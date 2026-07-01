@@ -4,7 +4,7 @@
 //
 // Unlike the AI-search snapshot (localStorage, so it survives a relaunch), this
 // is a plain module-level value: it only needs to bridge the in-session
-// `/` -> `/movie/:id` -> back round-trip (React Router keeps the module loaded).
+// `/` -> `/movie/:slug` -> back round-trip (React Router keeps the module loaded).
 // A full app relaunch legitimately resets focus to the top of the grid, which is
 // exactly what a fresh module instance gives us.
 

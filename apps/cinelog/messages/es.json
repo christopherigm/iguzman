@@ -270,7 +270,9 @@
     "spokenLanguages": "Idiomas de audio",
     "subtitles": "Subtítulos",
     "digitalCopyLabel": "Enlace de copia digital",
-    "digitalCopy": "Copia digital"
+    "digitalCopy": "Copia digital",
+    "share": "Compartir",
+    "linkCopied": "Enlace copiado al portapapeles."
   },
   "InboxPage": {
     "title": "Bandeja",

@@ -57,6 +57,13 @@ export type MovieSort =
 
 export interface Movie {
   id: number;
+  /**
+   * Stable, human-readable identifier (`the-matrix-1999`) used as the movie's
+   * detail-page URL segment and its canonical/shareable link. Assigned once on
+   * the server and never regenerated, so a shared link survives a later title
+   * edit. Write operations still address the movie by numeric `id`.
+   */
+  slug: string;
   title: string;
   director: string;
   year: number | null;
@@ -326,8 +333,13 @@ export function buildCatalogQuery(p: CatalogParams): string {
   return params.toString();
 }
 
-export async function getMovie(id: string | number): Promise<MovieDetail> {
-  const res = await fetch(`/api/catalog/movies/${id}`);
+/**
+ * Fetch a movie's detail by its stable slug - the identifier the detail page is
+ * keyed on. Used as the client-side fallback when the server prefetch missed.
+ * Throws ApiError (status 404) when no movie carries the slug.
+ */
+export async function getMovieBySlug(slug: string): Promise<MovieDetail> {
+  const res = await fetch(`/api/catalog/movies/by-slug/${slug}`);
   if (!res.ok) {
     const data: Record<string, unknown> = await res.json().catch(() => ({}));
     throw new ApiError(res.status, data);

@@ -3,6 +3,7 @@ import uuid
 
 from django.contrib.auth.models import User
 from django.db import models
+from django.utils.text import slugify
 
 from core.models import Common
 
@@ -170,6 +171,12 @@ def _scan_backdrop_path(instance, filename):
 
 class Movie(Common):
     title = models.CharField(max_length=500)
+    # Stable, human-readable identifier for shareable detail-page URLs
+    # (`the-matrix-1999`). Generated once from title + year on first save and
+    # never regenerated, so a later title correction can't break a link someone
+    # already shared. Collisions (remakes sharing a title+year) get a numeric
+    # suffix. See `_generate_unique_slug`.
+    slug = models.SlugField(max_length=560, unique=True, blank=True, db_index=True)
     director = models.CharField(max_length=255, blank=True)
     year = models.PositiveSmallIntegerField(null=True, blank=True)
     # The set of formats this title is available in - the union of its barcodes'
@@ -203,6 +210,28 @@ class Movie(Common):
 
     def __str__(self):
         return f'{self.title} ({self.year})'
+
+    def save(self, *args, **kwargs):
+        # Assign the slug once, on first save, then leave it frozen - editing the
+        # title later must not change (and thus break) an already-shared URL.
+        if not self.slug:
+            self.slug = self._generate_unique_slug()
+        super().save(*args, **kwargs)
+
+    def _generate_unique_slug(self):
+        """
+        Build a unique slug from the title (and year, when known), appending a
+        numeric suffix only when a remake/re-release already holds the base slug.
+        """
+        base = slugify(self.title) or 'movie'
+        if self.year:
+            base = f'{base}-{self.year}'
+        slug = base
+        suffix = 2
+        while Movie.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+            slug = f'{base}-{suffix}'
+            suffix += 1
+        return slug
 
 
 class Barcode(models.Model):

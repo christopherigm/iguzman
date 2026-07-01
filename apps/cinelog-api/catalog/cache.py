@@ -24,6 +24,14 @@ RELATED_CACHE_TTL = 60 * 60 * 24  # 1 day
 
 RELATED_CACHE_VERSION_KEY = 'movie:related:version'
 
+# Bump this whenever the *shape* of a serialized related card changes (a new
+# field, a renamed/removed key). The runtime `cache_version()` only tracks
+# catalog *content* changes (signals bump it on add/edit/delete), so a serializer
+# change alone would keep serving stale-shaped blocks until their TTL. Embedding
+# a schema version in the key means a deploy with a changed shape reads under
+# fresh keys and the old entries fall out by TTL. (v2: added `slug`.)
+RELATED_SCHEMA_VERSION = 2
+
 
 def cache_version():
     """Current related-cache version (1 until the first invalidation)."""
@@ -31,7 +39,7 @@ def cache_version():
 
 
 def related_cache_key(movie_id, version):
-    return f'movie:related:{version}:{movie_id}'
+    return f'movie:related:{RELATED_SCHEMA_VERSION}:{version}:{movie_id}'
 
 
 def invalidate_related_cache():

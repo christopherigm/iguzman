@@ -11,6 +11,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.generics import (
     ListAPIView,
     ListCreateAPIView,
+    RetrieveAPIView,
     RetrieveUpdateDestroyAPIView,
 )
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
@@ -398,6 +399,27 @@ class MovieDetailView(RetrieveUpdateDestroyAPIView):
             raise PermissionDenied('You do not own this movie.')
         ownership.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MovieBySlugView(RetrieveAPIView):
+    """
+    GET /api/catalog/movies/by-slug/<slug>/
+
+    Read-only detail lookup by the Movie's stable slug - the identifier the web
+    detail page and its shareable/OG URLs are keyed on. Mirrors
+    `MovieDetailView`'s GET (same serializer, same prefetch) but resolves by slug
+    instead of numeric pk; the write operations (edit/delete/refetch/...) stay on
+    the pk endpoints, addressed by the `id` the serialized movie carries.
+    """
+
+    # Anonymous users may view a movie (read-only), like the pk detail endpoint.
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    queryset = Movie.objects.filter(enabled=True).prefetch_related(
+        'genres', 'cast', 'formats', 'barcodes__format', 'ownerships',
+        'audio_formats', 'hdr_formats', 'spoken_languages', 'subtitle_languages',
+    )
+    serializer_class = MovieDetailSerializer
+    lookup_field = 'slug'
 
 
 class MovieBackdropView(APIView):

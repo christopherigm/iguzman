@@ -23,7 +23,7 @@ import {
   fetchSynopsis,
   fetchTrailer,
   getCategories,
-  getMovie,
+  getMovieBySlug,
   refetchMovie,
   updateMovie,
   type Category,
@@ -88,10 +88,11 @@ function useIsDesktop(): boolean {
 }
 
 export function MovieDetail({
-  id,
+  slug,
   initialMovie = null,
 }: {
-  id: string;
+  /** The movie's slug from the route - used for the read fetch and share URL. */
+  slug: string;
   /** Server-prefetched movie; seeds the first paint and skips the client fetch. */
   initialMovie?: MovieDetailData | null;
 }) {
@@ -114,6 +115,9 @@ export function MovieDetail({
   const [categories, setCategories] = useState<Category[]>([]);
   const [saveError, setSaveError] = useState(false);
   const [saved, setSaved] = useState(false);
+  // Set after a share falls back to copying the link (no native share sheet), so
+  // the user gets confirmation the URL made it to their clipboard.
+  const [linkCopied, setLinkCopied] = useState(false);
   const [showTrailer, setShowTrailer] = useState(false);
   // Live preview of a re-fetched poster/wallpaper while editing; null falls back
   // to the saved image. Cleared on save (the reloaded movie carries the new art)
@@ -127,9 +131,10 @@ export function MovieDetail({
   }
 
   async function handleSave(payload: MovieUpdatePayload) {
+    if (!movie) return;
     setSaveError(false);
     try {
-      const updated = await updateMovie(id, payload);
+      const updated = await updateMovie(movie.id, payload);
       setMovie(updated);
       setEditing(false);
       clearPreviews();
@@ -141,7 +146,8 @@ export function MovieDetail({
   }
 
   async function handleRefetch(title: string, year: number | null) {
-    const data = await refetchMovie(id, title, year);
+    if (!movie) throw new Error("Movie not loaded");
+    const data = await refetchMovie(movie.id, title, year);
     // Live-preview the resolved art on the page. An empty URL means the fallback
     // found no image, so keep showing the current one rather than blanking it.
     if (data.cover_url) setCoverPreview(data.cover_url);
@@ -155,20 +161,52 @@ export function MovieDetail({
   }
 
   async function handleGetBackdrop() {
-    const updated = await fetchBackdrop(id);
+    if (!movie) return;
+    const updated = await fetchBackdrop(movie.id);
     setMovie(updated);
   }
 
   async function handleGetSynopsis() {
-    const updated = await fetchSynopsis(id);
+    if (!movie) return "";
+    const updated = await fetchSynopsis(movie.id);
     setMovie(updated);
     return updated.synopsis;
   }
 
   async function handleGetTrailer() {
-    const updated = await fetchTrailer(id);
+    if (!movie) return "";
+    const updated = await fetchTrailer(movie.id);
     setMovie(updated);
     return updated.trailer_url;
+  }
+
+  /**
+   * Share the current movie. Prefers the device's native share sheet (mobile);
+   * where that's unavailable (most desktops) it copies the canonical URL to the
+   * clipboard and flags a confirmation toast. A user-cancelled share is a no-op.
+   */
+  async function handleShare() {
+    if (!movie || typeof window === "undefined") return;
+    const url = window.location.href;
+    const shareData = {
+      title: movie.title,
+      text: movie.synopsis || movie.title,
+      url,
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // User dismissed the share sheet - nothing to do.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+    } catch {
+      // Clipboard blocked (e.g. insecure context) - silently skip.
+    }
   }
 
   // On desktop (lg+) play the trailer in the in-page modal. On smaller screens
@@ -184,10 +222,11 @@ export function MovieDetail({
   }
 
   async function handleConfirmDelete() {
+    if (!movie) return;
     setShowDeleteConfirm(false);
     setDeleting(true);
     try {
-      await deleteMovie(id);
+      await deleteMovie(movie.id);
       router.push("/");
     } catch {
       setDeleting(false);
@@ -198,10 +237,11 @@ export function MovieDetail({
   // Staff-only hard delete: removes the shared movie from the catalog for
   // everyone, not just the current user's ownership.
   async function handleConfirmPurge() {
+    if (!movie) return;
     setShowPurgeConfirm(false);
     setDeleting(true);
     try {
-      await purgeMovie(id);
+      await purgeMovie(movie.id);
       router.push("/");
     } catch {
       setDeleting(false);
@@ -225,12 +265,19 @@ export function MovieDetail({
     return () => clearTimeout(timer);
   }, [saved]);
 
+  // Auto-clear the "link copied" flag so a later share can re-trigger the toast.
+  useEffect(() => {
+    if (!linkCopied) return;
+    const timer = setTimeout(() => setLinkCopied(false), 5000);
+    return () => clearTimeout(timer);
+  }, [linkCopied]);
+
   useEffect(() => {
     // The server prefetched this movie and it already seeds state via lazy init
     // (the component remounts per id), so no client round-trip is needed.
     if (initialMovie) return;
     let active = true;
-    getMovie(id)
+    getMovieBySlug(slug)
       .then((data) => {
         if (!active) return;
         setMovie(data);
@@ -245,7 +292,7 @@ export function MovieDetail({
     return () => {
       active = false;
     };
-  }, [id, initialMovie]);
+  }, [slug, initialMovie]);
 
   if (status === "loading") {
     return (
@@ -353,6 +400,14 @@ export function MovieDetail({
         <Toast message={t("saved")} variant="success" position="top-center" />
       )}
 
+      {linkCopied && (
+        <Toast
+          message={t("linkCopied")}
+          variant="success"
+          position="top-center"
+        />
+      )}
+
       <Box
         display="flex"
         alignItems="center"
@@ -373,82 +428,87 @@ export function MovieDetail({
           }}
           translucent
         />
-        {!editing &&
-          (movie.trailer_url ||
-            movie.owned ||
-            movie.can_purge ||
-            movie.digital_copy_url ||
-            (isLoggedIn && !movie.owned)) && (
-            <Box display="flex" gap={8} flexWrap="wrap">
-              {movie.can_purge && (
+        {!editing && (
+          <Box display="flex" gap={8} flexWrap="wrap">
+            {movie.can_purge && (
+              <IconButton
+                icon="/icons/purge.svg"
+                aria-label={t("purge")}
+                title={t("purge")}
+                kind="error"
+                size="md"
+                onClick={() => setShowPurgeConfirm(true)}
+                disabled={deleting}
+              />
+            )}
+            {movie.owned && (
+              <>
                 <IconButton
-                  icon="/icons/purge.svg"
-                  aria-label={t("purge")}
-                  title={t("purge")}
+                  icon="/icons/delete.svg"
+                  aria-label={t("delete")}
+                  title={t("delete")}
                   kind="error"
                   size="md"
-                  onClick={() => setShowPurgeConfirm(true)}
+                  onClick={() => setShowDeleteConfirm(true)}
                   disabled={deleting}
-                />
-              )}
-              {movie.owned && (
-                <>
-                  <IconButton
-                    icon="/icons/delete.svg"
-                    aria-label={t("delete")}
-                    title={t("delete")}
-                    kind="error"
-                    size="md"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    disabled={deleting}
-                    translucent
-                  />
-                  <IconButton
-                    icon="/icons/edit.svg"
-                    aria-label={t("edit")}
-                    title={t("edit")}
-                    kind="warning"
-                    size="md"
-                    onClick={() => setEditing(true)}
-                    disabled={deleting}
-                    translucent
-                  />
-                </>
-              )}
-              {isLoggedIn && !movie.owned && (
-                <AddToLibraryButton
-                  movieId={movie.id}
-                  movieTitle={movie.title}
-                  size="md"
-                  translucent
-                  onAdded={setMovie}
-                />
-              )}
-              {movie.trailer_url && (
-                <Button
-                  text={t("trailer")}
-                  icon="/icons/trailer.svg"
-                  size="md"
-                  onClick={handleTrailerClick}
-                  disabled={deleting}
-                  kind="primary"
                   translucent
                 />
-              )}
-              {isLoggedIn && movie.digital_copy_url && (
                 <IconButton
-                  icon="/icons/play-stream.svg"
-                  href={movie.digital_copy_url}
-                  target="_blank"
-                  aria-label={t("digitalCopy")}
-                  title={t("digitalCopy")}
-                  kind="primary"
+                  icon="/icons/edit.svg"
+                  aria-label={t("edit")}
+                  title={t("edit")}
+                  kind="warning"
                   size="md"
+                  onClick={() => setEditing(true)}
+                  disabled={deleting}
                   translucent
                 />
-              )}
-            </Box>
-          )}
+              </>
+            )}
+            {isLoggedIn && !movie.owned && (
+              <AddToLibraryButton
+                movieId={movie.id}
+                movieTitle={movie.title}
+                size="md"
+                translucent
+                onAdded={setMovie}
+              />
+            )}
+            <IconButton
+              icon="/icons/share.svg"
+              aria-label={t("share")}
+              title={t("share")}
+              kind="success"
+              size="md"
+              onClick={handleShare}
+              disabled={deleting}
+              translucent
+            />
+            {movie.trailer_url && (
+              <Button
+                text={t("trailer")}
+                icon="/icons/trailer.svg"
+                size="md"
+                onClick={handleTrailerClick}
+                disabled={deleting}
+                kind="primary"
+                translucent
+              />
+            )}
+            {isLoggedIn && movie.digital_copy_url && (
+              <IconButton
+                icon="/icons/play-stream.svg"
+                href={movie.digital_copy_url}
+                target="_blank"
+                aria-label={t("digitalCopy")}
+                title={t("digitalCopy")}
+                kind="primary"
+                size="md"
+                translucent
+              />
+            )}
+          </Box>
+        )}
       </Box>
 
       <Box

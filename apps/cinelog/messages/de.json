@@ -270,7 +270,9 @@
     "spokenLanguages": "Audiosprachen",
     "subtitles": "Untertitel",
     "digitalCopyLabel": "Link zur digitalen Kopie",
-    "digitalCopy": "Digitale Kopie"
+    "digitalCopy": "Digitale Kopie",
+    "share": "Teilen",
+    "linkCopied": "Link in die Zwischenablage kopiert."
   },
   "InboxPage": {
     "title": "Posteingang",

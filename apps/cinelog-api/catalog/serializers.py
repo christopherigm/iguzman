@@ -63,7 +63,7 @@ class MovieListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Movie
         fields = [
-            'id', 'title', 'director', 'year', 'formats', 'cover', 'backdrop',
+            'id', 'slug', 'title', 'director', 'year', 'formats', 'cover', 'backdrop',
             'genres', 'owned', 'digital_copy_url', 'created',
         ]
 
@@ -146,7 +146,7 @@ class MovieDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Movie
         fields = [
-            'id', 'title', 'director', 'year', 'formats', 'barcodes',
+            'id', 'slug', 'title', 'director', 'year', 'formats', 'barcodes',
             'cover', 'cover_url', 'backdrop', 'tmdb_id', 'synopsis', 'trailer_url',
             'genres', 'cast', 'audio_formats', 'hdr_formats', 'spoken_languages',
             'subtitle_languages', 'related', 'owned', 'digital_copy_url',

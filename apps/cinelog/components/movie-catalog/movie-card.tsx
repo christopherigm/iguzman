@@ -95,7 +95,7 @@ export function MovieCard({ movie, view }: Props) {
 
   if (view === "list") {
     return (
-      <Link href={`/movies/${movie.id}`} prefetch className="movie-card">
+      <Link href={`/movies/${movie.slug}`} prefetch className="movie-card">
         <Card
           flexDirection="row"
           gap={12}
@@ -153,7 +153,7 @@ export function MovieCard({ movie, view }: Props) {
   }
 
   return (
-    <Link href={`/movies/${movie.id}`} prefetch className="movie-card">
+    <Link href={`/movies/${movie.slug}`} prefetch className="movie-card">
       <Card padding={0} gap={0} border="">
         {cover}
         <Box

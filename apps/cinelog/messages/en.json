@@ -270,7 +270,9 @@
     "spokenLanguages": "Audio languages",
     "subtitles": "Subtitles",
     "digitalCopyLabel": "Digital copy link",
-    "digitalCopy": "Digital copy"
+    "digitalCopy": "Digital copy",
+    "share": "Share",
+    "linkCopied": "Link copied to clipboard."
   },
   "InboxPage": {
     "title": "Inbox",

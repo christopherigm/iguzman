@@ -9,7 +9,7 @@ import { TvBadge } from "@repo/ui-tv/tv-badge";
 import { TvScrollable } from "@repo/ui-tv/tv-scrollable";
 import { onBackButton } from "@repo/ui-tv/remote-keys";
 import {
-  getMovie,
+  getMovieBySlug,
   NotFoundError,
   UnauthorizedError,
   type MovieDetail as MovieDetailData,
@@ -77,12 +77,12 @@ function MetaText({ label, value }: { label: string; value: string }) {
 export function MovieDetail({ onSignOut }: { onSignOut: () => void }) {
   const { t } = useT();
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [movie, setMovie] = useState<MovieDetailData | null>(null);
-  // The route guarantees `:id`; a missing one (a hand-typed hash) starts as
+  // The route guarantees `:slug`; a missing one (a hand-typed hash) starts as
   // not-found so the effect never has to setState synchronously for that case.
   const [status, setStatus] = useState<Status>(() =>
-    id ? "loading" : "not_found",
+    slug ? "loading" : "not_found",
   );
   const [trailerOpen, setTrailerOpen] = useState(false);
   // A ref lets the single Back listener branch on the open state without
@@ -118,9 +118,9 @@ export function MovieDetail({ onSignOut }: { onSignOut: () => void }) {
   );
 
   useEffect(() => {
-    if (!id) return;
+    if (!slug) return;
     let active = true;
-    getMovie(id)
+    getMovieBySlug(slug)
       .then((data) => {
         if (!active) return;
         setMovie(data);
@@ -138,7 +138,7 @@ export function MovieDetail({ onSignOut }: { onSignOut: () => void }) {
     return () => {
       active = false;
     };
-  }, [id, onSignOut]);
+  }, [slug, onSignOut]);
 
   if (status === "loading") {
     return (

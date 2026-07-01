@@ -7,6 +7,7 @@ import { TvButton } from "@repo/ui-tv/tv-button";
 import { TvTextInput } from "@repo/ui-tv/tv-text-input";
 import { TvProgressBar } from "@repo/ui-tv/tv-progress-bar";
 import { TvConfirmationModal } from "@repo/ui-tv/tv-confirmation-modal";
+import { TvImage } from "@repo/ui-tv/tv-image";
 import {
   aiSearchMovies,
   getGenres,
@@ -289,6 +290,23 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
     requestAnimationFrame(() => setFocus(movieFocusKey(card.id)));
   }, [gridReady, gridMovies]);
 
+  // A random backdrop from the current page's movies, shown dimmed behind the
+  // grid. Re-picked only when the movie list changes reference - which happens
+  // exactly when a fresh set of results loads (a page turn, a filter change or
+  // an AI search), not on every render - so the background holds steady while
+  // the user moves focus within a page and swaps when the page does. Titles
+  // without a backdrop are skipped; "" (no candidates) hides the layer.
+  const [backdrop, setBackdrop] = useState("");
+  useEffect(() => {
+    const withBackdrops = gridMovies.filter((m) => m.backdrop);
+    if (withBackdrops.length === 0) {
+      setBackdrop("");
+      return;
+    }
+    const index = Math.floor(Math.random() * withBackdrops.length);
+    setBackdrop(withBackdrops[index]?.backdrop ?? "");
+  }, [gridMovies]);
+
   const openGenreModal = useCallback(() => {
     setDraftGenres(new Set(appliedGenres));
     setGenreModalOpen(true);
@@ -406,6 +424,15 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
 
   return (
     <>
+      {/* Full-bleed dimmed backdrop behind everything (fixed to the viewport,
+          z-index below the screen). Rendered only when the current page has a
+          movie with a backdrop. */}
+      {backdrop && (
+        <div className="home-backdrop">
+          <TvImage src={backdrop} fit="cover" />
+          <div className="home-backdrop__scrim" />
+        </div>
+      )}
       <div className="home-screen">
         <div className="home-header">
           <TvText variant="hero" className="home-title">
@@ -535,9 +562,11 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
                   }}
                   onSelect={(m) => {
                     // Remember this card so returning from the detail restores
-                    // focus onto it (see pendingGridFocus seeding above).
+                    // focus onto it (see pendingGridFocus seeding above). Focus
+                    // restoration keys on the numeric id; the detail route is
+                    // addressed by the shareable slug.
                     saveLastFocusedMovie(m.id);
-                    navigate(`/movie/${m.id}`);
+                    navigate(`/movie/${m.slug}`);
                   }}
                 />
               ))}

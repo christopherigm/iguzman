@@ -270,7 +270,9 @@
     "spokenLanguages": "Idiomas de áudio",
     "subtitles": "Legendas",
     "digitalCopyLabel": "Link da cópia digital",
-    "digitalCopy": "Cópia digital"
+    "digitalCopy": "Cópia digital",
+    "share": "Compartilhar",
+    "linkCopied": "Link copiado para a área de transferência."
   },
   "InboxPage": {
     "title": "Caixa de entrada",

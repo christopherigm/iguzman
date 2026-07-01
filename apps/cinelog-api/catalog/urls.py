@@ -10,6 +10,7 @@ from .views import (
     InboxSelectView,
     ManualScanView,
     MovieBackdropView,
+    MovieBySlugView,
     MovieDetailView,
     MovieListView,
     MovieOwnView,
@@ -23,6 +24,7 @@ from .views import (
 urlpatterns = [
     path('movies/', MovieListView.as_view(), name='movie-list'),
     path('movies/ai-search/', AiMovieSearchView.as_view(), name='movie-ai-search'),
+    path('movies/by-slug/<slug:slug>/', MovieBySlugView.as_view(), name='movie-by-slug'),
     path('movies/<int:pk>/', MovieDetailView.as_view(), name='movie-detail'),
     path('movies/<int:pk>/backdrop/', MovieBackdropView.as_view(), name='movie-backdrop'),
     path('movies/<int:pk>/synopsis/', MovieSynopsisView.as_view(), name='movie-synopsis'),

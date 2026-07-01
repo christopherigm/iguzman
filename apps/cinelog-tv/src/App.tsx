@@ -26,7 +26,7 @@ export function App() {
         <Routes>
           <Route path="/" element={<Home onSignOut={handleSignOut} />} />
           <Route
-            path="/movie/:id"
+            path="/movie/:slug"
             element={<MovieDetail onSignOut={handleSignOut} />}
           />
         </Routes>

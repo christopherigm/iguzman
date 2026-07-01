@@ -270,7 +270,9 @@
     "spokenLanguages": "Langues audio",
     "subtitles": "Sous-titres",
     "digitalCopyLabel": "Lien de la copie numérique",
-    "digitalCopy": "Copie numérique"
+    "digitalCopy": "Copie numérique",
+    "share": "Partager",
+    "linkCopied": "Lien copié dans le presse-papiers."
   },
   "InboxPage": {
     "title": "Boîte de réception",

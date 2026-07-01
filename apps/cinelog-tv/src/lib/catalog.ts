@@ -11,6 +11,13 @@ export type MovieFormat = "dvd" | "bluray" | "4k" | "digital" | "other";
 
 export interface Movie {
   id: number;
+  /**
+   * Stable, human-readable identifier (`the-matrix-1999`) the detail route is
+   * keyed on. Assigned once on the server and never regenerated. Used for the
+   * `/movie/:slug` URL and the by-slug detail fetch; the numeric `id` still
+   * identifies the card for grid focus restoration.
+   */
+  slug: string;
   title: string;
   director: string;
   year: number | null;
@@ -185,12 +192,13 @@ export async function getGenres(): Promise<Genre[]> {
 }
 
 /**
- * Fetch one movie's full detail for the detail screen. Same session handling as
+ * Fetch one movie's full detail for the detail screen, by its stable slug (the
+ * identifier the `/movie/:slug` route carries). Same session handling as
  * `getMovies`: attaches the access token, refreshes once on a 401 and retries,
  * and throws `UnauthorizedError` when the session can't be recovered.
  */
-export async function getMovie(id: number | string): Promise<MovieDetail> {
-  const url = `${API_URL}/api/catalog/movies/${id}/`;
+export async function getMovieBySlug(slug: string): Promise<MovieDetail> {
+  const url = `${API_URL}/api/catalog/movies/by-slug/${slug}/`;
 
   const request = (token: string | null): Promise<Response> =>
     fetch(url, {
@@ -205,6 +213,6 @@ export async function getMovie(id: number | string): Promise<MovieDetail> {
     if (res.status === 401) throw new UnauthorizedError();
   }
   if (res.status === 404) throw new NotFoundError();
-  if (!res.ok) throw new Error(`getMovie failed: ${res.status}`);
+  if (!res.ok) throw new Error(`getMovieBySlug failed: ${res.status}`);
   return res.json() as Promise<MovieDetail>;
 }
