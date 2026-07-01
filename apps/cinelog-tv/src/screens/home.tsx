@@ -143,23 +143,29 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
   // is NOT in the DOM on the frame the filter is applied - we must wait for the
   // new results to render before moving focus. Flag the reset here; the effect
   // below performs it once `movies` has updated.
-  const pendingGridFocusReset = useRef(false);
-  const requestGridFocusReset = useCallback(() => {
-    pendingGridFocusReset.current = true;
-  }, []);
+  const pendingGridFocus = useRef<"first" | "last" | null>(null);
+  const requestGridFocusReset = useCallback(
+    (target: "first" | "last" = "first") => {
+      pendingGridFocus.current = target;
+    },
+    [],
+  );
 
-  // Move focus onto the first card once the filtered results have rendered. The
-  // control the user pressed (Apply in the modal, or the Clear button, which
-  // itself unmounts) no longer holds focus, so park it deterministically on the
-  // first card. Deferred a frame so the new grid exists in the DOM. Empty
-  // results are left to the effect below, which moves focus to the Genres button
-  // (no grid to claim it).
+  // Move focus onto a card once freshly-rendered results arrive. Used both by a
+  // filter change (Apply / Clear, which target the first card) and by turning
+  // the page with the D-pad (right off the last card lands on the first card of
+  // the next page; left off the first card lands on the last card of the
+  // previous page). The control the user pressed no longer holds focus, so park
+  // it deterministically. Deferred a frame so the new grid exists in the DOM.
+  // Empty results are left to the effect below, which moves focus to the Genres
+  // button (no grid to claim it).
   useEffect(() => {
-    if (status !== "ready" || !pendingGridFocusReset.current) return;
-    pendingGridFocusReset.current = false;
-    const first = movies[0];
-    if (!first) return;
-    requestAnimationFrame(() => setFocus(movieFocusKey(first.id)));
+    if (status !== "ready" || !pendingGridFocus.current) return;
+    const target = pendingGridFocus.current;
+    pendingGridFocus.current = null;
+    const card = target === "last" ? movies[movies.length - 1] : movies[0];
+    if (!card) return;
+    requestAnimationFrame(() => setFocus(movieFocusKey(card.id)));
   }, [status, movies]);
 
   const openGenreModal = useCallback(() => {
@@ -286,19 +292,45 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
                   key={movie.id}
                   movie={movie}
                   focusKey={movieFocusKey(movie.id)}
-                  // Only the last row hands focus down to the paginator (and only
-                  // when there is one); interior rows navigate down normally.
-                  onArrowPress={
-                    totalPages > 1 && index >= lastRowStart
-                      ? (direction) => {
-                          if (direction === "down") {
-                            setFocus(pageFocusKey(page));
-                            return false;
-                          }
-                          return true;
-                        }
-                      : undefined
-                  }
+                  onArrowPress={(direction) => {
+                    // Only the last row hands focus down to the paginator (and
+                    // only when there is one); interior rows navigate down
+                    // normally.
+                    if (
+                      direction === "down" &&
+                      totalPages > 1 &&
+                      index >= lastRowStart
+                    ) {
+                      setFocus(pageFocusKey(page));
+                      return false;
+                    }
+                    // Right off the last card in a row (rightmost column, or the
+                    // final partial-row card) advances a page (unless already on
+                    // the last), landing focus on the next page's first card.
+                    if (
+                      direction === "right" &&
+                      (index === movies.length - 1 ||
+                        (index + 1) % COLUMNS === 0) &&
+                      page < totalPages
+                    ) {
+                      setPage(page + 1);
+                      requestGridFocusReset("first");
+                      return false;
+                    }
+                    // Left off the first card in a row (leftmost column) steps
+                    // back a page (unless already on page one), landing focus on
+                    // the previous page's last card.
+                    if (
+                      direction === "left" &&
+                      index % COLUMNS === 0 &&
+                      page > 1
+                    ) {
+                      setPage(page - 1);
+                      requestGridFocusReset("last");
+                      return false;
+                    }
+                    return true;
+                  }}
                   onSelect={(m) => navigate(`/movie/${m.id}`)}
                 />
               ))}
