@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Select, type SelectOption } from "@repo/ui/core-elements/select";
 import { Button } from "@repo/ui/core-elements/button";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import type {
   AudioFormatCode,
   Category,
@@ -72,10 +75,20 @@ export function MovieFilters({
   const t = useTranslations("CatalogPage");
   const tFormat = useTranslations("MovieFormat");
 
+  // Which filter modal is open (only one at a time), or null when closed.
+  const [openModal, setOpenModal] = useState<"formats" | "genres" | null>(null);
+  const closeModal = () => setOpenModal(null);
+
   const sortOptions: SelectOption[] = SORTS.map(({ value, labelKey }) => ({
     value,
     label: t(labelKey),
   }));
+
+  // Highlight a trigger button while its group has any active selection, so the
+  // user can tell filters are applied even with the modal collapsed.
+  const formatsActive =
+    format !== "" || selectedAudio.length > 0 || selectedHdr.length > 0;
+  const genresActive = selectedGenres.length > 0;
 
   return (
     <Box display="flex" flexDirection="column" gap={16}>
@@ -96,77 +109,135 @@ export function MovieFilters({
         />
       </Box>
 
-      {/* Disc-spec filter row: physical format (single-select icon toggles),
-          then audio and HDR formats (multi-select, AND-filtered). All flow into
-          one centered, wrapping row - the same layout language as the genres
-          row directly below it. */}
+      {/* Two centered triggers open the Formats and Genres pickers. Selections
+          inside each modal apply live (they call the same toggle handlers), so
+          OK just closes the dialog. */}
       <Box
         display="flex"
-        flexWrap="wrap"
-        gap={8}
+        gap={12}
         width="100%"
         justifyContent="center"
         alignItems="center"
+        flexWrap="wrap"
       >
-        {FORMAT_BUTTONS.map(({ value, icon, iconColor, fullColor }) => {
-          const selected = format === value;
-          return (
-            <IconButton
-              key={value}
-              icon={icon}
-              iconColor={iconColor}
-              kind={selected ? "primary" : "default"}
-              aria-label={tFormat(value)}
-              aria-pressed={selected}
-              title={tFormat(value)}
-              size="sm"
-              // Toggle: re-selecting the active format clears it ("all formats").
-              onClick={() => onFormatChange(selected ? "" : value)}
-              fullColor={fullColor}
-              solid={selected}
-            />
-          );
-        })}
-
-        {AUDIO_FORMAT_BUTTONS.map(({ value, label, icon }) => {
-          const selected = selectedAudio.includes(value);
-          return (
-            <Button
-              key={value}
-              text={label}
-              icon={icon}
-              size="sm"
-              kind={selected ? "primary" : undefined}
-              aria-label={label}
-              aria-pressed={selected}
-              onClick={() => onAudioToggle(value)}
-            />
-          );
-        })}
-
-        {HDR_FORMAT_BUTTONS.map(({ value, label, icon }) => {
-          const selected = selectedHdr.includes(value);
-          return (
-            <Button
-              key={value}
-              text={label}
-              icon={icon}
-              size="sm"
-              kind={selected ? "primary" : undefined}
-              aria-label={label}
-              aria-pressed={selected}
-              onClick={() => onHdrToggle(value)}
-            />
-          );
-        })}
+        <Button
+          text={t("formatsButton")}
+          icon="/icons/formats.svg"
+          size="md"
+          kind={formatsActive ? "primary" : undefined}
+          aria-expanded={openModal === "formats"}
+          onClick={() => setOpenModal("formats")}
+        />
+        <Button
+          text={t("genresButton")}
+          icon="/icons/genres.svg"
+          size="md"
+          kind={genresActive ? "primary" : undefined}
+          aria-expanded={openModal === "genres"}
+          onClick={() => setOpenModal("genres")}
+        />
       </Box>
 
-      <GenreSelector
-        categories={categories}
-        selected={selectedGenres}
-        onToggle={onGenreToggle}
-        align="center"
-      />
+      {openModal === "formats" && (
+        <ConfirmationModal
+          title={t("formatsModalTitle")}
+          text={t("formatsModalText")}
+          okCallback={closeModal}
+        >
+          <Box display="flex" flexDirection="column" gap={16}>
+            {/* Disc / physical format - single-select icon toggles. */}
+            <Box display="flex" flexDirection="column" gap={6}>
+              <Typography variant="caption" styles={{ opacity: 0.7 }}>
+                {t("discFormatHeading")}
+              </Typography>
+              <Box display="flex" flexWrap="wrap" gap={8}>
+                {FORMAT_BUTTONS.map(({ value, icon, iconColor, fullColor }) => {
+                  const selected = format === value;
+                  return (
+                    <IconButton
+                      key={value}
+                      icon={icon}
+                      iconColor={iconColor}
+                      kind={selected ? "primary" : "default"}
+                      aria-label={tFormat(value)}
+                      aria-pressed={selected}
+                      title={tFormat(value)}
+                      size="sm"
+                      // Toggle: re-selecting the active format clears it.
+                      onClick={() => onFormatChange(selected ? "" : value)}
+                      fullColor={fullColor}
+                      solid={selected}
+                    />
+                  );
+                })}
+              </Box>
+            </Box>
+
+            {/* Audio formats - multi-select, AND-filtered. */}
+            <Box display="flex" flexDirection="column" gap={6}>
+              <Typography variant="caption" styles={{ opacity: 0.7 }}>
+                {t("audioFormatHeading")}
+              </Typography>
+              <Box display="flex" flexWrap="wrap" gap={8}>
+                {AUDIO_FORMAT_BUTTONS.map(({ value, label, icon }) => {
+                  const selected = selectedAudio.includes(value);
+                  return (
+                    <Button
+                      key={value}
+                      text={label}
+                      icon={icon}
+                      size="sm"
+                      kind={selected ? "primary" : undefined}
+                      aria-label={label}
+                      aria-pressed={selected}
+                      onClick={() => onAudioToggle(value)}
+                    />
+                  );
+                })}
+              </Box>
+            </Box>
+
+            {/* Video / HDR formats - multi-select, AND-filtered. */}
+            <Box display="flex" flexDirection="column" gap={6}>
+              <Typography variant="caption" styles={{ opacity: 0.7 }}>
+                {t("videoFormatHeading")}
+              </Typography>
+              <Box display="flex" flexWrap="wrap" gap={8}>
+                {HDR_FORMAT_BUTTONS.map(({ value, label, icon }) => {
+                  const selected = selectedHdr.includes(value);
+                  return (
+                    <Button
+                      key={value}
+                      text={label}
+                      icon={icon}
+                      size="sm"
+                      kind={selected ? "primary" : undefined}
+                      aria-label={label}
+                      aria-pressed={selected}
+                      onClick={() => onHdrToggle(value)}
+                    />
+                  );
+                })}
+              </Box>
+            </Box>
+          </Box>
+        </ConfirmationModal>
+      )}
+
+      {openModal === "genres" && (
+        <ConfirmationModal
+          title={t("genresModalTitle")}
+          text={t("genresModalText")}
+          okCallback={closeModal}
+        >
+          <GenreSelector
+            categories={categories}
+            selected={selectedGenres}
+            onToggle={onGenreToggle}
+            align="center"
+          />
+        </ConfirmationModal>
+      )}
     </Box>
   );
 }

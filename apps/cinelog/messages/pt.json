@@ -190,7 +190,16 @@
     "addToLibraryTitle": "Adicionar à sua biblioteca",
     "addToLibraryText": "Adicionar \"{title}\" à sua biblioteca. Em que formato você o possui?",
     "addToLibraryError": "Falha ao adicionar o filme à sua biblioteca. Tente novamente.",
-    "digitalCopyLabel": "Link da cópia digital"
+    "digitalCopyLabel": "Link da cópia digital",
+    "formatsButton": "Formatos",
+    "genresButton": "Gêneros",
+    "formatsModalTitle": "Formatos",
+    "formatsModalText": "Filtrar por formatos de disco, áudio e vídeo.",
+    "genresModalTitle": "Gêneros",
+    "genresModalText": "Filtrar por gênero.",
+    "discFormatHeading": "Disco",
+    "audioFormatHeading": "Áudio",
+    "videoFormatHeading": "Vídeo"
   },
   "MovieDetailPage": {
     "back": "Voltar",
