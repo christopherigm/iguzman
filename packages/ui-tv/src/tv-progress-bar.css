@@ -1,0 +1,34 @@
+/* ── TvProgressBar ────────────────────────────────────── */
+
+.tv-progress-bar {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--surface-2, #e5e7eb);
+}
+
+.tv-progress-bar__track {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--accent, #06b6d4);
+  transition: width 300ms ease;
+}
+
+/* ── Indeterminate animation (Chromium-76-safe: translateX only) ── */
+
+.tv-progress-bar--indeterminate .tv-progress-bar__track {
+  width: 40% !important;
+  animation: tv-progress-bar-indeterminate 1.4s ease-in-out infinite;
+}
+
+@keyframes tv-progress-bar-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(150%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}

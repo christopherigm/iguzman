@@ -22,6 +22,7 @@ import {
   HDR_FORMAT_BUTTONS,
 } from "@/components/tech-spec-buttons";
 import { GenreSelector } from "@/components/genre-selector";
+import { requestAiSearch } from "@/lib/ai-search";
 
 // Sort options as {value, labelKey} pairs. The value is the API `ordering`
 // expression (see MovieSort); the key resolves to a CatalogPage translation.
@@ -74,10 +75,32 @@ export function MovieFilters({
 }: Props) {
   const t = useTranslations("CatalogPage");
   const tFormat = useTranslations("MovieFormat");
+  // AI search reuses the same copy as the navbar's search modal.
+  const tSearch = useTranslations("Navbar.search");
 
   // Which filter modal is open (only one at a time), or null when closed.
-  const [openModal, setOpenModal] = useState<"formats" | "genres" | null>(null);
+  const [openModal, setOpenModal] = useState<
+    "formats" | "genres" | "ai" | null
+  >(null);
   const closeModal = () => setOpenModal(null);
+
+  // Natural-language AI search query, driving the "ai" modal's text field.
+  const [aiQuery, setAiQuery] = useState("");
+
+  // Run the AI search entirely client-side: the catalog is already mounted, so
+  // requesting the query notifies it immediately (no URL param, no navigation).
+  // An empty query just closes the modal.
+  const handleAiSearch = () => {
+    const q = aiQuery.trim();
+    closeModal();
+    if (!q) return;
+    requestAiSearch(q);
+  };
+
+  const handleCancelAiSearch = () => {
+    closeModal();
+    setAiQuery("");
+  };
 
   const sortOptions: SelectOption[] = SORTS.map(({ value, labelKey }) => ({
     value,
@@ -135,6 +158,13 @@ export function MovieFilters({
           kind={genresActive ? "primary" : undefined}
           aria-expanded={openModal === "genres"}
           onClick={() => setOpenModal("genres")}
+        />
+        <Button
+          text={t("aiSearchButton")}
+          icon="/icons/search.svg"
+          size="md"
+          aria-expanded={openModal === "ai"}
+          onClick={() => setOpenModal("ai")}
         />
       </Box>
 
@@ -236,6 +266,30 @@ export function MovieFilters({
             onToggle={onGenreToggle}
             align="center"
           />
+        </ConfirmationModal>
+      )}
+
+      {openModal === "ai" && (
+        <ConfirmationModal
+          title={tSearch("title")}
+          text={tSearch("description")}
+          okCallback={handleAiSearch}
+          cancelCallback={handleCancelAiSearch}
+          panelMaxWidth="480px"
+        >
+          <Box display="flex" flexDirection="column" gap={12}>
+            <TextInput
+              label={tSearch("inputLabel")}
+              placeholder={tSearch("placeholder")}
+              value={aiQuery}
+              onChange={setAiQuery}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleAiSearch();
+              }}
+              rows={3}
+              multirow
+            />
+          </Box>
         </ConfirmationModal>
       )}
     </Box>

@@ -37,14 +37,16 @@ function toSearchParams(
  * page) on the server so the home page renders the grid on first paint instead
  * of after a client round-trip. The Django endpoint is Redis-backed, so this
  * stays cheap. Returns null on any failure so the client falls back to its own
- * fetch.
+ * fetch. AI search is intentionally excluded here - it is a client-only mode
+ * (see lib/ai-search.ts) and never round-trips through this prefetch.
  */
 async function prefetchMovies(
   filters: MovieFilters,
 ): Promise<Paginated<Movie> | null> {
   try {
-    const qs = buildMovieQuery(filters);
-    const res = await apiFetch(`/api/catalog/movies/${qs ? `?${qs}` : ""}`, {
+    const query = buildMovieQuery(filters);
+    const path = `/api/catalog/movies/${query ? `?${query}` : ""}`;
+    const res = await apiFetch(path, {
       cache: "no-store",
       allowAnonymous: true,
     });

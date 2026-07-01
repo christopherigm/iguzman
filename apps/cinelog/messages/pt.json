@@ -9,7 +9,14 @@
     "addMovie": "Adicionar filme",
     "account": "Minha Conta",
     "linkTv": "Vincular uma TV",
-    "signOut": "Sair"
+    "signOut": "Sair",
+    "search": {
+      "openLabel": "Busca com IA",
+      "title": "Busca de filmes com IA",
+      "description": "Descreva o que você quer assistir — ex.: \"filmes de terror com drama\" — e vamos procurar no catálogo.",
+      "inputLabel": "Buscar",
+      "placeholder": "ex.: ficção científica animada dos anos 80"
+    }
   },
   "Footer": {
     "appHeading": "App",
@@ -193,13 +200,17 @@
     "digitalCopyLabel": "Link da cópia digital",
     "formatsButton": "Formatos",
     "genresButton": "Gêneros",
+    "aiSearchButton": "Busca IA",
     "formatsModalTitle": "Formatos",
     "formatsModalText": "Filtrar por formatos de disco, áudio e vídeo.",
     "genresModalTitle": "Gêneros",
     "genresModalText": "Filtrar por gênero.",
     "discFormatHeading": "Disco",
     "audioFormatHeading": "Áudio",
-    "videoFormatHeading": "Vídeo"
+    "videoFormatHeading": "Vídeo",
+    "aiSearchActive": "Resultados de IA para",
+    "aiSearchClear": "Limpar busca com IA",
+    "aiSearchLoading": "Buscando filmes para"
   },
   "MovieDetailPage": {
     "back": "Voltar",

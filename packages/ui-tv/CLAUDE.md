@@ -24,6 +24,7 @@ when a plain `<input>` is focused. `TvTextInput` wraps that.
 | `@repo/ui-tv/tv-image` → `TvImage` | Old-Tizen-safe image box (aspect-ratio + fallback) - use instead of a bare `<img>`. |
 | `@repo/ui-tv/tv-badge` → `TvBadge` | 10-foot status/metadata pill (`filled`/`outlined`/`subtle`); `subtle` uses `rgba()` not `color-mix()` for old Chromium. |
 | `@repo/ui-tv/tv-scrollable` → `TvScrollable` | D-pad-scrollable region for tall, unfocusable content. Focusable itself: Up/Down scroll while focused, falling through to Norigin at the top/bottom edge; top/bottom fades show when more content exists. Needs an explicit `maxHeight`. |
+| `@repo/ui-tv/tv-progress-bar` → `TvProgressBar` | 10-foot port of `@repo/ui`'s `ProgressBar`: `value` (0-100) for determinate progress or omit for an indeterminate loading animation; `size` (px height), `label`. Chromium-76-safe (`translateX` animation only, palette tokens instead of `color-mix`). |
 | `@repo/ui-tv/tv-confirmation-modal` → `TvConfirmationModal` | 10-foot port of `@repo/ui`'s `ConfirmationModal`: full-screen overlay + centered panel via a portal, `title`/`text`, optional `children` (e.g. option buttons), OK + optional Cancel (`okCallback`/`cancelCallback`, `okLabel`/`cancelLabel`, `okDisabled`). Traps D-pad focus inside the panel (`isFocusBoundary`) and dismisses on the remote Back button. Focusable option children should set `scrollOnFocus` so they reveal when the list overflows. |
 | `@repo/ui-tv/remote-keys` → `TV_KEYS`, `onBackButton` | Remote key codes + Back-button helper. |
 

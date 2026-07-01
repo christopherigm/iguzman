@@ -135,6 +135,12 @@ export interface Paginated<T> {
 
 export interface MovieFilters {
   search?: string;
+  /**
+   * Natural-language AI search query. When set, the catalog is resolved via the
+   * AI-search endpoint (semantic match + LLM rerank) and the structured filters
+   * below are ignored - AI search is an exclusive mode driven from the navbar.
+   */
+  ai?: string;
   /** Genre slugs; a movie must match ALL of them (AND semantics). */
   genres?: string[];
   format?: MovieFormat;
@@ -172,9 +178,35 @@ export function buildMovieQuery(filters: MovieFilters = {}): string {
   return params.toString();
 }
 
+/**
+ * Build the query string for the AI-search endpoint from catalog filters. AI
+ * search is an exclusive mode, so only the natural-language query and the page
+ * carry over - the structured filters are ignored.
+ */
+export function buildAiSearchQuery(filters: MovieFilters = {}): string {
+  const params = new URLSearchParams();
+  if (filters.ai) params.set("q", filters.ai);
+  if (filters.page && filters.page > 1)
+    params.set("page", String(filters.page));
+  return params.toString();
+}
+
 export async function getMovies(
   filters: MovieFilters = {},
 ): Promise<Paginated<Movie>> {
+  // AI search is an exclusive mode: hit the semantic endpoint and ignore the
+  // structured filters. The response shape matches the regular list, so the
+  // grid renders it unchanged.
+  if (filters.ai) {
+    const qs = buildAiSearchQuery(filters);
+    const res = await fetch(`/api/catalog/ai-search${qs ? `?${qs}` : ""}`);
+    if (!res.ok) {
+      const data: Record<string, unknown> = await res.json().catch(() => ({}));
+      throw new ApiError(res.status, data);
+    }
+    return res.json() as Promise<Paginated<Movie>>;
+  }
+
   const qs = buildMovieQuery(filters);
   const res = await fetch(`/api/catalog/movies${qs ? `?${qs}` : ""}`);
   if (!res.ok) {
@@ -280,6 +312,9 @@ export function parseCatalogParams(sp: URLSearchParams): CatalogParams {
  */
 export function buildCatalogQuery(p: CatalogParams): string {
   const params = new URLSearchParams();
+  // Note: AI search is deliberately NOT encoded here - it is a client-only mode
+  // (see lib/ai-search.ts) and never appears in the URL. Only the structured
+  // filters/sort/page/view are shareable via the query string.
   if (p.search) params.set("q", p.search);
   p.genres.forEach((slug) => params.append("genre", slug));
   if (p.format) params.set("format", p.format);

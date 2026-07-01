@@ -3,7 +3,7 @@ import os
 
 from django.core.files.base import ContentFile
 from django.db import transaction
-from django.db.models import Count, Prefetch, Q
+from django.db.models import Case, Count, IntegerField, Prefetch, Q, When
 from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
 from rest_framework import status
@@ -37,6 +37,7 @@ from .serializers import (
     resolve_spoken_languages,
     resolve_subtitle_languages,
 )
+from .services.ai_search import ai_search_movie_ids
 from .services.backdrop import download_image, fetch_backdrop
 from .services.extras import fetch_synopsis, fetch_trailer
 from .services.lookup import lookup_barcode
@@ -218,6 +219,65 @@ class MovieListView(ListCreateAPIView):
         # The creator owns what they add, so they can edit/delete it afterwards.
         MovieOwnership.objects.get_or_create(user=request.user, movie=movie)
         return Response(MovieDetailSerializer(movie, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+class AiMovieSearchView(ListAPIView):
+    """
+    GET /api/catalog/movies/ai-search/?q=<natural-language query>&page=N
+
+    AI-powered natural-language search over the catalog. Where `MovieListView`'s
+    `?search=` only matches title/director substrings, this resolves a free-text
+    query like "horror movies with drama" to an ordered list of movie ids via a
+    hybrid retrieval + LLM-rerank pipeline (see services/ai_search.py), then
+    returns those movies in relevance order using the SAME serializer and
+    pagination as the regular catalog list - so the client renders the results
+    in the existing grid unchanged.
+
+    Public read-only (mirrors the regular list); results are cached per query so
+    repeat searches don't re-run the model.
+    """
+
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    pagination_class = MoviePagination
+    serializer_class = MovieListSerializer
+
+    def get_queryset(self):
+        query = self.request.query_params.get('q', '').strip()
+        ids = ai_search_movie_ids(query) if query else []
+        if not ids:
+            return Movie.objects.none()
+
+        # Preserve the model's relevance ordering: rank each id by its position
+        # in the LLM's ordered list (a DB-side Case/When), then order_by it.
+        ordering = Case(
+            *[When(id=mid, then=pos) for pos, mid in enumerate(ids)],
+            output_field=IntegerField(),
+        )
+        qs = (
+            Movie.objects.filter(id__in=ids, enabled=True)
+            .prefetch_related('genres', 'formats')
+            .annotate(ai_rank=ordering)
+            .order_by('ai_rank')
+        )
+
+        # Overlay the requesting user's ownership so the card's `owned` flag
+        # resolves without a per-card query (mirrors MovieListView).
+        user = self.request.user
+        if user.is_authenticated:
+            qs = qs.prefetch_related(
+                Prefetch(
+                    'ownerships',
+                    queryset=MovieOwnership.objects.filter(user=user),
+                    to_attr='user_ownerships',
+                )
+            )
+            # `?scope=library` narrows the AI results to the movies the signed-in
+            # user owns (the Smart-TV app renders only the user's own catalog),
+            # mirroring MovieListView. An absent/anonymous scope falls through to
+            # the full catalog, so the web app's global AI search is unaffected.
+            if self.request.query_params.get('scope', '').strip() == 'library':
+                qs = qs.filter(ownerships__user=user).distinct()
+        return qs
 
 
 class MovieDetailView(RetrieveUpdateDestroyAPIView):

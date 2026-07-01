@@ -9,7 +9,14 @@
     "addMovie": "Film hinzufügen",
     "account": "Konto",
     "linkTv": "TV verknüpfen",
-    "signOut": "Abmelden"
+    "signOut": "Abmelden",
+    "search": {
+      "openLabel": "KI-Suche",
+      "title": "KI-Filmsuche",
+      "description": "Beschreibe, worauf du Lust hast — z. B. „Horrorfilme mit Drama“ — und wir gleichen es mit dem Katalog ab.",
+      "inputLabel": "Suchen",
+      "placeholder": "z. B. gute-Laune-Science-Fiction aus den 80ern"
+    }
   },
   "Footer": {
     "appHeading": "App",
@@ -193,13 +200,17 @@
     "digitalCopyLabel": "Link zur digitalen Kopie",
     "formatsButton": "Formate",
     "genresButton": "Genres",
+    "aiSearchButton": "KI-Suche",
     "formatsModalTitle": "Formate",
     "formatsModalText": "Nach Disc-, Audio- und Videoformaten filtern.",
     "genresModalTitle": "Genres",
     "genresModalText": "Nach Genre filtern.",
     "discFormatHeading": "Disc",
     "audioFormatHeading": "Audio",
-    "videoFormatHeading": "Video"
+    "videoFormatHeading": "Video",
+    "aiSearchActive": "KI-Ergebnisse für",
+    "aiSearchClear": "KI-Suche löschen",
+    "aiSearchLoading": "Filme werden gesucht für"
   },
   "MovieDetailPage": {
     "back": "Zurück",

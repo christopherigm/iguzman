@@ -9,7 +9,14 @@
     "addMovie": "Ajouter un film",
     "account": "Mon Compte",
     "linkTv": "Associer une TV",
-    "signOut": "Se déconnecter"
+    "signOut": "Se déconnecter",
+    "search": {
+      "openLabel": "Recherche IA",
+      "title": "Recherche de films par IA",
+      "description": "Décrivez ce dont vous avez envie — par ex. « films d'horreur avec du drame » — et nous le comparerons au catalogue.",
+      "inputLabel": "Rechercher",
+      "placeholder": "par ex. science-fiction feel-good des années 80"
+    }
   },
   "Footer": {
     "appHeading": "Application",
@@ -193,13 +200,17 @@
     "digitalCopyLabel": "Lien de la copie numérique",
     "formatsButton": "Formats",
     "genresButton": "Genres",
+    "aiSearchButton": "Recherche IA",
     "formatsModalTitle": "Formats",
     "formatsModalText": "Filtrer par format de disque, audio et vidéo.",
     "genresModalTitle": "Genres",
     "genresModalText": "Filtrer par genre.",
     "discFormatHeading": "Disque",
     "audioFormatHeading": "Audio",
-    "videoFormatHeading": "Vidéo"
+    "videoFormatHeading": "Vidéo",
+    "aiSearchActive": "Résultats IA pour",
+    "aiSearchClear": "Effacer la recherche IA",
+    "aiSearchLoading": "Recherche de films pour"
   },
   "MovieDetailPage": {
     "back": "Retour",

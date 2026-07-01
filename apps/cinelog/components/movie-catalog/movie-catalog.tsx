@@ -6,8 +6,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Grid } from "@repo/ui/core-elements/grid";
+import { Button } from "@repo/ui/core-elements/button";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { Spinner } from "@repo/ui/core-elements/spinner";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import {
   getMovies,
   getCategories,
@@ -21,6 +23,14 @@ import {
   type MovieSort,
   type Paginated,
 } from "@/lib/catalog";
+import {
+  consumePendingAiSearch,
+  onAiSearch,
+  readAiSearchSnapshot,
+  saveAiSearchSnapshot,
+  clearAiSearchSnapshot,
+  type AiSearchSnapshot,
+} from "@/lib/ai-search";
 import { MovieCard } from "./movie-card";
 import { MovieFilters } from "./movie-filters";
 import { MoviePagination } from "./movie-pagination";
@@ -84,6 +94,17 @@ export function MovieCatalog({
 
   const [search, setSearch] = useState(initial.search);
   const [debouncedSearch, setDebouncedSearch] = useState(initial.search);
+  // Natural-language AI query (requested from the navbar search modal). This is
+  // a client-only, exclusive mode: it never touches the URL and, while active,
+  // overrides the grid with results from the semantic endpoint. It resets when
+  // the user clears it or touches a structured filter. Seeded empty and, if a
+  // snapshot was persisted (browser-back from a movie detail), restored in the
+  // mount effect below rather than here to avoid a hydration mismatch.
+  const [ai, setAi] = useState("");
+  // True while an AI search is resolving. Set when a query is requested and
+  // cleared once the results arrive, so the AI banner can show a progress bar
+  // and disable "clear" until the semantic search returns.
+  const [aiLoading, setAiLoading] = useState(false);
   const [genres, setGenres] = useState<string[]>(initial.genres);
   const [format, setFormat] = useState<MovieFormat>(initial.format);
   const [audioFormats, setAudioFormats] = useState<AudioFormatCode[]>(
@@ -100,16 +121,34 @@ export function MovieCatalog({
   const [totalCount, setTotalCount] = useState(
     seedFromPrefetch ? initialMovies.count : 0,
   );
+  // Tracks the last server-prefetched page so the render-time re-seed below only
+  // fires on a real prop change, and so clearing AI can restore it instantly.
+  const [seededFrom, setSeededFrom] = useState(initialMovies);
+  // Set true when the mount effect restores an AI grid from the persisted
+  // snapshot, so the AI-fetch effect skips its first run (the results are
+  // already in state - no need to re-hit the semantic endpoint).
+  const skipNextAiFetch = useRef(false);
+  // Tracks whether AI mode is currently active so we can drop the persisted
+  // snapshot on the transition *out* of AI mode (clear button or a structured
+  // filter), without also firing on the initial mount where AI was never active.
+  const aiActiveRef = useRef(false);
 
   const isFiltered =
+    ai !== "" ||
     debouncedSearch !== "" ||
     genres.length > 0 ||
     format !== "" ||
     audioFormats.length > 0 ||
     hdrFormats.length > 0;
 
+  // AI mode is "in progress" while the client-side semantic fetch is resolving
+  // (initial query or AI-mode pagination). Drives the AI banner's progress bar
+  // and disables the clear button until results land.
+  const aiSearching = ai !== "" && aiLoading;
+
   const handleSearchChange = (value: string) => {
     setSearch(value);
+    setAi("");
     setPage(1);
   };
 
@@ -118,11 +157,13 @@ export function MovieCatalog({
     setGenres((prev) =>
       prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
     );
+    setAi("");
     setPage(1);
   };
 
   const handleFormatChange = (value: MovieFormat) => {
     setFormat(value);
+    setAi("");
     setPage(1);
   };
 
@@ -131,6 +172,7 @@ export function MovieCatalog({
     setAudioFormats((prev) =>
       prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
     );
+    setAi("");
     setPage(1);
   };
 
@@ -139,12 +181,38 @@ export function MovieCatalog({
     setHdrFormats((prev) =>
       prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
     );
+    setAi("");
     setPage(1);
   };
 
   const handleSortChange = (value: MovieSort) => {
     setSort(value);
+    setAi("");
     setPage(1);
+  };
+
+  // Page changes: in AI mode, flag the loading state up front (the AI fetch
+  // effect below resolves the new page and clears it); in regular mode, the
+  // server-driven transition handles feedback.
+  const handlePageChange = (nextPage: number) => {
+    setPage(nextPage);
+    if (ai !== "") setAiLoading(true);
+  };
+
+  // Leave AI mode and return to the standard catalog. The structured filters
+  // were reset on entering AI, so restoring the last server-prefetched grid
+  // (which mirrors the current URL) brings back the regular catalog instantly;
+  // if the prefetch had failed, the fallback effect refetches once ai is "".
+  const handleClearAi = () => {
+    setAi("");
+    setAiLoading(false);
+    setPage(1);
+    if (seededFrom) {
+      setMovies(seededFrom.results);
+      setTotalPages(seededFrom.total_pages);
+      setTotalCount(seededFrom.count);
+      setStatus("ready");
+    }
   };
 
   useEffect(() => {
@@ -171,22 +239,121 @@ export function MovieCatalog({
   // Done during render (React's "adjust state on prop change" pattern) rather
   // than in an effect, so the grid updates in the same commit with no extra
   // render and no cascading-setState lint warning.
-  const [seededFrom, setSeededFrom] = useState(initialMovies);
   if (initialMovies && initialMovies !== seededFrom) {
     setSeededFrom(initialMovies);
-    setMovies(initialMovies.results);
-    setTotalPages(initialMovies.total_pages);
-    setTotalCount(initialMovies.count);
-    setStatus("ready");
+    // While AI mode is active it owns the grid (client-fetched), so don't clobber
+    // it with a server page - just track the latest so clearing AI can restore it.
+    if (ai === "") {
+      setMovies(initialMovies.results);
+      setTotalPages(initialMovies.total_pages);
+      setTotalCount(initialMovies.count);
+      setStatus("ready");
+    }
   }
+
+  // Adopt an AI search requested from the navbar (client-only - never via the
+  // URL). The live event covers the same-page case; a query stashed before this
+  // mounted (navbar navigated home from another page) is consumed on mount.
+  // Entering AI mode resets the structured filters so clearing it later returns
+  // to the full catalog; the fetch itself runs in the dedicated effect below.
+  // When no fresh query is pending, restore a persisted AI grid instead (e.g.
+  // browser-back from a movie detail) so the results the user left survive the
+  // catalog remount - seeding movies directly and flagging the fetch effect to
+  // skip, so we render the exact snapshot with no semantic-endpoint round-trip.
+  useEffect(() => {
+    const run = (query: string) => {
+      setAi(query);
+      setAiLoading(true);
+      setPage(1);
+      setSearch("");
+      setDebouncedSearch("");
+      setGenres([]);
+      setFormat("");
+      setAudioFormats([]);
+      setHdrFormats([]);
+      setSort("");
+    };
+    const restore = (snap: AiSearchSnapshot) => {
+      skipNextAiFetch.current = true;
+      setAi(snap.query);
+      setAiLoading(false);
+      setPage(snap.page);
+      setMovies(snap.movies);
+      setTotalPages(snap.totalPages);
+      setTotalCount(snap.totalCount);
+      setStatus("ready");
+    };
+    const pending = consumePendingAiSearch();
+    if (pending) {
+      run(pending);
+    } else {
+      const snap = readAiSearchSnapshot();
+      if (snap) restore(snap);
+    }
+    return onAiSearch(run);
+  }, []);
+
+  // Resolve AI search entirely on the client (semantic endpoint via the
+  // ai-search route). Runs on the initial query and on AI-mode pagination;
+  // no-ops outside AI mode, where the grid is server-driven. A restore from the
+  // persisted snapshot already put the results in state, so skip that one run to
+  // avoid a redundant semantic-endpoint call. Every real fetch re-persists the
+  // snapshot so a later browser-back restores this exact page.
+  useEffect(() => {
+    if (ai === "") return;
+    if (skipNextAiFetch.current) {
+      skipNextAiFetch.current = false;
+      return;
+    }
+    let active = true;
+    getMovies({ ai, page })
+      .then((data) => {
+        if (!active) return;
+        setMovies(data.results);
+        setTotalPages(data.total_pages);
+        setTotalCount(data.count);
+        setStatus("ready");
+        saveAiSearchSnapshot({
+          query: ai,
+          page,
+          totalPages: data.total_pages,
+          totalCount: data.count,
+          movies: data.results,
+        });
+      })
+      .catch(() => {
+        if (active) setStatus("error");
+      })
+      .finally(() => {
+        if (active) setAiLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [ai, page]);
+
+  // Drop the persisted AI snapshot the moment the user leaves AI mode - whether
+  // via the "clear" button or by touching a structured filter (both set `ai` to
+  // ""). Otherwise a stale AI grid could resurface on a later browser-back after
+  // the user has moved on to the regular catalog. Guarded by a ref so it fires
+  // only on the real exit transition, not on the initial mount.
+  useEffect(() => {
+    if (ai !== "") {
+      aiActiveRef.current = true;
+    } else if (aiActiveRef.current) {
+      aiActiveRef.current = false;
+      clearAiSearchSnapshot();
+    }
+  }, [ai]);
 
   // Fallback for when the server prefetch failed (initialMovies is null): fetch
   // the current view on the client so the catalog still renders. The happy path
-  // above is server-driven and never enters this effect. Loading feedback comes
-  // from the initial "loading" status (mount) and the router transition's
-  // isPending dim (filter changes), so no synchronous setState is needed here.
+  // above is server-driven and never enters this effect; AI mode has its own
+  // fetch effect, so this handles the regular (structured-filter) catalog only.
+  // Loading feedback comes from the initial "loading" status (mount) and the
+  // router transition's isPending dim (filter changes).
   useEffect(() => {
-    if (initialMovies) return;
+    if (initialMovies || ai !== "") return;
     let active = true;
     getMovies({
       search: debouncedSearch,
@@ -212,6 +379,7 @@ export function MovieCatalog({
     };
   }, [
     initialMovies,
+    ai,
     debouncedSearch,
     genres,
     format,
@@ -227,8 +395,10 @@ export function MovieCatalog({
   // filtered URL as the canonical entry, so the App Router re-runs the page's
   // server prefetch for these params instead of replaying a stale cached `/`.
   // Skips when already in sync (mount, back-restore) so it only fires on a real
-  // filter change; uses debouncedSearch so typing doesn't churn the URL.
+  // filter change; uses debouncedSearch so typing doesn't churn the URL. AI mode
+  // is client-only and never encoded, so the URL is left untouched while active.
   useEffect(() => {
+    if (ai !== "") return;
     const qs = buildCatalogQuery({
       search: debouncedSearch,
       genres,
@@ -246,6 +416,7 @@ export function MovieCatalog({
     startTransition(() => router.replace(url, { scroll: false }));
   }, [
     debouncedSearch,
+    ai,
     genres,
     format,
     audioFormats,
@@ -328,6 +499,39 @@ export function MovieCatalog({
         categories={categories}
       />
 
+      {ai !== "" && (
+        <Box
+          flexDirection="column"
+          gap={10}
+          padding={12}
+          borderRadius={10}
+          border="1px solid var(--border)"
+          backgroundColor="var(--surface-2)"
+        >
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            flexWrap="wrap"
+            gap={8}
+          >
+            <Typography variant="body">
+              {aiSearching ? t("aiSearchLoading") : t("aiSearchActive")}
+              <Typography as="span" variant="body" fontWeight={700}>
+                {` "${ai}"`}
+              </Typography>
+            </Typography>
+            <Button
+              text={t("aiSearchClear")}
+              onClick={handleClearAi}
+              size="sm"
+              disabled={aiSearching}
+            />
+          </Box>
+          {aiSearching && <ProgressBar label={t("aiSearchLoading")} />}
+        </Box>
+      )}
+
       {status === "loading" && (
         <Box display="flex" justifyContent="center" paddingY={40}>
           <Spinner label={t("loading")} />
@@ -379,7 +583,7 @@ export function MovieCatalog({
         <MoviePagination
           page={page}
           totalPages={totalPages}
-          onPageChange={setPage}
+          onPageChange={handlePageChange}
         />
       )}
     </Box>

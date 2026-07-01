@@ -9,7 +9,14 @@
     "addMovie": "Add Movie",
     "account": "Account",
     "linkTv": "Link a TV",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "search": {
+      "openLabel": "AI search",
+      "title": "AI movie search",
+      "description": "Describe what you're in the mood for — e.g. \"horror movies with drama\" — and we'll match it against the catalog.",
+      "inputLabel": "Search",
+      "placeholder": "e.g. feel-good sci-fi from the 80s"
+    }
   },
   "Footer": {
     "appHeading": "App",
@@ -193,13 +200,17 @@
     "digitalCopyLabel": "Digital copy link",
     "formatsButton": "Formats",
     "genresButton": "Genres",
+    "aiSearchButton": "AI Search",
     "formatsModalTitle": "Formats",
     "formatsModalText": "Filter by disc, audio and video formats.",
     "genresModalTitle": "Genres",
     "genresModalText": "Filter by genre.",
     "discFormatHeading": "Disc",
     "audioFormatHeading": "Audio",
-    "videoFormatHeading": "Video"
+    "videoFormatHeading": "Video",
+    "aiSearchActive": "AI results for",
+    "aiSearchClear": "Clear AI search",
+    "aiSearchLoading": "Searching movies for"
   },
   "MovieDetailPage": {
     "back": "Back",

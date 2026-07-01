@@ -4,14 +4,22 @@ import { setFocus } from "@noriginmedia/norigin-spatial-navigation";
 import { TvGrid } from "@repo/ui-tv/tv-grid";
 import { TvText } from "@repo/ui-tv/tv-typography";
 import { TvButton } from "@repo/ui-tv/tv-button";
+import { TvTextInput } from "@repo/ui-tv/tv-text-input";
+import { TvProgressBar } from "@repo/ui-tv/tv-progress-bar";
 import { TvConfirmationModal } from "@repo/ui-tv/tv-confirmation-modal";
 import {
+  aiSearchMovies,
   getGenres,
   getMovies,
   UnauthorizedError,
   type Genre,
   type Movie,
 } from "@/lib/catalog";
+import {
+  clearAiSearchSnapshot,
+  readAiSearchSnapshot,
+  saveAiSearchSnapshot,
+} from "@/lib/ai-search";
 import { TvMovieCard } from "@/components/tv-movie-card";
 import { TvPagination, pageFocusKey } from "@/components/tv-pagination";
 import { useT } from "@/i18n/provider";
@@ -22,6 +30,9 @@ type Status = "loading" | "ready" | "error";
 // Focus key for the "Genres" button so the modal can hand focus back to it on
 // close (Norigin loses the trapped focus when the dialog unmounts).
 const GENRES_BUTTON_KEY = "home-genres-button";
+// Focus key for the "AI Search" button - same reason: modal close and the AI
+// empty/searching states park focus here.
+const AI_SEARCH_BUTTON_KEY = "home-ai-search-button";
 // Focus key for the sign-out button so loading/error states (which have no grid
 // or filters to claim focus) can park focus on it.
 const SIGNOUT_BUTTON_KEY = "home-signout-button";
@@ -102,6 +113,44 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
   const [genreModalOpen, setGenreModalOpen] = useState(false);
   const [draftGenres, setDraftGenres] = useState<Set<string>>(new Set());
 
+  // AI natural-language search. `aiQuery !== null` means AI search is the active
+  // (exclusive) mode: the grid renders `aiMovies` instead of the genre-filtered
+  // library and the genre controls hide. Persisted to localStorage (see
+  // lib/ai-search) so the movie-detail round-trip restores it without refetching.
+  //
+  // The persisted snapshot is read once and seeds the initial state directly
+  // (rather than in a mount effect), so returning from a movie detail re-renders
+  // the exact AI grid the user left with no second trip to the model.
+  const initialAiSnapshot = useMemo(() => readAiSearchSnapshot(), []);
+  const [aiQuery, setAiQuery] = useState<string | null>(
+    initialAiSnapshot?.query ?? null,
+  );
+  const [aiMovies, setAiMovies] = useState<Movie[]>(
+    initialAiSnapshot?.movies ?? [],
+  );
+  const [aiPage, setAiPage] = useState(initialAiSnapshot?.page ?? 1);
+  const [aiTotalPages, setAiTotalPages] = useState(
+    initialAiSnapshot?.totalPages ?? 1,
+  );
+  const [aiStatus, setAiStatus] = useState<Status>(
+    initialAiSnapshot ? "ready" : "loading",
+  );
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiDraft, setAiDraft] = useState("");
+  // Seeded true when the initial state came from a snapshot, so the fetch effect
+  // skips the (now redundant) trip to the model just to reproduce that view.
+  const skipAiFetch = useRef(initialAiSnapshot !== null);
+
+  const aiActive = aiQuery !== null;
+  // The grid, its status and its paginator switch source based on the mode, so
+  // the render below is written once against these `active`/`grid` derivations.
+  const gridMovies = aiActive ? aiMovies : movies;
+  const gridStatus: Status = aiActive ? aiStatus : status;
+  const gridReady = gridStatus === "ready";
+  const activePage = aiActive ? aiPage : page;
+  const activeTotalPages = aiActive ? aiTotalPages : totalPages;
+  const goToPage = aiActive ? setAiPage : setPage;
+
   useEffect(() => {
     let active = true;
     getMovies(page, appliedGenres)
@@ -142,8 +191,13 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
   // A filter change (apply / clear) refetches asynchronously, so the fresh grid
   // is NOT in the DOM on the frame the filter is applied - we must wait for the
   // new results to render before moving focus. Flag the reset here; the effect
-  // below performs it once `movies` has updated.
-  const pendingGridFocus = useRef<"first" | "last" | null>(null);
+  // below performs it once the active grid has updated.
+  // Seeded "first" when a restored snapshot means an AI grid is already on the
+  // first render, so its first card claims focus once it paints (the effect
+  // below), mirroring the focus reset a fresh search / page turn requests.
+  const pendingGridFocus = useRef<"first" | "last" | null>(
+    initialAiSnapshot ? "first" : null,
+  );
   const requestGridFocusReset = useCallback(
     (target: "first" | "last" = "first") => {
       pendingGridFocus.current = target;
@@ -151,22 +205,59 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
     [],
   );
 
-  // Move focus onto a card once freshly-rendered results arrive. Used both by a
-  // filter change (Apply / Clear, which target the first card) and by turning
-  // the page with the D-pad (right off the last card lands on the first card of
-  // the next page; left off the first card lands on the last card of the
-  // previous page). The control the user pressed no longer holds focus, so park
-  // it deterministically. Deferred a frame so the new grid exists in the DOM.
-  // Empty results are left to the effect below, which moves focus to the Genres
-  // button (no grid to claim it).
+  // Resolve the AI search whenever the query or its page changes. Skips the one
+  // fetch that would merely reproduce a restored snapshot; persists each fresh
+  // page so the detail round-trip can restore it.
   useEffect(() => {
-    if (status !== "ready" || !pendingGridFocus.current) return;
+    if (aiQuery === null) return;
+    if (skipAiFetch.current) {
+      skipAiFetch.current = false;
+      return;
+    }
+    let active = true;
+    setAiStatus("loading");
+    aiSearchMovies(aiQuery, aiPage)
+      .then((data) => {
+        if (!active) return;
+        setAiMovies(data.results);
+        setAiTotalPages(data.total_pages);
+        setAiStatus("ready");
+        saveAiSearchSnapshot({
+          query: aiQuery,
+          page: aiPage,
+          totalPages: data.total_pages,
+          movies: data.results,
+        });
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (err instanceof UnauthorizedError) {
+          onSignOut();
+          return;
+        }
+        setAiStatus("error");
+      });
+    return () => {
+      active = false;
+    };
+  }, [aiQuery, aiPage, onSignOut]);
+
+  // Move focus onto a card once freshly-rendered results arrive - for either
+  // mode. Used by a filter change (Apply / Clear, targeting the first card), by
+  // turning the page with the D-pad (right off the last card lands on the first
+  // card of the next page; left off the first lands on the last of the previous),
+  // and by entering / restoring an AI search. The control the user pressed no
+  // longer holds focus, so park it deterministically, deferred a frame so the new
+  // grid exists in the DOM. Empty results are left to the effect below.
+  useEffect(() => {
+    if (!gridReady || !pendingGridFocus.current) return;
     const target = pendingGridFocus.current;
     pendingGridFocus.current = null;
-    const card = target === "last" ? movies[movies.length - 1] : movies[0];
+    const card =
+      target === "last" ? gridMovies[gridMovies.length - 1] : gridMovies[0];
     if (!card) return;
     requestAnimationFrame(() => setFocus(movieFocusKey(card.id)));
-  }, [status, movies]);
+  }, [gridReady, gridMovies]);
 
   const openGenreModal = useCallback(() => {
     setDraftGenres(new Set(appliedGenres));
@@ -197,40 +288,90 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
     requestGridFocusReset();
   }, [applyGenres, draftGenres, requestGridFocusReset]);
 
+  // Open the AI-search modal, seeded with the active query so re-opening edits it.
+  const openAiModal = useCallback(() => {
+    setAiDraft(aiQuery ?? "");
+    setAiModalOpen(true);
+  }, [aiQuery]);
+
+  const closeAiModal = useCallback(() => {
+    setAiModalOpen(false);
+    requestAnimationFrame(() => setFocus(AI_SEARCH_BUTTON_KEY));
+  }, []);
+
+  // Confirm the modal: an empty query is a no-op dismiss. Otherwise enter AI mode
+  // from page one and park focus on the AI button while the search runs (the grid
+  // claims it once results render, via the pending-focus effect).
+  const confirmAiSearch = useCallback(() => {
+    const q = aiDraft.trim();
+    setAiModalOpen(false);
+    if (!q) {
+      requestAnimationFrame(() => setFocus(AI_SEARCH_BUTTON_KEY));
+      return;
+    }
+    skipAiFetch.current = false;
+    setAiQuery(q);
+    setAiPage(1);
+    setAiStatus("loading");
+    requestGridFocusReset("first");
+    requestAnimationFrame(() => setFocus(AI_SEARCH_BUTTON_KEY));
+  }, [aiDraft, requestGridFocusReset]);
+
+  // Leave AI mode: drop the snapshot and fall back to the normal library grid,
+  // focusing its first card (or the Genres button when empty, via the effect).
+  const clearAiSearch = useCallback(() => {
+    clearAiSearchSnapshot();
+    setAiQuery(null);
+    setAiMovies([]);
+    setAiPage(1);
+    setAiTotalPages(1);
+    setAiStatus("loading");
+    requestGridFocusReset("first");
+  }, [requestGridFocusReset]);
+
   // Loading / error states render no grid or filters, so park focus on the
   // always-present sign-out button (replaces the old Focusable's focusOnMount).
+  // Suppressed during AI mode, which owns focus via its own controls/grid.
   useEffect(() => {
-    if (status !== "ready") {
+    if (!aiActive && status !== "ready") {
       setFocus(SIGNOUT_BUTTON_KEY);
     }
-  }, [status]);
+  }, [status, aiActive]);
 
-  // When the (filtered) result is empty there's no grid to claim focus, so move
-  // it to the Genres button - the user's way back to the filters / clearing.
+  // When the active (filtered or AI) result is empty there's no grid to claim
+  // focus, so move it to the mode's entry control - the user's way back to the
+  // filters / clearing.
   useEffect(() => {
-    if (status === "ready" && movies.length === 0 && !genreModalOpen) {
-      setFocus(GENRES_BUTTON_KEY);
+    if (
+      gridReady &&
+      gridMovies.length === 0 &&
+      !genreModalOpen &&
+      !aiModalOpen
+    ) {
+      setFocus(aiActive ? AI_SEARCH_BUTTON_KEY : GENRES_BUTTON_KEY);
     }
-  }, [status, movies.length, genreModalOpen]);
+  }, [gridReady, gridMovies.length, genreModalOpen, aiModalOpen, aiActive]);
 
   // Focusing a numbered page button loads that page immediately; re-focusing the
   // current one is a no-op (no redundant refetch).
   const handlePageFocus = useCallback(
     (next: number) => {
-      if (next !== page) setPage(next);
+      if (next !== activePage) goToPage(next);
     },
-    [page, setPage],
+    [activePage, goToPage],
   );
 
   // Index of the first card in the last grid row - only those cards hand focus
   // down to the paginator (interior rows navigate down within the grid).
   const lastRowStart =
-    movies.length > 0 ? Math.floor((movies.length - 1) / COLUMNS) * COLUMNS : 0;
+    gridMovies.length > 0
+      ? Math.floor((gridMovies.length - 1) / COLUMNS) * COLUMNS
+      : 0;
   // Where the paginator sends focus on the Up arrow: the 4th card of the second
   // row, falling back to the first card when the page holds fewer. Resolved to
   // the movie's id-based focus key (keys are per-movie, not per-index).
   const gridReentryKey = movieFocusKey(
-    (movies[SECOND_ROW_FOURTH_INDEX] ?? movies[0])?.id ?? 0,
+    (gridMovies[SECOND_ROW_FOURTH_INDEX] ?? gridMovies[0])?.id ?? 0,
   );
 
   return (
@@ -238,14 +379,16 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
       <div className="home-screen">
         <div className="home-header">
           <TvText variant="hero">{t("homeTitle")}</TvText>
-          {/* Sign-out, then the filter actions, all on the right of the header.
-              Genres/Clear only exist once the catalog is ready; sign-out is
-              always present and parks focus during loading/error (no grid). */}
+          {/* Sign-out, then the filter / search actions, all on the right of the
+              header. Genres/Clear only exist in normal mode once the catalog is
+              ready; AI search is available whenever there's a catalog to search
+              (or already in AI mode, to edit); sign-out is always present and
+              parks focus during loading/error (no grid). */}
           <div className="home-actions">
             <TvButton focusKey={SIGNOUT_BUTTON_KEY} onPress={onSignOut}>
               {t("signOut")}
             </TvButton>
-            {status === "ready" && (
+            {!aiActive && status === "ready" && (
               <>
                 <TvButton focusKey={GENRES_BUTTON_KEY} onPress={openGenreModal}>
                   {t("genres")}
@@ -262,32 +405,59 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
                 )}
               </>
             )}
+            {(status === "ready" || aiActive) && (
+              <TvButton focusKey={AI_SEARCH_BUTTON_KEY} onPress={openAiModal}>
+                {t("aiSearch")}
+              </TvButton>
+            )}
+            {aiActive && (
+              <TvButton onPress={clearAiSearch}>{t("clearAiSearch")}</TvButton>
+            )}
+            {/* Search-in-progress banner, pinned to the actions row so it never
+                consumes any of the grid / pagination space below. */}
+            {aiActive && aiStatus === "loading" && (
+              <div className="home-ai-banner">
+                <TvProgressBar label={t("aiSearching")} />
+                <TvText variant="label">{t("aiSearching")}</TvText>
+              </div>
+            )}
           </div>
         </div>
 
-        {status === "loading" && <TvText variant="body">{t("loading")}</TvText>}
-
-        {status === "error" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <TvText variant="body">{t("error")}</TvText>
-            {/* The TV app's own origin — this is the value the Django API needs
-                in CORS_ALLOWED_ORIGINS for the emulator/device to be allowed. */}
-            <TvText variant="body">
-              {t("originHint")} {window.location.origin}
-            </TvText>
-          </div>
-        )}
-
-        {status === "ready" && movies.length === 0 && (
+        {gridStatus === "loading" && gridMovies.length === 0 && (
           <TvText variant="body">
-            {appliedGenres.length > 0 ? t("emptyFiltered") : t("empty")}
+            {aiActive ? t("aiSearching") : t("loading")}
           </TvText>
         )}
 
-        {status === "ready" && movies.length > 0 && (
+        {gridStatus === "error" &&
+          (aiActive ? (
+            <TvText variant="body">{t("aiError")}</TvText>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <TvText variant="body">{t("error")}</TvText>
+              {/* The TV app's own origin — this is the value the Django API needs
+                  in CORS_ALLOWED_ORIGINS for the emulator/device to be allowed. */}
+              <TvText variant="body">
+                {t("originHint")} {window.location.origin}
+              </TvText>
+            </div>
+          ))}
+
+        {gridStatus === "ready" && gridMovies.length === 0 && (
+          <TvText variant="body">
+            {aiActive
+              ? t("aiEmpty")
+              : appliedGenres.length > 0
+                ? t("emptyFiltered")
+                : t("empty")}
+          </TvText>
+        )}
+
+        {gridMovies.length > 0 && (
           <>
             <TvGrid focusOnMount className="home-grid">
-              {movies.map((movie, index) => (
+              {gridMovies.map((movie, index) => (
                 <TvMovieCard
                   key={movie.id}
                   movie={movie}
@@ -298,10 +468,10 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
                     // normally.
                     if (
                       direction === "down" &&
-                      totalPages > 1 &&
+                      activeTotalPages > 1 &&
                       index >= lastRowStart
                     ) {
-                      setFocus(pageFocusKey(page));
+                      setFocus(pageFocusKey(activePage));
                       return false;
                     }
                     // Right off the last card in a row (rightmost column, or the
@@ -309,11 +479,11 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
                     // the last), landing focus on the next page's first card.
                     if (
                       direction === "right" &&
-                      (index === movies.length - 1 ||
+                      (index === gridMovies.length - 1 ||
                         (index + 1) % COLUMNS === 0) &&
-                      page < totalPages
+                      activePage < activeTotalPages
                     ) {
-                      setPage(page + 1);
+                      goToPage(activePage + 1);
                       requestGridFocusReset("first");
                       return false;
                     }
@@ -323,9 +493,9 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
                     if (
                       direction === "left" &&
                       index % COLUMNS === 0 &&
-                      page > 1
+                      activePage > 1
                     ) {
-                      setPage(page - 1);
+                      goToPage(activePage - 1);
                       requestGridFocusReset("last");
                       return false;
                     }
@@ -337,9 +507,9 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
             </TvGrid>
 
             <TvPagination
-              page={page}
-              totalPages={totalPages}
-              onPageChange={setPage}
+              page={activePage}
+              totalPages={activeTotalPages}
+              onPageChange={goToPage}
               onPageFocus={handlePageFocus}
               focusUpKey={gridReentryKey}
             />
@@ -368,6 +538,26 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
               </TvButton>
             ))}
           </div>
+        </TvConfirmationModal>
+      )}
+
+      {aiModalOpen && (
+        <TvConfirmationModal
+          title={t("aiSearchTitle")}
+          text={t("aiSearchText")}
+          okLabel={t("aiSearchSubmit")}
+          cancelLabel={t("cancel")}
+          okCallback={confirmAiSearch}
+          cancelCallback={closeAiModal}
+          okDisabled={aiDraft.trim() === ""}
+          panelMaxWidth="900px"
+        >
+          <TvTextInput
+            value={aiDraft}
+            onChange={setAiDraft}
+            ariaLabel={t("aiSearchInputLabel")}
+            placeholder={t("aiSearchPlaceholder")}
+          />
         </TvConfirmationModal>
       )}
     </>

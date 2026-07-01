@@ -36,6 +36,22 @@
   margin-right: 0;
 }
 
+/* AI-search progress banner in the header actions row. A fixed width gives the
+   full-width progress bar something to fill without stealing grid/pagination
+   space; the label sits beneath it. Margins (not flex `gap`) for Chromium 76. */
+.home-ai-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 260px;
+}
+.home-ai-banner > * {
+  margin-top: 6px;
+}
+.home-ai-banner > *:first-child {
+  margin-top: 0;
+}
+
 /* Genre toggle buttons inside the filter modal: wrap into rows, spaced with
    margins (no flex `gap`) for old Chromium. The negative top/left margins
    cancel the first row/column's offset so the block aligns flush. */

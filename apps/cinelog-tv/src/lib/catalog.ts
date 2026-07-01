@@ -123,6 +123,42 @@ export async function getMovies(
 }
 
 /**
+ * Run the AI natural-language search over the paired user's library. Hits the
+ * catalog's `movies/ai-search/` endpoint (semantic retrieval + LLM rerank) with
+ * `?scope=library` so only the user's own movies are ranked, and returns the
+ * same paginated `Movie` shape as `getMovies` (the grid renders it unchanged).
+ * Same session handling: attaches the access token, refreshes once on a 401 and
+ * retries, and throws `UnauthorizedError` when the session can't be recovered.
+ */
+export async function aiSearchMovies(
+  query: string,
+  page = 1,
+): Promise<Paginated<Movie>> {
+  const params = new URLSearchParams({
+    scope: "library",
+    q: query,
+    page: String(page),
+    page_size: String(PAGE_SIZE),
+  });
+  const url = `${API_URL}/api/catalog/movies/ai-search/?${params.toString()}`;
+
+  const request = (token: string | null): Promise<Response> =>
+    fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+  let res = await request(getAccessToken());
+  if (res.status === 401) {
+    const refreshed = await refreshSession();
+    if (!refreshed) throw new UnauthorizedError();
+    res = await request(refreshed);
+    if (res.status === 401) throw new UnauthorizedError();
+  }
+  if (!res.ok) throw new Error(`aiSearchMovies failed: ${res.status}`);
+  return res.json() as Promise<Paginated<Movie>>;
+}
+
+/**
  * Fetch the full list of catalog genres (categories) for the filter modal. The
  * API paginates categories but the page size (50) comfortably exceeds the genre
  * count, so the first page is the whole set. Same session handling as
