@@ -27,6 +27,7 @@ def _openrouter_client() -> instructor.Instructor:
         OpenAI(
             base_url='https://openrouter.ai/api/v1',
             api_key=settings.OPENROUTER_API_KEY,
+            timeout=settings.LLM_REQUEST_TIMEOUT,
         ),
         mode=instructor.Mode.TOOLS,
     )
@@ -46,7 +47,7 @@ def chat_structured(
 ):
     """Call Groq with Instructor schema enforcement, fall back to OpenRouter on rate-limit."""
     groq_client = instructor.from_groq(
-        Groq(api_key=settings.GROQ_API_KEY),
+        Groq(api_key=settings.GROQ_API_KEY, timeout=settings.LLM_REQUEST_TIMEOUT),
         mode=instructor.Mode.JSON,
     )
     try:
@@ -74,7 +75,7 @@ def chat_structured(
 
 def chat_text(messages: list[dict], temperature: float = 0.5) -> str:
     """Plain text generation with Groq → OpenRouter fallback."""
-    groq_client = Groq(api_key=settings.GROQ_API_KEY)
+    groq_client = Groq(api_key=settings.GROQ_API_KEY, timeout=settings.LLM_REQUEST_TIMEOUT)
     try:
         response = groq_client.chat.completions.create(
             model=settings.GROQ_MODEL,
@@ -90,6 +91,7 @@ def chat_text(messages: list[dict], temperature: float = 0.5) -> str:
     openrouter = OpenAI(
         base_url='https://openrouter.ai/api/v1',
         api_key=settings.OPENROUTER_API_KEY,
+        timeout=settings.LLM_REQUEST_TIMEOUT,
     )
     response = openrouter.chat.completions.create(
         model=settings.OPENROUTER_MODEL,

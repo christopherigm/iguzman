@@ -16,14 +16,18 @@ the whole catalog into the model on every request:
      truncated synopsis) are sent to the model, which returns the ids best
      matching the ORIGINAL query, most relevant first.
 
-Fallback: when retrieval yields fewer than ``MIN_CANDIDATES`` matches (an
-abstract, mood-only query the keyword/genre filter can't catch), the whole
-enabled catalog is reranked in batches so the model still gets a chance to match
-on vibe. Results are cached by normalized query and the catalog cache version
-(bumped on any Movie save/delete), so repeat searches never re-run the model.
+Fallback: when retrieval yields no matches at all (an abstract, mood-only query
+the keyword/genre filter can't catch), a BOUNDED slice of the enabled catalog
+(``FALLBACK_MAX_MOVIES``) is reranked in batches so the model still gets a chance
+to match on vibe - capped in both movie count and wall-clock time so a query the
+retrieval step can't anchor can't walk the whole catalog and block the worker
+until its health probe restarts the pod. Results are cached by normalized query
+and the catalog cache version (bumped on any Movie save/delete), so repeat
+searches never re-run the model.
 """
 
 import logging
+import time
 
 from django.core.cache import cache
 from django.db.models import Q
@@ -41,6 +45,17 @@ CANDIDATE_LIMIT = 40
 MIN_CANDIDATES = 10
 # Movies per LLM call in the whole-catalog fallback (keeps each prompt bounded).
 BATCH_SIZE = 50
+# Hard ceiling on how many movies the fallback reranks. A mood-only query that
+# retrieval can't anchor (e.g. "ugly movies") would otherwise walk the ENTIRE
+# catalog, one sequential LLM call per BATCH_SIZE batch - minutes of blocking
+# work that stacks up on the request worker until the pod's health probe kills
+# it. Capping the fallback to a bounded slice keeps the worst case to a fixed,
+# small number of model calls regardless of catalog size.
+FALLBACK_MAX_MOVIES = 150
+# Wall-clock budget (seconds) for the batched fallback loop. Even within the
+# movie cap, a slow provider can drag; once the budget is spent we stop and
+# return whatever ranked so far rather than block the worker further.
+FALLBACK_BUDGET_SECONDS = 40
 # Longest synopsis slice sent per movie - enough signal without blowing tokens.
 SYNOPSIS_CHARS = 300
 # Cap on the ranked ids returned (and thus paginated) for a single query.
@@ -131,7 +146,9 @@ def _run_pipeline(query: str) -> list[int]:
     # there are only a few.
     if not candidates:
         movies = list(
-            Movie.objects.filter(enabled=True).prefetch_related('genres').order_by('id')
+            Movie.objects.filter(enabled=True)
+            .prefetch_related('genres')
+            .order_by('id')[:FALLBACK_MAX_MOVIES]
         )
         return _rerank_all(query, movies)
 
@@ -258,14 +275,26 @@ def _rerank_batch(query: str, movies: list[Movie]) -> list[int]:
 
 def _rerank_all(query: str, movies: list[Movie]) -> list[int]:
     """
-    Whole-catalog fallback: rerank in batches and concatenate. Each batch is
-    ranked internally; cross-batch order is by batch (good enough for the rare
-    fallback path, where retrieval found almost nothing to begin with).
+    Bounded fallback: rerank a capped slice of the catalog in batches and
+    concatenate. Each batch is ranked internally; cross-batch order is by batch
+    (good enough for the rare fallback path, where retrieval found almost nothing
+    to begin with). The caller caps the movie count (FALLBACK_MAX_MOVIES) and we
+    additionally stop once the wall-clock budget is spent, so a slow provider
+    can't drag the request past a fixed ceiling.
     """
     ranked: list[int] = []
+    deadline = time.monotonic() + FALLBACK_BUDGET_SECONDS
     for start in range(0, len(movies), BATCH_SIZE):
         batch = movies[start : start + BATCH_SIZE]
         ranked.extend(_rerank_batch(query, batch))
         if len(ranked) >= RESULT_LIMIT:
+            break
+        if time.monotonic() >= deadline:
+            logger.warning(
+                'AI search fallback budget (%ss) exhausted after %d/%d movies',
+                FALLBACK_BUDGET_SECONDS,
+                start + BATCH_SIZE,
+                len(movies),
+            )
             break
     return ranked[:RESULT_LIMIT]

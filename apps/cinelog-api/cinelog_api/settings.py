@@ -253,6 +253,10 @@ OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 # Plain instruct model, NOT a reasoning model: generic OpenRouter providers leak
 # chain-of-thought into the response and break instructor structured output.
 OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-instruct')
+# Hard per-request timeout (seconds) for every hosted-LLM call. Without it a hung
+# provider blocks the calling worker indefinitely; combined with the AI-search
+# wall-clock budget this bounds how long a single search can occupy a worker.
+LLM_REQUEST_TIMEOUT = float(os.environ.get('LLM_REQUEST_TIMEOUT', '20'))
 
 # ── Celery ────────────────────────────────────────────────────────────────────
 _celery_broker = os.environ.get('CELERY_BROKER_URL', _REDIS_URL or 'redis://localhost:6379/0')

@@ -555,6 +555,7 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
           <TvTextInput
             value={aiDraft}
             onChange={setAiDraft}
+            onSubmit={confirmAiSearch}
             ariaLabel={t("aiSearchInputLabel")}
             placeholder={t("aiSearchPlaceholder")}
           />
