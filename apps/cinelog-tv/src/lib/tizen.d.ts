@@ -16,7 +16,12 @@ interface TizenApplicationInformation {
   packageId: string;
 }
 
+interface TizenCurrentApplication {
+  exit(): void;
+}
+
 interface TizenApplicationManager {
+  getCurrentApplication(): TizenCurrentApplication;
   launch(id: string, onSuccess?: () => void, onError?: (error: unknown) => void): void;
   launchAppControl(
     control: TizenApplicationControl,

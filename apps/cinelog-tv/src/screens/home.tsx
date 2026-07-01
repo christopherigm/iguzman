@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { setFocus } from "@noriginmedia/norigin-spatial-navigation";
+import {
+  getCurrentFocusKey,
+  setFocus,
+} from "@noriginmedia/norigin-spatial-navigation";
+import { onBackButton } from "@repo/ui-tv/remote-keys";
 import { TvGrid } from "@repo/ui-tv/tv-grid";
 import { TvText } from "@repo/ui-tv/tv-typography";
 import { TvButton } from "@repo/ui-tv/tv-button";
@@ -25,6 +29,7 @@ import {
   readLastFocusedMovie,
   saveLastFocusedMovie,
 } from "@/lib/last-focused-movie";
+import { exitApp } from "@/lib/exit-app";
 import { TvMovieCard } from "@/components/tv-movie-card";
 import { TvPagination, pageFocusKey } from "@/components/tv-pagination";
 import { useT } from "@/i18n/provider";
@@ -150,6 +155,14 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
   );
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [aiDraft, setAiDraft] = useState("");
+  // Exit-confirmation dialog, opened by the remote Back button (Home is the
+  // root screen - there is nowhere to navigate back to, so Back means "leave
+  // the app"). Confirming closes the Tizen app.
+  const [exitModalOpen, setExitModalOpen] = useState(false);
+  // Focus key held when Back was pressed, so cancelling the exit dialog puts
+  // focus back exactly where the user was (Norigin loses the trapped focus
+  // when the dialog unmounts, same as the other modals above).
+  const exitReturnFocusKey = useRef<string | null>(null);
   // Seeded true when the initial state came from a snapshot, so the fetch effect
   // skips the (now redundant) trip to the model just to reproduce that view.
   const skipAiFetch = useRef(initialAiSnapshot !== null);
@@ -376,6 +389,27 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
     setAiStatus("loading");
     requestGridFocusReset("first");
   }, [requestGridFocusReset]);
+
+  // Remote Back button on the home screen asks to exit the app. Registered
+  // only while no dialog is open: each open TvConfirmationModal has its own
+  // Back listener (dismiss), and both would fire on the same keypress -
+  // pressing Back inside the genre/AI dialog must only close that dialog, and
+  // Back inside the exit dialog itself must not re-open it.
+  useEffect(() => {
+    if (genreModalOpen || aiModalOpen || exitModalOpen) return;
+    return onBackButton(() => {
+      exitReturnFocusKey.current = getCurrentFocusKey() ?? null;
+      setExitModalOpen(true);
+    });
+  }, [genreModalOpen, aiModalOpen, exitModalOpen]);
+
+  // Cancelling the exit dialog restores focus to wherever the user was when
+  // they pressed Back (falling back to the always-present sign-out button).
+  const closeExitModal = useCallback(() => {
+    setExitModalOpen(false);
+    const key = exitReturnFocusKey.current ?? SIGNOUT_BUTTON_KEY;
+    requestAnimationFrame(() => setFocus(key));
+  }, []);
 
   // Loading / error states render no grid or filters, so park focus on the
   // always-present sign-out button (replaces the old Focusable's focusOnMount).
@@ -626,6 +660,18 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
             placeholder={t("aiSearchPlaceholder")}
           />
         </TvConfirmationModal>
+      )}
+
+      {exitModalOpen && (
+        <TvConfirmationModal
+          title={t("exitTitle")}
+          text={t("exitText")}
+          okLabel={t("exitConfirm")}
+          cancelLabel={t("cancel")}
+          okCallback={exitApp}
+          cancelCallback={closeExitModal}
+          panelMaxWidth="600px"
+        />
       )}
     </>
   );
