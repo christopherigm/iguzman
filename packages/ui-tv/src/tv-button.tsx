@@ -26,6 +26,17 @@ export interface TvButtonProps {
    * own layout is untouched.
    */
   scrollOnFocus?: boolean;
+  /**
+   * Fires when the button gains D-pad focus. Use for focus-driven side effects
+   * (e.g. a paginator that loads a page the moment its number is focused).
+   */
+  onFocusChange?: () => void;
+  /**
+   * Intercept a D-pad arrow while this button is focused. Return `false` to
+   * prevent Norigin's default navigation and move focus yourself via
+   * `setFocus`; return `true` to let the default proceed.
+   */
+  onArrowPress?: (direction: string) => boolean;
 }
 
 /** D-pad-focusable button. Enter on the remote triggers `onPress`. */
@@ -37,12 +48,18 @@ export function TvButton({
   kind,
   focusKey,
   scrollOnFocus = false,
+  onFocusChange,
+  onArrowPress,
 }: TvButtonProps) {
   // A disabled button drops out of spatial navigation so the D-pad skips it.
   const { ref, focused } = useFocusable({
     onEnterPress: onPress,
     focusable: !disabled,
     focusKey,
+    onFocus: onFocusChange,
+    onArrowPress: onArrowPress
+      ? (direction) => onArrowPress(direction)
+      : undefined,
   });
 
   // Reveal an off-screen button when focus lands on it (scrollable lists/modals).

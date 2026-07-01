@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
+import { setFocus } from "@noriginmedia/norigin-spatial-navigation";
 import { TvButton } from "@repo/ui-tv/tv-button";
 import { useT } from "@/i18n/provider";
 import "./tv-pagination.css";
@@ -6,10 +7,31 @@ import "./tv-pagination.css";
 type Props = {
   page: number;
   totalPages: number;
+  /** Fired by the prev/next buttons (Enter) to step the page. */
   onPageChange: (page: number) => void;
+  /**
+   * Fired when a numbered page button gains focus. Numbered buttons load their
+   * page the moment they are focused (Enter is disabled on them); only prev/next
+   * act on Enter.
+   */
+  onPageFocus?: (page: number) => void;
+  /**
+   * Focus key to hand focus to when the D-pad Up arrow leaves the paginator
+   * (i.e. back up into the grid). When omitted, Up uses default navigation.
+   */
+  focusUpKey?: string;
 };
 
 type PageItem = number | "ellipsis-start" | "ellipsis-end";
+
+/**
+ * Stable focus key for the button of page `n`, so the grid can hand focus to the
+ * current page via `setFocus(pageFocusKey(page))`. Keyed by number (not by
+ * "active") so focus survives the window shifting as pages load on focus.
+ */
+export function pageFocusKey(n: number): string {
+  return `home-page-${n}`;
+}
 
 // Ported from apps/cinelog's MoviePagination: first page, a window around the
 // current page, the last page, with ellipses bridging the gaps. `radius` is the
@@ -67,10 +89,26 @@ function fitWindowRadius(opts: {
 }
 
 /** D-pad-navigable numbered pagination rendered below the catalog grid. */
-export function TvPagination({ page, totalPages, onPageChange }: Props) {
+export function TvPagination({
+  page,
+  totalPages,
+  onPageChange,
+  onPageFocus,
+  focusUpKey,
+}: Props) {
   const { t } = useT();
   const containerRef = useRef<HTMLDivElement>(null);
   const [radius, setRadius] = useState(1);
+
+  // Up-arrow anywhere in the paginator jumps back into the grid at a fixed spot
+  // rather than the nearest card by geometry.
+  const leaveUp = (direction: string) => {
+    if (direction === "up" && focusUpKey) {
+      setFocus(focusUpKey);
+      return false;
+    }
+    return true;
+  };
 
   // Grow the visible page window to fill the row, remeasuring on resize. Page
   // buttons are square; prev/next keep their text width.
@@ -122,20 +160,25 @@ export function TvPagination({ page, totalPages, onPageChange }: Props) {
         className="tv-pagination__nav"
         disabled={page <= 1}
         onPress={() => onPageChange(page - 1)}
+        onArrowPress={leaveUp}
       >
         {t("previousPage")}
       </TvButton>
 
       {getPageItems(page, totalPages, radius).map((item) =>
         typeof item === "number" ? (
+          // Numbered buttons load their page on focus; Enter is disabled (no
+          // onPress) so only prev/next act on the remote's OK button.
           <TvButton
             key={item}
+            focusKey={pageFocusKey(item)}
             className={
               item === page
                 ? "tv-pagination__page tv-pagination__page--active"
                 : "tv-pagination__page"
             }
-            onPress={() => onPageChange(item)}
+            onFocusChange={() => onPageFocus?.(item)}
+            onArrowPress={leaveUp}
           >
             {item}
           </TvButton>
@@ -150,6 +193,7 @@ export function TvPagination({ page, totalPages, onPageChange }: Props) {
         className="tv-pagination__nav"
         disabled={page >= totalPages}
         onPress={() => onPageChange(page + 1)}
+        onArrowPress={leaveUp}
       >
         {t("nextPage")}
       </TvButton>

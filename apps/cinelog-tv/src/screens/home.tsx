@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { setFocus } from "@noriginmedia/norigin-spatial-navigation";
 import { TvGrid } from "@repo/ui-tv/tv-grid";
@@ -13,7 +13,7 @@ import {
   type Movie,
 } from "@/lib/catalog";
 import { TvMovieCard } from "@/components/tv-movie-card";
-import { TvPagination } from "@/components/tv-pagination";
+import { TvPagination, pageFocusKey } from "@/components/tv-pagination";
 import { useT } from "@/i18n/provider";
 import "./home.css";
 
@@ -25,6 +25,20 @@ const GENRES_BUTTON_KEY = "home-genres-button";
 // Focus key for the sign-out button so loading/error states (which have no grid
 // or filters to claim focus) can park focus on it.
 const SIGNOUT_BUTTON_KEY = "home-signout-button";
+
+// The grid is a fixed 8-column layout (see tv-grid.css).
+const COLUMNS = 8;
+// Re-entry target when coming back up from the paginator: the 4th card of the
+// second row.
+const SECOND_ROW_FOURTH_INDEX = COLUMNS + 3;
+// Per-movie focus key. Keyed by the movie's id (NOT its grid index) so a card
+// that survives a filter change keeps the same key even when it lands in a
+// different cell. Norigin's `useFocusable` registers a node under the focusKey
+// it had at mount and never re-registers when the prop changes (its
+// addFocusable effect has an empty dependency array), so an index-based key on a
+// reordered-but-not-remounted card corrupts the focus registry and D-pad
+// navigation starts skipping cards.
+const movieFocusKey = (id: number) => `home-movie-${id}`;
 
 export function Home({ onSignOut }: { onSignOut: () => void }) {
   const { t } = useT();
@@ -125,6 +139,29 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
     };
   }, []);
 
+  // A filter change (apply / clear) refetches asynchronously, so the fresh grid
+  // is NOT in the DOM on the frame the filter is applied - we must wait for the
+  // new results to render before moving focus. Flag the reset here; the effect
+  // below performs it once `movies` has updated.
+  const pendingGridFocusReset = useRef(false);
+  const requestGridFocusReset = useCallback(() => {
+    pendingGridFocusReset.current = true;
+  }, []);
+
+  // Move focus onto the first card once the filtered results have rendered. The
+  // control the user pressed (Apply in the modal, or the Clear button, which
+  // itself unmounts) no longer holds focus, so park it deterministically on the
+  // first card. Deferred a frame so the new grid exists in the DOM. Empty
+  // results are left to the effect below, which moves focus to the Genres button
+  // (no grid to claim it).
+  useEffect(() => {
+    if (status !== "ready" || !pendingGridFocusReset.current) return;
+    pendingGridFocusReset.current = false;
+    const first = movies[0];
+    if (!first) return;
+    requestAnimationFrame(() => setFocus(movieFocusKey(first.id)));
+  }, [status, movies]);
+
   const openGenreModal = useCallback(() => {
     setDraftGenres(new Set(appliedGenres));
     setGenreModalOpen(true);
@@ -146,10 +183,13 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
     });
   }, []);
 
+  // Applying the filters closes the modal and drops focus onto the first card of
+  // the fresh result (not back on the Genres button as Cancel does).
   const confirmGenres = useCallback(() => {
     applyGenres([...draftGenres]);
-    closeGenreModal();
-  }, [applyGenres, draftGenres, closeGenreModal]);
+    setGenreModalOpen(false);
+    requestGridFocusReset();
+  }, [applyGenres, draftGenres, requestGridFocusReset]);
 
   // Loading / error states render no grid or filters, so park focus on the
   // always-present sign-out button (replaces the old Focusable's focusOnMount).
@@ -166,6 +206,26 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
       setFocus(GENRES_BUTTON_KEY);
     }
   }, [status, movies.length, genreModalOpen]);
+
+  // Focusing a numbered page button loads that page immediately; re-focusing the
+  // current one is a no-op (no redundant refetch).
+  const handlePageFocus = useCallback(
+    (next: number) => {
+      if (next !== page) setPage(next);
+    },
+    [page, setPage],
+  );
+
+  // Index of the first card in the last grid row - only those cards hand focus
+  // down to the paginator (interior rows navigate down within the grid).
+  const lastRowStart =
+    movies.length > 0 ? Math.floor((movies.length - 1) / COLUMNS) * COLUMNS : 0;
+  // Where the paginator sends focus on the Up arrow: the 4th card of the second
+  // row, falling back to the first card when the page holds fewer. Resolved to
+  // the movie's id-based focus key (keys are per-movie, not per-index).
+  const gridReentryKey = movieFocusKey(
+    (movies[SECOND_ROW_FOURTH_INDEX] ?? movies[0])?.id ?? 0,
+  );
 
   return (
     <>
@@ -192,7 +252,12 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
                   {t("genres")}
                 </TvButton>
                 {appliedGenres.length > 0 && (
-                  <TvButton onPress={() => applyGenres([])}>
+                  <TvButton
+                    onPress={() => {
+                      applyGenres([]);
+                      requestGridFocusReset();
+                    }}
+                  >
                     {t("clearFilters")}
                   </TvButton>
                 )}
@@ -223,10 +288,24 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
         {status === "ready" && movies.length > 0 && (
           <>
             <TvGrid focusOnMount>
-              {movies.map((movie) => (
+              {movies.map((movie, index) => (
                 <TvMovieCard
                   key={movie.id}
                   movie={movie}
+                  focusKey={movieFocusKey(movie.id)}
+                  // Only the last row hands focus down to the paginator (and only
+                  // when there is one); interior rows navigate down normally.
+                  onArrowPress={
+                    totalPages > 1 && index >= lastRowStart
+                      ? (direction) => {
+                          if (direction === "down") {
+                            setFocus(pageFocusKey(page));
+                            return false;
+                          }
+                          return true;
+                        }
+                      : undefined
+                  }
                   onSelect={(m) => navigate(`/movie/${m.id}`)}
                 />
               ))}
@@ -236,6 +315,8 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
               page={page}
               totalPages={totalPages}
               onPageChange={setPage}
+              onPageFocus={handlePageFocus}
+              focusUpKey={gridReentryKey}
             />
           </>
         )}

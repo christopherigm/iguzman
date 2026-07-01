@@ -11,6 +11,17 @@ export interface FocusableProps {
   onEnterPress?: () => void;
   onFocus?: () => void;
   className?: string;
+  /**
+   * Stable focus key for the underlying focusable node. Provide one when another
+   * component needs to move focus here via Norigin's `setFocus(focusKey)`.
+   */
+  focusKey?: string;
+  /**
+   * Intercept a D-pad arrow while this node is focused. Return `false` to
+   * prevent Norigin's default geometry-based navigation (e.g. to hand focus to
+   * a specific node yourself via `setFocus`); return `true` to let it proceed.
+   */
+  onArrowPress?: (direction: string) => boolean;
   /** Wrap children in a FocusContext so they form a navigable group. */
   group?: boolean;
   /**
@@ -31,6 +42,8 @@ export function Focusable({
   onEnterPress,
   onFocus,
   className,
+  focusKey: focusKeyProp,
+  onArrowPress,
   group,
   focusOnMount,
   children,
@@ -38,6 +51,10 @@ export function Focusable({
   const { ref, focused, focusKey, focusSelf } = useFocusable({
     onEnterPress,
     onFocus,
+    focusKey: focusKeyProp,
+    onArrowPress: onArrowPress
+      ? (direction) => onArrowPress(direction)
+      : undefined,
     trackChildren: group,
   });
 

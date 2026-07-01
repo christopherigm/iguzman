@@ -15,15 +15,23 @@ import "./tv-movie-card.css";
 export function TvMovieCard({
   movie,
   onSelect,
+  focusKey,
+  onArrowPress,
 }: {
   movie: Movie;
   onSelect?: (movie: Movie) => void;
+  /** Stable focus key so the home screen can target this card via `setFocus`. */
+  focusKey?: string;
+  /** Intercept a D-pad arrow while this card is focused (see `Focusable`). */
+  onArrowPress?: (direction: string) => boolean;
 }) {
   const { t } = useT();
 
   return (
     <Focusable
       className="tv-movie-card"
+      focusKey={focusKey}
+      onArrowPress={onArrowPress}
       onEnterPress={onSelect ? () => onSelect(movie) : undefined}
     >
       <div className="tv-movie-card__cover">
