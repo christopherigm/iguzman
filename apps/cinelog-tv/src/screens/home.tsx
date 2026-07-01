@@ -20,6 +20,10 @@ import {
   readAiSearchSnapshot,
   saveAiSearchSnapshot,
 } from "@/lib/ai-search";
+import {
+  readLastFocusedMovie,
+  saveLastFocusedMovie,
+} from "@/lib/last-focused-movie";
 import { TvMovieCard } from "@/components/tv-movie-card";
 import { TvPagination, pageFocusKey } from "@/components/tv-pagination";
 import { useT } from "@/i18n/provider";
@@ -50,6 +54,14 @@ const SECOND_ROW_FOURTH_INDEX = COLUMNS + 3;
 // reordered-but-not-remounted card corrupts the focus registry and D-pad
 // navigation starts skipping cards.
 const movieFocusKey = (id: number) => `home-movie-${id}`;
+
+// Cap the AI query shown in the header title so a long prompt can't push the
+// action buttons off their row (the CSS ellipsis in home.css is the secondary
+// guard; this keeps the string itself short). Trailing whitespace is dropped
+// before the ellipsis so it reads "…" not " …".
+const AI_TITLE_MAX = 40;
+const truncateQuery = (q: string) =>
+  q.length > AI_TITLE_MAX ? `${q.slice(0, AI_TITLE_MAX - 1).trimEnd()}…` : q;
 
 export function Home({ onSignOut }: { onSignOut: () => void }) {
   const { t } = useT();
@@ -150,6 +162,13 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
   const activePage = aiActive ? aiPage : page;
   const activeTotalPages = aiActive ? aiTotalPages : totalPages;
   const goToPage = aiActive ? setAiPage : setPage;
+  // Header title: once an AI search has resolved, surface the user's query
+  // ("Results for: Horror movies") in place of the app name; every other state
+  // (normal library, AI still searching / errored) keeps the app title.
+  const headerTitle =
+    aiActive && aiStatus === "ready" && aiQuery
+      ? `${t("aiResultsFor")}${truncateQuery(aiQuery)}`
+      : t("homeTitle");
 
   useEffect(() => {
     let active = true;
@@ -191,15 +210,19 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
   // A filter change (apply / clear) refetches asynchronously, so the fresh grid
   // is NOT in the DOM on the frame the filter is applied - we must wait for the
   // new results to render before moving focus. Flag the reset here; the effect
-  // below performs it once the active grid has updated.
-  // Seeded "first" when a restored snapshot means an AI grid is already on the
-  // first render, so its first card claims focus once it paints (the effect
-  // below), mirroring the focus reset a fresh search / page turn requests.
-  const pendingGridFocus = useRef<"first" | "last" | null>(
-    initialAiSnapshot ? "first" : null,
+  // below performs it once the active grid has updated. A target can be an
+  // anchor ("first" / "last" card) or a specific movie id (returning from the
+  // detail re-focuses the exact card the user opened).
+  //
+  // Seeding priority on first render: the id of the last-opened card (so the
+  // movie-detail round-trip restores focus onto it), else "first" when a restored
+  // AI snapshot means a grid is already present, else null.
+  const initialFocusMovieId = useMemo(() => readLastFocusedMovie(), []);
+  const pendingGridFocus = useRef<"first" | "last" | number | null>(
+    initialFocusMovieId ?? (initialAiSnapshot ? "first" : null),
   );
   const requestGridFocusReset = useCallback(
-    (target: "first" | "last" = "first") => {
+    (target: "first" | "last" | number = "first") => {
       pendingGridFocus.current = target;
     },
     [],
@@ -250,11 +273,18 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
   // longer holds focus, so park it deterministically, deferred a frame so the new
   // grid exists in the DOM. Empty results are left to the effect below.
   useEffect(() => {
-    if (!gridReady || !pendingGridFocus.current) return;
+    if (!gridReady || pendingGridFocus.current === null) return;
     const target = pendingGridFocus.current;
     pendingGridFocus.current = null;
+    // A numeric target is a movie id (returning from the detail) - focus that
+    // exact card. If it's no longer in the grid (e.g. filtered out) fall through
+    // to TvGrid's focusOnMount, which already claimed the first card.
     const card =
-      target === "last" ? gridMovies[gridMovies.length - 1] : gridMovies[0];
+      typeof target === "number"
+        ? gridMovies.find((m) => m.id === target)
+        : target === "last"
+          ? gridMovies[gridMovies.length - 1]
+          : gridMovies[0];
     if (!card) return;
     requestAnimationFrame(() => setFocus(movieFocusKey(card.id)));
   }, [gridReady, gridMovies]);
@@ -378,7 +408,9 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
     <>
       <div className="home-screen">
         <div className="home-header">
-          <TvText variant="hero">{t("homeTitle")}</TvText>
+          <TvText variant="hero" className="home-title">
+            {headerTitle}
+          </TvText>
           {/* Sign-out, then the filter / search actions, all on the right of the
               header. Genres/Clear only exist in normal mode once the catalog is
               ready; AI search is available whenever there's a catalog to search
@@ -501,7 +533,12 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
                     }
                     return true;
                   }}
-                  onSelect={(m) => navigate(`/movie/${m.id}`)}
+                  onSelect={(m) => {
+                    // Remember this card so returning from the detail restores
+                    // focus onto it (see pendingGridFocus seeding above).
+                    saveLastFocusedMovie(m.id);
+                    navigate(`/movie/${m.id}`);
+                  }}
                 />
               ))}
             </TvGrid>
@@ -530,7 +567,7 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
             {genres.map((genre) => (
               <TvButton
                 key={genre.id}
-                kind={draftGenres.has(genre.slug) ? "primary" : undefined}
+                selected={draftGenres.has(genre.slug)}
                 scrollOnFocus
                 onPress={() => toggleDraftGenre(genre.slug)}
               >

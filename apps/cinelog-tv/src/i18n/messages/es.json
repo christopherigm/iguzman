@@ -12,6 +12,7 @@
   "filterGenresText": "Elige uno o más géneros. Las películas deben coincidir con todos.",
   "aiSearch": "Búsqueda con IA",
   "clearAiSearch": "Borrar búsqueda con IA",
+  "aiResultsFor": "Resultados para: ",
   "aiSearchTitle": "Búsqueda de películas con IA",
   "aiSearchText": "Describe lo que te apetece ver — p. ej. «películas de terror con drama» — y lo buscaremos en tu biblioteca.",
   "aiSearchInputLabel": "Buscar",

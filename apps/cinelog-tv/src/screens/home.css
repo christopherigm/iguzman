@@ -25,9 +25,22 @@
 
 /* Header action buttons (Sign out + Genres + Clear filters). Margin (not flex
    `gap`) between the buttons so it holds up on Tizen 6.x / Chromium 76. */
+/* Screen title. In AI mode it carries the user's query ("Results for: …"), so
+   cap it to a single line with an ellipsis and let it shrink (min-width: 0) —
+   together with the action row's flex-shrink: 0 below, this pins the buttons to
+   the right on the same row no matter how long the query is. */
+.home-title {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  margin-right: 24px;
+}
+
 .home-actions {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 .home-actions > * {
   margin-right: 18px;

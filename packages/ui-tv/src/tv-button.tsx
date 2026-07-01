@@ -14,6 +14,13 @@ export interface TvButtonProps {
   /** Semantic color intent. Omit for the neutral surface-2 button. */
   kind?: TvButtonKind;
   /**
+   * Persistent selected/toggled state (e.g. a genre filter chip). Unlike `kind`
+   * - which tints only while focused so the focus ring reads - `selected` keeps
+   * the accent fill whether or not the button holds focus, so a chosen option
+   * still reads as chosen after focus moves elsewhere.
+   */
+  selected?: boolean;
+  /**
    * Stable focus key for the underlying focusable node. Provide one when another
    * component needs to restore focus here via Norigin's `setFocus(focusKey)` -
    * e.g. returning focus to the button that opened a modal once it closes.
@@ -46,6 +53,7 @@ export function TvButton({
   className,
   disabled = false,
   kind,
+  selected = false,
   focusKey,
   scrollOnFocus = false,
   onFocusChange,
@@ -77,6 +85,7 @@ export function TvButton({
     'tv-focusable',
     // A disabled button always reads as neutral, matching @repo/ui's Button.
     kind && !disabled ? `tv-button--${kind}` : '',
+    selected && !disabled ? 'tv-button--selected' : '',
     focused ? 'tv-focusable--focused' : '',
     disabled ? 'tv-button--disabled' : '',
     className,

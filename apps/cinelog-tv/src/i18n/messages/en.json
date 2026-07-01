@@ -12,6 +12,7 @@
   "filterGenresText": "Pick one or more genres. Movies must match all of them.",
   "aiSearch": "AI search",
   "clearAiSearch": "Clear AI search",
+  "aiResultsFor": "Results for: ",
   "aiSearchTitle": "AI movie search",
   "aiSearchText": "Describe what you're in the mood for — e.g. \"horror movies with drama\" — and we'll match it against your library.",
   "aiSearchInputLabel": "Search",
