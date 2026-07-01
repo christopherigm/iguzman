@@ -229,14 +229,7 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
 
   return (
     <>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 18,
-          maxWidth: 1825,
-        }}
-      >
+      <div className="home-screen">
         <div className="home-header">
           <TvText variant="hero">{t("homeTitle")}</TvText>
           {/* Sign-out, then the filter actions, all on the right of the header.
@@ -287,7 +280,7 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
 
         {status === "ready" && movies.length > 0 && (
           <>
-            <TvGrid focusOnMount>
+            <TvGrid focusOnMount className="home-grid">
               {movies.map((movie, index) => (
                 <TvMovieCard
                   key={movie.id}

@@ -43,9 +43,6 @@ export function TvMovieCard({
       </div>
       <div className="tv-movie-card__meta">
         <span className="tv-movie-card__title">{movie.title}</span>
-        {movie.year && (
-          <span className="tv-movie-card__year">{movie.year}</span>
-        )}
       </div>
     </Focusable>
   );

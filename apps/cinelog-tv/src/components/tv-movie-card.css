@@ -19,7 +19,6 @@
 .tv-movie-card__meta {
   display: flex;
   flex-direction: column;
-  gap: 2px;
   padding: 8px 4px;
 }
 
@@ -30,9 +29,4 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.tv-movie-card__year {
-  color: color-mix(in srgb, var(--foreground, #f5f5f7) 60%, transparent);
-  font-size: 0.875rem;
 }

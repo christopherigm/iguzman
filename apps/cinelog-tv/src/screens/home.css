@@ -1,3 +1,20 @@
+/* Fill the safe area (the 48px #root padding) as a column so the title sits at
+   the top and the paginator at the bottom, with the grid centered between. */
+.home-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 1825px;
+}
+
+/* Center the catalog grid in the free space between the title and the paginator.
+   The vertical auto margins consume the slack above and below the grid, which
+   both keeps the grid off the title/paginator and pins the paginator to the
+   bottom of the safe area. Auto margins (not flex `gap`) hold up on Chromium 76. */
+.home-grid {
+  margin: auto 0;
+}
+
 /* Header row: screen title on the left, the action buttons on the right.
    Margins (not `gap`) keep this safe on Tizen 6.x / Chromium 76-85. */
 .home-header {
@@ -26,6 +43,7 @@
   display: flex;
   flex-wrap: wrap;
   margin: -12px 0 0 -12px;
+  justify-content: center;
 }
 .home-genre-options > * {
   margin: 12px 0 0 12px;
