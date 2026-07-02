@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type CSSProperties,
+} from "react";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Box } from "@repo/ui/core-elements/box";
@@ -34,6 +41,7 @@ import {
 import { MovieCard } from "./movie-card";
 import { MovieFilters } from "./movie-filters";
 import { MoviePagination } from "./movie-pagination";
+import "./movie-catalog.css";
 
 type ViewMode = "grid" | "list";
 type Status = "loading" | "ready" | "error";
@@ -462,8 +470,54 @@ export function MovieCatalog({
     if (initialScroll > 0) window.scrollTo(0, initialScroll);
   }, [status, initialScroll]);
 
+  // A random backdrop from the current grid, shown dimmed and fixed behind the
+  // whole page. Re-picked only when the movie list changes reference - which
+  // happens exactly when a fresh set of results loads (a page turn, a filter
+  // change or an AI search), not on every render - so the background holds
+  // steady while the user scrolls a page and swaps when the page does. Movies
+  // without a backdrop are skipped; "" (no candidates) hides the layer. The URL
+  // rides in as a CSS variable consumed by the `::before` in movie-catalog.css.
+  //
+  // Held in state and set from an effect (not derived during render) for two
+  // reasons: the pick is random (Math.random can't run in render without
+  // desyncing every re-render), and deferring it to the client keeps the server
+  // from rendering a different random backdrop than the client hydrates - the
+  // effect only runs after mount, so SSR emits no backdrop and there's no
+  // hydration mismatch.
+  const [backdrop, setBackdrop] = useState("");
+  useEffect(() => {
+    const withBackdrops = movies.filter((m) => m.backdrop);
+    if (withBackdrops.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- random, client-only pick (see note above)
+      setBackdrop("");
+      return;
+    }
+    const index = Math.floor(Math.random() * withBackdrops.length);
+    setBackdrop(withBackdrops[index]?.backdrop ?? "");
+  }, [movies]);
+
   return (
-    <Box flexDirection="column" gap={16} paddingY={16}>
+    <Box
+      flexDirection="column"
+      gap={16}
+      paddingTop={16}
+      // Small gap to the footer; the pagination now reserves its own height via
+      // its placeholder and docks above the footer when the grid ends.
+      paddingBottom={24}
+    >
+      {/* Full-bleed dimmed backdrop fixed behind the whole catalog, rendered
+          only when the current grid has a movie with a backdrop. A plain div
+          (not a @repo/ui component) owns its full layout in CSS; the dynamic
+          image URL rides in as a CSS custom property. */}
+      {backdrop && (
+        <div
+          aria-hidden
+          className="movie-catalog__backdrop"
+          style={
+            { "--backdrop-image": `url("${backdrop}")` } as CSSProperties
+          }
+        />
+      )}
       <Box
         display="flex"
         alignItems="center"

@@ -150,6 +150,7 @@ export function MovieFilters({
           kind={formatsActive ? "primary" : undefined}
           aria-expanded={openModal === "formats"}
           onClick={() => setOpenModal("formats")}
+          translucent
         />
         <Button
           text={t("genresButton")}
@@ -158,6 +159,7 @@ export function MovieFilters({
           kind={genresActive ? "primary" : undefined}
           aria-expanded={openModal === "genres"}
           onClick={() => setOpenModal("genres")}
+          translucent
         />
         <Button
           text={t("aiSearchButton")}
@@ -165,6 +167,7 @@ export function MovieFilters({
           size="md"
           aria-expanded={openModal === "ai"}
           onClick={() => setOpenModal("ai")}
+          translucent
         />
       </Box>
 

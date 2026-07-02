@@ -70,6 +70,8 @@ export interface Movie {
   /** Formats this title is available in (union of its barcodes' formats). */
   formats: Exclude<MovieFormat, "">[];
   cover: string;
+  /** Landscape wallpaper for the page background; "" when none was fetched. */
+  backdrop: string;
   genres: Category[];
   /**
    * True when the signed-in user already owns this movie; gates the catalog's
