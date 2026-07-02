@@ -55,6 +55,8 @@
     "newApiDescription": "Assistente interativo para scaffoldar uma API Django REST com banco de dados à escolha, Redis, email e passkeys opcionais. Cria o diretório, Dockerfile e virtualenv.",
     "newTvAppSection": "new-tv-app",
     "newTvAppDescription": "Assistente interativo para scaffoldar um app Samsung Smart TV (Tizen): uma SPA Vite + React conectada ao pacote @repo/ui-tv com navegação espacial Norigin para o controle remoto. Cria packages/ui-tv na primeira execução. Empacote em .wgt com o Tizen Studio.",
+    "setupMinecraftSection": "setup-minecraft",
+    "setupMinecraftDescription": "Bootstrapper multiplataforma para o mod de Minecraft apps/mob-forge (1.20.2 / NeoForge). Instala Java 17 e Blockbench, orienta a instalação dos plugins GeckoLib e MCP do Blockbench, depois baixa o scaffold Gradle do MDK NeoForge fixado e injeta o GeckoLib. Idempotente; execute novamente após mudar versões em gradle.properties.",
     "generateIconsSection": "generate-icons",
     "generateIconsDescription": "Gera ícones PWA (192×192, 512×512, mascarável) e favicon.ico a partir do logo do app via FFmpeg. Execute após colocar um logo na pasta public do app.",
     "secretsSection": "secrets",

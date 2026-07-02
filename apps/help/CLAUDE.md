@@ -20,6 +20,7 @@
 | `NEW_APP_COMMAND`           | `cli/new-nextjs-app/new-nextjs-app.sh`                                                                                                                   |
 | `NEW_API_COMMAND`           | `cli/new-django-app/new-django-app.sh`                                                                                                                   |
 | `NEW_TV_APP_COMMAND`        | `cli/new-smarttv-app/new-smarttv-app.sh`                                                                                                                 |
+| `SETUP_MINECRAFT_COMMAND`   | `cli/setup-minecraft/setup-minecraft.sh`                                                                                                                 |
 | `GENERATE_ICONS_COMMANDS`   | `cli/generate-icons/generate-icons.sh`                                                                                                                   |
 | `SECRETS_COMMAND`           | `cli/setup-k8s-secrets/setup-k8s-secrets.sh`                                                                                                             |
 | `DEPLOY_APP_COMMANDS`       | `cli/deploy-app/deploy-app.sh`                                                                                                                           |

@@ -61,6 +61,7 @@ This is a **Turborepo monorepo** with Next.js applications and shared packages.
 - **edge-folio** - Next.js PWA: privacy-first career app for engineers (Immutable Matrix, job tailoring, ATS export, client-side OPFS+WebGPU codebase extraction). See `apps/edge-folio/CLAUDE.md`.
 - **edge-folio-api** - Django REST API backend for edge-folio. See `apps/edge-folio-api/CLAUDE.md`.
 - **cinelog-tv** - Samsung Smart TV (Tizen) app. **Not Next.js** - a Vite + React SPA on `@repo/ui-tv`, packaged as a `.wgt`. The Next.js conventions in `apps/CLAUDE.md` do not apply; see `apps/cinelog-tv/CLAUDE.md` and the "Smart TV Apps (Tizen)" section below. Scaffold new TV apps with `cli/new-smarttv-app/new-smarttv-app.sh`.
+- **mob-forge** - Minecraft 1.20.2 NeoForge mod (**Java/Gradle, not Next.js**) for AI-authored GeckoLib mobs; a Turborepo member via a thin `package.json` → `./gradlew` wrapper. The Minecraft game + MDK caches are downloaded on demand and never committed. Bootstrap the toolchain with `pnpm setup-minecraft`; see `apps/mob-forge/CLAUDE.md` and the spec in `apps/prds/minecraft.md`.
 
 ### Packages (`packages/`)
 

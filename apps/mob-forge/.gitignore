@@ -1,0 +1,33 @@
+# ── Gradle / Java build outputs (regenerable) ────────────────────────────────
+build/
+out/
+bin/
+.gradle/
+*.class
+
+# ── NeoForge / Minecraft runtime — the game, decompiled sources, caches ───────
+# These are downloaded by `pnpm setup-minecraft` and are NEVER committed.
+run/
+runs/
+logs/
+crash-reports/
+saves/
+
+# ── Downloaded MDK / toolchain scratch ───────────────────────────────────────
+.mdk-download/
+gradle-*/
+
+# ── IDE / editor project files ───────────────────────────────────────────────
+.idea/
+*.iml
+*.ipr
+*.iws
+.eclipse/
+.settings/
+.classpath
+.project
+.vscode/
+.metadata/
+
+# ── Node (thin Turborepo wrapper only) ───────────────────────────────────────
+node_modules
