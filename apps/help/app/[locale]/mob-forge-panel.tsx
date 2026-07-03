@@ -53,9 +53,12 @@ const MOBFORGE_WIN_PLUGINS =
   "claude mcp add blockbench --transport http http://localhost:3000/bb-mcp";
 
 const MOBFORGE_WIN_BUILD =
+  "pnpm --filter=mob-forge build   # cross-platform: runs gradlew.bat on Windows\n" +
+  "pnpm --filter=mob-forge dev     # launches the dev client\n" +
+  "# or call the Windows wrapper directly from apps\\mob-forge:\n" +
   "cd apps\\mob-forge\n" +
-  ".\\gradlew.bat build            # equivalent to pnpm --filter=mob-forge build\n" +
-  ".\\gradlew.bat runClient        # launches the dev client";
+  ".\\gradlew.bat build\n" +
+  ".\\gradlew.bat runClient";
 
 // ── End-to-end workflow ───────────────────────────────────────────────────────
 
@@ -82,6 +85,44 @@ const MOBFORGE_INGAME =
   "pnpm --filter=mob-forge dev\n" +
   "# Launch the client, open the Spawn Eggs tab, use the Eyeball Spawn Egg.";
 
+// ── Edit & hand-paint an existing mob (Blockbench, per-part) ───────────────────
+
+const MOBFORGE_EDIT_SOURCE =
+  "apps/mob-forge/\n" +
+  "  blockbench/flyingseal.bbmodel                 # editable source (edit this)\n" +
+  "  src/main/resources/assets/mobforge/\n" +
+  "    geo/flyingseal.geo.json                     # build output (UV baked in)\n" +
+  "    textures/entity/flyingseal.png              # build output (shipped texture)\n" +
+  "    animations/flyingseal.animation.json        # build output";
+
+const MOBFORGE_OPEN =
+  "# Blockbench > File > Open Model...  (double-clicking the file works too)\n" +
+  "apps/mob-forge/blockbench/flyingseal.bbmodel";
+
+const MOBFORGE_SAVE =
+  "# 1. Save the source model:      File > Save  (Ctrl+S)\n" +
+  "# 2. Export the painted texture: Paint tab > right-click texture > Save As...\n" +
+  "#    Overwrite it, keeping the SAME path and pixel dimensions:\n" +
+  "apps/mob-forge/src/main/resources/assets/mobforge/textures/entity/flyingseal.png";
+
+const MOBFORGE_REBUILD =
+  "pnpm --filter=mob-forge build   # bakes the new texture into the mod jar\n" +
+  "pnpm --filter=mob-forge dev     # spawn the mob to verify the paint in-game";
+
+// ── Scripted face painting (mob_face.py — needs Python 3 + Pillow) ─────────────
+
+const MOBFORGE_FACEPAINT =
+  "# One-time: install Pillow, the image library the face-painter uses.\n" +
+  "#   Linux/macOS (Python 3 usually ships already):\n" +
+  "python3 -m pip install --user Pillow\n" +
+  "#   Windows (install Python first, then Pillow):\n" +
+  "winget install -e --id Python.Python.3.12\n" +
+  "py -m pip install Pillow\n" +
+  "\n" +
+  "# Paint eyes/mouth/nose onto the atlas AND re-embed into the .bbmodel:\n" +
+  "python3 tools/mob_face.py paint --spec tools/faces/<id>.face.json --root .\n" +
+  "# (on Windows use `py` instead of `python3`; run from apps/mob-forge)";
+
 // ── External documentation / download links ───────────────────────────────────
 
 const DOC_TEMURIN = "https://adoptium.net/temurin/releases/?version=17";
@@ -93,6 +134,8 @@ const DOC_GIT = "https://git-scm.com/download/win";
 const DOC_NODE = "https://nodejs.org/en/download";
 const DOC_PNPM = "https://pnpm.io/installation";
 const DOC_CLAUDE_SETUP = "https://code.claude.com/docs/en/setup";
+const DOC_PYTHON = "https://www.python.org/downloads/";
+const DOC_PILLOW = "https://pillow.readthedocs.io/en/stable/installation.html";
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -224,6 +267,46 @@ export async function MobForgePanel() {
         heading={t("mobForgeIngameHeading")}
         description={t("mobForgeIngameDesc")}
         code={MOBFORGE_INGAME}
+      />
+
+      {/* 4 ─ Edit & hand-paint a mob after creation (Blockbench, per-part). */}
+      <GroupLabel marginTop={8}>{t("mobForgeEditGroup")}</GroupLabel>
+
+      <StepSection
+        heading={t("mobForgeSourceHeading")}
+        description={t("mobForgeSourceDesc")}
+        code={MOBFORGE_EDIT_SOURCE}
+        language="text"
+      />
+      <StepSection
+        heading={t("mobForgeOpenHeading")}
+        description={t("mobForgeOpenDesc")}
+        code={MOBFORGE_OPEN}
+        language="text"
+      />
+      <StepSection
+        heading={t("mobForgePaintHeading")}
+        description={t("mobForgePaintDesc")}
+      />
+      <StepSection
+        heading={t("mobForgeFacePaintHeading")}
+        description={t("mobForgeFacePaintDesc")}
+        code={MOBFORGE_FACEPAINT}
+        links={[
+          { label: t("mobForgePythonLink"), href: DOC_PYTHON },
+          { label: t("mobForgePillowLink"), href: DOC_PILLOW },
+        ]}
+      />
+      <StepSection
+        heading={t("mobForgeSaveHeading")}
+        description={t("mobForgeSaveDesc")}
+        code={MOBFORGE_SAVE}
+        language="text"
+      />
+      <StepSection
+        heading={t("mobForgeRebuildHeading")}
+        description={t("mobForgeRebuildDesc")}
+        code={MOBFORGE_REBUILD}
       />
     </>
   );

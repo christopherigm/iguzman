@@ -1,5 +1,13 @@
 ## Product Requirements Document (PRD)
 
+> **⚠️ ARCHIVED — historical record, not the operating manual.** All phases are
+> complete (the pipeline shipped). This document is kept as the project's
+> **decision log**: it captures *why* mob-forge is shaped the way it is (the
+> Blender→Blockbench pivot, the 1.20.1→1.20.2 tooling move, the risk register).
+> To **build a mob**, use the `/mob-forge` skill; the authoritative *how* lives in
+> `apps/mob-forge/CLAUDE.md`. Do not treat anything below as a live requirement,
+> and do not update this file as part of a mob run.
+
 > **Revision note (Phase 0 outcome):** The original design authored 3D assets in **Blender** via a custom Python `bpy` MCP bridge. Phase 0 research (see §7) found that Blender is *not* GeckoLib's supported tool — **Blockbench** is the official and only documented authoring tool, and it exports GeckoLib `.geo.json` / `.animation.json` natively with no format conversion. A mature, ready-made **Blockbench MCP plugin** already exposes the create/rig/animate/export/screenshot tools this project needed to build from scratch. This document has been rewritten around Blockbench.
 
 > **Revision note (attended, human-observable mode):** Phase 1 runs Blockbench (and, during verification, the Minecraft client) as **user-launched, visible desktop apps on the operator's own display** — *not* as background/headless services. The user opens the tools **before** issuing the prompt, then watches the model get created, rigged, and animated in real time as Claude Code drives Blockbench over MCP. This makes asset generation a live, observable process with a human in the loop, and turns the screenshot-based verification steps into a confirmation of what the operator is already watching. Unattended/headless operation on a virtual framebuffer (**Xvfb**) is retained only as a future CI path (see §4, R2/R5) and is out of scope for Phase 1.

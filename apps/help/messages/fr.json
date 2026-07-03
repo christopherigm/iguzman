@@ -1,5 +1,8 @@
 {
-  "Metadata": { "title": "Help", "description": "" },
+  "Metadata": {
+    "title": "Help",
+    "description": ""
+  },
   "HomePage": {
     "menuSmartTv": "Smart TV",
     "smartTvTitle": "Développement Smart TV",
@@ -297,7 +300,7 @@
     "mobForgeWinPluginsHeading": "6. Plugins Blockbench + serveur MCP",
     "mobForgeWinPluginsDesc": "Identique à Linux/macOS : ouvrez Blockbench, installez « GeckoLib Models & Animations » depuis File > Plugins, chargez le plugin MCP depuis son URL, puis enregistrez le serveur auprès de Claude Code et redémarrez-le.",
     "mobForgeWinBuildHeading": "7. Vérifier la compilation",
-    "mobForgeWinBuildDesc": "Les scripts wrapper pnpm utilisent la syntaxe de test Bash ; sous Windows, appelez donc le wrapper Gradle directement depuis apps\\mob-forge. gradlew.bat est versionné, donc aucun bootstrap du MDK n'est requis. La première compilation télécharge les caches Minecraft + NeoForge à la demande.",
+    "mobForgeWinBuildDesc": "Les scripts build et dev passent par un petit lanceur Node, donc pnpm --filter=mob-forge build fonctionne sous Windows exactement comme sous Linux/macOS - il appelle pour vous le gradlew.bat versionné (vous pouvez aussi l'appeler directement depuis apps\\mob-forge). Aucun bootstrap du MDK n'est requis ; la première compilation télécharge les caches Minecraft + NeoForge à la demande.",
     "mobForgePreflightHeading": "1. Pré-vol (mode supervisé)",
     "mobForgePreflightDesc": "Avant de lancer l'instruction, ouvrez Blockbench sur votre bureau avec les plugins GeckoLib + MCP chargés et vérifiez que le point de terminaison MCP est actif sur http://localhost:3000/bb-mcp. Vous voyez le modèle se construire en direct - Claude se connecte à votre instance en cours d'exécution, il ne la lance jamais. Ouvrez éventuellement aussi le client Minecraft.",
     "mobForgeAuthorHeading": "2. Créer un mob avec la compétence /mob-forge",
@@ -306,6 +309,19 @@
     "mobForgeExampleDesc": "Pour cette instruction (id d'entité eyeball), Claude produit les classes Java ainsi que ces artefacts versionnés - sorties de build de l'éditable blockbench/eyeball.bbmodel. Chaque nom (id de registre, geo, ids d'animation comme animation.eyeball.fly, noms d'os, texture) est réutilisé à l'identique pour éviter les plantages au chargement.",
     "mobForgeIngameHeading": "4. Vérifier en jeu (supervisé)",
     "mobForgeIngameDesc": "Lancez le client de développement, ouvrez l'onglet créatif des œufs d'apparition et utilisez le nouvel œuf d'apparition Eyeball - attention : plusieurs œufs quasi identiques existent, choisissez donc le bon libellé. Vérifiez que le modèle s'affiche et que l'animation de vol boucle. Cette vérification finale se fait avec un humain dans la boucle.",
+    "mobForgeEditGroup": "Modifier et peindre un mob à la main",
+    "mobForgeSourceHeading": "1. Source vs. fichiers générés",
+    "mobForgeSourceDesc": "Chaque mob conserve une source Blockbench modifiable et versionnée dans blockbench/<id>.bbmodel. Les geo.json, animation.json et png sous src/main/resources sont des fichiers générés à partir d'elle - les modifications manuelles partent donc du .bbmodel, et le PNG est la texture réellement livrée dans le mod. Comme le pipeline donne à chaque cube son propre rectangle UV sans chevauchement, un coup de pinceau sur une partie ne déborde jamais sur une autre. (Si un ancien mob a encore tous ses cubes en uv:[0,0], réempaquetez d'abord ses UV - voir apps/mob-forge/CLAUDE.md.)",
+    "mobForgeOpenHeading": "2. Ouvrir la source modifiable dans Blockbench",
+    "mobForgeOpenDesc": "Ouvrez Blockbench et chargez la source avec File > Open Model - ni Claude Code ni MCP ne sont nécessaires pour peindre à la main. Modifiez toujours le .bbmodel plutôt que le PNG brut afin que le modèle, sa disposition UV et la texture restent synchronisés.",
+    "mobForgePaintHeading": "3. Peindre une seule partie",
+    "mobForgePaintDesc": "Passez à l'onglet Paint, sélectionnez dans l'outliner la partie du corps voulue et peignez avec le pinceau, le sélecteur de couleur et la gomme. Le panneau UV met en évidence exactement le rectangle que vous modifiez. C'est l'alternative visuelle et par partie à la modification des pixels dans un éditeur d'images - utilisez-la lorsque vous voulez un retour 3D en direct en recolorant une tête, en ajoutant une rayure ou en détaillant un membre.",
+    "mobForgeFacePaintHeading": "4. Ou peindre un visage avec le script mob_face.py",
+    "mobForgeFacePaintDesc": "Une alternative déterministe à la peinture à la main : mob_face.py lit l'atlas UV par partie du modèle et peint des yeux, une bouche, un nez, des narines, des sourcils ou des moustaches reconnaissables à partir d'une petite spécification JSON (tools/faces/<id>.face.json), puis réintègre le résultat dans le .bbmodel pour que la source et la texture livrée restent synchronisées - sans Blockbench. Il nécessite Python 3 et la bibliothèque d'images Pillow. Linux et macOS embarquent généralement déjà Python 3, il ne vous faut donc que Pillow ; sous Windows, installez d'abord Python (winget), puis Pillow, et utilisez py à la place de python3.",
+    "mobForgeSaveHeading": "5. Enregistrer le modèle et exporter la texture",
+    "mobForgeSaveDesc": "Conservez les deux moitiés pour que la source et la texture livrée restent synchronisées. Enregistrez le modèle avec File > Save (Ctrl+S) pour mettre à jour le .bbmodel, puis exportez la texture peinte (onglet Paint, clic droit sur la texture, Save As) et écrasez le PNG existant en conservant le même chemin et les mêmes dimensions en pixels. Ne réexportez geo.json que si vous avez changé la résolution de la texture ou réempaqueté les UV.",
+    "mobForgeRebuildHeading": "6. Recompiler et tester en jeu",
+    "mobForgeRebuildDesc": "Recompilez le mod pour intégrer la texture mise à jour dans le jar, puis lancez le client de développement et faites apparaître le mob avec son œuf d'apparition pour confirmer la peinture en jeu.",
     "mobForgeTemurinLink": "Eclipse Temurin JDK 17 - Adoptium",
     "mobForgeBlockbenchLink": "Téléchargements Blockbench",
     "mobForgeMcpPluginLink": "Plugin MCP Blockbench (jasonjgardner)",
@@ -314,7 +330,9 @@
     "mobForgeGitLink": "Git pour Windows",
     "mobForgeNodeLink": "Téléchargements Node.js",
     "mobForgePnpmLink": "Installation de pnpm",
-    "mobForgeClaudeLink": "Installation de Claude Code"
+    "mobForgeClaudeLink": "Installation de Claude Code",
+    "mobForgePythonLink": "Téléchargements Python",
+    "mobForgePillowLink": "Installation de Pillow"
   },
   "Navbar": {
     "home": "Accueil",

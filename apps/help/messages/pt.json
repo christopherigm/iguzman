@@ -1,5 +1,8 @@
 {
-  "Metadata": { "title": "Help", "description": "" },
+  "Metadata": {
+    "title": "Help",
+    "description": ""
+  },
   "HomePage": {
     "menuSmartTv": "Smart TV",
     "smartTvTitle": "Desenvolvimento para Smart TV",
@@ -297,7 +300,7 @@
     "mobForgeWinPluginsHeading": "6. Plugins do Blockbench + servidor MCP",
     "mobForgeWinPluginsDesc": "Idêntico ao Linux/macOS: abra o Blockbench, instale \"GeckoLib Models & Animations\" em File > Plugins, carregue o plugin MCP pela URL, registre o servidor no Claude Code e reinicie-o.",
     "mobForgeWinBuildHeading": "7. Verifique a compilação",
-    "mobForgeWinBuildDesc": "Os scripts wrapper do pnpm usam sintaxe de teste do Bash, então no Windows chame o wrapper do Gradle diretamente em apps\\mob-forge. O gradlew.bat está versionado, então não é preciso bootstrap do MDK. A primeira compilação baixa os caches do Minecraft + NeoForge sob demanda.",
+    "mobForgeWinBuildDesc": "Os scripts build e dev rodam através de um pequeno lançador Node, então pnpm --filter=mob-forge build funciona no Windows igual ao Linux/macOS - ele invoca o gradlew.bat versionado para você (você também pode chamá-lo diretamente em apps\\mob-forge). Não é preciso bootstrap do MDK; a primeira compilação baixa os caches do Minecraft + NeoForge sob demanda.",
     "mobForgePreflightHeading": "1. Preparação (modo assistido)",
     "mobForgePreflightDesc": "Antes de dar a instrução, abra o Blockbench no seu desktop com os plugins GeckoLib + MCP carregados e confirme que o endpoint MCP está ativo em http://localhost:3000/bb-mcp. Você vê o modelo sendo construído ao vivo - o Claude se conecta à sua instância em execução, nunca a inicia. Opcionalmente, abra também o cliente do Minecraft.",
     "mobForgeAuthorHeading": "2. Crie um mob com a skill /mob-forge",
@@ -306,6 +309,19 @@
     "mobForgeExampleDesc": "Para essa instrução (id da entidade eyeball), o Claude produz as classes Java mais estes artefatos versionados - saídas de build do editável blockbench/eyeball.bbmodel. Cada nome (id de registro, geo, ids de animação como animation.eyeball.fly, nomes de ossos, textura) é reutilizado exatamente para evitar travamentos no carregamento.",
     "mobForgeIngameHeading": "4. Verifique no jogo (assistido)",
     "mobForgeIngameDesc": "Inicie o cliente de desenvolvimento, abra a aba criativa de Ovos geradores e use o novo Ovo gerador de Eyeball - atenção: existem vários ovos quase idênticos, então escolha o rótulo certo. Confirme que o modelo é renderizado e que a animação de voo repete em loop. Essa verificação final é feita por uma pessoa.",
+    "mobForgeEditGroup": "Editar e pintar um mob à mão",
+    "mobForgeSourceHeading": "1. Fonte vs. arquivos gerados",
+    "mobForgeSourceDesc": "Cada mob mantém uma fonte de Blockbench editável e versionada em blockbench/<id>.bbmodel. O geo.json, animation.json e png em src/main/resources são arquivos gerados a partir dela - portanto, as edições manuais partem do .bbmodel, e o PNG é a textura que realmente vai no mod. Como o pipeline dá a cada cubo o seu próprio retângulo UV sem sobreposição, uma pincelada em uma parte nunca vaza para outra. (Se um mob antigo ainda tiver todos os cubos em uv:[0,0], reempacote as UVs primeiro - consulte apps/mob-forge/CLAUDE.md.)",
+    "mobForgeOpenHeading": "2. Abra a fonte editável no Blockbench",
+    "mobForgeOpenDesc": "Abra o Blockbench e carregue a fonte com File > Open Model - não é preciso Claude Code nem MCP para pintar à mão. Edite sempre o .bbmodel em vez do PNG bruto para que o modelo, o seu layout de UV e a textura permaneçam sincronizados.",
+    "mobForgePaintHeading": "3. Pinte uma única parte",
+    "mobForgePaintDesc": "Mude para a aba Paint, selecione no outliner a parte do corpo desejada e pinte com o pincel, o seletor de cor e a borracha. O painel UV destaca exatamente qual retângulo você está editando. Esta é a alternativa visual e por parte à edição dos pixels em um editor de imagens - use-a quando quiser retorno 3D ao vivo ao recolorir uma cabeça, adicionar uma faixa ou detalhar um membro.",
+    "mobForgeFacePaintHeading": "4. Ou pinte um rosto com o script mob_face.py",
+    "mobForgeFacePaintDesc": "Uma alternativa determinística à pintura manual: o mob_face.py lê o atlas UV por parte do modelo e pinta olhos, boca, nariz, narinas, sobrancelhas ou bigodes reconhecíveis a partir de uma pequena especificação JSON (tools/faces/<id>.face.json), depois reincorpora o resultado no .bbmodel para que a fonte e a textura publicada fiquem sincronizadas - sem precisar do Blockbench. Requer Python 3 e a biblioteca de imagens Pillow. Linux e macOS geralmente já vêm com Python 3, então você só precisa do Pillow; no Windows instale primeiro o Python (winget), depois o Pillow, e use py no lugar de python3.",
+    "mobForgeSaveHeading": "5. Salve o modelo e exporte a textura",
+    "mobForgeSaveDesc": "Salve as duas metades para que a fonte e a textura publicada permaneçam sincronizadas. Salve o modelo com File > Save (Ctrl+S) para atualizar o .bbmodel e depois exporte a textura pintada (aba Paint, clique com o botão direito na textura, Save As) e sobrescreva o PNG existente, mantendo o mesmo caminho e as mesmas dimensões em pixels. Só reexporte o geo.json se mudou a resolução da textura ou reempacotou as UVs.",
+    "mobForgeRebuildHeading": "6. Recompile e teste no jogo",
+    "mobForgeRebuildDesc": "Recompile o mod para embutir a textura atualizada no jar, depois inicie o cliente de desenvolvimento e gere o mob com o seu ovo gerador para confirmar a pintura no jogo.",
     "mobForgeTemurinLink": "Eclipse Temurin JDK 17 - Adoptium",
     "mobForgeBlockbenchLink": "Downloads do Blockbench",
     "mobForgeMcpPluginLink": "Plugin MCP do Blockbench (jasonjgardner)",
@@ -314,9 +330,15 @@
     "mobForgeGitLink": "Git para Windows",
     "mobForgeNodeLink": "Downloads do Node.js",
     "mobForgePnpmLink": "Instalação do pnpm",
-    "mobForgeClaudeLink": "Instalação do Claude Code"
+    "mobForgeClaudeLink": "Instalação do Claude Code",
+    "mobForgePythonLink": "Downloads do Python",
+    "mobForgePillowLink": "Instalação do Pillow"
   },
-  "Navbar": { "home": "Início", "account": "Minha Conta", "signOut": "Sair" },
+  "Navbar": {
+    "home": "Início",
+    "account": "Minha Conta",
+    "signOut": "Sair"
+  },
   "Footer": {
     "appHeading": "App",
     "legalHeading": "Legal",

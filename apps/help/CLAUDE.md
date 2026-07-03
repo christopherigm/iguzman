@@ -69,15 +69,16 @@ Build/test steps also wrap the `tizen`/`sdb` CLI in two interactive helper scrip
 
 ### Mob Forge - `app/[locale]/mob-forge-panel.tsx`
 
-The `apps/mob-forge` pipeline, ordered **setup-first, workflow-last** and split into three groups. Source of truth is `cli/setup-minecraft/setup-minecraft.sh`, `apps/mob-forge/CLAUDE.md`, and the PRD `apps/prds/minecraft.md` - keep this panel in sync when any of them change (tool versions, MCP endpoint, plugin URLs, the `/mob-forge` skill flow).
+The `apps/mob-forge` pipeline, ordered **setup-first, workflow-last** and split into four groups (setup, workflow, then post-creation editing/hand-painting). Source of truth is `cli/setup-minecraft/setup-minecraft.sh`, `apps/mob-forge/CLAUDE.md`, and the PRD `apps/prds/minecraft.md` - keep this panel in sync when any of them change (tool versions, MCP endpoint, plugin URLs, the `/mob-forge` skill flow).
 
-| Group (in order)      | Sections documented                                                                                                                                                     |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Setup - Linux & macOS | Prerequisites, `pnpm setup-minecraft` (Java 17 + Blockbench), Blockbench plugins (GeckoLib + MCP), register MCP with Claude Code, verify the build                       |
-| Setup - Windows       | Manual install of Git, Node.js + pnpm, Java 17 (Temurin), Blockbench, Claude Code (official-installer + winget links), plugins/MCP, build via `.\gradlew.bat`            |
-| End-to-End Workflow   | Attended pre-flight (open Blockbench, live MCP endpoint), author with `/mob-forge`, worked "flying eyeball" example (generated file tree), attended in-game spawn-egg check |
+| Group (in order)         | Sections documented                                                                                                                                                     |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Setup - Linux & macOS    | Prerequisites, `pnpm setup-minecraft` (Java 17 + Blockbench), Blockbench plugins (GeckoLib + MCP), register MCP with Claude Code, verify the build                       |
+| Setup - Windows          | Manual install of Git, Node.js + pnpm, Java 17 (Temurin), Blockbench, Claude Code (official-installer + winget links), plugins/MCP, build via `.\gradlew.bat`            |
+| End-to-End Workflow      | Attended pre-flight (open Blockbench, live MCP endpoint), author with `/mob-forge`, worked "flying eyeball" example (generated file tree), attended in-game spawn-egg check |
+| Edit & Hand-Paint a Mob  | Source (`blockbench/<id>.bbmodel`) vs. build outputs, open the source in Blockbench, per-part paint in the Paint tab, scripted face-painting via `apps/mob-forge/tools/mob_face.py` (needs Python 3 + Pillow), save `.bbmodel` + export texture PNG, rebuild & test |
 
-Windows has no bootstrap step because the NeoForge MDK Gradle scaffold (incl. `gradlew.bat` and the GeckoLib injection) is committed to `apps/mob-forge`. All external download/doc URLs live in the `DOC_*` constants at the top of the panel.
+Windows has no bootstrap step because the NeoForge MDK Gradle scaffold (incl. `gradlew.bat` and the GeckoLib injection) is committed to `apps/mob-forge`. The `build`/`dev`/`clean` pnpm scripts run through `apps/mob-forge/tools/gradlew.mjs` (a cross-platform Node launcher), so `pnpm --filter=mob-forge build` works on Windows too — the Windows build step shows it alongside the direct `.\gradlew.bat` call. The scripted face-painter (`tools/mob_face.py`) additionally needs Python 3 + Pillow; `setup-minecraft.sh` (Bash-only) installs neither, so the panel documents the per-OS install. All external download/doc URLs live in the `DOC_*` constants at the top of the panel.
 
 ## Adding a New Tool or Section
 

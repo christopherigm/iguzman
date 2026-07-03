@@ -1,5 +1,8 @@
 {
-  "Metadata": { "title": "Help", "description": "" },
+  "Metadata": {
+    "title": "Help",
+    "description": ""
+  },
   "HomePage": {
     "menuSmartTv": "Smart TV",
     "smartTvTitle": "Smart TV Development",
@@ -297,7 +300,7 @@
     "mobForgeWinPluginsHeading": "6. Blockbench plugins + MCP server",
     "mobForgeWinPluginsDesc": "Identical to Linux/macOS: open Blockbench, install \"GeckoLib Models & Animations\" from File > Plugins, load the MCP plugin from its URL, then register the server with Claude Code and restart it.",
     "mobForgeWinBuildHeading": "7. Verify the build",
-    "mobForgeWinBuildDesc": "The pnpm wrapper scripts use Bash test syntax, so on Windows call the Gradle wrapper directly from apps\\mob-forge. gradlew.bat is committed, so no MDK bootstrap is required. The first build downloads Minecraft + NeoForge caches on demand.",
+    "mobForgeWinBuildDesc": "The build and dev scripts run through a small Node launcher, so pnpm --filter=mob-forge build works the same on Windows as on Linux/macOS - it invokes the committed gradlew.bat for you (you can still call it directly from apps\\mob-forge). No MDK bootstrap is required; the first build downloads Minecraft + NeoForge caches on demand.",
     "mobForgePreflightHeading": "1. Pre-flight (attended mode)",
     "mobForgePreflightDesc": "Before prompting, open Blockbench on your desktop with the GeckoLib + MCP plugins loaded and confirm the MCP endpoint is live at http://localhost:3000/bb-mcp. You watch the model get built live - Claude connects to your running instance, it never launches it. Optionally open the Minecraft client too.",
     "mobForgeAuthorHeading": "2. Author a mob with the /mob-forge skill",
@@ -306,6 +309,19 @@
     "mobForgeExampleDesc": "For that prompt (entity id eyeball), Claude produces the Java classes plus these committed artifacts - build outputs from the editable blockbench/eyeball.bbmodel. Every name (registry id, geo, animation ids like animation.eyeball.fly, bone names, texture) is reused verbatim to avoid load-time crashes.",
     "mobForgeIngameHeading": "4. Verify in-game (attended)",
     "mobForgeIngameDesc": "Launch the dev client, open the Spawn Eggs creative tab, and use the new Eyeball Spawn Egg - a warning: several near-identical eggs exist, so pick the right label. Confirm the model renders and the fly animation loops. This final check is human-in-the-loop.",
+    "mobForgeEditGroup": "Edit & Hand-Paint a Mob",
+    "mobForgeSourceHeading": "1. Source vs. build outputs",
+    "mobForgeSourceDesc": "Every mob keeps a committed, editable Blockbench source at blockbench/<id>.bbmodel. The geo.json, animation.json, and png under src/main/resources are build outputs generated from it - so hand-edits start from the .bbmodel, and the PNG is the texture that actually ships in the mod. Because the pipeline gives every cube its own non-overlapping UV rectangle, a brush stroke on one part never bleeds onto another. (If an older mob still has every cube at uv:[0,0], repack its UVs first - see apps/mob-forge/CLAUDE.md.)",
+    "mobForgeOpenHeading": "2. Open the editable source in Blockbench",
+    "mobForgeOpenDesc": "Open Blockbench and load the source with File > Open Model - no Claude Code or MCP is needed for manual painting. Always edit the .bbmodel rather than the raw PNG so the model, its UV layout, and the texture stay in sync.",
+    "mobForgePaintHeading": "3. Paint a single part",
+    "mobForgePaintDesc": "Switch to the Paint tab, select the body part you want in the outliner, and paint with the brush, color picker, and eraser. The UV panel highlights exactly which rectangle you are editing. This is the visual, per-part alternative to editing pixels in an image editor - reach for it when you want live 3D feedback while recoloring a head, adding a stripe, or detailing a limb.",
+    "mobForgeFacePaintHeading": "4. Or paint a face with the mob_face.py script",
+    "mobForgeFacePaintDesc": "A deterministic alternative to hand-painting: mob_face.py reads the model's per-part UV atlas and paints recognizable eyes, mouth, nose, nostrils, brows, or whiskers from a small JSON spec (tools/faces/<id>.face.json), then re-embeds the result into the .bbmodel so source and shipped texture stay in sync - no Blockbench needed. It requires Python 3 and the Pillow image library. Linux and macOS usually ship Python 3 already, so you only need Pillow; on Windows install Python first (winget), then Pillow, and use py in place of python3.",
+    "mobForgeSaveHeading": "5. Save the model and export the texture",
+    "mobForgeSaveDesc": "Persist both halves so the source and the shipped texture stay in sync. Save the model with File > Save (Ctrl+S) to update the .bbmodel, then export the painted texture (Paint tab, right-click the texture, Save As) and overwrite the existing PNG, keeping the same file path and pixel dimensions. Only re-export geo.json if you changed the texture resolution or repacked UVs.",
+    "mobForgeRebuildHeading": "6. Rebuild and test in-game",
+    "mobForgeRebuildDesc": "Rebuild the mod to bake the updated texture into the jar, then launch the dev client and spawn the mob with its spawn egg to confirm the paint in-game.",
     "mobForgeTemurinLink": "Eclipse Temurin JDK 17 - Adoptium",
     "mobForgeBlockbenchLink": "Blockbench downloads",
     "mobForgeMcpPluginLink": "Blockbench MCP plugin (jasonjgardner)",
@@ -314,9 +330,15 @@
     "mobForgeGitLink": "Git for Windows",
     "mobForgeNodeLink": "Node.js downloads",
     "mobForgePnpmLink": "pnpm installation",
-    "mobForgeClaudeLink": "Claude Code setup"
+    "mobForgeClaudeLink": "Claude Code setup",
+    "mobForgePythonLink": "Python downloads",
+    "mobForgePillowLink": "Pillow installation"
   },
-  "Navbar": { "home": "Home", "account": "Account", "signOut": "Sign out" },
+  "Navbar": {
+    "home": "Home",
+    "account": "Account",
+    "signOut": "Sign out"
+  },
   "Footer": {
     "appHeading": "App",
     "legalHeading": "Legal",

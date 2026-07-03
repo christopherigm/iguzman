@@ -6,8 +6,10 @@ description: Author a new GeckoLib mob in apps/mob-forge end-to-end — generate
 # mob-forge — prompt-to-play mob pipeline
 
 Author a new Minecraft 1.20.2 NeoForge + GeckoLib mob in `apps/mob-forge` from a
-natural-language description, following the pipeline proven in PRD Phase 4
-(`apps/prds/minecraft.md`).
+natural-language description. This pipeline is self-contained; the authoritative
+technical recipe lives in `apps/mob-forge/CLAUDE.md`. (`apps/prds/minecraft.md`
+is a **frozen historical record** of how this pipeline was proven — background
+only, not an operating manual; do not update it as part of a mob run.)
 
 **The mob to build is described in this skill's arguments** (the text after
 `/mob-forge`). If no description was given, ask for one before starting.
@@ -84,17 +86,44 @@ renderer via `EntityRenderersEvent` listener, two-arg `ResourceLocation`).
 ### 3. Author in Blockbench over MCP (watched live)
 `create_project` (format **`geckolib_model`**) → `create_texture` (geometry needs
 a texture BEFORE `place_cube`) → `place_cube` / mesh inside the named bone →
-`create_animation` (pass the **bare** name — the plugin auto-prepends
+**add ear/horn/antenna cubes if the animal has them** (parented to the head bone;
+`python3 tools/mob_face.py ears --geo <geo.json> --head <head-bone>` prints the
+symmetric `add_group`/`place_cube` values) → **UV-unwrap so each part is
+hand-paintable** (repack *after* the ears exist, so they get their own atlas
+rect) → `create_animation` (pass the **bare** name — the plugin auto-prepends
 `animation.`) → shape the motion to match the description → `capture_screenshot`
 to verify. Confirm names with `list_outline` and `Animation.all` before exporting.
 
-### 4. Export + validate (R3a/R3b recipe)
+**Model the anatomy the creature actually has.** Ears, horns, tails, wings, and
+fins are geometry (cubes/bones), not paint — decide from the build spec which the
+animal needs and add them here. Eyes/mouth/nose are painted later (phase 4); a
+seal gets eyes + nose, a cat gets ears too.
+
+**The UV-unwrap step is not optional.** The default `create_texture` +
+`place_cube` auto-UV collapses every cube onto a shared 16×16 region, so later
+hand-painting one body part bleeds onto all the others. Once all cubes exist,
+repack them into a non-overlapping, auto-scaled box-UV atlas per the **"Per-part
+UV layout"** recipe in `apps/mob-forge/CLAUDE.md` (`generateTemplate` with
+`rearrange_uv`, refill the PNG at the new size, then re-export the geo). This is
+what lets the operator customise the mob further after the run.
+
+### 4. Export + validate (R3a/R3b recipe) — and paint the face
 Use the `risky_eval` recipe in CLAUDE.md: the `geometry_name` + `Blockbench.export`
 intercept for the `.geo.json`, `AnimationCodec.compileFile([anim])` for the
 `.animation.json`, write both into
 `src/main/resources/assets/mobforge/{geo,animations}/`, and save the texture PNG
 to `textures/entity/<id>.png`. Then **validate every file on disk**
 (`python3 -m json.tool`) — never trust the tool's success message alone.
+
+**Give the mob a face** (don't ship a blank fill). Author
+`tools/faces/<id>.face.json` listing only the features the creature has (eyes,
+mouth, nose, nostrils, brows, whiskers — each targeting a bone + cube + face) and
+run `python3 tools/mob_face.py paint --spec tools/faces/<id>.face.json --root .`;
+it paints them onto the exported atlas from the geo's box-UV rects and re-embeds
+the result into the `.bbmodel`. See "Facial features + ears" in
+`apps/mob-forge/CLAUDE.md`; `tools/faces/flyingseal.face.json` is the reference.
+Keep it minimal — Minecraft faces are only a few pixels wide.
+
 Finally, **save the editable Blockbench source to `blockbench/<id>.bbmodel`**
 (`Codecs.project.compile()` → `fs.writeFileSync`, then set `Project.save_path`
 and `Project.saved=true`). This is the committed source of truth for later edits;
@@ -104,14 +133,32 @@ see "Editing an existing mob" in `apps/mob-forge/CLAUDE.md`.
 `pnpm --filter=mob-forge build` → expect BUILD SUCCESSFUL, and confirm the new
 assets packaged into the jar (`unzip -l build/libs/*.jar | grep <id>`).
 
-### 6. Attended in-game verification (Success Criteria #4–5)
+### 6. Attended in-game verification (done-criteria #4–5)
 Ask the operator to launch `pnpm --filter=mob-forge dev`, then spawn the **new**
 `<Name> Spawn Egg` from the Spawn Eggs creative tab — **warn them there are
 multiple near-identical eggs** and to pick the right label. Confirm the model
 renders and the animation plays recognizably. This step is human-in-the-loop.
 
+## Definition of done
+A run is a full pass when all six hold; report which were met and log any step
+that needed manual intervention as a gap (a run with manual intervention is a
+**partial** pass).
+
+1. Compiling Java entity + renderer classes, no manual edits.
+2. Blockbench driven over MCP to a rigged, animated model.
+3. Schema-valid GeckoLib `.geo.json` + `.animation.json` in the correct
+   `src/main/resources/assets/mobforge/{geo,animations}/` paths.
+4. Client launches and the spawn egg spawns the entity with no load-time crash.
+5. The model renders and the animation loop plays recognizably (Blockbench +
+   in-game confirmation).
+6. Every cube has a **non-overlapping** UV rectangle on an auto-scaled atlas (no
+   cubes left at `uv:[0,0]`), so the operator can hand-paint any part afterward
+   without bleed.
+7. The mob has the **anatomy and face its species implies** — ear/horn/etc.
+   geometry where applicable, and painted facial features (eyes and, as
+   appropriate, mouth/nose) instead of a blank fill. Only features the creature
+   actually has (`tools/mob_face.py` + `tools/faces/<id>.face.json`).
+
 ## On completion
-- Report which Success Criteria (PRD §6) were met, and log any step that needed
-  manual intervention as a gap.
-- Update `apps/prds/minecraft.md` only if this run represents a real milestone.
+- Report against the Definition of done above.
 - **Do NOT commit** unless the user explicitly asks.

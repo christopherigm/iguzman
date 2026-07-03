@@ -1,5 +1,8 @@
 {
-  "Metadata": { "title": "Help", "description": "" },
+  "Metadata": {
+    "title": "Help",
+    "description": ""
+  },
   "HomePage": {
     "menuSmartTv": "Smart TV",
     "smartTvTitle": "Smart-TV-Entwicklung",
@@ -297,7 +300,7 @@
     "mobForgeWinPluginsHeading": "6. Blockbench-Plugins + MCP-Server",
     "mobForgeWinPluginsDesc": "Identisch zu Linux/macOS: Blockbench öffnen, \"GeckoLib Models & Animations\" über File > Plugins installieren, das MCP-Plugin über seine URL laden, dann den Server bei Claude Code registrieren und neu starten.",
     "mobForgeWinBuildHeading": "7. Build überprüfen",
-    "mobForgeWinBuildDesc": "Die pnpm-Wrapper-Skripte nutzen Bash-Test-Syntax, daher unter Windows den Gradle-Wrapper direkt aus apps\\mob-forge aufrufen. gradlew.bat ist eingecheckt, sodass kein MDK-Bootstrap nötig ist. Der erste Build lädt die Minecraft- und NeoForge-Caches bei Bedarf herunter.",
+    "mobForgeWinBuildDesc": "Die Skripte build und dev laufen über einen kleinen Node-Launcher, daher funktioniert pnpm --filter=mob-forge build unter Windows genauso wie unter Linux/macOS - es ruft die eingecheckte gradlew.bat für dich auf (du kannst sie auch direkt aus apps\\mob-forge aufrufen). Kein MDK-Bootstrap nötig; der erste Build lädt die Minecraft- und NeoForge-Caches bei Bedarf herunter.",
     "mobForgePreflightHeading": "1. Vorbereitung (beaufsichtigter Modus)",
     "mobForgePreflightDesc": "Öffne vor dem Prompt Blockbench auf deinem Desktop mit geladenen GeckoLib- + MCP-Plugins und stelle sicher, dass der MCP-Endpunkt unter http://localhost:3000/bb-mcp aktiv ist. Du siehst das Modell live entstehen - Claude verbindet sich mit deiner laufenden Instanz und startet sie nie selbst. Optional auch den Minecraft-Client öffnen.",
     "mobForgeAuthorHeading": "2. Ein Mob mit dem /mob-forge-Skill erstellen",
@@ -306,6 +309,19 @@
     "mobForgeExampleDesc": "Für diesen Prompt (Entity-ID eyeball) erzeugt Claude die Java-Klassen sowie diese eingecheckten Artefakte - Build-Ausgaben aus der editierbaren blockbench/eyeball.bbmodel. Jeder Name (Registry-ID, geo, Animations-IDs wie animation.eyeball.fly, Bone-Namen, Textur) wird wortwörtlich wiederverwendet, um Abstürze beim Laden zu vermeiden.",
     "mobForgeIngameHeading": "4. Im Spiel überprüfen (beaufsichtigt)",
     "mobForgeIngameDesc": "Starte den Dev-Client, öffne den Kreativ-Tab \"Spawn-Eier\" und nutze das neue Eyeball-Spawn-Ei - Achtung: Es gibt mehrere fast identische Eier, also das richtige Label wählen. Prüfe, dass das Modell gerendert wird und die Flug-Animation loopt. Diese letzte Prüfung erfolgt durch einen Menschen.",
+    "mobForgeEditGroup": "Ein Mob bearbeiten & von Hand bemalen",
+    "mobForgeSourceHeading": "1. Quelle vs. Build-Ausgaben",
+    "mobForgeSourceDesc": "Jedes Mob behält eine eingecheckte, bearbeitbare Blockbench-Quelle unter blockbench/<id>.bbmodel. Die geo.json, animation.json und png unter src/main/resources sind daraus erzeugte Build-Ausgaben - Handbearbeitungen beginnen also bei der .bbmodel, und das PNG ist die Textur, die tatsächlich im Mod ausgeliefert wird. Da die Pipeline jedem Würfel sein eigenes, überschneidungsfreies UV-Rechteck gibt, blutet ein Pinselstrich auf einem Teil nie auf ein anderes über. (Hat ein älteres Mob noch alle Würfel bei uv:[0,0], packe zuerst seine UVs neu - siehe apps/mob-forge/CLAUDE.md.)",
+    "mobForgeOpenHeading": "2. Die bearbeitbare Quelle in Blockbench öffnen",
+    "mobForgeOpenDesc": "Öffne Blockbench und lade die Quelle mit File > Open Model - für das manuelle Bemalen sind weder Claude Code noch MCP nötig. Bearbeite immer die .bbmodel statt des rohen PNG, damit Modell, UV-Layout und Textur synchron bleiben.",
+    "mobForgePaintHeading": "3. Ein einzelnes Teil bemalen",
+    "mobForgePaintDesc": "Wechsle zum Paint-Tab, wähle im Outliner das gewünschte Körperteil und male mit Pinsel, Farbwähler und Radierer. Das UV-Panel hebt hervor, welches Rechteck du gerade bearbeitest. Das ist die visuelle, teilweise Alternative zum Bearbeiten der Pixel in einem Bildeditor - nutze sie, wenn du beim Umfärben eines Kopfes, Hinzufügen eines Streifens oder Ausarbeiten einer Extremität ein Live-3D-Feedback möchtest.",
+    "mobForgeFacePaintHeading": "4. Oder ein Gesicht mit dem Skript mob_face.py malen",
+    "mobForgeFacePaintDesc": "Eine deterministische Alternative zum Handmalen: mob_face.py liest den teilebasierten UV-Atlas des Modells und malt erkennbare Augen, Mund, Nase, Nasenlöcher, Brauen oder Schnurrhaare aus einer kleinen JSON-Spezifikation (tools/faces/<id>.face.json) und bettet das Ergebnis dann wieder in die .bbmodel ein, sodass Quelle und ausgelieferte Textur synchron bleiben - ganz ohne Blockbench. Es benötigt Python 3 und die Bildbibliothek Pillow. Linux und macOS bringen Python 3 meist schon mit, du brauchst also nur Pillow; unter Windows installiere zuerst Python (winget), dann Pillow, und verwende py statt python3.",
+    "mobForgeSaveHeading": "5. Modell speichern und Textur exportieren",
+    "mobForgeSaveDesc": "Sichere beide Hälften, damit Quelle und ausgelieferte Textur synchron bleiben. Speichere das Modell mit File > Save (Ctrl+S), um die .bbmodel zu aktualisieren, exportiere dann die bemalte Textur (Paint-Tab, Rechtsklick auf die Textur, Save As) und überschreibe das vorhandene PNG unter Beibehaltung von Pfad und Pixelmaßen. Exportiere geo.json nur neu, wenn du die Texturauflösung geändert oder die UVs neu gepackt hast.",
+    "mobForgeRebuildHeading": "6. Neu bauen und im Spiel testen",
+    "mobForgeRebuildDesc": "Baue den Mod neu, um die aktualisierte Textur in das Jar einzubacken, starte dann den Dev-Client und erzeuge das Mob mit seinem Spawn-Ei, um die Bemalung im Spiel zu bestätigen.",
     "mobForgeTemurinLink": "Eclipse Temurin JDK 17 - Adoptium",
     "mobForgeBlockbenchLink": "Blockbench-Downloads",
     "mobForgeMcpPluginLink": "Blockbench-MCP-Plugin (jasonjgardner)",
@@ -314,9 +330,15 @@
     "mobForgeGitLink": "Git für Windows",
     "mobForgeNodeLink": "Node.js-Downloads",
     "mobForgePnpmLink": "pnpm-Installation",
-    "mobForgeClaudeLink": "Claude Code - Einrichtung"
+    "mobForgeClaudeLink": "Claude Code - Einrichtung",
+    "mobForgePythonLink": "Python-Downloads",
+    "mobForgePillowLink": "Pillow-Installation"
   },
-  "Navbar": { "home": "Startseite", "account": "Konto", "signOut": "Abmelden" },
+  "Navbar": {
+    "home": "Startseite",
+    "account": "Konto",
+    "signOut": "Abmelden"
+  },
   "Footer": {
     "appHeading": "App",
     "legalHeading": "Rechtliches",

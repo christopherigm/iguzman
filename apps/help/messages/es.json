@@ -1,5 +1,8 @@
 {
-  "Metadata": { "title": "Help", "description": "" },
+  "Metadata": {
+    "title": "Help",
+    "description": ""
+  },
   "HomePage": {
     "menuSmartTv": "Smart TV",
     "smartTvTitle": "Desarrollo para Smart TV",
@@ -297,7 +300,7 @@
     "mobForgeWinPluginsHeading": "6. Plugins de Blockbench + servidor MCP",
     "mobForgeWinPluginsDesc": "Idéntico a Linux/macOS: abre Blockbench, instala \"GeckoLib Models & Animations\" desde File > Plugins, carga el plugin MCP desde su URL, registra el servidor en Claude Code y reinícialo.",
     "mobForgeWinBuildHeading": "7. Verifica la compilación",
-    "mobForgeWinBuildDesc": "Los scripts envoltorio de pnpm usan sintaxis de test de Bash, así que en Windows llama al wrapper de Gradle directamente desde apps\\mob-forge. gradlew.bat está incluido en el repo, así que no se necesita bootstrap del MDK. La primera compilación descarga las cachés de Minecraft + NeoForge bajo demanda.",
+    "mobForgeWinBuildDesc": "Los scripts build y dev se ejecutan mediante un pequeño lanzador de Node, así que pnpm --filter=mob-forge build funciona igual en Windows que en Linux/macOS: invoca por ti el gradlew.bat versionado (también puedes llamarlo directamente desde apps\\mob-forge). No se necesita bootstrap del MDK; la primera compilación descarga las cachés de Minecraft + NeoForge bajo demanda.",
     "mobForgePreflightHeading": "1. Preparación (modo atendido)",
     "mobForgePreflightDesc": "Antes de dar la instrucción, abre Blockbench en tu escritorio con los plugins GeckoLib + MCP cargados y confirma que el endpoint MCP está activo en http://localhost:3000/bb-mcp. Verás el modelo construirse en directo: Claude se conecta a tu instancia en ejecución, nunca la lanza. Opcionalmente, abre también el cliente de Minecraft.",
     "mobForgeAuthorHeading": "2. Crea un mob con la skill /mob-forge",
@@ -306,6 +309,19 @@
     "mobForgeExampleDesc": "Para esa instrucción (id de entidad eyeball), Claude produce las clases Java más estos artefactos versionados: salidas de compilación del editable blockbench/eyeball.bbmodel. Cada nombre (id de registro, geo, ids de animación como animation.eyeball.fly, nombres de huesos, textura) se reutiliza literalmente para evitar fallos al cargar.",
     "mobForgeIngameHeading": "4. Verifica en el juego (atendido)",
     "mobForgeIngameDesc": "Lanza el cliente de desarrollo, abre la pestaña creativa de Huevos generadores y usa el nuevo Huevo generador de Eyeball; ojo: existen varios huevos casi idénticos, así que elige la etiqueta correcta. Confirma que el modelo se renderiza y que la animación de vuelo se repite. Esta comprobación final la hace una persona.",
+    "mobForgeEditGroup": "Editar y pintar un mob a mano",
+    "mobForgeSourceHeading": "1. Fuente vs. archivos generados",
+    "mobForgeSourceDesc": "Cada mob conserva una fuente de Blockbench editable y versionada en blockbench/<id>.bbmodel. El geo.json, animation.json y png bajo src/main/resources son archivos generados a partir de ella, así que las ediciones manuales parten del .bbmodel y el PNG es la textura que realmente se incluye en el mod. Como el pipeline da a cada cubo su propio rectángulo UV sin solapamientos, una pincelada en una parte nunca se filtra a otra. (Si un mob antiguo aún tiene todos los cubos en uv:[0,0], reempaqueta primero sus UV; consulta apps/mob-forge/CLAUDE.md.)",
+    "mobForgeOpenHeading": "2. Abre la fuente editable en Blockbench",
+    "mobForgeOpenDesc": "Abre Blockbench y carga la fuente con File > Open Model; no necesitas Claude Code ni MCP para pintar a mano. Edita siempre el .bbmodel en lugar del PNG en bruto para que el modelo, su diseño UV y la textura sigan sincronizados.",
+    "mobForgePaintHeading": "3. Pinta una sola parte",
+    "mobForgePaintDesc": "Cambia a la pestaña Paint, selecciona en el outliner la parte del cuerpo que quieras y pinta con el pincel, el selector de color y la goma. El panel UV resalta exactamente qué rectángulo estás editando. Es la alternativa visual y por partes a editar los píxeles en un editor de imágenes: úsala cuando quieras ver el resultado 3D en vivo al recolorear una cabeza, añadir una franja o detallar una extremidad.",
+    "mobForgeFacePaintHeading": "4. O pinta una cara con el script mob_face.py",
+    "mobForgeFacePaintDesc": "Una alternativa determinista a pintar a mano: mob_face.py lee el atlas UV por partes del modelo y pinta ojos, boca, nariz, fosas nasales, cejas o bigotes reconocibles a partir de una pequeña especificación JSON (tools/faces/<id>.face.json), luego reincrusta el resultado en el .bbmodel para que la fuente y la textura publicada sigan sincronizadas, sin necesidad de Blockbench. Requiere Python 3 y la biblioteca de imágenes Pillow. Linux y macOS suelen traer Python 3 ya instalado, así que solo necesitas Pillow; en Windows instala primero Python (winget), luego Pillow, y usa py en lugar de python3.",
+    "mobForgeSaveHeading": "5. Guarda el modelo y exporta la textura",
+    "mobForgeSaveDesc": "Guarda ambas partes para que la fuente y la textura publicada sigan sincronizadas. Guarda el modelo con File > Save (Ctrl+S) para actualizar el .bbmodel y luego exporta la textura pintada (pestaña Paint, clic derecho en la textura, Save As) y sobrescribe el PNG existente, manteniendo la misma ruta y dimensiones en píxeles. Solo vuelve a exportar geo.json si cambiaste la resolución de la textura o reempaquetaste las UV.",
+    "mobForgeRebuildHeading": "6. Recompila y prueba en el juego",
+    "mobForgeRebuildDesc": "Recompila el mod para incrustar la textura actualizada en el jar y luego lanza el cliente de desarrollo y genera el mob con su huevo generador para confirmar el pintado en el juego.",
     "mobForgeTemurinLink": "Eclipse Temurin JDK 17 - Adoptium",
     "mobForgeBlockbenchLink": "Descargas de Blockbench",
     "mobForgeMcpPluginLink": "Plugin MCP de Blockbench (jasonjgardner)",
@@ -314,7 +330,9 @@
     "mobForgeGitLink": "Git para Windows",
     "mobForgeNodeLink": "Descargas de Node.js",
     "mobForgePnpmLink": "Instalación de pnpm",
-    "mobForgeClaudeLink": "Instalación de Claude Code"
+    "mobForgeClaudeLink": "Instalación de Claude Code",
+    "mobForgePythonLink": "Descargas de Python",
+    "mobForgePillowLink": "Instalación de Pillow"
   },
   "Navbar": {
     "home": "Inicio",

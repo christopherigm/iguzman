@@ -6,7 +6,26 @@ Guidance for Claude Code when working in `apps/mob-forge`. This is a **Minecraft
 here**. It is a Turborepo workspace member only through a thin `package.json`
 wrapper that shells out to `./gradlew`.
 
-See the product spec in `apps/prds/minecraft.md`.
+For the project's history and rationale (the Blender→Blockbench pivot, the
+1.20.1→1.20.2 tooling decision), see the **archived** spec in
+`apps/prds/minecraft.md`. That PRD is a frozen historical record — this file is
+the authoritative recipe for building mobs.
+
+### Risk glossary (the `Rn` shorthand used below)
+
+These IDs originate in the PRD's risk register but are self-defined here so this
+file stands alone:
+
+- **R3a** — GeckoLib model export depends on the plugin chain; there is no
+  GeckoLib export *codec* (see the export recipe).
+- **R3b** — animation export has no MCP file-export method; resolved via the
+  `risky_eval` `AnimationCodec.compileFile` path.
+- **R6** — naming collisions between Java registry names and asset/bone names
+  crash the client on load; author names first, reuse verbatim.
+- **R7** — the model hallucinates older Forge (1.12/1.16) syntax; pin to the
+  verified 1.20.2 NeoForge syntax rules below.
+- **R8** — the third-party Blockbench MCP plugin can drift its tool surface; the
+  tool contract below is the one-file place to fix a rename.
 
 ## What lives here vs. what is generated
 
@@ -78,8 +97,11 @@ driven over the [`jasonjgardner/blockbench-mcp-plugin`](https://github.com/jason
 HTTP MCP server (default `http://localhost:3000/bb-mcp`). Canonical sequence:
 
 `create_project` (**format `geckolib_model`**) → `create_texture` → `place_cube`
-(geometry) → `add_group` (bone) → `create_animation` (keyframes) →
+(geometry, **+ `left_ear`/`right_ear` cubes for eared animals** — see "Facial
+features + ears" below) → `add_group` (bone) → **UV-unwrap for per-part
+paintability** (see "Per-part UV layout" below) → `create_animation` (keyframes) →
 `capture_screenshot` (verify) → **export via `risky_eval`** (see recipe below) →
+**paint facial features** (`tools/mob_face.py paint`, see below) →
 **save the editable `blockbench/<id>.bbmodel`** (`Codecs.project.compile()` →
 `fs.writeFileSync`, then set `Project.save_path`/`Project.saved`).
 
@@ -140,6 +162,113 @@ an empty Generic Model project has zero textures. So the geometry step must
 the same string. (There is no delete-texture MCP tool; remove a stray one via
 `risky_eval` → `Texture … .remove()`.)
 
+### Per-part UV layout (so each body part is hand-paintable)
+
+**The goal:** after the pipeline finishes, the operator can open the mob in
+Blockbench and paint (or add detail to) any one body part *without the paint
+bleeding onto other parts*. That only works when **every cube owns its own
+non-overlapping rectangle** on the texture — one shared atlas, distinct regions,
+not one region shared by all.
+
+**The default pipeline does the opposite.** `create_texture` forces a **16×16**
+canvas (it ignores width/height in `geckolib_model`), and `place_cube` auto-UVs
+every cube into that tiny space, so they all **collapse to `uv:[0,0]`** and
+overlap completely (see `cube`/`testcube`/the pre-fix `flyingseal`). Painting the
+head then paints the whole body. `xenomorph` is the counter-example — a 128×128
+atlas with a distinct rect per cube.
+
+**Fix — repack to a non-overlapping, auto-scaled box-UV atlas** once all
+`place_cube`s exist and **before** export. Over `risky_eval`:
+
+1. Select every element (`selectAll()` is unreliable — set `el.selected=true` on
+   each `Outliner.elements` entry *and* push it into the global `selected` array).
+2. Stub `Blockbench.showMessageBox` to a no-op for the call — sub-pixel faces
+   (e.g. 0.7-wide claw tubes) pop a blocking warning dialog that hangs MCP.
+3. `TextureGenerator.generateTemplate({rearrange_uv:true, box_uv:true,
+   double_use:false, power:true, padding:0}, cb)` — pass a **callback fn as the
+   2nd arg** so it covers all elements in single-texture formats. This repacks
+   non-overlapping box-UV offsets for every cube and grows
+   `Project.texture_width/height` to the smallest power-of-two atlas that fits
+   them at ~1 texel per block-unit (**auto-scaled** — `xenomorph`→128,
+   `flyingseal`→64; never hardcode 16).
+4. `generateTemplate` **rearranges UVs but does NOT paint the bitmap over MCP.**
+   So afterward, regenerate the PNG at the new `texture_width/height`, filled with
+   the mob's base colour (a flat fill is fine — it is the blank canvas the
+   operator paints on), and load it back (`t.fromDataURL(url); t.updateSource(url);
+   Canvas.updateAll()`).
+5. **Re-export `geo.json`** — the `uv` offsets and `texture_width/height` changed,
+   so an un-re-exported model still samples `uv:[0,0]` in game.
+
+Then **verify the PNG's real dimensions on disk** (`struct.unpack` of the IHDR) —
+the tool's success message and byte count will not reveal a wrong-size canvas.
+
+> The box-UV net Blockbench stores per face (needed only if you repack UVs
+> deterministically *outside* Blockbench, e.g. a retrofit script): for a cube
+> `size=(w,h,d)` at offset `(u,v)` —
+> `east=[u, v+d, u+d, v+d+h]`, `north=[u+d, v+d, u+d+w, v+d+h]`,
+> `west=[u+d+w, v+d, u+2d+w, v+d+h]`, `south=[u+2d+w, v+d, u+2d+2w, v+d+h]`,
+> `up=[u+d+w, v+d, u+d, v]` (both axes flipped), `down=[u+d+2w, v, u+d+w, v+d]`.
+> The game only reads the 2-element `uv:[u,v]` offset and derives faces itself;
+> the `.bbmodel` stores the full rects above and must agree with them.
+
+## Facial features + ears (a face, not a blank fill) — `tools/mob_face.py`
+
+A mob with eyes, a mouth, and a nose reads as a creature; a flat-filled atlas
+reads as a prop. Because the per-part UV step above gives **every cube its own
+non-overlapping rectangle**, we can paint one part's face without bleeding onto
+the others — that is exactly what `tools/mob_face.py` automates. It is
+deterministic and needs no Blockbench (painting the atlas directly is the
+"texture-only tweak" fast path); it uses the same box-UV net documented above to
+find each part's face on the atlas.
+
+**Dependencies:** Python 3 + [Pillow](https://pillow.readthedocs.io/). `pnpm
+setup-minecraft` does not install them (it is Bash-only). Linux/macOS usually
+ship Python 3, so just add Pillow (`python3 -m pip install --user Pillow`); on
+Windows install Python first (`winget install -e --id Python.Python.3.12`), then
+`py -m pip install Pillow`, and use `py` in place of `python3` in the commands
+below.
+
+**Decide the anatomy first.** From the build spec, list which of eyes, mouth,
+nose, nostrils, brows, whiskers, and **ears** the animal actually has — a seal
+has eyes + nose + a mouth and *no* external ears; a cat has all of them. Only
+add what the creature has; a spurious mouth on an eyeball is worse than none.
+
+**Eyes/mouth/nose = paint (`paint`).** Author a spec at
+`tools/faces/<id>.face.json` that names, per feature, the target **bone + cube
+index + face** (`front` = the mob's +Z face by convention) plus normalized
+placement, then run:
+
+```bash
+python3 tools/mob_face.py paint --spec tools/faces/<id>.face.json --root .
+```
+
+It computes each feature's pixel rect from the geo, paints it, writes the PNG,
+**and re-embeds the result into `blockbench/<id>.bbmodel`** so source and build
+output stay in sync. Use `tools/mob_face.py faces --geo <geo.json>` to dump every
+cube's face rectangles when authoring a spec. Feature types: `eyes`, `mouth`,
+`nose`, `nostrils`, `brows`, `whiskers`, `patch` (generic fill). Paired features
+(`eyes`, `nostrils`, `brows`) mirror across the face centre so they stay
+symmetric. **Minecraft faces are tiny** (a head front is often 6×5 px), so keep
+it minimal — an eye is usually a single pixel; `whiskers` need a face ≥ ~10px
+wide to read and are best skipped on small heads. `tools/faces/flyingseal.face.json`
+is the worked reference.
+
+**Ears (and horns/antennae) = geometry, not paint.** External ears must be real
+cubes so they cast shape, animate with the head, and get their own UV rect. Add
+them in the **modeling phase**, parented to the head bone, *before* the UV
+repack — then the repack gives them atlas rectangles and `mob_face.py paint` can
+add inner-ear detail like any other part. To get symmetric, correctly-placed ear
+geometry, run:
+
+```bash
+python3 tools/mob_face.py ears --geo <geo.json> --head <head-bone> --tilt 18
+```
+
+It emits the two `add_group` + `place_cube` calls (bone names `left_ear` /
+`right_ear`, origin, size, pivot, outward tilt) to run over MCP. Because the ears
+are new bones, add the matching Java only if you animate them independently (R6);
+purely-cosmetic ears parented to the head need no controller change.
+
 ## Editing an existing mob (source vs. build outputs)
 
 Treat it like the rest of the monorepo — **`blockbench/<id>.bbmodel` is the
@@ -147,11 +276,22 @@ editable source; the `geo.json` + `animation.json` + `png` are build outputs**
 generated from it. Every mob keeps a committed `.bbmodel` so it can be reopened
 without lossy reconstruction.
 
-- **Texture-only tweak** (recolor / add detail): fastest path — the UV layout is
-  baked into `geo.json`, so edit `textures/entity/<id>.png` directly (any editor
-  or a script), **keeping the same pixel dimensions and UV layout**, then
-  `pnpm --filter=mob-forge build`. No Blockbench needed. Only re-export the geo
-  if you change the texture resolution or repack UVs.
+- **Texture-only tweak** (recolor / add detail / **add or fix a face**): fastest
+  path — the UV layout is baked into `geo.json`, so edit
+  `textures/entity/<id>.png` directly, **keeping the same pixel dimensions and UV
+  layout**, then `pnpm --filter=mob-forge build`. No Blockbench needed. For
+  facial features prefer `tools/mob_face.py paint` (see "Facial features + ears"
+  above) — it edits the PNG *and* re-embeds it into the `.bbmodel` for you. Only
+  re-export the geo if you change the texture resolution or repack UVs.
+- **Hand-painting a single part** (recolour the head, add a stripe to the tail):
+  because the pipeline now gives every cube its own non-overlapping rectangle (see
+  "Per-part UV layout" above), a stroke on one part no longer bleeds onto the
+  others. Open `blockbench/<id>.bbmodel` (`Codecs.project.load` — never `parse`),
+  use the **Paint** tab, select the target part in the outliner, and paint; the UV
+  panel shows exactly which rectangle you are editing. Save the PNG **and** the
+  `.bbmodel`, then rebuild. (If a mob still has all cubes at `uv:[0,0]` — an old
+  16×16 model — repack it first with the "Per-part UV layout" recipe, otherwise
+  painting *will* bleed.)
 - **Geometry / UV / animation change:** open `blockbench/<id>.bbmodel`, edit,
   re-export `geo.json` + `animation.json` via the `risky_eval` recipe above, save
   the `png`, **and save the `.bbmodel`**. If you rename a bone or animation id,
@@ -170,10 +310,16 @@ is `rotation → [-x, -y, z]`, `position`/`scale` unchanged.
 ## Build / run
 
 ```bash
-pnpm setup-minecraft          # one-time: toolchain + MDK bootstrap
-pnpm --filter=mob-forge build # ./gradlew build
-pnpm --filter=mob-forge dev   # ./gradlew runClient (launches the client)
+pnpm setup-minecraft          # one-time: toolchain + MDK bootstrap (Bash-only)
+pnpm --filter=mob-forge build # gradlew build
+pnpm --filter=mob-forge dev   # gradlew runClient (launches the client)
 ```
+
+`build`/`dev`/`clean` go through `tools/gradlew.mjs`, a tiny cross-platform Node
+launcher that picks `./gradlew` on Linux/macOS and `gradlew.bat` on Windows — so
+`pnpm --filter=mob-forge build` works the same on every OS (no need to call the
+wrapper by hand). `setup-minecraft` is still Bash-only; on Windows the toolchain
+is installed manually (see the help app's Mob Forge tab).
 
 ## Authoring a new mob — use the `/mob-forge` skill
 

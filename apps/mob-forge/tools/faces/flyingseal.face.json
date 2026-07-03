@@ -1,0 +1,49 @@
+{
+  "_comment": "Facial-feature spec for the flying seal. Paths are relative to apps/mob-forge. Run: python3 tools/mob_face.py paint --spec tools/faces/flyingseal.face.json --root .",
+  "geo": "src/main/resources/assets/mobforge/geo/flyingseal.geo.json",
+  "texture": "src/main/resources/assets/mobforge/textures/entity/flyingseal.png",
+  "bbmodel": "blockbench/flyingseal.bbmodel",
+  "features": [
+    {
+      "type": "eyes",
+      "bone": "flyingseal",
+      "cube": 1,
+      "face": "front",
+      "color": [34, 34, 44, 255],
+      "y": 0.28,
+      "spread": 0.62,
+      "radius": 0
+    },
+    {
+      "type": "mouth",
+      "bone": "flyingseal",
+      "cube": 1,
+      "face": "front",
+      "color": [88, 84, 92, 255],
+      "y": 0.95,
+      "width": 0.42,
+      "thickness": 1,
+      "curve": "smile"
+    },
+    {
+      "type": "nose",
+      "bone": "flyingseal",
+      "cube": 2,
+      "face": "front",
+      "color": [46, 42, 52, 255],
+      "y": 0.0,
+      "width": 1.0,
+      "height": 1.0
+    },
+    {
+      "type": "nostrils",
+      "bone": "flyingseal",
+      "cube": 2,
+      "face": "top",
+      "color": [12, 10, 16, 255],
+      "y": 0.6,
+      "spread": 0.5,
+      "radius": 0
+    }
+  ]
+}
