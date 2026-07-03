@@ -137,16 +137,29 @@ A run that requires manual intervention at any step is a partial pass and must b
 - Provide verified Minecraft 1.20.2 GeckoLib entity-registration syntax examples, since models sometimes hallucinate 1.12/1.16 Forge syntax. (Closes R7.)
 - Record the pinned Blockbench MCP tool names behind a short reference so a plugin rename is a one-file fix. (Closes R8.)
 
-### Phase 4: Proof of Concept (The "Hello World" Mob)
+### Phase 4: Proof of Concept (The "Hello World" Mob) — ✅ Complete
 
 **Objective:** Run the pipeline end-to-end with a simple entity.
 
-- **Task 4.1: The Bouncing Cube Test**
+**Outcome:** Full pass. From the single prompt _"Create a living green cube entity
+that bounces up and down,"_ the pipeline produced a compiling `CubeEntity`/`CubeRenderer`,
+authored the model + green texture + bounce animation in Blockbench over MCP, exported
+schema-valid `geo/cube.geo.json` + `animations/cube.animation.json`, and the operator
+confirmed the **Cube Spawn Egg** spawns a green cube that **bounces** in the 1.20.2 client
+(distinct from the Phase-0 `testcube` spin). Success Criteria #1–5 all met with no manual
+intervention up to the attended in-game step.
+
+- **Task 4.1: The Bouncing Cube Test** — ✅ **Complete.**
 - Prompt Claude Code: _"Create a living green cube entity that bounces up and down."_
 - Monitor Claude as it writes `CubeEntity.java` and `CubeRenderer.java`.
 - Monitor the MCP calls as Claude drives Blockbench to create a cube, rig it with a single bone, animate a 30-frame bounce loop, and screenshot-verify it before export.
+- Reused the Phase-0 export recipe verbatim (`geometry_name` intercept for `.geo.json`;
+  `AnimationCodec.compileFile` for `.animation.json`); the `create_animation` double-prefix
+  and `place_cube`-needs-texture gotchas both held as documented in `apps/mob-forge/CLAUDE.md`.
 
-- **Task 4.2: Compilation & Verification**
+- **Task 4.2: Compilation & Verification** — ✅ **Complete.**
 - Verify the `.geo.json` / `.animation.json` appeared in the correct directories and pass schema validation.
 - Launch the Minecraft client on the operator's display (or attach to the one the user already opened).
 - Use a spawn egg to test that the custom model renders and animates correctly in-game, and capture the confirming screenshot (Success Criteria #5).
+- `pnpm --filter=mob-forge build` succeeded and both assets packaged into the jar; operator
+  launched `pnpm --filter=mob-forge dev` and confirmed the bounce in-game.

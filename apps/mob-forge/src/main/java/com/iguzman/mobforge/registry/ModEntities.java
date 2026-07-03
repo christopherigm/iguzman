@@ -1,7 +1,10 @@
 package com.iguzman.mobforge.registry;
 
 import com.iguzman.mobforge.MobForge;
+import com.iguzman.mobforge.entity.CubeEntity;
+import com.iguzman.mobforge.entity.FlyingSealEntity;
 import com.iguzman.mobforge.entity.TestCubeEntity;
+import com.iguzman.mobforge.entity.XenomorphEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -24,6 +27,24 @@ public final class ModEntities {
                     .of(TestCubeEntity::new, MobCategory.CREATURE)
                     .sized(0.5f, 0.5f)
                     .build("testcube"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<CubeEntity>> CUBE =
+            ENTITIES.register("cube", () -> EntityType.Builder
+                    .of(CubeEntity::new, MobCategory.CREATURE)
+                    .sized(0.5f, 0.5f)
+                    .build("cube"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<FlyingSealEntity>> FLYING_SEAL =
+            ENTITIES.register("flyingseal", () -> EntityType.Builder
+                    .of(FlyingSealEntity::new, MobCategory.CREATURE)
+                    .sized(0.9f, 0.6f)
+                    .build("flyingseal"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<XenomorphEntity>> XENOMORPH =
+            ENTITIES.register("xenomorph", () -> EntityType.Builder
+                    .of(XenomorphEntity::new, MobCategory.MONSTER)
+                    .sized(0.7f, 2.3f)
+                    .build("xenomorph"));
 
     private ModEntities() {}
 }

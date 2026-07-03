@@ -1,7 +1,10 @@
 package com.iguzman.mobforge;
 
 import com.iguzman.mobforge.client.MobForgeClient;
+import com.iguzman.mobforge.entity.CubeEntity;
+import com.iguzman.mobforge.entity.FlyingSealEntity;
 import com.iguzman.mobforge.entity.TestCubeEntity;
+import com.iguzman.mobforge.entity.XenomorphEntity;
 import com.iguzman.mobforge.registry.ModEntities;
 import com.iguzman.mobforge.registry.ModItems;
 import com.mojang.logging.LogUtils;
@@ -56,11 +59,17 @@ public class MobForge {
 
     private void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(ModEntities.TEST_CUBE.get(), TestCubeEntity.createAttributes().build());
+        event.put(ModEntities.CUBE.get(), CubeEntity.createAttributes().build());
+        event.put(ModEntities.FLYING_SEAL.get(), FlyingSealEntity.createAttributes().build());
+        event.put(ModEntities.XENOMORPH.get(), XenomorphEntity.createAttributes().build());
     }
 
     private void addCreative(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
             event.accept(ModItems.TEST_CUBE_SPAWN_EGG.get());
+            event.accept(ModItems.CUBE_SPAWN_EGG.get());
+            event.accept(ModItems.FLYING_SEAL_SPAWN_EGG.get());
+            event.accept(ModItems.XENOMORPH_SPAWN_EGG.get());
         }
     }
 }

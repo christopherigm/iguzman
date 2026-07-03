@@ -22,6 +22,9 @@ public final class MobForgeClient {
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.TEST_CUBE.get(), TestCubeRenderer::new);
+        event.registerEntityRenderer(ModEntities.CUBE.get(), CubeRenderer::new);
+        event.registerEntityRenderer(ModEntities.FLYING_SEAL.get(), FlyingSealRenderer::new);
+        event.registerEntityRenderer(ModEntities.XENOMORPH.get(), XenomorphRenderer::new);
     }
 
     private MobForgeClient() {}

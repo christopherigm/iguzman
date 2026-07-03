@@ -26,5 +26,29 @@ public final class ModItems {
                             0x2E7D32, // secondary (darker green)
                             new Item.Properties()));
 
+    public static final DeferredItem<Item> CUBE_SPAWN_EGG =
+            ITEMS.register("cube_spawn_egg",
+                    () -> new DeferredSpawnEggItem(
+                            ModEntities.CUBE,
+                            0x4CAF50, // primary (green body)
+                            0x2E7D32, // secondary (darker green)
+                            new Item.Properties()));
+
+    public static final DeferredItem<Item> FLYING_SEAL_SPAWN_EGG =
+            ITEMS.register("flyingseal_spawn_egg",
+                    () -> new DeferredSpawnEggItem(
+                            ModEntities.FLYING_SEAL,
+                            0xF5F5F5, // primary (white body)
+                            0x9E9E9E, // secondary (gray spots)
+                            new Item.Properties()));
+
+    public static final DeferredItem<Item> XENOMORPH_SPAWN_EGG =
+            ITEMS.register("xenomorph_spawn_egg",
+                    () -> new DeferredSpawnEggItem(
+                            ModEntities.XENOMORPH,
+                            0x141414, // primary (near-black carapace)
+                            0x3E3E4A, // secondary (biomechanical steel-blue)
+                            new Item.Properties()));
+
     private ModItems() {}
 }

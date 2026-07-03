@@ -11,7 +11,9 @@ See the product spec in `apps/prds/minecraft.md`.
 ## What lives here vs. what is generated
 
 - **Committed:** our Java (`src/main/java`), our assets (`src/main/resources`,
-  including GeckoLib `geo/` + `animations/`), `gradle.properties`, this file.
+  including GeckoLib `geo/` + `animations/`), the **editable Blockbench sources
+  in `blockbench/<id>.bbmodel`** (see "Editing an existing mob" below),
+  `gradle.properties`, this file.
 - **Bootstrapped by `pnpm setup-minecraft`, then committed:** the official
   NeoForge 1.20.2 MDK Gradle files (`build.gradle`, `settings.gradle`, the
   `gradlew` wrapper) with GeckoLib injected. Never hand-author `build.gradle`
@@ -77,7 +79,9 @@ HTTP MCP server (default `http://localhost:3000/bb-mcp`). Canonical sequence:
 
 `create_project` (**format `geckolib_model`**) → `create_texture` → `place_cube`
 (geometry) → `add_group` (bone) → `create_animation` (keyframes) →
-`capture_screenshot` (verify) → **export via `risky_eval`** (see recipe below).
+`capture_screenshot` (verify) → **export via `risky_eval`** (see recipe below) →
+**save the editable `blockbench/<id>.bbmodel`** (`Codecs.project.compile()` →
+`fs.writeFileSync`, then set `Project.save_path`/`Project.saved`).
 
 ### Export recipe (verified in Task 0.1-V — R3a/R3b closed)
 
@@ -136,6 +140,33 @@ an empty Generic Model project has zero textures. So the geometry step must
 the same string. (There is no delete-texture MCP tool; remove a stray one via
 `risky_eval` → `Texture … .remove()`.)
 
+## Editing an existing mob (source vs. build outputs)
+
+Treat it like the rest of the monorepo — **`blockbench/<id>.bbmodel` is the
+editable source; the `geo.json` + `animation.json` + `png` are build outputs**
+generated from it. Every mob keeps a committed `.bbmodel` so it can be reopened
+without lossy reconstruction.
+
+- **Texture-only tweak** (recolor / add detail): fastest path — the UV layout is
+  baked into `geo.json`, so edit `textures/entity/<id>.png` directly (any editor
+  or a script), **keeping the same pixel dimensions and UV layout**, then
+  `pnpm --filter=mob-forge build`. No Blockbench needed. Only re-export the geo
+  if you change the texture resolution or repack UVs.
+- **Geometry / UV / animation change:** open `blockbench/<id>.bbmodel`, edit,
+  re-export `geo.json` + `animation.json` via the `risky_eval` recipe above, save
+  the `png`, **and save the `.bbmodel`**. If you rename a bone or animation id,
+  update the matching Java (`AnimationController` refs + bone lookups) — R6.
+
+**Blockbench-MCP gotcha (learned the hard way):** to open a `.bbmodel` over MCP,
+use `Codecs.project.load(model, {path})` — it creates a **new** project.
+`Codecs.project.parse(...)` **merges into the currently-active project** and will
+silently corrupt it. Never leave a project's `save_path` pointing at a file whose
+in-memory content is wrong (a stray Ctrl+S then overwrites the good file). If you
+ever need to rebuild a `.bbmodel` from scratch, the committed `geo.json` +
+`animation.json` + `png` are a complete, deterministic source: box-UV faces come
+from each cube's `uv` offset + size, and bedrock→Blockbench animation conversion
+is `rotation → [-x, -y, z]`, `position`/`scale` unchanged.
+
 ## Build / run
 
 ```bash
@@ -143,3 +174,12 @@ pnpm setup-minecraft          # one-time: toolchain + MDK bootstrap
 pnpm --filter=mob-forge build # ./gradlew build
 pnpm --filter=mob-forge dev   # ./gradlew runClient (launches the client)
 ```
+
+## Authoring a new mob — use the `/mob-forge` skill
+
+To author a new GeckoLib mob end-to-end (Java → Blockbench MCP → export → build →
+attended in-game check), invoke the **`/mob-forge <description>`** skill
+(`.claude/skills/mob-forge/SKILL.md`) — e.g. `/mob-forge a hostile flying eyeball
+that shoots lasers`. It sequences the full prompt-to-play pipeline and treats this
+file as the authoritative recipe (naming discipline, 1.20.2 syntax, the MCP tool
+contract, and the `risky_eval` export steps all live here, not in the skill).

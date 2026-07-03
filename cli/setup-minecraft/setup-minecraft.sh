@@ -37,8 +37,12 @@ MDK_FALLBACK_URL="https://github.com/neoforgemdks"  # shown if the branch 404s
 GECKOLIB_MAVEN="https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/"
 
 # Blockbench plugin references (installed via the Blockbench UI — guided step).
-GECKOLIB_BB_PLUGIN="GeckoLib Models & Animations (Blockbench plugin store)"
-MCP_BB_PLUGIN_URL="https://github.com/jasonjgardner/blockbench-mcp-plugin"
+GECKOLIB_BB_PLUGIN="GeckoLib Animation Utils (Blockbench plugin store)"
+# Direct "Load Plugin from URL" target — the built plugin entrypoint, not the repo.
+MCP_BB_PLUGIN_URL="https://jasonjgardner.github.io/blockbench-mcp-plugin/mcp.js"
+# Claude Code registers the Blockbench MCP server over streamable HTTP.
+MCP_SERVER_URL="http://localhost:3000/bb-mcp"
+CLAUDE_MCP_ADD_CMD="claude mcp add blockbench --transport http ${MCP_SERVER_URL}"
 
 # ── ANSI colors ───────────────────────────────────────────────────────────────
 
@@ -189,11 +193,14 @@ guide_plugins() {
 
     1) Open Blockbench.
     2) File → Plugins → search & install:  ${GECKOLIB_BB_PLUGIN}
-    3) File → Plugins → "Load Plugin from URL" and point at the MCP plugin:
+       (lets you author/export the GeckoLib model + animation JSON mob-forge loads)
+    3) File → Plugins → "Load Plugin from URL" and paste the MCP plugin entrypoint:
          ${MCP_BB_PLUGIN_URL}
-       (follow its README to build/enable; it exposes the MCP server at
-        http://localhost:3000/bb-mcp)
-    4) Keep Blockbench open on your display before prompting Claude Code so you
+       Once enabled it serves the MCP server at ${MCP_SERVER_URL}.
+    4) Register that server with Claude Code (run in the repo root, one time):
+         ${CLAUDE_MCP_ADD_CMD}
+       Then restart Claude Code so the Blockbench MCP tools load.
+    5) Keep Blockbench open on your display before prompting Claude Code so you
        can watch the model get authored live.
 EOF
 }

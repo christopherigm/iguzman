@@ -1,4 +1,10 @@
 {
   "entity.mobforge.testcube": "Test Cube",
-  "item.mobforge.testcube_spawn_egg": "Test Cube Spawn Egg"
+  "item.mobforge.testcube_spawn_egg": "Test Cube Spawn Egg",
+  "entity.mobforge.cube": "Cube",
+  "item.mobforge.cube_spawn_egg": "Cube Spawn Egg",
+  "entity.mobforge.flyingseal": "Flying Seal",
+  "item.mobforge.flyingseal_spawn_egg": "Flying Seal Spawn Egg",
+  "entity.mobforge.xenomorph": "Xenomorph",
+  "item.mobforge.xenomorph_spawn_egg": "Xenomorph Spawn Egg"
 }
