@@ -9,6 +9,7 @@ import { TabMenu } from "./tab-menu";
 import { ServicesPanel } from "./services-panel";
 import { ToolsPanel } from "./edit-videos-panel";
 import { SmartTvPanel } from "./smarttv-panel";
+import { MobForgePanel } from "./mob-forge-panel";
 import "./page.css";
 
 type Props = {
@@ -22,6 +23,7 @@ const VALID_TABS = [
   "services",
   "tools",
   "smart-tv",
+  "mob-forge",
   "dev-cycle",
 ] as const;
 type Tab = (typeof VALID_TABS)[number];
@@ -112,9 +114,11 @@ export default async function Home({ params, searchParams }: Props) {
           ? t("toolsTitle")
           : tab === "smart-tv"
             ? t("smartTvTitle")
-            : tab === "dev-cycle"
-              ? t("devCycleTitle")
-              : t("title");
+            : tab === "mob-forge"
+              ? t("mobForgeTitle")
+              : tab === "dev-cycle"
+                ? t("devCycleTitle")
+                : t("title");
 
   const subheading =
     tab === "getting-started"
@@ -125,9 +129,11 @@ export default async function Home({ params, searchParams }: Props) {
           ? t("toolsSubtitle")
           : tab === "smart-tv"
             ? t("smartTvSubtitle")
-            : tab === "dev-cycle"
-              ? t("devCycleSubtitle")
-              : t("subtitle");
+            : tab === "mob-forge"
+              ? t("mobForgeSubtitle")
+              : tab === "dev-cycle"
+                ? t("devCycleSubtitle")
+                : t("subtitle");
 
   const menuLabels = {
     "getting-started": t("menuGettingStarted"),
@@ -135,6 +141,7 @@ export default async function Home({ params, searchParams }: Props) {
     services: t("menuServices"),
     tools: t("menuTools"),
     "smart-tv": t("menuSmartTv"),
+    "mob-forge": t("menuMobForge"),
     "dev-cycle": t("menuDevCycle"),
   };
 
@@ -331,6 +338,8 @@ export default async function Home({ params, searchParams }: Props) {
             {tab === "tools" && <ToolsPanel />}
 
             {tab === "smart-tv" && <SmartTvPanel />}
+
+            {tab === "mob-forge" && <MobForgePanel />}
 
             {tab === "dev-cycle" && (
               <>

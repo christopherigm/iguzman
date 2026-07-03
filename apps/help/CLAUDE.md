@@ -1,6 +1,6 @@
 # apps/help CLAUDE.md
 
-`apps/help/` is the developer documentation hub for this monorepo. It has six tabs. When anything in the inventory below changes - flags, defaults, new operations, removed features, renamed commands - update both the relevant source file **and** all five locale files (`messages/en.json`, `es.json`, `de.json`, `fr.json`, `pt.json`) in the same task.
+`apps/help/` is the developer documentation hub for this monorepo. It has seven tabs. When anything in the inventory below changes - flags, defaults, new operations, removed features, renamed commands - update both the relevant source file **and** all five locale files (`messages/en.json`, `es.json`, `de.json`, `fr.json`, `pt.json`) in the same task.
 
 ## Inventory by Tab
 
@@ -66,6 +66,18 @@ Build/test steps also wrap the `tizen`/`sdb` CLI in two interactive helper scrip
 | Build & Package          | Link the built `dist/` into Tizen Studio (`File ▸ Import ▸ Tizen Project`), Build Signed Package (CLI: `cli/tv-deploy`, `tizen package`)  |
 | Test in Emulator         | Run As ▸ Tizen Web Application on the emulator (CLI: `cli/tv-deploy`, `tizen install`/`run` on `emulator-26101`)                         |
 | Test on a Real TV        | Run As ▸ Tizen Web Application on the TV target (CLI: `cli/tv-deploy`, `tizen install`/`run`)                                            |
+
+### Mob Forge - `app/[locale]/mob-forge-panel.tsx`
+
+The `apps/mob-forge` pipeline, ordered **setup-first, workflow-last** and split into three groups. Source of truth is `cli/setup-minecraft/setup-minecraft.sh`, `apps/mob-forge/CLAUDE.md`, and the PRD `apps/prds/minecraft.md` - keep this panel in sync when any of them change (tool versions, MCP endpoint, plugin URLs, the `/mob-forge` skill flow).
+
+| Group (in order)      | Sections documented                                                                                                                                                     |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Setup - Linux & macOS | Prerequisites, `pnpm setup-minecraft` (Java 17 + Blockbench), Blockbench plugins (GeckoLib + MCP), register MCP with Claude Code, verify the build                       |
+| Setup - Windows       | Manual install of Git, Node.js + pnpm, Java 17 (Temurin), Blockbench, Claude Code (official-installer + winget links), plugins/MCP, build via `.\gradlew.bat`            |
+| End-to-End Workflow   | Attended pre-flight (open Blockbench, live MCP endpoint), author with `/mob-forge`, worked "flying eyeball" example (generated file tree), attended in-game spawn-egg check |
+
+Windows has no bootstrap step because the NeoForge MDK Gradle scaffold (incl. `gradlew.bat` and the GeckoLib injection) is committed to `apps/mob-forge`. All external download/doc URLs live in the `DOC_*` constants at the top of the panel.
 
 ## Adding a New Tool or Section
 
