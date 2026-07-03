@@ -90,6 +90,42 @@ entity `eyeball`:
 - bone/group names in Blockbench must match what the Java animation controller
   references.
 
+## Facing convention (mobs must travel forwards) — the `<id>_root` wrapper
+
+Minecraft/GeckoLib render every entity through a **180° yaw flip** (vanilla
+`LivingEntityRenderer` rotates the model by `180 − yaw`; GeckoLib's
+`GeoEntityRenderer` does the same). A model is therefore drawn facing the
+**opposite** of the way its geometry points, so a mob whose head/front is at **+Z
+walks and flies backwards** in game — head trailing, tail leading. This bit
+`flyingseal` and `xenomorph` (both authored snout-at-+Z).
+
+We keep authoring mobs **head/face toward +Z** — that is what the pipeline
+naturally produces and what `tools/mob_face.py` assumes (its `front` alias =
+the +Z / `south` box-UV face; flipping that would desync every `tools/faces/*.json`
+spec). To make a +Z-front model travel forwards, **wrap the whole rig in one
+extra root bone that carries a rigid 180° Y rotation**. Because it is a *rigid*
+rotation applied at render time (not a coordinate flip), it preserves every
+cube's box-UV texturing — no repaint, no UV edits, no animation changes (bones
+are still referenced by their original names).
+
+**This wrapper is a mandatory, final geometry step for every non-radially-symmetric
+mob** (a symmetric blob like `cube`/`testcube` needs none). Apply it to **both**
+the `geo.json` build output and the `.bbmodel` source:
+
+- **`geo.json`:** prepend a bone `{"name":"<id>_root","pivot":[0,0,0],"rotation":[0,180,0]}`
+  (no cubes) and set the current root bone's `"parent":"<id>_root"`.
+- **`.bbmodel`:** add a group `<id>_root` with `origin:[0,0,0]`, `rotation:[0,180,0]`,
+  and nest the previously top-level group under it in the `outliner`. (A Blockbench
+  group's `rotation` exports to bedrock as `[-x,-y,z]`; for a pure `[0,180,0]` the
+  negation is a no-op, so both files use `[0,180,0]` verbatim.)
+- **No Java / animation change** — GeckoLib finds bones by name recursively, so the
+  extra parent is transparent to the `AnimationController` and the `.animation.json`.
+
+**Retrofitting an existing backwards mob** is exactly the above (idempotent — skip
+if a `<id>_root` bone/group already exists). Verify by eye: in Blockbench the
+head should now point toward **+Z after** the root's flip, i.e. the model reads
+back-to-front relative to how you drew it; in game the mob leads with its head.
+
 ## Blockbench MCP tool contract (closes R8 — pin against plugin drift)
 
 Assets are authored in **Blockbench** (opened by the operator, watched live) and

@@ -99,6 +99,15 @@ fins are geometry (cubes/bones), not paint — decide from the build spec which 
 animal needs and add them here. Eyes/mouth/nose are painted later (phase 4); a
 seal gets eyes + nose, a cat gets ears too.
 
+**Keep authoring the head/face toward +Z, then add a forward-facing root.**
+Author the mob the usual way — head/snout at the most positive Z (so
+`tools/mob_face.py`'s `front` = +Z face keeps working) — but Minecraft/GeckoLib
+render every entity with a 180° yaw flip, so a raw +Z-front model **travels
+backwards**. Fix it by wrapping the whole rig in a single root bone rotated
+`[0, 180, 0]` (a rigid rotation that preserves box-UV texturing). This is a
+**mandatory** step; see **"Facing convention"** in `apps/mob-forge/CLAUDE.md` for
+the one-line geo/`.bbmodel` recipe.
+
 **The UV-unwrap step is not optional.** The default `create_texture` +
 `place_cube` auto-UV collapses every cube onto a shared 16×16 region, so later
 hand-painting one body part bleeds onto all the others. Once all cubes exist,
@@ -140,7 +149,7 @@ multiple near-identical eggs** and to pick the right label. Confirm the model
 renders and the animation plays recognizably. This step is human-in-the-loop.
 
 ## Definition of done
-A run is a full pass when all six hold; report which were met and log any step
+A run is a full pass when all of the following hold; report which were met and log any step
 that needed manual intervention as a gap (a run with manual intervention is a
 **partial** pass).
 
@@ -158,6 +167,10 @@ that needed manual intervention as a gap (a run with manual intervention is a
    geometry where applicable, and painted facial features (eyes and, as
    appropriate, mouth/nose) instead of a blank fill. Only features the creature
    actually has (`tools/mob_face.py` + `tools/faces/<id>.face.json`).
+8. The mob **travels forwards** — head leading, not tail-first. Any
+   non-symmetric rig carries the `[0, 180, 0]` `<id>_root` wrapper bone (see
+   "Facing convention" in `apps/mob-forge/CLAUDE.md`); confirm in-game that it
+   walks/flies the way it faces.
 
 ## On completion
 - Report against the Definition of done above.
