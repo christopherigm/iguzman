@@ -6,5 +6,9 @@
   "entity.mobforge.flyingseal": "Flying Seal",
   "item.mobforge.flyingseal_spawn_egg": "Flying Seal Spawn Egg",
   "entity.mobforge.xenomorph": "Xenomorph",
-  "item.mobforge.xenomorph_spawn_egg": "Xenomorph Spawn Egg"
+  "item.mobforge.xenomorph_spawn_egg": "Xenomorph Spawn Egg",
+  "itemGroup.mobforge.items": "Mob Forge Items",
+  "item.mobforge.ruby": "Ruby",
+  "item.mobforge.sunberry": "Sunberry",
+  "item.mobforge.emberblade": "Emberblade"
 }

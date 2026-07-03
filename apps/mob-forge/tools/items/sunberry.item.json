@@ -1,0 +1,32 @@
+{
+  "id": "sunberry",
+  "texture": "src/main/resources/assets/mobforge/textures/item/sunberry.png",
+  "bbmodel": "blockbench/items/sunberry.bbmodel",
+  "palette": {
+    ".": [0, 0, 0, 0],
+    "o": [70, 35, 12, 255],
+    "b": [240, 130, 45, 255],
+    "d": [205, 85, 22, 255],
+    "h": [255, 205, 130, 255],
+    "g": [85, 175, 65, 255],
+    "e": [55, 125, 42, 255]
+  },
+  "grid": [
+    "................",
+    ".......e........",
+    "......eeg.......",
+    ".....eggg.......",
+    "......ogo.......",
+    "....ooboooo.....",
+    "...obhbbbbdo....",
+    "..obhbbbbbbdo...",
+    "..obbbbbbbbdo...",
+    "..obbbbbbbbdo...",
+    "..odbbbbbbbdo...",
+    "...odbbbbbdo....",
+    "....oddbbdo.....",
+    ".....oddo.......",
+    "......oo........",
+    "................"
+  ]
+}

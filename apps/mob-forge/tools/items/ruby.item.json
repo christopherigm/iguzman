@@ -1,0 +1,30 @@
+{
+  "id": "ruby",
+  "texture": "src/main/resources/assets/mobforge/textures/item/ruby.png",
+  "bbmodel": "blockbench/items/ruby.bbmodel",
+  "palette": {
+    ".": [0, 0, 0, 0],
+    "o": [90, 12, 28, 255],
+    "r": [205, 30, 58, 255],
+    "h": [245, 130, 150, 255],
+    "d": [150, 20, 42, 255]
+  },
+  "grid": [
+    "................",
+    "................",
+    "......oooo......",
+    ".....ohhhho.....",
+    "....ohhrrhho....",
+    "...ohrrrrrrho...",
+    "..ohrrrrrrrrho..",
+    "..orrrrddrrrro..",
+    "..orrrddddrrro..",
+    "..odrrddddrrdo..",
+    "...odrrddrrdo...",
+    "....odrrrrdo....",
+    ".....odrrdo.....",
+    "......oddo......",
+    ".......oo.......",
+    "................"
+  ]
+}

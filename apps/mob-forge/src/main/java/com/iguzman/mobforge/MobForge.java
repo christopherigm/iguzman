@@ -5,6 +5,7 @@ import com.iguzman.mobforge.entity.CubeEntity;
 import com.iguzman.mobforge.entity.FlyingSealEntity;
 import com.iguzman.mobforge.entity.TestCubeEntity;
 import com.iguzman.mobforge.entity.XenomorphEntity;
+import com.iguzman.mobforge.registry.ModCreativeTabs;
 import com.iguzman.mobforge.registry.ModEntities;
 import com.iguzman.mobforge.registry.ModItems;
 import com.mojang.logging.LogUtils;
@@ -43,6 +44,7 @@ public class MobForge {
         // Deferred registers attach to the mod event bus.
         ModEntities.ENTITIES.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
+        ModCreativeTabs.TABS.register(modEventBus);
 
         // Mod-bus lifecycle listeners.
         modEventBus.addListener(this::registerAttributes);

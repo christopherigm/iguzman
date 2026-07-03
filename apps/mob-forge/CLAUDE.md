@@ -365,3 +365,83 @@ attended in-game check), invoke the **`/mob-forge <description>`** skill
 that shoots lasers`. It sequences the full prompt-to-play pipeline and treats this
 file as the authoritative recipe (naming discipline, 1.20.2 syntax, the MCP tool
 contract, and the `risky_eval` export steps all live here, not in the skill).
+
+## Authoring an item (inventory items — gems, food, tools/weapons)
+
+Items are **not** mobs, and the item pipeline shares almost nothing with the mob
+one — no GeckoLib, no rig, no animation, no entity, no renderer, no Blockbench
+*required*. Use the **`/item-forge <description>`** skill
+(`.claude/skills/item-forge/SKILL.md`) — e.g. `/item-forge a ruby-encrusted
+dagger`. This section is the authoritative item recipe.
+
+### Scope: flat inventory items only (not blocks)
+This covers items you hold or carry: **gems/materials, food, and tools/weapons**.
+A **block** (a placeable candle, lamp, ore, decorative block) is a different thing
+— Block + `BlockItem` + blockstate + world behaviour — and is **out of scope**;
+don't fake a placeable object as an item.
+
+### The sprite *is* the model — there is no geometry
+A flat item (`item/generated` or `item/handheld`) has **no cubes to author**.
+Minecraft auto-extrudes the little in-hand 3D slab straight from the sprite's
+alpha channel at runtime, so a 16×16 PNG is the entire visual. The only thing to
+"model" is that PNG. (A **sword is still a flat sprite** — same as a gem — it just
+uses the `item/handheld` parent for the in-hand grip and a `SwordItem` + `Tier`
+for behaviour.)
+
+### Files per item (reuse the id verbatim — R6)
+For an item `emberblade`:
+
+- spec: `tools/items/emberblade.item.json`
+- texture: `src/main/resources/assets/mobforge/textures/item/emberblade.png` (16×16)
+- model: `src/main/resources/assets/mobforge/models/item/emberblade.json`
+- editable source: `blockbench/items/emberblade.bbmodel`
+- registry name `emberblade` in `ModItems`; lang key `item.mobforge.emberblade`
+
+The worked references are `ruby` (gem/inert), `sunberry` (food), and `emberblade`
+(sword) — mirror the one matching the category.
+
+### Generate the sprite — `tools/item_sprite.py` (Python 3 + Pillow)
+Deterministic, no Blockbench. The spec is a `palette` (char → RGBA, `.` =
+transparent) and a 16×16 `grid` of chars. Render with:
+
+```bash
+python3 tools/item_sprite.py render --spec tools/items/<id>.item.json --root .
+```
+
+It writes the PNG **and** embeds it into `blockbench/items/<id>.bbmodel` (the
+editable source). Keep sprites readable at icon scale: strong silhouette, a dark
+outline, 1–2 shading tones, a highlight. **Look at the PNG** before continuing.
+(Pillow install is the same as `mob_face.py` — see "Facial features + ears".)
+
+### Java (1.20.2) — item type by category
+Register in `registry/ModItems.java` (mirror the references), then add the item
+to `registry/ModCreativeTabs.java`'s `displayItems` so it shows in the **Mob Forge
+Items** tab. That custom `CreativeModeTab` is registered on
+`Registries.CREATIVE_MODE_TAB` and attached to the mod bus in `MobForge` — mob
+spawn eggs stay in the vanilla `SPAWN_EGGS` tab.
+
+- **Gem / material** → `new Item(new Item.Properties())`.
+- **Food** → `new Item(new Item.Properties().food(new FoodProperties.Builder()
+  .nutrition(n).saturationMod(s).build()))`. On 20.2 the builder method is
+  **`saturationMod`** (it becomes `saturationModifier` in 1.20.5+ — R7).
+- **Tool / weapon** → `new SwordItem(tier, attackDamageModifier, attackSpeedModifier,
+  new Item.Properties())` with a per-item `com.iguzman.mobforge.item.ForgeItemTier`
+  (`uses, speed, attackDamageBonus, level, enchantmentValue, Ingredient.EMPTY`).
+  **Durability flows from the tier's `uses`** (`TieredItem` applies
+  `defaultDurability(tier.getUses())`); final attack damage = 1 (base) +
+  `attackDamageBonus` + `attackDamageModifier`. A `DeferredItem<SwordItem>` (not
+  `<Item>`) is required — `register` infers the concrete item type.
+
+### Item model parent
+`models/item/<id>.json` → `{ "parent": "minecraft:item/generated", "textures": {
+"layer0": "mobforge:item/<id>" } }` for icons; use **`minecraft:item/handheld`**
+for swords/tools so they sit right in the hand.
+
+### Editing / touch-up in Blockbench (source vs build output)
+Same contract as mobs: **`blockbench/items/<id>.bbmodel` is the editable source;
+the `png` is a build output.** The `.bbmodel` is a Generic-Model project that just
+carries the sprite as a paintable texture (a flat item has no geometry to edit).
+To touch up: open it in Blockbench, paint in the **Paint** tab, then export the
+texture over `textures/item/<id>.png` (same 16×16 dimensions) and save the
+`.bbmodel`, then rebuild. Re-running `item_sprite.py` re-embeds the PNG into the
+`.bbmodel`, so a pure sprite edit can also be done by hand-editing the grid spec.

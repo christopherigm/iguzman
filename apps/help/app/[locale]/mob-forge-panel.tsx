@@ -123,6 +123,35 @@ const MOBFORGE_FACEPAINT =
   "python3 tools/mob_face.py paint --spec tools/faces/<id>.face.json --root .\n" +
   "# (on Windows use `py` instead of `python3`; run from apps/mob-forge)";
 
+// ── Author an inventory item (/item-forge — flat items, no Blockbench needed) ──
+
+const MOBFORGE_ITEM_SKILL =
+  "/item-forge a ruby-encrusted dagger\n" +
+  "/item-forge a glowing healing berry\n" +
+  "/item-forge a bag of emerald dust";
+
+const MOBFORGE_ITEM_EXAMPLE =
+  "apps/mob-forge/\n" +
+  "  tools/items/emberblade.item.json       # sprite spec (palette + 16x16 grid)\n" +
+  "  src/main/java/com/iguzman/mobforge/\n" +
+  "    registry/ModItems.java               # item + custom Tier registration\n" +
+  "    registry/ModCreativeTabs.java        # 'Mob Forge Items' creative tab\n" +
+  "  src/main/resources/assets/mobforge/\n" +
+  "    textures/item/emberblade.png         # 16x16 sprite (the sprite IS the model)\n" +
+  "    models/item/emberblade.json          # parent item/handheld (item/generated for icons)\n" +
+  "  blockbench/items/emberblade.bbmodel    # editable source (committed)";
+
+const MOBFORGE_ITEM_SPRITE =
+  "# Item sprites are generated deterministically - no Blockbench required.\n" +
+  "# Needs Python 3 + Pillow (same install as mob_face.py above).\n" +
+  "python3 tools/item_sprite.py render --spec tools/items/<id>.item.json --root .\n" +
+  "# Writes textures/item/<id>.png AND embeds it into blockbench/items/<id>.bbmodel.\n" +
+  "# Touch up later: open the .bbmodel in Blockbench > Paint tab, then rebuild.";
+
+const MOBFORGE_ITEM_INGAME =
+  "pnpm --filter=mob-forge dev\n" +
+  "# Launch the client, open the 'Mob Forge Items' creative tab, grab the item.";
+
 // ── External documentation / download links ───────────────────────────────────
 
 const DOC_TEMURIN = "https://adoptium.net/temurin/releases/?version=17";
@@ -307,6 +336,36 @@ export async function MobForgePanel() {
         heading={t("mobForgeRebuildHeading")}
         description={t("mobForgeRebuildDesc")}
         code={MOBFORGE_REBUILD}
+      />
+
+      {/* 5 ─ Author an inventory item (/item-forge — flat items, no Blockbench). */}
+      <GroupLabel marginTop={8}>{t("mobForgeItemGroup")}</GroupLabel>
+
+      <StepSection
+        heading={t("mobForgeItemAuthorHeading")}
+        description={t("mobForgeItemAuthorDesc")}
+        code={MOBFORGE_ITEM_SKILL}
+        language="text"
+      />
+      <StepSection
+        heading={t("mobForgeItemSpriteHeading")}
+        description={t("mobForgeItemSpriteDesc")}
+        code={MOBFORGE_ITEM_SPRITE}
+        links={[
+          { label: t("mobForgePythonLink"), href: DOC_PYTHON },
+          { label: t("mobForgePillowLink"), href: DOC_PILLOW },
+        ]}
+      />
+      <StepSection
+        heading={t("mobForgeItemExampleHeading")}
+        description={t("mobForgeItemExampleDesc")}
+        code={MOBFORGE_ITEM_EXAMPLE}
+        language="text"
+      />
+      <StepSection
+        heading={t("mobForgeItemIngameHeading")}
+        description={t("mobForgeItemIngameDesc")}
+        code={MOBFORGE_ITEM_INGAME}
       />
     </>
   );
