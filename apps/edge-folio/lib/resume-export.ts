@@ -24,6 +24,12 @@ export interface ResumeExportConfig {
   includedEducationIds: number[];
   includedLanguageIds: number[];
   includedProjectIds: number[];
+  /**
+   * Tailored-bullet categories (`impact`, `technical`, …) to keep in the export.
+   * Omitted/undefined means "include every category" for backward compatibility
+   * with configs persisted before this field existed.
+   */
+  includedBulletCategories?: string[];
   useTailoredWeIds: number[];
   useTailoredProjectIds: number[];
 }
@@ -43,9 +49,13 @@ export function defaultResumeExportConfig(args: {
   educations: Education[];
   languages: Language[];
   projects: Project[];
+  tailoredBullets?: TailoredBullet[] | null;
   tailoredWorkExperiences?: TailoredWorkExperience[] | null;
   tailoredProjects?: TailoredProject[] | null;
 }): ResumeExportConfig {
+  const categories = Array.from(
+    new Set((args.tailoredBullets ?? []).map((b) => b.category || "other")),
+  );
   return {
     includeContact: true,
     includeLinks: true,
@@ -55,6 +65,7 @@ export function defaultResumeExportConfig(args: {
     includedEducationIds: args.educations.map((e) => e.id),
     includedLanguageIds: args.languages.map((l) => l.id),
     includedProjectIds: args.projects.map((p) => p.id),
+    includedBulletCategories: categories,
     useTailoredWeIds: (args.tailoredWorkExperiences ?? []).map((e) => e.id),
     useTailoredProjectIds: (args.tailoredProjects ?? []).map((p) => p.id),
   };
@@ -121,6 +132,14 @@ export function buildResumeDocumentProps(
     ? (application.tailored_skills ?? [])
     : [];
 
+  // Keep only bullets whose category is still switched on. A missing
+  // `includedBulletCategories` (old stored config) means "keep all".
+  const bulletCats = config.includedBulletCategories;
+  const includedCatSet = bulletCats ? new Set(bulletCats) : null;
+  const filteredBullets = includedCatSet
+    ? tailoredBullets.filter((b) => includedCatSet.has(b.category || "other"))
+    : tailoredBullets;
+
   const filteredWorkExps = workExps
     .filter((e) => includedWorkExpIds.has(e.id))
     .map((e) => ({
@@ -166,7 +185,7 @@ export function buildResumeDocumentProps(
     workExperiences: filteredWorkExps,
     targetRole: application.job_title,
     targetCompany: application.company_name,
-    tailoredBullets,
+    tailoredBullets: filteredBullets,
     projects: filteredProjects,
     educations: filteredEducations,
     languages: filteredLanguages,

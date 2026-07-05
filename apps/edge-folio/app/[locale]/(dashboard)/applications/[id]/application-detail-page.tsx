@@ -21,6 +21,7 @@ import {
   updateApplication,
   deleteApplication,
   tailorApplication,
+  updateTailoredContent,
   generateCoverLetter,
   generateNaftaLetter,
   refreshMetrics,
@@ -58,6 +59,7 @@ import {
   type Language,
   type Project,
 } from "@/lib/career";
+import { getSkills, type Skill } from "@/lib/matrix";
 import { TN_PROFESSIONS, CITIZENSHIP_OPTIONS } from "@/lib/nafta-constants";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Card } from "@repo/ui/core-elements/card";
@@ -66,6 +68,10 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
 import { MatchMetrics } from "../../_components/match-metrics";
+import {
+  TailoredEditableCard,
+  type EnhanceMessage,
+} from "./tailored-editable-card";
 import "swiper/css";
 import "swiper/css/pagination";
 import "./application-detail-page.css";
@@ -115,6 +121,7 @@ interface ExportData {
   educations: Education[];
   languages: Language[];
   projects: Project[];
+  skills: Skill[];
 }
 
 function SwitchRow({
@@ -427,6 +434,8 @@ export function ApplicationDetailPage({
     initialApp.professional_summary || "",
   );
   const [tailorError, setTailorError] = useState<string | null>(null);
+  // Free-text guidance appended to the tailoring prompt (optional).
+  const [additionalPrompt, setAdditionalPrompt] = useState("");
   const tailorPollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cover letter
@@ -482,6 +491,8 @@ export function ApplicationDetailPage({
   // Export customization switches
   const [includeContact, setIncludeContact] = useState(true);
   const [includeLinks, setIncludeLinks] = useState(true);
+  // Controlled by the "Technical Skills" tailored card's include switch. The
+  // "Tech Stack" card below still controls which Matrix skills feed the AI.
   const [includeSkills, setIncludeSkills] = useState(true);
   const [includePhoto, setIncludePhoto] = useState(false);
   const [includedWorkExpIds, setIncludedWorkExpIds] = useState<Set<number>>(
@@ -496,12 +507,31 @@ export function ApplicationDetailPage({
   const [includedProjectIds, setIncludedProjectIds] = useState<Set<number>>(
     new Set(),
   );
+  // Which Matrix skills ("Tech Stack") to feed the LLM tailoring.
+  const [includedSkillIds, setIncludedSkillIds] = useState<Set<number>>(
+    new Set(),
+  );
   const [useTailoredWeIds, setUseTailoredWeIds] = useState<Set<number>>(
     new Set((initialApp.tailored_work_experiences ?? []).map((e) => e.id)),
   );
   const [useTailoredProjectIds, setUseTailoredProjectIds] = useState<
     Set<number>
   >(new Set((initialApp.tailored_projects ?? []).map((p) => p.id)));
+
+  // ── Tailored-results editing ──
+  // Tailored-bullet categories (impact/technical/…) toggled OUT of the export.
+  // Empty by default → every category is included; avoids seeding from an effect.
+  const [excludedBulletCats, setExcludedBulletCats] = useState<Set<string>>(
+    new Set(),
+  );
+  // Sparse edit overrides keyed by category / work-experience id / project id.
+  // A missing key means "use the tailored value as-is"; one bullet per line for
+  // categories, the raw description for WE / projects.
+  const [bulletEdits, setBulletEdits] = useState<Record<string, string>>({});
+  const [weEdits, setWeEdits] = useState<Record<number, string>>({});
+  const [projectEdits, setProjectEdits] = useState<Record<number, string>>({});
+  // Which card is currently persisting ("bullets" | `we:<id>` | `project:<id>`).
+  const [savingCard, setSavingCard] = useState<string | null>(null);
 
   // Export
   const [exportingPDF, setExportingPDF] = useState(false);
@@ -623,6 +653,11 @@ export function ApplicationDetailPage({
   }
 
   function applyTailoredResult(data: JobApplication) {
+    // A fresh result supersedes any in-progress edits / exclusions.
+    setBulletEdits({});
+    setWeEdits({});
+    setProjectEdits({});
+    setExcludedBulletCats(new Set());
     setTailoredBullets(data.tailored_bullets ?? null);
     setTailoredWorkExperiences(data.tailored_work_experiences ?? null);
     setTailoredProjects(data.tailored_projects ?? null);
@@ -703,14 +738,10 @@ export function ApplicationDetailPage({
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load export section data lazily when tailored bullets are first available
+  // Load the career sections up-front so the user can choose which items to
+  // tailor (and later export) before running the LLM. Fetched once on mount.
   useEffect(() => {
-    if (
-      !tailoredBullets ||
-      tailoredBullets.length === 0 ||
-      exportDataFetchRef.current
-    )
-      return;
+    if (exportDataFetchRef.current) return;
     exportDataFetchRef.current = true;
     setExportDataLoading(true);
     Promise.allSettled([
@@ -718,23 +749,31 @@ export function ApplicationDetailPage({
       getEducations(),
       getLanguages(),
       getProjects(),
-    ]).then(([workExpsRes, educationsRes, languagesRes, projectsRes]) => {
-      const workExps =
-        workExpsRes.status === "fulfilled" ? workExpsRes.value.results : [];
-      const educations =
-        educationsRes.status === "fulfilled" ? educationsRes.value.results : [];
-      const languages =
-        languagesRes.status === "fulfilled" ? languagesRes.value.results : [];
-      const projects =
-        projectsRes.status === "fulfilled" ? projectsRes.value.results : [];
-      setExportData({ workExps, educations, languages, projects });
-      setIncludedWorkExpIds(new Set(workExps.map((e) => e.id)));
-      setIncludedEducationIds(new Set(educations.map((e) => e.id)));
-      setIncludedLanguageIds(new Set(languages.map((l) => l.id)));
-      setIncludedProjectIds(new Set(projects.map((p) => p.id)));
-      setExportDataLoading(false);
-    });
-  }, [tailoredBullets]);
+      getSkills(),
+    ]).then(
+      ([workExpsRes, educationsRes, languagesRes, projectsRes, skillsRes]) => {
+        const workExps =
+          workExpsRes.status === "fulfilled" ? workExpsRes.value.results : [];
+        const educations =
+          educationsRes.status === "fulfilled"
+            ? educationsRes.value.results
+            : [];
+        const languages =
+          languagesRes.status === "fulfilled" ? languagesRes.value.results : [];
+        const projects =
+          projectsRes.status === "fulfilled" ? projectsRes.value.results : [];
+        const skills =
+          skillsRes.status === "fulfilled" ? skillsRes.value.results : [];
+        setExportData({ workExps, educations, languages, projects, skills });
+        setIncludedWorkExpIds(new Set(workExps.map((e) => e.id)));
+        setIncludedEducationIds(new Set(educations.map((e) => e.id)));
+        setIncludedLanguageIds(new Set(languages.map((l) => l.id)));
+        setIncludedProjectIds(new Set(projects.map((p) => p.id)));
+        setIncludedSkillIds(new Set(skills.map((s) => s.id)));
+        setExportDataLoading(false);
+      },
+    );
+  }, []);
 
   function showToast(text: string, kind: "success" | "error") {
     setToast({ text, kind });
@@ -832,7 +871,12 @@ export function ApplicationDetailPage({
     setTailorError(null);
     setCoverLetter(null);
     try {
-      const result = await tailorApplication(app.id, locale);
+      const result = await tailorApplication(app.id, locale, {
+        work_experience_ids: [...includedWorkExpIds],
+        project_ids: [...includedProjectIds],
+        skill_ids: [...includedSkillIds],
+        additional_prompt: additionalPrompt.trim() || undefined,
+      });
       if (result.status === "complete") {
         // Eager (no broker) path: work already finished - fetch the result.
         const data = await getApplication(app.id);
@@ -953,6 +997,143 @@ export function ApplicationDetailPage({
     }
   }
 
+  // ── Effective tailored content (raw tailored data + the user's edit buffers) ──
+  // These feed both the export builder and the persistence payloads.
+  function effectiveTailoredBullets(): TailoredBullet[] {
+    if (!tailoredBullets) return [];
+    const grouped = groupByCategory(tailoredBullets);
+    const out: TailoredBullet[] = [];
+    let idc = 1;
+    for (const { cat, bullets } of grouped) {
+      const buf = bulletEdits[cat];
+      const texts =
+        buf !== undefined
+          ? buf
+              .split("\n")
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : bullets.map((b) => b.tailored_text);
+      texts.forEach((text, i) => {
+        out.push({
+          id: idc++,
+          tailored_text: text,
+          category: cat,
+          work_experience_id: bullets[i]?.work_experience_id ?? null,
+        });
+      });
+    }
+    return out;
+  }
+
+  function effectiveTailoredWorkExperiences(): TailoredWorkExperience[] | null {
+    if (!tailoredWorkExperiences) return null;
+    return tailoredWorkExperiences.map((twe) => ({
+      ...twe,
+      tailored_description: weEdits[twe.id] ?? twe.tailored_description,
+    }));
+  }
+
+  function effectiveTailoredProjects(): TailoredProject[] | null {
+    if (!tailoredProjects) return null;
+    return tailoredProjects.map((tp) => ({
+      ...tp,
+      tailored_description: projectEdits[tp.id] ?? tp.tailored_description,
+    }));
+  }
+
+  // ── Dirty checks (has a card's buffer diverged from the saved value?) ──
+  const weDirty = (twe: TailoredWorkExperience) =>
+    (weEdits[twe.id] ?? twe.tailored_description) !== twe.tailored_description;
+  const projectDirty = (tp: TailoredProject) =>
+    (projectEdits[tp.id] ?? tp.tailored_description) !== tp.tailored_description;
+
+  // ── Persist edits per card. Each save writes its whole section (all bullet
+  //    categories, or all WE / project descriptions) since they share one field. ──
+  async function handleSaveBullets() {
+    setSavingCard("bullets");
+    try {
+      const updated = await updateTailoredContent(app.id, {
+        tailored_bullets: effectiveTailoredBullets(),
+      });
+      setBulletEdits({});
+      setTailoredBullets(updated.tailored_bullets ?? null);
+      showToast(t("savedToast"), "success");
+    } catch {
+      showToast(t("errorSave"), "error");
+    } finally {
+      setSavingCard(null);
+    }
+  }
+
+  async function handleSaveWorkExperiences(cardKey: string) {
+    setSavingCard(cardKey);
+    try {
+      const updated = await updateTailoredContent(app.id, {
+        tailored_work_experiences: effectiveTailoredWorkExperiences() ?? [],
+      });
+      setWeEdits({});
+      setTailoredWorkExperiences(updated.tailored_work_experiences ?? null);
+      showToast(t("savedToast"), "success");
+    } catch {
+      showToast(t("errorSave"), "error");
+    } finally {
+      setSavingCard(null);
+    }
+  }
+
+  async function handleSaveProjects(cardKey: string) {
+    setSavingCard(cardKey);
+    try {
+      const updated = await updateTailoredContent(app.id, {
+        tailored_projects: effectiveTailoredProjects() ?? [],
+      });
+      setProjectEdits({});
+      setTailoredProjects(updated.tailored_projects ?? null);
+      showToast(t("savedToast"), "success");
+    } catch {
+      showToast(t("errorSave"), "error");
+    } finally {
+      setSavingCard(null);
+    }
+  }
+
+  const micLang: "en" | "es" = locale === "es" ? "es" : "en";
+  const editCardLabels = {
+    mic: t("tailoredMicLabel"),
+    enhance: t("tailoredEnhanceLabel"),
+    stop: t("tailoredEnhanceStop"),
+    discard: t("tailoredEnhanceDiscard"),
+    accept: t("tailoredEnhanceAccept"),
+    save: t("tailoredSaveChanges"),
+    saving: t("saving"),
+  };
+
+  // Enhance prompt for a category card (bullet points, one per line).
+  function buildBulletEnhance(text: string): EnhanceMessage[] {
+    const ctx = `${app.job_title} at ${app.company_name}`;
+    const isEs = locale === "es";
+    const system = isEs
+      ? `Eres un redactor experto de currículums. Mejora los siguientes puntos de logros para el puesto de ${ctx}. Mantenlos como viñetas concisas y orientadas a resultados, una por línea, sin guiones ni numeración al inicio, y conserva la misma cantidad de viñetas. Devuelve únicamente las viñetas mejoradas, una por línea.`
+      : `You are an expert resume writer. Improve the following achievement bullet points for a ${ctx} role. Keep them as concise, results-oriented bullets, one per line, with no leading dashes or numbering, and preserve the same number of bullets. Return only the improved bullets, one per line.`;
+    return [
+      { role: "system", content: system },
+      { role: "user", content: text },
+    ];
+  }
+
+  // Enhance prompt for a work-experience / project description (prose).
+  function buildDescriptionEnhance(text: string): EnhanceMessage[] {
+    const ctx = `${app.job_title} at ${app.company_name}`;
+    const isEs = locale === "es";
+    const system = isEs
+      ? `Eres un redactor experto de currículums. Reescribe y mejora la siguiente descripción para el puesto de ${ctx}, en prosa concisa y convincente. Devuelve únicamente el texto mejorado, sin explicaciones ni etiquetas.`
+      : `You are an expert resume writer. Rewrite and improve the following description for a ${ctx} role into concise, compelling prose. Return only the improved text, with no explanations or labels.`;
+    return [
+      { role: "system", content: system },
+      { role: "user", content: text },
+    ];
+  }
+
   // Current "Customize Export" selections, in a serializable shape shared with
   // the resume PDF builder and persisted for the Live Resume preview tab.
   const exportConfig: ResumeExportConfig = {
@@ -964,6 +1145,9 @@ export function ApplicationDetailPage({
     includedEducationIds: [...includedEducationIds],
     includedLanguageIds: [...includedLanguageIds],
     includedProjectIds: [...includedProjectIds],
+    includedBulletCategories: Array.from(
+      new Set((tailoredBullets ?? []).map((b) => b.category || "other")),
+    ).filter((c) => !excludedBulletCats.has(c)),
     useTailoredWeIds: [...useTailoredWeIds],
     useTailoredProjectIds: [...useTailoredProjectIds],
   };
@@ -987,9 +1171,9 @@ export function ApplicationDetailPage({
       profile,
       application: app,
       professionalSummary,
-      tailoredBullets,
-      tailoredWorkExperiences,
-      tailoredProjects,
+      tailoredBullets: effectiveTailoredBullets(),
+      tailoredWorkExperiences: effectiveTailoredWorkExperiences(),
+      tailoredProjects: effectiveTailoredProjects(),
       workExps: exportData.workExps,
       educations: exportData.educations,
       languages: exportData.languages,
@@ -1852,52 +2036,356 @@ export function ApplicationDetailPage({
         </Box>
       )}
 
-      {/* ── Tailor resume ─────────────────────────────────────────────── */}
+      {/* ── Review and Tailor Resume ─────────────────────────────────── */}
       <Box marginBottom={28} marginTop={48}>
-        <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="space-between"
-          gap={12}
-          flexWrap="wrap"
+        <Typography
+          as="h2"
+          variant="h3"
+          fontWeight={600}
           marginBottom={8}
         >
-          <Typography as="h2" variant="h3" fontWeight={600}>
-            {t("tailorTitle")}
-          </Typography>
-          <Button
-            text={
-              tailoring
-                ? t("tailoring")
-                : tailoredBullets
-                  ? t("tailorAgain")
-                  : t("tailor")
-            }
-            icon="/icons/enhance.svg"
-            type="button"
-            size="md"
-            kind="primary"
-            disabled={tailoring}
-            onClick={handleTailor}
-          />
-        </Box>
+          {t("reviewAndTailorTitle")}
+        </Typography>
         <Box
           styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
           marginBottom={12}
         />
+        <Typography
+          variant="body"
+          color="var(--muted-foreground, #6b7280)"
+          marginBottom={14}
+          as="p"
+        >
+          {t("selectToTailorSubtitle")}
+        </Typography>
+
+        {/* ── Selection: choose what feeds the tailoring & export ── */}
+        {exportDataLoading && (
+          <Box display="flex" alignItems="center" gap={8} marginBottom={14}>
+            <Spinner size={16} />
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
+              {t("exportLoadingData")}
+            </Typography>
+          </Box>
+        )}
+
+        {exportData && (
+          <Box display="flex" flexDirection="column" gap={16} marginBottom={20}>
+            {/* Work experience */}
+            {exportData.workExps.length > 0 && (
+              <Box display="flex" flexDirection="column" gap={8}>
+                <Typography variant="body" fontWeight={600}>
+                  {t("exportJobsTitle")}
+                </Typography>
+                <Grid container spacing={2}>
+                  {exportData.workExps.map((exp) => {
+                    const isIncluded = includedWorkExpIds.has(exp.id);
+                    return (
+                      <Grid key={exp.id} size={{ xs: 12, sm: 4, lg: 3 }}>
+                        <Card
+                          styles={{
+                            opacity: isIncluded ? 1 : 0.5,
+                            transition: "opacity 0.2s ease",
+                            height: "100%",
+                          }}
+                        >
+                          <Box
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="space-between"
+                            gap={10}
+                          >
+                            <Box
+                              display="flex"
+                              flexDirection="column"
+                              gap={4}
+                              flex={1}
+                              minWidth={0}
+                            >
+                              <Typography
+                                variant="body"
+                                fontWeight={600}
+                                styles={{ lineHeight: 1.3 }}
+                              >
+                                {exp.title}
+                              </Typography>
+                              <Typography
+                                variant="body"
+                                color="var(--muted-foreground, #6b7280)"
+                              >
+                                {exp.company}
+                              </Typography>
+                            </Box>
+                            <Switch
+                              checked={isIncluded}
+                              onChange={(checked) =>
+                                setIncludedWorkExpIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (checked) next.add(exp.id);
+                                  else next.delete(exp.id);
+                                  return next;
+                                })
+                              }
+                              aria-label={t("exportIncludeItem")}
+                            />
+                          </Box>
+                        </Card>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              </Box>
+            )}
+
+            {/* Projects */}
+            {exportData.projects.length > 0 && (
+              <Box display="flex" flexDirection="column" gap={8}>
+                <Typography variant="body" fontWeight={600}>
+                  {t("exportProjectsTitle")}
+                </Typography>
+                <Grid container spacing={2}>
+                  {exportData.projects.map((proj) => {
+                    const isIncluded = includedProjectIds.has(proj.id);
+                    return (
+                      <Grid key={proj.id} size={{ xs: 12, sm: 4, lg: 3 }}>
+                        <Card
+                          styles={{
+                            opacity: isIncluded ? 1 : 0.5,
+                            transition: "opacity 0.2s ease",
+                            height: "100%",
+                          }}
+                        >
+                          <Box
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="space-between"
+                            gap={10}
+                          >
+                            <Typography
+                              variant="body"
+                              fontWeight={600}
+                              styles={{
+                                lineHeight: 1.3,
+                                flex: 1,
+                                minWidth: 0,
+                              }}
+                            >
+                              {proj.name}
+                            </Typography>
+                            <Switch
+                              checked={isIncluded}
+                              onChange={(checked) =>
+                                setIncludedProjectIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (checked) next.add(proj.id);
+                                  else next.delete(proj.id);
+                                  return next;
+                                })
+                              }
+                              aria-label={t("exportIncludeItem")}
+                            />
+                          </Box>
+                        </Card>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              </Box>
+            )}
+
+            {/* Education */}
+            {exportData.educations.length > 0 && (
+              <Box display="flex" flexDirection="column" gap={8}>
+                <Typography variant="body" fontWeight={600}>
+                  {t("exportEducationTitle")}
+                </Typography>
+                <Grid container spacing={2}>
+                  {exportData.educations.map((edu) => {
+                    const isIncluded = includedEducationIds.has(edu.id);
+                    return (
+                      <Grid key={edu.id} size={{ xs: 12, sm: 6, lg: 4 }}>
+                        <Card gap={12}>
+                          <Box display="flex" flexDirection="column" gap={4}>
+                            <Typography
+                              variant="body"
+                              fontWeight={600}
+                              styles={{ lineHeight: 1.3 }}
+                            >
+                              {edu.institution}
+                            </Typography>
+                            {edu.field_of_study && (
+                              <Typography
+                                variant="body"
+                                color="var(--muted-foreground, #6b7280)"
+                              >
+                                {edu.field_of_study}
+                              </Typography>
+                            )}
+                          </Box>
+                          <SwitchRow
+                            label={t("exportIncludeItem")}
+                            checked={isIncluded}
+                            onChange={(checked) =>
+                              setIncludedEducationIds((prev) => {
+                                const next = new Set(prev);
+                                if (checked) next.add(edu.id);
+                                else next.delete(edu.id);
+                                return next;
+                              })
+                            }
+                          />
+                        </Card>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              </Box>
+            )}
+
+            {/* Languages */}
+            {exportData.languages.length > 0 && (
+              <Box display="flex" flexDirection="column" gap={8}>
+                <Typography variant="body" fontWeight={600}>
+                  {t("exportLanguagesTitle")}
+                </Typography>
+                <Card gap={12}>
+                  {exportData.languages.map((lang) => (
+                    <SwitchRow
+                      key={lang.id}
+                      label={lang.name}
+                      checked={includedLanguageIds.has(lang.id)}
+                      onChange={(checked) =>
+                        setIncludedLanguageIds((prev) => {
+                          const next = new Set(prev);
+                          if (checked) next.add(lang.id);
+                          else next.delete(lang.id);
+                          return next;
+                        })
+                      }
+                    />
+                  ))}
+                </Card>
+              </Box>
+            )}
+
+            {/* Tech Stack — feeds the AI tailoring */}
+            {exportData.skills.length > 0 && (
+              <Box display="flex" flexDirection="column" gap={8}>
+                <Typography variant="body" fontWeight={600}>
+                  {t("techStackTitle")}
+                </Typography>
+                <Card>
+                  <Box display="flex" flexWrap="wrap" gap={8}>
+                    {exportData.skills.map((skill) => {
+                      const isIncluded = includedSkillIds.has(skill.id);
+                      return (
+                        <Button
+                          key={skill.id}
+                          text={skill.name}
+                          type="button"
+                          size="sm"
+                          kind={isIncluded ? "primary" : undefined}
+                          styles={{ opacity: isIncluded ? 1 : 0.55 }}
+                          aria-pressed={isIncluded}
+                          onClick={() =>
+                            setIncludedSkillIds((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(skill.id)) next.delete(skill.id);
+                              else next.add(skill.id);
+                              return next;
+                            })
+                          }
+                        />
+                      );
+                    })}
+                  </Box>
+                </Card>
+              </Box>
+            )}
+          </Box>
+        )}
+
+        {/* Additional prompt + centered Tailor action, below the Tech Stack card */}
+        <Box display="flex" flexDirection="column" gap={16} marginBottom={20}>
+          <Box display="flex" flexDirection="column" gap={6}>
+            <Typography variant="body" fontWeight={600}>
+              {t("additionalPromptLabel")}
+            </Typography>
+            <TextInput
+              multirow
+              rows={6}
+              value={additionalPrompt}
+              onChange={setAdditionalPrompt}
+              placeholder={t("additionalPromptPlaceholder")}
+              width="100%"
+              aria-label={t("additionalPromptLabel")}
+            />
+          </Box>
+          <Box display="flex" justifyContent="center">
+            <Button
+              text={
+                tailoring
+                  ? t("tailoring")
+                  : tailoredBullets
+                    ? t("tailorAgain")
+                    : t("tailor")
+              }
+              icon="/icons/enhance.svg"
+              type="button"
+              size="md"
+              kind="primary"
+              disabled={tailoring || exportDataLoading}
+              onClick={handleTailor}
+            />
+          </Box>
+        </Box>
 
         {tailoring && <ProgressBar label={t("tailoring")} />}
-
         {tailorError && (
           <Typography variant="body" color="var(--error, #ef4444)">
             {tailorError}
           </Typography>
         )}
+
+        {/* ── Tailored results ── */}
         {tailoredBullets && tailoredBullets.length > 0 && (
-          <Box display="flex" flexDirection="column" gap={16}>
+          <Box display="flex" flexDirection="column" gap={16} marginTop={4}>
             <Typography variant="body" color="var(--muted-foreground, #6b7280)">
               {t("tailoredSubtitle")}
             </Typography>
+            {/* Customize Export (global toggles) */}
+            <Box display="flex" flexDirection="column" gap={8}>
+              <Typography variant="body" fontWeight={600}>
+                {t("exportCustomizeTitle")}
+              </Typography>
+              <Card display="flex" flexDirection="column" gap={10}>
+                <SwitchRow
+                  label={t("exportIncludeContact")}
+                  checked={includeContact}
+                  onChange={setIncludeContact}
+                />
+                <SwitchRow
+                  label={t("exportIncludeLinks")}
+                  checked={includeLinks}
+                  onChange={setIncludeLinks}
+                />
+                {profile?.profile_picture && (
+                  <Box display="flex" flexDirection="column" gap={4}>
+                    <SwitchRow
+                      label={t("exportIncludePhoto")}
+                      checked={includePhoto}
+                      onChange={setIncludePhoto}
+                    />
+                    <Typography
+                      variant="body"
+                      color="var(--muted-foreground, #6b7280)"
+                    >
+                      {t("exportIncludePhotoHint")}
+                    </Typography>
+                  </Box>
+                )}
+              </Card>
+            </Box>
             {professionalSummary && (
               <Card display="flex" flexDirection="column" gap={6}>
                 <Typography
@@ -1920,63 +2408,70 @@ export function ApplicationDetailPage({
                 </Typography>
               </Card>
             )}
+            {/* Technical Skills — include switch only (chips, not editable) */}
             {app.tailored_skills && app.tailored_skills.length > 0 && (
-              <Box display="flex" flexDirection="column" gap={6}>
-                <Typography
-                  variant="body"
-                  fontWeight={600}
-                  color="var(--foreground)"
-                >
-                  {t("tailoredSkillsTitle")}
-                </Typography>
-                <Card>
-                  <Box display="flex" flexWrap="wrap" gap={8}>
-                    {app.tailored_skills.map((skill) => (
-                      <Typography
-                        key={skill.id}
-                        variant="body"
-                        styles={{
-                          padding: "2px 10px",
-                          borderRadius: 999,
-                          border: "1px solid var(--border, #e5e7eb)",
-                        }}
-                      >
-                        {skill.name}
-                      </Typography>
-                    ))}
-                  </Box>
-                </Card>
-              </Box>
-            )}
-
-            {grouped.map(({ cat, bullets }) => (
-              <Box key={cat} display="flex" flexDirection="column" gap={6}>
-                <Typography
-                  variant="body"
-                  fontWeight={600}
-                  color="var(--foreground)"
-                  styles={{ textTransform: "capitalize" }}
-                >
-                  {t(`categories.${cat}`)}
-                </Typography>
-                <Card>
-                  {bullets.map((b) => (
+              <TailoredEditableCard
+                title={t("tailoredSkillsTitle")}
+                included={includeSkills}
+                onIncludedChange={setIncludeSkills}
+                includeLabel={t("exportIncludeItem")}
+                labels={editCardLabels}
+              >
+                <Box display="flex" flexWrap="wrap" gap={8}>
+                  {app.tailored_skills.map((skill) => (
                     <Typography
-                      key={b.id}
-                      as="p"
+                      key={skill.id}
                       variant="body"
-                      styles={{ lineHeight: 1.6, wordBreak: "break-word" }}
+                      styles={{
+                        padding: "2px 10px",
+                        borderRadius: 999,
+                        border: "1px solid var(--border, #e5e7eb)",
+                      }}
                     >
-                      - {b.tailored_text}
+                      {skill.name}
                     </Typography>
                   ))}
-                </Card>
-              </Box>
-            ))}
+                </Box>
+              </TailoredEditableCard>
+            )}
 
-            {/* Tailored work experiences */}
+            {/* Tailored bullet categories — editable, one card per category */}
+            {grouped.map(({ cat, bullets }) => {
+              const orig = bullets.map((b) => b.tailored_text).join("\n");
+              return (
+                <TailoredEditableCard
+                  key={cat}
+                  title={t(`categories.${cat}`)}
+                  included={!excludedBulletCats.has(cat)}
+                  onIncludedChange={(v) =>
+                    setExcludedBulletCats((prev) => {
+                      const next = new Set(prev);
+                      if (v) next.delete(cat);
+                      else next.add(cat);
+                      return next;
+                    })
+                  }
+                  includeLabel={t("exportIncludeItem")}
+                  labels={editCardLabels}
+                  editable
+                  value={bulletEdits[cat] ?? orig}
+                  onChange={(v) =>
+                    setBulletEdits((prev) => ({ ...prev, [cat]: v }))
+                  }
+                  rows={5}
+                  ariaLabel={t(`categories.${cat}`)}
+                  micLanguage={micLang}
+                  buildEnhanceMessages={buildBulletEnhance}
+                  onSave={handleSaveBullets}
+                  saving={savingCard === "bullets"}
+                  dirty={(bulletEdits[cat] ?? orig) !== orig}
+                />
+              );
+            })}
+
+            {/* Tailored work experiences — editable, one card per role */}
             {tailoredWorkExperiences && tailoredWorkExperiences.length > 0 && (
-              <Box display="flex" flexDirection="column" gap={6}>
+              <Box display="flex" flexDirection="column" gap={10}>
                 <Typography
                   variant="body"
                   fontWeight={600}
@@ -1986,39 +2481,44 @@ export function ApplicationDetailPage({
                 </Typography>
                 {tailoredWorkExperiences.map((twe) => {
                   const we = exportData?.workExps.find((e) => e.id === twe.id);
+                  const roleTitle = we ? `${we.title} - ${we.company}` : "";
+                  const cardKey = `we:${twe.id}`;
                   return (
-                    <Card
+                    <TailoredEditableCard
                       key={twe.id}
-                      display="flex"
-                      flexDirection="column"
-                      gap={4}
-                      marginBottom={8}
-                    >
-                      {we && (
-                        <Typography
-                          variant="body"
-                          fontWeight={600}
-                          color="var(--muted-foreground, #6b7280)"
-                        >
-                          {we.title} - {we.company}
-                        </Typography>
-                      )}
-                      <Typography
-                        as="p"
-                        variant="body"
-                        styles={{ lineHeight: 1.6, wordBreak: "break-word" }}
-                      >
-                        {twe.tailored_description}
-                      </Typography>
-                    </Card>
+                      title={roleTitle}
+                      included={includedWorkExpIds.has(twe.id)}
+                      onIncludedChange={(v) =>
+                        setIncludedWorkExpIds((prev) => {
+                          const next = new Set(prev);
+                          if (v) next.add(twe.id);
+                          else next.delete(twe.id);
+                          return next;
+                        })
+                      }
+                      includeLabel={t("exportIncludeItem")}
+                      labels={editCardLabels}
+                      editable
+                      value={weEdits[twe.id] ?? twe.tailored_description}
+                      onChange={(v) =>
+                        setWeEdits((prev) => ({ ...prev, [twe.id]: v }))
+                      }
+                      rows={4}
+                      ariaLabel={roleTitle || t("tailoredWorkExpTitle")}
+                      micLanguage={micLang}
+                      buildEnhanceMessages={buildDescriptionEnhance}
+                      onSave={() => handleSaveWorkExperiences(cardKey)}
+                      saving={savingCard === cardKey}
+                      dirty={weDirty(twe)}
+                    />
                   );
                 })}
               </Box>
             )}
 
-            {/* Tailored projects */}
+            {/* Tailored projects — editable, one card per project */}
             {tailoredProjects && tailoredProjects.length > 0 && (
-              <Box display="flex" flexDirection="column" gap={6}>
+              <Box display="flex" flexDirection="column" gap={10}>
                 <Typography
                   variant="body"
                   fontWeight={600}
@@ -2028,413 +2528,89 @@ export function ApplicationDetailPage({
                 </Typography>
                 {tailoredProjects.map((tp) => {
                   const proj = exportData?.projects.find((p) => p.id === tp.id);
+                  const projName = proj ? proj.name : "";
+                  const cardKey = `project:${tp.id}`;
                   return (
-                    <Card
+                    <TailoredEditableCard
                       key={tp.id}
-                      display="flex"
-                      flexDirection="column"
-                      gap={4}
-                      marginBottom={8}
-                    >
-                      {proj && (
-                        <Typography
-                          variant="body"
-                          fontWeight={600}
-                          color="var(--muted-foreground, #6b7280)"
-                        >
-                          {proj.name}
-                        </Typography>
-                      )}
-                      <Typography
-                        as="p"
-                        variant="body"
-                        styles={{ lineHeight: 1.6, wordBreak: "break-word" }}
-                      >
-                        {tp.tailored_description}
-                      </Typography>
-                    </Card>
+                      title={projName}
+                      included={includedProjectIds.has(tp.id)}
+                      onIncludedChange={(v) =>
+                        setIncludedProjectIds((prev) => {
+                          const next = new Set(prev);
+                          if (v) next.add(tp.id);
+                          else next.delete(tp.id);
+                          return next;
+                        })
+                      }
+                      includeLabel={t("exportIncludeItem")}
+                      labels={editCardLabels}
+                      editable
+                      value={projectEdits[tp.id] ?? tp.tailored_description}
+                      onChange={(v) =>
+                        setProjectEdits((prev) => ({ ...prev, [tp.id]: v }))
+                      }
+                      rows={4}
+                      ariaLabel={projName || t("tailoredProjectsTitle")}
+                      micLanguage={micLang}
+                      buildEnhanceMessages={buildDescriptionEnhance}
+                      onSave={() => handleSaveProjects(cardKey)}
+                      saving={savingCard === cardKey}
+                      dirty={projectDirty(tp)}
+                    />
                   );
                 })}
               </Box>
             )}
+
+            {/* ── Export actions ── */}
+            <Box
+              display="flex"
+              justifyContent="center"
+              gap={10}
+              flexWrap="wrap"
+              marginTop={8}
+            >
+              <Button
+                text={t("liveResume")}
+                type="button"
+                size="md"
+                icon="/icons/fullscreen.svg"
+                iconPosition="end"
+                disabled={exportDataLoading || !exportData}
+                onClick={openLiveResume}
+                kind="primary"
+              />
+              <Button
+                text={t("exportMarkdown")}
+                type="button"
+                size="md"
+                disabled={exportDataLoading || !exportData}
+                onClick={handleExportMarkdown}
+                kind="primary"
+              />
+              <Button
+                text={exportingPDF ? t("exportingPDF") : t("exportPDF")}
+                type="button"
+                size="md"
+                kind="primary"
+                disabled={exportingPDF || exportDataLoading || !exportData}
+                onClick={handleExportPDF}
+              />
+            </Box>
+            {exportError && (
+              <Typography
+                variant="body"
+                color="var(--error, #ef4444)"
+                marginTop={8}
+                as="p"
+              >
+                {exportError}
+              </Typography>
+            )}
           </Box>
         )}
       </Box>
-
-      {/* ── Export ────────────────────────────────────────────────────── */}
-      {tailoredBullets && tailoredBullets.length > 0 && (
-        <Box marginBottom={28} marginTop={48}>
-          <Box
-            display="flex"
-            alignItems="center"
-            justifyContent="space-between"
-            gap={12}
-            flexWrap="wrap"
-            marginBottom={8}
-          >
-            <Typography as="h2" variant="h3" fontWeight={600}>
-              {t("exportTitle")}
-            </Typography>
-            <Button
-              text={t("liveResume")}
-              type="button"
-              size="md"
-              icon="/icons/fullscreen.svg"
-              iconPosition="end"
-              disabled={exportDataLoading || !exportData}
-              onClick={openLiveResume}
-              kind="primary"
-            />
-          </Box>
-          <Box
-            styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
-            marginBottom={12}
-          />
-          <Typography
-            variant="body"
-            color="var(--muted-foreground, #6b7280)"
-            marginBottom={14}
-            as="p"
-          >
-            {t("exportSubtitle")}
-          </Typography>
-
-          {/* ── Customization ── */}
-          <Typography as="h3" variant="body" fontWeight={600} marginBottom={10}>
-            {t("exportCustomizeTitle")}
-          </Typography>
-
-          {exportDataLoading && (
-            <Box display="flex" alignItems="center" gap={8} marginBottom={14}>
-              <Spinner size={16} />
-              <Typography
-                variant="body"
-                color="var(--muted-foreground, #6b7280)"
-              >
-                {t("exportLoadingData")}
-              </Typography>
-            </Box>
-          )}
-
-          {exportData && (
-            <Box
-              display="flex"
-              flexDirection="column"
-              gap={16}
-              marginBottom={20}
-            >
-              {/* Global toggles */}
-              <Card display="flex" flexDirection="column" gap={10}>
-                <SwitchRow
-                  label={t("exportIncludeContact")}
-                  checked={includeContact}
-                  onChange={setIncludeContact}
-                />
-                <SwitchRow
-                  label={t("exportIncludeLinks")}
-                  checked={includeLinks}
-                  onChange={setIncludeLinks}
-                />
-                <SwitchRow
-                  label={t("exportIncludeSkills")}
-                  checked={includeSkills}
-                  onChange={setIncludeSkills}
-                />
-                {profile?.profile_picture && (
-                  <Box display="flex" flexDirection="column" gap={4}>
-                    <SwitchRow
-                      label={t("exportIncludePhoto")}
-                      checked={includePhoto}
-                      onChange={setIncludePhoto}
-                    />
-                    <Typography
-                      variant="body"
-                      color="var(--muted-foreground, #6b7280)"
-                    >
-                      {t("exportIncludePhotoHint")}
-                    </Typography>
-                  </Box>
-                )}
-              </Card>
-
-              {/* Work experience */}
-              {exportData.workExps.length > 0 && (
-                <Box display="flex" flexDirection="column" gap={8}>
-                  <Typography variant="body" fontWeight={600}>
-                    {t("exportJobsTitle")}
-                  </Typography>
-                  <Grid container spacing={2}>
-                    {exportData.workExps.map((exp) => {
-                      const isTailored = (tailoredWorkExperiences ?? []).some(
-                        (tw) => tw.id === exp.id,
-                      );
-                      const isIncluded = includedWorkExpIds.has(exp.id);
-                      return (
-                        <Grid key={exp.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-                          <Card
-                            gap={12}
-                            styles={{
-                              opacity: isIncluded ? 1 : 0.5,
-                              transition: "opacity 0.2s ease",
-                              height: "100%",
-                            }}
-                          >
-                            <Box display="flex" flexDirection="column" gap={4}>
-                              <Box
-                                display="flex"
-                                alignItems="flex-start"
-                                justifyContent="space-between"
-                                gap={8}
-                              >
-                                <Typography
-                                  variant="body"
-                                  fontWeight={600}
-                                  styles={{ lineHeight: 1.3 }}
-                                >
-                                  {exp.title}
-                                </Typography>
-                                {isTailored && (
-                                  <Badge
-                                    variant="subtle"
-                                    size="sm"
-                                    color="var(--primary, #06b6d4)"
-                                  >
-                                    {t("aiTailored")}
-                                  </Badge>
-                                )}
-                              </Box>
-                              <Typography
-                                variant="body"
-                                color="var(--muted-foreground, #6b7280)"
-                              >
-                                {exp.company}
-                              </Typography>
-                            </Box>
-                            <Box display="flex" flexDirection="column" gap={8}>
-                              <SwitchRow
-                                label={t("exportIncludeItem")}
-                                checked={isIncluded}
-                                onChange={(checked) =>
-                                  setIncludedWorkExpIds((prev) => {
-                                    const next = new Set(prev);
-                                    if (checked) next.add(exp.id);
-                                    else next.delete(exp.id);
-                                    return next;
-                                  })
-                                }
-                              />
-                              {isTailored && isIncluded && (
-                                <SwitchRow
-                                  label={t("useTailoredVersion")}
-                                  checked={useTailoredWeIds.has(exp.id)}
-                                  onChange={(checked) =>
-                                    setUseTailoredWeIds((prev) => {
-                                      const next = new Set(prev);
-                                      if (checked) next.add(exp.id);
-                                      else next.delete(exp.id);
-                                      return next;
-                                    })
-                                  }
-                                />
-                              )}
-                            </Box>
-                          </Card>
-                        </Grid>
-                      );
-                    })}
-                  </Grid>
-                </Box>
-              )}
-
-              {/* Projects */}
-              {exportData.projects.length > 0 && (
-                <Box display="flex" flexDirection="column" gap={8}>
-                  <Typography variant="body" fontWeight={600}>
-                    {t("exportProjectsTitle")}
-                  </Typography>
-                  <Grid container spacing={2}>
-                    {exportData.projects.map((proj) => {
-                      const isTailored = (tailoredProjects ?? []).some(
-                        (tp) => tp.id === proj.id,
-                      );
-                      const isIncluded = includedProjectIds.has(proj.id);
-                      return (
-                        <Grid key={proj.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-                          <Card
-                            gap={12}
-                            styles={{
-                              opacity: isIncluded ? 1 : 0.5,
-                              transition: "opacity 0.2s ease",
-                              height: "100%",
-                            }}
-                          >
-                            <Box
-                              display="flex"
-                              alignItems="flex-start"
-                              justifyContent="space-between"
-                              gap={8}
-                            >
-                              <Typography
-                                variant="body"
-                                fontWeight={600}
-                                styles={{ lineHeight: 1.3 }}
-                              >
-                                {proj.name}
-                              </Typography>
-                              {isTailored && (
-                                <Badge
-                                  variant="subtle"
-                                  size="sm"
-                                  color="var(--primary, #06b6d4)"
-                                >
-                                  {t("aiTailored")}
-                                </Badge>
-                              )}
-                            </Box>
-                            <Box display="flex" flexDirection="column" gap={8}>
-                              <SwitchRow
-                                label={t("exportIncludeItem")}
-                                checked={isIncluded}
-                                onChange={(checked) =>
-                                  setIncludedProjectIds((prev) => {
-                                    const next = new Set(prev);
-                                    if (checked) next.add(proj.id);
-                                    else next.delete(proj.id);
-                                    return next;
-                                  })
-                                }
-                              />
-                              {isTailored && isIncluded && (
-                                <SwitchRow
-                                  label={t("useTailoredVersion")}
-                                  checked={useTailoredProjectIds.has(proj.id)}
-                                  onChange={(checked) =>
-                                    setUseTailoredProjectIds((prev) => {
-                                      const next = new Set(prev);
-                                      if (checked) next.add(proj.id);
-                                      else next.delete(proj.id);
-                                      return next;
-                                    })
-                                  }
-                                />
-                              )}
-                            </Box>
-                          </Card>
-                        </Grid>
-                      );
-                    })}
-                  </Grid>
-                </Box>
-              )}
-
-              {/* Education */}
-              {exportData.educations.length > 0 && (
-                <Box display="flex" flexDirection="column" gap={8}>
-                  <Typography variant="body" fontWeight={600}>
-                    {t("exportEducationTitle")}
-                  </Typography>
-                  <Grid container spacing={2}>
-                    {exportData.educations.map((edu) => {
-                      const isIncluded = includedEducationIds.has(edu.id);
-                      return (
-                        <Grid key={edu.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-                          <Card gap={12}>
-                            <Box display="flex" flexDirection="column" gap={4}>
-                              <Typography
-                                variant="body"
-                                fontWeight={600}
-                                styles={{ lineHeight: 1.3 }}
-                              >
-                                {edu.institution}
-                              </Typography>
-                              {edu.field_of_study && (
-                                <Typography
-                                  variant="body"
-                                  color="var(--muted-foreground, #6b7280)"
-                                >
-                                  {edu.field_of_study}
-                                </Typography>
-                              )}
-                            </Box>
-                            <SwitchRow
-                              label={t("exportIncludeItem")}
-                              checked={isIncluded}
-                              onChange={(checked) =>
-                                setIncludedEducationIds((prev) => {
-                                  const next = new Set(prev);
-                                  if (checked) next.add(edu.id);
-                                  else next.delete(edu.id);
-                                  return next;
-                                })
-                              }
-                            />
-                          </Card>
-                        </Grid>
-                      );
-                    })}
-                  </Grid>
-                </Box>
-              )}
-
-              {/* Languages */}
-              {exportData.languages.length > 0 && (
-                <Box display="flex" flexDirection="column" gap={8}>
-                  <Typography variant="body" fontWeight={600}>
-                    {t("exportLanguagesTitle")}
-                  </Typography>
-                  <Card gap={12}>
-                    {exportData.languages.map((lang) => (
-                      <SwitchRow
-                        key={lang.id}
-                        label={lang.name}
-                        checked={includedLanguageIds.has(lang.id)}
-                        onChange={(checked) =>
-                          setIncludedLanguageIds((prev) => {
-                            const next = new Set(prev);
-                            if (checked) next.add(lang.id);
-                            else next.delete(lang.id);
-                            return next;
-                          })
-                        }
-                      />
-                    ))}
-                  </Card>
-                </Box>
-              )}
-            </Box>
-          )}
-
-          {/* ── Export buttons ── */}
-          <Box display="flex" justifyContent="center" gap={10} flexWrap="wrap">
-            <Button
-              text={t("exportMarkdown")}
-              type="button"
-              size="md"
-              disabled={exportDataLoading || !exportData}
-              onClick={handleExportMarkdown}
-              kind="primary"
-            />
-            <Button
-              text={exportingPDF ? t("exportingPDF") : t("exportPDF")}
-              type="button"
-              size="md"
-              kind="primary"
-              disabled={exportingPDF || exportDataLoading || !exportData}
-              onClick={handleExportPDF}
-            />
-          </Box>
-          {exportError && (
-            <Typography
-              variant="body"
-              color="var(--error, #ef4444)"
-              marginTop={8}
-              as="p"
-            >
-              {exportError}
-            </Typography>
-          )}
-        </Box>
-      )}
 
       {/* ── Cover letter ──────────────────────────────────────────────── */}
       {tailoredBullets && tailoredBullets.length > 0 && (

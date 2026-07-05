@@ -91,6 +91,7 @@
   "SimulatorPage": {
     "heading": "TandaOmni Simulator",
     "subtitle": "Estimate your zero-interest, community-funded savings plan. Built for the Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM, by Christopher Guzman.",
+    "tierInstructions": "To get started, pick the goal that fits you below, then set, change, or update the sliders to match your needs. Click the \"?\" buttons for help about each item.",
     "tiers": {
       "realEstate": {
         "label": "Real Estate",

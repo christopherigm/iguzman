@@ -139,6 +139,7 @@ export function ResumePreview({
       storedConfig ??
       defaultResumeExportConfig({
         ...careerData,
+        tailoredBullets: application.tailored_bullets,
         tailoredWorkExperiences: application.tailored_work_experiences,
         tailoredProjects: application.tailored_projects,
       });

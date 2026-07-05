@@ -7,6 +7,7 @@ from .views import (
     NaftaLetterView,
     RefreshMetricsView,
     TailorApplicationView,
+    TailoredContentView,
     TnSuggestView,
 )
 
@@ -15,6 +16,7 @@ urlpatterns = [
     path('tn-suggest/', TnSuggestView.as_view(), name='application-tn-suggest'),
     path('<int:pk>/', JobApplicationDetailView.as_view(), name='application-detail'),
     path('<int:pk>/tailor/', TailorApplicationView.as_view(), name='application-tailor'),
+    path('<int:pk>/tailored/', TailoredContentView.as_view(), name='application-tailored-content'),
     path('<int:pk>/cover-letter/', CoverLetterView.as_view(), name='application-cover-letter'),
     path('<int:pk>/nafta-letter/', NaftaLetterView.as_view(), name='application-nafta-letter'),
     path('<int:pk>/metrics/', RefreshMetricsView.as_view(), name='application-metrics'),

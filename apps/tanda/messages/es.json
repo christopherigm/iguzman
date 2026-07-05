@@ -91,6 +91,7 @@
   "SimulatorPage": {
     "heading": "Simulador TandaOmni",
     "subtitle": "Estima tu plan de ahorro comunitario sin intereses. Desarrollado para el Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM, por Christopher Guzman.",
+    "tierInstructions": "Para comenzar, elige abajo el objetivo que mejor se adapte a ti y luego ajusta, cambia o actualiza los controles deslizantes según tus necesidades. Haz clic en los botones \"?\" para obtener ayuda sobre cada elemento.",
     "tiers": {
       "realEstate": {
         "label": "Bienes Raíces",

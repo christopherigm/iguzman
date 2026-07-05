@@ -91,6 +91,7 @@
   "SimulatorPage": {
     "heading": "TandaOmni-Simulator",
     "subtitle": "Schätze deinen zinslosen, gemeinschaftlich finanzierten Sparplan. Entwickelt für das Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM, von Christopher Guzman.",
+    "tierInstructions": "Wähle zunächst unten das Ziel, das zu dir passt, und stelle dann die Schieberegler nach deinen Bedürfnissen ein, ändere oder aktualisiere sie. Klicke auf die \"?\"-Schaltflächen, um Hilfe zu jedem Element zu erhalten.",
     "tiers": {
       "realEstate": {
         "label": "Immobilien",

@@ -411,16 +411,21 @@ export function Simulator() {
       )}
 
       {/* Tier Tabs */}
-      <Box display="flex" gap={8} styles={{ flexWrap: "wrap" }}>
-        {(Object.keys(TIERS) as TierKey[]).map((tierKey) => (
-          <Button
-            key={tierKey}
-            text={`${TIERS[tierKey].icon}  ${t(`tiers.${TIER_I18N_KEY[tierKey]}.label`)}`}
-            kind={tier === tierKey ? "primary" : undefined}
-            size="md"
-            onClick={() => handleTierSwitch(tierKey)}
-          />
-        ))}
+      <Box display="flex" flexDirection="column" gap={8}>
+        <Typography color="var(--muted-foreground, #6b7280)">
+          {t("tierInstructions")}
+        </Typography>
+        <Box display="flex" gap={8} styles={{ flexWrap: "wrap" }}>
+          {(Object.keys(TIERS) as TierKey[]).map((tierKey) => (
+            <Button
+              key={tierKey}
+              text={`${TIERS[tierKey].icon}  ${t(`tiers.${TIER_I18N_KEY[tierKey]}.label`)}`}
+              kind={tier === tierKey ? "primary" : undefined}
+              size="md"
+              onClick={() => handleTierSwitch(tierKey)}
+            />
+          ))}
+        </Box>
       </Box>
 
       {/* Vehicle New / Used Toggle */}

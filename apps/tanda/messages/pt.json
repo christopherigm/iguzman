@@ -91,6 +91,7 @@
   "SimulatorPage": {
     "heading": "Simulador TandaOmni",
     "subtitle": "Estime seu plano de poupança comunitário sem juros. Desenvolvido para o Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM, por Christopher Guzman.",
+    "tierInstructions": "Para começar, escolha abaixo o objetivo que combina com você e depois defina, altere ou atualize os controles deslizantes conforme suas necessidades. Clique nos botões \"?\" para obter ajuda sobre cada item.",
     "tiers": {
       "realEstate": {
         "label": "Imóveis",

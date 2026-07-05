@@ -91,6 +91,7 @@
   "SimulatorPage": {
     "heading": "Simulateur TandaOmni",
     "subtitle": "Estimez votre plan d’épargne communautaire sans intérêts. Réalisé pour le Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM, par Christopher Guzman.",
+    "tierInstructions": "Pour commencer, choisissez ci-dessous l’objectif qui vous correspond, puis réglez, modifiez ou mettez à jour les curseurs selon vos besoins. Cliquez sur les boutons « ? » pour obtenir de l’aide sur chaque élément.",
     "tiers": {
       "realEstate": {
         "label": "Immobilier",

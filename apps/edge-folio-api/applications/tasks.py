@@ -6,7 +6,7 @@ from celery import shared_task
 from django.conf import settings
 from django.core.cache import cache
 from django.core.files.base import ContentFile
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 from pydantic import BaseModel
 
@@ -468,7 +468,27 @@ def refresh_stale_companies() -> None:
 # ── Resume tailoring task ────────────────────────────────────────────────────────
 
 @shared_task(bind=True, max_retries=2, default_retry_delay=30)
-def run_tailor_pipeline(self, application_id: int, locale: str = 'en') -> None:
+def run_tailor_pipeline(
+    self,
+    application_id: int,
+    locale: str = 'en',
+    work_experience_ids: list[int] | None = None,
+    project_ids: list[int] | None = None,
+    skill_ids: list[int] | None = None,
+    additional_prompt: str = '',
+) -> None:
+    """
+    Tailor a resume for the given application.
+
+    ``work_experience_ids`` / ``project_ids`` / ``skill_ids`` optionally restrict
+    which career items feed the LLM (chosen by the user in the "Review and Tailor"
+    selection). ``None`` means "use everything" for that section. When work
+    experiences are restricted, the candidate bullets are narrowed to those
+    belonging to a selected experience (bullets with no experience are kept).
+
+    ``additional_prompt`` is optional free-text guidance the user typed into the
+    "Additional Prompt" field; it is appended to each tailoring LLM call.
+    """
     from career.models import Project, WorkExperience
     from matrix.models import BulletPoint, Skill
 
@@ -484,20 +504,33 @@ def run_tailor_pipeline(self, application_id: int, locale: str = 'en') -> None:
     company_name = application.company.name if application.company_id else application.company_name
 
     try:
-        approved_bullets = list(
-            BulletPoint.objects.filter(user=user, is_approved=True).prefetch_related('skills')
-        )
-        skills_payload = list(
-            Skill.objects.filter(user=user).values('id', 'name', 'proficiency')
-        )
+        bullets_qs = BulletPoint.objects.filter(user=user, is_approved=True).prefetch_related('skills')
+        if work_experience_ids is not None:
+            selected_we = set(work_experience_ids)
+            bullets_qs = bullets_qs.filter(
+                models.Q(work_experience_id__in=selected_we)
+                | models.Q(work_experience__isnull=True)
+            )
+        approved_bullets = list(bullets_qs)
+
+        skills_filter = Skill.objects.filter(user=user)
+        if skill_ids is not None:
+            skills_filter = skills_filter.filter(id__in=skill_ids)
+        skills_payload = list(skills_filter.values('id', 'name', 'proficiency'))
+
+        work_experiences_qs = WorkExperience.objects.filter(user=user)
+        if work_experience_ids is not None:
+            work_experiences_qs = work_experiences_qs.filter(id__in=work_experience_ids)
         work_experiences = list(
-            WorkExperience.objects.filter(user=user)
+            work_experiences_qs
             .order_by('-start_date')
             .values('id', 'title', 'company', 'start_date', 'end_date', 'is_current', 'description')
         )
         we_map = {we['id']: we for we in work_experiences}
 
         projects_qs = Project.objects.filter(user=user).prefetch_related('tech_stack')
+        if project_ids is not None:
+            projects_qs = projects_qs.filter(id__in=project_ids)
         projects_payload = [
             {
                 'id': p.id,
@@ -539,6 +572,7 @@ def run_tailor_pipeline(self, application_id: int, locale: str = 'en') -> None:
             projects=projects_payload,
             profile_job_title=profile_job_title,
             locale=locale,
+            additional_prompt=additional_prompt,
         )
     except Exception as exc:
         logger.error('LLM error during full resume tailoring for application %s: %s', application_id, exc)

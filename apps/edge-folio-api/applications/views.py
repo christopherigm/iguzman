@@ -32,6 +32,26 @@ def _invalidate_application(user_id, pk=None):
         cache.delete(f'applications:application:{user_id}:{pk}')
 
 
+def _optional_int_list(data, key):
+    """
+    Parse an optional list-of-ints field from request data. Returns None when the
+    key is absent (meaning "no selection filter - use all"), or a list of the
+    values that could be coerced to int otherwise.
+    """
+    if key not in data:
+        return None
+    raw = data.get(key)
+    if not isinstance(raw, (list, tuple)):
+        return None
+    out = []
+    for v in raw:
+        try:
+            out.append(int(v))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
 def _assign_company(application: JobApplication) -> None:
     norm = _normalize_company_name(application.company_name)
     if not norm:
@@ -139,6 +159,57 @@ class JobApplicationDetailView(generics.RetrieveUpdateDestroyAPIView):
         return response
 
 
+class TailoredContentView(APIView):
+    """
+    Persist manual edits to the AI-tailored resume content: professional summary,
+    tailored bullets, tailored work experiences and tailored projects. These
+    fields are read-only on the main serializer (normally LLM-generated), so this
+    endpoint lets the detail page save the user's per-card edits back to the DB.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            application = JobApplication.objects.select_related('company').get(pk=pk, user=request.user)
+        except JobApplication.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        update_fields = ['modified']
+
+        if 'professional_summary' in request.data:
+            summary = request.data.get('professional_summary') or ''
+            if not isinstance(summary, str):
+                return Response(
+                    {'detail': 'professional_summary must be a string.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            application.professional_summary = summary
+            update_fields.append('professional_summary')
+
+        for field in ('tailored_bullets', 'tailored_work_experiences', 'tailored_projects'):
+            if field in request.data:
+                value = request.data.get(field)
+                if value is not None and not isinstance(value, list):
+                    return Response(
+                        {'detail': f'{field} must be a list.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                setattr(application, field, value)
+                update_fields.append(field)
+
+        if len(update_fields) == 1:
+            return Response(
+                {'detail': 'No editable fields provided.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        application.save(update_fields=update_fields)
+        _invalidate_application(request.user.id, pk)
+
+        serializer = JobApplicationSerializer(application, context={'request': request})
+        return Response(serializer.data)
+
+
 class TailorApplicationView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -161,13 +232,31 @@ class TailorApplicationView(APIView):
 
         from .tasks import run_tailor_pipeline
 
+        # Optional selection of which career items feed the LLM. A missing key
+        # (None) means "use everything" - preserving the pre-selection behaviour.
+        work_experience_ids = _optional_int_list(request.data, 'work_experience_ids')
+        project_ids = _optional_int_list(request.data, 'project_ids')
+        skill_ids = _optional_int_list(request.data, 'skill_ids')
+
+        # Optional free-text guidance appended to the tailoring prompt.
+        additional_prompt = request.data.get('additional_prompt') or ''
+        if not isinstance(additional_prompt, str):
+            additional_prompt = ''
+
         application.tailor_status = 'processing'
         application.tailor_started_at = timezone.now()
         application.save(update_fields=['tailor_status', 'tailor_started_at', 'modified'])
         _invalidate_application(request.user.id, pk)
 
         locale = parse_accept_language(request.META.get('HTTP_ACCEPT_LANGUAGE', ''))
-        run_tailor_pipeline.delay(application.pk, locale=locale)
+        run_tailor_pipeline.delay(
+            application.pk,
+            locale=locale,
+            work_experience_ids=work_experience_ids,
+            project_ids=project_ids,
+            skill_ids=skill_ids,
+            additional_prompt=additional_prompt,
+        )
 
         application.refresh_from_db(fields=['tailor_status'])
         return Response({'status': application.tailor_status}, status=status.HTTP_202_ACCEPTED)

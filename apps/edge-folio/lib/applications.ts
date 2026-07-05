@@ -209,17 +209,63 @@ export interface TailorStartResult {
 }
 
 /**
+ * Selection of which career items should feed the LLM tailoring. Any omitted
+ * field means "use everything" for that section on the backend.
+ */
+export interface TailorSelection {
+  work_experience_ids?: number[];
+  project_ids?: number[];
+  skill_ids?: number[];
+  /** Free-text guidance appended to the LLM tailoring prompt. */
+  additional_prompt?: string;
+}
+
+/**
  * Kicks off async resume tailoring. Returns immediately with the current
  * tailor status - the heavy LLM work runs in the background and is polled
  * via `getApplication` until `tailor_status` reaches `complete`/`failed`.
+ *
+ * `selection` restricts which work experiences / projects / skills are sent to
+ * the LLM; omit it to tailor over the entire Matrix.
  */
 export function tailorApplication(
   id: number,
   locale?: string,
+  selection?: TailorSelection,
 ): Promise<TailorStartResult> {
   return request(`/api/applications/${id}/tailor`, {
     method: "POST",
-    headers: locale ? { "Accept-Language": locale } : undefined,
+    headers: {
+      ...(locale ? { "Accept-Language": locale } : {}),
+      ...(selection ? { "Content-Type": "application/json" } : {}),
+    },
+    body: selection ? JSON.stringify(selection) : undefined,
+  });
+}
+
+/**
+ * Manual edits to the AI-tailored resume content. Any omitted field is left
+ * untouched on the server; provided fields overwrite the stored value.
+ */
+export interface TailoredContentPayload {
+  professional_summary?: string;
+  tailored_bullets?: TailoredBullet[];
+  tailored_work_experiences?: TailoredWorkExperience[];
+  tailored_projects?: TailoredProject[];
+}
+
+/**
+ * Persists the user's per-card edits to the tailored resume content and returns
+ * the refreshed application.
+ */
+export function updateTailoredContent(
+  id: number,
+  payload: TailoredContentPayload,
+): Promise<JobApplication> {
+  return request(`/api/applications/${id}/tailored`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   });
 }
 

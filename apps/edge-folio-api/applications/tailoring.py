@@ -237,7 +237,13 @@ def _rank_bullets(job_description: str, bullets: list[dict]) -> list[dict]:
     return sorted(bullets, key=score, reverse=True)
 
 
-def tailor_resume(job_description: str, bullets: list[dict], skills: list[dict], locale: str = 'en') -> list[dict]:
+def tailor_resume(
+    job_description: str,
+    bullets: list[dict],
+    skills: list[dict],
+    locale: str = 'en',
+    custom_instructions: str = '',
+) -> list[dict]:
     """
     Call Groq LLM to select and rewrite the user's bullet points for a job.
 
@@ -266,6 +272,7 @@ def tailor_resume(job_description: str, bullets: list[dict], skills: list[dict],
         f"CANDIDATE SKILLS: {skill_summary}\n\n"
         f"CANDIDATE BULLET POINTS:\n{bullet_lines}\n\n"
         "Return the tailored bullet selection as JSON."
+        + _format_custom_instructions(custom_instructions)
     )
 
     result = chat_structured(
@@ -295,7 +302,12 @@ Response schema:
 """
 
 
-def tailor_skills(job_description: str, skills: list[dict], locale: str = 'en') -> list[int]:
+def tailor_skills(
+    job_description: str,
+    skills: list[dict],
+    locale: str = 'en',
+    custom_instructions: str = '',
+) -> list[int]:
     """
     Select the most relevant skill IDs from the user's matrix for the given job.
 
@@ -312,6 +324,7 @@ def tailor_skills(job_description: str, skills: list[dict], locale: str = 'en') 
         f"JOB DESCRIPTION:\n{job_description[:5000]}\n\n"
         f"CANDIDATE SKILLS:\n{skill_lines}\n\n"
         "Select the most relevant skill IDs as JSON."
+        + _format_custom_instructions(custom_instructions)
     )
 
     result = chat_structured(
@@ -356,7 +369,12 @@ Response schema:
 """
 
 
-def tailor_work_experiences(job_description: str, work_experiences: list[dict], locale: str = 'en') -> list[dict]:
+def tailor_work_experiences(
+    job_description: str,
+    work_experiences: list[dict],
+    locale: str = 'en',
+    custom_instructions: str = '',
+) -> list[dict]:
     """
     Select and rewrite the most relevant work experience descriptions for a job.
 
@@ -382,6 +400,7 @@ def tailor_work_experiences(job_description: str, work_experiences: list[dict], 
         f"JOB DESCRIPTION:\n{job_description[:5000]}\n\n"
         f"CANDIDATE WORK EXPERIENCES:\n{we_lines}\n\n"
         "Select and rewrite the most relevant work experiences as JSON."
+        + _format_custom_instructions(custom_instructions)
     )
 
     result = chat_structured(
@@ -421,7 +440,12 @@ Response schema:
 """
 
 
-def tailor_projects(job_description: str, projects: list[dict], locale: str = 'en') -> list[dict]:
+def tailor_projects(
+    job_description: str,
+    projects: list[dict],
+    locale: str = 'en',
+    custom_instructions: str = '',
+) -> list[dict]:
     """
     Select and rewrite the most relevant project descriptions for a job.
 
@@ -444,6 +468,7 @@ def tailor_projects(job_description: str, projects: list[dict], locale: str = 'e
         f"JOB DESCRIPTION:\n{job_description[:5000]}\n\n"
         f"CANDIDATE PROJECTS:\n{project_lines}\n\n"
         "Select and rewrite the most relevant projects as JSON."
+        + _format_custom_instructions(custom_instructions)
     )
 
     result = chat_structured(
@@ -473,9 +498,13 @@ def tailor_full_resume(
     projects: list[dict],
     profile_job_title: str = '',
     locale: str = 'en',
+    additional_prompt: str = '',
 ) -> dict:
     """
     Orchestrate complete resume tailoring across all sections.
+
+    ``additional_prompt`` is optional free-text guidance the user provided; it is
+    appended (as high-priority instructions) to each tailoring LLM call.
 
     bullets: [{"id": int, "text": str, "category": str, "skills": [str],
                "work_experience_title"?: str, "work_experience_company"?: str}]
@@ -493,10 +522,18 @@ def tailor_full_resume(
         "summary": str,
     }
     """
-    tailored_bullets = tailor_resume(job_description, bullets, skills, locale=locale)
-    tailored_skill_ids = tailor_skills(job_description, skills, locale=locale)
-    tailored_work_experiences = tailor_work_experiences(job_description, work_experiences, locale=locale)
-    tailored_projects = tailor_projects(job_description, projects, locale=locale)
+    tailored_bullets = tailor_resume(
+        job_description, bullets, skills, locale=locale, custom_instructions=additional_prompt
+    )
+    tailored_skill_ids = tailor_skills(
+        job_description, skills, locale=locale, custom_instructions=additional_prompt
+    )
+    tailored_work_experiences = tailor_work_experiences(
+        job_description, work_experiences, locale=locale, custom_instructions=additional_prompt
+    )
+    tailored_projects = tailor_projects(
+        job_description, projects, locale=locale, custom_instructions=additional_prompt
+    )
     summary = generate_professional_summary(
         job_title=job_title,
         company_name=company_name,
@@ -506,6 +543,7 @@ def tailor_full_resume(
         work_experiences=work_experiences,
         profile_job_title=profile_job_title,
         locale=locale,
+        custom_instructions=additional_prompt,
     )
     return {
         "bullets": tailored_bullets,
@@ -576,6 +614,7 @@ def generate_professional_summary(
     work_experiences: list[dict],
     profile_job_title: str = '',
     locale: str = 'en',
+    custom_instructions: str = '',
 ) -> str:
     """
     Generate a 50-100 word professional summary grounded in tailored bullets.
@@ -602,6 +641,7 @@ def generate_professional_summary(
         f"TOP SKILLS: {top_skills or 'Not provided'}\n\n"
         f"TAILORED ACHIEVEMENTS (use the best metric from these):\n{bullet_lines}\n\n"
         "Write the professional summary now."
+        + _format_custom_instructions(custom_instructions)
     )
 
     return chat_text(
