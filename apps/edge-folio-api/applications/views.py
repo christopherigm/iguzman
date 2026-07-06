@@ -287,6 +287,11 @@ class CoverLetterView(APIView):
 
         company_name = application.company.name if application.company_id else application.company_name
 
+        # Optional free-text guidance appended to the cover-letter prompt.
+        additional_prompt = request.data.get('additional_prompt') or ''
+        if not isinstance(additional_prompt, str):
+            additional_prompt = ''
+
         try:
             locale = parse_accept_language(request.META.get('HTTP_ACCEPT_LANGUAGE', ''))
             cover_letter = generate_cover_letter(
@@ -295,6 +300,7 @@ class CoverLetterView(APIView):
                 job_description=application.job_description,
                 tailored_bullets=bullets,
                 locale=locale,
+                additional_prompt=additional_prompt,
             )
         except Exception as exc:
             logger.error('LLM error during cover letter generation: %s', exc)

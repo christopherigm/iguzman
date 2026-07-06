@@ -680,11 +680,14 @@ def generate_cover_letter(
     job_description: str,
     tailored_bullets: list[dict],
     locale: str = 'en',
+    additional_prompt: str = '',
 ) -> str:
     """
     Generate a cover letter grounded strictly in the provided tailored bullets.
 
     tailored_bullets: [{"id": int, "tailored_text": str}]
+    ``additional_prompt`` is optional free-text guidance the user provided; it is
+    appended as a clearly-delimited, high-priority block.
 
     Returns: plain-text cover letter body (no salutation / closing).
     """
@@ -695,6 +698,7 @@ def generate_cover_letter(
         f"JOB DESCRIPTION EXCERPT:\n{job_description[:5000]}\n\n"
         f"SELECTED BULLETS (the ONLY facts you may reference):\n{bullet_lines}\n\n"
         "Write the cover letter body now."
+        + _format_custom_instructions(additional_prompt)
     )
 
     return chat_text(

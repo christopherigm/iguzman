@@ -21,6 +21,7 @@ import {
 } from "@/lib/resume-export";
 import { groupByCategory } from "../detail-constants";
 import type { EnhanceMessage } from "../_components/tailored-editable-card";
+import type { EnhanceOptions } from "@/components/enhance/enhance-options-modal";
 import type { ExportDataController } from "./use-export-data";
 import type { ShowToast } from "./use-toast";
 
@@ -81,6 +82,8 @@ export function useTailoringWorkflow({
   );
   const [clError, setClError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // Free-text guidance appended to the cover-letter prompt (optional).
+  const [clAdditionalPrompt, setClAdditionalPrompt] = useState("");
 
   // ── Tailored-results editing ──
   // Tailored-bullet categories (impact/technical/…) toggled OUT of the export.
@@ -99,6 +102,11 @@ export function useTailoringWorkflow({
   const [useTailoredProjectIds, setUseTailoredProjectIds] = useState<
     Set<number>
   >(new Set((app.tailored_projects ?? []).map((p) => p.id)));
+  // Which AI-tailored skills to keep in the export. Pre-selected with every
+  // skill the LLM returned; the user confirms/unselects individual chips.
+  const [includedTailoredSkillIds, setIncludedTailoredSkillIds] = useState<
+    Set<number>
+  >(new Set((app.tailored_skills ?? []).map((s) => s.id)));
 
   // ── Export ──
   const [exportingPDF, setExportingPDF] = useState(false);
@@ -121,6 +129,9 @@ export function useTailoringWorkflow({
     );
     setUseTailoredProjectIds(
       new Set((data.tailored_projects ?? []).map((p) => p.id)),
+    );
+    setIncludedTailoredSkillIds(
+      new Set((data.tailored_skills ?? []).map((s) => s.id)),
     );
   }
 
@@ -214,7 +225,12 @@ export function useTailoringWorkflow({
     setGeneratingCL(true);
     setClError(null);
     try {
-      const result = await generateCoverLetter(app.id, tailoredBullets, locale);
+      const result = await generateCoverLetter(
+        app.id,
+        tailoredBullets,
+        locale,
+        clAdditionalPrompt,
+      );
       setCoverLetter(result.cover_letter);
       setCopied(false);
     } catch {
@@ -352,30 +368,69 @@ export function useTailoringWorkflow({
   const ctx = `${app.job_title} at ${app.company_name}`;
   const isEs = locale === "es";
 
-  function buildBulletEnhance(text: string): EnhanceMessage[] {
+  function buildBulletEnhance(
+    text: string,
+    opts?: EnhanceOptions,
+  ): EnhanceMessage[] {
+    // For bullets the modal's paragraph count maps to the number of bullets and
+    // the length band to words per bullet; with no options, keep the count.
+    const shape = opts
+      ? isEs
+        ? `Devuelve exactamente ${opts.paragraphs} viñeta${opts.paragraphs !== 1 ? "s" : ""}, cada una de entre ${opts.minWords} y ${opts.maxWords} palabras`
+        : `Return exactly ${opts.paragraphs} ${opts.paragraphs === 1 ? "bullet" : "bullets"}, each between ${opts.minWords} and ${opts.maxWords} words`
+      : isEs
+        ? "conserva la misma cantidad de viñetas"
+        : "preserve the same number of bullets";
     const system = isEs
-      ? `Eres un redactor experto de currículums. Mejora los siguientes puntos de logros para el puesto de ${ctx}. Mantenlos como viñetas concisas y orientadas a resultados, una por línea, sin guiones ni numeración al inicio, y conserva la misma cantidad de viñetas. Devuelve únicamente las viñetas mejoradas, una por línea.`
-      : `You are an expert resume writer. Improve the following achievement bullet points for a ${ctx} role. Keep them as concise, results-oriented bullets, one per line, with no leading dashes or numbering, and preserve the same number of bullets. Return only the improved bullets, one per line.`;
+      ? `Eres un redactor experto de currículums. Mejora los siguientes puntos de logros para el puesto de ${ctx}. Mantenlos como viñetas concisas y orientadas a resultados, una por línea, sin guiones ni numeración al inicio, y ${shape}. Devuelve únicamente las viñetas mejoradas, una por línea.`
+      : `You are an expert resume writer. Improve the following achievement bullet points for a ${ctx} role. Keep them as concise, results-oriented bullets, one per line, with no leading dashes or numbering, and ${shape}. Return only the improved bullets, one per line.`;
     return [
       { role: "system", content: system },
       { role: "user", content: text },
     ];
   }
 
-  function buildSummaryEnhance(text: string): EnhanceMessage[] {
+  // Length clause honoring the paragraph/word options the user picked in the
+  // enhance modal; falls back to the prior concise default when none are given.
+  function lengthClause(opts: EnhanceOptions | undefined, fallback: string) {
+    if (!opts) return fallback;
+    return isEs
+      ? `Escribe exactamente ${opts.paragraphs} párrafo${opts.paragraphs !== 1 ? "s" : ""}, cada uno de entre ${opts.minWords} y ${opts.maxWords} palabras.`
+      : `Write exactly ${opts.paragraphs} ${opts.paragraphs === 1 ? "paragraph" : "paragraphs"}, each between ${opts.minWords} and ${opts.maxWords} words.`;
+  }
+
+  function buildSummaryEnhance(
+    text: string,
+    opts?: EnhanceOptions,
+  ): EnhanceMessage[] {
+    const length = lengthClause(
+      opts,
+      isEs
+        ? "Escríbelo en prosa concisa y convincente de 2 a 4 oraciones."
+        : "Write it as concise, compelling prose of 2-4 sentences.",
+    );
     const system = isEs
-      ? `Eres un redactor experto de currículums. Reescribe y mejora el siguiente resumen profesional para el puesto de ${ctx}, en prosa concisa y convincente de 2 a 4 oraciones. Devuelve únicamente el texto mejorado, sin explicaciones ni etiquetas.`
-      : `You are an expert resume writer. Rewrite and improve the following professional summary for a ${ctx} role into concise, compelling prose of 2-4 sentences. Return only the improved text, with no explanations or labels.`;
+      ? `Eres un redactor experto de currículums. Reescribe y mejora el siguiente resumen profesional para el puesto de ${ctx}. ${length} Devuelve únicamente el texto mejorado, sin explicaciones ni etiquetas.`
+      : `You are an expert resume writer. Rewrite and improve the following professional summary for a ${ctx} role. ${length} Return only the improved text, with no explanations or labels.`;
     return [
       { role: "system", content: system },
       { role: "user", content: text },
     ];
   }
 
-  function buildDescriptionEnhance(text: string): EnhanceMessage[] {
+  function buildDescriptionEnhance(
+    text: string,
+    opts?: EnhanceOptions,
+  ): EnhanceMessage[] {
+    const length = lengthClause(
+      opts,
+      isEs
+        ? "Escríbelo en prosa concisa y convincente."
+        : "Write it as concise, compelling prose.",
+    );
     const system = isEs
-      ? `Eres un redactor experto de currículums. Reescribe y mejora la siguiente descripción para el puesto de ${ctx}, en prosa concisa y convincente. Devuelve únicamente el texto mejorado, sin explicaciones ni etiquetas.`
-      : `You are an expert resume writer. Rewrite and improve the following description for a ${ctx} role into concise, compelling prose. Return only the improved text, with no explanations or labels.`;
+      ? `Eres un redactor experto de currículums. Reescribe y mejora la siguiente descripción para el puesto de ${ctx}. ${length} Devuelve únicamente el texto mejorado, sin explicaciones ni etiquetas.`
+      : `You are an expert resume writer. Rewrite and improve the following description for a ${ctx} role. ${length} Return only the improved text, with no explanations or labels.`;
     return [
       { role: "system", content: system },
       { role: "user", content: text },
@@ -398,6 +453,7 @@ export function useTailoringWorkflow({
     ).filter((c) => !excludedBulletCats.has(c)),
     useTailoredWeIds: [...useTailoredWeIds],
     useTailoredProjectIds: [...useTailoredProjectIds],
+    includedTailoredSkillIds: [...includedTailoredSkillIds],
   };
   const exportConfigJson = JSON.stringify(exportConfig);
   const { exportData } = exportCtl;
@@ -425,6 +481,7 @@ export function useTailoringWorkflow({
       educations: exportData.educations,
       languages: exportData.languages,
       projects: exportData.projects,
+      allSkills: exportData.skills,
       config: exportConfig,
       profilePictureBase64,
     });
@@ -523,6 +580,8 @@ export function useTailoringWorkflow({
     // edits
     excludedBulletCats,
     setExcludedBulletCats,
+    includedTailoredSkillIds,
+    setIncludedTailoredSkillIds,
     bulletEdits,
     setBulletEdits,
     weEdits,
@@ -546,6 +605,8 @@ export function useTailoringWorkflow({
     generatingCL,
     clError,
     copied,
+    clAdditionalPrompt,
+    setClAdditionalPrompt,
     handleGenerateCL,
     handleCopy,
     // export

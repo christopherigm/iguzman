@@ -17,6 +17,10 @@ import {
   StreamingEnhancePanel,
   type StreamingEnhanceHandle,
 } from "@repo/ui/core-elements/streaming-enhance-panel";
+import {
+  EnhanceOptionsModal,
+  type EnhanceOptions,
+} from "@/components/enhance/enhance-options-modal";
 import { getProfile, saveOnboarding, updateContactInfo } from "@/lib/auth";
 import { TN_PROFESSIONS } from "@/lib/nafta-constants";
 import {
@@ -33,29 +37,6 @@ const YEARS_STEPS: SliderStep[] = [
   { value: 10, label: "10-14" },
   { value: 15, label: "15+" },
 ];
-
-const PARAGRAPH_WORD_COUNTS: Record<string, { min: number; max: number }> = {
-  xs: { min: 10, max: 20 },
-  sm: { min: 25, max: 40 },
-  md: { min: 50, max: 75 },
-  "md-lg": { min: 80, max: 120 },
-  lg: { min: 130, max: 180 },
-  xl: { min: 200, max: 270 },
-};
-
-const SUMMARY_LENGTH_STEPS = [
-  { value: "xs", label: "XS" },
-  { value: "sm", label: "S" },
-  { value: "md", label: "M" },
-  { value: "md-lg", label: "M-L" },
-  { value: "lg", label: "L" },
-  { value: "xl", label: "XL" },
-];
-
-const SUMMARY_PARAGRAPH_COUNT_STEPS = [1, 2, 3].map((n) => ({
-  value: n,
-  label: String(n),
-}));
 
 /**
  * ProfessionalInfoPanel - job title, years of experience, professional summary
@@ -89,9 +70,6 @@ export function ProfessionalInfoPanel() {
   // coarse transitions reported by the panel.
   const [summaryShowEnhanceOptions, setSummaryShowEnhanceOptions] =
     useState(false);
-  const [summaryEnhanceParagraphs, setSummaryEnhanceParagraphs] = useState(1);
-  const [summaryEnhanceParagraphLength, setSummaryEnhanceParagraphLength] =
-    useState("sm");
   const [summaryEnhancing, setSummaryEnhancing] = useState(false);
   const [summaryPreviewActive, setSummaryPreviewActive] = useState(false);
   const summaryEnhanceRef = useRef<StreamingEnhanceHandle>(null);
@@ -160,50 +138,40 @@ export function ProfessionalInfoPanel() {
     }
   }, [t, locale]);
 
-  const handleSummaryConfirmEnhanceOptions = useCallback(() => {
-    setSummaryShowEnhanceOptions(false);
-    const currentText = contactSummary.trim();
-    if (!currentText) return;
-    const { min, max } = PARAGRAPH_WORD_COUNTS[
-      summaryEnhanceParagraphLength
-    ] ?? {
-      min: 25,
-      max: 40,
-    };
-    const yearsLabel =
-      YEARS_STEPS.find((s) => s.value === yearsValue)?.label ??
-      String(yearsValue);
-    const profileCtx = [
-      jobTitle.trim() ? `Job title: ${jobTitle.trim()}` : "",
-      yearsValue !== null ? `Years of experience: ${yearsLabel}` : "",
-    ]
-      .filter(Boolean)
-      .join(". ");
-    const isEs = locale === "es";
-    const messages = isEs
-      ? [
-          {
-            role: "system" as const,
-            content: `Eres un coach profesional de carrera. Reescribe y mejora el siguiente resumen profesional en prosa convincente para un CV o portafolio. Escribe exactamente ${summaryEnhanceParagraphs} párrafo${summaryEnhanceParagraphs !== 1 ? "s" : ""}. Cada párrafo debe tener entre ${min} y ${max} palabras. Enfócate en logros de carrera, habilidades clave y propuesta de valor profesional. Devuelve únicamente el texto mejorado - sin explicaciones, etiquetas ni marcas de formato.${profileCtx ? ` Contexto del perfil: ${profileCtx}.` : ""}`,
-          },
-          { role: "user" as const, content: currentText },
-        ]
-      : [
-          {
-            role: "system" as const,
-            content: `You are a professional career coach and resume expert. Rewrite and enhance the following professional summary into polished, compelling prose for a resume or portfolio. Write exactly ${summaryEnhanceParagraphs} ${summaryEnhanceParagraphs === 1 ? "paragraph" : "paragraphs"}. Each paragraph must be between ${min} and ${max} words. Focus on career achievements, key skills, and professional value proposition. Return only the improved text - no explanations, labels, or formatting marks.${profileCtx ? ` Profile context: ${profileCtx}.` : ""}`,
-          },
-          { role: "user" as const, content: currentText },
-        ];
-    summaryEnhanceRef.current?.start(messages);
-  }, [
-    contactSummary,
-    summaryEnhanceParagraphLength,
-    summaryEnhanceParagraphs,
-    locale,
-    jobTitle,
-    yearsValue,
-  ]);
+  const handleSummaryConfirmEnhanceOptions = useCallback(
+    ({ paragraphs, minWords, maxWords }: EnhanceOptions) => {
+      setSummaryShowEnhanceOptions(false);
+      const currentText = contactSummary.trim();
+      if (!currentText) return;
+      const yearsLabel =
+        YEARS_STEPS.find((s) => s.value === yearsValue)?.label ??
+        String(yearsValue);
+      const profileCtx = [
+        jobTitle.trim() ? `Job title: ${jobTitle.trim()}` : "",
+        yearsValue !== null ? `Years of experience: ${yearsLabel}` : "",
+      ]
+        .filter(Boolean)
+        .join(". ");
+      const isEs = locale === "es";
+      const messages = isEs
+        ? [
+            {
+              role: "system" as const,
+              content: `Eres un coach profesional de carrera. Reescribe y mejora el siguiente resumen profesional en prosa convincente para un CV o portafolio. Escribe exactamente ${paragraphs} párrafo${paragraphs !== 1 ? "s" : ""}. Cada párrafo debe tener entre ${minWords} y ${maxWords} palabras. Enfócate en logros de carrera, habilidades clave y propuesta de valor profesional. Devuelve únicamente el texto mejorado - sin explicaciones, etiquetas ni marcas de formato.${profileCtx ? ` Contexto del perfil: ${profileCtx}.` : ""}`,
+            },
+            { role: "user" as const, content: currentText },
+          ]
+        : [
+            {
+              role: "system" as const,
+              content: `You are a professional career coach and resume expert. Rewrite and enhance the following professional summary into polished, compelling prose for a resume or portfolio. Write exactly ${paragraphs} ${paragraphs === 1 ? "paragraph" : "paragraphs"}. Each paragraph must be between ${minWords} and ${maxWords} words. Focus on career achievements, key skills, and professional value proposition. Return only the improved text - no explanations, labels, or formatting marks.${profileCtx ? ` Profile context: ${profileCtx}.` : ""}`,
+            },
+            { role: "user" as const, content: currentText },
+          ];
+      summaryEnhanceRef.current?.start(messages);
+    },
+    [contactSummary, locale, jobTitle, yearsValue],
+  );
 
   if (loading) {
     return <ProgressBar label={t("loading")} />;
@@ -287,27 +255,17 @@ export function ProfessionalInfoPanel() {
         </ConfirmationModal>
       )}
       {summaryShowEnhanceOptions && (
-        <ConfirmationModal
-          title={t("summaryEnhanceOptionsTitle")}
-          text={t("summaryEnhanceOptionsText")}
-          okCallback={() => handleSummaryConfirmEnhanceOptions()}
-          cancelCallback={() => setSummaryShowEnhanceOptions(false)}
-        >
-          <Box display="flex" flexDirection="column" gap={20} paddingY={4}>
-            <Slider
-              steps={SUMMARY_PARAGRAPH_COUNT_STEPS}
-              value={summaryEnhanceParagraphs}
-              onChange={(v) => setSummaryEnhanceParagraphs(Number(v))}
-              label={t("summaryEnhanceParagraphsLabel")}
-            />
-            <Slider
-              steps={SUMMARY_LENGTH_STEPS}
-              value={summaryEnhanceParagraphLength}
-              onChange={(v) => setSummaryEnhanceParagraphLength(String(v))}
-              label={`${t("summaryEnhanceLengthLabel")} (${(PARAGRAPH_WORD_COUNTS[summaryEnhanceParagraphLength] ?? { min: 25, max: 40 }).min}-${(PARAGRAPH_WORD_COUNTS[summaryEnhanceParagraphLength] ?? { min: 25, max: 40 }).max} words/para)`}
-            />
-          </Box>
-        </ConfirmationModal>
+        <EnhanceOptionsModal
+          labels={{
+            title: t("summaryEnhanceOptionsTitle"),
+            text: t("summaryEnhanceOptionsText"),
+            paragraphs: t("summaryEnhanceParagraphsLabel"),
+            length: t("summaryEnhanceLengthLabel"),
+            wordsPerPara: t("summaryEnhanceWordsPerPara"),
+          }}
+          onConfirm={handleSummaryConfirmEnhanceOptions}
+          onCancel={() => setSummaryShowEnhanceOptions(false)}
+        />
       )}
 
       <Box display="flex" flexDirection="column" gap={12} marginBottom={12}>

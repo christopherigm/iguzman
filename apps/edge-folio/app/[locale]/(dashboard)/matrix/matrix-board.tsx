@@ -12,7 +12,6 @@ import { Badge } from "@repo/ui/core-elements/badge";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Toast } from "@repo/ui/core-elements/toast";
 import { Select } from "@repo/ui/core-elements/select";
-import { Slider } from "@repo/ui/core-elements/slider";
 import { SpeechButton } from "@repo/ui/core-elements/speech-button";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Card } from "@repo/ui/core-elements/card";
@@ -35,29 +34,10 @@ import {
 } from "@/lib/matrix";
 import "./matrix-board.css";
 import IconButton from "@repo/ui/core-elements/icon-button";
-
-const PARAGRAPH_WORD_COUNTS: Record<string, { min: number; max: number }> = {
-  xs: { min: 10, max: 20 },
-  sm: { min: 25, max: 40 },
-  md: { min: 50, max: 75 },
-  "md-lg": { min: 80, max: 120 },
-  lg: { min: 130, max: 180 },
-  xl: { min: 200, max: 270 },
-};
-
-const PARAGRAPH_LENGTH_STEPS = [
-  { value: "xs", label: "XS" },
-  { value: "sm", label: "S" },
-  { value: "md", label: "M" },
-  { value: "md-lg", label: "M-L" },
-  { value: "lg", label: "L" },
-  { value: "xl", label: "XL" },
-];
-
-const PARAGRAPH_COUNT_STEPS = [1, 2, 3, 4, 5].map((n) => ({
-  value: n,
-  label: String(n),
-}));
+import {
+  EnhanceOptionsModal,
+  type EnhanceOptions,
+} from "@/components/enhance/enhance-options-modal";
 
 const CATEGORIES: Category[] = [
   "impact",
@@ -133,34 +113,32 @@ function BulletForm({
   const [enhancing, setEnhancing] = useState(false);
   const [previewActive, setPreviewActive] = useState(false);
   const [showEnhanceOptions, setShowEnhanceOptions] = useState(false);
-  const [enhanceParagraphs, setEnhanceParagraphs] = useState(1);
-  const [enhanceParagraphLength, setEnhanceParagraphLength] = useState("sm");
 
   useEffect(() => {
     onValidityChange?.(!saving && text.trim().length > 0);
   }, [saving, text, onValidityChange]);
 
-  const handleConfirmEnhanceOptions = () => {
+  const handleConfirmEnhance = ({
+    paragraphs,
+    minWords,
+    maxWords,
+  }: EnhanceOptions) => {
     setShowEnhanceOptions(false);
     const currentText = text.trim();
     if (!currentText) return;
-    const { min, max } = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? {
-      min: 50,
-      max: 75,
-    };
     const isEs = locale === "es";
     const messages = isEs
       ? [
           {
             role: "system" as const,
-            content: `Eres un coach profesional de carrera. Reescribe y amplía el siguiente logro profesional en prosa impactante para un portafolio. Escribe exactamente ${enhanceParagraphs} párrafo${enhanceParagraphs !== 1 ? "s" : ""}. Cada párrafo debe tener entre ${min} y ${max} palabras. Enfócate en logros cuantificables, verbos de acción y resultados medibles. Devuelve únicamente el texto mejorado - sin explicaciones, etiquetas ni marcas de formato.`,
+            content: `Eres un coach profesional de carrera. Reescribe y amplía el siguiente logro profesional en prosa impactante para un portafolio. Escribe exactamente ${paragraphs} párrafo${paragraphs !== 1 ? "s" : ""}. Cada párrafo debe tener entre ${minWords} y ${maxWords} palabras. Enfócate en logros cuantificables, verbos de acción y resultados medibles. Devuelve únicamente el texto mejorado - sin explicaciones, etiquetas ni marcas de formato.`,
           },
           { role: "user" as const, content: currentText },
         ]
       : [
           {
             role: "system" as const,
-            content: `You are a professional career coach and resume expert. Rewrite and expand the following career achievement into polished, impactful prose for a professional portfolio. Write exactly ${enhanceParagraphs} ${enhanceParagraphs === 1 ? "paragraph" : "paragraphs"}. Each paragraph must be between ${min} and ${max} words. Focus on quantifiable achievements, action verbs, and measurable outcomes. Return only the improved text - no explanations, labels, or formatting marks.`,
+            content: `You are a professional career coach and resume expert. Rewrite and expand the following career achievement into polished, impactful prose for a professional portfolio. Write exactly ${paragraphs} ${paragraphs === 1 ? "paragraph" : "paragraphs"}. Each paragraph must be between ${minWords} and ${maxWords} words. Focus on quantifiable achievements, action verbs, and measurable outcomes. Return only the improved text - no explanations, labels, or formatting marks.`,
           },
           { role: "user" as const, content: currentText },
         ];
@@ -201,34 +179,20 @@ function BulletForm({
     }
   }
 
-  const currentLengthWordRange = PARAGRAPH_WORD_COUNTS[
-    enhanceParagraphLength
-  ] ?? { min: 50, max: 75 };
-
   return (
     <>
       {showEnhanceOptions && (
-        <ConfirmationModal
-          title={t("enhanceOptionsTitle")}
-          text={t("enhanceOptionsText")}
-          okCallback={handleConfirmEnhanceOptions}
-          cancelCallback={() => setShowEnhanceOptions(false)}
-        >
-          <Box className="matrix__enhance-options">
-            <Slider
-              steps={PARAGRAPH_COUNT_STEPS}
-              value={enhanceParagraphs}
-              onChange={(v) => setEnhanceParagraphs(Number(v))}
-              label={t("enhanceParagraphsLabel")}
-            />
-            <Slider
-              steps={PARAGRAPH_LENGTH_STEPS}
-              value={enhanceParagraphLength}
-              onChange={(v) => setEnhanceParagraphLength(String(v))}
-              label={`${t("enhanceLengthLabel")} (${currentLengthWordRange.min}-${currentLengthWordRange.max} words/para)`}
-            />
-          </Box>
-        </ConfirmationModal>
+        <EnhanceOptionsModal
+          labels={{
+            title: t("enhanceOptionsTitle"),
+            text: t("enhanceOptionsText"),
+            paragraphs: t("enhanceParagraphsLabel"),
+            length: t("enhanceLengthLabel"),
+            wordsPerPara: t("enhanceWordsPerPara"),
+          }}
+          onConfirm={handleConfirmEnhance}
+          onCancel={() => setShowEnhanceOptions(false)}
+        />
       )}
       <form ref={formRef} onSubmit={handleSubmit} className="matrix__add-form">
         {/* Label row with voice + enhance buttons */}
@@ -268,7 +232,7 @@ function BulletForm({
         </Box>
         <TextInput
           multirow
-          rows={4}
+          rows={7}
           value={text}
           onChange={setText}
           required

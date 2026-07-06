@@ -1,0 +1,10 @@
+/* Signal cards double as a selectable list; layout and the selected border live
+   on Card props. Only the interactive affordances (cursor + hover) need CSS. */
+.company-signal-item {
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.company-signal-item:hover {
+  background: var(--surface-2);
+}

@@ -94,15 +94,6 @@
   cursor: not-allowed;
 }
 
-/* ── Enhance options modal content ────────────────────────────────────────── */
-
-.matrix__enhance-options {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 4px 0;
-}
-
 /* ── Text field label row (label + action buttons) ────────────────────────── */
 
 .matrix__field-label-row {

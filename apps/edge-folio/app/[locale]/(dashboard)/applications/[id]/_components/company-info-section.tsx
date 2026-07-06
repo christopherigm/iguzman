@@ -13,6 +13,7 @@ import type {
 } from "@/lib/applications";
 import { IntelSwiperCard } from "./company-intel-card";
 import { CompanyAnalysisPanel } from "./company-analysis-panel";
+import { CompanySignalsPanel } from "./company-signals-panel";
 
 interface Props {
   app: JobApplication;
@@ -103,18 +104,26 @@ export function CompanyInfoSection({
             </Box>
           )}
           {companyAnalysis && (
-            <Box display="flex" flexDirection="column" gap={8}>
-              <Typography
-                variant="body"
-                fontWeight={600}
-                color="var(--foreground)"
-              >
-                {t("companyAnalysisTitle")}
-              </Typography>
-              <CompanyAnalysisPanel analysis={companyAnalysis} />
+            <Box display="flex" flexDirection="column" gap={16}>
+              <Box display="flex" flexDirection="column" gap={8}>
+                <Typography
+                  variant="body"
+                  fontWeight={600}
+                  color="var(--foreground)"
+                >
+                  {t("companyAnalysisTitle")}
+                </Typography>
+                <CompanyAnalysisPanel analysis={companyAnalysis} />
+              </Box>
+              <CompanySignalsPanel
+                analysis={companyAnalysis}
+                intel={companyIntel}
+              />
             </Box>
           )}
-          {companyIntel && (
+          {/* Fallback: intel arrived before the analysis (progressive load), so
+              there are no signals to select yet - show the raw source swipers. */}
+          {!companyAnalysis && companyIntel && (
             <Grid container spacing={2}>
               {INTEL_SECTIONS.map(({ key, titleKey }) => {
                 const items = companyIntel[key];

@@ -18,8 +18,8 @@ export function useExportData() {
   // Global export toggles
   const [includeContact, setIncludeContact] = useState(true);
   const [includeLinks, setIncludeLinks] = useState(true);
-  // Controlled by the "Technical Skills" tailored card's include switch. The
-  // "Tech Stack" card still controls which Matrix skills feed the AI.
+  // Section-level switch on the "Technical Skills" tailored card: omit the
+  // whole skills section from the export.
   const [includeSkills, setIncludeSkills] = useState(true);
   const [includePhoto, setIncludePhoto] = useState(false);
 
@@ -36,7 +36,9 @@ export function useExportData() {
   const [includedProjectIds, setIncludedProjectIds] = useState<Set<number>>(
     new Set(),
   );
-  // Which Matrix skills ("Tech Stack") to feed the LLM tailoring.
+  // Which Matrix skills feed the LLM tailoring. Defaults to every skill; there
+  // is no longer a UI to narrow this — the user refines the resulting tailored
+  // skills afterward on the "Technical Skills" card.
   const [includedSkillIds, setIncludedSkillIds] = useState<Set<number>>(
     new Set(),
   );

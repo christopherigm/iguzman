@@ -10,7 +10,6 @@ import { Switch } from "@repo/ui/core-elements/switch";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { Spinner } from "@repo/ui/core-elements/spinner";
-import type { JobApplication } from "@/lib/applications";
 import type { UserProfile } from "@/lib/auth";
 import { TailoredEditableCard } from "./tailored-editable-card";
 import { SwitchRow } from "./detail-primitives";
@@ -18,7 +17,6 @@ import type { ExportDataController } from "../_hooks/use-export-data";
 import type { TailoringWorkflow } from "../_hooks/use-tailoring-workflow";
 
 interface Props {
-  app: JobApplication;
   profile: UserProfile | null;
   exportCtl: ExportDataController;
   workflow: TailoringWorkflow;
@@ -39,7 +37,6 @@ function toggleId(
 }
 
 export function ReviewTailorSection({
-  app,
   profile,
   exportCtl,
   workflow,
@@ -56,6 +53,16 @@ export function ReviewTailorSection({
     accept: t("tailoredEnhanceAccept"),
     save: t("tailoredSaveChanges"),
     saving: t("saving"),
+  };
+
+  // Shared labels for the paragraphs/length modal opened by the prose enhance
+  // buttons (summary, work experience, projects).
+  const enhanceOptionsLabels = {
+    title: t("enhanceOptionsTitle"),
+    text: t("enhanceOptionsText"),
+    paragraphs: t("enhanceParagraphsLabel"),
+    length: t("enhanceLengthLabel"),
+    wordsPerPara: t("enhanceWordsPerPara"),
   };
 
   const {
@@ -77,8 +84,6 @@ export function ReviewTailorSection({
     setIncludedLanguageIds,
     includedProjectIds,
     setIncludedProjectIds,
-    includedSkillIds,
-    setIncludedSkillIds,
   } = exportCtl;
 
   const {
@@ -96,6 +101,8 @@ export function ReviewTailorSection({
     handleTailor,
     excludedBulletCats,
     setExcludedBulletCats,
+    includedTailoredSkillIds,
+    setIncludedTailoredSkillIds,
     bulletEdits,
     setBulletEdits,
     weEdits,
@@ -199,6 +206,7 @@ export function ReviewTailorSection({
                             onChange={(checked) =>
                               toggleId(setIncludedWorkExpIds, exp.id, checked)
                             }
+                            disabled={tailoring}
                             aria-label={t("exportIncludeItem")}
                           />
                         </Box>
@@ -250,6 +258,7 @@ export function ReviewTailorSection({
                             onChange={(checked) =>
                               toggleId(setIncludedProjectIds, proj.id, checked)
                             }
+                            disabled={tailoring}
                             aria-label={t("exportIncludeItem")}
                           />
                         </Box>
@@ -258,41 +267,6 @@ export function ReviewTailorSection({
                   );
                 })}
               </Grid>
-            </Box>
-          )}
-
-          {/* Tech Stack — feeds the AI tailoring */}
-          {exportData.skills.length > 0 && (
-            <Box display="flex" flexDirection="column" gap={8}>
-              <Typography variant="body" fontWeight={600}>
-                {t("techStackTitle")}
-              </Typography>
-              <Card>
-                <Box display="flex" flexWrap="wrap" gap={8}>
-                  {exportData.skills.map((skill) => {
-                    const isIncluded = includedSkillIds.has(skill.id);
-                    return (
-                      <Button
-                        key={skill.id}
-                        text={skill.name}
-                        type="button"
-                        size="sm"
-                        kind={isIncluded ? "primary" : undefined}
-                        styles={{ opacity: isIncluded ? 1 : 0.55 }}
-                        aria-pressed={isIncluded}
-                        onClick={() =>
-                          setIncludedSkillIds((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(skill.id)) next.delete(skill.id);
-                            else next.add(skill.id);
-                            return next;
-                          })
-                        }
-                      />
-                    );
-                  })}
-                </Box>
-              </Card>
             </Box>
           )}
         </Box>
@@ -311,6 +285,7 @@ export function ReviewTailorSection({
             onChange={setAdditionalPrompt}
             placeholder={t("additionalPromptPlaceholder")}
             width="100%"
+            disabled={tailoring}
             aria-label={t("additionalPromptLabel")}
           />
         </Box>
@@ -346,60 +321,64 @@ export function ReviewTailorSection({
           <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {t("tailoredSubtitle")}
           </Typography>
-          {/* Customize Export (global toggles) */}
-          <Box display="flex" flexDirection="column" gap={8}>
-            <Typography variant="body" fontWeight={600}>
-              {t("exportCustomizeTitle")}
-            </Typography>
-            <Card display="flex" flexDirection="column" gap={10}>
-              <SwitchRow
-                label={t("exportIncludeContact")}
-                checked={includeContact}
-                onChange={setIncludeContact}
-              />
-              <SwitchRow
-                label={t("exportIncludeLinks")}
-                checked={includeLinks}
-                onChange={setIncludeLinks}
-              />
-              {profile?.profile_picture && (
-                <Box display="flex" flexDirection="column" gap={4}>
-                  <SwitchRow
-                    label={t("exportIncludePhoto")}
-                    checked={includePhoto}
-                    onChange={setIncludePhoto}
-                  />
-                  <Typography
-                    variant="body"
-                    color="var(--muted-foreground, #6b7280)"
-                  >
-                    {t("exportIncludePhotoHint")}
-                  </Typography>
-                </Box>
-              )}
-            </Card>
-          </Box>
-
-          {/* Languages — full-width */}
-          {exportData && exportData.languages.length > 0 && (
-            <Box display="flex" flexDirection="column" gap={8}>
-              <Typography variant="body" fontWeight={600}>
-                {t("exportLanguagesTitle")}
-              </Typography>
-              <Card gap={12}>
-                {exportData.languages.map((lang) => (
-                  <SwitchRow
-                    key={lang.id}
-                    label={lang.name}
-                    checked={includedLanguageIds.has(lang.id)}
-                    onChange={(checked) =>
-                      toggleId(setIncludedLanguageIds, lang.id, checked)
-                    }
-                  />
-                ))}
+          <Typography variant="body" fontWeight={600}>
+            {t("exportCustomizeTitle")}
+          </Typography>
+          <Grid container spacing={2}>
+            {/* Contact / Links / Photo (global toggles) */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Card
+                display="flex"
+                flexDirection="column"
+                gap={10}
+                height="100%"
+              >
+                <SwitchRow
+                  label={t("exportIncludeContact")}
+                  checked={includeContact}
+                  onChange={setIncludeContact}
+                />
+                <SwitchRow
+                  label={t("exportIncludeLinks")}
+                  checked={includeLinks}
+                  onChange={setIncludeLinks}
+                />
+                {profile?.profile_picture && (
+                  <Box display="flex" flexDirection="column" gap={4}>
+                    <SwitchRow
+                      label={t("exportIncludePhoto")}
+                      checked={includePhoto}
+                      onChange={setIncludePhoto}
+                    />
+                    <Typography
+                      variant="body"
+                      color="var(--muted-foreground, #6b7280)"
+                    >
+                      {t("exportIncludePhotoHint")}
+                    </Typography>
+                  </Box>
+                )}
               </Card>
-            </Box>
-          )}
+            </Grid>
+
+            {/* Languages */}
+            {exportData && exportData.languages.length > 0 && (
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Card gap={12} height="100%">
+                  {exportData.languages.map((lang) => (
+                    <SwitchRow
+                      key={lang.id}
+                      label={lang.name}
+                      checked={includedLanguageIds.has(lang.id)}
+                      onChange={(checked) =>
+                        toggleId(setIncludedLanguageIds, lang.id, checked)
+                      }
+                    />
+                  ))}
+                </Card>
+              </Grid>
+            )}
+          </Grid>
 
           {(professionalSummary || savedSummary) && (
             <TailoredEditableCard
@@ -412,13 +391,18 @@ export function ReviewTailorSection({
               ariaLabel={t("professionalSummaryLabel")}
               micLanguage={micLang}
               buildEnhanceMessages={buildSummaryEnhance}
+              enhanceWithOptions
+              enhanceOptionsLabels={enhanceOptionsLabels}
               onSave={handleSaveSummary}
               saving={savingCard === "summary"}
               dirty={professionalSummary !== savedSummary}
             />
           )}
-          {/* Technical Skills — include switch only (chips, not editable) */}
-          {app.tailored_skills && app.tailored_skills.length > 0 && (
+          {/* Technical Skills — section include switch + per-chip selection.
+              Every Matrix skill is shown here; the chips the AI picked start
+              selected, and the user confirms / adds / removes which skills to
+              keep in the export. */}
+          {exportData && exportData.skills.length > 0 && (
             <TailoredEditableCard
               title={t("tailoredSkillsTitle")}
               included={includeSkills}
@@ -427,19 +411,27 @@ export function ReviewTailorSection({
               labels={editCardLabels}
             >
               <Box display="flex" flexWrap="wrap" gap={8}>
-                {app.tailored_skills.map((skill) => (
-                  <Typography
-                    key={skill.id}
-                    variant="body"
-                    styles={{
-                      padding: "2px 10px",
-                      borderRadius: 999,
-                      border: "1px solid var(--border, #e5e7eb)",
-                    }}
-                  >
-                    {skill.name}
-                  </Typography>
-                ))}
+                {exportData.skills.map((skill) => {
+                  const isIncluded = includedTailoredSkillIds.has(skill.id);
+                  return (
+                    <Button
+                      key={skill.id}
+                      text={skill.name}
+                      type="button"
+                      size="sm"
+                      kind={isIncluded ? "primary" : undefined}
+                      styles={{ opacity: isIncluded ? 1 : 0.55 }}
+                      aria-pressed={isIncluded}
+                      onClick={() =>
+                        toggleId(
+                          setIncludedTailoredSkillIds,
+                          skill.id,
+                          !isIncluded,
+                        )
+                      }
+                    />
+                  );
+                })}
               </Box>
             </TailoredEditableCard>
           )}
@@ -471,6 +463,8 @@ export function ReviewTailorSection({
                 ariaLabel={t(`categories.${cat}`)}
                 micLanguage={micLang}
                 buildEnhanceMessages={buildBulletEnhance}
+                enhanceWithOptions
+                enhanceOptionsLabels={enhanceOptionsLabels}
                 onSave={handleSaveBullets}
                 saving={savingCard === "bullets"}
                 dirty={(bulletEdits[cat] ?? orig) !== orig}
@@ -512,6 +506,8 @@ export function ReviewTailorSection({
                         ariaLabel={roleTitle || t("tailoredWorkExpTitle")}
                         micLanguage={micLang}
                         buildEnhanceMessages={buildDescriptionEnhance}
+                        enhanceWithOptions
+                        enhanceOptionsLabels={enhanceOptionsLabels}
                         onSave={() => handleSaveWorkExperiences(cardKey)}
                         saving={savingCard === cardKey}
                         dirty={weDirty(twe)}
@@ -560,6 +556,8 @@ export function ReviewTailorSection({
                         ariaLabel={projName || t("tailoredProjectsTitle")}
                         micLanguage={micLang}
                         buildEnhanceMessages={buildDescriptionEnhance}
+                        enhanceWithOptions
+                        enhanceOptionsLabels={enhanceOptionsLabels}
                         onSave={() => handleSaveProjects(cardKey)}
                         saving={savingCard === cardKey}
                         dirty={projectDirty(tp)}

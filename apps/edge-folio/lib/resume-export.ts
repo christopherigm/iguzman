@@ -66,6 +66,12 @@ export interface ResumeExportConfig {
   includedBulletCategories?: string[];
   useTailoredWeIds: number[];
   useTailoredProjectIds: number[];
+  /**
+   * AI-tailored skill ids to keep in the export. Omitted/undefined means
+   * "include every tailored skill" for backward compatibility with configs
+   * persisted before this field existed.
+   */
+  includedTailoredSkillIds?: number[];
 }
 
 /** localStorage key for a given application's export config. */
@@ -86,6 +92,7 @@ export function defaultResumeExportConfig(args: {
   tailoredBullets?: TailoredBullet[] | null;
   tailoredWorkExperiences?: TailoredWorkExperience[] | null;
   tailoredProjects?: TailoredProject[] | null;
+  tailoredSkills?: TailoredSkill[] | null;
 }): ResumeExportConfig {
   const categories = Array.from(
     new Set((args.tailoredBullets ?? []).map((b) => b.category || "other")),
@@ -102,6 +109,7 @@ export function defaultResumeExportConfig(args: {
     includedBulletCategories: categories,
     useTailoredWeIds: (args.tailoredWorkExperiences ?? []).map((e) => e.id),
     useTailoredProjectIds: (args.tailoredProjects ?? []).map((p) => p.id),
+    includedTailoredSkillIds: (args.tailoredSkills ?? []).map((s) => s.id),
   };
 }
 
@@ -120,6 +128,13 @@ export interface BuildResumeDocumentArgs {
   languages: Language[];
   projects: Project[];
   config: ResumeExportConfig;
+  /**
+   * The full set of the user's Matrix skills. The "Technical Skills" export
+   * section is built from this list filtered by `config.includedTailoredSkillIds`,
+   * so the user can keep skills the LLM omitted. Falls back to
+   * `application.tailored_skills` when not provided (older callers / stored data).
+   */
+  allSkills?: TailoredSkill[];
   /** base64 data URI for the profile photo (only used when includePhoto). */
   profilePictureBase64?: string;
 }
@@ -145,6 +160,7 @@ export function buildResumeDocumentProps(
     languages,
     projects,
     config,
+    allSkills,
     profilePictureBase64,
   } = args;
 
@@ -162,8 +178,20 @@ export function buildResumeDocumentProps(
     (tailoredProjects ?? []).map((t) => [t.id, t.tailored_description]),
   );
 
+  // The card lets the user pick from *all* their Matrix skills (pre-selected
+  // with the LLM's picks), so the export source is the full list when provided.
+  // A missing `includedTailoredSkillIds` (old stored config) means "keep all",
+  // and for that legacy path we keep the original tailored-only source.
+  const includedSkillIdSet = config.includedTailoredSkillIds
+    ? new Set(config.includedTailoredSkillIds)
+    : null;
+  const skillSource = includedSkillIdSet
+    ? (allSkills ?? application.tailored_skills ?? [])
+    : (application.tailored_skills ?? []);
   const skills: TailoredSkill[] = config.includeSkills
-    ? (application.tailored_skills ?? [])
+    ? skillSource.filter(
+        (s) => !includedSkillIdSet || includedSkillIdSet.has(s.id),
+      )
     : [];
 
   // Keep only bullets whose category is still switched on. A missing

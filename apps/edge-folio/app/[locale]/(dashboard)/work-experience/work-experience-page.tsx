@@ -14,13 +14,16 @@ import { Badge } from "@repo/ui/core-elements/badge";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Select } from "@repo/ui/core-elements/select";
 import { Switch } from "@repo/ui/core-elements/switch";
-import { Slider } from "@repo/ui/core-elements/slider";
 import { Toast } from "@repo/ui/core-elements/toast";
 import { SpeechButton } from "@repo/ui/core-elements/speech-button";
 import {
   StreamingEnhancePanel,
   type StreamingEnhanceHandle,
 } from "@repo/ui/core-elements/streaming-enhance-panel";
+import {
+  EnhanceOptionsModal,
+  type EnhanceOptions,
+} from "@/components/enhance/enhance-options-modal";
 import {
   getWorkExperiences,
   createWorkExperience,
@@ -96,29 +99,6 @@ const EMPLOYMENT_TYPE_COLORS: Record<EmploymentType, string> = {
   internship: "#f59e0b",
 };
 
-const PARAGRAPH_WORD_COUNTS: Record<string, { min: number; max: number }> = {
-  xs: { min: 10, max: 20 },
-  sm: { min: 25, max: 40 },
-  md: { min: 50, max: 75 },
-  "md-lg": { min: 80, max: 120 },
-  lg: { min: 130, max: 180 },
-  xl: { min: 200, max: 270 },
-};
-
-const PARAGRAPH_LENGTH_STEPS = [
-  { value: "xs", label: "XS" },
-  { value: "sm", label: "S" },
-  { value: "md", label: "M" },
-  { value: "md-lg", label: "M-L" },
-  { value: "lg", label: "L" },
-  { value: "xl", label: "XL" },
-];
-
-const PARAGRAPH_COUNT_STEPS = [1, 2, 3, 4, 5].map((n) => ({
-  value: n,
-  label: String(n),
-}));
-
 // ── Form ──────────────────────────────────────────────────────────────────────
 
 interface FormProps {
@@ -156,8 +136,6 @@ function WorkExperienceForm({
   const [enhancing, setEnhancing] = useState(false);
   const [previewActive, setPreviewActive] = useState(false);
   const [showEnhanceOptions, setShowEnhanceOptions] = useState(false);
-  const [enhanceParagraphs, setEnhanceParagraphs] = useState(1);
-  const [enhanceParagraphLength, setEnhanceParagraphLength] = useState("sm");
 
   const isValid =
     !saving &&
@@ -170,27 +148,27 @@ function WorkExperienceForm({
     onValidityChange(isValid);
   }, [isValid, onValidityChange]);
 
-  const handleConfirmEnhanceOptions = () => {
+  const handleConfirmEnhanceOptions = ({
+    paragraphs,
+    minWords,
+    maxWords,
+  }: EnhanceOptions) => {
     setShowEnhanceOptions(false);
     const currentText = description.trim();
     if (!currentText) return;
-    const { min, max } = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? {
-      min: 50,
-      max: 75,
-    };
     const isEs = locale === "es";
     const messages = isEs
       ? [
           {
             role: "system" as const,
-            content: `Eres un coach profesional de carrera. Reescribe y amplía la siguiente descripción de experiencia laboral en prosa impactante para un portafolio. Escribe exactamente ${enhanceParagraphs} párrafo${enhanceParagraphs !== 1 ? "s" : ""}. Cada párrafo debe tener entre ${min} y ${max} palabras. Enfócate en logros cuantificables, verbos de acción y resultados medibles. Devuelve únicamente el texto mejorado - sin explicaciones, etiquetas ni marcas de formato.`,
+            content: `Eres un coach profesional de carrera. Reescribe y amplía la siguiente descripción de experiencia laboral en prosa impactante para un portafolio. Escribe exactamente ${paragraphs} párrafo${paragraphs !== 1 ? "s" : ""}. Cada párrafo debe tener entre ${minWords} y ${maxWords} palabras. Enfócate en logros cuantificables, verbos de acción y resultados medibles. Devuelve únicamente el texto mejorado - sin explicaciones, etiquetas ni marcas de formato.`,
           },
           { role: "user" as const, content: currentText },
         ]
       : [
           {
             role: "system" as const,
-            content: `You are a professional career coach and resume expert. Rewrite and expand the following work experience description into polished, impactful prose for a professional portfolio. Write exactly ${enhanceParagraphs} ${enhanceParagraphs === 1 ? "paragraph" : "paragraphs"}. Each paragraph must be between ${min} and ${max} words. Focus on quantifiable achievements, action verbs, and measurable outcomes. Return only the improved text - no explanations, labels, or formatting marks.`,
+            content: `You are a professional career coach and resume expert. Rewrite and expand the following work experience description into polished, impactful prose for a professional portfolio. Write exactly ${paragraphs} ${paragraphs === 1 ? "paragraph" : "paragraphs"}. Each paragraph must be between ${minWords} and ${maxWords} words. Focus on quantifiable achievements, action verbs, and measurable outcomes. Return only the improved text - no explanations, labels, or formatting marks.`,
           },
           { role: "user" as const, content: currentText },
         ];
@@ -235,34 +213,20 @@ function WorkExperienceForm({
     }
   }
 
-  const currentLengthWordRange = PARAGRAPH_WORD_COUNTS[
-    enhanceParagraphLength
-  ] ?? { min: 50, max: 75 };
-
   return (
     <>
       {showEnhanceOptions && (
-        <ConfirmationModal
-          title={t("enhanceOptionsTitle")}
-          text={t("enhanceOptionsText")}
-          okCallback={handleConfirmEnhanceOptions}
-          cancelCallback={() => setShowEnhanceOptions(false)}
-        >
-          <Box display="flex" flexDirection="column" gap={20} paddingY={4}>
-            <Slider
-              steps={PARAGRAPH_COUNT_STEPS}
-              value={enhanceParagraphs}
-              onChange={(v) => setEnhanceParagraphs(Number(v))}
-              label={t("enhanceParagraphsLabel")}
-            />
-            <Slider
-              steps={PARAGRAPH_LENGTH_STEPS}
-              value={enhanceParagraphLength}
-              onChange={(v) => setEnhanceParagraphLength(String(v))}
-              label={`${t("enhanceLengthLabel")} (${currentLengthWordRange.min}-${currentLengthWordRange.max} words/para)`}
-            />
-          </Box>
-        </ConfirmationModal>
+        <EnhanceOptionsModal
+          labels={{
+            title: t("enhanceOptionsTitle"),
+            text: t("enhanceOptionsText"),
+            paragraphs: t("enhanceParagraphsLabel"),
+            length: t("enhanceLengthLabel"),
+            wordsPerPara: t("enhanceWordsPerPara"),
+          }}
+          onConfirm={handleConfirmEnhanceOptions}
+          onCancel={() => setShowEnhanceOptions(false)}
+        />
       )}
       <form ref={formRef} onSubmit={handleSubmit} className="work-exp__form">
         <TextInput
@@ -619,8 +583,6 @@ function ProjectForm({
   const [enhancing, setEnhancing] = useState(false);
   const [previewActive, setPreviewActive] = useState(false);
   const [showEnhanceOptions, setShowEnhanceOptions] = useState(false);
-  const [enhanceParagraphs, setEnhanceParagraphs] = useState(1);
-  const [enhanceParagraphLength, setEnhanceParagraphLength] = useState("sm");
 
   const isValid = !saving && name.trim().length > 0;
 
@@ -628,27 +590,27 @@ function ProjectForm({
     onValidityChange(isValid);
   }, [isValid, onValidityChange]);
 
-  const handleConfirmEnhanceOptions = () => {
+  const handleConfirmEnhanceOptions = ({
+    paragraphs,
+    minWords,
+    maxWords,
+  }: EnhanceOptions) => {
     setShowEnhanceOptions(false);
     const currentText = description.trim();
     if (!currentText) return;
-    const { min, max } = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? {
-      min: 50,
-      max: 75,
-    };
     const isEs = locale === "es";
     const messages = isEs
       ? [
           {
             role: "system" as const,
-            content: `Eres un coach profesional de carrera. Reescribe y amplía la siguiente descripción de proyecto en prosa impactante para un portafolio profesional. Escribe exactamente ${enhanceParagraphs} párrafo${enhanceParagraphs !== 1 ? "s" : ""}. Cada párrafo debe tener entre ${min} y ${max} palabras. Enfócate en el problema resuelto, tecnologías usadas, y el impacto logrado. Devuelve únicamente el texto mejorado - sin explicaciones, etiquetas ni marcas de formato.`,
+            content: `Eres un coach profesional de carrera. Reescribe y amplía la siguiente descripción de proyecto en prosa impactante para un portafolio profesional. Escribe exactamente ${paragraphs} párrafo${paragraphs !== 1 ? "s" : ""}. Cada párrafo debe tener entre ${minWords} y ${maxWords} palabras. Enfócate en el problema resuelto, tecnologías usadas, y el impacto logrado. Devuelve únicamente el texto mejorado - sin explicaciones, etiquetas ni marcas de formato.`,
           },
           { role: "user" as const, content: currentText },
         ]
       : [
           {
             role: "system" as const,
-            content: `You are a professional career coach and resume expert. Rewrite and expand the following project description into polished, impactful prose for a professional portfolio. Write exactly ${enhanceParagraphs} ${enhanceParagraphs === 1 ? "paragraph" : "paragraphs"}. Each paragraph must be between ${min} and ${max} words. Focus on the problem solved, technologies used, and measurable impact. Return only the improved text - no explanations, labels, or formatting marks.`,
+            content: `You are a professional career coach and resume expert. Rewrite and expand the following project description into polished, impactful prose for a professional portfolio. Write exactly ${paragraphs} ${paragraphs === 1 ? "paragraph" : "paragraphs"}. Each paragraph must be between ${minWords} and ${maxWords} words. Focus on the problem solved, technologies used, and measurable impact. Return only the improved text - no explanations, labels, or formatting marks.`,
           },
           { role: "user" as const, content: currentText },
         ];
@@ -689,34 +651,20 @@ function ProjectForm({
     }
   }
 
-  const currentLengthWordRange = PARAGRAPH_WORD_COUNTS[
-    enhanceParagraphLength
-  ] ?? { min: 50, max: 75 };
-
   return (
     <>
       {showEnhanceOptions && (
-        <ConfirmationModal
-          title={t("projectEnhanceOptionsTitle")}
-          text={t("projectEnhanceOptionsText")}
-          okCallback={handleConfirmEnhanceOptions}
-          cancelCallback={() => setShowEnhanceOptions(false)}
-        >
-          <Box display="flex" flexDirection="column" gap={20} paddingY={4}>
-            <Slider
-              steps={PARAGRAPH_COUNT_STEPS}
-              value={enhanceParagraphs}
-              onChange={(v) => setEnhanceParagraphs(Number(v))}
-              label={t("projectEnhanceParagraphsLabel")}
-            />
-            <Slider
-              steps={PARAGRAPH_LENGTH_STEPS}
-              value={enhanceParagraphLength}
-              onChange={(v) => setEnhanceParagraphLength(String(v))}
-              label={`${t("projectEnhanceLengthLabel")} (${currentLengthWordRange.min}-${currentLengthWordRange.max} words/para)`}
-            />
-          </Box>
-        </ConfirmationModal>
+        <EnhanceOptionsModal
+          labels={{
+            title: t("projectEnhanceOptionsTitle"),
+            text: t("projectEnhanceOptionsText"),
+            paragraphs: t("projectEnhanceParagraphsLabel"),
+            length: t("projectEnhanceLengthLabel"),
+            wordsPerPara: t("projectEnhanceWordsPerPara"),
+          }}
+          onConfirm={handleConfirmEnhanceOptions}
+          onCancel={() => setShowEnhanceOptions(false)}
+        />
       )}
       <form ref={formRef} onSubmit={handleSubmit} className="work-exp__form">
         <TextInput

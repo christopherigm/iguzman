@@ -186,7 +186,6 @@ export function ApplicationDetailPage({
       )}
 
       <ReviewTailorSection
-        app={app}
         profile={profile}
         exportCtl={exportCtl}
         workflow={workflow}
@@ -199,6 +198,8 @@ export function ApplicationDetailPage({
           generating={workflow.generatingCL}
           error={workflow.clError}
           copied={workflow.copied}
+          additionalPrompt={workflow.clAdditionalPrompt}
+          onAdditionalPromptChange={workflow.setClAdditionalPrompt}
           onGenerate={workflow.handleGenerateCL}
           onCopy={workflow.handleCopy}
         />

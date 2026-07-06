@@ -61,3 +61,5 @@ packages/charts/*/charts/*.tgz
 apps/*/public/fallback-*.js
 apps/*/public/sw.js
 apps/*/public/workbox-*.js
+
+lint_results.json

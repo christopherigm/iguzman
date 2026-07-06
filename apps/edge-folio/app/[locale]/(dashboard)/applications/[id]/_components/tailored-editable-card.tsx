@@ -12,6 +12,11 @@ import {
   StreamingEnhancePanel,
   type StreamingEnhanceHandle,
 } from "@repo/ui/core-elements/streaming-enhance-panel";
+import {
+  EnhanceOptionsModal,
+  type EnhanceOptions,
+  type EnhanceOptionsLabels,
+} from "@/components/enhance/enhance-options-modal";
 
 /** Chat messages passed to the streaming enhance panel (structurally an LlmMessage). */
 export type EnhanceMessage = {
@@ -52,7 +57,17 @@ interface Props {
   placeholder?: string;
   ariaLabel?: string;
   micLanguage?: "en" | "es";
-  buildEnhanceMessages?: (currentText: string) => EnhanceMessage[];
+  buildEnhanceMessages?: (
+    currentText: string,
+    opts?: EnhanceOptions,
+  ) => EnhanceMessage[];
+  /**
+   * When set, the enhance button first opens the paragraph/length options modal
+   * and the chosen options are passed to `buildEnhanceMessages`. Omit it (the
+   * bullet cards) to enhance immediately with no modal.
+   */
+  enhanceWithOptions?: boolean;
+  enhanceOptionsLabels?: EnhanceOptionsLabels;
   onSave?: () => void;
   saving?: boolean;
   dirty?: boolean;
@@ -79,6 +94,8 @@ export function TailoredEditableCard({
   ariaLabel,
   micLanguage = "en",
   buildEnhanceMessages,
+  enhanceWithOptions = false,
+  enhanceOptionsLabels,
   onSave,
   saving = false,
   dirty = false,
@@ -87,6 +104,7 @@ export function TailoredEditableCard({
   const enhanceRef = useRef<StreamingEnhanceHandle>(null);
   const [enhancing, setEnhancing] = useState(false);
   const [previewActive, setPreviewActive] = useState(false);
+  const [showEnhanceOptions, setShowEnhanceOptions] = useState(false);
 
   const handleMic = (text: string) => {
     if (!onChange) return;
@@ -97,7 +115,20 @@ export function TailoredEditableCard({
     if (!buildEnhanceMessages) return;
     const current = value.trim();
     if (!current) return;
+    // Prose cards let the user pick paragraphs/length first; others enhance now.
+    if (enhanceWithOptions && enhanceOptionsLabels) {
+      setShowEnhanceOptions(true);
+      return;
+    }
     enhanceRef.current?.start(buildEnhanceMessages(current));
+  };
+
+  const handleConfirmEnhance = (opts: EnhanceOptions) => {
+    setShowEnhanceOptions(false);
+    if (!buildEnhanceMessages) return;
+    const current = value.trim();
+    if (!current) return;
+    enhanceRef.current?.start(buildEnhanceMessages(current, opts));
   };
 
   return (
@@ -105,6 +136,13 @@ export function TailoredEditableCard({
       gap={0}
       styles={{ opacity: included === false ? 0.55 : 1, height: "100%" }}
     >
+      {showEnhanceOptions && enhanceOptionsLabels && (
+        <EnhanceOptionsModal
+          labels={enhanceOptionsLabels}
+          onConfirm={handleConfirmEnhance}
+          onCancel={() => setShowEnhanceOptions(false)}
+        />
+      )}
       {/* Title + right-aligned controls — stay on one row at all widths; the
           title wraps to honor the space the controls need. */}
       <Box

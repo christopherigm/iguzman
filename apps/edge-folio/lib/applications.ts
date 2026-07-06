@@ -277,6 +277,7 @@ export function generateCoverLetter(
   id: number,
   bullets: TailoredBullet[],
   locale?: string,
+  additionalPrompt?: string,
 ): Promise<CoverLetterResult> {
   return request(`/api/applications/${id}/cover-letter`, {
     method: "POST",
@@ -284,7 +285,12 @@ export function generateCoverLetter(
       "Content-Type": "application/json",
       ...(locale ? { "Accept-Language": locale } : {}),
     },
-    body: JSON.stringify({ bullets }),
+    body: JSON.stringify({
+      bullets,
+      ...(additionalPrompt?.trim()
+        ? { additional_prompt: additionalPrompt.trim() }
+        : {}),
+    }),
   });
 }
 

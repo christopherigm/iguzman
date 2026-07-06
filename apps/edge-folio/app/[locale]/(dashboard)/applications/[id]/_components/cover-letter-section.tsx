@@ -13,6 +13,8 @@ interface Props {
   generating: boolean;
   error: string | null;
   copied: boolean;
+  additionalPrompt: string;
+  onAdditionalPromptChange: (v: string) => void;
   onGenerate: () => void;
   onCopy: () => void;
 }
@@ -23,6 +25,8 @@ export function CoverLetterSection({
   generating,
   error,
   copied,
+  additionalPrompt,
+  onAdditionalPromptChange,
   onGenerate,
   onCopy,
 }: Props) {
@@ -30,36 +34,48 @@ export function CoverLetterSection({
 
   return (
     <Box marginBottom={28} marginTop={48}>
-      <Box
-        display="flex"
-        alignItems="center"
-        justifyContent="space-between"
-        gap={12}
-        flexWrap="wrap"
-        marginBottom={8}
-      >
-        <Typography as="h2" variant="h3" fontWeight={600}>
-          {t("coverLetterTitle")}
-        </Typography>
-        <Button
-          text={
-            generating
-              ? t("generatingCL")
-              : coverLetter
-                ? t("regenerateCL")
-                : t("generateCL")
-          }
-          type="button"
-          size="md"
-          disabled={generating}
-          onClick={onGenerate}
-          kind="primary"
-        />
-      </Box>
+      <Typography as="h2" variant="h3" fontWeight={600} marginBottom={8}>
+        {t("coverLetterTitle")}
+      </Typography>
       <Box
         styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
         marginBottom={12}
       />
+
+      {/* Additional prompt + Generate action, mirroring Review & Tailor */}
+      <Box display="flex" flexDirection="column" gap={16} marginBottom={16}>
+        <Box display="flex" flexDirection="column" gap={6}>
+          <Typography variant="body" fontWeight={600}>
+            {t("additionalPromptLabel")}
+          </Typography>
+          <TextInput
+            multirow
+            rows={6}
+            value={additionalPrompt}
+            onChange={onAdditionalPromptChange}
+            placeholder={t("additionalPromptPlaceholder")}
+            width="100%"
+            aria-label={t("additionalPromptLabel")}
+          />
+        </Box>
+        <Box display="flex" justifyContent="center">
+          <Button
+            text={
+              generating
+                ? t("generatingCL")
+                : coverLetter
+                  ? t("regenerateCL")
+                  : t("generateCL")
+            }
+            type="button"
+            size="md"
+            disabled={generating}
+            onClick={onGenerate}
+            kind="primary"
+          />
+        </Box>
+      </Box>
+
       {generating && <ProgressBar label={t("generatingCL")} />}
       {error && (
         <Typography variant="body" color="var(--error, #ef4444)">

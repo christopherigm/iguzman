@@ -20,6 +20,7 @@ import {
   type Language,
   type Project,
 } from "@/lib/career";
+import { getSkills, type Skill } from "@/lib/matrix";
 import {
   buildResumeDocumentProps,
   defaultResumeExportConfig,
@@ -47,6 +48,7 @@ interface CareerData {
   educations: Education[];
   languages: Language[];
   projects: Project[];
+  skills: Skill[];
 }
 
 interface Props {
@@ -100,22 +102,29 @@ export function ResumePreview({
       getEducations(),
       getLanguages(),
       getProjects(),
-    ]).then(([workExpsRes, educationsRes, languagesRes, projectsRes]) => {
-      if (!active) return;
-      setCareerData({
-        workExps:
-          workExpsRes.status === "fulfilled" ? workExpsRes.value.results : [],
-        educations:
-          educationsRes.status === "fulfilled"
-            ? educationsRes.value.results
-            : [],
-        languages:
-          languagesRes.status === "fulfilled" ? languagesRes.value.results : [],
-        projects:
-          projectsRes.status === "fulfilled" ? projectsRes.value.results : [],
-      });
-      setLoading(false);
-    });
+      getSkills(),
+    ]).then(
+      ([workExpsRes, educationsRes, languagesRes, projectsRes, skillsRes]) => {
+        if (!active) return;
+        setCareerData({
+          workExps:
+            workExpsRes.status === "fulfilled" ? workExpsRes.value.results : [],
+          educations:
+            educationsRes.status === "fulfilled"
+              ? educationsRes.value.results
+              : [],
+          languages:
+            languagesRes.status === "fulfilled"
+              ? languagesRes.value.results
+              : [],
+          projects:
+            projectsRes.status === "fulfilled" ? projectsRes.value.results : [],
+          skills:
+            skillsRes.status === "fulfilled" ? skillsRes.value.results : [],
+        });
+        setLoading(false);
+      },
+    );
     return () => {
       active = false;
     };
@@ -142,6 +151,7 @@ export function ResumePreview({
         tailoredBullets: application.tailored_bullets,
         tailoredWorkExperiences: application.tailored_work_experiences,
         tailoredProjects: application.tailored_projects,
+        tailoredSkills: application.tailored_skills,
       });
     return buildResumeDocumentProps({
       profile,
@@ -154,6 +164,7 @@ export function ResumePreview({
       educations: careerData.educations,
       languages: careerData.languages,
       projects: careerData.projects,
+      allSkills: careerData.skills,
       config,
       profilePictureBase64,
     });
