@@ -32,10 +32,14 @@ export interface TailoredEditableCardLabels {
 interface Props {
   /** Card title; when empty the controls still sit flush right. */
   title?: string;
-  /** Whether this section is included in the exported resume. */
-  included: boolean;
-  onIncludedChange: (v: boolean) => void;
-  includeLabel: string;
+  /**
+   * Whether this section is included in the exported resume. Omit
+   * `onIncludedChange` to render the card without an include switch (e.g. the
+   * always-exported Professional Summary).
+   */
+  included?: boolean;
+  onIncludedChange?: (v: boolean) => void;
+  includeLabel?: string;
   labels: TailoredEditableCardLabels;
   /**
    * Editable card (bullets / descriptions). When false the card is display-only
@@ -97,7 +101,10 @@ export function TailoredEditableCard({
   };
 
   return (
-    <Card gap={0} styles={{ opacity: included ? 1 : 0.55, height: "100%" }}>
+    <Card
+      gap={0}
+      styles={{ opacity: included === false ? 0.55 : 1, height: "100%" }}
+    >
       {/* Title + right-aligned controls — stay on one row at all widths; the
           title wraps to honor the space the controls need. */}
       <Box
@@ -162,11 +169,13 @@ export function TailoredEditableCard({
               />
             </>
           )}
-          <Switch
-            checked={included}
-            onChange={onIncludedChange}
-            aria-label={includeLabel}
-          />
+          {onIncludedChange && (
+            <Switch
+              checked={included ?? true}
+              onChange={onIncludedChange}
+              aria-label={includeLabel}
+            />
+          )}
         </Box>
       </Box>
 

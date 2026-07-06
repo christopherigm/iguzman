@@ -433,6 +433,10 @@ export function ApplicationDetailPage({
   const [professionalSummary, setProfessionalSummary] = useState(
     initialApp.professional_summary || "",
   );
+  // Last persisted summary — baseline for the editable summary card's dirty check.
+  const [savedSummary, setSavedSummary] = useState(
+    initialApp.professional_summary || "",
+  );
   const [tailorError, setTailorError] = useState<string | null>(null);
   // Free-text guidance appended to the tailoring prompt (optional).
   const [additionalPrompt, setAdditionalPrompt] = useState("");
@@ -662,6 +666,7 @@ export function ApplicationDetailPage({
     setTailoredWorkExperiences(data.tailored_work_experiences ?? null);
     setTailoredProjects(data.tailored_projects ?? null);
     setProfessionalSummary(data.professional_summary || "");
+    setSavedSummary(data.professional_summary || "");
     setApp(data);
     setUseTailoredWeIds(
       new Set((data.tailored_work_experiences ?? []).map((e) => e.id)),
@@ -1045,7 +1050,8 @@ export function ApplicationDetailPage({
   const weDirty = (twe: TailoredWorkExperience) =>
     (weEdits[twe.id] ?? twe.tailored_description) !== twe.tailored_description;
   const projectDirty = (tp: TailoredProject) =>
-    (projectEdits[tp.id] ?? tp.tailored_description) !== tp.tailored_description;
+    (projectEdits[tp.id] ?? tp.tailored_description) !==
+    tp.tailored_description;
 
   // ── Persist edits per card. Each save writes its whole section (all bullet
   //    categories, or all WE / project descriptions) since they share one field. ──
@@ -1073,6 +1079,23 @@ export function ApplicationDetailPage({
       });
       setWeEdits({});
       setTailoredWorkExperiences(updated.tailored_work_experiences ?? null);
+      showToast(t("savedToast"), "success");
+    } catch {
+      showToast(t("errorSave"), "error");
+    } finally {
+      setSavingCard(null);
+    }
+  }
+
+  async function handleSaveSummary() {
+    setSavingCard("summary");
+    try {
+      const updated = await updateTailoredContent(app.id, {
+        professional_summary: professionalSummary,
+      });
+      const saved = updated.professional_summary || "";
+      setProfessionalSummary(saved);
+      setSavedSummary(saved);
       showToast(t("savedToast"), "success");
     } catch {
       showToast(t("errorSave"), "error");
@@ -1115,6 +1138,19 @@ export function ApplicationDetailPage({
     const system = isEs
       ? `Eres un redactor experto de currículums. Mejora los siguientes puntos de logros para el puesto de ${ctx}. Mantenlos como viñetas concisas y orientadas a resultados, una por línea, sin guiones ni numeración al inicio, y conserva la misma cantidad de viñetas. Devuelve únicamente las viñetas mejoradas, una por línea.`
       : `You are an expert resume writer. Improve the following achievement bullet points for a ${ctx} role. Keep them as concise, results-oriented bullets, one per line, with no leading dashes or numbering, and preserve the same number of bullets. Return only the improved bullets, one per line.`;
+    return [
+      { role: "system", content: system },
+      { role: "user", content: text },
+    ];
+  }
+
+  // Enhance prompt for the professional summary (concise prose paragraph).
+  function buildSummaryEnhance(text: string): EnhanceMessage[] {
+    const ctx = `${app.job_title} at ${app.company_name}`;
+    const isEs = locale === "es";
+    const system = isEs
+      ? `Eres un redactor experto de currículums. Reescribe y mejora el siguiente resumen profesional para el puesto de ${ctx}, en prosa concisa y convincente de 2 a 4 oraciones. Devuelve únicamente el texto mejorado, sin explicaciones ni etiquetas.`
+      : `You are an expert resume writer. Rewrite and improve the following professional summary for a ${ctx} role into concise, compelling prose of 2-4 sentences. Return only the improved text, with no explanations or labels.`;
     return [
       { role: "system", content: system },
       { role: "user", content: text },
@@ -2038,12 +2074,7 @@ export function ApplicationDetailPage({
 
       {/* ── Review and Tailor Resume ─────────────────────────────────── */}
       <Box marginBottom={28} marginTop={48}>
-        <Typography
-          as="h2"
-          variant="h3"
-          fontWeight={600}
-          marginBottom={8}
-        >
+        <Typography as="h2" variant="h3" fontWeight={600} marginBottom={8}>
           {t("reviewAndTailorTitle")}
         </Typography>
         <Box
@@ -2091,7 +2122,7 @@ export function ApplicationDetailPage({
                         >
                           <Box
                             display="flex"
-                            alignItems="center"
+                            alignItems="start"
                             justifyContent="space-between"
                             gap={10}
                           >
@@ -2157,7 +2188,7 @@ export function ApplicationDetailPage({
                         >
                           <Box
                             display="flex"
-                            alignItems="center"
+                            alignItems="start"
                             justifyContent="space-between"
                             gap={10}
                           >
@@ -2190,81 +2221,6 @@ export function ApplicationDetailPage({
                     );
                   })}
                 </Grid>
-              </Box>
-            )}
-
-            {/* Education */}
-            {exportData.educations.length > 0 && (
-              <Box display="flex" flexDirection="column" gap={8}>
-                <Typography variant="body" fontWeight={600}>
-                  {t("exportEducationTitle")}
-                </Typography>
-                <Grid container spacing={2}>
-                  {exportData.educations.map((edu) => {
-                    const isIncluded = includedEducationIds.has(edu.id);
-                    return (
-                      <Grid key={edu.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-                        <Card gap={12}>
-                          <Box display="flex" flexDirection="column" gap={4}>
-                            <Typography
-                              variant="body"
-                              fontWeight={600}
-                              styles={{ lineHeight: 1.3 }}
-                            >
-                              {edu.institution}
-                            </Typography>
-                            {edu.field_of_study && (
-                              <Typography
-                                variant="body"
-                                color="var(--muted-foreground, #6b7280)"
-                              >
-                                {edu.field_of_study}
-                              </Typography>
-                            )}
-                          </Box>
-                          <SwitchRow
-                            label={t("exportIncludeItem")}
-                            checked={isIncluded}
-                            onChange={(checked) =>
-                              setIncludedEducationIds((prev) => {
-                                const next = new Set(prev);
-                                if (checked) next.add(edu.id);
-                                else next.delete(edu.id);
-                                return next;
-                              })
-                            }
-                          />
-                        </Card>
-                      </Grid>
-                    );
-                  })}
-                </Grid>
-              </Box>
-            )}
-
-            {/* Languages */}
-            {exportData.languages.length > 0 && (
-              <Box display="flex" flexDirection="column" gap={8}>
-                <Typography variant="body" fontWeight={600}>
-                  {t("exportLanguagesTitle")}
-                </Typography>
-                <Card gap={12}>
-                  {exportData.languages.map((lang) => (
-                    <SwitchRow
-                      key={lang.id}
-                      label={lang.name}
-                      checked={includedLanguageIds.has(lang.id)}
-                      onChange={(checked) =>
-                        setIncludedLanguageIds((prev) => {
-                          const next = new Set(prev);
-                          if (checked) next.add(lang.id);
-                          else next.delete(lang.id);
-                          return next;
-                        })
-                      }
-                    />
-                  ))}
-                </Card>
               </Box>
             )}
 
@@ -2386,27 +2342,21 @@ export function ApplicationDetailPage({
                 )}
               </Card>
             </Box>
-            {professionalSummary && (
-              <Card display="flex" flexDirection="column" gap={6}>
-                <Typography
-                  variant="body"
-                  fontWeight={600}
-                  color="var(--foreground)"
-                >
-                  {t("professionalSummaryLabel")}
-                </Typography>
-                <Typography
-                  as="p"
-                  variant="body"
-                  styles={{
-                    lineHeight: 1.7,
-                    wordBreak: "break-word",
-                    fontStyle: "italic",
-                  }}
-                >
-                  {professionalSummary}
-                </Typography>
-              </Card>
+            {(professionalSummary || savedSummary) && (
+              <TailoredEditableCard
+                title={t("professionalSummaryLabel")}
+                labels={editCardLabels}
+                editable
+                value={professionalSummary}
+                onChange={setProfessionalSummary}
+                rows={8}
+                ariaLabel={t("professionalSummaryLabel")}
+                micLanguage={micLang}
+                buildEnhanceMessages={buildSummaryEnhance}
+                onSave={handleSaveSummary}
+                saving={savingCard === "summary"}
+                dirty={professionalSummary !== savedSummary}
+              />
             )}
             {/* Technical Skills — include switch only (chips, not editable) */}
             {app.tailored_skills && app.tailored_skills.length > 0 && (
@@ -2469,7 +2419,7 @@ export function ApplicationDetailPage({
               );
             })}
 
-            {/* Tailored work experiences — editable, one card per role */}
+            {/* Tailored work experiences — full-width grid, cards xs=12 / md=6 */}
             {tailoredWorkExperiences && tailoredWorkExperiences.length > 0 && (
               <Box display="flex" flexDirection="column" gap={10}>
                 <Typography
@@ -2479,44 +2429,49 @@ export function ApplicationDetailPage({
                 >
                   {t("tailoredWorkExpTitle")}
                 </Typography>
-                {tailoredWorkExperiences.map((twe) => {
-                  const we = exportData?.workExps.find((e) => e.id === twe.id);
-                  const roleTitle = we ? `${we.title} - ${we.company}` : "";
-                  const cardKey = `we:${twe.id}`;
-                  return (
-                    <TailoredEditableCard
-                      key={twe.id}
-                      title={roleTitle}
-                      included={includedWorkExpIds.has(twe.id)}
-                      onIncludedChange={(v) =>
-                        setIncludedWorkExpIds((prev) => {
-                          const next = new Set(prev);
-                          if (v) next.add(twe.id);
-                          else next.delete(twe.id);
-                          return next;
-                        })
-                      }
-                      includeLabel={t("exportIncludeItem")}
-                      labels={editCardLabels}
-                      editable
-                      value={weEdits[twe.id] ?? twe.tailored_description}
-                      onChange={(v) =>
-                        setWeEdits((prev) => ({ ...prev, [twe.id]: v }))
-                      }
-                      rows={4}
-                      ariaLabel={roleTitle || t("tailoredWorkExpTitle")}
-                      micLanguage={micLang}
-                      buildEnhanceMessages={buildDescriptionEnhance}
-                      onSave={() => handleSaveWorkExperiences(cardKey)}
-                      saving={savingCard === cardKey}
-                      dirty={weDirty(twe)}
-                    />
-                  );
-                })}
+                <Grid container spacing={2}>
+                  {tailoredWorkExperiences.map((twe) => {
+                    const we = exportData?.workExps.find(
+                      (e) => e.id === twe.id,
+                    );
+                    const roleTitle = we ? `${we.title} - ${we.company}` : "";
+                    const cardKey = `we:${twe.id}`;
+                    return (
+                      <Grid key={twe.id} size={{ xs: 12, md: 6 }}>
+                        <TailoredEditableCard
+                          title={roleTitle}
+                          included={includedWorkExpIds.has(twe.id)}
+                          onIncludedChange={(v) =>
+                            setIncludedWorkExpIds((prev) => {
+                              const next = new Set(prev);
+                              if (v) next.add(twe.id);
+                              else next.delete(twe.id);
+                              return next;
+                            })
+                          }
+                          includeLabel={t("exportIncludeItem")}
+                          labels={editCardLabels}
+                          editable
+                          value={weEdits[twe.id] ?? twe.tailored_description}
+                          onChange={(v) =>
+                            setWeEdits((prev) => ({ ...prev, [twe.id]: v }))
+                          }
+                          rows={6}
+                          ariaLabel={roleTitle || t("tailoredWorkExpTitle")}
+                          micLanguage={micLang}
+                          buildEnhanceMessages={buildDescriptionEnhance}
+                          onSave={() => handleSaveWorkExperiences(cardKey)}
+                          saving={savingCard === cardKey}
+                          dirty={weDirty(twe)}
+                        />
+                      </Grid>
+                    );
+                  })}
+                </Grid>
               </Box>
             )}
 
-            {/* Tailored projects — editable, one card per project */}
+            {/* Tailored projects — full-width grid, cards xs=12 / md=6 */}
             {tailoredProjects && tailoredProjects.length > 0 && (
               <Box display="flex" flexDirection="column" gap={10}>
                 <Typography
@@ -2526,40 +2481,115 @@ export function ApplicationDetailPage({
                 >
                   {t("tailoredProjectsTitle")}
                 </Typography>
-                {tailoredProjects.map((tp) => {
-                  const proj = exportData?.projects.find((p) => p.id === tp.id);
-                  const projName = proj ? proj.name : "";
-                  const cardKey = `project:${tp.id}`;
-                  return (
-                    <TailoredEditableCard
-                      key={tp.id}
-                      title={projName}
-                      included={includedProjectIds.has(tp.id)}
-                      onIncludedChange={(v) =>
-                        setIncludedProjectIds((prev) => {
+                <Grid container spacing={2}>
+                  {tailoredProjects.map((tp) => {
+                    const proj = exportData?.projects.find(
+                      (p) => p.id === tp.id,
+                    );
+                    const projName = proj ? proj.name : "";
+                    const cardKey = `project:${tp.id}`;
+                    return (
+                      <Grid key={tp.id} size={{ xs: 12, md: 6 }}>
+                        <TailoredEditableCard
+                          title={projName}
+                          included={includedProjectIds.has(tp.id)}
+                          onIncludedChange={(v) =>
+                            setIncludedProjectIds((prev) => {
+                              const next = new Set(prev);
+                              if (v) next.add(tp.id);
+                              else next.delete(tp.id);
+                              return next;
+                            })
+                          }
+                          includeLabel={t("exportIncludeItem")}
+                          labels={editCardLabels}
+                          editable
+                          value={projectEdits[tp.id] ?? tp.tailored_description}
+                          onChange={(v) =>
+                            setProjectEdits((prev) => ({
+                              ...prev,
+                              [tp.id]: v,
+                            }))
+                          }
+                          rows={6}
+                          ariaLabel={projName || t("tailoredProjectsTitle")}
+                          micLanguage={micLang}
+                          buildEnhanceMessages={buildDescriptionEnhance}
+                          onSave={() => handleSaveProjects(cardKey)}
+                          saving={savingCard === cardKey}
+                          dirty={projectDirty(tp)}
+                        />
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              </Box>
+            )}
+
+            {/* Education — full-width, below the Work Experience / Projects grid */}
+            {exportData && exportData.educations.length > 0 && (
+              <Box display="flex" flexDirection="column" gap={8}>
+                <Typography variant="body" fontWeight={600}>
+                  {t("exportEducationTitle")}
+                </Typography>
+                <Grid container spacing={2}>
+                  {exportData.educations.map((edu) => {
+                    const isIncluded = includedEducationIds.has(edu.id);
+                    return (
+                      <Grid key={edu.id} size={{ xs: 12, sm: 6 }}>
+                        <TailoredEditableCard
+                          title={edu.institution}
+                          included={isIncluded}
+                          onIncludedChange={(checked) =>
+                            setIncludedEducationIds((prev) => {
+                              const next = new Set(prev);
+                              if (checked) next.add(edu.id);
+                              else next.delete(edu.id);
+                              return next;
+                            })
+                          }
+                          includeLabel={t("exportIncludeItem")}
+                          labels={editCardLabels}
+                        >
+                          {edu.field_of_study && (
+                            <Typography
+                              variant="body"
+                              color="var(--muted-foreground, #6b7280)"
+                            >
+                              {edu.field_of_study}
+                            </Typography>
+                          )}
+                        </TailoredEditableCard>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              </Box>
+            )}
+
+            {/* Languages — full-width, below Education */}
+            {exportData && exportData.languages.length > 0 && (
+              <Box display="flex" flexDirection="column" gap={8}>
+                <Typography variant="body" fontWeight={600}>
+                  {t("exportLanguagesTitle")}
+                </Typography>
+                <Card gap={12}>
+                  {exportData.languages.map((lang) => (
+                    <SwitchRow
+                      key={lang.id}
+                      label={lang.name}
+                      checked={includedLanguageIds.has(lang.id)}
+                      onChange={(checked) =>
+                        setIncludedLanguageIds((prev) => {
                           const next = new Set(prev);
-                          if (v) next.add(tp.id);
-                          else next.delete(tp.id);
+                          if (checked) next.add(lang.id);
+                          else next.delete(lang.id);
                           return next;
                         })
                       }
-                      includeLabel={t("exportIncludeItem")}
-                      labels={editCardLabels}
-                      editable
-                      value={projectEdits[tp.id] ?? tp.tailored_description}
-                      onChange={(v) =>
-                        setProjectEdits((prev) => ({ ...prev, [tp.id]: v }))
-                      }
-                      rows={4}
-                      ariaLabel={projName || t("tailoredProjectsTitle")}
-                      micLanguage={micLang}
-                      buildEnhanceMessages={buildDescriptionEnhance}
-                      onSave={() => handleSaveProjects(cardKey)}
-                      saving={savingCard === cardKey}
-                      dirty={projectDirty(tp)}
                     />
-                  );
-                })}
+                  ))}
+                </Card>
               </Box>
             )}
 
