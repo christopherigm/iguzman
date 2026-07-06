@@ -97,13 +97,19 @@ Rules:
   Launched, Eliminated, Accelerated, Automated, Negotiated. Never start with: Utilized, \
   Leveraged, Facilitated, Spearheaded, Showcased, Executed, Managed (as a generic opener).
 - Target 15-25 words per bullet. Do not exceed two lines.
-- If the original bullet contains a precise metric (e.g. "71%", "$183K", "3 of 7 teams"), \
-  preserve it exactly as written. If no metric exists, omit the quantity entirely - never \
-  invent round numbers like "50%" or "$100K".
+- Only include a number, percentage, dollar amount, count, or time span if it appears in the \
+  ORIGINAL bullet, copied exactly (e.g. "71%", "$183K", "3 of 7 teams"). If the original has \
+  no figure, describe the work qualitatively - never invent, estimate, or round a number. Do \
+  not add "50%", "$100K", "thousands of users", "significantly", or any quantity the source \
+  does not state.
+- Avoid buzzwords and hype adjectives. Do not describe the candidate or their work as \
+  seasoned, dynamic, passionate, results-driven, world-class, cutting-edge, or a \
+  rockstar / ninja / guru. Use plain, specific language.
 - Forbidden words and phrases - do not use any of these: leverage, leveraged, utilize, \
-  utilized, spearhead, spearheaded, pivotal, realm, synergize, proven track record, \
-  results-driven, dynamic professional, passionate team player, cross-functional stakeholders, \
-  facilitating knowledge transfer, intricate, delve, showcase, showcasing.
+  utilized, spearhead, spearheaded, pivotal, realm, synergize, seasoned, dynamic, passionate, \
+  proven track record, results-driven, dynamic professional, passionate team player, \
+  cross-functional stakeholders, facilitating knowledge transfer, intricate, delve, showcase, \
+  showcasing.
 - Return ONLY valid JSON - no markdown, no explanation, no extra text.
 
 Response schema:
@@ -357,11 +363,16 @@ description to highlight alignment with the target role.
 Rules:
 - Include ALL provided work experience entries in your response - do not omit any.
 - Rewrite each description to mirror 2-3 keywords from the job description.
-- Preserve any concrete metrics exactly as written - never invent or round numbers.
+- Only keep a number, percentage, dollar amount, or count if it appears in the original \
+  description, copied exactly. If the original has no figure, stay qualitative - never invent, \
+  estimate, or round a number.
 - Keep each rewritten description concise: 2-4 sentences.
 - Do not invent duties or achievements not implied by the original description.
+- Avoid buzzwords and hype adjectives (seasoned, dynamic, passionate, results-driven, \
+  world-class, rockstar). Use plain, specific language.
 - Forbidden words: leverage, leveraged, utilize, utilized, spearhead, spearheaded, pivotal, \
-  synergize, proven track record, results-driven, dynamic professional, passionate team player.
+  synergize, seasoned, dynamic, passionate, proven track record, results-driven, \
+  dynamic professional, passionate team player.
 - Return ONLY valid JSON - no markdown, no explanation, no extra text.
 
 Response schema:
@@ -431,8 +442,14 @@ Rules:
 - Emphasize technologies from the tech stack that appear in the job description.
 - Keep each rewritten description to 1-3 sentences.
 - Do not invent features or outcomes not implied by the original description.
+- Only keep a number, percentage, or count if it appears in the original description, copied \
+  exactly. If the original has no figure, stay qualitative - never invent, estimate, or round a \
+  number (no "50%", no "10k users").
+- Avoid buzzwords and hype adjectives (seasoned, dynamic, passionate, results-driven, \
+  world-class, rockstar). Use plain, specific language.
 - Forbidden words: leverage, leveraged, utilize, utilized, spearhead, spearheaded, pivotal, \
-  synergize, proven track record, results-driven, dynamic professional, passionate team player.
+  synergize, seasoned, dynamic, passionate, proven track record, results-driven, \
+  dynamic professional, passionate team player.
 - Return ONLY valid JSON - no markdown, no explanation, no extra text.
 
 Response schema:
@@ -565,17 +582,24 @@ Write a professional summary (3-5 sentences, 50-100 words total) for a candidate
 applying to a specific role. The summary is the first thing a recruiter reads.
 
 Rules:
-- Open with: [Most recent job title] with [X] years of experience [core domain / stack].
-- Include at least one concrete achievement drawn from the provided bullet points. \
-  Use the exact metric - never invent or round numbers.
+- Open with the exact job title and years of experience supplied in the input, e.g. \
+  "Software Engineer with 6 years of experience in ...". Do NOT prepend an adjective like \
+  "Seasoned", "Dynamic", "Experienced", "Passionate", or "Motivated" to the title.
+- Include at least one concrete achievement drawn from the provided bullet points. Only use a \
+  number, percentage, or dollar amount if it appears in a bullet, copied exactly - never \
+  invent, estimate, or round a figure. If no bullet has a metric, describe the achievement \
+  qualitatively with no number attached.
 - Close with what the candidate brings to this specific company or type of role.
 - Naturally mirror 2-3 keywords from the job description.
 - Total length: 50-100 words. Maximum 5 sentences.
 - No first-person pronouns (I, my, me, we).
+- Avoid buzzwords and hype adjectives - do not describe the candidate as seasoned, dynamic, \
+  passionate, results-driven, world-class, or a rockstar / ninja / guru. Use plain, specific \
+  language.
 - Forbidden words and phrases - do not use any: leverage, leveraged, utilize, utilized, \
-  spearhead, spearheaded, pivotal, realm, synergize, proven track record, results-driven, \
-  dynamic professional, passionate team player, passionate about, cross-functional, \
-  intricate, delve, showcase, showcasing, facilitating.
+  spearhead, spearheaded, pivotal, realm, synergize, seasoned, dynamic, passionate, \
+  proven track record, results-driven, dynamic professional, passionate team player, \
+  passionate about, cross-functional, intricate, delve, showcase, showcasing, facilitating.
 - Write in confident, direct, third-person professional prose.
 - Return the summary paragraph as plain text only. No labels, no JSON, no markdown.
 """
@@ -666,8 +690,13 @@ for the candidate applying to the role described below.
 Critical rules:
 - Reference ONLY the achievement facts listed in "SELECTED BULLETS". Do not invent or \
   infer any experience not present in those bullets.
+- Only cite a number, percentage, or dollar amount if it appears in a selected bullet, copied \
+  exactly - never invent, estimate, or round a figure.
 - Do not use bullet-point formatting - write in flowing prose.
 - Keep the tone confident and specific; avoid generic filler phrases.
+- Avoid buzzwords and hype adjectives - do not call the candidate seasoned, dynamic, \
+  passionate, results-driven, world-class, or a rockstar / ninja / guru. Use plain, specific \
+  language.
 - Do not include a salutation header (e.g. "Dear Hiring Manager,") or closing signature - \
   return only the body paragraphs.
 - Return plain text only. No markdown, no extra commentary.

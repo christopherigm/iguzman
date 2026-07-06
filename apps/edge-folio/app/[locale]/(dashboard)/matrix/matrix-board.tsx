@@ -38,6 +38,7 @@ import {
   EnhanceOptionsModal,
   type EnhanceOptions,
 } from "@/components/enhance/enhance-options-modal";
+import { buildEnhance } from "@/lib/enhance-prompts";
 
 const CATEGORIES: Category[] = [
   "impact",
@@ -126,22 +127,12 @@ function BulletForm({
     setShowEnhanceOptions(false);
     const currentText = text.trim();
     if (!currentText) return;
-    const isEs = locale === "es";
-    const messages = isEs
-      ? [
-          {
-            role: "system" as const,
-            content: `Eres un coach profesional de carrera. Reescribe y amplía el siguiente logro profesional en prosa impactante para un portafolio. Escribe exactamente ${paragraphs} párrafo${paragraphs !== 1 ? "s" : ""}. Cada párrafo debe tener entre ${minWords} y ${maxWords} palabras. Enfócate en logros cuantificables, verbos de acción y resultados medibles. Devuelve únicamente el texto mejorado - sin explicaciones, etiquetas ni marcas de formato.`,
-          },
-          { role: "user" as const, content: currentText },
-        ]
-      : [
-          {
-            role: "system" as const,
-            content: `You are a professional career coach and resume expert. Rewrite and expand the following career achievement into polished, impactful prose for a professional portfolio. Write exactly ${paragraphs} ${paragraphs === 1 ? "paragraph" : "paragraphs"}. Each paragraph must be between ${minWords} and ${maxWords} words. Focus on quantifiable achievements, action verbs, and measurable outcomes. Return only the improved text - no explanations, labels, or formatting marks.`,
-          },
-          { role: "user" as const, content: currentText },
-        ];
+    const messages = buildEnhance({
+      kind: "achievement",
+      locale,
+      text: currentText,
+      opts: { paragraphs, minWords, maxWords },
+    });
     enhanceRef.current?.start(messages);
   };
 

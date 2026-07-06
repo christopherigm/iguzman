@@ -21,6 +21,7 @@ import {
   EnhanceOptionsModal,
   type EnhanceOptions,
 } from "@/components/enhance/enhance-options-modal";
+import { buildEnhance } from "@/lib/enhance-prompts";
 import { getProfile, saveOnboarding, updateContactInfo } from "@/lib/auth";
 import { TN_PROFESSIONS } from "@/lib/nafta-constants";
 import {
@@ -152,22 +153,13 @@ export function ProfessionalInfoPanel() {
       ]
         .filter(Boolean)
         .join(". ");
-      const isEs = locale === "es";
-      const messages = isEs
-        ? [
-            {
-              role: "system" as const,
-              content: `Eres un coach profesional de carrera. Reescribe y mejora el siguiente resumen profesional en prosa convincente para un CV o portafolio. Escribe exactamente ${paragraphs} párrafo${paragraphs !== 1 ? "s" : ""}. Cada párrafo debe tener entre ${minWords} y ${maxWords} palabras. Enfócate en logros de carrera, habilidades clave y propuesta de valor profesional. Devuelve únicamente el texto mejorado - sin explicaciones, etiquetas ni marcas de formato.${profileCtx ? ` Contexto del perfil: ${profileCtx}.` : ""}`,
-            },
-            { role: "user" as const, content: currentText },
-          ]
-        : [
-            {
-              role: "system" as const,
-              content: `You are a professional career coach and resume expert. Rewrite and enhance the following professional summary into polished, compelling prose for a resume or portfolio. Write exactly ${paragraphs} ${paragraphs === 1 ? "paragraph" : "paragraphs"}. Each paragraph must be between ${minWords} and ${maxWords} words. Focus on career achievements, key skills, and professional value proposition. Return only the improved text - no explanations, labels, or formatting marks.${profileCtx ? ` Profile context: ${profileCtx}.` : ""}`,
-            },
-            { role: "user" as const, content: currentText },
-          ];
+      const messages = buildEnhance({
+        kind: "summary",
+        locale,
+        text: currentText,
+        opts: { paragraphs, minWords, maxWords },
+        profileCtx,
+      });
       summaryEnhanceRef.current?.start(messages);
     },
     [contactSummary, locale, jobTitle, yearsValue],

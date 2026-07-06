@@ -30,6 +30,7 @@ import {
   type EducationPayload,
   type DegreeType,
 } from "@/lib/career";
+import { buildEnhance } from "@/lib/enhance-prompts";
 import "./education-page.css";
 import IconButton from "@repo/ui/core-elements/icon-button";
 
@@ -103,24 +104,11 @@ function EducationForm({
   function handleEnhance() {
     const current = description.trim();
     if (!current) return;
-    const isEs = locale === "es";
-    const messages = isEs
-      ? [
-          {
-            role: "system" as const,
-            content:
-              "Eres un coach profesional de carrera. Reescribe la siguiente descripción académica en prosa clara e impactante para un portafolio profesional. Mantén 2-4 oraciones. Enfócate en logros académicos, habilidades y actividades relevantes. Devuelve únicamente el texto mejorado - sin explicaciones ni marcas de formato.",
-          },
-          { role: "user" as const, content: current },
-        ]
-      : [
-          {
-            role: "system" as const,
-            content:
-              "You are a professional career coach. Rewrite the following education description into polished, impactful prose for a professional portfolio. Keep it to 2-4 sentences. Focus on academic achievements, relevant coursework, and transferable skills. Return only the improved text - no explanations or formatting marks.",
-          },
-          { role: "user" as const, content: current },
-        ];
+    const messages = buildEnhance({
+      kind: "education",
+      locale,
+      text: current,
+    });
     enhanceRef.current?.start(messages);
   }
 
