@@ -9,7 +9,7 @@ import { ProfessionalInfoPanel } from "./professional-info-section";
 import { ContactInfoPanel } from "./contact-info-section";
 import { LanguagesPanel } from "./languages-section";
 import { ResumePanel } from "./resume-section";
-import { JobSearchPanel } from "./job-search-section";
+import { JobSearchPanel } from "@/components/job-search-section";
 import { JobApiKeysSection } from "./job-api-keys-section";
 import { TechStackPanel } from "./tech-stack-section";
 import "./profile-page.css";

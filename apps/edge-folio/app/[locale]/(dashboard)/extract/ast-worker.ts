@@ -1,5 +1,5 @@
 import type { AstWorkerInbound, AstWorkerOutbound } from "./ast-worker-types";
-import type { SkeletonJson, SkeletonInfra } from "./skeleton-json";
+import type { SkeletonJson, SkeletonInfra } from "@/lib/skeleton-json";
 
 // ── Parser state ──────────────────────────────────────────────────────────────
 

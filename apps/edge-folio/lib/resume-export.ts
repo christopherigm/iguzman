@@ -7,7 +7,41 @@ import type {
 } from "./applications";
 import type { UserProfile } from "./auth";
 import type { WorkExperience, Education, Language, Project } from "./career";
-import type { ResumePDFProps } from "./resume-pdf";
+import type { Skill } from "./matrix";
+
+/**
+ * Props for the resume PDF document (`ResumeDocument` in
+ * `applications/[id]/_components/resume-pdf.tsx`). Defined here in the data layer
+ * because it's the shared contract between the export util that builds these
+ * props and the presentational PDF component that consumes them.
+ */
+export interface ResumePDFProps {
+  // Header
+  fullName: string;
+  jobTitle: string;
+  email: string;
+  phone?: string;
+  location?: string;
+  githubUrl?: string;
+  linkedinUrl?: string;
+  // Profile photo (base64 data URI or absolute URL)
+  photoUrl?: string;
+  // Summary
+  summary?: string;
+  // Skills (flat list, sorted by proficiency desc)
+  skills?: Pick<Skill, "name" | "proficiency">[];
+  // Experience
+  workExperiences?: WorkExperience[];
+  targetRole: string;
+  targetCompany: string;
+  tailoredBullets: TailoredBullet[];
+  // Projects
+  projects?: Project[];
+  // Education
+  educations?: Education[];
+  // Languages
+  languages?: Language[];
+}
 
 /**
  * Serializable snapshot of the "Customize Export" toggles on the application

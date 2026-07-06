@@ -2,6 +2,32 @@
 
 These rules apply to every Next.js app in `apps/`.
 
+## File & Folder Structure
+
+Every Next.js app in `apps/` follows the same layout so files land in predictable places regardless of which app you open. The guiding principle: **keep a component as close as possible to the route that uses it, and only lift it out when a second route needs it.**
+
+### Where each kind of file goes
+
+| Kind                                        | Location                                        | Rule                                                                                                                             |
+| ------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Component used by **exactly one route**     | Loose file next to that route's `page.tsx`      | Default. No wrapper folder. `movies/[slug]/movie-detail.tsx`                                                                     |
+| One route with **many** local components    | `_components/` folder inside that route         | Only once a route owns **~4+** local components and the folder is getting noisy. Promote the loose files into `_components/`.    |
+| Component **shared by 2+ routes**           | `components/` at the app root                    | Group related shared components in a subfolder: `components/<domain>/` (e.g. `components/movie-catalog/`).                       |
+| Hook used by **exactly one route**          | Loose file next to that route's `page.tsx`       | Same rule as components. If the route uses `_components/`, a matching `_hooks/` is acceptable but not required.                  |
+| Hook **shared by 2+ routes**                | `hooks/` at the app root                         | All reusable hooks live here. Never scatter `use-*` files into `lib/`.                                                          |
+| Pure utilities, data-fetching, API clients  | `lib/` at the app root                           | Non-hook, non-component modules only. Keep it free of `use-*` hooks and JSX components.                                         |
+
+### The two thresholds
+
+1. **Loose → `_components/`:** a component starts life as a loose file beside `page.tsx`. Move it into a route-local `_components/` folder **only** when that route accumulates roughly four or more local components. Don't create `_components/` pre-emptively for one file — the extra folder just deepens an already-long App Router path (route groups + dynamic segments).
+2. **Route-local → `components/`:** the moment a second route imports a component, lift it to `components/<domain>/`. Colocation is for single-consumer code only.
+
+**Don't split a route between the root and `_components/`.** Once a route has crossed the threshold and uses a `_components/` folder, put *all* of that route's single-use components inside it — the only file that stays loose beside `page.tsx` is the route's main view (the component `page.tsx` renders directly). Mixing a few loose components alongside a `_components/` folder in the same route is the exact inconsistency this convention exists to prevent.
+
+### Rationale
+
+App Router paths are already deep (`app/[locale]/(dashboard)/applications/[id]/`). Wrapping every single-use file in a `_components/` subfolder on top of that makes files hard to find. Loose-by-default keeps the common case one `ls` from the `page.tsx` that uses it, while the `_components/` escape hatch keeps genuinely crowded routes tidy. One home per concern (`components/`, `hooks/`, `lib/`) removes the "where does this go?" guesswork.
+
 ## Accessibility - Form Element Labels
 
 Every `<input>`, `<select>`, and `<textarea>` element must have an accessible label. The ESLint `jsx-a11y` rules enforce this as an error (`--max-warnings 0`).

@@ -20,7 +20,7 @@ import {
   type ResumeExportConfig,
 } from "@/lib/resume-export";
 import { groupByCategory } from "../detail-constants";
-import type { EnhanceMessage } from "../tailored-editable-card";
+import type { EnhanceMessage } from "../_components/tailored-editable-card";
 import type { ExportDataController } from "./use-export-data";
 import type { ShowToast } from "./use-toast";
 
@@ -451,7 +451,7 @@ export function useTailoringWorkflow({
     setExportError(null);
     try {
       const { pdf } = await import("@react-pdf/renderer");
-      const { ResumeDocument } = await import("@/lib/resume-pdf");
+      const { ResumeDocument } = await import("../_components/resume-pdf");
 
       const blob = await pdf(<ResumeDocument {...resumeProps} />).toBlob();
       const url = URL.createObjectURL(blob);

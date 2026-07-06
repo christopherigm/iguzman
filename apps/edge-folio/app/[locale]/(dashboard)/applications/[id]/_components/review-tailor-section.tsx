@@ -12,7 +12,7 @@ import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { Spinner } from "@repo/ui/core-elements/spinner";
 import type { JobApplication } from "@/lib/applications";
 import type { UserProfile } from "@/lib/auth";
-import { TailoredEditableCard } from "../tailored-editable-card";
+import { TailoredEditableCard } from "./tailored-editable-card";
 import { SwitchRow } from "./detail-primitives";
 import type { ExportDataController } from "../_hooks/use-export-data";
 import type { TailoringWorkflow } from "../_hooks/use-tailoring-workflow";
@@ -379,6 +379,28 @@ export function ReviewTailorSection({
               )}
             </Card>
           </Box>
+
+          {/* Languages — full-width */}
+          {exportData && exportData.languages.length > 0 && (
+            <Box display="flex" flexDirection="column" gap={8}>
+              <Typography variant="body" fontWeight={600}>
+                {t("exportLanguagesTitle")}
+              </Typography>
+              <Card gap={12}>
+                {exportData.languages.map((lang) => (
+                  <SwitchRow
+                    key={lang.id}
+                    label={lang.name}
+                    checked={includedLanguageIds.has(lang.id)}
+                    onChange={(checked) =>
+                      toggleId(setIncludedLanguageIds, lang.id, checked)
+                    }
+                  />
+                ))}
+              </Card>
+            </Box>
+          )}
+
           {(professionalSummary || savedSummary) && (
             <TailoredEditableCard
               title={t("professionalSummaryLabel")}
@@ -582,27 +604,6 @@ export function ReviewTailorSection({
                   );
                 })}
               </Grid>
-            </Box>
-          )}
-
-          {/* Languages — full-width, below Education */}
-          {exportData && exportData.languages.length > 0 && (
-            <Box display="flex" flexDirection="column" gap={8}>
-              <Typography variant="body" fontWeight={600}>
-                {t("exportLanguagesTitle")}
-              </Typography>
-              <Card gap={12}>
-                {exportData.languages.map((lang) => (
-                  <SwitchRow
-                    key={lang.id}
-                    label={lang.name}
-                    checked={includedLanguageIds.has(lang.id)}
-                    onChange={(checked) =>
-                      toggleId(setIncludedLanguageIds, lang.id, checked)
-                    }
-                  />
-                ))}
-              </Card>
             </Box>
           )}
 

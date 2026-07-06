@@ -10,8 +10,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import type { JobPosting } from "@/lib/jobs";
-import { MatchMetrics } from "../_components/match-metrics";
-import "./jobs-page.css";
+import { MatchMetrics } from "./match-metrics";
 
 export function formatSalary(posting: JobPosting): string | null {
   const min = posting.salary_min

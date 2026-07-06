@@ -40,11 +40,11 @@ import {
   type JobScope,
 } from "@/lib/jobs";
 import { getProfile } from "@/lib/auth";
-import { JobCard } from "./job-card";
+import { JobCard } from "@/components/job-card";
 import {
   JobSearchPanel,
   type JobSearchPanelHandle,
-} from "../profile/job-search-section";
+} from "@/components/job-search-section";
 import Card from "@repo/ui/core-elements/card";
 import "./jobs-page.css";
 

@@ -8,7 +8,7 @@ import type { JobApplication } from "@/lib/applications";
 import {
   MatchMetrics,
   type MatchMetricItem,
-} from "../../../_components/match-metrics";
+} from "@/components/match-metrics";
 import { InfoField, InfoCard } from "./detail-primitives";
 import { formatSalary } from "../detail-constants";
 

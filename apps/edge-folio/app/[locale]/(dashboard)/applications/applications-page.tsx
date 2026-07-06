@@ -30,7 +30,7 @@ import {
   type SignalLevel,
 } from "@/lib/applications";
 import { SpeechButton } from "@repo/ui/core-elements/speech-button";
-import { MatchMetrics } from "../_components/match-metrics";
+import { MatchMetrics } from "@/components/match-metrics";
 import "./applications-page.css";
 
 const STATUSES: ApplicationStatus[] = [

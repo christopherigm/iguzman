@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import type { AstWorkerInbound, AstWorkerOutbound } from "./ast-worker-types";
-import type { SkeletonJson } from "./skeleton-json";
+import type { SkeletonJson } from "@/lib/skeleton-json";
 
 export type AstExtractorStatus = "idle" | "running" | "done" | "error";
 

@@ -6,9 +6,8 @@ import {
   StyleSheet,
   Image,
 } from "@react-pdf/renderer";
-import type { TailoredBullet } from "./applications";
-import type { WorkExperience, Education, Language, Project } from "./career";
-import type { Skill } from "./matrix";
+import type { TailoredBullet } from "@/lib/applications";
+import type { ResumePDFProps } from "@/lib/resume-export";
 
 const CATEGORY_LABELS: Record<string, string> = {
   impact: "Impact",
@@ -324,34 +323,6 @@ export function NaftaLetterDocument({
       </Page>
     </Document>
   );
-}
-
-export interface ResumePDFProps {
-  // Header
-  fullName: string;
-  jobTitle: string;
-  email: string;
-  phone?: string;
-  location?: string;
-  githubUrl?: string;
-  linkedinUrl?: string;
-  // Profile photo (base64 data URI or absolute URL)
-  photoUrl?: string;
-  // Summary
-  summary?: string;
-  // Skills (flat list, sorted by proficiency desc)
-  skills?: Pick<Skill, "name" | "proficiency">[];
-  // Experience
-  workExperiences?: WorkExperience[];
-  targetRole: string;
-  targetCompany: string;
-  tailoredBullets: TailoredBullet[];
-  // Projects
-  projects?: Project[];
-  // Education
-  educations?: Education[];
-  // Languages
-  languages?: Language[];
 }
 
 function groupByCategory(

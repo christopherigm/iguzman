@@ -6,7 +6,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Toast } from "@repo/ui/core-elements/toast";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { saveJob, deleteJob, JobsError, type JobPosting } from "@/lib/jobs";
-import { JobCard } from "./(dashboard)/jobs/job-card";
+import { JobCard } from "@/components/job-card";
 
 interface HeroJobCardsProps {
   jobs: JobPosting[];

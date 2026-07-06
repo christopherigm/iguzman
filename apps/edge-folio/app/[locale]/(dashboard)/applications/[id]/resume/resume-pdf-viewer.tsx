@@ -1,7 +1,8 @@
 "use client";
 
 import { PDFViewer } from "@react-pdf/renderer";
-import { ResumeDocument, type ResumePDFProps } from "@/lib/resume-pdf";
+import { ResumeDocument } from "../_components/resume-pdf";
+import type { ResumePDFProps } from "@/lib/resume-export";
 
 /**
  * Thin wrapper around react-pdf's <PDFViewer> rendering the exact same

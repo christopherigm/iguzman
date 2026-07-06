@@ -163,7 +163,7 @@ export function NaftaLetterSection({ app, profile, companyDescription }: Props) 
     setPdfError(null);
     try {
       const { pdf } = await import("@react-pdf/renderer");
-      const { NaftaLetterDocument } = await import("@/lib/resume-pdf");
+      const { NaftaLetterDocument } = await import("./resume-pdf");
       const blob = await pdf(
         <NaftaLetterDocument
           companyName={app.company_name}

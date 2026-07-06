@@ -141,7 +141,7 @@ The "Extract Experience" feature parses a local repository **structurally** in t
 ### How it works
 
 1. The user picks a local directory via the **File System Access API** (`showDirectoryPicker`).
-2. A **Web Worker** (`lib/ast-worker.ts`) runs the extraction pipeline:
+2. A **Web Worker** (`extract/ast-worker.ts`) runs the extraction pipeline:
    - **Manifest parsing** (no AST needed): reads `package.json`, `requirements.txt`, `go.mod`, `Cargo.toml`, `Dockerfile`, `docker-compose.yml`, K8s manifests, `.kicad_pro` files - extracts dependency names and infra signals only.
    - **Import extraction** (tree-sitter): for `.ts`/`.tsx`/`.js`/`.jsx` and `.py` files, parses AST import declarations. Only module source strings are captured - variable names, function names, and business logic are never read.
    - Falls back to regex-based import extraction when grammar WASM files are unavailable.
@@ -168,14 +168,18 @@ The worker loads grammars via `Parser.Language.load('/wasm/tree-sitter-*.wasm')`
 
 ### Key files
 
-| File                          | Role                                       |
-| ----------------------------- | ------------------------------------------ |
-| `lib/skeleton-json.ts`        | `SkeletonJson` type - the sanitized output |
-| `lib/ast-worker-types.ts`     | Message types for main thread ↔ worker     |
-| `lib/ast-worker.ts`           | Web Worker: manifest + import extraction   |
-| `lib/use-ast-extractor.ts`    | React hook managing the worker lifecycle   |
-| `lib/use-directory-picker.ts` | File System Access API picker (unchanged)  |
-| `public/wasm/`                | WASM grammar files served as static assets |
+The extract feature colocates in the `extract/` route folder
+(`app/[locale]/(dashboard)/extract/`). The one exception is `skeleton-json.ts`,
+which lives in `lib/` because `lib/matrix.ts` also depends on the `SkeletonJson` type.
+
+| File                              | Role                                       |
+| --------------------------------- | ------------------------------------------ |
+| `lib/skeleton-json.ts`            | `SkeletonJson` type - the sanitized output (shared with `lib/matrix.ts`) |
+| `extract/ast-worker-types.ts`     | Message types for main thread ↔ worker     |
+| `extract/ast-worker.ts`           | Web Worker: manifest + import extraction   |
+| `extract/use-ast-extractor.ts`    | React hook managing the worker lifecycle   |
+| `extract/use-directory-picker.ts` | File System Access API picker (unchanged)  |
+| `public/wasm/`                    | WASM grammar files served as static assets |
 
 ## Environment Variables
 

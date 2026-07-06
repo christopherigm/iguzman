@@ -1,4 +1,4 @@
-import type { SkeletonJson } from "./skeleton-json";
+import type { SkeletonJson } from "@/lib/skeleton-json";
 
 /** Messages sent FROM the main thread TO the AST worker. */
 export type AstWorkerInbound =

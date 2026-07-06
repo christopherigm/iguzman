@@ -11,8 +11,8 @@ import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Select } from "@repo/ui/core-elements/select";
-import { useDirectoryPicker } from "@/lib/use-directory-picker";
-import { useAstExtractor } from "@/lib/use-ast-extractor";
+import { useDirectoryPicker } from "./use-directory-picker";
+import { useAstExtractor } from "./use-ast-extractor";
 import type { SkeletonJson } from "@/lib/skeleton-json";
 import {
   synthesizeSkeleton,
