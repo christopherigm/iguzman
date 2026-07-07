@@ -1,16 +1,8 @@
 {
   "name": "Mob Forge",
-  "description": "AI-authored mobs and items from mob-forge, as a Bedrock Add-On.",
-  "version": [
-    0,
-    1,
-    1
-  ],
-  "min_engine_version": [
-    1,
-    21,
-    0
-  ],
+  "description": "0.1.3 AI-authored mobs and items from mob-forge, as a Bedrock Add-On.",
+  "version": [0, 1, 3],
+  "min_engine_version": [1, 21, 0],
   "resource_pack": {
     "header_uuid": "c14be379-43eb-4f1f-ac89-1ffd14946d20",
     "module_uuid": "4f73cb86-7005-4b05-8d06-587afd813cea"
