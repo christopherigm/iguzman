@@ -49,15 +49,6 @@
   justify-content: center;
 }
 
-/* AVPlay display placeholder, pinned to the full 1920x1080 screen space. */
-.trailer-overlay__avplay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 1920px;
-  height: 1080px;
-}
-
 .trailer-overlay__close {
   position: absolute;
   top: 40px;

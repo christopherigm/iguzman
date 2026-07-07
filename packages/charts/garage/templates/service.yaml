@@ -1,0 +1,55 @@
+{{- /*
+  Headless service: governs the StatefulSet (stable per-pod DNS) and lets
+  peers reach each other over RPC during bootstrap. publishNotReadyAddresses
+  is required so pods are discoverable before the layout is applied (until
+  then they report NotReady).
+*/}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "garage.fullname" . }}
+  labels:
+    {{- include "garage.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+    - name: rpc
+      port: 3901
+      targetPort: 3901
+    - name: s3-api
+      port: 3900
+      targetPort: 3900
+    - name: web
+      port: 3902
+      targetPort: 3902
+    - name: admin
+      port: 3903
+      targetPort: 3903
+  selector:
+    {{- include "garage.selectorLabels" . | nindent 4 }}
+---
+{{- /* Load-balanced S3 endpoint your apps connect to. */}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "garage.fullname" . }}-s3
+  labels:
+    {{- include "garage.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: s3-api
+      port: {{ .Values.service.s3Port }}
+      targetPort: 3900
+      protocol: TCP
+    - name: web
+      port: {{ .Values.service.webPort }}
+      targetPort: 3902
+      protocol: TCP
+    - name: admin
+      port: {{ .Values.service.adminPort }}
+      targetPort: 3903
+      protocol: TCP
+  selector:
+    {{- include "garage.selectorLabels" . | nindent 4 }}

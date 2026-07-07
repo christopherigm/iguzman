@@ -1,0 +1,10 @@
+/* AVPlay display placeholder, pinned to the full 1920x1080 screen space.
+   Explicit px (not inset/percentages) so it resolves a real size on old Tizen
+   Chromium 76 - see apps/cinelog-tv/CLAUDE.md. */
+.av-player {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: 1080px;
+}

@@ -1,0 +1,153 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "garage.fullname" . }}
+  labels:
+    {{- include "garage.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "garage.fullname" . }}
+  podManagementPolicy: Parallel
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "garage.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "garage.selectorLabels" . | nindent 8 }}
+      annotations:
+        # Roll pods when the base config changes.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "garage.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      affinity:
+        {{- if .Values.nodeAffinity.enabled }}
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      {{- toYaml .Values.nodeAffinity.nodeNames | nindent 22 }}
+        {{- end }}
+        # One Garage pod per node so each instance owns a distinct node's disk.
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  {{- include "garage.selectorLabels" . | nindent 18 }}
+              topologyKey: kubernetes.io/hostname
+
+      {{- /*
+        The garage image is FROM scratch — it ships only the /garage binary,
+        with no shell. So we can't build the config inside the main container.
+        Assemble it here: the read-only ConfigMap base plus this pod's own IP
+        (Garage needs a routable rpc_public_addr to advertise to peers), and
+        drop the result in a shared emptyDir for the shell-less server to read.
+      */}}
+      initContainers:
+        - name: config
+          image: "{{ .Values.initImage.repository }}:{{ .Values.initImage.tag }}"
+          imagePullPolicy: {{ .Values.initImage.pullPolicy }}
+          command: ['/bin/sh', '-c']
+          args:
+            - |
+              set -eu
+              CONF=/run/garage/garage.toml
+              cp /etc/garage/garage.toml "$CONF"
+              printf '\nrpc_public_addr = "%s:3901"\n' "$POD_IP" >> "$CONF"
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          volumeMounts:
+            - name: config
+              mountPath: /etc/garage
+              readOnly: true
+            - name: run-config
+              mountPath: /run/garage
+
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          # Config was assembled by the init container into the shared emptyDir.
+          command: ['/garage', '-c', '/run/garage/garage.toml', 'server']
+
+          envFrom:
+            - secretRef:
+                name: {{ .Values.garage.existingSecret | default (printf "%s-secrets" (include "garage.fullname" .)) }}
+
+          ports:
+            - name: s3-api
+              containerPort: 3900
+            - name: rpc
+              containerPort: 3901
+            - name: web
+              containerPort: 3902
+            - name: admin
+              containerPort: 3903
+
+          startupProbe:
+            {{- toYaml .Values.probes.startupProbe | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.probes.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.probes.readinessProbe | nindent 12 }}
+
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          volumeMounts:
+            - name: config
+              mountPath: /etc/garage
+              readOnly: true
+            - name: run-config
+              mountPath: /run/garage
+            - name: garage-data
+              mountPath: {{ .Values.persistence.mountPath }}
+
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "garage.fullname" . }}-config
+        # Holds the runtime config assembled by the init container.
+        - name: run-config
+          emptyDir: {}
+        {{- if .Values.persistence.hostPath }}
+        - name: garage-data
+          hostPath:
+            path: {{ .Values.persistence.hostPath }}
+            type: DirectoryOrCreate
+        {{- end }}
+
+  {{- if not .Values.persistence.hostPath }}
+  volumeClaimTemplates:
+    - metadata:
+        name: garage-data
+      spec:
+        accessModes:
+          - {{ .Values.persistence.accessMode | quote }}
+        {{- if .Values.persistence.storageClass }}
+        storageClassName: {{ .Values.persistence.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size | quote }}
+  {{- end }}

@@ -1,0 +1,43 @@
+──────────────────────────────────────────────────────────────
+  {{ include "garage.fullname" . }} (Garage S3) has been deployed!
+──────────────────────────────────────────────────────────────
+
+Pods: {{ .Values.replicaCount }} (one per node: {{ join ", " .Values.nodeAffinity.nodeNames }})
+Replication factor: {{ .Values.garage.replicationFactor }}
+
+⚠️  FIRST INSTALL IS NOT DONE UNTIL YOU APPLY THE LAYOUT.
+    Until then pods stay NotReady and the store rejects reads/writes.
+
+1) Wait for all pods to be Running:
+
+     kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }} -o wide
+
+2) Assign per-node capacities and apply the layout (ONE TIME):
+
+     ./scripts/bootstrap-layout.sh {{ .Release.Name }} {{ .Release.Namespace }}
+
+   (or do it by hand — see the chart README "Bootstrapping the layout".)
+
+3) Create a bucket and an access key:
+
+     P={{ .Release.Name }}-0
+     kubectl exec -n {{ .Release.Namespace }} $P -- /garage -c /run/garage/garage.toml bucket create my-bucket
+     kubectl exec -n {{ .Release.Namespace }} $P -- /garage -c /run/garage/garage.toml key create my-app
+     kubectl exec -n {{ .Release.Namespace }} $P -- /garage -c /run/garage/garage.toml bucket allow --read --write --owner my-bucket --key my-app
+
+   The `key create` output prints the S3 Access Key ID and Secret Key.
+
+   Or wire a bucket + key straight into an app's `<app>-secrets` Secret
+   (idempotent) so `pnpm helm` / `pnpm secrets` can read them:
+
+     ./scripts/provision-app-secret.sh video-downloader video-downloader-2
+
+S3 endpoint (inside the cluster):
+
+     http://{{ include "garage.fullname" . }}-s3.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.s3Port }}
+     Region: {{ .Values.garage.s3Region }}   (use path-style / forcePathStyle addressing)
+
+Check consumed vs available capacity anytime:
+
+     kubectl exec -n {{ .Release.Namespace }} {{ .Release.Name }}-0 -- /garage -c /run/garage/garage.toml status
+     kubectl exec -n {{ .Release.Namespace }} {{ .Release.Name }}-0 -- /garage -c /run/garage/garage.toml stats

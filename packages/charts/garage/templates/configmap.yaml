@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "garage.fullname" . }}-config
+  labels:
+    {{- include "garage.labels" . | nindent 4 }}
+data:
+  # Base config. Secrets (rpc_secret, admin_token, metrics_token) are
+  # injected at runtime via the GARAGE_* env vars from the Secret, and
+  # rpc_public_addr is appended from the pod IP by the container command.
+  garage.toml: |
+    metadata_dir = "{{ .Values.persistence.mountPath }}/meta"
+    data_dir = "{{ .Values.persistence.mountPath }}/data"
+    db_engine = "lmdb"
+    metadata_auto_snapshot_interval = "6h"
+
+    replication_factor = {{ .Values.garage.replicationFactor }}
+    compression_level = {{ .Values.garage.compressionLevel }}
+
+    rpc_bind_addr = "[::]:3901"
+
+    [kubernetes_discovery]
+    namespace = {{ .Release.Namespace | quote }}
+    service_name = {{ include "garage.fullname" . | quote }}
+    skip_crd = {{ .Values.garage.kubernetesDiscovery.skipCrd }}
+
+    [s3_api]
+    s3_region = {{ .Values.garage.s3Region | quote }}
+    api_bind_addr = "[::]:3900"
+    root_domain = {{ .Values.garage.s3RootDomain | quote }}
+
+    [s3_web]
+    bind_addr = "[::]:3902"
+    root_domain = {{ .Values.garage.webRootDomain | quote }}
+    index = "index.html"
+
+    [admin]
+    api_bind_addr = "[::]:3903"
+    metrics_require_token = {{ .Values.garage.admin.metricsRequireToken }}

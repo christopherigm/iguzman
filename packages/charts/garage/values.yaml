@@ -1,0 +1,212 @@
+# ─────────────────────────────────────────────────────────────
+# Garage - distributed S3-compatible object store (Helm Values)
+# ─────────────────────────────────────────────────────────────
+#
+# Garage pools node-local disks into a single S3 namespace and
+# replicates objects across nodes. Unlike MinIO erasure coding, it
+# supports HETEROGENEOUS disks: you give each node a capacity weight
+# (see `layout` below) and Garage places data proportionally, so a
+# 2 TB node holds far more than an 80 GB node instead of every drive
+# being capped to the smallest one.
+
+# -- Number of old ReplicaSets to keep for rollbacks
+revisionHistoryLimit: 2
+
+# -- Number of Garage pods. MUST equal the number of nodes in
+#    nodeAffinity.nodeNames below — podAntiAffinity pins one pod per
+#    node, so any extra replica stays Pending forever with nowhere to go.
+replicaCount: 3
+
+# ─── Container image ────────────────────────────────────────
+image:
+  repository: dxflrs/garage
+  tag: 'v1.0.1' # check https://garagehq.deuxfleurs.fr for newer releases
+  pullPolicy: IfNotPresent
+
+# ─── Init image ─────────────────────────────────────────────
+# The garage image is FROM scratch (no shell), so a tiny helper image
+# assembles the runtime garage.toml (base config + this pod's own
+# rpc_public_addr) into a shared volume before the server starts.
+initImage:
+  repository: busybox
+  tag: '1.36'
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+# - name: my-registry-secret
+
+# ─── Name overrides ─────────────────────────────────────────
+nameOverride: ''
+fullnameOverride: ''
+
+# ─── Services ───────────────────────────────────────────────
+# The S3 API endpoint your apps connect to. The headless service
+# (always created) handles inter-node RPC + peer discovery.
+service:
+  type: ClusterIP
+  s3Port: 3900     # S3 API
+  webPort: 3902    # static website serving (optional)
+  adminPort: 3903  # admin API + Prometheus metrics
+
+# ─── Ingress (expose the S3 endpoint outside the cluster) ───
+# Routes external traffic to the S3 API port (3900) of the -s3 Service.
+ingress:
+  enabled: true
+  className: '' # e.g. "nginx" / "public" (leave empty for the cluster default)
+  # For large multipart uploads on ingress-nginx, raise the body size limit:
+  annotations:
+    {}
+    # nginx.ingress.kubernetes.io/proxy-body-size: "0"
+  hosts:
+    - host: s3.iguzman.com.mx
+      paths:
+        - path: /
+          pathType: Prefix
+    # For virtual-hosted-style access (bucket.s3.iguzman.com), add a wildcard
+    # host pointing at the same service and a matching wildcard TLS cert:
+    # - host: '*.s3.iguzman.com'
+    #   paths:
+    #     - path: /
+    #       pathType: Prefix
+  tls: []
+  # - hosts:
+  #     - s3.iguzman.com
+  #   secretName: garage-s3-tls
+
+# ─── Garage daemon configuration (garage.toml) ──────────────
+garage:
+  # Copies of every object kept across the cluster. 3 is recommended
+  # for 3+ nodes; tolerates one node down with room to spare.
+  replicationFactor: 3
+
+  # zstd compression level for stored blocks (1 = fast, higher = smaller).
+  compressionLevel: 1
+
+  s3Region: 'garage'
+  # Wildcard domain for virtual-hosted-style bucket access. Path-style
+  # access (e.g. from most SDKs with forcePathStyle) works regardless.
+  s3RootDomain: '.s3.garage'
+  webRootDomain: '.web.garage'
+
+  admin:
+    # Require the metrics token to scrape /metrics (recommended).
+    metricsRequireToken: true
+
+  kubernetesDiscovery:
+    # Garage discovers its peers via a `garagenodes.deuxfleurs.fr` CRD
+    # instead of hard-coded bootstrap peers. skipCrd=false lets Garage
+    # create the CRD itself (needs the ClusterRole in rbac below).
+    # Set skipCrd=true if the CRD is already installed cluster-wide.
+    skipCrd: false
+
+  # ─── Secrets ──────────────────────────────────────────────
+  # Leave blank to auto-generate on first install and persist across
+  # upgrades (via a lookup on the existing Secret). rpcSecret MUST stay
+  # constant for the life of the cluster — never rotate it in place.
+  rpcSecret: '' # 64 hex chars; blank = generated (sha256 of random)
+  adminToken: '' # blank = generated
+  metricsToken: '' # blank = generated
+  # Or point at an existing Secret with keys GARAGE_RPC_SECRET,
+  # GARAGE_ADMIN_TOKEN, GARAGE_METRICS_TOKEN:
+  existingSecret: ''
+
+# ─── Cluster layout (capacity per node) ─────────────────────
+# The heart of heterogeneous storage. After the first deploy, run
+# scripts/bootstrap-layout.sh (documented in NOTES.txt) which reads
+# this map and runs `garage layout assign -c <capacity>` per node.
+# Keys are Kubernetes node names; values are Garage capacity weights.
+#
+# NOTE: your cluster shows master/node1/node2/node4/node6 and node2 is
+# NotReady — there is no "node5". Reconcile the 2 TB box's real node
+# name here and in nodeAffinity.nodeNames before applying.
+layout:
+  zone: default
+  capacities:
+    node1: 10G
+    node4: 15G
+    # node5: 500Gi # <-- verify this node's real name (node2 relabelled?)
+    node6: 150G
+
+# ─── Persistent storage (PVC per pod) ───────────────────────
+# IMPORTANT: on microk8s-hostpath, the PVC is provisioned under the
+# kubelet's hostpath storage directory — which lives on each node's
+# ROOT disk unless microk8s hostpath-storage is pointed at the big
+# mounted disk. If your 2 TB / 900 GB volumes are separate mounts,
+# either reconfigure the hostpath storage path per node, or set
+# persistence.hostPath below to a directory on the big disk.
+persistence:
+  enabled: true
+  size: 50Gi         # advisory on hostpath (not enforced); real cap = node disk
+  storageClass: ''   # empty = cluster default (microk8s-hostpath)
+  accessMode: ReadWriteOnce
+  mountPath: /mnt/garage
+  # Bypass the StorageClass and bind-mount an explicit path on each
+  # node's big disk instead of a provisioned PVC. The path must exist
+  # (and point at the intended disk) on every scheduled node.
+  hostPath: '' # e.g. /mnt/bigdisk/garage
+
+# ─── Node scheduling ────────────────────────────────────────
+# Restrict Garage to specific nodes AND spread one pod per node
+# (podAntiAffinity), so each instance owns a distinct node's disk.
+nodeAffinity:
+  enabled: true
+  nodeNames:
+    - node1
+    - node4
+    # - node5 # <-- verify (see layout note above)
+    - node6
+
+# ─── RBAC / ServiceAccount (for Kubernetes peer discovery) ──
+serviceAccount:
+  create: true
+  name: ''
+
+rbac:
+  # Creates a ClusterRole allowing Garage to manage the garagenodes CRD
+  # used for peer discovery. Required when garage.kubernetesDiscovery.skipCrd
+  # is false.
+  create: true
+
+# ─── Health probes ──────────────────────────────────────────
+probes:
+  startupProbe:
+    tcpSocket:
+      port: 3901
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 30
+    timeoutSeconds: 5
+  livenessProbe:
+    tcpSocket:
+      port: 3901
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    failureThreshold: 4
+    timeoutSeconds: 5
+  # /health on the admin port returns 200 once the node is connected
+  # and the layout is applied. Pods stay NotReady until you run the
+  # layout bootstrap — that is expected on first install.
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 3903
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 5
+
+# ─── Security context ──────────────────────────────────────
+podSecurityContext:
+  fsGroup: 1000
+  runAsUser: 1000
+  runAsGroup: 1000
+  runAsNonRoot: true
+
+# ─── Resources ──────────────────────────────────────────────
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: '1'
+    memory: 1Gi

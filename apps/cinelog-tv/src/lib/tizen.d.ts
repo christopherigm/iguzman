@@ -70,6 +70,12 @@ interface AVPlay {
   open(url: string): void;
   close(): void;
   setDisplayRect(left: number, top: number, width: number, height: number): void;
+  setDisplayMethod(
+    method:
+      | "PLAYER_DISPLAY_MODE_LETTER_BOX"
+      | "PLAYER_DISPLAY_MODE_FULL_SCREEN"
+      | "PLAYER_DISPLAY_MODE_AUTO_ASPECT_RATIO",
+  ): void;
   setListener(listener: AVPlayListener): void;
   prepare(): void;
   prepareAsync(success: () => void, error: (error: unknown) => void): void;

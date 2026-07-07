@@ -53,6 +53,25 @@ export function appIdForUrl(rawUrl: string): string | null {
   }
 }
 
+/**
+ * URLs the native AVPlay player can open directly (progressive or adaptive
+ * media streams). A YouTube watch URL is *not* one of these - AVPlay can't play
+ * YouTube, so those are handled by the embedded frame path instead.
+ */
+export function isDirectStream(rawUrl: string): boolean {
+  return /\.(m3u8|mpd|mp4|m4v|mov|webm|ts)(?:[?#]|$)/i.test(rawUrl);
+}
+
+/**
+ * True when a digital-copy URL is a self-hosted media stream (e.g. a personal
+ * S3 bucket) rather than an external provider we deep-link into: it matches no
+ * known provider app *and* points at a direct media file. Such copies play
+ * inline via the AVPlay StreamOverlay instead of launching a provider app.
+ */
+export function isSelfHostedCopy(rawUrl: string): boolean {
+  return appIdForUrl(rawUrl) === null && isDirectStream(rawUrl);
+}
+
 /** Extract the YouTube video id from any common YouTube URL shape. */
 export function youtubeVideoId(rawUrl: string): string | null {
   try {

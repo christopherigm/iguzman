@@ -14,10 +14,11 @@ import {
   UnauthorizedError,
   type MovieDetail as MovieDetailData,
 } from "@/lib/catalog";
-import { launchDigitalCopy } from "@/lib/launch-app";
+import { launchDigitalCopy, isSelfHostedCopy } from "@/lib/launch-app";
 import { useT } from "@/i18n/provider";
 import { TvFormatHeader } from "@/components/tv-format-header";
 import { TrailerOverlay } from "@/components/trailer-overlay";
+import { StreamOverlay } from "@/components/stream-overlay";
 import trailerIcon from "@/icons/trailer.svg";
 import playStream from "@/icons/play-stream.svg";
 import "./movie-detail.css";
@@ -85,9 +86,13 @@ export function MovieDetail({ onSignOut }: { onSignOut: () => void }) {
     slug ? "loading" : "not_found",
   );
   const [trailerOpen, setTrailerOpen] = useState(false);
-  // A ref lets the single Back listener branch on the open state without
-  // re-subscribing every time it toggles.
+  // A self-hosted digital copy (personal bucket) plays inline in an AVPlay
+  // overlay; a provider copy still deep-links out via launchDigitalCopy.
+  const [streamOpen, setStreamOpen] = useState(false);
+  // Refs let the single Back listener branch on the open state without
+  // re-subscribing every time they toggle.
   const trailerOpenRef = useRef(false);
+  const streamOpenRef = useRef(false);
   // Bumped to remount (and thus re-focus) the action row after the trailer
   // overlay closes - its Close button stole D-pad focus on the way in, and
   // Norigin doesn't restore focus when a focused node unmounts.
@@ -103,6 +108,26 @@ export function MovieDetail({ onSignOut }: { onSignOut: () => void }) {
     setActionsKey((k) => k + 1);
   }, []);
 
+  const openStream = () => {
+    streamOpenRef.current = true;
+    setStreamOpen(true);
+  };
+  const closeStream = useCallback(() => {
+    streamOpenRef.current = false;
+    setStreamOpen(false);
+    setActionsKey((k) => k + 1);
+  }, []);
+
+  // Route the digital copy: a self-hosted stream plays inline; anything else
+  // (a provider title) deep-links into the matching Tizen app as before.
+  const openDigitalCopy = (url: string) => {
+    if (isSelfHostedCopy(url)) {
+      openStream();
+      return;
+    }
+    launchDigitalCopy(url);
+  };
+
   // Remote Back closes the trailer first, then returns to the grid (matching
   // the on-screen Back/Close buttons).
   useEffect(
@@ -112,9 +137,13 @@ export function MovieDetail({ onSignOut }: { onSignOut: () => void }) {
           closeTrailer();
           return;
         }
+        if (streamOpenRef.current) {
+          closeStream();
+          return;
+        }
         navigate(-1);
       }),
-    [navigate, closeTrailer],
+    [navigate, closeTrailer, closeStream],
   );
 
   useEffect(() => {
@@ -200,7 +229,7 @@ export function MovieDetail({ onSignOut }: { onSignOut: () => void }) {
             {movie.digital_copy_url && (
               <TvButton
                 kind="primary"
-                onPress={() => launchDigitalCopy(movie.digital_copy_url)}
+                onPress={() => openDigitalCopy(movie.digital_copy_url)}
               >
                 <ButtonIcon src={playStream} />
                 {t("digitalCopy")}
@@ -291,6 +320,10 @@ export function MovieDetail({ onSignOut }: { onSignOut: () => void }) {
 
       {trailerOpen && movie.trailer_url && (
         <TrailerOverlay url={movie.trailer_url} onClose={closeTrailer} />
+      )}
+
+      {streamOpen && movie.digital_copy_url && (
+        <StreamOverlay url={movie.digital_copy_url} onClose={closeStream} />
       )}
     </>
   );

@@ -1,0 +1,28 @@
+/* Fullscreen player layer above the detail screen for a self-hosted digital
+   copy. Sized with explicit 100vw/100vh (not inset/top-bottom:0) so children
+   resolve a real height on old Tizen Chromium 76 - see apps/cinelog-tv/CLAUDE.md.
+
+   Left intentionally transparent (no background): the AVPlay video is on a
+   hardware plane behind the webview and must show through. */
+.stream-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 100;
+}
+
+/* Shown only on playback failure - opaque black so the detail screen behind the
+   transparent overlay doesn't bleed through the message. */
+.stream-overlay__message {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000000;
+}

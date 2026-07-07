@@ -73,7 +73,8 @@ const DEPLOY_SERVICES_COMMANDS =
   "pnpm deploy-postgres\n" +
   "pnpm deploy-mongodb\n" +
   "pnpm deploy-mysql\n" +
-  "pnpm deploy-redis";
+  "pnpm deploy-redis\n" +
+  "pnpm deploy-garage               # S3-compatible object store";
 const DEV_SERVICES_COMMANDS =
   "pnpm dev-services                # pick app, then an action\n" +
   "pnpm dev-services my-api         # skip app selection\n" +

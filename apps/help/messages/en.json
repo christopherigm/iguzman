@@ -69,7 +69,7 @@
     "helmSection": "helm",
     "helmDescription": "Interactively manage a Helm release: check status, reveal secrets, deploy, force redeploy, restart rollout, rollback, or uninstall.",
     "deployServicesSection": "deploy-* (services)",
-    "deployServicesDescription": "Deploy a managed database or cache to Kubernetes via Helm. Each command walks you through namespace, credentials, and persistent storage size.",
+    "deployServicesDescription": "Deploy a managed database, cache, or S3-compatible object store to Kubernetes via Helm. Each command walks you through namespace, credentials, and persistent storage size.",
     "devServicesSection": "dev-services (local Docker)",
     "devServicesDescription": "Spin up production-like Docker containers (Redis, Celery worker, Celery beat) for an app in your local dev environment. Auto-detects each app's services, points its .env at the local Redis, and offers create/start/stop/restart/logs/remove/purge actions.",
     "djangoSuperuserSection": "django-superuser",
