@@ -6,6 +6,7 @@ import { Container } from "@repo/ui/core-elements/container";
 import { PageBottomSpacer } from "@repo/ui/core-elements/navbar";
 import { apiFetch } from "@/lib/api-fetch";
 import type { MovieDetail as MovieDetailData } from "@/lib/catalog";
+import { detectDeviceType } from "@/lib/device";
 import { MovieDetail } from "./movie-detail";
 
 type Props = { params: Promise<{ locale: string; slug: string }> };
@@ -87,12 +88,21 @@ export default async function MovieDetailPage({ params }: Props) {
   setRequestLocale(locale);
 
   const initialMovie = await prefetchMovie(slug);
+  // Classify the client from the request UA on the server so streaming routes
+  // to the native player (mobile) vs the in-app modal (desktop) by the real OS,
+  // not the viewport width - a narrow desktop window is still a desktop.
+  const deviceType = detectDeviceType((await headers()).get("user-agent"));
 
   return (
     <Container paddingX={12}>
       {/* key={slug} remounts on navigation so the freshly prefetched movie seeds
           state via lazy init instead of a setState-in-effect re-sync. */}
-      <MovieDetail key={slug} slug={slug} initialMovie={initialMovie} />
+      <MovieDetail
+        key={slug}
+        slug={slug}
+        initialMovie={initialMovie}
+        deviceType={deviceType}
+      />
       <PageBottomSpacer />
     </Container>
   );

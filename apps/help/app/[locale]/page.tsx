@@ -75,6 +75,8 @@ const DEPLOY_SERVICES_COMMANDS =
   "pnpm deploy-mysql\n" +
   "pnpm deploy-redis\n" +
   "pnpm deploy-garage               # S3-compatible object store";
+const UPLOAD_S3_COMMAND =
+  "pnpm upload-s3                   # chunked upload to Garage (S3)";
 const DEV_SERVICES_COMMANDS =
   "pnpm dev-services                # pick app, then an action\n" +
   "pnpm dev-services my-api         # skip app selection\n" +
@@ -283,6 +285,11 @@ export default async function Home({ params, searchParams }: Props) {
                   heading={t("deployServicesSection")}
                   description={t("deployServicesDescription")}
                   code={DEPLOY_SERVICES_COMMANDS}
+                />
+                <Section
+                  heading={t("uploadS3Section")}
+                  description={t("uploadS3Description")}
+                  code={UPLOAD_S3_COMMAND}
                 />
                 <Section
                   heading={t("devServicesSection")}

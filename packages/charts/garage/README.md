@@ -164,6 +164,19 @@ Override with `S3_ENDPOINT=…` if you expose Garage another way. The generated
 snippets all force **path-style** addressing (required unless you set up the
 wildcard DNS + cert above) and use region **`garage`**.
 
+### Uploading large files past the CloudFlare / nginx caps
+
+When the S3 endpoint is behind CloudFlare (~90 MB request-body cap) and the
+nginx Ingress (80 MB cap), a plain `PUT` of a big video fails. Use the
+interactive **chunked** uploader, which drives rclone with a small multipart
+part size (50 MB) so every request stays under both limits:
+
+```bash
+pnpm upload-s3        # manage credential profiles, pick a bucket, upload a folder
+```
+
+See `cli/upload-s3/README.md` for details.
+
 ## Consumed vs available storage
 
 Since S3 has no free-space API, capacity comes from Garage's admin tooling:

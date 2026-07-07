@@ -153,12 +153,80 @@ _probe_streams_of_type() {
 #     "0 2 …"  keep only these relative indices
 STREAM_EXTRA_INPUTS=()
 STREAM_MAP_ARGS=()
+AUDIO_CODEC_ARGS=()
 
 # Whether $1 (a relative index) is present in the space-separated list $2.
 _stream_idx_selected() {
   local needle="$1" list="$2" x
   for x in ${list}; do [[ "${x}" == "${needle}" ]] && return 0; done
   return 1
+}
+
+# ── Smart TV audio codec args ─────────────────────────────────────────────────
+#
+# Samsung AVPlay refuses DTS/TrueHD/PCM/FLAC (PLAYER_ERROR_NOT_SUPPORTED_AUDIO_
+# CODEC), so the Smart TV profile transcodes those to AC3 (up to 5.1, universally
+# TV-decodable) while copying tracks that are already AAC/AC3/E-AC3. Codec is
+# decided per *output* audio position, so the ordering must match the -map order
+# the caller emitted (all audio in stream order for "*", else the selected list).
+#
+# Args: $1 primary input (video+audio source)   $2 audio selection ("*" or list)
+# Sets: AUDIO_CODEC_ARGS
+_smarttv_audio_codec_args() {
+  local primary="$1" sel="$2"
+  AUDIO_CODEC_ARGS=()
+
+  local _ffprobe="${FFPROBE_BIN}"
+  [[ ! -x "${_ffprobe}" ]] && _ffprobe="ffprobe"
+
+  # codec_name,channels per audio stream, in stream order (rel index 0,1,…).
+  local _lines
+  _lines="$("${_ffprobe}" -v quiet -select_streams a \
+    -show_entries stream=codec_name,channels -of csv=p=0 "${primary}" 2>/dev/null || true)"
+
+  local -a _codec=() _chan=()
+  local _c _ch
+  while IFS=',' read -r _c _ch; do
+    [[ -z "${_c}" ]] && continue
+    _codec+=("${_c}"); _chan+=("${_ch}")
+  done <<< "${_lines}"
+
+  # Output order of source-relative indices.
+  local -a _order=()
+  if [[ "${sel}" == "*" ]]; then
+    local _i
+    for (( _i=0; _i<${#_codec[@]}; _i++ )); do _order+=("${_i}"); done
+  else
+    local _x
+    for _x in ${sel}; do _order+=("${_x}"); done
+  fi
+
+  local _pos=0 _ri _cc _nch
+  for _ri in "${_order[@]}"; do
+    _cc="$(lc "${_codec[$_ri]:-}")"
+    _nch="${_chan[$_ri]:-2}"
+    [[ "${_nch}" =~ ^[0-9]+$ ]] || _nch=2
+    case "${_cc}" in
+      aac|ac3|eac3)
+        AUDIO_CODEC_ARGS+=(-c:a:${_pos} copy)
+        ;;
+      *)
+        AUDIO_CODEC_ARGS+=(-c:a:${_pos} ac3)
+        if [[ "${_nch}" -gt 6 ]]; then
+          # AC3 tops out at 5.1 - downmix 7.1+ sources.
+          AUDIO_CODEC_ARGS+=(-ac:a:${_pos} 6 -b:a:${_pos} 448k)
+        elif [[ "${_nch}" -gt 2 ]]; then
+          AUDIO_CODEC_ARGS+=(-b:a:${_pos} 448k)
+        else
+          AUDIO_CODEC_ARGS+=(-b:a:${_pos} 192k)
+        fi
+        ;;
+    esac
+    _pos=$(( _pos + 1 ))
+  done
+
+  # Nothing resolved (probe failed) → blanket AC3 transcode as a safe fallback.
+  [[ "${#AUDIO_CODEC_ARGS[@]}" -eq 0 ]] && AUDIO_CODEC_ARGS=(-c:a ac3)
 }
 
 build_stream_maps() {
@@ -168,14 +236,22 @@ build_stream_maps() {
   local sel_a="${CUR_STREAM_SEL_AUDIO:-*}"
   local sel_s="${CUR_STREAM_SEL_SUBS:-*}"
 
-  # Processed video, then audio per selection.
+  # Processed video, then audio per selection. The Smart TV profile transcodes
+  # TV-incompatible audio to AC3 (per-stream); every other path copies audio.
   STREAM_MAP_ARGS=(-map 0:v:0)
-  if [[ "${sel_a}" == "*" ]]; then
-    STREAM_MAP_ARGS+=(-map 0:a? -c:a copy)
-  elif [[ "${sel_a}" != "-" ]]; then
-    local _ai
-    for _ai in ${sel_a}; do STREAM_MAP_ARGS+=(-map "0:a:${_ai}"); done
-    STREAM_MAP_ARGS+=(-c:a copy)
+  if [[ "${sel_a}" != "-" ]]; then
+    if [[ "${sel_a}" == "*" ]]; then
+      STREAM_MAP_ARGS+=(-map 0:a?)
+    else
+      local _ai
+      for _ai in ${sel_a}; do STREAM_MAP_ARGS+=(-map "0:a:${_ai}"); done
+    fi
+    if [[ "${DO_SMARTTV:-0}" -eq 1 ]]; then
+      _smarttv_audio_codec_args "${primary}" "${sel_a}"
+      STREAM_MAP_ARGS+=("${AUDIO_CODEC_ARGS[@]}")
+    else
+      STREAM_MAP_ARGS+=(-c:a copy)
+    fi
   fi
   # sel_a == "-" → no audio mapped.
 

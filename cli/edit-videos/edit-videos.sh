@@ -57,8 +57,14 @@ DO_DOWNSIZE=0
 DO_COLOR=0
 DO_COMPRESS=0
 DO_TIKTOK=0
+DO_SMARTTV=0
 
 COMPRESS_PERCENT=50
+
+# Smart TV (Tizen) profile tier + target dimensions (set by the tier prompt).
+SMARTTV_TIER=720
+SMARTTV_TARGET_W=1280
+SMARTTV_TARGET_H=720
 
 DENOISE_LUMA_S=4; DENOISE_CHROMA_S=4; DENOISE_LUMA_T=3; DENOISE_CHROMA_T=3
 COLOR_CONTRAST=1.1; COLOR_BRIGHTNESS=0.0; COLOR_SATURATION=1.1; COLOR_GAMMA=1.0
@@ -276,17 +282,18 @@ main() {
     "${ACTION_DEEP3D}"
     "${ACTION_MPG_TO_MP4}"
     "${ACTION_TIKTOK}"
+    "${ACTION_SMARTTV}"
   )
-  _CB_SEL=(0 0 0 0 0 0 0 0 0 0 0 0 0 0)
+  _CB_SEL=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
   local _dis_vulkan=0 _dis_cuda=0
   [[ "${HAS_VULKAN_GPU}" -eq 0 ]] && _dis_vulkan=1
   [[ "${HAS_CUDA_GPU}" -eq 0 ]]   && _dis_cuda=1
-  _CB_DISABLED=(0 0 0 0 0 0 0 0 0 "${_dis_vulkan}" "${_dis_vulkan}" "${_dis_cuda}" 0 0)
+  _CB_DISABLED=(0 0 0 0 0 0 0 0 0 "${_dis_vulkan}" "${_dis_vulkan}" "${_dis_cuda}" 0 0 0)
   interactive_checkbox
 
   local do_black_bars=0 do_fps=0 do_stab=0
   DO_DENOISE=0; DO_SHARPEN=0; DO_UPSCALE=0; DO_DOWNSIZE=0; DO_COLOR=0; DO_COMPRESS=0
-  DO_RIFE=0; DO_VIDEO2X=0; DO_DEEP3D=0; DO_MPG_TO_MP4=0; DO_TIKTOK=0
+  DO_RIFE=0; DO_VIDEO2X=0; DO_DEEP3D=0; DO_MPG_TO_MP4=0; DO_TIKTOK=0; DO_SMARTTV=0
 
   for idx in "${SELECTED_INDICES[@]}"; do
     case "${idx}" in
@@ -304,6 +311,7 @@ main() {
       11) DO_DEEP3D=1 ;;
       12) DO_MPG_TO_MP4=1 ;;
       13) DO_TIKTOK=1 ;;
+      14) DO_SMARTTV=1 ;;
     esac
   done
 
@@ -312,21 +320,49 @@ main() {
         "${DO_UPSCALE}" -eq 0 && "${DO_DOWNSIZE}" -eq 0 && "${DO_COLOR}" -eq 0 && \
         "${DO_COMPRESS}" -eq 0 && \
         "${DO_RIFE}" -eq 0 && "${DO_VIDEO2X}" -eq 0 && "${DO_DEEP3D}" -eq 0 && \
-        "${DO_MPG_TO_MP4}" -eq 0 && "${DO_TIKTOK}" -eq 0 ]]; then
+        "${DO_MPG_TO_MP4}" -eq 0 && "${DO_TIKTOK}" -eq 0 && "${DO_SMARTTV}" -eq 0 ]]; then
     printf "\n  %s\n\n" "$(clr_yellow "${NO_ACTIONS_SELECTED}")"
     exit 0
   fi
   echo ""
 
-  # ── Codec selection ───────────────────────────────────────────────────────
-  printf "  %s\n" "$(clr_bold "${CODEC_SELECT_LABEL}:")"
-  printf "  %s\n\n" "$(clr_dim "↑↓ ${CB_PROMPT##*↑↓ }")"
-  _CB_LABELS=("${CODEC_H264_OPTION}" "${CODEC_H265_OPTION}")
-  _CB_SEL=(1 0)
-  _CB_DISABLED=(0 0)
-  interactive_radio
+  # ── Smart TV (Tizen) profile - a forced preset bundle ─────────────────────
+  # Picks a resolution tier, then turns on crop + downscale (reusing the
+  # existing filters) and forces H.265/MP4 later. The encode itself
+  # (tuned CRF, faststart, hvc1, AC3 audio) lives in process-video.sh.
+  if [[ "${DO_SMARTTV}" -eq 1 ]]; then
+    printf "  %s\n" "$(clr_dim "${SMARTTV_INFO}")"
+    printf "  %s (2): " "$(clr_bold "${SMARTTV_TIER_LABEL}")"
+    local _tv_tier; read -r _tv_tier; _tv_tier="${_tv_tier:-2}"
+    case "${_tv_tier}" in
+      1) SMARTTV_TIER=480;  SMARTTV_TARGET_W=854;  SMARTTV_TARGET_H=480  ;;
+      3) SMARTTV_TIER=1080; SMARTTV_TARGET_W=1920; SMARTTV_TARGET_H=1080 ;;
+      *) SMARTTV_TIER=720;  SMARTTV_TARGET_W=1280; SMARTTV_TARGET_H=720  ;;
+    esac
+    do_black_bars=1
+    DO_DOWNSIZE=1
+    DOWNSIZE_TARGET_W="${SMARTTV_TARGET_W}"
+    DOWNSIZE_TARGET_H="${SMARTTV_TARGET_H}"
+    echo ""
+  fi
 
-  if [[ "${SELECTED_INDICES[0]:-0}" -eq 1 ]]; then
+  # ── Codec selection ───────────────────────────────────────────────────────
+  # The Smart TV profile mandates H.265 (Samsung AVPlay decodes HEVC well and it
+  # halves the bitrate), so it skips the prompt and forces the H.265 path below.
+  local _want_h265=0
+  if [[ "${DO_SMARTTV}" -eq 1 ]]; then
+    _want_h265=1
+  else
+    printf "  %s\n" "$(clr_bold "${CODEC_SELECT_LABEL}:")"
+    printf "  %s\n\n" "$(clr_dim "↑↓ ${CB_PROMPT##*↑↓ }")"
+    _CB_LABELS=("${CODEC_H264_OPTION}" "${CODEC_H265_OPTION}")
+    _CB_SEL=(1 0)
+    _CB_DISABLED=(0 0)
+    interactive_radio
+    [[ "${SELECTED_INDICES[0]:-0}" -eq 1 ]] && _want_h265=1
+  fi
+
+  if [[ "${_want_h265}" -eq 1 ]]; then
     USE_H265=1
     if [[ "${GPU_ENCODER}" == "h264_nvenc" ]]; then
       if _has_encoder "${FFMPEG_BIN}" 'hevc_nvenc'; then
@@ -528,7 +564,7 @@ main() {
     fi
   fi
 
-  if [[ "${DO_DOWNSIZE}" -eq 1 ]]; then
+  if [[ "${DO_DOWNSIZE}" -eq 1 && "${DO_SMARTTV}" -eq 0 ]]; then
     printf "  %s (1080): " "$(clr_bold "${DOWNSIZE_TARGET_LABEL}")"
     local downsize_input; read -r downsize_input
     if [[ "${downsize_input}" =~ ^([0-9]+)[xX]([0-9]+)$ ]]; then
@@ -794,6 +830,7 @@ main() {
   [[ "${DO_VIDEO2X}" -eq 1 ]]    && action_list+=("video2x ${VIDEO2X_SCALE}× (${VIDEO2X_MODEL})")
   [[ "${DO_DEEP3D}" -eq 1 ]]     && action_list+=("deep3d (stability=${DEEP3D_STABILITY})")
   [[ "${DO_MPG_TO_MP4}" -eq 1 ]] && action_list+=("mpg→mp4")
+  [[ "${DO_SMARTTV}" -eq 1 ]]    && action_list+=("SmartTV ${SMARTTV_TIER}p (MP4/H.265/AC3)")
   [[ "${DO_TIKTOK}"    -eq 1 ]] && action_list+=("tiktok reel (model=${TIKTOK_OLLAMA_MODEL} score≥${TIKTOK_MIN_SCORE} ${TIKTOK_CLIP_MIN}-${TIKTOK_CLIP_MAX}s clips)")
   local IFS_SAVE="${IFS}"; IFS=', '; printf "%s\n" "$(clr_cyan "${action_list[*]}")"; IFS="${IFS_SAVE}"
 

@@ -26,6 +26,7 @@
 | `DEPLOY_APP_COMMANDS`       | `cli/deploy-app/deploy-app.sh`                                                                                                                                                                 |
 | `HELM_COMMANDS`             | `cli/helm/helm.sh`                                                                                                                                                                             |
 | `DEPLOY_SERVICES_COMMANDS`  | `cli/deploy-postgres/deploy-postgres.sh`, `cli/deploy-mongodb/deploy-mongodb.sh`, `cli/deploy-mysql/deploy-mysql.sh`, `cli/deploy-redis/deploy-redis.sh`, `cli/deploy-garage/deploy-garage.sh` |
+| `UPLOAD_S3_COMMAND`         | `cli/upload-s3/upload-s3.sh`                                                                                                                                                                   |
 | `DEV_SERVICES_COMMANDS`     | `cli/dev-services/dev-services.sh`                                                                                                                                                             |
 | `DJANGO_SUPERUSER_COMMANDS` | `cli/django-superuser/django-superuser.sh`                                                                                                                                                     |
 | `LOGS_COMMAND`              | `cli/logs/logs.sh`                                                                                                                                                                             |
@@ -47,7 +48,7 @@ Documents the `apps/scraper/` REST API. Update when endpoints, request/response 
 
 | Script                                 | Sections documented                                                                                                                                                                  |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `cli/edit-videos/edit-videos.sh`       | Invocation, workflow, filters (black bars, FPS, stabilization, denoise, sharpen, upscale, downsize, color correction, compress, MPG/MKV), AI filters (RIFE, video2x, Deep3D, TikTok) |
+| `cli/edit-videos/edit-videos.sh`       | Invocation, workflow, filters (black bars, FPS, stabilization, denoise, sharpen, upscale, downsize, color correction, compress, MPG/MKV, Smart TV profile), AI filters (RIFE, video2x, Deep3D, TikTok) |
 | `cli/docker-cleanup/docker-cleanup.sh` | Invocation, workflow, operations (dangling images, old images, all unused, stopped containers, build cache, system prune)                                                            |
 | `cli/play-videos/play-videos.sh`       | Invocation, examples, flag groups (media, playback, display, audio, advanced)                                                                                                        |
 | `cli/server-audit/server-audit.sh`     | Invocation, all 12 audit checks                                                                                                                                                      |

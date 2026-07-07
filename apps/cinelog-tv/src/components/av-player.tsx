@@ -11,6 +11,12 @@ import "./av-player.css";
  *
  * Shared by TrailerOverlay (direct-stream trailers) and StreamOverlay
  * (self-hosted digital copies) - both feed it a direct media URL.
+ *
+ * `onError` receives the raw AVPlay error string when the device reports one
+ * (e.g. `PLAYER_ERROR_NOT_SUPPORTED_AUDIO_CODEC` for a disc-rip MKV whose audio
+ * the TV can't decode, vs `..._NOT_SUPPORTED_FORMAT` for the container, vs
+ * `..._CONNECTION_FAILED` for a network/Content-Type problem). Callers can show
+ * it to distinguish "this file's codec is unplayable" from a transient failure.
  */
 export function AvPlayer({
   url,
@@ -18,7 +24,7 @@ export function AvPlayer({
   onEnded,
 }: {
   url: string;
-  onError: () => void;
+  onError: (detail?: string) => void;
   onEnded: () => void;
 }) {
   const ref = useRef<HTMLObjectElement>(null);
@@ -39,17 +45,17 @@ export function AvPlayer({
       player.setDisplayMethod("PLAYER_DISPLAY_MODE_LETTER_BOX");
       player.setListener({
         onstreamcompleted: () => onEnded(),
-        onerror: () => onError(),
+        onerror: (eventType) => onError(eventType),
       });
       // prepareAsync (not prepare) - the sync form blocks the UI thread.
       player.prepareAsync(
         () => {
           if (active) player.play();
         },
-        () => onError(),
+        (error) => onError(String(error)),
       );
-    } catch {
-      onError();
+    } catch (error) {
+      onError(error instanceof Error ? error.message : String(error));
     }
     return () => {
       active = false;

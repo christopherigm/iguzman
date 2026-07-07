@@ -24,6 +24,7 @@
     "deploy-mysql": "bash cli/deploy-mysql/deploy-mysql.sh",
     "deploy-redis": "bash cli/deploy-redis/deploy-redis.sh",
     "deploy-garage": "bash cli/deploy-garage/deploy-garage.sh",
+    "upload-s3": "bash cli/upload-s3/upload-s3.sh",
     "dev-services": "bash cli/dev-services/dev-services.sh",
     "generate-icons": "bash cli/generate-icons/generate-icons.sh"
   },

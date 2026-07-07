@@ -61,7 +61,7 @@ process_video() {
   dur_sec="${probe_out%% *}"
 
   # ── HDR detection + conversion filters ─────────────────────────────────
-  local do_any=$(( do_black_bars | do_fps | do_stab | DO_DENOISE | DO_SHARPEN | DO_UPSCALE | DO_DOWNSIZE | DO_COLOR | DO_COMPRESS | do_rife | DO_VIDEO2X | DO_DEEP3D | DO_MPG_TO_MP4 ))
+  local do_any=$(( do_black_bars | do_fps | do_stab | DO_DENOISE | DO_SHARPEN | DO_UPSCALE | DO_DOWNSIZE | DO_COLOR | DO_COMPRESS | do_rife | DO_VIDEO2X | DO_DEEP3D | DO_MPG_TO_MP4 | DO_SMARTTV ))
   local hdr_type="sdr_8bit"
   if [[ "${do_any}" -eq 1 ]]; then
     printf "    %s\n" "$(clr_dim "${HDR_DETECT}")"
@@ -341,6 +341,9 @@ process_video() {
   local needs_encode=0
   [[ "${#vf_chain[@]}" -gt 0 ]] && needs_encode=1
   [[ "${DO_COMPRESS}" -eq 1 ]]  && needs_encode=1
+  # Smart TV always re-encodes (codec/container/audio change) even when a source
+  # has no bars to crop and is already at the target resolution.
+  [[ "${DO_SMARTTV:-0}" -eq 1 ]] && needs_encode=1
   if [[ "${DO_MPG_TO_MP4}" -eq 1 ]]; then
     # Re-encode legacy MPEG containers (→ MP4) and MKV sources (codec change,
     # container kept). Other formats are left untouched (handled by the copy path).
@@ -362,6 +365,19 @@ process_video() {
     if [[ "${DO_COMPRESS}" -eq 1 ]]; then
       q_h264=$(( 18 + COMPRESS_PERCENT * 22 / 100 ))
       q_h265=$(( 22 + COMPRESS_PERCENT * 22 / 100 ))
+    fi
+
+    # Smart TV: tuned HEVC CRF per tier (quality-targeted, so file size varies -
+    # SD/HD land ~1-2 GB, FHD ~2-3.5 GB for a feature). A slower preset than the
+    # default "faster" buys real bitrate efficiency at these small sizes.
+    local _hevc_preset="faster"
+    if [[ "${DO_SMARTTV:-0}" -eq 1 ]]; then
+      case "${SMARTTV_TIER}" in
+        480)  q_h265=26 ;;
+        1080) q_h265=22 ;;
+        *)    q_h265=24 ;;
+      esac
+      _hevc_preset="medium"
     fi
 
     # Full CUDA pipeline: no CPU filters and only scale/resize requested
@@ -393,9 +409,19 @@ process_video() {
       vf_chain+=("format=nv12" "hwupload")
       encode_args=(-c:v hevc_vaapi -qp "${q_h265}")
     elif [[ "${USE_H265}" -eq 1 ]]; then
-      encode_args=(-c:v libx265 -preset faster -crf "${q_h265}")
+      encode_args=(-c:v libx265 -preset "${_hevc_preset}" -crf "${q_h265}")
     else
       encode_args=(-c:v libx264 -preset faster -crf "${q_h264}")
+    fi
+
+    # Smart TV output must be a broadly playable 8-bit HEVC-in-MP4: force yuv420p
+    # (Main profile) for the software/NVENC paths - VA-API already outputs nv12 -
+    # and stream the moov atom up front (faststart) tagged hvc1 so Samsung AVPlay
+    # recognises the HEVC track.
+    local mp4_mux=()
+    if [[ "${DO_SMARTTV:-0}" -eq 1 ]]; then
+      [[ "${gpu_encoder}" != *vaapi* ]] && encode_args+=(-pix_fmt yuv420p)
+      mp4_mux=(-movflags +faststart -tag:v hvc1)
     fi
 
     local final_vf=""
@@ -414,7 +440,7 @@ process_video() {
 
     local ffmpeg_args=("${pre_input_args[@]}" -i "${src}" "${STREAM_EXTRA_INPUTS[@]}")
     [[ -n "${final_vf}" ]] && ffmpeg_args+=(-vf "${final_vf}")
-    ffmpeg_args+=("${encode_args[@]}" "${STREAM_MAP_ARGS[@]}" "${output}")
+    ffmpeg_args+=("${encode_args[@]}" "${STREAM_MAP_ARGS[@]}" "${mp4_mux[@]}" "${output}")
 
     if ! run_ffmpeg_step "${STEP_ENCODE}" "${dur_sec}" "${ffmpeg_args[@]}"; then
       # vidstabtransform + NVENC: retry CPU on failure
@@ -424,11 +450,12 @@ process_video() {
         printf "    %s NVENC encode failed - retrying with CPU encoder...\n" "$(clr_yellow '⚠')"
         local cpu_encode_args=()
         [[ "${USE_H265}" -eq 1 ]] \
-          && cpu_encode_args=(-c:v libx265 -preset faster -crf "${q_h265}") \
+          && cpu_encode_args=(-c:v libx265 -preset "${_hevc_preset}" -crf "${q_h265}") \
           || cpu_encode_args=(-c:v libx264 -preset faster -crf "${q_h264}")
+        [[ "${DO_SMARTTV:-0}" -eq 1 ]] && cpu_encode_args+=(-pix_fmt yuv420p)
         local cpu_ffmpeg_args=(-i "${src}" "${STREAM_EXTRA_INPUTS[@]}")
         [[ -n "${final_vf}" ]] && cpu_ffmpeg_args+=(-vf "${final_vf}")
-        cpu_ffmpeg_args+=("${cpu_encode_args[@]}" "${STREAM_MAP_ARGS[@]}" "${output}")
+        cpu_ffmpeg_args+=("${cpu_encode_args[@]}" "${STREAM_MAP_ARGS[@]}" "${mp4_mux[@]}" "${output}")
         if ! run_ffmpeg_step "${STEP_ENCODE}" "${dur_sec}" "${cpu_ffmpeg_args[@]}"; then
           [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
           [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
@@ -547,6 +574,10 @@ _run_processing() {
             "${_out_ext}" == "m2v" || "${_out_ext}" == "vob" ]]; then
         out="${out_dir}/${base%.*}.mp4"
       fi
+    fi
+    # Smart TV always targets an MP4 container regardless of the source extension.
+    if [[ "${DO_SMARTTV:-0}" -eq 1 ]]; then
+      out="${out_dir}/${base%.*}.mp4"
     fi
 
     printf "\n  [%d/%d] %s\n" "${count_idx}" "${#video_files[@]}" "$(clr_bold "${base}")"

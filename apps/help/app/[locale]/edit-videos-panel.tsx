@@ -74,6 +74,19 @@ const EV_COMPRESS_PARAMS =
   "# achieved reduction % are logged after each file.\n" +
   "Level: 50";
 
+const EV_SMARTTV_PARAMS =
+  "# Resolution tier\n" +
+  "#   1) SD   854×480\n" +
+  "#   2) HD   1280×720   (default)\n" +
+  "#   3) FHD  1920×1080\n" +
+  "Quality: 2\n" +
+  "\n" +
+  "# Bundles per tier: crop black bars → downscale → H.265 in MP4 at a tuned\n" +
+  "# CRF (SD 26 · HD 24 · FHD 22, medium preset) with +faststart and the hvc1\n" +
+  "# tag so Samsung AVPlay recognises the HEVC track.\n" +
+  "# Audio: DTS/TrueHD/PCM → AC3 (7.1 downmixed to 5.1); AAC/AC3/E-AC3 copied.\n" +
+  "# Subtitles: text tracks kept as mov_text; bitmap subs (PGS/DVD/DVB) dropped.";
+
 const EV_STREAMS_PARAMS =
   "# Prompted only when at least one file has >1 audio track or any\n" +
   "# subtitle/caption track. Choose once for the whole batch:\n" +
@@ -285,6 +298,11 @@ export async function ToolsPanel() {
       <EvSection
         heading={t("toolsEvMpgHeading")}
         description={t("toolsEvMpgDesc")}
+      />
+      <EvSection
+        heading={t("toolsEvSmartTvHeading")}
+        description={t("toolsEvSmartTvDesc")}
+        code={EV_SMARTTV_PARAMS}
       />
       <EvSection
         heading={t("toolsEvStreamsHeading")}

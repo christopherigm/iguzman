@@ -11,7 +11,6 @@ import { Button } from "@repo/ui/core-elements/button";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { Spinner } from "@repo/ui/core-elements/spinner";
 import { Grid } from "@repo/ui/core-elements/grid";
-import { BREAKPOINTS } from "@repo/ui/core-elements/utils";
 import { LinkButton } from "@repo/ui/core-elements/link-button";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { Toast } from "@repo/ui/core-elements/toast";
@@ -31,6 +30,8 @@ import {
   type MovieUpdatePayload,
 } from "@/lib/catalog";
 import { useIsLoggedIn } from "@/lib/use-is-logged-in";
+import { isSelfHostedCopy } from "@/lib/digital-copy";
+import type { DeviceType } from "@/lib/device";
 import { FormatHeader } from "@/components/format-header";
 import { MovieCard } from "@/components/movie-catalog/movie-card";
 import { AddToLibraryButton } from "@/components/movie-catalog/add-to-library-button";
@@ -71,35 +72,24 @@ function toYouTubeEmbed(url: string): string {
   }
 }
 
-/**
- * True once the viewport is at the `lg` breakpoint (desktop) or wider. Defaults
- * to false on the server / first paint so mobile behaviour is the safe fallback.
- */
-function useIsDesktop(): boolean {
-  const [isDesktop, setIsDesktop] = useState(false);
-  useEffect(() => {
-    const mql = window.matchMedia(`(min-width: ${BREAKPOINTS.lg}px)`);
-    const update = () => setIsDesktop(mql.matches);
-    update();
-    mql.addEventListener("change", update);
-    return () => mql.removeEventListener("change", update);
-  }, []);
-  return isDesktop;
-}
-
 export function MovieDetail({
   slug,
   initialMovie = null,
+  deviceType = "desktop",
 }: {
   /** The movie's slug from the route - used for the read fetch and share URL. */
   slug: string;
   /** Server-prefetched movie; seeds the first paint and skips the client fetch. */
   initialMovie?: MovieDetailData | null;
+  /** Client class from the request UA (server-detected). Drives inline-media
+   *  routing: mobile hands off to the native player, desktop uses the modal.
+   *  Defaults to "desktop" - the modal player works on every client. */
+  deviceType?: DeviceType;
 }) {
   const t = useTranslations("MovieDetailPage");
   const tFormat = useTranslations("MovieFormat");
   const router = useRouter();
-  const isDesktop = useIsDesktop();
+  const isDesktop = deviceType === "desktop";
   const isLoggedIn = useIsLoggedIn();
   const [movie, setMovie] = useState<MovieDetailData | null>(initialMovie);
   const [status, setStatus] = useState<Status>(
@@ -119,6 +109,7 @@ export function MovieDetail({
   // the user gets confirmation the URL made it to their clipboard.
   const [linkCopied, setLinkCopied] = useState(false);
   const [showTrailer, setShowTrailer] = useState(false);
+  const [showStream, setShowStream] = useState(false);
   // Live preview of a re-fetched poster/wallpaper while editing; null falls back
   // to the saved image. Cleared on save (the reloaded movie carries the new art)
   // and on cancel (discard the preview).
@@ -209,9 +200,9 @@ export function MovieDetail({
     }
   }
 
-  // On desktop (lg+) play the trailer in the in-page modal. On smaller screens
-  // most users are on a phone/tablet, so open the YouTube URL directly to hand
-  // off to the native app instead of cramming a player into the viewport.
+  // On desktop play the trailer in the in-page modal. On mobile (phone/tablet)
+  // open the YouTube URL directly to hand off to the native app instead of
+  // cramming a player into the viewport.
   function handleTrailerClick() {
     if (!movie?.trailer_url) return;
     if (isDesktop) {
@@ -219,6 +210,35 @@ export function MovieDetail({
     } else {
       window.open(movie.trailer_url, "_blank", "noopener,noreferrer");
     }
+  }
+
+  // Route the digital copy. A provider title (Netflix/Prime/YouTube/…) opens in
+  // a new tab / hands off to its native app. A self-hosted copy (direct media on
+  // a personal bucket) plays inline: desktop always uses the in-page modal
+  // player (opening the raw URL there would download the file), while mobile
+  // (Android/iOS) first tries to hand off to the OS-native video player by
+  // opening the direct URL, falling back to the modal if the browser blocks the
+  // new tab. The desktop/mobile split comes from the server-detected UA, not the
+  // viewport, so a narrow desktop window still gets the modal.
+  function handleDigitalCopyClick() {
+    const url = movie?.digital_copy_url;
+    if (!url) return;
+    if (!isSelfHostedCopy(url)) {
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    if (isDesktop) {
+      setShowStream(true);
+      return;
+    }
+    // Hand off to the OS-native video player. We deliberately omit
+    // "noopener,noreferrer" here: those features make window.open() return null
+    // *by spec* (noreferrer implies noopener), which would make the popup-blocked
+    // check below always fire and wrongly fall back to the modal. Opening a
+    // direct media file on our own bucket carries no meaningful opener/referrer
+    // risk, so the plain form lets us actually detect a blocked popup.
+    const opened = window.open(url, "_blank");
+    if (!opened) setShowStream(true);
   }
 
   async function handleConfirmDelete() {
@@ -384,6 +404,28 @@ export function MovieDetail({
         </ConfirmationModal>
       )}
 
+      {showStream && movie.digital_copy_url && (
+        <ConfirmationModal
+          title={t("digitalCopy")}
+          text={movie.title}
+          okCallback={() => setShowStream(false)}
+          panelMaxWidth="960px"
+        >
+          <Box width="100%" borderRadius={8} styles={{ overflow: "hidden" }}>
+            {/* Self-hosted direct media stream - plays inline with native
+                controls, the same player the video-downloader app uses. */}
+            <video
+              className="movie-detail__stream-video"
+              src={movie.digital_copy_url}
+              controls
+              autoPlay
+              playsInline
+              preload="metadata"
+            />
+          </Box>
+        </ConfirmationModal>
+      )}
+
       {deleteError && (
         <Toast
           message={t("deleteError")}
@@ -498,8 +540,7 @@ export function MovieDetail({
             {isLoggedIn && movie.digital_copy_url && (
               <IconButton
                 icon="/icons/play-stream.svg"
-                href={movie.digital_copy_url}
-                target="_blank"
+                onClick={handleDigitalCopyClick}
                 aria-label={t("digitalCopy")}
                 title={t("digitalCopy")}
                 kind="primary"

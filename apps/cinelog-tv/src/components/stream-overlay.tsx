@@ -22,8 +22,11 @@ export function StreamOverlay({
   onClose: () => void;
 }) {
   const { t } = useT();
-  const [error, setError] = useState(false);
-  const handleError = useCallback(() => setError(true), []);
+  const [error, setError] = useState<{ detail?: string } | null>(null);
+  const handleError = useCallback(
+    (detail?: string) => setError({ detail }),
+    [],
+  );
   const handleEnded = useCallback(() => onClose(), [onClose]);
 
   return (
@@ -31,6 +34,11 @@ export function StreamOverlay({
       {error ? (
         <div className="stream-overlay__message">
           <TvText variant="title">{t("digitalCopyUnavailable")}</TvText>
+          {/* Raw AVPlay error string - identifies which fix the file needs
+              (unsupported codec vs container vs network/Content-Type). */}
+          {error.detail ? (
+            <TvText variant="body">{error.detail}</TvText>
+          ) : null}
         </div>
       ) : (
         <AvPlayer url={url} onError={handleError} onEnded={handleEnded} />
