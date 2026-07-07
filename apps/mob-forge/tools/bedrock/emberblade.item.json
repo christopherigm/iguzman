@@ -1,0 +1,14 @@
+{
+  "id": "emberblade",
+  "name": "Emberblade",
+  "category": "equipment",
+
+  "weapon": {
+    "damage": 9,
+    "durability": 1200,
+    "enchant_slot": "sword",
+    "enchant_value": 15
+  },
+
+  "_comment": "Mirrors ModItems.EMBERBLADE — custom-tier sword: final attack damage 9 (netherite-class), durability 1200 from the tier uses."
+}

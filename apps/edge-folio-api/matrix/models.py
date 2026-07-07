@@ -32,7 +32,7 @@ class Skill(Common):
 
 class BulletPoint(Common):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bullet_points')
-    text = models.CharField(max_length=500)
+    text = models.CharField(max_length=900)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='impact')
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='manual')
     is_approved = models.BooleanField(default=True)

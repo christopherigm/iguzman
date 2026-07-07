@@ -227,7 +227,7 @@ function BulletForm({
           value={text}
           onChange={setText}
           required
-          maxLength={500}
+          maxLength={900}
           width="100%"
           aria-label={t("textLabel")}
         />

@@ -1,0 +1,8 @@
+{
+  "id": "ruby",
+  "name": "Ruby",
+  "category": "items",
+  "max_stack_size": 64,
+
+  "_comment": "Mirrors ModItems.RUBY — a plain gem/material with no behaviour."
+}

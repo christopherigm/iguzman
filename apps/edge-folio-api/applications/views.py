@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from career.models import Education, WorkExperience
-from matrix.models import BulletPoint
+from matrix.models import BulletPoint, Skill
 
 from edge_folio_api.utils import parse_accept_language
 
@@ -197,13 +197,31 @@ class TailoredContentView(APIView):
                 setattr(application, field, value)
                 update_fields.append(field)
 
-        if len(update_fields) == 1:
+        # The user's confirmed skill selection (a subset of the AI-picked skills).
+        # tailored_skills is a M2M, so it is set separately from update_fields.
+        skill_ids = None
+        if 'tailored_skill_ids' in request.data:
+            skill_ids = request.data.get('tailored_skill_ids')
+            if not isinstance(skill_ids, list) or not all(
+                isinstance(i, int) for i in skill_ids
+            ):
+                return Response(
+                    {'detail': 'tailored_skill_ids must be a list of integers.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        if len(update_fields) == 1 and skill_ids is None:
             return Response(
                 {'detail': 'No editable fields provided.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         application.save(update_fields=update_fields)
+        if skill_ids is not None:
+            # Scope to the user's own skills so an arbitrary id can't be attached.
+            application.tailored_skills.set(
+                Skill.objects.filter(user=request.user, id__in=skill_ids)
+            )
         _invalidate_application(request.user.id, pk)
 
         serializer = JobApplicationSerializer(application, context={'request': request})

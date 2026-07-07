@@ -1,0 +1,22 @@
+{
+  "id": "flyingseal",
+  "name": "Flying Seal",
+  "spawn_egg_name": "Flying Seal Spawn Egg",
+
+  "health": 12,
+  "movement_speed": 0.2,
+  "collision": { "width": 0.9, "height": 0.6 },
+
+  "locomotion": "fly",
+  "no_fall_damage": true,
+
+  "spawn_egg": { "base_color": "#ededed", "overlay_color": "#9a9a9a" },
+
+  "tempt_items": ["cod", "salmon", "tropical_fish", "pufferfish"],
+  "behaviors": ["float", "tempt", "random_fly", "random_hover", "look_at_player"],
+
+  "animations": { "fly": "animation.flyingseal.fly" },
+  "animate": ["fly"],
+
+  "_comment": "Bedrock behavior/appearance spec for the flyingseal mob. Mirrors FlyingSealEntity.java (12 HP, flying parrot-style movement, tempted by fish) and geo/animation are reused verbatim from src/main/resources. This is the source of truth for the Bedrock layer only; the Java mod stays authoritative for Java Edition."
+}

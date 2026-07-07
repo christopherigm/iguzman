@@ -245,7 +245,7 @@ def _synthesize_skeleton_with_llm(skeleton: dict) -> dict:
         '(no source code, no proprietary data), generate professional resume bullet points '
         'a software engineer could use on their CV.\n\n'
         'Rules:\n'
-        '- Each bullet: one factual, achievement-oriented sentence under 500 chars. Use STAR format where possible.\n'
+        '- Each bullet: one factual, achievement-oriented sentence under 900 chars. Use STAR format where possible.\n'
         '- Infer plausible achievements from the tech stack without inventing metrics or team sizes.\n'
         '- category: impact=business/product outcome, technical=engineering depth, '
         'leadership=ownership/architecture, collaboration=cross-team, other=else\n'
@@ -302,7 +302,7 @@ class SkeletonSynthesisView(APIView):
             if not isinstance(item, dict):
                 continue
             text = str(item.get('text', '')).strip()
-            if not text or len(text) > 500:
+            if not text or len(text) > 900:
                 continue
             category = item.get('category', 'technical')
             if category not in valid_categories:

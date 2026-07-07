@@ -1,0 +1,52 @@
+{
+  "id": "xenomorph",
+  "name": "Xenomorph",
+  "spawn_egg_name": "Xenomorph Spawn Egg",
+
+  "health": 30,
+  "movement_speed": 0.3,
+  "collision": { "width": 0.7, "height": 2.3 },
+  "locomotion": "walk",
+
+  "family": ["xenomorph", "monster", "mob"],
+  "attack_damage": 6,
+  "follow_range": 24,
+  "knockback_resistance": 0.3,
+  "target_families": ["player", "villager"],
+
+  "spawn_egg": { "base_color": "#141414", "overlay_color": "#3e3e4a" },
+
+  "behaviors": [
+    "float",
+    "hurt_by_target",
+    "nearest_attackable_target",
+    "melee_attack",
+    "random_stroll",
+    "look_at_player",
+    "random_look_around"
+  ],
+
+  "animations": {
+    "idle": "animation.xenomorph.idle",
+    "walk": "animation.xenomorph.walk",
+    "slash": "animation.xenomorph.slash",
+    "finisher": "animation.xenomorph.finisher",
+    "move": "controller.animation.xenomorph.move"
+  },
+  "animate": ["move"],
+  "animation_controllers": {
+    "controller.animation.xenomorph.move": {
+      "initial_state": "default",
+      "states": {
+        "default": {
+          "animations": [
+            { "idle": "1.0 - math.clamp(query.modified_move_speed, 0.0, 1.0)" },
+            { "walk": "math.clamp(query.modified_move_speed, 0.0, 1.0)" }
+          ]
+        }
+      }
+    }
+  },
+
+  "_comment": "Mirrors XenomorphEntity.java (30 HP melee monster, 6 dmg, targets players+villagers). idle<->walk blend via a Bedrock animation controller. The Java triggered attack anims (slash/finisher, fired on hit/kill) are shipped as clips but not yet auto-triggered on Bedrock — the melee attack itself works; the special attack animation bridge is a follow-up."
+}

@@ -5,7 +5,8 @@
   "description": "AI-authored GeckoLib mobs for Minecraft 1.20.2 (NeoForge). A Gradle/Java project wrapped as a Turborepo workspace member.",
   "scripts": {
     "setup": "bash ../../cli/setup-minecraft/setup-minecraft.sh",
-    "build": "node tools/gradlew.mjs build",
+    "build": "node tools/gradlew.mjs build && node tools/bedrock_export.mjs",
+    "build:bedrock": "node tools/bedrock_export.mjs",
     "dev": "node tools/gradlew.mjs runClient",
     "clean": "node tools/gradlew.mjs clean",
     "lint": "echo 'lint: n/a (Java/Gradle project - see ./gradlew check)'",

@@ -108,6 +108,10 @@ export function useTailoringWorkflow({
   const [includedTailoredSkillIds, setIncludedTailoredSkillIds] = useState<
     Set<number>
   >(new Set((app.tailored_skills ?? []).map((s) => s.id)));
+  // Last persisted skill selection — baseline for the skills card's dirty check.
+  const [savedTailoredSkillIds, setSavedTailoredSkillIds] = useState<
+    Set<number>
+  >(new Set((app.tailored_skills ?? []).map((s) => s.id)));
 
   // ── Export ──
   const [exportingPDF, setExportingPDF] = useState(false);
@@ -132,6 +136,9 @@ export function useTailoringWorkflow({
       new Set((data.tailored_projects ?? []).map((p) => p.id)),
     );
     setIncludedTailoredSkillIds(
+      new Set((data.tailored_skills ?? []).map((s) => s.id)),
+    );
+    setSavedTailoredSkillIds(
       new Set((data.tailored_skills ?? []).map((s) => s.id)),
     );
   }
@@ -297,6 +304,9 @@ export function useTailoringWorkflow({
   const projectDirty = (tp: TailoredProject) =>
     (projectEdits[tp.id] ?? tp.tailored_description) !==
     tp.tailored_description;
+  const skillsDirty =
+    includedTailoredSkillIds.size !== savedTailoredSkillIds.size ||
+    [...includedTailoredSkillIds].some((id) => !savedTailoredSkillIds.has(id));
 
   // ── Persist edits per card. Each save writes its whole section (all bullet
   //    categories, or all WE / project descriptions) since they share one field. ──
@@ -341,6 +351,25 @@ export function useTailoringWorkflow({
       const saved = updated.professional_summary || "";
       setProfessionalSummary(saved);
       setSavedSummary(saved);
+      showToast(t("savedToast"), "success");
+    } catch {
+      showToast(t("errorSave"), "error");
+    } finally {
+      setSavingCard(null);
+    }
+  }
+
+  async function handleSaveSkills() {
+    setSavingCard("skills");
+    try {
+      const updated = await updateTailoredContent(app.id, {
+        tailored_skill_ids: [...includedTailoredSkillIds],
+      });
+      const savedIds = new Set(
+        (updated.tailored_skills ?? []).map((s) => s.id),
+      );
+      setIncludedTailoredSkillIds(savedIds);
+      setSavedTailoredSkillIds(savedIds);
       showToast(t("savedToast"), "success");
     } catch {
       showToast(t("errorSave"), "error");
@@ -563,10 +592,12 @@ export function useTailoringWorkflow({
     savingCard,
     weDirty,
     projectDirty,
+    skillsDirty,
     handleSaveBullets,
     handleSaveWorkExperiences,
     handleSaveSummary,
     handleSaveProjects,
+    handleSaveSkills,
     // enhance prompts
     buildBulletEnhance,
     buildSummaryEnhance,

@@ -1,0 +1,23 @@
+{
+  "name": "Mob Forge",
+  "description": "AI-authored mobs and items from mob-forge, as a Bedrock Add-On.",
+  "version": [
+    0,
+    1,
+    1
+  ],
+  "min_engine_version": [
+    1,
+    21,
+    0
+  ],
+  "resource_pack": {
+    "header_uuid": "c14be379-43eb-4f1f-ac89-1ffd14946d20",
+    "module_uuid": "4f73cb86-7005-4b05-8d06-587afd813cea"
+  },
+  "behavior_pack": {
+    "header_uuid": "0cbe69ac-d86f-4b3d-8c28-ecd32815a73c",
+    "module_uuid": "5f310900-d379-44e5-ace1-724aeaa068bc"
+  },
+  "_comment": "These UUIDs are STABLE and committed on purpose. Re-importing the .mcaddon updates the existing packs instead of creating duplicates. Never regenerate them per build; bump the version arrays instead."
+}

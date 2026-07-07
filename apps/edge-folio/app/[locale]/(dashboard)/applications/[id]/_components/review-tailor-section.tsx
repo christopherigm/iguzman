@@ -112,6 +112,7 @@ export function ReviewTailorSection({
     savingCard,
     weDirty,
     projectDirty,
+    skillsDirty,
     buildBulletEnhance,
     buildSummaryEnhance,
     buildDescriptionEnhance,
@@ -119,6 +120,7 @@ export function ReviewTailorSection({
     handleSaveWorkExperiences,
     handleSaveSummary,
     handleSaveProjects,
+    handleSaveSkills,
     exportingPDF,
     exportError,
     openLiveResume,
@@ -410,28 +412,44 @@ export function ReviewTailorSection({
               includeLabel={t("exportIncludeItem")}
               labels={editCardLabels}
             >
-              <Box display="flex" flexWrap="wrap" gap={8}>
-                {exportData.skills.map((skill) => {
-                  const isIncluded = includedTailoredSkillIds.has(skill.id);
-                  return (
-                    <Button
-                      key={skill.id}
-                      text={skill.name}
-                      type="button"
-                      size="sm"
-                      kind={isIncluded ? "primary" : undefined}
-                      styles={{ opacity: isIncluded ? 1 : 0.55 }}
-                      aria-pressed={isIncluded}
-                      onClick={() =>
-                        toggleId(
-                          setIncludedTailoredSkillIds,
-                          skill.id,
-                          !isIncluded,
-                        )
-                      }
-                    />
-                  );
-                })}
+              <Box display="flex" flexDirection="column" gap={12}>
+                <Box display="flex" flexWrap="wrap" gap={8}>
+                  {exportData.skills.map((skill) => {
+                    const isIncluded = includedTailoredSkillIds.has(skill.id);
+                    return (
+                      <Button
+                        key={skill.id}
+                        text={skill.name}
+                        type="button"
+                        size="sm"
+                        kind={isIncluded ? "primary" : undefined}
+                        styles={{ opacity: isIncluded ? 1 : 0.55 }}
+                        aria-pressed={isIncluded}
+                        onClick={() =>
+                          toggleId(
+                            setIncludedTailoredSkillIds,
+                            skill.id,
+                            !isIncluded,
+                          )
+                        }
+                      />
+                    );
+                  })}
+                </Box>
+                <Box display="flex" justifyContent="flex-end">
+                  <Button
+                    text={
+                      savingCard === "skills"
+                        ? editCardLabels.saving
+                        : editCardLabels.save
+                    }
+                    type="button"
+                    size="md"
+                    kind="primary"
+                    disabled={savingCard === "skills" || !skillsDirty}
+                    onClick={handleSaveSkills}
+                  />
+                </Box>
               </Box>
             </TailoredEditableCard>
           )}

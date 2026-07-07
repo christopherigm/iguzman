@@ -252,6 +252,8 @@ export interface TailoredContentPayload {
   tailored_bullets?: TailoredBullet[];
   tailored_work_experiences?: TailoredWorkExperience[];
   tailored_projects?: TailoredProject[];
+  /** The user's confirmed skill selection (a subset of the AI-picked skills). */
+  tailored_skill_ids?: number[];
 }
 
 /**

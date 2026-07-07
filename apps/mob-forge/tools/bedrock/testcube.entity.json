@@ -1,0 +1,19 @@
+{
+  "id": "testcube",
+  "name": "Test Cube",
+  "spawn_egg_name": "Test Cube Spawn Egg",
+
+  "health": 10,
+  "movement_speed": 0.25,
+  "collision": { "width": 0.5, "height": 0.5 },
+  "locomotion": "walk",
+
+  "spawn_egg": { "base_color": "#4caf50", "overlay_color": "#2e7d32" },
+
+  "behaviors": ["float", "random_stroll", "look_at_player"],
+
+  "animations": { "spin": "animation.testcube.spin" },
+  "animate": ["spin"],
+
+  "_comment": "Mirrors TestCubeEntity.java (10 HP, wandering green cube, always-looping spin)."
+}

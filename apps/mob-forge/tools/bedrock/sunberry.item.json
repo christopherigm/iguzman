@@ -1,0 +1,10 @@
+{
+  "id": "sunberry",
+  "name": "Sunberry",
+  "category": "items",
+
+  "food": { "nutrition": 4, "saturation_modifier": 0.4 },
+  "use_duration": 1.6,
+
+  "_comment": "Mirrors ModItems.SUNBERRY — edible; nutrition 4 / saturationMod 0.4 from the Java FoodProperties."
+}

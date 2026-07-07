@@ -445,3 +445,50 @@ To touch up: open it in Blockbench, paint in the **Paint** tab, then export the
 texture over `textures/item/<id>.png` (same 16×16 dimensions) and save the
 `.bbmodel`, then rebuild. Re-running `item_sprite.py` re-embeds the PNG into the
 `.bbmodel`, so a pure sprite edit can also be done by hand-editing the grid spec.
+
+## Exporting to Android / Bedrock Edition (`.mcaddon`)
+
+`pnpm --filter=mob-forge build` builds the Java jar **and** emits
+`build/bedrock/mobforge.mcaddon` — a Bedrock Add-On so the same mobs/items run on
+**Android/Bedrock Minecraft** (`build:bedrock` runs just this half; it reads
+`src/main/resources` and needs no Gradle/MDK). The generator is
+`tools/bedrock_export.mjs` (pure Node, no deps, cross-platform like `gradlew.mjs`,
+including a hand-rolled store/deflate zip writer — no external `zip` binary).
+
+**Why this is cheap:** GeckoLib `.geo.json` (geometry `1.12.0`) and
+`.animation.json` (animation `1.8.0`) plus the entity/item PNGs are **already
+Bedrock-native**, so they copy verbatim. The exporter only generates the JSON
+glue: pack manifests, a client-entity + server-behavior per mob, an item def per
+item. **The `<id>_root` 180° facing flip is correct for Bedrock too** (Bedrock
+applies the same render flip as Java) — device-confirmed, copy the geo as-is.
+
+**Specs are the Bedrock source of truth** (mirroring the `tools/faces/` +
+`tools/items/` convention — the Java stays authoritative for Java Edition):
+
+- `tools/bedrock/packs.json` — **stable, committed** pack UUIDs (re-importing the
+  `.mcaddon` updates in place instead of duplicating; never regenerate them — bump
+  the `version` arrays). Also holds `min_engine_version`.
+- `tools/bedrock/<id>.entity.json` — per-mob: `health`, `movement_speed`,
+  `collision`, `locomotion` (`fly`|`walk`), `spawn_egg` colors, `behaviors`
+  (keywords mapped to `minecraft:behavior.*` in the exporter's
+  `BEHAVIOR_COMPONENTS` table, priority = array order), optional combat
+  (`attack_damage`/`follow_range`/`knockback_resistance`/`target_families`/
+  `family`), `animations` map + `animate` list, and optional `animation_controllers`
+  (e.g. the xenomorph idle↔walk blend on `query.modified_move_speed`).
+- `tools/bedrock/<id>.item.json` — per-item: `category`, `max_stack_size`,
+  optional `food` (nutrition/saturation) or `weapon` (damage/durability/enchant).
+
+**Authoring a new mob/item for Bedrock:** add its `tools/bedrock/<id>.{entity,item}.json`
+spec (reuse the same `id` verbatim — R6) and rebuild. Only ids that have a spec
+are exported. When adding a new `behaviors` keyword, extend `BEHAVIOR_COMPONENTS`.
+
+**Known gap:** the xenomorph's triggered attack clips (`slash`/`finisher`, fired
+from Java `doHurtTarget`) ship in the pack but are **not yet auto-triggered** on
+Bedrock (the melee attack itself works). Wiring them needs a Bedrock event/anim
+bridge — a follow-up.
+
+**Install on Android:** transfer the `.mcaddon`, open it with **Files by Google**
+(Samsung "My Files" refuses `.mcaddon`), or drop the unzipped `mobforge_rp`/
+`mobforge_bp` folders into `Internal storage/games/com.mojang/development_{resource,behavior}_packs/`.
+Then enable the behavior pack on a world (it pulls in the resource pack via its
+manifest dependency).
