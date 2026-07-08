@@ -414,14 +414,15 @@ process_video() {
       encode_args=(-c:v libx264 -preset faster -crf "${q_h264}")
     fi
 
-    # Smart TV output must be a broadly playable 8-bit HEVC-in-MP4: force yuv420p
-    # (Main profile) for the software/NVENC paths - VA-API already outputs nv12 -
-    # and stream the moov atom up front (faststart) tagged hvc1 so Samsung AVPlay
-    # recognises the HEVC track.
+    # Smart TV output must be a broadly playable 8-bit HEVC: force yuv420p (Main
+    # profile) for the software/NVENC paths - VA-API already outputs nv12. When
+    # the container is MP4, also stream the moov atom up front (faststart) tagged
+    # hvc1 so Samsung AVPlay recognises the HEVC track; those flags are MP4/MOV-
+    # only, so an MKV target skips them (Matroska carries HEVC natively).
     local mp4_mux=()
     if [[ "${DO_SMARTTV:-0}" -eq 1 ]]; then
       [[ "${gpu_encoder}" != *vaapi* ]] && encode_args+=(-pix_fmt yuv420p)
-      mp4_mux=(-movflags +faststart -tag:v hvc1)
+      [[ "$(lc "${output##*.}")" == "mp4" ]] && mp4_mux=(-movflags +faststart -tag:v hvc1)
     fi
 
     local final_vf=""
@@ -595,9 +596,14 @@ _run_processing() {
         out="${out_dir}/${base%.*}.mp4"
       fi
     fi
-    # Smart TV always targets an MP4 container regardless of the source extension.
+    # Smart TV targets the container the user picked (MP4 or MKV; both carry HEVC
+    # on Samsung Tizen), defaulting to MKV when unset. This overrides the source
+    # extension. OUTPUT_CONTAINER is already set to mp4/mkv by the Smart TV prompt
+    # so the block above usually handles this, but keep the guard defensive.
     if [[ "${DO_SMARTTV:-0}" -eq 1 ]]; then
-      out="${out_dir}/${base%.*}.mp4"
+      local _tv_ext="${OUTPUT_CONTAINER:-mkv}"
+      [[ "${_tv_ext}" == "source" ]] && _tv_ext="mkv"
+      out="${out_dir}/${base%.*}.${_tv_ext}"
     fi
 
     printf "\n  [%d/%d] %s\n" "${count_idx}" "${#video_files[@]}" "$(clr_bold "${base}")"

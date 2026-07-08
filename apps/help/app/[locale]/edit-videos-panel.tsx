@@ -81,11 +81,17 @@ const EV_SMARTTV_PARAMS =
   "#   3) FHD  1920×1080\n" +
   "Quality: 2\n" +
   "\n" +
-  "# Bundles per tier: crop black bars → downscale → H.265 in MP4 at a tuned\n" +
-  "# CRF (SD 26 · HD 24 · FHD 22, medium preset) with +faststart and the hvc1\n" +
-  "# tag so Samsung AVPlay recognises the HEVC track.\n" +
+  "# Container (default: MKV)\n" +
+  "#   1) MKV   (default)  — carries HEVC natively; keeps every subtitle as-is\n" +
+  "#   2) MP4               — adds +faststart and the hvc1 tag for Samsung AVPlay\n" +
+  "Container: 1\n" +
+  "\n" +
+  "# Bundles per tier: crop black bars → downscale → H.265 at a tuned CRF\n" +
+  "# (SD 26 · HD 24 · FHD 22, medium preset). Samsung Tizen TVs decode HEVC from\n" +
+  "# both MP4 and MKV.\n" +
   "# Audio: DTS/TrueHD/PCM → AC3 (7.1 downmixed to 5.1); AAC/AC3/E-AC3 copied.\n" +
-  "# Subtitles: text tracks kept as mov_text; bitmap subs (PGS/DVD/DVB) dropped.";
+  "# Subtitles: MP4 keeps text tracks as mov_text and drops bitmap subs\n" +
+  "# (PGS/DVD/DVB); MKV preserves every subtitle losslessly.";
 
 const EV_STREAMS_PARAMS =
   "# Prompted only when at least one file has >1 audio track or any\n" +
@@ -153,7 +159,25 @@ const DC_OLD_PARAMS =
 // ── play-videos constants ─────────────────────────────────────────────────────
 
 const PV_INVOKE =
-  "bash cli/play-videos/play-videos.sh [OPTIONS] <file|dir|playlist>";
+  "bash cli/play-videos/play-videos.sh [OPTIONS] <file|dir|playlist>\n" +
+  "bash cli/play-videos/play-videos.sh                # no arguments: interactive menu";
+
+const PV_MENU =
+  "# Run with no arguments to open an interactive (arrow-key) menu.\n" +
+  "# Picks an en/es language on start; stays open until you choose Exit.\n" +
+  "# Every entry maps to a flag below, and configures the current session:\n" +
+  "Play media (audio or video)     # the positional <file/dir/playlist>\n" +
+  "Audio device                    # --audio-device  (built from aplay -l)\n" +
+  "Video connector                 # --connector     (built from mpv's DRM probe)\n" +
+  "Display mode                    # --mode\n" +
+  "Loop                            # --loop / --loop=<N>\n" +
+  "Volume                          # --volume\n" +
+  "Enhance (GPU)                   # --enhance / --sdr-to-hdr\n" +
+  "Audio output                    # --ao\n" +
+  "Shuffle / Mute / Audio-only     # --shuffle / --mute / --audio-only\n" +
+  "List connectors / audio devices # --list-connectors / --list-audio-devices\n" +
+  "Fix audio / video issues        # runs fix-audio.sh + DRM/video-group checks\n" +
+  "Exit";
 
 const PV_EXAMPLES =
   "./play-videos.sh video.mp4\n" +
@@ -415,6 +439,11 @@ export async function ToolsPanel() {
         heading={t("toolsPvInvokeHeading")}
         description={t("toolsPvInvokeDescription")}
         code={PV_INVOKE}
+      />
+      <EvSection
+        heading={t("toolsPvMenuHeading")}
+        description={t("toolsPvMenuDesc")}
+        code={PV_MENU}
       />
       <EvSection
         heading={t("toolsPvExamplesHeading")}

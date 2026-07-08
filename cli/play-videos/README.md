@@ -81,7 +81,33 @@ Plays video and audio files via mpv's `--vo=drm` (Direct Rendering Manager / Ker
 
 ```
 ./play-videos.sh [OPTIONS] <file|directory|playlist>
+./play-videos.sh                              # no arguments: interactive menu
 ```
+
+#### Interactive menu
+
+Run `play-videos.sh` with **no arguments** to open a `setup-wifi`-style
+interactive menu (arrow keys to navigate, Enter to select, Ctrl+C to quit). It
+picks up an `en`/`es` language choice on start and stays open until you choose
+**Exit**, so you can adjust settings and play repeatedly without re-invoking the
+script. Every flag below has an equivalent menu entry:
+
+| Menu entry                       | Equivalent flag(s)                         |
+| -------------------------------- | ------------------------------------------ |
+| Play media (audio or video)      | the positional `<file/dir/playlist>`       |
+| Audio device                     | `--audio-device` (built from `aplay -l`)   |
+| Video connector                  | `--connector` (built from mpv's DRM probe) |
+| Display mode                     | `--mode`                                   |
+| Loop                             | `--loop` / `--loop=<N>`                     |
+| Volume                           | `--volume`                                 |
+| Enhance (GPU)                    | `--enhance` / `--sdr-to-hdr`               |
+| Audio output                     | `--ao`                                      |
+| Shuffle / Mute / Audio-only      | `--shuffle` / `--mute` / `--audio-only`    |
+| List connectors / audio devices  | `--list-connectors` / `--list-audio-devices` |
+| Fix audio / video issues         | runs `fix-audio.sh` + DRM/`video`-group checks |
+
+The last-played path is remembered and offered as the default the next time you
+choose **Play media**.
 
 #### Positional argument
 

@@ -3,6 +3,7 @@
 #
 # Usage:
 #   ./play-videos.sh [OPTIONS] <file|dir|playlist>
+#   ./play-videos.sh                 # no arguments: open the interactive menu
 #
 # Options:
 #   -h, --help                    Show this help message
@@ -58,8 +59,12 @@
 #   ./play-videos.sh --list-connectors
 #   ./play-videos.sh --list-audio-devices
 #   ./play-videos.sh video.mp4 -- --brightness=10 --contrast=5
+#   ./play-videos.sh                          # interactive menu (no flags)
 
-set -euo pipefail
+# Note: -e is intentionally omitted. The interactive menu is a long-lived loop
+# where individual handlers (device probes, mpv runs) may exit non-zero without
+# meaning the whole session should die; explicit die/require still exit hard.
+set -uo pipefail
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
 CONNECTOR="auto"       # DRM connector (auto = first available). Use --list-connectors to see options
@@ -80,6 +85,9 @@ SDR_TO_HDR="no"        # [experimental] inverse tone-map SDR -> HDR10 (implies E
 HDR_PEAK="auto"        # Target HDR peak nits for --sdr-to-hdr (auto = let libplacebo decide)
 ENHANCE_VO=""          # Resolved enhance video output: gpu-next (mpv >= 0.36) or gpu fallback
 EXTRA_ARGS=()          # Any extra mpv args passed through
+RUN_MODE="oneshot"     # oneshot (flags -> exec mpv) | menu (loop -> run mpv, return)
+LAST_TARGET=""         # Menu: last path played, offered as the default next time
+LANG_CHOICE="en"       # Menu language: en | es
 
 # ── Media type definitions ─────────────────────────────────────────────────────
 VIDEO_EXTS="mp4|mkv|avi|mov|webm|flv|m4v|ts|wmv"
@@ -230,7 +238,9 @@ check_group() {
 check_video_group() { check_group video "DRM device access may fail."; }
 check_audio_group() { check_group audio "ALSA device access may fail."; }
 
-list_connectors() {
+# Print connectors/modes (no exit) so both the --list-connectors flag and the
+# interactive menu can share the same output.
+show_connectors() {
   require mpv mpv
   check_video_group
   echo "Available DRM connectors:"
@@ -238,10 +248,9 @@ list_connectors() {
   echo ""
   echo "Available DRM modes (first connector):"
   mpv --vo=drm --drm-mode=help /dev/null 2>&1 | grep -E 'mode|^  ' || true
-  exit 0
 }
 
-list_audio_devices() {
+show_audio_devices() {
   require aplay alsa-utils
   check_audio_group
   echo "Available ALSA audio devices:"
@@ -253,8 +262,10 @@ list_audio_devices() {
   echo "Examples:"
   echo "  --audio-device 'alsa/hdmi:CARD=PCH,DEV=3'"
   echo "  --audio-device 'alsa/plughw:CARD=rt5650,DEV=0'"
-  exit 0
 }
+
+list_connectors()    { show_connectors;    exit 0; }
+list_audio_devices() { show_audio_devices; exit 0; }
 
 build_mpv_args() {
   local audio_only="${1:-no}"
@@ -367,7 +378,7 @@ play_target() {
     echo "Found ${#files[@]} ${type_label} file(s). Starting playback..."
 
     local mpv_args; mapfile -t mpv_args < <(build_mpv_args "${audio_only}")
-    exec mpv "${mpv_args[@]}" "${files[@]}"
+    run_mpv "${mpv_args[@]}" "${files[@]}"
 
   elif [[ -f "${target}" ]]; then
     local ext="${target##*.}"
@@ -376,22 +387,466 @@ play_target() {
       [[ "${audio_only}" == "auto" ]] && audio_only="no"
       [[ "${audio_only}" == "no" ]] && check_video_group
       local mpv_args; mapfile -t mpv_args < <(build_mpv_args "${audio_only}")
-      exec mpv "${mpv_args[@]}" --playlist="${target}"
+      run_mpv "${mpv_args[@]}" --playlist="${target}"
     else
       if [[ "${audio_only}" == "auto" ]]; then
         is_audio_file "${target}" && audio_only="yes" || audio_only="no"
       fi
       [[ "${audio_only}" == "no" ]] && check_video_group
       local mpv_args; mapfile -t mpv_args < <(build_mpv_args "${audio_only}")
-      exec mpv "${mpv_args[@]}" "${target}"
+      run_mpv "${mpv_args[@]}" "${target}"
     fi
   else
     die "Target not found: ${target}"
   fi
 }
 
+# Run mpv. In one-shot (flag) mode we exec so mpv replaces this process. In menu
+# mode we must return to the loop afterwards, so we run it as a child instead.
+run_mpv() {
+  if [[ "${RUN_MODE}" == "menu" ]]; then
+    mpv "$@"
+  else
+    exec mpv "$@"
+  fi
+}
+
+# ══ Interactive menu (shown when the script is run with no arguments) ══════════
+# The look-and-feel mirrors cli/setup-wifi/setup-wifi.sh: an arrow-key select
+# list, a boxed header, and a bilingual (en/es) string table.
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ── ANSI colors ───────────────────────────────────────────────────────────────
+RESET='\033[0m'; BOLD='\033[1m'; DIM='\033[2m'
+GREEN='\033[32m'; RED='\033[31m'; CYAN='\033[36m'; YELLOW='\033[33m'
+clr_bold()        { printf "${BOLD}%s${RESET}" "$*"; }
+clr_dim()         { printf "${DIM}%s${RESET}" "$*"; }
+clr_cyan()        { printf "${CYAN}%s${RESET}" "$*"; }
+clr_bold_cyan()   { printf "${BOLD}${CYAN}%s${RESET}" "$*"; }
+clr_bold_green()  { printf "${BOLD}${GREEN}%s${RESET}" "$*"; }
+clr_bold_yellow() { printf "${BOLD}${YELLOW}%s${RESET}" "$*"; }
+clr_bold_red()    { printf "${BOLD}${RED}%s${RESET}" "$*"; }
+
+say_ok()   { printf "  %s %s\n" "$(clr_bold_green '✓')" "$*"; }
+say_warn() { printf "  %s %s\n" "$(clr_bold_yellow '!')" "$*"; }
+say_info() { printf "  %s\n"     "$(clr_dim "$*")"; }
+
+# ── i18n ──────────────────────────────────────────────────────────────────────
+setup_strings() {
+  if [[ "$1" == "es" ]]; then
+    WELCOME="Reproductor multimedia — HDMI (DRM/KMS)"
+    SUBTITLE="Reproduce audio y vídeo por HDMI sin escritorio."
+    NAV_HINT="Flechas para navegar · Enter para elegir · Ctrl+C para salir"
+    MENU_TITLE="¿Qué deseas hacer?"
+    BYE="👋"
+    CANCELLED="Cancelado."
+    PRESS_ENTER="Pulsa Enter para volver al menú…"
+    STARTING="Iniciando reproducción…"
+    INVALID_NUMBER="Número no válido."
+    BACK="← Volver"
+    SET_TO="Ajustado a: %s"
+    VAL_ON="activado"; VAL_OFF="desactivado"; VAL_AUTO="auto"
+    VAL_INF="infinito"; VAL_YES="sí"; VAL_NO="no"
+    M_PLAY="Reproducir medios (audio o vídeo)"
+    M_AUDIO_DEVICE="Dispositivo de audio"
+    M_CONNECTOR="Conector de vídeo"
+    M_MODE="Modo de pantalla"
+    M_LOOP="Repetir"
+    M_VOLUME="Volumen"
+    M_ENHANCE="Mejorar (GPU)"
+    M_AO="Salida de audio"
+    M_SHUFFLE="Aleatorio"
+    M_MUTE="Silencio"
+    M_AUDIO_ONLY="Solo audio"
+    M_LIST_CONNECTORS="Listar conectores"
+    M_LIST_AUDIO="Listar dispositivos de audio"
+    M_FIX="Reparar problemas de audio/vídeo"
+    M_EXIT="Salir"
+    PROMPT_PATH="Archivo, carpeta o playlist"
+    PATH_NOT_FOUND="No se encontró: %s"
+    SELECT_AUDIO_DEVICE="Selecciona un dispositivo de audio"
+    DEV_AUTO="Automático (predeterminado)"
+    DEV_MANUAL="Escribir el dispositivo manualmente…"
+    NO_AUDIO_DEVICES="No se encontraron dispositivos de audio."
+    PROMPT_AUDIO_MANUAL="Dispositivo (p. ej. alsa/hdmi:CARD=PCH,DEV=3)"
+    SELECT_CONNECTOR="Selecciona un conector de vídeo"
+    CONN_AUTO="Automático (primer conector activo)"
+    CONN_MANUAL="Escribir el conector manualmente…"
+    NO_CONNECTORS="No se pudieron detectar conectores DRM."
+    PROMPT_CONNECTOR_MANUAL="Conector (p. ej. HDMI-A-1, DP-1)"
+    SELECT_MODE="Selecciona el modo de pantalla"
+    MODE_PREFERRED="preferido (predeterminado)"
+    MODE_HIGHEST="el más alto disponible"
+    MODE_CUSTOM="Personalizado (AnchoxAlto[@Hz])…"
+    PROMPT_MODE="Modo (p. ej. 1920x1080@60)"
+    SELECT_LOOP="Repetición"
+    LOOP_OFF="Desactivada"
+    LOOP_INF="Infinita"
+    LOOP_CUSTOM="Número de repeticiones…"
+    PROMPT_LOOP_N="¿Cuántas repeticiones?"
+    PROMPT_VOLUME="Volumen (0-100)"
+    SELECT_ENHANCE="Mejora por GPU"
+    ENHANCE_OFF="Desactivada"
+    ENHANCE_ON="Activada (escalado 4K + desentrelazado)"
+    ENHANCE_HDR="Activada + SDR→HDR [experimental]"
+    SELECT_AO="Controlador de salida de audio"
+    FIX_RUNNING="Revisando el sistema de audio y vídeo…"
+    FIX_DRM_OK="Dispositivos DRM presentes: %s"
+    FIX_DRM_NONE="No se encontraron dispositivos DRM en /dev/dri (¿GPU/HDMI?)."
+    FIX_NO_FIXER="No se encontró fix-audio.sh junto a este script."
+  else
+    WELCOME="Media player — HDMI (DRM/KMS)"
+    SUBTITLE="Play audio and video over HDMI, no desktop required."
+    NAV_HINT="Arrow keys to navigate · Enter to select · Ctrl+C to quit"
+    MENU_TITLE="What would you like to do?"
+    BYE="👋"
+    CANCELLED="Cancelled."
+    PRESS_ENTER="Press Enter to return to the menu…"
+    STARTING="Starting playback…"
+    INVALID_NUMBER="Not a valid number."
+    BACK="← Back"
+    SET_TO="Set to: %s"
+    VAL_ON="on"; VAL_OFF="off"; VAL_AUTO="auto"
+    VAL_INF="infinite"; VAL_YES="yes"; VAL_NO="no"
+    M_PLAY="Play media (audio or video)"
+    M_AUDIO_DEVICE="Audio device"
+    M_CONNECTOR="Video connector"
+    M_MODE="Display mode"
+    M_LOOP="Loop"
+    M_VOLUME="Volume"
+    M_ENHANCE="Enhance (GPU)"
+    M_AO="Audio output"
+    M_SHUFFLE="Shuffle"
+    M_MUTE="Mute"
+    M_AUDIO_ONLY="Audio-only"
+    M_LIST_CONNECTORS="List connectors"
+    M_LIST_AUDIO="List audio devices"
+    M_FIX="Fix audio / video issues"
+    M_EXIT="Exit"
+    PROMPT_PATH="File, folder or playlist"
+    PATH_NOT_FOUND="Not found: %s"
+    SELECT_AUDIO_DEVICE="Select an audio device"
+    DEV_AUTO="Automatic (default)"
+    DEV_MANUAL="Type the device manually…"
+    NO_AUDIO_DEVICES="No audio devices found."
+    PROMPT_AUDIO_MANUAL="Device (e.g. alsa/hdmi:CARD=PCH,DEV=3)"
+    SELECT_CONNECTOR="Select a video connector"
+    CONN_AUTO="Automatic (first active connector)"
+    CONN_MANUAL="Type the connector manually…"
+    NO_CONNECTORS="Could not detect any DRM connectors."
+    PROMPT_CONNECTOR_MANUAL="Connector (e.g. HDMI-A-1, DP-1)"
+    SELECT_MODE="Select the display mode"
+    MODE_PREFERRED="preferred (default)"
+    MODE_HIGHEST="highest available"
+    MODE_CUSTOM="Custom (WxH[@Hz])…"
+    PROMPT_MODE="Mode (e.g. 1920x1080@60)"
+    SELECT_LOOP="Loop"
+    LOOP_OFF="Off"
+    LOOP_INF="Infinite"
+    LOOP_CUSTOM="A number of times…"
+    PROMPT_LOOP_N="How many times?"
+    PROMPT_VOLUME="Volume (0-100)"
+    SELECT_ENHANCE="GPU enhancement"
+    ENHANCE_OFF="Off"
+    ENHANCE_ON="On (4K upscale + deinterlace)"
+    ENHANCE_HDR="On + SDR→HDR [experimental]"
+    SELECT_AO="Audio output driver"
+    FIX_RUNNING="Checking the audio and video stack…"
+    FIX_DRM_OK="DRM devices present: %s"
+    FIX_DRM_NONE="No DRM devices found in /dev/dri (GPU/HDMI missing?)."
+    FIX_NO_FIXER="fix-audio.sh not found next to this script."
+  fi
+}
+
+# ── UI helpers ────────────────────────────────────────────────────────────────
+print_header() {
+  local line; line="$(printf '─%.0s' {1..58})"
+  echo ""
+  echo "  $(clr_bold_cyan "┌${line}┐")"
+  printf "  %s  %-56s%s\n" "$(clr_bold_cyan '│')" "$(clr_bold "${WELCOME}")"   "$(clr_bold_cyan '│')"
+  printf "  %s  %-56s%s\n" "$(clr_bold_cyan '│')" "$(clr_dim "${SUBTITLE}")"  "$(clr_bold_cyan '│')"
+  echo "  $(clr_bold_cyan "└${line}┘")"
+  echo ""
+}
+
+pad_right() { printf "%-${2}s" "${1}"; }
+screen()    { clear; print_header; }
+
+# Single-select list. Input: MENU_ITEMS[] ; Output: MENU_SELECTED (index).
+interactive_select() {
+  local num="${#MENU_ITEMS[@]}" cursor=0
+  render_select() {
+    local j lbl ptr label_str
+    for j in "${!MENU_ITEMS[@]}"; do
+      lbl="$(pad_right "${MENU_ITEMS[$j]}" 54)"
+      if [[ $j -eq $cursor ]]; then
+        ptr="$(clr_cyan '▶')"; label_str="$(clr_bold_cyan "${lbl}")"
+      else
+        ptr=" "; label_str="${lbl}"
+      fi
+      printf "  %s  %s\n" "${ptr}" "${label_str}"
+    done
+  }
+  render_select
+  printf '\033[?25l'
+  while true; do
+    local key seq
+    IFS= read -r -s -n1 key 2>/dev/null || key=""
+    if [[ "${key}" == $'\x1b' ]]; then
+      IFS= read -r -s -n2 -t 1 seq 2>/dev/null || seq=""
+      if [[ "${seq}" == '[A' ]]; then
+        cursor=$(( (cursor - 1 + num) % num )); printf "\033[%dA" "${num}"; render_select
+      elif [[ "${seq}" == '[B' ]]; then
+        cursor=$(( (cursor + 1) % num )); printf "\033[%dA" "${num}"; render_select
+      fi
+      continue
+    fi
+    [[ "${key}" == $'\r' || "${key}" == $'\n' || "${key}" == '' ]] && break
+    if [[ "${key}" == $'\x03' || "${key}" == $'\x04' ]]; then printf '\033[?25h'; echo ""; exit 0; fi
+  done
+  printf '\033[?25h'; echo ""
+  MENU_SELECTED="${cursor}"
+}
+
+prompt_visible() {
+  local label="$1" default="${2:-}" val
+  if [[ -n "${default}" ]]; then
+    printf "  %s (%s): " "$(clr_bold "${label}")" "$(clr_dim "${default}")" >/dev/tty
+  else
+    printf "  %s: " "$(clr_bold "${label}")" >/dev/tty
+  fi
+  IFS= read -r val </dev/tty || true
+  [[ -z "${val}" && -n "${default}" ]] && val="${default}"
+  printf '%s' "${val}"
+}
+
+prompt_enter() {
+  printf "  %s " "$(clr_dim "${PRESS_ENTER}")" >/dev/tty
+  IFS= read -r _ </dev/tty || true
+}
+
+# ── Value formatters (shown inline in the main-menu labels) ────────────────────
+fmt_onoff()  { [[ "$1" == "yes" ]] && printf '%s' "${VAL_ON}" || printf '%s' "${VAL_OFF}"; }
+fmt_loop()   { case "${LOOP}" in no) printf '%s' "${VAL_OFF}";; inf) printf '%s' "${VAL_INF}";; *) printf '%s' "${LOOP}";; esac; }
+fmt_enhance() {
+  if   [[ "${SDR_TO_HDR}" == "yes" ]]; then printf '%s' "${VAL_ON} + HDR"
+  elif [[ "${ENHANCE}"    == "yes" ]]; then printf '%s' "${VAL_ON}"
+  else printf '%s' "${VAL_OFF}"; fi
+}
+fmt_audio_device() { [[ -z "${AUDIO_DEVICE}" ]] && printf '%s' "${VAL_AUTO}" || printf '%s' "${AUDIO_DEVICE#alsa/}"; }
+fmt_audio_only()   { case "${AUDIO_ONLY}" in yes) printf '%s' "${VAL_YES}";; no) printf '%s' "${VAL_NO}";; *) printf '%s' "${VAL_AUTO}";; esac; }
+kv() { printf '%s: %s' "$1" "$2"; }
+
+# ── Menu handlers ─────────────────────────────────────────────────────────────
+menu_play() {
+  screen
+  local target; target="$(prompt_visible "${PROMPT_PATH}" "${LAST_TARGET}")"
+  if [[ -z "${target}" ]]; then say_info "${CANCELLED}"; return; fi
+  if [[ ! -e "${target}" ]]; then
+    say_warn "$(printf "${PATH_NOT_FOUND}" "${target}")"; prompt_enter; return
+  fi
+  LAST_TARGET="${target}"
+  echo ""; say_info "${STARTING}"; echo ""
+  # A subshell contains any die/exit inside play_target so the menu survives.
+  ( play_target "${target}" ) || true
+  echo ""; prompt_enter
+}
+
+menu_audio_device() {
+  screen
+  require aplay alsa-utils || { prompt_enter; return; }
+  local -a labels=() values=() line
+  labels+=("${DEV_AUTO}"); values+=("")
+  while IFS= read -r line; do
+    [[ "${line}" =~ ^card\ ([0-9]+):\ ([^\ ]+)\ \[([^]]*)\],\ device\ ([0-9]+):\ (.*)$ ]] || continue
+    local cname="${BASH_REMATCH[2]}" cfull="${BASH_REMATCH[3]}" dnum="${BASH_REMATCH[4]}" ddesc="${BASH_REMATCH[5]}"
+    ddesc="${ddesc%% \[*}"
+    local kind="plughw"
+    [[ "${ddesc} ${cfull}" =~ [Hh][Dd][Mm][Ii] ]] && kind="hdmi"
+    labels+=("${cname} · dev ${dnum} · ${ddesc}")
+    values+=("alsa/${kind}:CARD=${cname},DEV=${dnum}")
+  done < <(aplay -l 2>/dev/null | grep '^card' || true)
+  labels+=("${DEV_MANUAL}"); values+=("__manual__")
+  labels+=("${BACK}");       values+=("__back__")
+
+  printf "  %s\n\n" "$(clr_bold_cyan "${SELECT_AUDIO_DEVICE}")"
+  MENU_ITEMS=("${labels[@]}"); interactive_select
+  case "${values[$MENU_SELECTED]}" in
+    __back__)   : ;;
+    __manual__) AUDIO_DEVICE="$(prompt_visible "${PROMPT_AUDIO_MANUAL}" "${AUDIO_DEVICE}")" ;;
+    "")         AUDIO_DEVICE="" ;;
+    *)          AUDIO_DEVICE="${values[$MENU_SELECTED]}" ;;
+  esac
+}
+
+menu_connector() {
+  screen
+  require mpv mpv || { prompt_enter; return; }
+  local -a conns=()
+  mapfile -t conns < <(mpv --vo=drm --drm-connector=help /dev/null 2>&1 \
+    | grep -oE '(eDP|LVDS|DSI|HDMI-A|HDMI-B|HDMI|DP|DVI-I|DVI-D|VGA|Composite|Virtual)-[0-9]+' \
+    | sort -u)
+  local -a labels=("${CONN_AUTO}") values=("auto")
+  local c
+  for c in "${conns[@]}"; do labels+=("${c}"); values+=("${c}"); done
+  labels+=("${CONN_MANUAL}"); values+=("__manual__")
+  labels+=("${BACK}");        values+=("__back__")
+
+  printf "  %s\n\n" "$(clr_bold_cyan "${SELECT_CONNECTOR}")"
+  [[ ${#conns[@]} -eq 0 ]] && say_warn "${NO_CONNECTORS}" && echo ""
+  MENU_ITEMS=("${labels[@]}"); interactive_select
+  case "${values[$MENU_SELECTED]}" in
+    __back__)   : ;;
+    __manual__) CONNECTOR="$(prompt_visible "${PROMPT_CONNECTOR_MANUAL}" "${CONNECTOR}")" ;;
+    *)          CONNECTOR="${values[$MENU_SELECTED]}" ;;
+  esac
+}
+
+menu_mode() {
+  screen
+  printf "  %s\n\n" "$(clr_bold_cyan "${SELECT_MODE}")"
+  MENU_ITEMS=("${MODE_PREFERRED}" "${MODE_HIGHEST}" "${MODE_CUSTOM}" "${BACK}")
+  interactive_select
+  case "${MENU_SELECTED}" in
+    0) MODE="preferred" ;;
+    1) MODE="highest" ;;
+    2) local m; m="$(prompt_visible "${PROMPT_MODE}" "${MODE}")"; [[ -n "${m}" ]] && MODE="${m}" ;;
+    3) : ;;
+  esac
+}
+
+menu_loop() {
+  screen
+  printf "  %s\n\n" "$(clr_bold_cyan "${SELECT_LOOP}")"
+  MENU_ITEMS=("${LOOP_OFF}" "${LOOP_INF}" "${LOOP_CUSTOM}" "${BACK}")
+  interactive_select
+  case "${MENU_SELECTED}" in
+    0) LOOP="no" ;;
+    1) LOOP="inf" ;;
+    2) local n; n="$(prompt_visible "${PROMPT_LOOP_N}" "")"
+       if [[ "${n}" =~ ^[0-9]+$ ]]; then LOOP="${n}"; else say_warn "${INVALID_NUMBER}"; prompt_enter; fi ;;
+    3) : ;;
+  esac
+}
+
+menu_volume() {
+  screen
+  local v; v="$(prompt_visible "${PROMPT_VOLUME}" "${VOLUME}")"
+  if [[ "${v}" =~ ^[0-9]+$ ]] && [[ "${v}" -le 100 ]]; then
+    VOLUME="${v}"
+  else
+    say_warn "${INVALID_NUMBER}"; prompt_enter
+  fi
+}
+
+menu_enhance() {
+  screen
+  printf "  %s\n\n" "$(clr_bold_cyan "${SELECT_ENHANCE}")"
+  MENU_ITEMS=("${ENHANCE_OFF}" "${ENHANCE_ON}" "${ENHANCE_HDR}" "${BACK}")
+  interactive_select
+  case "${MENU_SELECTED}" in
+    0) ENHANCE="no";  SDR_TO_HDR="no" ;;
+    1) ENHANCE="yes"; SDR_TO_HDR="no" ;;
+    2) ENHANCE="yes"; SDR_TO_HDR="yes" ;;
+    3) : ;;
+  esac
+}
+
+menu_ao() {
+  screen
+  printf "  %s\n\n" "$(clr_bold_cyan "${SELECT_AO}")"
+  MENU_ITEMS=("alsa" "pulse" "pipewire" "jack" "auto" "${BACK}")
+  interactive_select
+  [[ "${MENU_SELECTED}" -lt 5 ]] && AUDIO_OUTPUT="${MENU_ITEMS[$MENU_SELECTED]}"
+}
+
+menu_toggle_shuffle()    { [[ "${SHUFFLE}" == "yes" ]] && SHUFFLE="no" || SHUFFLE="yes"; }
+menu_toggle_mute()       { [[ "${MUTE}"    == "yes" ]] && MUTE="no"    || MUTE="yes"; }
+menu_toggle_audio_only() {
+  case "${AUDIO_ONLY}" in auto) AUDIO_ONLY="yes";; yes) AUDIO_ONLY="no";; *) AUDIO_ONLY="auto";; esac
+}
+
+menu_list_connectors() { screen; show_connectors    || true; echo ""; prompt_enter; }
+menu_list_audio()      { screen; show_audio_devices || true; echo ""; prompt_enter; }
+
+menu_fix() {
+  screen
+  say_info "${FIX_RUNNING}"; echo ""
+  check_video_group
+  local cards; cards="$(ls /dev/dri/card* 2>/dev/null | tr '\n' ' ')"
+  if [[ -n "${cards}" ]]; then
+    say_ok "$(printf "${FIX_DRM_OK}" "${cards}")"
+  else
+    say_warn "${FIX_DRM_NONE}"
+  fi
+  local fixer="${SCRIPT_DIR}/fix-audio.sh"
+  echo ""
+  if [[ -f "${fixer}" ]]; then
+    bash "${fixer}" || true
+  else
+    say_warn "${FIX_NO_FIXER}"
+  fi
+  echo ""; prompt_enter
+}
+
+# ── Main menu loop ────────────────────────────────────────────────────────────
+build_main_menu() {
+  MENU_ITEMS=(); ACTIONS=()
+  add() { MENU_ITEMS+=("$1"); ACTIONS+=("$2"); }
+  add "${M_PLAY}"                                                     play
+  add "$(kv "${M_AUDIO_DEVICE}" "$(fmt_audio_device)")"              audio_device
+  add "$(kv "${M_CONNECTOR}"    "${CONNECTOR}")"                     connector
+  add "$(kv "${M_MODE}"         "${MODE}")"                          mode
+  add "$(kv "${M_LOOP}"         "$(fmt_loop)")"                      loop
+  add "$(kv "${M_VOLUME}"       "${VOLUME}")"                        volume
+  add "$(kv "${M_ENHANCE}"      "$(fmt_enhance)")"                   enhance
+  add "$(kv "${M_AO}"           "${AUDIO_OUTPUT}")"                  ao
+  add "$(kv "${M_SHUFFLE}"      "$(fmt_onoff "${SHUFFLE}")")"        shuffle
+  add "$(kv "${M_MUTE}"         "$(fmt_onoff "${MUTE}")")"           mute
+  add "$(kv "${M_AUDIO_ONLY}"   "$(fmt_audio_only)")"               audio_only
+  add "${M_LIST_CONNECTORS}"                                        list_connectors
+  add "${M_LIST_AUDIO}"                                             list_audio
+  add "${M_FIX}"                                                    fix
+  add "${M_EXIT}"                                                   exit
+}
+
+run_menu() {
+  printf "  %s" "Select language / Selecciona idioma [en/es] (en): "
+  local raw; read -r raw || true
+  [[ "$(lc "${raw}")" == es* ]] && LANG_CHOICE="es"
+  setup_strings "${LANG_CHOICE}"
+
+  while true; do
+    screen
+    build_main_menu
+    printf "  %s\n" "$(clr_bold_cyan "${MENU_TITLE}")"
+    printf "  %s\n\n" "$(clr_dim "${NAV_HINT}")"
+    interactive_select
+    echo ""
+    case "${ACTIONS[$MENU_SELECTED]}" in
+      play)            menu_play ;;
+      audio_device)    menu_audio_device ;;
+      connector)       menu_connector ;;
+      mode)            menu_mode ;;
+      loop)            menu_loop ;;
+      volume)          menu_volume ;;
+      enhance)         menu_enhance ;;
+      ao)              menu_ao ;;
+      shuffle)         menu_toggle_shuffle ;;
+      mute)            menu_toggle_mute ;;
+      audio_only)      menu_toggle_audio_only ;;
+      list_connectors) menu_list_connectors ;;
+      list_audio)      menu_list_audio ;;
+      fix)             menu_fix ;;
+      exit)            screen; printf "  %s\n\n" "$(clr_dim "${BYE}")"; exit 0 ;;
+    esac
+  done
+}
+
 # ── Argument parsing ──────────────────────────────────────────────────────────
 TARGET=""
+ORIG_ARGC=$#
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -434,6 +889,14 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+# No arguments at all -> interactive menu. Any flag or target -> classic one-shot.
+if [[ "${ORIG_ARGC}" -eq 0 ]]; then
+  RUN_MODE="menu"
+  run_menu
+  exit 0
+fi
+
 [[ -z "${TARGET}" ]] && { echo "No target specified."; usage; }
 
+RUN_MODE="oneshot"
 play_target "${TARGET}"

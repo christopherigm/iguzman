@@ -63,7 +63,8 @@ COMPRESS_PERCENT=50
 
 # Output container override: "source" keeps each file's original extension,
 # "mp4" / "mkv" force that container (MKV preserves all subtitles losslessly).
-# Smart TV and mpg→mp4 force their own container regardless of this setting.
+# The mpg→mp4 action forces MP4; the Smart TV profile prompts for MP4 or MKV
+# (both carry HEVC on Samsung Tizen) and sets this accordingly.
 OUTPUT_CONTAINER="source"
 
 # Smart TV (Tizen) profile tier + target dimensions (set by the tier prompt).
@@ -333,8 +334,9 @@ main() {
 
   # ── Smart TV (Tizen) profile - a forced preset bundle ─────────────────────
   # Picks a resolution tier, then turns on crop + downscale (reusing the
-  # existing filters) and forces H.265/MP4 later. The encode itself
-  # (tuned CRF, faststart, hvc1, AC3 audio) lives in process-video.sh.
+  # existing filters) and forces H.265 later, in the MP4 or MKV container the
+  # user picks below. The encode itself (tuned CRF, AC3 audio, plus faststart +
+  # hvc1 tagging for the MP4 target) lives in process-video.sh.
   if [[ "${DO_SMARTTV}" -eq 1 ]]; then
     printf "  %s\n" "$(clr_dim "${SMARTTV_INFO}")"
     printf "  %s (2): " "$(clr_bold "${SMARTTV_TIER_LABEL}")"
@@ -396,9 +398,21 @@ main() {
   # ── Container selection ───────────────────────────────────────────────────
   # MKV preserves every subtitle stream losslessly (SRT, ASS, PGS, VobSub),
   # whereas MP4 can only carry text subs as mov_text and drops image subs.
-  # The Smart TV profile forces its own MP4 container, so skip the prompt there.
+  # Samsung Tizen TVs decode HEVC from both MP4 and MKV, so the Smart TV profile
+  # offers just those two (default MKV - it preserves every subtitle losslessly)
+  # instead of the source/mp4/mkv prompt - "source" makes no sense there since
+  # the source may be an HEVC-incapable container (avi/mov).
   OUTPUT_CONTAINER="source"
-  if [[ "${DO_SMARTTV}" -eq 0 ]]; then
+  if [[ "${DO_SMARTTV}" -eq 1 ]]; then
+    printf "  %s\n" "$(clr_bold "${CONTAINER_SELECT_LABEL}:")"
+    printf "  %s\n\n" "$(clr_dim "↑↓ ${CB_PROMPT##*↑↓ }")"
+    _CB_LABELS=("${CONTAINER_MKV_OPTION}" "${CONTAINER_MP4_OPTION}")
+    _CB_SEL=(1 0)
+    _CB_DISABLED=(0 0)
+    interactive_radio
+    [[ "${SELECTED_INDICES[0]:-0}" -eq 1 ]] && OUTPUT_CONTAINER="mp4" || OUTPUT_CONTAINER="mkv"
+    echo ""
+  else
     printf "  %s\n" "$(clr_bold "${CONTAINER_SELECT_LABEL}:")"
     printf "  %s\n\n" "$(clr_dim "↑↓ ${CB_PROMPT##*↑↓ }")"
     _CB_LABELS=("${CONTAINER_SOURCE_OPTION}" "${CONTAINER_MP4_OPTION}" "${CONTAINER_MKV_OPTION}")
@@ -855,7 +869,7 @@ main() {
   [[ "${DO_VIDEO2X}" -eq 1 ]]    && action_list+=("video2x ${VIDEO2X_SCALE}× (${VIDEO2X_MODEL})")
   [[ "${DO_DEEP3D}" -eq 1 ]]     && action_list+=("deep3d (stability=${DEEP3D_STABILITY})")
   [[ "${DO_MPG_TO_MP4}" -eq 1 ]] && action_list+=("mpg→mp4")
-  [[ "${DO_SMARTTV}" -eq 1 ]]    && action_list+=("SmartTV ${SMARTTV_TIER}p (MP4/H.265/AC3)")
+  [[ "${DO_SMARTTV}" -eq 1 ]]    && action_list+=("SmartTV ${SMARTTV_TIER}p ($(printf '%s' "${OUTPUT_CONTAINER}" | tr '[:lower:]' '[:upper:]')/H.265/AC3)")
   [[ "${DO_TIKTOK}"    -eq 1 ]] && action_list+=("tiktok reel (model=${TIKTOK_OLLAMA_MODEL} score≥${TIKTOK_MIN_SCORE} ${TIKTOK_CLIP_MIN}-${TIKTOK_CLIP_MAX}s clips)")
   local IFS_SAVE="${IFS}"; IFS=', '; printf "%s\n" "$(clr_cyan "${action_list[*]}")"; IFS="${IFS_SAVE}"
 
