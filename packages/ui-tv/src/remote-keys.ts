@@ -6,7 +6,12 @@ export const TV_KEYS = {
   DOWN: 40,
   ENTER: 13,
   BACK: 10009,
+  // Transport keys. Remotes vary: some send the single toggle (MEDIA_PLAY_PAUSE),
+  // others discrete Play/Pause. All must be registered via `tvinputdevice`
+  // before the platform delivers them (see the TV app's media-key registration).
   MEDIA_PLAY_PAUSE: 10252,
+  MEDIA_PLAY: 415,
+  MEDIA_PAUSE: 19,
 } as const;
 
 /**

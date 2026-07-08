@@ -36,8 +36,26 @@ interface TizenApplicationManager {
   ): void;
 }
 
+interface TizenInputDeviceKey {
+  name: string;
+  code: number;
+}
+
+/**
+ * `tizen.tvinputdevice` - controls which remote keys the platform delivers as
+ * KeyboardEvents. Media-transport keys (Play/Pause/FF/Rewind) are withheld until
+ * an app registers them by name; the always-on arrow/Enter/Back keys are not
+ * listed here. Absent in the dev browser/emulator.
+ */
+interface TizenInputDeviceManager {
+  getSupportedKeys(): TizenInputDeviceKey[];
+  registerKey(keyName: string): void;
+  unregisterKey(keyName: string): void;
+}
+
 interface TizenStatic {
   application: TizenApplicationManager;
+  tvinputdevice?: TizenInputDeviceManager;
   ApplicationControl: new (
     operation: string,
     uri?: string | null,

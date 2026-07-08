@@ -1,17 +1,22 @@
+import { setFocus } from "@noriginmedia/norigin-spatial-navigation";
 import { Focusable } from "@repo/ui-tv/focusable";
 import { TvButton } from "@repo/ui-tv/tv-button";
 import { TvText } from "@repo/ui-tv/tv-typography";
 import { useT } from "@/i18n/provider";
+import forwardIcon from "@/icons/forward.svg";
+import backwardIcon from "@/icons/backward.svg";
 import type { StreamPlayer } from "./use-stream-player";
+import { SKIP_STEP_KEYS, type SkipBurst } from "./use-skip-burst";
 import "./stream-controls.css";
 
 /** Stable focus key so the overlay can return focus here when it reveals the bar. */
 export const PLAYPAUSE_FOCUS_KEY = "stream-playpause";
 
+/** Focus key for the scrubbable progress bar (Left/Right seek). */
+export const PROGRESS_FOCUS_KEY = "stream-progress";
+
 /** The track menus the transport bar can open above itself. */
 export type StreamMenu = "audio" | "subtitles" | null;
-
-const SKIP_MS = 10_000;
 
 /** ms -> `H:MM:SS` (or `M:SS` under an hour). */
 export function formatTime(ms: number): string {
@@ -64,16 +69,21 @@ function TrackMenu({
  */
 export function StreamControls({
   player,
+  burst,
   visible,
   menu,
   onOpenMenu,
   onStop,
+  onHide,
 }: {
   player: StreamPlayer;
+  /** Shared skip-burst state (also driven by the overlay while the bar hides). */
+  burst: SkipBurst;
   visible: boolean;
   menu: StreamMenu;
   onOpenMenu: (menu: Exclude<StreamMenu, null>) => void;
   onStop: () => void;
+  onHide: () => void;
 }) {
   const { t } = useT();
   const {
@@ -85,15 +95,58 @@ export function StreamControls({
     activeAudio,
     activeSubtitle,
     togglePlay,
-    seekBy,
     selectAudio,
     selectSubtitle,
   } = player;
+  const { pending, skipStep, skip } = burst;
 
-  const pct = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+  // While a burst is in flight the bar renders the pending target instead of the
+  // (paused) playhead, so the viewer watches it slide toward where they're headed.
+  const displayTime = pending ?? currentTime;
+  const pct = duration > 0 ? Math.min(100, (displayTime / duration) * 100) : 0;
   const cls = ["stream-controls", visible ? "" : "stream-controls--hidden"]
     .filter(Boolean)
     .join(" ");
+
+  const skipLabel = (sign: "-" | "+") => `${sign}${t(SKIP_STEP_KEYS[skipStep]!)}`;
+
+  // While the progress bar holds focus: Left/Right run the same escalating skip
+  // burst as the transport buttons (30s -> 1min -> 3min, previewed then
+  // committed), so scrubbing the bar feels identical to Netflix. Down lands on
+  // the play/pause button; Up dismisses the whole transport bar (nothing sits
+  // above it) for an unobstructed view of the stream. Every handled arrow
+  // returns `false` to block Norigin's default geometry navigation.
+  const onSeekArrow = (direction: string): boolean => {
+    if (direction === "left") {
+      skip(-1);
+      return false;
+    }
+    if (direction === "right") {
+      skip(1);
+      return false;
+    }
+    if (direction === "down") {
+      setFocus(PLAYPAUSE_FOCUS_KEY);
+      return false;
+    }
+    if (direction === "up") {
+      onHide();
+      return false;
+    }
+    return false;
+  };
+
+  // While any transport button holds focus: Down dismisses the whole bar (the
+  // button row is the bottom-most focusable, so Down otherwise goes nowhere),
+  // mirroring Up on the progress bar. Other arrows fall through to Norigin's
+  // default geometry navigation between the buttons.
+  const onButtonArrow = (direction: string): boolean => {
+    if (direction === "down") {
+      onHide();
+      return false;
+    }
+    return true;
+  };
 
   return (
     <div className={cls}>
@@ -127,41 +180,87 @@ export function StreamControls({
 
       <div className="stream-controls__progress">
         <TvText variant="label" className="stream-controls__time">
-          {formatTime(currentTime)}
+          {formatTime(displayTime)}
         </TvText>
-        <div className="stream-controls__bar" aria-hidden="true">
-          <div
-            className="stream-controls__bar-fill"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
+        <Focusable
+          focusKey={PROGRESS_FOCUS_KEY}
+          className="stream-controls__bar-focus"
+          onArrowPress={onSeekArrow}
+        >
+          {({ focused }) => (
+            <div
+              className="stream-controls__bar"
+              role="slider"
+              aria-label={t("seek")}
+              aria-valuemin={0}
+              aria-valuemax={Math.round(duration)}
+              aria-valuenow={Math.round(displayTime)}
+            >
+              <div
+                className="stream-controls__bar-fill"
+                style={{ width: `${pct}%` }}
+              />
+              <div
+                className={
+                  "stream-controls__thumb" +
+                  (focused ? " stream-controls__thumb--focused" : "")
+                }
+                style={{ left: `${pct}%` }}
+              />
+            </div>
+          )}
+        </Focusable>
         <TvText variant="label" className="stream-controls__time">
           {formatTime(duration)}
         </TvText>
       </div>
 
       <Focusable group className="stream-controls__buttons">
-        <TvButton onPress={() => seekBy(-SKIP_MS)}>{t("skipBack")}</TvButton>
-        <TvButton focusKey={PLAYPAUSE_FOCUS_KEY} kind="primary" onPress={togglePlay}>
-          {phase === "playing" ? t("pause") : t("play")}
-        </TvButton>
-        <TvButton onPress={() => seekBy(SKIP_MS)}>{t("skipForward")}</TvButton>
         <TvButton
           disabled={audioTracks.length < 2}
           selected={menu === "audio"}
           onPress={() => onOpenMenu("audio")}
+          onArrowPress={onButtonArrow}
         >
           {t("audio")}
         </TvButton>
+
+        <div className="stream-controls__buttons-center">
+          <TvButton
+            icon={backwardIcon}
+            onPress={() => skip(-1)}
+            onArrowPress={onButtonArrow}
+          >
+            {skipLabel("-")}
+          </TvButton>
+          <TvButton
+            focusKey={PLAYPAUSE_FOCUS_KEY}
+            kind="primary"
+            onPress={togglePlay}
+            onArrowPress={onButtonArrow}
+          >
+            {phase === "playing" ? t("pause") : t("play")}
+          </TvButton>
+          <TvButton kind="error" onPress={onStop} onArrowPress={onButtonArrow}>
+            {t("stop")}
+          </TvButton>
+          <TvButton
+            icon={forwardIcon}
+            iconPosition="end"
+            onPress={() => skip(1)}
+            onArrowPress={onButtonArrow}
+          >
+            {skipLabel("+")}
+          </TvButton>
+        </div>
+
         <TvButton
           disabled={subtitleTracks.length === 0}
           selected={menu === "subtitles"}
           onPress={() => onOpenMenu("subtitles")}
+          onArrowPress={onButtonArrow}
         >
           {t("subtitles")}
-        </TvButton>
-        <TvButton kind="error" onPress={onStop}>
-          {t("stop")}
         </TvButton>
       </Focusable>
     </div>

@@ -1,6 +1,6 @@
 import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
 import { useEffect } from 'react';
-import type { ReactNode, Ref } from 'react';
+import type { CSSProperties, ReactNode, Ref } from 'react';
 import './tokens.css';
 
 /** Semantic color intent for a button (mirrors @repo/ui's ButtonKind). */
@@ -44,6 +44,16 @@ export interface TvButtonProps {
    * `setFocus`; return `true` to let the default proceed.
    */
   onArrowPress?: (direction: string) => boolean;
+  /**
+   * Icon glyph rendered alongside the label. Pass an imported SVG URL (e.g.
+   * `import forward from '@/icons/forward.svg'`). The SVG is used as a CSS mask
+   * tinted to the button's text color (`currentColor`), so a single black
+   * source glyph inherits the button's - and its focus/kind - colors. Mirrors
+   * `@repo/ui`'s Button `icon`, but URL-based rather than a raw SVG path.
+   */
+  icon?: string;
+  /** Position of the icon relative to the label. Defaults to `'start'`. */
+  iconPosition?: 'start' | 'end';
 }
 
 /** D-pad-focusable button. Enter on the remote triggers `onPress`. */
@@ -58,6 +68,8 @@ export function TvButton({
   scrollOnFocus = false,
   onFocusChange,
   onArrowPress,
+  icon,
+  iconPosition = 'start',
 }: TvButtonProps) {
   // A disabled button drops out of spatial navigation so the D-pad skips it.
   const { ref, focused } = useFocusable({
@@ -92,6 +104,17 @@ export function TvButton({
   ]
     .filter(Boolean)
     .join(' ');
+
+  // Quote the URL: Vite inlines small SVGs as data URIs whose path data contains
+  // commas/parens that break an unquoted url() and drop the mask.
+  const iconEl = icon ? (
+    <span
+      className={`tv-button__icon tv-button__icon--${iconPosition}`}
+      aria-hidden="true"
+      style={{ '--tv-button-icon': `url("${icon}")` } as CSSProperties}
+    />
+  ) : null;
+
   return (
     <button
       ref={ref as Ref<HTMLButtonElement>}
@@ -100,7 +123,9 @@ export function TvButton({
       disabled={disabled}
       type="button"
     >
+      {iconPosition !== 'end' && iconEl}
       {children}
+      {iconPosition === 'end' && iconEl}
     </button>
   );
 }

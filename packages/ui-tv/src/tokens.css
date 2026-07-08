@@ -21,7 +21,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
   padding: 18px 36px;
   border: none;
   cursor: pointer;
@@ -33,6 +32,30 @@
 .tv-button--disabled {
   opacity: 0.4;
   cursor: default;
+}
+/* Icon glyph: the source SVG is used as a mask and filled with the button's
+   text color, so it inherits every focus/kind tint. Spacing from the label
+   comes from a directional margin (not flex `gap`, which old Tizen Chromium 76
+   ignores - collapsing the space to zero on the real device). */
+.tv-button__icon {
+  display: inline-block;
+  width: 1.5rem;
+  height: 1.5rem;
+  background-color: currentColor;
+  -webkit-mask-image: var(--tv-button-icon);
+  mask-image: var(--tv-button-icon);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+.tv-button__icon--start {
+  margin-right: 12px;
+}
+.tv-button__icon--end {
+  margin-left: 12px;
 }
 /* Semantic kind colors, mirroring @repo/ui's Button. The host TV palette only
    defines --accent, so each kind carries the same hex fallback the web button

@@ -312,12 +312,15 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
   const [backdrop, setBackdrop] = useState("");
   useEffect(() => {
     const withBackdrops = gridMovies.filter((m) => m.backdrop);
-    if (withBackdrops.length === 0) {
-      setBackdrop("");
-      return;
-    }
-    const index = Math.floor(Math.random() * withBackdrops.length);
-    setBackdrop(withBackdrops[index]?.backdrop ?? "");
+    // Keep the random pick in the effect, not render (react-hooks/purity bars
+    // Math.random during render), and defer the setState out of the effect body
+    // via a microtask so it isn't a synchronous setState (set-state-in-effect).
+    const next =
+      withBackdrops.length === 0
+        ? ""
+        : (withBackdrops[Math.floor(Math.random() * withBackdrops.length)]
+            ?.backdrop ?? "");
+    queueMicrotask(() => setBackdrop(next));
   }, [gridMovies]);
 
   const openGenreModal = useCallback(() => {

@@ -40,6 +40,8 @@ export interface StreamPlayer {
   play: () => void;
   pause: () => void;
   seekBy: (deltaMs: number) => void;
+  /** Seek to an absolute position (ms), clamped into the playable range. */
+  seekTo: (ms: number) => void;
   selectAudio: (index: number) => void;
   selectSubtitle: (index: number | null) => void;
 }
@@ -310,6 +312,20 @@ export function useStreamPlayer({
     }
   }, []);
 
+  const seekTo = useCallback((ms: number) => {
+    const player = window.webapis?.avplay;
+    if (!player) return;
+    try {
+      const total = player.getDuration();
+      const target = Math.max(0, Math.min(ms, Math.max(total - 1000, 0)));
+      // Reflect the jump immediately; oncurrentplaytime will confirm it.
+      setCurrentTime(target);
+      player.seekTo(target);
+    } catch {
+      /* seek unsupported at this state */
+    }
+  }, []);
+
   const selectAudio = useCallback((index: number) => {
     const player = window.webapis?.avplay;
     if (!player) return;
@@ -350,6 +366,7 @@ export function useStreamPlayer({
     play,
     pause,
     seekBy,
+    seekTo,
     selectAudio,
     selectSubtitle,
   };

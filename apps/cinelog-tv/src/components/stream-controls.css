@@ -43,11 +43,20 @@
   text-align: right;
 }
 
+/* The focusable wrapper takes the middle slot; focus is shown through the thumb,
+   so suppress the default rectangular focus ring around the whole track. */
+.stream-controls__bar-focus {
+  flex: 1;
+  margin: 0 24px;
+}
+.stream-controls__bar-focus.tv-focusable--focused {
+  box-shadow: none;
+}
+
 .stream-controls__bar {
   position: relative;
-  flex: 1;
+  width: 100%;
   height: 6px;
-  margin: 0 24px;
   border-radius: 3px;
   background: rgba(255, 255, 255, 0.25);
 }
@@ -61,16 +70,44 @@
   background: var(--accent);
 }
 
+/* Draggable-looking playhead thumb, mirroring @repo/ui's slider. Positioned by
+   an inline `left: <pct>%`; `transform` centers it on that point (translate is
+   safe on Chromium 76, unlike `inset`). No `color-mix` - a plain white ring. */
+.stream-controls__thumb {
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
+  transform: translate(-50%, -50%);
+  transition: box-shadow 0.12s ease;
+}
+.stream-controls__thumb--focused {
+  box-shadow:
+    0 0 0 5px rgba(255, 255, 255, 0.4),
+    0 1px 4px rgba(0, 0, 0, 0.22);
+}
+
+/* Audio pinned left, transport buttons centered, subtitles pinned right. */
 .stream-controls__buttons {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stream-controls__buttons-center {
   display: flex;
   align-items: center;
 }
 
 /* margin (not flex `gap`) - `gap` needs Chromium 84+. */
-.stream-controls__buttons > * {
+.stream-controls__buttons-center > * {
   margin-right: 20px;
 }
-.stream-controls__buttons > *:last-child {
+.stream-controls__buttons-center > *:last-child {
   margin-right: 0;
 }
 

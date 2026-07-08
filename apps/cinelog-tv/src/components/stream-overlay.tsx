@@ -11,9 +11,11 @@ import {
   saveResumePoint,
 } from "@/lib/resume-store";
 import { useStreamPlayer } from "./use-stream-player";
+import { useSkipBurst } from "./use-skip-burst";
 import {
   StreamControls,
   PLAYPAUSE_FOCUS_KEY,
+  PROGRESS_FOCUS_KEY,
   formatTime,
   type StreamMenu,
 } from "./stream-controls";
@@ -88,7 +90,14 @@ export function StreamOverlay({
     onEnded: handleEnded,
   });
 
-  const { phase, togglePlay } = player;
+  const { phase, togglePlay, play, pause } = player;
+
+  // Skip-burst state shared with the transport bar; the key router below also
+  // drives it (Left/Right while the bar is hidden), so a scrub started from the
+  // bare stream and one started on the progress bar are the same burst. The
+  // callbacks are referentially stable, so effects can depend on them directly.
+  const burst = useSkipBurst(player);
+  const { skip: skipBurst, commit: commitBurst, isPending: burstPending } = burst;
 
   // ----- resume prompt -----
   const startPlayback = (at: number) => {
@@ -167,6 +176,15 @@ export function StreamOverlay({
     scheduleHide();
   }, [scheduleHide]);
 
+  // Explicitly dismiss the transport bar (Up from the progress bar). Wins over
+  // the capture-phase `revealControls` fired by the same key press because both
+  // setState calls batch and this one runs last; the ref write is likewise last.
+  const hideControls = useCallback(() => {
+    clearTimeout(hideTimerRef.current);
+    controlsVisibleRef.current = false;
+    setControlsVisible(false);
+  }, []);
+
   const openMenu = useCallback(
     (next: Exclude<StreamMenu, null>) => {
       menuRef.current = next;
@@ -201,45 +219,95 @@ export function StreamOverlay({
     }
   }, [phase, scheduleHide]);
 
-  // Route remote keys during playback: Back closes an open menu; the media key
-  // toggles play/pause; while the bar is hidden any key just wakes it; while
-  // visible any key keeps it awake. Capture phase so a "wake" press is swallowed
-  // before Norigin (bubble) acts on it. Back with no menu open falls through to
-  // the parent screen, which closes the overlay.
+  // Route remote keys during playback. Capture phase so a press we handle is
+  // swallowed before Norigin (bubble) - and the parent screen's Back handler -
+  // act on it.
+  //
+  //   Back    - closes an open menu, else hides a visible bar, else (bar already
+  //             hidden) falls through to the parent screen, which closes the overlay.
+  //   Play/Pause media keys - toggle (or force play/pause) and wake the bar.
+  //   Left/Right while the bar is hidden - run the skip burst and wake the bar so
+  //             its progress preview shows (mirrors scrubbing the progress bar).
+  //   any other key while hidden - just wakes the bar; while visible keeps it awake.
   useEffect(() => {
     if (mode !== "play") return;
     const onKey = (event: KeyboardEvent) => {
       const code = event.keyCode;
+      const swallow = () => {
+        event.stopPropagation();
+        event.preventDefault();
+      };
       if (code === TV_KEYS.BACK) {
         if (menuRef.current) {
           closeMenu();
           setFocus(PLAYPAUSE_FOCUS_KEY);
-          event.stopPropagation();
-          event.preventDefault();
+          swallow();
+          return;
+        }
+        // Back on the visible bar dismisses it rather than leaving the player;
+        // only a Back with the bar already hidden closes the overlay (parent).
+        if (controlsVisibleRef.current) {
+          hideControls();
+          swallow();
         }
         return;
       }
       if (code === TV_KEYS.MEDIA_PLAY_PAUSE) {
         togglePlay();
         revealControls();
-        event.stopPropagation();
-        event.preventDefault();
+        swallow();
+        return;
+      }
+      if (code === TV_KEYS.MEDIA_PLAY) {
+        play();
+        revealControls();
+        swallow();
+        return;
+      }
+      if (code === TV_KEYS.MEDIA_PAUSE) {
+        pause();
+        revealControls();
+        swallow();
         return;
       }
       if (!controlsVisibleRef.current) {
+        // Left/Right on the bare stream scrub; land focus on the progress bar so
+        // further presses continue the burst through its own arrow handler.
+        if (code === TV_KEYS.LEFT || code === TV_KEYS.RIGHT) {
+          skipBurst(code === TV_KEYS.RIGHT ? 1 : -1);
+          revealControls();
+          setFocus(PROGRESS_FOCUS_KEY);
+          swallow();
+          return;
+        }
         revealControls();
         setFocus(PLAYPAUSE_FOCUS_KEY);
-        event.stopPropagation();
-        event.preventDefault();
+        swallow();
         return;
       }
       revealControls();
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [mode, togglePlay, revealControls, closeMenu]);
+  }, [
+    mode,
+    togglePlay,
+    play,
+    pause,
+    revealControls,
+    hideControls,
+    closeMenu,
+    skipBurst,
+  ]);
 
   useEffect(() => () => clearTimeout(hideTimerRef.current), []);
+
+  // Commit any in-flight skip burst when the bar hides mid-scrub (auto-hide, Up,
+  // or Back) so the accumulated seek isn't dropped; deferred out of the effect
+  // body (setState-in-effect) per react-hooks rules.
+  useEffect(() => {
+    if (!controlsVisible && burstPending()) queueMicrotask(commitBurst);
+  }, [controlsVisible, burstPending, commitBurst]);
 
   if (phase === "error") {
     return (
@@ -290,10 +358,12 @@ export function StreamOverlay({
       {(phase === "playing" || phase === "paused") && (
         <StreamControls
           player={player}
+          burst={burst}
           visible={controlsVisible}
           menu={menu}
           onOpenMenu={openMenu}
           onStop={onClose}
+          onHide={hideControls}
         />
       )}
     </div>
