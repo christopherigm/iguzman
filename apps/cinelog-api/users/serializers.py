@@ -6,7 +6,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from core.serializers import ImageProcessingSerializer
-from .models import UserProfile
+from .models import S3Bucket, UserProfile
 
 
 def build_username(email: str) -> str:
@@ -172,3 +172,50 @@ class PasskeyRegistrationVerifySerializer(serializers.Serializer):
     credential = serializers.JSONField()
     challenge_id = serializers.CharField()
     name = serializers.CharField(max_length=64, default='My passkey', required=False)
+
+
+# ── S3 bucket serializers ─────────────────────────────────────────────────────
+
+class S3BucketSerializer(serializers.ModelSerializer):
+    """
+    Read + write representation of a user's S3 bucket credentials.
+
+    The secret access key is write-only: accepted on create/update, encrypted
+    before storage, and never echoed back. On update it is optional - omit it to
+    keep the stored secret (so a user can rename a bucket without re-entering the
+    key), send a new value to rotate it.
+    """
+
+    secret_access_key = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    class Meta:
+        model = S3Bucket
+        fields = [
+            'id', 'label', 'endpoint_url', 'region', 'bucket_name',
+            'access_key_id', 'secret_access_key', 'created',
+        ]
+        read_only_fields = ['id', 'created']
+
+    def validate(self, attrs):
+        # A secret is mandatory when creating; optional when updating.
+        if self.instance is None and not (attrs.get('secret_access_key') or '').strip():
+            raise serializers.ValidationError(
+                {'secret_access_key': 'This field is required.'}
+            )
+        return attrs
+
+    def create(self, validated_data):
+        secret = validated_data.pop('secret_access_key', '')
+        bucket = S3Bucket(user=self.context['request'].user, **validated_data)
+        bucket.set_secret_access_key(secret)
+        bucket.save()
+        return bucket
+
+    def update(self, instance, validated_data):
+        secret = validated_data.pop('secret_access_key', '')
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        if secret.strip():
+            instance.set_secret_access_key(secret)
+        instance.save()
+        return instance

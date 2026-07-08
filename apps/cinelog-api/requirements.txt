@@ -12,6 +12,10 @@ django-redis==5.4.0
 webauthn==2.7.1
 cbor2==5.9.0
 django-storages[s3]==1.14.4
+# Imported directly for per-user S3 presigning/listing and secret encryption
+# (also pulled in transitively by django-storages[s3] and webauthn).
+boto3==1.43.34
+cryptography==49.0.0
 requests==2.32.3
 celery[redis]==5.4.0
 groq==1.4.0

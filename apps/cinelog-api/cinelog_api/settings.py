@@ -158,6 +158,20 @@ else:
     MEDIA_URL = '/media/'
     MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', str(BASE_DIR / 'media')))
 
+# ── Per-user S3 digital copies ────────────────────────────────────────────────
+# Users register their own S3-compatible buckets to host private media files;
+# an ownership's digital_copy_url can point at one and the catalog signs a
+# short-lived GET URL for playback. This is unrelated to the app's own R2 media
+# storage configured above.
+#
+# How long a signed playback URL stays valid (seconds). 12h comfortably covers a
+# full film plus pause/resume within a viewing session.
+S3_DIGITAL_COPY_URL_TTL = int(os.environ.get('S3_DIGITAL_COPY_URL_TTL', 12 * 60 * 60))
+# Key used to encrypt users' stored S3 secret access keys at rest. When unset,
+# core.crypto derives one from SECRET_KEY. Set a dedicated key in any environment
+# where SECRET_KEY may rotate (rotating it would orphan existing ciphertexts).
+S3_CREDENTIALS_ENCRYPTION_KEY = os.environ.get('S3_CREDENTIALS_ENCRYPTION_KEY', '')
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 _REDIS_URL = os.environ.get('REDIS_URL', '')

@@ -15,6 +15,7 @@ import type {
 import { FORMAT_BUTTONS } from "./format-buttons";
 import { GenreSelector } from "./genre-selector";
 import { AUDIO_FORMAT_BUTTONS, HDR_FORMAT_BUTTONS } from "./tech-spec-buttons";
+import { DigitalCopySelector } from "./digital-copy-selector";
 
 type Format = Exclude<MovieFormat, "">;
 
@@ -253,13 +254,16 @@ export function MovieMetadataFields({
         onChange={(trailerUrl) => onPatch({ trailerUrl })}
         disabled={disabled}
       />
-      <TextInput
-        label={t("digitalCopyLabel")}
-        type="url"
-        value={value.digitalCopyUrl}
-        onChange={(digitalCopyUrl) => onPatch({ digitalCopyUrl })}
-        disabled={disabled}
-      />
+      <Box display="flex" flexDirection="column" gap={4}>
+        <Typography variant="caption" styles={{ opacity: 0.7 }}>
+          {t("digitalCopyLabel")}
+        </Typography>
+        <DigitalCopySelector
+          value={value.digitalCopyUrl}
+          onChange={(digitalCopyUrl) => onPatch({ digitalCopyUrl })}
+          disabled={disabled}
+        />
+      </Box>
     </Box>
   );
 }

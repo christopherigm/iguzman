@@ -130,6 +130,7 @@ export default async function LocaleLayout({ children, params }: Props) {
                     addMovie: tNav("addMovie"),
                     account: tNav("account"),
                     linkTv: tNav("linkTv"),
+                    linkStorage: tNav("linkStorage"),
                     signOut: tNav("signOut"),
                   }}
                 />

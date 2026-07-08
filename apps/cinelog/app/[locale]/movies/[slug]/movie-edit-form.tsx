@@ -70,7 +70,9 @@ export function MovieEditForm({
     subtitleLanguages: movie.subtitle_languages.join(", "),
     synopsis: movie.synopsis,
     trailerUrl: movie.trailer_url,
-    digitalCopyUrl: movie.digital_copy_url,
+    // Seed from the raw stored reference, not the signed (short-lived) URL, so an
+    // S3-backed copy round-trips as its s3://<bucketId>/<key> reference on save.
+    digitalCopyUrl: movie.digital_copy_ref,
   });
   const patchMeta = (patch: Partial<MovieMetadataValue>) =>
     setMeta((prev) => ({ ...prev, ...patch }));

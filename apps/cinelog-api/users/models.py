@@ -109,3 +109,51 @@ class PasskeyCredential(models.Model):
 
     def __str__(self):
         return f"Passkey '{self.name}' for {self.user.email}"
+
+
+class S3Bucket(models.Model):
+    """
+    A user's S3-compatible bucket credentials, used to host their own digital
+    copies of films (a private media file per movie).
+
+    Each user may register several buckets (a labelled connection to any
+    S3-compatible provider: AWS S3, Cloudflare R2, Backblaze B2, MinIO, ...).
+    When an ownership's ``digital_copy_url`` is an ``s3://<bucket_id>/<key>``
+    reference, the catalog serializer signs a short-lived GET URL from the
+    matching bucket so the web / TV apps can stream the file directly.
+
+    The secret access key is stored **encrypted** (Fernet, see
+    :mod:`core.crypto`) - never in plaintext and never returned to the client.
+    """
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='s3_buckets')
+    # Human label shown in the UI so a user can tell several buckets apart.
+    label = models.CharField(max_length=100)
+    # Full S3 API endpoint (e.g. https://<account>.r2.cloudflarestorage.com or
+    # https://s3.us-east-1.amazonaws.com). Kept as the provider-agnostic anchor.
+    endpoint_url = models.URLField(max_length=500)
+    # Region string ('auto' works for R2; AWS wants e.g. 'us-east-1'). Optional.
+    region = models.CharField(max_length=100, blank=True)
+    bucket_name = models.CharField(max_length=255)
+    access_key_id = models.CharField(max_length=255)
+    # Fernet ciphertext of the secret access key - decrypted only server-side to
+    # sign requests; never serialized back to the client.
+    secret_access_key_encrypted = models.TextField()
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['label']
+
+    def __str__(self):
+        return f'{self.label} ({self.bucket_name}) for {self.user.email}'
+
+    def set_secret_access_key(self, raw_secret: str) -> None:
+        """Encrypt and store the plaintext secret access key."""
+        from core.crypto import encrypt
+        self.secret_access_key_encrypted = encrypt(raw_secret)
+
+    @property
+    def secret_access_key(self) -> str:
+        """Decrypt and return the plaintext secret access key (server-side only)."""
+        from core.crypto import decrypt
+        return decrypt(self.secret_access_key_encrypted)

@@ -116,8 +116,16 @@ export interface MovieDetail extends Movie {
   /**
    * The signed-in user's private digital-copy link, or "" when they have none.
    * Gates the detail page's "stream digital copy" button (per-user, never shared).
+   * For an S3-backed copy this is a short-lived signed URL (see `digital_copy_ref`).
    */
   digital_copy_url: string;
+  /**
+   * The raw stored value behind `digital_copy_url`: a plain URL, or an
+   * `s3://<bucketId>/<key>` reference into one of the user's buckets. The edit
+   * form round-trips this (the signed `digital_copy_url` is short-lived and can't
+   * be re-saved). "" when the user has no copy / isn't the owner.
+   */
+  digital_copy_ref: string;
   /** True for staff users; gates the "purge" control that hard-deletes the movie. */
   can_purge: boolean;
   modified: string;

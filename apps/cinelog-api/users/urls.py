@@ -20,6 +20,9 @@ from .views import (
     TvDeviceCodeView,
     TvTokenRefreshView,
     TvTokenView,
+    S3BucketListView,
+    S3BucketDetailView,
+    S3BucketObjectsView,
 )
 
 urlpatterns = [
@@ -45,4 +48,8 @@ urlpatterns = [
     path('tv/token/', TvTokenView.as_view(), name='tv-token'),
     path('tv/authorize/', TvAuthorizeView.as_view(), name='tv-authorize'),
     path('tv/refresh/', TvTokenRefreshView.as_view(), name='tv-refresh'),
+    # Per-user S3 bucket credentials
+    path('s3-buckets/', S3BucketListView.as_view(), name='s3-buckets'),
+    path('s3-buckets/<int:pk>/', S3BucketDetailView.as_view(), name='s3-bucket-detail'),
+    path('s3-buckets/<int:pk>/objects/', S3BucketObjectsView.as_view(), name='s3-bucket-objects'),
 ]

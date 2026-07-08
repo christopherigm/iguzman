@@ -63,13 +63,35 @@ export function isDirectStream(rawUrl: string): boolean {
 }
 
 /**
+ * True when the URL is a presigned S3 GET URL (an `X-Amz-Signature` SigV4 query
+ * param, or a `Signature`+`Expires` SigV2 pair). These are the signed links the
+ * API mints for a user's own bucket files, so we treat them as self-hosted even
+ * when the object key has no recognised media extension (e.g. `.mkv`).
+ */
+export function isPresignedUrl(rawUrl: string): boolean {
+  try {
+    const params = new URL(rawUrl).searchParams;
+    return (
+      params.has("X-Amz-Signature") ||
+      (params.has("Signature") && params.has("Expires"))
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
  * True when a digital-copy URL is a self-hosted media stream (e.g. a personal
  * S3 bucket) rather than an external provider we deep-link into: it matches no
- * known provider app *and* points at a direct media file. Such copies play
- * inline via the AVPlay StreamOverlay instead of launching a provider app.
+ * known provider app *and* is either a direct media file or a presigned bucket
+ * URL. Such copies play inline via the AVPlay StreamOverlay instead of
+ * launching a provider app.
  */
 export function isSelfHostedCopy(rawUrl: string): boolean {
-  return appIdForUrl(rawUrl) === null && isDirectStream(rawUrl);
+  return (
+    appIdForUrl(rawUrl) === null &&
+    (isDirectStream(rawUrl) || isPresignedUrl(rawUrl))
+  );
 }
 
 /** Extract the YouTube video id from any common YouTube URL shape. */

@@ -1,6 +1,9 @@
 from django.core.cache import cache
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.validators import URLValidator
 from rest_framework import serializers
 
+from .digital_copy import is_s3_ref, parse_s3_ref, sign_digital_copy_url
 from .cache import (
     RELATED_CACHE_TTL,
     cache_version,
@@ -31,6 +34,35 @@ from .vocab import (
 
 # Maps a format code to its human label for on-the-fly Format.get_or_create.
 FORMAT_LABELS = dict(FORMAT_CHOICES)
+
+
+class DigitalCopyURLField(serializers.CharField):
+    """
+    A digital-copy value: an empty string, an ``s3://<bucket_id>/<key>``
+    reference into one of the user's registered buckets, or a plain http(s) URL.
+
+    Plain ``URLField`` rejects the ``s3://`` scheme, so this accepts either shape
+    while still validating that a non-S3 value is a well-formed URL.
+    """
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault('max_length', 1000)
+        super().__init__(**kwargs)
+        self._url_validator = URLValidator()
+
+    def run_validation(self, data=serializers.empty):
+        value = super().run_validation(data)
+        if not value:
+            return value
+        if is_s3_ref(value):
+            if parse_s3_ref(value) is None:
+                raise serializers.ValidationError('Enter a valid S3 reference.')
+            return value
+        try:
+            self._url_validator(value)
+        except DjangoValidationError:
+            raise serializers.ValidationError('Enter a valid URL.')
+        return value
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -86,9 +118,12 @@ class MovieListSerializer(serializers.ModelSerializer):
         # backs `owned`); fall back to a direct lookup when absent.
         prefetched = getattr(obj, 'user_ownerships', None)
         if prefetched is not None:
-            return prefetched[0].digital_copy_url if prefetched else ''
-        ownership = obj.ownerships.filter(user=user).first()
-        return ownership.digital_copy_url if ownership else ''
+            raw = prefetched[0].digital_copy_url if prefetched else ''
+        else:
+            ownership = obj.ownerships.filter(user=user).first()
+            raw = ownership.digital_copy_url if ownership else ''
+        # Sign s3:// references into a playable URL (plain URLs pass through).
+        return sign_digital_copy_url(raw, user)
 
     def get_owned(self, obj):
         request = self.context.get('request')
@@ -137,7 +172,12 @@ class MovieDetailSerializer(serializers.ModelSerializer):
     owned = serializers.SerializerMethodField()
     # The requesting user's private link to their own digital copy ('' when none).
     # Gates the detail page's "stream digital copy" button - per-user, never shared.
+    # For an s3:// reference this is the signed, playable URL.
     digital_copy_url = serializers.SerializerMethodField()
+    # The raw stored value behind `digital_copy_url` (the `s3://<bucket_id>/<key>`
+    # reference or the plain URL), so the edit form can round-trip it - the signed
+    # URL in `digital_copy_url` is short-lived and can't be re-saved. Owner-only.
+    digital_copy_ref = serializers.SerializerMethodField()
     # True for staff users. Gates the "purge" control in the UI, which hard-deletes
     # the shared Movie for everyone (vs. the owner "delete" that only drops the
     # requesting user's ownership).
@@ -150,7 +190,7 @@ class MovieDetailSerializer(serializers.ModelSerializer):
             'cover', 'cover_url', 'backdrop', 'tmdb_id', 'synopsis', 'trailer_url',
             'genres', 'cast', 'audio_formats', 'hdr_formats', 'spoken_languages',
             'subtitle_languages', 'related', 'owned', 'digital_copy_url',
-            'can_purge', 'created', 'modified',
+            'digital_copy_ref', 'can_purge', 'created', 'modified',
         ]
 
     def get_formats(self, obj):
@@ -183,6 +223,15 @@ class MovieDetailSerializer(serializers.ModelSerializer):
         return obj.ownerships.filter(user=user).exists()
 
     def get_digital_copy_url(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if user is None or not user.is_authenticated:
+            return ''
+        ownership = obj.ownerships.filter(user=user).first()
+        raw = ownership.digital_copy_url if ownership else ''
+        return sign_digital_copy_url(raw, user)
+
+    def get_digital_copy_ref(self, obj):
         request = self.context.get('request')
         user = getattr(request, 'user', None)
         if user is None or not user.is_authenticated:
@@ -256,7 +305,7 @@ class MovieDetailSerializer(serializers.ModelSerializer):
             {
                 **item,
                 'owned': item['id'] in links,
-                'digital_copy_url': links.get(item['id'], ''),
+                'digital_copy_url': sign_digital_copy_url(links.get(item['id'], ''), user),
             }
             for item in related
         ]
@@ -492,9 +541,10 @@ class MovieEditMediaSerializer(MovieEditSerializer):
     )
     # The requesting user's private digital-copy link, saved onto THEIR ownership
     # (never the shared Movie). `None` means "not sent" so a plain edit leaves the
-    # existing link untouched; an empty string explicitly clears it.
-    digital_copy_url = serializers.URLField(
-        max_length=1000, required=False, allow_blank=True, allow_null=True, default=None
+    # existing link untouched; an empty string explicitly clears it. Accepts a URL
+    # or an s3://<bucket_id>/<key> reference into one of the user's buckets.
+    digital_copy_url = DigitalCopyURLField(
+        required=False, allow_blank=True, allow_null=True, default=None
     )
 
 
@@ -507,8 +557,8 @@ class MovieOwnSerializer(serializers.Serializer):
     """
 
     format = serializers.ChoiceField(choices=FORMAT_CHOICES)
-    digital_copy_url = serializers.URLField(
-        max_length=1000, required=False, allow_blank=True, default=''
+    digital_copy_url = DigitalCopyURLField(
+        required=False, allow_blank=True, default=''
     )
 
     def validate(self, attrs):
@@ -576,6 +626,6 @@ class InboxAcceptSerializer(MovieEditSerializer):
     # The reviewer's private digital-copy link, written onto THEIR ownership row
     # (never the shared Movie). Empty means "not supplied" so accepting without
     # one leaves nothing to write - see the accept view's guarded save.
-    digital_copy_url = serializers.URLField(
-        max_length=1000, required=False, allow_blank=True, default=''
+    digital_copy_url = DigitalCopyURLField(
+        required=False, allow_blank=True, default=''
     )

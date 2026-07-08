@@ -19,9 +19,11 @@ from django.template.loader import render_to_string
 from .models import (
     EmailVerificationToken,
     PasswordResetToken,
+    S3Bucket,
     TvDeviceCode,
     generate_tv_user_code,
 )
+from .s3 import S3Error, list_objects
 
 # A Smart TV is a long-lived appliance, so its refresh token outlives the 7-day
 # web default - the user shouldn't have to re-pair after a week of normal use.
@@ -71,6 +73,7 @@ def _get_rp_id_and_origin():
 from .serializers import (
     CustomTokenObtainPairSerializer,
     ProfilePictureSerializer,
+    S3BucketSerializer,
     SignUpSerializer,
     UserProfileSerializer,
     UserProfileUpdateSerializer,
@@ -621,3 +624,87 @@ class TvTokenRefreshView(APIView):
 
         access, refresh = _mint_tv_tokens(user)
         return Response({'access': access, 'refresh': refresh})
+
+
+# ── Per-user S3 bucket credentials ────────────────────────────────────────────
+
+
+class S3BucketListView(APIView):
+    """
+    GET  /api/auth/s3-buckets/   list the user's registered buckets.
+    POST /api/auth/s3-buckets/   register a new bucket (secret stored encrypted).
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        buckets = S3Bucket.objects.filter(user=request.user)
+        return Response(S3BucketSerializer(buckets, many=True).data)
+
+    def post(self, request):
+        serializer = S3BucketSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        bucket = serializer.save()
+        return Response(S3BucketSerializer(bucket).data, status=status.HTTP_201_CREATED)
+
+
+class S3BucketDetailView(APIView):
+    """
+    GET / PATCH / DELETE a single bucket the requesting user owns.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def _get_object(self, request, pk):
+        return S3Bucket.objects.filter(user=request.user, pk=pk).first()
+
+    def get(self, request, pk):
+        bucket = self._get_object(request, pk)
+        if bucket is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(S3BucketSerializer(bucket).data)
+
+    def patch(self, request, pk):
+        bucket = self._get_object(request, pk)
+        if bucket is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = S3BucketSerializer(
+            bucket, data=request.data, partial=True, context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(S3BucketSerializer(bucket).data)
+
+    def delete(self, request, pk):
+        bucket = self._get_object(request, pk)
+        if bucket is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        bucket.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class S3BucketObjectsView(APIView):
+    """
+    GET /api/auth/s3-buckets/<pk>/objects/?prefix=
+
+    List objects in the bucket for the web app's file picker. Requires the
+    credentials to have ListBucket permission; a provider error (bad creds,
+    permission denied) surfaces as 400 so the UI can prompt the user to type the
+    key by hand instead.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        bucket = S3Bucket.objects.filter(user=request.user, pk=pk).first()
+        if bucket is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        prefix = request.query_params.get('prefix', '')
+        try:
+            objects = list_objects(bucket, prefix=prefix)
+        except S3Error as exc:
+            return Response(
+                {'detail': 'Could not list bucket objects.', 'error': str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response({'objects': objects})

@@ -33,6 +33,7 @@ interface NavbarWrapperProps {
     addMovie: string;
     account: string;
     linkTv: string;
+    linkStorage: string;
     signOut: string;
   };
 }
@@ -79,6 +80,7 @@ export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
         children: [
           { label: labels.account, href: "/account" },
           { label: labels.linkTv, href: "/tv" },
+          { label: labels.linkStorage, href: "/storage" },
           { label: labels.signOut, onClick: handleSignOut },
         ],
       }
