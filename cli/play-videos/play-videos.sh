@@ -31,6 +31,13 @@
 #   --audio-device <device>       Audio device string, e.g. alsa/hdmi:CARD=PCH,DEV=3 (default: auto)
 #   --list-audio-devices          List available audio devices, then exit
 #
+#   Enhancement (GPU real-time processing; needs a GPU; best on mpv >= 0.36 gpu-next):
+#   --enhance                     4K upscale + deinterlace + judder-smoothing via GPU
+#                                   (uses vo=gpu-next when available, else falls back to vo=gpu)
+#                                   (checks/installs the GPU's VAAPI drivers on first use)
+#   --sdr-to-hdr                  [experimental] Inverse tone-map SDR -> HDR10 (implies --enhance)
+#   --hdr-peak <nits|auto>        Target HDR peak brightness for --sdr-to-hdr (default: auto)
+#
 #   Advanced:
 #   -- <mpv-args...>              Pass remaining arguments directly to mpv
 #
@@ -46,6 +53,8 @@
 #   ./play-videos.sh --ao alsa --audio-device 'alsa/hdmi:CARD=PCH,DEV=3' video.mp4
 #   ./play-videos.sh --ao alsa --audio-device 'alsa/plughw:CARD=rt5650,DEV=0' song.flac
 #   ./play-videos.sh --playlist my-playlist.m3u --loop-playlist --shuffle
+#   ./play-videos.sh --enhance --mode 3840x2160@60 movie.mkv
+#   ./play-videos.sh --enhance --sdr-to-hdr --mode 3840x2160@60 bluray.mkv
 #   ./play-videos.sh --list-connectors
 #   ./play-videos.sh --list-audio-devices
 #   ./play-videos.sh video.mp4 -- --brightness=10 --contrast=5
@@ -66,6 +75,10 @@ DRM_DEVICE=""          # Override DRM device (e.g. /dev/dri/card1). Empty = auto
 AUDIO_OUTPUT="alsa"    # Audio output driver: alsa | pulse | pipewire | jack | auto
 AUDIO_DEVICE=""        # ALSA device override (e.g. alsa/hdmi:CARD=PCH,DEV=3). Use --list-audio-devices to find
 AUDIO_ONLY="auto"      # auto = detect from file extension | yes | no
+ENHANCE="no"           # GPU real-time upscale + deinterlace (vo=gpu-next). Needs a GPU + mpv >= 0.38
+SDR_TO_HDR="no"        # [experimental] inverse tone-map SDR -> HDR10 (implies ENHANCE)
+HDR_PEAK="auto"        # Target HDR peak nits for --sdr-to-hdr (auto = let libplacebo decide)
+ENHANCE_VO=""          # Resolved enhance video output: gpu-next (mpv >= 0.36) or gpu fallback
 EXTRA_ARGS=()          # Any extra mpv args passed through
 
 # ── Media type definitions ─────────────────────────────────────────────────────
@@ -94,8 +107,113 @@ usage() {
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
+# Offer to apt-install one or more packages. Shared prompt + sudo + update logic.
+# Args: <human-purpose> <pkg...>   Returns 0 on success, 1 if declined/unavailable.
+apt_install_pkgs() {
+  local purpose="$1"; shift
+  local pkgs=("$@")
+  if ! command -v apt-get &>/dev/null; then
+    echo "  No apt-get here - install ${purpose} manually: ${pkgs[*]}" >&2
+    return 1
+  fi
+  local ans="y"
+  if [[ -t 0 ]]; then
+    printf "  Install %s now with apt (%s)? [Y/n]: " "${purpose}" "${pkgs[*]}" >&2
+    read -r ans; ans="${ans:-y}"
+  else
+    echo "  Non-interactive shell - installing ${purpose} automatically..." >&2
+  fi
+  [[ "$(lc "${ans}")" =~ ^y ]] || { echo "  Skipped ${purpose}." >&2; return 1; }
+  local sudo=""; [[ "$(id -u)" -ne 0 ]] && sudo="sudo"
+  echo "  Installing ${pkgs[*]}..." >&2
+  ${sudo} apt-get update -qq || true
+  ${sudo} apt-get install -y "${pkgs[@]}"
+}
+
+# Ensure a command exists; if missing, offer to apt-install its package.
 require() {
-  command -v "$1" &>/dev/null || die "'$1' is not installed. Install with: sudo apt install $2"
+  local cmd="$1" pkg="$2"
+  command -v "${cmd}" &>/dev/null && return 0
+  echo "'${cmd}' is not installed." >&2
+  apt_install_pkgs "'${cmd}'" "${pkg}" \
+    || die "'${cmd}' is required. Install with: sudo apt install ${pkg}"
+  command -v "${cmd}" &>/dev/null \
+    || die "'${cmd}' still not found after installing '${pkg}'."
+}
+
+# For --enhance: make sure the GPU decode stack is present so mpv's hwdec can
+# offload to the GPU instead of silently falling back to (much slower) software.
+#   Intel / AMD -> VAAPI, verified with vainfo
+#   NVIDIA      -> proprietary driver (heavy, release-specific): guide, don't force
+ensure_gpu_drivers() {
+  local gpu=""
+  command -v lspci &>/dev/null && gpu="$(lspci 2>/dev/null | grep -Ei 'vga|3d|display' || true)"
+
+  # Check NVIDIA before AMD, and match ATI only as a whole word - otherwise the
+  # "ati" in "Corporation" false-positives every non-AMD card as AMD.
+  local vendor="unknown" driver_pkgs=()
+  if   echo "${gpu}" | grep -qi  'intel';               then vendor="Intel";  driver_pkgs=(intel-media-va-driver)
+  elif echo "${gpu}" | grep -qi  'nvidia';              then vendor="NVIDIA"
+  elif echo "${gpu}" | grep -qiE '\b(amd|ati|radeon)\b'; then vendor="AMD";   driver_pkgs=(mesa-va-drivers)
+  fi
+  echo "  GPU vendor: ${vendor}" >&2
+
+  # NVIDIA: the proprietary driver is large and tied to a kernel/driver release,
+  # so we surface the exact steps rather than auto-installing the wrong version.
+  if [[ "${vendor}" == "NVIDIA" ]]; then
+    if command -v nvidia-smi &>/dev/null; then
+      echo "  NVIDIA driver present. For VAAPI decode you may also want: sudo apt install nvidia-vaapi-driver" >&2
+    else
+      echo "  WARNING: NVIDIA proprietary driver not detected - gpu-next/hwdec need it:" >&2
+      echo "             sudo ubuntu-drivers autoinstall" >&2
+      echo "             echo 'options nvidia-drm modeset=1' | sudo tee /etc/modprobe.d/nvidia-drm.conf" >&2
+      echo "             sudo update-initramfs -u   # then reboot" >&2
+      echo "           For VAAPI decode also: sudo apt install nvidia-vaapi-driver" >&2
+    fi
+    return 0
+  fi
+
+  # Intel / AMD (or unknown): verify VAAPI via vainfo, installing the driver if needed.
+  if ! command -v vainfo &>/dev/null; then
+    local pkgs=(vainfo)
+    [[ "${#driver_pkgs[@]}" -gt 0 ]] && pkgs+=("${driver_pkgs[@]}")
+    apt_install_pkgs "VAAPI tools/${vendor} driver" "${pkgs[@]}" \
+      || { echo "  Continuing without verified VAAPI - hwdec may fall back to software (more CPU)." >&2; return 0; }
+  fi
+
+  command -v vainfo &>/dev/null || return 0
+  if vainfo &>/dev/null; then
+    echo "  VAAPI OK: $(vainfo 2>/dev/null | grep -m1 -i 'driver version' | sed 's/^[[:space:]]*//')" >&2
+  else
+    echo "  WARNING: vainfo could not initialise VAAPI." >&2
+    [[ "${#driver_pkgs[@]}" -gt 0 ]] && { apt_install_pkgs "${vendor} VAAPI driver" "${driver_pkgs[@]}" || true; }
+    vainfo &>/dev/null \
+      && echo "  VAAPI OK now." >&2 \
+      || echo "  hwdec may fall back to software; playback still works but uses more CPU." >&2
+  fi
+}
+
+# Pick the video output for --enhance. libplacebo's gpu-next (mpv >= 0.36) is
+# preferred, but Ubuntu 22.04 et al ship mpv 0.34 which has no gpu-next - fall
+# back to the classic gpu VO so --enhance still upscales/deinterlaces/interpolates
+# there. Only SDR->HDR inverse tone-mapping is unavailable on the fallback.
+select_enhance_vo() {
+  local vos; vos="$(mpv --vo=help 2>/dev/null || true)"
+  if echo "${vos}" | grep -qE '^[[:space:]]*gpu-next[[:space:]]'; then
+    ENHANCE_VO="gpu-next"
+  elif echo "${vos}" | grep -qE '^[[:space:]]*gpu[[:space:]]'; then
+    ENHANCE_VO="gpu"
+    local ver; ver="$(mpv --version 2>/dev/null | head -1 | awk '{print $2}')"
+    echo "  NOTE: this mpv (${ver:-unknown}) has no 'gpu-next' VO; falling back to 'gpu'." >&2
+    echo "        Core upscale/deinterlace/interpolation still apply. For gpu-next" >&2
+    echo "        quality (and SDR->HDR), upgrade mpv to >= 0.36 (libplacebo)." >&2
+    if [[ "${SDR_TO_HDR}" == "yes" ]]; then
+      echo "  WARNING: --sdr-to-hdr needs gpu-next inverse tone-mapping (unavailable on 'gpu')." >&2
+      echo "           Continuing without inverse tone-mapping; output stays SDR." >&2
+    fi
+  else
+    die "mpv has neither a 'gpu-next' nor 'gpu' video output; cannot --enhance."
+  fi
 }
 
 check_group() {
@@ -144,11 +262,53 @@ build_mpv_args() {
     "--volume=${VOLUME}"
     "--mute=${MUTE}"
     "--ao=${AUDIO_OUTPUT}"
-    "--really-quiet"
+    # --quiet (not --really-quiet): suppress the verbose banner but still let
+    # fatal errors through, so a failed VO/decode isn't silently swallowed.
+    "--quiet"
   )
 
   if [[ "${audio_only}" == "yes" ]]; then
     args+=("--vo=null")
+  elif [[ "${ENHANCE}" == "yes" ]]; then
+    # GPU path: libplacebo (gpu-next) straight onto the DRM/KMS console. Gives
+    # real-time high-quality upscaling, deinterlacing and (optionally) SDR->HDR.
+    # hwdec offloads decode to the Intel VAAPI block so the GPU's shader budget
+    # is free for scaling. This replaces the software --vo=drm / sw-fast path.
+    args+=(
+      "--vo=${ENHANCE_VO:-gpu-next}"
+      "--gpu-context=drm"
+      "--hwdec=auto-safe"
+      "--drm-connector=${CONNECTOR}"
+      "--drm-mode=${MODE}"
+      # Upscaling: sharp EWA-Lanczos for luma, cheaper spline for chroma.
+      "--scale=ewa_lanczossharp"
+      "--cscale=spline36"
+      "--dscale=mitchell"
+      "--correct-downscaling=yes"
+      "--sigmoid-upscaling=yes"
+      # Deinterlace DVD/broadcast; smooth 24p->display cadence cheaply.
+      "--deinterlace=yes"
+      "--video-sync=display-resample"
+      "--interpolation=yes"
+      "--tscale=oversample"
+    )
+    # Inverse tone-mapping: remap Rec.709 SDR into an HDR10 (PQ / BT.2020)
+    # container. The drm context emits HDR metadata to the TV (kernel >= 5.4).
+    # This is libplacebo-only, so it only applies on the gpu-next VO; on the
+    # older 'gpu' fallback the --inverse-tone-mapping/--tone-mapping-mode options
+    # don't even exist, so we skip the whole block (warned in select_enhance_vo).
+    if [[ "${SDR_TO_HDR}" == "yes" && "${ENHANCE_VO}" == "gpu-next" ]]; then
+      args+=(
+        "--target-prim=bt.2020"
+        "--target-trc=pq"
+        "--tone-mapping=bt.2390"
+        "--tone-mapping-mode=rgb"
+        "--inverse-tone-mapping=yes"
+      )
+      [[ "${HDR_PEAK}" != "auto" ]] && args+=("--target-peak=${HDR_PEAK}")
+    fi
+    [[ "${FULLSCREEN}" == "yes" ]] && args+=("--fs")
+    [[ -n "${DRM_DEVICE}" ]]       && args+=("--drm-device=${DRM_DEVICE}")
   else
     args+=(
       "--vo=drm"
@@ -173,6 +333,17 @@ play_target() {
   local target="$1"
   require mpv mpv
   check_audio_group
+
+  if [[ "${ENHANCE}" == "yes" ]]; then
+    select_enhance_vo
+    echo "Enhance ON: GPU upscaling via vo=${ENHANCE_VO} (hwdec=vaapi, deinterlace, interpolation)."
+    ensure_gpu_drivers
+    if [[ "${SDR_TO_HDR}" == "yes" ]]; then
+      echo "  [experimental] SDR->HDR inverse tone-mapping enabled - needs an HDR-capable TV + kernel DRM HDR."
+      echo "  If the picture looks dull/washed out, the panel likely isn't switching to HDR; drop --sdr-to-hdr."
+    fi
+    echo "  If playback stutters at 4K on this iGPU, append: -- --scale=spline36 --no-interpolation"
+  fi
 
   local audio_only="${AUDIO_ONLY}"
 
@@ -240,6 +411,9 @@ while [[ $# -gt 0 ]]; do
     --volume)             VOLUME="$2"; shift ;;
     --mute)               MUTE="yes" ;;
     --no-fullscreen)      FULLSCREEN="no" ;;
+    --enhance)            ENHANCE="yes" ;;
+    --sdr-to-hdr)         SDR_TO_HDR="yes"; ENHANCE="yes" ;;
+    --hdr-peak)           HDR_PEAK="$2"; shift ;;
     --device)             DRM_DEVICE="$2"; shift ;;
     --profile)            PROFILE="$2"; shift ;;
     --playlist)

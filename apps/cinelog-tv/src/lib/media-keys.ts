@@ -16,8 +16,12 @@ export function registerMediaKeys(): void {
   for (const name of ["MediaPlayPause", "MediaPlay", "MediaPause"]) {
     try {
       tvinputdevice.registerKey(name);
-    } catch {
-      /* key unsupported on this device - skip it */
+    } catch (error) {
+      // Most likely a missing `http://tizen.org/privilege/tv.inputdevice` in
+      // config.xml (registerKey then throws SecurityError and the platform keeps
+      // handling the key itself - drawing its own media OSD), or a key name this
+      // device doesn't support. Log rather than swallow so it's diagnosable.
+      console.warn(`registerKey("${name}") failed:`, error);
     }
   }
 }

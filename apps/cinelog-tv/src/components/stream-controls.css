@@ -111,7 +111,8 @@
   margin-right: 0;
 }
 
-/* Track menu floats above the transport buttons. */
+/* Track menu floats above the transport buttons, pinned under the button that
+   opened it: audio on the left, subtitles on the right. */
 .stream-controls__menu {
   position: absolute;
   left: 64px;
@@ -120,6 +121,11 @@
   padding: 24px;
   border-radius: var(--tv-radius);
   background: var(--surface-2);
+}
+
+.stream-controls__menu--right {
+  left: auto;
+  right: 64px;
 }
 
 .stream-controls__menu-title {

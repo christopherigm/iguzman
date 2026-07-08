@@ -15,6 +15,10 @@ export const PLAYPAUSE_FOCUS_KEY = "stream-playpause";
 /** Focus key for the scrubbable progress bar (Left/Right seek). */
 export const PROGRESS_FOCUS_KEY = "stream-progress";
 
+/** Focus keys for the track buttons, so a closing menu can return focus here. */
+export const AUDIO_FOCUS_KEY = "stream-audio";
+export const SUBTITLES_FOCUS_KEY = "stream-subtitles";
+
 /** The track menus the transport bar can open above itself. */
 export type StreamMenu = "audio" | "subtitles" | null;
 
@@ -29,29 +33,56 @@ export function formatTime(ms: number): string {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
-/** A single audio/subtitle option list rendered above the transport buttons. */
+/**
+ * A single audio/subtitle option list rendered above the transport buttons.
+ * `align` pins it under the button that opened it (audio left, subtitles right).
+ * Down from the last option closes the menu (it's the bottom-most focusable, so
+ * Down otherwise goes nowhere) and hands focus back to the button that opened it
+ * (`returnFocusKey`).
+ */
 function TrackMenu({
   title,
   options,
   activeIndex,
+  align,
   onSelect,
+  onCloseMenu,
+  returnFocusKey,
 }: {
   title: string;
   options: { key: string; label: string; index: number | null }[];
   activeIndex: number | null;
+  align: "left" | "right";
   onSelect: (index: number | null) => void;
+  onCloseMenu: () => void;
+  returnFocusKey: string;
 }) {
+  const cls =
+    "stream-controls__menu" +
+    (align === "right" ? " stream-controls__menu--right" : "");
   return (
-    <div className="stream-controls__menu">
+    <div className={cls}>
       <TvText variant="label" className="stream-controls__menu-title">
         {title}
       </TvText>
       <Focusable group focusOnMount className="stream-controls__menu-list">
-        {options.map((opt) => (
+        {options.map((opt, i) => (
           <TvButton
             key={opt.key}
             selected={opt.index === activeIndex}
             onPress={() => onSelect(opt.index)}
+            onArrowPress={
+              i === options.length - 1
+                ? (direction) => {
+                    if (direction === "down") {
+                      onCloseMenu();
+                      setFocus(returnFocusKey);
+                      return false;
+                    }
+                    return true;
+                  }
+                : undefined
+            }
           >
             {opt.label}
           </TvButton>
@@ -73,6 +104,7 @@ export function StreamControls({
   visible,
   menu,
   onOpenMenu,
+  onCloseMenu,
   onStop,
   onHide,
 }: {
@@ -82,6 +114,7 @@ export function StreamControls({
   visible: boolean;
   menu: StreamMenu;
   onOpenMenu: (menu: Exclude<StreamMenu, null>) => void;
+  onCloseMenu: () => void;
   onStop: () => void;
   onHide: () => void;
 }) {
@@ -153,7 +186,10 @@ export function StreamControls({
       {menu === "audio" && (
         <TrackMenu
           title={t("audio")}
+          align="left"
           activeIndex={activeAudio}
+          returnFocusKey={AUDIO_FOCUS_KEY}
+          onCloseMenu={onCloseMenu}
           onSelect={(i) => i !== null && selectAudio(i)}
           options={audioTracks.map((track, i) => ({
             key: `a${track.index}`,
@@ -165,7 +201,10 @@ export function StreamControls({
       {menu === "subtitles" && (
         <TrackMenu
           title={t("subtitles")}
+          align="right"
           activeIndex={activeSubtitle}
+          returnFocusKey={SUBTITLES_FOCUS_KEY}
+          onCloseMenu={onCloseMenu}
           onSelect={selectSubtitle}
           options={[
             { key: "off", label: t("subtitlesOff"), index: null },
@@ -217,6 +256,7 @@ export function StreamControls({
 
       <Focusable group className="stream-controls__buttons">
         <TvButton
+          focusKey={AUDIO_FOCUS_KEY}
           disabled={audioTracks.length < 2}
           selected={menu === "audio"}
           onPress={() => onOpenMenu("audio")}
@@ -255,6 +295,7 @@ export function StreamControls({
         </div>
 
         <TvButton
+          focusKey={SUBTITLES_FOCUS_KEY}
           disabled={subtitleTracks.length === 0}
           selected={menu === "subtitles"}
           onPress={() => onOpenMenu("subtitles")}

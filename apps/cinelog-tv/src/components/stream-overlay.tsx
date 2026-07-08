@@ -198,6 +198,12 @@ export function StreamOverlay({
     setMenu(null);
     revealControls();
   }, [revealControls]);
+  // Close the menu and drop focus back onto the transport row (Down from the
+  // menu's last option), so the remote lands somewhere once the menu is gone.
+  const closeMenuToBar = useCallback(() => {
+    closeMenu();
+    setFocus(PLAYPAUSE_FOCUS_KEY);
+  }, [closeMenu]);
 
   // On the playing/paused transition, adjust the auto-hide timer without
   // touching the bar's current visibility (so no setState in this effect): keep
@@ -362,6 +368,7 @@ export function StreamOverlay({
           visible={controlsVisible}
           menu={menu}
           onOpenMenu={openMenu}
+          onCloseMenu={closeMenuToBar}
           onStop={onClose}
           onHide={hideControls}
         />

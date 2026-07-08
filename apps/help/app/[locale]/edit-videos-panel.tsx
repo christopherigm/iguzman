@@ -226,6 +226,30 @@ const SA_CHECKS =
   "Severity levels: CRITICAL · HIGH · MEDIUM · LOW · INFO\n" +
   "Each finding includes a mitigation command in the summary.";
 
+// ── setup-wifi constants ───────────────────────────────────────────────────────
+
+const SW_INVOKE =
+  "pnpm setup-wifi\n" +
+  "# or\n" +
+  "bash cli/setup-wifi/setup-wifi.sh\n" +
+  "\n" +
+  "# Re-runs itself with sudo (needs root for rfkill / ip link / netplan).";
+
+const SW_FLOW =
+  "Backend (auto-detected):\n" +
+  "  • NetworkManager (nmcli)    — when its service is active\n" +
+  "  • netplan + wpa_supplicant  — Ubuntu Server's default otherwise\n" +
+  "\n" +
+  "1. Detect the Wi-Fi interface (wlan0, wlp1s0, …); diagnose the\n" +
+  "   hardware (PCI/USB, firmware hint) if none is found.\n" +
+  "2. Fix the card:   rfkill unblock · radio on · interface up\n" +
+  "3. Connect:        scan → pick SSID (or type it) → password →\n" +
+  "                   verify association + IP\n" +
+  "4. Already connected → switch to another network or disconnect\n" +
+  "\n" +
+  "Persistent: nmcli saves an auto-connect profile; netplan writes\n" +
+  "/etc/netplan/90-setup-wifi.yaml (mode 600) and runs netplan apply.";
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export async function ToolsPanel() {
@@ -440,6 +464,25 @@ export async function ToolsPanel() {
         heading={t("toolsSaChecksHeading")}
         description={t("toolsSaChecksDescription")}
         code={SA_CHECKS}
+      />
+
+      <ScriptDivider />
+
+      {/* ─── setup-wifi ─── */}
+      <ScriptHeader
+        title={t("toolsSwSection")}
+        description={t("toolsSwDescription")}
+      />
+
+      <EvSection
+        heading={t("toolsSwInvokeHeading")}
+        description={t("toolsSwInvokeDescription")}
+        code={SW_INVOKE}
+      />
+      <EvSection
+        heading={t("toolsSwFlowHeading")}
+        description={t("toolsSwFlowDescription")}
+        code={SW_FLOW}
       />
     </>
   );
