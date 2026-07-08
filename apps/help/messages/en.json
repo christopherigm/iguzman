@@ -141,7 +141,7 @@
     "toolsEditVideosInvokeHeading": "Invocation",
     "toolsEditVideosInvokeDescription": "Run from the repo root. The script is fully interactive - no command-line flags are required.",
     "toolsEvFlowHeading": "Interactive flow",
-    "toolsEvFlowDescription": "The script guides you through: language selection → FFmpeg check (auto-downloads a static BtbN build if missing) → GPU detection → input folder → format filter → output folder → skip-already-processed check → action selection → codec choice (H.264 / H.265) → per-action parameter prompts → audio/subtitle stream selection → pre-flight summary → optional background mode.",
+    "toolsEvFlowDescription": "The script guides you through: language selection → FFmpeg check (auto-downloads a static BtbN build if missing) → GPU detection → input folder → format filter → output folder → skip-already-processed check → action selection → codec choice (H.264 / H.265) → container choice (same as input / MP4 / MKV) → per-action parameter prompts → audio/subtitle stream selection → pre-flight summary → optional background mode.",
     "toolsEvFiltersGroup": "Filters & Encoding",
     "toolsEvActionsDescription": "Select any combination of the 14 actions at the checkbox menu. Actions are applied in the order listed below.",
     "toolsEvBlackBarsHeading": "Remove Black Bars",

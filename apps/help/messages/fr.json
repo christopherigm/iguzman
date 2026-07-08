@@ -141,7 +141,7 @@
     "toolsEditVideosInvokeHeading": "Invocation",
     "toolsEditVideosInvokeDescription": "Exécuter depuis la racine du dépôt. Le script est entièrement interactif - aucun argument en ligne de commande n'est requis.",
     "toolsEvFlowHeading": "Déroulement interactif",
-    "toolsEvFlowDescription": "Le script vous guide à travers : sélection de la langue → vérification de FFmpeg (téléchargement automatique du build statique BtbN si absent) → détection du GPU → dossier d'entrée → filtre de formats → dossier de sortie → vérification des fichiers déjà traités → sélection des actions → choix du codec (H.264 / H.265) → paramètres par action → sélection des pistes audio/sous-titres → récapitulatif pré-vol → mode arrière-plan optionnel.",
+    "toolsEvFlowDescription": "Le script vous guide à travers : sélection de la langue → vérification de FFmpeg (téléchargement automatique du build statique BtbN si absent) → détection du GPU → dossier d'entrée → filtre de formats → dossier de sortie → vérification des fichiers déjà traités → sélection des actions → choix du codec (H.264 / H.265) → choix du conteneur (identique à l'entrée / MP4 / MKV) → paramètres par action → sélection des pistes audio/sous-titres → récapitulatif pré-vol → mode arrière-plan optionnel.",
     "toolsEvFiltersGroup": "Filtres & encodage",
     "toolsEvActionsDescription": "Sélectionnez n'importe quelle combinaison des 14 actions dans le menu à cases. Les actions sont appliquées dans l'ordre indiqué.",
     "toolsEvBlackBarsHeading": "Supprimer les barres noires",

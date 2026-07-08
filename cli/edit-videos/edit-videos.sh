@@ -61,6 +61,11 @@ DO_SMARTTV=0
 
 COMPRESS_PERCENT=50
 
+# Output container override: "source" keeps each file's original extension,
+# "mp4" / "mkv" force that container (MKV preserves all subtitles losslessly).
+# Smart TV and mpg→mp4 force their own container regardless of this setting.
+OUTPUT_CONTAINER="source"
+
 # Smart TV (Tizen) profile tier + target dimensions (set by the tier prompt).
 SMARTTV_TIER=720
 SMARTTV_TARGET_W=1280
@@ -387,6 +392,26 @@ main() {
     fi
   fi
   echo ""
+
+  # ── Container selection ───────────────────────────────────────────────────
+  # MKV preserves every subtitle stream losslessly (SRT, ASS, PGS, VobSub),
+  # whereas MP4 can only carry text subs as mov_text and drops image subs.
+  # The Smart TV profile forces its own MP4 container, so skip the prompt there.
+  OUTPUT_CONTAINER="source"
+  if [[ "${DO_SMARTTV}" -eq 0 ]]; then
+    printf "  %s\n" "$(clr_bold "${CONTAINER_SELECT_LABEL}:")"
+    printf "  %s\n\n" "$(clr_dim "↑↓ ${CB_PROMPT##*↑↓ }")"
+    _CB_LABELS=("${CONTAINER_SOURCE_OPTION}" "${CONTAINER_MP4_OPTION}" "${CONTAINER_MKV_OPTION}")
+    _CB_SEL=(1 0 0)
+    _CB_DISABLED=(0 0 0)
+    interactive_radio
+    case "${SELECTED_INDICES[0]:-0}" in
+      1) OUTPUT_CONTAINER="mp4" ;;
+      2) OUTPUT_CONTAINER="mkv" ;;
+      *) OUTPUT_CONTAINER="source" ;;
+    esac
+    echo ""
+  fi
 
   # ── RIFE check / bootstrap ────────────────────────────────────────────────
   if [[ "${DO_RIFE}" -eq 1 ]]; then
@@ -841,6 +866,8 @@ main() {
   [[ "${DO_DEEP3D}" -eq 1 && -n "${DEEP3D_GPU_NAME:-}" ]] && \
     printf "  %s: %s\n" "$(clr_bold_magenta 'AI GPU')" "$(clr_magenta "${DEEP3D_GPU_NAME} (CUDA)")"
   printf "  %s: %s\n" "$(clr_dim "${THREADS_LABEL}")" "$(clr_dim "${THREAD_COUNT}")"
+  [[ "${OUTPUT_CONTAINER}" != "source" ]] && \
+    printf "  %s: %s\n" "$(clr_bold "${CONTAINER_SELECT_LABEL}")" "$(clr_cyan ".${OUTPUT_CONTAINER}")"
   [[ "${STREAM_SELECTION_MODE}" -eq 1 ]] && \
     printf "  %s: %s\n" "$(clr_bold "${STREAM_SELECT_TITLE}")" "$(clr_cyan "${STREAM_SELECT_PER_FILE}")"
   echo "  ${divider}"

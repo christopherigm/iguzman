@@ -141,7 +141,7 @@
     "toolsEditVideosInvokeHeading": "Invocación",
     "toolsEditVideosInvokeDescription": "Ejecutar desde la raíz del repositorio. El script es completamente interactivo - no se requieren argumentos de línea de comandos.",
     "toolsEvFlowHeading": "Flujo interactivo",
-    "toolsEvFlowDescription": "El script te guía a través de: selección de idioma → verificación de FFmpeg (descarga automática de la versión estática BtbN si falta) → detección de GPU → carpeta de entrada → filtro de formatos → carpeta de salida → comprobación de archivos ya procesados → selección de acciones → elección de códec (H.264 / H.265) → parámetros por acción → selección de pistas de audio/subtítulos → resumen previo → modo en segundo plano opcional.",
+    "toolsEvFlowDescription": "El script te guía a través de: selección de idioma → verificación de FFmpeg (descarga automática de la versión estática BtbN si falta) → detección de GPU → carpeta de entrada → filtro de formatos → carpeta de salida → comprobación de archivos ya procesados → selección de acciones → elección de códec (H.264 / H.265) → elección de contenedor (igual que el original / MP4 / MKV) → parámetros por acción → selección de pistas de audio/subtítulos → resumen previo → modo en segundo plano opcional.",
     "toolsEvFiltersGroup": "Filtros y codificación",
     "toolsEvActionsDescription": "Selecciona cualquier combinación de las 14 acciones en el menú de casillas. Las acciones se aplican en el orden indicado.",
     "toolsEvBlackBarsHeading": "Eliminar barras negras",

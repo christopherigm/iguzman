@@ -468,28 +468,44 @@ process_video() {
       fi
     fi
   else
-    # Pure remux (same container). Default keeps every track (-map 0); when the
-    # user curated streams for this file, map only the chosen audio/subtitles.
-    local copy_maps=(-map 0)
-    local _sel_a="${CUR_STREAM_SEL_AUDIO:-*}" _sel_s="${CUR_STREAM_SEL_SUBS:-*}"
-    if [[ "${_sel_a}" != "*" || "${_sel_s}" != "*" ]]; then
-      copy_maps=(-map 0:v?)
-      local _ci
-      if [[ "${_sel_a}" == "*" ]]; then
-        copy_maps+=(-map 0:a?)
-      elif [[ "${_sel_a}" != "-" ]]; then
-        for _ci in ${_sel_a}; do copy_maps+=(-map "0:a:${_ci}"); done
+    local _src_ext="${src##*.}"; _src_ext="$(lc "${_src_ext}")"
+    local _out_ext="${output##*.}"; _out_ext="$(lc "${_out_ext}")"
+    if [[ "${_src_ext}" != "${_out_ext}" ]]; then
+      # Container change without a video re-encode (e.g. an output-container
+      # override with no filters). Copy video/audio verbatim but route subtitles
+      # through build_stream_maps so they are muxed correctly for the target
+      # container (lossless copy into MKV; text-only mov_text into MP4).
+      build_stream_maps "${src}" "${src}" "${output}"
+      if ! run_ffmpeg_step "${STEP_COPY}" "${dur_sec}" -i "${src}" "${STREAM_EXTRA_INPUTS[@]}" \
+            -c:v copy "${STREAM_MAP_ARGS[@]}" "${output}"; then
+        [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+        [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+        return 1
       fi
-      if [[ "${_sel_s}" == "*" ]]; then
-        copy_maps+=(-map 0:s?)
-      elif [[ "${_sel_s}" != "-" ]]; then
-        for _ci in ${_sel_s}; do copy_maps+=(-map "0:s:${_ci}"); done
+    else
+      # Pure remux (same container). Default keeps every track (-map 0); when the
+      # user curated streams for this file, map only the chosen audio/subtitles.
+      local copy_maps=(-map 0)
+      local _sel_a="${CUR_STREAM_SEL_AUDIO:-*}" _sel_s="${CUR_STREAM_SEL_SUBS:-*}"
+      if [[ "${_sel_a}" != "*" || "${_sel_s}" != "*" ]]; then
+        copy_maps=(-map 0:v?)
+        local _ci
+        if [[ "${_sel_a}" == "*" ]]; then
+          copy_maps+=(-map 0:a?)
+        elif [[ "${_sel_a}" != "-" ]]; then
+          for _ci in ${_sel_a}; do copy_maps+=(-map "0:a:${_ci}"); done
+        fi
+        if [[ "${_sel_s}" == "*" ]]; then
+          copy_maps+=(-map 0:s?)
+        elif [[ "${_sel_s}" != "-" ]]; then
+          for _ci in ${_sel_s}; do copy_maps+=(-map "0:s:${_ci}"); done
+        fi
       fi
-    fi
-    if ! run_ffmpeg_step "${STEP_COPY}" "${dur_sec}" -i "${src}" "${copy_maps[@]}" -c copy "${output}"; then
-      [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
-      [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
-      return 1
+      if ! run_ffmpeg_step "${STEP_COPY}" "${dur_sec}" -i "${src}" "${copy_maps[@]}" -c copy "${output}"; then
+        [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+        [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+        return 1
+      fi
     fi
   fi
 
@@ -568,7 +584,11 @@ _run_processing() {
     count_idx=$(( count_idx + 1 ))
     local base; base="$(basename "${vf}")"
     local out="${out_dir}/${base}"
-    if [[ "${DO_MPG_TO_MP4}" -eq 1 ]]; then
+    # Explicit output-container override (mkv keeps every subtitle losslessly;
+    # mp4 forces mov_text/text-only). Wins over the mpg→mp4 default extension.
+    if [[ "${OUTPUT_CONTAINER:-source}" != "source" ]]; then
+      out="${out_dir}/${base%.*}.${OUTPUT_CONTAINER}"
+    elif [[ "${DO_MPG_TO_MP4}" -eq 1 ]]; then
       local _out_ext="${base##*.}"; _out_ext="$(lc "${_out_ext}")"
       if [[ "${_out_ext}" == "mpg" || "${_out_ext}" == "mpeg" || \
             "${_out_ext}" == "m2v" || "${_out_ext}" == "vob" ]]; then
