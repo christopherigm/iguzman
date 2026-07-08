@@ -177,7 +177,23 @@ const PV_MENU =
   "Shuffle / Mute / Audio-only     # --shuffle / --mute / --audio-only\n" +
   "List connectors / audio devices # --list-connectors / --list-audio-devices\n" +
   "Fix audio / video issues        # runs fix-audio.sh + DRM/video-group checks\n" +
+  "Help: playback keys             # shows the in-playback key bindings below\n" +
   "Exit";
+
+const PV_CONTROLS =
+  "# Keys while a video / audio file is playing (mpv). The menu's\n" +
+  "# 'Help: playback keys' entry prints this same list.\n" +
+  "Space / p     Pause / resume\n" +
+  "Left / Right  Seek backward / forward 5s\n" +
+  "Up / Down     Volume up / down\n" +
+  "9 / 0         Volume down / up  (mpv default)\n" +
+  "m             Mute / unmute\n" +
+  "f             Toggle fullscreen\n" +
+  "< / >         Previous / next in playlist\n" +
+  "[ / ]         Slower / faster playback speed\n" +
+  "j             Cycle subtitle tracks\n" +
+  "#             Cycle audio tracks\n" +
+  "q / Esc       Quit";
 
 const PV_EXAMPLES =
   "./play-videos.sh video.mp4\n" +
@@ -444,6 +460,11 @@ export async function ToolsPanel() {
         heading={t("toolsPvMenuHeading")}
         description={t("toolsPvMenuDesc")}
         code={PV_MENU}
+      />
+      <EvSection
+        heading={t("toolsPvControlsHeading")}
+        description={t("toolsPvControlsDesc")}
+        code={PV_CONTROLS}
       />
       <EvSection
         heading={t("toolsPvExamplesHeading")}

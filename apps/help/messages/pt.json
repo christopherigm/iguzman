@@ -204,6 +204,8 @@
     "toolsPvInvokeDescription": "Requer mpv (apt install mpv). Forneça um caminho de arquivo, diretório ou arquivo de lista de reprodução como argumento posicional.",
     "toolsPvMenuHeading": "Menu interativo (sem argumentos)",
     "toolsPvMenuDesc": "Execute sem flags para abrir um menu com setas no estilo do cli/setup-wifi: escolha o idioma, configure a sessão atual (dispositivo de áudio, conector, repetição, aprimoramento, volume…) e reproduza quantas vezes quiser. Ele permanece aberto até você escolher Sair ou pressionar Ctrl+C. Cada entrada do menu tem uma flag equivalente.",
+    "toolsPvControlsHeading": "Controles de reprodução (teclas)",
+    "toolsPvControlsDesc": "Atalhos de teclado que funcionam enquanto um arquivo de vídeo ou áudio é reproduzido (gerenciados pelo mpv). As setas Cima/Baixo são remapeadas do salto padrão de 60 segundos do mpv para aumentar/diminuir o volume. A entrada \"Ajuda: teclas de reprodução\" do menu interativo mostra esta mesma lista.",
     "toolsPvExamplesHeading": "Exemplos",
     "toolsPvExamplesDescription": "Padrões de uso comuns.",
     "toolsPvMediaHeading": "Fonte de mídia",

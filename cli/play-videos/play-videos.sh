@@ -60,6 +60,19 @@
 #   ./play-videos.sh --list-audio-devices
 #   ./play-videos.sh video.mp4 -- --brightness=10 --contrast=5
 #   ./play-videos.sh                          # interactive menu (no flags)
+#
+# Playback controls (keys, while a video/audio is playing):
+#   Space / p         Pause / resume
+#   Left / Right      Seek backward / forward 5s
+#   Up / Down         Volume up / down
+#   9 / 0             Volume down / up (mpv default)
+#   m                 Mute / unmute
+#   f                 Toggle fullscreen
+#   < / >             Previous / next in playlist
+#   [ / ]             Slower / faster playback speed
+#   j                 Cycle subtitle tracks
+#   #                 Cycle audio tracks
+#   q / Esc           Quit
 
 # Note: -e is intentionally omitted. The interactive menu is a long-lived loop
 # where individual handlers (device probes, mpv runs) may exit non-zero without
@@ -267,6 +280,19 @@ show_audio_devices() {
 list_connectors()    { show_connectors;    exit 0; }
 list_audio_devices() { show_audio_devices; exit 0; }
 
+# mpv has no command-line flag for individual key bindings, so we materialise a
+# tiny input.conf and point mpv at it with --input-conf. This remaps Up/Down
+# from their default 60s seek to volume up/down (add volume clamps to 0..100).
+# Written to a stable path (not mktemp) because oneshot mode `exec`s mpv, so an
+# EXIT trap would never fire to clean a temp file up.
+INPUT_CONF="${TMPDIR:-/tmp}/play-videos-input.conf"
+ensure_input_conf() {
+  cat > "${INPUT_CONF}" 2>/dev/null <<'EOF' || return 1
+UP   add volume 5
+DOWN add volume -5
+EOF
+}
+
 build_mpv_args() {
   local audio_only="${1:-no}"
   local args=(
@@ -335,6 +361,7 @@ build_mpv_args() {
   [[ "${LOOP_PLAYLIST}" != "no" ]]  && args+=("--loop-playlist=${LOOP_PLAYLIST}")
   [[ "${SHUFFLE}" == "yes" ]]       && args+=("--shuffle")
   [[ -n "${AUDIO_DEVICE}" ]]        && args+=("--audio-device=${AUDIO_DEVICE}")
+  ensure_input_conf                 && args+=("--input-conf=${INPUT_CONF}")
   args+=("${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}")
 
   printf '%s\n' "${args[@]}"
@@ -462,7 +489,20 @@ setup_strings() {
     M_LIST_CONNECTORS="Listar conectores"
     M_LIST_AUDIO="Listar dispositivos de audio"
     M_FIX="Reparar problemas de audio/vídeo"
+    M_HELP="Ayuda: teclas de reproducción"
     M_EXIT="Salir"
+    HELP_TITLE="Controles de reproducción (durante la reproducción)"
+    HK_PAUSE="Pausar / reanudar"
+    HK_SEEK="Retroceder / avanzar 5 s"
+    HK_VOLUME="Subir / bajar volumen"
+    HK_VOLUME2="Bajar / subir volumen (predeterminado de mpv)"
+    HK_MUTE="Silenciar / activar sonido"
+    HK_FULLSCREEN="Alternar pantalla completa"
+    HK_PLAYLIST="Anterior / siguiente en la lista"
+    HK_SPEED="Reproducir más lento / más rápido"
+    HK_SUBS="Cambiar de subtítulos"
+    HK_AUDIO_TRACK="Cambiar de pista de audio"
+    HK_QUIT="Salir"
     PROMPT_PATH="Archivo, carpeta o playlist"
     PATH_NOT_FOUND="No se encontró: %s"
     SELECT_AUDIO_DEVICE="Selecciona un dispositivo de audio"
@@ -523,7 +563,20 @@ setup_strings() {
     M_LIST_CONNECTORS="List connectors"
     M_LIST_AUDIO="List audio devices"
     M_FIX="Fix audio / video issues"
+    M_HELP="Help: playback keys"
     M_EXIT="Exit"
+    HELP_TITLE="Playback controls (while playing)"
+    HK_PAUSE="Pause / resume"
+    HK_SEEK="Seek backward / forward 5s"
+    HK_VOLUME="Volume up / down"
+    HK_VOLUME2="Volume down / up (mpv default)"
+    HK_MUTE="Mute / unmute"
+    HK_FULLSCREEN="Toggle fullscreen"
+    HK_PLAYLIST="Previous / next in playlist"
+    HK_SPEED="Slower / faster playback"
+    HK_SUBS="Cycle subtitle tracks"
+    HK_AUDIO_TRACK="Cycle audio tracks"
+    HK_QUIT="Quit"
     PROMPT_PATH="File, folder or playlist"
     PATH_NOT_FOUND="Not found: %s"
     SELECT_AUDIO_DEVICE="Select an audio device"
@@ -790,6 +843,26 @@ menu_fix() {
   echo ""; prompt_enter
 }
 
+menu_help() {
+  screen
+  printf "  %s\n\n" "$(clr_bold_cyan "${HELP_TITLE}")"
+  # Keys are printed literally (not padded with printf %-Ns) because the arrow
+  # glyphs are multi-byte, and %-Ns pads by byte count, which would misalign.
+  help_row() { printf "  %s\t%s\n" "$(clr_bold_cyan "$1")" "$2"; }
+  help_row "Space / p"    "${HK_PAUSE}"
+  help_row "← / →"        "${HK_SEEK}"
+  help_row "↑ / ↓"        "${HK_VOLUME}"
+  help_row "9 / 0"        "${HK_VOLUME2}"
+  help_row "m"            "${HK_MUTE}"
+  help_row "f"            "${HK_FULLSCREEN}"
+  help_row "< / >"        "${HK_PLAYLIST}"
+  help_row "[ / ]"        "${HK_SPEED}"
+  help_row "j"            "${HK_SUBS}"
+  help_row "#"            "${HK_AUDIO_TRACK}"
+  help_row "q / Esc"      "${HK_QUIT}"
+  echo ""; prompt_enter
+}
+
 # ── Main menu loop ────────────────────────────────────────────────────────────
 build_main_menu() {
   MENU_ITEMS=(); ACTIONS=()
@@ -808,6 +881,7 @@ build_main_menu() {
   add "${M_LIST_CONNECTORS}"                                        list_connectors
   add "${M_LIST_AUDIO}"                                             list_audio
   add "${M_FIX}"                                                    fix
+  add "${M_HELP}"                                                   help
   add "${M_EXIT}"                                                   exit
 }
 
@@ -839,6 +913,7 @@ run_menu() {
       list_connectors) menu_list_connectors ;;
       list_audio)      menu_list_audio ;;
       fix)             menu_fix ;;
+      help)            menu_help ;;
       exit)            screen; printf "  %s\n\n" "$(clr_dim "${BYE}")"; exit 0 ;;
     esac
   done

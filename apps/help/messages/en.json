@@ -204,6 +204,8 @@
     "toolsPvInvokeDescription": "Requires mpv (apt install mpv). Provide a file path, directory, or playlist file as the positional argument.",
     "toolsPvMenuHeading": "Interactive menu (no arguments)",
     "toolsPvMenuDesc": "Run with no flags to open an arrow-key menu that mirrors cli/setup-wifi: pick a language, configure the current session (audio device, connector, loop, enhance, volume…), and play repeatedly. It stays open until you choose Exit or press Ctrl+C. Every menu entry has an equivalent flag.",
+    "toolsPvControlsHeading": "Playback controls (keys)",
+    "toolsPvControlsDesc": "Keyboard shortcuts that work while a video or audio file is playing (handled by mpv). Up/Down are remapped from mpv's default 60-second seek to volume up/down. The interactive menu's \"Help: playback keys\" entry prints this same list.",
     "toolsPvExamplesHeading": "Examples",
     "toolsPvExamplesDescription": "Common usage patterns.",
     "toolsPvMediaHeading": "Media source",

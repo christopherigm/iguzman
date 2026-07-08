@@ -204,6 +204,8 @@
     "toolsPvInvokeDescription": "Erfordert mpv (apt install mpv). Gib einen Dateipfad, ein Verzeichnis oder eine Wiedergabelisten-Datei als Positionsargument an.",
     "toolsPvMenuHeading": "Interaktives Menü (ohne Argumente)",
     "toolsPvMenuDesc": "Ohne Flags gestartet öffnet sich ein Pfeiltasten-Menü im Stil von cli/setup-wifi: Sprache wählen, die aktuelle Sitzung konfigurieren (Audiogerät, Anschluss, Wiederholung, Enhance, Lautstärke…) und beliebig oft abspielen. Es bleibt offen, bis du Beenden wählst oder Strg+C drückst. Jeder Menüeintrag hat ein entsprechendes Flag.",
+    "toolsPvControlsHeading": "Wiedergabesteuerung (Tasten)",
+    "toolsPvControlsDesc": "Tastenkürzel, die während der Wiedergabe einer Video- oder Audiodatei funktionieren (von mpv verarbeitet). Pfeil hoch/runter werden von mpvs standardmäßigem 60-Sekunden-Sprung auf Lautstärke lauter/leiser umgelegt. Der Menüeintrag „Hilfe: Wiedergabetasten“ zeigt dieselbe Liste an.",
     "toolsPvExamplesHeading": "Beispiele",
     "toolsPvExamplesDescription": "Häufige Verwendungsmuster.",
     "toolsPvMediaHeading": "Mediaquelle",

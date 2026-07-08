@@ -204,6 +204,8 @@
     "toolsPvInvokeDescription": "Nécessite mpv (apt install mpv). Fournissez un chemin de fichier, un répertoire ou un fichier de liste de lecture comme argument positionnel.",
     "toolsPvMenuHeading": "Menu interactif (sans arguments)",
     "toolsPvMenuDesc": "Lancé sans option, il ouvre un menu à flèches inspiré de cli/setup-wifi : choisissez une langue, configurez la session en cours (périphérique audio, connecteur, boucle, amélioration, volume…) et lisez autant de fois que voulu. Il reste ouvert jusqu'à ce que vous choisissiez Quitter ou appuyiez sur Ctrl+C. Chaque entrée du menu a une option équivalente.",
+    "toolsPvControlsHeading": "Commandes de lecture (touches)",
+    "toolsPvControlsDesc": "Raccourcis clavier actifs pendant la lecture d'un fichier vidéo ou audio (gérés par mpv). Les flèches Haut/Bas sont réaffectées du saut de 60 secondes par défaut de mpv au réglage du volume. L'entrée « Aide : touches de lecture » du menu interactif affiche cette même liste.",
     "toolsPvExamplesHeading": "Exemples",
     "toolsPvExamplesDescription": "Motifs d'utilisation courants.",
     "toolsPvMediaHeading": "Source multimédia",

@@ -204,6 +204,8 @@
     "toolsPvInvokeDescription": "Requiere mpv (apt install mpv). Proporciona una ruta de archivo, directorio o archivo de lista de reproducción como argumento posicional.",
     "toolsPvMenuHeading": "Menú interactivo (sin argumentos)",
     "toolsPvMenuDesc": "Ejecútalo sin banderas para abrir un menú con flechas al estilo de cli/setup-wifi: elige idioma, configura la sesión actual (dispositivo de audio, conector, repetición, mejora, volumen…) y reproduce las veces que quieras. Permanece abierto hasta que elijas Salir o pulses Ctrl+C. Cada entrada del menú tiene una bandera equivalente.",
+    "toolsPvControlsHeading": "Controles de reproducción (teclas)",
+    "toolsPvControlsDesc": "Atajos de teclado que funcionan mientras se reproduce un vídeo o audio (gestionados por mpv). Las flechas Arriba/Abajo se reasignan del salto de 60 segundos predeterminado de mpv a subir/bajar el volumen. La entrada «Ayuda: teclas de reproducción» del menú interactivo muestra esta misma lista.",
     "toolsPvExamplesHeading": "Ejemplos",
     "toolsPvExamplesDescription": "Patrones de uso comunes.",
     "toolsPvMediaHeading": "Fuente multimedia",
