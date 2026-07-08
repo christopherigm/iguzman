@@ -50,5 +50,17 @@
   "hdr": "HDR",
   "spokenLanguages": "Idiomas",
   "subtitles": "Subtítulos",
+  "resumeTitle": "¿Reanudar la reproducción?",
+  "resumeFrom": "Lo dejaste en",
+  "resume": "Reanudar",
+  "startOver": "Empezar de nuevo",
+  "play": "Reproducir",
+  "pause": "Pausa",
+  "skipBack": "-10s",
+  "skipForward": "+10s",
+  "stop": "Detener",
+  "subtitlesOff": "Desactivados",
+  "audioTrack": "Audio",
+  "subtitleTrack": "Subtítulo",
   "notFound": "Película no encontrada."
 }

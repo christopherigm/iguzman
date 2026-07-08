@@ -323,7 +323,13 @@ export function MovieDetail({ onSignOut }: { onSignOut: () => void }) {
       )}
 
       {streamOpen && movie.digital_copy_url && (
-        <StreamOverlay url={movie.digital_copy_url} onClose={closeStream} />
+        <StreamOverlay
+          url={movie.digital_copy_url}
+          storageKey={movie.slug}
+          audioLanguages={movie.spoken_languages}
+          subtitleLanguages={movie.subtitle_languages}
+          onClose={closeStream}
+        />
       )}
     </>
   );

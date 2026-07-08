@@ -31,6 +31,7 @@ import {
 } from "@/lib/catalog";
 import { useIsLoggedIn } from "@/lib/use-is-logged-in";
 import { isSelfHostedCopy } from "@/lib/digital-copy";
+import { externalPlayersFor } from "@/lib/external-players";
 import type { DeviceType } from "@/lib/device";
 import { FormatHeader } from "@/components/format-header";
 import { MovieCard } from "@/components/movie-catalog/movie-card";
@@ -110,6 +111,9 @@ export function MovieDetail({
   const [linkCopied, setLinkCopied] = useState(false);
   const [showTrailer, setShowTrailer] = useState(false);
   const [showStream, setShowStream] = useState(false);
+  // Mobile-only: the native-player picker for a self-hosted copy (VLC, MX
+  // Player, …). Desktop plays inline in the modal instead.
+  const [showPlayerPicker, setShowPlayerPicker] = useState(false);
   // Live preview of a re-fetched poster/wallpaper while editing; null falls back
   // to the saved image. Cleared on save (the reloaded movie carries the new art)
   // and on cancel (discard the preview).
@@ -216,10 +220,10 @@ export function MovieDetail({
   // a new tab / hands off to its native app. A self-hosted copy (direct media on
   // a personal bucket) plays inline: desktop always uses the in-page modal
   // player (opening the raw URL there would download the file), while mobile
-  // (Android/iOS) first tries to hand off to the OS-native video player by
-  // opening the direct URL, falling back to the modal if the browser blocks the
-  // new tab. The desktop/mobile split comes from the server-detected UA, not the
-  // viewport, so a narrow desktop window still gets the modal.
+  // (Android/iOS) opens a picker of native video players (VLC, MX Player, …) to
+  // hand the direct URL off via a platform deep link. The desktop/mobile split
+  // comes from the server-detected UA, not the viewport, so a narrow desktop
+  // window still gets the modal.
   function handleDigitalCopyClick() {
     const url = movie?.digital_copy_url;
     if (!url) return;
@@ -231,14 +235,18 @@ export function MovieDetail({
       setShowStream(true);
       return;
     }
-    // Hand off to the OS-native video player. We deliberately omit
-    // "noopener,noreferrer" here: those features make window.open() return null
-    // *by spec* (noreferrer implies noopener), which would make the popup-blocked
-    // check below always fire and wrongly fall back to the modal. Opening a
-    // direct media file on our own bucket carries no meaningful opener/referrer
-    // risk, so the plain form lets us actually detect a blocked popup.
-    const opened = window.open(url, "_blank");
-    if (!opened) setShowStream(true);
+    // Mobile: we can't detect which native players are installed, so present
+    // the list and let the user pick one.
+    setShowPlayerPicker(true);
+  }
+
+  // Launch the chosen native player. A custom-scheme / intent: deep link must
+  // navigate the current document (not window.open) so the OS URL handler picks
+  // it up on both Android and iOS. If the app isn't installed the navigation is
+  // a no-op, leaving the user on the page.
+  function launchExternalPlayer(href: string) {
+    setShowPlayerPicker(false);
+    window.location.assign(href);
   }
 
   async function handleConfirmDelete() {
@@ -422,6 +430,30 @@ export function MovieDetail({
               playsInline
               preload="metadata"
             />
+          </Box>
+        </ConfirmationModal>
+      )}
+
+      {showPlayerPicker && movie.digital_copy_url && (
+        <ConfirmationModal
+          title={t("playWith")}
+          text={movie.title}
+          okCallback={() => setShowPlayerPicker(false)}
+        >
+          <Box flexDirection="column" gap={8}>
+            {externalPlayersFor(deviceType, movie.digital_copy_url).map(
+              (player) => (
+                <Button
+                  key={player.id}
+                  text={player.label}
+                  icon="/icons/play-stream.svg"
+                  onClick={() => launchExternalPlayer(player.href)}
+                  kind="primary"
+                  size="lg"
+                  width="100%"
+                />
+              ),
+            )}
           </Box>
         </ConfirmationModal>
       )}

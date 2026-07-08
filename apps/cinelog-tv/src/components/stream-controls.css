@@ -1,0 +1,104 @@
+/* Auto-hiding transport bar over the AVPlay stream. Written for Tizen 6.0's
+   Chromium 76 (see apps/cinelog-tv/CLAUDE.md): explicit edges (no `inset`),
+   `margin` between children (no flex `gap`), no `aspect-ratio`. */
+
+.stream-controls {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100vw;
+  box-sizing: border-box;
+  padding: 40px 64px;
+  /* Scrim so white text/controls stay legible over any frame behind them. */
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.9) 0%,
+    rgba(0, 0, 0, 0.6) 60%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+/* Faded out and pushed down when the bar auto-hides; kept mounted so focus keys
+   stay registered and the parent can reveal it instantly. */
+.stream-controls--hidden {
+  opacity: 0;
+  transform: translateY(48px);
+  pointer-events: none;
+}
+
+.stream-controls__progress {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.stream-controls__time {
+  min-width: 96px;
+}
+
+.stream-controls__progress .stream-controls__time:first-child {
+  text-align: right;
+}
+
+.stream-controls__bar {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  margin: 0 24px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.stream-controls__bar-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.stream-controls__buttons {
+  display: flex;
+  align-items: center;
+}
+
+/* margin (not flex `gap`) - `gap` needs Chromium 84+. */
+.stream-controls__buttons > * {
+  margin-right: 20px;
+}
+.stream-controls__buttons > *:last-child {
+  margin-right: 0;
+}
+
+/* Track menu floats above the transport buttons. */
+.stream-controls__menu {
+  position: absolute;
+  left: 64px;
+  bottom: 168px;
+  min-width: 320px;
+  padding: 24px;
+  border-radius: var(--tv-radius);
+  background: var(--surface-2);
+}
+
+.stream-controls__menu-title {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.stream-controls__menu-list {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.stream-controls__menu-list > * {
+  margin-bottom: 12px;
+}
+.stream-controls__menu-list > *:last-child {
+  margin-bottom: 0;
+}

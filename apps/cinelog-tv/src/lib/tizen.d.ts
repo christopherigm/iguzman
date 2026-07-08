@@ -83,6 +83,22 @@ interface AVPlay {
   pause(): void;
   stop(): void;
   getState(): string;
+  /** Total media length in milliseconds; valid once the player is prepared. */
+  getDuration(): number;
+  /** Current playhead in milliseconds. */
+  getCurrentTime(): number;
+  /** Jump to an absolute position (ms). Valid in READY/PLAYING/PAUSED. */
+  seekTo(
+    milliseconds: number,
+    success?: () => void,
+    error?: (error: unknown) => void,
+  ): void;
+  /** All audio/video/text tracks in the prepared stream. */
+  getTotalTrackInfo(): AVPlayTrackInfo[];
+  /** Switch the active track of a kind by its `AVPlayTrackInfo.index`. */
+  setSelectTrack(type: "AUDIO" | "VIDEO" | "TEXT", index: number): void;
+  /** `true` hides in-container subtitles; `false` renders the selected TEXT track. */
+  setSilentSubtitle(silent: boolean): void;
 }
 
 interface WebApis {
@@ -90,6 +106,18 @@ interface WebApis {
 }
 
 declare global {
+  /**
+   * One entry from `AVPlay.getTotalTrackInfo()`. `extra_info` is a JSON string
+   * whose shape varies by track type/device - for AUDIO/TEXT it usually carries
+   * a `language` (or `track_lang`) code the player-side code parses defensively.
+   * Global so the player hook can annotate track arrays with it directly.
+   */
+  interface AVPlayTrackInfo {
+    index: number;
+    type: "AUDIO" | "VIDEO" | "TEXT";
+    extra_info: string;
+  }
+
   interface Window {
     tizen?: TizenStatic;
     webapis?: WebApis;
