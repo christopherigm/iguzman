@@ -1227,6 +1227,323 @@ TSEOF
 }
 
 
+gen_lib_password_policy_ts() {
+  local out="$1"; mkdir -p "$(dirname "$out")"
+  cat > "$out" << 'TSEOF'
+/**
+ * Client-side mirror of the Django password policy.
+ *
+ * The API remains the authority - `validate_password` runs on every password
+ * write. This module reproduces the rules that can be evaluated in the browser
+ * so the form can guide the user before a round-trip, and maps the API's
+ * rejection messages back onto translation keys when it cannot.
+ *
+ * `CommonPasswordValidator` is deliberately absent: it tests against a
+ * 20,000-entry word list that is not worth shipping to the client. A common
+ * password satisfies every rule here and is rejected by the API on submit -
+ * `mapPasswordErrors` turns that response into a message.
+ *
+ * Keep in sync with `AUTH_PASSWORD_VALIDATORS` in the Django settings.
+ */
+
+/** Mirrors `MinimumLengthValidator(min_length=8)`. */
+export const PASSWORD_MIN_LENGTH = 8;
+
+/** Mirrors `UserAttributeSimilarityValidator(max_similarity=0.7)`. */
+const MAX_SIMILARITY = 0.7;
+
+export type PasswordRuleId = "minLength" | "notNumeric" | "notSimilar";
+
+export interface PasswordRule {
+  id: PasswordRuleId;
+  satisfied: boolean;
+}
+
+/** The user attributes Django compares a password against. */
+export interface PasswordUserAttributes {
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+/**
+ * Port of Python's `difflib.SequenceMatcher.quick_ratio` - an upper bound on
+ * the true ratio, derived from the character multiset intersection. Django's
+ * similarity validator compares against exactly this value, so an approximation
+ * here would make the two layers disagree around the 0.7 boundary.
+ */
+function quickRatio(a: string, b: string): number {
+  const aChars = [...a];
+  const bChars = [...b];
+  const total = aChars.length + bChars.length;
+  if (total === 0) return 1;
+
+  const bCounts = new Map<string, number>();
+  for (const ch of bChars) bCounts.set(ch, (bCounts.get(ch) ?? 0) + 1);
+
+  const available = new Map<string, number>();
+  let matches = 0;
+  for (const ch of aChars) {
+    const remaining = available.get(ch) ?? bCounts.get(ch) ?? 0;
+    available.set(ch, remaining - 1);
+    if (remaining > 0) matches += 1;
+  }
+  return (2 * matches) / total;
+}
+
+/**
+ * Port of Django's `exceeds_maximum_length_ratio`. When the password dwarfs the
+ * attribute, `quick_ratio` cannot reach `max_similarity`, so the comparison is
+ * skipped rather than computed.
+ */
+function exceedsMaximumLengthRatio(
+  passwordLength: number,
+  valueLength: number,
+): boolean {
+  return (
+    passwordLength >= 10 * valueLength &&
+    valueLength < (MAX_SIMILARITY / 2) * passwordLength
+  );
+}
+
+/**
+ * Django compares the password against each attribute *and* each of its
+ * word-like components, so `chris` is caught via `chris.guzman@example.com`.
+ * The username is derived from the email, so comparing the email covers both.
+ */
+function isTooSimilar(
+  password: string,
+  attributes: PasswordUserAttributes,
+): boolean {
+  const lowered = password.toLowerCase();
+  const passwordLength = [...lowered].length;
+
+  for (const attribute of [
+    attributes.email,
+    attributes.firstName,
+    attributes.lastName,
+  ]) {
+    if (!attribute) continue;
+    const value = attribute.toLowerCase();
+    // `\W+` in Python's re is Unicode-aware; the ASCII-only JS `\W` is not.
+    for (const part of [...value.split(/[^\p{L}\p{N}_]+/u), value]) {
+      if (!part) continue;
+      if (exceedsMaximumLengthRatio(passwordLength, [...part].length)) continue;
+      if (quickRatio(lowered, part) >= MAX_SIMILARITY) return true;
+    }
+  }
+  return false;
+}
+
+/** Mirrors `NumericPasswordValidator` (Python's `str.isdigit`). */
+function isEntirelyNumeric(password: string): boolean {
+  return password.length > 0 && /^\p{Nd}+$/u.test(password);
+}
+
+/**
+ * Evaluate every browser-checkable rule. Returns one entry per rule so the UI
+ * can render a live checklist rather than a single pass/fail.
+ */
+export function checkPassword(
+  password: string,
+  attributes: PasswordUserAttributes = {},
+): PasswordRule[] {
+  return [
+    { id: "minLength", satisfied: [...password].length >= PASSWORD_MIN_LENGTH },
+    { id: "notNumeric", satisfied: !isEntirelyNumeric(password) },
+    { id: "notSimilar", satisfied: !isTooSimilar(password, attributes) },
+  ];
+}
+
+/** True when every browser-checkable rule passes. The API still has final say. */
+export function isPasswordValid(
+  password: string,
+  attributes: PasswordUserAttributes = {},
+): boolean {
+  return checkPassword(password, attributes).every((rule) => rule.satisfied);
+}
+
+// ── Mapping the API's rejection messages ──────────────────────────────────────
+
+export type PasswordErrorKey =
+  | "errorTooShort"
+  | "errorTooCommon"
+  | "errorEntirelyNumeric"
+  | "errorTooSimilar";
+
+/**
+ * A rejection reason resolved to a translation key, or - when Django said
+ * something we don't recognise - the server's own text. Falling back to the raw
+ * message keeps a reworded or newly-configured validator readable (in English)
+ * instead of collapsing it into a useless generic error.
+ */
+export type PasswordErrorMessage =
+  | { translated: true; key: PasswordErrorKey; values?: { count: number } }
+  | { translated: false; text: string };
+
+/**
+ * DRF renders validator messages, not codes, so matching is by text. Each
+ * pattern is anchored to survive an unrelated validator being added later.
+ */
+const DJANGO_MESSAGES: {
+  pattern: RegExp;
+  key: PasswordErrorKey;
+  values?: (match: RegExpMatchArray) => { count: number };
+}[] = [
+  {
+    pattern:
+      /^This password is too short\. It must contain at least (\d+) characters?\.$/,
+    key: "errorTooShort",
+    values: (match) => ({ count: Number(match[1]) }),
+  },
+  { pattern: /^This password is too common\.$/, key: "errorTooCommon" },
+  {
+    pattern: /^This password is entirely numeric\.$/,
+    key: "errorEntirelyNumeric",
+  },
+  {
+    pattern: /^The password is too similar to the .+\.$/,
+    key: "errorTooSimilar",
+  },
+];
+
+function mapPasswordError(message: string): PasswordErrorMessage {
+  for (const { pattern, key, values } of DJANGO_MESSAGES) {
+    const match = message.match(pattern);
+    if (match) {
+      return values
+        ? { translated: true, key, values: values(match) }
+        : { translated: true, key };
+    }
+  }
+  return { translated: false, text: message };
+}
+
+/** Pull a DRF field's errors out of a 400 body, tolerating string or array. */
+export function extractFieldErrors(data: unknown, field: string): string[] {
+  if (!data || typeof data !== "object") return [];
+  const raw = (data as Record<string, unknown>)[field];
+  if (typeof raw === "string") return [raw];
+  if (Array.isArray(raw))
+    return raw.filter((item): item is string => typeof item === "string");
+  return [];
+}
+
+/**
+ * Turn a 400 response body into renderable password errors. `field` is the DRF
+ * field name - `password` on sign-up, `new_password` on change/reset.
+ */
+export function mapPasswordErrors(
+  data: unknown,
+  field = "password",
+): PasswordErrorMessage[] {
+  return extractFieldErrors(data, field).map(mapPasswordError);
+}
+TSEOF
+}
+
+
+gen_password_requirements() {
+  local base="$1"   # apps/<name>/components/auth
+  mkdir -p "${base}"
+
+  cat > "${base}/password-requirements.tsx" << 'TSEOF'
+"use client";
+
+import { useTranslations } from "next-intl";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import {
+  PASSWORD_MIN_LENGTH,
+  checkPassword,
+  type PasswordRuleId,
+  type PasswordUserAttributes,
+} from "@/lib/password-policy";
+import "./password-requirements.css";
+
+const RULE_LABEL: Record<PasswordRuleId, string> = {
+  minLength: "ruleMinLength",
+  notNumeric: "ruleNotNumeric",
+  notSimilar: "ruleNotSimilar",
+};
+
+interface Props {
+  password: string;
+  /** Compared against the password by the `notSimilar` rule. */
+  attributes?: PasswordUserAttributes;
+}
+
+/**
+ * Live checklist of the browser-checkable half of the Django password policy.
+ * Renders nothing until the user types, so an untouched form is not greeted by
+ * a wall of unmet rules. The common-password rule cannot run here and instead
+ * surfaces as a server error on submit.
+ */
+export function PasswordRequirements({ password, attributes }: Props) {
+  const t = useTranslations("PasswordPolicy");
+  if (!password) return null;
+
+  const rules = checkPassword(password, attributes);
+
+  return (
+    <Box
+      role="list"
+      flexDirection="column"
+      gap={2}
+      aria-live="polite"
+      className="password-requirements"
+    >
+      {rules.map((rule) => (
+        <Typography
+          key={rule.id}
+          as="div"
+          role="listitem"
+          variant="caption"
+          display="flex"
+          alignItems="center"
+          gap={6}
+          color={
+            rule.satisfied
+              ? "var(--success, #22c55e)"
+              : "var(--muted-foreground, #6b7280)"
+          }
+          className={`password-requirements__item password-requirements__item--${
+            rule.satisfied ? "met" : "unmet"
+          }`}
+        >
+          {t(RULE_LABEL[rule.id], { count: PASSWORD_MIN_LENGTH })}
+        </Typography>
+      ))}
+    </Box>
+  );
+}
+TSEOF
+
+  cat > "${base}/password-requirements.css" << 'CSSEOF'
+/* Only the state marker and its transition live here - layout, spacing, and
+   color are component props on <Typography> per the props-first rule. */
+
+.password-requirements__item {
+  transition: color 150ms ease;
+}
+
+.password-requirements__item::before {
+  width: 1em;
+  font-weight: 600;
+  text-align: center;
+}
+
+.password-requirements__item--met::before {
+  content: "\2713"; /* ✓ */
+}
+
+.password-requirements__item--unmet::before {
+  content: "\2717"; /* ✗ */
+}
+CSSEOF
+}
+
+
 gen_api_auth_routes() {
   local base="$1"
 
@@ -1516,6 +1833,8 @@ import { Typography } from '@repo/ui/core-elements/typography';
 import { Switch } from '@repo/ui/core-elements/switch';
 import './auth-form.css';
 import { login, LoginError, signUp, requestPasswordReset, ApiError, loginWithPasskey, registerPasskey, getPasskeyCredentials, getProfile, storeUser } from '@/lib/auth';
+import { isPasswordValid, mapPasswordErrors } from '@/lib/password-policy';
+import { PasswordRequirements } from '@/components/auth/password-requirements';
 
 const REMEMBERED_EMAIL_KEY = 'auth_remembered_email';
 const REMEMBER_EMAIL_PREF_KEY = 'auth_remember_email';
@@ -1628,12 +1947,24 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
 
 function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
   const t = useTranslations('AuthPage');
+  const tPolicy = useTranslations('PasswordPolicy');
   const [email, setEmail] = useState(''); const [firstName, setFirstName] = useState(''); const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState(''); const [password2, setPassword2] = useState('');
-  const [error, setError] = useState<string | null>(null); const [success, setSuccess] = useState<string | null>(null); const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null); const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null); const [loading, setLoading] = useState(false);
+
+  const attributes = { email, firstName, lastName };
+  // The API is the authority; this only gates the rules the browser can check.
+  const passwordAccepted = isPasswordValid(password, attributes);
+
+  function handlePasswordChange(value: string) {
+    setPassword(value);
+    // A rejection describes the password that was submitted, not this one.
+    setPasswordError(null);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); setError(null); setSuccess(null);
+    e.preventDefault(); setError(null); setPasswordError(null); setSuccess(null);
     if (password !== password2) { setError(t('signUp.errorPasswordMismatch')); return; }
     setLoading(true);
     try {
@@ -1641,6 +1972,13 @@ function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
       setSuccess(t('signUp.successDetail'));
     } catch (err) {
       if (err instanceof ApiError) {
+        // The password policy the browser cannot check (e.g. the common-password
+        // list) is only enforced server-side, so surface what the API rejected.
+        const rejections = mapPasswordErrors(err.data, 'password');
+        if (rejections.length > 0) {
+          setPasswordError(rejections.map((r) => (r.translated ? tPolicy(r.key, r.values) : r.text)).join(' '));
+          return;
+        }
         const emailErr = (err.data as Record<string, string[]>)?.email;
         setError(emailErr ? (Array.isArray(emailErr) ? (emailErr[0] ?? t('signUp.errorGeneric')) : String(emailErr)) : t('signUp.errorGeneric'));
       } else { setError(t('signUp.errorGeneric')); }
@@ -1661,11 +1999,12 @@ function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         <TextInput label={t('signUp.lastNameLabel')} type="text" value={lastName} onChange={setLastName} autoComplete="family-name" />
       </Box>
       <TextInput label={t('signUp.emailLabel')} type="email" value={email} onChange={setEmail} required autoComplete="email" />
-      <TextInput label={t('signUp.passwordLabel')} type="password" value={password} onChange={setPassword} required autoComplete="new-password" />
+      <TextInput label={t('signUp.passwordLabel')} type="password" value={password} onChange={handlePasswordChange} required autoComplete="new-password" error={passwordError ?? undefined} />
+      <PasswordRequirements password={password} attributes={attributes} />
       <TextInput label={t('signUp.confirmPasswordLabel')} type="password" value={password2} onChange={setPassword2} required autoComplete="new-password" />
       {error && <ErrorMessage message={error} />}
       {loading && <ProgressBar label={t('signUp.submitting')} />}
-      <Button text={loading ? t('signUp.submitting') : t('signUp.submitButton')} type="submit" size="md" width="100%" marginTop={4} kind={email && password && password2 && password === password2 ? 'success' : undefined} disabled={!email || !password || !password2 || password !== password2} />
+      <Button text={loading ? t('signUp.submitting') : t('signUp.submitButton')} type="submit" size="md" width="100%" marginTop={4} kind={email && passwordAccepted && password2 && password === password2 ? 'success' : undefined} disabled={!email || !passwordAccepted || !password2 || password !== password2} />
       <Box display="flex" flexDirection="column" gap={8} alignItems="center">
         <LinkButton onClick={() => switchTab('sign-in')} label={t('signUp.haveAccount')} />
         <LinkButton onClick={() => switchTab('reset-password')} label={t('signUp.forgotPassword')} />
@@ -1863,6 +2202,8 @@ import { Typography } from '@repo/ui/core-elements/typography';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { getProfile, updateProfile, uploadProfilePicture, changePassword, getPasskeyCredentials, deletePasskeyCredential, registerPasskey, ApiError, type UserProfile } from '@/lib/auth';
+import { isPasswordValid, mapPasswordErrors } from '@/lib/password-policy';
+import { PasswordRequirements } from '@/components/auth/password-requirements';
 import './account-form.css';
 
 function SuccessMessage({ message }: { message: string }) {
@@ -1934,17 +2275,29 @@ function ProfileSection({ profile }: { profile: UserProfile }) {
   );
 }
 
-function ChangePasswordSection() {
+function ChangePasswordSection({ profile }: { profile: UserProfile }) {
   const t = useTranslations('AccountPage');
+  const tPolicy = useTranslations('PasswordPolicy');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  const attributes = { email: profile.email, firstName: profile.first_name, lastName: profile.last_name };
+  // The API is the authority; this only gates the rules the browser can check.
+  const passwordAccepted = isPasswordValid(newPassword, attributes);
+
+  function handleNewPasswordChange(value: string) {
+    setNewPassword(value);
+    // A rejection describes the password that was submitted, not this one.
+    setPasswordError(null);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); setError(null); setSuccess(null);
+    e.preventDefault(); setError(null); setPasswordError(null); setSuccess(null);
     if (newPassword !== confirmPassword) { setError(t('passwordMismatch')); return; }
     setLoading(true);
     try {
@@ -1954,7 +2307,14 @@ function ChangePasswordSection() {
     } catch (err) {
       if (err instanceof ApiError && err.status === 400) {
         const data = err.data as Record<string, unknown>;
-        setError(data.current_password ? t('passwordWrong') : t('passwordError'));
+        // The policy the browser cannot check (e.g. the common-password list)
+        // is only enforced server-side, so surface what the API rejected.
+        const rejections = mapPasswordErrors(data, 'new_password');
+        if (rejections.length > 0) {
+          setPasswordError(rejections.map((r) => (r.translated ? tPolicy(r.key, r.values) : r.text)).join(' '));
+        } else {
+          setError(data.current_password ? t('passwordWrong') : t('passwordError'));
+        }
       } else { setError(t('passwordError')); }
     } finally { setLoading(false); }
   }
@@ -1964,12 +2324,13 @@ function ChangePasswordSection() {
       <Typography as="h2" variant="h3" fontWeight={600} className="account__section-title">{t('securitySection')}</Typography>
       <form onSubmit={handleSubmit} className="account__form">
         <TextInput label={t('currentPasswordLabel')} type="password" value={currentPassword} onChange={setCurrentPassword} required autoComplete="current-password" />
-        <TextInput label={t('newPasswordLabel')} type="password" value={newPassword} onChange={setNewPassword} required autoComplete="new-password" />
+        <TextInput label={t('newPasswordLabel')} type="password" value={newPassword} onChange={handleNewPasswordChange} required autoComplete="new-password" error={passwordError ?? undefined} />
+        <PasswordRequirements password={newPassword} attributes={attributes} />
         <TextInput label={t('confirmPasswordLabel')} type="password" value={confirmPassword} onChange={setConfirmPassword} required autoComplete="new-password" />
         {success && <SuccessMessage message={success} />}
         {error && <ErrorMessage message={error} />}
         {loading && <ProgressBar label={t('savingPassword')} />}
-        <Button text={loading ? t('savingPassword') : t('savePassword')} type="submit" size="md" width="100%" marginTop={4} kind="primary" />
+        <Button text={loading ? t('savingPassword') : t('savePassword')} type="submit" size="md" width="100%" marginTop={4} kind="primary" disabled={!currentPassword || !passwordAccepted || !confirmPassword || newPassword !== confirmPassword} />
       </form>
     </Box>
   );
@@ -2061,7 +2422,7 @@ export function AccountForm() {
       </Box>
       <Box display="flex" flexDirection="column" gap={24} width="100%" maxWidth={520} marginBottom={40}>
         <ProfileSection profile={profile} />
-        <ChangePasswordSection />
+        <ChangePasswordSection profile={profile} />
         <PasskeySection />
       </Box>
     </Container>
@@ -2094,6 +2455,14 @@ gen_messages_json() {
     "redirecting": "Redirigiendo en {seconds}…", "redirectProgress": "Progreso de redirección",
     "expiredTitle": "Enlace expirado", "expiredDetail": "Este enlace de verificación ha expirado. Regístrate de nuevo para solicitar uno nuevo.",
     "invalidTitle": "Enlace inválido", "invalidDetail": "Este enlace de verificación no es válido. Revisa tu correo o regístrate de nuevo."
+  },
+  "PasswordPolicy": {
+    "ruleMinLength": "Al menos {count} caracteres", "ruleNotNumeric": "No solo números",
+    "ruleNotSimilar": "No demasiado parecida a tu nombre o correo",
+    "errorTooShort": "Esta contraseña es demasiado corta. Debe contener al menos {count} caracteres.",
+    "errorTooCommon": "Esta contraseña es demasiado común.",
+    "errorEntirelyNumeric": "Esta contraseña es completamente numérica.",
+    "errorTooSimilar": "Esta contraseña se parece demasiado a tu nombre o correo."
   },
   "AuthPage": {
     "tabSignIn": "Iniciar sesión", "tabSignUp": "Registrarse", "tabReset": "Restablecer contraseña",
@@ -2186,6 +2555,14 @@ EOF
     "expiredTitle": "Link abgelaufen", "expiredDetail": "Dieser Bestätigungslink ist abgelaufen. Bitte registriere dich erneut, um einen neuen anzufordern.",
     "invalidTitle": "Ungültiger Link", "invalidDetail": "Dieser Bestätigungslink ist ungültig. Bitte prüfe deine E-Mails oder registriere dich erneut."
   },
+  "PasswordPolicy": {
+    "ruleMinLength": "Mindestens {count} Zeichen", "ruleNotNumeric": "Nicht nur Ziffern",
+    "ruleNotSimilar": "Nicht zu ähnlich zu Name oder E-Mail",
+    "errorTooShort": "Dieses Passwort ist zu kurz. Es muss mindestens {count} Zeichen enthalten.",
+    "errorTooCommon": "Dieses Passwort ist zu häufig.",
+    "errorEntirelyNumeric": "Dieses Passwort besteht nur aus Ziffern.",
+    "errorTooSimilar": "Dieses Passwort ist Ihrem Namen oder Ihrer E-Mail-Adresse zu ähnlich."
+  },
   "AuthPage": {
     "tabSignIn": "Anmelden", "tabSignUp": "Registrieren", "tabReset": "Passwort zurücksetzen",
     "signIn": {
@@ -2276,6 +2653,14 @@ EOF
     "redirecting": "Redirection dans {seconds}…", "redirectProgress": "Progression de la redirection",
     "expiredTitle": "Lien expiré", "expiredDetail": "Ce lien de vérification a expiré. Veuillez vous inscrire à nouveau pour en obtenir un nouveau.",
     "invalidTitle": "Lien invalide", "invalidDetail": "Ce lien de vérification est invalide. Vérifiez votre e-mail ou inscrivez-vous à nouveau."
+  },
+  "PasswordPolicy": {
+    "ruleMinLength": "Au moins {count} caractères", "ruleNotNumeric": "Pas uniquement des chiffres",
+    "ruleNotSimilar": "Pas trop proche de votre nom ou e-mail",
+    "errorTooShort": "Ce mot de passe est trop court. Il doit contenir au moins {count} caractères.",
+    "errorTooCommon": "Ce mot de passe est trop courant.",
+    "errorEntirelyNumeric": "Ce mot de passe est entièrement numérique.",
+    "errorTooSimilar": "Ce mot de passe est trop proche de votre nom ou de votre e-mail."
   },
   "AuthPage": {
     "tabSignIn": "Se connecter", "tabSignUp": "S'inscrire", "tabReset": "Réinitialiser le mot de passe",
@@ -2368,6 +2753,14 @@ EOF
     "expiredTitle": "Link expirado", "expiredDetail": "Este link de verificação expirou. Por favor, cadastre-se novamente para solicitar um novo.",
     "invalidTitle": "Link inválido", "invalidDetail": "Este link de verificação é inválido. Verifique seu e-mail ou cadastre-se novamente."
   },
+  "PasswordPolicy": {
+    "ruleMinLength": "Pelo menos {count} caracteres", "ruleNotNumeric": "Não apenas números",
+    "ruleNotSimilar": "Não muito parecida com seu nome ou e-mail",
+    "errorTooShort": "Esta senha é muito curta. Ela precisa conter pelo menos {count} caracteres.",
+    "errorTooCommon": "Esta senha é muito comum.",
+    "errorEntirelyNumeric": "Esta senha é totalmente numérica.",
+    "errorTooSimilar": "Esta senha é muito parecida com seu nome ou e-mail."
+  },
   "AuthPage": {
     "tabSignIn": "Entrar", "tabSignUp": "Cadastrar", "tabReset": "Redefinir senha",
     "signIn": {
@@ -2459,6 +2852,14 @@ EOF
     "redirecting": "Redirecting in {seconds}…", "redirectProgress": "Redirect progress",
     "expiredTitle": "Link Expired", "expiredDetail": "This verification link has expired. Please sign up again to request a new one.",
     "invalidTitle": "Invalid Link", "invalidDetail": "This verification link is invalid. Please check your email or sign up again."
+  },
+  "PasswordPolicy": {
+    "ruleMinLength": "At least {count} characters", "ruleNotNumeric": "Not entirely numbers",
+    "ruleNotSimilar": "Not too similar to your name or email",
+    "errorTooShort": "This password is too short. It must contain at least {count} characters.",
+    "errorTooCommon": "This password is too common.",
+    "errorEntirelyNumeric": "This password is entirely numeric.",
+    "errorTooSimilar": "This password is too similar to your name or email."
   },
   "AuthPage": {
     "tabSignIn": "Sign In", "tabSignUp": "Sign Up", "tabReset": "Reset Password",
@@ -2919,6 +3320,8 @@ main() {
     gen_footer_css                   "${app_dir}/app/[locale]/footer.css"
     gen_lib_auth_ts                  "${app_dir}/lib/auth.ts"
     gen_lib_api_fetch_ts             "${app_dir}/lib/api-fetch.ts"
+    gen_lib_password_policy_ts       "${app_dir}/lib/password-policy.ts"
+    gen_password_requirements        "${app_dir}/components/auth"
     gen_auth_pages                   "${app_dir}/app/[locale]/(auth)"
     gen_account_pages                "${app_dir}/app/[locale]/account"
     gen_api_auth_routes              "${app_dir}/app/api/auth"

@@ -33,6 +33,7 @@ from webauthn.helpers.structs import (
 
 from .models import EmailVerificationToken, PasskeyCredential, PasswordResetToken
 from .serializers import (
+    ChangePasswordSerializer,
     ContactInfoSerializer,
     CustomTokenObtainPairSerializer,
     JobSearchPrefsSerializer,
@@ -49,6 +50,7 @@ from .serializers import (
     UserProfileSerializer,
     UserProfileUpdateSerializer,
     build_username,
+    run_password_validators,
 )
 
 WEBAUTHN_CHALLENGE_TTL = 300  # 5 minutes
@@ -242,10 +244,42 @@ class PasswordResetConfirmView(APIView):
             return Response({'detail': 'Token has expired.'}, status=status.HTTP_400_BAD_REQUEST)
 
         user = token_obj.user
+        # Enforced here rather than on the serializer: the password validators
+        # need the user, and the token is what identifies them. A failure raises
+        # DRF's ValidationError, which the exception handler renders as a 400.
+        run_password_validators(
+            serializer.validated_data['new_password'], user, field='new_password'
+        )
+
         user.set_password(serializer.validated_data['new_password'])
         user.save(update_fields=['password'])
         token_obj.delete()
         return Response({'detail': 'Password reset successful.'})
+
+
+class ChangePasswordView(APIView):
+    """Change the authenticated user's password after verifying their current one."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # The request is passed so the password validators can compare the new
+        # password against the user's own attributes.
+        serializer = ChangePasswordSerializer(
+            data=request.data, context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        if not user.check_password(serializer.validated_data['current_password']):
+            return Response(
+                {'current_password': 'Current password is incorrect.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(serializer.validated_data['new_password'])
+        user.save(update_fields=['password'])
+        return Response({'detail': 'Password changed successfully.'})
 
 
 # ── Passkey (WebAuthn) views ─────────────────────────────────────────────────

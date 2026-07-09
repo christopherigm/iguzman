@@ -98,6 +98,15 @@
       "errorGeneric": "Falha ao registrar chave de acesso. Você pode tentar novamente mais tarde."
     }
   },
+  "PasswordPolicy": {
+    "ruleMinLength": "Pelo menos {count} caracteres",
+    "ruleNotNumeric": "Não apenas números",
+    "ruleNotSimilar": "Não muito parecida com seu nome ou e-mail",
+    "errorTooShort": "Esta senha é muito curta. Ela precisa conter pelo menos {count} caracteres.",
+    "errorTooCommon": "Esta senha é muito comum.",
+    "errorEntirelyNumeric": "Esta senha é totalmente numérica.",
+    "errorTooSimilar": "Esta senha é muito parecida com seu nome ou e-mail."
+  },
   "ScannerPage": {
     "pageTitle": "Adicionar filme",
     "pageSubtitle": "Escaneie um código de barras ou pesquise por título para enviá-lo à sua caixa de entrada para revisão.",

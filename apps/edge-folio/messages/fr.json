@@ -502,6 +502,15 @@
       "errorGeneric": "Impossible d'enregistrer la clé d'accès. Vous pouvez réessayer plus tard."
     }
   },
+  "PasswordPolicy": {
+    "ruleMinLength": "Au moins {count} caractères",
+    "ruleNotNumeric": "Pas uniquement des chiffres",
+    "ruleNotSimilar": "Pas trop proche de votre nom ou e-mail",
+    "errorTooShort": "Ce mot de passe est trop court. Il doit contenir au moins {count} caractères.",
+    "errorTooCommon": "Ce mot de passe est trop courant.",
+    "errorEntirelyNumeric": "Ce mot de passe est entièrement numérique.",
+    "errorTooSimilar": "Ce mot de passe est trop proche de votre nom ou de votre e-mail."
+  },
   "ApplicationDetailPage": {
     "metaTitle": "Candidature",
     "backToList": "Retour aux candidatures",

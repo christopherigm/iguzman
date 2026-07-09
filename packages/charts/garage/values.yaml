@@ -52,10 +52,10 @@ service:
 # Routes external traffic to the S3 API port (3900) of the -s3 Service.
 ingress:
   enabled: true
-  className: '' # e.g. "nginx" / "public" (leave empty for the cluster default)
+  className: 'nginx' # e.g. "nginx" / "public" (leave empty for the cluster default)
   # For large multipart uploads on ingress-nginx, raise the body size limit:
   annotations:
-    {}
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
     # nginx.ingress.kubernetes.io/proxy-body-size: "0"
   hosts:
     - host: s3.iguzman.com.mx
@@ -68,10 +68,10 @@ ingress:
     #   paths:
     #     - path: /
     #       pathType: Prefix
-  tls: []
-  # - hosts:
-  #     - s3.iguzman.com
-  #   secretName: garage-s3-tls
+  tls:
+  - hosts:
+      - s3.iguzman.com.mx
+    secretName: garage-s3-tls
 
 # ─── Garage daemon configuration (garage.toml) ──────────────
 garage:
@@ -123,9 +123,9 @@ layout:
   zone: default
   capacities:
     node1: 10G
-    node4: 15G
+    node4: 30G
     # node5: 500Gi # <-- verify this node's real name (node2 relabelled?)
-    node6: 150G
+    node6: 350G
 
 # ─── Persistent storage (PVC per pod) ───────────────────────
 # IMPORTANT: on microk8s-hostpath, the PVC is provisioned under the

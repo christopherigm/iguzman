@@ -98,6 +98,15 @@
       "errorGeneric": "No se pudo registrar la llave. Puedes intentarlo más tarde."
     }
   },
+  "PasswordPolicy": {
+    "ruleMinLength": "Al menos {count} caracteres",
+    "ruleNotNumeric": "No solo números",
+    "ruleNotSimilar": "No demasiado parecida a tu nombre o correo",
+    "errorTooShort": "Esta contraseña es demasiado corta. Debe contener al menos {count} caracteres.",
+    "errorTooCommon": "Esta contraseña es demasiado común.",
+    "errorEntirelyNumeric": "Esta contraseña es completamente numérica.",
+    "errorTooSimilar": "Esta contraseña se parece demasiado a tu nombre o correo."
+  },
   "ScannerPage": {
     "pageTitle": "Agregar película",
     "pageSubtitle": "Escanea un código de barras o busca por título para enviarlo a tu bandeja de entrada para revisión.",

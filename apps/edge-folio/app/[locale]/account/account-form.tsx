@@ -22,6 +22,8 @@ import {
   ApiError,
   type UserProfile,
 } from "@/lib/auth";
+import { isPasswordValid, mapPasswordErrors } from "@/lib/password-policy";
+import { PasswordRequirements } from "@/components/auth/password-requirements";
 import "./account-form.css";
 
 function SuccessMessage({ message }: { message: string }) {
@@ -196,18 +198,35 @@ function ProfileSection({ profile }: { profile: UserProfile }) {
 
 // ── Change-password section ───────────────────────────────────────────────────
 
-function ChangePasswordSection() {
+function ChangePasswordSection({ profile }: { profile: UserProfile }) {
   const t = useTranslations("AccountPage");
+  const tPolicy = useTranslations("PasswordPolicy");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  const attributes = {
+    email: profile.email,
+    firstName: profile.first_name,
+    lastName: profile.last_name,
+  };
+  // The API is the authority; this only gates the rules the browser can check.
+  const passwordAccepted = isPasswordValid(newPassword, attributes);
+
+  function handleNewPasswordChange(value: string) {
+    setNewPassword(value);
+    // A rejection describes the password that was submitted, not this one.
+    setPasswordError(null);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setPasswordError(null);
     setSuccess(null);
 
     if (newPassword !== confirmPassword) {
@@ -225,7 +244,16 @@ function ChangePasswordSection() {
     } catch (err) {
       if (err instanceof ApiError && err.status === 400) {
         const data = err.data as Record<string, unknown>;
-        if (data.current_password) {
+        // The policy the browser cannot check (e.g. the common-password list)
+        // is only enforced server-side, so surface what the API rejected.
+        const rejections = mapPasswordErrors(data, "new_password");
+        if (rejections.length > 0) {
+          setPasswordError(
+            rejections
+              .map((r) => (r.translated ? tPolicy(r.key, r.values) : r.text))
+              .join(" "),
+          );
+        } else if (data.current_password) {
           setError(t("passwordWrong"));
         } else {
           setError(t("passwordError"));
@@ -270,10 +298,12 @@ function ChangePasswordSection() {
           label={t("newPasswordLabel")}
           type="password"
           value={newPassword}
-          onChange={setNewPassword}
+          onChange={handleNewPasswordChange}
           required
           autoComplete="new-password"
+          error={passwordError ?? undefined}
         />
+        <PasswordRequirements password={newPassword} attributes={attributes} />
         <TextInput
           label={t("confirmPasswordLabel")}
           type="password"
@@ -292,6 +322,12 @@ function ChangePasswordSection() {
           width="100%"
           marginTop={4}
           kind="primary"
+          disabled={
+            !currentPassword ||
+            !passwordAccepted ||
+            !confirmPassword ||
+            newPassword !== confirmPassword
+          }
         />
       </form>
     </Box>
@@ -505,7 +541,7 @@ export function AccountForm() {
         marginBottom={40}
       >
         <ProfileSection profile={profile} />
-        <ChangePasswordSection />
+        <ChangePasswordSection profile={profile} />
         <PasskeySection />
       </Box>
     </Container>

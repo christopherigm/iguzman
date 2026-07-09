@@ -2,6 +2,7 @@ from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
 from .views import (
+    ChangePasswordView,
     ContactInfoView,
     JobSearchPrefsView,
     LoginView,
@@ -37,6 +38,7 @@ urlpatterns = [
     path('resend-verification/', ResendVerificationView.as_view(), name='auth-resend-verification'),
     path('password-reset/', PasswordResetRequestView.as_view(), name='auth-password-reset'),
     path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='auth-password-reset-confirm'),
+    path('change-password/', ChangePasswordView.as_view(), name='auth-change-password'),
     # Passkey
     path('passkey/register/options/', PasskeyRegistrationOptionsView.as_view(), name='passkey-register-options'),
     path('passkey/register/verify/', PasskeyRegistrationVerifyView.as_view(), name='passkey-register-verify'),

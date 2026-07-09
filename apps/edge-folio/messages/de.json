@@ -502,6 +502,15 @@
       "errorGeneric": "Passkey konnte nicht registriert werden. Du kannst es später erneut versuchen."
     }
   },
+  "PasswordPolicy": {
+    "ruleMinLength": "Mindestens {count} Zeichen",
+    "ruleNotNumeric": "Nicht nur Ziffern",
+    "ruleNotSimilar": "Nicht zu ähnlich zu Name oder E-Mail",
+    "errorTooShort": "Dieses Passwort ist zu kurz. Es muss mindestens {count} Zeichen enthalten.",
+    "errorTooCommon": "Dieses Passwort ist zu häufig.",
+    "errorEntirelyNumeric": "Dieses Passwort besteht nur aus Ziffern.",
+    "errorTooSimilar": "Dieses Passwort ist Ihrem Namen oder Ihrer E-Mail-Adresse zu ähnlich."
+  },
   "ApplicationDetailPage": {
     "metaTitle": "Bewerbung",
     "backToList": "Zurück zu Bewerbungen",

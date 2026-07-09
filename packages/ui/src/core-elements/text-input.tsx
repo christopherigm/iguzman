@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useRef, CSSProperties, InputHTMLAttributes } from "react";
+import {
+  useState,
+  useRef,
+  useId,
+  CSSProperties,
+  InputHTMLAttributes,
+} from "react";
 import { UIComponentProps, buildStyleProps } from "./utils";
 import "./text-input.css";
 
@@ -125,6 +131,14 @@ export interface TextInputProps extends UIComponentProps, NativeInputProps {
   rows?: number;
   /** Standard placeholder. When omitted the `label` fills this role. */
   placeholder?: string;
+  /**
+   * Invalid state. Pass a string to render it as the field's message (replacing
+   * `helperText`); pass `true` to style the field as invalid without a message.
+   * Either form sets `aria-invalid` on the control.
+   */
+  error?: boolean | string;
+  /** Hint rendered beneath the field. Superseded by a string `error`. */
+  helperText?: string;
   /** React 19 ref - no forwardRef needed. */
   ref?: React.Ref<HTMLInputElement | HTMLTextAreaElement>;
 }
@@ -150,6 +164,12 @@ export interface TextInputProps extends UIComponentProps, NativeInputProps {
  * // amount === "1234.5", displayed as "$1,234.5"
  * <TextInput label="Amount" format="currency" value={amount} onChange={setAmount} />
  * ```
+ *
+ * @example Validation - a string `error` replaces `helperText` and sets `aria-invalid`.
+ * ```tsx
+ * <TextInput label="Password" type="password" helperText="At least 8 characters" />
+ * <TextInput label="Password" type="password" error="This password is too common." />
+ * ```
  */
 export const TextInput = ({
   value,
@@ -160,6 +180,8 @@ export const TextInput = ({
   multirow = false,
   rows = 3,
   placeholder,
+  error,
+  helperText,
   className,
   id,
   ref,
@@ -250,10 +272,19 @@ export const TextInput = ({
     }
   };
 
+  // ── Validation state ──────────────────────────────────────────
+  // A string `error` doubles as the message; `true` only paints the field.
+  const hasError = Boolean(error);
+  const message = (typeof error === "string" ? error : "") || helperText;
+  const reactId = useId();
+  const messageId = message ? `${id ?? reactId}-message` : undefined;
+
   // ── Shared props for <input> / <textarea> ─────────────────────
   const sharedProps = {
     id,
     ref: assignRef,
+    "aria-invalid": hasError || undefined,
+    "aria-describedby": messageId,
     value: displayValue,
     onChange: handleChange,
     onFocus: handleFocus,
@@ -278,6 +309,7 @@ export const TextInput = ({
     "ui-text-input-wrapper",
     isActive ? "ui-text-input-wrapper--active" : "",
     !label ? "ui-text-input-wrapper--no-label" : "",
+    hasError ? "ui-text-input-wrapper--error" : "",
     className,
   ]
     .filter(Boolean)
@@ -286,28 +318,42 @@ export const TextInput = ({
   // ── Render ────────────────────────────────────────────────────
   return (
     <div className={wrapperCls} style={safeStyle}>
-      {multirow ? (
-        <textarea
-          {...(sharedProps as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
-          className="ui-text-input-multirow"
-          rows={rows}
-        />
-      ) : (
-        <input
-          {...(sharedProps as React.InputHTMLAttributes<HTMLInputElement>)}
-          className="ui-text-input"
-          type={effectiveType}
-        />
-      )}
+      {/* The bar is anchored to this box, not the wrapper, so a message below
+          the field does not drag the indicator away from the input. */}
+      <div className="ui-text-input-field">
+        {multirow ? (
+          <textarea
+            {...(sharedProps as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
+            className="ui-text-input-multirow"
+            rows={rows}
+          />
+        ) : (
+          <input
+            {...(sharedProps as React.InputHTMLAttributes<HTMLInputElement>)}
+            className="ui-text-input"
+            type={effectiveType}
+          />
+        )}
 
-      {label && (
-        <label htmlFor={id} className="ui-text-input-label">
-          {label}
-        </label>
-      )}
+        {label && (
+          <label htmlFor={id} className="ui-text-input-label">
+            {label}
+          </label>
+        )}
 
-      {/* Material active-indicator bar */}
-      <span aria-hidden className="ui-text-input-bar" />
+        {/* Material active-indicator bar */}
+        <span aria-hidden className="ui-text-input-bar" />
+      </div>
+
+      {message && (
+        <span
+          id={messageId}
+          role={hasError ? "alert" : undefined}
+          className="ui-text-input-message"
+        >
+          {message}
+        </span>
+      )}
     </div>
   );
 };

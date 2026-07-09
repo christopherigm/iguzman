@@ -1,12 +1,20 @@
 /* ── TextInput: Material Design floating-label ────────────────────── */
 
 .ui-text-input-wrapper {
-  position: relative;
   display: inline-flex;
   flex-direction: column;
   width: 100%;
   min-width: 100px;
   font-family: inherit;
+}
+
+/* Positioning context for the floating label and the active-indicator bar, so
+   a message rendered beneath the field never displaces them. */
+.ui-text-input-field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }
 
 /* ── Shared base for <input> and <textarea> ────────────────────── */
@@ -119,4 +127,34 @@
 .ui-text-input-multirow:focus ~ .ui-text-input-bar {
   width: 100%;
   left: 0;
+}
+
+/* ── Error state ──────────────────────────────────────────────── */
+
+.ui-text-input-wrapper--error .ui-text-input,
+.ui-text-input-wrapper--error .ui-text-input-multirow {
+  border-bottom-color: var(--error, #ef4444);
+  caret-color: var(--error, #ef4444);
+}
+
+.ui-text-input-wrapper--error.ui-text-input-wrapper--active
+  .ui-text-input-label {
+  color: var(--error, #ef4444);
+}
+
+.ui-text-input-wrapper--error .ui-text-input-bar {
+  background: var(--error, #ef4444);
+}
+
+/* ── Helper / error message ───────────────────────────────────── */
+
+.ui-text-input-message {
+  padding: 4px 12px 0;
+  font-size: 0.75rem; /* label / 12 px */
+  line-height: 1.4;
+  color: var(--muted, #757575);
+}
+
+.ui-text-input-wrapper--error .ui-text-input-message {
+  color: var(--error, #ef4444);
 }

@@ -1232,6 +1232,7 @@ import uuid
 
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -1247,11 +1248,27 @@ def build_username(email: str) -> str:
     return email[:100] + hashlib.md5(email.encode()).hexdigest()[:50]
 
 
+def run_password_validators(password, user, field='password'):
+    """
+    Run AUTH_PASSWORD_VALIDATORS against `password` and re-raise any failure as a
+    DRF field error.
+
+    `user` must be supplied: UserAttributeSimilarityValidator short-circuits when
+    it is None, which is exactly what happens when `validate_password` is used as
+    a DRF field validator (DRF calls validators with the value alone). Passing the
+    user here is what makes that validator actually run.
+    """
+    try:
+        validate_password(password, user)
+    except DjangoValidationError as exc:
+        raise serializers.ValidationError({field: list(exc.messages)})
+
+
 class SignUpSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
     first_name = serializers.CharField(required=False, allow_blank=True, default='')
     last_name = serializers.CharField(required=False, allow_blank=True, default='')
-    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password = serializers.CharField(write_only=True, required=True)
     password2 = serializers.CharField(write_only=True, required=True, label='Confirm password')
 
     def validate_email(self, value):
@@ -1263,6 +1280,15 @@ class SignUpSerializer(serializers.Serializer):
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({'password': 'Passwords do not match.'})
+        # The account does not exist yet, so hand the validators the unsaved user
+        # this signup would create - otherwise the password may equal the email.
+        prospective_user = User(
+            username=build_username(attrs['email']),
+            email=attrs['email'],
+            first_name=attrs.get('first_name', ''),
+            last_name=attrs.get('last_name', ''),
+        )
+        run_password_validators(attrs['password'], prospective_user)
         return attrs
 
     def create(self, validated_data):
@@ -1309,6 +1335,8 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     def validate(self, data):
         if data['new_password'] != data['new_password2']:
             raise serializers.ValidationError({'new_password2': 'Passwords do not match.'})
+        # The password policy is enforced in PasswordResetConfirmView, which is
+        # where the token is exchanged for the user the validators need.
         return data
 
 
@@ -1327,6 +1355,21 @@ PYEOF
   fi
 
   cat >> "$out" << 'PYEOF'
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True)
+    new_password2 = serializers.CharField(write_only=True, label='Confirm new password')
+
+    def validate(self, data):
+        if data['new_password'] != data['new_password2']:
+            raise serializers.ValidationError({'new_password2': 'Passwords do not match.'})
+        request = self.context.get('request')
+        run_password_validators(
+            data['new_password'], getattr(request, 'user', None), field='new_password'
+        )
+        return data
+
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def __init__(self, *args, **kwargs):
@@ -1448,6 +1491,7 @@ from .serializers import (
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     ResendVerificationSerializer,
+    run_password_validators,
 )
 PYEOF
   fi
@@ -1492,6 +1536,7 @@ PYEOF
 
   cat >> "$out" << 'PYEOF'
 from .serializers import (
+    ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
     ProfilePictureSerializer,
     SignUpSerializer,
@@ -1622,6 +1667,31 @@ class ProfilePictureView(APIView):
         if profile.profile_picture:
             picture_url = request.build_absolute_uri(profile.profile_picture.url)
         return Response({'profile_picture': picture_url})
+
+
+class ChangePasswordView(APIView):
+    """Change the authenticated user's password after verifying their current one."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # The request is passed so the password validators can compare the new
+        # password against the user's own attributes.
+        serializer = ChangePasswordSerializer(
+            data=request.data, context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        if not user.check_password(serializer.validated_data['current_password']):
+            return Response(
+                {'current_password': 'Current password is incorrect.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(serializer.validated_data['new_password'])
+        user.save(update_fields=['password'])
+        return Response({'detail': 'Password changed successfully.'})
 PYEOF
 
   if [[ "${include_email}" == "y" ]]; then
@@ -1710,6 +1780,13 @@ class PasswordResetConfirmView(APIView):
             return Response({'detail': 'Token has expired.'}, status=status.HTTP_400_BAD_REQUEST)
 
         user = token_obj.user
+        # Enforced here rather than on the serializer: the password validators
+        # need the user, and the token is what identifies them. A failure raises
+        # DRF's ValidationError, which the exception handler renders as a 400.
+        run_password_validators(
+            serializer.validated_data['new_password'], user, field='new_password'
+        )
+
         user.set_password(serializer.validated_data['new_password'])
         user.save(update_fields=['password'])
         token_obj.delete()
@@ -1967,7 +2044,8 @@ from .views import (
     SignUpView,
     LoginView,
     ProfileView,
-    ProfilePictureView,${email_imports}${passkey_imports}
+    ProfilePictureView,
+    ChangePasswordView,${email_imports}${passkey_imports}
 )
 
 urlpatterns = [
@@ -1977,6 +2055,7 @@ urlpatterns = [
     path('token/verify/', TokenVerifyView.as_view(), name='auth-token-verify'),
     path('profile/', ProfileView.as_view(), name='auth-profile'),
     path('profile/picture/', ProfilePictureView.as_view(), name='auth-profile-picture'),
+    path('change-password/', ChangePasswordView.as_view(), name='auth-change-password'),
 ${email_paths}
 ${passkey_paths}
 ]

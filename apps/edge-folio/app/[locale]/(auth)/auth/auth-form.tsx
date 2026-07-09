@@ -26,6 +26,8 @@ import {
   storeUser,
   type UserProfile,
 } from "@/lib/auth";
+import { isPasswordValid, mapPasswordErrors } from "@/lib/password-policy";
+import { PasswordRequirements } from "@/components/auth/password-requirements";
 
 const REMEMBERED_EMAIL_KEY = "auth_remembered_email";
 const REMEMBER_EMAIL_PREF_KEY = "auth_remember_email";
@@ -259,18 +261,31 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
 
 function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
   const t = useTranslations("AuthPage");
+  const tPolicy = useTranslations("PasswordPolicy");
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const attributes = { email, firstName, lastName };
+  // The API is the authority; this only gates the rules the browser can check.
+  const passwordAccepted = isPasswordValid(password, attributes);
+
+  function handlePasswordChange(value: string) {
+    setPassword(value);
+    // A rejection describes the password that was submitted, not this one.
+    setPasswordError(null);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setPasswordError(null);
     setSuccess(null);
 
     if (password !== password2) {
@@ -290,6 +305,17 @@ function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
       setSuccess(t("signUp.successDetail"));
     } catch (err) {
       if (err instanceof ApiError) {
+        // The password policy the browser cannot check (e.g. the common-password
+        // list) is only enforced server-side, so surface what the API rejected.
+        const rejections = mapPasswordErrors(err.data, "password");
+        if (rejections.length > 0) {
+          setPasswordError(
+            rejections
+              .map((r) => (r.translated ? tPolicy(r.key, r.values) : r.text))
+              .join(" "),
+          );
+          return;
+        }
         const emailErr = (err.data as Record<string, string[]>)?.email;
         if (emailErr) {
           setError(
@@ -356,10 +382,12 @@ function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         label={t("signUp.passwordLabel")}
         type="password"
         value={password}
-        onChange={setPassword}
+        onChange={handlePasswordChange}
         required
         autoComplete="new-password"
+        error={passwordError ?? undefined}
       />
+      <PasswordRequirements password={password} attributes={attributes} />
       <TextInput
         label={t("signUp.confirmPasswordLabel")}
         type="password"
@@ -377,11 +405,13 @@ function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         width="100%"
         marginTop={4}
         kind={
-          email && password && password2 && password === password2
+          email && passwordAccepted && password2 && password === password2
             ? "success"
             : undefined
         }
-        disabled={!email || !password || !password2 || password !== password2}
+        disabled={
+          !email || !passwordAccepted || !password2 || password !== password2
+        }
       />
       <Box display="flex" flexDirection="column" gap={8} alignItems="center">
         <LinkButton

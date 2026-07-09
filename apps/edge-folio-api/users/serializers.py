@@ -2,6 +2,7 @@ import uuid
 
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -17,11 +18,27 @@ def build_username(email: str) -> str:
     return email[:100] + hashlib.md5(email.encode()).hexdigest()[:50]
 
 
+def run_password_validators(password, user, field='password'):
+    """
+    Run AUTH_PASSWORD_VALIDATORS against `password` and re-raise any failure as a
+    DRF field error.
+
+    `user` must be supplied: UserAttributeSimilarityValidator short-circuits when
+    it is None, which is exactly what happens when `validate_password` is used as
+    a DRF field validator (DRF calls validators with the value alone). Passing the
+    user here is what makes that validator actually run.
+    """
+    try:
+        validate_password(password, user)
+    except DjangoValidationError as exc:
+        raise serializers.ValidationError({field: list(exc.messages)})
+
+
 class SignUpSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
     first_name = serializers.CharField(required=False, allow_blank=True, default='')
     last_name = serializers.CharField(required=False, allow_blank=True, default='')
-    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password = serializers.CharField(write_only=True, required=True)
     password2 = serializers.CharField(write_only=True, required=True, label='Confirm password')
 
     def validate_email(self, value):
@@ -33,6 +50,15 @@ class SignUpSerializer(serializers.Serializer):
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({'password': 'Passwords do not match.'})
+        # The account does not exist yet, so hand the validators the unsaved user
+        # this signup would create - otherwise the password may equal the email.
+        prospective_user = User(
+            username=build_username(attrs['email']),
+            email=attrs['email'],
+            first_name=attrs.get('first_name', ''),
+            last_name=attrs.get('last_name', ''),
+        )
+        run_password_validators(attrs['password'], prospective_user)
         return attrs
 
     def create(self, validated_data):
@@ -100,6 +126,23 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     def validate(self, data):
         if data['new_password'] != data['new_password2']:
             raise serializers.ValidationError({'new_password2': 'Passwords do not match.'})
+        # The password policy is enforced in PasswordResetConfirmView, which is
+        # where the token is exchanged for the user the validators need.
+        return data
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True)
+    new_password2 = serializers.CharField(write_only=True, label='Confirm new password')
+
+    def validate(self, data):
+        if data['new_password'] != data['new_password2']:
+            raise serializers.ValidationError({'new_password2': 'Passwords do not match.'})
+        request = self.context.get('request')
+        run_password_validators(
+            data['new_password'], getattr(request, 'user', None), field='new_password'
+        )
         return data
 
 
