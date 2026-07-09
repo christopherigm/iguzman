@@ -273,6 +273,11 @@
     "digitalCopyLabel": "Link da cópia digital",
     "digitalCopy": "Cópia digital",
     "playWith": "Reproduzir com…",
+    "openInPlayer": "Abrir em reprodutor externo",
+    "copyStreamUrl": "Copiar URL do stream",
+    "copied": "Copiado",
+    "streamUnsupported": "O seu navegador não consegue reproduzir este ficheiro.",
+    "streamUnsupportedHint": "Provavelmente usa codecs que os navegadores não suportam, como vídeo HEVC ou áudio AC-3. Abra-o num reprodutor de ambiente de trabalho como o VLC, ou copie o URL do stream e cole-o no seu reprodutor.",
     "share": "Compartilhar",
     "linkCopied": "Link copiado para a área de transferência."
   },

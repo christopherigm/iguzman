@@ -273,6 +273,11 @@
     "digitalCopyLabel": "Digital copy link",
     "digitalCopy": "Digital copy",
     "playWith": "Play with…",
+    "openInPlayer": "Open in external player",
+    "copyStreamUrl": "Copy stream URL",
+    "copied": "Copied",
+    "streamUnsupported": "Your browser can't play this file.",
+    "streamUnsupportedHint": "It probably uses codecs browsers don't support, such as HEVC video or AC-3 audio. Open it in a desktop player like VLC, or copy the stream URL and paste it into your player.",
     "share": "Share",
     "linkCopied": "Link copied to clipboard."
   },

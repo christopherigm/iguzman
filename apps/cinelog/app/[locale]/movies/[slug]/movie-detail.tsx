@@ -31,7 +31,10 @@ import {
 } from "@/lib/catalog";
 import { useIsLoggedIn } from "@/lib/use-is-logged-in";
 import { isSelfHostedCopy } from "@/lib/digital-copy";
-import { externalPlayersFor } from "@/lib/external-players";
+import {
+  externalPlayersFor,
+  openInDesktopPlayer,
+} from "@/lib/external-players";
 import type { DeviceType } from "@/lib/device";
 import { FormatHeader } from "@/components/format-header";
 import { MovieCard } from "@/components/movie-catalog/movie-card";
@@ -111,6 +114,15 @@ export function MovieDetail({
   const [linkCopied, setLinkCopied] = useState(false);
   const [showTrailer, setShowTrailer] = useState(false);
   const [showStream, setShowStream] = useState(false);
+  // Set when the modal's <video> refuses the source. Self-hosted copies are
+  // whatever the user uploaded, and browsers decode far less than VLC does
+  // (no HEVC outside Safari, no AC-3 audio in Chrome/Firefox anywhere), so a
+  // perfectly good file can be unplayable inline. Swaps the dead player for the
+  // external-player handoff rather than leaving the user staring at nothing.
+  const [streamError, setStreamError] = useState(false);
+  // Brief "Copied" confirmation on the copy-stream-URL button. Local rather
+  // than the page-level toast, which would render behind the modal overlay.
+  const [streamUrlCopied, setStreamUrlCopied] = useState(false);
   // Mobile-only: the native-player picker for a self-hosted copy (VLC, MX
   // Player, …). Desktop plays inline in the modal instead.
   const [showPlayerPicker, setShowPlayerPicker] = useState(false);
@@ -249,6 +261,23 @@ export function MovieDetail({
     window.location.assign(href);
   }
 
+  function closeStream() {
+    setShowStream(false);
+    setStreamError(false);
+    setStreamUrlCopied(false);
+  }
+
+  /** Copy the direct stream URL so the user can paste it into a desktop
+   *  player's "open network stream" prompt (VLC: Ctrl+N). */
+  async function copyStreamUrl(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setStreamUrlCopied(true);
+    } catch {
+      // Clipboard blocked (e.g. insecure context) - silently skip.
+    }
+  }
+
   async function handleConfirmDelete() {
     if (!movie) return;
     setShowDeleteConfirm(false);
@@ -300,6 +329,13 @@ export function MovieDetail({
     return () => clearTimeout(timer);
   }, [linkCopied]);
 
+  // Revert the copy button's label so it can confirm a second copy.
+  useEffect(() => {
+    if (!streamUrlCopied) return;
+    const timer = setTimeout(() => setStreamUrlCopied(false), 2500);
+    return () => clearTimeout(timer);
+  }, [streamUrlCopied]);
+
   useEffect(() => {
     // The server prefetched this movie and it already seeds state via lazy init
     // (the component remounts per id), so no client round-trip is needed.
@@ -345,6 +381,9 @@ export function MovieDetail({
   // the matched version before saving.
   const displayCover = coverPreview ?? movie.cover;
   const displayBackdrop = backdropPreview ?? movie.backdrop;
+  // Hoisted out of `movie` so its non-null narrowing survives into the modal's
+  // event-handler closures.
+  const streamUrl = movie.digital_copy_url;
 
   // Dim, full-bleed wallpaper behind the whole card; falls back to the plain
   // layout when the API resolved no backdrop. The image URL is dynamic, so it
@@ -412,24 +451,69 @@ export function MovieDetail({
         </ConfirmationModal>
       )}
 
-      {showStream && movie.digital_copy_url && (
+      {showStream && streamUrl && (
         <ConfirmationModal
           title={t("digitalCopy")}
           text={movie.title}
-          okCallback={() => setShowStream(false)}
+          okCallback={closeStream}
           panelMaxWidth="960px"
         >
-          <Box width="100%" borderRadius={8} styles={{ overflow: "hidden" }}>
-            {/* Self-hosted direct media stream - plays inline with native
-                controls, the same player the video-downloader app uses. */}
-            <video
-              className="movie-detail__stream-video"
-              src={movie.digital_copy_url}
-              controls
-              autoPlay
-              playsInline
-              preload="metadata"
-            />
+          <Box flexDirection="column" gap={12} width="100%">
+            {streamError ? (
+              <Box
+                display="flex"
+                flexDirection="column"
+                gap={8}
+                padding={16}
+                borderRadius={8}
+                backgroundColor="var(--surface-2)"
+              >
+                <Typography variant="body" role="alert">
+                  {t("streamUnsupported")}
+                </Typography>
+                <Typography variant="caption" styles={{ opacity: 0.7 }}>
+                  {t("streamUnsupportedHint")}
+                </Typography>
+              </Box>
+            ) : (
+              <Box
+                width="100%"
+                borderRadius={8}
+                styles={{ overflow: "hidden" }}
+              >
+                {/* Self-hosted direct media stream - plays inline with native
+                    controls, the same player the video-downloader app uses. */}
+                <video
+                  className="movie-detail__stream-video"
+                  src={streamUrl}
+                  controls
+                  autoPlay
+                  playsInline
+                  preload="metadata"
+                  onError={() => setStreamError(true)}
+                />
+              </Box>
+            )}
+
+            {/* Escape hatch for codecs the browser can't decode. Always offered,
+                not just after an error: the original is the full-quality copy,
+                and an external player handles it better regardless. */}
+            <Box display="flex" gap={8} flexWrap="wrap">
+              <Button
+                text={t("openInPlayer")}
+                icon="/icons/play-stream.svg"
+                kind="primary"
+                size="md"
+                onClick={() => openInDesktopPlayer(streamUrl, movie.title)}
+              />
+              <Button
+                text={streamUrlCopied ? t("copied") : t("copyStreamUrl")}
+                icon="/icons/share.svg"
+                kind="success"
+                size="md"
+                onClick={() => copyStreamUrl(streamUrl)}
+              />
+            </Box>
           </Box>
         </ConfirmationModal>
       )}

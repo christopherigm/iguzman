@@ -46,14 +46,15 @@
 }
 
 /* Self-hosted digital-copy player inside the modal. The panel is capped at
-   calc(90vh - 50px) and wraps the video in ~220px of chrome (title, movie
-   title, paddings, footer buttons); capping the video just under that keeps
-   the whole dialog within the viewport so it never grows its own scrollbar.
+   calc(90vh - 50px) and wraps the video in ~280px of chrome (title, movie
+   title, paddings, the external-player button row, footer buttons); capping
+   the video just under that keeps the whole dialog within the viewport so it
+   never grows its own scrollbar.
    object-fit lets a non-16:9 source letterbox against the black backing. */
 .movie-detail__stream-video {
   display: block;
   width: 100%;
-  max-height: calc(90vh - 220px);
+  max-height: calc(90vh - 280px);
   object-fit: contain;
   background: #000;
 }

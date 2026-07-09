@@ -273,6 +273,11 @@
     "digitalCopyLabel": "Lien de la copie numérique",
     "digitalCopy": "Copie numérique",
     "playWith": "Lire avec…",
+    "openInPlayer": "Ouvrir dans un lecteur externe",
+    "copyStreamUrl": "Copier l'URL du flux",
+    "copied": "Copié",
+    "streamUnsupported": "Votre navigateur ne peut pas lire ce fichier.",
+    "streamUnsupportedHint": "Il utilise probablement des codecs que les navigateurs ne prennent pas en charge, comme la vidéo HEVC ou l'audio AC-3. Ouvrez-le dans un lecteur de bureau comme VLC, ou copiez l'URL du flux et collez-la dans votre lecteur.",
     "share": "Partager",
     "linkCopied": "Lien copié dans le presse-papiers."
   },
