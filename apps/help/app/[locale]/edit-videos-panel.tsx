@@ -7,6 +7,16 @@ import { CodeBlock } from "@repo/ui/core-elements/code-block";
 
 const EV_INVOKE = "bash cli/edit-videos/edit-videos.sh";
 
+const EV_FILES =
+  "Select files to process:\n" +
+  "Use ↑↓ to navigate · Space to toggle · Enter to confirm\n" +
+  "(a = all  ·  n = none)\n" +
+  "\n" +
+  "  ▶ [✓] interstellar.mkv        1.82 GB\n" +
+  "    [✓] the-fall.mkv          742.10 MB\n" +
+  "    [ ] arrival.mkv             1.11 GB  (already processed)\n" +
+  "  ↑ 0 more above  ·  ↓ 24 more below";
+
 const EV_FPS_PARAMS =
   "# Multiplier - how many times to multiply the original frame rate\n" +
   "# Options:  2× | 4× | 8×\n" +
@@ -86,7 +96,8 @@ const EV_SMARTTV_PARAMS =
   "# tag so Samsung AVPlay recognises the HEVC track. The container is always\n" +
   "# MP4 - MKV output would not play on the test Samsung Smart TV.\n" +
   "# Audio: DTS/TrueHD/PCM → AC3 (7.1 downmixed to 5.1); AAC/AC3/E-AC3 copied.\n" +
-  "# Subtitles: text tracks kept as mov_text; bitmap subs (PGS/DVD/DVB) dropped.";
+  "# Subtitles: text tracks kept as mov_text. DVD/VobSub bitmap tracks are\n" +
+  "# offered to OCR (see below); PGS/DVB bitmap subs are still dropped.";
 
 const EV_STREAMS_PARAMS =
   "# Prompted only when at least one file has >1 audio track or any\n" +
@@ -100,8 +111,24 @@ const EV_STREAMS_PARAMS =
   '[ ] Subtitle #0  eng  subrip  "English"\n' +
   "\n" +
   "# The video stream is always kept. Unchecked audio/subtitle tracks are\n" +
-  "# dropped on re-encode and on plain remux. Bitmap subtitles (PGS/DVD/DVB)\n" +
-  "# are still dropped automatically when the output container is MP4.";
+  "# dropped on re-encode and on plain remux. When the output container is MP4,\n" +
+  "# DVD/VobSub bitmap subtitles can be OCR'd to text (see below); PGS/DVB\n" +
+  "# bitmap subtitles are still dropped automatically.";
+
+const EV_OCR_PARAMS =
+  "# Prompted only when the output container is MP4 (Smart TV profile, or an\n" +
+  "# explicit .mp4 override) AND at least one file has DVD/VobSub subtitles.\n" +
+  "⚠ 1 file(s) with image subtitles (DVD/VobSub)\n" +
+  "  MP4 cannot store image subtitles. OCR converts them to text (mov_text)\n" +
+  "  without burning them into the video.\n" +
+  "  Detected languages: eng spa\n" +
+  "OCR image subtitles to text? [y/n] (y): y\n" +
+  "\n" +
+  "# Needs tesseract; offers to `sudo apt-get install` it plus the language\n" +
+  "# data on first use. Declining leaves the bitmap tracks dropped, as before.\n" +
+  "# Pipeline: FFmpeg rasterises each subtitle track (sub2video) → tesseract\n" +
+  "# reads the bitmaps → SubRip → muxed back in as mov_text with its language\n" +
+  "# tag. Adds a few minutes per track and can make recognition errors.";
 
 const EV_RIFE_PARAMS =
   "# Multiplier (default: 2)\n" +
@@ -167,11 +194,12 @@ const PV_MENU =
   "Display mode                    # --mode\n" +
   "Loop                            # --loop / --loop=<N>\n" +
   "Volume                          # --volume\n" +
+  "Max ALSA mixer                  # --no-max-volume  (on by default)\n" +
   "Enhance (GPU)                   # --enhance / --sdr-to-hdr\n" +
   "Audio output                    # --ao\n" +
   "Shuffle / Mute / Audio-only     # --shuffle / --mute / --audio-only\n" +
   "List connectors / audio devices # --list-connectors / --list-audio-devices\n" +
-  "Fix audio / video issues        # runs fix-audio.sh + DRM/video-group checks\n" +
+  "Fix audio / video issues        # runs fix-video.sh + fix-audio.sh\n" +
   "Help: playback keys             # shows the in-playback key bindings below\n" +
   "Exit";
 
@@ -224,19 +252,61 @@ const PV_DISPLAY_FLAGS =
 
 const PV_AUDIO_FLAGS =
   "--volume <0-100>          # playback volume  (default: 100)\n" +
+  "                          # mpv's SOFTWARE volume - never touches the ALSA mixer\n" +
   "--mute                    # mute audio\n" +
+  "--no-max-volume           # do not raise the ALSA hardware mixer before playback\n" +
   "--ao <driver>             # audio output driver  (default: alsa)\n" +
   "                          # Options: alsa | pulse | pipewire | jack | auto\n" +
   "--audio-device <device>   # audio device string  (default: auto)\n" +
   "                          # Example: alsa/hdmi:CARD=PCH,DEV=3\n" +
   "                          # Example: alsa/plughw:CARD=rt5650,DEV=0\n" +
-  "--list-audio-devices      # list available ALSA devices, then exit";
+  "--list-audio-devices      # list available ALSA devices, then exit\n" +
+  "\n" +
+  "# Two independent volume layers. Because --volume is software-only, a Master\n" +
+  "# left at 20% (or a muted HDMI IEC958 switch) stays quiet whatever mpv is told.\n" +
+  "# So before every playback play-videos.sh opens the hardware all the way up:\n" +
+  "fix-audio.sh --force --quiet --volume 100 [--card <from --audio-device>]\n" +
+  "\n" +
+  "# The mixer KEEPS that level after playback - nothing is restored.\n" +
+  "# Use --no-max-volume (or the menu toggle) to leave the system mixer alone.\n" +
+  "# A pure HDMI card has no Master at all, only an IEC958 on/off switch, so\n" +
+  "# there is no hardware level to raise - attenuate with --volume instead.";
 
 const PV_ADVANCED_FLAGS =
   "-- <mpv-args...>   # pass remaining arguments directly to mpv\n" +
   "\n" +
   "# Example:\n" +
   "./play-videos.sh video.mp4 -- --brightness=10 --contrast=5";
+
+const PV_FIX =
+  "# The menu's 'Fix audio / video issues' entry runs both sibling scripts.\n" +
+  "# They also run standalone:\n" +
+  "bash cli/play-videos/fix-video.sh                        # diagnose + repair\n" +
+  "bash cli/play-videos/fix-video.sh --dry-run              # diagnose only\n" +
+  "sudo bash cli/play-videos/fix-video.sh --yes             # apply, no prompts\n" +
+  "sudo bash cli/play-videos/fix-video.sh --yes --headless  # also drop the desktop\n" +
+  "bash cli/play-videos/fix-audio.sh                        # muted / 0% ALSA controls\n" +
+  "bash cli/play-videos/fix-audio.sh --force                # every control to 100%\n" +
+  "\n" +
+  "# --vo=drm renders onto the HDMI console, so it needs all three at once:\n" +
+  "#   1. A real console VT   Ctrl+Alt+F1 on the machine. SSH can never work.\n" +
+  "#                          mpv: 'VT_GETMODE failed'\n" +
+  "#   2. Atomic modesetting  the legacy 'radeon' driver has none, and amdgpu\n" +
+  "#                          leaves Display Core off on old DCE-8 GPUs.\n" +
+  "#                          mpv: 'Failed to create DRM atomic context'\n" +
+  "#   3. DRM master          a running display manager owns the GPU.\n" +
+  "\n" +
+  "# Old AMD APUs (Temash / Kabini / Kaveri / Beema / Mullins) need all five\n" +
+  "# kernel params as one unit - amdgpu.dc=1 does nothing unless amdgpu owns the\n" +
+  "# card. fix-video.sh writes them to /etc/default/grub (timestamped backup),\n" +
+  "# runs update-grub, and asks you to reboot:\n" +
+  'GRUB_CMDLINE_LINUX_DEFAULT="... radeon.si_support=0 radeon.cik_support=0\n' +
+  '                                amdgpu.si_support=1 amdgpu.cik_support=1 amdgpu.dc=1"\n' +
+  "\n" +
+  "# Verify after rebooting - all three must pass:\n" +
+  "lspci -k | grep -A2 -i vga             # Kernel driver in use: amdgpu\n" +
+  "cat /sys/module/amdgpu/parameters/dc   # 1\n" +
+  "sudo dmesg | grep -i 'display core'    # Display Core initialized";
 
 // ── server-audit constants ────────────────────────────────────────────────────
 
@@ -307,6 +377,11 @@ export async function ToolsPanel() {
         heading={t("toolsEvFlowHeading")}
         description={t("toolsEvFlowDescription")}
       />
+      <EvSection
+        heading={t("toolsEvFilesHeading")}
+        description={t("toolsEvFilesDesc")}
+        code={EV_FILES}
+      />
 
       <GroupLabel>{t("toolsEvFiltersGroup")}</GroupLabel>
 
@@ -367,6 +442,11 @@ export async function ToolsPanel() {
         heading={t("toolsEvStreamsHeading")}
         description={t("toolsEvStreamsDesc")}
         code={EV_STREAMS_PARAMS}
+      />
+      <EvSection
+        heading={t("toolsEvOcrHeading")}
+        description={t("toolsEvOcrDesc")}
+        code={EV_OCR_PARAMS}
       />
 
       <GroupLabel marginTop={8}>{t("toolsEvAiGroup")}</GroupLabel>
@@ -490,6 +570,11 @@ export async function ToolsPanel() {
         heading={t("toolsPvAdvancedHeading")}
         description={t("toolsPvAdvancedDesc")}
         code={PV_ADVANCED_FLAGS}
+      />
+      <EvSection
+        heading={t("toolsPvFixHeading")}
+        description={t("toolsPvFixDesc")}
+        code={PV_FIX}
       />
 
       <ScriptDivider />

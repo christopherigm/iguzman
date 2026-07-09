@@ -48,9 +48,11 @@ Documents the `apps/scraper/` REST API. Update when endpoints, request/response 
 
 | Script                                 | Sections documented                                                                                                                                                                  |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `cli/edit-videos/edit-videos.sh`       | Invocation, workflow, filters (black bars, FPS, stabilization, denoise, sharpen, upscale, downsize, color correction, compress, MPG/MKV, Smart TV profile), AI filters (RIFE, video2x, Deep3D, TikTok) |
+| `cli/edit-videos/edit-videos.sh`       | Invocation, workflow, per-file selection checklist, filters (black bars, FPS, stabilization, denoise, sharpen, upscale, downsize, color correction, compress, MPG/MKV, Smart TV profile), audio/subtitle stream curation, OCR of DVD/VobSub image subtitles, AI filters (RIFE, video2x, Deep3D, TikTok) |
 | `cli/docker-cleanup/docker-cleanup.sh` | Invocation, workflow, operations (dangling images, old images, all unused, stopped containers, build cache, system prune)                                                            |
-| `cli/play-videos/play-videos.sh`       | Invocation, interactive menu, in-playback key controls, examples, flag groups (media, playback, display, audio, advanced)                                                             |
+| `cli/play-videos/play-videos.sh`       | Invocation, interactive menu, in-playback key controls, examples, flag groups (media, playback, display, audio, advanced), fix audio/video issues                                     |
+| `cli/play-videos/fix-video.sh`         | DRM/KMS troubleshooting: console VT, atomic modesetting, DRM master; the AMD `radeon`→`amdgpu` + `amdgpu.dc=1` GRUB repair (documented in the `PV_FIX` constant)                     |
+| `cli/play-videos/fix-audio.sh`         | ALSA mixer repair (muted / 0% controls, IEC958 switch) plus `--force`, which `play-videos.sh` runs before every playback to max the hardware mixer; also the "Fix audio / video issues" menu entry |
 | `cli/server-audit/server-audit.sh`     | Invocation, all 12 audit checks                                                                                                                                                      |
 | `cli/setup-wifi/setup-wifi.sh`         | Invocation, backends (nmcli vs. netplan + wpa_supplicant) & flow (detect interface, fix card, scan/connect/verify, switch/disconnect)                                                |
 

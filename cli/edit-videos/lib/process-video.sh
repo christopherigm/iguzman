@@ -55,6 +55,10 @@ process_video() {
   local src="${input}"
   local vf_chain=()
 
+  # Drop any OCR results left over from the previous file before anything can
+  # read OCR_SRT_FILES (the copy path calls build_stream_maps without OCR'ing).
+  ocr_cleanup
+
   # ── Probe duration ──────────────────────────────────────────────────────
   local probe_out dur_sec=0
   probe_out="$(probe_video "${input}")"
@@ -433,6 +437,10 @@ process_video() {
       fi
     fi
 
+    # MP4 cannot hold bitmap subtitles, so OCR them to .srt first (no-op unless
+    # DO_OCR_SUBS=1). build_stream_maps picks the results up as mov_text tracks.
+    ocr_prepare_subs "${input}"
+
     # Keep every audio track and (container-permitting) every subtitle track.
     # Subtitles always come from the original input; audio from the encode source
     # (an intermediate already carries copied audio, but never the subtitles).
@@ -459,11 +467,13 @@ process_video() {
         if ! run_ffmpeg_step "${STEP_ENCODE}" "${dur_sec}" "${cpu_ffmpeg_args[@]}"; then
           [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
           [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+          ocr_cleanup
           return 1
         fi
       else
         [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
         [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+        ocr_cleanup
         return 1
       fi
     fi
@@ -511,6 +521,7 @@ process_video() {
 
   [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
   [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+  ocr_cleanup
   return 0
 }
 

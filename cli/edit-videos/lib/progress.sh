@@ -175,6 +175,57 @@ wait_deep3d_progress() {
   return "${ec}"
 }
 
+# ── OCR progress (ocr_subs.py "ocr <done>/<total>" line parser) ───────────────
+#
+# The rasterize phase emits no progress lines, so the bar shows a spinner until
+# the first cue is OCR'd.
+
+wait_ocr_progress() {
+  local pid="$1" progress_tmp="$2"
+  local step_start=$SECONDS bar_width=25
+  local spin_idx=0
+
+  printf '\033[?25l'
+  while kill -0 "${pid}" 2>/dev/null; do
+    local elapsed=$(( SECONDS - step_start ))
+    local elapsed_str; elapsed_str="$(_fmt_time "${elapsed}")"
+    local pct=-1
+
+    local ocr_line
+    ocr_line="$(grep -o 'ocr [0-9]*/[0-9]*' "${progress_tmp}" 2>/dev/null | tail -1 || true)"
+    if [[ -n "${ocr_line}" ]]; then
+      local cur_cue total_cue
+      cur_cue="${ocr_line#ocr }"
+      total_cue="${cur_cue##*/}"
+      cur_cue="${cur_cue%%/*}"
+      if [[ "${total_cue}" -gt 0 ]]; then
+        pct=$(( cur_cue * 100 / total_cue ))
+        [[ "${pct}" -gt 99 ]] && pct=99
+      fi
+    fi
+
+    _render_progress_line "${pct}" "${elapsed_str}" 0 "${bar_width}" "${spin_idx}" "${elapsed}"
+    spin_idx=$(( spin_idx + 1 ))
+    sleep 0.2
+  done
+
+  local ec=0
+  wait "${pid}" || ec=$?
+  printf '\033[?25h'
+  local total_elapsed=$(( SECONDS - step_start ))
+  local total_str; total_str="$(_fmt_time "${total_elapsed}")"
+  printf "\r\033[K"
+
+  if [[ "${ec}" -eq 0 ]]; then
+    local bar; bar="$(_filled_bar "${bar_width}")"
+    printf "\r    [%s] 100%%  %s\033[K\n" "$(clr_bold_green "${bar}")" "$(clr_dim "${total_str}")"
+    printf "    %s\n" "$(clr_bold_green "✓ ${STEP_DONE}  (${total_str})")"
+  else
+    printf "    %s\n" "$(clr_bold_red "✗ ${STEP_FAIL}  (${total_str})")"
+  fi
+  return "${ec}"
+}
+
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
 _filled_bar() {

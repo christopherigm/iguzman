@@ -24,6 +24,8 @@ source "${_SCRIPT_DIR}/lib/encoders.sh"
 source "${_SCRIPT_DIR}/lib/probe.sh"
 # shellcheck source=lib/progress.sh
 source "${_SCRIPT_DIR}/lib/progress.sh"
+# shellcheck source=lib/ocr.sh
+source "${_SCRIPT_DIR}/lib/ocr.sh"
 
 # Action modules
 # shellcheck source=lib/actions/crop.sh
@@ -58,6 +60,10 @@ DO_COLOR=0
 DO_COMPRESS=0
 DO_TIKTOK=0
 DO_SMARTTV=0
+
+# OCR bitmap (DVD/VobSub) subtitles to text when the target container is MP4,
+# which cannot carry image subs. Set by the prompt in main(); see lib/ocr.sh.
+DO_OCR_SUBS=0
 
 COMPRESS_PERCENT=50
 
@@ -244,7 +250,6 @@ main() {
 
   # ── Skip already processed files ─────────────────────────────────────────
   local SKIP_EXISTING=0
-  local _skipped_count=0
   declare -A _SKIP_STEM_MAP
   if [[ -d "${out_dir}" ]]; then
     local _all_video_exts=(mp4 mkv avi mov wmv flv webm mpeg mpg m4v ts mts m2ts 3gp ogv)
@@ -266,6 +271,76 @@ main() {
       echo ""
     fi
   fi
+
+  # ── File selection ────────────────────────────────────────────────────────
+  # Every candidate is listed; files whose stem already exists in the output
+  # folder start unchecked when SKIP_EXISTING is on, so the earlier y/n answer
+  # only seeds the checkboxes - the list below is the final say.
+  local _cand_files=() _cand_already=()
+  local _f_base _f_stem _already
+  for ext in "${selected_exts[@]}"; do
+    while IFS= read -r -d '' f; do
+      _f_base="$(basename "${f}")"
+      _f_stem="${_f_base%.*}"
+      _already=0
+      [[ -n "${_SKIP_STEM_MAP["$(lc "${_f_stem}")"]:-}" ]] && _already=1
+      _cand_files+=("${f}")
+      _cand_already+=("${_already}")
+    done < <(find "${folder}" -maxdepth 1 -type f -iname "*.${ext}" -print0 2>/dev/null | sort -z)
+  done
+
+  local _cand_total="${#_cand_files[@]}"
+  if [[ "${_cand_total}" -eq 0 ]]; then
+    printf "  %s %s\n\n" "$(clr_yellow '⚠')" "${NO_VIDEOS}"
+    exit 0
+  fi
+
+  # Pad the name column so the size column lines up. ${#s} counts characters,
+  # so accented filenames stay aligned.
+  local _name_w=0 _ci
+  for ((_ci=0; _ci<_cand_total; _ci++)); do
+    _f_base="$(basename "${_cand_files[$_ci]}")"
+    [[ "${#_f_base}" -gt "${_name_w}" ]] && _name_w="${#_f_base}"
+  done
+  [[ "${_name_w}" -gt 48 ]] && _name_w=48
+
+  printf "  %s\n" "$(clr_bold "${SELECT_FILES_TITLE}:")"
+  printf "  %s\n" "$(clr_dim "${CB_PROMPT}")"
+  printf "  %s\n\n" "$(clr_dim "${CB_HINT}")"
+
+  _CB_LABELS=(); _CB_SEL=(); _CB_DISABLED=()
+  local _pad _size_str
+  for ((_ci=0; _ci<_cand_total; _ci++)); do
+    _f_base="$(basename "${_cand_files[$_ci]}")"
+    _size_str="$(_fmt_bytes "$(_file_size "${_cand_files[$_ci]}")")"
+    _pad=""
+    [[ "${#_f_base}" -lt "${_name_w}" ]] && \
+      printf -v _pad '%*s' "$(( _name_w - ${#_f_base} ))" ''
+    if [[ "${_cand_already[$_ci]}" -eq 1 ]]; then
+      _CB_LABELS+=("${_f_base}${_pad}  ${_size_str}  (${FILE_ALREADY_PROCESSED})")
+    else
+      _CB_LABELS+=("${_f_base}${_pad}  ${_size_str}")
+    fi
+    if [[ "${SKIP_EXISTING}" -eq 1 && "${_cand_already[$_ci]}" -eq 1 ]]; then
+      _CB_SEL+=(0)
+    else
+      _CB_SEL+=(1)
+    fi
+    _CB_DISABLED+=(0)
+  done
+  interactive_checkbox
+
+  local video_files=()
+  for idx in "${SELECTED_INDICES[@]}"; do
+    video_files+=("${_cand_files[$idx]}")
+  done
+
+  if [[ "${#video_files[@]}" -eq 0 ]]; then
+    printf "\n  %s\n\n" "$(clr_yellow "${NO_FILES_SELECTED}")"
+    exit 0
+  fi
+  local _deselected_count=$(( _cand_total - ${#video_files[@]} ))
+  echo ""
 
   # ── Action selection ──────────────────────────────────────────────────────
   printf "  %s\n" "$(clr_bold "${SELECT_ACTIONS_TITLE}:")"
@@ -395,7 +470,8 @@ main() {
 
   # ── Container selection ───────────────────────────────────────────────────
   # MKV preserves every subtitle stream losslessly (SRT, ASS, PGS, VobSub),
-  # whereas MP4 can only carry text subs as mov_text and drops image subs.
+  # whereas MP4 can only carry text subs as mov_text. Image subs are dropped
+  # unless the OCR prompt further below converts them to text first.
   # The Smart TV profile forces its own MP4 container, so skip the prompt there.
   #
   # NOTE: Samsung's developer docs list HEVC-in-MKV as supported, and we briefly
@@ -736,23 +812,6 @@ main() {
   fi
   echo ""
 
-  # ── Collect files ─────────────────────────────────────────────────────────
-  local video_files=()
-  local _f_base _f_stem
-  for ext in "${selected_exts[@]}"; do
-    while IFS= read -r -d '' f; do
-      if [[ "${SKIP_EXISTING}" -eq 1 ]]; then
-        _f_base="$(basename "${f}")"
-        _f_stem="${_f_base%.*}"
-        if [[ -n "${_SKIP_STEM_MAP["$(lc "${_f_stem}")"]:-}" ]]; then
-          (( _skipped_count++ )) || true
-          continue
-        fi
-      fi
-      video_files+=("$f")
-    done < <(find "${folder}" -maxdepth 1 -type f -iname "*.${ext}" -print0 2>/dev/null | sort -z)
-  done
-
   local total="${#video_files[@]}"
 
   # ── Audio / subtitle stream selection ─────────────────────────────────────
@@ -838,12 +897,73 @@ main() {
     fi
   fi
 
+  # ── OCR image subtitles (MP4 targets only) ────────────────────────────────
+  # MP4's only subtitle codec, mov_text, is text-only, so bitmap tracks
+  # (dvd_subtitle) would be dropped. Offer to OCR them to text instead. Asked
+  # only when the batch really contains bitmap subs and the output really is MP4;
+  # MKV/source targets carry them losslessly and need no OCR.
+  DO_OCR_SUBS=0
+  local _ocr_langs=""
+  local _ocr_mp4_target=0
+  [[ "${DO_SMARTTV}" -eq 1 || "${OUTPUT_CONTAINER}" == "mp4" ]] && _ocr_mp4_target=1
+
+  if [[ "${_ocr_mp4_target}" -eq 1 && "${DO_TIKTOK}" -eq 0 && "${total}" -gt 0 ]]; then
+    local _ocr_files=0 _ocr_lang_lines="" _fj
+    for ((_fj=0; _fj<total; _fj++)); do
+      if ocr_has_image_subs "${_stream_subs_cache[$_fj]:-}"; then
+        _ocr_files=$(( _ocr_files + 1 ))
+        _ocr_lang_lines+="$(ocr_image_sub_langs "${_stream_subs_cache[$_fj]}" || true)"$'\n'
+      fi
+    done
+
+    if [[ "${_ocr_files}" -gt 0 ]]; then
+      _ocr_langs="$(printf '%s\n' "${_ocr_lang_lines}" | sed '/^$/d' | sort -u | tr '\n' ' ' || true)"
+      _ocr_langs="${_ocr_langs% }"
+
+      printf "  %s %d %s\n" "$(clr_bold_yellow '⚠')" "${_ocr_files}" "$(clr_yellow "${OCR_IMAGE_SUBS_FOUND}")"
+      printf "  %s\n" "$(clr_dim "${OCR_INFO}")"
+      printf "  %s: %s\n" "$(clr_dim "${OCR_LANGS_LABEL}")" "$(clr_cyan "${_ocr_langs}")"
+      printf "  %s [y/n] (y): " "$(clr_bold "${OCR_PROMPT}")"
+      local _ocr_ans; read -r _ocr_ans; _ocr_ans="${_ocr_ans:-y}"
+
+      if [[ "${CONFIRM_YES_CHARS}" == *"${_ocr_ans:0:1}"* ]]; then
+        printf "  %s\n" "$(clr_dim "${OCR_CHECK}")"
+        if check_ocr; then
+          DO_OCR_SUBS=1
+          printf "  %s %s: %s\n" "$(clr_bold_green '✓')" "${OCR_FOUND}" "$(clr_dim "${OCR_TESSERACT_BIN}")"
+        else
+          printf "  %s %s\n" "$(clr_bold_yellow '⚠')" "${OCR_NOT_FOUND}"
+          echo ""
+          printf "  %s [y/n] (y): " "$(clr_bold "${OCR_INSTALL_PROMPT}")"
+          local _ocr_dl; read -r _ocr_dl; _ocr_dl="${_ocr_dl:-y}"
+          echo ""
+          if [[ "${CONFIRM_YES_CHARS}" == *"${_ocr_dl:0:1}"* ]] && bootstrap_ocr "${_ocr_langs}"; then
+            DO_OCR_SUBS=1
+            printf "  %s %s: %s\n" "$(clr_bold_green '✓')" "${OCR_FOUND}" "$(clr_dim "${OCR_TESSERACT_BIN}")"
+          else
+            printf "  %s %s\n" "$(clr_yellow '⚠')" "$(clr_yellow "${OCR_DISABLED_WARN}")"
+          fi
+        fi
+      else
+        printf "  %s %s\n" "$(clr_yellow '⚠')" "$(clr_dim "${OCR_SUBS_DROPPED_WARN}")"
+      fi
+
+      if [[ "${DO_OCR_SUBS}" -eq 1 ]]; then
+        local _ocr_miss; _ocr_miss="$(ocr_missing_langs "${_ocr_langs}")"
+        [[ -n "${_ocr_miss}" ]] && \
+          printf "  %s %s: %s\n" "$(clr_bold_yellow '⚠')" "$(clr_yellow "${OCR_LANG_MISSING}")" "$(clr_dim "${_ocr_miss}")"
+        printf "  %s\n" "$(clr_yellow "⚠  ${OCR_SLOW_WARN}")"
+      fi
+      echo ""
+    fi
+  fi
+
   # ── Pre-flight summary ────────────────────────────────────────────────────
   local divider; divider="$(printf '─%.0s' {1..60})"
   echo "  ${divider}"
   printf "  %s  %d %s\n" "$(clr_bold_cyan '▶')" "${total}" "$(clr_bold "${FILES_LABEL} selected")"
-  [[ "${_skipped_count}" -gt 0 ]] && \
-    printf "  %s  %d %s\n" "$(clr_dim '○')" "${_skipped_count}" "$(clr_dim "${SKIP_EXISTING_SKIPPED}")"
+  [[ "${_deselected_count}" -gt 0 ]] && \
+    printf "  %s  %d %s\n" "$(clr_dim '○')" "${_deselected_count}" "$(clr_dim "${FILES_NOT_SELECTED}")"
   printf "  %s: %s\n" "$(clr_bold "${OUTPUT_FOLDER}")" "$(clr_dim "${out_dir}")"
 
   printf "  %s: " "$(clr_bold "${ACTIONS_LABEL}")"
@@ -862,6 +982,7 @@ main() {
   [[ "${DO_DEEP3D}" -eq 1 ]]     && action_list+=("deep3d (stability=${DEEP3D_STABILITY})")
   [[ "${DO_MPG_TO_MP4}" -eq 1 ]] && action_list+=("mpg→mp4")
   [[ "${DO_SMARTTV}" -eq 1 ]]    && action_list+=("SmartTV ${SMARTTV_TIER}p (MP4/H.265/AC3)")
+  [[ "${DO_OCR_SUBS}" -eq 1 ]]   && action_list+=("OCR subs → mov_text (${_ocr_langs})")
   [[ "${DO_TIKTOK}"    -eq 1 ]] && action_list+=("tiktok reel (model=${TIKTOK_OLLAMA_MODEL} score≥${TIKTOK_MIN_SCORE} ${TIKTOK_CLIP_MIN}-${TIKTOK_CLIP_MAX}s clips)")
   local IFS_SAVE="${IFS}"; IFS=', '; printf "%s\n" "$(clr_cyan "${action_list[*]}")"; IFS="${IFS_SAVE}"
 
@@ -876,6 +997,8 @@ main() {
     printf "  %s: %s\n" "$(clr_bold "${CONTAINER_SELECT_LABEL}")" "$(clr_cyan ".${OUTPUT_CONTAINER}")"
   [[ "${STREAM_SELECTION_MODE}" -eq 1 ]] && \
     printf "  %s: %s\n" "$(clr_bold "${STREAM_SELECT_TITLE}")" "$(clr_cyan "${STREAM_SELECT_PER_FILE}")"
+  [[ "${DO_OCR_SUBS}" -eq 1 ]] && \
+    printf "  %s: %s\n" "$(clr_bold "${OCR_SUMMARY_LABEL}")" "$(clr_cyan "${_ocr_langs} → mov_text")"
   echo "  ${divider}"
   echo ""
 

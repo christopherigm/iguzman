@@ -10,6 +10,7 @@ A collection of bash scripts for playing media on **Ubuntu Server** (or any head
 | ---------------------------------- | -------------------------------------------------- |
 | [`install.sh`](#installsh)         | Install all dependencies and configure user groups |
 | [`play-videos.sh`](#play-videossh) | Play video and audio files via DRM/KMS output      |
+| [`fix-video.sh`](#fix-videosh)     | Inspect and fix DRM/KMS video-output issues        |
 | [`fix-audio.sh`](#fix-audiosh)     | Inspect and fix common ALSA audio issues           |
 
 ---
@@ -100,11 +101,12 @@ script. Every flag below has an equivalent menu entry:
 | Display mode                     | `--mode`                                   |
 | Loop                             | `--loop` / `--loop=<N>`                     |
 | Volume                           | `--volume`                                 |
+| Max ALSA mixer                   | `--no-max-volume` (on by default)          |
 | Enhance (GPU)                    | `--enhance` / `--sdr-to-hdr`               |
 | Audio output                     | `--ao`                                      |
 | Shuffle / Mute / Audio-only      | `--shuffle` / `--mute` / `--audio-only`    |
 | List connectors / audio devices  | `--list-connectors` / `--list-audio-devices` |
-| Fix audio / video issues         | runs `fix-audio.sh` + DRM/`video`-group checks |
+| Fix audio / video issues         | runs `fix-video.sh` + `fix-audio.sh`       |
 
 The last-played path is remembered and offered as the default the next time you
 choose **Play media**.
@@ -130,8 +132,9 @@ choose **Play media**.
 | `--loop-playlist`                      | off           | Loop the entire playlist infinitely                              |
 | `--loop-playlist=<N>`                  | off           | Loop the entire playlist N times                                 |
 | `--shuffle`                            | off           | Play files in random order                                       |
-| `--volume <0-100>`                     | `100`         | Playback volume                                                  |
+| `--volume <0-100>`                     | `100`         | Playback volume (mpv's **software** volume, not the ALSA mixer)  |
 | `--mute`                               | off           | Start with audio muted                                           |
+| `--no-max-volume`                      | mixer maxed   | Do not raise the ALSA hardware mixer to 100% before playback     |
 | `--no-fullscreen`                      | fullscreen on | Disable forced fullscreen                                        |
 | `--audio-only`                         | auto          | Force audio-only mode (skips DRM video output)                   |
 | `--ao <driver>`                        | `alsa`        | Audio output driver: `alsa`, `pulse`, `pipewire`, `jack`, `auto` |
@@ -141,6 +144,16 @@ choose **Play media**.
 | `--list-audio-devices`                 | -             | Print available ALSA audio devices, then exit                    |
 | `--`                                   | -             | Pass all subsequent arguments directly to mpv                    |
 | `-h`, `--help`                         | -             | Show usage and exit                                              |
+
+#### Volume: two independent layers
+
+`--volume` is mpv's **software** volume - it never touches the ALSA hardware mixer. A `Master` control left at 20%, or an HDMI `IEC958` switch left muted, therefore makes playback quiet no matter what `--volume` says.
+
+So before every playback `play-videos.sh` opens the hardware all the way up: it runs `fix-audio.sh --force --quiet --volume 100`, which sets every volume-capable control on the card in use to 100%, unmutes it, and unmutes the `IEC958` switch. `--volume` is then the only thing setting the actual level.
+
+- The card is taken from `--audio-device` when given (`alsa/hdmi:CARD=PCH,DEV=3` → card `PCH`); otherwise every card is raised.
+- **The mixer keeps that level after playback ends** - nothing is restored. Pass `--no-max-volume` (or toggle **Max ALSA mixer** off in the menu) on a machine where you don't want the system mixer touched.
+- A pure HDMI card exposes no `Master` at all, only `IEC958` switches, so there is no hardware level to raise - only the mute is cleared. Attenuate with `--volume` instead.
 
 ### Examples
 
@@ -253,6 +266,84 @@ sudo systemctl enable --now play-videos
 
 ---
 
+## fix-video.sh
+
+Diagnoses why `--vo=drm` will not start, and repairs the driver-side causes by writing kernel parameters to `/etc/default/grub`.
+
+mpv's DRM output needs **three things at once**. When any one is missing, mpv prints a message that names the symptom but not the cause:
+
+| Requirement            | What breaks without it                                   | mpv says                                  |
+| ---------------------- | -------------------------------------------------------- | ----------------------------------------- |
+| A real console VT      | SSH and terminal emulators cannot drive DRM output       | `VT_GETMODE failed`                       |
+| Atomic modesetting     | `radeon` has none; `amdgpu` disables Display Core on DCE-8 | `Failed to create DRM atomic context`     |
+| DRM master             | A running display manager owns the GPU                   | (silent, or fails to acquire the device)  |
+
+### The AMD case
+
+Old AMD APUs - **Temash, Kabini, Kaveri, Beema, Mullins** (GCN/CIK) - bind to the legacy `radeon` driver, which has **no atomic KMS**. Forcing `amdgpu` fixes that, but `amdgpu` then falls back to its *own* legacy display path on DCE-8 hardware, which also has no atomic. Display Core must be forced on as well.
+
+All five parameters are **a single unit**: `amdgpu.dc=1` does nothing unless `amdgpu` owns the card, and `amdgpu` will not claim it while `radeon.*_support` is enabled.
+
+```
+GRUB_CMDLINE_LINUX_DEFAULT="... radeon.si_support=0 radeon.cik_support=0 amdgpu.si_support=1 amdgpu.cik_support=1 amdgpu.dc=1"
+```
+
+`fix-video.sh` shows the diff, backs up `/etc/default/grub` with a timestamp, applies the change, and runs `update-grub`. It **never reboots on its own**.
+
+Verify after rebooting - all three must pass:
+
+```bash
+lspci -k | grep -A2 -i vga            # Kernel driver in use: amdgpu
+cat /sys/module/amdgpu/parameters/dc  # 1
+sudo dmesg | grep -i 'display core'   # [drm] Display Core initialized with v...
+```
+
+### What it checks
+
+- `/dev/dri` DRM devices exist and the user is in the `video` group
+- The session is a real console VT (not SSH, not a terminal emulator)
+- No display manager / compositor is holding DRM master
+- The GPU's kernel driver supports atomic modesetting:
+  - `radeon` → offers the `amdgpu` switch (GRUB, needs reboot)
+  - `amdgpu` with Display Core off → offers `amdgpu.dc=1` (GRUB, needs reboot)
+  - `nvidia-drm` → reports the `modeset=1` requirement (not auto-applied)
+
+### Usage
+
+```
+./fix-video.sh [OPTIONS]
+```
+
+| Option            | Default | Description                                                        |
+| ----------------- | ------- | ------------------------------------------------------------------ |
+| `-n`, `--dry-run` | off     | Show what would be fixed without applying changes                  |
+| `-y`, `--yes`     | off     | Apply GRUB fixes without prompting (never reboots)                 |
+| `-q`, `--quiet`   | off     | Suppress informational output (errors still shown)                 |
+| `--headless`      | off     | Also set the boot target to `multi-user.target`, freeing the GPU   |
+| `-h`, `--help`    | -       | Show usage and exit                                                |
+
+Exits `0` when there was nothing to fix (or everything was fixed), `1` when issues remain.
+
+### Examples
+
+```bash
+# Diagnose and repair interactively
+./fix-video.sh
+
+# Diagnose only - change nothing
+./fix-video.sh --dry-run
+
+# Unattended repair, e.g. while re-imaging a server
+sudo ./fix-video.sh --yes
+
+# Dedicated media box: also drop to a no-desktop boot target
+sudo ./fix-video.sh --yes --headless
+```
+
+> `--vo=drm` cannot render over SSH no matter what this script fixes. Run playback from the machine's own keyboard (`Ctrl+Alt+F1`), or hand mpv a VT with `sudo openvt -s -w -- ./play-videos.sh <file>`.
+
+---
+
 ## fix-audio.sh
 
 Inspects all ALSA mixer controls and automatically fixes common issues: muted channels and zero-volume controls. Supports dry-run mode, targeting a specific card, and persisting fixes across reboots.
@@ -268,6 +359,9 @@ Inspects all ALSA mixer controls and automatically fixes common issues: muted ch
 
 - At least one ALSA playback device exists
 - `Master`, `PCM`, `Speaker`, `Headphone`, and `Front` controls are unmuted and have volume > 0
+- `IEC958` (the S/PDIF + HDMI switch) is unmuted. It carries **no volume level**, so it is only ever unmuted, never given a percentage.
+
+By default only *broken* controls (muted, or at 0%) are touched - a control you deliberately set to 40% is left alone. `--force` overrides that and sets every volume-capable control to `--volume`.
 
 ### Usage
 
@@ -275,14 +369,15 @@ Inspects all ALSA mixer controls and automatically fixes common issues: muted ch
 ./fix-audio.sh [OPTIONS]
 ```
 
-| Option                   | Default | Description                                        |
-| ------------------------ | ------- | -------------------------------------------------- |
-| `-n`, `--dry-run`        | off     | Show what would be fixed without applying changes  |
-| `-v`, `--volume <0-100>` | `100`   | Target volume to set on muted/silent controls      |
-| `-c`, `--card <N>`       | all     | Target a specific card index                       |
-| `-p`, `--persist`        | off     | Persist fixes across reboots via `alsactl store`   |
-| `-q`, `--quiet`          | off     | Suppress informational output (errors still shown) |
-| `-h`, `--help`           | -       | Show usage and exit                                |
+| Option                   | Default | Description                                                       |
+| ------------------------ | ------- | ----------------------------------------------------------------- |
+| `-n`, `--dry-run`        | off     | Show what would be fixed without applying changes                 |
+| `-f`, `--force`          | off     | Set **every** control to `--volume` and unmute, even healthy ones |
+| `-v`, `--volume <0-100>` | `100`   | Target volume to set                                              |
+| `-c`, `--card <N\|name>` | all     | Target a specific card index or name (e.g. `0`, `PCH`)            |
+| `-p`, `--persist`        | off     | Persist fixes across reboots via `alsactl store`                  |
+| `-q`, `--quiet`          | off     | Suppress banner, summary and informational output                 |
+| `-h`, `--help`           | -       | Show usage and exit                                               |
 
 ### Examples
 
@@ -301,11 +396,49 @@ Inspects all ALSA mixer controls and automatically fixes common issues: muted ch
 
 # Quiet mode (only print warnings and errors)
 ./fix-audio.sh --quiet --persist
+
+# Open the hardware all the way up - what play-videos.sh runs before playback
+./fix-audio.sh --force --quiet --volume 100
+
+# Max out one card by name, and make it survive a reboot
+./fix-audio.sh --force --card PCH --persist
 ```
 
 ---
 
 ## Troubleshooting
+
+**Start here:** `./fix-video.sh` diagnoses the three DRM requirements and fixes the driver-side ones. `./fix-audio.sh` handles muted/zero-volume ALSA controls. The interactive menu's **Fix audio / video issues** entry runs both.
+
+**`Error opening/initializing the selected video_out (--vo) device`**
+
+The video output never started, so the codec/container is irrelevant - transcoding the file will not help. It is always one of the three requirements below. Run `./fix-video.sh`.
+
+**`VT_GETMODE failed: Inappropriate ioctl for device`**
+
+mpv is not on a real console VT. DRM output draws onto the physical framebuffer and cannot render over an SSH pty or a terminal emulator.
+
+```bash
+# Run from the machine's own keyboard:  Ctrl+Alt+F1, log in, then play.
+# Or hand mpv a VT from SSH (playback keys then come from the physical keyboard):
+sudo openvt -s -w -- ./play-videos.sh video.mp4
+```
+
+**`Failed to create DRM atomic context, no DRM Atomic support`**
+
+The GPU driver has no atomic modesetting. On old AMD APUs this needs both the `radeon`→`amdgpu` switch **and** `amdgpu.dc=1` - see [`fix-video.sh`](#fix-videosh).
+
+```bash
+sudo ./fix-video.sh          # applies the GRUB params, then reboot
+lspci -k | grep -A2 -i vga   # confirm: Kernel driver in use: amdgpu
+```
+
+**A desktop is running and holds DRM master**
+
+```bash
+sudo systemctl stop display-manager        # just for now
+sudo systemctl set-default multi-user.target && sudo reboot   # permanently
+```
 
 **Black screen / no video output**
 
@@ -339,6 +472,18 @@ newgrp video
 # Or persist the fix
 ./fix-audio.sh --persist
 ```
+
+**Playback is quiet even with `--volume 100`**
+
+`--volume` is mpv's *software* volume and never touches the ALSA mixer. `play-videos.sh` maxes the hardware mixer for you before playback - unless you passed `--no-max-volume` or toggled **Max ALSA mixer** off. To do it by hand:
+
+```bash
+./fix-audio.sh --force            # every control to 100%, unmuted
+./fix-audio.sh --force --persist  # ...and survive a reboot
+amixer -c 0 scontents             # inspect what the card actually exposes
+```
+
+On a pure HDMI card there is no `Master` to raise - only an `IEC958` on/off switch. Lower the level with `--volume N` instead.
 
 **Permission denied on ALSA devices**
 

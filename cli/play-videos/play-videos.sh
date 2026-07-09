@@ -26,10 +26,18 @@
 #   --list-connectors             List available DRM connectors and modes, then exit
 #
 #   Audio:
-#   --volume <0-100>              Playback volume (default: 100)
+#   --volume <0-100>              Playback volume (default: 100). This is mpv's
+#                                   software volume, not the ALSA hardware mixer.
 #   --mute                        Mute audio
 #   --ao <driver>                 Audio output driver: alsa | pulse | pipewire | jack | auto (default: alsa)
 #   --audio-device <device>       Audio device string, e.g. alsa/hdmi:CARD=PCH,DEV=3 (default: auto)
+#   --no-max-volume               Do not raise the ALSA mixer before playback.
+#                                   By default every volume-capable control on the
+#                                   card in use is set to 100% and unmuted (and the
+#                                   HDMI IEC958 switch unmuted), because mpv's
+#                                   --volume never touches the hardware mixer - a
+#                                   Master left at 20% would stay quiet regardless.
+#                                   The mixer keeps that level after playback ends.
 #   --list-audio-devices          List available audio devices, then exit
 #
 #   Enhancement (GPU real-time processing; needs a GPU; best on mpv >= 0.36 gpu-next):
@@ -60,6 +68,18 @@
 #   ./play-videos.sh --list-audio-devices
 #   ./play-videos.sh video.mp4 -- --brightness=10 --contrast=5
 #   ./play-videos.sh                          # interactive menu (no flags)
+#
+# Troubleshooting (DRM/KMS video output):
+#   Video goes straight to the HDMI console, which needs three things at once:
+#     1. A real console VT   - Ctrl+Alt+F1 on the machine itself. An SSH session
+#                              cannot drive DRM output: "VT_GETMODE failed".
+#     2. Atomic modesetting  - the legacy 'radeon' driver has none, and 'amdgpu'
+#                              disables its Display Core on old DCE-8 GPUs:
+#                              "Failed to create DRM atomic context".
+#     3. DRM master          - a running desktop/display-manager owns the GPU.
+#   Run ./fix-video.sh to diagnose all three (and repair 2 via GRUB kernel params).
+#   Run ./fix-audio.sh for muted/zero-volume ALSA mixer controls.
+#   The menu's "Fix audio / video issues" entry runs both.
 #
 # Playback controls (keys, while a video/audio is playing):
 #   Space / p         Pause / resume
@@ -93,14 +113,16 @@ DRM_DEVICE=""          # Override DRM device (e.g. /dev/dri/card1). Empty = auto
 AUDIO_OUTPUT="alsa"    # Audio output driver: alsa | pulse | pipewire | jack | auto
 AUDIO_DEVICE=""        # ALSA device override (e.g. alsa/hdmi:CARD=PCH,DEV=3). Use --list-audio-devices to find
 AUDIO_ONLY="auto"      # auto = detect from file extension | yes | no
+MAX_VOLUME="yes"       # Raise the ALSA hardware mixer to 100% before playback (--no-max-volume to skip)
 ENHANCE="no"           # GPU real-time upscale + deinterlace (vo=gpu-next). Needs a GPU + mpv >= 0.38
 SDR_TO_HDR="no"        # [experimental] inverse tone-map SDR -> HDR10 (implies ENHANCE)
 HDR_PEAK="auto"        # Target HDR peak nits for --sdr-to-hdr (auto = let libplacebo decide)
 ENHANCE_VO=""          # Resolved enhance video output: gpu-next (mpv >= 0.36) or gpu fallback
 EXTRA_ARGS=()          # Any extra mpv args passed through
-RUN_MODE="oneshot"     # oneshot (flags -> exec mpv) | menu (loop -> run mpv, return)
+RUN_MODE="oneshot"     # oneshot (flags -> run mpv, exit) | menu (loop -> run mpv, return)
 LAST_TARGET=""         # Menu: last path played, offered as the default next time
 LANG_CHOICE="en"       # Menu language: en | es
+PLAYING_VIDEO="no"     # Set per-run: yes when a DRM video output is in play (not --audio-only)
 
 # ── Media type definitions ─────────────────────────────────────────────────────
 VIDEO_EXTS="mp4|mkv|avi|mov|webm|flv|m4v|ts|wmv"
@@ -251,6 +273,111 @@ check_group() {
 check_video_group() { check_group video "DRM device access may fail."; }
 check_audio_group() { check_group audio "ALSA device access may fail."; }
 
+# ── ALSA hardware mixer ───────────────────────────────────────────────────────
+# mpv's --volume is a *software* volume - it never touches the ALSA mixer. So a
+# Master control left at 20%, or an IEC958 switch left muted on an HDMI sink,
+# makes playback quiet no matter what mpv is told. Open the hardware all the way
+# up and let mpv's --volume set the actual level.
+#
+# fix-audio.sh --force does exactly this (and knows that IEC958 takes no
+# percentage), so reuse it rather than duplicating the amixer logic here.
+
+# "alsa/hdmi:CARD=PCH,DEV=3" -> "PCH".  Empty AUDIO_DEVICE = let it do all cards.
+alsa_card_from_device() {
+  [[ -n "${AUDIO_DEVICE}" ]] || return 1
+  [[ "${AUDIO_DEVICE}" =~ CARD=([^,]+) ]] || return 1
+  printf '%s' "${BASH_REMATCH[1]}"
+}
+
+ensure_max_volume() {
+  [[ "${MAX_VOLUME}" == "yes" ]] || return 0
+  command -v amixer &>/dev/null    || return 0   # no ALSA tools: nothing to raise
+  local fixer="${SCRIPT_DIR}/fix-audio.sh"
+  [[ -f "${fixer}" ]]              || return 0
+
+  # Always 100%: the hardware stays wide open, --volume does the attenuating.
+  local -a args=(--force --quiet --volume 100)
+  local card
+  card="$(alsa_card_from_device)" && args+=(--card "${card}")
+
+  # Never let a mixer hiccup stop playback - it is a convenience, not a gate.
+  bash "${fixer}" "${args[@]}" || true
+}
+
+# ── DRM/KMS preflight ─────────────────────────────────────────────────────────
+# When the console VT, atomic modesetting or DRM master is missing, mpv only
+# prints "VT_GETMODE failed" / "no DRM Atomic support" and dies - which says
+# nothing about the cause. Diagnose what we can prove up front, then get out of
+# the way: this cannot see every GPU/kernel combination, so it never blocks.
+
+# Kernel driver of the first real DRM card (card0-HDMI-A-1 is a connector, not a card).
+drm_driver() {
+  local path name link
+  for path in /sys/class/drm/card[0-9]*; do
+    [[ -e "${path}" ]] || continue
+    name="$(basename "${path}")"
+    [[ "${name}" == *-* ]] && continue
+    link="/sys/class/drm/${name}/device/driver"
+    [[ -L "${link}" ]] && { basename "$(readlink -f "${link}")"; return 0; }
+  done
+  return 1
+}
+
+preflight_video() {
+  check_video_group
+
+  local problems=() tty_name driver
+  tty_name="$(tty 2>/dev/null)"
+
+  # 1. A console VT. An SSH pty or terminal emulator can never drive DRM output.
+  if [[ -n "${SSH_CONNECTION:-}" ]]; then
+    problems+=("This is an SSH session, not a console VT - DRM video cannot render over SSH.")
+  elif [[ ! "${tty_name}" =~ ^/dev/tty[0-9]+$ ]]; then
+    problems+=("Not attached to a console VT (${tty_name:-no tty}) - DRM video needs one.")
+  fi
+
+  # 2. Atomic modesetting. Only flag what is provable without root: 'radeon' has
+  # no atomic at all, and amdgpu.dc=0 forces the legacy non-atomic path. The
+  # amdgpu.dc=-1 "auto" case (off on old DCE-8 parts) can only be confirmed from
+  # the kernel log, which is root-only on Ubuntu - fix-video.sh handles that.
+  driver="$(drm_driver)"
+  case "${driver}" in
+    radeon)
+      problems+=("GPU uses the legacy 'radeon' driver, which has no atomic KMS.")
+      ;;
+    amdgpu)
+      local dc="/sys/module/amdgpu/parameters/dc"
+      [[ -r "${dc}" && "$(cat "${dc}")" == "0" ]] \
+        && problems+=("amdgpu Display Core is off (amdgpu.dc=0) - that path has no atomic KMS.")
+      ;;
+  esac
+
+  # 3. DRM master. A display manager owns the GPU and will not hand it over.
+  systemctl is-active --quiet display-manager 2>/dev/null \
+    && problems+=("A display manager is running and holds DRM master.")
+
+  [[ ${#problems[@]} -eq 0 ]] && return 0
+
+  echo "" >&2
+  echo "WARNING: DRM/KMS video output is unlikely to work here:" >&2
+  local p; for p in "${problems[@]}"; do echo "  - ${p}" >&2; done
+  echo "  Diagnose and fix: bash ${SCRIPT_DIR}/fix-video.sh" >&2
+  echo "  Trying anyway..." >&2
+  echo "" >&2
+}
+
+# Printed after mpv exits non-zero on a video run. The preflight cannot detect
+# every cause (notably amdgpu.dc=-1 resolving to off), so always leave a pointer.
+drm_failure_hint() {
+  [[ "${PLAYING_VIDEO}" == "yes" ]] || return 0
+  echo "" >&2
+  echo "mpv exited with an error. If it mentioned 'no DRM Atomic support'," >&2
+  echo "'VT_GETMODE failed', or 'Error opening/initializing the selected video_out'," >&2
+  echo "the video output could not start. Diagnose it with:" >&2
+  echo "  bash ${SCRIPT_DIR}/fix-video.sh" >&2
+  echo "" >&2
+}
+
 # Print connectors/modes (no exit) so both the --list-connectors flag and the
 # interactive menu can share the same output.
 show_connectors() {
@@ -282,7 +409,10 @@ list_audio_devices() { show_audio_devices; exit 0; }
 
 # mpv has no command-line flag for individual key bindings, so we materialise a
 # tiny input.conf and point mpv at it with --input-conf. This remaps Up/Down
-# from their default 60s seek to volume up/down (add volume clamps to 0..100).
+# from their default 60s seek to volume up/down. This is mpv's *software* volume
+# (the ALSA mixer is opened to 100% separately, see ensure_max_volume), and
+# `add volume` clamps to 0..--volume-max, which defaults to 130 - so Up can
+# amplify past 100% and clip.
 # Written to a stable path (not mktemp) because oneshot mode `exec`s mpv, so an
 # EXIT trap would never fire to clean a temp file up.
 INPUT_CONF="${TMPDIR:-/tmp}/play-videos-input.conf"
@@ -371,6 +501,7 @@ play_target() {
   local target="$1"
   require mpv mpv
   check_audio_group
+  ensure_max_volume
 
   if [[ "${ENHANCE}" == "yes" ]]; then
     select_enhance_vo
@@ -400,7 +531,7 @@ play_target() {
       [[ "${has_video}" == "no" ]] && audio_only="yes" || audio_only="no"
     fi
 
-    [[ "${audio_only}" == "no" ]] && check_video_group
+    [[ "${audio_only}" == "no" ]] && { PLAYING_VIDEO="yes"; preflight_video; }
     local type_label; [[ "${audio_only}" == "yes" ]] && type_label="audio" || type_label="media"
     echo "Found ${#files[@]} ${type_label} file(s). Starting playback..."
 
@@ -412,14 +543,14 @@ play_target() {
 
     if [[ "$(lc "${ext}")" =~ ^(m3u|m3u8|pls|txt)$ ]]; then
       [[ "${audio_only}" == "auto" ]] && audio_only="no"
-      [[ "${audio_only}" == "no" ]] && check_video_group
+      [[ "${audio_only}" == "no" ]] && { PLAYING_VIDEO="yes"; preflight_video; }
       local mpv_args; mapfile -t mpv_args < <(build_mpv_args "${audio_only}")
       run_mpv "${mpv_args[@]}" --playlist="${target}"
     else
       if [[ "${audio_only}" == "auto" ]]; then
         is_audio_file "${target}" && audio_only="yes" || audio_only="no"
       fi
-      [[ "${audio_only}" == "no" ]] && check_video_group
+      [[ "${audio_only}" == "no" ]] && { PLAYING_VIDEO="yes"; preflight_video; }
       local mpv_args; mapfile -t mpv_args < <(build_mpv_args "${audio_only}")
       run_mpv "${mpv_args[@]}" "${target}"
     fi
@@ -428,14 +559,15 @@ play_target() {
   fi
 }
 
-# Run mpv. In one-shot (flag) mode we exec so mpv replaces this process. In menu
-# mode we must return to the loop afterwards, so we run it as a child instead.
+# Run mpv as a child in both modes (not exec, even one-shot) so a non-zero exit
+# can be turned into the DRM hint below - mpv's own VO errors never name a cause.
+# Menu mode returns to the loop; one-shot propagates mpv's exit status.
 run_mpv() {
-  if [[ "${RUN_MODE}" == "menu" ]]; then
-    mpv "$@"
-  else
-    exec mpv "$@"
-  fi
+  local status=0
+  mpv "$@" || status=$?
+  [[ "${status}" -ne 0 ]] && drm_failure_hint
+  [[ "${RUN_MODE}" == "menu" ]] && return "${status}"
+  exit "${status}"
 }
 
 # ══ Interactive menu (shown when the script is run with no arguments) ══════════
@@ -481,6 +613,7 @@ setup_strings() {
     M_MODE="Modo de pantalla"
     M_LOOP="Repetir"
     M_VOLUME="Volumen"
+    M_MAX_VOLUME="Mezclador ALSA al máximo"
     M_ENHANCE="Mejorar (GPU)"
     M_AO="Salida de audio"
     M_SHUFFLE="Aleatorio"
@@ -535,6 +668,7 @@ setup_strings() {
     FIX_DRM_OK="Dispositivos DRM presentes: %s"
     FIX_DRM_NONE="No se encontraron dispositivos DRM en /dev/dri (¿GPU/HDMI?)."
     FIX_NO_FIXER="No se encontró fix-audio.sh junto a este script."
+    FIX_NO_VIDEO_FIXER="No se encontró fix-video.sh junto a este script."
   else
     WELCOME="Media player — HDMI (DRM/KMS)"
     SUBTITLE="Play audio and video over HDMI, no desktop required."
@@ -555,6 +689,7 @@ setup_strings() {
     M_MODE="Display mode"
     M_LOOP="Loop"
     M_VOLUME="Volume"
+    M_MAX_VOLUME="Max ALSA mixer"
     M_ENHANCE="Enhance (GPU)"
     M_AO="Audio output"
     M_SHUFFLE="Shuffle"
@@ -609,6 +744,7 @@ setup_strings() {
     FIX_DRM_OK="DRM devices present: %s"
     FIX_DRM_NONE="No DRM devices found in /dev/dri (GPU/HDMI missing?)."
     FIX_NO_FIXER="fix-audio.sh not found next to this script."
+    FIX_NO_VIDEO_FIXER="fix-video.sh not found next to this script."
   fi
 }
 
@@ -814,6 +950,7 @@ menu_ao() {
   [[ "${MENU_SELECTED}" -lt 5 ]] && AUDIO_OUTPUT="${MENU_ITEMS[$MENU_SELECTED]}"
 }
 
+menu_toggle_max_volume() { [[ "${MAX_VOLUME}" == "yes" ]] && MAX_VOLUME="no" || MAX_VOLUME="yes"; }
 menu_toggle_shuffle()    { [[ "${SHUFFLE}" == "yes" ]] && SHUFFLE="no" || SHUFFLE="yes"; }
 menu_toggle_mute()       { [[ "${MUTE}"    == "yes" ]] && MUTE="no"    || MUTE="yes"; }
 menu_toggle_audio_only() {
@@ -833,14 +970,21 @@ menu_fix() {
   else
     say_warn "${FIX_DRM_NONE}"
   fi
-  local fixer="${SCRIPT_DIR}/fix-audio.sh"
   echo ""
+  run_fixer "${SCRIPT_DIR}/fix-video.sh" "${FIX_NO_VIDEO_FIXER}"
+  echo ""
+  run_fixer "${SCRIPT_DIR}/fix-audio.sh" "${FIX_NO_FIXER}"
+  echo ""; prompt_enter
+}
+
+# Each fixer exits non-zero when issues remain; that must not kill the menu loop.
+run_fixer() {
+  local fixer="$1" missing="$2"
   if [[ -f "${fixer}" ]]; then
     bash "${fixer}" || true
   else
-    say_warn "${FIX_NO_FIXER}"
+    say_warn "${missing}"
   fi
-  echo ""; prompt_enter
 }
 
 menu_help() {
@@ -873,6 +1017,7 @@ build_main_menu() {
   add "$(kv "${M_MODE}"         "${MODE}")"                          mode
   add "$(kv "${M_LOOP}"         "$(fmt_loop)")"                      loop
   add "$(kv "${M_VOLUME}"       "${VOLUME}")"                        volume
+  add "$(kv "${M_MAX_VOLUME}"   "$(fmt_onoff "${MAX_VOLUME}")")"     max_volume
   add "$(kv "${M_ENHANCE}"      "$(fmt_enhance)")"                   enhance
   add "$(kv "${M_AO}"           "${AUDIO_OUTPUT}")"                  ao
   add "$(kv "${M_SHUFFLE}"      "$(fmt_onoff "${SHUFFLE}")")"        shuffle
@@ -905,6 +1050,7 @@ run_menu() {
       mode)            menu_mode ;;
       loop)            menu_loop ;;
       volume)          menu_volume ;;
+      max_volume)      menu_toggle_max_volume ;;
       enhance)         menu_enhance ;;
       ao)              menu_ao ;;
       shuffle)         menu_toggle_shuffle ;;
@@ -940,6 +1086,7 @@ while [[ $# -gt 0 ]]; do
     --shuffle)            SHUFFLE="yes" ;;
     --volume)             VOLUME="$2"; shift ;;
     --mute)               MUTE="yes" ;;
+    --no-max-volume)      MAX_VOLUME="no" ;;
     --no-fullscreen)      FULLSCREEN="no" ;;
     --enhance)            ENHANCE="yes" ;;
     --sdr-to-hdr)         SDR_TO_HDR="yes"; ENHANCE="yes" ;;

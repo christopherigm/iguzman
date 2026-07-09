@@ -141,8 +141,10 @@ _probe_streams_of_type() {
 #   STREAM_MAP_ARGS      - the full -map / -c:a / -c:s argument list
 #
 # Subtitle handling is container-aware: Matroska/WebM copy every subtitle as-is;
-# MP4-family containers only accept text subtitles (re-muxed to mov_text) and
-# silently drop bitmap subs (PGS/DVD/DVB) which the format cannot hold.
+# MP4-family containers only accept text subtitles (re-muxed to mov_text).
+# Bitmap subs (PGS/DVD/DVB) cannot be held by MP4 at all, so when OCR is enabled
+# lib/ocr.sh converts the supported ones to .srt beforehand and this function
+# muxes those as mov_text; the rest are still dropped.
 #
 # Per-file stream curation: when the user opted to pick streams individually
 # (edit-videos.sh), the current file's choice is passed in via two globals,
@@ -226,7 +228,11 @@ _smarttv_audio_codec_args() {
   done
 
   # Nothing resolved (probe failed) → blanket AC3 transcode as a safe fallback.
+  # The explicit `return 0` matters: without it the function's status would be
+  # that of the failing `[[ ]]` test above, which under `set -e` aborts any
+  # caller that is not inside an `if` condition.
   [[ "${#AUDIO_CODEC_ARGS[@]}" -eq 0 ]] && AUDIO_CODEC_ARGS=(-c:a ac3)
+  return 0
 }
 
 build_stream_maps() {
@@ -288,19 +294,39 @@ build_stream_maps() {
       ;;
     mp4|m4v|mov|3gp)
       # Only text subtitles can live in MP4 (as mov_text); map them individually.
-      local rel=0 codec text_maps=()
+      # Bitmap tracks are handled further down: ocr_prepare_subs (lib/ocr.sh) has
+      # already turned them into .srt files, which come in as extra inputs.
+      local rel=0 codec sub_maps=() meta_args=() out_pos=0
       while IFS= read -r codec; do
         [[ -z "${codec}" ]] && continue
         if [[ "${sel_s}" == "*" ]] || _stream_idx_selected "${rel}" "${sel_s}"; then
           case "$(lc "${codec}")" in
             subrip|srt|ass|ssa|mov_text|webvtt|text|subviewer|subviewer1|eia_608|microdvd)
-              text_maps+=(-map "${sub_idx}:s:${rel}")
+              sub_maps+=(-map "${sub_idx}:s:${rel}")
+              out_pos=$(( out_pos + 1 ))
               ;;
           esac
         fi
         rel=$(( rel + 1 ))
       done <<< "${sub_codecs}"
-      [[ "${#text_maps[@]}" -gt 0 ]] && STREAM_MAP_ARGS+=("${text_maps[@]}" -c:s mov_text)
+
+      # OCR'd bitmap subtitles: one extra "-i <srt>" input each, appended after
+      # the primary (0) and, when present, the separate subtitle source (1).
+      local ocr_n="${#OCR_SRT_FILES[@]}"
+      if [[ "${ocr_n}" -gt 0 ]]; then
+        local k in_base=$(( 1 + sub_idx ))
+        for (( k=0; k<ocr_n; k++ )); do
+          STREAM_EXTRA_INPUTS+=(-i "${OCR_SRT_FILES[$k]}")
+          sub_maps+=(-map "$(( in_base + k )):0")
+          meta_args+=("-metadata:s:s:${out_pos}" "language=${OCR_SRT_LANGS[$k]}")
+          out_pos=$(( out_pos + 1 ))
+        done
+      fi
+
+      if [[ "${#sub_maps[@]}" -gt 0 ]]; then
+        STREAM_MAP_ARGS+=("${sub_maps[@]}" -c:s mov_text)
+        [[ "${#meta_args[@]}" -gt 0 ]] && STREAM_MAP_ARGS+=("${meta_args[@]}")
+      fi
       ;;
     *)
       if [[ "${sel_s}" == "*" ]]; then
@@ -312,6 +338,7 @@ build_stream_maps() {
       fi
       ;;
   esac
+  return 0
 }
 
 # ── HDR type detection ────────────────────────────────────────────────────────

@@ -118,16 +118,68 @@ print_header() {
 # ── Interactive checkbox ──────────────────────────────────────────────────────
 # Set _CB_LABELS, _CB_SEL, _CB_DISABLED before calling.
 # Result written to SELECTED_INDICES.
+#
+# Lists taller than the terminal scroll inside a fixed viewport: only _CB_VIEW
+# rows are drawn, plus one footer line counting the hidden rows. Every repaint
+# emits exactly _CB_LINES lines so the `\033[<n>A` cursor rewind stays correct;
+# each line ends with `\033[K` because a scrolled row can be shorter than the
+# row it replaced.
 
 _CB_LABELS=()
 _CB_SEL=()
 _CB_DISABLED=()
 _CB_CURSOR=0
+_CB_TOP=0
+_CB_VIEW=0
+_CB_LINES=0
 SELECTED_INDICES=()
 
+# Rows we may draw: terminal height minus the prompt/title/footer already on
+# screen. Falls back to 24 lines when the height is unknowable (piped stdout).
+_cb_set_viewport() {
+  local num="$1" avail
+  avail="$(tput lines 2>/dev/null || echo 0)"
+  [[ "${avail}" -le 0 ]] && avail="${LINES:-24}"
+  avail=$(( avail - 8 ))
+  [[ "${avail}" -lt 5 ]] && avail=5
+
+  if [[ "${num}" -le "${avail}" ]]; then
+    _CB_VIEW="${num}"
+    _CB_LINES="${num}"
+  else
+    _CB_VIEW="${avail}"
+    _CB_LINES=$(( avail + 1 ))   # + footer
+  fi
+  _CB_TOP=0
+}
+
+# Keep the cursor inside the window, and the window inside the list.
+_cb_scroll_into_view() {
+  local num="${#_CB_LABELS[@]}"
+  if [[ "${num}" -le "${_CB_VIEW}" ]]; then _CB_TOP=0; return; fi
+  [[ "${_CB_CURSOR}" -lt "${_CB_TOP}" ]] && _CB_TOP="${_CB_CURSOR}"
+  [[ "${_CB_CURSOR}" -ge $(( _CB_TOP + _CB_VIEW )) ]] && _CB_TOP=$(( _CB_CURSOR - _CB_VIEW + 1 ))
+  [[ "${_CB_TOP}" -gt $(( num - _CB_VIEW )) ]] && _CB_TOP=$(( num - _CB_VIEW ))
+  [[ "${_CB_TOP}" -lt 0 ]] && _CB_TOP=0
+  return 0
+}
+
+# Trailing "N above / M below" line, drawn only when the list actually scrolls.
+_cb_render_footer() {
+  local num="${#_CB_LABELS[@]}"
+  [[ "${num}" -le "${_CB_VIEW}" ]] && return 0
+  local above="${_CB_TOP}"
+  local below=$(( num - _CB_TOP - _CB_VIEW ))
+  local parts=""
+  [[ "${above}" -gt 0 ]] && parts="↑ ${above} ${CB_MORE_ABOVE}"
+  [[ "${below}" -gt 0 ]] && parts="${parts:+${parts}  ·  }↓ ${below} ${CB_MORE_BELOW}"
+  printf "  %s\033[K\n" "$(clr_dim "${parts}")"
+}
+
 _cb_render() {
-  local j num="${#_CB_LABELS[@]}"
-  for ((j=0; j<num; j++)); do
+  _cb_scroll_into_view
+  local j end=$(( _CB_TOP + _CB_VIEW ))
+  for ((j=_CB_TOP; j<end; j++)); do
     local lbl="${_CB_LABELS[$j]}"
     local is_sel="${_CB_SEL[$j]}"
     local is_dis="${_CB_DISABLED[$j]:-0}"
@@ -162,13 +214,15 @@ _cb_render() {
       fi
     fi
 
-    printf "  %s %s %s\n" "${pointer}" "${checkbox}" "${label_str}"
+    printf "  %s %s %s\033[K\n" "${pointer}" "${checkbox}" "${label_str}"
   done
+  _cb_render_footer
 }
 
 interactive_checkbox() {
   local num="${#_CB_LABELS[@]}"
   _CB_CURSOR=0
+  _cb_set_viewport "${num}"
 
   local i
   for ((i=0; i<num; i++)); do
@@ -189,10 +243,21 @@ interactive_checkbox() {
       IFS= read -r -s -n2 -t 1 seq 2>/dev/null || seq=""
       if [[ "${seq}" == '[A' ]]; then
         _CB_CURSOR=$(( (_CB_CURSOR - 1 + num) % num ))
-        printf "\033[%dA" "${num}"; _cb_render
+        printf "\033[%dA" "${_CB_LINES}"; _cb_render
       elif [[ "${seq}" == '[B' ]]; then
         _CB_CURSOR=$(( (_CB_CURSOR + 1) % num ))
-        printf "\033[%dA" "${num}"; _cb_render
+        printf "\033[%dA" "${_CB_LINES}"; _cb_render
+      elif [[ "${seq}" == '[5' || "${seq}" == '[6' ]]; then
+        # PageUp/PageDown send ESC [ 5 ~ / ESC [ 6 ~ - consume the trailing '~'.
+        local tilde; IFS= read -r -s -n1 -t 1 tilde 2>/dev/null || tilde=""
+        if [[ "${seq}" == '[5' ]]; then
+          _CB_CURSOR=$(( _CB_CURSOR - _CB_VIEW ))
+          [[ "${_CB_CURSOR}" -lt 0 ]] && _CB_CURSOR=0
+        else
+          _CB_CURSOR=$(( _CB_CURSOR + _CB_VIEW ))
+          [[ "${_CB_CURSOR}" -ge "${num}" ]] && _CB_CURSOR=$(( num - 1 ))
+        fi
+        printf "\033[%dA" "${_CB_LINES}"; _cb_render
       fi
       continue
     fi
@@ -203,17 +268,17 @@ interactive_checkbox() {
     if [[ "${key}" == ' ' ]]; then
       if [[ "${_CB_DISABLED[$_CB_CURSOR]:-0}" -eq 0 ]]; then
         _CB_SEL[$_CB_CURSOR]=$(( 1 - _CB_SEL[$_CB_CURSOR] ))
-        printf "\033[%dA" "${num}"; _cb_render
+        printf "\033[%dA" "${_CB_LINES}"; _cb_render
       fi
       continue
     fi
     if [[ "${key}" == 'a' || "${key}" == 'A' ]]; then
       for ((i=0; i<num; i++)); do [[ "${_CB_DISABLED[$i]:-0}" -eq 0 ]] && _CB_SEL[$i]=1; done
-      printf "\033[%dA" "${num}"; _cb_render; continue
+      printf "\033[%dA" "${_CB_LINES}"; _cb_render; continue
     fi
     if [[ "${key}" == 'n' || "${key}" == 'N' ]]; then
       for ((i=0; i<num; i++)); do [[ "${_CB_DISABLED[$i]:-0}" -eq 0 ]] && _CB_SEL[$i]=0; done
-      printf "\033[%dA" "${num}"; _cb_render; continue
+      printf "\033[%dA" "${_CB_LINES}"; _cb_render; continue
     fi
   done
 
