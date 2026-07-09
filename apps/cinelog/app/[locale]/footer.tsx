@@ -36,13 +36,13 @@ export async function Footer({ logo }: { logo: string }) {
             <Box display="flex" flexDirection="column" gap="20px">
               <Image
                 src={logo}
-                alt="Cinelog"
+                alt="Movie Catalog Hub"
                 width={58}
                 height={44}
                 className="footer__logo"
               />
               <Typography as="span" variant="h5" fontWeight={700}>
-                Cinelog
+                Movie Catalog Hub
               </Typography>
               <Box
                 display="flex"

@@ -1,6 +1,6 @@
 {
   "Metadata": {
-    "title": "Cinelog",
+    "title": "Movie Catalog Hub",
     "description": ""
   },
   "Navbar": {
@@ -28,7 +28,7 @@
     "privacyPolicy": "Datenschutz",
     "terms": "Nutzungsbedingungen",
     "userData": "Nutzerdaten",
-    "copyright": "© {year} Cinelog v{version}. Alle Rechte vorbehalten."
+    "copyright": "© {year} Movie Catalog Hub v{version}. Alle Rechte vorbehalten."
   },
   "VerifyEmailPage": {
     "loading": "E-Mail wird verifiziert…",
@@ -64,7 +64,7 @@
     },
     "signUp": {
       "title": "Konto erstellen",
-      "subtitle": "Jetzt bei Cinelog registrieren",
+      "subtitle": "Jetzt bei Movie Catalog Hub registrieren",
       "emailLabel": "E-Mail",
       "firstNameLabel": "Vorname",
       "lastNameLabel": "Nachname",

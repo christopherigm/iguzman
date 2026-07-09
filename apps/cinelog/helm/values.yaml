@@ -21,13 +21,46 @@ ingress:
   className: 'nginx'
   annotations:
     cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+    # 301 www -> apex. ingress-nginx synthesises the www server block from the
+    # apex rule below, so www must NOT also appear under `hosts:` - an explicit
+    # rule for it would win and the redirect would never fire. It does need to
+    # stay in `tls:` so the issued cert carries it as a SAN and the redirect is
+    # served over HTTPS without a cert warning.
+    nginx.ingress.kubernetes.io/from-to-www-redirect: 'true'
   hosts:
-    - host: cinelog.iguzman.com.mx
+    - host: moviecataloghub.com
       paths:
         - path: /
           pathType: Prefix
   tls:
     - secretName: cinelog-tls
+      hosts:
+        - moviecataloghub.com
+        - www.moviecataloghub.com
+
+# ─── Legacy-domain redirect ─────────────────────────────────
+# A second Ingress whose only job is to 301 the retired cinelog.iguzman.com.mx
+# onto the new apex, preserving the path so old deep links keep resolving.
+# It must stay a *separate* Ingress: `permanent-redirect` applies to every path
+# of the Ingress it is set on, so putting it on the main one would redirect the
+# live site to itself.
+#
+# Keep this alive as long as the old DNS record exists - it needs its own
+# cert (cinelog.iguzman.com.mx is not a SAN on cinelog-tls), and cert-manager
+# can only issue that while the old host still resolves to this cluster.
+redirectIngress:
+  enabled: true
+  className: 'nginx'
+  annotations:
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+    # $request_uri is an nginx variable, interpolated at request time, so
+    # /es/movies/dune lands on the same path under the new domain rather than
+    # dumping every visitor on the homepage.
+    nginx.ingress.kubernetes.io/permanent-redirect: 'https://moviecataloghub.com$request_uri'
+  hosts:
+    - host: cinelog.iguzman.com.mx
+  tls:
+    - secretName: cinelog-legacy-tls
       hosts:
         - cinelog.iguzman.com.mx
 

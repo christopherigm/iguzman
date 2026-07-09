@@ -71,7 +71,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       url: canonical,
       type: "video.movie",
-      siteName: "CineLog",
+      siteName: "Movie Catalog Hub",
       images,
     },
     twitter: {

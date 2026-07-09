@@ -21,7 +21,7 @@ CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get(
         'CSRF_TRUSTED_ORIGINS',
-        'https://cinelog-api.iguzman.com.mx,https://cinelog.iguzman.com.mx',
+        'https://api.moviecataloghub.com,https://moviecataloghub.com',
     ).split(',')
     if origin.strip()
 ]
@@ -30,7 +30,7 @@ CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get(
         'CORS_ALLOWED_ORIGINS',
-        'https://cinelog.iguzman.com.mx',
+        'https://moviecataloghub.com',
     ).split(',')
     if origin.strip()
 ]
@@ -325,5 +325,5 @@ PASSWORD_RESET_TOKEN_EXPIRY_HOURS = int(
 )
 
 WEBAUTHN_RP_ID = os.environ.get('WEBAUTHN_RP_ID', 'localhost')
-WEBAUTHN_RP_NAME = os.environ.get('WEBAUTHN_RP_NAME', 'Cinelog_api')
+WEBAUTHN_RP_NAME = os.environ.get('WEBAUTHN_RP_NAME', 'Movie Catalog Hub')
 WEBAUTHN_RP_ORIGIN = os.environ.get('WEBAUTHN_RP_ORIGIN', 'http://localhost:3000')

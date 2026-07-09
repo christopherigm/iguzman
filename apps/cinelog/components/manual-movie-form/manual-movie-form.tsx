@@ -57,7 +57,7 @@ export function ManualMovieForm() {
         setDirector("");
         // Nudge the inbox below on the "Add Movie" page to refetch so the new
         // entry shows without a manual reload.
-        window.dispatchEvent(new Event("cinelog:scan-queued"));
+        window.dispatchEvent(new Event("moviecataloghub:scan-queued"));
       } else {
         setState("error");
       }

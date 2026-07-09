@@ -2,9 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Cinelog",
-    short_name: "Cinelog",
-    description: "Cinelog application",
+    name: "Movie Catalog Hub",
+    // Home-screen launchers truncate past ~12 chars, so this drops the "Movie".
+    short_name: "Catalog Hub",
+    description: "Movie Catalog Hub application",
     start_url: "/",
     display: "standalone",
     background_color: "#000000",

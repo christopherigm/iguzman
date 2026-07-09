@@ -83,9 +83,9 @@ export function Inbox() {
       setPage(1);
       setReloadToken((t) => t + 1);
     }
-    window.addEventListener("cinelog:scan-queued", onScanQueued);
+    window.addEventListener("moviecataloghub:scan-queued", onScanQueued);
     return () =>
-      window.removeEventListener("cinelog:scan-queued", onScanQueued);
+      window.removeEventListener("moviecataloghub:scan-queued", onScanQueued);
   }, []);
 
   async function handleAccept(id: number, payload: InboxAcceptPayload) {

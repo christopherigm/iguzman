@@ -18,10 +18,10 @@
 
 import type { Movie } from "./catalog";
 
-const AI_SEARCH_EVENT = "cinelog:ai-search";
+const AI_SEARCH_EVENT = "moviecataloghub:ai-search";
 
-// Per-tab snapshot key (parallels the catalog's "cinelog:catalog-scroll").
-const AI_SEARCH_SNAPSHOT_KEY = "cinelog:ai-search";
+// Per-tab snapshot key (parallels the catalog's "moviecataloghub:catalog-scroll").
+const AI_SEARCH_SNAPSHOT_KEY = "moviecataloghub:ai-search";
 
 // A query queued before the catalog was mounted (cross-page navigation). The
 // live event path clears it so it is never applied twice.

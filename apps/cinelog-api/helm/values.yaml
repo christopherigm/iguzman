@@ -31,14 +31,14 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: 'letsencrypt-prod'
   hosts:
-    - host: cinelog-api.iguzman.com.mx
+    - host: api.moviecataloghub.com
       paths:
         - path: /
           pathType: Prefix
   tls:
     - secretName: cinelog-api-tls
       hosts:
-        - cinelog-api.iguzman.com.mx
+        - api.moviecataloghub.com
 
 # ─── Environment variables ──────────────────────────────────
 # Non-secret vars not present in env.example / the k8s secret.

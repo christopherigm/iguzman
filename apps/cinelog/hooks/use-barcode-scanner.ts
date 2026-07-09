@@ -67,7 +67,7 @@ export function useBarcodeScanner() {
         // The user can keep scanning and review it below. Auto-clear so the
         // lingering "queued" card doesn't imply there's something to wait for here.
         if (data.status === "queued") {
-          window.dispatchEvent(new Event("cinelog:scan-queued"));
+          window.dispatchEvent(new Event("moviecataloghub:scan-queued"));
           clearRef.current = setTimeout(() => setLastScan(null), 2500);
         }
       } else {

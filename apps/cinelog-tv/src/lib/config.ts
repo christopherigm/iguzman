@@ -4,8 +4,8 @@
 
 /** Django catalog/auth API base. */
 export const API_URL =
-  import.meta.env.VITE_API_URL ?? "https://cinelog-api.iguzman.com.mx";
+  import.meta.env.VITE_API_URL ?? "https://api.moviecataloghub.com";
 
 /** Cinelog web app base - shown on the pairing screen as where to enter the code. */
 export const WEB_URL =
-  import.meta.env.VITE_WEB_URL ?? "https://cinelog.iguzman.com.mx";
+  import.meta.env.VITE_WEB_URL ?? "https://moviecataloghub.com";

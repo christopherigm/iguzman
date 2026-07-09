@@ -24,8 +24,10 @@ Install Tizen Studio and create a TV certificate profile first. Then:
     # from apps/cinelog-tv
     cp config.xml icon.png dist/
     tizen package -t wgt -s <your-cert-profile> -- dist
-    tizen install -n dist/CinelogTv.wgt -t <tv-device>
-    tizen run -p CinelogTv0 -t <tv-device>
+    # the .wgt filename is derived from <name> in config.xml (spaces stripped);
+    # -p takes the `package` id from <tizen:application>.
+    tizen install -n dist/MovieCatalogHubTV.wgt -t <tv-device>
+    tizen run -p MovCatHub0 -t <tv-device>
 
 Connect a physical TV in Developer Mode with: sdb connect <tv-ip>
 

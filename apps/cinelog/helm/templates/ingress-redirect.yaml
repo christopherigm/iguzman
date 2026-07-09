@@ -1,0 +1,44 @@
+{{- if .Values.redirectIngress.enabled }}
+{{- $fullName := include "cinelog.fullname" . }}
+{{- $svcPort := .Values.service.port }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $fullName }}-redirect
+  labels:
+    {{- include "cinelog.labels" . | nindent 4 }}
+  {{- with .Values.redirectIngress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.redirectIngress.className }}
+  ingressClassName: {{ .Values.redirectIngress.className }}
+  {{- end }}
+  {{- if .Values.redirectIngress.tls }}
+  tls:
+    {{- range .Values.redirectIngress.tls }}
+    - secretName: {{ .secretName | default (printf "%s-tls" (index .hosts 0 | default "app")) }}
+      hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.redirectIngress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          # The `permanent-redirect` annotation makes nginx `return 301` before it
+          # ever proxies, so this backend is never reached. Kubernetes still
+          # requires a valid service reference on every path, hence the self-reference.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}
+                port:
+                  number: {{ $svcPort }}
+    {{- end }}
+{{- end }}

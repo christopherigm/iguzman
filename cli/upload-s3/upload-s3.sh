@@ -803,12 +803,12 @@ main() {
   while true; do
     echo ""
     printf "  %s\n\n" "$(clr_bold_cyan "${MENU_TITLE}")"
-    MENU_ITEMS=("${MENU_MANAGE}" "${MENU_UPLOAD}" "${MENU_EXIT}")
+    MENU_ITEMS=("${MENU_UPLOAD}" "${MENU_MANAGE}" "${MENU_EXIT}")
     printf "  %s\n\n" "$(clr_dim "${NAV_HINT}")"
     interactive_select
     case "${MENU_SELECTED}" in
-      0) manage_credentials ;;
-      1) do_upload ;;
+      0) do_upload ;;
+      1) manage_credentials ;;
       2) printf "  %s\n\n" "$(clr_dim "👋")"; exit 0 ;;
     esac
   done

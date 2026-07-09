@@ -53,7 +53,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 // first paint (see app/[locale]/page.tsx). Only the scroll offset stays in
 // sessionStorage - it's per-tab and meaningless in a shared link - and is
 // restored when returning to the catalog (e.g. browser-back from a detail page).
-const SCROLL_KEY = "cinelog:catalog-scroll";
+const SCROLL_KEY = "moviecataloghub:catalog-scroll";
 const SCROLL_PERSIST_MS = 150;
 
 function readScroll(): number {
