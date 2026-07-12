@@ -3,7 +3,8 @@
 #
 # Interactive development environment setup script.
 # Checks and installs: git, Node.js, pnpm, Docker, kubectl, Helm,
-# bash-git-prompt, Python, Django, Claude Code CLI, VSCodium, and Ghostty.
+# bash-git-prompt, Python, Django, Claude Code CLI, VSCodium, Ghostty,
+# JDK 17, and the Android SDK (for local React Native / Expo builds).
 #
 # Run: bash cli/setup-dev-env/setup-dev-env.sh
 #
@@ -78,7 +79,11 @@ setup_strings() {
     TOOL_FFMPEG="Procesamiento de audio y video"
     TOOL_VSCODIUM="Editor de código de fuente abierta (sin telemetría)"
     TOOL_GHOSTTY="Emulador de terminal con aceleración GPU"
+    TOOL_JAVA="Kit de desarrollo de Java 17 (builds de Android)"
+    TOOL_ANDROID="SDK de Android - API 36 (builds locales de React Native)"
     NOTE_BASH_GIT_PROMPT="Snippet de activación agregado automáticamente a tu archivo de configuración de shell (~/.zshrc, ~/.bash_profile o ~/.bashrc).\n  Reinicia tu shell o ejecuta: source ~/.zshrc"
+    NOTE_JAVA="JAVA_HOME se agregó a la configuración de tu shell.\n  Reinicia tu shell o ejecuta: source ~/.zshrc (o ~/.bashrc)"
+    NOTE_ANDROID_SDK="ANDROID_HOME se agregó a la configuración de tu shell (~/Android/Sdk o ~/Library/Android/sdk).\n  Reinicia tu shell para usar adb / sdkmanager, luego corre: npx expo run:android\n  En Linux se instalaron reglas udev de adb: desconecta y vuelve a conectar el dispositivo USB (y reinicia sesión si acabas de entrar al grupo plugdev)."
     BREW_MISSING="Homebrew no está instalado. La mayoría de las herramientas en macOS lo requieren."
     BREW_INSTALL_PROMPT="¿Instalar Homebrew ahora? [s/n]"
     BREW_REQUIRED="Homebrew es necesario en macOS. Instálalo desde https://brew.sh y vuelve a ejecutar el script."
@@ -124,7 +129,11 @@ setup_strings() {
     TOOL_FFMPEG="Audio and video processing"
     TOOL_VSCODIUM="Open-source VS Code build (no telemetry)"
     TOOL_GHOSTTY="GPU-accelerated terminal emulator"
+    TOOL_JAVA="Java Development Kit 17 (Android builds)"
+    TOOL_ANDROID="Android SDK - API 36 (local React Native builds)"
     NOTE_BASH_GIT_PROMPT="Source snippet automatically added to your shell config (~/.zshrc, ~/.bash_profile, or ~/.bashrc).\n  Restart your shell or run: source ~/.zshrc"
+    NOTE_JAVA="JAVA_HOME added to your shell config.\n  Restart your shell or run: source ~/.zshrc (or ~/.bashrc)"
+    NOTE_ANDROID_SDK="ANDROID_HOME added to your shell config (~/Android/Sdk or ~/Library/Android/sdk).\n  Restart your shell to use adb / sdkmanager, then run: npx expo run:android\n  On Linux, adb udev rules were installed: unplug and replug your USB device (and log out/in if you were just added to the plugdev group)."
     BREW_MISSING="Homebrew is not installed. Most macOS tools require it."
     BREW_INSTALL_PROMPT="Install Homebrew now? [y/n]"
     BREW_REQUIRED="Homebrew is required on macOS. Install it from https://brew.sh and re-run this script."
@@ -152,6 +161,28 @@ get_version() {
 
 # Portable lowercase helper for older bash (macOS /bin/bash doesn't support ${var,,})
 lc() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+
+# Pick the shell config file to append env exports to (mirrors bash-git-prompt).
+shell_config_file() {
+  local shell_name; shell_name="$(basename "${SHELL:-bash}")"
+  if [[ "${shell_name}" == "zsh" ]]; then
+    echo "${HOME}/.zshrc"
+  elif is_mac; then
+    echo "${HOME}/.bash_profile"
+  else
+    echo "${HOME}/.bashrc"
+  fi
+}
+
+# append_shell_snippet <marker> <snippet> - idempotently append env exports to the
+# user's shell config (guarded by a unique marker so re-runs don't duplicate it).
+append_shell_snippet() {
+  local marker="$1" snippet="$2" config_file
+  config_file="$(shell_config_file)"
+  if ! grep -q "${marker}" "${config_file}" 2>/dev/null; then
+    printf '%b' "${snippet}" >> "${config_file}"
+  fi
+}
 
 # ── Install functions ─────────────────────────────────────────────────────────
 
@@ -335,12 +366,166 @@ install_ghostty() {
   return 1
 }
 
+# React Native 0.85 / Expo SDK 56 compile the Android app with JDK 17.
+install_java() {
+  if is_mac && has_brew; then
+    brew install openjdk@17 || return 1
+    local prefix; prefix="$(brew --prefix)/opt/openjdk@17"
+    # openjdk@17 is keg-only; symlink it so the macOS java wrappers can find it.
+    sudo ln -sfn "${prefix}/libexec/openjdk.jdk" \
+      "/Library/Java/JavaVirtualMachines/openjdk-17.jdk" 2>/dev/null || true
+    export JAVA_HOME="${prefix}/libexec/openjdk.jdk/Contents/Home"
+    append_shell_snippet 'JAVA_HOME (openjdk@17)' \
+      "\n# JAVA_HOME (openjdk@17)\nexport JAVA_HOME=\"${prefix}/libexec/openjdk.jdk/Contents/Home\"\nexport PATH=\"\$JAVA_HOME/bin:\$PATH\"\n"
+    return 0
+  fi
+
+  local ok=0
+  if has_apt; then sudo apt-get update && sudo apt-get install -y openjdk-17-jdk && ok=1
+  elif has_dnf; then sudo dnf install -y java-17-openjdk-devel && ok=1
+  elif has_yum; then sudo yum install -y java-17-openjdk-devel && ok=1
+  fi
+  if [[ "${ok}" -eq 1 ]]; then
+    # Resolve JAVA_HOME from the freshly installed java binary (arch-independent).
+    local java_home
+    java_home="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")"
+    export JAVA_HOME="${java_home}"
+    append_shell_snippet 'JAVA_HOME (openjdk-17)' \
+      "\n# JAVA_HOME (openjdk-17)\nexport JAVA_HOME=\"${java_home}\"\nexport PATH=\"\$JAVA_HOME/bin:\$PATH\"\n"
+    return 0
+  fi
+  echo "  $(clr_yellow 'Please install JDK 17 manually: https://adoptium.net/temurin/releases/?version=17')"
+  return 1
+}
+
+# Resolve the newest "command line tools only" zip from Google's SDK manifest
+# (the same repository index sdkmanager reads). The download URL is versioned by
+# build number - there is no build-number-free "latest" URL - so we read the
+# manifest and pick the highest build. Falls back to a known-good build if the
+# manifest can't be fetched. Echoes just the zip filename.
+latest_cmdline_tools_zip() {
+  local os_tag
+  if is_mac; then os_tag="mac"; else os_tag="linux"; fi
+  local fallback="commandlinetools-${os_tag}-15641748_latest.zip"
+  local newest
+  newest="$(curl -fsSL "https://dl.google.com/android/repository/repository2-3.xml" 2>/dev/null \
+    | grep -oE "commandlinetools-${os_tag}-[0-9]+_latest\.zip" \
+    | sort -t- -k3 -n \
+    | tail -1)"
+  printf '%s' "${newest:-${fallback}}"
+}
+
+# Linux-only: install a udev rule so a physical Android device is usable over USB
+# without root. Without it, `adb devices` reports "insufficient permissions for
+# device: missing udev rules?" and Expo's "open Android" (press `a`) fails - even
+# when the user is already in the plugdev group - because nothing maps the adb USB
+# interface to that group. macOS has no udev and no such permission gate, so this
+# is a no-op there. Idempotent: the rule file is rewritten on every run.
+install_android_udev_rules() {
+  is_linux || return 0
+  if ! command -v sudo &>/dev/null; then
+    echo "  $(clr_yellow 'sudo not found - skipping adb udev rules (USB debugging may require root).')"
+    return 0
+  fi
+
+  local rules_file="/etc/udev/rules.d/51-android.rules"
+  echo "  $(clr_dim "Installing adb udev rules (${rules_file})...")"
+
+  # Google's documented list of Android USB vendor IDs. Each grants the plugdev
+  # group + the logged-in desktop user (uaccess) permission to open the device's
+  # adb/fastboot interface. A phone in debug mode often enumerates under Google
+  # (18d1) regardless of its maker, so 18d1 is the one that fixes most devices.
+  local vendors=(
+    18d1 04e8 22b8 12d1 2717 22d9 0bb4 1004 054c 0fce 2a70 0b05 17ef 19d2
+    05c6 0955 413c 0502 0409 2080 0930 10a9 04dd 03f0 0482 0e8d 8087
+  )
+
+  {
+    printf '# Android adb/fastboot USB access for the plugdev group.\n'
+    printf '# Generated by cli/setup-dev-env/setup-dev-env.sh - fixes\n'
+    printf '#   "adb: insufficient permissions for device: missing udev rules?"\n'
+    local v
+    for v in "${vendors[@]}"; do
+      printf 'SUBSYSTEM=="usb", ATTR{idVendor}=="%s", MODE="0660", GROUP="plugdev", TAG+="uaccess"\n' "${v}"
+    done
+  } | sudo tee "${rules_file}" >/dev/null || {
+    echo "  $(clr_yellow 'Could not write udev rules - USB debugging may require root.')"
+    return 1
+  }
+  sudo chmod 644 "${rules_file}" 2>/dev/null || true
+
+  # Ensure the user is in plugdev (the rule's GROUP). Takes effect on next login.
+  if command -v usermod &>/dev/null && ! id -nG "${USER:-$(id -un)}" 2>/dev/null | grep -qw plugdev; then
+    sudo usermod -aG plugdev "${USER:-$(id -un)}" 2>/dev/null || true
+  fi
+
+  # Reload + re-trigger so the rule applies to already-connected devices without
+  # a reboot (a physical replug is still the surest way to re-enumerate).
+  sudo udevadm control --reload-rules 2>/dev/null || true
+  sudo udevadm trigger 2>/dev/null || true
+  return 0
+}
+
+# Android SDK for local RN builds (`npx expo run:android`). Same portable flow on
+# Linux and macOS: download Google's command-line tools, then drive sdkmanager to
+# install the packages Expo SDK 56 targets (API 36 / build-tools 36.0.0).
+install_android_sdk() {
+  # sdkmanager is a Java program, so JDK 17 must be present first.
+  if ! command -v java &>/dev/null; then
+    echo "  $(clr_dim 'JDK not found - installing JDK 17 first (sdkmanager needs Java)...')"
+    install_java || { echo "  $(clr_yellow 'Install JDK 17 first, then re-run.')"; return 1; }
+  fi
+
+  local android_home
+  if is_mac; then android_home="${HOME}/Library/Android/sdk"; else android_home="${HOME}/Android/Sdk"; fi
+  export ANDROID_HOME="${android_home}"
+
+  # Newest "command line tools only" package, resolved from Google's manifest.
+  local zip_name; zip_name="$(latest_cmdline_tools_zip)"
+
+  local tmp_zip; tmp_zip="$(mktemp)" || return 1
+  echo "  $(clr_dim "Downloading Android command-line tools (${zip_name})...")"
+  if ! curl -fsSL "https://dl.google.com/android/repository/${zip_name}" -o "${tmp_zip}"; then
+    rm -f "${tmp_zip}"
+    echo "  $(clr_yellow 'Failed to download Android command-line tools.')"
+    return 1
+  fi
+
+  # sdkmanager expects the tools at $ANDROID_HOME/cmdline-tools/latest/.
+  local staging; staging="$(mktemp -d)" || { rm -f "${tmp_zip}"; return 1; }
+  if command -v unzip &>/dev/null; then
+    unzip -q "${tmp_zip}" -d "${staging}"
+  else
+    # `jar` ships with the JDK we just ensured, so it's a safe fallback.
+    ( cd "${staging}" && jar xf "${tmp_zip}" ) 2>/dev/null \
+      || { rm -rf "${staging}" "${tmp_zip}"; echo "  $(clr_yellow 'Need unzip or jar to extract the SDK.')"; return 1; }
+  fi
+  mkdir -p "${android_home}/cmdline-tools/latest"
+  cp -R "${staging}/cmdline-tools/." "${android_home}/cmdline-tools/latest/"
+  rm -rf "${staging}" "${tmp_zip}"
+
+  local sdkmanager="${android_home}/cmdline-tools/latest/bin/sdkmanager"
+  chmod +x "${sdkmanager}" 2>/dev/null || true
+
+  # Accept licenses, then install the packages Expo SDK 56 targets (API 36).
+  yes | "${sdkmanager}" --sdk_root="${android_home}" --licenses >/dev/null 2>&1 || true
+  "${sdkmanager}" --sdk_root="${android_home}" \
+    "platform-tools" "platforms;android-36" "build-tools;36.0.0" || return 1
+
+  # Linux: grant the desktop user USB access to physical devices (no-op on macOS).
+  install_android_udev_rules || true
+
+  append_shell_snippet 'ANDROID_HOME (Android SDK)' \
+    "\n# ANDROID_HOME (Android SDK)\nexport ANDROID_HOME=\"${android_home}\"\nexport PATH=\"\$ANDROID_HOME/platform-tools:\$ANDROID_HOME/cmdline-tools/latest/bin:\$PATH\"\n"
+  return 0
+}
+
 # ── Tool definitions ──────────────────────────────────────────────────────────
 # Each entry: ID|LABEL|DESCRIPTION|CHECK_CMD|VERSION_CMD|INSTALL_FN
 
 build_tools() {
-  TOOL_IDS=(git nodejs pnpm docker kubectl helm bash-git-prompt python django claude opencode ffmpeg vscodium ghostty)
-  TOOL_LABELS=(Git Node.js pnpm Docker kubectl Helm bash-git-prompt Python Django "Claude Code" OpenCode FFmpeg VSCodium Ghostty)
+  TOOL_IDS=(git nodejs pnpm docker kubectl helm bash-git-prompt python django claude opencode ffmpeg vscodium ghostty java android-sdk)
+  TOOL_LABELS=(Git Node.js pnpm Docker kubectl Helm bash-git-prompt Python Django "Claude Code" OpenCode FFmpeg VSCodium Ghostty Java "Android SDK")
   TOOL_DESCS=(
     "${TOOL_GIT}"
     "${TOOL_NODEJS}"
@@ -356,6 +541,8 @@ build_tools() {
     "${TOOL_FFMPEG}"
     "${TOOL_VSCODIUM}"
     "${TOOL_GHOSTTY}"
+    "${TOOL_JAVA}"
+    "${TOOL_ANDROID}"
   )
   TOOL_INSTALLED=()
   TOOL_VERSIONS=()
@@ -420,6 +607,19 @@ build_tools() {
   # ghostty
   if command -v ghostty &>/dev/null; then TOOL_INSTALLED+=(1); TOOL_VERSIONS+=("$(ghostty --version 2>/dev/null)");
   else TOOL_INSTALLED+=(0); TOOL_VERSIONS+=(""); fi
+
+  # java
+  if command -v java &>/dev/null; then TOOL_INSTALLED+=(1); TOOL_VERSIONS+=("$(java -version 2>&1 | head -1)");
+  else TOOL_INSTALLED+=(0); TOOL_VERSIONS+=(""); fi
+
+  # android-sdk (installed under ~/Android/Sdk on Linux, ~/Library/Android/sdk on macOS)
+  if command -v sdkmanager &>/dev/null \
+     || [[ -x "${HOME}/Android/Sdk/cmdline-tools/latest/bin/sdkmanager" ]] \
+     || [[ -x "${HOME}/Library/Android/sdk/cmdline-tools/latest/bin/sdkmanager" ]]; then
+    TOOL_INSTALLED+=(1); TOOL_VERSIONS+=("Android SDK (cmdline-tools)")
+  else
+    TOOL_INSTALLED+=(0); TOOL_VERSIONS+=("")
+  fi
 }
 
 # ── UI Helpers ────────────────────────────────────────────────────────────────
@@ -787,6 +987,8 @@ main() {
             ffmpeg)          install_ffmpeg          && ok=1 || true ;;
             vscodium)        install_vscodium        && ok=1 || true ;;
             ghostty)         install_ghostty         && ok=1 || true ;;
+            java)            install_java            && ok=1 || true ;;
+            android-sdk)     install_android_sdk     && ok=1 || true ;;
           esac
 
           if [[ "${ok}" -eq 1 ]]; then
@@ -799,6 +1001,12 @@ main() {
           if [[ "${TOOL_IDS[$i]}" == "bash-git-prompt" ]]; then
             echo ""
             printf "  %s  %b\n" "$(clr_yellow 'ℹ')" "${NOTE_BASH_GIT_PROMPT}"
+          elif [[ "${TOOL_IDS[$i]}" == "java" ]]; then
+            echo ""
+            printf "  %s  %b\n" "$(clr_yellow 'ℹ')" "${NOTE_JAVA}"
+          elif [[ "${TOOL_IDS[$i]}" == "android-sdk" ]]; then
+            echo ""
+            printf "  %s  %b\n" "$(clr_yellow 'ℹ')" "${NOTE_ANDROID_SDK}"
           fi
         done
         echo ""

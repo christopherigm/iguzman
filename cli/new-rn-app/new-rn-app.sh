@@ -252,37 +252,42 @@ RN_EOF
   subst "$out"
 }
 
-# Monorepo-aware Metro config. Without watchFolders + nodeModulesPaths, Metro
-# cannot resolve the pnpm-symlinked workspace packages (@repo/ui-native) from
-# apps/<name>. Package exports resolution lets it read ui-native's "./src/*"
-# export map directly from source.
+# Monorepo-aware Metro config. Expo SDK 56+ auto-configures pnpm monorepo
+# resolution inside getDefaultConfig, so we deliberately do NOT hand-set
+# watchFolders / nodeModulesPaths / disableHierarchicalLookup - overriding them
+# re-breaks resolution of nested pnpm transitive deps. We only add the
+# repo-specific blockList (Django venv exclusion) on top of Expo's defaults.
 gen_metro_config() {
   local out="${app_dir}/metro.config.js"
   cat > "$out" <<'RN_EOF'
 // Learn more: https://docs.expo.dev/guides/monorepos/
 const { getDefaultConfig } = require('expo/metro-config');
-const path = require('path');
 
-const projectRoot = __dirname;
-const workspaceRoot = path.resolve(projectRoot, '../..');
+const config = getDefaultConfig(__dirname);
 
-const config = getDefaultConfig(projectRoot);
+// Expo SDK 56+ auto-configures monorepo resolution inside getDefaultConfig:
+// watchFolders, resolver.nodeModulesPaths, and hierarchical lookup across
+// pnpm's isolated (symlinked) node_modules. Per Expo's monorepo guide we must
+// NOT hand-set watchFolders / nodeModulesPaths / disableHierarchicalLookup -
+// overriding them re-breaks resolution of nested pnpm transitive deps (e.g.
+// @expo/metro-runtime -> @expo/log-box). https://docs.expo.dev/guides/monorepos/
 
-// 1. Watch the whole monorepo so edits to @repo/* packages hot-reload.
-config.watchFolders = [workspaceRoot];
-
-// 2. Resolve modules from the app first, then the workspace root (pnpm hoists
-//    shared deps to the root node_modules).
-config.resolver.nodeModulesPaths = [
-  path.resolve(projectRoot, 'node_modules'),
-  path.resolve(workspaceRoot, 'node_modules'),
-];
-
-// 3. pnpm's nested/symlinked layout breaks Metro's default upward lookup.
-config.resolver.disableHierarchicalLookup = true;
-
-// 4. Honor the "exports" field so @repo/ui-native/* resolves from src.
+// Honor the "exports" field so @repo/ui-native/* resolves straight from src.
 config.resolver.unstable_enablePackageExports = true;
+
+// Expo's auto watchFolders include every workspace package dir. The Django API
+// apps (website-api, edge-folio-api) keep Python virtualenvs there with tens of
+// thousands of files; on Linux each watched dir consumes an inotify watch and
+// blows past the per-user limit, throwing ENOSPC ("System limit for number of
+// file watchers reached"). None of these hold anything Metro needs to bundle,
+// so exclude them. blockList feeds Metro's file-map ignorePattern, skipping
+// them at both crawl and watch time. Keep every entry flagless so Metro can
+// combine the array into one RegExp (mismatched flags throw at startup).
+config.resolver.blockList = [
+  ...config.resolver.blockList,
+  /(^|\/)(venv|\.venv|__pycache__|\.mypy_cache|\.pytest_cache|\.ruff_cache|site-packages)(\/|$)/,
+  /(^|\/)\.git(\/|$)/,
+];
 
 module.exports = config;
 RN_EOF
@@ -530,8 +535,11 @@ npx eas build --profile production --platform android
 
 ## Notes
 
-- Monorepo Metro config lives in `metro.config.js` (watches the workspace root,
-  resolves pnpm-hoisted deps, honors package `exports`).
+- Monorepo Metro config lives in `metro.config.js`. Expo SDK 56+ auto-configures
+  pnpm monorepo resolution in `getDefaultConfig`, so the file only honors package
+  `exports` and blockLists Python venvs / `.git` so Metro's file watcher doesn't
+  hit the inotify ENOSPC limit. Don't re-add `watchFolders` / `nodeModulesPaths` /
+  `disableHierarchicalLookup` - they break nested pnpm transitive resolution.
 - If Expo package versions drift from the SDK, run `npx expo install --fix`.
 RN_EOF
   subst "$out"

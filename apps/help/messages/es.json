@@ -105,7 +105,7 @@
     "cloneRepoSection": "Clonar el repositorio",
     "cloneRepoDescription": "Clona el repositorio en tu máquina local.",
     "setupScriptSection": "Ejecutar el script de configuración",
-    "setupScriptDescription": "El script interactivo verifica e instala todas las herramientas necesarias: Git, Node.js, pnpm, Docker, kubectl, Helm, Python, Django y Claude Code. También crea una llave SSH si no tienes una.",
+    "setupScriptDescription": "El script interactivo verifica e instala todas las herramientas necesarias: Git, Node.js, pnpm, Docker, kubectl, Helm, Python, Django, Claude Code, Java 17 y el SDK de Android (para builds locales de React Native; en Linux también instala reglas udev de adb para depurar un dispositivo USB sin root). También crea una llave SSH si no tienes una.",
     "sshKeySection": "Configurar llave SSH para k8s",
     "sshKeyDescription": "Después de ejecutar el script, se mostrará tu llave pública SSH. Compártela con el administrador del clúster o abre un issue en GitHub para solicitar acceso.",
     "verifySection": "Verificar kubectl y Helm",
