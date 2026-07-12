@@ -1,0 +1,27 @@
+{
+  "name": "@repo/ui-native",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./*": "./src/*.tsx",
+    "./theme": "./src/theme.ts",
+    "./style-props": "./src/style-props.ts"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0",
+    "check-types": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=19",
+    "react-native": ">=0.79"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/react": "19.2.17",
+    "eslint": "^9.39.4",
+    "react": "^19.2.7",
+    "react-native": "0.85.0",
+    "typescript": "6.0.3"
+  }
+}

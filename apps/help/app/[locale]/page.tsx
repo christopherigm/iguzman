@@ -57,6 +57,7 @@ const GIT_SWITCH_MAIN_COMMAND = "git checkout main";
 const NEW_APP_COMMAND = "pnpm new-app";
 const NEW_API_COMMAND = "pnpm new-api";
 const NEW_TV_APP_COMMAND = "pnpm new-tv-app";
+const NEW_RN_APP_COMMAND = "pnpm new-rn-app";
 const SETUP_MINECRAFT_COMMAND = "pnpm setup-minecraft";
 const GENERATE_ICONS_COMMANDS =
   "pnpm generate-icons              # pick app interactively\n" +
@@ -255,6 +256,11 @@ export default async function Home({ params, searchParams }: Props) {
                   heading={t("newTvAppSection")}
                   description={t("newTvAppDescription")}
                   code={NEW_TV_APP_COMMAND}
+                />
+                <Section
+                  heading={t("newRnAppSection")}
+                  description={t("newRnAppDescription")}
+                  code={NEW_RN_APP_COMMAND}
                 />
                 <Section
                   heading={t("setupMinecraftSection")}

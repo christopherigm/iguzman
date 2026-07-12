@@ -58,6 +58,8 @@
     "newApiDescription": "Interaktiver Wizard für eine Django REST API mit wählbarer Datenbank, optionalem Redis, E-Mail und Passkeys. Erstellt Verzeichnis, Dockerfile und Virtualenv.",
     "newTvAppSection": "new-tv-app",
     "newTvAppDescription": "Interaktiver Wizard für eine Samsung-Smart-TV-App (Tizen): eine Vite + React SPA, verbunden mit dem Paket @repo/ui-tv und Norigin-Spatial-Navigation für die Fernbedienung. Erstellt packages/ui-tv beim ersten Lauf. Verpackung als .wgt mit Tizen Studio.",
+    "newRnAppSection": "new-rn-app",
+    "newRnAppDescription": "Interaktiver Wizard für eine React-Native-App: ein Expo-SDK-56-Projekt (React Native 0.85, React 19.2, New Architecture) mit expo-router, verbunden mit dem Paket @repo/ui-native und einer monorepo-fähigen Metro-Konfiguration. Keine Next.js-App - mit Expo Go ausführen oder native Builds über EAS erstellen.",
     "setupMinecraftSection": "setup-minecraft",
     "setupMinecraftDescription": "Plattformübergreifender Bootstrapper für den Minecraft-Mod apps/mob-forge (1.20.2 / NeoForge). Installiert Java 17 und Blockbench, führt durch die Installation der Blockbench-Plugins GeckoLib und MCP, lädt dann das gepinnte NeoForge-MDK-Gradle-Gerüst herunter und injiziert GeckoLib. Idempotent; nach Versionsänderungen in gradle.properties erneut ausführen.",
     "generateIconsSection": "generate-icons",

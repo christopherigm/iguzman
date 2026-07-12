@@ -68,6 +68,7 @@ This is a **Turborepo monorepo** with Next.js applications and shared packages.
 - **`@repo/helpers`** - Core utility library (~9k lines). Contains video processing (concat, audio/subtitle/image composition), data validation, and audio manipulation. Each utility is documented with a companion `.md` file
 - **`@repo/ui`** - Shared React components, theme providers, palette system, and the `use-ffmpeg` hook for FFmpeg WASM integration (depends on `next/*`; web apps only)
 - **`@repo/ui-tv`** - Smart TV (Tizen) React primitives: D-pad spatial navigation, 10-foot components, and the old-Chromium-safe `TvImage`. Bundler-agnostic (no `next/*`) so it runs in the Vite/Tizen SPA. See `packages/ui-tv/CLAUDE.md`
+- **`@repo/ui-native`** - React Native primitives for Expo apps: props-first `Box`/`Typography`/`Button`/`Screen` (the native mirror of `@repo/ui`'s props-first API), a themed palette system, and `ThemeProvider`/`useTheme`. Imports only `react`/`react-native` (no `next/*`, no DOM) so Metro bundles it from source. See `packages/ui-native/CLAUDE.md`
 - **`@repo/i18n`** - `next-intl` routing and config for multi-locale support
 - **`@repo/eslint-config`** - Shared flat ESLint config (Next.js variant)
 - **`@repo/typescript-config`** - Shared `tsconfig` base (ESM, strict, ES2022)
@@ -118,6 +119,30 @@ Render every image through `TvImage` (`@repo/ui-tv/tv-image`), never a bare
 `<img>`. The full CSS-support floor and image guidance live in
 `packages/ui-tv/CLAUDE.md` and each app's `apps/<name>/CLAUDE.md` (the scaffold
 generates one per app).
+
+## React Native Apps (Expo)
+
+Scaffold a React Native app with `pnpm new-rn-app` (append `es` for Spanish
+prompts), which runs `cli/new-rn-app/new-rn-app.sh`. These are **Expo** apps
+(currently **SDK 56 / React Native 0.85 / React 19.2**, New Architecture) using
+**expo-router**, generated under `apps/<name>` and wired to the shared
+**`@repo/ui-native`** component package - **not** Next.js apps.
+
+The Next.js conventions do **not** apply: no `output: "standalone"`, no
+`next-pwa`, no Docker/Helm deploy. RN builds native binaries via **EAS**
+(`npx eas build`) or runs in Expo Go / a dev client. Metro (not Turbopack) is
+the bundler; the generated `metro.config.js` is monorepo-aware (watches the
+workspace root, resolves pnpm-hoisted deps, honors package `exports`) so
+`@repo/ui-native` resolves from source. Turborepo picks up each RN app's `lint`
+and `check-types` tasks; there is intentionally no `build` task (nothing for
+`pnpm build` to run - native builds go through EAS).
+
+Style with props first, exactly as on the web: `@repo/ui-native`'s `Box`,
+`Typography`, `Button`, and `Screen` take layout/spacing/color props, with a
+`styles` escape hatch (an RN `ViewStyle`) for what props don't cover. Note the
+React Native realities: `flexDirection` defaults to `column` (not `row`), and
+you may share **pure** utilities from `@repo/helpers` (per-file imports) but not
+its DOM/Node/FFmpeg/Mongo helpers. See `packages/ui-native/CLAUDE.md`.
 
 ## TypeScript - Always Check After Writing
 

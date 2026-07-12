@@ -58,6 +58,8 @@
     "newApiDescription": "Asistente interactivo que genera una API Django REST con base de datos a elección, Redis, email y passkeys opcionales. Crea el directorio, Dockerfile y virtualenv.",
     "newTvAppSection": "new-tv-app",
     "newTvAppDescription": "Asistente interactivo que genera una app para Samsung Smart TV (Tizen): un SPA con Vite + React conectado al paquete @repo/ui-tv con navegación espacial Norigin para el control remoto. Crea packages/ui-tv en la primera ejecución. Empaqueta a un .wgt con Tizen Studio.",
+    "newRnAppSection": "new-rn-app",
+    "newRnAppDescription": "Asistente interactivo que genera una app React Native: un proyecto Expo SDK 56 (React Native 0.85, React 19.2, Nueva Arquitectura) con expo-router, conectado al paquete @repo/ui-native y con una configuración de Metro compatible con el monorepo. No es una app Next.js: ejecútala con Expo Go o compila binarios nativos con EAS.",
     "setupMinecraftSection": "setup-minecraft",
     "setupMinecraftDescription": "Instalador multiplataforma para el mod de Minecraft apps/mob-forge (1.20.2 / NeoForge). Instala Java 17 y Blockbench, guía la instalación de los plugins GeckoLib y MCP de Blockbench, luego descarga el andamiaje Gradle del MDK de NeoForge fijado e inyecta GeckoLib. Idempotente; vuelve a ejecutarlo tras cambiar versiones en gradle.properties.",
     "generateIconsSection": "generate-icons",
