@@ -58,6 +58,7 @@ const NEW_APP_COMMAND = "pnpm new-app";
 const NEW_API_COMMAND = "pnpm new-api";
 const NEW_TV_APP_COMMAND = "pnpm new-tv-app";
 const NEW_RN_APP_COMMAND = "pnpm new-rn-app";
+const NEW_SITE_COMMAND = "pnpm new-site <domain>";
 const SETUP_MINECRAFT_COMMAND = "pnpm setup-minecraft";
 const GENERATE_ICONS_COMMANDS =
   "pnpm generate-icons              # pick app interactively\n" +
@@ -261,6 +262,11 @@ export default async function Home({ params, searchParams }: Props) {
                   heading={t("newRnAppSection")}
                   description={t("newRnAppDescription")}
                   code={NEW_RN_APP_COMMAND}
+                />
+                <Section
+                  heading={t("newSiteSection")}
+                  description={t("newSiteDescription")}
+                  code={NEW_SITE_COMMAND}
                 />
                 <Section
                   heading={t("setupMinecraftSection")}

@@ -28,10 +28,6 @@ import {
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { Slider } from "@repo/ui/core-elements/slider";
 import {
-  AiInterviewer,
-  type AiEntityType,
-} from "./ai-interviewer/ai-interviewer";
-import {
   PARAGRAPH_WORD_COUNTS,
   PARAGRAPH_LENGTH_STEPS,
   PARAGRAPH_COUNT_STEPS,
@@ -239,8 +235,6 @@ interface AdminFormProps {
   error?: string | null;
   success?: string | null;
   children?: React.ReactNode;
-  /** When provided, shows an "AI Interview" button that populates the form via conversational AI. */
-  aiInterviewEntityType?: AiEntityType;
 }
 
 // ── AdminForm ──────────────────────────────────────────────────────────────
@@ -257,7 +251,6 @@ export function AdminForm({
   error,
   success,
   children,
-  aiInterviewEntityType,
 }: AdminFormProps) {
   const t = useTranslations("Admin");
   const router = useRouter();
@@ -483,15 +476,6 @@ export function AdminForm({
             {title}
           </Typography>
           <Box display="flex" alignItems="center" gap={8}>
-            {aiInterviewEntityType && (
-              <AiInterviewer
-                entityType={aiInterviewEntityType}
-                entityLabel={title}
-                fields={fields}
-                values={values}
-                onChange={onChange}
-              />
-            )}
             {!hideCancel && (
               <Button
                 text={t("cancel")}

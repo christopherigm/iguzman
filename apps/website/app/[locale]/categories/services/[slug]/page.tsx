@@ -6,7 +6,6 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { Hero } from "@repo/ui/hero";
-import { NavbarSpacer, PageBottomSpacer } from "@repo/ui/core-elements/navbar";
 import { getServiceCategory, getServicesByCategory } from "@/lib/catalog";
 import { CategoryDetail } from "@/components/category-detail";
 
@@ -88,8 +87,12 @@ export default async function ServiceCategoryPage({ params }: Props) {
           style={{ height: "clamp(220px, 30vw, 400px)" }}
         />
       )}
-      {!hasImage && <NavbarSpacer />}
-      <Container paddingX={10} marginTop={32}>
+      <Container
+        paddingX={10}
+        marginTop={32}
+        paddingTop={!hasImage ? "var(--ui-navbar-height, 57px)" : undefined}
+        paddingBottom="var(--ui-page-bottom-spacing, 64px)"
+      >
         <Breadcrumbs items={breadcrumbs} />
         {description && (
           <Typography
@@ -108,7 +111,6 @@ export default async function ServiceCategoryPage({ params }: Props) {
           showTitle={!hasImage}
         />
       </Container>
-      <PageBottomSpacer />
     </>
   );
 }

@@ -60,6 +60,8 @@
     "newTvAppDescription": "Assistant interactif pour scaffolder une app Samsung Smart TV (Tizen) : une SPA Vite + React reliée au paquet @repo/ui-tv avec navigation spatiale Norigin pour la télécommande. Crée packages/ui-tv au premier lancement. Empaquetage en .wgt avec Tizen Studio.",
     "newRnAppSection": "new-rn-app",
     "newRnAppDescription": "Assistant interactif pour scaffolder une app React Native : un projet Expo SDK 56 (React Native 0.85, React 19.2, New Architecture) utilisant expo-router, relié au paquet @repo/ui-native avec une configuration Metro adaptée au monorepo. Ce n'est pas une app Next.js - lancez-la avec Expo Go ou compilez des binaires natifs via EAS.",
+    "newSiteSection": "new-site",
+    "newSiteDescription": "Scaffolde un site sur mesure par client dans l'app website : crée sites/<slug>/ (configuration, page d'accueil, index) et l'enregistre par hôte, afin qu'un domaine affiche un site codé à la main et connecté au backend. L'équipe code le frontend ; le client modifie uniquement le kit de marque et le contenu via le CMS. Suivez la recette dans apps/website/sites/CLAUDE.md ou lancez le skill /new-site dans Claude Code.",
     "setupMinecraftSection": "setup-minecraft",
     "setupMinecraftDescription": "Bootstrapper multiplateforme pour le mod Minecraft apps/mob-forge (1.20.2 / NeoForge). Installe Java 17 et Blockbench, guide l'installation des plugins Blockbench GeckoLib et MCP, puis télécharge l'échafaudage Gradle du MDK NeoForge épinglé et injecte GeckoLib. Idempotent ; relancez-le après avoir changé les versions dans gradle.properties.",
     "generateIconsSection": "generate-icons",

@@ -1,4 +1,27 @@
 {
+  "BdroneSite": {
+    "intro": {
+      "eyebrow": "Who we are",
+      "exploreServices": "Explore services",
+      "viewProducts": "View products",
+      "learnMore": "Learn more"
+    },
+    "about": {
+      "eyebrow": "About us",
+      "title": "About us",
+      "titleNamed": "About {name}",
+      "placeholder": "We're getting our story ready. Check back soon to learn more about our team and what we do.",
+      "missionHeading": "Our mission",
+      "visionHeading": "Our vision"
+    },
+    "contact": {
+      "eyebrow": "Contact",
+      "heading": "Get in touch",
+      "subtitle": "Ready to put drones to work for your next project? Explore what we offer and let's take it from there.",
+      "servicesCta": "Browse services",
+      "productsCta": "Browse products"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""
@@ -294,43 +317,7 @@
     "errorGenerateAssets": "Failed to generate assets from logo.",
     "aiProvider": "AI Provider",
     "groqProvider": "Groq",
-    "ollamaProvider": "Ollama",
-    "aiInterviewLabel": "AI Interview",
-    "aiInterviewTitle": "AI Interview: {entityLabel}",
-    "aiInterviewClose": "Close",
-    "aiInterviewStageScoping": "Questions",
-    "aiInterviewStageResearching": "Research",
-    "aiInterviewStageProposal": "Proposal",
-    "aiInterviewStageDone": "Done",
-    "aiInterviewMarketResearch": "Market Research",
-    "aiInterviewContinue": "Generate Proposal",
-    "aiInterviewAccept": "Apply to Form",
-    "aiInterviewNegotiate": "Negotiate",
-    "aiInterviewUpload": "Upload image",
-    "aiInterviewAnalyzing": "Analyzing image…",
-    "aiInterviewResearching": "Researching market…",
-    "aiInterviewGenerating": "Generating proposal…",
-    "aiInterviewLoadingBrand": "Loading brand context…",
-    "aiInterviewWelcome": "Hello! I’ll help you create a {entityLabel}. I’ll ask a few questions to understand your needs, then propose content for your form.",
-    "aiInterviewSend": "Send",
-    "aiInterviewPlaceholder": "Type your answer…",
-    "aiInterviewBrandWarning": "Brand alignment note",
-    "aiInterviewProposalTitle": "Proposed Record",
-    "aiInterviewProposalNote": "Review the proposed values. Accept to apply to the form, or send feedback to adjust.",
-    "aiInterviewErrorPersona": "Could not load brand context. Continuing without it.",
-    "aiInterviewErrorResearch": "Market research failed.",
-    "aiInterviewErrorProposal": "Could not generate proposal. Please try again.",
-    "aiInterviewImageAnalysis": "Image Analysis",
-    "aiInterviewImageAnalysisError": "Image analysis failed.",
-    "aiInterviewResearchResults": "Market Research Results",
-    "aiInterviewResearchNoResults": "No market research results found.",
-    "aiInterviewNegotiatePrompt": "Sure, let me know what you’d like to change.",
-    "aiInterviewApplied": "Content applied to the form. Review and save when ready.",
-    "aiInterviewLengthOptionsTitle": "Content Length",
-    "aiInterviewLengthOptionsText": "Set the length for each text field in the proposal.",
-    "aiInterviewLengthParagraphsLabel": "Paragraphs",
-    "aiInterviewLengthWordsLabel": "Words per paragraph",
-    "aiInterviewLengthWordsPerPara": "words/para"
+    "ollamaProvider": "Ollama"
   },
   "GradientBuilder": {
     "linear": "Linear",

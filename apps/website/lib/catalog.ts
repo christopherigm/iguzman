@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { headers } from "next/headers";
+import { getTenantHost } from "./resolve-site";
 import { API_URL } from "./config";
 import logger from "./logger";
 
@@ -80,8 +80,7 @@ async function fetchOneWithHost<T>(
 
 export const getProductCategories = cache(
   async (): Promise<ProductCategory[]> => {
-    const headersList = await headers();
-    const host = headersList.get("host") ?? "";
+    const host = await getTenantHost();
     return fetchWithHost<ProductCategory>(
       "/api/catalog/product-categories/",
       host,
@@ -92,8 +91,7 @@ export const getProductCategories = cache(
 
 export const getServiceCategories = cache(
   async (): Promise<ServiceCategory[]> => {
-    const headersList = await headers();
-    const host = headersList.get("host") ?? "";
+    const host = await getTenantHost();
     return fetchWithHost<ServiceCategory>(
       "/api/catalog/service-categories/",
       host,
@@ -288,8 +286,7 @@ export interface ServiceDetail {
 
 export const getFeaturedProducts = cache(
   async (): Promise<FeaturedProduct[]> => {
-    const headersList = await headers();
-    const host = headersList.get("host") ?? "";
+    const host = await getTenantHost();
     return fetchWithHost<FeaturedProduct>(
       "/api/catalog/products/?featured=true",
       host,
@@ -300,8 +297,7 @@ export const getFeaturedProducts = cache(
 
 export const getFeaturedServices = cache(
   async (): Promise<FeaturedService[]> => {
-    const headersList = await headers();
-    const host = headersList.get("host") ?? "";
+    const host = await getTenantHost();
     return fetchWithHost<FeaturedService>(
       "/api/catalog/services/?featured=true",
       host,
@@ -311,8 +307,7 @@ export const getFeaturedServices = cache(
 );
 
 export const getAllProducts = cache(async (): Promise<FeaturedProduct[]> => {
-  const headersList = await headers();
-  const host = headersList.get("host") ?? "";
+  const host = await getTenantHost();
   return fetchWithHost<FeaturedProduct>(
     "/api/catalog/products/",
     host,
@@ -321,8 +316,7 @@ export const getAllProducts = cache(async (): Promise<FeaturedProduct[]> => {
 });
 
 export const getAllServices = cache(async (): Promise<FeaturedService[]> => {
-  const headersList = await headers();
-  const host = headersList.get("host") ?? "";
+  const host = await getTenantHost();
   return fetchWithHost<FeaturedService>(
     "/api/catalog/services/",
     host,
@@ -347,8 +341,7 @@ export async function getServiceCategory(
 export async function getProductsByCategory(
   categoryId: number,
 ): Promise<FeaturedProduct[]> {
-  const headersList = await headers();
-  const host = headersList.get("host") ?? "";
+  const host = await getTenantHost();
   return fetchWithHost<FeaturedProduct>(
     `/api/catalog/products/?category=${categoryId}`,
     host,
@@ -359,8 +352,7 @@ export async function getProductsByCategory(
 export async function getServicesByCategory(
   categoryId: number,
 ): Promise<FeaturedService[]> {
-  const headersList = await headers();
-  const host = headersList.get("host") ?? "";
+  const host = await getTenantHost();
   return fetchWithHost<FeaturedService>(
     `/api/catalog/services/?category=${categoryId}`,
     host,
@@ -369,8 +361,7 @@ export async function getServicesByCategory(
 }
 
 export async function getProduct(slug: string): Promise<ProductDetail | null> {
-  const headersList = await headers();
-  const host = headersList.get("host") ?? "";
+  const host = await getTenantHost();
   return fetchOneWithHost<ProductDetail>(
     `/api/catalog/products/?slug=${encodeURIComponent(slug)}`,
     host,
@@ -379,8 +370,7 @@ export async function getProduct(slug: string): Promise<ProductDetail | null> {
 }
 
 export async function getService(slug: string): Promise<ServiceDetail | null> {
-  const headersList = await headers();
-  const host = headersList.get("host") ?? "";
+  const host = await getTenantHost();
   return fetchOneWithHost<ServiceDetail>(
     `/api/catalog/services/?slug=${encodeURIComponent(slug)}`,
     host,

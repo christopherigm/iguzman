@@ -11,6 +11,7 @@
     "new-api": "bash cli/new-django-app/new-django-app.sh",
     "new-tv-app": "bash cli/new-smarttv-app/new-smarttv-app.sh",
     "new-rn-app": "bash cli/new-rn-app/new-rn-app.sh",
+    "new-site": "bash cli/new-site/new-site.sh",
     "setup-minecraft": "bash cli/setup-minecraft/setup-minecraft.sh",
     "tv-cert": "bash cli/tv-cert/tv-cert.sh",
     "tv-deploy": "bash cli/tv-deploy/tv-deploy.sh",

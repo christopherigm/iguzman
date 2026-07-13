@@ -31,7 +31,7 @@ const nextConfig = {
       },
     ];
   },
-  allowedDevOrigins: ['127.0.0.1', '*'],
+  allowedDevOrigins: ['127.0.0.1', '192.168.0.*'],
   images: {
     qualities: [75, 80, 85, 90],
     dangerouslyAllowLocalIP: true,

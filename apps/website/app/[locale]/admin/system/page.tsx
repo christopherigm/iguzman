@@ -372,7 +372,6 @@ export default function AdminSystemPage() {
         saving={saving}
         error={error}
         success={success}
-        aiInterviewEntityType="system"
       >
         <GradientBuilder
           label={t("highlightsBg")}

@@ -1,4 +1,27 @@
 {
+  "BdroneSite": {
+    "intro": {
+      "eyebrow": "Quem somos",
+      "exploreServices": "Explorar serviços",
+      "viewProducts": "Ver produtos",
+      "learnMore": "Saiba mais"
+    },
+    "about": {
+      "eyebrow": "Sobre nós",
+      "title": "Sobre nós",
+      "titleNamed": "Sobre {name}",
+      "placeholder": "Estamos preparando a nossa história. Volte em breve para conhecer a nossa equipe e o que fazemos.",
+      "missionHeading": "Nossa missão",
+      "visionHeading": "Nossa visão"
+    },
+    "contact": {
+      "eyebrow": "Contato",
+      "heading": "Entre em contato",
+      "subtitle": "Pronto para colocar os drones a trabalhar no seu próximo projeto? Explore o que oferecemos e vamos começar.",
+      "servicesCta": "Ver serviços",
+      "productsCta": "Ver produtos"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""
@@ -294,43 +317,7 @@
     "errorGenerateAssets": "Falha ao gerar recursos a partir do logo.",
     "aiProvider": "Provedor de IA",
     "groqProvider": "Groq",
-    "ollamaProvider": "Ollama",
-    "aiInterviewLabel": "Entrevista IA",
-    "aiInterviewTitle": "Entrevista IA: {entityLabel}",
-    "aiInterviewClose": "Fechar",
-    "aiInterviewStageScoping": "Perguntas",
-    "aiInterviewStageResearching": "Pesquisa",
-    "aiInterviewStageProposal": "Proposta",
-    "aiInterviewStageDone": "Concluído",
-    "aiInterviewMarketResearch": "Pesquisa de mercado",
-    "aiInterviewContinue": "Gerar proposta",
-    "aiInterviewAccept": "Aplicar ao formulário",
-    "aiInterviewNegotiate": "Negociar",
-    "aiInterviewUpload": "Enviar imagem",
-    "aiInterviewAnalyzing": "Analisando imagem…",
-    "aiInterviewResearching": "Pesquisando mercado…",
-    "aiInterviewGenerating": "Gerando proposta…",
-    "aiInterviewLoadingBrand": "Carregando contexto da marca…",
-    "aiInterviewWelcome": "Olá! Vou ajudá-lo(a) a criar um(a) {entityLabel}. Farei algumas perguntas para entender suas necessidades e, em seguida, proporei conteúdo para o seu formulário.",
-    "aiInterviewSend": "Enviar",
-    "aiInterviewPlaceholder": "Digite sua resposta…",
-    "aiInterviewBrandWarning": "Nota de alinhamento de marca",
-    "aiInterviewProposalTitle": "Registro proposto",
-    "aiInterviewProposalNote": "Revise os valores propostos. Aceite para aplicar ao formulário ou envie feedback para ajustar.",
-    "aiInterviewErrorPersona": "Não foi possível carregar o contexto da marca. Continuando sem ele.",
-    "aiInterviewErrorResearch": "Pesquisa de mercado falhou.",
-    "aiInterviewErrorProposal": "Não foi possível gerar a proposta. Por favor, tente novamente.",
-    "aiInterviewImageAnalysis": "Análise de imagem",
-    "aiInterviewImageAnalysisError": "A análise de imagem falhou.",
-    "aiInterviewResearchResults": "Resultados da pesquisa de mercado",
-    "aiInterviewResearchNoResults": "Nenhum resultado de pesquisa encontrado.",
-    "aiInterviewNegotiatePrompt": "Claro, diga-me o que você gostaria de mudar.",
-    "aiInterviewApplied": "Conteúdo aplicado ao formulário. Revise e salve quando estiver pronto.",
-    "aiInterviewLengthOptionsTitle": "Comprimento do conteúdo",
-    "aiInterviewLengthOptionsText": "Defina o comprimento de cada campo de texto na proposta.",
-    "aiInterviewLengthParagraphsLabel": "Parágrafos",
-    "aiInterviewLengthWordsLabel": "Palavras por parágrafo",
-    "aiInterviewLengthWordsPerPara": "palavras/parágrafo"
+    "ollamaProvider": "Ollama"
   },
   "GradientBuilder": {
     "linear": "Linear",

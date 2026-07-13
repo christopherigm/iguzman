@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { headers } from "next/headers";
+import { getTenantHost } from "./resolve-site";
 import { API_URL } from "./config";
 import logger from "./logger";
 
@@ -39,8 +39,7 @@ export interface SuccessStory {
 
 export const getSuccessStory = cache(
   async (slug: string): Promise<SuccessStory | null> => {
-    const headersList = await headers();
-    const host = headersList.get("host") ?? "";
+    const host = await getTenantHost();
 
     try {
       const res = await fetch(`${API_URL}/api/success-stories/slug/${slug}/`, {
@@ -69,8 +68,7 @@ export const getSuccessStory = cache(
 );
 
 export const getSuccessStories = cache(async (): Promise<SuccessStory[]> => {
-  const headersList = await headers();
-  const host = headersList.get("host") ?? "";
+  const host = await getTenantHost();
 
   try {
     const res = await fetch(`${API_URL}/api/success-stories/`, {

@@ -7,7 +7,6 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { Hero } from "@repo/ui/hero";
-import { NavbarSpacer, PageBottomSpacer } from "@repo/ui/core-elements/navbar";
 import { RichText } from "@repo/ui/core-elements/rich-text";
 import { getSuccessStory } from "@/lib/success-stories";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
@@ -115,8 +114,13 @@ export default async function SuccessStoryDetailPage({ params }: Props) {
           style={{ height: "clamp(220px, 30vw, 500px)" }}
         />
       )}
-      {!hasImage && <NavbarSpacer />}
-      <Container size="md" paddingX={10} marginTop={32}>
+      <Container
+        size="md"
+        paddingX={10}
+        marginTop={32}
+        paddingTop={!hasImage ? "var(--ui-navbar-height, 57px)" : undefined}
+        paddingBottom="var(--ui-page-bottom-spacing, 64px)"
+      >
         <Breadcrumbs items={breadcrumbs} />
         <Typography as="h1" variant="h1" marginTop={24}>
           {name}
@@ -143,7 +147,6 @@ export default async function SuccessStoryDetailPage({ params }: Props) {
           </Box>
         )}
       </Container>
-      <PageBottomSpacer />
     </>
   );
 }

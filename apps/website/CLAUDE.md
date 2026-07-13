@@ -1,5 +1,20 @@
 # website - App-Specific Conventions
 
+## Per-Customer Sites (domain-driven frontend)
+
+This app is **one Next.js app, many customer sites**. Each customer gets a
+`sites/<slug>/` folder tied to one customer and one (or more) domain(s),
+resolved by request host at runtime (`lib/resolve-site.ts` → `sites/registry.ts`).
+`app/[locale]/page.tsx` dispatches the landing page to the resolved site;
+`app/[locale]/[...sitePath]/page.tsx` serves a site's optional extra pages.
+Unmatched hosts fall back to `sites/_default` (the generic DB-driven template).
+
+**We code the frontend; the customer only self-edits the brand kit + content via
+the backend CMS.** To build a customer site, use the **`/new-site`** skill. The
+authoritative recipe (site contract, host→site→tenant chain, block library,
+registration, styling rules, checklist) is **`sites/CLAUDE.md`**; the strategy
+and rationale live in `apps/prds/website-sites.md`.
+
 ## Shared utility classes in `app/globals.css`
 
 | Class                   | Use for                                                                                                       |

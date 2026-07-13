@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { headers } from "next/headers";
+import { getTenantHost } from "./resolve-site";
 import { API_URL } from "./config";
 import logger from "./logger";
 
@@ -55,8 +55,7 @@ export interface System {
  * (layout + generateMetadata + page all share one fetch).
  */
 export const getSystem = cache(async (): Promise<System | null> => {
-  const headersList = await headers();
-  const host = headersList.get("host") ?? "";
+  const host = await getTenantHost();
 
   try {
     const res = await fetch(`${API_URL}/api/system/`, {

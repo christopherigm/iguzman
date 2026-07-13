@@ -14,12 +14,15 @@ import {
 } from "@repo/ui/theme-provider";
 import type { ThemeMode, ResolvedTheme } from "@repo/ui/theme-provider";
 import { PaletteProvider } from "@repo/ui/palette-provider";
+import { palettes } from "@repo/ui/palettes";
 import { routing } from "@repo/i18n/routing";
 import { NavbarClient } from "./navbar-client";
+import { DevSiteSwitcher } from "./dev-site-switcher";
 import { Footer } from "@/components/footer";
 import { FooterVisibility } from "@/components/footer-visibility";
 import packageJson from "@/package.json";
 import { getSystem } from "@/lib/system";
+import { DEV_SITE_COOKIE, SITE_CONFIGS } from "@/sites/registry";
 import "../globals.css";
 
 type Props = {
@@ -90,6 +93,15 @@ export default async function LocaleLayout({ children, params }: Props) {
       ? (themeResolvedCookie ?? "light")
       : (initialMode as ResolvedTheme);
 
+  const isDev = process.env.NODE_ENV === "development";
+  const devSite = isDev ? (cookieStore.get(DEV_SITE_COOKIE)?.value ?? "") : "";
+
+  const paletteVars = palettes["cyan"]?.[initialResolved] ?? {};
+  const bodyStyle = Object.fromEntries(
+    Object.entries(paletteVars),
+  ) as React.CSSProperties;
+  (bodyStyle as Record<string, string>)["--accent"] = "#68c3f7";
+
   return (
     <html
       lang={locale}
@@ -100,25 +112,40 @@ export default async function LocaleLayout({ children, params }: Props) {
       <head>
         <ThemeScript />
       </head>
-      <NextIntlClientProvider messages={messages}>
-        <ThemeProvider
-          initialMode={initialMode}
-          initialResolved={initialResolved}
-        >
-          <PaletteProvider palette="cyan">
-            <NavbarClient
-              logo={system?.img_logo ?? "/logo.png"}
-              version={`v${packageJson.version}`}
-              productCount={system?.product_count ?? 0}
-              serviceCount={system?.service_count ?? 0}
-            />
-            {children}
-            <FooterVisibility>
-              <Footer logo={system?.img_logo ?? "/logo.png"} system={system} />
-            </FooterVisibility>
-          </PaletteProvider>
-        </ThemeProvider>
-      </NextIntlClientProvider>
+      <body style={bodyStyle}>
+        <NextIntlClientProvider messages={messages}>
+          <ThemeProvider
+            initialMode={initialMode}
+            initialResolved={initialResolved}
+          >
+            <PaletteProvider palette="cyan" accent="#68c3f7">
+              <NavbarClient
+                logo={system?.img_logo ?? "/logo.png"}
+                version={`v${packageJson.version}`}
+                productCount={system?.product_count ?? 0}
+                serviceCount={system?.service_count ?? 0}
+              />
+              {children}
+              {isDev && (
+                <DevSiteSwitcher
+                  sites={SITE_CONFIGS.map((c) => ({
+                    slug: c.slug,
+                    name: c.name,
+                  }))}
+                  current={devSite}
+                  cookieName={DEV_SITE_COOKIE}
+                />
+              )}
+              <FooterVisibility>
+                <Footer
+                  logo={system?.img_logo ?? "/logo.png"}
+                  system={system}
+                />
+              </FooterVisibility>
+            </PaletteProvider>
+          </ThemeProvider>
+        </NextIntlClientProvider>
+      </body>
     </html>
   );
 }
