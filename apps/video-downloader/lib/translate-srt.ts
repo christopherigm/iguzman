@@ -228,20 +228,29 @@ async function complete(
     userPrompt,
   );
 
-  // Groq returns 429 when the per-minute budget is exhausted and 413 ("Request
-  // too large") when a single request exceeds the tier's TPM limit; both are
-  // token-rate failures recoverable on the larger OpenRouter model.
-  if (upstream.status === 429 || upstream.status === 413) {
+  // Groq returns 429 when the per-minute budget is exhausted, 413 ("Request
+  // too large") when a single request exceeds the tier's TPM limit, and 403
+  // ("Access denied. Please check your network settings.") when the request
+  // egresses from a blocked IP - which happens intermittently in production
+  // when the VPN sidecar's Groq bypass route goes stale (api.groq.com resolves
+  // to rotating CDN IPs, so a request can leave through the VPN and get
+  // rejected). All three are recoverable by falling back to OpenRouter, whose
+  // IPs are not blocked and which is reachable through the tunnel.
+  if (
+    upstream.status === 429 ||
+    upstream.status === 413 ||
+    upstream.status === 403
+  ) {
     const openrouterApiKey = process.env.OPENROUTER_API_KEY;
     if (!openrouterApiKey) {
       throw new Error(
-        `Translation rate-limited (${upstream.status}) and OpenRouter not configured`,
+        `Translation upstream error (${upstream.status}) and OpenRouter not configured`,
       );
     }
     provider = "openrouter";
     log.warn(
       { openrouterModel: OPENROUTER_MODEL, groqStatus: upstream.status },
-      "Groq rate limit hit; falling back to OpenRouter for translation",
+      "Groq unavailable (rate limit / access denied); falling back to OpenRouter for translation",
     );
     upstream = await callCompletion(
       OPENROUTER_API_URL,

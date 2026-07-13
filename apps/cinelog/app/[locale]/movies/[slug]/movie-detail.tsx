@@ -597,6 +597,7 @@ export function MovieDetail({
                 size="md"
                 onClick={() => setShowPurgeConfirm(true)}
                 disabled={deleting}
+                translucent
               />
             )}
             {movie.owned && (

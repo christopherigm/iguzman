@@ -217,9 +217,13 @@ nodeAffinity:
 #   # ① Prevent the VPN endpoint's own UDP traffic from looping through wg0
 #   PostUp  = ip route add $(wg show wg0 endpoints | awk '{print $2}' | sed 's/:[0-9]*$//')/32 via 169.254.1.1
 #   PreDown = ip route del $(wg show wg0 endpoints | awk '{print $2}' | sed 's/:[0-9]*$//')/32 via 169.254.1.1 2>/dev/null || true
-#   # ② Bypass VPN for Groq API - Surfshark IPs are blocked by Groq
-#   PostUp  = for IP in $(nslookup api.groq.com 2>/dev/null | awk '/^Address: /{print $2}' || getent hosts api.groq.com 2>/dev/null | awk '{print $1}'); do ip route add ${IP}/32 via 169.254.1.1 dev eth0 2>/dev/null || true; done
-#   PreDown = for IP in $(nslookup api.groq.com 2>/dev/null | awk '/^Address: /{print $2}' || getent hosts api.groq.com 2>/dev/null | awk '{print $1}'); do ip route del ${IP}/32 via 169.254.1.1 dev eth0 2>/dev/null || true; done
+#   # ② Bypass VPN for Groq API - Surfshark IPs are blocked by Groq (403).
+#   # RETRY until DNS answers: CoreDNS is momentarily unreachable during pod/
+#   # sidecar (re)start, and a single-shot lookup that comes back empty pins no
+#   # route and leaves that pod sending ALL Groq traffic through the VPN for its
+#   # whole lifetime → persistent 403 on one pod. The loop waits up to ~30s.
+#   PostUp  = i=0; IPS=""; while [ "$i" -lt 15 ]; do IPS="$(nslookup api.groq.com 2>/dev/null | awk '/^Address: [0-9]/{print $2}')"; [ -n "$IPS" ] && break; i=$((i+1)); sleep 2; done; for IP in $IPS; do ip route add ${IP}/32 via 169.254.1.1 dev eth0 2>/dev/null || true; done
+#   PreDown = for IP in $(nslookup api.groq.com 2>/dev/null | awk '/^Address: [0-9]/{print $2}'); do ip route del ${IP}/32 via 169.254.1.1 dev eth0 2>/dev/null || true; done
 #
 #   [Peer]
 #   PublicKey  = <server-public-key>
