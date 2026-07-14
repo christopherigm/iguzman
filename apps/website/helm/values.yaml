@@ -54,9 +54,9 @@ ingress:
 env:
   NODE_ENV: 'production'
   NEXT_TELEMETRY_DISABLED: '1'
-  NEXT_PUBLIC_API_URL: 'https://api.website.iguzman.com.mx'
-  # Add your own env vars here, for example:
-  # API_URL: "https://api.example.com"
+  # Server-side only (never NEXT_PUBLIC_): the browser talks to /api/* route
+  # handlers, which reach Django from the server. Matches cinelog + edge-folio.
+  API_URL: 'https://api.website.iguzman.com.mx'
 
 # Sensitive values - reference existing Kubernetes Secrets.
 # envFromSecret:

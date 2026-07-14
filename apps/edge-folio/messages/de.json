@@ -502,15 +502,6 @@
       "errorGeneric": "Passkey konnte nicht registriert werden. Du kannst es später erneut versuchen."
     }
   },
-  "PasswordPolicy": {
-    "ruleMinLength": "Mindestens {count} Zeichen",
-    "ruleNotNumeric": "Nicht nur Ziffern",
-    "ruleNotSimilar": "Nicht zu ähnlich zu Name oder E-Mail",
-    "errorTooShort": "Dieses Passwort ist zu kurz. Es muss mindestens {count} Zeichen enthalten.",
-    "errorTooCommon": "Dieses Passwort ist zu häufig.",
-    "errorEntirelyNumeric": "Dieses Passwort besteht nur aus Ziffern.",
-    "errorTooSimilar": "Dieses Passwort ist Ihrem Namen oder Ihrer E-Mail-Adresse zu ähnlich."
-  },
   "ApplicationDetailPage": {
     "metaTitle": "Bewerbung",
     "backToList": "Zurück zu Bewerbungen",
@@ -980,5 +971,21 @@
     "jobSearchQueryError": "Anfrage konnte nicht erzeugt werden",
     "jobSearchQueryNoData": "Aktiviere mindestens eine Einstellung, um eine Anfrage zu erzeugen.",
     "jobSearchApiTitle": "Eigene API-Schlüssel (BYOK)"
+  },
+  "ResetPasswordPage": {
+    "title": "Neues Passwort festlegen",
+    "subtitle": "Geben Sie unten Ihr neues Passwort ein",
+    "newPasswordLabel": "Neues Passwort",
+    "confirmPasswordLabel": "Neues Passwort bestätigen",
+    "submitButton": "Passwort zurücksetzen",
+    "submitting": "Passwort wird zurückgesetzt…",
+    "errorPasswordMismatch": "Passwörter stimmen nicht überein.",
+    "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+    "successTitle": "Passwort zurückgesetzt!",
+    "successDetail": "Ihr Passwort wurde aktualisiert. Sie können sich jetzt mit Ihrem neuen Passwort anmelden.",
+    "backToSignIn": "Zurück zur Anmeldung",
+    "invalidTitle": "Link ungültig oder abgelaufen",
+    "invalidDetail": "Dieser Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen. Bitte fordern Sie einen neuen an.",
+    "requestNewLink": "Neuen Reset-Link anfordern"
   }
 }

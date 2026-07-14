@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "@repo/i18n/navigation";
 import Link from "next/link";
-import { getUserFromToken, getAccessToken } from "@/lib/auth";
+import { useSession } from "@repo/auth/session-provider";
 import { Button } from "@repo/ui/core-elements/button";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -19,14 +19,10 @@ export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  // Derive admin authorization from the client-only token via lazy init (null on
-  // the server) instead of seeding it from an effect.
-  const [authorized] = useState<boolean | null>(() => {
-    if (typeof window === "undefined") return null;
-    const token = getAccessToken();
-    const user = getUserFromToken();
-    return Boolean(token && user?.isAdmin);
-  });
+  // The session is server-derived, so admin status is known during SSR - no more
+  // null limbo while the client catches up. This only gates the sidebar UI:
+  // proxy.ts guards the route and Django enforces the permission on every call.
+  const authorized = useSession()?.isAdmin === true;
   const [aiProvider, setAiProvider] = useState<AdminAiProvider>(() => {
     if (typeof window === "undefined") return "groq";
     const stored = localStorage.getItem(
@@ -36,7 +32,7 @@ export function AdminSidebar() {
   });
 
   useEffect(() => {
-    if (authorized === false) router.replace("/auth");
+    if (!authorized) router.replace("/auth");
   }, [authorized, router]);
 
   const handleProviderChange = (provider: AdminAiProvider) => {
@@ -47,7 +43,6 @@ export function AdminSidebar() {
     );
   };
 
-  if (authorized === null) return null; // loading
   if (!authorized) return null;
   if (pathname === "/admin") return null;
 

@@ -1,49 +1,23 @@
-import { clearTokens, getAccessToken, refreshTokens } from "./auth";
-import { API_URL } from "./config";
-
-function buildHeaders(
-  token: string | null,
-  extra: HeadersInit = {},
-): HeadersInit {
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...extra,
-  };
-}
-
-// Deduplicate concurrent refresh attempts - all 401s share one refresh call
-let _adminRefreshPromise: Promise<string | null> | null = null;
-
-// Helper: authenticated fetch with automatic token refresh on 401
+/**
+ * Authenticated fetch for the admin CMS. Requests go to the same-origin
+ * `/api/admin/*` route handler, which attaches the bearer token from the
+ * HTTP-only cookie and transparently refreshes it on 401 - so there is no token
+ * for this module (or any other browser code) to hold.
+ */
 async function adminFetch(
   path: string,
   options: RequestInit = {},
 ): Promise<Response> {
-  const token = getAccessToken();
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(path.replace(/^\/api\//, "/api/admin/"), {
     ...options,
-    headers: buildHeaders(token, options.headers),
+    headers: { "Content-Type": "application/json", ...options.headers },
   });
 
-  if (res.status === 401) {
-    if (!_adminRefreshPromise) {
-      _adminRefreshPromise = refreshTokens(API_URL).finally(() => {
-        _adminRefreshPromise = null;
-      });
-    }
-    const newToken = await _adminRefreshPromise;
-    if (!newToken) {
-      clearTokens();
-      if (typeof window !== "undefined") {
-        window.location.href = "/auth";
-      }
-      return res;
-    }
-    return fetch(`${API_URL}${path}`, {
-      ...options,
-      headers: buildHeaders(newToken, options.headers),
-    });
+  // A 401 here means the refresh token is gone or rejected too: genuinely logged
+  // out. The session lives in the cookie the server already cleared, so a full
+  // navigation to /auth is all that is needed - there is no client store to purge.
+  if (res.status === 401 && typeof window !== "undefined") {
+    window.location.href = "/auth";
   }
 
   return res;

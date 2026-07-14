@@ -5,5 +5,14 @@
     "close": "Close",
     "loading": "Loading...",
     "error": "An error occurred"
+  },
+  "PasswordPolicy": {
+    "ruleMinLength": "Mindestens {count} Zeichen",
+    "ruleNotNumeric": "Nicht nur Ziffern",
+    "ruleNotSimilar": "Nicht zu ähnlich zu Name oder E-Mail",
+    "errorTooShort": "Dieses Passwort ist zu kurz. Es muss mindestens {count} Zeichen enthalten.",
+    "errorTooCommon": "Dieses Passwort ist zu häufig.",
+    "errorEntirelyNumeric": "Dieses Passwort besteht nur aus Ziffern.",
+    "errorTooSimilar": "Dieses Passwort ist Ihrem Namen oder Ihrer E-Mail-Adresse zu ähnlich."
   }
 }

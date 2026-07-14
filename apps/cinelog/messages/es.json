@@ -98,15 +98,6 @@
       "errorGeneric": "No se pudo registrar la llave. Puedes intentarlo más tarde."
     }
   },
-  "PasswordPolicy": {
-    "ruleMinLength": "Al menos {count} caracteres",
-    "ruleNotNumeric": "No solo números",
-    "ruleNotSimilar": "No demasiado parecida a tu nombre o correo",
-    "errorTooShort": "Esta contraseña es demasiado corta. Debe contener al menos {count} caracteres.",
-    "errorTooCommon": "Esta contraseña es demasiado común.",
-    "errorEntirelyNumeric": "Esta contraseña es completamente numérica.",
-    "errorTooSimilar": "Esta contraseña se parece demasiado a tu nombre o correo."
-  },
   "ScannerPage": {
     "pageTitle": "Agregar película",
     "pageSubtitle": "Escanea un código de barras o busca por título para enviarlo a tu bandeja de entrada para revisión.",
@@ -437,5 +428,21 @@
     "browseError": "No se pudieron listar los archivos. Escribe la ruta manualmente.",
     "loadingObjects": "Cargando archivos…",
     "selectBucketFirst": "Selecciona primero un bucket."
+  },
+  "ResetPasswordPage": {
+    "title": "Establecer nueva contraseña",
+    "subtitle": "Ingresa tu nueva contraseña a continuación",
+    "newPasswordLabel": "Nueva contraseña",
+    "confirmPasswordLabel": "Confirmar nueva contraseña",
+    "submitButton": "Restablecer contraseña",
+    "submitting": "Restableciendo contraseña…",
+    "errorPasswordMismatch": "Las contraseñas no coinciden.",
+    "errorGeneric": "Algo salió mal. Por favor, inténtalo de nuevo.",
+    "successTitle": "¡Contraseña restablecida!",
+    "successDetail": "Tu contraseña ha sido actualizada. Ahora puedes iniciar sesión con tu nueva contraseña.",
+    "backToSignIn": "Volver a iniciar sesión",
+    "invalidTitle": "Enlace inválido o expirado",
+    "invalidDetail": "Este enlace para restablecer la contraseña es inválido o ha expirado. Por favor, solicita uno nuevo.",
+    "requestNewLink": "Solicitar un nuevo enlace"
   }
 }

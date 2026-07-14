@@ -16,6 +16,8 @@ import type { ThemeMode, ResolvedTheme } from "@repo/ui/theme-provider";
 import { PaletteProvider } from "@repo/ui/palette-provider";
 import { palettes } from "@repo/ui/palettes";
 import { routing } from "@repo/i18n/routing";
+import { getSession } from "@repo/auth/session";
+import { SessionProvider } from "@repo/auth/session-provider";
 import { NavbarWrapper } from "./navbar-wrapper";
 import { Footer } from "./footer";
 import { SerwistProvider } from "@serwist/next/react";
@@ -64,6 +66,10 @@ export default async function LocaleLayout({ children, params }: Props) {
   }
   setRequestLocale(locale);
   const messages = await getMessages();
+
+  // Decoded from the access-token cookie during this request, so the HTML we
+  // send already reflects who the user is - no logged-out flash, no reload.
+  const session = await getSession();
 
   const tNav = (await getTranslations({ locale, namespace: "Navbar" })) as (
     key: string,
@@ -116,28 +122,30 @@ export default async function LocaleLayout({ children, params }: Props) {
       <body style={bodyStyle}>
         <SerwistProvider swUrl="/sw.js">
           <NextIntlClientProvider messages={messages}>
-            <ThemeProvider
-              initialMode={initialMode}
-              initialResolved={initialResolved}
-            >
-              <PaletteProvider palette="rose" accent="#e11d48">
-                <NavbarWrapper
-                  logo="/logo.png"
-                  version={`v${packageJson.version}`}
-                  labels={{
-                    home: tNav("home"),
-                    statistics: tNav("statistics"),
-                    addMovie: tNav("addMovie"),
-                    account: tNav("account"),
-                    linkTv: tNav("linkTv"),
-                    linkStorage: tNav("linkStorage"),
-                    signOut: tNav("signOut"),
-                  }}
-                />
-                {children}
-                <Footer logo="/logo.png" />
-              </PaletteProvider>
-            </ThemeProvider>
+            <SessionProvider session={session}>
+              <ThemeProvider
+                initialMode={initialMode}
+                initialResolved={initialResolved}
+              >
+                <PaletteProvider palette="rose" accent="#e11d48">
+                  <NavbarWrapper
+                    logo="/logo.png"
+                    version={`v${packageJson.version}`}
+                    labels={{
+                      home: tNav("home"),
+                      statistics: tNav("statistics"),
+                      addMovie: tNav("addMovie"),
+                      account: tNav("account"),
+                      linkTv: tNav("linkTv"),
+                      linkStorage: tNav("linkStorage"),
+                      signOut: tNav("signOut"),
+                    }}
+                  />
+                  {children}
+                  <Footer logo="/logo.png" />
+                </PaletteProvider>
+              </ThemeProvider>
+            </SessionProvider>
           </NextIntlClientProvider>
         </SerwistProvider>
       </body>

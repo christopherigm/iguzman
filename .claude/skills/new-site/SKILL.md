@@ -55,7 +55,7 @@ customer was given, ask for one before starting.
    the tenant's `System` colors where the design allows.
 5. **Extra pages (if briefed).** Add components under `sites/<slug>/pages/` and
    wire them into the `SiteModule.pages` map (`{ "/about": About }`). Never name
-   one after a platform route (auth, admin, my-account, products, services,
+   one after a platform route (auth, admin, account, products, services,
    categories, blog, highlights). **These pages are Server Components: never
    import from `@repo/ui/core-elements/navbar` (no `NavbarSpacer`/
    `PageBottomSpacer`).** To clear the fixed navbar / add bottom spacing, use

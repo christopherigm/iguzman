@@ -29,7 +29,7 @@ import {
   type MovieDetail as MovieDetailData,
   type MovieUpdatePayload,
 } from "@/lib/catalog";
-import { useIsLoggedIn } from "@/lib/use-is-logged-in";
+import { useIsLoggedIn } from "@repo/auth/session-provider";
 import { isSelfHostedCopy } from "@/lib/digital-copy";
 import {
   externalPlayersFor,

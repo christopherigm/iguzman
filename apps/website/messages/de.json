@@ -331,13 +331,12 @@
     "pickColor": "Farbe wählen",
     "rawCss": "CSS-Wert"
   },
-  "MyAccountPage": {
+  "AccountPage": {
     "title": "Mein Konto",
     "subtitle": "Verwalte dein Profil und deine Sicherheitseinstellungen",
     "profileSection": "Profilinformationen",
     "securitySection": "Passwort ändern",
     "passkeySection": "Passkeys",
-    "profilePictureLabel": "Profilbild",
     "firstNameLabel": "Vorname",
     "lastNameLabel": "Nachname",
     "emailLabel": "E-Mail",
@@ -364,7 +363,7 @@
     "passkeyAdded": "Passkey erfolgreich hinzugefügt.",
     "passkeyAddError": "Passkey konnte nicht hinzugefügt werden. Bitte versuche es erneut.",
     "loading": "Laden…",
-    "notLoggedIn": "Du musst angemeldet sein, um diese Seite zu sehen."
+    "changePhoto": "Foto ändern"
   },
   "Footer": {
     "navigationHeading": "Navigation",

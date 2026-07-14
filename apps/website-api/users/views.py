@@ -46,6 +46,7 @@ from .serializers import (
     UserProfileSerializer,
     UserProfileUpdateSerializer,
     build_username,
+    run_password_validators,
 )
 
 WEBAUTHN_CHALLENGE_TTL = 300  # 5 minutes
@@ -207,6 +208,13 @@ class PasswordResetConfirmView(APIView):
             return Response({"detail": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
 
         user = token_obj.user
+        # Enforced here rather than on the serializer: the password validators
+        # need the user, and the token is what identifies them. A failure raises
+        # DRF's ValidationError, which the exception handler renders as a 400.
+        run_password_validators(
+            serializer.validated_data["new_password"], user, field="new_password"
+        )
+
         user.set_password(serializer.validated_data["new_password"])
         user.save(update_fields=["password"])
         token_obj.delete()
@@ -218,6 +226,27 @@ class LoginView(TokenObtainPairView):
 
     permission_classes = (AllowAny,)
     serializer_class = CustomTokenObtainPairSerializer
+
+
+class TokenReissueView(APIView):
+    """
+    Mint a fresh token pair for the already-authenticated user.
+
+    The frontend renders identity (display name, admin flag) straight from the
+    access token's claims. Those claims are copied from the refresh token, so
+    they are frozen for the refresh token's whole 7-day life - editing your
+    profile, or being granted admin, would otherwise leave stale values in the
+    UI until it expired. Calling this rebuilds both tokens from the live user.
+    """
+
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        token = CustomTokenObtainPairSerializer.get_token(request.user)
+        return Response({
+            "access": str(token.access_token),
+            "refresh": str(token),
+        })
 
 
 class ProfileView(APIView):
@@ -274,6 +303,10 @@ class ChangePasswordView(APIView):
                 {"current_password": "Current password is incorrect."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        run_password_validators(
+            serializer.validated_data["new_password"], user, field="new_password"
+        )
 
         user.set_password(serializer.validated_data["new_password"])
         user.save(update_fields=["password"])

@@ -1,0 +1,19 @@
+/*
+ * The account page. Layout, spacing and colour live on the component props (see
+ * the repo's props-first rule); what remains here is the plain <form> element
+ * and the avatar <img>, neither of which is a @repo/ui component.
+ */
+
+.account-form__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.account-form__avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}

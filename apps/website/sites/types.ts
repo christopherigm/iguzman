@@ -48,7 +48,7 @@ export interface SiteModule {
    * Optional extra top-level pages keyed by their path, e.g.
    * { "/about": AboutPage, "/contact": ContactPage }. Served by the
    * [locale]/[...sitePath] catch-all. Paths that clash with a platform route
-   * (auth, admin, my-account, products, services, categories…) never reach
+   * (auth, admin, account, products, services, categories…) never reach
    * here - those explicit routes always win.
    */
   pages?: Record<string, ComponentType<SitePageProps>>;

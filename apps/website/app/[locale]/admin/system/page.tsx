@@ -8,7 +8,7 @@ import {
   type NewImage,
 } from "@/components/admin-image-uploader/admin-image-uploader";
 import { getSystem, updateSystem } from "@/lib/admin-api";
-import { getUserFromToken } from "@/lib/auth";
+import { useSession } from "@repo/auth/session-provider";
 import { GradientBuilder } from "@repo/ui/core-elements/gradient-builder";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -103,7 +103,7 @@ export default function AdminSystemPage() {
   // Track previous logo pending count to detect new uploads (not removals).
   const prevLogoPendingCountRef = useRef(0);
 
-  const systemId = getUserFromToken()?.systemId ?? 0;
+  const systemId = useSession()?.systemId ?? 0;
 
   useEffect(() => {
     if (!systemId) return;

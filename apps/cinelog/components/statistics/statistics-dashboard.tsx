@@ -8,7 +8,7 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { Select } from "@repo/ui/core-elements/select";
 import { Spinner } from "@repo/ui/core-elements/spinner";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { useIsLoggedIn } from "@/lib/use-is-logged-in";
+import { useIsLoggedIn } from "@repo/auth/session-provider";
 import {
   getStats,
   STAT_DEFAULT_CHART,

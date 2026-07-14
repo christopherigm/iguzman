@@ -5,14 +5,14 @@ import { useTranslations } from "next-intl";
 import { AdminEntityList } from "@/components/admin/admin-entity-list";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { listSuccessStories, deleteSuccessStory } from "@/lib/admin-api";
-import { getUserFromToken } from "@/lib/auth";
+import { useSession } from "@repo/auth/session-provider";
 
 export default function AdminSuccessStoriesPage() {
   const t = useTranslations("Admin");
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const systemId = getUserFromToken()?.systemId ?? 0;
+  const systemId = useSession()?.systemId ?? 0;
 
   const load = useCallback(async () => {
     setLoading(true);

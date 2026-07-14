@@ -100,6 +100,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def get_token(cls, user):
         token = super().get_token(user)
         token['email'] = user.email
+        # Identity claims let the Next.js server derive the session straight from
+        # the cookie it already holds, so a page renders logged-in on first paint
+        # instead of flashing logged-out while the browser fetches the profile.
+        # SimpleJWT copies these onto the refreshed access token, and the passkey
+        # views mint through this same method, so every token carries them.
+        token['first_name'] = user.first_name
+        token['last_name'] = user.last_name
         return token
 
 

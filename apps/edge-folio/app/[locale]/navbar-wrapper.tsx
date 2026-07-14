@@ -1,22 +1,9 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-import { useRouter } from "next/navigation";
 import { Navbar } from "@repo/ui/core-elements/navbar";
 import type { MenuItem } from "@repo/ui/core-elements/navbar";
-import { logout, clearUser, getStoredUser } from "@/lib/auth";
-
-// The stored user lives in localStorage; `app-auth` is dispatched (after the
-// store is updated) whenever it changes. Reading it through useSyncExternalStore
-// avoids a setState-in-effect on mount.
-function subscribeAuth(callback: () => void): () => void {
-  window.addEventListener("app-auth", callback);
-  return () => window.removeEventListener("app-auth", callback);
-}
-
-function getDisplayNameSnapshot(): string | null {
-  return getStoredUser()?.displayName ?? null;
-}
+import { useSession } from "@repo/auth/session-provider";
+import { useAuthActions } from "@repo/auth/use-auth-actions";
 
 interface NavbarWrapperProps {
   logo: string;
@@ -36,18 +23,15 @@ interface NavbarWrapperProps {
 }
 
 export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
-  const router = useRouter();
-  const displayName = useSyncExternalStore(
-    subscribeAuth,
-    getDisplayNameSnapshot,
-    () => null,
-  );
+  // Comes from the server via SessionProvider, so it is already correct in the
+  // first HTML - the navbar never renders logged-out for a logged-in user.
+  const session = useSession();
+  // useAuthActions routes through @repo/i18n/navigation, so signing out keeps the
+  // locale prefix. The old next/navigation router dropped it (/es/... → /auth).
+  const { signOut } = useAuthActions();
+  const displayName = session?.displayName ?? null;
 
-  const handleSignOut = async () => {
-    await logout();
-    clearUser();
-    router.push("/auth");
-  };
+  const handleSignOut = () => void signOut("/auth");
 
   const accountItem: MenuItem = displayName
     ? {

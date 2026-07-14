@@ -139,6 +139,27 @@ class LoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
 
+class TokenReissueView(APIView):
+    """
+    Mint a fresh token pair for the already-authenticated user.
+
+    The frontend renders identity (display name, admin flag) straight from the
+    access token's claims. Those claims are copied from the refresh token, so
+    they are frozen for the refresh token's whole 7-day life - editing your
+    profile would otherwise leave a stale name in the navbar until it expired.
+    Calling this after a profile change rebuilds both tokens from the live user.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        token = CustomTokenObtainPairSerializer.get_token(request.user)
+        return Response({
+            'access': str(token.access_token),
+            'refresh': str(token),
+        })
+
+
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 

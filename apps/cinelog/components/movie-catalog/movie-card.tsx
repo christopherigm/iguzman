@@ -8,7 +8,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import type { Movie } from "@/lib/catalog";
-import { useIsLoggedIn } from "@/lib/use-is-logged-in";
+import { useIsLoggedIn } from "@repo/auth/session-provider";
 import { FormatHeader } from "@/components/format-header";
 import { AddToLibraryButton } from "./add-to-library-button";
 import "./movie-card.css";

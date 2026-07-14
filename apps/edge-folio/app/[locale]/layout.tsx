@@ -17,6 +17,8 @@ import type { ThemeMode, ResolvedTheme } from "@repo/ui/theme-provider";
 import { PaletteProvider } from "@repo/ui/palette-provider";
 import { routing } from "@repo/i18n/routing";
 import { palettes } from "@repo/ui/palettes";
+import { getSession } from "@repo/auth/session";
+import { SessionProvider } from "@repo/auth/session-provider";
 import { NavbarWrapper } from "./navbar-wrapper";
 import { Footer } from "./footer";
 import packageJson from "@/package.json";
@@ -77,6 +79,10 @@ export default async function LocaleLayout({ children, params }: Props) {
   setRequestLocale(locale);
 
   const messages = await getMessages();
+
+  // Decoded from the access-token cookie during this request, so the HTML we
+  // send already reflects who the user is - no logged-out flash, no reload.
+  const session = await getSession();
 
   const tNav = (await getTranslations({ locale, namespace: "Navbar" })) as (
     key: string,
@@ -178,31 +184,33 @@ export default async function LocaleLayout({ children, params }: Props) {
           disable={process.env.NODE_ENV !== "production"}
         >
           <NextIntlClientProvider messages={messages}>
-            <ThemeProvider
-              initialMode={initialMode}
-              initialResolved={initialResolved}
-            >
-              <PaletteProvider palette="cyan" accent="#06b6d4">
-                <NavbarWrapper
-                  logo="/logo-navbar.png"
-                  version={`v${packageJson.version}`}
-                  labels={{
-                    home: tNav("home"),
-                    matrix: tNav("matrix"),
-                    extract: tNav("extract"),
-                    applications: tNav("applications"),
-                    jobs: tNav("jobs"),
-                    workExperience: tNav("workExperience"),
-                    education: tNav("education"),
-                    profile: tNav("profile"),
-                    account: tNav("account"),
-                    signOut: tNav("signOut"),
-                  }}
-                />
-                {children}
-                <Footer logo="/logo-navbar.png" />
-              </PaletteProvider>
-            </ThemeProvider>
+            <SessionProvider session={session}>
+              <ThemeProvider
+                initialMode={initialMode}
+                initialResolved={initialResolved}
+              >
+                <PaletteProvider palette="cyan" accent="#06b6d4">
+                  <NavbarWrapper
+                    logo="/logo-navbar.png"
+                    version={`v${packageJson.version}`}
+                    labels={{
+                      home: tNav("home"),
+                      matrix: tNav("matrix"),
+                      extract: tNav("extract"),
+                      applications: tNav("applications"),
+                      jobs: tNav("jobs"),
+                      workExperience: tNav("workExperience"),
+                      education: tNav("education"),
+                      profile: tNav("profile"),
+                      account: tNav("account"),
+                      signOut: tNav("signOut"),
+                    }}
+                  />
+                  {children}
+                  <Footer logo="/logo-navbar.png" />
+                </PaletteProvider>
+              </ThemeProvider>
+            </SessionProvider>
           </NextIntlClientProvider>
         </SerwistProvider>
       </body>

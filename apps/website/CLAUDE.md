@@ -1,5 +1,48 @@
 # website - App-Specific Conventions
 
+## Auth - shared via `@repo/auth`
+
+The auth stack lives in **`@repo/auth`** and is shared with `cinelog` and
+`edge-folio`. Read `packages/auth/CLAUDE.md` first - it documents the session model
+and the invariants. Only the website-specific parts are listed here.
+
+JWTs live in HTTP-only `access_token` / `refresh_token` cookies and are **invisible
+to JavaScript**. There is no `getAccessToken()`, no `Authorization` header built in
+the browser, and no user in `localStorage`.
+
+- **Identity is server-derived.** `getSession()` decodes the access cookie during the
+  request; the root layout passes it to `<SessionProvider>`; client components read
+  `useSession()`. `isAdmin` and `systemId` are **claims on the token**, so the admin
+  nav renders correctly in the first HTML. They only drive presentation - Django
+  re-derives both from the token on every call, and `proxy.ts` guards `/admin` and
+  `/account`.
+- **Browser → Django always goes through a Route Handler.** Client code calls
+  same-origin `/api/auth/*` (see `lib/auth.ts`); the handler attaches the bearer
+  token from the cookie. Handlers that talk to Django must use `apiFetch` from
+  `@/lib/api-fetch` (a re-export of `@repo/auth/api-fetch`), which refreshes an
+  expired access token and retries once.
+- **The admin CMS proxies through `/api/admin/[...path]`.** `lib/admin-api.ts`
+  rewrites `/api/x` → `/api/admin/x`; the catch-all forwards to Django via
+  `apiFetch` behind a prefix allowlist. Adding a new admin endpoint under a new
+  top-level prefix means adding that prefix to `ALLOWED_PREFIXES`.
+- **`system_id` is resolved server-side, never sent by the client.** Login, signup,
+  password-reset and passkey-authenticate handlers inject it from `getSystemId()`
+  (request host → `getSystem()`), so a browser cannot choose its tenant. This is the
+  one place website diverges from the other two frontends.
+- **`API_URL` is server-only.** It used to be `NEXT_PUBLIC_API_URL`, which shipped the
+  API host to the browser and baked it in at build time. Every consumer is a server
+  component or route handler, so it is now a runtime, server-only variable
+  (`passThroughEnv` in `turbo.json`, plain `env` in `helm/values.yaml`).
+- Routes that verify auth but call an **external** service (`/api/groq/chat`,
+  `/api/ollama/*`) read the cookie themselves and call `refreshAccessToken()` once
+  before returning 401.
+
+Passwords: the policy and its live checklist come from `@repo/auth/password-policy`
+and `@repo/auth/password-requirements`; the `PasswordPolicy` messages are shared via
+`@repo/i18n`. Server-only rules (the common-password list) surface via
+`mapPasswordErrors`. Never add `validators=[validate_password]` in `website-api` -
+use `run_password_validators`.
+
 ## Per-Customer Sites (domain-driven frontend)
 
 This app is **one Next.js app, many customer sites**. Each customer gets a

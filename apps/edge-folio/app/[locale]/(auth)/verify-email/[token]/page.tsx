@@ -1,13 +1,11 @@
 import { setRequestLocale } from "next-intl/server";
-import { VerifyEmailClient } from "./verify-email-client";
+import { VerifyEmail } from "@repo/auth/verify-email";
 
-type Props = {
-  params: Promise<{ locale: string; token: string }>;
-};
+type Props = { params: Promise<{ locale: string; token: string }> };
 
 export default async function VerifyEmailPage({ params }: Props) {
   const { locale, token } = await params;
   setRequestLocale(locale);
 
-  return <VerifyEmailClient token={token} />;
+  return <VerifyEmail token={token} />;
 }

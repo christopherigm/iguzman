@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter, usePathname } from "@repo/i18n/navigation";
 import { Navbar } from "@repo/ui/core-elements/navbar";
@@ -9,20 +9,9 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
-import { logout, clearUser, getStoredUser } from "@/lib/auth";
+import { useSession } from "@repo/auth/session-provider";
+import { useAuthActions } from "@repo/auth/use-auth-actions";
 import { requestAiSearch } from "@/lib/ai-search";
-
-// The stored user lives in localStorage; `app-auth` is dispatched (after the
-// store is updated) whenever it changes. Reading it through useSyncExternalStore
-// avoids a setState-in-effect on mount.
-function subscribeAuth(callback: () => void): () => void {
-  window.addEventListener("app-auth", callback);
-  return () => window.removeEventListener("app-auth", callback);
-}
-
-function getDisplayNameSnapshot(): string | null {
-  return getStoredUser()?.displayName ?? null;
-}
 
 interface NavbarWrapperProps {
   logo: string;
@@ -42,20 +31,16 @@ export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
   const router = useRouter();
   const pathname = usePathname();
   const t = useTranslations("Navbar");
-  const displayName = useSyncExternalStore(
-    subscribeAuth,
-    getDisplayNameSnapshot,
-    () => null,
-  );
+  // Comes from the server via SessionProvider, so it is already correct in the
+  // first HTML - the navbar never renders logged-out for a logged-in user.
+  const session = useSession();
+  const { signOut } = useAuthActions();
+  const displayName = session?.displayName ?? null;
 
   const [modalOpen, setModalOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  const handleSignOut = async () => {
-    await logout();
-    clearUser();
-    router.push("/auth");
-  };
+  const handleSignOut = () => void signOut("/auth");
 
   // Run the AI natural-language search entirely client-side (no `ai` URL param):
   // request the query, which the catalog resolves via the semantic endpoint. If

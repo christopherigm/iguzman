@@ -37,7 +37,7 @@ updating its `registry.ts` entry and `site.config.ts` `slug`.
 ## What lives here vs. what is shared vs. what is generated
 
 - **Committed, per-site (ours to build):** everything under `sites/<slug>/`.
-- **Shared platform (do NOT fork per site):** auth, my-account, admin CMS,
+- **Shared platform (do NOT fork per site):** auth, account, admin CMS,
   navbar/footer, the block library in `apps/website/components/`, the data
   helpers in `apps/website/lib/`, i18n, theme. A site *composes* these; it does
   not copy them.
@@ -97,7 +97,7 @@ exist. The switcher is wired in `app/[locale]/layout.tsx` from `SITE_CONFIGS`
 - `Landing` is required (`/`). `pages` is an optional map of extra top-level
   routes (`{ "/about": About, "/contact": Contact }`) served by the
   `[locale]/[...sitePath]` catch-all. Paths that collide with a platform route
-  (`auth`, `admin`, `my-account`, `products`, `services`, `categories`, `blog`,
+  (`auth`, `admin`, `account`, `products`, `services`, `categories`, `blog`,
   `highlights`) never reach a site — those explicit routes always win, so don't
   name a site page after one.
 

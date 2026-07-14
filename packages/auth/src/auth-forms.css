@@ -1,0 +1,71 @@
+/*
+ * The auth surface: the sign-in/up/reset tabbed form and the reset-password
+ * page share these classes, so both stylesheets used to be copied per app.
+ * Layout, spacing and colour belong on the component props (see the repo's
+ * props-first rule); only what props cannot express lives here.
+ */
+
+.auth-form__form,
+.reset-password__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-form__tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+  margin-bottom: 4px;
+}
+
+.auth-form__tab-btn {
+  flex: 1;
+  padding: 10px 4px;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--muted-foreground, #6b7280);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: -1px;
+}
+
+.auth-form__tab-btn[data-active="true"] {
+  font-weight: 600;
+  color: var(--foreground);
+  border-bottom-color: var(--foreground);
+}
+
+.auth-form__divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted-foreground, #6b7280);
+  font-size: 0.8125rem;
+}
+
+.auth-form__divider::before,
+.auth-form__divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border, #e5e7eb);
+}
+
+/* Box, size and border live on the IconButton's props; only state styling here. */
+.auth-form__passkey-icon-btn {
+  transition:
+    background 0.15s,
+    opacity 0.15s;
+}
+
+.auth-form__passkey-icon-btn:hover:not(:disabled) {
+  background: var(--surface-2, #f3f4f6);
+}
+
+.auth-form__passkey-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}

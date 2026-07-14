@@ -22,73 +22,68 @@ Browser (client component or form action)
 
 **Why:** JWT tokens are stored in HTTP-only cookies (`access_token`, `refresh_token`), which are invisible to JavaScript. Route handlers read those cookies and inject `Authorization: Bearer <token>` before forwarding to Django.
 
+### Auth lives in `@repo/auth`
+
+The auth stack is shared with `cinelog` and `website`. **Read
+`packages/auth/CLAUDE.md`** - it documents the session model (the server owns the
+session; there is no client-side user store) and the invariants. The patterns below
+are the edge-folio-specific bits.
+
 ### Login / Signup Route Handler Pattern
+
+Use `setAuthCookies` - it applies the correct 7-day maxAge so an expired 1-hour JWT
+gets refreshed by the proxy instead of looking like a logout.
 
 ```ts
 // app/api/auth/login/route.ts
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { setAuthCookies } from "@repo/auth/api-fetch";
+import { apiUrl } from "@repo/auth/tokens";
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const res = await fetch(`${process.env.API_URL}/api/auth/login/`, {
+  const body: unknown = await request.json();
+  const res = await fetch(`${apiUrl()}/api/auth/login/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const data = await res.json();
+  const data = (await res.json()) as Record<string, unknown>;
   if (!res.ok) return NextResponse.json(data, { status: res.status });
 
-  const cookieStore = await cookies();
-  cookieStore.set("access_token", data.access, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    path: "/",
-  });
-  cookieStore.set("refresh_token", data.refresh, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    path: "/",
-  });
-  return NextResponse.json({ user: data.user });
+  await setAuthCookies(data.access as string, data.refresh as string);
+  return NextResponse.json({ ok: true });
 }
 ```
 
 ### Authenticated Route Handler Pattern
 
+Always `apiFetch` - never read the cookie by hand. It refreshes an expired token and
+retries once; a manual read turns an expired token into a spurious 401.
+
 ```ts
 // app/api/matrix/route.ts
-import { cookies } from "next/headers";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { apiFetch } from "@/lib/api-fetch";
 
-export async function GET(request: NextRequest) {
-  const token = (await cookies()).get("access_token")?.value;
-  if (!token)
-    return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
-
-  const res = await fetch(`${process.env.API_URL}/api/matrix/`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function GET() {
+  const res = await apiFetch("/api/matrix/", { cache: "no-store" });
   return NextResponse.json(await res.json(), { status: res.status });
 }
 ```
 
+If the route changes an identity claim (the user's name), call `reissueTokens()` after
+a successful write - see `app/api/auth/profile/route.ts`.
+
 ### Server Component Pattern
 
-Server components can call Django directly (server-to-server, no Route Handler needed):
+Use `getSession()` for identity; it decodes the cookie the proxy has already
+refreshed. For data, call Django directly with the access cookie:
 
 ```ts
-import { cookies } from "next/headers";
+import { getSession } from "@repo/auth/session";
 
 export default async function MatrixPage() {
-  const token = (await cookies()).get("access_token")?.value;
-  const res = await fetch(`${process.env.API_URL}/api/matrix/`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
-  const data = await res.json();
+  const session = await getSession(); // null when logged out
   // render...
 }
 ```

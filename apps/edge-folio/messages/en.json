@@ -682,15 +682,6 @@
       "errorGeneric": "Failed to register passkey. You can try again later."
     }
   },
-  "PasswordPolicy": {
-    "ruleMinLength": "At least {count} characters",
-    "ruleNotNumeric": "Not entirely numbers",
-    "ruleNotSimilar": "Not too similar to your name or email",
-    "errorTooShort": "This password is too short. It must contain at least {count} characters.",
-    "errorTooCommon": "This password is too common.",
-    "errorEntirelyNumeric": "This password is entirely numeric.",
-    "errorTooSimilar": "This password is too similar to your name or email."
-  },
   "WorkExperiencePage": {
     "title": "Work Experience",
     "subtitle": "Your professional history",
@@ -980,5 +971,21 @@
     "jobSearchQueryError": "Couldn't generate the query",
     "jobSearchQueryNoData": "Enable at least one preference above to generate a query.",
     "jobSearchApiTitle": "BYOK API Keys"
+  },
+  "ResetPasswordPage": {
+    "title": "Set New Password",
+    "subtitle": "Enter your new password below",
+    "newPasswordLabel": "New Password",
+    "confirmPasswordLabel": "Confirm New Password",
+    "submitButton": "Reset Password",
+    "submitting": "Resetting password…",
+    "errorPasswordMismatch": "Passwords do not match.",
+    "errorGeneric": "Something went wrong. Please try again.",
+    "successTitle": "Password reset!",
+    "successDetail": "Your password has been updated. You can now sign in with your new password.",
+    "backToSignIn": "Back to Sign In",
+    "invalidTitle": "Link invalid or expired",
+    "invalidDetail": "This password reset link is invalid or has expired. Please request a new one.",
+    "requestNewLink": "Request a new reset link"
   }
 }

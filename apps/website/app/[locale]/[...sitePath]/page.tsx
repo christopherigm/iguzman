@@ -10,7 +10,7 @@ type Props = {
  * Per-site extra-page dispatcher. Serves the bespoke top-level pages a site
  * declares in its `pages` map (e.g. "/about", "/contact", later "/menu",
  * "/booking"). This catch-all sits at the lowest routing priority under
- * [locale], so every explicit platform route (auth, admin, my-account,
+ * [locale], so every explicit platform route (auth, admin, account,
  * products, services, categories, blog, highlights…) is matched first and is
  * never shadowed. Only unclaimed top-level paths reach here; an unknown path
  * for the resolved site 404s.

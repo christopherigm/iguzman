@@ -37,7 +37,7 @@ bespoke artifact**, instead of a non-expert + a builder UI.
 | Brand kit: logo, favicon, hero, slogan, name, colors | **Customer** | `System` (CMS) |
 | About/mission/vision, legal (privacy/terms/user-data) | **Customer** | `System` (CMS) |
 | Products, services, categories, variants, brands, stories, highlights | **Customer** | catalog/core (CMS) |
-| Auth, my-account, verify/reset, i18n, PWA, theme | **Platform (shared)** | app-wide |
+| Auth, account, verify/reset, i18n, PWA, theme | **Platform (shared)** | app-wide |
 
 ## Architecture: single app, host-resolved sites
 

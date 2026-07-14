@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -20,10 +21,24 @@ def build_username(system_id, email):
     return f"{system_id}_{email}"
 
 
+def run_password_validators(password, user, field="password"):
+    """
+    Run AUTH_PASSWORD_VALIDATORS against `password` and re-raise any failure as a
+    DRF field error.
+
+    `user` must be supplied: UserAttributeSimilarityValidator short-circuits when
+    it is None, which is exactly what happens when `validate_password` is used as
+    a DRF field validator (DRF calls validators with the value alone). Passing the
+    user here is what makes that validator actually run.
+    """
+    try:
+        validate_password(password, user)
+    except DjangoValidationError as exc:
+        raise serializers.ValidationError({field: list(exc.messages)})
+
+
 class SignUpSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(
-        write_only=True, required=True, validators=[validate_password]
-    )
+    password = serializers.CharField(write_only=True, required=True)
     password2 = serializers.CharField(write_only=True, required=True, label="Confirm password")
     system_id = serializers.IntegerField(write_only=True, required=True)
 
@@ -59,6 +74,15 @@ class SignUpSerializer(serializers.ModelSerializer):
                     {"email": "A user with this email already exists for this system."}
                 )
             attrs["username"] = username
+        # The account does not exist yet, so hand the validators the unsaved user
+        # this signup would create - otherwise the password may equal the email.
+        prospective_user = User(
+            username=attrs.get("username", ""),
+            email=email or "",
+            first_name=attrs.get("first_name", ""),
+            last_name=attrs.get("last_name", ""),
+        )
+        run_password_validators(attrs["password"], prospective_user)
         return attrs
 
     def create(self, validated_data):
@@ -100,7 +124,7 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
     token = serializers.UUIDField()
-    new_password = serializers.CharField(write_only=True, validators=[validate_password])
+    new_password = serializers.CharField(write_only=True)
     new_password2 = serializers.CharField(write_only=True, label="Confirm new password")
 
     def validate(self, attrs):
@@ -148,6 +172,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token = super().get_token(user)
         token["username"] = user.username
         token["email"] = user.email
+        # Identity claims let the Next.js server derive the session straight from
+        # the cookie it already holds, so a page renders logged-in on first paint
+        # instead of flashing logged-out while the browser fetches the profile.
+        # SimpleJWT copies these onto the refreshed access token, and the passkey
+        # views mint through this same method, so every token carries them.
+        token["first_name"] = user.first_name
+        token["last_name"] = user.last_name
         try:
             token["is_admin"] = user.profile.is_admin
         except Exception:
@@ -298,7 +329,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 class ChangePasswordSerializer(serializers.Serializer):
     current_password = serializers.CharField(write_only=True)
-    new_password = serializers.CharField(write_only=True, validators=[validate_password])
+    new_password = serializers.CharField(write_only=True)
     new_password2 = serializers.CharField(write_only=True, label="Confirm new password")
 
     def validate(self, attrs):

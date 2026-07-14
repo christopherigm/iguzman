@@ -1,10 +1,12 @@
+import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { ollamaServerURL } from "@repo/helpers/constants";
+import { refreshAccessToken } from "@/lib/api-fetch";
+import { API_URL } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
 const OLLAMA_URL = ollamaServerURL;
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 // ── Tavily web-search helpers ─────────────────────────────────────────────────
 
@@ -57,26 +59,26 @@ async function verifyToken(token: string): Promise<boolean> {
   }
 }
 
+/**
+ * This route calls the Ollama server (not Django), so it verifies the caller
+ * itself rather than going through `apiFetch`. A stale access token is refreshed
+ * once before giving up, so an expired token is not mistaken for a logged-out user.
+ */
+async function isAuthenticated(): Promise<boolean> {
+  const token = (await cookies()).get("access_token")?.value;
+  if (token && (await verifyToken(token))) return true;
+  return (await refreshAccessToken()) !== null;
+}
+
 type RouteContext = { params: Promise<{ path: string[] }> };
 
 async function handler(
   req: NextRequest,
   context: RouteContext,
 ): Promise<Response> {
-  const authHeader = req.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-
-  if (!token) {
+  if (!(await isAuthenticated())) {
     return NextResponse.json(
       { detail: "Authentication required." },
-      { status: 401 },
-    );
-  }
-
-  const valid = await verifyToken(token);
-  if (!valid) {
-    return NextResponse.json(
-      { detail: "Invalid or expired token." },
       { status: 401 },
     );
   }

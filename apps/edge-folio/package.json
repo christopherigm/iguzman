@@ -13,19 +13,20 @@
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
+    "@repo/auth": "workspace:*",
     "@repo/helpers": "workspace:*",
     "@repo/i18n": "workspace:^",
     "@repo/ui": "workspace:*",
     "@serwist/next": "^9.5.11",
     "@simplewebauthn/browser": "^13.1.0",
     "@swc/helpers": "^0.5.23",
+    "next": "16.3.0-canary.66",
     "next-intl": "^4",
     "pino": "^10.3.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "swiper": "^12.2.0",
-    "web-tree-sitter": "^0.26.9",
-    "next": "16.3.0-canary.66"
+    "web-tree-sitter": "^0.26.9"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

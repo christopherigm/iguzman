@@ -11,20 +11,21 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
-    "sharp": "^0.35.2",
-    "html5-qrcode": "^2.3.8",
+    "@repo/auth": "workspace:*",
     "@repo/helpers": "workspace:*",
-    "@swc/helpers": "^0.5.23",
-    "@repo/ui": "workspace:*",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "swiper": "^12.2.0",
-    "pino": "^10.3.1",
     "@repo/i18n": "workspace:^",
-    "next-intl": "^4",
+    "@repo/ui": "workspace:*",
     "@serwist/next": "^9.5.11",
     "@simplewebauthn/browser": "^13.1.0",
-    "next": "16.3.0-canary.66"
+    "@swc/helpers": "^0.5.23",
+    "html5-qrcode": "^2.3.8",
+    "next": "16.3.0-canary.66",
+    "next-intl": "^4",
+    "pino": "^10.3.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "sharp": "^0.35.2",
+    "swiper": "^12.2.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

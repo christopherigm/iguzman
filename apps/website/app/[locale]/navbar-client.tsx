@@ -1,19 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { usePathname } from "@repo/i18n/navigation";
 import { Navbar } from "@repo/ui/core-elements/navbar";
-import {
-  getAccessToken,
-  getRefreshToken,
-  clearTokens,
-  getUserFromToken,
-} from "@/lib/auth";
-
-function hasTokens(): boolean {
-  return Boolean(getAccessToken() && getRefreshToken());
-}
+import { useSession } from "@repo/auth/session-provider";
+import { useAuthActions } from "@repo/auth/use-auth-actions";
 
 interface NavbarClientProps {
   logo: string;
@@ -30,35 +21,23 @@ export function NavbarClient({
 }: NavbarClientProps) {
   const t = useTranslations("Navbar");
   const pathname = usePathname();
-  // Seed auth state from tokens on the client (lazy init avoids a mount
-  // setState-in-effect); the listener keeps it current on auth changes.
-  const [isLoggedIn, setIsLoggedIn] = useState(
-    () => typeof window !== "undefined" && hasTokens(),
-  );
-  const [isAdmin, setIsAdmin] = useState(
-    () => typeof window !== "undefined" && getUserFromToken()?.isAdmin === true,
-  );
+  // Comes from the server via SessionProvider, decoded from the access-token
+  // cookie - so the admin link and the account menu are already right in the
+  // first HTML instead of popping in after hydration.
+  const session = useSession();
+  const { signOut } = useAuthActions();
 
-  useEffect(() => {
-    const syncAuth = () => {
-      setIsLoggedIn(hasTokens());
-      setIsAdmin(getUserFromToken()?.isAdmin === true);
-    };
-    window.addEventListener("auth-changed", syncAuth);
-    return () => window.removeEventListener("auth-changed", syncAuth);
-  }, []);
+  const isLoggedIn = session !== null;
+  const isAdmin = session?.isAdmin === true;
 
-  const handleSignOut = () => {
-    clearTokens();
-    window.location.reload();
-  };
+  const handleSignOut = () => void signOut("/");
 
   const authItem = isLoggedIn
     ? {
         label: "",
         icon: "/icons/user.svg",
         children: [
-          { label: t("myAccount"), href: "/my-account" },
+          { label: t("myAccount"), href: "/account" },
           { label: t("signOut"), onClick: handleSignOut },
         ],
       }

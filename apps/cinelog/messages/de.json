@@ -98,15 +98,6 @@
       "errorGeneric": "Passkey konnte nicht registriert werden. Du kannst es später erneut versuchen."
     }
   },
-  "PasswordPolicy": {
-    "ruleMinLength": "Mindestens {count} Zeichen",
-    "ruleNotNumeric": "Nicht nur Ziffern",
-    "ruleNotSimilar": "Nicht zu ähnlich zu Name oder E-Mail",
-    "errorTooShort": "Dieses Passwort ist zu kurz. Es muss mindestens {count} Zeichen enthalten.",
-    "errorTooCommon": "Dieses Passwort ist zu häufig.",
-    "errorEntirelyNumeric": "Dieses Passwort besteht nur aus Ziffern.",
-    "errorTooSimilar": "Dieses Passwort ist Ihrem Namen oder Ihrer E-Mail-Adresse zu ähnlich."
-  },
   "ScannerPage": {
     "pageTitle": "Film hinzufügen",
     "pageSubtitle": "Scanne einen Barcode oder suche nach Titel, um ihn zur Überprüfung an deinen Posteingang zu senden.",
@@ -437,5 +428,21 @@
     "browseError": "Dateien konnten nicht aufgelistet werden. Gib den Pfad manuell ein.",
     "loadingObjects": "Dateien werden geladen…",
     "selectBucketFirst": "Wähle zuerst einen Bucket."
+  },
+  "ResetPasswordPage": {
+    "title": "Neues Passwort festlegen",
+    "subtitle": "Geben Sie unten Ihr neues Passwort ein",
+    "newPasswordLabel": "Neues Passwort",
+    "confirmPasswordLabel": "Neues Passwort bestätigen",
+    "submitButton": "Passwort zurücksetzen",
+    "submitting": "Passwort wird zurückgesetzt…",
+    "errorPasswordMismatch": "Passwörter stimmen nicht überein.",
+    "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+    "successTitle": "Passwort zurückgesetzt!",
+    "successDetail": "Ihr Passwort wurde aktualisiert. Sie können sich jetzt mit Ihrem neuen Passwort anmelden.",
+    "backToSignIn": "Zurück zur Anmeldung",
+    "invalidTitle": "Link ungültig oder abgelaufen",
+    "invalidDetail": "Dieser Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen. Bitte fordern Sie einen neuen an.",
+    "requestNewLink": "Neuen Reset-Link anfordern"
   }
 }

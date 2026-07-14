@@ -331,13 +331,12 @@
     "pickColor": "Escolher cor",
     "rawCss": "Valor CSS"
   },
-  "MyAccountPage": {
+  "AccountPage": {
     "title": "Minha conta",
     "subtitle": "Gerencie seu perfil e configurações de segurança",
     "profileSection": "Informações do perfil",
     "securitySection": "Alterar senha",
     "passkeySection": "Chaves de acesso",
-    "profilePictureLabel": "Foto de perfil",
     "firstNameLabel": "Nome",
     "lastNameLabel": "Sobrenome",
     "emailLabel": "E-mail",
@@ -364,7 +363,7 @@
     "passkeyAdded": "Chave de acesso adicionada com sucesso.",
     "passkeyAddError": "Falha ao adicionar a chave de acesso. Tente novamente.",
     "loading": "Carregando…",
-    "notLoggedIn": "Você precisa estar conectado para ver esta página."
+    "changePhoto": "Alterar foto"
   },
   "Footer": {
     "navigationHeading": "Navegação",

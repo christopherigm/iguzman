@@ -16,6 +16,9 @@ import type { ThemeMode, ResolvedTheme } from "@repo/ui/theme-provider";
 import { PaletteProvider } from "@repo/ui/palette-provider";
 import { palettes } from "@repo/ui/palettes";
 import { routing } from "@repo/i18n/routing";
+import { SerwistProvider } from "@serwist/next/react";
+import { getSession } from "@repo/auth/session";
+import { SessionProvider } from "@repo/auth/session-provider";
 import { NavbarClient } from "./navbar-client";
 import { DevSiteSwitcher } from "./dev-site-switcher";
 import { Footer } from "@/components/footer";
@@ -78,7 +81,14 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   setRequestLocale(locale);
 
-  const [messages, system] = await Promise.all([getMessages(), getSystem()]);
+  // The session is decoded from the access-token cookie during this request, so
+  // the HTML we send already reflects who the user is - the admin link and the
+  // account menu no longer pop in after hydration.
+  const [messages, system, session] = await Promise.all([
+    getMessages(),
+    getSystem(),
+    getSession(),
+  ]);
 
   const cookieStore = await cookies();
   const themeModeCookie = cookieStore.get("theme-mode")?.value as
@@ -113,38 +123,42 @@ export default async function LocaleLayout({ children, params }: Props) {
         <ThemeScript />
       </head>
       <body style={bodyStyle}>
-        <NextIntlClientProvider messages={messages}>
-          <ThemeProvider
-            initialMode={initialMode}
-            initialResolved={initialResolved}
-          >
-            <PaletteProvider palette="cyan" accent="#68c3f7">
-              <NavbarClient
-                logo={system?.img_logo ?? "/logo.png"}
-                version={`v${packageJson.version}`}
-                productCount={system?.product_count ?? 0}
-                serviceCount={system?.service_count ?? 0}
-              />
-              {children}
-              {isDev && (
-                <DevSiteSwitcher
-                  sites={SITE_CONFIGS.map((c) => ({
-                    slug: c.slug,
-                    name: c.name,
-                  }))}
-                  current={devSite}
-                  cookieName={DEV_SITE_COOKIE}
-                />
-              )}
-              <FooterVisibility>
-                <Footer
-                  logo={system?.img_logo ?? "/logo.png"}
-                  system={system}
-                />
-              </FooterVisibility>
-            </PaletteProvider>
-          </ThemeProvider>
-        </NextIntlClientProvider>
+        <SerwistProvider swUrl="/sw.js">
+          <NextIntlClientProvider messages={messages}>
+            <SessionProvider session={session}>
+              <ThemeProvider
+                initialMode={initialMode}
+                initialResolved={initialResolved}
+              >
+                <PaletteProvider palette="cyan" accent="#68c3f7">
+                  <NavbarClient
+                    logo={system?.img_logo ?? "/logo.png"}
+                    version={`v${packageJson.version}`}
+                    productCount={system?.product_count ?? 0}
+                    serviceCount={system?.service_count ?? 0}
+                  />
+                  {children}
+                  {isDev && (
+                    <DevSiteSwitcher
+                      sites={SITE_CONFIGS.map((c) => ({
+                        slug: c.slug,
+                        name: c.name,
+                      }))}
+                      current={devSite}
+                      cookieName={DEV_SITE_COOKIE}
+                    />
+                  )}
+                  <FooterVisibility>
+                    <Footer
+                      logo={system?.img_logo ?? "/logo.png"}
+                      system={system}
+                    />
+                  </FooterVisibility>
+                </PaletteProvider>
+              </ThemeProvider>
+            </SessionProvider>
+          </NextIntlClientProvider>
+        </SerwistProvider>
       </body>
     </html>
   );

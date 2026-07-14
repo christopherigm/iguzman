@@ -69,7 +69,8 @@ This is a **Turborepo monorepo** with Next.js applications and shared packages.
 - **`@repo/ui`** - Shared React components, theme providers, palette system, and the `use-ffmpeg` hook for FFmpeg WASM integration (depends on `next/*`; web apps only)
 - **`@repo/ui-tv`** - Smart TV (Tizen) React primitives: D-pad spatial navigation, 10-foot components, and the old-Chromium-safe `TvImage`. Bundler-agnostic (no `next/*`) so it runs in the Vite/Tizen SPA. See `packages/ui-tv/CLAUDE.md`
 - **`@repo/ui-native`** - React Native primitives for Expo apps: props-first `Box`/`Typography`/`Button`/`Screen` (the native mirror of `@repo/ui`'s props-first API), a themed palette system, and `ThemeProvider`/`useTheme`. Imports only `react`/`react-native` (no `next/*`, no DOM) so Metro bundles it from source. See `packages/ui-native/CLAUDE.md`
-- **`@repo/i18n`** - `next-intl` routing and config for multi-locale support
+- **`@repo/i18n`** - `next-intl` routing and config for multi-locale support, plus the shared message namespaces (`Common`, `PasswordPolicy`) every app merges into its own
+- **`@repo/auth`** - The auth stack shared by `cinelog`, `edge-folio` and `website`: server-side session (`getSession`), `apiFetch` with refresh-and-retry, the `createAuthProxy` middleware factory, browser auth calls + passkeys, `SessionProvider`/`useSession`, and the password policy. See "Auth" below and `packages/auth/CLAUDE.md`
 - **`@repo/eslint-config`** - Shared flat ESLint config (Next.js variant)
 - **`@repo/typescript-config`** - Shared `tsconfig` base (ESM, strict, ES2022)
 - **`packages/charts`** - Helm charts for Kubernetes deployment

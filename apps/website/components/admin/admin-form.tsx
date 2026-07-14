@@ -18,7 +18,6 @@ import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { Toast } from "@repo/ui/core-elements/toast";
 import { SpeechButton } from "@repo/ui/core-elements/speech-button";
-import { getAccessToken } from "@/lib/auth";
 import { useOllamaProxy, type LlmMessage } from "@repo/ui/use-ollama";
 import { useGroqProxy } from "@repo/ui/use-groq";
 import {
@@ -275,13 +274,10 @@ export function AdminForm({
   }, []);
 
   // ── LLM hooks (both must be called unconditionally) ───────────────────────
-  const getAuthHeaders = useCallback((): Record<string, string> => {
-    const token = getAccessToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  }, []);
-
-  const ollamaHook = useOllamaProxy({ temperature: 0.7, getAuthHeaders });
-  const groqHook = useGroqProxy({ temperature: 0.7, getAuthHeaders });
+  // No auth headers: the proxy routes authenticate the caller from the HTTP-only
+  // cookie, which the browser sends automatically.
+  const ollamaHook = useOllamaProxy({ temperature: 0.7 });
+  const groqHook = useGroqProxy({ temperature: 0.7 });
 
   const {
     streamingText,

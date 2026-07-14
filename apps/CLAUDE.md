@@ -139,18 +139,35 @@ For **native form elements** (`<select>`, `<input>`, `<textarea>`) where `<Typog
 
 Next.js 16 renamed `middleware.ts` to `proxy.ts`. Use `proxy.ts` at the app root - never `middleware.ts`.
 
+Apps with auth (`cinelog`, `edge-folio`, `website`) use the shared factory from
+`@repo/auth`, which combines the next-intl middleware with JWT session upkeep
+(it refreshes an expired access token on every page request, so public pages also
+render logged-in). See `packages/auth/CLAUDE.md`.
+
 ```ts
 // proxy.ts
+import { createAuthProxy } from "@repo/auth/proxy";
+
+export default createAuthProxy({
+  protectedPrefixes: ["/account", "/admin"],
+});
+
+// The matcher MUST be an inline literal. Next.js statically analyses it at build
+// time; an imported constant silently fails to parse, the proxy then runs on
+// /api/* too, and the intl middleware redirects POST /api/auth/login to
+// /en/api/auth/login - breaking login.
+export const config = {
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)"],
+};
+```
+
+An app with no auth uses the intl middleware directly:
+
+```ts
 import createMiddleware from "next-intl/middleware";
-import { NextRequest, NextResponse } from "next/server";
 import { routing } from "@repo/i18n/routing";
 
-const intlMiddleware = createMiddleware(routing);
-
-export default function proxy(request: NextRequest) {
-  // auth guard or other logic here, then:
-  return intlMiddleware(request);
-}
+export default createMiddleware(routing);
 
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)"],

@@ -3,8 +3,8 @@
   "extends": ["//"],
   "tasks": {
     "build": {
-      "env": ["NEXT_PUBLIC_API_URL"],
       "passThroughEnv": [
+        "API_URL",
         "LOG_LEVEL",
         "SCRAPER_URL",
         "SCRAPER_API_KEY",

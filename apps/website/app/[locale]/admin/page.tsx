@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { getUserFromToken } from "@/lib/auth";
+import { useSession } from "@repo/auth/session-provider";
 import "./admin-home.css";
 import { ADMIN_NAV_ITEMS } from "./admin-nav-items";
 
@@ -20,12 +19,10 @@ function trimName(name: string): string {
 
 export default function AdminPage() {
   const t = useTranslations("Admin");
-  // Derived from the client-only token via lazy init (avoids a setState-in-effect).
-  const [username] = useState(() => {
-    if (typeof window === "undefined") return t("breadcrumbAdmin");
-    const user = getUserFromToken();
-    return trimName(user?.firstName ?? user?.email ?? t("breadcrumbAdmin"));
-  });
+  // The session comes from the server, so the greeting is correct in the first
+  // render - no lazy-init dance to work around localStorage being invisible to it.
+  const session = useSession();
+  const username = trimName(session?.displayName ?? t("breadcrumbAdmin"));
 
   return (
     <Box className="admin-home">

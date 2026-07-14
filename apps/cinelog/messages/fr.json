@@ -98,15 +98,6 @@
       "errorGeneric": "Impossible d'enregistrer la clé d'accès. Vous pouvez réessayer plus tard."
     }
   },
-  "PasswordPolicy": {
-    "ruleMinLength": "Au moins {count} caractères",
-    "ruleNotNumeric": "Pas uniquement des chiffres",
-    "ruleNotSimilar": "Pas trop proche de votre nom ou e-mail",
-    "errorTooShort": "Ce mot de passe est trop court. Il doit contenir au moins {count} caractères.",
-    "errorTooCommon": "Ce mot de passe est trop courant.",
-    "errorEntirelyNumeric": "Ce mot de passe est entièrement numérique.",
-    "errorTooSimilar": "Ce mot de passe est trop proche de votre nom ou de votre e-mail."
-  },
   "ScannerPage": {
     "pageTitle": "Ajouter un film",
     "pageSubtitle": "Scannez un code-barres ou recherchez par titre pour l'envoyer dans votre boîte de réception pour révision.",
@@ -437,5 +428,21 @@
     "browseError": "Impossible de lister les fichiers. Saisissez le chemin manuellement.",
     "loadingObjects": "Chargement des fichiers…",
     "selectBucketFirst": "Sélectionnez d'abord un bucket."
+  },
+  "ResetPasswordPage": {
+    "title": "Définir un nouveau mot de passe",
+    "subtitle": "Entrez votre nouveau mot de passe ci-dessous",
+    "newPasswordLabel": "Nouveau mot de passe",
+    "confirmPasswordLabel": "Confirmer le nouveau mot de passe",
+    "submitButton": "Réinitialiser le mot de passe",
+    "submitting": "Réinitialisation en cours…",
+    "errorPasswordMismatch": "Les mots de passe ne correspondent pas.",
+    "errorGeneric": "Une erreur s'est produite. Veuillez réessayer.",
+    "successTitle": "Mot de passe réinitialisé !",
+    "successDetail": "Votre mot de passe a été mis à jour. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
+    "backToSignIn": "Retour à la connexion",
+    "invalidTitle": "Lien invalide ou expiré",
+    "invalidDetail": "Ce lien de réinitialisation est invalide ou a expiré. Veuillez en demander un nouveau.",
+    "requestNewLink": "Demander un nouveau lien"
   }
 }

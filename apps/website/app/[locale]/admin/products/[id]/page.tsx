@@ -22,7 +22,7 @@ import {
   checkSlug,
 } from "@/lib/admin-api";
 import { buildSlug } from "@/lib/slug-utils";
-import { getUserFromToken } from "@/lib/auth";
+import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
@@ -106,7 +106,7 @@ export default function AdminProductFormPage({ params }: Props) {
   const [success, setSuccess] = useState<string | null>(null);
   const [slugError, setSlugError] = useState<string | null>(null);
 
-  const systemId = getUserFromToken()?.systemId ?? 0;
+  const systemId = useSession()?.systemId ?? 0;
 
   // Auto-populate slug from name for new records (the slug field is read-only).
   // Derived during render rather than in an effect; the guard stops it looping
