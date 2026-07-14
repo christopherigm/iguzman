@@ -11,6 +11,7 @@ const TABS = [
   "tools",
   "smart-tv",
   "mob-forge",
+  "new-site",
   "dev-cycle",
 ] as const;
 type Tab = (typeof TABS)[number];

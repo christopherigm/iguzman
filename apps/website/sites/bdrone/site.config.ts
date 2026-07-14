@@ -5,8 +5,8 @@ import type { SiteConfig } from "../types";
 const config: SiteConfig = {
   slug: "bdrone",
   name: "Bdrone",
-  hosts: ["bdrone"],
-  systemHost: "bdrone",
+  hosts: ["bdrone.com.mx"],
+  systemHost: "bdrone.com.mx",
 };
 
 export default config;

@@ -1,6 +1,6 @@
 # apps/help CLAUDE.md
 
-`apps/help/` is the developer documentation hub for this monorepo. It has seven tabs. When anything in the inventory below changes - flags, defaults, new operations, removed features, renamed commands - update both the relevant source file **and** all five locale files (`messages/en.json`, `es.json`, `de.json`, `fr.json`, `pt.json`) in the same task.
+`apps/help/` is the developer documentation hub for this monorepo. It has eight tabs. When anything in the inventory below changes - flags, defaults, new operations, removed features, renamed commands - update both the relevant source file **and** all five locale files (`messages/en.json`, `es.json`, `de.json`, `fr.json`, `pt.json`) in the same task.
 
 ## Inventory by Tab
 
@@ -22,6 +22,7 @@
 | `NEW_TV_APP_COMMAND`        | `cli/new-smarttv-app/new-smarttv-app.sh`                                                                                                                                                       |
 | `NEW_RN_APP_COMMAND`        | `cli/new-rn-app/new-rn-app.sh`                                                                                                                                                                 |
 | `NEW_SITE_COMMAND`          | `cli/new-site/new-site.sh`                                                                                                                                                                     |
+| `PUBLISH_SITE_COMMAND`      | `scripts/publish-site.mjs` (+ `apps/website-api` `export_site` / `POST /api/publish-site/`)                                                                                                     |
 | `SETUP_MINECRAFT_COMMAND`   | `cli/setup-minecraft/setup-minecraft.sh`                                                                                                                                                       |
 | `GENERATE_ICONS_COMMANDS`   | `cli/generate-icons/generate-icons.sh`                                                                                                                                                         |
 | `SECRETS_COMMAND`           | `cli/setup-k8s-secrets/setup-k8s-secrets.sh`                                                                                                                                                   |
@@ -86,6 +87,21 @@ The `apps/mob-forge` pipeline, ordered **setup-first, workflow-last** and split 
 | Author an Item          | The `/item-forge` skill for flat inventory items (gems, food, tools/weapons — not blocks/mobs), deterministic sprite generation via `apps/mob-forge/tools/item_sprite.py` (Python 3 + Pillow, no Blockbench), generated file tree (`ModItems`/`ModCreativeTabs`, `textures/item/`, `models/item/`, `blockbench/items/<id>.bbmodel`), attended in-game check in the "Mob Forge Items" creative tab |
 
 Windows has no bootstrap step because the NeoForge MDK Gradle scaffold (incl. `gradlew.bat` and the GeckoLib injection) is committed to `apps/mob-forge`. The `build`/`dev`/`clean` pnpm scripts run through `apps/mob-forge/tools/gradlew.mjs` (a cross-platform Node launcher), so `pnpm --filter=mob-forge build` works on Windows too — the Windows build step shows it alongside the direct `.\gradlew.bat` call. The scripted face-painter (`tools/mob_face.py`) additionally needs Python 3 + Pillow; `setup-minecraft.sh` (Bash-only) installs neither, so the panel documents the per-OS install. All external download/doc URLs live in the `DOC_*` constants at the top of the panel.
+
+### New Site - `app/[locale]/new-site-panel.tsx`
+
+The end-to-end workflow for building a bespoke per-customer site in `apps/website`, ordered as a pipeline: overview → scaffold/configure → design the frontend → seed content → verify locally → publish to production. Source of truth is the `/new-site` skill (`.claude/skills/new-site/SKILL.md`), `cli/new-site/new-site.sh`, and `apps/website/sites/CLAUDE.md`, with the seed/publish steps drawn from the `/seed-site` skill, `scripts/publish-site.mjs`, and `scripts/sync-website-hosts.mjs` - keep this panel in sync when any of them change (the skill flow, the `new-site` CLI args, the `SiteConfig`/`registry.ts` contract, the `publish-site`/`sync-website-hosts`/`seed_site` commands, or the dev site-switcher mechanism).
+
+| Group (in order)      | Sections documented                                                                                                                                                               |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview              | The one-app-many-sites model (host-resolved `sites/<slug>/`, `_default` fallback, we-code-the-frontend / customer-self-edits-content), frontend-only preconditions               |
+| Scaffold & Configure  | Author with the `/new-site` skill, the `pnpm new-site <domain> [slug]` CLI, the generated file tree (`site.config.ts`/`landing.tsx`/`index.ts` + `registry.ts` entry), configuring `hosts`/`systemHost` |
+| Design the Frontend   | Rework `landing.tsx` from the block library (props-first, tenant colors), optional extra `pages/` + the Server-Component navbar caveat (`--ui-navbar-height` padding vars)         |
+| Seed Initial Content  | `/seed-site` in a separate Claude session → strategy interview → `seed_site` command (System copy + stories/highlights/catalog, placeholder assets)                              |
+| Verify Locally        | `check-types` + `lint --filter=website`, then `pnpm dev` + the dev-only site switcher (`__dev_site` cookie) so `127.0.0.1` resolves to the slug                                   |
+| Publish to Production  | Redeploy `website-api` first, `pnpm publish-site <host>` (upsert content, images skipped), `pnpm sync-website-hosts` (ingress + CORS), redeploy `website`                        |
+
+The panel has no external `DOC_*` links (the whole workflow is in-repo) and no per-OS split (it is a Claude Code + pnpm workflow). It reuses the same local `StepSection`/`GroupLabel` helpers as the Smart TV and Mob Forge panels.
 
 ## Adding a New Tool or Section
 

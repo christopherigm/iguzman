@@ -22,7 +22,7 @@ const VALUES_YAML = join(APPS_DIR, "website", "helm", "values.yaml");
 const API_VALUES_YAML = join(APPS_DIR, "website-api", "helm", "values.yaml");
 
 // Fixed API host - always included in ALLOWED_HOSTS / CSRF_TRUSTED_ORIGINS
-const API_HOST = "api.website.iguzman.com.mx";
+const API_HOST = "website-api.iguzman.com.mx";
 
 // ── YAML helpers ────────────────────────────────────────────────────────────
 
@@ -89,7 +89,7 @@ const apiEnv = readEnvFile(join(APPS_DIR, "website-api", ".env"));
 const { rl, prompt } = createPrompt({ defaultYes: autoYes });
 
 // Resolve API URL
-const defaultApiUrl = "https://api.website.iguzman.com.mx";
+const defaultApiUrl = "https://website-api.iguzman.com.mx";
 
 const apiUrl = autoYes
   ? defaultApiUrl

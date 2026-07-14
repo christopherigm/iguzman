@@ -1,11 +1,9 @@
-import type { CSSProperties } from "react";
 import { getTranslations } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
 import { Container } from "@repo/ui/core-elements/container";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Button } from "@repo/ui/core-elements/button";
 import { getSystem } from "@/lib/system";
-import "../bdrone.css";
 
 /**
  * Bdrone "/contact" page. The backend has no dedicated contact fields, so this
@@ -20,23 +18,18 @@ export async function Contact() {
   ]);
 
   const primary = system?.primary_color ?? "#2196f3";
-  const secondary = system?.secondary_color ?? "#e040fb";
   const hasServices = (system?.service_count ?? 0) > 0;
   const hasProducts = (system?.product_count ?? 0) > 0;
 
-  const ctaBase: CSSProperties = { fontWeight: 700, fontSize: "1rem" };
-  const brandVar = { "--bdrone-brand": primary } as CSSProperties;
-
-  // Full-bleed brand band that starts under the fixed navbar; paddingTop clears
-  // it via the shared @repo/ui CSS var, so we avoid importing the heavy
-  // "use client" navbar module into this server component just for a spacer.
+  // Full-bleed band that starts under the fixed navbar; paddingTop clears it via
+  // the shared @repo/ui CSS var, so we avoid importing the heavy "use client"
+  // navbar module into this server component just for a spacer. A calm neutral
+  // surface, not a brand gradient - the primary CTA carries the brand.
   return (
     <Box
       width="100%"
       paddingTop="var(--ui-navbar-height, 57px)"
-      styles={{
-        background: `linear-gradient(135deg, ${primary}1f 0%, ${secondary}12 100%)`,
-      }}
+      backgroundColor="var(--surface-2)"
     >
       <Container size="sm" paddingX={10}>
         <Box
@@ -80,27 +73,15 @@ export async function Contact() {
               <Button
                 text={t("contact.servicesCta")}
                 href="/services"
-                unstyled
-                className="bdrone-cta"
-                backgroundColor={primary}
-                color="#fff"
-                padding="14px 26px"
-                borderRadius={12}
-                elevation={4}
-                styles={ctaBase}
+                kind="primary"
+                size="lg"
               />
             )}
             {hasProducts && (
               <Button
                 text={t("contact.productsCta")}
                 href="/products"
-                unstyled
-                className="bdrone-cta bdrone-cta-outline"
-                color={primary}
-                border={`2px solid ${primary}`}
-                padding="12px 24px"
-                borderRadius={12}
-                styles={{ ...ctaBase, ...brandVar }}
+                size="lg"
               />
             )}
           </Box>

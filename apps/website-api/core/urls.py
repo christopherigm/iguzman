@@ -8,6 +8,7 @@ from .views import (
     CompanyHighlightItemDetailView,
     CompanyHighlightItemsView,
     CompanyHighlightListView,
+    PublishSiteView,
     SlugCheckView,
     SuccessStoryBySlugView,
     SuccessStoryDetailView,
@@ -20,6 +21,7 @@ from .views import (
 
 urlpatterns = [
     path("systems/", SystemListView.as_view(), name="system-list"),
+    path("publish-site/", PublishSiteView.as_view(), name="publish-site"),
     path("system/", SystemView.as_view(), name="system-detail"),
     path("system/<int:pk>/", SystemView.as_view(), name="system-update"),
 

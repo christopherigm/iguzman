@@ -84,3 +84,23 @@ Examples requiring confirmation before exposure:
 - `password`, `hashed_password`, any password-adjacent field
 - `email`, `phone_number`, `date_of_birth`, or other PII
 - `token`, `secret`, `api_key`, `refresh_token`
+
+## Publishing a site's content (dev → prod)
+
+`core/site_payload.py` is the portable serialize/apply layer for a `System`'s
+content (stories, highlights, product/service catalog). It backs the **publish**
+flow that moves a locally-seeded, tested site into production:
+
+- `export_site <host>` (management command) → `serialize_system` dumps the System
+  + children to a brief-shaped JSON payload with real slugs. **Image files are
+  omitted** — every image is an `ImageField` (a file), not portable data.
+- `POST /api/publish-site/` (`PublishSiteView`, `BasicAuthentication` +
+  `IsAdminUser`, mirroring `SystemListView`) → `apply_payload` upserts the System
+  by host and every child by slug. It **never touches image fields on update**, so
+  a customer's CMS-uploaded images survive a re-publish; `{"reset": true}` wipes
+  the System's prior content first. The view invalidates the system + catalog +
+  stories/highlights cache namespaces afterward (see the Caching Rule above).
+
+Driven by `pnpm publish-site <host>` (`scripts/publish-site.mjs`). `seed_site`
+imports `SYSTEM_TEXT_FIELDS` from `site_payload` so seeding and publishing agree
+on which System fields are copyable content.

@@ -1,6 +1,6 @@
 {
   "name": "website-api",
-  "version": "0.1.75",
+  "version": "0.1.76",
   "scripts": {
     "venv": "source venv/bin/activate",
     "requirements": "pip install -r requirements.txt",
@@ -9,6 +9,7 @@
     "migrations": "python3 manage.py makemigrations",
     "superuser": "python3 manage.py createsuperuser",
     "dev": "python3 manage.py runserver 0.0.0.0:8000",
+    "seed-site": "python3 manage.py seed_site",
     "freeze": "pip freeze > requirements.txt"
   }
 }

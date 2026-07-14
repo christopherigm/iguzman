@@ -106,11 +106,17 @@ export default async function LocaleLayout({ children, params }: Props) {
   const isDev = process.env.NODE_ENV === "development";
   const devSite = isDev ? (cookieStore.get(DEV_SITE_COOKIE)?.value ?? "") : "";
 
+  // Drive the accent from the resolved tenant's brand color so every core
+  // component keyed on `--accent` (e.g. `Button kind="primary"`) renders in the
+  // customer's brand without any per-site restyling. Falls back to the platform
+  // cyan when the System has no primary_color set.
+  const accent = system?.primary_color ?? "#68c3f7";
+
   const paletteVars = palettes["cyan"]?.[initialResolved] ?? {};
   const bodyStyle = Object.fromEntries(
     Object.entries(paletteVars),
   ) as React.CSSProperties;
-  (bodyStyle as Record<string, string>)["--accent"] = "#68c3f7";
+  (bodyStyle as Record<string, string>)["--accent"] = accent;
 
   return (
     <html
@@ -130,7 +136,7 @@ export default async function LocaleLayout({ children, params }: Props) {
                 initialMode={initialMode}
                 initialResolved={initialResolved}
               >
-                <PaletteProvider palette="cyan" accent="#68c3f7">
+                <PaletteProvider palette="cyan" accent={accent}>
                   <NavbarClient
                     logo={system?.img_logo ?? "/logo.png"}
                     version={`v${packageJson.version}`}

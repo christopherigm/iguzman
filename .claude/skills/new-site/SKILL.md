@@ -25,6 +25,9 @@ customer was given, ask for one before starting.
   `site.config.ts` + `landing.tsx` + `index.ts`); mirror its structure.
 - Root **`CLAUDE.md`** styling rule (props-first, CSS-last) and
   `apps/website/CLAUDE.md` shared utility classes.
+- **`/site-design`** skill — the design playbook (visual quality bar, the
+  anti-"AI-generated-look" rules, core-element purity, craft rubric, and
+  per-business-type layout archetypes). **Invoke it in step 4 before composing.**
 
 ## Preconditions
 
@@ -47,12 +50,18 @@ customer was given, ask for one before starting.
    mirroring `_default/` and register it per `sites/CLAUDE.md`.
 3. **Configure.** Fill `site.config.ts`: `slug`, `name`, all `hosts` (production
    + preview), and `systemHost` (the customer's `System.host`).
-4. **Design the landing.** Rework `landing.tsx` into a unique, well-structured
-   composition — deliberate section order, strong hero, clear hierarchy — built
-   from the block library (`@/components/*`) and cached `lib/` data helpers.
-   Site-specific sections go in `sites/<slug>/sections/`. **Props-first, CSS-last**
-   on every `@repo/ui` component. Keep it responsive, theme-aware, and driven by
-   the tenant's `System` colors where the design allows.
+4. **Design the landing.** **First invoke the `/site-design` skill** and follow
+   it — pick the layout archetype for the customer's business type, apply the
+   craft rubric, and avoid the AI-look tells. Rework `landing.tsx` into a unique,
+   well-structured composition — deliberate section order, strong hero, clear
+   hierarchy — built from the block library (`@/components/*`) and cached `lib/`
+   data helpers. Site-specific sections go in `sites/<slug>/sections/`; a bespoke
+   component variant (e.g. an outline CTA) goes in `sites/<slug>/components/`,
+   built from `@repo/ui` — never a fork of it. **Props-first, CSS-last** on every
+   `@repo/ui` component; use core `Button`/`LinkButton` with `kind`/`size` (the
+   layout already drives `--accent` from the tenant brand — no `unstyled` hacks).
+   Keep it responsive, theme-aware, no purple defaults, no `translateY` hovers,
+   no gradient soup.
 5. **Extra pages (if briefed).** Add components under `sites/<slug>/pages/` and
    wire them into the `SiteModule.pages` map (`{ "/about": About }`). Never name
    one after a platform route (auth, admin, account, products, services,
@@ -72,7 +81,15 @@ customer was given, ask for one before starting.
    dev-only **site switcher** (bottom-left dropdown, development only) to select
    this site — it sets the `__dev_site` cookie so the local host resolves to the
    new folder instead of `_default`. (Production still resolves purely by host.)
-7. **Hand off the domain step.** Remind the operator that a real public domain
+7. **Populate initial content (separate call).** This skill builds the
+   **frontend only** — the landing renders blank until the backend `System` +
+   stories/highlights/catalog exist. Hand off to the **`/seed-site`** skill **in a
+   fresh Claude session** to run the business-strategy interview and seed that
+   content (it writes a brief and runs `website-api`'s `seed_site` command, using
+   the `seed_assets/` placeholder pool). Keeping it a separate call stops the long
+   interview transcript from eating this build's context. Tell the operator:
+   *"run `/seed-site <domain>` in a new session to populate the landing."*
+8. **Hand off the domain step.** Remind the operator that a real public domain
    also needs its `System.host` created and `pnpm sync-website-hosts` run so the
    ingress routes it to this app.
 

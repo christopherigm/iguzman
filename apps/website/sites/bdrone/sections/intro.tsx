@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import Image from "next/image";
 import { getTranslations, getLocale } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
@@ -6,14 +5,18 @@ import { Container } from "@repo/ui/core-elements/container";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Button } from "@repo/ui/core-elements/button";
+import { LinkButton } from "@repo/ui/core-elements/link-button";
 import { getSystem } from "@/lib/system";
-import "../bdrone.css";
 
 /**
  * Bespoke "who we are" intro for the Bdrone site. A two-column split: the
- * tenant's About copy + brand-colored CTAs on one side, its About image (or a
- * themed brand panel) on the other. All copy/imagery is DB-driven (System) so
- * the customer self-edits it via the CMS; only the composition is ours.
+ * tenant's About copy + CTAs on one side, its About image on the other. All
+ * copy/imagery is DB-driven (System) so the customer self-edits it via the CMS;
+ * only the composition is ours.
+ *
+ * CTAs are plain core `Button`/`LinkButton` primitives - the primary action
+ * picks up the tenant's brand color automatically because the layout drives
+ * `--accent` from `System.primary_color`. No `unstyled`, no custom CTA CSS.
  */
 export async function Intro() {
   const [system, locale, t] = await Promise.all([
@@ -33,13 +36,8 @@ export async function Intro() {
   if (!body) return null;
 
   const primary = system?.primary_color ?? "#2196f3";
-  const secondary = system?.secondary_color ?? "#e040fb";
   const hasServices = (system?.service_count ?? 0) > 0;
   const hasProducts = (system?.product_count ?? 0) > 0;
-
-  // Shared CTA sizing (unstyled Buttons don't get the built-in size tokens).
-  const ctaBase: CSSProperties = { fontWeight: 700, fontSize: "1rem" };
-  const brandVar = { "--bdrone-brand": primary } as CSSProperties;
 
   return (
     <Container paddingX={10}>
@@ -71,7 +69,7 @@ export async function Intro() {
 
               <Box
                 display="flex"
-                gap="14px"
+                gap="16px"
                 flexWrap="wrap"
                 alignItems="center"
                 marginTop="8px"
@@ -80,38 +78,18 @@ export async function Intro() {
                   <Button
                     text={t("intro.exploreServices")}
                     href="/services"
-                    unstyled
-                    className="bdrone-cta"
-                    backgroundColor={primary}
-                    color="#fff"
-                    padding="14px 26px"
-                    borderRadius={12}
-                    elevation={4}
-                    styles={ctaBase}
+                    kind="primary"
+                    size="lg"
                   />
                 )}
                 {hasProducts && (
                   <Button
                     text={t("intro.viewProducts")}
                     href="/products"
-                    unstyled
-                    className="bdrone-cta bdrone-cta-outline"
-                    color={primary}
-                    border={`2px solid ${primary}`}
-                    padding="12px 24px"
-                    borderRadius={12}
-                    styles={{ ...ctaBase, ...brandVar }}
+                    size="lg"
                   />
                 )}
-                <Button
-                  text={t("intro.learnMore")}
-                  href="/about"
-                  unstyled
-                  className="bdrone-cta"
-                  color={primary}
-                  padding="12px 8px"
-                  styles={{ ...ctaBase, textDecoration: "underline" }}
-                />
+                <LinkButton label={t("intro.learnMore")} href="/about" />
               </Box>
             </Box>
           </Grid>
@@ -122,12 +100,9 @@ export async function Intro() {
               height={420}
               maxHeight="60vh"
               borderRadius={20}
-              elevation={10}
-              styles={{
-                position: "relative",
-                overflow: "hidden",
-                background: `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)`,
-              }}
+              elevation={6}
+              backgroundColor="var(--surface-2)"
+              styles={{ position: "relative", overflow: "hidden" }}
             >
               {system?.img_about && (
                 <Image

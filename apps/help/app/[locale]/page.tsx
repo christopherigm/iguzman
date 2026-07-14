@@ -10,6 +10,7 @@ import { ServicesPanel } from "./services-panel";
 import { ToolsPanel } from "./edit-videos-panel";
 import { SmartTvPanel } from "./smarttv-panel";
 import { MobForgePanel } from "./mob-forge-panel";
+import { NewSitePanel } from "./new-site-panel";
 import "./page.css";
 
 type Props = {
@@ -24,6 +25,7 @@ const VALID_TABS = [
   "tools",
   "smart-tv",
   "mob-forge",
+  "new-site",
   "dev-cycle",
 ] as const;
 type Tab = (typeof VALID_TABS)[number];
@@ -59,6 +61,7 @@ const NEW_API_COMMAND = "pnpm new-api";
 const NEW_TV_APP_COMMAND = "pnpm new-tv-app";
 const NEW_RN_APP_COMMAND = "pnpm new-rn-app";
 const NEW_SITE_COMMAND = "pnpm new-site <domain>";
+const PUBLISH_SITE_COMMAND = "pnpm publish-site <host>";
 const SETUP_MINECRAFT_COMMAND = "pnpm setup-minecraft";
 const GENERATE_ICONS_COMMANDS =
   "pnpm generate-icons              # pick app interactively\n" +
@@ -121,9 +124,11 @@ export default async function Home({ params, searchParams }: Props) {
             ? t("smartTvTitle")
             : tab === "mob-forge"
               ? t("mobForgeTitle")
-              : tab === "dev-cycle"
-                ? t("devCycleTitle")
-                : t("title");
+              : tab === "new-site"
+                ? t("newSiteTitle")
+                : tab === "dev-cycle"
+                  ? t("devCycleTitle")
+                  : t("title");
 
   const subheading =
     tab === "getting-started"
@@ -136,9 +141,11 @@ export default async function Home({ params, searchParams }: Props) {
             ? t("smartTvSubtitle")
             : tab === "mob-forge"
               ? t("mobForgeSubtitle")
-              : tab === "dev-cycle"
-                ? t("devCycleSubtitle")
-                : t("subtitle");
+              : tab === "new-site"
+                ? t("newSiteSubtitle")
+                : tab === "dev-cycle"
+                  ? t("devCycleSubtitle")
+                  : t("subtitle");
 
   const menuLabels = {
     "getting-started": t("menuGettingStarted"),
@@ -147,6 +154,7 @@ export default async function Home({ params, searchParams }: Props) {
     tools: t("menuTools"),
     "smart-tv": t("menuSmartTv"),
     "mob-forge": t("menuMobForge"),
+    "new-site": t("menuNewSite"),
     "dev-cycle": t("menuDevCycle"),
   };
 
@@ -269,6 +277,11 @@ export default async function Home({ params, searchParams }: Props) {
                   code={NEW_SITE_COMMAND}
                 />
                 <Section
+                  heading={t("publishSiteSection")}
+                  description={t("publishSiteDescription")}
+                  code={PUBLISH_SITE_COMMAND}
+                />
+                <Section
                   heading={t("setupMinecraftSection")}
                   description={t("setupMinecraftDescription")}
                   code={SETUP_MINECRAFT_COMMAND}
@@ -360,6 +373,8 @@ export default async function Home({ params, searchParams }: Props) {
             {tab === "smart-tv" && <SmartTvPanel />}
 
             {tab === "mob-forge" && <MobForgePanel />}
+
+            {tab === "new-site" && <NewSitePanel />}
 
             {tab === "dev-cycle" && (
               <>

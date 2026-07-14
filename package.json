@@ -19,6 +19,7 @@
     "secrets": "bash cli/setup-k8s-secrets/setup-k8s-secrets.sh",
     "logs": "bash cli/logs/logs.sh",
     "sync-website-hosts": "node scripts/sync-website-hosts.mjs",
+    "publish-site": "node scripts/publish-site.mjs",
     "deploy-app": "bash cli/deploy-app/deploy-app.sh",
     "django-superuser": "bash cli/django-superuser/django-superuser.sh",
     "deploy-postgres": "bash cli/deploy-postgres/deploy-postgres.sh",

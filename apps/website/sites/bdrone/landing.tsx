@@ -13,24 +13,20 @@ import { Intro } from "./sections/intro";
  *
  * Deliberate narrative for a drone-services company, distinct from the default
  * stack: lead with the brand (Hero), establish identity + CTAs (Intro), prove
- * capability (Highlights on a tinted band), let visitors browse what's on offer
- * (Categories), surface featured work/gear (Items on a tinted band), and close
- * with social proof (Success stories). All section content stays DB-driven via
- * the shared blocks; band colors follow the tenant's brand kit.
+ * capability (Highlights), let visitors browse what's on offer (Categories),
+ * surface featured work/gear (Items), and close with social proof (Success
+ * stories). All section content stays DB-driven via the shared blocks.
+ *
+ * Rhythm comes from a neutral `--surface-2` band behind alternate sections -
+ * not brand gradients - so the page reads calm and on-brand in both themes. The
+ * customer can still override a band via `System.highlights_bg` /
+ * `catalog_items_bg` in the CMS.
  */
 export async function Landing() {
   const system = await getSystem();
 
-  const primary = system?.primary_color ?? "#2196f3";
-  const secondary = system?.secondary_color ?? "#e040fb";
-
-  const highlightsBg =
-    system?.highlights_bg ??
-    `linear-gradient(135deg, ${primary}1a 0%, ${secondary}0d 100%)`;
-
-  const itemsBg =
-    system?.catalog_items_bg ??
-    `linear-gradient(135deg, ${secondary}0d 50%, ${primary}1a 100%)`;
+  const highlightsBg = system?.highlights_bg ?? "var(--surface-2)";
+  const itemsBg = system?.catalog_items_bg ?? "var(--surface-2)";
 
   return (
     <>

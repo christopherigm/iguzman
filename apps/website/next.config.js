@@ -50,7 +50,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'api.website.iguzman.com.mx',
+        hostname: 'website-api.iguzman.com.mx',
       },
       {
         protocol: 'http',

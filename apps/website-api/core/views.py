@@ -22,6 +22,7 @@ from .serializers import (
     SystemSerializer,
     SystemWriteSerializer,
 )
+from core.site_payload import apply_payload
 
 SYSTEM_CACHE_TTL = 3600  # 1 hour
 CACHE_TTL = 300  # 5 minutes
@@ -48,6 +49,57 @@ class SystemListView(APIView):
     def get(self, request):
         systems = System.objects.filter(enabled=True).values("id", "site_name", "host")
         return Response(list(systems))
+
+
+class PublishSiteView(APIView):
+    """POST /api/publish-site/ - upsert a customer System + its content from a
+    serialized payload (admin only).
+
+    The production counterpart to the local ``export_site`` command: ``pnpm
+    publish-site`` POSTs an exported payload here to publish a tested site into
+    this database. Image files are not transported - image fields are left
+    untouched on update, so customer-uploaded CMS images survive a re-publish.
+    Send ``{"reset": true}`` for an exact replace of the System's prior content.
+
+    Uses BasicAuthentication so the deploy script can authenticate without a
+    per-tenant JWT flow (mirrors SystemListView).
+    """
+
+    authentication_classes = [BasicAuthentication]
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        payload = request.data
+        if not isinstance(payload, dict) or not (payload.get("system") or {}).get("host"):
+            return Response(
+                {"detail": "A JSON body with system.host is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            summary = apply_payload(payload, reset=bool(payload.get("reset")))
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        self._invalidate(summary["host"])
+        return Response(summary, status=status.HTTP_200_OK)
+
+    @staticmethod
+    def _invalidate(host):
+        """Clear every cache namespace publishing can touch (see apps/website-api/CLAUDE.md)."""
+        cache.delete(f"system:host:{host}")
+        for pattern in (
+            "system:pk:*",
+            "core:success_stories:*",
+            "core:success_story:*",
+            "core:highlights:*",
+            "core:highlight:*",
+            "core:highlight_item*",
+            "catalog:product_categories*",
+            "catalog:products*",
+            "catalog:service_categories*",
+            "catalog:services*",
+        ):
+            _invalidate_pattern(pattern)
 
 
 class SystemView(APIView):

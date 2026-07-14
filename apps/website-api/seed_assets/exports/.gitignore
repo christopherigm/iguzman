@@ -1,0 +1,4 @@
+# Generated site export payloads (produced by `manage.py export_site`).
+# These are transient artifacts consumed by `pnpm publish-site`; do not commit.
+*
+!.gitignore

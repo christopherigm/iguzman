@@ -56,7 +56,7 @@ env:
   NEXT_TELEMETRY_DISABLED: '1'
   # Server-side only (never NEXT_PUBLIC_): the browser talks to /api/* route
   # handlers, which reach Django from the server. Matches cinelog + edge-folio.
-  API_URL: 'https://api.website.iguzman.com.mx'
+  API_URL: 'https://website-api.iguzman.com.mx'
 
 # Sensitive values - reference existing Kubernetes Secrets.
 # envFromSecret:
