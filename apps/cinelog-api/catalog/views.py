@@ -1,5 +1,6 @@
 import logging
 import os
+import random
 
 from django.core.files.base import ContentFile
 from django.db import transaction
@@ -126,6 +127,44 @@ class MovieListView(ListCreateAPIView):
         '-created': ('-created', 'title'),
     }
 
+    def _shuffled(self, qs):
+        """
+        Order `qs` randomly for `?ordering=random&seed=N` (the TV app's dice
+        button).
+
+        The shuffle has to stay *stable across pages*: a plain `ORDER BY
+        RANDOM()` re-draws the deck on every request, so paging through it would
+        repeat some movies and skip others. So the client picks a seed once and
+        the same seed always rebuilds the same deck - page 2 continues page 1,
+        and re-rolling means sending a new seed.
+
+        The ids are shuffled here rather than in SQL because the portable
+        SQL-side trick - ordering by `(id * seed) mod prime` - quietly degrades
+        on a small catalog: the modulo only mixes once the product overflows the
+        prime, so with ids in the tens the "shuffle" comes back in plain id
+        order. Seeding Python's RNG and doing a real Fisher-Yates shuffle is
+        uniform for any catalog size, and the resulting order is applied DB-side
+        as a Case/When rank - the same way `AiMovieSearchView` replays the
+        model's ranking - so the paginator keeps working unchanged.
+        """
+        try:
+            seed = int(self.request.query_params.get('seed', ''))
+        except ValueError:
+            seed = 0
+
+        # `sorted` is what makes the deck reproducible: an unordered queryset may
+        # hand back its rows in any order the DB feels like, and shuffling two
+        # differently-ordered id lists with the same seed yields two different
+        # decks - so page 2 would be drawn from a different shuffle than page 1.
+        ids = sorted(qs.values_list('id', flat=True))
+        random.Random(seed).shuffle(ids)
+
+        position = Case(
+            *[When(id=movie_id, then=pos) for pos, movie_id in enumerate(ids)],
+            output_field=IntegerField(),
+        )
+        return qs.annotate(shuffle_position=position).order_by('shuffle_position')
+
     def get_queryset(self):
         qs = Movie.objects.filter(enabled=True).prefetch_related('genres', 'formats')
 
@@ -202,9 +241,14 @@ class MovieListView(ListCreateAPIView):
             qs = qs.distinct()
 
         ordering = self.request.query_params.get('ordering', '').strip()
-        order_by = self.ORDERING_MAP.get(ordering)
-        if order_by:
-            qs = qs.order_by(*order_by)
+        if ordering == 'random':
+            # Shuffles whatever survived the filters above, so shuffling a
+            # genre-filtered library re-orders only the movies that passed.
+            qs = self._shuffled(qs)
+        else:
+            order_by = self.ORDERING_MAP.get(ordering)
+            if order_by:
+                qs = qs.order_by(*order_by)
 
         return qs
 

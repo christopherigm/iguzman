@@ -1,0 +1,94 @@
+/* Icon-only square button. Written for Chromium 76 (Tizen 6.x): explicit
+   width/height squares instead of `aspect-ratio`, palette tokens instead of
+   `color-mix()`, and no flex `gap` (nothing to space - there is one child). */
+.tv-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  background: var(--surface-2, #1a1a22);
+  color: var(--foreground, #f5f5f7);
+  /* Never let the square be squeezed by a flex row of wider text buttons. */
+  flex-shrink: 0;
+}
+
+/* Square box sizes. The `md` box matches the rendered height of a TvButton
+   (18px padding + a 1.5rem label), so the two sit flush in a header row. */
+.tv-icon-button--sm {
+  width: 56px;
+  height: 56px;
+}
+.tv-icon-button--md {
+  width: 68px;
+  height: 68px;
+}
+.tv-icon-button--lg {
+  width: 80px;
+  height: 80px;
+}
+
+/* The source SVG is used as a mask and filled with the button's text color, so
+   it inherits every focus/kind/selected tint from a single-color source glyph. */
+.tv-icon-button__icon {
+  display: inline-block;
+  background-color: currentColor;
+  -webkit-mask-image: var(--tv-icon-button-icon);
+  mask-image: var(--tv-icon-button-icon);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+.tv-icon-button--sm .tv-icon-button__icon {
+  width: 26px;
+  height: 26px;
+}
+.tv-icon-button--md .tv-icon-button__icon {
+  width: 32px;
+  height: 32px;
+}
+.tv-icon-button--lg .tv-icon-button__icon {
+  width: 38px;
+  height: 38px;
+}
+
+.tv-icon-button--disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Semantic kinds, mirroring TvButton: the tint applies only while focused, so
+   the fill change itself signals focus (an accent ring on an accent fill would
+   be invisible). Same hex fallbacks as the web button - no color-mix. */
+.tv-icon-button--primary.tv-focusable--focused {
+  background: var(--accent, #06b6d4);
+  color: var(--accent-foreground, #ffffff);
+}
+.tv-icon-button--success.tv-focusable--focused {
+  background: var(--success, #16a34a);
+  color: var(--success-foreground, #ffffff);
+}
+.tv-icon-button--error.tv-focusable--focused {
+  background: var(--error, #8d0e0e);
+  color: var(--error-foreground, #ffffff);
+}
+.tv-icon-button--warning.tv-focusable--focused {
+  background: var(--warning, #d97706);
+  color: var(--warning-foreground, #1c1000);
+}
+
+/* Persistent toggled state: the accent fill stays whether or not the button is
+   focused, so an active mode still reads as active after focus moves away. */
+.tv-icon-button--selected {
+  background: var(--accent, #06b6d4);
+  color: var(--accent-foreground, #ffffff);
+}
+/* The default focus ring is also accent, so it would vanish against a selected
+   button's fill - swap in a contrasting foreground ring while focused. */
+.tv-icon-button--selected.tv-focusable--focused {
+  box-shadow: 0 0 0 4px var(--foreground, #f5f5f7);
+}

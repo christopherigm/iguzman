@@ -565,5 +565,21 @@
     "passkeyAdded": "Passkey added.",
     "passkeyAddError": "Failed to add passkey. Please try again.",
     "loading": "Loading…"
+  },
+  "ResetPasswordPage": {
+    "title": "Set New Password",
+    "subtitle": "Enter your new password below",
+    "newPasswordLabel": "New Password",
+    "confirmPasswordLabel": "Confirm New Password",
+    "submitButton": "Reset Password",
+    "submitting": "Resetting password…",
+    "errorPasswordMismatch": "Passwords do not match.",
+    "errorGeneric": "Something went wrong. Please try again.",
+    "successTitle": "Password reset!",
+    "successDetail": "Your password has been updated. You can now sign in with your new password.",
+    "backToSignIn": "Back to Sign In",
+    "invalidTitle": "Link invalid or expired",
+    "invalidDetail": "This password reset link is invalid or has expired. Please request a new one.",
+    "requestNewLink": "Request a new reset link"
   }
 }

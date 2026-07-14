@@ -11,6 +11,7 @@ import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import type {
   AudioFormatCode,
+  CatalogView,
   Category,
   HdrFormatCode,
   MovieFormat,
@@ -55,7 +56,16 @@ type Props = {
   onHdrToggle: (code: HdrFormatCode) => void;
   sort: MovieSort;
   onSortChange: (value: MovieSort) => void;
+  /** True while the catalog is shuffled; lights the Random button. */
+  shuffleActive: boolean;
+  /** Roll a new shuffle - each press re-shuffles into a fresh order. */
+  onRandom: () => void;
+  /** Drop the shuffle and return the catalog to its normal order. */
+  onClearRandom: () => void;
   categories: Category[];
+  /** Current catalog layout; the toggle next to the sort Select flips it. */
+  view: CatalogView;
+  onViewChange: (view: CatalogView) => void;
 };
 
 export function MovieFilters({
@@ -71,7 +81,12 @@ export function MovieFilters({
   onHdrToggle,
   sort,
   onSortChange,
+  shuffleActive,
+  onRandom,
+  onClearRandom,
   categories,
+  view,
+  onViewChange,
 }: Props) {
   const t = useTranslations("CatalogPage");
   const tFormat = useTranslations("MovieFormat");
@@ -115,7 +130,9 @@ export function MovieFilters({
 
   return (
     <Box display="flex" flexDirection="column" gap={16}>
-      <Box display="flex" gap={12} flexWrap="wrap">
+      {/* The inputs carry a label above them, so the row aligns on its bottom
+          edge to keep the view toggle level with the search/sort controls. */}
+      <Box display="flex" gap={12} flexWrap="wrap" alignItems="flex-end">
         <TextInput
           type="search"
           label={t("searchLabel")}
@@ -130,6 +147,12 @@ export function MovieFilters({
           options={sortOptions}
           flex="1 1 40px"
         />
+        <IconButton
+          icon={view === "grid" ? "/icons/list.svg" : "/icons/grid.svg"}
+          aria-label={view === "grid" ? t("listView") : t("gridView")}
+          onClick={() => onViewChange(view === "grid" ? "list" : "grid")}
+          size="md"
+        />
       </Box>
 
       {/* Two centered triggers open the Formats and Genres pickers. Selections
@@ -143,6 +166,29 @@ export function MovieFilters({
         alignItems="center"
         flexWrap="wrap"
       >
+        {/* Shuffles whatever the current filters select; pressing it again rolls
+            a new order. Fills in while shuffled (solid + primary), the same way
+            the format toggles signal an active selection. Icon-only, so the
+            label lives in aria-label/title. */}
+        <IconButton
+          icon="/icons/dice.svg"
+          aria-label={t("randomButton")}
+          title={t("randomButton")}
+          size="sm"
+          kind={shuffleActive ? "primary" : "default"}
+          solid={shuffleActive}
+          aria-pressed={shuffleActive}
+          onClick={onRandom}
+          translucent
+        />
+        {shuffleActive && (
+          <Button
+            text={t("clearRandomButton")}
+            size="md"
+            onClick={onClearRandom}
+            translucent
+          />
+        )}
         <Button
           text={t("formatsButton")}
           icon="/icons/formats.svg"
@@ -161,10 +207,12 @@ export function MovieFilters({
           onClick={() => setOpenModal("genres")}
           translucent
         />
-        <Button
-          text={t("aiSearchButton")}
+        {/* Icon-only, so the label lives in aria-label/title. */}
+        <IconButton
           icon="/icons/search.svg"
-          size="md"
+          aria-label={t("aiSearchButton")}
+          title={t("aiSearchButton")}
+          size="sm"
           aria-expanded={openModal === "ai"}
           onClick={() => setOpenModal("ai")}
           translucent

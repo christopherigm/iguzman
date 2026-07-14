@@ -565,5 +565,21 @@
     "passkeyAdded": "Chave de acesso adicionada.",
     "passkeyAddError": "Não foi possível adicionar a chave. Tente novamente.",
     "loading": "Carregando…"
+  },
+  "ResetPasswordPage": {
+    "title": "Definir nova senha",
+    "subtitle": "Digite sua nova senha abaixo",
+    "newPasswordLabel": "Nova senha",
+    "confirmPasswordLabel": "Confirmar nova senha",
+    "submitButton": "Redefinir senha",
+    "submitting": "Redefinindo senha…",
+    "errorPasswordMismatch": "As senhas não coincidem.",
+    "errorGeneric": "Algo deu errado. Por favor, tente novamente.",
+    "successTitle": "Senha redefinida!",
+    "successDetail": "Sua senha foi atualizada. Agora você pode entrar com sua nova senha.",
+    "backToSignIn": "Voltar para entrar",
+    "invalidTitle": "Link inválido ou expirado",
+    "invalidDetail": "Este link de redefinição de senha é inválido ou expirou. Por favor, solicite um novo.",
+    "requestNewLink": "Solicitar um novo link"
   }
 }

@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # new-nextjs-app.sh - interactive Next.js app scaffold
-# Based on apps/edge-folio architecture (i18n + auth + PWA + Helm)
+# Based on the cinelog / edge-folio / website architecture (i18n + auth + PWA + Helm).
+#
+# Auth is always wired to the shared @repo/auth package: the server owns the
+# session (decoded from the access-token cookie), the auth screens and the
+# identical /api/auth/* handlers are imported rather than copied. Never generate
+# a per-app auth form, password policy, or a localStorage user store here - that
+# is exactly the duplication @repo/auth exists to remove. See packages/auth/CLAUDE.md.
+#
 # Run: bash cli/new-nextjs-app/new-nextjs-app.sh
 
 set -euo pipefail
@@ -36,7 +43,6 @@ setup_strings() {
     PALETTE_ENTER_NUM="Ingresa número"
     REGISTRY_PROMPT="Usuario del registro Docker"
     HOST_PROMPT="Host"
-    AUTH_PROMPT="¿Incluir autenticación? (JWT cookies, passkeys, páginas auth, proxy API)"
     PWA_PROMPT="¿Incluir PWA? (Serwist service worker, manifest, página offline)"
     STEP_CONFIG="[1/2] Configuración"
     STEP_FILES="[2/2] Generando archivos"
@@ -44,7 +50,6 @@ setup_strings() {
     ABORTED_MSG="Cancelado."
     LBL_PORT="Puerto"
     LBL_PALETTE="Paleta"
-    LBL_AUTH="Auth"
     LBL_PWA="PWA"
     LBL_REGISTRY="Registro"
     LBL_HOST="Host"
@@ -66,7 +71,6 @@ setup_strings() {
     PALETTE_ENTER_NUM="Enter number"
     REGISTRY_PROMPT="Docker registry user"
     HOST_PROMPT="Host"
-    AUTH_PROMPT="Include auth? (JWT cookies, passkeys, auth pages, API proxy)"
     PWA_PROMPT="Include PWA? (Serwist service worker, manifest, offline page)"
     STEP_CONFIG="[1/2] Configuration"
     STEP_FILES="[2/2] Generating files"
@@ -74,7 +78,6 @@ setup_strings() {
     ABORTED_MSG="Aborted."
     LBL_PORT="Port"
     LBL_PALETTE="Palette"
-    LBL_AUTH="Auth"
     LBL_PWA="PWA"
     LBL_REGISTRY="Registry"
     LBL_HOST="Host"
@@ -163,20 +166,18 @@ validate_app_name() {
 
 
 # ── File Generators ───────────────────────────────────────────────────────────
-# Globals used by all generators: name title port palette accent registry_user host include_auth include_pwa
+# Globals used by all generators: name title port palette accent registry_user host include_pwa
 
 gen_package_json() {
   local out="$1"; mkdir -p "$(dirname "$out")"
   local ts_comma="," pwa_devdep="" deps_tail=""
-  if [[ "${include_pwa}" == "y" && "${include_auth}" == "y" ]]; then
+  # @simplewebauthn/browser is a direct dep because the passkey calls in
+  # @repo/auth/client import it lazily; @repo/auth itself carries the rest.
+  deps_tail=',
+    "@simplewebauthn/browser": "^13.1.0"'
+  if [[ "${include_pwa}" == "y" ]]; then
     deps_tail=',
     "@serwist/next": "^9.5.11",
-    "@simplewebauthn/browser": "^13.1.0"'
-  elif [[ "${include_pwa}" == "y" ]]; then
-    deps_tail=',
-    "@serwist/next": "^9.5.11"'
-  elif [[ "${include_auth}" == "y" ]]; then
-    deps_tail=',
     "@simplewebauthn/browser": "^13.1.0"'
   fi
   if [[ "${include_pwa}" == "y" ]]; then
@@ -199,6 +200,7 @@ gen_package_json() {
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@repo/auth": "workspace:*",
     "@repo/helpers": "workspace:*",
     "@swc/helpers": "^0.5.23",
     "@repo/ui": "workspace:*",
@@ -207,7 +209,8 @@ gen_package_json() {
     "swiper": "^12.2.0",
     "pino": "^10.3.1",
     "@repo/i18n": "workspace:^",
-    "next-intl": "^4"${deps_tail}
+    "next-intl": "^4",
+    "next": "16.3.0-canary.66"${deps_tail}
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
@@ -453,135 +456,50 @@ gen_env_example() {
   cat > "$out" << EOF
 DOCKER_REGISTRY=${registry_user}
 NAMESPACE=${name}
-EOF
-  [[ "${include_auth}" == "y" ]] && cat >> "$out" << 'TXTEOF'
 
 # Django API base URL - server-side only, never NEXT_PUBLIC_
 # Local: http://localhost:8000
 API_URL=http://localhost:8000
-TXTEOF
+EOF
 }
 
+
+gen_turbo_json() {
+  local out="$1"; mkdir -p "$(dirname "$out")"
+  # Without this, `turbo/no-undeclared-env-vars` fails lint on the first run
+  # (lint is --max-warnings 0), and API_URL would not reach the build.
+  cat > "$out" << 'JSONEOF'
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "passThroughEnv": ["API_URL", "LOG_LEVEL"]
+    }
+  }
+}
+JSONEOF
+}
 
 gen_proxy_ts() {
   local out="$1"; mkdir -p "$(dirname "$out")"
-  if [[ "${include_auth}" == "y" ]]; then
-    cat > "$out" << 'TSEOF'
-import { NextRequest, NextResponse } from 'next/server';
-import createMiddleware from 'next-intl/middleware';
-import { routing } from '@repo/i18n/routing';
+  cat > "$out" << 'TSEOF'
+import { createAuthProxy } from '@repo/auth/proxy';
 
-const intlMiddleware = createMiddleware(routing);
+// Locale-less prefixes that require a session. Everything else renders for
+// anonymous visitors - the proxy still refreshes their token on every page, so a
+// public page with auth-dependent UI (the navbar account menu) paints correctly.
+export default createAuthProxy({
+  protectedPrefixes: ['/account'],
+});
 
-const PROTECTED_PREFIXES = ['/account'];
-
-const IS_PROD = process.env.NODE_ENV === 'production';
-// Access cookie outlives the 1h JWT (see settings.py ACCESS_TOKEN_LIFETIME) so an
-// expired access token is refreshed here rather than looking like a logged-out user.
-const ACCESS_MAX_AGE = 60 * 60 * 24 * 7;
-const REFRESH_MAX_AGE = 60 * 60 * 24 * 7;
-const COOKIE_OPTS = { httpOnly: true, secure: IS_PROD, sameSite: 'strict' as const, path: '/' };
-
-function isProtectedPath(pathname: string): boolean {
-  const withoutLocale = pathname.replace(/^\/[a-z]{2}(-[A-Z]{2})?/, '');
-  return PROTECTED_PREFIXES.some((prefix) => withoutLocale.startsWith(prefix));
-}
-
-function localeOf(pathname: string): string {
-  return pathname.split('/')[1] ?? 'en';
-}
-
-// The access cookie now outlives the JWT (maxAge 7d), so cookie presence no
-// longer implies a valid token. Decode the unverified `exp` claim to decide
-// whether a refresh is needed - Django still verifies the signature on use.
-// Treat any undecodable token as expired so we refresh rather than 401.
-function isAccessUsable(token: string | undefined): boolean {
-  if (!token) return false;
-  try {
-    const payload = token.split('.')[1];
-    if (!payload) return false;
-    const claims = JSON.parse(Buffer.from(payload, 'base64url').toString()) as { exp?: number };
-    if (typeof claims.exp !== 'number') return false;
-    return claims.exp * 1000 > Date.now();
-  } catch {
-    return false;
-  }
-}
-
-function redirectToAuth(request: NextRequest): NextResponse {
-  const res = NextResponse.redirect(
-    new URL(`/${localeOf(request.nextUrl.pathname)}/auth`, request.url),
-  );
-  res.cookies.delete('access_token');
-  res.cookies.delete('refresh_token');
-  return res;
-}
-
-async function refreshTokens(refresh: string): Promise<{ access: string; refresh?: string } | null> {
-  const api = process.env.API_URL;
-  if (!api) return null;
-  try {
-    const res = await fetch(`${api}/api/auth/token/refresh/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh }),
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as { access: string; refresh?: string };
-  } catch {
-    return null;
-  }
-}
-
-export default async function proxy(request: NextRequest) {
-  if (isProtectedPath(request.nextUrl.pathname)) {
-    const access = request.cookies.get('access_token')?.value;
-    const refresh = request.cookies.get('refresh_token')?.value;
-
-    if (!isAccessUsable(access)) {
-      // No usable refresh token either → genuinely logged out.
-      if (!refresh) return redirectToAuth(request);
-
-      // Access token expired but refresh is still valid. Refresh here (middleware
-      // is one of the few places allowed to set cookies) so server components that
-      // read the cookie directly don't hard-redirect to /auth on expiry.
-      const tokens = await refreshTokens(refresh);
-      if (!tokens) return redirectToAuth(request);
-
-      // Make the *current* request see the new token: mutating request.cookies
-      // updates the forwarded cookie header before next-intl clones it.
-      request.cookies.set('access_token', tokens.access);
-
-      const response = intlMiddleware(request);
-      response.cookies.set('access_token', tokens.access, { ...COOKIE_OPTS, maxAge: ACCESS_MAX_AGE });
-      if (tokens.refresh) {
-        response.cookies.set('refresh_token', tokens.refresh, { ...COOKIE_OPTS, maxAge: REFRESH_MAX_AGE });
-      }
-      return response;
-    }
-  }
-
-  return intlMiddleware(request);
-}
-
+// The matcher must be an inline literal: Next.js statically analyses it at build
+// time and an imported constant silently fails to parse, which would run the
+// proxy on /api/* and break login. See @repo/auth/proxy.
 export const config = {
-  // Proxy always runs on the Node.js runtime in Next.js 16, so API_URL (injected
-  // at runtime via k8s secret, not baked at build time) is available here.
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)'],
 };
 TSEOF
-  else
-    cat > "$out" << 'TSEOF'
-import createMiddleware from 'next-intl/middleware';
-import { routing } from '@repo/i18n/routing';
-
-export default createMiddleware(routing);
-
-export const config = {
-  matcher: '/((?!api|trpc|_next|_vercel|.*\\..*)*)',
-};
-TSEOF
-  fi
 }
 
 gen_globals_css() {
@@ -649,64 +567,18 @@ EOF
 gen_lib_api_fetch_ts() {
   local out="$1"; mkdir -p "$(dirname "$out")"
   cat > "$out" << 'TSEOF'
-import { cookies } from 'next/headers';
-
-const API = process.env.API_URL;
-const IS_PROD = process.env.NODE_ENV === 'production';
-
-const COOKIE_OPTS = { httpOnly: true, secure: IS_PROD, sameSite: 'strict' as const, path: '/' };
-
-export async function refreshAccessToken(): Promise<string | null> {
-  const cookieStore = await cookies();
-  const refresh = cookieStore.get('refresh_token')?.value;
-  if (!refresh) return null;
-
-  const res = await fetch(`${API}/api/auth/token/refresh/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh }),
-  });
-
-  if (!res.ok) {
-    cookieStore.delete('access_token');
-    cookieStore.delete('refresh_token');
-    return null;
-  }
-
-  const data = (await res.json()) as { access: string; refresh?: string };
-  // Cookie outlives the 1h JWT so an expired access token gets refreshed
-  // (proxy.ts / apiFetch) instead of looking like a logout.
-  cookieStore.set('access_token', data.access, { ...COOKIE_OPTS, maxAge: 60 * 60 * 24 * 7 });
-  if (data.refresh) {
-    cookieStore.set('refresh_token', data.refresh, { ...COOKIE_OPTS, maxAge: 60 * 60 * 24 * 7 });
-  }
-  return data.access;
-}
-
-export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  const cookieStore = await cookies();
-  let token = cookieStore.get('access_token')?.value;
-  if (!token) {
-    const newToken = await refreshAccessToken();
-    if (!newToken) return Response.json({ detail: 'Unauthorized' }, { status: 401 });
-    token = newToken;
-  }
-
-  const withAuth = (t: string): RequestInit => ({
-    ...init,
-    headers: { ...(init.headers as Record<string, string>), Authorization: `Bearer ${t}` },
-  });
-
-  let res = await fetch(`${API}${path}`, withAuth(token));
-
-  if (res.status === 401) {
-    const newToken = await refreshAccessToken();
-    if (!newToken) return Response.json({ detail: 'Unauthorized' }, { status: 401 });
-    res = await fetch(`${API}${path}`, withAuth(newToken));
-  }
-
-  return res;
-}
+/**
+ * The API fetcher lives in `@repo/auth` so all the frontends share one
+ * refresh-and-retry implementation. Re-exported here because every route handler
+ * imports it from `@/lib/api-fetch` (see apps/CLAUDE.md).
+ */
+export {
+  apiFetch,
+  refreshAccessToken,
+  setAuthCookies,
+  clearAuthCookies,
+  type ApiFetchInit,
+} from '@repo/auth/api-fetch';
 TSEOF
 }
 
@@ -767,29 +639,23 @@ export const viewport: Viewport = {
     meta_extra=""
   fi
 
-  if [[ "${include_auth}" == "y" ]]; then
-    navbar_import="import { NavbarWrapper } from './navbar-wrapper';
+  navbar_import="import { getSession } from '@repo/auth/session';
+import { SessionProvider } from '@repo/auth/session-provider';
+import { NavbarWrapper } from './navbar-wrapper';
 import { Footer } from './footer';"
-    tNav_decl="
-  const tNav = (await getTranslations({ locale, namespace: 'Navbar' })) as (key: string) => string;"
-    navbar_jsx="            <NavbarWrapper
+  tNav_decl="
+  const tNav = (await getTranslations({ locale, namespace: 'Navbar' })) as (key: string) => string;
+
+  // Decoded from the access-token cookie during this request, so the HTML we
+  // send already reflects who the user is - no logged-out flash, no reload.
+  const session = await getSession();"
+  navbar_jsx="            <NavbarWrapper
               logo=\"/logo-navbar.png\"
               version={\`v\${packageJson.version}\`}
               labels={{ home: tNav('home'), account: tNav('account'), signOut: tNav('signOut') }}
             />
             {children}
             <Footer logo=\"/logo-navbar.png\" />"
-  else
-    navbar_import="import { Navbar } from '@repo/ui/core-elements/navbar';"
-    tNav_decl=""
-    navbar_jsx="            <Navbar
-              logo=\"/logo.png\"
-              items={[{ label: 'Home', href: '/' }]}
-              fixedItems={[]}
-              version={\`v\${packageJson.version}\`}
-            />
-            {children}"
-  fi
 
   if [[ "${include_pwa}" == "y" ]]; then
     serwist_import="import { SerwistProvider } from '@serwist/next/react';"
@@ -858,11 +724,13 @@ ${tNav_decl}
       <body style={bodyStyle}>
 ${serwist_open}
       <NextIntlClientProvider messages={messages}>
-        <ThemeProvider initialMode={initialMode} initialResolved={initialResolved}>
-          <PaletteProvider palette="${palette}" accent="${accent}">
+        <SessionProvider session={session}>
+          <ThemeProvider initialMode={initialMode} initialResolved={initialResolved}>
+            <PaletteProvider palette="${palette}" accent="${accent}">
 ${navbar_jsx}
-          </PaletteProvider>
-        </ThemeProvider>
+            </PaletteProvider>
+          </ThemeProvider>
+        </SessionProvider>
       </NextIntlClientProvider>
 ${serwist_close}
       </body>
@@ -878,11 +746,10 @@ gen_navbar_wrapper_tsx() {
   cat > "$out" << 'TSEOF'
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Navbar } from '@repo/ui/core-elements/navbar';
 import type { MenuItem } from '@repo/ui/core-elements/navbar';
-import { logout, clearUser, getStoredUser } from '@/lib/auth';
+import { useSession } from '@repo/auth/session-provider';
+import { useAuthActions } from '@repo/auth/use-auth-actions';
 
 interface NavbarWrapperProps {
   logo: string;
@@ -891,23 +758,13 @@ interface NavbarWrapperProps {
 }
 
 export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
-  const router = useRouter();
-  const [displayName, setDisplayName] = useState<string | null>(null);
+  // Comes from the server via SessionProvider, so it is already correct in the
+  // first HTML - the navbar never renders logged-out for a logged-in user.
+  const session = useSession();
+  const { signOut } = useAuthActions();
+  const displayName = session?.displayName ?? null;
 
-  useEffect(() => {
-    setDisplayName(getStoredUser()?.displayName ?? null);
-    const handler = (e: Event) => {
-      setDisplayName((e as CustomEvent<{ displayName: string | null }>).detail.displayName);
-    };
-    window.addEventListener('app-auth', handler);
-    return () => window.removeEventListener('app-auth', handler);
-  }, []);
-
-  const handleSignOut = async () => {
-    await logout();
-    clearUser();
-    router.push('/auth');
-  };
+  const handleSignOut = () => void signOut('/auth');
 
   const accountItem: MenuItem = displayName
     ? { label: displayName, children: [{ label: labels.account, href: '/account' }, { label: labels.signOut, onClick: handleSignOut }] }
@@ -1104,480 +961,94 @@ TSEOF
 gen_lib_auth_ts() {
   local out="$1"; mkdir -p "$(dirname "$out")"
   cat > "$out" << 'TSEOF'
-export interface UserProfile {
-  id: number;
-  email: string;
-  first_name: string;
-  last_name: string;
-  profile_picture: string | null;
-}
-
-const USER_PROFILE_KEY = 'app_user';
-
-export function storeUser(profile: UserProfile): void {
-  const raw = (profile.first_name?.trim() || profile.email) ?? '';
-  const displayName = raw.substring(0, 10);
-  localStorage.setItem(USER_PROFILE_KEY, JSON.stringify({ displayName }));
-  window.dispatchEvent(new CustomEvent('app-auth', { detail: { displayName } }));
-}
-
-export function clearUser(): void {
-  localStorage.removeItem(USER_PROFILE_KEY);
-  window.dispatchEvent(new CustomEvent('app-auth', { detail: { displayName: null } }));
-}
-
-export function getStoredUser(): { displayName: string } | null {
-  try {
-    const raw = localStorage.getItem(USER_PROFILE_KEY);
-    return raw ? (JSON.parse(raw) as { displayName: string }) : null;
-  } catch { return null; }
-}
-
-export class ApiError extends Error {
-  constructor(public readonly status: number, public readonly data: Record<string, unknown>) {
-    super('API request failed');
-  }
-}
-
-export class LoginError extends Error {
-  constructor(public readonly status: number, public readonly data: Record<string, unknown>) {
-    super('Login failed');
-  }
-}
-
-export async function login(payload: { email: string; password: string }): Promise<void> {
-  const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-  if (!res.ok) { const data: Record<string, unknown> = await res.json().catch(() => ({})); throw new LoginError(res.status, data); }
-}
-
-export async function logout(): Promise<void> {
-  await fetch('/api/auth/logout', { method: 'POST' });
-}
-
-export async function signUp(payload: { email: string; password: string; password2: string; first_name?: string; last_name?: string }): Promise<void> {
-  const res = await fetch('/api/auth/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-  if (!res.ok) { const data: Record<string, unknown> = await res.json().catch(() => ({})); throw new ApiError(res.status, data); }
-}
-
-export async function verifyEmail(token: string): Promise<void> {
-  const res = await fetch(`/api/auth/verify-email/${token}`);
-  if (!res.ok) { const data: Record<string, unknown> = await res.json().catch(() => ({})); throw new ApiError(res.status, data); }
-}
-
-export async function requestPasswordReset(email: string): Promise<void> {
-  const res = await fetch('/api/auth/password-reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
-  if (!res.ok) { const data: Record<string, unknown> = await res.json().catch(() => ({})); throw new ApiError(res.status, data); }
-}
-
-export async function getProfile(): Promise<UserProfile> {
-  const res = await fetch('/api/auth/profile');
-  if (!res.ok) { const data: Record<string, unknown> = await res.json().catch(() => ({})); throw new ApiError(res.status, data); }
-  return res.json() as Promise<UserProfile>;
-}
-
-export async function updateProfile(payload: { first_name?: string; last_name?: string }): Promise<UserProfile> {
-  const res = await fetch('/api/auth/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-  if (!res.ok) { const data: Record<string, unknown> = await res.json().catch(() => ({})); throw new ApiError(res.status, data); }
-  return res.json() as Promise<UserProfile>;
-}
-
-export async function uploadProfilePicture(base64Image: string): Promise<{ profile_picture: string | null }> {
-  const res = await fetch('/api/auth/profile/picture', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ base64_image: base64Image }) });
-  if (!res.ok) { const data: Record<string, unknown> = await res.json().catch(() => ({})); throw new ApiError(res.status, data); }
-  return res.json() as Promise<{ profile_picture: string | null }>;
-}
-
-export async function changePassword(currentPassword: string, newPassword: string, newPassword2: string): Promise<void> {
-  const res = await fetch('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ current_password: currentPassword, new_password: newPassword, new_password2: newPassword2 }) });
-  if (!res.ok) { const data: Record<string, unknown> = await res.json().catch(() => ({})); throw new ApiError(res.status, data); }
-}
-
-export async function deletePasskeyCredential(id: number): Promise<void> {
-  const res = await fetch(`/api/auth/passkey/credentials/${id}`, { method: 'DELETE' });
-  if (!res.ok) { throw new ApiError(res.status, {}); }
-}
-
-export async function getPasskeyCredentials(): Promise<{ count: number; credentials: { id: number; name: string; created_at: string }[] }> {
-  const res = await fetch('/api/auth/passkey/credentials');
-  if (!res.ok) return { count: 0, credentials: [] };
-  return res.json() as Promise<{ count: number; credentials: { id: number; name: string; created_at: string }[] }>;
-}
-
-export async function registerPasskey(name = 'My passkey'): Promise<{ id: number; name: string }> {
-  const { startRegistration } = await import('@simplewebauthn/browser');
-  const optionsRes = await fetch('/api/auth/passkey/register/options', { method: 'POST' });
-  if (!optionsRes.ok) { const data: Record<string, unknown> = await optionsRes.json().catch(() => ({})); throw new ApiError(optionsRes.status, data); }
-  const { options, challenge_id } = (await optionsRes.json()) as { options: Parameters<typeof startRegistration>[0]['optionsJSON']; challenge_id: string };
-  const credential = await startRegistration({ optionsJSON: options });
-  const verifyRes = await fetch('/api/auth/passkey/register/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential, challenge_id, name }) });
-  if (!verifyRes.ok) { const data: Record<string, unknown> = await verifyRes.json().catch(() => ({})); throw new ApiError(verifyRes.status, data); }
-  return verifyRes.json() as Promise<{ id: number; name: string }>;
-}
-
-export async function loginWithPasskey(email: string): Promise<void> {
-  const { startAuthentication } = await import('@simplewebauthn/browser');
-  const optionsRes = await fetch('/api/auth/passkey/authenticate/options', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
-  if (!optionsRes.ok) { const data: Record<string, unknown> = await optionsRes.json().catch(() => ({})); throw new LoginError(optionsRes.status, data); }
-  const { options, challenge_id } = (await optionsRes.json()) as { options: Parameters<typeof startAuthentication>[0]['optionsJSON']; challenge_id: string };
-  const credential = await startAuthentication({ optionsJSON: options });
-  const verifyRes = await fetch('/api/auth/passkey/authenticate/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, credential, challenge_id }) });
-  if (!verifyRes.ok) { const data: Record<string, unknown> = await verifyRes.json().catch(() => ({})); throw new LoginError(verifyRes.status, data); }
-}
+/**
+ * Auth for this app. The whole surface (login, signup, passkeys, password reset,
+ * the profile calls) lives in `@repo/auth/client`; this module only re-exports it
+ * so app code keeps importing from `@/lib/auth`.
+ *
+ * There is no client-side user store. Identity comes from the server via
+ * `getSession()` / `useSession()`, decoded from the access-token cookie - so the
+ * first render already knows who you are. Never reintroduce a localStorage user
+ * or an `app-auth` event: the server cannot read them, which is what used to make
+ * every page render logged-out until hydration corrected it.
+ *
+ * If this app's profile carries extra fields, declare
+ * `interface UserProfile extends BaseUserProfile` and bind the generic:
+ *
+ *   import { getProfile as getSharedProfile } from '@repo/auth/client';
+ *   export function getProfile(): Promise<UserProfile> {
+ *     return getSharedProfile<UserProfile>();
+ *   }
+ */
+export {
+  ApiError,
+  LoginError,
+  login,
+  logout,
+  signUp,
+  verifyEmail,
+  requestPasswordReset,
+  confirmPasswordReset,
+  changePassword,
+  uploadProfilePicture,
+  getPasskeyCredentials,
+  deletePasskeyCredential,
+  registerPasskey,
+  loginWithPasskey,
+  getProfile,
+  updateProfile,
+  type PasskeyCredential,
+  type UserProfile,
+} from '@repo/auth/client';
 TSEOF
 }
 
-
-gen_lib_password_policy_ts() {
-  local out="$1"; mkdir -p "$(dirname "$out")"
-  cat > "$out" << 'TSEOF'
-/**
- * Client-side mirror of the Django password policy.
- *
- * The API remains the authority - `validate_password` runs on every password
- * write. This module reproduces the rules that can be evaluated in the browser
- * so the form can guide the user before a round-trip, and maps the API's
- * rejection messages back onto translation keys when it cannot.
- *
- * `CommonPasswordValidator` is deliberately absent: it tests against a
- * 20,000-entry word list that is not worth shipping to the client. A common
- * password satisfies every rule here and is rejected by the API on submit -
- * `mapPasswordErrors` turns that response into a message.
- *
- * Keep in sync with `AUTH_PASSWORD_VALIDATORS` in the Django settings.
- */
-
-/** Mirrors `MinimumLengthValidator(min_length=8)`. */
-export const PASSWORD_MIN_LENGTH = 8;
-
-/** Mirrors `UserAttributeSimilarityValidator(max_similarity=0.7)`. */
-const MAX_SIMILARITY = 0.7;
-
-export type PasswordRuleId = "minLength" | "notNumeric" | "notSimilar";
-
-export interface PasswordRule {
-  id: PasswordRuleId;
-  satisfied: boolean;
-}
-
-/** The user attributes Django compares a password against. */
-export interface PasswordUserAttributes {
-  email?: string;
-  firstName?: string;
-  lastName?: string;
-}
-
-/**
- * Port of Python's `difflib.SequenceMatcher.quick_ratio` - an upper bound on
- * the true ratio, derived from the character multiset intersection. Django's
- * similarity validator compares against exactly this value, so an approximation
- * here would make the two layers disagree around the 0.7 boundary.
- */
-function quickRatio(a: string, b: string): number {
-  const aChars = [...a];
-  const bChars = [...b];
-  const total = aChars.length + bChars.length;
-  if (total === 0) return 1;
-
-  const bCounts = new Map<string, number>();
-  for (const ch of bChars) bCounts.set(ch, (bCounts.get(ch) ?? 0) + 1);
-
-  const available = new Map<string, number>();
-  let matches = 0;
-  for (const ch of aChars) {
-    const remaining = available.get(ch) ?? bCounts.get(ch) ?? 0;
-    available.set(ch, remaining - 1);
-    if (remaining > 0) matches += 1;
-  }
-  return (2 * matches) / total;
-}
-
-/**
- * Port of Django's `exceeds_maximum_length_ratio`. When the password dwarfs the
- * attribute, `quick_ratio` cannot reach `max_similarity`, so the comparison is
- * skipped rather than computed.
- */
-function exceedsMaximumLengthRatio(
-  passwordLength: number,
-  valueLength: number,
-): boolean {
-  return (
-    passwordLength >= 10 * valueLength &&
-    valueLength < (MAX_SIMILARITY / 2) * passwordLength
-  );
-}
-
-/**
- * Django compares the password against each attribute *and* each of its
- * word-like components, so `chris` is caught via `chris.guzman@example.com`.
- * The username is derived from the email, so comparing the email covers both.
- */
-function isTooSimilar(
-  password: string,
-  attributes: PasswordUserAttributes,
-): boolean {
-  const lowered = password.toLowerCase();
-  const passwordLength = [...lowered].length;
-
-  for (const attribute of [
-    attributes.email,
-    attributes.firstName,
-    attributes.lastName,
-  ]) {
-    if (!attribute) continue;
-    const value = attribute.toLowerCase();
-    // `\W+` in Python's re is Unicode-aware; the ASCII-only JS `\W` is not.
-    for (const part of [...value.split(/[^\p{L}\p{N}_]+/u), value]) {
-      if (!part) continue;
-      if (exceedsMaximumLengthRatio(passwordLength, [...part].length)) continue;
-      if (quickRatio(lowered, part) >= MAX_SIMILARITY) return true;
-    }
-  }
-  return false;
-}
-
-/** Mirrors `NumericPasswordValidator` (Python's `str.isdigit`). */
-function isEntirelyNumeric(password: string): boolean {
-  return password.length > 0 && /^\p{Nd}+$/u.test(password);
-}
-
-/**
- * Evaluate every browser-checkable rule. Returns one entry per rule so the UI
- * can render a live checklist rather than a single pass/fail.
- */
-export function checkPassword(
-  password: string,
-  attributes: PasswordUserAttributes = {},
-): PasswordRule[] {
-  return [
-    { id: "minLength", satisfied: [...password].length >= PASSWORD_MIN_LENGTH },
-    { id: "notNumeric", satisfied: !isEntirelyNumeric(password) },
-    { id: "notSimilar", satisfied: !isTooSimilar(password, attributes) },
-  ];
-}
-
-/** True when every browser-checkable rule passes. The API still has final say. */
-export function isPasswordValid(
-  password: string,
-  attributes: PasswordUserAttributes = {},
-): boolean {
-  return checkPassword(password, attributes).every((rule) => rule.satisfied);
-}
-
-// ── Mapping the API's rejection messages ──────────────────────────────────────
-
-export type PasswordErrorKey =
-  | "errorTooShort"
-  | "errorTooCommon"
-  | "errorEntirelyNumeric"
-  | "errorTooSimilar";
-
-/**
- * A rejection reason resolved to a translation key, or - when Django said
- * something we don't recognise - the server's own text. Falling back to the raw
- * message keeps a reworded or newly-configured validator readable (in English)
- * instead of collapsing it into a useless generic error.
- */
-export type PasswordErrorMessage =
-  | { translated: true; key: PasswordErrorKey; values?: { count: number } }
-  | { translated: false; text: string };
-
-/**
- * DRF renders validator messages, not codes, so matching is by text. Each
- * pattern is anchored to survive an unrelated validator being added later.
- */
-const DJANGO_MESSAGES: {
-  pattern: RegExp;
-  key: PasswordErrorKey;
-  values?: (match: RegExpMatchArray) => { count: number };
-}[] = [
-  {
-    pattern:
-      /^This password is too short\. It must contain at least (\d+) characters?\.$/,
-    key: "errorTooShort",
-    values: (match) => ({ count: Number(match[1]) }),
-  },
-  { pattern: /^This password is too common\.$/, key: "errorTooCommon" },
-  {
-    pattern: /^This password is entirely numeric\.$/,
-    key: "errorEntirelyNumeric",
-  },
-  {
-    pattern: /^The password is too similar to the .+\.$/,
-    key: "errorTooSimilar",
-  },
-];
-
-function mapPasswordError(message: string): PasswordErrorMessage {
-  for (const { pattern, key, values } of DJANGO_MESSAGES) {
-    const match = message.match(pattern);
-    if (match) {
-      return values
-        ? { translated: true, key, values: values(match) }
-        : { translated: true, key };
-    }
-  }
-  return { translated: false, text: message };
-}
-
-/** Pull a DRF field's errors out of a 400 body, tolerating string or array. */
-export function extractFieldErrors(data: unknown, field: string): string[] {
-  if (!data || typeof data !== "object") return [];
-  const raw = (data as Record<string, unknown>)[field];
-  if (typeof raw === "string") return [raw];
-  if (Array.isArray(raw))
-    return raw.filter((item): item is string => typeof item === "string");
-  return [];
-}
-
-/**
- * Turn a 400 response body into renderable password errors. `field` is the DRF
- * field name - `password` on sign-up, `new_password` on change/reset.
- */
-export function mapPasswordErrors(
-  data: unknown,
-  field = "password",
-): PasswordErrorMessage[] {
-  return extractFieldErrors(data, field).map(mapPasswordError);
-}
-TSEOF
-}
-
-
-gen_password_requirements() {
-  local base="$1"   # apps/<name>/components/auth
-  mkdir -p "${base}"
-
-  cat > "${base}/password-requirements.tsx" << 'TSEOF'
-"use client";
-
-import { useTranslations } from "next-intl";
-import { Box } from "@repo/ui/core-elements/box";
-import { Typography } from "@repo/ui/core-elements/typography";
-import {
-  PASSWORD_MIN_LENGTH,
-  checkPassword,
-  type PasswordRuleId,
-  type PasswordUserAttributes,
-} from "@/lib/password-policy";
-import "./password-requirements.css";
-
-const RULE_LABEL: Record<PasswordRuleId, string> = {
-  minLength: "ruleMinLength",
-  notNumeric: "ruleNotNumeric",
-  notSimilar: "ruleNotSimilar",
-};
-
-interface Props {
-  password: string;
-  /** Compared against the password by the `notSimilar` rule. */
-  attributes?: PasswordUserAttributes;
-}
-
-/**
- * Live checklist of the browser-checkable half of the Django password policy.
- * Renders nothing until the user types, so an untouched form is not greeted by
- * a wall of unmet rules. The common-password rule cannot run here and instead
- * surfaces as a server error on submit.
- */
-export function PasswordRequirements({ password, attributes }: Props) {
-  const t = useTranslations("PasswordPolicy");
-  if (!password) return null;
-
-  const rules = checkPassword(password, attributes);
-
-  return (
-    <Box
-      role="list"
-      flexDirection="column"
-      gap={2}
-      aria-live="polite"
-      className="password-requirements"
-    >
-      {rules.map((rule) => (
-        <Typography
-          key={rule.id}
-          as="div"
-          role="listitem"
-          variant="caption"
-          display="flex"
-          alignItems="center"
-          gap={6}
-          color={
-            rule.satisfied
-              ? "var(--success, #22c55e)"
-              : "var(--muted-foreground, #6b7280)"
-          }
-          className={`password-requirements__item password-requirements__item--${
-            rule.satisfied ? "met" : "unmet"
-          }`}
-        >
-          {t(RULE_LABEL[rule.id], { count: PASSWORD_MIN_LENGTH })}
-        </Typography>
-      ))}
-    </Box>
-  );
-}
-TSEOF
-
-  cat > "${base}/password-requirements.css" << 'CSSEOF'
-/* Only the state marker and its transition live here - layout, spacing, and
-   color are component props on <Typography> per the props-first rule. */
-
-.password-requirements__item {
-  transition: color 150ms ease;
-}
-
-.password-requirements__item::before {
-  width: 1em;
-  font-weight: 600;
-  text-align: center;
-}
-
-.password-requirements__item--met::before {
-  content: "\2713"; /* ✓ */
-}
-
-.password-requirements__item--unmet::before {
-  content: "\2717"; /* ✗ */
-}
-CSSEOF
-}
-
-
+# The /api/auth/* route handlers.
+#
+# The five that are byte-identical in every app are re-exported from
+# @repo/auth/route-handlers in one line each. The rest stay here because they
+# genuinely differ per app (they set cookies, or an app may inject extra fields).
 gen_api_auth_routes() {
   local base="$1"
 
-  # login
+  # ── Shared handlers: one-line re-exports ────────────────────────────────────
+  mkdir -p "${base}/logout" "${base}/change-password" "${base}/profile/picture" \
+           "${base}/passkey/credentials" "${base}/passkey/credentials/[id]"
+
+  echo "export { logoutRoute as POST } from '@repo/auth/route-handlers';" \
+    > "${base}/logout/route.ts"
+  echo "export { changePasswordRoute as POST } from '@repo/auth/route-handlers';" \
+    > "${base}/change-password/route.ts"
+  echo "export { uploadProfilePictureRoute as POST } from '@repo/auth/route-handlers';" \
+    > "${base}/profile/picture/route.ts"
+  echo "export { listPasskeyCredentialsRoute as GET } from '@repo/auth/route-handlers';" \
+    > "${base}/passkey/credentials/route.ts"
+  echo "export { deletePasskeyCredentialRoute as DELETE } from '@repo/auth/route-handlers';" \
+    > "${base}/passkey/credentials/[id]/route.ts"
+
+  # ── App-specific handlers ───────────────────────────────────────────────────
+
+  # login - sets the cookies, so it cannot be shared as-is
   mkdir -p "${base}/login"
   cat > "${base}/login/route.ts" << 'TSEOF'
-import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
+import { setAuthCookies } from '@repo/auth/api-fetch';
+import { apiUrl } from '@repo/auth/tokens';
 
 export async function POST(request: NextRequest) {
   const body: unknown = await request.json();
-  const res = await fetch(`${process.env.API_URL}/api/auth/login/`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  const res = await fetch(`${apiUrl()}/api/auth/login/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
   const data = (await res.json()) as Record<string, unknown>;
   if (!res.ok) return NextResponse.json(data, { status: res.status });
-  const isProduction = process.env.NODE_ENV === 'production';
-  const cookieStore = await cookies();
-  cookieStore.set('access_token', data.access as string, { httpOnly: true, secure: isProduction, sameSite: 'strict', path: '/', maxAge: 60 * 60 });
-  cookieStore.set('refresh_token', data.refresh as string, { httpOnly: true, secure: isProduction, sameSite: 'strict', path: '/', maxAge: 60 * 60 * 24 * 7 });
-  return NextResponse.json({ ok: true });
-}
-TSEOF
 
-  # logout
-  mkdir -p "${base}/logout"
-  cat > "${base}/logout/route.ts" << 'TSEOF'
-import { cookies } from 'next/headers';
-import { NextResponse } from 'next/server';
-
-export async function POST() {
-  const cookieStore = await cookies();
-  cookieStore.delete('access_token');
-  cookieStore.delete('refresh_token');
+  // setAuthCookies gives the access cookie a 7d maxAge so it outlives the 1h JWT
+  // and the proxy can refresh it. A cookie that expired with the token would make
+  // a still-valid session look like a logout.
+  await setAuthCookies(data.access as string, data.refresh as string);
   return NextResponse.json({ ok: true });
 }
 TSEOF
@@ -1586,22 +1057,26 @@ TSEOF
   mkdir -p "${base}/signup"
   cat > "${base}/signup/route.ts" << 'TSEOF'
 import { NextRequest, NextResponse } from 'next/server';
+import { apiUrl } from '@repo/auth/tokens';
 
 export async function POST(request: NextRequest) {
   const body: unknown = await request.json();
-  const res = await fetch(`${process.env.API_URL}/api/auth/signup/`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  const res = await fetch(`${apiUrl()}/api/auth/signup/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
   const data: unknown = await res.json();
   return NextResponse.json(data, { status: res.status });
 }
 TSEOF
 
-  # profile
+  # profile - GET/PUT; the PUT must reissue tokens
   mkdir -p "${base}/profile"
   cat > "${base}/profile/route.ts" << 'TSEOF'
 import { NextRequest, NextResponse } from 'next/server';
 import { apiFetch } from '@/lib/api-fetch';
+import { reissueTokens } from '@repo/auth/api-fetch';
 
 export async function GET() {
   const res = await apiFetch('/api/auth/profile/');
@@ -1612,78 +1087,75 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   const body: unknown = await request.json();
   const res = await apiFetch('/api/auth/profile/', {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
   const data: unknown = await res.json();
+
+  // The name is a token claim, and claims ride on the refresh token - so without
+  // a reissue a rename would not reach the navbar until the refresh token expired.
+  if (res.ok) await reissueTokens();
+
   return NextResponse.json(data, { status: res.status });
 }
 TSEOF
 
-  # profile/picture
-  mkdir -p "${base}/profile/picture"
-  cat > "${base}/profile/picture/route.ts" << 'TSEOF'
-import { NextRequest, NextResponse } from 'next/server';
-import { apiFetch } from '@/lib/api-fetch';
-
-export async function POST(request: NextRequest) {
-  const body: unknown = await request.json();
-  const res = await apiFetch('/api/auth/profile/picture/', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  });
-  const data: unknown = await res.json();
-  return NextResponse.json(data, { status: res.status });
-}
-TSEOF
-
-  # change-password
-  mkdir -p "${base}/change-password"
-  cat > "${base}/change-password/route.ts" << 'TSEOF'
-import { NextRequest, NextResponse } from 'next/server';
-import { apiFetch } from '@/lib/api-fetch';
-
-export async function POST(request: NextRequest) {
-  const body: unknown = await request.json();
-  const res = await apiFetch('/api/auth/change-password/', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  });
-  if (res.status === 204) return new NextResponse(null, { status: 204 });
-  const data: unknown = await res.json().catch(() => ({}));
-  return NextResponse.json(data, { status: res.status });
-}
-TSEOF
-
-  # verify-email/[token]
+  # verify-email
   mkdir -p "${base}/verify-email/[token]"
   cat > "${base}/verify-email/[token]/route.ts" << 'TSEOF'
 import { NextRequest, NextResponse } from 'next/server';
+import { apiUrl } from '@repo/auth/tokens';
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {
   const { token } = await params;
-  const res = await fetch(`${process.env.API_URL}/api/auth/verify-email/${token}/`);
+  const res = await fetch(`${apiUrl()}/api/auth/verify-email/${token}/`);
   const data: Record<string, unknown> = await res.json().catch(() => ({}));
   return NextResponse.json(data, { status: res.status });
 }
 TSEOF
 
-  # password-reset
+  # password-reset - request the email
   mkdir -p "${base}/password-reset"
   cat > "${base}/password-reset/route.ts" << 'TSEOF'
 import { NextRequest, NextResponse } from 'next/server';
+import { apiUrl } from '@repo/auth/tokens';
 
 export async function POST(request: NextRequest) {
   const body: unknown = await request.json();
-  const res = await fetch(`${process.env.API_URL}/api/auth/password-reset/`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  const res = await fetch(`${apiUrl()}/api/auth/password-reset/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
   const data: unknown = await res.json();
   return NextResponse.json(data, { status: res.status });
 }
 TSEOF
 
-  # passkey routes
+  # password-reset/confirm - the endpoint the emailed link posts to. The reset
+  # email points at /reset-password/<token>, so this and its page must both exist.
+  mkdir -p "${base}/password-reset/confirm"
+  cat > "${base}/password-reset/confirm/route.ts" << 'TSEOF'
+import { NextRequest, NextResponse } from 'next/server';
+import { apiUrl } from '@repo/auth/tokens';
+
+export async function POST(request: NextRequest) {
+  const body: unknown = await request.json();
+  const res = await fetch(`${apiUrl()}/api/auth/password-reset/confirm/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data: Record<string, unknown> = await res.json().catch(() => ({}));
+  return NextResponse.json(data, { status: res.status });
+}
+TSEOF
+
+  # passkey register options/verify - authenticated, so they go through apiFetch
   mkdir -p "${base}/passkey/register/options"
   cat > "${base}/passkey/register/options/route.ts" << 'TSEOF'
 import { NextResponse } from 'next/server';
@@ -1691,9 +1163,11 @@ import { apiFetch } from '@/lib/api-fetch';
 
 export async function POST() {
   const res = await apiFetch('/api/auth/passkey/register/options/', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
   });
-  if (!res.headers.get('content-type')?.includes('application/json')) return NextResponse.json({ detail: 'Upstream error' }, { status: 502 });
+  if (!res.headers.get('content-type')?.includes('application/json'))
+    return NextResponse.json({ detail: 'Upstream error' }, { status: 502 });
   const data: unknown = await res.json();
   return NextResponse.json(data, { status: res.status });
 }
@@ -1707,24 +1181,33 @@ import { apiFetch } from '@/lib/api-fetch';
 export async function POST(request: NextRequest) {
   const body: unknown = await request.json();
   const res = await apiFetch('/api/auth/passkey/register/verify/', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
-  if (!res.headers.get('content-type')?.includes('application/json')) return NextResponse.json({ detail: 'Upstream error' }, { status: 502 });
+  if (!res.headers.get('content-type')?.includes('application/json'))
+    return NextResponse.json({ detail: 'Upstream error' }, { status: 502 });
   const data: unknown = await res.json();
   return NextResponse.json(data, { status: res.status });
 }
 TSEOF
 
+  # passkey authenticate options/verify - anonymous (this IS the login), and the
+  # verify sets the cookies
   mkdir -p "${base}/passkey/authenticate/options"
   cat > "${base}/passkey/authenticate/options/route.ts" << 'TSEOF'
 import { NextRequest, NextResponse } from 'next/server';
+import { apiUrl } from '@repo/auth/tokens';
 
 export async function POST(request: NextRequest) {
   const body: unknown = await request.json();
-  const res = await fetch(`${process.env.API_URL}/api/auth/passkey/authenticate/options/`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  const res = await fetch(`${apiUrl()}/api/auth/passkey/authenticate/options/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
-  if (!res.headers.get('content-type')?.includes('application/json')) return NextResponse.json({ detail: 'Upstream error' }, { status: 502 });
+  if (!res.headers.get('content-type')?.includes('application/json'))
+    return NextResponse.json({ detail: 'Upstream error' }, { status: 502 });
   const data: unknown = await res.json();
   return NextResponse.json(data, { status: res.status });
 }
@@ -1732,713 +1215,119 @@ TSEOF
 
   mkdir -p "${base}/passkey/authenticate/verify"
   cat > "${base}/passkey/authenticate/verify/route.ts" << 'TSEOF'
-import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
+import { setAuthCookies } from '@repo/auth/api-fetch';
+import { apiUrl } from '@repo/auth/tokens';
 
 export async function POST(request: NextRequest) {
   const body: unknown = await request.json();
-  const res = await fetch(`${process.env.API_URL}/api/auth/passkey/authenticate/verify/`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  const res = await fetch(`${apiUrl()}/api/auth/passkey/authenticate/verify/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
-  if (!res.headers.get('content-type')?.includes('application/json')) return NextResponse.json({ detail: 'Upstream error' }, { status: 502 });
+  if (!res.headers.get('content-type')?.includes('application/json'))
+    return NextResponse.json({ detail: 'Upstream error' }, { status: 502 });
   const data = (await res.json()) as Record<string, unknown>;
   if (!res.ok) return NextResponse.json(data, { status: res.status });
-  const isProduction = process.env.NODE_ENV === 'production';
-  const cookieStore = await cookies();
-  cookieStore.set('access_token', data.access as string, { httpOnly: true, secure: isProduction, sameSite: 'strict', path: '/', maxAge: 60 * 60 });
-  cookieStore.set('refresh_token', data.refresh as string, { httpOnly: true, secure: isProduction, sameSite: 'strict', path: '/', maxAge: 60 * 60 * 24 * 7 });
+
+  await setAuthCookies(data.access as string, data.refresh as string);
   return NextResponse.json({ ok: true });
 }
 TSEOF
-
-  mkdir -p "${base}/passkey/credentials"
-  cat > "${base}/passkey/credentials/route.ts" << 'TSEOF'
-import { NextResponse } from 'next/server';
-import { apiFetch } from '@/lib/api-fetch';
-
-export async function GET() {
-  const res = await apiFetch('/api/auth/passkey/credentials/');
-  if (!res.ok) return NextResponse.json({ count: 0, credentials: [] });
-  const data: unknown = await res.json();
-  return NextResponse.json(data);
-}
-TSEOF
-
-  mkdir -p "${base}/passkey/credentials/[id]"
-  cat > "${base}/passkey/credentials/[id]/route.ts" << 'TSEOF'
-import { NextResponse } from 'next/server';
-import { apiFetch } from '@/lib/api-fetch';
-
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const { id } = await params;
-  const res = await apiFetch(`/api/auth/passkey/credentials/${id}/`, { method: 'DELETE' });
-  return new NextResponse(null, { status: res.status });
-}
-TSEOF
 }
 
-
+# The auth screens. Every one of these is a shared component from @repo/auth - the
+# page is just a server wrapper that sets the locale. The copy still comes from
+# this app's own AuthPage / ResetPasswordPage / VerifyEmailPage namespaces.
 gen_auth_pages() {
   local base="$1"   # apps/<name>/app/[locale]/(auth)
 
-  # auth/page.tsx
   mkdir -p "${base}/auth"
   cat > "${base}/auth/page.tsx" << 'TSEOF'
 import { setRequestLocale } from 'next-intl/server';
-import { AuthForm } from './auth-form';
 import { NavbarSpacer } from '@repo/ui/core-elements/navbar';
+import { AuthForm } from '@repo/auth/auth-form';
 
 type Props = { params: Promise<{ locale: string }> };
 
 export default async function AuthPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
-  return (<><NavbarSpacer /><AuthForm /></>);
-}
-TSEOF
 
-  # auth/auth-form.css
-  cat > "${base}/auth/auth-form.css" << 'CSSEOF'
-.auth-form__form { display: flex; flex-direction: column; gap: 16px; }
-.auth-form__tabs { display: flex; border-bottom: 1px solid var(--border, #e5e7eb); margin-bottom: 4px; }
-.auth-form__tab-btn { flex: 1; padding: 10px 4px; font-size: 13px; font-weight: 400; color: var(--muted-foreground, #6b7280); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.15s; margin-bottom: -1px; }
-.auth-form__tab-btn[data-active='true'] { font-weight: 600; color: var(--foreground); border-bottom-color: var(--foreground); }
-.auth-form__error { color: var(--error, #ef4444); padding: 8px 12px; border-radius: 6px; background: var(--error-bg, rgba(239,68,68,0.08)); }
-.auth-form__divider { display: flex; align-items: center; gap: 12px; color: var(--muted-foreground, #6b7280); font-size: 13px; }
-.auth-form__divider::before, .auth-form__divider::after { content: ''; flex: 1; height: 1px; background: var(--border, #e5e7eb); }
-.auth-form__passkey-icon-btn { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; border: 1.5px solid var(--border, #e5e7eb); background: transparent; cursor: pointer; transition: background 0.15s, opacity 0.15s; padding: 0; }
-.auth-form__passkey-icon-btn:hover:not(:disabled) { background: var(--surface-2, #f3f4f6); }
-.auth-form__passkey-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-.auth-form__success { color: var(--success, #22c55e); padding: 8px 12px; border-radius: 6px; background: var(--success-bg, rgba(34,197,94,0.08)); text-align: center; }
-CSSEOF
-
-  # auth/auth-form.tsx
-  cat > "${base}/auth/auth-form.tsx" << 'TSEOF'
-'use client';
-
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
-import { useTranslations } from 'next-intl';
-import { useRouter } from '@repo/i18n/navigation';
-import { Container } from '@repo/ui/core-elements/container';
-import { Box } from '@repo/ui/core-elements/box';
-import { TextInput } from '@repo/ui/core-elements/text-input';
-import { Button } from '@repo/ui/core-elements/button';
-import { LinkButton } from '@repo/ui/core-elements/link-button';
-import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Switch } from '@repo/ui/core-elements/switch';
-import './auth-form.css';
-import { login, LoginError, signUp, requestPasswordReset, ApiError, loginWithPasskey, registerPasskey, getPasskeyCredentials, getProfile, storeUser } from '@/lib/auth';
-import { isPasswordValid, mapPasswordErrors } from '@/lib/password-policy';
-import { PasswordRequirements } from '@/components/auth/password-requirements';
-
-const REMEMBERED_EMAIL_KEY = 'auth_remembered_email';
-const REMEMBER_EMAIL_PREF_KEY = 'auth_remember_email';
-
-type Tab = 'sign-in' | 'sign-up' | 'reset-password';
-
-function ErrorMessage({ message }: { message: string }) {
-  return <Typography variant="caption" role="alert" className="auth-form__error">{message}</Typography>;
-}
-
-function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
-  const t = useTranslations('AuthPage');
-  const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [passkeyPrompt, setPasskeyPrompt] = useState(false);
-  const [passkeySuccess, setPasskeySuccess] = useState(false);
-  const [rememberEmail, setRememberEmail] = useState(false);
-
-  useEffect(() => {
-    const pref = localStorage.getItem(REMEMBER_EMAIL_PREF_KEY) === 'true';
-    setRememberEmail(pref);
-    if (pref) { const saved = localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? ''; if (saved) setEmail(saved); }
-  }, []);
-
-  function handleEmailChange(value: string) {
-    setEmail(value);
-    if (rememberEmail) localStorage.setItem(REMEMBERED_EMAIL_KEY, value);
-  }
-
-  function handleRememberEmailChange(checked: boolean) {
-    setRememberEmail(checked);
-    localStorage.setItem(REMEMBER_EMAIL_PREF_KEY, String(checked));
-    if (checked) { if (email) localStorage.setItem(REMEMBERED_EMAIL_KEY, email); }
-    else { localStorage.removeItem(REMEMBERED_EMAIL_KEY); }
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); setError(null); setLoading(true);
-    try {
-      await login({ email, password });
-      storeUser(await getProfile());
-      const { count } = await getPasskeyCredentials();
-      if (count === 0) { setPasskeyPrompt(true); setLoading(false); return; }
-      router.push('/');
-    } catch (err) {
-      setError(err instanceof LoginError && err.status === 401 ? t('signIn.errorInvalidCredentials') : t('signIn.errorGeneric'));
-    } finally { setLoading(false); }
-  }
-
-  async function handlePasskeySignIn() {
-    if (!email) { setError(t('signIn.errorEmailRequired')); return; }
-    setError(null); setLoading(true);
-    try { await loginWithPasskey(email); storeUser(await getProfile()); router.push('/'); }
-    catch (err) { setError(err instanceof LoginError ? t('signIn.errorPasskeyFailed') : t('signIn.errorGeneric')); }
-    finally { setLoading(false); }
-  }
-
-  async function handleRegisterPasskey() {
-    setError(null); setLoading(true);
-    try { await registerPasskey(); setPasskeySuccess(true); setTimeout(() => router.push('/'), 1500); }
-    catch { setError(t('passkey.errorGeneric')); }
-    finally { setLoading(false); }
-  }
-
-  if (passkeyPrompt) {
-    return (
-      <Box display="flex" flexDirection="column" gap={16} alignItems="center">
-        <Typography variant="body" fontWeight={600}>{t('passkey.promptTitle')}</Typography>
-        <Typography variant="caption" styles={{ textAlign: 'center' }}>{t('passkey.promptDescription')}</Typography>
-        {passkeySuccess && <Typography variant="caption" className="auth-form__success">{t('passkey.successMessage')}</Typography>}
-        {error && <ErrorMessage message={error} />}
-        {loading && <ProgressBar />}
-        {!passkeySuccess && (
-          <>
-            <Button text={t('passkey.registerButton')} type="button" onClick={handleRegisterPasskey} size="md" width="100%" kind="primary" />
-            <LinkButton onClick={() => router.push('/')} label={t('passkey.skipButton')} />
-          </>
-        )}
-      </Box>
-    );
-  }
-
+  // AuthForm takes an optional `resolveRedirect` - where to land once the user is
+  // authenticated (it defaults to '/'). An app that needs to send, say, a user with
+  // an incomplete profile to /onboarding wraps this in a thin 'use client' component:
+  // a function cannot cross the server/client boundary.
   return (
-    <form onSubmit={handleSubmit} className="auth-form__form">
-      <TextInput label={t('signIn.emailLabel')} type="email" value={email} onChange={handleEmailChange} required autoComplete="email" />
-      <TextInput label={t('signIn.passwordLabel')} type="password" value={password} onChange={setPassword} required autoComplete="current-password" />
-      <Box display="flex" alignItems="center" gap={8}>
-        <Switch checked={rememberEmail} onChange={handleRememberEmailChange} />
-        <Typography variant="caption" color="var(--muted-foreground, #6b7280)">{t('signIn.rememberEmail')}</Typography>
-      </Box>
-      {error && <ErrorMessage message={error} />}
-      {loading && <ProgressBar label={t('signIn.submitting')} />}
-      <Button text={loading ? t('signIn.submitting') : t('signIn.submitButton')} type="submit" size="md" width="100%" marginTop={4} kind={email && password ? 'success' : undefined} disabled={!email || !password} />
-      <Typography variant="none" className="auth-form__divider">{t('signIn.orDivider')}</Typography>
-      <Box display="flex" justifyContent="center" gap={12}>
-        <Button unstyled type="button" onClick={handlePasskeySignIn} disabled={!email} className="auth-form__passkey-icon-btn" aria-label={t('signIn.passkeyButton')} title={t('signIn.passkeyButton')}>
-          <Image src="/icons/fingerprint.svg" width={28} height={28} alt="" />
-        </Button>
-      </Box>
-      <Box display="flex" flexDirection="column" gap={8} alignItems="center">
-        <LinkButton onClick={() => switchTab('reset-password')} label={t('signIn.forgotPassword')} />
-        <LinkButton onClick={() => switchTab('sign-up')} label={t('signIn.noAccount')} />
-      </Box>
-    </form>
-  );
-}
-
-function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
-  const t = useTranslations('AuthPage');
-  const tPolicy = useTranslations('PasswordPolicy');
-  const [email, setEmail] = useState(''); const [firstName, setFirstName] = useState(''); const [lastName, setLastName] = useState('');
-  const [password, setPassword] = useState(''); const [password2, setPassword2] = useState('');
-  const [error, setError] = useState<string | null>(null); const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null); const [loading, setLoading] = useState(false);
-
-  const attributes = { email, firstName, lastName };
-  // The API is the authority; this only gates the rules the browser can check.
-  const passwordAccepted = isPasswordValid(password, attributes);
-
-  function handlePasswordChange(value: string) {
-    setPassword(value);
-    // A rejection describes the password that was submitted, not this one.
-    setPasswordError(null);
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); setError(null); setPasswordError(null); setSuccess(null);
-    if (password !== password2) { setError(t('signUp.errorPasswordMismatch')); return; }
-    setLoading(true);
-    try {
-      await signUp({ email, password, password2, first_name: firstName || undefined, last_name: lastName || undefined });
-      setSuccess(t('signUp.successDetail'));
-    } catch (err) {
-      if (err instanceof ApiError) {
-        // The password policy the browser cannot check (e.g. the common-password
-        // list) is only enforced server-side, so surface what the API rejected.
-        const rejections = mapPasswordErrors(err.data, 'password');
-        if (rejections.length > 0) {
-          setPasswordError(rejections.map((r) => (r.translated ? tPolicy(r.key, r.values) : r.text)).join(' '));
-          return;
-        }
-        const emailErr = (err.data as Record<string, string[]>)?.email;
-        setError(emailErr ? (Array.isArray(emailErr) ? (emailErr[0] ?? t('signUp.errorGeneric')) : String(emailErr)) : t('signUp.errorGeneric'));
-      } else { setError(t('signUp.errorGeneric')); }
-    } finally { setLoading(false); }
-  }
-
-  if (success) return (
-    <Box display="flex" flexDirection="column" gap={16} alignItems="center" styles={{ textAlign: 'center' }}>
-      <Typography variant="body">{success}</Typography>
-      <LinkButton onClick={() => switchTab('sign-in')} label={t('signUp.haveAccount')} />
-    </Box>
-  );
-
-  return (
-    <form onSubmit={handleSubmit} className="auth-form__form">
-      <Box display="flex" gap={12}>
-        <TextInput label={t('signUp.firstNameLabel')} type="text" value={firstName} onChange={setFirstName} autoComplete="given-name" />
-        <TextInput label={t('signUp.lastNameLabel')} type="text" value={lastName} onChange={setLastName} autoComplete="family-name" />
-      </Box>
-      <TextInput label={t('signUp.emailLabel')} type="email" value={email} onChange={setEmail} required autoComplete="email" />
-      <TextInput label={t('signUp.passwordLabel')} type="password" value={password} onChange={handlePasswordChange} required autoComplete="new-password" error={passwordError ?? undefined} />
-      <PasswordRequirements password={password} attributes={attributes} />
-      <TextInput label={t('signUp.confirmPasswordLabel')} type="password" value={password2} onChange={setPassword2} required autoComplete="new-password" />
-      {error && <ErrorMessage message={error} />}
-      {loading && <ProgressBar label={t('signUp.submitting')} />}
-      <Button text={loading ? t('signUp.submitting') : t('signUp.submitButton')} type="submit" size="md" width="100%" marginTop={4} kind={email && passwordAccepted && password2 && password === password2 ? 'success' : undefined} disabled={!email || !passwordAccepted || !password2 || password !== password2} />
-      <Box display="flex" flexDirection="column" gap={8} alignItems="center">
-        <LinkButton onClick={() => switchTab('sign-in')} label={t('signUp.haveAccount')} />
-        <LinkButton onClick={() => switchTab('reset-password')} label={t('signUp.forgotPassword')} />
-      </Box>
-    </form>
-  );
-}
-
-function ResetPasswordTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
-  const t = useTranslations('AuthPage');
-  const [email, setEmail] = useState(''); const [error, setError] = useState<string | null>(null); const [success, setSuccess] = useState<string | null>(null); const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); setError(null); setSuccess(null); setLoading(true);
-    try { await requestPasswordReset(email); setSuccess(t('resetPassword.successDetail')); }
-    catch { setError(t('resetPassword.errorGeneric')); }
-    finally { setLoading(false); }
-  }
-
-  return success ? (
-    <Box display="flex" flexDirection="column" gap={16}>
-      <Typography variant="body">{success}</Typography>
-      <LinkButton onClick={() => switchTab('sign-in')} label={t('resetPassword.backToSignIn')} />
-    </Box>
-  ) : (
-    <form onSubmit={handleSubmit} className="auth-form__form">
-      <TextInput label={t('resetPassword.emailLabel')} type="email" value={email} onChange={setEmail} required autoComplete="email" />
-      {error && <ErrorMessage message={error} />}
-      {loading && <ProgressBar label={t('resetPassword.submitting')} />}
-      <Button text={loading ? t('resetPassword.submitting') : t('resetPassword.submitButton')} type="submit" size="md" width="100%" marginTop={4} kind={email ? 'success' : undefined} disabled={!email} />
-      <Box display="flex" justifyContent="center">
-        <LinkButton onClick={() => switchTab('sign-in')} label={t('resetPassword.backToSignIn')} />
-      </Box>
-    </form>
-  );
-}
-
-export function AuthForm() {
-  const t = useTranslations('AuthPage');
-  const [tab, setTab] = useState<Tab>('sign-in');
-
-  useEffect(() => {
-    const readHash = () => {
-      const hash = window.location.hash.replace('#', '');
-      setTab(hash === 'sign-up' || hash === 'reset-password' ? (hash as Tab) : 'sign-in');
-    };
-    readHash();
-    window.addEventListener('hashchange', readHash);
-    return () => window.removeEventListener('hashchange', readHash);
-  }, []);
-
-  const switchTab = (newTab: Tab) => { window.location.hash = newTab; setTab(newTab); };
-
-  const tabLabels: Record<Tab, string> = { 'sign-in': t('tabSignIn'), 'sign-up': t('tabSignUp'), 'reset-password': t('tabReset') };
-  const tabHeadings: Record<Tab, { title: string; subtitle: string }> = {
-    'sign-in': { title: t('signIn.title'), subtitle: t('signIn.subtitle') },
-    'sign-up': { title: t('signUp.title'), subtitle: t('signUp.subtitle') },
-    'reset-password': { title: t('resetPassword.title'), subtitle: t('resetPassword.subtitle') },
-  };
-  const { title, subtitle } = tabHeadings[tab];
-
-  return (
-    <Container display="flex" alignItems="center" styles={{ minHeight: '100vh', flexDirection: 'column', justifyContent: 'flex-start' }} paddingTop={16} paddingX={10}>
-      <Box width="100%" maxWidth={420} marginBottom={20}>
-        <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>{title}</Typography>
-        <Typography variant="body" color="var(--muted-foreground, #6b7280)">{subtitle}</Typography>
-      </Box>
-      <Box width="100%" maxWidth={420} padding={10} borderRadius={12} flexDirection="column" gap={20} elevation={5} backgroundColor="var(--surface-1)">
-        <Box className="auth-form__tabs">
-          {(['sign-in', 'sign-up', 'reset-password'] as Tab[]).map((id) => (
-            <button key={id} onClick={() => switchTab(id)} data-active={String(tab === id)} className="auth-form__tab-btn">{tabLabels[id]}</button>
-          ))}
-        </Box>
-        {tab === 'sign-in' && <SignInTab switchTab={switchTab} />}
-        {tab === 'sign-up' && <SignUpTab switchTab={switchTab} />}
-        {tab === 'reset-password' && <ResetPasswordTab switchTab={switchTab} />}
-      </Box>
-    </Container>
+    <>
+      <NavbarSpacer />
+      <AuthForm />
+    </>
   );
 }
 TSEOF
 
-  # verify-email/[token]/page.tsx
+  # The page the password-reset email links to. The API mails
+  # `${FRONTEND_URL}/reset-password/<token>`, so this route must exist.
+  mkdir -p "${base}/reset-password/[token]"
+  cat > "${base}/reset-password/[token]/page.tsx" << 'TSEOF'
+import { setRequestLocale } from 'next-intl/server';
+import { ResetPasswordForm } from '@repo/auth/reset-password-form';
+
+type Props = { params: Promise<{ locale: string; token: string }> };
+
+export default async function ResetPasswordPage({ params }: Props) {
+  const { locale, token } = await params;
+  setRequestLocale(locale);
+
+  return <ResetPasswordForm token={token} />;
+}
+TSEOF
+
+  # The page the verification email links to.
   mkdir -p "${base}/verify-email/[token]"
   cat > "${base}/verify-email/[token]/page.tsx" << 'TSEOF'
 import { setRequestLocale } from 'next-intl/server';
-import { VerifyEmailClient } from './verify-email-client';
+import { VerifyEmail } from '@repo/auth/verify-email';
 
 type Props = { params: Promise<{ locale: string; token: string }> };
 
 export default async function VerifyEmailPage({ params }: Props) {
   const { locale, token } = await params;
   setRequestLocale(locale);
-  return <VerifyEmailClient token={token} />;
-}
-TSEOF
 
-  # verify-email/[token]/verify-email-client.tsx
-  cat > "${base}/verify-email/[token]/verify-email-client.tsx" << 'TSEOF'
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
-import { useRouter } from '@repo/i18n/navigation';
-import { Container } from '@repo/ui/core-elements/container';
-import { Box } from '@repo/ui/core-elements/box';
-import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { verifyEmail, ApiError } from '@/lib/auth';
-
-type Status = 'loading' | 'success' | 'expired' | 'invalid';
-const REDIRECT_SECONDS = 3;
-
-export function VerifyEmailClient({ token }: { token: string }) {
-  const t = useTranslations('VerifyEmailPage');
-  const router = useRouter();
-  const [status, setStatus] = useState<Status>('loading');
-  const [countdown, setCountdown] = useState(REDIRECT_SECONDS);
-
-  useEffect(() => {
-    verifyEmail(token)
-      .then(() => setStatus('success'))
-      .catch((err) => {
-        if (err instanceof ApiError) {
-          const detail = String((err.data as Record<string, unknown>).detail ?? '');
-          setStatus(detail.toLowerCase().includes('expired') ? 'expired' : 'invalid');
-        } else { setStatus('invalid'); }
-      });
-  }, [token]);
-
-  useEffect(() => {
-    if (status !== 'success') return;
-    if (countdown === 0) { router.push('/'); return; }
-    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [status, countdown, router]);
-
-  return (
-    <Container display="flex" alignItems="center" styles={{ minHeight: '100vh', flexDirection: 'column', justifyContent: 'center' }} paddingX={10}>
-      <Box width="100%" maxWidth={420} padding={10} borderRadius={12} flexDirection="column" gap={20} elevation={5} backgroundColor="var(--surface-1)">
-        {status === 'loading' && <Box display="flex" flexDirection="column" gap={16}><ProgressBar label={t('loading')} /><Typography variant="body" color="var(--muted-foreground, #6b7280)" textAlign="center">{t('loading')}</Typography></Box>}
-        {status === 'success' && <Box display="flex" flexDirection="column" gap={12} alignItems="center" styles={{ textAlign: 'center' }}><Typography variant="h5">{t('successTitle')}</Typography><Typography variant="body" color="var(--muted-foreground, #6b7280)">{t('successDetail')}</Typography><Typography variant="caption" color="var(--muted-foreground, #6b7280)">{t('redirecting', { seconds: countdown })}</Typography><ProgressBar value={((REDIRECT_SECONDS - countdown) / REDIRECT_SECONDS) * 100} label={t('redirectProgress')} /></Box>}
-        {status === 'expired' && <Box display="flex" flexDirection="column" gap={12} alignItems="center" styles={{ textAlign: 'center' }}><Typography variant="h5" role="alert" color="var(--error, #ef4444)">{t('expiredTitle')}</Typography><Typography variant="body" color="var(--muted-foreground, #6b7280)">{t('expiredDetail')}</Typography></Box>}
-        {status === 'invalid' && <Box display="flex" flexDirection="column" gap={12} alignItems="center" styles={{ textAlign: 'center' }}><Typography variant="h5" role="alert" color="var(--error, #ef4444)">{t('invalidTitle')}</Typography><Typography variant="body" color="var(--muted-foreground, #6b7280)">{t('invalidDetail')}</Typography></Box>}
-      </Box>
-    </Container>
-  );
+  return <VerifyEmail token={token} />;
 }
 TSEOF
 }
 
-
+# The account page: profile + avatar, password, passkeys. All of it is AccountForm
+# from @repo/auth, reading this app's own AccountPage namespace.
 gen_account_pages() {
   local base="$1"   # apps/<name>/app/[locale]/account
 
   mkdir -p "${base}"
   cat > "${base}/page.tsx" << 'TSEOF'
 import { setRequestLocale } from 'next-intl/server';
-import { AccountForm } from './account-form';
+import { AccountForm } from '@repo/auth/account-form';
 
 type Props = { params: Promise<{ locale: string }> };
 
 export default async function AccountPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
+
   return <AccountForm />;
 }
 TSEOF
-
-  cat > "${base}/account-form.css" << 'CSSEOF'
-.account__form { display: flex; flex-direction: column; gap: 16px; }
-.account__section-title { margin-bottom: 4px; }
-.account__picture-area { display: flex; align-items: center; gap: 16px; }
-.account__avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-.account__avatar-initials { width: 72px; height: 72px; border-radius: 50%; background: var(--primary, #06b6d4); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 600; flex-shrink: 0; user-select: none; }
-.account__passkey-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border, #e5e7eb); gap: 12px; }
-.account__passkey-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.account__passkey-date { color: var(--muted-foreground, #6b7280); font-size: 12px; }
-.account__success { color: var(--success, #22c55e); padding: 8px 12px; border-radius: 6px; background: var(--success-bg, rgba(34,197,94,0.08)); }
-.account__error { color: var(--error, #ef4444); padding: 8px 12px; border-radius: 6px; background: var(--error-bg, rgba(239,68,68,0.08)); }
-CSSEOF
-
-  cat > "${base}/account-form.tsx" << 'TSEOF'
-'use client';
-
-import { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
-import { useTranslations } from 'next-intl';
-import { useRouter } from '@repo/i18n/navigation';
-import { Container } from '@repo/ui/core-elements/container';
-import { Box } from '@repo/ui/core-elements/box';
-import { TextInput } from '@repo/ui/core-elements/text-input';
-import { Button } from '@repo/ui/core-elements/button';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { getProfile, updateProfile, uploadProfilePicture, changePassword, getPasskeyCredentials, deletePasskeyCredential, registerPasskey, ApiError, type UserProfile } from '@/lib/auth';
-import { isPasswordValid, mapPasswordErrors } from '@/lib/password-policy';
-import { PasswordRequirements } from '@/components/auth/password-requirements';
-import './account-form.css';
-
-function SuccessMessage({ message }: { message: string }) {
-  return <Typography variant="caption" className="account__success">{message}</Typography>;
 }
-function ErrorMessage({ message }: { message: string }) {
-  return <Typography variant="caption" role="alert" className="account__error">{message}</Typography>;
-}
-
-function ProfileSection({ profile }: { profile: UserProfile }) {
-  const t = useTranslations('AccountPage');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [firstName, setFirstName] = useState(profile.first_name);
-  const [lastName, setLastName] = useState(profile.last_name);
-  const [pendingPicture, setPendingPicture] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setPendingPicture(reader.result as string);
-    reader.readAsDataURL(file);
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); setError(null); setSuccess(null); setLoading(true);
-    try {
-      const tasks: Promise<unknown>[] = [updateProfile({ first_name: firstName, last_name: lastName })];
-      if (pendingPicture) tasks.push(uploadProfilePicture(pendingPicture));
-      await Promise.all(tasks);
-      setPendingPicture(null);
-      setSuccess(t('profileSaved'));
-    } catch { setError(t('profileError')); }
-    finally { setLoading(false); }
-  }
-
-  const initials = (profile.first_name[0] ?? profile.email[0] ?? '?').toUpperCase();
-
-  return (
-    <Box width="100%" maxWidth={520} padding={10} borderRadius={12} flexDirection="column" gap={20} elevation={5} backgroundColor="var(--surface-1)">
-      <Typography as="h2" variant="h3" fontWeight={600} className="account__section-title">{t('profileSection')}</Typography>
-      <form onSubmit={handleSubmit} className="account__form">
-        <div className="account__picture-area">
-          {pendingPicture ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={pendingPicture} alt="" className="account__avatar" />
-          ) : profile.profile_picture ? (
-            <Image src={profile.profile_picture} width={72} height={72} alt="" className="account__avatar" />
-          ) : (
-            <div className="account__avatar-initials" aria-hidden="true">{initials}</div>
-          )}
-          <input ref={fileInputRef} type="file" aria-hidden="true" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
-          <Button text={t('changePhoto')} type="button" size="sm" onClick={() => fileInputRef.current?.click()} />
-        </div>
-        <TextInput label={t('emailLabel')} type="email" value={profile.email} disabled />
-        <Box display="flex" gap={12}>
-          <TextInput label={t('firstNameLabel')} type="text" value={firstName} onChange={setFirstName} autoComplete="given-name" />
-          <TextInput label={t('lastNameLabel')} type="text" value={lastName} onChange={setLastName} autoComplete="family-name" />
-        </Box>
-        {success && <SuccessMessage message={success} />}
-        {error && <ErrorMessage message={error} />}
-        {loading && <ProgressBar label={t('savingProfile')} />}
-        <Button text={loading ? t('savingProfile') : t('saveProfile')} type="submit" size="md" width="100%" marginTop={4} kind="primary" />
-      </form>
-    </Box>
-  );
-}
-
-function ChangePasswordSection({ profile }: { profile: UserProfile }) {
-  const t = useTranslations('AccountPage');
-  const tPolicy = useTranslations('PasswordPolicy');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-
-  const attributes = { email: profile.email, firstName: profile.first_name, lastName: profile.last_name };
-  // The API is the authority; this only gates the rules the browser can check.
-  const passwordAccepted = isPasswordValid(newPassword, attributes);
-
-  function handleNewPasswordChange(value: string) {
-    setNewPassword(value);
-    // A rejection describes the password that was submitted, not this one.
-    setPasswordError(null);
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); setError(null); setPasswordError(null); setSuccess(null);
-    if (newPassword !== confirmPassword) { setError(t('passwordMismatch')); return; }
-    setLoading(true);
-    try {
-      await changePassword(currentPassword, newPassword, confirmPassword);
-      setSuccess(t('passwordSaved'));
-      setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 400) {
-        const data = err.data as Record<string, unknown>;
-        // The policy the browser cannot check (e.g. the common-password list)
-        // is only enforced server-side, so surface what the API rejected.
-        const rejections = mapPasswordErrors(data, 'new_password');
-        if (rejections.length > 0) {
-          setPasswordError(rejections.map((r) => (r.translated ? tPolicy(r.key, r.values) : r.text)).join(' '));
-        } else {
-          setError(data.current_password ? t('passwordWrong') : t('passwordError'));
-        }
-      } else { setError(t('passwordError')); }
-    } finally { setLoading(false); }
-  }
-
-  return (
-    <Box width="100%" maxWidth={520} padding={10} borderRadius={12} flexDirection="column" gap={20} elevation={5} backgroundColor="var(--surface-1)">
-      <Typography as="h2" variant="h3" fontWeight={600} className="account__section-title">{t('securitySection')}</Typography>
-      <form onSubmit={handleSubmit} className="account__form">
-        <TextInput label={t('currentPasswordLabel')} type="password" value={currentPassword} onChange={setCurrentPassword} required autoComplete="current-password" />
-        <TextInput label={t('newPasswordLabel')} type="password" value={newPassword} onChange={handleNewPasswordChange} required autoComplete="new-password" error={passwordError ?? undefined} />
-        <PasswordRequirements password={newPassword} attributes={attributes} />
-        <TextInput label={t('confirmPasswordLabel')} type="password" value={confirmPassword} onChange={setConfirmPassword} required autoComplete="new-password" />
-        {success && <SuccessMessage message={success} />}
-        {error && <ErrorMessage message={error} />}
-        {loading && <ProgressBar label={t('savingPassword')} />}
-        <Button text={loading ? t('savingPassword') : t('savePassword')} type="submit" size="md" width="100%" marginTop={4} kind="primary" disabled={!currentPassword || !passwordAccepted || !confirmPassword || newPassword !== confirmPassword} />
-      </form>
-    </Box>
-  );
-}
-
-function PasskeySection() {
-  const t = useTranslations('AccountPage');
-  const [credentials, setCredentials] = useState<{ id: number; name: string; created_at: string }[]>([]);
-  const [loadingCreds, setLoadingCreds] = useState(true);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
-  const [addingPasskey, setAddingPasskey] = useState(false);
-  const [toast, setToast] = useState<{ message: string; isError: boolean } | null>(null);
-
-  useEffect(() => {
-    getPasskeyCredentials()
-      .then(({ credentials: creds }) => setCredentials(creds))
-      .catch(() => setCredentials([]))
-      .finally(() => setLoadingCreds(false));
-  }, []);
-
-  async function handleDelete() {
-    if (confirmDeleteId === null) return;
-    const id = confirmDeleteId; setConfirmDeleteId(null); setDeletingId(id);
-    try { await deletePasskeyCredential(id); setCredentials((prev) => prev.filter((c) => c.id !== id)); setToast({ message: t('passkeyDeleted'), isError: false }); }
-    catch { setToast({ message: t('passkeyDeleteError'), isError: true }); }
-    finally { setDeletingId(null); }
-  }
-
-  async function handleAddPasskey() {
-    setAddingPasskey(true); setToast(null);
-    try { await registerPasskey(); const { credentials: creds } = await getPasskeyCredentials(); setCredentials(creds); setToast({ message: t('passkeyAdded'), isError: false }); }
-    catch { setToast({ message: t('passkeyAddError'), isError: true }); }
-    finally { setAddingPasskey(false); }
-  }
-
-  return (
-    <>
-      {confirmDeleteId !== null && <ConfirmationModal title={t('confirmDeletePasskeyTitle')} text={t('confirmDeletePasskeyText')} okCallback={handleDelete} cancelCallback={() => setConfirmDeleteId(null)} />}
-      <Box width="100%" maxWidth={520} padding={10} borderRadius={12} flexDirection="column" gap={20} elevation={5} backgroundColor="var(--surface-1)">
-        <Typography as="h2" variant="h3" fontWeight={600} className="account__section-title">{t('passkeySection')}</Typography>
-        <Box display="flex" flexDirection="column" gap={8}>
-          {loadingCreds && <ProgressBar />}
-          {!loadingCreds && credentials.length === 0 && <Typography variant="caption" color="var(--muted-foreground, #6b7280)">{t('noPasskeys')}</Typography>}
-          {credentials.map((cred) => (
-            <Box key={cred.id} className="account__passkey-row">
-              <Box display="flex" alignItems="center" gap={10}>
-                <Image src="/icons/fingerprint.svg" width={24} height={24} alt="" />
-                <Box className="account__passkey-meta">
-                  <Typography variant="caption" fontWeight={600}>{cred.name}</Typography>
-                  <span className="account__passkey-date">{new Date(cred.created_at).toLocaleDateString()}</span>
-                </Box>
-              </Box>
-              <Button text={t('deletePasskey')} type="button" size="sm" kind="error" disabled={deletingId === cred.id} onClick={() => setConfirmDeleteId(cred.id)} />
-            </Box>
-          ))}
-        </Box>
-        {toast && (toast.isError ? <ErrorMessage message={toast.message} /> : <SuccessMessage message={toast.message} />)}
-        {addingPasskey && <ProgressBar />}
-        <Button text={t('addPasskey')} type="button" onClick={handleAddPasskey} disabled={addingPasskey} size="md" width="100%" marginTop={4} kind="primary" />
-      </Box>
-    </>
-  );
-}
-
-export function AccountForm() {
-  const t = useTranslations('AccountPage');
-  const router = useRouter();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getProfile().then(setProfile).catch(() => router.push('/auth')).finally(() => setLoading(false));
-  }, [router]);
-
-  if (loading || !profile) {
-    return (
-      <Container display="flex" alignItems="center" styles={{ minHeight: '100vh', flexDirection: 'column', justifyContent: 'center' }}>
-        <ProgressBar label={t('loading')} />
-      </Container>
-    );
-  }
-
-  return (
-    <Container display="flex" alignItems="center" styles={{ minHeight: '100vh', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: 'var(--ui-navbar-height)' }} paddingX={10}>
-      <Box width="100%" maxWidth={520} marginBottom={20} marginTop={20}>
-        <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>{t('title')}</Typography>
-        <Typography variant="body" color="var(--muted-foreground, #6b7280)">{t('subtitle')}</Typography>
-      </Box>
-      <Box display="flex" flexDirection="column" gap={24} width="100%" maxWidth={520} marginBottom={40}>
-        <ProfileSection profile={profile} />
-        <ChangePasswordSection profile={profile} />
-        <PasskeySection />
-      </Box>
-    </Container>
-  );
-}
-TSEOF
-}
-
-
 gen_messages_json() {
   local out="$1" locale="${2:-en}"; mkdir -p "$(dirname "$out")"
 
   if [[ "${locale}" == "es" ]]; then
     local copyright_val="© {year} ${title} v{version}. Todos los derechos reservados."
-    if [[ "${include_auth}" == "y" ]]; then
-      cat > "$out" << EOF
+    cat > "$out" << EOF
 {
   "Metadata": { "title": "${title}", "description": "" },
   "HomePage": { "title": "${title}" },
@@ -2455,14 +1344,6 @@ gen_messages_json() {
     "redirecting": "Redirigiendo en {seconds}…", "redirectProgress": "Progreso de redirección",
     "expiredTitle": "Enlace expirado", "expiredDetail": "Este enlace de verificación ha expirado. Regístrate de nuevo para solicitar uno nuevo.",
     "invalidTitle": "Enlace inválido", "invalidDetail": "Este enlace de verificación no es válido. Revisa tu correo o regístrate de nuevo."
-  },
-  "PasswordPolicy": {
-    "ruleMinLength": "Al menos {count} caracteres", "ruleNotNumeric": "No solo números",
-    "ruleNotSimilar": "No demasiado parecida a tu nombre o correo",
-    "errorTooShort": "Esta contraseña es demasiado corta. Debe contener al menos {count} caracteres.",
-    "errorTooCommon": "Esta contraseña es demasiado común.",
-    "errorEntirelyNumeric": "Esta contraseña es completamente numérica.",
-    "errorTooSimilar": "Esta contraseña se parece demasiado a tu nombre o correo."
   },
   "AuthPage": {
     "tabSignIn": "Iniciar sesión", "tabSignUp": "Registrarse", "tabReset": "Restablecer contraseña",
@@ -2522,22 +1403,29 @@ gen_messages_json() {
     "passkeyDeleted": "Llave eliminada.", "passkeyDeleteError": "No se pudo eliminar la llave. Por favor intenta de nuevo.",
     "addPasskey": "Agregar llave", "passkeyAdded": "Llave agregada.", "passkeyAddError": "No se pudo agregar la llave. Por favor intenta de nuevo.",
     "loading": "Cargando…"
+  },
+  "ResetPasswordPage": {
+    "title": "Establecer nueva contraseña",
+    "subtitle": "Ingresa tu nueva contraseña a continuación",
+    "newPasswordLabel": "Nueva contraseña",
+    "confirmPasswordLabel": "Confirmar nueva contraseña",
+    "submitButton": "Restablecer contraseña",
+    "submitting": "Restableciendo contraseña…",
+    "errorPasswordMismatch": "Las contraseñas no coinciden.",
+    "errorGeneric": "Algo salió mal. Por favor, inténtalo de nuevo.",
+    "successTitle": "¡Contraseña restablecida!",
+    "successDetail": "Tu contraseña ha sido actualizada. Ahora puedes iniciar sesión con tu nueva contraseña.",
+    "backToSignIn": "Volver a iniciar sesión",
+    "invalidTitle": "Enlace inválido o expirado",
+    "invalidDetail": "Este enlace para restablecer la contraseña es inválido o ha expirado. Por favor, solicita uno nuevo.",
+    "requestNewLink": "Solicitar un nuevo enlace"
   }
 }
 EOF
-    else
-      cat > "$out" << EOF
-{
-  "Metadata": { "title": "${title}", "description": "" },
-  "HomePage": { "title": "${title}" }
-}
-EOF
-    fi
 
   elif [[ "${locale}" == "de" ]]; then
     local copyright_val="© {year} ${title} v{version}. Alle Rechte vorbehalten."
-    if [[ "${include_auth}" == "y" ]]; then
-      cat > "$out" << EOF
+    cat > "$out" << EOF
 {
   "Metadata": { "title": "${title}", "description": "" },
   "HomePage": { "title": "${title}" },
@@ -2554,14 +1442,6 @@ EOF
     "redirecting": "Weiterleitung in {seconds}…", "redirectProgress": "Weiterleitungsfortschritt",
     "expiredTitle": "Link abgelaufen", "expiredDetail": "Dieser Bestätigungslink ist abgelaufen. Bitte registriere dich erneut, um einen neuen anzufordern.",
     "invalidTitle": "Ungültiger Link", "invalidDetail": "Dieser Bestätigungslink ist ungültig. Bitte prüfe deine E-Mails oder registriere dich erneut."
-  },
-  "PasswordPolicy": {
-    "ruleMinLength": "Mindestens {count} Zeichen", "ruleNotNumeric": "Nicht nur Ziffern",
-    "ruleNotSimilar": "Nicht zu ähnlich zu Name oder E-Mail",
-    "errorTooShort": "Dieses Passwort ist zu kurz. Es muss mindestens {count} Zeichen enthalten.",
-    "errorTooCommon": "Dieses Passwort ist zu häufig.",
-    "errorEntirelyNumeric": "Dieses Passwort besteht nur aus Ziffern.",
-    "errorTooSimilar": "Dieses Passwort ist Ihrem Namen oder Ihrer E-Mail-Adresse zu ähnlich."
   },
   "AuthPage": {
     "tabSignIn": "Anmelden", "tabSignUp": "Registrieren", "tabReset": "Passwort zurücksetzen",
@@ -2621,22 +1501,29 @@ EOF
     "passkeyDeleted": "Passkey entfernt.", "passkeyDeleteError": "Passkey konnte nicht entfernt werden. Bitte erneut versuchen.",
     "addPasskey": "Passkey hinzufügen", "passkeyAdded": "Passkey hinzugefügt.", "passkeyAddError": "Passkey konnte nicht hinzugefügt werden. Bitte erneut versuchen.",
     "loading": "Lädt…"
+  },
+  "ResetPasswordPage": {
+    "title": "Neues Passwort festlegen",
+    "subtitle": "Geben Sie unten Ihr neues Passwort ein",
+    "newPasswordLabel": "Neues Passwort",
+    "confirmPasswordLabel": "Neues Passwort bestätigen",
+    "submitButton": "Passwort zurücksetzen",
+    "submitting": "Passwort wird zurückgesetzt…",
+    "errorPasswordMismatch": "Passwörter stimmen nicht überein.",
+    "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+    "successTitle": "Passwort zurückgesetzt!",
+    "successDetail": "Ihr Passwort wurde aktualisiert. Sie können sich jetzt mit Ihrem neuen Passwort anmelden.",
+    "backToSignIn": "Zurück zur Anmeldung",
+    "invalidTitle": "Link ungültig oder abgelaufen",
+    "invalidDetail": "Dieser Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen. Bitte fordern Sie einen neuen an.",
+    "requestNewLink": "Neuen Reset-Link anfordern"
   }
 }
 EOF
-    else
-      cat > "$out" << EOF
-{
-  "Metadata": { "title": "${title}", "description": "" },
-  "HomePage": { "title": "${title}" }
-}
-EOF
-    fi
 
   elif [[ "${locale}" == "fr" ]]; then
     local copyright_val="© {year} ${title} v{version}. Tous droits réservés."
-    if [[ "${include_auth}" == "y" ]]; then
-      cat > "$out" << EOF
+    cat > "$out" << EOF
 {
   "Metadata": { "title": "${title}", "description": "" },
   "HomePage": { "title": "${title}" },
@@ -2653,14 +1540,6 @@ EOF
     "redirecting": "Redirection dans {seconds}…", "redirectProgress": "Progression de la redirection",
     "expiredTitle": "Lien expiré", "expiredDetail": "Ce lien de vérification a expiré. Veuillez vous inscrire à nouveau pour en obtenir un nouveau.",
     "invalidTitle": "Lien invalide", "invalidDetail": "Ce lien de vérification est invalide. Vérifiez votre e-mail ou inscrivez-vous à nouveau."
-  },
-  "PasswordPolicy": {
-    "ruleMinLength": "Au moins {count} caractères", "ruleNotNumeric": "Pas uniquement des chiffres",
-    "ruleNotSimilar": "Pas trop proche de votre nom ou e-mail",
-    "errorTooShort": "Ce mot de passe est trop court. Il doit contenir au moins {count} caractères.",
-    "errorTooCommon": "Ce mot de passe est trop courant.",
-    "errorEntirelyNumeric": "Ce mot de passe est entièrement numérique.",
-    "errorTooSimilar": "Ce mot de passe est trop proche de votre nom ou de votre e-mail."
   },
   "AuthPage": {
     "tabSignIn": "Se connecter", "tabSignUp": "S'inscrire", "tabReset": "Réinitialiser le mot de passe",
@@ -2720,22 +1599,29 @@ EOF
     "passkeyDeleted": "Clé d'accès supprimée.", "passkeyDeleteError": "Impossible de supprimer la clé d'accès. Veuillez réessayer.",
     "addPasskey": "Ajouter une clé d'accès", "passkeyAdded": "Clé d'accès ajoutée.", "passkeyAddError": "Impossible d'ajouter la clé d'accès. Veuillez réessayer.",
     "loading": "Chargement…"
+  },
+  "ResetPasswordPage": {
+    "title": "Définir un nouveau mot de passe",
+    "subtitle": "Entrez votre nouveau mot de passe ci-dessous",
+    "newPasswordLabel": "Nouveau mot de passe",
+    "confirmPasswordLabel": "Confirmer le nouveau mot de passe",
+    "submitButton": "Réinitialiser le mot de passe",
+    "submitting": "Réinitialisation en cours…",
+    "errorPasswordMismatch": "Les mots de passe ne correspondent pas.",
+    "errorGeneric": "Une erreur s'est produite. Veuillez réessayer.",
+    "successTitle": "Mot de passe réinitialisé !",
+    "successDetail": "Votre mot de passe a été mis à jour. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
+    "backToSignIn": "Retour à la connexion",
+    "invalidTitle": "Lien invalide ou expiré",
+    "invalidDetail": "Ce lien de réinitialisation est invalide ou a expiré. Veuillez en demander un nouveau.",
+    "requestNewLink": "Demander un nouveau lien"
   }
 }
 EOF
-    else
-      cat > "$out" << EOF
-{
-  "Metadata": { "title": "${title}", "description": "" },
-  "HomePage": { "title": "${title}" }
-}
-EOF
-    fi
 
   elif [[ "${locale}" == "pt" ]]; then
     local copyright_val="© {year} ${title} v{version}. Todos os direitos reservados."
-    if [[ "${include_auth}" == "y" ]]; then
-      cat > "$out" << EOF
+    cat > "$out" << EOF
 {
   "Metadata": { "title": "${title}", "description": "" },
   "HomePage": { "title": "${title}" },
@@ -2752,14 +1638,6 @@ EOF
     "redirecting": "Redirecionando em {seconds}…", "redirectProgress": "Progresso do redirecionamento",
     "expiredTitle": "Link expirado", "expiredDetail": "Este link de verificação expirou. Por favor, cadastre-se novamente para solicitar um novo.",
     "invalidTitle": "Link inválido", "invalidDetail": "Este link de verificação é inválido. Verifique seu e-mail ou cadastre-se novamente."
-  },
-  "PasswordPolicy": {
-    "ruleMinLength": "Pelo menos {count} caracteres", "ruleNotNumeric": "Não apenas números",
-    "ruleNotSimilar": "Não muito parecida com seu nome ou e-mail",
-    "errorTooShort": "Esta senha é muito curta. Ela precisa conter pelo menos {count} caracteres.",
-    "errorTooCommon": "Esta senha é muito comum.",
-    "errorEntirelyNumeric": "Esta senha é totalmente numérica.",
-    "errorTooSimilar": "Esta senha é muito parecida com seu nome ou e-mail."
   },
   "AuthPage": {
     "tabSignIn": "Entrar", "tabSignUp": "Cadastrar", "tabReset": "Redefinir senha",
@@ -2819,23 +1697,30 @@ EOF
     "passkeyDeleted": "Chave de acesso removida.", "passkeyDeleteError": "Não foi possível remover a chave. Tente novamente.",
     "addPasskey": "Adicionar chave de acesso", "passkeyAdded": "Chave de acesso adicionada.", "passkeyAddError": "Não foi possível adicionar a chave. Tente novamente.",
     "loading": "Carregando…"
+  },
+  "ResetPasswordPage": {
+    "title": "Definir nova senha",
+    "subtitle": "Digite sua nova senha abaixo",
+    "newPasswordLabel": "Nova senha",
+    "confirmPasswordLabel": "Confirmar nova senha",
+    "submitButton": "Redefinir senha",
+    "submitting": "Redefinindo senha…",
+    "errorPasswordMismatch": "As senhas não coincidem.",
+    "errorGeneric": "Algo deu errado. Por favor, tente novamente.",
+    "successTitle": "Senha redefinida!",
+    "successDetail": "Sua senha foi atualizada. Agora você pode entrar com sua nova senha.",
+    "backToSignIn": "Voltar para entrar",
+    "invalidTitle": "Link inválido ou expirado",
+    "invalidDetail": "Este link de redefinição de senha é inválido ou expirou. Por favor, solicite um novo.",
+    "requestNewLink": "Solicitar um novo link"
   }
 }
 EOF
-    else
-      cat > "$out" << EOF
-{
-  "Metadata": { "title": "${title}", "description": "" },
-  "HomePage": { "title": "${title}" }
-}
-EOF
-    fi
 
   else
     # English (default)
     local copyright_val="© {year} ${title} v{version}. All rights reserved."
-    if [[ "${include_auth}" == "y" ]]; then
-      cat > "$out" << EOF
+    cat > "$out" << EOF
 {
   "Metadata": { "title": "${title}", "description": "" },
   "HomePage": { "title": "${title}" },
@@ -2852,14 +1737,6 @@ EOF
     "redirecting": "Redirecting in {seconds}…", "redirectProgress": "Redirect progress",
     "expiredTitle": "Link Expired", "expiredDetail": "This verification link has expired. Please sign up again to request a new one.",
     "invalidTitle": "Invalid Link", "invalidDetail": "This verification link is invalid. Please check your email or sign up again."
-  },
-  "PasswordPolicy": {
-    "ruleMinLength": "At least {count} characters", "ruleNotNumeric": "Not entirely numbers",
-    "ruleNotSimilar": "Not too similar to your name or email",
-    "errorTooShort": "This password is too short. It must contain at least {count} characters.",
-    "errorTooCommon": "This password is too common.",
-    "errorEntirelyNumeric": "This password is entirely numeric.",
-    "errorTooSimilar": "This password is too similar to your name or email."
   },
   "AuthPage": {
     "tabSignIn": "Sign In", "tabSignUp": "Sign Up", "tabReset": "Reset Password",
@@ -2919,17 +1796,25 @@ EOF
     "passkeyDeleted": "Passkey removed.", "passkeyDeleteError": "Failed to remove passkey. Please try again.",
     "addPasskey": "Add Passkey", "passkeyAdded": "Passkey added.", "passkeyAddError": "Failed to add passkey. Please try again.",
     "loading": "Loading…"
+  },
+  "ResetPasswordPage": {
+    "title": "Set New Password",
+    "subtitle": "Enter your new password below",
+    "newPasswordLabel": "New Password",
+    "confirmPasswordLabel": "Confirm New Password",
+    "submitButton": "Reset Password",
+    "submitting": "Resetting password…",
+    "errorPasswordMismatch": "Passwords do not match.",
+    "errorGeneric": "Something went wrong. Please try again.",
+    "successTitle": "Password reset!",
+    "successDetail": "Your password has been updated. You can now sign in with your new password.",
+    "backToSignIn": "Back to Sign In",
+    "invalidTitle": "Link invalid or expired",
+    "invalidDetail": "This password reset link is invalid or has expired. Please request a new one.",
+    "requestNewLink": "Request a new reset link"
   }
 }
 EOF
-    else
-      cat > "$out" << EOF
-{
-  "Metadata": { "title": "${title}", "description": "" },
-  "HomePage": { "title": "${title}" }
-}
-EOF
-    fi
   fi
 }
 
@@ -2948,18 +1833,12 @@ appVersion: '0.1.0'
 EOF
 
   # values.yaml
-  local secret_block=""
-  if [[ "${include_auth}" == "y" ]]; then
-    secret_block="envFromSecret:
+  # API_URL is server-only (never NEXT_PUBLIC_) and is injected at runtime from a
+  # k8s secret, not baked at build time.
+  local secret_block="envFromSecret:
   - name: API_URL
     secretName: ${name}-secrets
     secretKey: API_URL"
-  else
-    secret_block="# envFromSecret:
-#   - name: SOME_SECRET
-#     secretName: ${name}-secrets
-#     secretKey: some-key"
-  fi
 
   cat > "${base}/values.yaml" << EOF
 revisionHistoryLimit: 2
@@ -3264,14 +2143,13 @@ main() {
   [[ -z "${host}" ]] && host="${name}.iguzman.com.mx"
 
   echo ""
-  include_auth="n"; confirm_yn "${AUTH_PROMPT}" 'y' && include_auth="y"
   include_pwa="n";  confirm_yn "${PWA_PROMPT}" 'y'  && include_pwa="y"
 
   echo ""
   echo "  ┌─────────────────────────────────┐"
   printf "  │  %-31s│\n" "$(clr_bold "${name}")"
   printf "  │  %-31s│\n" "$(clr_dim "${LBL_PORT}: ${port}  ${LBL_PALETTE}: ${palette}")"
-  printf "  │  %-31s│\n" "$(clr_dim "${LBL_AUTH}: ${include_auth}  ${LBL_PWA}: ${include_pwa}")"
+  printf "  │  %-31s│\n" "$(clr_dim "${LBL_PWA}: ${include_pwa}")"
   printf "  │  %-31s│\n" "$(clr_dim "${LBL_REGISTRY}: ${registry_user}")"
   printf "  │  %-31s│\n" "$(clr_dim "${LBL_HOST}: ${host}")"
   echo "  └─────────────────────────────────┘"
@@ -3285,6 +2163,7 @@ main() {
   local app_dir="${repo_root}/apps/${name}"
 
   gen_package_json                   "${app_dir}/package.json"
+  gen_turbo_json                     "${app_dir}/turbo.json"
   gen_next_config_js                 "${app_dir}/next.config.js"
   gen_tsconfig_json                  "${app_dir}/tsconfig.json"
   gen_eslint_config_js               "${app_dir}/eslint.config.js"
@@ -3313,29 +2192,28 @@ main() {
     gen_offline_page_tsx             "${app_dir}/app/[locale]/~offline/page.tsx"
   fi
 
-  # Auth files
-  if [[ "${include_auth}" == "y" ]]; then
-    gen_navbar_wrapper_tsx           "${app_dir}/app/[locale]/navbar-wrapper.tsx"
-    gen_footer_tsx                   "${app_dir}/app/[locale]/footer.tsx"
-    gen_footer_css                   "${app_dir}/app/[locale]/footer.css"
-    gen_lib_auth_ts                  "${app_dir}/lib/auth.ts"
-    gen_lib_api_fetch_ts             "${app_dir}/lib/api-fetch.ts"
-    gen_lib_password_policy_ts       "${app_dir}/lib/password-policy.ts"
-    gen_password_requirements        "${app_dir}/components/auth"
-    gen_auth_pages                   "${app_dir}/app/[locale]/(auth)"
-    gen_account_pages                "${app_dir}/app/[locale]/account"
-    gen_api_auth_routes              "${app_dir}/app/api/auth"
-  fi
+  # Auth files - all of it wired to @repo/auth (see packages/auth/CLAUDE.md)
+  gen_navbar_wrapper_tsx             "${app_dir}/app/[locale]/navbar-wrapper.tsx"
+  gen_footer_tsx                     "${app_dir}/app/[locale]/footer.tsx"
+  gen_footer_css                     "${app_dir}/app/[locale]/footer.css"
+  gen_lib_auth_ts                    "${app_dir}/lib/auth.ts"
+  gen_lib_api_fetch_ts               "${app_dir}/lib/api-fetch.ts"
+  gen_auth_pages                     "${app_dir}/app/[locale]/(auth)"
+  gen_account_pages                  "${app_dir}/app/[locale]/account"
+  gen_api_auth_routes                "${app_dir}/app/api/auth"
 
   # Helm
   gen_helm_files                     "${app_dir}/helm"
 
-  # Public placeholder dirs + core UI icons required by @repo/ui components
+  # Public placeholder dirs + core UI icons required by @repo/ui components.
+  # fingerprint.svg (passkey prompts) and delete-trash-icon.svg (the account
+  # page's passkey list) are rendered by the shared @repo/auth forms.
   mkdir -p "${app_dir}/public/icons/splash"
   touch "${app_dir}/public/icons/splash/.gitkeep"
   local cli_icons="${repo_root}/cli/new-nextjs-app/public/icons"
   cp "${cli_icons}/hamburger.svg" "${cli_icons}/close.svg" "${cli_icons}/search.svg" \
      "${cli_icons}/chevron-down.svg" "${cli_icons}/mic.svg" "${cli_icons}/fingerprint.svg" \
+     "${cli_icons}/delete-trash-icon.svg" \
      "${app_dir}/public/icons/"
 
   # Copy .env.example → .env
@@ -3354,7 +2232,6 @@ main() {
   echo ""
   printf "  %s\n" "$(clr_bold_cyan "── ${NEXT_STEPS} ──")"
   echo ""
-  [[ "${include_auth}" == "y" ]] && \
   printf "  %s  %s\n" "$(clr_dim '1.')" "$(clr_cyan "${NEXT_STEP_AUTH_API}")"
   printf "  %s  %s\n" "$(clr_dim '2.')" "$(clr_cyan "pnpm dev --filter=${name}")"
   [[ "${include_pwa}" == "y" ]] && \

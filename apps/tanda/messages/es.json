@@ -565,5 +565,21 @@
     "passkeyAdded": "Llave agregada.",
     "passkeyAddError": "No se pudo agregar la llave. Por favor intenta de nuevo.",
     "loading": "Cargando…"
+  },
+  "ResetPasswordPage": {
+    "title": "Establecer nueva contraseña",
+    "subtitle": "Ingresa tu nueva contraseña a continuación",
+    "newPasswordLabel": "Nueva contraseña",
+    "confirmPasswordLabel": "Confirmar nueva contraseña",
+    "submitButton": "Restablecer contraseña",
+    "submitting": "Restableciendo contraseña…",
+    "errorPasswordMismatch": "Las contraseñas no coinciden.",
+    "errorGeneric": "Algo salió mal. Por favor, inténtalo de nuevo.",
+    "successTitle": "¡Contraseña restablecida!",
+    "successDetail": "Tu contraseña ha sido actualizada. Ahora puedes iniciar sesión con tu nueva contraseña.",
+    "backToSignIn": "Volver a iniciar sesión",
+    "invalidTitle": "Enlace inválido o expirado",
+    "invalidDetail": "Este enlace para restablecer la contraseña es inválido o ha expirado. Por favor, solicita uno nuevo.",
+    "requestNewLink": "Solicitar un nuevo enlace"
   }
 }

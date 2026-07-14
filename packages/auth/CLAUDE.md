@@ -1,10 +1,15 @@
 # @repo/auth
 
-The auth stack shared by the three web frontends (`cinelog`, `edge-folio`,
-`website`). Before this package each app had its own near-identical copy, and
-they drifted: one had a 1-hour access cookie that contradicted its own proxy,
-one dropped the locale on sign-out, two sent password-reset emails to a page
-that did not exist. Fix things here, once.
+The auth stack shared by the web frontends (`cinelog`, `edge-folio`, `website`,
+`tanda`). Before this package each app had its own near-identical copy, and they
+drifted: one had a 1-hour access cookie that contradicted its own proxy, one
+dropped the locale on sign-out, two sent password-reset emails to a page that did
+not exist. Fix things here, once.
+
+`cli/new-nextjs-app/new-nextjs-app.sh` scaffolds new apps onto this package, so
+"Adding an app" below is also what the generator emits. It used to generate a
+private copy of all of it - if you change the shape of the wiring here, change
+the generator in the same task, or the next `pnpm new-app` reintroduces the drift.
 
 ## The core idea: the server owns the session
 

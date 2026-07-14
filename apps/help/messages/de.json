@@ -53,7 +53,7 @@
     "subtitle": "Alle pnpm-Befehle vom Repository-Stammverzeichnis aus.",
     "projectGroup": "Projekt & Deployment",
     "newAppSection": "new-app",
-    "newAppDescription": "Interaktiver Wizard, der eine vollständige Next.js PWA scaffoldet - i18n, optionale Auth, optionale PWA, Dockerfile und Helm-Chart - bereit zum Deployen.",
+    "newAppDescription": "Interaktiver Wizard, der eine vollständige Next.js PWA scaffoldet - i18n, Auth über @repo/auth, optionale PWA, Dockerfile und Helm-Chart - bereit zum Deployen.",
     "newApiSection": "new-api",
     "newApiDescription": "Interaktiver Wizard für eine Django REST API mit wählbarer Datenbank, optionalem Redis, E-Mail und Passkeys. Erstellt Verzeichnis, Dockerfile und Virtualenv.",
     "newTvAppSection": "new-tv-app",

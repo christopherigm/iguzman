@@ -199,6 +199,8 @@
     "addToLibraryText": "„{title}“ zu deiner Bibliothek hinzufügen. In welchem Format besitzt du den Film?",
     "addToLibraryError": "Der Film konnte nicht zu deiner Bibliothek hinzugefügt werden. Bitte versuche es erneut.",
     "digitalCopyLabel": "Link zur digitalen Kopie",
+    "randomButton": "Zufällig",
+    "clearRandomButton": "Zufall aufheben",
     "formatsButton": "Formate",
     "genresButton": "Genres",
     "aiSearchButton": "KI-Suche",

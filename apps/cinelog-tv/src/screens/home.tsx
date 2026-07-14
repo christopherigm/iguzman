@@ -8,6 +8,7 @@ import { onBackButton } from "@repo/ui-tv/remote-keys";
 import { TvGrid } from "@repo/ui-tv/tv-grid";
 import { TvText } from "@repo/ui-tv/tv-typography";
 import { TvButton } from "@repo/ui-tv/tv-button";
+import { TvIconButton } from "@repo/ui-tv/tv-icon-button";
 import { TvTextInput } from "@repo/ui-tv/tv-text-input";
 import { TvProgressBar } from "@repo/ui-tv/tv-progress-bar";
 import { TvConfirmationModal } from "@repo/ui-tv/tv-confirmation-modal";
@@ -33,6 +34,8 @@ import { exitApp } from "@/lib/exit-app";
 import { TvMovieCard } from "@/components/tv-movie-card";
 import { TvPagination, pageFocusKey } from "@/components/tv-pagination";
 import { useT } from "@/i18n/provider";
+import dice from "@/icons/dice.svg";
+import search from "@/icons/search.svg";
 import "./home.css";
 
 type Status = "loading" | "ready" | "error";
@@ -46,6 +49,15 @@ const AI_SEARCH_BUTTON_KEY = "home-ai-search-button";
 // Focus key for the sign-out button so loading/error states (which have no grid
 // or filters to claim focus) can park focus on it.
 const SIGNOUT_BUTTON_KEY = "home-signout-button";
+// Focus key for the shuffle (dice) button. Re-rolling leaves focus here rather
+// than throwing it into the grid, so the user can press Enter repeatedly to keep
+// re-rolling until they like what they see; clearing the shuffle also parks here.
+const SHUFFLE_BUTTON_KEY = "home-shuffle-button";
+
+// Upper bound for a shuffle seed. The server derives the permutation from
+// `seed mod (2^31 - 1)` and treats 0 as 1, so any value in [1, 2^31 - 2] is a
+// distinct, usable deck (see MovieListView.RANDOM_MODULUS in cinelog-api).
+const MAX_SHUFFLE_SEED = 2147483646;
 
 // The grid is a fixed 8-column layout (see tv-grid.css).
 const COLUMNS = 8;
@@ -120,6 +132,16 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
     [setSearchParams],
   );
 
+  // The active shuffle seed (the dice button), or null for the catalog's normal
+  // title order. Lives in the URL alongside `page`/`genre` for the same reason:
+  // it survives the round-trip to the movie detail, so coming back re-renders the
+  // same shuffled deck on the same page rather than reshuffling under the user.
+  // The seed - not a client-side shuffle - is what makes paging through a shuffle
+  // coherent: the server rebuilds the identical permutation from it on every page
+  // request (see getMovies / MovieListView).
+  const shuffleSeed = searchParams.get("shuffle");
+  const shuffleActive = shuffleSeed !== null;
+
   const [movies, setMovies] = useState<Movie[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [status, setStatus] = useState<Status>("loading");
@@ -186,7 +208,7 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
 
   useEffect(() => {
     let active = true;
-    getMovies(page, appliedGenres)
+    getMovies(page, appliedGenres, shuffleSeed)
       .then((data) => {
         if (!active) return;
         setMovies(data.results);
@@ -205,7 +227,7 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
     return () => {
       active = false;
     };
-  }, [page, appliedGenres, onSignOut]);
+  }, [page, appliedGenres, shuffleSeed, onSignOut]);
 
   // Load the genre list once for the filter modal. A failed/unauthorized load
   // just leaves the modal empty - the movies fetch above owns sign-out.
@@ -381,6 +403,39 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
     requestAnimationFrame(() => setFocus(AI_SEARCH_BUTTON_KEY));
   }, [aiDraft, requestGridFocusReset]);
 
+  // Roll a fresh deck: a new seed re-orders the library and re-pages from the
+  // top (the old page number means nothing in a new order). Focus deliberately
+  // stays on the dice button - it survives the re-render, so the user can hold
+  // Enter to keep re-rolling until a deck they like comes up.
+  const rollShuffle = useCallback(() => {
+    const seed = String(Math.floor(Math.random() * MAX_SHUFFLE_SEED) + 1);
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        params.set("shuffle", seed);
+        params.delete("page");
+        return params;
+      },
+      { replace: true },
+    );
+  }, [setSearchParams]);
+
+  // Back to the catalog's normal (title) order. The Clear-shuffle button that
+  // triggered this unmounts with the shuffle, so - as with Clear filters - hand
+  // focus to the first card of the restored grid once it renders.
+  const clearShuffle = useCallback(() => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        params.delete("shuffle");
+        params.delete("page");
+        return params;
+      },
+      { replace: true },
+    );
+    requestGridFocusReset("first");
+  }, [setSearchParams, requestGridFocusReset]);
+
   // Leave AI mode: drop the snapshot and fall back to the normal library grid,
   // focusing its first card (or the Genres button when empty, via the effect).
   const clearAiSearch = useCallback(() => {
@@ -499,12 +554,31 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
                     {t("clearFilters")}
                   </TvButton>
                 )}
+                {/* Shuffle the library (respecting any applied genres). Stays
+                    lit while a shuffle is active; pressing it again re-rolls.
+                    Only in normal mode - AI results are ranked by relevance, so
+                    shuffling them would throw away the ranking. */}
+                <TvIconButton
+                  icon={dice}
+                  ariaLabel={t("shuffle")}
+                  focusKey={SHUFFLE_BUTTON_KEY}
+                  selected={shuffleActive}
+                  onPress={rollShuffle}
+                />
+                {shuffleActive && (
+                  <TvButton onPress={clearShuffle}>
+                    {t("clearShuffle")}
+                  </TvButton>
+                )}
               </>
             )}
             {(status === "ready" || aiActive) && (
-              <TvButton focusKey={AI_SEARCH_BUTTON_KEY} onPress={openAiModal}>
-                {t("aiSearch")}
-              </TvButton>
+              <TvIconButton
+                icon={search}
+                ariaLabel={t("aiSearch")}
+                focusKey={AI_SEARCH_BUTTON_KEY}
+                onPress={openAiModal}
+              />
             )}
             {aiActive && (
               <TvButton onPress={clearAiSearch}>{t("clearAiSearch")}</TvButton>

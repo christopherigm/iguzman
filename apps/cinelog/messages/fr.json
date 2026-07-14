@@ -199,6 +199,8 @@
     "addToLibraryText": "Ajouter « {title} » à votre bibliothèque. Dans quel format le possédez-vous ?",
     "addToLibraryError": "Échec de l'ajout du film à votre bibliothèque. Veuillez réessayer.",
     "digitalCopyLabel": "Lien de la copie numérique",
+    "randomButton": "Aléatoire",
+    "clearRandomButton": "Annuler l’aléatoire",
     "formatsButton": "Formats",
     "genresButton": "Genres",
     "aiSearchButton": "Recherche IA",

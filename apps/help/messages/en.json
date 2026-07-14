@@ -53,7 +53,7 @@
     "subtitle": "All pnpm commands available from the repo root.",
     "projectGroup": "Project & Deployment",
     "newAppSection": "new-app",
-    "newAppDescription": "Interactive wizard that scaffolds a full Next.js PWA - i18n, optional auth, optional PWA, Dockerfile, and a Helm chart - ready to deploy.",
+    "newAppDescription": "Interactive wizard that scaffolds a full Next.js PWA - i18n, auth wired to @repo/auth, optional PWA, Dockerfile, and a Helm chart - ready to deploy.",
     "newApiSection": "new-api",
     "newApiDescription": "Interactive wizard that scaffolds a Django REST API with your choice of database, optional Redis, email, and passkeys. Creates the app directory, Dockerfile, and virtualenv.",
     "newTvAppSection": "new-tv-app",

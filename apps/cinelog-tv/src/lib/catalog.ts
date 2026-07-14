@@ -99,10 +99,18 @@ export class NotFoundError extends Error {
  * API's `?genre=` repeats with AND semantics). Attaches the session access
  * token; on a 401 it refreshes once and retries, and throws `UnauthorizedError`
  * when the session can't be recovered.
+ *
+ * `shuffleSeed` (the dice button) shuffles the library instead of ordering it by
+ * title. The seed is sent to the server rather than shuffling here, because the
+ * order has to be stable across pages: the server derives a permutation from the
+ * seed, so page 2 of a shuffle continues page 1 instead of re-drawing the deck.
+ * Re-rolling means passing a new seed. Applies on top of `genres` - shuffling a
+ * filtered library re-orders only the movies that pass the filter.
  */
 export async function getMovies(
   page = 1,
   genres: string[] = [],
+  shuffleSeed: string | null = null,
 ): Promise<Paginated<Movie>> {
   const params = new URLSearchParams({
     scope: "library",
@@ -111,6 +119,10 @@ export async function getMovies(
   });
   // `genre` repeats once per selected slug (AND across the m2m on the server).
   for (const slug of genres) params.append("genre", slug);
+  if (shuffleSeed) {
+    params.set("ordering", "random");
+    params.set("seed", shuffleSeed);
+  }
   const url = `${API_URL}/api/catalog/movies/?${params.toString()}`;
 
   const request = (token: string | null): Promise<Response> =>

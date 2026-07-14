@@ -1,5 +1,5 @@
 import { setRequestLocale } from "next-intl/server";
-import { AuthForm } from "./auth-form";
+import { AuthForm } from "@repo/auth/auth-form";
 import { NavbarSpacer } from "@repo/ui/core-elements/navbar";
 
 type Props = { params: Promise<{ locale: string }> };

@@ -199,6 +199,8 @@
     "addToLibraryText": "Add \"{title}\" to your library. Which format do you own?",
     "addToLibraryError": "Failed to add the movie to your library. Please try again.",
     "digitalCopyLabel": "Digital copy link",
+    "randomButton": "Random",
+    "clearRandomButton": "Clear random",
     "formatsButton": "Formats",
     "genresButton": "Genres",
     "aiSearchButton": "AI Search",

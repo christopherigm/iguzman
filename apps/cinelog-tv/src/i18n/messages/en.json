@@ -8,6 +8,8 @@
   "empty": "No movies yet.",
   "emptyFiltered": "No movies match the selected genres.",
   "clearFilters": "Clear filters",
+  "shuffle": "Shuffle the catalog",
+  "clearShuffle": "Clear shuffle",
   "filterGenresTitle": "Filter by genre",
   "filterGenresText": "Pick one or more genres. Movies must match all of them.",
   "aiSearch": "AI search",

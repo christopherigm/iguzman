@@ -166,6 +166,15 @@ export interface MovieFilters {
   /** Disc HDR-format codes; a movie must carry ALL of them (AND semantics). */
   hdrFormats?: HdrFormatCode[];
   sort?: MovieSort;
+  /**
+   * Shuffle seed (the "Random" button). When set, the catalog comes back in a
+   * random order instead of `sort`'s - the two are the same concern, so a seed
+   * supersedes the sort. The seed (rather than a plain "shuffle me") is what
+   * keeps the deck stable across pages: the API rebuilds the identical order
+   * from it on every page request, so page 2 continues page 1 rather than
+   * re-drawing. Re-rolling means sending a new seed. "" means no shuffle.
+   */
+  shuffle?: string;
   page?: number;
 }
 
@@ -189,7 +198,15 @@ export function buildMovieQuery(filters: MovieFilters = {}): string {
   // must carry every selected code).
   filters.audioFormats?.forEach((code) => params.append("audio_format", code));
   filters.hdrFormats?.forEach((code) => params.append("hdr_format", code));
-  if (filters.sort) params.set("ordering", filters.sort);
+  // A shuffle seed supersedes the sort - both drive the API's `ordering`, and
+  // "random" is what the Random button asked for. The filters above still apply:
+  // shuffling a genre-filtered catalog re-orders only what passed the filter.
+  if (filters.shuffle) {
+    params.set("ordering", "random");
+    params.set("seed", filters.shuffle);
+  } else if (filters.sort) {
+    params.set("ordering", filters.sort);
+  }
   if (filters.page && filters.page > 1)
     params.set("page", String(filters.page));
   return params.toString();
@@ -249,6 +266,13 @@ export interface CatalogParams {
   /** Selected disc HDR-format codes (AND-filtered). */
   hdrFormats: HdrFormatCode[];
   sort: MovieSort;
+  /**
+   * Active shuffle seed, or "" for the catalog's normal order. Lives in the URL
+   * like every other filter so a shuffled view is shareable, survives a refresh,
+   * and is restored on browser-back from a movie detail with the same deck on
+   * the same page (a re-roll would otherwise reshuffle under the user).
+   */
+  shuffle: string;
   page: number;
   view: CatalogView;
 }
@@ -297,6 +321,7 @@ const VALID_SORTS: MovieSort[] = [
 export function parseCatalogParams(sp: URLSearchParams): CatalogParams {
   const rawFormat = sp.get("format") ?? "";
   const rawSort = sp.get("sort") ?? "";
+  const rawShuffle = sp.get("shuffle") ?? "";
   const pageNum = Number.parseInt(sp.get("page") ?? "", 10);
   return {
     search: sp.get("q")?.trim() ?? "",
@@ -317,6 +342,9 @@ export function parseCatalogParams(sp: URLSearchParams): CatalogParams {
     sort: (VALID_SORTS as string[]).includes(rawSort)
       ? (rawSort as MovieSort)
       : "",
+    // Digits only: the query string is user-editable, and the seed is echoed
+    // straight back into an API request.
+    shuffle: /^\d+$/.test(rawShuffle) ? rawShuffle : "",
     page: Number.isFinite(pageNum) && pageNum > 1 ? pageNum : 1,
     view: sp.get("view") === "list" ? "list" : "grid",
   };
@@ -338,6 +366,7 @@ export function buildCatalogQuery(p: CatalogParams): string {
   p.audioFormats.forEach((code) => params.append("audio", code));
   p.hdrFormats.forEach((code) => params.append("hdr", code));
   if (p.sort) params.set("sort", p.sort);
+  if (p.shuffle) params.set("shuffle", p.shuffle);
   if (p.page > 1) params.set("page", String(p.page));
   if (p.view !== "grid") params.set("view", p.view);
   return params.toString();

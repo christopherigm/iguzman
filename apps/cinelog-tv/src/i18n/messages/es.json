@@ -8,6 +8,8 @@
   "empty": "Aún no hay películas.",
   "emptyFiltered": "Ninguna película coincide con los géneros seleccionados.",
   "clearFilters": "Quitar filtros",
+  "shuffle": "Mezclar el catálogo",
+  "clearShuffle": "Quitar mezcla",
   "filterGenresTitle": "Filtrar por género",
   "filterGenresText": "Elige uno o más géneros. Las películas deben coincidir con todos.",
   "aiSearch": "Búsqueda con IA",

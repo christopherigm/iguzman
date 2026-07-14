@@ -53,7 +53,7 @@
     "subtitle": "Toutes les commandes pnpm disponibles depuis la racine du dépôt.",
     "projectGroup": "Projet & Déploiement",
     "newAppSection": "new-app",
-    "newAppDescription": "Assistant interactif qui génère une Next.js PWA complète - i18n, auth optionnelle, PWA optionnelle, Dockerfile et chart Helm - prête à déployer.",
+    "newAppDescription": "Assistant interactif qui génère une Next.js PWA complète - i18n, auth branchée sur @repo/auth, PWA optionnelle, Dockerfile et chart Helm - prête à déployer.",
     "newApiSection": "new-api",
     "newApiDescription": "Assistant interactif pour scaffolder une API Django REST avec base de données au choix, Redis, email et passkeys optionnels. Crée le répertoire, Dockerfile et virtualenv.",
     "newTvAppSection": "new-tv-app",

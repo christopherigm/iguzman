@@ -14,7 +14,6 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Button } from "@repo/ui/core-elements/button";
-import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { Spinner } from "@repo/ui/core-elements/spinner";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import {
@@ -47,6 +46,11 @@ type ViewMode = "grid" | "list";
 type Status = "loading" | "ready" | "error";
 
 const SEARCH_DEBOUNCE_MS = 300;
+
+// Upper bound for a shuffle seed (the Random button). Any positive integer is a
+// usable deck - the API seeds its RNG with it - so this just keeps the seed
+// short enough to sit comfortably in a shareable URL.
+const MAX_SHUFFLE_SEED = 2147483646;
 
 // The catalog's page, filters, sort and view live in the URL query string so a
 // view is shareable/bookmarkable and the server can prefetch the exact grid on
@@ -122,12 +126,13 @@ export function MovieCatalog({
     initial.hdrFormats,
   );
   const [sort, setSort] = useState<MovieSort>(initial.sort);
+  // Active shuffle seed (the Random button), or "" for the catalog's normal
+  // order. Like the other structured filters it round-trips through the URL, so
+  // the server prefetches the same deck and browser-back restores it intact.
+  const [shuffle, setShuffle] = useState(initial.shuffle);
   const [page, setPage] = useState(initial.page);
   const [totalPages, setTotalPages] = useState(
     seedFromPrefetch ? initialMovies.total_pages : 1,
-  );
-  const [totalCount, setTotalCount] = useState(
-    seedFromPrefetch ? initialMovies.count : 0,
   );
   // Tracks the last server-prefetched page so the render-time re-seed below only
   // fires on a real prop change, and so clearing AI can restore it instantly.
@@ -193,9 +198,32 @@ export function MovieCatalog({
     setPage(1);
   };
 
+  // Sorting and shuffling are the same concern (both drive the API's ordering),
+  // so picking a sort is how the user leaves a shuffle - no separate clear.
   const handleSortChange = (value: MovieSort) => {
     setSort(value);
+    setShuffle("");
     setAi("");
+    setPage(1);
+  };
+
+  // Roll a fresh deck. A new seed re-orders the catalog and re-pages from the
+  // top (the old page number means nothing in a new order); pressing Random
+  // again just rolls another one. The sort is dropped because the seed
+  // supersedes it - leaving it set would misreport the order in the Sort field.
+  // The structured filters are deliberately kept: shuffling a filtered catalog
+  // re-orders only the movies that passed the filter.
+  const handleRandom = () => {
+    setShuffle(String(Math.floor(Math.random() * MAX_SHUFFLE_SEED) + 1));
+    setSort("");
+    setAi("");
+    setPage(1);
+  };
+
+  // Drop the shuffle and go back to the catalog's normal order, keeping the
+  // structured filters (only the ordering was random - the filters weren't).
+  const handleClearRandom = () => {
+    setShuffle("");
     setPage(1);
   };
 
@@ -218,7 +246,6 @@ export function MovieCatalog({
     if (seededFrom) {
       setMovies(seededFrom.results);
       setTotalPages(seededFrom.total_pages);
-      setTotalCount(seededFrom.count);
       setStatus("ready");
     }
   };
@@ -254,7 +281,6 @@ export function MovieCatalog({
     if (ai === "") {
       setMovies(initialMovies.results);
       setTotalPages(initialMovies.total_pages);
-      setTotalCount(initialMovies.count);
       setStatus("ready");
     }
   }
@@ -280,6 +306,7 @@ export function MovieCatalog({
       setAudioFormats([]);
       setHdrFormats([]);
       setSort("");
+      setShuffle("");
     };
     const restore = (snap: AiSearchSnapshot) => {
       skipNextAiFetch.current = true;
@@ -288,7 +315,6 @@ export function MovieCatalog({
       setPage(snap.page);
       setMovies(snap.movies);
       setTotalPages(snap.totalPages);
-      setTotalCount(snap.totalCount);
       setStatus("ready");
     };
     const pending = consumePendingAiSearch();
@@ -319,7 +345,6 @@ export function MovieCatalog({
         if (!active) return;
         setMovies(data.results);
         setTotalPages(data.total_pages);
-        setTotalCount(data.count);
         setStatus("ready");
         saveAiSearchSnapshot({
           query: ai,
@@ -370,13 +395,13 @@ export function MovieCatalog({
       audioFormats,
       hdrFormats,
       sort,
+      shuffle,
       page,
     })
       .then((data) => {
         if (!active) return;
         setMovies(data.results);
         setTotalPages(data.total_pages);
-        setTotalCount(data.count);
         setStatus("ready");
       })
       .catch(() => {
@@ -394,6 +419,7 @@ export function MovieCatalog({
     audioFormats,
     hdrFormats,
     sort,
+    shuffle,
     page,
   ]);
 
@@ -414,6 +440,7 @@ export function MovieCatalog({
       audioFormats,
       hdrFormats,
       sort,
+      shuffle,
       page,
       view,
     });
@@ -430,6 +457,7 @@ export function MovieCatalog({
     audioFormats,
     hdrFormats,
     sort,
+    shuffle,
     page,
     view,
     router,
@@ -513,30 +541,9 @@ export function MovieCatalog({
         <div
           aria-hidden
           className="movie-catalog__backdrop"
-          style={
-            { "--backdrop-image": `url("${backdrop}")` } as CSSProperties
-          }
+          style={{ "--backdrop-image": `url("${backdrop}")` } as CSSProperties}
         />
       )}
-      <Box
-        display="flex"
-        alignItems="center"
-        justifyContent="space-between"
-        flexWrap="wrap"
-        gap={8}
-        marginBottom={16}
-      >
-        <Typography as="h1" variant="h2" fontWeight={700}>
-          {status === "ready" ? `${t("title")} (${totalCount})` : t("title")}
-        </Typography>
-        <IconButton
-          icon={view === "grid" ? "/icons/list.svg" : "/icons/grid.svg"}
-          aria-label={view === "grid" ? t("listView") : t("gridView")}
-          onClick={() => setView(view === "grid" ? "list" : "grid")}
-          size="sm"
-        />
-      </Box>
-
       <MovieFilters
         search={search}
         onSearchChange={handleSearchChange}
@@ -550,7 +557,12 @@ export function MovieCatalog({
         onHdrToggle={handleHdrToggle}
         sort={sort}
         onSortChange={handleSortChange}
+        shuffleActive={shuffle !== ""}
+        onRandom={handleRandom}
+        onClearRandom={handleClearRandom}
         categories={categories}
+        view={view}
+        onViewChange={setView}
       />
 
       {ai !== "" && (

@@ -11,9 +11,11 @@ from django.template.loader import render_to_string
 
 from .models import EmailVerificationToken, PasswordResetToken
 from .serializers import (
+    ChangePasswordSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     ResendVerificationSerializer,
+    run_password_validators,
 )
 import json
 import uuid
@@ -112,6 +114,27 @@ class SignUpView(APIView):
 class LoginView(TokenObtainPairView):
     permission_classes = [AllowAny]
     serializer_class = CustomTokenObtainPairSerializer
+
+
+class TokenReissueView(APIView):
+    """
+    Mint a fresh token pair for the already-authenticated user.
+
+    The frontend renders identity (the navbar display name) straight from the
+    access token's claims. Those claims are copied from the refresh token, so
+    they are frozen for the refresh token's whole 7-day life - editing your
+    profile would otherwise leave a stale name in the navbar until it expired.
+    Calling this after a profile change rebuilds both tokens from the live user.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        token = CustomTokenObtainPairSerializer.get_token(request.user)
+        return Response({
+            'access': str(token.access_token),
+            'refresh': str(token),
+        })
 
 
 class ProfileView(APIView):
@@ -229,10 +252,42 @@ class PasswordResetConfirmView(APIView):
             return Response({'detail': 'Token has expired.'}, status=status.HTTP_400_BAD_REQUEST)
 
         user = token_obj.user
+        # Enforced here rather than on the serializer: the password validators
+        # need the user, and the token is what identifies them. A failure raises
+        # DRF's ValidationError, which the exception handler renders as a 400.
+        run_password_validators(
+            serializer.validated_data['new_password'], user, field='new_password'
+        )
+
         user.set_password(serializer.validated_data['new_password'])
         user.save(update_fields=['password'])
         token_obj.delete()
         return Response({'detail': 'Password reset successful.'})
+
+
+class ChangePasswordView(APIView):
+    """Change the authenticated user's password after verifying their current one."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # The request is passed so the password validators can compare the new
+        # password against the user's own attributes.
+        serializer = ChangePasswordSerializer(
+            data=request.data, context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        if not user.check_password(serializer.validated_data['current_password']):
+            return Response(
+                {'current_password': 'Current password is incorrect.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(serializer.validated_data['new_password'])
+        user.save(update_fields=['password'])
+        return Response({'detail': 'Password changed successfully.'})
 
 
 # ── Passkey (WebAuthn) views ─────────────────────────────────────────────────

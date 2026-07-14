@@ -139,7 +139,8 @@ For **native form elements** (`<select>`, `<input>`, `<textarea>`) where `<Typog
 
 Next.js 16 renamed `middleware.ts` to `proxy.ts`. Use `proxy.ts` at the app root - never `middleware.ts`.
 
-Apps with auth (`cinelog`, `edge-folio`, `website`) use the shared factory from
+Apps with auth (`cinelog`, `edge-folio`, `website`, `tanda`, and anything from
+`pnpm new-app`) use the shared factory from
 `@repo/auth`, which combines the next-intl middleware with JWT session upkeep
 (it refreshes an expired access token on every page request, so public pages also
 render logged-in). See `packages/auth/CLAUDE.md`.
