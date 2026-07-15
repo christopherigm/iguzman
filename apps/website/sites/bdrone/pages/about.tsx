@@ -30,7 +30,6 @@ export async function About() {
   ]);
 
   const primary = system?.primary_color ?? "#2196f3";
-  const secondary = system?.secondary_color ?? "#e040fb";
   const about = localized(locale, system?.about, system?.en_about);
   const mission = localized(locale, system?.mission, system?.en_mission);
   const vision = localized(locale, system?.vision, system?.en_vision);
@@ -95,11 +94,8 @@ export async function About() {
             maxHeight="50vh"
             borderRadius={8}
             elevation={8}
-            styles={{
-              position: "relative",
-              overflow: "hidden",
-              background: `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)`,
-            }}
+            backgroundColor="var(--surface-2)"
+            styles={{ position: "relative", overflow: "hidden" }}
           >
             {system?.img_about && (
               <Image
@@ -124,7 +120,7 @@ export async function About() {
                   padding={24}
                   borderRadius={8}
                   gap="12px"
-                  styles={{ borderTop: `4px solid ${primary}` }}
+                  styles={{ borderTop: "4px solid var(--accent)" }}
                 >
                   <Typography as="h2" variant="h3" fontWeight={700}>
                     {t("about.missionHeading")}
@@ -146,7 +142,7 @@ export async function About() {
                   padding={24}
                   borderRadius={8}
                   gap="12px"
-                  styles={{ borderTop: `4px solid ${secondary}` }}
+                  styles={{ borderTop: "4px solid var(--accent)" }}
                 >
                   <Typography as="h2" variant="h3" fontWeight={700}>
                     {t("about.visionHeading")}

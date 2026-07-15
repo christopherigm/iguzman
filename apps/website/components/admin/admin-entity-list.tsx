@@ -149,17 +149,44 @@ export function AdminEntityList({
   );
 }
 
+/**
+ * Muted "empty value" placeholder for a table cell. Use in any custom `render`
+ * function instead of returning a bare `"-"` string, so empty cells look the
+ * same across every admin table.
+ */
+export function EmptyCell() {
+  return (
+    <Typography
+      as="span"
+      variant="body"
+      color="color-mix(in srgb, var(--foreground) 35%, transparent)"
+    >
+      -
+    </Typography>
+  );
+}
+
+/**
+ * Standard text wrapper for a table cell. Use in any custom `render` function
+ * instead of returning a raw string or bare `<span>`, so all cell text shares
+ * the same Typography styling.
+ */
+export function CellText({
+  children,
+  title,
+}: {
+  children: React.ReactNode;
+  title?: string;
+}) {
+  return (
+    <Typography as="span" variant="body" title={title}>
+      {children}
+    </Typography>
+  );
+}
+
 function renderCell(value: unknown): React.ReactNode {
-  if (value === null || value === undefined)
-    return (
-      <Typography
-        as="span"
-        variant="body"
-        color="color-mix(in srgb, var(--foreground) 35%, transparent)"
-      >
-        -
-      </Typography>
-    );
+  if (value === null || value === undefined) return <EmptyCell />;
   if (typeof value === "boolean") {
     return (
       <Badge variant="subtle" color={value ? "green" : "gray"}>
@@ -193,12 +220,11 @@ function renderCell(value: unknown): React.ReactNode {
       );
     }
   }
-  if (typeof value === "string" && value.length > 60) {
-    return (
-      <Typography as="span" variant="body" title={value}>
-        {value.slice(0, 60)}…
-      </Typography>
-    );
-  }
-  return String(value);
+  const text = String(value);
+  const isLong = text.length > 60;
+  return (
+    <CellText title={isLong ? text : undefined}>
+      {isLong ? `${text.slice(0, 60)}…` : text}
+    </CellText>
+  );
 }

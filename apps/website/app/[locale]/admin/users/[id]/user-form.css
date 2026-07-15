@@ -70,12 +70,6 @@
   gap: 10px;
 }
 
-.uf__toggle-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--foreground);
-}
-
 .uf__actions {
   padding-top: 8px;
   border-top: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);

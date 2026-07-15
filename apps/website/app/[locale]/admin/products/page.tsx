@@ -2,7 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { AdminEntityList } from "@/components/admin/admin-entity-list";
+import {
+  AdminEntityList,
+  CellText,
+  EmptyCell,
+} from "@/components/admin/admin-entity-list";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { listProducts, deleteProduct } from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
@@ -51,7 +55,11 @@ export default function AdminProductsPage() {
       key: "price",
       label: t("price") ?? "Price",
       render: (v: unknown, row: Record<string, unknown>) =>
-        v != null ? `${v} ${row.currency ?? ""}` : "-",
+        v != null ? (
+          <CellText>{`${v} ${row.currency ?? ""}`}</CellText>
+        ) : (
+          <EmptyCell />
+        ),
     },
     { key: "in_stock", label: t("inStock") ?? "In Stock" },
     { key: "enabled", label: t("enabled") },

@@ -2,7 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { AdminEntityList } from "@/components/admin/admin-entity-list";
+import {
+  AdminEntityList,
+  CellText,
+  EmptyCell,
+} from "@/components/admin/admin-entity-list";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { listServices, deleteService } from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
@@ -49,7 +53,11 @@ export default function AdminServicesPage() {
       key: "price",
       label: t("price") ?? "Price",
       render: (v: unknown, r: Record<string, unknown>) =>
-        v != null ? `${v} ${r.currency ?? ""}` : "-",
+        v != null ? (
+          <CellText>{`${v} ${r.currency ?? ""}`}</CellText>
+        ) : (
+          <EmptyCell />
+        ),
     },
     { key: "enabled", label: t("enabled") },
   ];

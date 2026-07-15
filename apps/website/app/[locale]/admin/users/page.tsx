@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import {
   AdminEntityList,
+  CellText,
+  EmptyCell,
   type Column,
 } from "@/components/admin/admin-entity-list";
 import { listAdminUsers } from "@/lib/admin-api";
@@ -40,15 +42,15 @@ export default function AdminUsersPage() {
       key: "email",
       label: "Email",
       render: (v) => {
-        if (!v) return "-";
+        if (!v) return <EmptyCell />;
         const str = String(v);
         const [local, domain] = str.split("@");
         const short =
           local && local.length > 10 ? `${local.slice(0, 10)}…` : (local ?? "");
         return (
-          <span title={str}>
+          <CellText title={str}>
             {short}@{domain}
-          </span>
+          </CellText>
         );
       },
     },
@@ -56,7 +58,12 @@ export default function AdminUsersPage() {
     {
       key: "last_name",
       label: t("lastName") ?? "Last Name",
-      render: (v) => (v ? `${String(v).charAt(0).toUpperCase()}.` : "-"),
+      render: (v) =>
+        v ? (
+          <CellText>{`${String(v).charAt(0).toUpperCase()}.`}</CellText>
+        ) : (
+          <EmptyCell />
+        ),
     },
     {
       key: "is_active",
@@ -79,7 +86,12 @@ export default function AdminUsersPage() {
     {
       key: "date_joined",
       label: t("createdAt"),
-      render: (v) => (v ? new Date(String(v)).toLocaleDateString() : "-"),
+      render: (v) =>
+        v ? (
+          <CellText>{new Date(String(v)).toLocaleDateString()}</CellText>
+        ) : (
+          <EmptyCell />
+        ),
     },
   ];
 

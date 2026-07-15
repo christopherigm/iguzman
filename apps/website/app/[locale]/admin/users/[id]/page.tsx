@@ -128,11 +128,15 @@ export default function AdminUserFormPage({ params }: Props) {
           <Box className="uf__toggles">
             <Box className="uf__toggle-row">
               <Switch checked={isAdmin} onChange={setIsAdmin} />
-              <span className="uf__toggle-label">{t("isAdmin")}</span>
+              <Typography as="span" variant="body" fontWeight={500}>
+                {t("isAdmin")}
+              </Typography>
             </Box>
             <Box className="uf__toggle-row">
               <Switch checked={isActive} onChange={setIsActive} />
-              <span className="uf__toggle-label">{t("active")}</span>
+              <Typography as="span" variant="body" fontWeight={500}>
+                {t("active")}
+              </Typography>
             </Box>
           </Box>
 
