@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   photoContainer: {
     width: 72,
     height: 72,
-    borderRadius: 4,
+    borderRadius: 8,
     overflow: "hidden",
     flexShrink: 0,
     marginTop: 4,

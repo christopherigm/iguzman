@@ -15,7 +15,7 @@ export function PhaseHeader({
   return (
     <Box
       padding="8px 14px"
-      borderRadius={6}
+      borderRadius={8}
       backgroundColor="color-mix(in srgb, var(--accent, #06b6d4) 12%, transparent)"
     >
       <Typography fontWeight={700} color="var(--foreground)">
@@ -66,7 +66,7 @@ export function TaskTable({
             <Typography
               fontWeight={700}
               padding="2px 8px"
-              borderRadius={4}
+              borderRadius={8}
               backgroundColor="color-mix(in srgb, var(--accent, #06b6d4) 14%, transparent)"
               styles={{ fontFamily: "monospace", flexShrink: 0 }}
               color="var(--accent, #06b6d4)"

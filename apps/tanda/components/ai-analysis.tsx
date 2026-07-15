@@ -7,6 +7,7 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Card } from "@repo/ui/core-elements/card";
 import { Button } from "@repo/ui/core-elements/button";
+import { Badge } from "@repo/ui/core-elements/badge";
 import { Select, type SelectOption } from "@repo/ui/core-elements/select";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { TextInput } from "@repo/ui/core-elements/text-input";
@@ -676,17 +677,9 @@ export function AiAnalysis({
               alignItems="center"
             >
               {queries.map((q) => (
-                <Box
-                  key={q}
-                  padding="4px 12px"
-                  borderRadius={999}
-                  backgroundColor="var(--surface-2)"
-                  styles={{ border: "1px solid var(--border, #e5e7eb)" }}
-                >
-                  <Typography variant="caption" color="var(--foreground)">
-                    {q}
-                  </Typography>
-                </Box>
+                <Badge key={q} variant="subtle">
+                  {q}
+                </Badge>
               ))}
             </Box>
           </Box>

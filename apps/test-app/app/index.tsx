@@ -24,7 +24,7 @@ export default function Home() {
         <Box
           gap={12}
           padding={16}
-          borderRadius={16}
+          borderRadius={8}
           backgroundColor="#00000010"
         >
           <Typography variant="label" color="accent">

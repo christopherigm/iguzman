@@ -817,7 +817,7 @@ export function AdminForm({
           <Box
             display="flex"
             gap={12}
-            borderRadius={12}
+            borderRadius={8}
             border="1px solid color-mix(in srgb, var(--foreground) 12%, transparent)"
             backgroundColor="var(--background)"
             styles={{

@@ -27,7 +27,7 @@ function SuccessMessage({ message }: { message: string }) {
     <Box
       paddingX={12}
       paddingY={8}
-      borderRadius={6}
+      borderRadius={8}
       backgroundColor="var(--success-bg, rgba(34,197,94,0.08))"
     >
       <Typography variant="caption" color="var(--success, #22c55e)">
@@ -42,7 +42,7 @@ function ErrorMessage({ message }: { message: string }) {
     <Box
       paddingX={12}
       paddingY={8}
-      borderRadius={6}
+      borderRadius={8}
       backgroundColor="var(--error-bg, rgba(239,68,68,0.08))"
     >
       <Typography variant="caption" role="alert" color="var(--error, #ef4444)">
@@ -104,7 +104,7 @@ function AddBucketForm({ onCreated }: { onCreated: (bucket: S3Bucket) => void })
     <Box
       width="100%"
       padding={10}
-      borderRadius={12}
+      borderRadius={8}
       flexDirection="column"
       gap={16}
       elevation={5}
@@ -293,7 +293,7 @@ export function StorageForm() {
         <Box
           width="100%"
           padding={10}
-          borderRadius={12}
+          borderRadius={8}
           flexDirection="column"
           gap={16}
           elevation={5}

@@ -47,7 +47,7 @@
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--primary-subtle, rgba(6, 182, 212, 0.12));
   color: var(--primary, #06b6d4);
   font-weight: 500;
@@ -71,7 +71,7 @@
 
 .profile__suggestion {
   padding: 4px 10px;
-  border-radius: 16px;
+  border-radius: 8px;
   border: 1px solid var(--border, #e5e7eb);
   background: var(--surface-2);
   color: var(--foreground);
@@ -103,7 +103,7 @@
   justify-content: center;
   gap: 8px;
   padding: 32px 24px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 2px dashed var(--border, #e5e7eb);
   background: var(--surface-2);
   color: var(--foreground);
@@ -145,7 +145,7 @@
   flex-direction: column;
   gap: 6px;
   padding: 14px 16px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1.5px solid var(--success, #22c55e);
   background: rgba(34, 197, 94, 0.06);
 }
@@ -154,7 +154,7 @@
 
 .profile__diff-panel {
   padding: 16px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid var(--border, #e5e7eb);
   background: var(--surface-2);
 }
@@ -203,13 +203,13 @@
 .profile__success {
   color: var(--success, #22c55e);
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   background: rgba(34, 197, 94, 0.08);
 }
 
 .profile__error {
   color: var(--error, #ef4444);
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   background: rgba(239, 68, 68, 0.08);
 }

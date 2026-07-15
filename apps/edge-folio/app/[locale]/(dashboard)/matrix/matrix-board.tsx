@@ -325,7 +325,7 @@ function BulletCard({ bullet, onEdit, onDelete, onApprove }: BulletCardProps) {
           variant="filled"
           color="var(--muted, #f3f4f6)"
           textColor="var(--muted-foreground, #6b7280)"
-          style={{ borderRadius: "4px", fontWeight: 500 }}
+          style={{ borderRadius: "8px", fontWeight: 500 }}
         >
           {bullet.source === "manual"
             ? t("sourceManual")

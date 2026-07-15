@@ -208,7 +208,7 @@ export function InboxCard({ item, categories, onAccept, onReject }: Props) {
         <Box
           width={160}
           flexDirection="column"
-          borderRadius={6}
+          borderRadius={8}
           className="inbox-card__cover"
           styles={{
             overflow: "hidden",
@@ -351,7 +351,7 @@ export function InboxCard({ item, categories, onAccept, onReject }: Props) {
                   flexDirection="column"
                   gap={6}
                   padding={6}
-                  borderRadius={6}
+                  borderRadius={8}
                   width={120}
                   backgroundColor={
                     selected ? "var(--surface-2)" : "transparent"
@@ -364,7 +364,7 @@ export function InboxCard({ item, categories, onAccept, onReject }: Props) {
                 >
                   <Box
                     width="100%"
-                    borderRadius={4}
+                    borderRadius={8}
                     styles={{
                       position: "relative",
                       aspectRatio: "2 / 3",

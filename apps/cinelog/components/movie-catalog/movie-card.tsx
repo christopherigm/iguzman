@@ -34,7 +34,7 @@ export function MovieCard({ movie, view }: Props) {
     <Box
       width={view === "list" ? 70 : "100%"}
       flexDirection="column"
-      borderRadius={6}
+      borderRadius={8}
       styles={{
         overflow: "hidden",
         flexShrink: 0,

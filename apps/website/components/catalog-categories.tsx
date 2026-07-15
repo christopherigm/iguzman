@@ -49,7 +49,7 @@ export function CategoryCard({
       prefetch
       padding={0}
       border="none"
-      borderRadius={16}
+      borderRadius={8}
       elevation={5}
       minHeight={hasImage ? 280 : 220}
       backgroundColor="var(--surface-2)"
@@ -99,7 +99,7 @@ export function CategoryCard({
           style={{
             width: "fit-content",
             padding: "3px 10px",
-            borderRadius: 4,
+            borderRadius: 8,
             border: `1px solid ${
               accentBadge
                 ? "rgba(var(--accent-rgb, 99, 102, 241), 0.45)"

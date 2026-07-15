@@ -30,7 +30,7 @@ function HighlightItemCard({ item }: { item: CompanyHighlightItem }) {
     <Box
       width={80}
       height={80}
-      borderRadius={10}
+      borderRadius={8}
       backgroundColor="var(--surface-1)"
       alignItems="center"
       justifyContent="center"
@@ -130,7 +130,7 @@ function HighlightCard({
               style={{
                 width: "fit-content",
                 padding: "3px 10px",
-                borderRadius: 4,
+                borderRadius: 8,
                 border: "1px solid rgba(255, 255, 255, 0.35)",
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
@@ -144,7 +144,7 @@ function HighlightCard({
             <Box
               width={44}
               height={44}
-              borderRadius={10}
+              borderRadius={8}
               backgroundColor="rgba(255, 255, 255, 0.12)"
               alignItems="center"
               justifyContent="center"
@@ -225,7 +225,7 @@ function HighlightCard({
   const surfaceProps = {
     padding: 0,
     border: "none",
-    borderRadius: 16,
+    borderRadius: 8,
     elevation: 5,
     backgroundColor: "var(--surface-2)",
     className: cardClass,

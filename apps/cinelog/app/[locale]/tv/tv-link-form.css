@@ -9,6 +9,6 @@
 .tv-link__error {
   color: var(--error, #ef4444);
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--error-bg, rgba(239, 68, 68, 0.08));
 }

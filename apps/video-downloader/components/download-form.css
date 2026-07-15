@@ -12,7 +12,7 @@
   width: 36px;
   height: 36px;
   flex-shrink: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--surface-2, #f4f4f5);
   transition:
     background 250ms ease,
@@ -130,7 +130,7 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 8px;
   transition: background 180ms ease;
 }
 

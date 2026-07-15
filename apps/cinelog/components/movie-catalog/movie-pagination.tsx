@@ -173,7 +173,7 @@ export function MoviePagination({ page, totalPages, onPageChange }: Props) {
         flexWrap="nowrap"
         width="fit-content"
         padding={4}
-        borderRadius={12}
+        borderRadius={8}
         border="1px solid var(--border)"
         backgroundColor="var(--surface-2)"
         elevation={4}

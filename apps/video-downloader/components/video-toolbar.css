@@ -28,7 +28,7 @@
   align-items: center;
   gap: 2px;
   padding: 3px;
-  border-radius: 10px;
+  border-radius: 8px;
   background: color-mix(in srgb, var(--foreground, #111) 4%, transparent);
 }
 

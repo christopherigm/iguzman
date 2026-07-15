@@ -8,6 +8,15 @@
 # a per-app auth form, password policy, or a localStorage user store here - that
 # is exactly the duplication @repo/auth exists to remove. See packages/auth/CLAUDE.md.
 #
+# Hydration rule for any client component you add: never read `window`,
+# `localStorage`, `navigator`, or a media query during render - not even in a
+# lazy `useState(() => ...)` initializer. The server has none of them, so it
+# renders the default while the first client render reads the real value, and
+# React throws "Hydration failed... server rendered HTML didn't match". Instead
+# seed the SSR-safe default in useState and correct it in a mount `useEffect`
+# (with `// eslint-disable-next-line react-hooks/set-state-in-effect`). This is
+# the cinelog movie-catalog / hero-video idiom; see apps/cinelog and packages/ui.
+#
 # Run: bash cli/new-nextjs-app/new-nextjs-app.sh
 
 set -euo pipefail

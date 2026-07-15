@@ -241,7 +241,7 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
             onClick={() => void handleFetchUrl()}
             width={36}
             height={36}
-            borderRadius={10}
+            borderRadius={8}
             styles={{ padding: 0, justifyContent: "center" }}
           />
         </Box>
@@ -875,7 +875,7 @@ export function ApplicationsPage() {
           paddingY={60}
           paddingX={24}
           border="2px dashed var(--border, #e5e7eb)"
-          borderRadius={16}
+          borderRadius={8}
           styles={{ textAlign: "center" }}
         >
           <Typography

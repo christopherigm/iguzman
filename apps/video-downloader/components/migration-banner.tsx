@@ -41,7 +41,7 @@ export function MigrationBanner({ serverDate }: MigrationBannerProps) {
     <Box maxWidth={400} width="100%">
       <Box
         elevation={2}
-        borderRadius={14}
+        borderRadius={8}
         className="vi-card"
         flexDirection="column"
         styles={{ overflow: "hidden" }}

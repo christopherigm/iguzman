@@ -570,7 +570,7 @@ export function MovieCatalog({
           flexDirection="column"
           gap={10}
           padding={12}
-          borderRadius={10}
+          borderRadius={8}
           border="1px solid var(--border)"
           backgroundColor="var(--surface-2)"
         >

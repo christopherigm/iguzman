@@ -130,7 +130,7 @@ export function VariantSelectorClient({
                     text={displayName}
                     className={`variant-selector__chip${isSelected ? " variant-selector__chip--selected" : ""}`}
                     padding="6px 16px"
-                    borderRadius={6}
+                    borderRadius={8}
                     styles={{
                       fontSize: "0.8125rem", // caption / 13px
                       fontWeight: 500,

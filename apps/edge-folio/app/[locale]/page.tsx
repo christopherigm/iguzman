@@ -263,7 +263,7 @@ export default async function Home({ params }: Props) {
           gap={16}
           marginTop={48}
           padding={40}
-          borderRadius={16}
+          borderRadius={8}
           backgroundColor="var(--surface-1)"
           alignItems="center"
           styles={{ textAlign: "center" }}

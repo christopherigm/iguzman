@@ -589,7 +589,7 @@ export function Simulator() {
           justifyContent="space-between"
           alignItems="center"
           padding="10px 14px"
-          borderRadius={6}
+          borderRadius={8}
           backgroundColor="var(--surface-2)"
         >
           <Box display="flex" alignItems="center">

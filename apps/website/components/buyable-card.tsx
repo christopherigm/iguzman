@@ -92,7 +92,7 @@ export function BuyableCard({
       prefetch
       padding={0}
       border="none"
-      borderRadius={16}
+      borderRadius={8}
       elevation={5}
       height="100%"
       backgroundColor="var(--surface-1)"

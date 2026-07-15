@@ -1042,7 +1042,7 @@ export function JobsPage() {
           paddingY={60}
           paddingX={24}
           border="2px dashed var(--border, #e5e7eb)"
-          borderRadius={16}
+          borderRadius={8}
           styles={{ textAlign: "center" }}
         >
           <Typography

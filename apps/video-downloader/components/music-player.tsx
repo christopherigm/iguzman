@@ -778,7 +778,7 @@ export function MusicPlayer() {
           <div ref={coverRef} style={{ flexShrink: 0 }}>
             <Box
               className="music-player__cover-wrap"
-              borderRadius={16}
+              borderRadius={8}
               backgroundColor="var(--mp-surface)"
               display="flex"
               alignItems="center"

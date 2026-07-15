@@ -591,7 +591,7 @@ export function PinnedVideoItemClient({
   return (
     <Box
       elevation={2}
-      borderRadius={14}
+      borderRadius={8}
       className="vi-card"
       flexDirection="column"
       styles={{ overflow: "hidden" }}

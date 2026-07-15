@@ -23,7 +23,7 @@ export function FormulaCard({
       </Typography>
       <Box
         padding="10px 14px"
-        borderRadius={6}
+        borderRadius={8}
         backgroundColor="var(--surface-2)"
       >
         <MathFormula formula={formula} displayMode />

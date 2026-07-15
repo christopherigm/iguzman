@@ -281,7 +281,7 @@ export function CreditsPageContent() {
         <Box maxWidth={400} width="100%">
           <Box
             elevation={4}
-            borderRadius={16}
+            borderRadius={8}
             padding={10}
             flexDirection="column"
             width="100%"
@@ -422,7 +422,7 @@ export function CreditsPageContent() {
                         fontFamily: "monospace",
                         fontSize: "13px",
                         padding: "8px 10px",
-                        borderRadius: "6px",
+                        borderRadius: "8px",
                         border: "1px solid var(--border, #e5e7eb)",
                         background: "var(--surface-2, #f3f4f6)",
                         overflow: "hidden",
@@ -437,7 +437,7 @@ export function CreditsPageContent() {
                     <Button
                       aria-label={t("copyKey")}
                       onClick={handleCopyKey}
-                      borderRadius={6}
+                      borderRadius={8}
                       padding="6px"
                       icon="/icons/copy.svg"
                       iconSize="18px"
@@ -447,7 +447,7 @@ export function CreditsPageContent() {
                     <Button
                       aria-label={showKey ? t("hideKey") : t("revealKey")}
                       onClick={() => setShowKey((v) => !v)}
-                      borderRadius={6}
+                      borderRadius={8}
                       padding="6px"
                       icon="/icons/show.svg"
                       iconSize="18px"
@@ -457,7 +457,7 @@ export function CreditsPageContent() {
                     <Button
                       aria-label={t("deleteKey")}
                       onClick={() => setShowDeleteModal(true)}
-                      borderRadius={6}
+                      borderRadius={8}
                       padding="6px"
                       icon="/icons/delete-video.svg"
                       iconSize="18px"

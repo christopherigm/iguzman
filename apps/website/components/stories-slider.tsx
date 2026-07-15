@@ -154,7 +154,7 @@ function StoryCard({
   // external href), otherwise it renders a plain surface.
   const surfaceProps = {
     elevation: 5,
-    borderRadius: 12,
+    borderRadius: 8,
     padding: 10,
     height: 400,
     backgroundColor: story.background_color ?? "#111827",

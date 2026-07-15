@@ -710,20 +710,12 @@ function ProjectForm({
           {techStack.length > 0 && (
             <Box display="flex" flexWrap="wrap" gap={6} marginTop={8}>
               {techStack.map((ts) => (
-                <Box
+                <Badge
                   key={ts.id}
-                  display="inline-flex"
-                  alignItems="center"
-                  gap={4}
-                  paddingY={3}
-                  paddingX={10}
-                  borderRadius={999}
-                  border="1px solid var(--primary, #06b6d4)"
-                  backgroundColor="color-mix(in srgb, var(--primary, #06b6d4) 12%, transparent)"
+                  variant="outlined"
+                  color="var(--primary, #06b6d4)"
                 >
-                  <Typography variant="label" color="var(--primary, #06b6d4)">
-                    {ts.name}
-                  </Typography>
+                  {ts.name}
                   <Button
                     unstyled
                     type="button"
@@ -733,7 +725,7 @@ function ProjectForm({
                   >
                     ×
                   </Button>
-                </Box>
+                </Badge>
               ))}
             </Box>
           )}

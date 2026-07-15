@@ -118,7 +118,7 @@ export function BarcodeScanner() {
       <Box
         className="scanner-viewfinder"
         width="100%"
-        borderRadius={12}
+        borderRadius={8}
         alignItems="center"
         justifyContent="center"
         styles={{

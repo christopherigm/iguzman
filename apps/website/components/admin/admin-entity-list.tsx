@@ -57,7 +57,7 @@ export function AdminEntityList({
       {loading && (
         <Box
           padding="32px 16px"
-          borderRadius={12}
+          borderRadius={8}
           backgroundColor="color-mix(in srgb, var(--foreground) 3%, transparent)"
           color="color-mix(in srgb, var(--foreground) 60%, transparent)"
           styles={{ textAlign: "center" }}
@@ -69,7 +69,7 @@ export function AdminEntityList({
       {error && (
         <Box
           padding="32px 16px"
-          borderRadius={12}
+          borderRadius={8}
           backgroundColor="color-mix(in srgb, #e53935 8%, transparent)"
           color="#c62828"
           styles={{ textAlign: "center" }}
@@ -81,7 +81,7 @@ export function AdminEntityList({
       {!loading && !error && items.length === 0 && (
         <Box
           padding="32px 16px"
-          borderRadius={12}
+          borderRadius={8}
           backgroundColor="color-mix(in srgb, var(--foreground) 3%, transparent)"
           color="color-mix(in srgb, var(--foreground) 60%, transparent)"
           styles={{ textAlign: "center" }}
@@ -92,7 +92,7 @@ export function AdminEntityList({
 
       {!loading && !error && items.length > 0 && (
         <Box
-          borderRadius={12}
+          borderRadius={8}
           styles={{
             overflowX: "auto",
             border:
@@ -177,7 +177,7 @@ function renderCell(value: unknown): React.ReactNode {
         <Box
           width={40}
           height={40}
-          borderRadius={6}
+          borderRadius={8}
           backgroundColor="color-mix(in srgb, var(--foreground) 8%, transparent)"
           styles={{ overflow: "hidden", flexShrink: 0 }}
         >

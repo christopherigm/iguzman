@@ -81,7 +81,7 @@ export function ItemGalleryClient({
     return (
       <Box
         width="100%"
-        borderRadius={12}
+        borderRadius={8}
         styles={{
           aspectRatio: "1 / 1",
           backgroundColor: placeholderColor ?? "var(--surface-1, #e0e0e0)",

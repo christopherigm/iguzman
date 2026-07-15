@@ -99,7 +99,7 @@ export async function Intro() {
               width="100%"
               height={420}
               maxHeight="60vh"
-              borderRadius={20}
+              borderRadius={8}
               elevation={6}
               backgroundColor="var(--surface-2)"
               styles={{ position: "relative", overflow: "hidden" }}

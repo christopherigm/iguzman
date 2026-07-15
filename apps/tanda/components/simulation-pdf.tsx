@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 0.5,
     borderColor: BORDER,
-    borderRadius: 4,
+    borderRadius: 8,
     overflow: "hidden",
   },
   panelHeadingTanda: {
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0fdf4",
     borderWidth: 1,
     borderColor: SUCCESS,
-    borderRadius: 4,
+    borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 14,
     marginTop: 12,

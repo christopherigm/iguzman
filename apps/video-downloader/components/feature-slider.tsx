@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Autoplay } from "swiper/modules";
@@ -35,12 +35,19 @@ const CARDS: FeatureCard[] = [
 export function FeatureSlider() {
   const t = useTranslations("FeatureSlider");
   const swiperRef = useRef<SwiperType | null>(null);
-  // Seeded from localStorage via lazy init (avoids a mount setState-in-effect).
-  const [visible, setVisible] = useState(
-    () =>
-      typeof window !== "undefined" && localStorage.getItem(LS_KEY) !== "true",
-  );
+  // Start hidden to match the server (which has no localStorage), then reveal
+  // after mount unless the user has dismissed it. Reading localStorage during
+  // render - even via a lazy init - makes the first client render disagree with
+  // the SSR HTML and throws a hydration mismatch.
+  const [visible, setVisible] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  useEffect(() => {
+    if (localStorage.getItem(LS_KEY) !== "true") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only localStorage read (see note above)
+      setVisible(true);
+    }
+  }, []);
 
   if (!visible) return null;
 
@@ -49,7 +56,7 @@ export function FeatureSlider() {
       <Box maxWidth={400} width="100%" className="fs-wrapper">
         <Box
           elevation={2}
-          borderRadius={14}
+          borderRadius={8}
           className="vi-card"
           flexDirection="column"
           styles={{ overflow: "hidden" }}

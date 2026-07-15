@@ -376,17 +376,14 @@ export function DownloadForm({
   const router = useRouter();
   const { registerUrls } = useOPFSUrls();
   const [url, setUrl] = useState("");
-  // Client-only capability/setting reads via lazy init (avoids a mount
-  // setState-in-effect). On the server these fall back to defaults.
-  const [ios] = useState(() => typeof window !== "undefined" && isIOS());
-  const [autoDownload, setAutoDownload] = useState(() => {
-    if (typeof window === "undefined" || isIOS()) return false;
-    const stored = localStorage.getItem("vd_auto_download");
-    return stored !== null ? stored === "true" : false;
-  });
-  const [opfsSupported] = useState(
-    () => typeof window !== "undefined" && isOPFSSupported(),
-  );
+  // Client-only capability/setting values. They must NOT be read from `window`/
+  // `localStorage` during render: the server has neither, so a lazy init that
+  // read them would make the first client render disagree with the SSR HTML and
+  // throw a hydration mismatch. Instead we seed the SSR-safe defaults here and
+  // correct them in the mount effect below (see the cinelog movie-catalog note).
+  const [ios, setIos] = useState(false);
+  const [autoDownload, setAutoDownload] = useState(false);
+  const [opfsSupported, setOpfsSupported] = useState(false);
   const [storageInfo, setStorageInfo] = useState<{
     usedBytes: number;
     totalBytes: number;
@@ -421,31 +418,14 @@ export function DownloadForm({
   const [commentsUnavailable, setCommentsUnavailable] = useState(false);
   const [commentCount, setCommentCount] = useState<5 | 10 | 20 | 50>(20);
 
-  const [smartDownload, setSmartDownload] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      localStorage.getItem("vd_smart_download") === "true",
-  );
-  const [smartCaptions, setSmartCaptions] = useState(
-    () =>
-      typeof window === "undefined" ||
-      localStorage.getItem("vd_smart_captions") !== "false",
-  );
-  const [smartMaxHeight, setSmartMaxHeight] = useState(() => {
-    if (typeof window === "undefined") return 1080;
-    const stored = localStorage.getItem("vd_smart_max_height");
-    return stored ? Number(stored) : 1080;
-  });
-  const [smartComments, setSmartComments] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      localStorage.getItem("vd_smart_comments") === "true",
-  );
-  const [smartMetadata, setSmartMetadata] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      localStorage.getItem("vd_smart_metadata") === "true",
-  );
+  // Persisted "smart download" settings. Seeded with the same defaults the old
+  // server-side branch returned (smartCaptions defaults on) and rehydrated from
+  // localStorage in the mount effect below to keep SSR and hydration in step.
+  const [smartDownload, setSmartDownload] = useState(false);
+  const [smartCaptions, setSmartCaptions] = useState(true);
+  const [smartMaxHeight, setSmartMaxHeight] = useState(1080);
+  const [smartComments, setSmartComments] = useState(false);
+  const [smartMetadata, setSmartMetadata] = useState(false);
 
   const creditsBalance = useCreditsBalance();
   const [showClearStorageConfirm, setShowClearStorageConfirm] = useState(false);
@@ -498,6 +478,26 @@ export function DownloadForm({
   const handleSmartMaxHeightChange = useCallback((value: number) => {
     setSmartMaxHeight(value);
     localStorage.setItem("vd_smart_max_height", String(value));
+  }, []);
+
+  // Rehydrate client-only capability flags and persisted settings after mount.
+  // These can't be read during render (see the state declarations above): the
+  // SSR HTML is built with the defaults, so the first client render must match
+  // them, then this effect corrects to the real browser values on the client.
+  useEffect(() => {
+    const onIOS = isIOS();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only capability reads (see note above)
+    setIos(onIOS);
+    setOpfsSupported(isOPFSSupported());
+    if (!onIOS) {
+      setAutoDownload(localStorage.getItem("vd_auto_download") === "true");
+    }
+    setSmartDownload(localStorage.getItem("vd_smart_download") === "true");
+    setSmartCaptions(localStorage.getItem("vd_smart_captions") !== "false");
+    const maxHeight = localStorage.getItem("vd_smart_max_height");
+    if (maxHeight) setSmartMaxHeight(Number(maxHeight));
+    setSmartComments(localStorage.getItem("vd_smart_comments") === "true");
+    setSmartMetadata(localStorage.getItem("vd_smart_metadata") === "true");
   }, []);
 
   useEffect(() => {
@@ -880,7 +880,7 @@ export function DownloadForm({
   const formContent = (
     <Box
       elevation={4}
-      borderRadius={16}
+      borderRadius={8}
       padding={7}
       flexDirection="column"
       width="100%"
@@ -927,7 +927,7 @@ export function DownloadForm({
             disabled={!validPlatformUrl || creditsBalance < creditCost}
             width={36}
             height={36}
-            borderRadius={10}
+            borderRadius={8}
             styles={{ padding: 0, justifyContent: "center" }}
           />
         </Box>
@@ -1258,7 +1258,7 @@ export function DownloadForm({
                         onClick={() => setShowClearStorageConfirm(true)}
                         width={36}
                         height={36}
-                        borderRadius={10}
+                        borderRadius={8}
                         styles={{ padding: 0, justifyContent: "center" }}
                       />
                     </Box>

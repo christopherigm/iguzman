@@ -292,7 +292,7 @@ export function AdminImageUploader({
                       bottom: 4,
                       left: 4,
                       padding: "2px 5px",
-                      borderRadius: 4,
+                      borderRadius: 8,
                       fontSize: 9,
                       fontWeight: 700,
                       textTransform: "uppercase",

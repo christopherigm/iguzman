@@ -123,7 +123,7 @@ export async function ServiceDetailPanel({
                 padding: "4px 12px",
                 fontSize: 13,
                 fontWeight: 500,
-                borderRadius: 20,
+                borderRadius: 8,
                 border:
                   "1px solid color-mix(in srgb, var(--accent) 30%, transparent)",
               }}
@@ -139,7 +139,7 @@ export async function ServiceDetailPanel({
                 padding: "4px 12px",
                 fontSize: 13,
                 fontWeight: 500,
-                borderRadius: 20,
+                borderRadius: 8,
                 border:
                   "1px solid color-mix(in srgb, var(--accent) 30%, transparent)",
               }}

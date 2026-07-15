@@ -39,7 +39,7 @@ export function DevSiteSwitcher({
   return (
     <Box
       padding={8}
-      borderRadius={10}
+      borderRadius={8}
       border="1px solid var(--border)"
       backgroundColor="var(--surface-2)"
       elevation={6}

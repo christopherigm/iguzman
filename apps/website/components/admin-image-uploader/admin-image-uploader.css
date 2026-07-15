@@ -2,7 +2,7 @@
    swap must live in CSS. */
 .aiu__dropzone {
   border: 2px dashed color-mix(in srgb, var(--foreground) 20%, transparent);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 32px 16px;
   display: flex;
   flex-direction: column;

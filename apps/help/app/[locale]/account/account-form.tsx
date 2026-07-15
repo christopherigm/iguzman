@@ -88,7 +88,7 @@ function ProfileSection({ profile }: { profile: UserProfile }) {
       width="100%"
       maxWidth={520}
       padding={10}
-      borderRadius={12}
+      borderRadius={8}
       flexDirection="column"
       gap={20}
       elevation={5}
@@ -216,7 +216,7 @@ function ChangePasswordSection() {
       width="100%"
       maxWidth={520}
       padding={10}
-      borderRadius={12}
+      borderRadius={8}
       flexDirection="column"
       gap={20}
       elevation={5}
@@ -337,7 +337,7 @@ function PasskeySection() {
         width="100%"
         maxWidth={520}
         padding={10}
-        borderRadius={12}
+        borderRadius={8}
         flexDirection="column"
         gap={20}
         elevation={5}
