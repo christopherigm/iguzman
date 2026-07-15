@@ -1,7 +1,21 @@
 import React, { CSSProperties } from "react";
+import Link from "next/link";
 import { UIComponentProps, buildStyleProps } from "./utils";
 
 export interface BoxProps extends UIComponentProps {
+  /**
+   * When set, the Box renders as a `next/link` anchor (`<a>`) instead of a
+   * `<div>`, keeping every layout prop. Use for a whole card / surface that is
+   * itself a navigation target. @default undefined (renders a `<div>`)
+   */
+  href?: string;
+  /**
+   * Anchor target when `href` is set (e.g. `"_blank"`). `"_blank"` auto-adds
+   * `rel="noopener noreferrer"`.
+   */
+  target?: string;
+  /** `next/link` prefetch behavior when `href` is set. */
+  prefetch?: boolean;
   /** ARIA role for semantic meaning (e.g. `"nav"`, `"main"`, `"article"`). */
   role?: string;
   /** Accessible label for the element when visible text is absent. */
@@ -97,6 +111,9 @@ export const Box = React.forwardRef<HTMLDivElement, BoxProps>(function Box(
     onDragEnd,
     tabIndex,
     translucent = false,
+    href,
+    target,
+    prefetch,
   } = props;
 
   const built = buildStyleProps(props);
@@ -118,6 +135,40 @@ export const Box = React.forwardRef<HTMLDivElement, BoxProps>(function Box(
       : {}),
     ...styles,
   };
+
+  const sharedAria = {
+    "aria-label": props["aria-label"],
+    "aria-labelledby": props["aria-labelledby"],
+    "aria-describedby": props["aria-describedby"],
+    ...(props["aria-hidden"] !== undefined
+      ? { "aria-hidden": props["aria-hidden"] }
+      : {}),
+    ...(role !== undefined ? { role } : {}),
+  };
+
+  // Polymorphic branch: render a `next/link` anchor when `href` is set, so a
+  // whole Box/Card can itself be a navigation target instead of wrapping one.
+  if (href !== undefined) {
+    return (
+      <Link
+        href={href}
+        prefetch={prefetch}
+        target={target}
+        rel={target === "_blank" ? "noopener noreferrer" : undefined}
+        id={id}
+        className={className}
+        style={style}
+        tabIndex={tabIndex}
+        onClick={onClick as unknown as React.MouseEventHandler<HTMLAnchorElement>}
+        onKeyDown={
+          onKeyDown as unknown as React.KeyboardEventHandler<HTMLAnchorElement>
+        }
+        {...sharedAria}
+      >
+        {children}
+      </Link>
+    );
+  }
 
   return (
     <div

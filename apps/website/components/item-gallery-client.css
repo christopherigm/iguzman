@@ -1,18 +1,7 @@
-.item-gallery {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-}
-
-.item-gallery--placeholder {
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  border-radius: 12px;
-}
-
-/* ── Main swiper ─────────────────────────────────────────────────────────── */
-
+/* ── Main swiper ─────────────────────────────────────────────────────────────
+   `.item-gallery__main` is a Swiper root (not a @repo/ui component); its layout
+   and the Swiper nav-button overrides can only be reached through these
+   descendant selectors. */
 .item-gallery__main {
   width: 100%;
   border-radius: 12px;
@@ -42,19 +31,10 @@
   font-weight: 700 !important;
 }
 
-.item-gallery__slide {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  max-height: clamp(320px, 50vh, 520px);
-}
-
-.item-gallery__image {
-  object-fit: contain;
-}
-
-/* ── Thumbnails ──────────────────────────────────────────────────────────── */
-
+/* ── Thumbnails ──────────────────────────────────────────────────────────────
+   `.item-gallery__thumbs` is a Swiper root; the active-slide state is driven by
+   the Swiper-applied `.swiper-slide-thumb-active` class, so the thumb border
+   must live here (a prop cannot react to that runtime class). */
 .item-gallery__thumbs {
   width: 100%;
 }
@@ -70,37 +50,18 @@
 }
 
 .item-gallery__thumb {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  border-radius: 8px;
-  overflow: hidden;
   border: 2px solid transparent;
   transition: border-color 0.2s ease;
-  background: var(--surface-1, #f5f5f5);
 }
 
 .item-gallery__thumbs .swiper-slide-thumb-active .item-gallery__thumb {
   border-color: var(--accent);
 }
 
-.item-gallery__thumb-image {
-  object-fit: cover;
-}
-
-/* ── Fullscreen button (per-slide) ───────────────────────────────────────── */
-
+/* ── Fullscreen button (per-slide) ────────────────────────────────────────────
+   `Button unstyled`; the hover-swapped background must be CSS so :hover can win
+   over it. Layout is passed as Button props. */
 .item-gallery__fullscreen-btn {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
   background: rgba(0, 0, 0, 0.35);
   cursor: pointer;
   transition: background 0.2s ease;
@@ -110,40 +71,50 @@
   background: rgba(0, 0, 0, 0.55);
 }
 
-.item-gallery__fullscreen-btn img {
-  filter: invert(1);
-}
-
-/* ── Fullscreen overlay ───────────────────────────────────────────────────── */
-
+/* ── Fullscreen overlay ───────────────────────────────────────────────────────
+   Enter/leave animations; the --closing modifier plays the reverse keyframes.
+   Layout is passed as props/styles. */
 @keyframes gallery-fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes gallery-fade-out {
-  from { opacity: 1; }
-  to   { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 @keyframes gallery-zoom-in {
-  from { opacity: 0; transform: scale(0.8); }
-  to   { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes gallery-zoom-out {
-  from { opacity: 1; transform: scale(1); }
-  to   { opacity: 0; transform: scale(0.8); }
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.8);
+  }
 }
 
 .item-gallery__overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background: rgba(0, 0, 0, 0.75);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   animation: gallery-fade-in 0.25s ease forwards;
 }
 
@@ -152,10 +123,6 @@
 }
 
 .item-gallery__overlay-image-wrap {
-  position: relative;
-  width: min(90vw, calc(90vh * var(--img-ar, 1.5)));
-  max-height: 90vh;
-  aspect-ratio: var(--img-ar, 1.5);
   animation: gallery-zoom-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
@@ -163,20 +130,9 @@
   animation: gallery-zoom-out 0.25s ease forwards;
 }
 
-.item-gallery__overlay-image {
-  object-fit: contain;
-}
-
+/* ── Fullscreen close button ──────────────────────────────────────────────────
+   `Button unstyled`; hover-swapped background stays in CSS, layout via props. */
 .item-gallery__overlay-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
   background: rgba(0, 0, 0, 0.35);
   cursor: pointer;
   transition: background 0.2s ease;
@@ -184,8 +140,4 @@
 
 .item-gallery__overlay-close:hover {
   background: rgba(0, 0, 0, 0.55);
-}
-
-.item-gallery__overlay-close img {
-  filter: invert(1);
 }

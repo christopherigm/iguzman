@@ -93,7 +93,7 @@ export async function About() {
             width="100%"
             height={340}
             maxHeight="50vh"
-            borderRadius={20}
+            borderRadius={8}
             elevation={8}
             styles={{
               position: "relative",
@@ -122,7 +122,7 @@ export async function About() {
                 <Card
                   height="100%"
                   padding={24}
-                  borderRadius={16}
+                  borderRadius={8}
                   gap="12px"
                   styles={{ borderTop: `4px solid ${primary}` }}
                 >
@@ -144,7 +144,7 @@ export async function About() {
                 <Card
                   height="100%"
                   padding={24}
-                  borderRadius={16}
+                  borderRadius={8}
                   gap="12px"
                   styles={{ borderTop: `4px solid ${secondary}` }}
                 >

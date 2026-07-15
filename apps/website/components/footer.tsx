@@ -57,7 +57,7 @@ export async function Footer({ logo, system }: Props) {
                 alt={system?.site_name ?? ""}
                 width={140}
                 height={44}
-                className="footer__logo"
+                style={{ objectFit: "contain", objectPosition: "left center" }}
               />
               {system?.site_name && (
                 <Typography as="span" variant="h5" fontWeight={700}>
@@ -65,7 +65,12 @@ export async function Footer({ logo, system }: Props) {
                 </Typography>
               )}
               {system?.slogan && (
-                <Typography as="p" variant="body" className="footer__slogan">
+                <Typography
+                  as="p"
+                  variant="body"
+                  color="color-mix(in srgb, var(--foreground) 80%, transparent)"
+                  styles={{ fontStyle: "italic", overflowWrap: "break-word" }}
+                >
                   {system.slogan}
                 </Typography>
               )}
@@ -73,7 +78,15 @@ export async function Footer({ logo, system }: Props) {
                 <Typography
                   as="p"
                   variant="body"
-                  className="footer__description"
+                  color="color-mix(in srgb, var(--foreground) 60%, transparent)"
+                  styles={{
+                    lineHeight: 1.6,
+                    overflowWrap: "break-word",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
                 >
                   {description}
                 </Typography>
@@ -99,7 +112,7 @@ export async function Footer({ logo, system }: Props) {
               as="h3"
               variant="h5"
               fontWeight={700}
-              className="footer__col-heading"
+              marginBottom={20}
             >
               {t("navigationHeading")}
             </Typography>
@@ -120,7 +133,7 @@ export async function Footer({ logo, system }: Props) {
               as="h3"
               variant="h5"
               fontWeight={700}
-              className="footer__col-heading"
+              marginBottom={20}
             >
               {t("companyHeading")}
             </Typography>
@@ -137,12 +150,20 @@ export async function Footer({ logo, system }: Props) {
         </Grid>
 
         {/* Bottom bar */}
-        <Box className="footer__bottom">
+        <Box
+          paddingY={20}
+          marginTop={40}
+          styles={{
+            borderTop:
+              "1px solid color-mix(in srgb, var(--foreground) 10%, transparent)",
+          }}
+        >
           <Typography
             as="p"
             variant="body"
             textAlign="center"
-            className="footer__description"
+            color="color-mix(in srgb, var(--foreground) 60%, transparent)"
+            styles={{ lineHeight: 1.6, overflowWrap: "break-word" }}
           >
             {t("copyright", {
               year: currentYear,

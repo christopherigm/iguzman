@@ -1,15 +1,14 @@
+/* `Button unstyled` toggle. Border/background stay in CSS because :hover and
+   --active override them (inline props would win over the pseudo-class); layout
+   (size, radius, centering) is passed as Button props. */
 .favorite-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
   border: 1.5px solid color-mix(in srgb, var(--foreground) 20%, transparent);
   background: transparent;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
-  flex-shrink: 0;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease;
 }
 
 .favorite-btn:hover {

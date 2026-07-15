@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { getTranslations, getLocale } from "next-intl/server";
 import {
   getProductCategories,
@@ -8,8 +7,10 @@ import {
   type ServiceCategory,
 } from "@/lib/catalog";
 import { Box } from "@repo/ui/core-elements/box";
+import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Grid } from "@repo/ui/core-elements/grid";
+import { Badge } from "@repo/ui/core-elements/badge";
 import "./catalog-categories.css";
 
 type CategoryType = "product" | "service";
@@ -37,43 +38,124 @@ export function CategoryCard({
       ? `${itemCount} product${itemCount !== 1 ? "s" : ""}`
       : `${itemCount} service${itemCount !== 1 ? "s" : ""}`;
 
+  const hasImage = Boolean(image);
+  // Service badge picks up an accent tint only on flat (image-less) cards;
+  // product cards and every image card use the light-on-dark treatment.
+  const accentBadge = type === "service" && !hasImage;
+
   return (
-    <Link
+    <Card
       href={href}
       prefetch
-      className={`category-card elevation-5 zoom-on-hover${image ? " category-card--has-image" : ""}`}
+      padding={0}
+      border="none"
+      borderRadius={16}
+      elevation={5}
+      minHeight={hasImage ? 280 : 220}
+      backgroundColor="var(--surface-2)"
+      className="zoom-on-hover"
+      styles={{ position: "relative", textDecoration: "none" }}
     >
       {image && (
-        <Image fill className="category-card__image" src={image} alt={name} />
+        <Image
+          fill
+          src={image}
+          alt={name}
+          style={{ objectFit: "cover" }}
+        />
       )}
-      {image && <Box className="category-card__overlay" />}
+      {image && (
+        <Box
+          styles={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 25%, rgba(0,0,0,0) 50%)",
+          }}
+        />
+      )}
 
-      <Box className="category-card__content card-content">
-        <Typography
-          as="span"
-          variant="none"
-          className={`category-card__badge category-card__badge--${type}`}
+      <Box
+        flexDirection="column"
+        gap={10}
+        flex={1}
+        justifyContent="flex-end"
+        className="card-content"
+        styles={{ position: "relative", zIndex: 1 }}
+      >
+        <Badge
+          variant="filled"
+          size="md"
+          color={
+            accentBadge
+              ? "rgba(var(--accent-rgb, 99, 102, 241), 0.18)"
+              : "rgba(255, 255, 255, 0.15)"
+          }
+          textColor={
+            accentBadge
+              ? "var(--accent, #6366f1)"
+              : "rgba(255, 255, 255, 0.85)"
+          }
+          style={{
+            width: "fit-content",
+            padding: "3px 10px",
+            borderRadius: 4,
+            border: `1px solid ${
+              accentBadge
+                ? "rgba(var(--accent-rgb, 99, 102, 241), 0.45)"
+                : "rgba(255, 255, 255, 0.35)"
+            }`,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+          }}
         >
           {label}
-        </Typography>
+        </Badge>
 
         {name && (
-          <Typography as="h3" variant="h3" className="category-card__name">
+          <Typography
+            as="h3"
+            variant="h3"
+            margin={0}
+            color={hasImage ? "#fff" : "var(--on-surface)"}
+          >
             {name}
           </Typography>
         )}
 
         {description && (
-          <Typography variant="body" className="category-card__description">
+          <Typography
+            variant="body"
+            margin={0}
+            color={
+              hasImage
+                ? "rgba(255, 255, 255, 0.72)"
+                : "var(--on-surface-muted, rgba(0, 0, 0, 0.55))"
+            }
+            styles={{
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
             {description}
           </Typography>
         )}
 
-        <Typography as="span" variant="label" className="category-card__count">
+        <Typography
+          as="span"
+          variant="label"
+          color={
+            hasImage
+              ? "rgba(255, 255, 255, 0.55)"
+              : "var(--on-surface-muted, rgba(0, 0, 0, 0.45))"
+          }
+        >
           {countLabel}
         </Typography>
       </Box>
-    </Link>
+    </Card>
   );
 }
 

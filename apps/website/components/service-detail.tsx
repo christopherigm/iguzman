@@ -1,11 +1,11 @@
 import { getTranslations } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
+import { Badge } from "@repo/ui/core-elements/badge";
 import type { ServiceDetail, ServiceVariantFull } from "@/lib/catalog";
 import { VariantSelectorClient } from "./variant-selector-client";
 import { FavoriteButtonClient } from "./favorite-button-client";
 import { ActionButtonsClient } from "./action-buttons-client";
-import "./service-detail.css";
 
 function formatPrice(amount: string, currency: string): string {
   const num = parseFloat(amount);
@@ -80,22 +80,22 @@ export async function ServiceDetailPanel({
   };
 
   return (
-    <Box className="service-detail">
+    <Box flexDirection="column" gap={20} paddingY={4}>
       {/* Name */}
       {name && (
-        <Typography as="h1" variant="h3" className="service-detail__name">
+        <Typography as="h1" variant="h3" styles={{ lineHeight: 1.25 }}>
           {name}
         </Typography>
       )}
 
       {/* Meta: brand / category */}
       {(service.brand_name || service.category_name) && (
-        <Box className="service-detail__meta">
+        <Box flexWrap="wrap" gap="8px 20px">
           {service.brand_name && (
             <Typography
               as="span"
-              variant="none"
-              className="service-detail__meta-item"
+              variant="caption"
+              color="color-mix(in srgb, var(--foreground) 60%, transparent)"
             >
               {t("brand")}: <strong>{service.brand_name}</strong>
             </Typography>
@@ -103,8 +103,8 @@ export async function ServiceDetailPanel({
           {service.category_name && (
             <Typography
               as="span"
-              variant="none"
-              className="service-detail__meta-item"
+              variant="caption"
+              color="color-mix(in srgb, var(--foreground) 60%, transparent)"
             >
               {t("category")}: <strong>{service.category_name}</strong>
             </Typography>
@@ -114,30 +114,44 @@ export async function ServiceDetailPanel({
 
       {/* Service badges: duration + modality */}
       {(effectiveDuration || effectiveModality) && (
-        <Box className="service-detail__badges">
+        <Box flexWrap="wrap" gap={8}>
           {effectiveDuration && (
-            <Typography
-              as="span"
-              variant="none"
-              className="service-detail__badge"
+            <Badge
+              variant="subtle"
+              color="var(--accent)"
+              style={{
+                padding: "4px 12px",
+                fontSize: 13,
+                fontWeight: 500,
+                borderRadius: 20,
+                border:
+                  "1px solid color-mix(in srgb, var(--accent) 30%, transparent)",
+              }}
             >
               ⏱ {formatDuration(effectiveDuration)}
-            </Typography>
+            </Badge>
           )}
           {effectiveModality && (
-            <Typography
-              as="span"
-              variant="none"
-              className="service-detail__badge"
+            <Badge
+              variant="subtle"
+              color="var(--accent)"
+              style={{
+                padding: "4px 12px",
+                fontSize: 13,
+                fontWeight: 500,
+                borderRadius: 20,
+                border:
+                  "1px solid color-mix(in srgb, var(--accent) 30%, transparent)",
+              }}
             >
               {modalityLabels[effectiveModality] ?? effectiveModality}
-            </Typography>
+            </Badge>
           )}
         </Box>
       )}
 
       {/* Pricing */}
-      <Box className="service-detail__pricing">
+      <Box alignItems="baseline" flexWrap="wrap" gap="8px 12px">
         <Typography as="span" variant="none" className="item-price">
           {formatPrice(effectivePrice, service.currency)}
         </Typography>
@@ -148,15 +162,19 @@ export async function ServiceDetailPanel({
             </Typography>
           )}
         {discount > 0 && (
-          <Typography as="span" variant="none" className="item-discount-badge">
+          <Badge variant="filled" color="#ef4444" textColor="#fff">
             -{discount}%
-          </Typography>
+          </Badge>
         )}
       </Box>
 
       {/* SKU */}
       {(selectedVariant?.sku ?? service.sku) && (
-        <Typography as="span" variant="none" className="service-detail__sku">
+        <Typography
+          as="span"
+          variant="caption"
+          color="color-mix(in srgb, var(--foreground) 45%, transparent)"
+        >
           {t("sku")}: {selectedVariant?.sku ?? service.sku}
         </Typography>
       )}
@@ -171,7 +189,7 @@ export async function ServiceDetailPanel({
       )}
 
       {/* Actions */}
-      <Box className="service-detail__actions">
+      <Box alignItems="flex-end" gap={10}>
         <ActionButtonsClient
           addToCartLabel={t("addToCart")}
           buyNowLabel={t("buyNow")}
@@ -181,18 +199,36 @@ export async function ServiceDetailPanel({
 
       {/* Description */}
       {description && (
-        <Box className="service-detail__section">
+        <Box
+          flexDirection="column"
+          paddingTop={8}
+          styles={{
+            borderTop:
+              "1px solid color-mix(in srgb, var(--foreground) 10%, transparent)",
+          }}
+        >
           <Typography as="h2" variant="none" className="item-section-heading">
             {t("description")}
           </Typography>
-          <Typography variant="none" className="service-detail__description">
+          <Typography
+            variant="body"
+            color="color-mix(in srgb, var(--foreground) 80%, transparent)"
+            styles={{ lineHeight: 1.7, whiteSpace: "pre-line" }}
+          >
             {description}
           </Typography>
         </Box>
       )}
 
       {/* Service details */}
-      <Box className="service-detail__section">
+      <Box
+        flexDirection="column"
+        paddingTop={8}
+        styles={{
+          borderTop:
+            "1px solid color-mix(in srgb, var(--foreground) 10%, transparent)",
+        }}
+      >
         <Typography as="h2" variant="none" className="item-section-heading">
           {t("serviceDetails")}
         </Typography>

@@ -1,15 +1,5 @@
-.aiu {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.aiu__label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
+/* Drop zone - a native <div> (role="button"); the hover/active border+background
+   swap must live in CSS. */
 .aiu__dropzone {
   border: 2px dashed color-mix(in srgb, var(--foreground) 20%, transparent);
   border-radius: 12px;
@@ -19,7 +9,9 @@
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
   background: color-mix(in srgb, var(--foreground) 2%, transparent);
   position: relative;
   text-align: center;
@@ -36,17 +28,7 @@
   line-height: 1;
 }
 
-.aiu__dropzone-text {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.aiu__dropzone-hint {
-  font-size: 12px;
-  color: color-mix(in srgb, var(--foreground) 50%, transparent);
-}
-
+/* Native file <input> - visually hidden, covers the dropzone. */
 .aiu__input {
   position: absolute;
   inset: 0;
@@ -57,12 +39,16 @@
   pointer-events: none;
 }
 
+/* Responsive thumbnail grid - auto-fill minmax + a breakpoint override have no
+   component-prop equivalent, so the grid stays in CSS. */
 .aiu__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: 8px;
 }
 
+/* Draggable thumbnail - a native <div>; the drag/over/active visual states are
+   toggled by runtime classes and :active. */
 .aiu__thumb {
   position: relative;
   aspect-ratio: 1;
@@ -70,7 +56,10 @@
   overflow: hidden;
   cursor: grab;
   background: color-mix(in srgb, var(--foreground) 8%, transparent);
-  transition: transform 0.15s, opacity 0.15s, box-shadow 0.15s;
+  transition:
+    transform 0.15s,
+    opacity 0.15s,
+    box-shadow 0.15s;
   border: 2px solid transparent;
 }
 
@@ -88,25 +77,14 @@
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
-.aiu__thumb-img-wrap {
-  position: absolute;
-  inset: 0;
-}
-
-.aiu__thumb-img {
-  object-fit: cover;
-}
-
+/* Overlay revealed on thumbnail hover - opacity/transition + the parent-hover
+   selector require CSS; its flex layout is passed as Box props. */
 .aiu__thumb-overlay {
   position: absolute;
   inset: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 4px;
   opacity: 0;
   transition: opacity 0.15s;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 50%);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4) 0%, transparent 50%);
 }
 
 .aiu__thumb:hover .aiu__thumb-overlay {
@@ -118,51 +96,23 @@
   font-size: 16px;
   cursor: grab;
   padding: 2px;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
+/* Delete button - `Button unstyled`; hover-swapped background stays in CSS,
+   layout is passed as props. */
 .aiu__thumb-delete {
-  background: rgba(0,0,0,0.6);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
+  background: rgba(0, 0, 0, 0.6);
   cursor: pointer;
   transition: background 0.15s;
-  line-height: 1;
 }
 
 .aiu__thumb-delete:hover {
   background: #e53935;
 }
 
-.aiu__thumb-badge {
-  position: absolute;
-  bottom: 4px;
-  left: 4px;
-  background: var(--accent);
-  color: white;
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 2px 5px;
-  border-radius: 4px;
-}
-
-.aiu__empty {
-  font-size: 13px;
-  color: color-mix(in srgb, var(--foreground) 50%, transparent);
-  text-align: center;
-  padding: 8px;
-}
-
-@media (min-width: 600px) { /* sm */
+@media (min-width: 600px) {
+  /* sm */
   .aiu__grid {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   }

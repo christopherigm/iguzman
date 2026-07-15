@@ -15,6 +15,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Button } from "@repo/ui/core-elements/button";
 import { TextInput } from "@repo/ui/core-elements/text-input";
+import { Select } from "@repo/ui/core-elements/select";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { Toast } from "@repo/ui/core-elements/toast";
 import { SpeechButton } from "@repo/ui/core-elements/speech-button";
@@ -468,7 +469,7 @@ export function AdminForm({
           justifyContent="space-between"
           gap={16}
         >
-          <Typography as="h1" variant="h3" className="af__title">
+          <Typography as="h1" variant="h3" margin={0}>
             {title}
           </Typography>
           <Box display="flex" alignItems="center" gap={8}>
@@ -493,8 +494,27 @@ export function AdminForm({
               <Fragment key={field.key}>
                 {/* ── Pair group header (shown before the ES field of each pair) ── */}
                 {needsGroupHeader(field) && (
-                  <Box className="af__field--full af__pair-header">
-                    <Typography variant="label" className="af__pair-label">
+                  <Box
+                    className="af__field--full"
+                    paddingTop={6}
+                    paddingBottom={2}
+                    marginBottom={2}
+                    styles={{
+                      borderBottom:
+                        "1px solid color-mix(in srgb, var(--foreground) 12%, transparent)",
+                    }}
+                  >
+                    <Typography
+                      variant="label"
+                      fontWeight={700}
+                      color="color-mix(in srgb, var(--foreground) 45%, transparent)"
+                      // 11px sub-scale group header, below the label (12px) tier
+                      styles={{
+                        fontSize: 11,
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                      }}
+                    >
                       {field.groupLabel ?? deriveGroupLabel(field.label)}
                     </Typography>
                   </Box>
@@ -521,37 +541,26 @@ export function AdminForm({
                       <Typography
                         as="span"
                         variant="body"
-                        className="af__field-bool-label"
+                        fontWeight={500}
+                        color="var(--foreground)"
                       >
                         {field.label}
                       </Typography>
                     </Box>
                   ) : field.type === "select" ? (
-                    <Box flexDirection="column" gap={6}>
-                      <label
-                        className="af__label"
-                        htmlFor={`field-${field.key}`}
-                      >
-                        {field.label}
-                      </label>
-                      <select
-                        id={`field-${field.key}`}
-                        className="af__select"
-                        value={String(values[field.key] ?? "")}
-                        onChange={(e) => onChange(field.key, e.target.value)}
-                        required={field.required}
-                      >
-                        <option value="">{field.placeholder ?? "-"}</option>
-                        {field.options?.map((opt) => (
-                          <option
-                            key={String(opt.value)}
-                            value={String(opt.value)}
-                          >
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </Box>
+                    <Select
+                      label={field.label}
+                      value={String(values[field.key] ?? "")}
+                      onChange={(v) => onChange(field.key, v)}
+                      required={field.required}
+                      options={[
+                        { value: "", label: field.placeholder ?? "-" },
+                        ...(field.options?.map((opt) => ({
+                          value: String(opt.value),
+                          label: opt.label,
+                        })) ?? []),
+                      ]}
+                    />
                   ) : field.type === "color" ? (
                     <Box flexDirection="column" gap={6}>
                       <label
@@ -572,7 +581,7 @@ export function AdminForm({
                           value={String(values[field.key] ?? "")}
                           onChange={(v) => onChange(field.key, v)}
                           placeholder="#000000"
-                          className="af__color-text"
+                          flex={1}
                         />
                       </Box>
                     </Box>
@@ -587,7 +596,8 @@ export function AdminForm({
                             ? "space-between"
                             : undefined
                         }
-                        className="af__label-row"
+                        minHeight={24}
+                        marginBottom={4}
                       >
                         <label
                           className="af__label"
@@ -598,7 +608,8 @@ export function AdminForm({
                             <Typography
                               as="span"
                               variant="none"
-                              className="af__required"
+                              color="#e53935"
+                              marginLeft={2}
                             >
                               *
                             </Typography>
@@ -700,18 +711,19 @@ export function AdminForm({
                         placeholder={field.placeholder}
                         disabled={field.disabled ?? field.type === "slug"}
                         onBlur={field.onBlur}
-                        className={
-                          field.fieldError ? "af__input--error" : undefined
-                        }
+                        error={field.fieldError ?? undefined}
                       />
 
                       {/* ── Enhance preview panel ── */}
                       {field.type === "textarea" &&
                         activeEnhanceField === field.key && (
                           <Box
-                            className="af__enhance-preview"
                             flexDirection="column"
                             gap={10}
+                            padding="12px 14px"
+                            borderRadius={8}
+                            border="1px solid color-mix(in srgb, var(--accent, #06b6d4) 30%, transparent)"
+                            backgroundColor="color-mix(in srgb, var(--accent, #06b6d4) 5%, transparent)"
                           >
                             <Typography variant="body">
                               {enhancePreview || "…"}
@@ -751,9 +763,12 @@ export function AdminForm({
                       {isTranslatable(field) &&
                         activeTranslateField === field.key && (
                           <Box
-                            className="af__translate-preview"
                             flexDirection="column"
                             gap={10}
+                            padding="12px 14px"
+                            borderRadius={8}
+                            border="1px solid color-mix(in srgb, var(--foreground) 15%, transparent)"
+                            backgroundColor="color-mix(in srgb, var(--foreground) 3%, transparent)"
                           >
                             <Typography variant="body">
                               {translatePreview || "…"}
@@ -789,15 +804,6 @@ export function AdminForm({
                           </Box>
                         )}
 
-                      {field.fieldError && (
-                        <Typography
-                          as="span"
-                          variant="none"
-                          className="af__field-error"
-                        >
-                          {field.fieldError}
-                        </Typography>
-                      )}
                     </Box>
                   )}
                 </Box>
@@ -808,7 +814,21 @@ export function AdminForm({
           {/* Extra content (image uploaders, gradient builders, etc.) */}
           {children}
 
-          <Box display="flex" gap={12} className="af__actions">
+          <Box
+            display="flex"
+            gap={12}
+            borderRadius={12}
+            border="1px solid color-mix(in srgb, var(--foreground) 12%, transparent)"
+            backgroundColor="var(--background)"
+            styles={{
+              position: "fixed",
+              bottom: 24,
+              right: 24,
+              boxShadow:
+                "0 4px 16px color-mix(in srgb, var(--foreground) 12%, transparent)",
+              zIndex: 100,
+            }}
+          >
             <Button
               type="submit"
               text={saving ? t("saving") : t("save")}

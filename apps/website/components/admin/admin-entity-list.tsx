@@ -46,7 +46,7 @@ export function AdminEntityList({
         flexWrap="wrap"
         marginBottom={12}
       >
-        <Typography as="h1" variant="h3" className="ael__title">
+        <Typography as="h1" variant="h3" margin={0}>
           {title}
         </Typography>
         <Link href={`${basePath}/new`} prefetch>
@@ -55,25 +55,50 @@ export function AdminEntityList({
       </Box>
 
       {loading && (
-        <Box className="ael__state">
+        <Box
+          padding="32px 16px"
+          borderRadius={12}
+          backgroundColor="color-mix(in srgb, var(--foreground) 3%, transparent)"
+          color="color-mix(in srgb, var(--foreground) 60%, transparent)"
+          styles={{ textAlign: "center" }}
+        >
           <Typography variant="body">{t("loading")}</Typography>
         </Box>
       )}
 
       {error && (
-        <Box className="ael__state ael__state--error">
+        <Box
+          padding="32px 16px"
+          borderRadius={12}
+          backgroundColor="color-mix(in srgb, #e53935 8%, transparent)"
+          color="#c62828"
+          styles={{ textAlign: "center" }}
+        >
           <Typography variant="body">{error}</Typography>
         </Box>
       )}
 
       {!loading && !error && items.length === 0 && (
-        <Box className="ael__state">
+        <Box
+          padding="32px 16px"
+          borderRadius={12}
+          backgroundColor="color-mix(in srgb, var(--foreground) 3%, transparent)"
+          color="color-mix(in srgb, var(--foreground) 60%, transparent)"
+          styles={{ textAlign: "center" }}
+        >
           <Typography variant="body">{t("noItems")}</Typography>
         </Box>
       )}
 
       {!loading && !error && items.length > 0 && (
-        <Box className="ael__table-wrap">
+        <Box
+          borderRadius={12}
+          styles={{
+            overflowX: "auto",
+            border:
+              "1px solid color-mix(in srgb, var(--foreground) 10%, transparent)",
+          }}
+        >
           <table className="ael__table">
             <thead>
               <tr>
@@ -127,7 +152,11 @@ export function AdminEntityList({
 function renderCell(value: unknown): React.ReactNode {
   if (value === null || value === undefined)
     return (
-      <Typography as="span" variant="body" className="ael__null">
+      <Typography
+        as="span"
+        variant="body"
+        color="color-mix(in srgb, var(--foreground) 35%, transparent)"
+      >
         -
       </Typography>
     );
@@ -145,14 +174,20 @@ function renderCell(value: unknown): React.ReactNode {
     // Detect image URLs
     if (/\.(jpg|jpeg|png|webp|gif|svg)(\?|$)/i.test(value)) {
       return (
-        <Box className="ael__thumb-wrap">
+        <Box
+          width={40}
+          height={40}
+          borderRadius={6}
+          backgroundColor="color-mix(in srgb, var(--foreground) 8%, transparent)"
+          styles={{ overflow: "hidden", flexShrink: 0 }}
+        >
           <Image
             src={value}
             alt=""
             width={40}
             height={40}
-            className="ael__thumb"
             unoptimized
+            style={{ objectFit: "cover" }}
           />
         </Box>
       );
@@ -160,12 +195,7 @@ function renderCell(value: unknown): React.ReactNode {
   }
   if (typeof value === "string" && value.length > 60) {
     return (
-      <Typography
-        as="span"
-        variant="body"
-        className="ael__truncated"
-        title={value}
-      >
+      <Typography as="span" variant="body" title={value}>
         {value.slice(0, 60)}…
       </Typography>
     );

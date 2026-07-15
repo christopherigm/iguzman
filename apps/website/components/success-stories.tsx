@@ -16,7 +16,7 @@ export async function SuccessStories() {
 
   return (
     <section className="stories-section">
-      <Box className="stories-header">
+      <Box className="highlights-header">
         <Typography as="h2" variant="h2" className="section-title">
           {t("heading")}
         </Typography>

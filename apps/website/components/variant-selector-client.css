@@ -1,41 +1,16 @@
-.variant-selector {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.variant-selector__group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.variant-selector__label {
-  font-size: 13px;
-  font-weight: 600;
-  color: color-mix(in srgb, var(--foreground) 70%, transparent);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.variant-selector__values {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-/* ── Text chip ───────────────────────────────────────────────────────────── */
-
+/* ── Text chip ───────────────────────────────────────────────────────────────
+   `Button unstyled` custom-styled toggle. The base border/background/color live
+   here (not as props) because the :hover and --selected rules must override
+   them, and inline props would win over the pseudo-class. Layout (padding,
+   radius) and font metrics are set as Button props/styles. */
 .variant-selector__chip {
-  padding: 6px 16px;
-  border-radius: 6px;
   border: 1.5px solid color-mix(in srgb, var(--foreground) 20%, transparent);
   background: transparent;
   color: var(--foreground);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .variant-selector__chip:hover {
@@ -49,15 +24,14 @@
   color: var(--accent);
 }
 
-/* ── Color swatch ────────────────────────────────────────────────────────── */
-
+/* ── Color swatch ────────────────────────────────────────────────────────────
+   `Button unstyled` circular toggle; the :hover scale and --selected outline
+   require CSS. Size + radius are set as Button props. */
 .variant-selector__swatch {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
   border: 2.5px solid transparent;
-  cursor: pointer;
-  transition: transform 0.15s ease, outline 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    outline 0.15s ease;
   outline: 2px solid transparent;
   outline-offset: 2px;
 }

@@ -80,21 +80,23 @@ export function VariantSelectorClient({
   }
 
   return (
-    <Box className="variant-selector">
+    <Box flexDirection="column" gap={14}>
       {Array.from(optionsMap.entries()).map(([optionName, values]) => {
         const sortedValues = [...values].sort(
           (a, b) => a.sort_order - b.sort_order,
         );
         return (
-          <Box key={optionName} className="variant-selector__group">
+          <Box key={optionName} flexDirection="column" gap={8}>
             <Typography
               as="span"
-              variant="none"
-              className="variant-selector__label"
+              variant="label"
+              fontWeight={600}
+              color="color-mix(in srgb, var(--foreground) 70%, transparent)"
+              styles={{ textTransform: "uppercase", letterSpacing: "0.04em" }}
             >
               {optionName}
             </Typography>
-            <Box className="variant-selector__values">
+            <Box flexWrap="wrap" gap={8}>
               {sortedValues.map((ov) => {
                 const isSelected = selectedValueIds.has(ov.id);
                 const displayName =
@@ -110,7 +112,10 @@ export function VariantSelectorClient({
                       unstyled
                       title={displayName}
                       className={`variant-selector__swatch${isSelected ? " variant-selector__swatch--selected" : ""}`}
-                      styles={{ backgroundColor: ov.color }}
+                      width={32}
+                      height={32}
+                      borderRadius="50%"
+                      styles={{ backgroundColor: ov.color, cursor: "pointer" }}
                       onClick={() => handleSelect(optionName, ov.id)}
                       aria-pressed={isSelected}
                       aria-label={`${optionName}: ${displayName}`}
@@ -124,6 +129,13 @@ export function VariantSelectorClient({
                     unstyled
                     text={displayName}
                     className={`variant-selector__chip${isSelected ? " variant-selector__chip--selected" : ""}`}
+                    padding="6px 16px"
+                    borderRadius={6}
+                    styles={{
+                      fontSize: "0.8125rem", // caption / 13px
+                      fontWeight: 500,
+                      cursor: "pointer",
+                    }}
                     onClick={() => handleSelect(optionName, ov.id)}
                     aria-pressed={isSelected}
                   />

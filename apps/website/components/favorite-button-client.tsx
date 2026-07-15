@@ -17,6 +17,13 @@ export function FavoriteButtonClient({ label }: FavoriteButtonClientProps) {
       unstyled
       type="button"
       className={`favorite-btn${active ? " favorite-btn--active" : ""}`}
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      width={44}
+      height={44}
+      borderRadius="50%"
+      styles={{ flexShrink: 0 }}
       onClick={() => setActive((prev) => !prev)}
       aria-label={label}
       aria-pressed={active}

@@ -1,11 +1,11 @@
 import { getTranslations } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
+import { Badge } from "@repo/ui/core-elements/badge";
 import type { ProductDetail, ProductVariantFull } from "@/lib/catalog";
 import { VariantSelectorClient } from "./variant-selector-client";
 import { FavoriteButtonClient } from "./favorite-button-client";
 import { ActionButtonsClient } from "./action-buttons-client";
-import "./product-detail.css";
 
 function formatPrice(amount: string, currency: string): string {
   const num = parseFloat(amount);
@@ -72,22 +72,22 @@ export async function ProductDetailPanel({
   const hasDimensions = length || width || height || weight;
 
   return (
-    <Box className="product-detail">
+    <Box flexDirection="column" gap={20} paddingY={4}>
       {/* Name */}
       {name && (
-        <Typography as="h1" variant="h3" className="product-detail__name">
+        <Typography as="h1" variant="h3" styles={{ lineHeight: 1.25 }}>
           {name}
         </Typography>
       )}
 
       {/* Meta: brand / category */}
       {(product.brand_name || product.category_name) && (
-        <Box className="product-detail__meta">
+        <Box flexWrap="wrap" gap="8px 20px">
           {product.brand_name && (
             <Typography
               as="span"
-              variant="none"
-              className="product-detail__meta-item"
+              variant="caption"
+              color="color-mix(in srgb, var(--foreground) 60%, transparent)"
             >
               {t("brand")}: <strong>{product.brand_name}</strong>
             </Typography>
@@ -95,8 +95,8 @@ export async function ProductDetailPanel({
           {product.category_name && (
             <Typography
               as="span"
-              variant="none"
-              className="product-detail__meta-item"
+              variant="caption"
+              color="color-mix(in srgb, var(--foreground) 60%, transparent)"
             >
               {t("category")}: <strong>{product.category_name}</strong>
             </Typography>
@@ -105,7 +105,7 @@ export async function ProductDetailPanel({
       )}
 
       {/* Pricing */}
-      <Box className="product-detail__pricing">
+      <Box alignItems="baseline" flexWrap="wrap" gap="8px 12px">
         <Typography as="span" variant="none" className="item-price">
           {formatPrice(effectivePrice, product.currency)}
         </Typography>
@@ -116,14 +116,14 @@ export async function ProductDetailPanel({
             </Typography>
           )}
         {discount > 0 && (
-          <Typography as="span" variant="none" className="item-discount-badge">
+          <Badge variant="filled" color="#ef4444" textColor="#fff">
             -{discount}%
-          </Typography>
+          </Badge>
         )}
       </Box>
 
       {/* Stock status */}
-      <Box className="product-detail__stock">
+      <Box alignItems="center" gap={8} flexWrap="wrap">
         <Typography
           as="span"
           variant="none"
@@ -134,8 +134,8 @@ export async function ProductDetailPanel({
         {inStock && stockCount !== null && stockCount <= 10 && (
           <Typography
             as="span"
-            variant="none"
-            className="product-detail__stock-count"
+            variant="caption"
+            color="color-mix(in srgb, var(--foreground) 55%, transparent)"
           >
             {t("stockCount", { count: stockCount })}
           </Typography>
@@ -144,7 +144,11 @@ export async function ProductDetailPanel({
 
       {/* SKU */}
       {(selectedVariant?.sku ?? product.sku) && (
-        <Typography as="span" variant="none" className="product-detail__sku">
+        <Typography
+          as="span"
+          variant="caption"
+          color="color-mix(in srgb, var(--foreground) 45%, transparent)"
+        >
           {t("sku")}: {selectedVariant?.sku ?? product.sku}
         </Typography>
       )}
@@ -159,7 +163,7 @@ export async function ProductDetailPanel({
       )}
 
       {/* Actions */}
-      <Box className="product-detail__actions">
+      <Box alignItems="flex-end" gap={10}>
         <ActionButtonsClient
           addToCartLabel={t("addToCart")}
           buyNowLabel={t("buyNow")}
@@ -169,18 +173,36 @@ export async function ProductDetailPanel({
 
       {/* Description */}
       {description && (
-        <Box className="product-detail__section">
+        <Box
+          flexDirection="column"
+          paddingTop={8}
+          styles={{
+            borderTop:
+              "1px solid color-mix(in srgb, var(--foreground) 10%, transparent)",
+          }}
+        >
           <Typography as="h2" variant="none" className="item-section-heading">
             {t("description")}
           </Typography>
-          <Typography variant="none" className="product-detail__description">
+          <Typography
+            variant="body"
+            color="color-mix(in srgb, var(--foreground) 80%, transparent)"
+            styles={{ lineHeight: 1.7, whiteSpace: "pre-line" }}
+          >
             {description}
           </Typography>
         </Box>
       )}
 
       {/* Specifications */}
-      <Box className="product-detail__section">
+      <Box
+        flexDirection="column"
+        paddingTop={8}
+        styles={{
+          borderTop:
+            "1px solid color-mix(in srgb, var(--foreground) 10%, transparent)",
+        }}
+      >
         <Typography as="h2" variant="none" className="item-section-heading">
           {t("specifications")}
         </Typography>
@@ -228,7 +250,14 @@ export async function ProductDetailPanel({
 
       {/* Physical dimensions */}
       {hasDimensions && (
-        <Box className="product-detail__section">
+        <Box
+          flexDirection="column"
+          paddingTop={8}
+          styles={{
+            borderTop:
+              "1px solid color-mix(in srgb, var(--foreground) 10%, transparent)",
+          }}
+        >
           <Typography as="h2" variant="none" className="item-section-heading">
             {t("physicalDetails")}
           </Typography>

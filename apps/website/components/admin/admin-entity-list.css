@@ -1,37 +1,16 @@
-.ael__title {
-  margin: 0;
-}
-
-.ael__state {
-  padding: 32px 16px;
-  text-align: center;
-  background: color-mix(in srgb, var(--foreground) 3%, transparent);
-  border-radius: 12px;
-  color: color-mix(in srgb, var(--foreground) 60%, transparent);
-}
-
-.ael__state--error {
-  background: color-mix(in srgb, #e53935 8%, transparent);
-  color: #c62828;
-}
-
-.ael__table-wrap {
-  overflow-x: auto;
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
-}
-
+/* Native <table> styling - these selectors target table/th/tr/td elements,
+   which are not @repo/ui components, so the styles live here. */
 .ael__table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 0.875rem; /* h6 / 14px */
 }
 
 .ael__th {
   padding: 12px 16px;
   text-align: left;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 0.75rem; /* label / 12px */
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: color-mix(in srgb, var(--foreground) 55%, transparent);
@@ -67,23 +46,4 @@
 .ael__td--actions {
   text-align: right;
   white-space: nowrap;
-}
-
-.ael__null {
-  color: color-mix(in srgb, var(--foreground) 35%, transparent);
-}
-
-.ael__thumb-wrap {
-  width: 40px;
-  height: 40px;
-  border-radius: 6px;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--foreground) 8%, transparent);
-  flex-shrink: 0;
-}
-
-.ael__thumb {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
 }

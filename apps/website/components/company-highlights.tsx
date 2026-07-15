@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { getLocale } from "next-intl/server";
 import {
   getHighlights,
@@ -8,9 +7,11 @@ import {
 } from "@/lib/highlights";
 import { getSystem } from "@/lib/system";
 import { Box } from "@repo/ui/core-elements/box";
+import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Grid } from "@repo/ui/core-elements/grid";
 import type { GridSize } from "@repo/ui/core-elements/grid";
+import { Badge } from "@repo/ui/core-elements/badge";
 import "./company-highlights.css";
 
 const HIGHLIGHT_GRID_SIZE: Record<string, GridSize> = {
@@ -26,16 +27,34 @@ function isIconPath(icon: string): boolean {
 
 function HighlightItemCard({ item }: { item: CompanyHighlightItem }) {
   return (
-    <Box className="highlight-item">
+    <Box
+      width={80}
+      height={80}
+      borderRadius={10}
+      backgroundColor="var(--surface-1)"
+      alignItems="center"
+      justifyContent="center"
+      flex="0 0 auto"
+      styles={{ position: "relative", overflow: "hidden" }}
+    >
       {item.image ? (
-        <Image fill src={item.image} alt={item.name ?? ""} />
+        <Image
+          fill
+          src={item.image}
+          alt={item.name ?? ""}
+          style={{ objectFit: "cover" }}
+        />
       ) : item.icon && isIconPath(item.icon) ? (
         <Image
           width={32}
           height={32}
-          className="highlight-item__icon"
           src={item.icon}
           alt={item.name ?? ""}
+          style={{
+            objectFit: "contain",
+            filter: "brightness(0) invert(1)",
+            opacity: 0.6,
+          }}
         />
       ) : (
         <Typography as="span" variant="none" styles={{ fontSize: 24 }}>
@@ -71,34 +90,66 @@ function HighlightCard({
 
   const hasImage = Boolean(highlight.image);
   const hasItems = highlight.items.length > 0;
-  const cardClass = `highlight-card elevation-5 highlight-card--${highlight.size}${hasImage ? " highlight-card--has-image" : ""}`;
+  // The size classes carry only the responsive min-heights (base + @media);
+  // surface styling comes from Card props below.
+  const cardClass = `highlight-card highlight-card--${highlight.size}${hasImage ? " highlight-card--has-image" : ""}`;
 
   const cardBody = (
     <>
       {hasImage && (
         <Image
           fill
-          className="highlight-card__image"
           src={highlight.image!}
           alt={name}
+          style={{ objectFit: "cover" }}
         />
       )}
-      {hasImage && <Box className="highlight-card__overlay" />}
+      {hasImage && (
+        <Box
+          styles={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.55) 40%, rgba(0,0,0,0.15) 100%)",
+          }}
+        />
+      )}
 
-      <Box className="highlight-card__content card-content">
-        <Box className="highlight-card__left">
+      <Box
+        className="card-content"
+        gap={20}
+        flex={1}
+        styles={{ position: "relative", zIndex: 1 }}
+      >
+        <Box flexDirection="column" gap={10} flex={1}>
           {category && (
-            <Typography
-              as="span"
-              variant="none"
-              className="highlight-card__category"
+            <Badge
+              variant="filled"
+              color="transparent"
+              textColor="rgba(255, 255, 255, 0.75)"
+              style={{
+                width: "fit-content",
+                padding: "3px 10px",
+                borderRadius: 4,
+                border: "1px solid rgba(255, 255, 255, 0.35)",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}
             >
               {category}
-            </Typography>
+            </Badge>
           )}
 
           {highlight.icon && (
-            <Box className="highlight-card__icon">
+            <Box
+              width={44}
+              height={44}
+              borderRadius={10}
+              backgroundColor="rgba(255, 255, 255, 0.12)"
+              alignItems="center"
+              justifyContent="center"
+              styles={{ fontSize: 22 }}
+            >
               {isIconPath(highlight.icon) ? (
                 <Image
                   width={26}
@@ -106,6 +157,11 @@ function HighlightCard({
                   src={highlight.icon}
                   alt=""
                   aria-hidden={true}
+                  style={{
+                    objectFit: "contain",
+                    filter: "brightness(0) invert(1)",
+                    opacity: 0.85,
+                  }}
                 />
               ) : (
                 <Typography as="span" variant="none">
@@ -116,19 +172,29 @@ function HighlightCard({
           )}
 
           {name && (
-            <Typography as="h3" variant="h3" className="highlight-card__name">
+            <Typography as="h3" variant="h3" margin={0} color="#fff">
               {name}
             </Typography>
           )}
 
           {description && (
-            <Typography variant="body" className="highlight-card__description">
+            <Typography
+              variant="body"
+              margin={0}
+              color="rgba(255, 255, 255, 0.72)"
+            >
               {description}
             </Typography>
           )}
 
           {hasItems && (highlight.size === "sm" || highlight.size === "md") && (
-            <Box className="highlight-card__items">
+            <Box
+              display="grid"
+              gap={8}
+              alignSelf="center"
+              marginTop={12}
+              styles={{ gridTemplateColumns: "repeat(2, 1fr)" }}
+            >
               {highlight.items.map((item) => (
                 <HighlightItemCard key={item.id} item={item} />
               ))}
@@ -137,7 +203,12 @@ function HighlightCard({
         </Box>
 
         {hasItems && (highlight.size === "lg" || highlight.size === "xl") && (
-          <Box className="highlight-card__items">
+          <Box
+            display="grid"
+            gap={8}
+            alignSelf="center"
+            styles={{ gridTemplateColumns: "repeat(3, 1fr)" }}
+          >
             {highlight.items.map((item) => (
               <HighlightItemCard key={item.id} item={item} />
             ))}
@@ -151,15 +222,33 @@ function HighlightCard({
     ? `/highlights/${highlight.slug}`
     : (highlight.href ?? null);
 
+  const surfaceProps = {
+    padding: 0,
+    border: "none",
+    borderRadius: 16,
+    elevation: 5,
+    backgroundColor: "var(--surface-2)",
+    className: cardClass,
+  } as const;
+
   if (linkHref) {
     return (
-      <Link href={linkHref} prefetch className={cardClass}>
+      <Card
+        href={linkHref}
+        prefetch
+        {...surfaceProps}
+        styles={{ position: "relative", textDecoration: "none" }}
+      >
         {cardBody}
-      </Link>
+      </Card>
     );
   }
 
-  return <Box className={cardClass}>{cardBody}</Box>;
+  return (
+    <Card {...surfaceProps} styles={{ position: "relative" }}>
+      {cardBody}
+    </Card>
+  );
 }
 
 export async function CompanyHighlights() {

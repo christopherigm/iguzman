@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
+import { Badge } from "@repo/ui/core-elements/badge";
 import "./admin-image-uploader.css";
 
 export interface ExistingImage {
@@ -166,9 +167,14 @@ export function AdminImageUploader({
   const canAdd = entries.length < maxImages;
 
   return (
-    <Box className="aiu">
+    <Box flexDirection="column" gap={12}>
       {label && (
-        <Typography as="span" variant="label" className="aiu__label">
+        <Typography
+          as="span"
+          variant="label"
+          fontWeight={600}
+          color="var(--foreground)"
+        >
           {label}
         </Typography>
       )}
@@ -190,13 +196,18 @@ export function AdminImageUploader({
           aria-label={t("dropzoneLabel")}
         >
           <span className="aiu__dropzone-icon">🖼️</span>
-          <Typography as="span" variant="body" className="aiu__dropzone-text">
+          <Typography
+            as="span"
+            variant="body"
+            fontWeight={600}
+            color="var(--foreground)"
+          >
             {t("dropzoneText")}
           </Typography>
           <Typography
             as="span"
             variant="caption"
-            className="aiu__dropzone-hint"
+            color="color-mix(in srgb, var(--foreground) 50%, transparent)"
           >
             {t("dropzoneHint")}
           </Typography>
@@ -232,16 +243,21 @@ export function AdminImageUploader({
                 onDrop={(e) => handleItemDrop(e, index)}
                 onDragEnd={handleItemDragEnd}
               >
-                <Box className="aiu__thumb-img-wrap">
+                <Box styles={{ position: "absolute", inset: 0 }}>
                   <Image
                     src={url}
                     alt=""
                     fill
-                    className="aiu__thumb-img"
                     unoptimized={entry.kind === "new"}
+                    style={{ objectFit: "cover" }}
                   />
                 </Box>
-                <Box className="aiu__thumb-overlay">
+                <Box
+                  className="aiu__thumb-overlay"
+                  justifyContent="space-between"
+                  alignItems="flex-start"
+                  padding={4}
+                >
                   <span className="aiu__thumb-drag-handle" aria-hidden="true">
                     ⠿
                   </span>
@@ -249,6 +265,14 @@ export function AdminImageUploader({
                     unstyled
                     type="button"
                     className="aiu__thumb-delete"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    width={22}
+                    height={22}
+                    borderRadius="50%"
+                    color="white"
+                    styles={{ fontSize: 11, lineHeight: 1 }}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDelete(index);
@@ -259,13 +283,24 @@ export function AdminImageUploader({
                   </Button>
                 </Box>
                 {index === 0 && (
-                  <Typography
-                    as="span"
-                    variant="caption"
-                    className="aiu__thumb-badge"
+                  <Badge
+                    variant="filled"
+                    color="var(--accent)"
+                    textColor="white"
+                    style={{
+                      position: "absolute",
+                      bottom: 4,
+                      left: 4,
+                      padding: "2px 5px",
+                      borderRadius: 4,
+                      fontSize: 9,
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
                   >
                     {t("main")}
-                  </Typography>
+                  </Badge>
                 )}
               </div>
             );
@@ -274,7 +309,12 @@ export function AdminImageUploader({
       )}
 
       {entries.length === 0 && !canAdd && (
-        <Typography variant="body" className="aiu__empty">
+        <Typography
+          variant="body"
+          textAlign="center"
+          padding={8}
+          color="color-mix(in srgb, var(--foreground) 50%, transparent)"
+        >
           {t("maxReached")}
         </Typography>
       )}

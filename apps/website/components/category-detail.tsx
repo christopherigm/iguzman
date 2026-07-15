@@ -9,7 +9,6 @@ import type {
   FeaturedService,
 } from "@/lib/catalog";
 import { BuyableCard, type BuyableItem } from "./buyable-card";
-import "./category-detail.css";
 
 type CategoryDetailProps =
   | {
@@ -58,24 +57,25 @@ export async function CategoryDetail({
         }));
 
   return (
-    <Box className="category-detail">
+    <Box flexDirection="column" paddingTop={24} paddingBottom={56}>
       {/* Title - only shown when there is no hero image */}
       {showTitle && name && (
-        <Typography as="h1" variant="h2" className="category-detail__title">
+        <Typography as="h1" variant="h2" marginBottom={12}>
           {name}
         </Typography>
       )}
 
       {/* Items section */}
-      <Box className="category-detail__items-header">
+      <Box alignItems="baseline" gap={12} flexWrap="wrap" marginBottom={24}>
         <Typography as="h2" variant="h3" className="section-title">
           {kind === "product" ? t("products") : t("services")}
         </Typography>
         {buyableItems.length > 0 && (
           <Typography
             as="span"
-            variant="none"
-            className="category-detail__count"
+            variant="h6"
+            fontWeight={500}
+            color="color-mix(in srgb, var(--foreground) 45%, transparent)"
           >
             {buyableItems.length}
           </Typography>
@@ -83,7 +83,7 @@ export async function CategoryDetail({
       </Box>
 
       {buyableItems.length === 0 ? (
-        <Box className="category-detail__empty">
+        <Box paddingY={48}>
           <Typography variant="none" className="section-subtitle">
             {t("noItems")}
           </Typography>

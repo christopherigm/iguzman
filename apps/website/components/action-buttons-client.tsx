@@ -2,7 +2,6 @@
 
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
-import "./action-buttons-client.css";
 
 interface ActionButtonsClientProps {
   addToCartLabel: string;
@@ -14,7 +13,7 @@ export function ActionButtonsClient({
   buyNowLabel,
 }: ActionButtonsClientProps) {
   return (
-    <Box className="action-buttons">
+    <Box flexDirection="column" gap={10} width="100%">
       <Button text={addToCartLabel} size="lg" width="100%" />
       <Button text={buyNowLabel} size="lg" width="100%" />
     </Box>

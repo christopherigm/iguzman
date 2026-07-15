@@ -1,6 +1,6 @@
 import Image from "next/image";
-import Link from "next/link";
 import { Box } from "@repo/ui/core-elements/box";
+import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import type {
@@ -8,7 +8,6 @@ import type {
   FeaturedService,
   BuyableVariant,
 } from "@/lib/catalog";
-import "./buyable-card.css";
 
 export type BuyableItem =
   | { kind: "product"; data: FeaturedProduct }
@@ -88,40 +87,62 @@ export function BuyableCard({
   const variantCount = data.variants.length;
 
   return (
-    <Link
+    <Card
       href={href}
       prefetch
-      className={`buyable-card elevation-5 zoom-on-hover${hasImage ? " buyable-card--has-image" : ""}`}
+      padding={0}
+      border="none"
+      borderRadius={16}
+      elevation={5}
+      height="100%"
+      backgroundColor="var(--surface-1)"
+      className="zoom-on-hover"
+      styles={{ position: "relative", textDecoration: "none" }}
     >
-      <Box className="buyable-card__image-wrap">
+      <Box
+        width="100%"
+        backgroundColor="var(--surface-3, #e5e7eb)"
+        flex="0 0 auto"
+        styles={{
+          position: "relative",
+          aspectRatio: "1 / 1",
+          overflow: "hidden",
+        }}
+      >
         {hasImage ? (
           <Image
             fill
-            className="buyable-card__image"
             src={image!}
             alt={name}
             sizes="(min-width: 1200px) 16vw, (min-width: 600px) 25vw, 50vw"
+            style={{ objectFit: "cover" }}
           />
         ) : (
           <Box
-            className="buyable-card__placeholder"
-            styles={{ backgroundColor: data.background_color ?? undefined }}
+            backgroundColor={data.background_color ?? "var(--surface-3, #e5e7eb)"}
+            styles={{ position: "absolute", inset: 0 }}
           />
         )}
 
         {duration != null && (
-          <Typography
-            as="span"
-            variant="none"
-            className="buyable-card__duration"
+          <Badge
+            variant="filled"
+            size="sm"
+            color="rgba(0,0,0,0.6)"
+            textColor="#fff"
+            style={{ position: "absolute", bottom: 8, left: 8, zIndex: 1 }}
           >
             {duration >= 60
               ? `${Math.floor(duration / 60)}h${duration % 60 ? ` ${duration % 60}m` : ""}`
               : `${duration}m`}
-          </Typography>
+          </Badge>
         )}
 
-        <Box className="buyable-card__badges">
+        <Box
+          flexWrap="wrap"
+          gap={4}
+          styles={{ position: "absolute", top: 8, left: 8, zIndex: 1 }}
+        >
           <Badge
             variant="filled"
             size="sm"
@@ -143,25 +164,54 @@ export function BuyableCard({
         </Box>
       </Box>
 
-      <Box className="buyable-card__body card-content">
+      <Box flexDirection="column" gap={6} flex={1} className="card-content">
         {name && (
-          <Typography as="h3" variant="h5" className="buyable-card__name">
+          <Typography
+            as="h3"
+            variant="h5"
+            margin={0}
+            color="var(--on-surface)"
+            styles={{
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
             {name}
           </Typography>
         )}
 
         {description && (
-          <Typography variant="none" className="buyable-card__description">
+          <Typography
+            variant="caption"
+            margin={0}
+            color="var(--on-surface-muted, rgba(0, 0, 0, 0.55))"
+            styles={{
+              lineHeight: 1.5,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
             {description}
           </Typography>
         )}
 
-        <Box className="buyable-card__footer">
-          <Box className="buyable-card__pricing">
+        <Box
+          alignItems="center"
+          justifyContent="space-between"
+          gap={8}
+          marginTop="auto"
+          paddingTop={4}
+        >
+          <Box alignItems="baseline" gap={6} flexWrap="wrap">
             <Typography
               as="span"
-              variant="none"
-              className="buyable-card__price"
+              variant="h6"
+              fontWeight={700}
+              color="var(--on-surface)"
             >
               {formatPrice(effectivePrice, data.currency)}
             </Typography>
@@ -169,8 +219,11 @@ export function BuyableCard({
               parseFloat(effectiveCompare) > parseFloat(effectivePrice) && (
                 <Typography
                   as="span"
-                  variant="none"
-                  className="buyable-card__compare-price"
+                  variant="label"
+                  fontWeight={400}
+                  color="var(--on-surface-muted, rgba(0, 0, 0, 0.45))"
+                  // 11px sub-scale: compare price sits below the label (12px) tier
+                  styles={{ fontSize: 11, textDecoration: "line-through" }}
                 >
                   {formatPrice(effectiveCompare, data.currency)}
                 </Typography>
@@ -178,17 +231,33 @@ export function BuyableCard({
           </Box>
 
           {modality && (
-            <Typography as="span" variant="none" className="buyable-card__meta">
+            <Typography
+              as="span"
+              variant="label"
+              fontWeight={500}
+              textAlign="right"
+              color="var(--on-surface-muted, rgba(0, 0, 0, 0.45))"
+              // 11px sub-scale metadata, below the label (12px) tier
+              styles={{ fontSize: 11, whiteSpace: "nowrap" }}
+            >
               {modality}
             </Typography>
           )}
           {!modality && variantCount > 1 && (
-            <Typography as="span" variant="none" className="buyable-card__meta">
+            <Typography
+              as="span"
+              variant="label"
+              fontWeight={500}
+              textAlign="right"
+              color="var(--on-surface-muted, rgba(0, 0, 0, 0.45))"
+              // 11px sub-scale metadata, below the label (12px) tier
+              styles={{ fontSize: 11, whiteSpace: "nowrap" }}
+            >
               {variantCount} variants
             </Typography>
           )}
         </Box>
       </Box>
-    </Link>
+    </Card>
   );
 }

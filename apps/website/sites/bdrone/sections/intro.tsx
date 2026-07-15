@@ -77,7 +77,7 @@ export async function Intro() {
                 {hasServices && (
                   <Button
                     text={t("intro.exploreServices")}
-                    href="/services"
+                    href="/categories/services"
                     kind="primary"
                     size="lg"
                   />

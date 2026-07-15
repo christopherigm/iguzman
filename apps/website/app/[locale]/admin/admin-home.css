@@ -25,7 +25,7 @@
   background: var(--surface, var(--background));
   text-decoration: none;
   color: inherit;
-  transition: box-shadow 0.2s ease, transform 0.15s ease;
+  transition: box-shadow 0.2s ease;
   height: 100%;
   box-sizing: border-box;
   text-align: center;
@@ -33,7 +33,6 @@
 
 .admin-home__card:hover {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-  transform: translateY(-2px);
 }
 
 .admin-home__icon {

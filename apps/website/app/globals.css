@@ -48,6 +48,23 @@ a {
   padding: 16px 10px;
 }
 
+/* ── Section header ──────────────────────────────────────────────────────────
+   Wraps a section-title (+ optional section-subtitle) for the catalog,
+   catalog-items and company-highlights sections. Shared here because it recurs
+   across more than one component; the gap replaces the shared bottom margins.
+   ────────────────────────────────────────────────────────────────────────── */
+.highlights-header {
+  margin-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.highlights-header .section-title,
+.highlights-header .section-subtitle {
+  margin-bottom: 0;
+}
+
 /* ── Card image zoom on hover ────────────────────────────────────────────────
    Apply .zoom-on-hover to any card container with overflow: hidden that
    contains an <img>. The image scales to 1.1× on hover.
@@ -201,16 +218,6 @@ a {
   font-size: clamp(14px, 1.8vw, 17px);
   color: color-mix(in srgb, var(--foreground) 45%, transparent);
   text-decoration: line-through;
-}
-
-.item-discount-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 700;
-  background: #ef4444;
-  color: #fff;
 }
 
 .item-stock-in {
