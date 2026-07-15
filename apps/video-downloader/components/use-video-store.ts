@@ -529,6 +529,16 @@ export function useVideoStore() {
     });
   }, []);
 
+  /** Prepend a fully-formed completed entry to the top of the completed list. */
+  const prependCompleted = useCallback((entry: StoredVideo) => {
+    setCompleted((prev) => {
+      /* Guard against React Strict Mode double-invocation of functional
+         updaters: if the uuid is already present, skip the add. */
+      if (prev.some((v) => v.uuid === entry.uuid)) return prev;
+      return [entry, ...prev];
+    });
+  }, []);
+
   /** Insert a new completed entry immediately before the one with `beforeUuid`. */
   const insertBeforeCompleted = useCallback(
     (beforeUuid: string, entry: StoredVideo) => {
@@ -555,6 +565,7 @@ export function useVideoStore() {
     removeCompletedBulk,
     clearCompleted,
     moveCompletedToFirst,
+    prependCompleted,
     insertBeforeCompleted,
     storageError,
   } as const;

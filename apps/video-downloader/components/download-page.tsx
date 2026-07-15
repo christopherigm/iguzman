@@ -215,6 +215,7 @@ function DownloadPageInner({ serverDate }: { serverDate: string }) {
     removeCompleted,
     removeCompletedBulk,
     moveCompletedToFirst,
+    prependCompleted,
     insertBeforeCompleted,
     storageError,
   } = useVideoStore();
@@ -267,6 +268,7 @@ function DownloadPageInner({ serverDate }: { serverDate: string }) {
       <CreditsInitializer />
       <DownloadForm
         onVideoAdded={handleVideoAdded}
+        onVideoUploaded={prependCompleted}
         completedVideos={completed}
         onMoveToFirst={moveCompletedToFirst}
         onRemoveVideosByUuids={removeCompletedBulk}

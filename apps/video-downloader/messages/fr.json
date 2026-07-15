@@ -12,6 +12,8 @@
     "download": "Télécharger",
     "autoDownload": "Autosave to Gallery",
     "justAudio": "Audio uniquement",
+    "uploadVideo": "Importer une vidéo",
+    "uploadingVideo": "Traitement de la vidéo…",
     "toggleAdvanced": "Options avancées",
     "enhance": "Améliorer",
     "fps": "IPS",

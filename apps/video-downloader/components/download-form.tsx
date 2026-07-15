@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Box } from "@repo/ui/core-elements/box";
@@ -20,8 +20,10 @@ import {
   buildResolutionLabel,
   PlatformIconBg,
 } from "./video-item-shared";
-import { isOPFSSupported, getOPFSStorageInfo } from "@/lib/opfs";
+import { isOPFSSupported, getOPFSStorageInfo, writeToOPFS } from "@/lib/opfs";
 import { ClearStorageModal } from "./clear-storage-modal";
+import { useOPFSUrls } from "./opfs-url-context";
+import type { StoredVideo } from "./use-video-store";
 import type { CaptionOption } from "@/app/api/video-metadata/route";
 import { useCreditsBalance, setCreditsBalance } from "./use-credits-store";
 import { Divider } from "@repo/ui/core-elements/divider";
@@ -63,6 +65,63 @@ function cleanUrl(url: string): string {
     // not a valid URL - fall through to stripQueryParams
   }
   return stripQueryParams(url);
+}
+
+function generateUUID(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for non-secure contexts (iOS over HTTP in dev)
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+/** Best-effort file extension from a filename, falling back to the MIME type. */
+function fileExtension(file: File): string {
+  const fromName = file.name.includes(".")
+    ? file.name.split(".").pop()?.toLowerCase()
+    : undefined;
+  if (fromName) return fromName;
+  const fromType = file.type.split("/").pop()?.toLowerCase();
+  return fromType && fromType !== "octet-stream" ? fromType : "mp4";
+}
+
+/** Load a video blob URL just far enough to read its intrinsic metadata. */
+function extractVideoMetadata(
+  objectUrl: string,
+): Promise<{ duration: number | null; width: number | null; height: number | null }> {
+  return new Promise((resolve) => {
+    const el = document.createElement("video");
+    el.preload = "metadata";
+    let settled = false;
+    const done = (
+      result: {
+        duration: number | null;
+        width: number | null;
+        height: number | null;
+      } = { duration: null, width: null, height: null },
+    ) => {
+      if (settled) return;
+      settled = true;
+      el.removeAttribute("src");
+      el.load();
+      resolve(result);
+    };
+    el.onloadedmetadata = () =>
+      done({
+        duration:
+          Number.isFinite(el.duration) && el.duration > 0 ? el.duration : null,
+        width: el.videoWidth || null,
+        height: el.videoHeight || null,
+      });
+    el.onerror = () => done();
+    // Guard against a video the browser can't decode metadata for.
+    setTimeout(() => done(), 10_000);
+    el.src = objectUrl;
+  });
 }
 
 function isServerPath(url: string | null): url is string {
@@ -298,6 +357,8 @@ export interface DownloadFormProps {
     downloadURL: string | null;
     name: string | null;
   }>;
+  /** Called with a fully-formed completed entry after the user uploads a local video into OPFS. */
+  onVideoUploaded?: (entry: StoredVideo) => void;
   /** Called when the user wants to move an existing completed video to the top of the list. */
   onMoveToFirst?: (uuid: string) => void;
   /** Called after a category of OPFS videos is cleared; receives the UUIDs removed. */
@@ -306,12 +367,14 @@ export interface DownloadFormProps {
 
 export function DownloadForm({
   onVideoAdded,
+  onVideoUploaded,
   completedVideos,
   onMoveToFirst,
   onRemoveVideosByUuids,
 }: DownloadFormProps = {}) {
   const t = useTranslations("DownloadForm");
   const router = useRouter();
+  const { registerUrls } = useOPFSUrls();
   const [url, setUrl] = useState("");
   // Client-only capability/setting reads via lazy init (avoids a mount
   // setState-in-effect). On the server these fall back to defaults.
@@ -391,6 +454,9 @@ export function DownloadForm({
   const [duplicateEntry, setDuplicateEntry] = useState<DuplicateEntry | null>(
     null,
   );
+
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
   const handleAutoDownloadChange = useCallback((value: boolean) => {
     setAutoDownload(value);
@@ -698,6 +764,112 @@ export function DownloadForm({
     setDuplicateEntry(null);
   }, [duplicateEntry, onMoveToFirst]);
 
+  /* ── Upload a local video into OPFS ──────────────── */
+  const handleUploadClick = useCallback(() => {
+    uploadInputRef.current?.click();
+  }, []);
+
+  const handleFileSelected = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      /* Reset the input so selecting the same file again re-fires onChange. */
+      e.target.value = "";
+      if (!file || !opfsSupported) return;
+
+      setUploading(true);
+      const objectUrl = URL.createObjectURL(file);
+      try {
+        const meta = await extractVideoMetadata(objectUrl);
+
+        const uuid = generateUUID();
+        const ext = fileExtension(file);
+        const key = `${uuid}.${ext}`;
+
+        await writeToOPFS(key, file);
+
+        /* Register the blob URL for this session so the card can render/play
+           the file without a server round-trip. */
+        registerUrls(uuid, { videoUrl: objectUrl, thumbnailUrl: null });
+
+        const displayName = file.name.includes(".")
+          ? file.name.slice(0, file.name.lastIndexOf("."))
+          : file.name;
+
+        const entry: StoredVideo = {
+          uuid,
+          status: "done",
+          error: null,
+          fps: "original",
+          justAudio: false,
+          enhance: false,
+          autoDownload: false,
+          downloadURL: `opfs://${key}`,
+          originalURL: "",
+          platform: "unknown",
+          file: key,
+          name: displayName,
+          fulltitle: file.name,
+          thumbnail: null,
+          duration: meta.duration,
+          uploader: null,
+          uploader_id: null,
+          uploader_url: null,
+          uploadTimestamp: file.lastModified
+            ? Math.floor(file.lastModified / 1000)
+            : null,
+          description: null,
+          tags: null,
+          createdAt: Date.now(),
+          fpsApplied: true,
+          isH265: false,
+          h264Converted: false,
+          h265Converted: false,
+          blackBarsRemoved: false,
+          taskId: null,
+          sourceFps: null,
+          width: meta.width,
+          height: meta.height,
+          maxHeight: null,
+          captionsEnabled: false,
+          captionUrl: null,
+          captionsFile: null,
+          commentsEnabled: false,
+          maxComments: null,
+          metadataEnabled: false,
+          commentsFile: null,
+          scrapeCreditsRemaining: null,
+          opfsCommentsKey: null,
+          burnCaptionsConfig: null,
+          captionsBurned: false,
+          useServerProcessing: false,
+          serverTaskId: null,
+          opfsEnabled: true,
+          opfsKey: key,
+          opfsThumbnailKey: null,
+          opfsCaptionsKey: null,
+          opfsStored: true,
+          serverFileDeleted: true,
+          fileSize: file.size,
+          scaleDownTargetHeight: null,
+          diarizeMaxWords: null,
+          operationCredits: null,
+        };
+
+        onVideoUploaded?.(entry);
+
+        /* Refresh the storage-usage bar now that a new file was written. */
+        const info = await getOPFSStorageInfo();
+        setStorageInfo(info);
+      } catch {
+        /* Metadata read or OPFS write failed - drop the temporary blob URL. */
+        URL.revokeObjectURL(objectUrl);
+      } finally {
+        setUploading(false);
+      }
+    },
+    [opfsSupported, registerUrls, onVideoUploaded],
+  );
+
   const handleStorageModalClose = useCallback(async () => {
     setShowClearStorageConfirm(false);
     /* Refresh the storage bar after any category clears */
@@ -815,6 +987,36 @@ export function DownloadForm({
           className={`df-advanced-panel${advancedOpen ? " df-advanced-panel--open" : ""}`}
         >
           <Box className="df-advanced-inner">
+            {opfsSupported && (
+              <Box
+                flexDirection="column"
+                gap={8}
+                marginTop={8}
+                marginBottom={8}
+              >
+                <Box display="flex" justifyContent="center">
+                  <Button
+                    text={uploading ? t("uploadingVideo") : t("uploadVideo")}
+                    icon="/icons/up-arrow.svg"
+                    onClick={handleUploadClick}
+                    disabled={uploading}
+                    size="md"
+                    kind="primary"
+                  />
+                </Box>
+                <input
+                  ref={uploadInputRef}
+                  type="file"
+                  accept="video/*"
+                  aria-hidden="true"
+                  style={{ display: "none" }}
+                  onChange={(e) => void handleFileSelected(e)}
+                />
+                {uploading && (
+                  <ProgressBar label={t("uploadingVideo")} width="100%" />
+                )}
+              </Box>
+            )}
             <Divider />
             {!smartDownload && (
               <>

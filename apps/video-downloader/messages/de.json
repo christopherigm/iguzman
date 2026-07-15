@@ -12,6 +12,8 @@
     "download": "Herunterladen",
     "autoDownload": "Autosave to Gallery",
     "justAudio": "Nur Audio",
+    "uploadVideo": "Video hochladen",
+    "uploadingVideo": "Video wird verarbeitet…",
     "toggleAdvanced": "Erweiterte Optionen umschalten",
     "enhance": "Verbessern",
     "fps": "FPS",
