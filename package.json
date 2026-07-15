@@ -18,8 +18,9 @@
     "helm": "bash cli/helm/helm.sh",
     "secrets": "bash cli/setup-k8s-secrets/setup-k8s-secrets.sh",
     "logs": "bash cli/logs/logs.sh",
-    "sync-website-hosts": "node scripts/sync-website-hosts.mjs",
-    "publish-site": "node scripts/publish-site.mjs",
+    "sync-website-hosts": "bash cli/website/website.sh sync",
+    "publish-site": "bash cli/website/website.sh publish",
+    "pull-site": "bash cli/website/website.sh pull",
     "deploy-app": "bash cli/deploy-app/deploy-app.sh",
     "django-superuser": "bash cli/django-superuser/django-superuser.sh",
     "deploy-postgres": "bash cli/deploy-postgres/deploy-postgres.sh",
@@ -30,7 +31,8 @@
     "upload-s3": "bash cli/upload-s3/upload-s3.sh",
     "setup-wifi": "bash cli/setup-wifi/setup-wifi.sh",
     "dev-services": "bash cli/dev-services/dev-services.sh",
-    "generate-icons": "bash cli/generate-icons/generate-icons.sh"
+    "generate-icons": "bash cli/generate-icons/generate-icons.sh",
+    "edit-videos": "bash cli/edit-videos/edit-videos.sh"
   },
   "devDependencies": {
     "prettier": "^3.8.4",

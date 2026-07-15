@@ -101,6 +101,6 @@ flow that moves a locally-seeded, tested site into production:
   the System's prior content first. The view invalidates the system + catalog +
   stories/highlights cache namespaces afterward (see the Caching Rule above).
 
-Driven by `pnpm publish-site <host>` (`scripts/publish-site.mjs`). `seed_site`
+Driven by `pnpm publish-site <host>` (`cli/website/website.sh publish`). `seed_site`
 imports `SYSTEM_TEXT_FIELDS` from `site_payload` so seeding and publishing agree
 on which System fields are copyable content.

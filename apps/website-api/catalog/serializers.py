@@ -498,6 +498,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'system', 'category', 'category_name', 'category_slug',
             'brand', 'brand_name',
             'name', 'en_name', 'description', 'en_description',
+            'short_description', 'en_short_description',
             'slug', 'sku', 'barcode',
             'image', 'images', 'variants',
             'href', 'fit', 'background_color',
@@ -523,6 +524,8 @@ class ProductWriteSerializer(serializers.Serializer):
     en_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     en_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    short_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_short_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     href = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
     fit = serializers.ChoiceField(
         choices=[c[0] for c in [('cover', ''), ('contain', ''), ('fill', ''), ('scale-down', ''), ('none', '')]],
@@ -603,7 +606,8 @@ class ProductWriteSerializer(serializers.Serializer):
         return value
 
     _SCALAR_FIELDS = [
-        'name', 'en_name', 'description', 'en_description', 'href', 'fit',
+        'name', 'en_name', 'description', 'en_description',
+        'short_description', 'en_short_description', 'href', 'fit',
         'background_color', 'system', 'brand', 'category',
         'slug', 'sku', 'barcode',
         'price', 'compare_price', 'cost_price', 'currency',
@@ -797,6 +801,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             'system', 'category', 'category_name', 'category_slug',
             'brand', 'brand_name',
             'name', 'en_name', 'description', 'en_description',
+            'short_description', 'en_short_description',
             'slug', 'sku',
             'image', 'images', 'variants',
             'href', 'fit', 'background_color',
@@ -820,6 +825,8 @@ class ServiceWriteSerializer(serializers.Serializer):
     en_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     en_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    short_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_short_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     href = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
     fit = serializers.ChoiceField(
         choices=[c[0] for c in [('cover', ''), ('contain', ''), ('fill', ''), ('scale-down', ''), ('none', '')]],
@@ -890,7 +897,8 @@ class ServiceWriteSerializer(serializers.Serializer):
         return value
 
     _SCALAR_FIELDS = [
-        'name', 'en_name', 'description', 'en_description', 'href', 'fit',
+        'name', 'en_name', 'description', 'en_description',
+        'short_description', 'en_short_description', 'href', 'fit',
         'background_color', 'system', 'brand', 'category',
         'slug', 'sku',
         'price', 'compare_price', 'cost_price', 'currency',

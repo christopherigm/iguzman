@@ -30,6 +30,72 @@ check_zscale() {
   grep -q 'zscale' <<< "${_FILTER_CACHE}"
 }
 
+# ── Preflight sanity check ────────────────────────────────────────────────────
+#
+# A fast, bounded validation run BEFORE any real processing so a broken/corrupt
+# file can't stall a later step (e.g. cropdetect decoding the whole file). Two
+# cheap tests:
+#   1. ffprobe must see at least one video stream.
+#   2. A short, video-only decode of the opening seconds must not error out.
+#
+# IMPORTANT: a *timeout* here is treated as INCONCLUSIVE, not as failure. A
+# large, slow-to-decode-or-read but perfectly valid file (e.g. a 30 GB VC-1
+# Blu-ray remux on a cold cache) can exceed the wall-clock cap on the opening
+# probe; discarding it would be wrong. Only an actual decoder error (ffmpeg
+# exits non-zero for a reason other than the timeout kill) means corruption.
+#
+# Returns 0 when the file looks processable (including the inconclusive case).
+# On real failure it returns non-zero and echoes a reason token on stdout:
+#   "no_stream"    - no readable video stream (structurally not a video)
+#   "decode_fail"  - the decoder errored on the opening (corrupt bitstream)
+#
+# Tunables (env): PREFLIGHT_SAMPLE_SEC (decode window, default 3s)
+#                 PREFLIGHT_TIMEOUT    (wall-clock cap; on hit -> inconclusive)
+preflight_check() {
+  local input="$1"
+  local sample="${PREFLIGHT_SAMPLE_SEC:-3}"
+  local timeout_s="${PREFLIGHT_TIMEOUT:-30}"
+
+  local _ffprobe="${FFPROBE_BIN}"
+  [[ ! -x "${_ffprobe}" ]] && _ffprobe="ffprobe"
+
+  # 1. Is there a video stream at all?
+  local vstreams
+  vstreams="$("${_ffprobe}" -v quiet -select_streams v \
+    -show_entries stream=index -of csv=p=0 "${input}" 2>/dev/null || true)"
+  if [[ -z "${vstreams//[[:space:]]/}" ]]; then
+    echo "no_stream"
+    return 1
+  fi
+
+  # 2. Decode just the opening of the video stream (audio skipped - lighter and
+  #    not what the later hang-prone step needs). `-nostdin` keeps this
+  #    foreground ffmpeg from consuming the interactive tool's stdin. `-t` is an
+  #    output option so the decode reliably stops after ${sample}s.
+  local _timeout_bin=""
+  command -v timeout &>/dev/null && _timeout_bin="timeout"
+
+  local _rc=0
+  if [[ -n "${_timeout_bin}" ]]; then
+    "${_timeout_bin}" "${timeout_s}" "${FFMPEG_BIN}" -nostdin "${THREAD_FLAGS[@]}" \
+      -v error -i "${input}" -map 0:v:0 -an -t "${sample}" \
+      -f null - &>/dev/null || _rc=$?
+  else
+    "${FFMPEG_BIN}" -nostdin "${THREAD_FLAGS[@]}" \
+      -v error -i "${input}" -map 0:v:0 -an -t "${sample}" \
+      -f null - &>/dev/null || _rc=$?
+  fi
+
+  # rc 124 = timeout killed it -> slow but not proven bad -> let it through.
+  # Any other non-zero = the decoder actually failed -> corrupt.
+  if [[ "${_rc}" -ne 0 && "${_rc}" -ne 124 ]]; then
+    echo "decode_fail"
+    return 1
+  fi
+
+  return 0
+}
+
 # ── Duration + FPS ────────────────────────────────────────────────────────────
 
 # Outputs: "<duration_sec> <fps_int>"
@@ -42,7 +108,9 @@ probe_video() {
 
   if [[ "${info}" =~ Duration:[[:space:]]+([0-9]+):([0-9]+):([0-9]+) ]]; then
     local h="${BASH_REMATCH[1]}" m="${BASH_REMATCH[2]}" s="${BASH_REMATCH[3]}"
-    dur_sec=$(( h * 3600 + m * 60 + s ))
+    # Force base-10: zero-padded fields like "08"/"09" are otherwise parsed as
+    # (invalid) octal by bash arithmetic.
+    dur_sec=$(( 10#$h * 3600 + 10#$m * 60 + 10#$s ))
   fi
 
   if [[ "${info}" =~ ([0-9]+)[[:space:]]*(fps|tbr) ]]; then

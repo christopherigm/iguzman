@@ -62,7 +62,7 @@ places, in order:
 2. **Ingress:** run `pnpm sync-website-hosts` — it reads every enabled
    `System.host` from the API and rewrites `apps/website/helm/values.yaml`
    (ingress) + the API's CORS/CSRF/ALLOWED_HOSTS, so the domain routes to this
-   one app. (See `scripts/sync-website-hosts.mjs`.)
+   one app. (See `cli/website/website.sh sync`.)
 3. **Frontend:** the `sites/<slug>/` folder + its `registry.ts` entry map that
    host to bespoke code. Until a folder exists, the host safely falls back to
    `_default` (the generic DB-driven template).

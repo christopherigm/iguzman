@@ -59,6 +59,21 @@ process_video() {
   # read OCR_SRT_FILES (the copy path calls build_stream_maps without OCR'ing).
   ocr_cleanup
 
+  # ── Preflight sanity check ──────────────────────────────────────────────
+  # A fast, bounded validation so a broken/corrupt/undecodable file is skipped
+  # up front instead of stalling a later step (cropdetect decodes the whole
+  # file, so a bad file appears to hang at "Detecting black bars..."). On
+  # failure we return non-zero, which _run_processing counts as a skipped file.
+  printf "    %s\n" "$(clr_dim "${STEP_PREFLIGHT}...")"
+  local _pf_reason
+  if ! _pf_reason="$(preflight_check "${input}")"; then
+    local _pf_msg="${PREFLIGHT_DECODE_FAIL}"
+    [[ "${_pf_reason}" == "no_stream" ]] && _pf_msg="${PREFLIGHT_NO_STREAM}"
+    printf "    %s %s\n" "$(clr_yellow '⚠')" "$(clr_dim "${_pf_msg}")"
+    _log "Preflight failed (${_pf_reason}) for ${input}"
+    return 1
+  fi
+
   # ── Probe duration ──────────────────────────────────────────────────────
   local probe_out dur_sec=0
   probe_out="$(probe_video "${input}")"
@@ -104,8 +119,13 @@ process_video() {
   # ── Crop (black-bar detection) ──────────────────────────────────────────
   if [[ "${do_black_bars}" -eq 1 ]]; then
     printf "    %s\n" "$(clr_dim "${STEP_CROPDETECT}...")"
-    local crop_str
-    crop_str="$(detect_black_bars "${input}")"
+    local crop_str _cd_rc=0
+    crop_str="$(detect_black_bars "${input}")" || _cd_rc=$?
+    if [[ "${_cd_rc}" -eq 124 ]]; then
+      printf "    %s %s\n" "$(clr_yellow '⚠')" "$(clr_dim "${CROPDETECT_TIMEOUT_MSG}")"
+      _log "Cropdetect timed out for ${input}"
+      return 1
+    fi
     if [[ -n "${crop_str}" ]]; then
       printf "    %s crop=%s\n" "$(clr_cyan '→')" "$(clr_dim "${crop_str}")"
       vf_chain+=("crop=${crop_str}")

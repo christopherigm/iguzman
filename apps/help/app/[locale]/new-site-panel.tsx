@@ -62,6 +62,13 @@ const NEWSITE_DEPLOY =
   "pnpm sync-website-hosts    # ingress + API CORS pick up the new System.host\n" +
   "pnpm deploy-app website    # redeploy so the new sites/<slug>/ folder ships";
 
+// ── Pull production content back into local (inverse of publish) ───────────────
+
+const NEWSITE_PULL =
+  "pnpm pull-site                 # list prod sites, pick one + which sections\n" +
+  "pnpm pull-site acme.com        # skip the picker for this host\n" +
+  "pnpm pull-site acme.com -y     # accept all site/section defaults";
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export async function NewSitePanel() {
@@ -150,6 +157,15 @@ export async function NewSitePanel() {
         heading={t("newSiteSyncHeading")}
         description={t("newSiteSyncDesc")}
         code={NEWSITE_DEPLOY}
+      />
+
+      {/* 7 ─ Pull prod content back down to keep local a faithful mirror. */}
+      <GroupLabel marginTop={8}>{t("newSitePullGroup")}</GroupLabel>
+
+      <StepSection
+        heading={t("newSitePullHeading")}
+        description={t("newSitePullDesc")}
+        code={NEWSITE_PULL}
       />
     </>
   );

@@ -62,6 +62,8 @@ const NEW_TV_APP_COMMAND = "pnpm new-tv-app";
 const NEW_RN_APP_COMMAND = "pnpm new-rn-app";
 const NEW_SITE_COMMAND = "pnpm new-site <domain>";
 const PUBLISH_SITE_COMMAND = "pnpm publish-site <host>";
+const SYNC_WEBSITE_HOSTS_COMMAND = "pnpm sync-website-hosts";
+const PULL_SITE_COMMAND = "pnpm pull-site [host]";
 const SETUP_MINECRAFT_COMMAND = "pnpm setup-minecraft";
 const GENERATE_ICONS_COMMANDS =
   "pnpm generate-icons              # pick app interactively\n" +
@@ -280,6 +282,16 @@ export default async function Home({ params, searchParams }: Props) {
                   heading={t("publishSiteSection")}
                   description={t("publishSiteDescription")}
                   code={PUBLISH_SITE_COMMAND}
+                />
+                <Section
+                  heading={t("syncWebsiteHostsSection")}
+                  description={t("syncWebsiteHostsDescription")}
+                  code={SYNC_WEBSITE_HOSTS_COMMAND}
+                />
+                <Section
+                  heading={t("pullSiteSection")}
+                  description={t("pullSiteDescription")}
+                  code={PULL_SITE_COMMAND}
                 />
                 <Section
                   heading={t("setupMinecraftSection")}

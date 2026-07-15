@@ -13,7 +13,7 @@ import type { SiteModule } from "@/sites/types";
  * page dispatcher, and any metadata hook share a single resolution.
  *
  * Multi-tenancy is host-based end-to-end: the ingress routes every registered
- * domain to this single app (see scripts/sync-website-hosts.mjs), and this
+ * domain to this single app (see cli/website/website.sh sync), and this
  * function maps that host to the right site folder.
  *
  * In development ONLY, a `__dev_site` cookie (set by the dev site switcher)
