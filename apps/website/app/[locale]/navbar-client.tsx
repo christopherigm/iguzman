@@ -11,6 +11,8 @@ interface NavbarClientProps {
   version: string;
   productCount: number;
   serviceCount: number;
+  /** Total quantity in the signed-in user's cart; 0 when logged out. */
+  cartCount: number;
 }
 
 export function NavbarClient({
@@ -18,6 +20,7 @@ export function NavbarClient({
   version,
   productCount,
   serviceCount,
+  cartCount,
 }: NavbarClientProps) {
   const t = useTranslations("Navbar");
   const pathname = usePathname();
@@ -53,6 +56,17 @@ export function NavbarClient({
       : []),
     ...(isLoggedIn && !pathname.startsWith("/favorites")
       ? [{ label: t("favorites"), href: "/favorites" }]
+      : []),
+    // The count rides in the label rather than a badge, keeping the entry a
+    // plain text item like every other one here. It comes from the server on
+    // each render, so it is already right in the first HTML.
+    ...(isLoggedIn && !pathname.startsWith("/cart")
+      ? [
+          {
+            label: cartCount > 0 ? `${t("cart")} (${cartCount})` : t("cart"),
+            href: "/cart",
+          },
+        ]
       : []),
     ...(isAdmin && !pathname.startsWith("/admin")
       ? [{ label: t("admin"), href: "/admin" }]

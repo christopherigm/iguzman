@@ -37,7 +37,8 @@
     "admin": "Administrator",
     "products": "Produkte",
     "services": "Dienstleistungen",
-    "favorites": "Favoriten"
+    "favorites": "Favoriten",
+    "cart": "Warenkorb"
   },
   "AuthPage": {
     "tabSignIn": "Anmelden",
@@ -153,7 +154,12 @@
     "modalityInPerson": "Vor Ort",
     "modalityHybrid": "Hybrid",
     "expandVideo": "Video vergrößern",
-    "removeFromFavorites": "Aus Favoriten entfernen"
+    "removeFromFavorites": "Aus Favoriten entfernen",
+    "addedToCart": "Zum Warenkorb hinzugefügt",
+    "addToCartFailed": "Konnte nicht zum Warenkorb hinzugefügt werden. Bitte erneut versuchen.",
+    "removeFromCart": "Aus dem Warenkorb entfernen",
+    "removedFromCart": "Aus dem Warenkorb entfernt",
+    "removeFromCartFailed": "Konnte nicht aus dem Warenkorb entfernt werden. Bitte erneut versuchen."
   },
   "CatalogCategories": {
     "heading": "Kategorien"
@@ -206,6 +212,23 @@
     "heading": "Favoriten",
     "home": "Startseite",
     "empty": "Noch keine Favoriten. Tippe auf das Herz bei einem Produkt oder einer Dienstleistung, um es hier zu speichern."
+  },
+  "Cart": {
+    "heading": "Warenkorb",
+    "home": "Startseite",
+    "empty": "Dein Warenkorb ist leer. Füge ein Produkt oder eine Dienstleistung hinzu, um sie hier zu sehen.",
+    "browseProducts": "Produkte ansehen",
+    "summary": "Bestellübersicht",
+    "itemCount": "{count, plural, =0 {Keine Artikel} one {# Artikel} other {# Artikel}}",
+    "subtotal": "Zwischensumme",
+    "taxesNote": "Steuern und Versand werden beim Bezahlen berechnet.",
+    "checkout": "Zur Kasse",
+    "checkoutComingSoon": "Die Kasse ist bald verfügbar.",
+    "remove": "Aus dem Warenkorb entfernen",
+    "increase": "Menge erhöhen",
+    "decrease": "Menge verringern",
+    "each": "pro Stück",
+    "outOfStock": "Nicht vorrätig"
   },
   "VerifyEmailPage": {
     "loading": "Ihr Konto wird verifiziert, bitte warten…",

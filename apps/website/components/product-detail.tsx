@@ -7,31 +7,13 @@ import { Badge } from "@repo/ui/core-elements/badge";
 import { ShareButton } from "@repo/ui/core-elements/share-button";
 import { getSession } from "@repo/auth/session";
 import type { ProductDetail, ProductVariantFull } from "@/lib/catalog";
+import { findCartLineId } from "@/lib/cart";
 import { isFavorite } from "@/lib/favorites";
 import { toShareDescription } from "@/lib/metadata";
+import { formatPrice, discountPercent } from "@/lib/price";
+import { AddToCartButton } from "./add-to-cart-button";
 import { FavoriteButton } from "./favorite-button";
 import { VariantSelectorClient } from "./variant-selector-client";
-
-function formatPrice(amount: string, currency: string): string {
-  const num = parseFloat(amount);
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(num);
-  } catch {
-    return `${currency} ${num.toFixed(2)}`;
-  }
-}
-
-function discountPercent(price: string, comparePrice: string): number {
-  const p = parseFloat(price);
-  const cp = parseFloat(comparePrice);
-  if (cp <= p) return 0;
-  return Math.round(((cp - p) / cp) * 100);
-}
 
 interface ProductDetailProps {
   product: ProductDetail;
@@ -44,10 +26,14 @@ export async function ProductDetailPanel({
   selectedVariant,
   locale,
 }: ProductDetailProps) {
-  const [t, session, favorite] = await Promise.all([
+  // The cart line is looked up for the *selected* variant, so switching variants
+  // re-renders this panel with the answer for the one now on screen: the CTA
+  // offers to remove the size already in the cart and to add the one that isn't.
+  const [t, session, favorite, cartLineId] = await Promise.all([
     getTranslations("ItemDetail"),
     getSession(),
     isFavorite("product", product.id),
+    findCartLineId("product", product.id, selectedVariant?.id ?? null),
   ]);
 
   const name =
@@ -205,13 +191,25 @@ export async function ProductDetailPanel({
         {/* Actions: secondary + primary CTAs share the width, wrapping on very
             narrow widths so the buttons never get crushed. */}
         <Box alignItems="center" gap={10} width="100%" flexWrap="wrap">
-          <Button text={t("addToCart")} size="lg" flex="1" minWidth={140} />
+          <AddToCartButton
+            kind="product"
+            id={product.id}
+            variantId={selectedVariant?.id ?? null}
+            cartLineId={cartLineId}
+            isLoggedIn={session !== null}
+            disabled={!inStock}
+            display="button"
+            size="lg"
+            flex="1"
+            minWidth={140}
+          />
           <Button
             text={t("buyNow")}
             kind="primary"
             size="lg"
             flex="1"
             minWidth={140}
+            disabled={!inStock}
           />
         </Box>
       </Card>

@@ -37,7 +37,8 @@
     "admin": "Administrador",
     "products": "Productos",
     "services": "Servicios",
-    "favorites": "Favoritos"
+    "favorites": "Favoritos",
+    "cart": "Carrito"
   },
   "AuthPage": {
     "tabSignIn": "Iniciar sesión",
@@ -161,7 +162,12 @@
     "modalityInPerson": "En persona",
     "modalityHybrid": "Híbrido",
     "expandVideo": "Ampliar video",
-    "removeFromFavorites": "Quitar de favoritos"
+    "removeFromFavorites": "Quitar de favoritos",
+    "addedToCart": "Agregado al carrito",
+    "addToCartFailed": "No se pudo agregar al carrito. Inténtalo de nuevo.",
+    "removeFromCart": "Quitar del carrito",
+    "removedFromCart": "Quitado del carrito",
+    "removeFromCartFailed": "No se pudo quitar del carrito. Inténtalo de nuevo."
   },
   "CategoryDetail": {
     "home": "Inicio",
@@ -206,6 +212,23 @@
     "heading": "Favoritos",
     "home": "Inicio",
     "empty": "Aún no hay favoritos. Toca el corazón en cualquier producto o servicio para guardarlo aquí."
+  },
+  "Cart": {
+    "heading": "Carrito",
+    "home": "Inicio",
+    "empty": "Tu carrito está vacío. Agrega un producto o servicio para verlo aquí.",
+    "browseProducts": "Ver productos",
+    "summary": "Resumen del pedido",
+    "itemCount": "{count, plural, =0 {Sin artículos} one {# artículo} other {# artículos}}",
+    "subtotal": "Subtotal",
+    "taxesNote": "Los impuestos y el envío se calculan al pagar.",
+    "checkout": "Pagar",
+    "checkoutComingSoon": "El pago estará disponible pronto.",
+    "remove": "Quitar del carrito",
+    "increase": "Aumentar cantidad",
+    "decrease": "Disminuir cantidad",
+    "each": "c/u",
+    "outOfStock": "Agotado"
   },
   "VerifyEmailPage": {
     "loading": "Verificando tu cuenta, por favor espera…",

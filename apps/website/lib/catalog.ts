@@ -119,6 +119,12 @@ export interface BuyableVariant {
   effective_price: string;
   effective_compare_price: string | null;
   effective_image: string | null;
+  /**
+   * Products only - a service variant carries no stock, so this is absent there
+   * rather than false. Where a product variant has it, it overrides the
+   * product's own flag (matching the API's per-line stock check).
+   */
+  in_stock?: boolean;
 }
 
 export interface FeaturedProduct {

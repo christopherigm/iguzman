@@ -3,13 +3,14 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 
 from .models import (
+    CartItem,
     EmailVerificationToken,
     Favorite,
     PasskeyCredential,
     PasswordResetToken,
     UserProfile,
 )
-from .cache import invalidate_favorites
+from .cache import invalidate_cart, invalidate_favorites
 
 
 class UserProfileInline(admin.StackedInline):
@@ -80,4 +81,33 @@ class FavoriteAdmin(admin.ModelAdmin):
 
     def delete_model(self, request, obj):
         invalidate_favorites(obj.user_id, obj.system_id or 0)
+        super().delete_model(request, obj)
+
+
+@admin.register(CartItem)
+class CartItemAdmin(admin.ModelAdmin):
+    list_display = ("user", "kind", "target", "variant", "quantity", "system", "updated_at")
+    list_filter = ("system", "created_at")
+    search_fields = ("user__username", "user__email", "product__name", "service__name")
+    raw_id_fields = ("user", "product", "service", "product_variant", "service_variant")
+    readonly_fields = ("created_at", "updated_at")
+
+    @admin.display(description="Kind")
+    def kind(self, obj):
+        return obj.kind
+
+    @admin.display(description="Item")
+    def target(self, obj):
+        return obj.target
+
+    @admin.display(description="Variant")
+    def variant(self, obj):
+        return obj.variant
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        invalidate_cart(obj.user_id, obj.system_id or 0)
+
+    def delete_model(self, request, obj):
+        invalidate_cart(obj.user_id, obj.system_id or 0)
         super().delete_model(request, obj)

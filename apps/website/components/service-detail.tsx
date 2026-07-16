@@ -7,37 +7,19 @@ import { Badge } from "@repo/ui/core-elements/badge";
 import { ShareButton } from "@repo/ui/core-elements/share-button";
 import { getSession } from "@repo/auth/session";
 import type { ServiceDetail, ServiceVariantFull } from "@/lib/catalog";
+import { findCartLineId } from "@/lib/cart";
 import { isFavorite } from "@/lib/favorites";
 import { toShareDescription } from "@/lib/metadata";
+import { formatPrice, discountPercent } from "@/lib/price";
+import { AddToCartButton } from "./add-to-cart-button";
 import { FavoriteButton } from "./favorite-button";
 import { VariantSelectorClient } from "./variant-selector-client";
-
-function formatPrice(amount: string, currency: string): string {
-  const num = parseFloat(amount);
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(num);
-  } catch {
-    return `${currency} ${num.toFixed(2)}`;
-  }
-}
 
 function formatDuration(minutes: number): string {
   if (minutes < 60) return `${minutes}m`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return m ? `${h}h ${m}m` : `${h}h`;
-}
-
-function discountPercent(price: string, comparePrice: string): number {
-  const p = parseFloat(price);
-  const cp = parseFloat(comparePrice);
-  if (cp <= p) return 0;
-  return Math.round(((cp - p) / cp) * 100);
 }
 
 interface ServiceDetailProps {
@@ -51,10 +33,12 @@ export async function ServiceDetailPanel({
   selectedVariant,
   locale,
 }: ServiceDetailProps) {
-  const [t, session, favorite] = await Promise.all([
+  // Looked up for the *selected* variant - see the note in ProductDetailPanel.
+  const [t, session, favorite, cartLineId] = await Promise.all([
     getTranslations("ItemDetail"),
     getSession(),
     isFavorite("service", service.id),
+    findCartLineId("service", service.id, selectedVariant?.id ?? null),
   ]);
 
   const name =
@@ -210,12 +194,17 @@ export async function ServiceDetailPanel({
         {/* Actions: secondary + primary CTAs share the width, wrapping on very
             narrow widths so the buttons never get crushed. */}
         <Box alignItems="center" gap={10} width="100%" flexWrap="wrap">
-          <Button
-            text={t("addToCart")}
+          <AddToCartButton
+            kind="service"
+            id={service.id}
+            variantId={selectedVariant?.id ?? null}
+            cartLineId={cartLineId}
+            isLoggedIn={session !== null}
+            display="button"
+            buttonKind="warning"
             size="lg"
             flex="1"
             minWidth={140}
-            kind="warning"
           />
           <Button
             text={t("buyNow")}
@@ -223,6 +212,7 @@ export async function ServiceDetailPanel({
             size="lg"
             flex="1"
             minWidth={140}
+            icon="/icons/happy-heart-eyes.svg"
           />
         </Box>
       </Card>

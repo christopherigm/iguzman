@@ -1,0 +1,13 @@
+/* Both classes sit on a next/link `<a>`, not on a @repo/ui component, and carry
+   only link-decoration state - the props-first rule is untouched. */
+
+.cart-line__image-link,
+.cart-line__title-link {
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+}
+
+.cart-line__title-link:hover h2 {
+  text-decoration: underline;
+}

@@ -9,34 +9,15 @@ import type {
   FeaturedService,
   BuyableVariant,
 } from "@/lib/catalog";
+import { findCartLineId } from "@/lib/cart";
 import { isFavorite } from "@/lib/favorites";
 import { getRequestOrigin, toShareDescription } from "@/lib/metadata";
+import { formatPrice, discountPercent } from "@/lib/price";
 import { BuyableCardActions } from "./buyable-card-actions";
 
 export type BuyableItem =
   | { kind: "product"; data: FeaturedProduct }
   | { kind: "service"; data: FeaturedService };
-
-function formatPrice(amount: string, currency: string): string {
-  const num = parseFloat(amount);
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(num);
-  } catch {
-    return `${currency} ${num.toFixed(2)}`;
-  }
-}
-
-function discountPercent(price: string, comparePrice: string): number {
-  const p = parseFloat(price);
-  const cp = parseFloat(comparePrice);
-  if (cp <= p) return 0;
-  return Math.round(((cp - p) / cp) * 100);
-}
 
 function defaultVariant(
   variants: BuyableVariant[],
@@ -95,8 +76,21 @@ export async function BuyableCard({
 
   const hasImage = Boolean(image);
 
+  // A service is always orderable; only products carry stock, and a variant's
+  // own flag wins over the product's. Mirrors the API's per-line stock check.
+  const inStock =
+    kind === "service"
+      ? true
+      : (variant?.in_stock ?? (data as FeaturedProduct).in_stock);
+
   const duration =
     kind === "service" ? (data as FeaturedService).duration : null;
+
+  // Whether the card's own variant is already a line, and which line it is - the
+  // button turns into "remove" and needs the row's id to delete it. Read after
+  // `variant` resolves because the variant is half the line's identity; the
+  // lookup is `cache()`d per request, so the grid still costs one fetch.
+  const cartLineId = await findCartLineId(kind, data.id, variant?.id ?? null);
 
   return (
     <Card
@@ -259,6 +253,9 @@ export async function BuyableCard({
             shareUrl={`${origin}${href}`}
             initialFavorite={favorite}
             isLoggedIn={session !== null}
+            variantId={variant?.id ?? null}
+            cartLineId={cartLineId}
+            inStock={inStock}
           />
         </Box>
       </Box>

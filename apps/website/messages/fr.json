@@ -37,7 +37,8 @@
     "admin": "Administration",
     "products": "Produits",
     "services": "Services",
-    "favorites": "Favoris"
+    "favorites": "Favoris",
+    "cart": "Panier"
   },
   "AuthPage": {
     "tabSignIn": "Connexion",
@@ -153,7 +154,12 @@
     "modalityInPerson": "En personne",
     "modalityHybrid": "Hybride",
     "expandVideo": "Agrandir la vidéo",
-    "removeFromFavorites": "Retirer des favoris"
+    "removeFromFavorites": "Retirer des favoris",
+    "addedToCart": "Ajouté au panier",
+    "addToCartFailed": "Impossible d'ajouter au panier. Veuillez réessayer.",
+    "removeFromCart": "Retirer du panier",
+    "removedFromCart": "Retiré du panier",
+    "removeFromCartFailed": "Impossible de retirer du panier. Veuillez réessayer."
   },
   "CatalogCategories": {
     "heading": "Catégories"
@@ -206,6 +212,23 @@
     "heading": "Favoris",
     "home": "Accueil",
     "empty": "Pas encore de favoris. Touchez le cœur d'un produit ou d'un service pour l'enregistrer ici."
+  },
+  "Cart": {
+    "heading": "Panier",
+    "home": "Accueil",
+    "empty": "Votre panier est vide. Ajoutez un produit ou un service pour le voir ici.",
+    "browseProducts": "Voir les produits",
+    "summary": "Récapitulatif de la commande",
+    "itemCount": "{count, plural, =0 {Aucun article} one {# article} other {# articles}}",
+    "subtotal": "Sous-total",
+    "taxesNote": "Les taxes et la livraison sont calculées au paiement.",
+    "checkout": "Commander",
+    "checkoutComingSoon": "Le paiement arrive bientôt.",
+    "remove": "Retirer du panier",
+    "increase": "Augmenter la quantité",
+    "decrease": "Diminuer la quantité",
+    "each": "l'unité",
+    "outOfStock": "Rupture de stock"
   },
   "VerifyEmailPage": {
     "loading": "Vérification de votre compte, veuillez patienter…",

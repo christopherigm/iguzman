@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
-import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { ShareButton } from "@repo/ui/core-elements/share-button";
+import { AddToCartButton } from "./add-to-cart-button";
 import { FavoriteButton } from "./favorite-button";
 
 interface BuyableCardActionsProps {
@@ -26,6 +26,18 @@ interface BuyableCardActionsProps {
   shareUrl: string;
   initialFavorite: boolean;
   isLoggedIn: boolean;
+  /**
+   * The variant the card is showing (its default), so the line added from here
+   * matches the price printed on it. Null when the item has no variants.
+   */
+  variantId: number | null;
+  /**
+   * The cart line for this card's item+variant, when it is already in the cart.
+   * Turns the add button into a remove one, which deletes that line.
+   */
+  cartLineId: number | null;
+  /** The card's variant is out of stock - the add button is offered disabled. */
+  inStock: boolean;
 }
 
 /**
@@ -43,14 +55,11 @@ export function BuyableCardActions({
   shareUrl,
   initialFavorite,
   isLoggedIn,
+  variantId,
+  cartLineId,
+  inStock,
 }: BuyableCardActionsProps) {
   const t = useTranslations("ItemDetail");
-
-  // The cart is not built yet; this button only claims its slot in the card.
-  const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
 
   return (
     <Box justifyContent="space-evenly" alignItems="center" gap={6}>
@@ -71,13 +80,15 @@ export function BuyableCardActions({
         size="sm"
         stopPropagation
       />
-      <IconButton
-        icon="/icons/add-to-cart.svg"
-        aria-label={t("addToCart")}
-        title={t("addToCart")}
-        kind="warning"
+      <AddToCartButton
+        kind={kind}
+        id={id}
+        variantId={variantId}
+        cartLineId={cartLineId}
+        isLoggedIn={isLoggedIn}
+        disabled={!inStock}
         size="sm"
-        onClick={handleAddToCart}
+        stopPropagation
       />
     </Box>
   );

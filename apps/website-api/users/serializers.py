@@ -386,3 +386,78 @@ class FavoriteSerializer(serializers.Serializer):
 class FavoriteWriteSerializer(serializers.Serializer):
     kind = serializers.ChoiceField(choices=["product", "service"])
     id = serializers.IntegerField()
+
+
+# ── Cart ──────────────────────────────────────────────────────────────────────
+
+
+class CartItemSerializer(serializers.Serializer):
+    """A cart line, flattened for the cart page.
+
+    Mirrors `FavoriteSerializer` - `item` carries the full catalog payload so the
+    frontend reuses its existing card - and adds what a line needs on top: the
+    chosen variant, the quantity, and the prices resolved for that variant.
+
+    Prices are strings, matching how DRF renders every other DecimalField in this
+    API; the frontend already parses catalog prices the same way.
+    """
+
+    id = serializers.IntegerField(read_only=True)
+    kind = serializers.CharField(read_only=True)
+    quantity = serializers.IntegerField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    item = serializers.SerializerMethodField()
+    variant = serializers.SerializerMethodField()
+    unit_price = serializers.SerializerMethodField()
+    line_total = serializers.SerializerMethodField()
+    currency = serializers.SerializerMethodField()
+    in_stock = serializers.SerializerMethodField()
+
+    def get_item(self, obj):
+        # Imported here for the same reason as FavoriteSerializer.get_item: a
+        # module-level import would make users ↔ catalog a cycle at app-load.
+        from catalog.serializers import ProductSerializer, ServiceSerializer
+
+        serializer = ProductSerializer if obj.product_id else ServiceSerializer
+        return serializer(obj.target, context=self.context).data
+
+    def get_variant(self, obj):
+        from catalog.serializers import ProductVariantSerializer, ServiceVariantSerializer
+
+        variant = obj.variant
+        if variant is None:
+            return None
+        serializer = ProductVariantSerializer if obj.product_id else ServiceVariantSerializer
+        return serializer(variant, context=self.context).data
+
+    def get_unit_price(self, obj):
+        return str(obj.unit_price)
+
+    def get_line_total(self, obj):
+        return str(obj.line_total)
+
+    def get_currency(self, obj):
+        return obj.target.currency
+
+    def get_in_stock(self, obj):
+        """Services are always orderable; only products carry stock.
+
+        Reported per line so the cart can flag an item that sold out after it was
+        added - the variant's own flag wins when the line has one.
+        """
+        if obj.service_id:
+            return True
+        if obj.product_variant_id:
+            return obj.product_variant.in_stock
+        return obj.product.in_stock
+
+
+class CartItemWriteSerializer(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=["product", "service"])
+    id = serializers.IntegerField()
+    variant_id = serializers.IntegerField(required=False, allow_null=True)
+    quantity = serializers.IntegerField(required=False, min_value=1, max_value=99, default=1)
+
+
+class CartItemUpdateSerializer(serializers.Serializer):
+    quantity = serializers.IntegerField(min_value=1, max_value=99)

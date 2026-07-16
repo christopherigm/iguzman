@@ -37,7 +37,8 @@
     "admin": "Admin",
     "products": "Products",
     "services": "Services",
-    "favorites": "Favorites"
+    "favorites": "Favorites",
+    "cart": "Cart"
   },
   "AuthPage": {
     "tabSignIn": "Sign In",
@@ -161,7 +162,12 @@
     "modalityInPerson": "In Person",
     "modalityHybrid": "Hybrid",
     "expandVideo": "Expand video",
-    "removeFromFavorites": "Remove from favorites"
+    "removeFromFavorites": "Remove from favorites",
+    "addedToCart": "Added to cart",
+    "addToCartFailed": "Could not add to cart. Please try again.",
+    "removeFromCart": "Remove from cart",
+    "removedFromCart": "Removed from cart",
+    "removeFromCartFailed": "Could not remove from cart. Please try again."
   },
   "CategoryDetail": {
     "home": "Home",
@@ -206,6 +212,23 @@
     "heading": "Favorites",
     "home": "Home",
     "empty": "No favorites yet. Tap the heart on any product or service to save it here."
+  },
+  "Cart": {
+    "heading": "Cart",
+    "home": "Home",
+    "empty": "Your cart is empty. Add a product or service to see it here.",
+    "browseProducts": "Browse products",
+    "summary": "Order summary",
+    "itemCount": "{count, plural, =0 {No items} one {# item} other {# items}}",
+    "subtotal": "Subtotal",
+    "taxesNote": "Taxes and shipping are calculated at checkout.",
+    "checkout": "Checkout",
+    "checkoutComingSoon": "Checkout is coming soon.",
+    "remove": "Remove from cart",
+    "increase": "Increase quantity",
+    "decrease": "Decrease quantity",
+    "each": "each",
+    "outOfStock": "Out of Stock"
   },
   "VerifyEmailPage": {
     "loading": "Verifying your account, please wait…",

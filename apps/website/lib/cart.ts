@@ -1,0 +1,172 @@
+/**
+ * The signed-in user's cart.
+ *
+ * The reasoning here is `lib/favorites.ts`'s, and the two must stay in step: these
+ * read through `apiFetch`, are safe to call from a server component because
+ * `createAuthProxy` has already refreshed an expired access token earlier in the
+ * same request, and degrade to an empty cart rather than a 500 when the API is
+ * unreachable.
+ *
+ * Each catch must call `unstable_rethrow` first. Next signals "this route read
+ * cookies, so it cannot be prerendered" by *throwing*; swallowing that tells the
+ * build the route rendered fine with an empty cart, and it gets baked into a
+ * static page that shows every user an empty cart forever.
+ */
+import { cache } from "react";
+import { unstable_rethrow } from "next/navigation";
+import { getSession } from "@repo/auth/session";
+import { apiFetch } from "./api-fetch";
+import type {
+  FeaturedProduct,
+  FeaturedService,
+  BuyableVariant,
+} from "./catalog";
+import logger from "./logger";
+
+/**
+ * One line of the cart. `unit_price` and `line_total` are resolved server-side
+ * for the line's variant, so nothing here has to re-derive a price from the
+ * catalog payload; they are strings, matching every other price in this API.
+ */
+export type CartItem = {
+  id: number;
+  quantity: number;
+  created_at: string;
+  variant: BuyableVariant | null;
+  unit_price: string;
+  line_total: string;
+  currency: string;
+  in_stock: boolean;
+} & (
+  | { kind: "product"; item: FeaturedProduct }
+  | { kind: "service"; item: FeaturedService }
+);
+
+/** A subtotal, per currency: `Buyable.currency` is per item, so a cart can hold
+ *  more than one and summing across them would be meaningless. */
+export interface CartTotal {
+  currency: string;
+  subtotal: string;
+}
+
+export interface Cart {
+  items: CartItem[];
+  /** Total quantity, not line count - what the navbar shows. */
+  count: number;
+  totals: CartTotal[];
+}
+
+/**
+ * One line, stripped to what a card needs to recognise itself in the cart.
+ *
+ * `line_id` is the CartItem row's own id - the thing `DELETE /api/auth/cart/[id]`
+ * takes - which is why this cannot be a list of catalog ids the way `FavoriteIds`
+ * is. `variant_id` is part of the match because it is part of the line's
+ * identity: the same product in two sizes is two lines.
+ */
+export interface CartLineRef {
+  line_id: number;
+  kind: "product" | "service";
+  id: number;
+  variant_id: number | null;
+}
+
+const EMPTY_CART: Cart = { items: [], count: 0, totals: [] };
+
+export const getCart = cache(async (): Promise<Cart> => {
+  if ((await getSession()) === null) return EMPTY_CART;
+
+  try {
+    const res = await apiFetch("/api/auth/cart/", { cache: "no-store" });
+    if (!res.ok) {
+      if (res.status !== 401) {
+        logger.warn({ status: res.status }, "Cart API returned non-OK status");
+      }
+      return EMPTY_CART;
+    }
+    return (await res.json()) as Cart;
+  } catch (err) {
+    unstable_rethrow(err);
+    logger.error({ err }, "Failed to fetch cart");
+    return EMPTY_CART;
+  }
+});
+
+/**
+ * Just the total quantity, for the navbar badge. The navbar renders on every
+ * page, and fetching the full cart to print one number would pull every line's
+ * images and variants on every navigation - the same reasoning as
+ * `getFavoriteIds`.
+ */
+export const getCartCount = cache(async (): Promise<number> => {
+  // An anonymous visitor has no cart, and the navbar asks on every page.
+  if ((await getSession()) === null) return 0;
+
+  try {
+    const res = await apiFetch("/api/auth/cart/count/", { cache: "no-store" });
+    if (!res.ok) {
+      if (res.status !== 401) {
+        logger.warn(
+          { status: res.status },
+          "Cart count API returned non-OK status",
+        );
+      }
+      return 0;
+    }
+    const data = (await res.json()) as { count: number };
+    return data.count;
+  } catch (err) {
+    unstable_rethrow(err);
+    logger.error({ err }, "Failed to fetch cart count");
+    return 0;
+  }
+});
+
+/**
+ * The cart as bare line references, for the catalog cards' in-cart check - the
+ * same trade as `getFavoriteIds`: a grid of N cards asks N times, and answering
+ * each from the full cart would pull every line's images and variants.
+ */
+export const getCartLines = cache(async (): Promise<CartLineRef[]> => {
+  // An anonymous visitor has no cart, and every card asks. Without this the
+  // whole catalog costs one round-trip that can only come back 401.
+  if ((await getSession()) === null) return [];
+
+  try {
+    const res = await apiFetch("/api/auth/cart/ids/", { cache: "no-store" });
+    if (!res.ok) {
+      if (res.status !== 401) {
+        logger.warn(
+          { status: res.status },
+          "Cart ids API returned non-OK status",
+        );
+      }
+      return [];
+    }
+    const data = (await res.json()) as { lines: CartLineRef[] };
+    return data.lines;
+  } catch (err) {
+    unstable_rethrow(err);
+    logger.error({ err }, "Failed to fetch cart ids");
+    return [];
+  }
+});
+
+/**
+ * The id of the cart line for exactly this item *and* variant, or null when it
+ * is not in the cart. A card showing the default variant therefore reads as "not
+ * in cart" while a different variant of it sits in the cart - which is correct:
+ * clicking its button would add that other line, not touch the existing one.
+ */
+export async function findCartLineId(
+  kind: "product" | "service",
+  id: number,
+  variantId: number | null,
+): Promise<number | null> {
+  const lines = await getCartLines();
+  const match = lines.find(
+    (line) =>
+      line.kind === kind && line.id === id && line.variant_id === variantId,
+  );
+  return match?.line_id ?? null;
+}

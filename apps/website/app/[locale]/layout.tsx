@@ -24,6 +24,7 @@ import { DevSiteSwitcher } from "./dev-site-switcher";
 import { Footer } from "@/components/footer";
 import { HideOnAdmin } from "@/components/hide-on-admin";
 import packageJson from "@/package.json";
+import { getCartCount } from "@/lib/cart";
 import { getSystem } from "@/lib/system";
 import { DEV_SITE_COOKIE, SITE_CONFIGS } from "@/sites/registry";
 import "../globals.css";
@@ -84,10 +85,11 @@ export default async function LocaleLayout({ children, params }: Props) {
   // The session is decoded from the access-token cookie during this request, so
   // the HTML we send already reflects who the user is - the admin link and the
   // account menu no longer pop in after hydration.
-  const [messages, system, session] = await Promise.all([
+  const [messages, system, session, cartCount] = await Promise.all([
     getMessages(),
     getSystem(),
     getSession(),
+    getCartCount(),
   ]);
 
   const cookieStore = await cookies();
@@ -142,6 +144,7 @@ export default async function LocaleLayout({ children, params }: Props) {
                     version={`v${packageJson.version}`}
                     productCount={system?.product_count ?? 0}
                     serviceCount={system?.service_count ?? 0}
+                    cartCount={cartCount}
                   />
                   {children}
                   {isDev && (

@@ -4,6 +4,10 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 from .views import (
     AdminUserDetailView,
     AdminUserListView,
+    CartCountView,
+    CartIdsView,
+    CartItemDetailView,
+    CartListView,
     ChangePasswordView,
     FavoriteDetailView,
     FavoriteIdsView,
@@ -42,6 +46,11 @@ urlpatterns = [
     path("favorites/", FavoriteListView.as_view(), name="favorite-list"),
     path("favorites/ids/", FavoriteIdsView.as_view(), name="favorite-ids"),
     path("favorites/<str:kind>/<int:pk>/", FavoriteDetailView.as_view(), name="favorite-detail"),
+    # Cart
+    path("cart/", CartListView.as_view(), name="cart-list"),
+    path("cart/count/", CartCountView.as_view(), name="cart-count"),
+    path("cart/ids/", CartIdsView.as_view(), name="cart-ids"),
+    path("cart/<int:pk>/", CartItemDetailView.as_view(), name="cart-item-detail"),
     path("admin/users/", AdminUserListView.as_view(), name="admin-user-list"),
     path("admin/users/<int:pk>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
     # Passkey (WebAuthn)

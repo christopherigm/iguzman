@@ -1,11 +1,12 @@
 import json
 import uuid
+from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.mail import send_mail
-from django.db import transaction
+from django.db import models, transaction
 from django.template.loader import render_to_string
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -27,19 +28,27 @@ from webauthn.helpers.structs import (
     UserVerificationRequirement,
 )
 
-from catalog.models import Product, Service
+from catalog.models import Product, ProductVariant, Service, ServiceVariant
 from core.models import System
 from core.permissions import IsSystemAdmin
 from .cache import (
+    CART_CACHE_TTL,
     FAVORITES_CACHE_TTL,
+    cart_count_key,
+    cart_ids_key,
+    cart_key,
     favorites_ids_key,
     favorites_key,
+    invalidate_cart,
     invalidate_favorites,
 )
-from .models import EmailVerificationToken, Favorite, PasskeyCredential, PasswordResetToken
+from .models import CartItem, EmailVerificationToken, Favorite, PasskeyCredential, PasswordResetToken
 from .serializers import (
     AdminUserSerializer,
     AdminUserUpdateSerializer,
+    CartItemSerializer,
+    CartItemUpdateSerializer,
+    CartItemWriteSerializer,
     ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
     FavoriteSerializer,
@@ -765,4 +774,250 @@ class FavoriteIdsView(APIView):
             "services": [s for _, s in rows if s is not None],
         }
         cache.set(cache_key, data, FAVORITES_CACHE_TTL)
+        return Response(data)
+
+
+# ── Cart ──────────────────────────────────────────────────────────────────────
+
+def _cart_qs(request, system):
+    return (
+        CartItem.objects
+        .filter(user=request.user, system=system)
+        .select_related(
+            'product', 'service', 'product_variant', 'service_variant',
+        )
+        .prefetch_related(
+            'product__images', 'product__variants',
+            'service__images', 'service__variants',
+            'product_variant__option_values', 'service_variant__option_values',
+        )
+    )
+
+
+def _resolve_target(system, kind, target_id, variant_id):
+    """The buyable and variant a write refers to, or (None, None, error).
+
+    Every lookup is scoped to the user's System, which is what stops a crafted id
+    from putting another tenant's item in this cart; the variant is then looked
+    up *through* its parent, so a variant id belonging to a different product
+    cannot be attached to this line. That second check is the one the database
+    cannot make for us - a CheckConstraint sees only one row's columns.
+    """
+    model = Product if kind == "product" else Service
+    target = model.objects.filter(pk=target_id, system=system, enabled=True).first()
+    if target is None:
+        return None, None, "Not found."
+
+    if variant_id is None:
+        return target, None, None
+
+    variant_model = ProductVariant if kind == "product" else ServiceVariant
+    variant = variant_model.objects.filter(
+        pk=variant_id, enabled=True, **{kind: target},
+    ).first()
+    if variant is None:
+        return None, None, "Variant not found for this item."
+
+    return target, variant, None
+
+
+def _cart_payload(request, system):
+    """The whole cart: lines, total quantity, and a subtotal per currency.
+
+    Totals are grouped by currency because `Buyable.currency` is per item, so a
+    System can hold a USD product and an MXN one; summing them into a single
+    number would be arithmetic on incomparable units. The summary card renders
+    one row per group.
+    """
+    items = list(_cart_qs(request, system))
+    data = CartItemSerializer(items, many=True, context={"request": request}).data
+
+    totals = {}
+    for item in items:
+        currency = item.target.currency
+        totals[currency] = totals.get(currency, Decimal("0")) + item.line_total
+
+    return {
+        "items": data,
+        "count": sum(item.quantity for item in items),
+        "totals": [
+            {"currency": currency, "subtotal": str(subtotal)}
+            for currency, subtotal in sorted(totals.items())
+        ],
+    }
+
+
+class CartListView(APIView):
+    """
+    GET    /api/auth/cart/ - the authenticated user's cart, with totals.
+    POST   /api/auth/cart/ - add a line, body
+                             {"kind", "id", "variant_id"?, "quantity"?}.
+    DELETE /api/auth/cart/ - empty the cart.
+    """
+
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        system = _user_system(request)
+        cache_key = cart_key(request.user.id, system.id if system else 0)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        data = _cart_payload(request, system)
+        cache.set(cache_key, data, CART_CACHE_TTL)
+        return Response(data)
+
+    def post(self, request):
+        serializer = CartItemWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        kind = serializer.validated_data["kind"]
+        target_id = serializer.validated_data["id"]
+        variant_id = serializer.validated_data.get("variant_id")
+        quantity = serializer.validated_data["quantity"]
+
+        system = _user_system(request)
+        target, variant, error = _resolve_target(system, kind, target_id, variant_id)
+        if error:
+            return Response({"detail": error}, status=status.HTTP_404_NOT_FOUND)
+
+        variant_field = f"{kind}_variant"
+        # Adding what is already in the cart raises the quantity instead of
+        # creating a second identical line - the uniqueness constraints would
+        # reject that row anyway. Locked, because two rapid clicks would
+        # otherwise both read the old quantity and one increment would be lost.
+        with transaction.atomic():
+            item, created = CartItem.objects.select_for_update().get_or_create(
+                user=request.user,
+                system=system,
+                **{kind: target, variant_field: variant},
+                defaults={"quantity": quantity},
+            )
+            if not created:
+                item.quantity = min(item.quantity + quantity, 99)
+                item.save(update_fields=["quantity", "updated_at"])
+
+        invalidate_cart(request.user.id, system.id if system else 0)
+
+        return Response(
+            CartItemSerializer(item, context={"request": request}).data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+    def delete(self, request):
+        system = _user_system(request)
+        CartItem.objects.filter(user=request.user, system=system).delete()
+        invalidate_cart(request.user.id, system.id if system else 0)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CartItemDetailView(APIView):
+    """
+    PATCH  /api/auth/cart/<id>/ - set a line's quantity, body {"quantity": N}.
+    DELETE /api/auth/cart/<id>/ - drop the line.
+
+    Keyed by the CartItem row's id, unlike the favorites detail view: a line is
+    identified by item *and* variant, so the catalog id alone cannot name it.
+    """
+
+    permission_classes = (IsAuthenticated,)
+
+    def _get_item(self, request, pk):
+        # Filtering by user is the authorization check: another user's line id
+        # simply does not exist as far as this request is concerned.
+        return CartItem.objects.filter(
+            pk=pk, user=request.user, system=_user_system(request),
+        ).select_related(
+            'product', 'service', 'product_variant', 'service_variant',
+        ).first()
+
+    def patch(self, request, pk):
+        serializer = CartItemUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        item = self._get_item(request, pk)
+        if item is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        item.quantity = serializer.validated_data["quantity"]
+        item.save(update_fields=["quantity", "updated_at"])
+        invalidate_cart(request.user.id, item.system_id or 0)
+
+        return Response(CartItemSerializer(item, context={"request": request}).data)
+
+    def delete(self, request, pk):
+        item = self._get_item(request, pk)
+        if item is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        system_id = item.system_id or 0
+        item.delete()
+        invalidate_cart(request.user.id, system_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CartCountView(APIView):
+    """GET /api/auth/cart/count/ - total quantity in the cart.
+
+    The navbar renders this on every page. Serving it the full cart payload to
+    print one number would fetch every line's images and variants on every
+    navigation, which is the same reasoning as FavoriteIdsView.
+    """
+
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        system = _user_system(request)
+        cache_key = cart_count_key(request.user.id, system.id if system else 0)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        total = CartItem.objects.filter(user=request.user, system=system).aggregate(
+            total=models.Sum("quantity"),
+        )["total"]
+        data = {"count": total or 0}
+        cache.set(cache_key, data, CART_CACHE_TTL)
+        return Response(data)
+
+
+class CartIdsView(APIView):
+    """GET /api/auth/cart/ids/ - what is in the cart, as bare identifiers.
+
+    The counterpart of FavoriteIdsView for the catalog cards, which only need to
+    know whether *this* item is already in the cart; serving them the full cart
+    payload to answer that would fetch every line's images and variants on every
+    grid render.
+
+    It cannot be a list of catalog ids the way favorites is, for the two reasons
+    the cart differs: a line is identified by item *and* variant, so the catalog
+    id alone does not name one; and removing a line needs the CartItem row's own
+    id. Each entry therefore carries the triple the card matches on plus the
+    `line_id` it would delete.
+    """
+
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        system = _user_system(request)
+        cache_key = cart_ids_key(request.user.id, system.id if system else 0)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        rows = CartItem.objects.filter(user=request.user, system=system).values_list(
+            "id", "product_id", "service_id", "product_variant_id", "service_variant_id",
+        )
+        data = {
+            "lines": [
+                {
+                    "line_id": line_id,
+                    "kind": "product" if product_id else "service",
+                    "id": product_id or service_id,
+                    "variant_id": product_variant_id or service_variant_id,
+                }
+                for line_id, product_id, service_id, product_variant_id, service_variant_id in rows
+            ],
+        }
+        cache.set(cache_key, data, CART_CACHE_TTL)
         return Response(data)

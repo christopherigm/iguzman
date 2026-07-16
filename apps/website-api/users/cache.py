@@ -21,3 +21,24 @@ def favorites_ids_key(user_id, system_id):
 def invalidate_favorites(user_id, system_id):
     cache.delete(favorites_key(user_id, system_id))
     cache.delete(favorites_ids_key(user_id, system_id))
+
+
+CART_CACHE_TTL = 300  # 5 minutes
+
+
+def cart_key(user_id, system_id):
+    return f"users:cart:{user_id}:{system_id}"
+
+
+def cart_count_key(user_id, system_id):
+    return f"users:cart-count:{user_id}:{system_id}"
+
+
+def cart_ids_key(user_id, system_id):
+    return f"users:cart-ids:{user_id}:{system_id}"
+
+
+def invalidate_cart(user_id, system_id):
+    cache.delete(cart_key(user_id, system_id))
+    cache.delete(cart_count_key(user_id, system_id))
+    cache.delete(cart_ids_key(user_id, system_id))
