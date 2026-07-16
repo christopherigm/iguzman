@@ -55,6 +55,10 @@ export interface EnhanceOptionsLabels {
   length: string;
   /** Unit shown after the word range, e.g. "words/para". */
   wordsPerPara: string;
+  /** Confirm button label. */
+  ok: string;
+  /** Cancel button label. */
+  cancel: string;
 }
 
 interface Props {
@@ -90,6 +94,8 @@ export function EnhanceOptionsModal({
         onConfirm({ paragraphs, minWords: range.min, maxWords: range.max })
       }
       cancelCallback={onCancel}
+      okLabel={labels.ok}
+      cancelLabel={labels.cancel}
     >
       <Box display="flex" flexDirection="column" gap={20} paddingY={4}>
         <Slider

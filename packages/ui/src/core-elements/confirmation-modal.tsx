@@ -30,6 +30,13 @@ export interface ConfirmationModalProps {
   okCallback: () => void;
   /** Called when the user cancels. If provided a "Cancel" button is rendered. */
   cancelCallback?: () => void;
+  /**
+   * Confirm button label (default: 'OK'). This package is i18n-agnostic, so a
+   * localised app must pass the translated string - the default is English.
+   */
+  okLabel?: string;
+  /** Cancel button label (default: 'Cancel'). Same i18n note as `okLabel`. */
+  cancelLabel?: string;
   /** Optional content rendered between the text and the action buttons. */
   children?: React.ReactNode;
   /** Override the panel's max-width (default: 420px). */
@@ -45,12 +52,17 @@ export interface ConfirmationModalProps {
 /**
  * ConfirmationModal - centered dialog drawn over a semi-transparent overlay.
  *
+ * The button labels default to English. In a localised app pass `okLabel` /
+ * `cancelLabel` - this package holds no translations of its own.
+ *
  * @example
  * <ConfirmationModal
- *   title="Delete item?"
- *   text="This action cannot be undone."
+ *   title={t("deleteTitle")}
+ *   text={t("deleteText")}
  *   okCallback={() => deleteItem()}
  *   cancelCallback={() => setOpen(false)}
+ *   okLabel={tCommon("ok")}
+ *   cancelLabel={tCommon("cancel")}
  * />
  */
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
@@ -61,6 +73,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   children,
   panelMaxWidth,
   okDisabled,
+  okLabel = "OK",
+  cancelLabel = "Cancel",
   position = "center",
   backgroundBlur = "blur(2px)",
 }) => {
@@ -176,10 +190,10 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           }}
         >
           {cancelCallback && (
-            <Button text="Cancel" onClick={cancelCallback} size="md" />
+            <Button text={cancelLabel} onClick={cancelCallback} size="md" />
           )}
           <Button
-            text="OK"
+            text={okLabel}
             onClick={okCallback}
             kind="primary"
             size="md"

@@ -46,6 +46,7 @@ export function JobCard({
   isStaff,
 }: JobCardProps) {
   const t = useTranslations("JobsPage");
+  const tCommon = useTranslations("Common");
   const locale = useLocale();
   const [explainModal, setExplainModal] = useState<{
     title: string;
@@ -230,6 +231,7 @@ export function JobCard({
           title={explainModal.title}
           text={explainModal.text}
           okCallback={() => setExplainModal(null)}
+          okLabel={tCommon("ok")}
         />
       )}
     </Card>

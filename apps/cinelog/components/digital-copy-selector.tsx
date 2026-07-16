@@ -50,6 +50,7 @@ export function DigitalCopySelector({
   disabled?: boolean;
 }) {
   const t = useTranslations("DigitalCopy");
+  const tCommon = useTranslations("Common");
 
   // Seed mode + per-mode state from the incoming value, once.
   const initial = useMemo(() => parseS3Ref(value), []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -199,6 +200,7 @@ export function DigitalCopySelector({
           title={t("browseTitle")}
           text={selectedBucketLabel}
           okCallback={() => setBrowsing(false)}
+          okLabel={tCommon("ok")}
         >
           <Box display="flex" flexDirection="column" gap={8}>
             {loadingObjects && <ProgressBar label={t("loadingObjects")} />}

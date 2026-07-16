@@ -27,14 +27,23 @@ from webauthn.helpers.structs import (
     UserVerificationRequirement,
 )
 
+from catalog.models import Product, Service
 from core.models import System
 from core.permissions import IsSystemAdmin
-from .models import EmailVerificationToken, PasskeyCredential, PasswordResetToken
+from .cache import (
+    FAVORITES_CACHE_TTL,
+    favorites_ids_key,
+    favorites_key,
+    invalidate_favorites,
+)
+from .models import EmailVerificationToken, Favorite, PasskeyCredential, PasswordResetToken
 from .serializers import (
     AdminUserSerializer,
     AdminUserUpdateSerializer,
     ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
+    FavoriteSerializer,
+    FavoriteWriteSerializer,
     PasskeyAuthenticationOptionsSerializer,
     PasskeyAuthenticationVerifySerializer,
     PasskeyRegistrationVerifySerializer,
@@ -632,3 +641,128 @@ class PasskeyCredentialDetailView(APIView):
 
         cred.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ── Favorites ─────────────────────────────────────────────────────────────────
+
+def _user_system(request):
+    """The tenant this user belongs to, or None.
+
+    Mirrors the passkey views: the System is taken from the profile (set at
+    signup), never from anything the browser sends.
+    """
+    try:
+        return request.user.profile.system
+    except Exception:
+        return None
+
+
+def _favorites_qs(request, system):
+    return (
+        Favorite.objects
+        .filter(user=request.user, system=system)
+        .select_related('product', 'service')
+        .prefetch_related(
+            'product__images', 'product__variants',
+            'service__images', 'service__variants',
+        )
+    )
+
+
+class FavoriteListView(APIView):
+    """
+    GET  /api/auth/favorites/  - the authenticated user's saved items.
+    POST /api/auth/favorites/  - save one, body {"kind": "product"|"service", "id": N}.
+    """
+
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        system = _user_system(request)
+        cache_key = favorites_key(request.user.id, system.id if system else 0)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        favorites = _favorites_qs(request, system)
+        data = FavoriteSerializer(favorites, many=True, context={"request": request}).data
+        cache.set(cache_key, data, FAVORITES_CACHE_TTL)
+        return Response(data)
+
+    def post(self, request):
+        serializer = FavoriteWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        kind = serializer.validated_data["kind"]
+        target_id = serializer.validated_data["id"]
+
+        system = _user_system(request)
+        model = Product if kind == "product" else Service
+        # Scoping the lookup to the user's System is what stops a crafted id from
+        # attaching another tenant's item to this account.
+        target = model.objects.filter(pk=target_id, system=system, enabled=True).first()
+        if target is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        favorite, created = Favorite.objects.get_or_create(
+            user=request.user,
+            system=system,
+            **{kind: target},
+        )
+        invalidate_favorites(request.user.id, system.id if system else 0)
+
+        return Response(
+            FavoriteSerializer(favorite, context={"request": request}).data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+
+class FavoriteDetailView(APIView):
+    """DELETE /api/auth/favorites/<kind>/<id>/ - unsave an item.
+
+    Keyed by the catalog item's id rather than the Favorite row's, so the button
+    on a product page can unsave without first looking the row up.
+    """
+
+    permission_classes = (IsAuthenticated,)
+
+    def delete(self, request, kind, pk):
+        if kind not in ("product", "service"):
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        system = _user_system(request)
+        deleted, _ = Favorite.objects.filter(
+            user=request.user, system=system, **{f"{kind}_id": pk},
+        ).delete()
+        if not deleted:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        invalidate_favorites(request.user.id, system.id if system else 0)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class FavoriteIdsView(APIView):
+    """GET /api/auth/favorites/ids/ - just the saved ids.
+
+    The detail pages only need to know whether *this* item is saved; serving them
+    the full favorites payload to answer a boolean would fetch every saved item's
+    images and variants on every product view.
+    """
+
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        system = _user_system(request)
+        cache_key = favorites_ids_key(request.user.id, system.id if system else 0)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        rows = Favorite.objects.filter(user=request.user, system=system).values_list(
+            "product_id", "service_id",
+        )
+        data = {
+            "products": [p for p, _ in rows if p is not None],
+            "services": [s for _, s in rows if s is not None],
+        }
+        cache.set(cache_key, data, FAVORITES_CACHE_TTL)
+        return Response(data)

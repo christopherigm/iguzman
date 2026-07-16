@@ -4,8 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { AdminEntityList } from "@/components/admin/admin-entity-list";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
-import { listVariantOptions, deleteVariantOption } from "@/lib/admin-api";
+import {
+  listVariantOptions,
+  deleteVariantOption,
+  updateVariantOption,
+} from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
+import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
 
 export default function AdminVariantOptionsPage() {
   const t = useTranslations("Admin");
@@ -32,6 +37,11 @@ export default function AdminVariantOptionsPage() {
     })();
   }, [load]);
 
+  const handleToggleEnabled = useToggleEnabled(
+    updateVariantOption,
+    setItems,
+    setError,
+  );
   const handleDelete = async (id: number) => {
     try {
       await deleteVariantOption(id);
@@ -63,6 +73,7 @@ export default function AdminVariantOptionsPage() {
         columns={columns}
         basePath="/admin/variant-options"
         onDelete={handleDelete}
+        onToggleEnabled={handleToggleEnabled}
         loading={loading}
         error={error}
       />

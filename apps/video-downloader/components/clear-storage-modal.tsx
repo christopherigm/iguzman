@@ -142,6 +142,7 @@ export function ClearStorageModal({
   onRemoveVideosByUuids,
 }: ClearStorageModalProps) {
   const t = useTranslations("ClearStorageModal");
+  const tCommon = useTranslations("Common");
 
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Record<
@@ -360,6 +361,8 @@ export function ClearStorageModal({
       okCallback={onClose}
       cancelCallback={onClose}
       panelMaxWidth="480px"
+      okLabel={tCommon("ok")}
+      cancelLabel={tCommon("cancel")}
     >
       {body}
     </ConfirmationModal>

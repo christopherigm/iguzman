@@ -815,6 +815,9 @@ export function VideoExtraActions({
   onServerModeChange?: (enabled: boolean) => void;
   t: TranslationFn;
 }) {
+  // `t` arrives as a prop (VideoGrid namespace); the shared Common namespace is
+  // read here directly rather than threading a second translator through.
+  const tCommon = useTranslations("Common");
   const [serverMode, setServerMode] = useState(useServerProcessing ?? false);
   const creditsBalance = useCreditsBalance();
   const autoEnabledRef = useRef(false);
@@ -889,6 +892,8 @@ export function VideoExtraActions({
             setShowServerOffModal(false);
           }}
           cancelCallback={() => setShowServerOffModal(false)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       ) : null}
       {fpsDeviceModalFps !== null ? (
@@ -896,6 +901,7 @@ export function VideoExtraActions({
           title={t("fpsDeviceOnlyTitle")}
           text={t("fpsDeviceOnlyText")}
           okCallback={() => setFpsDeviceModalFps(null)}
+          okLabel={tCommon("ok")}
         />
       ) : null}
       {showScaleDownModal ? (
@@ -905,6 +911,8 @@ export function VideoExtraActions({
           okCallback={() => setShowScaleDownModal(false)}
           cancelCallback={() => setShowScaleDownModal(false)}
           panelMaxWidth="340px"
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         >
           <Box
             display="flex"
@@ -936,6 +944,8 @@ export function VideoExtraActions({
           }}
           cancelCallback={() => setShowDiarizeModal(false)}
           panelMaxWidth="340px"
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         >
           <Select
             label={t("diarizeWordsPerRowLabel")}

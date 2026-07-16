@@ -328,6 +328,7 @@ function ChangePasswordSection({ profile }: { profile: UserProfile }) {
 
 function PasskeySection() {
   const t = useTranslations("AccountPage");
+  const tCommon = useTranslations("Common");
   const [credentials, setCredentials] = useState<PasskeyCredential[]>([]);
   const [loadingCreds, setLoadingCreds] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -384,6 +385,8 @@ function PasskeySection() {
           text={t("confirmDeletePasskeyText")}
           okCallback={handleDelete}
           cancelCallback={() => setConfirmDeleteId(null)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       )}
       <Section title={t("passkeySection")}>

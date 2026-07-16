@@ -1,10 +1,11 @@
 {
   "Common": {
-    "save": "Save",
-    "cancel": "Cancel",
-    "close": "Close",
-    "loading": "Loading...",
-    "error": "An error occurred"
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "ok": "OK",
+    "close": "Schließen",
+    "loading": "Wird geladen...",
+    "error": "Ein Fehler ist aufgetreten"
   },
   "PasswordPolicy": {
     "ruleMinLength": "Mindestens {count} Zeichen",

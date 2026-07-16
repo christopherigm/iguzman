@@ -1,7 +1,7 @@
 import { createAuthProxy } from "@repo/auth/proxy";
 
 export default createAuthProxy({
-  protectedPrefixes: ["/admin", "/account"],
+  protectedPrefixes: ["/admin", "/account", "/favorites"],
 });
 
 // The matcher must be an inline literal: Next.js statically analyses it at build

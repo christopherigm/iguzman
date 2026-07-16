@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { AdminEntityList } from "@/components/admin/admin-entity-list";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
-import { listBrands, deleteBrand } from "@/lib/admin-api";
+import { listBrands, deleteBrand, updateBrand } from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
+import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
 
 export default function AdminBrandsPage() {
   const t = useTranslations("Admin");
@@ -32,6 +33,7 @@ export default function AdminBrandsPage() {
     })();
   }, [load]);
 
+  const handleToggleEnabled = useToggleEnabled(updateBrand, setItems, setError);
   const handleDelete = async (id: number) => {
     try {
       await deleteBrand(id);
@@ -42,7 +44,7 @@ export default function AdminBrandsPage() {
   };
 
   const columns = [
-    { key: "logo", label: "Logo" },
+    { key: "logo", label: "Logo", compact: true },
     { key: "name", label: t("name") },
     { key: "slug", label: "Slug" },
     { key: "enabled", label: t("enabled") },
@@ -63,6 +65,7 @@ export default function AdminBrandsPage() {
         columns={columns}
         basePath="/admin/brands"
         onDelete={handleDelete}
+        onToggleEnabled={handleToggleEnabled}
         loading={loading}
         error={error}
       />

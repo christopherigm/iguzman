@@ -1,16 +1,9 @@
-"use client";
-
 import Image from "next/image";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Pagination } from "swiper/modules";
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import type { SuccessStory } from "@/lib/success-stories";
-import "swiper/css";
-import "swiper/css/navigation";
-import "swiper/css/pagination";
 
 export function StoryCard({
   story,
@@ -191,36 +184,5 @@ export function StoryCard({
     <Card {...surfaceProps} styles={{ position: "relative" }}>
       {cardBody}
     </Card>
-  );
-}
-
-export function StoriesSlider({
-  stories,
-  locale,
-  readMore,
-}: {
-  stories: SuccessStory[];
-  locale: string;
-  readMore: string;
-}) {
-  return (
-    <Swiper
-      className="stories-swiper"
-      modules={[Navigation, Pagination]}
-      slidesPerView={1}
-      spaceBetween={16}
-      breakpoints={{
-        600: { slidesPerView: 2 }, // sm
-        1200: { slidesPerView: 3 }, // lg
-      }}
-      navigation
-      pagination={{ clickable: true }}
-    >
-      {stories.map((story) => (
-        <SwiperSlide key={story.id} className="stories-swiper__slide">
-          <StoryCard story={story} locale={locale} readMore={readMore} />
-        </SwiperSlide>
-      ))}
-    </Swiper>
   );
 }

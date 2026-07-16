@@ -8,12 +8,15 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { HeroVideo } from "@repo/ui/hero-video";
+import { ParallaxLayer } from "@repo/ui/parallax-layer";
 
 interface ItemHeroVideoProps {
   /** YouTube, Vimeo or direct video URL. */
   url: string;
   /** Item name - used as the fullscreen dialog's heading. */
   title: string;
+  /** Drift the video against the page as it scrolls, matching the landing `Hero`. */
+  parallax?: boolean;
 }
 
 /**
@@ -22,8 +25,13 @@ interface ItemHeroVideoProps {
  * autoplay muted video); the fullscreen button reopens it with sound and
  * controls in a modal, which is the user's opt-in for audio.
  */
-export function ItemHeroVideo({ url, title }: ItemHeroVideoProps) {
+export function ItemHeroVideo({
+  url,
+  title,
+  parallax = true,
+}: ItemHeroVideoProps) {
   const t = useTranslations("ItemDetail");
+  const tCommon = useTranslations("Common");
   const [fullscreen, setFullscreen] = useState(false);
 
   return (
@@ -34,8 +42,11 @@ export function ItemHeroVideo({ url, title }: ItemHeroVideoProps) {
       styles={{ position: "relative", overflow: "hidden" }}
     >
       {/* Held paused while the fullscreen modal plays, so the two players don't
-          run the same video at once; it resumes when the modal closes. */}
-      <HeroVideo url={url} playing={!fullscreen} />
+          run the same video at once; it resumes when the modal closes. The
+          title and its scrim stay outside the drifting layer. */}
+      <ParallaxLayer disabled={!parallax}>
+        <HeroVideo url={url} playing={!fullscreen} />
+      </ParallaxLayer>
       {/* Scrim - keeps the white title legible over an arbitrary video frame. */}
       <Box
         aria-hidden
@@ -96,6 +107,7 @@ export function ItemHeroVideo({ url, title }: ItemHeroVideoProps) {
           text=""
           panelMaxWidth="min(90vw, 1200px)"
           okCallback={() => setFullscreen(false)}
+          okLabel={tCommon("ok")}
         >
           {/* Fit the 16:9 frame to the modal instead of letting it overflow into
               a scrollbar. The panel caps itself at `calc(90vh - 50px)`, and the

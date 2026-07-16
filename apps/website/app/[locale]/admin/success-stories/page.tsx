@@ -4,8 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { AdminEntityList } from "@/components/admin/admin-entity-list";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
-import { listSuccessStories, deleteSuccessStory } from "@/lib/admin-api";
+import {
+  listSuccessStories,
+  deleteSuccessStory,
+  updateSuccessStory,
+} from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
+import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
 
 export default function AdminSuccessStoriesPage() {
   const t = useTranslations("Admin");
@@ -32,6 +37,11 @@ export default function AdminSuccessStoriesPage() {
     })();
   }, [load]);
 
+  const handleToggleEnabled = useToggleEnabled(
+    updateSuccessStory,
+    setItems,
+    setError,
+  );
   const handleDelete = async (id: number) => {
     try {
       await deleteSuccessStory(id);
@@ -42,7 +52,7 @@ export default function AdminSuccessStoriesPage() {
   };
 
   const columns = [
-    { key: "image", label: "Image" },
+    { key: "image", label: "Image", compact: true },
     { key: "name", label: t("name") },
     { key: "slug", label: "Slug" },
     { key: "enabled", label: t("enabled") },
@@ -63,6 +73,7 @@ export default function AdminSuccessStoriesPage() {
         columns={columns}
         basePath="/admin/success-stories"
         onDelete={handleDelete}
+        onToggleEnabled={handleToggleEnabled}
         loading={loading}
         error={error}
       />

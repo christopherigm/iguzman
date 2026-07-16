@@ -226,6 +226,7 @@ function BucketRow({
 
 export function StorageForm() {
   const t = useTranslations("StoragePage");
+  const tCommon = useTranslations("Common");
   const router = useRouter();
   const [buckets, setBuckets] = useState<S3Bucket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -275,6 +276,8 @@ export function StorageForm() {
           text={t("confirmDeleteText")}
           okCallback={handleDelete}
           cancelCallback={() => setConfirmDeleteId(null)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       )}
 

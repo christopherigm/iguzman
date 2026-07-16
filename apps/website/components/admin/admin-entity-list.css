@@ -25,6 +25,15 @@
   width: 120px;
 }
 
+/* Sizes a column to its content. In an auto-layout table a 1% width resolves to
+   the column's minimum, so the surplus goes to the text columns instead of
+   padding out a fixed-size cell (e.g. the 40px image square). */
+.ael__th--compact,
+.ael__td--compact {
+  width: 1%;
+  white-space: nowrap;
+}
+
 .ael__row {
   transition: background 0.1s;
 }

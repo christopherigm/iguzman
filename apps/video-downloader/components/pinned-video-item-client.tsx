@@ -77,6 +77,7 @@ export function PinnedVideoItemClient({
   onRemove,
 }: PinnedVideoItemClientProps) {
   const t = useTranslations("VideoGrid");
+  const tCommon = useTranslations("Common");
   const { getUrls, registerUrls } = useOPFSUrls();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -699,6 +700,8 @@ export function PinnedVideoItemClient({
             onRemove(video.uuid);
           }}
           cancelCallback={() => setConfirmRemove(false)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       ) : null}
     </Box>

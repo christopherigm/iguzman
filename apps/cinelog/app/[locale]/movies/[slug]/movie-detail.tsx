@@ -92,6 +92,7 @@ export function MovieDetail({
   deviceType?: DeviceType;
 }) {
   const t = useTranslations("MovieDetailPage");
+  const tCommon = useTranslations("Common");
   const tFormat = useTranslations("MovieFormat");
   const router = useRouter();
   const isDesktop = deviceType === "desktop";
@@ -374,6 +375,8 @@ export function MovieDetail({
           text={t("confirmDeleteText", { title: movie.title })}
           okCallback={handleConfirmDelete}
           cancelCallback={() => setShowDeleteConfirm(false)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       )}
 
@@ -383,6 +386,8 @@ export function MovieDetail({
           text={t("confirmPurgeText", { title: movie.title })}
           okCallback={handleConfirmPurge}
           cancelCallback={() => setShowPurgeConfirm(false)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       )}
 
@@ -392,6 +397,7 @@ export function MovieDetail({
           text={movie.title}
           okCallback={() => setShowTrailer(false)}
           panelMaxWidth="760px"
+          okLabel={tCommon("ok")}
         >
           <Box
             width="100%"
@@ -419,6 +425,7 @@ export function MovieDetail({
           text={movie.title}
           okCallback={closeStream}
           panelMaxWidth="960px"
+          okLabel={tCommon("ok")}
         >
           <Box flexDirection="column" gap={12} width="100%">
             {streamError ? (
@@ -485,6 +492,7 @@ export function MovieDetail({
           title={t("playWith")}
           text={movie.title}
           okCallback={() => setShowPlayerPicker(false)}
+          okLabel={tCommon("ok")}
         >
           <Box flexDirection="column" gap={8}>
             {externalPlayersFor(deviceType, movie.digital_copy_url).map(

@@ -46,6 +46,7 @@ const YEARS_STEPS: SliderStep[] = [
  */
 export function ProfessionalInfoPanel() {
   const t = useTranslations("ProfilePage");
+  const tCommon = useTranslations("Common");
   const locale = useLocale();
 
   const [loading, setLoading] = useState(true);
@@ -191,6 +192,7 @@ export function ProfessionalInfoPanel() {
           text={t("tnSuggestModalSubtitle")}
           okCallback={() => setTnSuggestModal(false)}
           panelMaxWidth="540px"
+          okLabel={tCommon("ok")}
         >
           <Box display="flex" flexDirection="column" gap={16} marginTop={4}>
             {tnSuggestResults.length === 0 ? (
@@ -254,6 +256,8 @@ export function ProfessionalInfoPanel() {
             paragraphs: t("summaryEnhanceParagraphsLabel"),
             length: t("summaryEnhanceLengthLabel"),
             wordsPerPara: t("summaryEnhanceWordsPerPara"),
+            ok: tCommon("ok"),
+            cancel: tCommon("cancel"),
           }}
           onConfirm={handleSummaryConfirmEnhanceOptions}
           onCancel={() => setSummaryShowEnhanceOptions(false)}

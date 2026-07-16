@@ -64,6 +64,7 @@ interface ApplicationFormProps {
 
 function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
   const t = useTranslations("ApplicationsPage");
+  const tCommon = useTranslations("Common");
   const [companyName, setCompanyName] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -443,6 +444,7 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
           title={t("duplicateUrlTitle")}
           text={t("duplicateUrlText")}
           okCallback={() => setDuplicateUrlModal(false)}
+          okLabel={tCommon("ok")}
         />
       )}
 
@@ -698,6 +700,7 @@ function ApplicationCard({ app, onDelete, onExplain }: ApplicationCardProps) {
 
 export function ApplicationsPage() {
   const t = useTranslations("ApplicationsPage");
+  const tCommon = useTranslations("Common");
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -816,6 +819,8 @@ export function ApplicationsPage() {
             handleDelete(id);
           }}
           cancelCallback={() => setPendingDeleteId(null)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       )}
 
@@ -824,6 +829,7 @@ export function ApplicationsPage() {
           title={explainModal.title}
           text={explainModal.text}
           okCallback={() => setExplainModal(null)}
+          okLabel={tCommon("ok")}
         />
       )}
 

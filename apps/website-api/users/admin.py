@@ -2,7 +2,14 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 
-from .models import EmailVerificationToken, PasskeyCredential, PasswordResetToken, UserProfile
+from .models import (
+    EmailVerificationToken,
+    Favorite,
+    PasskeyCredential,
+    PasswordResetToken,
+    UserProfile,
+)
+from .cache import invalidate_favorites
 
 
 class UserProfileInline(admin.StackedInline):
@@ -49,3 +56,28 @@ class PasskeyCredentialAdmin(admin.ModelAdmin):
     search_fields = ("user__username", "user__email", "name")
     readonly_fields = ("credential_id", "public_key", "sign_count", "transports", "created_at")
     raw_id_fields = ("user",)
+
+
+@admin.register(Favorite)
+class FavoriteAdmin(admin.ModelAdmin):
+    list_display = ("user", "kind", "target", "system", "created_at")
+    list_filter = ("system", "created_at")
+    search_fields = ("user__username", "user__email", "product__name", "service__name")
+    raw_id_fields = ("user", "product", "service")
+    readonly_fields = ("created_at",)
+
+    @admin.display(description="Kind")
+    def kind(self, obj):
+        return obj.kind
+
+    @admin.display(description="Item")
+    def target(self, obj):
+        return obj.target
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        invalidate_favorites(obj.user_id, obj.system_id or 0)
+
+    def delete_model(self, request, obj):
+        invalidate_favorites(obj.user_id, obj.system_id or 0)
+        super().delete_model(request, obj)

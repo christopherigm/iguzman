@@ -30,6 +30,76 @@ class UserProfile(models.Model):
         return f"Profile of {self.user.username}"
 
 
+class Favorite(models.Model):
+    """A product or service a user has saved.
+
+    One row per saved item, holding exactly one of `product` / `service` - the
+    CheckConstraint is what keeps a row from meaning "both" or "neither", so the
+    `kind` the API reports can always be derived from which column is set.
+
+    `system` scopes the row to the tenant the user saved it from: the catalog is
+    per-System, so listing favorites without this filter would surface another
+    customer's items on a shared account.
+    """
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="favorites")
+    system = models.ForeignKey(
+        'core.System',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='favorites',
+    )
+    product = models.ForeignKey(
+        'catalog.Product',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='favorites',
+    )
+    service = models.ForeignKey(
+        'catalog.Service',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='favorites',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'product'],
+                condition=models.Q(product__isnull=False),
+                name='unique_user_product_favorite',
+            ),
+            models.UniqueConstraint(
+                fields=['user', 'service'],
+                condition=models.Q(service__isnull=False),
+                name='unique_user_service_favorite',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(product__isnull=False, service__isnull=True)
+                    | models.Q(product__isnull=True, service__isnull=False)
+                ),
+                name='favorite_exactly_one_target',
+            ),
+        ]
+
+    @property
+    def kind(self):
+        return 'product' if self.product_id else 'service'
+
+    @property
+    def target(self):
+        return self.product or self.service
+
+    def __str__(self):
+        return f"{self.user.email} ♥ {self.target}"
+
+
 class EmailVerificationToken(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="email_verification_token")
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)

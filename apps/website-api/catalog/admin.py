@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.core.cache import cache
 
+from core.cache import invalidate_pattern as _invalidate_pattern
+
 from .models import (
     ProductCategory, Product, ProductImage,
     ServiceCategory, Service, ServiceImage,
@@ -8,14 +10,6 @@ from .models import (
     ProductVariant, ProductVariantImage,
     ServiceVariant,
 )
-
-
-def _invalidate_pattern(pattern):
-    """Delete all keys matching a glob pattern (Redis only; silently skipped on LocMemCache)."""
-    try:
-        cache.delete_pattern(pattern)
-    except AttributeError:
-        pass
 
 
 # ---------------------------------------------------------------------------

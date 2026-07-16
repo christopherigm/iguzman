@@ -5,6 +5,9 @@ from .views import (
     AdminUserDetailView,
     AdminUserListView,
     ChangePasswordView,
+    FavoriteDetailView,
+    FavoriteIdsView,
+    FavoriteListView,
     LoginView,
     TokenReissueView,
     PasskeyAuthenticationOptionsView,
@@ -35,6 +38,10 @@ urlpatterns = [
     path("resend-verification/", ResendVerificationView.as_view(), name="auth-resend-verification"),
     path("password-reset/", PasswordResetRequestView.as_view(), name="auth-password-reset"),
     path("password-reset/confirm/", PasswordResetConfirmView.as_view(), name="auth-password-reset-confirm"),
+    # Favorites
+    path("favorites/", FavoriteListView.as_view(), name="favorite-list"),
+    path("favorites/ids/", FavoriteIdsView.as_view(), name="favorite-ids"),
+    path("favorites/<str:kind>/<int:pk>/", FavoriteDetailView.as_view(), name="favorite-detail"),
     path("admin/users/", AdminUserListView.as_view(), name="admin-user-list"),
     path("admin/users/<int:pk>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
     # Passkey (WebAuthn)

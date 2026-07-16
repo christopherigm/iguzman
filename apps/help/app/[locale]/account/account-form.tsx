@@ -273,6 +273,7 @@ function ChangePasswordSection() {
 
 function PasskeySection() {
   const t = useTranslations("AccountPage");
+  const tCommon = useTranslations("Common");
   const [credentials, setCredentials] = useState<
     { id: number; name: string; created_at: string }[]
   >([]);
@@ -331,6 +332,8 @@ function PasskeySection() {
           text={t("confirmDeletePasskeyText")}
           okCallback={handleDelete}
           cancelCallback={() => setConfirmDeleteId(null)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       )}
       <Box

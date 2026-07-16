@@ -40,6 +40,7 @@ export function ApplicationDetailPage({
   profilePictureBase64,
 }: Props) {
   const t = useTranslations("ApplicationDetailPage");
+  const tCommon = useTranslations("Common");
   const locale = useLocale();
   const router = useRouter();
 
@@ -123,6 +124,8 @@ export function ApplicationDetailPage({
             handleDelete();
           }}
           cancelCallback={() => setConfirmDelete(false)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       )}
 
@@ -171,6 +174,7 @@ export function ApplicationDetailPage({
           title={explainModal.title}
           text={explainModal.text}
           okCallback={() => setExplainModal(null)}
+          okLabel={tCommon("ok")}
         />
       )}
 

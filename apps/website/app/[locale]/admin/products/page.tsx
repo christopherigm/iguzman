@@ -8,8 +8,9 @@ import {
   EmptyCell,
 } from "@/components/admin/admin-entity-list";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
-import { listProducts, deleteProduct } from "@/lib/admin-api";
+import { listProducts, deleteProduct, updateProduct } from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
+import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
 
 export default function AdminProductsPage() {
   const t = useTranslations("Admin");
@@ -38,6 +39,11 @@ export default function AdminProductsPage() {
     })();
   }, [load]);
 
+  const handleToggleEnabled = useToggleEnabled(
+    updateProduct,
+    setItems,
+    setError,
+  );
   const handleDelete = async (id: number) => {
     try {
       await deleteProduct(id);
@@ -48,7 +54,7 @@ export default function AdminProductsPage() {
   };
 
   const columns = [
-    { key: "image", label: t("image") ?? "Image" },
+    { key: "image", label: t("image") ?? "Image", compact: true },
     { key: "name", label: t("name") },
     { key: "sku", label: "SKU" },
     {
@@ -80,6 +86,7 @@ export default function AdminProductsPage() {
         columns={columns}
         basePath="/admin/products"
         onDelete={handleDelete}
+        onToggleEnabled={handleToggleEnabled}
         loading={loading}
         error={error}
       />

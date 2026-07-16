@@ -27,6 +27,7 @@ async function dataUrlToFile(dataUrl: string, filename: string): Promise<File> {
 
 export default function AdminSystemPage() {
   const t = useTranslations("Admin");
+  const tCommon = useTranslations("Common");
   const tGb = useTranslations("GradientBuilder");
 
   const [values, setValues] = useState<Record<string, unknown>>({
@@ -391,6 +392,8 @@ export default function AdminSystemPage() {
           text={t("logoAssetsModalText")}
           okCallback={handleGenerateAssets}
           cancelCallback={() => setShowLogoAssetsModal(false)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         >
           {generatingAssets && (
             <Typography variant="body">{t("generatingAssets")}</Typography>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import "./admin-entity-list.css";
@@ -8,11 +9,18 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Button } from "@repo/ui/core-elements/button";
 import { Badge } from "@repo/ui/core-elements/badge";
+import { Switch } from "@repo/ui/core-elements/switch";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 
 export interface Column {
   key: string;
   label: string;
   render?: (value: unknown, row: Record<string, unknown>) => React.ReactNode;
+  /**
+   * Size the column to its content rather than letting the table stretch it.
+   * Use for image/icon columns, whose cell is a fixed-size square.
+   */
+  compact?: boolean;
 }
 
 interface AdminEntityListProps {
@@ -21,6 +29,12 @@ interface AdminEntityListProps {
   columns: Column[];
   basePath: string;
   onDelete?: (id: number) => void;
+  /**
+   * Enables the inline Enabled toggle: the `enabled` column renders a Switch that
+   * publishes/unpublishes the record on the spot. Must **reject** when the write
+   * fails, so the Switch can roll its optimistic state back.
+   */
+  onToggleEnabled?: (id: number, enabled: boolean) => Promise<void>;
   loading?: boolean;
   error?: string | null;
 }
@@ -31,10 +45,14 @@ export function AdminEntityList({
   columns,
   basePath,
   onDelete,
+  onToggleEnabled,
   loading,
   error,
 }: AdminEntityListProps) {
   const t = useTranslations("Admin");
+  const tCommon = useTranslations("Common");
+  // The row awaiting delete confirmation; null when the modal is closed.
+  const [pendingDelete, setPendingDelete] = useState<number | null>(null);
 
   return (
     <Box flexDirection="column" gap={20}>
@@ -103,7 +121,10 @@ export function AdminEntityList({
             <thead>
               <tr>
                 {columns.map((col) => (
-                  <th key={col.key} className="ael__th">
+                  <th
+                    key={col.key}
+                    className={`ael__th${col.compact ? " ael__th--compact" : ""}`}
+                  >
                     {col.label}
                   </th>
                 ))}
@@ -114,10 +135,22 @@ export function AdminEntityList({
               {items.map((item) => (
                 <tr key={String(item.id)} className="ael__row">
                   {columns.map((col) => (
-                    <td key={col.key} className="ael__td">
-                      {col.render
-                        ? col.render(item[col.key], item)
-                        : renderCell(item[col.key])}
+                    <td
+                      key={col.key}
+                      className={`ael__td${col.compact ? " ael__td--compact" : ""}`}
+                    >
+                      {col.render ? (
+                        col.render(item[col.key], item)
+                      ) : onToggleEnabled && col.key === "enabled" ? (
+                        <EnabledSwitch
+                          id={item.id as number}
+                          enabled={Boolean(item.enabled)}
+                          onToggle={onToggleEnabled}
+                          label={t("toggleEnabled")}
+                        />
+                      ) : (
+                        renderCell(item[col.key])
+                      )}
                     </td>
                   ))}
                   <td className="ael__td ael__td--actions">
@@ -130,11 +163,7 @@ export function AdminEntityList({
                           text={t("delete")}
                           size="sm"
                           kind="error"
-                          onClick={() => {
-                            if (window.confirm(t("confirmDelete"))) {
-                              onDelete(item.id as number);
-                            }
-                          }}
+                          onClick={() => setPendingDelete(item.id as number)}
                         />
                       )}
                     </Box>
@@ -145,7 +174,63 @@ export function AdminEntityList({
           </table>
         </Box>
       )}
+
+      {onDelete && pendingDelete !== null && (
+        <ConfirmationModal
+          title={t("confirmDeleteTitle")}
+          text={t("confirmDelete")}
+          okCallback={() => {
+            onDelete(pendingDelete);
+            setPendingDelete(null);
+          }}
+          cancelCallback={() => setPendingDelete(null)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
+        />
+      )}
     </Box>
+  );
+}
+
+/**
+ * Inline publish/unpublish toggle for a row's `enabled` field. Flips immediately
+ * and rolls back if `onToggle` rejects, so the switch never claims a write that
+ * the API refused.
+ */
+function EnabledSwitch({
+  id,
+  enabled,
+  onToggle,
+  label,
+}: {
+  id: number;
+  enabled: boolean;
+  onToggle: (id: number, enabled: boolean) => Promise<void>;
+  label: string;
+}) {
+  // `pending` is the optimistic value shown while the write is in flight; the row
+  // is the source of truth either side of it. Clearing it on settle reverts on
+  // failure and keeps the accepted value on success, with no prop/state sync.
+  const [pending, setPending] = useState<boolean | null>(null);
+
+  const handleChange = async (next: boolean) => {
+    setPending(next);
+    try {
+      await onToggle(id, next);
+    } catch {
+      // The list already surfaced the error; the switch just falls back.
+    } finally {
+      setPending(null);
+    }
+  };
+
+  return (
+    <Switch
+      checked={pending ?? enabled}
+      onChange={(next) => void handleChange(next)}
+      disabled={pending !== null}
+      aria-label={label}
+    />
   );
 }
 

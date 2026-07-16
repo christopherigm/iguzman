@@ -268,6 +268,7 @@ export function AdminForm({
   children,
 }: AdminFormProps) {
   const t = useTranslations("Admin");
+  const tCommon = useTranslations("Common");
   const router = useRouter();
 
   // ── LLM ───────────────────────────────────────────────────────────────────
@@ -924,6 +925,8 @@ export function AdminForm({
           text={t("enhanceOptionsText")}
           okCallback={handleConfirmEnhanceOptions}
           cancelCallback={handleCancelEnhanceOptions}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         >
           <div className="af__enhance-options">
             <Slider

@@ -40,6 +40,7 @@ export function NaftaLetterSection({
   companyDescription,
 }: Props) {
   const t = useTranslations("ApplicationDetailPage");
+  const tCommon = useTranslations("Common");
   const locale = useLocale();
 
   // Letter parameters
@@ -218,6 +219,7 @@ export function NaftaLetterSection({
           text={t("tnSuggestModalSubtitle")}
           okCallback={() => setSuggestModal(false)}
           panelMaxWidth="540px"
+          okLabel={tCommon("ok")}
         >
           <Box display="flex" flexDirection="column" gap={16} marginTop={4}>
             {suggestResults.length === 0 ? (

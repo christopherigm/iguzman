@@ -4,8 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { AdminEntityList } from "@/components/admin/admin-entity-list";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
-import { listHighlights, deleteHighlight } from "@/lib/admin-api";
+import {
+  listHighlights,
+  deleteHighlight,
+  updateHighlight,
+} from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
+import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
 
 export default function AdminHighlightsPage() {
   const t = useTranslations("Admin");
@@ -32,6 +37,11 @@ export default function AdminHighlightsPage() {
     })();
   }, [load]);
 
+  const handleToggleEnabled = useToggleEnabled(
+    updateHighlight,
+    setItems,
+    setError,
+  );
   const handleDelete = async (id: number) => {
     try {
       await deleteHighlight(id);
@@ -42,7 +52,7 @@ export default function AdminHighlightsPage() {
   };
 
   const columns = [
-    { key: "image", label: "Image" },
+    { key: "image", label: "Image", compact: true },
     { key: "name", label: t("name") },
     { key: "category", label: t("category") ?? "Category" },
     { key: "size", label: t("size") ?? "Size" },
@@ -65,6 +75,7 @@ export default function AdminHighlightsPage() {
         columns={columns}
         basePath="/admin/highlights"
         onDelete={handleDelete}
+        onToggleEnabled={handleToggleEnabled}
         loading={loading}
         error={error}
       />

@@ -36,7 +36,8 @@
     "home": "Home",
     "admin": "Admin",
     "products": "Products",
-    "services": "Services"
+    "services": "Services",
+    "favorites": "Favorites"
   },
   "AuthPage": {
     "tabSignIn": "Sign In",
@@ -159,7 +160,8 @@
     "modalityOnline": "Online",
     "modalityInPerson": "In Person",
     "modalityHybrid": "Hybrid",
-    "expandVideo": "Expand video"
+    "expandVideo": "Expand video",
+    "removeFromFavorites": "Remove from favorites"
   },
   "CategoryDetail": {
     "home": "Home",
@@ -184,7 +186,9 @@
   "SuccessStories": {
     "heading": "Success Stories",
     "readMore": "Read More",
-    "empty": "No success stories yet. Check back soon."
+    "empty": "No success stories yet. Check back soon.",
+    "previous": "Previous story",
+    "next": "Next story"
   },
   "SuccessStoryDetail": {
     "home": "Home",
@@ -197,6 +201,11 @@
   "Highlights": {
     "heading": "Highlights",
     "empty": "No highlights yet. Check back soon."
+  },
+  "Favorites": {
+    "heading": "Favorites",
+    "home": "Home",
+    "empty": "No favorites yet. Tap the heart on any product or service to save it here."
   },
   "VerifyEmailPage": {
     "loading": "Verifying your account, please wait…",
@@ -231,6 +240,7 @@
     "save": "Save",
     "saving": "Saving…",
     "cancel": "Cancel",
+    "confirmDeleteTitle": "Delete item?",
     "confirmDelete": "Are you sure you want to delete this item?",
     "deleted": "Deleted successfully",
     "saved": "Saved successfully",
@@ -242,6 +252,7 @@
     "noItems": "No items found.",
     "name": "Name",
     "enabled": "Enabled",
+    "toggleEnabled": "Toggle enabled",
     "actions": "Actions",
     "createdAt": "Created",
     "active": "Active",

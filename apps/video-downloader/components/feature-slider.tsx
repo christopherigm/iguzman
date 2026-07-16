@@ -34,6 +34,7 @@ const CARDS: FeatureCard[] = [
 
 export function FeatureSlider() {
   const t = useTranslations("FeatureSlider");
+  const tCommon = useTranslations("Common");
   const swiperRef = useRef<SwiperType | null>(null);
   // Start hidden to match the server (which has no localStorage), then reveal
   // after mount unless the user has dismissed it. Reading localStorage during
@@ -151,6 +152,8 @@ export function FeatureSlider() {
             setShowConfirm(false);
           }}
           cancelCallback={() => setShowConfirm(false)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       )}
     </>

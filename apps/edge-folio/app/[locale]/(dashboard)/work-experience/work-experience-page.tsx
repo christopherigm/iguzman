@@ -116,6 +116,7 @@ function WorkExperienceForm({
   onValidityChange,
 }: FormProps) {
   const t = useTranslations("WorkExperiencePage");
+  const tCommon = useTranslations("Common");
   const locale = useLocale();
   const [company, setCompany] = useState(initial?.company ?? "");
   const [title, setTitle] = useState(initial?.title ?? "");
@@ -214,6 +215,8 @@ function WorkExperienceForm({
             paragraphs: t("enhanceParagraphsLabel"),
             length: t("enhanceLengthLabel"),
             wordsPerPara: t("enhanceWordsPerPara"),
+            ok: tCommon("ok"),
+            cancel: tCommon("cancel"),
           }}
           onConfirm={handleConfirmEnhanceOptions}
           onCancel={() => setShowEnhanceOptions(false)}
@@ -472,6 +475,7 @@ function ProjectForm({
   onValidityChange,
 }: ProjectFormProps) {
   const t = useTranslations("WorkExperiencePage");
+  const tCommon = useTranslations("Common");
   const locale = useLocale();
   const [name, setName] = useState(initial?.name ?? "");
   const [url, setUrl] = useState(initial?.url ?? "");
@@ -642,6 +646,8 @@ function ProjectForm({
             paragraphs: t("projectEnhanceParagraphsLabel"),
             length: t("projectEnhanceLengthLabel"),
             wordsPerPara: t("projectEnhanceWordsPerPara"),
+            ok: tCommon("ok"),
+            cancel: tCommon("cancel"),
           }}
           onConfirm={handleConfirmEnhanceOptions}
           onCancel={() => setShowEnhanceOptions(false)}
@@ -911,6 +917,7 @@ function ProjectCard({ entry, onEdit, onDelete }: ProjectCardProps) {
 
 export function WorkExperiencePage() {
   const t = useTranslations("WorkExperiencePage");
+  const tCommon = useTranslations("Common");
 
   // ── Work experience state ────────────────────────────────────────────────────
   const [entries, setEntries] = useState<WorkExperience[]>([]);
@@ -1107,6 +1114,8 @@ export function WorkExperiencePage() {
             void handleDelete(id);
           }}
           cancelCallback={() => setPendingDeleteId(null)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       )}
 
@@ -1119,6 +1128,8 @@ export function WorkExperiencePage() {
           cancelCallback={closeForm}
           okDisabled={!formCanSubmit}
           panelMaxWidth="600px"
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         >
           <WorkExperienceForm
             initial={editing ?? undefined}
@@ -1140,6 +1151,8 @@ export function WorkExperiencePage() {
             void handleProjectDelete(id);
           }}
           cancelCallback={() => setPendingDeleteProjectId(null)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       )}
 
@@ -1152,6 +1165,8 @@ export function WorkExperiencePage() {
           cancelCallback={closeProjectForm}
           okDisabled={!projectFormCanSubmit}
           panelMaxWidth="540px"
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         >
           <ProjectForm
             initial={editingProject ?? undefined}

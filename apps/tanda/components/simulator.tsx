@@ -67,6 +67,7 @@ function withPiePercents(labels: string[], data: number[]): string[] {
 
 export function Simulator() {
   const t = useTranslations("SimulatorPage");
+  const tCommon = useTranslations("Common");
   const locale = useLocale();
   const [tier, setTier] = useState<TierKey>("real_estate");
   const cfg = TIERS[tier];
@@ -407,6 +408,7 @@ export function Simulator() {
           title={explainModal.title}
           text={explainModal.text}
           okCallback={() => setExplainModal(null)}
+          okLabel={tCommon("ok")}
         />
       )}
 

@@ -33,6 +33,7 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
   const showSearch = !searchHiddenPaths?.includes(pathname);
   const showCredits = !creditsHiddenPaths?.includes(pathname);
   const t = useTranslations("Navbar");
+  const tCommon = useTranslations("Common");
   const locale = useLocale();
   const whisperLang = locale.slice(0, 2);
   const searchQuery = useSearchQuery();
@@ -134,6 +135,8 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
           panelMaxWidth="480px"
           position="top"
           backgroundBlur=""
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         >
           <Box display="flex" flexDirection="column" gap={12}>
             <TextInput

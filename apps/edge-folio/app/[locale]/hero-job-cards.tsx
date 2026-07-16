@@ -16,6 +16,7 @@ interface HeroJobCardsProps {
 // exact same JobCard as the jobs dashboard, with working save/delete handlers.
 export function HeroJobCards({ jobs }: HeroJobCardsProps) {
   const t = useTranslations("JobsPage");
+  const tCommon = useTranslations("Common");
   const [postings, setPostings] = useState<JobPosting[]>(jobs);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -106,6 +107,8 @@ export function HeroJobCards({ jobs }: HeroJobCardsProps) {
           text={t("confirmDeleteText")}
           okCallback={confirmDelete}
           cancelCallback={() => setPendingDelete(null)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       )}
     </>

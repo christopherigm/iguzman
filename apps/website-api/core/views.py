@@ -11,7 +11,8 @@ from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.permissions import IsSystemAdmin
+from core.permissions import IsSystemAdmin, show_disabled
+from .cache import invalidate_pattern as _invalidate_pattern
 from .models import Brand, CompanyHighlight, CompanyHighlightItem, SuccessStory, SuccessStoryImage, System
 from .serializers import (
     AiChatSerializer,
@@ -40,14 +41,6 @@ CACHE_TTL = 300  # 5 minutes
 def _sse_data(payload):
     """Serialize one Server-Sent Events data frame."""
     return f"data: {json.dumps(payload)}\n\n"
-
-
-def _invalidate_pattern(pattern):
-    """Delete all keys matching a glob pattern (Redis only; silently skipped on LocMemCache)."""
-    try:
-        cache.delete_pattern(pattern)
-    except AttributeError:
-        pass
 
 
 class SystemListView(APIView):
@@ -177,10 +170,24 @@ class SystemView(APIView):
         return Response(SystemSerializer(instance, context={"request": request}).data)
 
 
+def _disabled_suffix(disabled_visible):
+    """Cache-key suffix separating an admin response (which contains disabled
+    records) from the public one. Derived from the resolved flag, never the raw
+    param, so the two can never share an entry. The existing ``*`` invalidation
+    patterns match both variants.
+    """
+    return ":include_disabled" if disabled_visible else ""
+
+
 class SuccessStoryListView(APIView):
     """
     GET  /api/success-stories/   - list stories for the current system (public).
     POST /api/success-stories/   - create a new story (admin only).
+
+    Query params (GET):
+      system           - filter by system pk
+      include_disabled - 'true' to also return disabled stories (system admins
+                         only; ignored for everyone else)
     """
 
     def get_permissions(self):
@@ -195,25 +202,25 @@ class SuccessStoryListView(APIView):
         return System.objects.filter(host=host, enabled=True).first()
 
     def get(self, request):
+        disabled_visible = show_disabled(request)
+        suffix = _disabled_suffix(disabled_visible)
         system_id = request.query_params.get('system')
         if system_id:
-            cache_key = f"core:success_stories:system:{system_id}"
-            cached = cache.get(cache_key)
-            if cached is not None:
-                return Response(cached)
-            qs = SuccessStory.objects.filter(system_id=system_id, enabled=True).prefetch_related("images")
-            data = SuccessStorySerializer(qs, many=True, context={"request": request}).data
-            cache.set(cache_key, data, CACHE_TTL)
-            return Response(data)
-        # Existing host-based resolution
-        system = self._resolve_system(request)
-        if system is None:
-            return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
-        cache_key = f"core:success_stories:{system.host}"
+            cache_key = f"core:success_stories:system:{system_id}{suffix}"
+        else:
+            # Existing host-based resolution
+            system = self._resolve_system(request)
+            if system is None:
+                return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
+            system_id = system.id
+            cache_key = f"core:success_stories:{system.host}{suffix}"
+
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
-        qs = SuccessStory.objects.filter(system=system, enabled=True).prefetch_related("images")
+        qs = SuccessStory.objects.filter(system_id=system_id).prefetch_related("images")
+        if not disabled_visible:
+            qs = qs.filter(enabled=True)
         data = SuccessStorySerializer(qs, many=True, context={"request": request}).data
         cache.set(cache_key, data, CACHE_TTL)
         return Response(data)
@@ -427,25 +434,25 @@ class CompanyHighlightListView(APIView):
         return System.objects.filter(host=host, enabled=True).first()
 
     def get(self, request):
+        disabled_visible = show_disabled(request)
+        suffix = _disabled_suffix(disabled_visible)
         system_id = request.query_params.get('system')
         if system_id:
-            cache_key = f"core:highlights:system:{system_id}"
-            cached = cache.get(cache_key)
-            if cached is not None:
-                return Response(cached)
-            qs = CompanyHighlight.objects.filter(system_id=system_id, enabled=True).prefetch_related("items")
-            data = CompanyHighlightSerializer(qs, many=True, context={"request": request}).data
-            cache.set(cache_key, data, CACHE_TTL)
-            return Response(data)
-        # Existing host-based resolution
-        system = self._resolve_system(request)
-        if system is None:
-            return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
-        cache_key = f"core:highlights:{system.host}"
+            cache_key = f"core:highlights:system:{system_id}{suffix}"
+        else:
+            # Existing host-based resolution
+            system = self._resolve_system(request)
+            if system is None:
+                return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
+            system_id = system.id
+            cache_key = f"core:highlights:{system.host}{suffix}"
+
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
-        qs = CompanyHighlight.objects.filter(system=system, enabled=True).prefetch_related("items")
+        qs = CompanyHighlight.objects.filter(system_id=system_id).prefetch_related("items")
+        if not disabled_visible:
+            qs = qs.filter(enabled=True)
         data = CompanyHighlightSerializer(qs, many=True, context={"request": request}).data
         cache.set(cache_key, data, CACHE_TTL)
         return Response(data)
@@ -672,25 +679,25 @@ class BrandListCreateView(APIView):
         return [IsSystemAdmin()]
 
     def get(self, request):
+        disabled_visible = show_disabled(request)
+        suffix = _disabled_suffix(disabled_visible)
         system_id = request.query_params.get("system")
         if system_id:
-            cache_key = f"core:brands:system:{system_id}"
-            cached = cache.get(cache_key)
-            if cached is not None:
-                return Response(cached)
-            qs = Brand.objects.filter(system_id=system_id, enabled=True)
-            data = BrandSerializer(qs, many=True, context={"request": request}).data
-            cache.set(cache_key, data, CACHE_TTL)
-            return Response(data)
-        host = (request.META.get("HTTP_X_WEBSITE_HOST") or request.get_host()).split(":")[0]
-        system = System.objects.filter(host=host, enabled=True).first()
-        if system is None:
-            return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
-        cache_key = f"core:brands:{system.host}"
+            cache_key = f"core:brands:system:{system_id}{suffix}"
+        else:
+            host = (request.META.get("HTTP_X_WEBSITE_HOST") or request.get_host()).split(":")[0]
+            system = System.objects.filter(host=host, enabled=True).first()
+            if system is None:
+                return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
+            system_id = system.id
+            cache_key = f"core:brands:{system.host}{suffix}"
+
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
-        qs = Brand.objects.filter(system=system, enabled=True)
+        qs = Brand.objects.filter(system_id=system_id)
+        if not disabled_visible:
+            qs = qs.filter(enabled=True)
         data = BrandSerializer(qs, many=True, context={"request": request}).data
         cache.set(cache_key, data, CACHE_TTL)
         return Response(data)

@@ -479,6 +479,7 @@ function JobSearchesCard({
 
 export function JobsPage() {
   const t = useTranslations("JobsPage");
+  const tCommon = useTranslations("Common");
   // The refine modal renders the profile's JobSearchPanel, whose save toasts use
   // the ProfilePage namespace; reuse those keys for the OK-driven save feedback.
   const tProfile = useTranslations("ProfilePage");
@@ -1149,6 +1150,8 @@ export function JobsPage() {
           }}
           cancelCallback={() => setRefineOpen(false)}
           panelMaxWidth="640px"
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         >
           <JobSearchPanel
             ref={jobSearchPanelRef}
@@ -1164,6 +1167,8 @@ export function JobsPage() {
           text={t("confirmDeleteText")}
           okCallback={confirmDelete}
           cancelCallback={() => setPendingDelete(null)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       )}
     </Container>

@@ -4,10 +4,12 @@ import { Button } from "@repo/ui/core-elements/button";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
-import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { ShareButton } from "@repo/ui/core-elements/share-button";
+import { getSession } from "@repo/auth/session";
 import type { ServiceDetail, ServiceVariantFull } from "@/lib/catalog";
+import { isFavorite } from "@/lib/favorites";
 import { toShareDescription } from "@/lib/metadata";
+import { FavoriteButton } from "./favorite-button";
 import { VariantSelectorClient } from "./variant-selector-client";
 
 function formatPrice(amount: string, currency: string): string {
@@ -49,7 +51,11 @@ export async function ServiceDetailPanel({
   selectedVariant,
   locale,
 }: ServiceDetailProps) {
-  const t = await getTranslations("ItemDetail");
+  const [t, session, favorite] = await Promise.all([
+    getTranslations("ItemDetail"),
+    getSession(),
+    isFavorite("service", service.id),
+  ]);
 
   const name =
     (locale === "en" ? service.en_name : service.name) ??
@@ -106,12 +112,11 @@ export async function ServiceDetailPanel({
               copiedLabel={t("linkCopied")}
               size="md"
             />
-            {/* Placeholder - favorites has no persistence yet. */}
-            <IconButton
-              icon="/icons/favorite.svg"
-              aria-label={t("addToFavorites")}
-              title={t("addToFavorites")}
-              kind="error"
+            <FavoriteButton
+              kind="service"
+              id={service.id}
+              initialFavorite={favorite}
+              isLoggedIn={session !== null}
               size="md"
             />
           </Box>

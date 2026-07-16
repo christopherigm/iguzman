@@ -4,8 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { AdminEntityList } from "@/components/admin/admin-entity-list";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
-import { listServiceCategories, deleteServiceCategory } from "@/lib/admin-api";
+import {
+  listServiceCategories,
+  deleteServiceCategory,
+  updateServiceCategory,
+} from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
+import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
 
 export default function AdminServiceCategoriesPage() {
   const t = useTranslations("Admin");
@@ -32,6 +37,11 @@ export default function AdminServiceCategoriesPage() {
     })();
   }, [load]);
 
+  const handleToggleEnabled = useToggleEnabled(
+    updateServiceCategory,
+    setItems,
+    setError,
+  );
   const handleDelete = async (id: number) => {
     try {
       await deleteServiceCategory(id);
@@ -42,7 +52,7 @@ export default function AdminServiceCategoriesPage() {
   };
 
   const columns = [
-    { key: "image", label: "Image" },
+    { key: "image", label: "Image", compact: true },
     { key: "name", label: t("name") },
     { key: "slug", label: "Slug" },
     { key: "item_count", label: t("items") ?? "Items" },
@@ -64,6 +74,7 @@ export default function AdminServiceCategoriesPage() {
         columns={columns}
         basePath="/admin/service-categories"
         onDelete={handleDelete}
+        onToggleEnabled={handleToggleEnabled}
         loading={loading}
         error={error}
       />

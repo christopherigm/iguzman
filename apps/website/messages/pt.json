@@ -36,7 +36,8 @@
     "home": "Início",
     "admin": "Administração",
     "products": "Produtos",
-    "services": "Serviços"
+    "services": "Serviços",
+    "favorites": "Favoritos"
   },
   "AuthPage": {
     "tabSignIn": "Entrar",
@@ -151,7 +152,8 @@
     "modalityOnline": "Online",
     "modalityInPerson": "Presencial",
     "modalityHybrid": "Híbrido",
-    "expandVideo": "Ampliar vídeo"
+    "expandVideo": "Ampliar vídeo",
+    "removeFromFavorites": "Remover dos favoritos"
   },
   "CatalogCategories": {
     "heading": "Categorias"
@@ -184,7 +186,9 @@
   "SuccessStories": {
     "heading": "Histórias de Sucesso",
     "readMore": "Leia mais",
-    "empty": "Ainda não há histórias de sucesso. Volte em breve."
+    "empty": "Ainda não há histórias de sucesso. Volte em breve.",
+    "previous": "História anterior",
+    "next": "Próxima história"
   },
   "SuccessStoryDetail": {
     "home": "Início",
@@ -197,6 +201,11 @@
   "Highlights": {
     "heading": "Destaques",
     "empty": "Ainda não há destaques. Volte em breve."
+  },
+  "Favorites": {
+    "heading": "Favoritos",
+    "home": "Início",
+    "empty": "Ainda não há favoritos. Toque no coração de qualquer produto ou serviço para salvá-lo aqui."
   },
   "VerifyEmailPage": {
     "loading": "Verificando sua conta, aguarde…",
@@ -231,6 +240,7 @@
     "save": "Salvar",
     "saving": "Salvando…",
     "cancel": "Cancelar",
+    "confirmDeleteTitle": "Excluir item?",
     "confirmDelete": "Tem certeza de que deseja excluir este item?",
     "deleted": "Excluído com sucesso",
     "saved": "Salvo com sucesso",
@@ -242,6 +252,7 @@
     "noItems": "Nenhum item encontrado.",
     "name": "Nome",
     "enabled": "Habilitado",
+    "toggleEnabled": "Ativar ou desativar",
     "actions": "Ações",
     "createdAt": "Criado em",
     "active": "Ativo",

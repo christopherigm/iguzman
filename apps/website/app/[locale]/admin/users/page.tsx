@@ -37,7 +37,7 @@ export default function AdminUsersPage() {
   }, [load]);
 
   const columns: Column[] = [
-    { key: "profile_picture", label: "Avatar" },
+    { key: "profile_picture", label: "Avatar", compact: true },
     {
       key: "email",
       label: "Email",

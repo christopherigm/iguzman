@@ -2,7 +2,8 @@ from django.core.cache import cache
 
 from rest_framework import status
 from rest_framework.permissions import AllowAny
-from core.permissions import IsSystemAdmin
+from core.cache import invalidate_pattern as _invalidate_pattern
+from core.permissions import IsSystemAdmin, show_disabled
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -17,17 +18,19 @@ def _list_key(prefix, params):
     return f"{prefix}:{flat}" if flat else prefix
 
 
-def _invalidate_pattern(pattern):
-    """Delete all keys matching a glob pattern.
+def _scoped_list_key(prefix, request, system_id, disabled_visible):
+    """Cache key for a list endpoint, scoped to the resolved system and to the
+    *effective* disabled-visibility.
 
-    django-redis exposes delete_pattern(); the local-memory cache used in
-    development does not, so we silently skip invalidation there and let
-    the TTL handle expiry instead.
+    Keying off the resolved flag rather than the raw include_disabled param is what
+    keeps an admin's response (which contains disabled records) from being served
+    to an anonymous caller who passes the same param.
     """
-    try:
-        cache.delete_pattern(pattern)
-    except AttributeError:
-        pass
+    params = {k: v for k, v in request.query_params.items() if k != 'include_disabled'}
+    params['system'] = system_id
+    if disabled_visible:
+        params['include_disabled'] = '1'
+    return _list_key(prefix, params)
 
 
 def _resolve_system(request):
@@ -83,22 +86,22 @@ class ProductCategoryListCreateView(APIView):
 
     def get(self, request):
         system_id = request.query_params.get('system')
-        if system_id:
-            cache_key = _list_key('catalog:product_categories', request.query_params)
-        else:
+        if not system_id:
             system = _resolve_system(request)
             if system is None:
                 return Response([], status=status.HTTP_200_OK)
             system_id = system.id
-            params = dict(request.query_params)
-            params['system'] = system_id
-            cache_key = _list_key('catalog:product_categories', params)
+
+        disabled_visible = show_disabled(request)
+        cache_key = _scoped_list_key('catalog:product_categories', request, system_id, disabled_visible)
 
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
 
-        qs = ProductCategory.objects.filter(enabled=True, system_id=system_id)
+        qs = ProductCategory.objects.filter(system_id=system_id)
+        if not disabled_visible:
+            qs = qs.filter(enabled=True)
 
         parent_id = request.query_params.get('parent')
         if parent_id == 'null':
@@ -180,6 +183,8 @@ class ProductListCreateView(APIView):
       featured  - 'true' to show only featured products
       in_stock  - 'true' to show only in-stock products
       search    - text search on name
+      include_disabled - 'true' to also return disabled products (system admins
+                  only; ignored for everyone else)
     """
 
     def get_permissions(self):
@@ -189,22 +194,22 @@ class ProductListCreateView(APIView):
 
     def get(self, request):
         system_id = request.query_params.get('system')
-        if system_id:
-            cache_key = _list_key('catalog:products', request.query_params)
-        else:
+        if not system_id:
             system = _resolve_system(request)
             if system is None:
                 return Response([], status=status.HTTP_200_OK)
             system_id = system.id
-            params = dict(request.query_params)
-            params['system'] = system_id
-            cache_key = _list_key('catalog:products', params)
+
+        disabled_visible = show_disabled(request)
+        cache_key = _scoped_list_key('catalog:products', request, system_id, disabled_visible)
 
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
 
-        qs = Product.objects.filter(enabled=True, system_id=system_id).select_related('brand', 'category', 'system').prefetch_related('images', 'variants__option_values__option', 'variants__images')
+        qs = Product.objects.filter(system_id=system_id).select_related('brand', 'category', 'system').prefetch_related('images', 'variants__option_values__option', 'variants__images')
+        if not disabled_visible:
+            qs = qs.filter(enabled=True)
 
         category_id = request.query_params.get('category')
         if category_id:
@@ -379,22 +384,22 @@ class ServiceCategoryListCreateView(APIView):
 
     def get(self, request):
         system_id = request.query_params.get('system')
-        if system_id:
-            cache_key = _list_key('catalog:service_categories', request.query_params)
-        else:
+        if not system_id:
             system = _resolve_system(request)
             if system is None:
                 return Response([], status=status.HTTP_200_OK)
             system_id = system.id
-            params = dict(request.query_params)
-            params['system'] = system_id
-            cache_key = _list_key('catalog:service_categories', params)
+
+        disabled_visible = show_disabled(request)
+        cache_key = _scoped_list_key('catalog:service_categories', request, system_id, disabled_visible)
 
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
 
-        qs = ServiceCategory.objects.filter(enabled=True, system_id=system_id)
+        qs = ServiceCategory.objects.filter(system_id=system_id)
+        if not disabled_visible:
+            qs = qs.filter(enabled=True)
 
         parent_id = request.query_params.get('parent')
         if parent_id == 'null':
@@ -476,6 +481,8 @@ class ServiceListCreateView(APIView):
       featured  - 'true' to show only featured services
       modality  - filter by modality (online/in_person/hybrid)
       search    - text search on name
+      include_disabled - 'true' to also return disabled services (system admins
+                  only; ignored for everyone else)
     """
 
     def get_permissions(self):
@@ -485,22 +492,22 @@ class ServiceListCreateView(APIView):
 
     def get(self, request):
         system_id = request.query_params.get('system')
-        if system_id:
-            cache_key = _list_key('catalog:services', request.query_params)
-        else:
+        if not system_id:
             system = _resolve_system(request)
             if system is None:
                 return Response([], status=status.HTTP_200_OK)
             system_id = system.id
-            params = dict(request.query_params)
-            params['system'] = system_id
-            cache_key = _list_key('catalog:services', params)
+
+        disabled_visible = show_disabled(request)
+        cache_key = _scoped_list_key('catalog:services', request, system_id, disabled_visible)
 
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
 
-        qs = Service.objects.filter(enabled=True, system_id=system_id).select_related('brand', 'category', 'system').prefetch_related('variants__option_values__option')
+        qs = Service.objects.filter(system_id=system_id).select_related('brand', 'category', 'system').prefetch_related('variants__option_values__option')
+        if not disabled_visible:
+            qs = qs.filter(enabled=True)
 
         category_id = request.query_params.get('category')
         if category_id:
@@ -608,21 +615,21 @@ class VariantOptionListCreateView(APIView):
 
     def get(self, request):
         system_id = request.query_params.get('system')
-        if system_id:
-            cache_key = _list_key('catalog:variant_options', request.query_params)
-        else:
+        if not system_id:
             system = _resolve_system(request)
             if system is None:
                 return Response([], status=status.HTTP_200_OK)
             system_id = system.id
-            params = dict(request.query_params)
-            params['system'] = system_id
-            cache_key = _list_key('catalog:variant_options', params)
+
+        disabled_visible = show_disabled(request)
+        cache_key = _scoped_list_key('catalog:variant_options', request, system_id, disabled_visible)
 
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
-        qs = VariantOption.objects.filter(enabled=True, system_id=system_id).prefetch_related('values')
+        qs = VariantOption.objects.filter(system_id=system_id).prefetch_related('values')
+        if not disabled_visible:
+            qs = qs.filter(enabled=True)
         data = VariantOptionSerializer(qs, many=True, context={'request': request}).data
         cache.set(cache_key, data, CACHE_TTL)
         return Response(data)

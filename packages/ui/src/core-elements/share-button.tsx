@@ -20,6 +20,13 @@ export interface ShareButtonProps extends Omit<
   url?: string;
   /** SVG path for the share icon. */
   icon?: string;
+  /**
+   * Stop the click reaching an enclosing link. Set when the button sits inside
+   * a card that is itself a link, where a bare click would navigate to the item
+   * instead of sharing it. Such a card must also pass `url` - the default
+   * target is the current page, which there is the grid, not the item.
+   */
+  stopPropagation?: boolean;
 }
 
 /**
@@ -45,6 +52,7 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
   url,
   icon = "/icons/share.svg",
   kind = "success",
+  stopPropagation = false,
   ...iconButtonProps
 }) => {
   const [linkCopied, setLinkCopied] = useState(false);
@@ -56,7 +64,11 @@ export const ShareButton: React.FC<ShareButtonProps> = ({
     return () => clearTimeout(timer);
   }, [linkCopied]);
 
-  async function handleShare() {
+  async function handleShare(e: React.MouseEvent) {
+    if (stopPropagation) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (typeof window === "undefined") return;
     const shareUrl = url ?? window.location.href;
 

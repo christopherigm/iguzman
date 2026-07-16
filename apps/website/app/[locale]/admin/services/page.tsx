@@ -8,8 +8,9 @@ import {
   EmptyCell,
 } from "@/components/admin/admin-entity-list";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
-import { listServices, deleteService } from "@/lib/admin-api";
+import { listServices, deleteService, updateService } from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
+import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
 
 export default function AdminServicesPage() {
   const t = useTranslations("Admin");
@@ -36,6 +37,11 @@ export default function AdminServicesPage() {
     })();
   }, [load]);
 
+  const handleToggleEnabled = useToggleEnabled(
+    updateService,
+    setItems,
+    setError,
+  );
   const handleDelete = async (id: number) => {
     try {
       await deleteService(id);
@@ -46,7 +52,7 @@ export default function AdminServicesPage() {
   };
 
   const columns = [
-    { key: "image", label: "Image" },
+    { key: "image", label: "Image", compact: true },
     { key: "name", label: t("name") },
     { key: "sku", label: "SKU" },
     {
@@ -77,6 +83,7 @@ export default function AdminServicesPage() {
         columns={columns}
         basePath="/admin/services"
         onDelete={handleDelete}
+        onToggleEnabled={handleToggleEnabled}
         loading={loading}
         error={error}
       />

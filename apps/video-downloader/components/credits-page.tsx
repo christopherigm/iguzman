@@ -61,6 +61,7 @@ function PackButton({
 
 export function CreditsPageContent() {
   const t = useTranslations("Credits");
+  const tCommon = useTranslations("Common");
   const locale = useLocale();
   // Client-mount flag without a setState-in-effect: false on the server, true
   // after hydration.
@@ -552,6 +553,8 @@ export function CreditsPageContent() {
           text={t("deleteKeyText")}
           okCallback={handleDeleteKey}
           cancelCallback={() => setShowDeleteModal(false)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       ) : null}
 
@@ -562,6 +565,7 @@ export function CreditsPageContent() {
             credits: couponModal.creditsAdded ?? 0,
           })}
           okCallback={() => setCouponModal(null)}
+          okLabel={tCommon("ok")}
         />
       ) : null}
 
@@ -570,6 +574,7 @@ export function CreditsPageContent() {
           title={t("couponErrorTitle")}
           text={t("couponErrorText")}
           okCallback={() => setCouponModal(null)}
+          okLabel={tCommon("ok")}
         />
       ) : null}
     </>

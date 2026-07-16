@@ -56,7 +56,9 @@ export async function updateSystem(pk: number, data: Record<string, unknown>) {
 
 // ---- Products ----
 export async function listProducts(systemId: number) {
-  const res = await adminFetch(`/api/catalog/products/?system=${systemId}`);
+  const res = await adminFetch(
+    `/api/catalog/products/?system=${systemId}&include_disabled=true`,
+  );
   return parseResponse<Record<string, unknown>[]>(res);
 }
 export async function getProduct(pk: number) {
@@ -121,7 +123,7 @@ export async function updateProductImage(
 // ---- Product Categories ----
 export async function listProductCategories(systemId: number) {
   const res = await adminFetch(
-    `/api/catalog/product-categories/?system=${systemId}`,
+    `/api/catalog/product-categories/?system=${systemId}&include_disabled=true`,
   );
   return parseResponse<Record<string, unknown>[]>(res);
 }
@@ -155,7 +157,9 @@ export async function deleteProductCategory(pk: number) {
 
 // ---- Services ----
 export async function listServices(systemId: number) {
-  const res = await adminFetch(`/api/catalog/services/?system=${systemId}`);
+  const res = await adminFetch(
+    `/api/catalog/services/?system=${systemId}&include_disabled=true`,
+  );
   return parseResponse<Record<string, unknown>[]>(res);
 }
 export async function getService(pk: number) {
@@ -220,7 +224,7 @@ export async function updateServiceImage(
 // ---- Service Categories ----
 export async function listServiceCategories(systemId: number) {
   const res = await adminFetch(
-    `/api/catalog/service-categories/?system=${systemId}`,
+    `/api/catalog/service-categories/?system=${systemId}&include_disabled=true`,
   );
   return parseResponse<Record<string, unknown>[]>(res);
 }
@@ -254,7 +258,9 @@ export async function deleteServiceCategory(pk: number) {
 
 // ---- Brands ----
 export async function listBrands(systemId: number) {
-  const res = await adminFetch(`/api/brands/?system=${systemId}`);
+  const res = await adminFetch(
+    `/api/brands/?system=${systemId}&include_disabled=true`,
+  );
   return parseResponse<Record<string, unknown>[]>(res);
 }
 export async function getBrand(pk: number) {
@@ -283,7 +289,7 @@ export async function deleteBrand(pk: number) {
 // ---- Variant Options ----
 export async function listVariantOptions(systemId: number) {
   const res = await adminFetch(
-    `/api/catalog/variant-options/?system=${systemId}`,
+    `/api/catalog/variant-options/?system=${systemId}&include_disabled=true`,
   );
   return parseResponse<Record<string, unknown>[]>(res);
 }
@@ -317,7 +323,9 @@ export async function deleteVariantOption(pk: number) {
 
 // ---- Success Stories ----
 export async function listSuccessStories(systemId: number) {
-  const res = await adminFetch(`/api/success-stories/?system=${systemId}`);
+  const res = await adminFetch(
+    `/api/success-stories/?system=${systemId}&include_disabled=true`,
+  );
   return parseResponse<Record<string, unknown>[]>(res);
 }
 export async function getSuccessStory(pk: number) {
@@ -384,7 +392,9 @@ export async function deleteSuccessStoryImage(storyId: number, imgId: number) {
 
 // ---- Highlights ----
 export async function listHighlights(systemId: number) {
-  const res = await adminFetch(`/api/highlights/?system=${systemId}`);
+  const res = await adminFetch(
+    `/api/highlights/?system=${systemId}&include_disabled=true`,
+  );
   return parseResponse<Record<string, unknown>[]>(res);
 }
 export async function getHighlight(pk: number) {

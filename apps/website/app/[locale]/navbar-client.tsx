@@ -51,6 +51,9 @@ export function NavbarClient({
     ...(serviceCount > 0 && !pathname.startsWith("/categories/services")
       ? [{ label: t("services"), href: "/categories/services" }]
       : []),
+    ...(isLoggedIn && !pathname.startsWith("/favorites")
+      ? [{ label: t("favorites"), href: "/favorites" }]
+      : []),
     ...(isAdmin && !pathname.startsWith("/admin")
       ? [{ label: t("admin"), href: "/admin" }]
       : []),

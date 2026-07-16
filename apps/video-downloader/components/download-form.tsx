@@ -377,6 +377,7 @@ export function DownloadForm({
   onRemoveVideosByUuids,
 }: DownloadFormProps = {}) {
   const t = useTranslations("DownloadForm");
+  const tCommon = useTranslations("Common");
   const router = useRouter();
   const { registerUrls } = useOPFSUrls();
   const [url, setUrl] = useState("");
@@ -1312,6 +1313,8 @@ export function DownloadForm({
           okCallback={() => router.push("/credits")}
           cancelCallback={() => setShowCreditsModal(false)}
           panelMaxWidth="440px"
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       )}
 
@@ -1323,6 +1326,8 @@ export function DownloadForm({
           okCallback={handleDuplicateClose}
           cancelCallback={handleDuplicateClose}
           panelMaxWidth="440px"
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         >
           <Box display="flex" flexDirection="column" gap={8}>
             {isServerPath(duplicateEntry.downloadURL) && (

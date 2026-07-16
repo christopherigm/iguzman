@@ -1,5 +1,6 @@
 import React, { CSSProperties } from "react";
 import { HeroVideo } from "./hero-video";
+import { ParallaxLayer } from "./parallax-layer";
 import "./hero.css";
 
 export type HeroProps = {
@@ -15,6 +16,8 @@ export type HeroProps = {
   backgroundAlt?: string;
   /** Slogan text rendered centred below the logo (or centred alone if no logo). */
   slogan?: string | null;
+  /** Drift the background against the page as it scrolls. Pass false for a static background. */
+  parallax?: boolean;
   /** Additional styles applied to the outermost container. */
   style?: CSSProperties;
   className?: string;
@@ -25,7 +28,12 @@ export type HeroProps = {
  * bottom-to-mid gradient overlay, and a centred logo.
  *
  * This component is a server component. The video playback is delegated to
- * `HeroVideo` ('use client') so only that subtree is hydrated on the client.
+ * `HeroVideo` ('use client') and the scroll drift to `ParallaxLayer`
+ * ('use client'), so only those subtrees are hydrated on the client.
+ *
+ * The background drifts with the page by default (`parallax`); the logo and
+ * slogan sit outside that layer and scroll with the hero box, which is what
+ * separates the two planes.
  *
  * Priority: videoUrl → backgroundImage
  *
@@ -44,6 +52,7 @@ export function Hero({
   logoAlt = "",
   backgroundAlt = "",
   slogan,
+  parallax = true,
   style,
   className,
 }: HeroProps) {
@@ -69,21 +78,23 @@ export function Hero({
       }}
     >
       {/* ── Background layer ─────────────────────────────────── */}
-      {hasVideo && videoUrl && <HeroVideo url={videoUrl} />}
+      <ParallaxLayer disabled={!parallax}>
+        {hasVideo && videoUrl && <HeroVideo url={videoUrl} />}
 
-      {!hasVideo && backgroundImage && (
-        <img
-          src={backgroundImage}
-          alt={backgroundAlt}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-          }}
-        />
-      )}
+        {!hasVideo && backgroundImage && (
+          <img
+            src={backgroundImage}
+            alt={backgroundAlt}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+          />
+        )}
+      </ParallaxLayer>
 
       {/* ── Gradient overlay (bottom → mid) ──────────────────── */}
       <div

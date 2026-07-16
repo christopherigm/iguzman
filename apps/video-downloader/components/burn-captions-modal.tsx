@@ -188,6 +188,7 @@ export function BurnCaptionsModal({
   videoWidth,
 }: BurnCaptionsModalProps) {
   const t = useTranslations("VideoGrid");
+  const tCommon = useTranslations("Common");
   const [config, setConfig] = useState<BurnCaptionsConfig>(DEFAULT_CONFIG);
   // No stored key means no credits and nothing to fetch; seed those via lazy
   // init so the effect only runs the (async) fetch when a key exists.
@@ -257,6 +258,8 @@ export function BurnCaptionsModal({
       okCallback={() => onConfirm(config)}
       cancelCallback={onCancel}
       panelMaxWidth="480px"
+      okLabel={tCommon("ok")}
+      cancelLabel={tCommon("cancel")}
     >
       <Box className="bcm-config">
         {/* Subtitle preview */}

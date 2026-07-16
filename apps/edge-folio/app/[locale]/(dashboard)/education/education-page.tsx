@@ -409,6 +409,7 @@ function EducationCard({ entry, onEdit, onDelete }: CardProps) {
 
 export function EducationPage() {
   const t = useTranslations("EducationPage");
+  const tCommon = useTranslations("Common");
   const [entries, setEntries] = useState<Education[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -542,6 +543,8 @@ export function EducationPage() {
             void handleDelete(id);
           }}
           cancelCallback={() => setPendingDeleteId(null)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       )}
 
@@ -553,6 +556,8 @@ export function EducationPage() {
           cancelCallback={closeForm}
           okDisabled={!formCanSubmit}
           panelMaxWidth="600px"
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         >
           <EducationForm
             initial={editing ?? undefined}

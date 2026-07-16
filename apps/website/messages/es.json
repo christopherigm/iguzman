@@ -36,7 +36,8 @@
     "home": "Inicio",
     "admin": "Administrador",
     "products": "Productos",
-    "services": "Servicios"
+    "services": "Servicios",
+    "favorites": "Favoritos"
   },
   "AuthPage": {
     "tabSignIn": "Iniciar sesión",
@@ -159,7 +160,8 @@
     "modalityOnline": "En línea",
     "modalityInPerson": "En persona",
     "modalityHybrid": "Híbrido",
-    "expandVideo": "Ampliar video"
+    "expandVideo": "Ampliar video",
+    "removeFromFavorites": "Quitar de favoritos"
   },
   "CategoryDetail": {
     "home": "Inicio",
@@ -184,7 +186,9 @@
   "SuccessStories": {
     "heading": "Historias de Éxito",
     "readMore": "Leer más",
-    "empty": "Aún no hay historias de éxito. Vuelve pronto."
+    "empty": "Aún no hay historias de éxito. Vuelve pronto.",
+    "previous": "Historia anterior",
+    "next": "Historia siguiente"
   },
   "SuccessStoryDetail": {
     "home": "Inicio",
@@ -197,6 +201,11 @@
   "Highlights": {
     "heading": "Destacados",
     "empty": "Aún no hay destacados. Vuelve pronto."
+  },
+  "Favorites": {
+    "heading": "Favoritos",
+    "home": "Inicio",
+    "empty": "Aún no hay favoritos. Toca el corazón en cualquier producto o servicio para guardarlo aquí."
   },
   "VerifyEmailPage": {
     "loading": "Verificando tu cuenta, por favor espera…",
@@ -231,6 +240,7 @@
     "save": "Guardar",
     "saving": "Guardando…",
     "cancel": "Cancelar",
+    "confirmDeleteTitle": "¿Eliminar elemento?",
     "confirmDelete": "¿Estás seguro de que deseas eliminar este elemento?",
     "deleted": "Eliminado correctamente",
     "saved": "Guardado correctamente",
@@ -242,6 +252,7 @@
     "noItems": "No se encontraron elementos.",
     "name": "Nombre",
     "enabled": "Habilitado",
+    "toggleEnabled": "Activar o desactivar",
     "actions": "Acciones",
     "createdAt": "Creado",
     "active": "Activo",

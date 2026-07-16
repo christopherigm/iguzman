@@ -26,6 +26,7 @@ import "./infinite-page.css";
 
 function InfinitePageInner() {
   const t = useTranslations("InfinitePage");
+  const tCommon = useTranslations("Common");
   const { completed, removeCompleted, updateCompleted, storeLoaded } =
     useVideoStore();
   const { getUrls, registerUrls, revokeUrls } = useOPFSUrls();
@@ -667,6 +668,8 @@ function InfinitePageInner() {
           text={t("confirmDeleteText")}
           okCallback={confirmAndDelete}
           cancelCallback={() => setConfirmDelete(false)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       )}
     </>

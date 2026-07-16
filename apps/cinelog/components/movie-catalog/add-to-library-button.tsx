@@ -42,6 +42,7 @@ export function AddToLibraryButton({
   onAdded,
 }: Props) {
   const t = useTranslations("CatalogPage");
+  const tCommon = useTranslations("Common");
   const tFormat = useTranslations("MovieFormat");
   const [open, setOpen] = useState(false);
   const [format, setFormat] = useState<OwnableFormat | "">("");
@@ -122,6 +123,8 @@ export function AddToLibraryButton({
             okCallback={handleConfirm}
             cancelCallback={handleCancel}
             okDisabled={!format || saving || digitalLinkMissing}
+            okLabel={tCommon("ok")}
+            cancelLabel={tCommon("cancel")}
           >
             <Box display="flex" flexDirection="column" gap={8}>
               <Box

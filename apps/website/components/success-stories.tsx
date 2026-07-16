@@ -1,7 +1,7 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { getSuccessStories } from "@/lib/success-stories";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { StoriesSlider } from "./stories-slider";
+import { StoriesSliderClient } from "./stories-slider-client";
 import "./success-stories.css";
 import Box from "@repo/ui/core-elements/box";
 
@@ -21,7 +21,7 @@ export async function SuccessStories() {
           {t("heading")}
         </Typography>
       </Box>
-      <StoriesSlider
+      <StoriesSliderClient
         stories={stories}
         locale={locale}
         readMore={t("readMore")}

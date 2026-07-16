@@ -89,6 +89,7 @@ export function MovieFilters({
   onViewChange,
 }: Props) {
   const t = useTranslations("CatalogPage");
+  const tCommon = useTranslations("Common");
   const tFormat = useTranslations("MovieFormat");
   // AI search reuses the same copy as the navbar's search modal.
   const tSearch = useTranslations("Navbar.search");
@@ -224,6 +225,7 @@ export function MovieFilters({
           title={t("formatsModalTitle")}
           text={t("formatsModalText")}
           okCallback={closeModal}
+          okLabel={tCommon("ok")}
         >
           <Box display="flex" flexDirection="column" gap={16}>
             {/* Disc / physical format - single-select icon toggles. */}
@@ -310,6 +312,7 @@ export function MovieFilters({
           title={t("genresModalTitle")}
           text={t("genresModalText")}
           okCallback={closeModal}
+          okLabel={tCommon("ok")}
         >
           <GenreSelector
             categories={categories}
@@ -327,6 +330,8 @@ export function MovieFilters({
           okCallback={handleAiSearch}
           cancelCallback={handleCancelAiSearch}
           panelMaxWidth="480px"
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         >
           <Box display="flex" flexDirection="column" gap={12}>
             <TextInput

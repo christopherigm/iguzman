@@ -96,6 +96,7 @@ function BulletForm({
   onValidityChange,
 }: BulletFormProps) {
   const t = useTranslations("MatrixPage");
+  const tCommon = useTranslations("Common");
   const locale = useLocale();
   const [text, setText] = useState(initial?.text ?? "");
   const [selectedCategory, setSelectedCategory] = useState<Category>(
@@ -180,6 +181,8 @@ function BulletForm({
             paragraphs: t("enhanceParagraphsLabel"),
             length: t("enhanceLengthLabel"),
             wordsPerPara: t("enhanceWordsPerPara"),
+            ok: tCommon("ok"),
+            cancel: tCommon("cancel"),
           }}
           onConfirm={handleConfirmEnhance}
           onCancel={() => setShowEnhanceOptions(false)}
@@ -395,6 +398,7 @@ function CategorySection({
   onBulletApproved,
 }: CategorySectionProps) {
   const t = useTranslations("MatrixPage");
+  const tCommon = useTranslations("Common");
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
   return (
@@ -409,6 +413,8 @@ function CategorySection({
             onBulletDeleted(id);
           }}
           cancelCallback={() => setPendingDeleteId(null)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       )}
       <Box display="flex" flexDirection="column" gap={12}>
@@ -470,6 +476,7 @@ function SkillsPanel({
   onSkillDeleted,
 }: SkillsPanelProps) {
   const t = useTranslations("MatrixPage");
+  const tCommon = useTranslations("Common");
   const [newName, setNewName] = useState("");
   const [newProficiency, setNewProficiency] = useState(3);
   const [adding, setAdding] = useState(false);
@@ -542,6 +549,8 @@ function SkillsPanel({
             handleDelete(id);
           }}
           cancelCallback={() => setPendingDeleteId(null)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       )}
       <Card padding={12}>
@@ -676,6 +685,7 @@ function SkillsPanel({
 
 export function MatrixBoard() {
   const t = useTranslations("MatrixPage");
+  const tCommon = useTranslations("Common");
   const [bullets, setBullets] = useState<BulletPoint[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -842,6 +852,8 @@ export function MatrixBoard() {
           cancelCallback={closeForm}
           okDisabled={!bulletFormCanSubmit}
           panelMaxWidth="600px"
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         >
           <BulletForm
             category={editingBullet?.category ?? "impact"}

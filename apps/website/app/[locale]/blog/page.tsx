@@ -7,7 +7,7 @@ import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Hero } from "@repo/ui/hero";
 import { getSuccessStories } from "@/lib/success-stories";
-import { StoryCard } from "@/components/stories-slider";
+import { StoryCard } from "@/components/story-card";
 
 type Props = {
   params: Promise<{ locale: string }>;

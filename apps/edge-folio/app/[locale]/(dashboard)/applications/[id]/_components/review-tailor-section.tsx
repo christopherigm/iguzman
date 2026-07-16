@@ -38,6 +38,7 @@ function toggleId(
 
 export function ReviewTailorSection({ profile, exportCtl, workflow }: Props) {
   const t = useTranslations("ApplicationDetailPage");
+  const tCommon = useTranslations("Common");
   const locale = useLocale();
   const micLang: "en" | "es" = locale === "es" ? "es" : "en";
 
@@ -59,6 +60,8 @@ export function ReviewTailorSection({ profile, exportCtl, workflow }: Props) {
     paragraphs: t("enhanceParagraphsLabel"),
     length: t("enhanceLengthLabel"),
     wordsPerPara: t("enhanceWordsPerPara"),
+    ok: tCommon("ok"),
+    cancel: tCommon("cancel"),
   };
 
   const {

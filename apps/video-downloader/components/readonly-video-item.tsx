@@ -65,6 +65,7 @@ export function ReadOnlyVideoItem({
   onDuplicate,
 }: ReadOnlyVideoItemProps) {
   const t = useTranslations("VideoGrid");
+  const tCommon = useTranslations("Common");
   const { getUrls, registerUrls } = useOPFSUrls();
   const opfsUrls = video.opfsEnabled ? getUrls(video.uuid) : null;
 
@@ -497,6 +498,8 @@ export function ReadOnlyVideoItem({
             onRemove(video.uuid);
           }}
           cancelCallback={() => setConfirmRemove(false)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
         />
       ) : null}
     </Box>

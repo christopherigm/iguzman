@@ -357,3 +357,32 @@ class PasskeyAuthenticationVerifySerializer(serializers.Serializer):
     system_id = serializers.IntegerField()
     credential = serializers.JSONField()
     challenge_id = serializers.CharField()
+
+
+# ── Favorites ─────────────────────────────────────────────────────────────────
+
+
+class FavoriteSerializer(serializers.Serializer):
+    """A saved item, flattened to the shape the favorites grid renders.
+
+    `item` carries the full catalog payload so the frontend can reuse the same
+    card it uses everywhere else, and `kind` tells it which of the two it got.
+    """
+
+    id = serializers.IntegerField(read_only=True)
+    kind = serializers.CharField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    item = serializers.SerializerMethodField()
+
+    def get_item(self, obj):
+        # Imported here: catalog.serializers imports from core, and a module-level
+        # import would make users ↔ catalog a cycle at app-load time.
+        from catalog.serializers import ProductSerializer, ServiceSerializer
+
+        serializer = ProductSerializer if obj.product_id else ServiceSerializer
+        return serializer(obj.target, context=self.context).data
+
+
+class FavoriteWriteSerializer(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=["product", "service"])
+    id = serializers.IntegerField()
