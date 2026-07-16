@@ -9,7 +9,10 @@ import type { GalleryImage } from "@/components/item-gallery-client";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
-import { ServiceDetailPanel } from "@/components/service-detail";
+import {
+  ServiceDetailPanel,
+  ServiceDetailSections,
+} from "@/components/service-detail";
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
@@ -126,13 +129,13 @@ export default async function ServicePage({ params, searchParams }: Props) {
     >
       <Breadcrumbs items={breadcrumbs} />
       <Grid container spacing={4} marginBottom="48px">
-        <Grid size={{ xs: 12, sm: 6, lg: 5 }}>
+        <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
           <ItemGalleryClient
             images={galleryImages}
             placeholderColor={service.background_color ?? undefined}
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 7 }}>
+        <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
           <ServiceDetailPanel
             service={service}
             selectedVariant={selectedVariant}
@@ -140,6 +143,11 @@ export default async function ServicePage({ params, searchParams }: Props) {
           />
         </Grid>
       </Grid>
+      <ServiceDetailSections
+        service={service}
+        selectedVariant={selectedVariant}
+        locale={locale}
+      />
     </Container>
   );
 }

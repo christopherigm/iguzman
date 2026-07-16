@@ -99,7 +99,7 @@ export default async function SuccessStoryDetailPage({ params }: Props) {
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },
-    { label: t("successStories"), href: "/#stories" },
+    { label: t("successStories"), href: "/blog" },
     { label: name },
   ];
 

@@ -174,7 +174,8 @@
   },
   "SuccessStories": {
     "heading": "Histoires de Succès",
-    "readMore": "En savoir plus"
+    "readMore": "En savoir plus",
+    "empty": "Pas encore d'histoires de succès. Revenez bientôt."
   },
   "SuccessStoryDetail": {
     "home": "Accueil",
@@ -183,6 +184,10 @@
   "HighlightDetail": {
     "home": "Accueil",
     "highlights": "Points forts"
+  },
+  "Highlights": {
+    "heading": "Points forts",
+    "empty": "Pas encore de points forts. Revenez bientôt."
   },
   "VerifyEmailPage": {
     "loading": "Vérification de votre compte, veuillez patienter…",

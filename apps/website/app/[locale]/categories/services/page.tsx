@@ -4,6 +4,8 @@ import { Container } from "@repo/ui/core-elements/container";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Grid } from "@repo/ui/core-elements/grid";
+import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { Hero } from "@repo/ui/hero";
 import { getServiceCategories, getAllServices } from "@/lib/catalog";
 import { CategoryCard } from "@/components/catalog-categories";
@@ -30,11 +32,17 @@ export default async function ServicesPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const [categories, services, t] = await Promise.all([
+  const [categories, services, t, detailT] = await Promise.all([
     getServiceCategories(),
     getAllServices(),
     getTranslations("ServicesPage"),
+    getTranslations("CategoryDetail"),
   ]);
+
+  const breadcrumbs: BreadcrumbItem[] = [
+    { label: detailT("home"), href: "/" },
+    { label: detailT("services") },
+  ];
 
   const images = [
     ...categories.map((c) => c.image),
@@ -60,6 +68,7 @@ export default async function ServicesPage({ params }: Props) {
         marginTop={32}
         paddingTop={!heroImage ? "var(--ui-navbar-height, 57px)" : undefined}
       >
+        <Breadcrumbs items={breadcrumbs} />
         {!heroImage && (
           <Typography
             as="h1"

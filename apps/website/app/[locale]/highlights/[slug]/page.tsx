@@ -67,7 +67,7 @@ export default async function HighlightDetailPage({ params }: Props) {
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },
-    { label: t("highlights"), href: "/#highlights" },
+    { label: t("highlights"), href: "/highlights" },
     { label: name },
   ];
 

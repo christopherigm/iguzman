@@ -174,7 +174,8 @@
   },
   "SuccessStories": {
     "heading": "Erfolgsgeschichten",
-    "readMore": "Mehr lesen"
+    "readMore": "Mehr lesen",
+    "empty": "Noch keine Erfolgsgeschichten. Schau bald wieder vorbei."
   },
   "SuccessStoryDetail": {
     "home": "Startseite",
@@ -183,6 +184,10 @@
   "HighlightDetail": {
     "home": "Startseite",
     "highlights": "Highlights"
+  },
+  "Highlights": {
+    "heading": "Highlights",
+    "empty": "Noch keine Highlights. Schau bald wieder vorbei."
   },
   "VerifyEmailPage": {
     "loading": "Ihr Konto wird verifiziert, bitte warten…",

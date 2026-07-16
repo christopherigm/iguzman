@@ -14,7 +14,7 @@ import type { GridSize } from "@repo/ui/core-elements/grid";
 import { Badge } from "@repo/ui/core-elements/badge";
 import "./company-highlights.css";
 
-const HIGHLIGHT_GRID_SIZE: Record<string, GridSize> = {
+export const HIGHLIGHT_GRID_SIZE: Record<string, GridSize> = {
   sm: { xs: 6, md: 3 },
   md: { xs: 6, md: 4 },
   lg: { xs: 6, md: 8 },
@@ -65,7 +65,7 @@ function HighlightItemCard({ item }: { item: CompanyHighlightItem }) {
   );
 }
 
-function HighlightCard({
+export function HighlightCard({
   highlight,
   locale,
 }: {
