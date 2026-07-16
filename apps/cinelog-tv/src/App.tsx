@@ -1,10 +1,10 @@
-import { useCallback, useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { Home } from './screens/home';
-import { MovieDetail } from './screens/movie-detail';
-import { Pairing } from './screens/pairing';
-import { DevScreenGuide } from './dev-screen-guide';
-import { hasSession, clearSession } from './lib/auth';
+import { useCallback, useState } from "react";
+import { Routes, Route } from "react-router-dom";
+import { Home } from "./screens/home";
+import { MovieDetail } from "./screens/movie-detail";
+import { Pairing } from "./screens/pairing";
+import { DevScreenGuide } from "./dev-screen-guide";
+import { hasSession, clearSession } from "./lib/auth";
 
 export function App() {
   // The TV renders the user's library only when paired; otherwise it shows the

@@ -1,10 +1,10 @@
-import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
-import { useEffect } from 'react';
-import type { CSSProperties, ReactNode, Ref } from 'react';
-import './tokens.css';
+import { useFocusable } from "@noriginmedia/norigin-spatial-navigation";
+import { useEffect } from "react";
+import type { CSSProperties, ReactNode, Ref } from "react";
+import "./tokens.css";
 
 /** Semantic color intent for a button (mirrors @repo/ui's ButtonKind). */
-export type TvButtonKind = 'primary' | 'success' | 'error' | 'warning';
+export type TvButtonKind = "primary" | "success" | "error" | "warning";
 
 export interface TvButtonProps {
   children: ReactNode;
@@ -53,7 +53,7 @@ export interface TvButtonProps {
    */
   icon?: string;
   /** Position of the icon relative to the label. Defaults to `'start'`. */
-  iconPosition?: 'start' | 'end';
+  iconPosition?: "start" | "end";
 }
 
 /** D-pad-focusable button. Enter on the remote triggers `onPress`. */
@@ -69,7 +69,7 @@ export function TvButton({
   onFocusChange,
   onArrowPress,
   icon,
-  iconPosition = 'start',
+  iconPosition = "start",
 }: TvButtonProps) {
   // A disabled button drops out of spatial navigation so the D-pad skips it.
   const { ref, focused } = useFocusable({
@@ -86,24 +86,24 @@ export function TvButton({
   // `block: 'nearest'` keeps it instant and does nothing when no ancestor scrolls.
   useEffect(() => {
     if (scrollOnFocus && focused) {
-      (ref as Ref<HTMLButtonElement> & { current: HTMLButtonElement | null }).current?.scrollIntoView(
-        { block: 'nearest', inline: 'nearest' },
-      );
+      (
+        ref as Ref<HTMLButtonElement> & { current: HTMLButtonElement | null }
+      ).current?.scrollIntoView({ block: "nearest", inline: "nearest" });
     }
   }, [scrollOnFocus, focused, ref]);
 
   const cls = [
-    'tv-button',
-    'tv-focusable',
+    "tv-button",
+    "tv-focusable",
     // A disabled button always reads as neutral, matching @repo/ui's Button.
-    kind && !disabled ? `tv-button--${kind}` : '',
-    selected && !disabled ? 'tv-button--selected' : '',
-    focused ? 'tv-focusable--focused' : '',
-    disabled ? 'tv-button--disabled' : '',
+    kind && !disabled ? `tv-button--${kind}` : "",
+    selected && !disabled ? "tv-button--selected" : "",
+    focused ? "tv-focusable--focused" : "",
+    disabled ? "tv-button--disabled" : "",
     className,
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
   // Quote the URL: Vite inlines small SVGs as data URIs whose path data contains
   // commas/parens that break an unquoted url() and drop the mask.
@@ -111,7 +111,7 @@ export function TvButton({
     <span
       className={`tv-button__icon tv-button__icon--${iconPosition}`}
       aria-hidden="true"
-      style={{ '--tv-button-icon': `url("${icon}")` } as CSSProperties}
+      style={{ "--tv-button-icon": `url("${icon}")` } as CSSProperties}
     />
   ) : null;
 
@@ -123,9 +123,9 @@ export function TvButton({
       disabled={disabled}
       type="button"
     >
-      {iconPosition !== 'end' && iconEl}
+      {iconPosition !== "end" && iconEl}
       {children}
-      {iconPosition === 'end' && iconEl}
+      {iconPosition === "end" && iconEl}
     </button>
   );
 }

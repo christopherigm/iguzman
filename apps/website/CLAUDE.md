@@ -33,9 +33,12 @@ the browser, and no user in `localStorage`.
   API host to the browser and baked it in at build time. Every consumer is a server
   component or route handler, so it is now a runtime, server-only variable
   (`passThroughEnv` in `turbo.json`, plain `env` in `helm/values.yaml`).
-- Routes that verify auth but call an **external** service (`/api/groq/chat`,
-  `/api/ollama/*`) read the cookie themselves and call `refreshAccessToken()` once
-  before returning 401.
+- **AI/LLM calls belong to the backend.** The admin CMS posts to `/api/ai/chat`,
+  which is a thin `apiFetch` pass-through to website-api's `/api/ai/chat/`; that
+  endpoint owns provider choice (Groq, falling back to OpenRouter) and holds the
+  keys. There is no `GROQ_API_KEY` in this app any more, and no provider picker in
+  the UI. The route streams Django's SSE body straight through - never buffer it
+  (e.g. via `res.json()`), or the live preview turns into one lump at the end.
 
 Passwords: the policy and its live checklist come from `@repo/auth/password-policy`
 and `@repo/auth/password-requirements`; the `PasswordPolicy` messages are shared via
@@ -97,3 +100,39 @@ Before defining a constant, type, or pure utility function in a component file, 
 1. Before writing a new constant in any file under `apps/website/components/admin/`, grep for it across sibling files first.
 2. If it already exists in a shared file, import it. If it exists in a sibling but not yet extracted, move it to the appropriate shared file and update both importers.
 3. When creating a new shared file, name it after what it contains (`paragraph-options.ts`, `field-utils.ts`, etc.) - not after a consumer (`admin-form-helpers.ts`).
+
+## Production env & secrets (k8s)
+
+`helm/values.yaml` sets `envFromSecretBundle: website-secrets`, so **every key in
+the `website-secrets` Secret becomes an env var** in the pod - add a key there and
+it reaches the app with no chart change. The Secret is keyed by real env var names
+(`TAVILY_API_KEY`, not `tavily-api-key`); the kubelet silently ignores keys that
+aren't valid env var names, so never use kebab-case here.
+
+Precedence, highest first:
+
+1. `env:` in `helm/values.yaml` (e.g. `API_URL`) - **`env` beats `envFrom`**, so a
+   value named here wins over the Secret's copy.
+2. `website-secrets` via the bundle.
+3. `.env.production` baked into the image - Next.js checks `process.env` **first**
+   and stops at the first hit ([load order](https://nextjs.org/docs/app/guides/environment-variables#environment-variable-load-order)),
+   so anything from k8s shadows this file.
+
+⚠ **`.env.production` ships inside the image.** The root `.dockerignore` re-includes
+it (`!**/.env.production`), `next build` copies it into `.next/standalone`, and the
+Dockerfile copies standalone into the runtime image - so any key in it is readable
+by anyone who can pull the image. It is now redundant for anything in
+`website-secrets`; prefer the Secret and keep credentials out of that file.
+
+Update the Secret with **`pnpm secrets`** (`cli/setup-k8s-secrets/`), which reads
+`env.example`, derives the name `website-secrets` from the app folder, and patches
+only the keys you tick. Two cautions: it offers `env.example`'s dev values as
+defaults and Enter accepts them (type real values), and its "Restart pods?" prompt
+restarts every workload in the namespace - `postgres` and `redis` included - so
+prefer `kubectl rollout restart deployment/website -n website`. Keep comments in
+`env.example` _below_ the keys: the script reads any comment as the section heading
+for everything that follows.
+
+`GROQ_API_KEY` in `website-secrets` is **obsolete** - LLM calls moved to
+website-api. It can be dropped once nothing else reads it (`pnpm secrets` cannot
+delete keys; that needs a manual `kubectl patch` with a null value).

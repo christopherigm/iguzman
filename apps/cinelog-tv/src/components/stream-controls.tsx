@@ -141,7 +141,8 @@ export function StreamControls({
     .filter(Boolean)
     .join(" ");
 
-  const skipLabel = (sign: "-" | "+") => `${sign}${t(SKIP_STEP_KEYS[skipStep]!)}`;
+  const skipLabel = (sign: "-" | "+") =>
+    `${sign}${t(SKIP_STEP_KEYS[skipStep]!)}`;
 
   // While the progress bar holds focus: Left/Right run the same escalating skip
   // burst as the transport buttons (30s -> 1min -> 3min, previewed then

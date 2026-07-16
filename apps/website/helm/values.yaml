@@ -58,7 +58,18 @@ env:
   # handlers, which reach Django from the server. Matches cinelog + edge-folio.
   API_URL: 'https://website-api.iguzman.com.mx'
 
-# Sensitive values - reference existing Kubernetes Secrets.
+# ─── Secrets ────────────────────────────────────────────────
+# Every key in `website-secrets` is loaded as an env var (the Secret is keyed by
+# real env var names, e.g. TAVILY_API_KEY). Add a key to the Secret and it lands in
+# the pod with no chart change - but note the `env:` block above takes precedence,
+# so anything named there wins over the Secret's copy.
+#
+# Create/update it with:
+#   kubectl create secret generic website-secrets -n website \
+#     --from-literal=TAVILY_API_KEY=... --dry-run=client -o yaml | kubectl apply -f -
+envFromSecretBundle: website-secrets
+
+# Individual keys from a Secret, for keys whose name is not a valid env var name.
 # envFromSecret:
 #   - name: DATABASE_URL
 #     secretName: website-secrets

@@ -72,6 +72,13 @@ class Product(Buyable):
     sku = models.CharField(max_length=100, null=True, blank=True, unique=True)
     barcode = models.CharField(max_length=100, null=True, blank=True)
 
+    video_link = models.URLField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text='YouTube, Vimeo or direct video URL rendered as a hero above the detail page.',
+    )
+
     # Inventory
     in_stock = models.BooleanField(default=True)
     stock_count = models.PositiveIntegerField(null=True, blank=True)
@@ -155,6 +162,13 @@ class Service(Buyable):
 
     # Identifier
     sku = models.CharField(max_length=100, null=True, blank=True, unique=True)
+
+    video_link = models.URLField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text='YouTube, Vimeo or direct video URL rendered as a hero above the detail page.',
+    )
 
     # Service details
     is_featured = models.BooleanField(default=False)

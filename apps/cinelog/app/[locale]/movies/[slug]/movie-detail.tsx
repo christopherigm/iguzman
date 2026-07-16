@@ -13,6 +13,7 @@ import { Spinner } from "@repo/ui/core-elements/spinner";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { LinkButton } from "@repo/ui/core-elements/link-button";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { ShareButton } from "@repo/ui/core-elements/share-button";
 import { Toast } from "@repo/ui/core-elements/toast";
 import {
   ApiError,
@@ -109,9 +110,6 @@ export function MovieDetail({
   const [categories, setCategories] = useState<Category[]>([]);
   const [saveError, setSaveError] = useState(false);
   const [saved, setSaved] = useState(false);
-  // Set after a share falls back to copying the link (no native share sheet), so
-  // the user gets confirmation the URL made it to their clipboard.
-  const [linkCopied, setLinkCopied] = useState(false);
   const [showTrailer, setShowTrailer] = useState(false);
   const [showStream, setShowStream] = useState(false);
   // Set when the modal's <video> refuses the source. Self-hosted copies are
@@ -185,35 +183,6 @@ export function MovieDetail({
     const updated = await fetchTrailer(movie.id);
     setMovie(updated);
     return updated.trailer_url;
-  }
-
-  /**
-   * Share the current movie. Prefers the device's native share sheet (mobile);
-   * where that's unavailable (most desktops) it copies the canonical URL to the
-   * clipboard and flags a confirmation toast. A user-cancelled share is a no-op.
-   */
-  async function handleShare() {
-    if (!movie || typeof window === "undefined") return;
-    const url = window.location.href;
-    const shareData = {
-      title: movie.title,
-      text: movie.synopsis || movie.title,
-      url,
-    };
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch {
-        // User dismissed the share sheet - nothing to do.
-      }
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      setLinkCopied(true);
-    } catch {
-      // Clipboard blocked (e.g. insecure context) - silently skip.
-    }
   }
 
   // On desktop play the trailer in the in-page modal. On mobile (phone/tablet)
@@ -321,13 +290,6 @@ export function MovieDetail({
     const timer = setTimeout(() => setSaved(false), 5000);
     return () => clearTimeout(timer);
   }, [saved]);
-
-  // Auto-clear the "link copied" flag so a later share can re-trigger the toast.
-  useEffect(() => {
-    if (!linkCopied) return;
-    const timer = setTimeout(() => setLinkCopied(false), 5000);
-    return () => clearTimeout(timer);
-  }, [linkCopied]);
 
   // Revert the copy button's label so it can confirm a second copy.
   useEffect(() => {
@@ -558,14 +520,6 @@ export function MovieDetail({
         <Toast message={t("saved")} variant="success" position="top-center" />
       )}
 
-      {linkCopied && (
-        <Toast
-          message={t("linkCopied")}
-          variant="success"
-          position="top-center"
-        />
-      )}
-
       <Box
         display="flex"
         alignItems="center"
@@ -633,13 +587,12 @@ export function MovieDetail({
                 onAdded={setMovie}
               />
             )}
-            <IconButton
-              icon="/icons/share.svg"
-              aria-label={t("share")}
-              title={t("share")}
-              kind="success"
+            <ShareButton
+              title={movie.title}
+              text={movie.synopsis || movie.title}
+              label={t("share")}
+              copiedLabel={t("linkCopied")}
               size="md"
-              onClick={handleShare}
               disabled={deleting}
               translucent
             />

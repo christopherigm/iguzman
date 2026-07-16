@@ -1,7 +1,10 @@
-import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
-import { useEffect } from 'react';
-import type { ReactNode, Ref } from 'react';
-import './tokens.css';
+import {
+  useFocusable,
+  FocusContext,
+} from "@noriginmedia/norigin-spatial-navigation";
+import { useEffect } from "react";
+import type { ReactNode, Ref } from "react";
+import "./tokens.css";
 
 interface FocusableRenderProps {
   focused: boolean;
@@ -62,16 +65,25 @@ export function Focusable({
     if (focusOnMount) focusSelf();
   }, [focusOnMount, focusSelf]);
 
-  const cls = ['tv-focusable', focused ? 'tv-focusable--focused' : '', className]
+  const cls = [
+    "tv-focusable",
+    focused ? "tv-focusable--focused" : "",
+    className,
+  ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
-  const content = typeof children === 'function' ? children({ focused }) : children;
+  const content =
+    typeof children === "function" ? children({ focused }) : children;
   const node = (
     <div ref={ref as Ref<HTMLDivElement>} className={cls}>
       {content}
     </div>
   );
 
-  return group ? <FocusContext.Provider value={focusKey}>{node}</FocusContext.Provider> : node;
+  return group ? (
+    <FocusContext.Provider value={focusKey}>{node}</FocusContext.Provider>
+  ) : (
+    node
+  );
 }

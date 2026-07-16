@@ -91,13 +91,14 @@ export function TvLinkForm() {
       >
         {success ? (
           <Box display="flex" flexDirection="column" gap={12}>
-            <Typography variant="h3" fontWeight={600} className="tv-link__success">
+            <Typography
+              variant="h3"
+              fontWeight={600}
+              className="tv-link__success"
+            >
               {t("successTitle")}
             </Typography>
-            <Typography
-              variant="body"
-              color="var(--muted-foreground, #6b7280)"
-            >
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
               {t("successBody")}
             </Typography>
           </Box>

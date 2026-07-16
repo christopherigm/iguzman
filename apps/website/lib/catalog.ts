@@ -207,6 +207,7 @@ export interface ProductDetail {
   description: string | null;
   en_description: string | null;
   image: string | null;
+  video_link: string | null;
   background_color: string | null;
   price: string;
   compare_price: string | null;
@@ -267,6 +268,7 @@ export interface ServiceDetail {
   description: string | null;
   en_description: string | null;
   image: string | null;
+  video_link: string | null;
   background_color: string | null;
   price: string;
   compare_price: string | null;

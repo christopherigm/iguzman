@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import type { ReactNode } from 'react';
-import './tv-image.css';
+import { useState } from "react";
+import type { ReactNode } from "react";
+import "./tv-image.css";
 
 export interface TvImageProps {
   /** Image URL. A falsy value renders the `placeholder` instead. */
@@ -16,7 +16,7 @@ export interface TvImageProps {
    */
   ratio?: number;
   /** `object-fit` of the image. Defaults to `cover`. */
-  fit?: 'cover' | 'contain';
+  fit?: "cover" | "contain";
   /** Shown when there is no `src` or the image fails to load. */
   placeholder?: ReactNode;
   /** Extra class on the wrapper (e.g. for border-radius). */
@@ -38,34 +38,44 @@ export interface TvImageProps {
  */
 export function TvImage({
   src,
-  alt = '',
+  alt = "",
   ratio,
-  fit = 'cover',
+  fit = "cover",
   placeholder,
   className,
 }: TvImageProps) {
   const [errored, setErrored] = useState(false);
   const showImage = Boolean(src) && !errored;
 
-  const cls = ['tv-image', ratio ? '' : 'tv-image--fill', className]
+  const cls = ["tv-image", ratio ? "" : "tv-image--fill", className]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
   // The only dynamic style: reserve the aspect ratio as bottom padding
   // (padding-top is a percentage of WIDTH, so height/width*100 = 100/ratio).
   const style = ratio ? { paddingTop: `${100 / ratio}%` } : undefined;
 
-  const imgCls = ['tv-image__img', fit === 'contain' ? 'tv-image__img--contain' : '']
+  const imgCls = [
+    "tv-image__img",
+    fit === "contain" ? "tv-image__img--contain" : "",
+  ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
   return (
     <div className={cls} style={style}>
       {showImage ? (
         // `src` is a string here (showImage requires it truthy).
-        <img className={imgCls} src={src} alt={alt} onError={() => setErrored(true)} />
+        <img
+          className={imgCls}
+          src={src}
+          alt={alt}
+          onError={() => setErrored(true)}
+        />
       ) : (
-        placeholder != null && <div className="tv-image__placeholder">{placeholder}</div>
+        placeholder != null && (
+          <div className="tv-image__placeholder">{placeholder}</div>
+        )
       )}
     </div>
   );

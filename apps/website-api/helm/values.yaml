@@ -43,8 +43,22 @@ ingress:
       hosts:
         - website-api.iguzman.com.mx
 
+# ─── Secrets ────────────────────────────────────────────────
+# Loads every validly-named key of `website-api-secrets` as an env var - this is
+# how GROQ_API_KEY / OPENROUTER_API_KEY reach Django.
+#
+# ⚠ This Secret also still holds a stale SCREAMING_SNAKE copy of an old env.example
+# (DEBUG=True, ALLOWED_HOSTS=*, plus a SECRET_KEY and REDIS_PASSWORD that do NOT
+# match the live kebab-case keys below). Those stale copies are inert ONLY because
+# the `env:` block below names the same variables and `env` beats `envFrom`.
+# Do NOT "de-duplicate" by deleting entries from `env:` - that would hand production
+# DEBUG=True, ALLOWED_HOSTS=* and a rotated SECRET_KEY (logging every user out).
+# Prune the stale keys from the Secret first; see apps/website-api/CLAUDE.md.
+envFromSecretBundle: website-api-secrets
+
 # ─── Environment variables ──────────────────────────────────
 # Plain environment variables injected into the container.
+# These deliberately override their stale namesakes in the Secret (see above).
 env:
   DJANGO_SETTINGS_MODULE: 'website_api.settings'
   MEDIA_ROOT: '/app/media'
@@ -67,8 +81,15 @@ env:
   CSRF_TRUSTED_ORIGINS: 'https://website-api.iguzman.com.mx,https://bdrone.com.mx,https://website.iguzman.com.mx'
   CORS_ALLOWED_ORIGINS: 'https://bdrone.com.mx,https://website.iguzman.com.mx'
   EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: '24'
+  # ── LLM (Groq primary, OpenRouter fallback) ───────────────
+  GROQ_MODEL: 'openai/gpt-oss-120b'
+  OPENROUTER_MODEL: 'meta-llama/llama-3.3-70b-instruct'
+  LLM_REQUEST_TIMEOUT: '20'
 
-# Sensitive values - reference existing Kubernetes Secrets.
+# Sensitive values whose Secret key is kebab-case, and so cannot come from the
+# bundle above (the kubelet skips keys that are not valid env var names). These are
+# the values production has always run on - they intentionally shadow the stale
+# SCREAMING_SNAKE copies of SECRET_KEY / REDIS_PASSWORD in the same Secret.
 envFromSecret:
   - name: DB_PASSWORD
     secretName: website-api-secrets
@@ -86,6 +107,8 @@ envFromSecret:
   - name: EMAIL_HOST_PASSWORD
     secretName: website-api-secrets
     secretKey: email-host-password
+  # GROQ_API_KEY / OPENROUTER_API_KEY are not listed here: they are keyed by their
+  # real env var names in the Secret, so the bundle above delivers them.
 
 # ─── Host-path volume (media storage) ───────────────────────
 hostPathVolume:

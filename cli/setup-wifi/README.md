@@ -27,8 +27,8 @@ The script **re-runs itself with `sudo`** on start (it needs root for `rfkill`,
    - Turns the Wi-Fi **radio on** (nmcli mode).
    - Brings the **interface up**.
 5. **Main menu** (adapts to the current state):
-   - **Connect to a Wi-Fi network** — scans, lists SSIDs in range (plus *type
-     the SSID manually* and *scan again*), prompts for the password (leave blank
+   - **Connect to a Wi-Fi network** — scans, lists SSIDs in range (plus _type
+     the SSID manually_ and _scan again_), prompts for the password (leave blank
      for an open network), connects, and **verifies** the association + IP.
    - **Show status** — backend, interface, SSID, IP, signal.
 

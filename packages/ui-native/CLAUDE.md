@@ -25,15 +25,15 @@ realities baked in:
 
 ## Components
 
-| Import | Purpose |
-| ------ | ------- |
-| `@repo/ui-native/theme-provider` → `ThemeProvider`, `useTheme` | Wrap the app root once. Resolves a palette + OS color scheme into a `Theme` (`colors`, `spacing`, `radius`, `typeScale`). `useTheme()` falls back to the default light palette when no provider is mounted. |
-| `@repo/ui-native/theme` → `palettes`, `resolveTheme`, `spacing`, `radius`, `typeScale` | Palette tokens (6 accents, light + dark) and design scales. Token names match `@repo/ui`'s web palette (`background`, `surface1`, `accent`, …). |
-| `@repo/ui-native/box` → `Box` | Props-first `View`. Layout/spacing/color via props; `styles` escape hatch for the rest. |
-| `@repo/ui-native/typography` → `Typography` | Themed `Text`. `variant` (`hero`/`title`/`subtitle`/`body`/`caption`/`label`) sets size + weight; `color` accepts a token alias (`foreground`/`muted`/`accent`) or a raw color. |
-| `@repo/ui-native/button` → `Button` | Pressable button. `kind` (`primary`/`success`/`error`/`warning`) sets the intent color; `variant` (`solid`/`outline`/`ghost`); `loading` shows a spinner. |
-| `@repo/ui-native/screen` → `Screen` | Themed route root: paints the background, syncs the status-bar style to the color scheme, `scroll`/`center` options. |
-| `@repo/ui-native/style-props` → `UINativeProps`, `buildViewStyle`, `getShadowStyle` | The props-first engine, for building your own primitives. |
+| Import                                                                                 | Purpose                                                                                                                                                                                                     |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@repo/ui-native/theme-provider` → `ThemeProvider`, `useTheme`                         | Wrap the app root once. Resolves a palette + OS color scheme into a `Theme` (`colors`, `spacing`, `radius`, `typeScale`). `useTheme()` falls back to the default light palette when no provider is mounted. |
+| `@repo/ui-native/theme` → `palettes`, `resolveTheme`, `spacing`, `radius`, `typeScale` | Palette tokens (6 accents, light + dark) and design scales. Token names match `@repo/ui`'s web palette (`background`, `surface1`, `accent`, …).                                                             |
+| `@repo/ui-native/box` → `Box`                                                          | Props-first `View`. Layout/spacing/color via props; `styles` escape hatch for the rest.                                                                                                                     |
+| `@repo/ui-native/typography` → `Typography`                                            | Themed `Text`. `variant` (`hero`/`title`/`subtitle`/`body`/`caption`/`label`) sets size + weight; `color` accepts a token alias (`foreground`/`muted`/`accent`) or a raw color.                             |
+| `@repo/ui-native/button` → `Button`                                                    | Pressable button. `kind` (`primary`/`success`/`error`/`warning`) sets the intent color; `variant` (`solid`/`outline`/`ghost`); `loading` shows a spinner.                                                   |
+| `@repo/ui-native/screen` → `Screen`                                                    | Themed route root: paints the background, syncs the status-bar style to the color scheme, `scroll`/`center` options.                                                                                        |
+| `@repo/ui-native/style-props` → `UINativeProps`, `buildViewStyle`, `getShadowStyle`    | The props-first engine, for building your own primitives.                                                                                                                                                   |
 
 ## Sharing with `@repo/helpers`
 

@@ -1,12 +1,14 @@
 import { getTranslations } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
+import { Button } from "@repo/ui/core-elements/button";
 import { Card } from "@repo/ui/core-elements/card";
-import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
+import { ShareButton } from "@repo/ui/core-elements/share-button";
 import type { ServiceDetail, ServiceVariantFull } from "@/lib/catalog";
+import { toShareDescription } from "@/lib/metadata";
 import { VariantSelectorClient } from "./variant-selector-client";
-import { ActionButtonsClient } from "./action-buttons-client";
 
 function formatPrice(amount: string, currency: string): string {
   const num = parseFloat(amount);
@@ -55,6 +57,12 @@ export async function ServiceDetailPanel({
     service.en_name ??
     "";
 
+  const shareText =
+    (locale === "en" ? service.en_description : service.description) ??
+    service.description ??
+    service.en_description ??
+    "";
+
   const effectivePrice = selectedVariant?.effective_price ?? service.price;
   const effectiveCompare =
     selectedVariant?.effective_compare_price ?? service.compare_price;
@@ -75,78 +83,83 @@ export async function ServiceDetailPanel({
   };
 
   return (
-    <Box flexDirection="column" gap={20} paddingY={4}>
-      {/* Name */}
-      {name && (
-        <Typography as="h1" variant="h3" styles={{ lineHeight: 1.25 }}>
-          {name}
-        </Typography>
-      )}
-
-      {/* Meta: brand / category */}
-      {(service.brand_name || service.category_name) && (
-        <Box flexWrap="wrap" gap="8px 20px">
-          {service.brand_name && (
+    <Box flexDirection="column" gap={18} paddingY={4}>
+      <Box flexDirection="column" gap={8}>
+        {/* Name + share / favorite actions */}
+        <Box alignItems="flex-start" justifyContent="space-between" gap={12}>
+          {name && (
             <Typography
-              as="span"
-              variant="caption"
-              color="color-mix(in srgb, var(--foreground) 60%, transparent)"
+              as="h1"
+              variant="h2"
+              flex="1"
+              minWidth={0}
+              styles={{ lineHeight: 1.25 }}
             >
-              {t("brand")}: <strong>{service.brand_name}</strong>
+              {name}
             </Typography>
           )}
-          {service.category_name && (
-            <Typography
-              as="span"
-              variant="caption"
-              color="color-mix(in srgb, var(--foreground) 60%, transparent)"
-            >
-              {t("category")}: <strong>{service.category_name}</strong>
-            </Typography>
-          )}
+          <Box alignItems="center" gap={8}>
+            <ShareButton
+              title={name}
+              text={toShareDescription(shareText)}
+              label={t("share")}
+              copiedLabel={t("linkCopied")}
+              size="md"
+            />
+            {/* Placeholder - favorites has no persistence yet. */}
+            <IconButton
+              icon="/icons/favorite.svg"
+              aria-label={t("addToFavorites")}
+              title={t("addToFavorites")}
+              kind="error"
+              size="md"
+            />
+          </Box>
         </Box>
-      )}
 
-      {/* Service badges: duration + modality */}
-      {(effectiveDuration || effectiveModality) && (
-        <Box flexWrap="wrap" gap={8}>
-          {effectiveDuration && (
-            <Badge
-              variant="subtle"
-              color="var(--accent)"
-              style={{
-                padding: "4px 12px",
-                fontSize: 13,
-                fontWeight: 500,
-                borderRadius: 8,
-                border:
-                  "1px solid color-mix(in srgb, var(--accent) 30%, transparent)",
-              }}
-            >
-              ⏱ {formatDuration(effectiveDuration)}
-            </Badge>
-          )}
-          {effectiveModality && (
-            <Badge
-              variant="subtle"
-              color="var(--accent)"
-              style={{
-                padding: "4px 12px",
-                fontSize: 13,
-                fontWeight: 500,
-                borderRadius: 8,
-                border:
-                  "1px solid color-mix(in srgb, var(--accent) 30%, transparent)",
-              }}
-            >
-              {modalityLabels[effectiveModality] ?? effectiveModality}
-            </Badge>
-          )}
-        </Box>
-      )}
+        {/* Meta: brand / category */}
+        {(service.brand_name || service.category_name) && (
+          <Box flexWrap="wrap" gap="8px 20px">
+            {service.brand_name && (
+              <Typography
+                as="span"
+                variant="caption"
+                color="color-mix(in srgb, var(--foreground) 60%, transparent)"
+              >
+                {t("brand")}: <strong>{service.brand_name}</strong>
+              </Typography>
+            )}
+            {service.category_name && (
+              <Typography
+                as="span"
+                variant="caption"
+                color="color-mix(in srgb, var(--foreground) 60%, transparent)"
+              >
+                {t("category")}: <strong>{service.category_name}</strong>
+              </Typography>
+            )}
+          </Box>
+        )}
+
+        {/* Service badges: duration + modality */}
+        {(effectiveDuration || effectiveModality) && (
+          <Box flexWrap="wrap" gap={8}>
+            {effectiveDuration && (
+              <Badge variant="subtle" color="var(--accent)" size="lg">
+                ⏱ {formatDuration(effectiveDuration)}
+              </Badge>
+            )}
+            {effectiveModality && (
+              <Badge variant="subtle" color="var(--accent)" size="lg">
+                {modalityLabels[effectiveModality] ?? effectiveModality}
+              </Badge>
+            )}
+          </Box>
+        )}
+      </Box>
 
       {/* Buy box: price, variant selector and CTAs grouped as one unit */}
-      <Card gap={18} padding={20}>
+      <Card gap={18}>
         {/* Pricing */}
         <Box alignItems="baseline" flexWrap="wrap" gap="8px 12px">
           <Typography as="span" variant="none" className="item-price">
@@ -189,25 +202,84 @@ export async function ServiceDetailPanel({
           />
         )}
 
-        {/* Actions */}
-        <ActionButtonsClient
-          addToCartLabel={t("addToCart")}
-          buyNowLabel={t("buyNow")}
-          favoriteLabel={t("addToFavorites")}
-        />
+        {/* Actions: secondary + primary CTAs share the width, wrapping on very
+            narrow widths so the buttons never get crushed. */}
+        <Box alignItems="center" gap={10} width="100%" flexWrap="wrap">
+          <Button
+            text={t("addToCart")}
+            size="lg"
+            flex="1"
+            minWidth={140}
+            kind="warning"
+          />
+          <Button
+            text={t("buyNow")}
+            kind="success"
+            size="lg"
+            flex="1"
+            minWidth={140}
+          />
+        </Box>
+      </Card>
+
+      {/* Service details spec table */}
+      <Card>
+        <Typography as="h2" variant="none" className="item-section-heading">
+          {t("serviceDetails")}
+        </Typography>
+        <table className="item-specs-table">
+          <tbody>
+            {service.brand_name && (
+              <tr>
+                <td>{t("brand")}</td>
+                <td>{service.brand_name}</td>
+              </tr>
+            )}
+            {service.category_name && (
+              <tr>
+                <td>{t("category")}</td>
+                <td>{service.category_name}</td>
+              </tr>
+            )}
+            {effectiveModality && (
+              <tr>
+                <td>{t("modality")}</td>
+                <td>
+                  {modalityLabels[effectiveModality] ?? effectiveModality}
+                </td>
+              </tr>
+            )}
+            {effectiveDuration && (
+              <tr>
+                <td>{t("duration")}</td>
+                <td>{formatDuration(effectiveDuration)}</td>
+              </tr>
+            )}
+            {(selectedVariant?.sku ?? service.sku) && (
+              <tr>
+                <td>{t("sku")}</td>
+                <td>{selectedVariant?.sku ?? service.sku}</td>
+              </tr>
+            )}
+            {service.currency && (
+              <tr>
+                <td>{t("currency")}</td>
+                <td>{service.currency}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </Card>
     </Box>
   );
 }
 
 /**
- * Full-width long-form content for the service detail page: the description and
- * the service-details spec table, laid out side by side below the buy box so
- * neither column of the page is left empty.
+ * Full-width long-form content for the service detail page: the description,
+ * shown below the buy box across the whole page width.
  */
 export async function ServiceDetailSections({
   service,
-  selectedVariant,
   locale,
 }: ServiceDetailProps) {
   const t = await getTranslations("ItemDetail");
@@ -218,87 +290,20 @@ export async function ServiceDetailSections({
     service.en_description ??
     "";
 
-  const effectiveDuration =
-    selectedVariant?.effective_duration ?? service.duration;
-  const effectiveModality =
-    selectedVariant?.effective_modality ?? service.modality;
-
-  const modalityLabels: Record<string, string> = {
-    online: t("modalityOnline"),
-    in_person: t("modalityInPerson"),
-    hybrid: t("modalityHybrid"),
-  };
+  if (!description) return null;
 
   return (
-    <Grid container spacing={4}>
-      {/* Description */}
-      {description && (
-        <Grid size={{ xs: 12, md: 7 }}>
-          <Box flexDirection="column" maxWidth="68ch">
-            <Typography as="h2" variant="none" className="item-section-heading">
-              {t("description")}
-            </Typography>
-            <Typography
-              variant="body"
-              color="color-mix(in srgb, var(--foreground) 80%, transparent)"
-              styles={{ lineHeight: 1.7, whiteSpace: "pre-line" }}
-            >
-              {description}
-            </Typography>
-          </Box>
-        </Grid>
-      )}
-
-      {/* Service details */}
-      <Grid size={{ xs: 12, md: 5 }}>
-        <Box flexDirection="column">
-          <Typography as="h2" variant="none" className="item-section-heading">
-            {t("serviceDetails")}
-          </Typography>
-          <table className="item-specs-table">
-            <tbody>
-              {service.brand_name && (
-                <tr>
-                  <td>{t("brand")}</td>
-                  <td>{service.brand_name}</td>
-                </tr>
-              )}
-              {service.category_name && (
-                <tr>
-                  <td>{t("category")}</td>
-                  <td>{service.category_name}</td>
-                </tr>
-              )}
-              {effectiveModality && (
-                <tr>
-                  <td>{t("modality")}</td>
-                  <td>
-                    {modalityLabels[effectiveModality] ?? effectiveModality}
-                  </td>
-                </tr>
-              )}
-              {effectiveDuration && (
-                <tr>
-                  <td>{t("duration")}</td>
-                  <td>{formatDuration(effectiveDuration)}</td>
-                </tr>
-              )}
-              {(selectedVariant?.sku ?? service.sku) && (
-                <tr>
-                  <td>{t("sku")}</td>
-                  <td>{selectedVariant?.sku ?? service.sku}</td>
-                </tr>
-              )}
-              {service.currency && (
-                <tr>
-                  <td>{t("currency")}</td>
-                  <td>{service.currency}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </Box>
-      </Grid>
-    </Grid>
+    <Card width="100%">
+      <Typography as="h2" variant="none" className="item-section-heading">
+        {t("description")}
+      </Typography>
+      <Typography
+        variant="body"
+        color="color-mix(in srgb, var(--foreground) 80%, transparent)"
+        styles={{ lineHeight: 1.7, whiteSpace: "pre-line" }}
+      >
+        {description}
+      </Typography>
+    </Card>
   );
 }

@@ -1,6 +1,6 @@
-import { forwardRef } from 'react';
-import { View, type ViewProps } from 'react-native';
-import { buildViewStyle, type UINativeProps } from './style-props';
+import { forwardRef } from "react";
+import { View, type ViewProps } from "react-native";
+import { buildViewStyle, type UINativeProps } from "./style-props";
 
 export interface BoxProps extends UINativeProps {
   /** Accessible label when there is no visible text. */
@@ -8,11 +8,11 @@ export interface BoxProps extends UINativeProps {
   /** Marks the element (and children) as a single accessibility element. */
   accessible?: boolean;
   /** Accessibility role, e.g. `'header'`, `'summary'`. */
-  accessibilityRole?: ViewProps['accessibilityRole'];
+  accessibilityRole?: ViewProps["accessibilityRole"];
   /** `testID` for e2e/unit selection. */
   testID?: string;
   /** Escape hatch for pointer events (e.g. `'none'` to click through). */
-  pointerEvents?: ViewProps['pointerEvents'];
+  pointerEvents?: ViewProps["pointerEvents"];
 }
 
 /**

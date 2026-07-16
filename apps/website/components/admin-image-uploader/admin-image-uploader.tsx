@@ -31,6 +31,11 @@ interface AdminImageUploaderProps {
   maxImages?: number;
   accept?: string;
   label?: string;
+  /**
+   * Renders a square, single-line dropzone that fits a grid cell. For
+   * side-by-side single-image fields; leave off for full-width galleries.
+   */
+  compact?: boolean;
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -52,6 +57,7 @@ export function AdminImageUploader({
   maxImages = 20,
   accept = "image/*",
   label,
+  compact = false,
 }: AdminImageUploaderProps) {
   const t = useTranslations("AdminImageUploader");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -182,7 +188,7 @@ export function AdminImageUploader({
       {/* Drop zone */}
       {canAdd && (
         <div
-          className={`aiu__dropzone${isDragOver ? " aiu__dropzone--active" : ""}`}
+          className={`aiu__dropzone${compact ? " aiu__dropzone--compact" : ""}${isDragOver ? " aiu__dropzone--active" : ""}`}
           onDragOver={(e) => {
             e.preventDefault();
             setIsDragOver(true);
@@ -198,19 +204,21 @@ export function AdminImageUploader({
           <span className="aiu__dropzone-icon">🖼️</span>
           <Typography
             as="span"
-            variant="body"
+            variant={compact ? "caption" : "body"}
             fontWeight={600}
             color="var(--foreground)"
           >
-            {t("dropzoneText")}
+            {compact ? t("dropzoneTextCompact") : t("dropzoneText")}
           </Typography>
-          <Typography
-            as="span"
-            variant="caption"
-            color="color-mix(in srgb, var(--foreground) 50%, transparent)"
-          >
-            {t("dropzoneHint")}
-          </Typography>
+          {!compact && (
+            <Typography
+              as="span"
+              variant="caption"
+              color="color-mix(in srgb, var(--foreground) 50%, transparent)"
+            >
+              {t("dropzoneHint")}
+            </Typography>
+          )}
           <input
             ref={inputRef}
             type="file"

@@ -92,8 +92,8 @@ content (stories, highlights, product/service catalog). It backs the **publish**
 flow that moves a locally-seeded, tested site into production:
 
 - `export_site <host>` (management command) → `serialize_system` dumps the System
-  + children to a brief-shaped JSON payload with real slugs. **Image files are
-  omitted** — every image is an `ImageField` (a file), not portable data.
+  - children to a brief-shaped JSON payload with real slugs. **Image files are
+    omitted** — every image is an `ImageField` (a file), not portable data.
 - `POST /api/publish-site/` (`PublishSiteView`, `BasicAuthentication` +
   `IsAdminUser`, mirroring `SystemListView`) → `apply_payload` upserts the System
   by host and every child by slug. It **never touches image fields on update**, so
@@ -104,3 +104,94 @@ flow that moves a locally-seeded, tested site into production:
 Driven by `pnpm publish-site <host>` (`cli/website/website.sh publish`). `seed_site`
 imports `SYSTEM_TEXT_FIELDS` from `site_payload` so seeding and publishing agree
 on which System fields are copyable content.
+
+## LLM calls - always through `core/services/llm.py`
+
+Every AI call in the website stack runs here, not in the Next.js app. `stream_chat`
+uses **Groq as primary and OpenRouter as fallback**, mirroring
+`cinelog-api/catalog/services/llm.py`. Never call a provider SDK directly from a
+view, and never move an API key back into the frontend.
+
+- **The fallback only covers failures before the first token.** Once Groq has
+  emitted content the user is already reading it, so restarting on OpenRouter would
+  duplicate the output; a mid-stream failure propagates instead. An empty Groq
+  stream counts as a failure and does fall back.
+- Unlike cinelog's rate-limit-only rule, **any** Groq exception falls back here
+  (timeouts and 5xx included), so a Groq outage degrades instead of failing.
+- Config: `GROQ_API_KEY`, `GROQ_MODEL`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`,
+  `LLM_REQUEST_TIMEOUT`. In the cluster both keys come from the
+  `website-api-secrets` Secret; locally they come from `.env`, which
+  `settings.py` loads via `load_dotenv` (as cinelog-api does). With neither key
+  set, `/api/ai/chat/` returns 503 rather than streaming - so a 503 from that
+  endpoint means the key never reached the process, not that the provider is down.
+
+`AiChatView` (`POST /api/ai/chat/`, `IsSystemAdmin`) streams OpenAI-shaped SSE for
+the admin CMS's enhance/translate buttons. Two rules if you touch it:
+
+- **Set `X-Accel-Buffering: no`.** nginx otherwise buffers the whole completion and
+  delivers it in one lump, defeating the streaming UI.
+- **Errors must be reported inside the stream** (`data: {"error": {...}}`), because
+  `StreamingHttpResponse` commits the 200 before the generator runs. Validate
+  anything that could 4xx/5xx _before_ returning the response. Report provider
+  errors generically and log the detail - upstream error bodies are not for the
+  browser.
+
+Streaming holds its worker for the whole generation, which is why gunicorn runs
+`gthread` workers (see the `Dockerfile`) - with plain sync workers, two concurrent
+enhance requests would block every other API call.
+
+## Production env & secrets (k8s)
+
+Config reaches the pod three ways, and the order matters:
+
+1. `envFromSecretBundle: website-api-secrets` - every **validly-named** key of the
+   Secret becomes an env var. This is how `GROQ_API_KEY` / `OPENROUTER_API_KEY`
+   arrive.
+2. `env:` in `helm/values.yaml` - non-sensitive config. **`env` beats `envFrom`**
+   ([k8s API ref](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/):
+   "Variables defined in the env field take precedence over variables defined in the
+   envFrom field").
+3. `envFromSecret:` - explicit `secretKeyRef`s for the kebab-case keys
+   (`db-password`, `secret-key`, …). These **cannot** come from the bundle: the
+   kubelet silently ignores Secret keys that aren't valid env var names.
+
+⚠ **`website-api-secrets` contains a stale trap.** Alongside the live kebab-case
+keys it still holds a `--from-env-file` dump of an old `env.example`, in
+SCREAMING_SNAKE. Those copies are **wrong**:
+
+| Stale key in Secret | Says               | Reality                                            |
+| ------------------- | ------------------ | -------------------------------------------------- |
+| `DEBUG`             | `True`             | prod must be `False`                               |
+| `ALLOWED_HOSTS`     | `*`                | must be the real host list                         |
+| `SECRET_KEY`        | ≠ `secret-key`     | using it rotates the key → **logs every user out** |
+| `REDIS_PASSWORD`    | ≠ `redis-password` | using it breaks the cache                          |
+
+They are inert **only** because `env:`/`envFromSecret:` name the same variables and
+win. **Never delete an entry from `env:` to "remove duplication"** - that hands
+production `DEBUG=True`, `ALLOWED_HOSTS=*` and a rotated `SECRET_KEY`. The real fix
+is to prune the stale SCREAMING_SNAKE keys from the Secret (keep only
+`GROQ_API_KEY`, `OPENROUTER_API_KEY`, and the kebab-case ones); do that before
+simplifying the chart.
+
+### Updating the Secret: `pnpm secrets`
+
+`pnpm secrets` (`cli/setup-k8s-secrets/setup-k8s-secrets.sh`) is the canonical way.
+It reads `apps/<app>/env.example`, derives the Secret name as `<app>-secrets`, lets
+you tick individual keys, and **patches only the ticked ones** (`--type=merge`), so
+add a key to `env.example` and it becomes offerable with no other change. Use a real
+env var name (`MY_API_KEY`) so the bundle picks it up without a chart edit.
+
+Three things to know before running it against production:
+
+- ⚠ **It offers `env.example`'s values as defaults, and Enter accepts them.** This is
+  exactly how the stale trap above was created: `DEBUG`, `ALLOWED_HOSTS` and
+  `FRONTEND_URL` in the live Secret are byte-identical to this repo's dev defaults.
+  Tick **only** the keys you actually intend to set, and type real values.
+- **It cannot delete a key** - patch/create only. Pruning the stale keys needs a
+  manual `kubectl patch` with a JSON-merge `null`, or recreating the Secret.
+- ⚠ **Its "Restart pods?" prompt restarts _every_ Deployment and StatefulSet in the
+  namespace** - in `website` that includes `postgres` and `redis`, not just the app.
+  Prefer `kubectl rollout restart deployment/website-api -n website`.
+
+A Secret change does **not** reach running pods on its own: env vars are read at
+container start, so a rollout restart (or redeploy) is required.

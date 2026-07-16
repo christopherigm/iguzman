@@ -1,14 +1,14 @@
-import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
-import { useEffect } from 'react';
-import type { CSSProperties, Ref } from 'react';
-import './tokens.css';
-import './tv-icon-button.css';
+import { useFocusable } from "@noriginmedia/norigin-spatial-navigation";
+import { useEffect } from "react";
+import type { CSSProperties, Ref } from "react";
+import "./tokens.css";
+import "./tv-icon-button.css";
 
 /** Semantic color intent for an icon button (mirrors TvButton's kinds). */
-export type TvIconButtonKind = 'primary' | 'success' | 'error' | 'warning';
+export type TvIconButtonKind = "primary" | "success" | "error" | "warning";
 
 /** Square box size. Scaled for 10-foot viewing, so even `sm` is large by web standards. */
-export type TvIconButtonSize = 'sm' | 'md' | 'lg';
+export type TvIconButtonSize = "sm" | "md" | "lg";
 
 export interface TvIconButtonProps {
   /**
@@ -79,7 +79,7 @@ export function TvIconButton({
   onPress,
   className,
   disabled = false,
-  size = 'md',
+  size = "md",
   kind,
   selected = false,
   focusKey,
@@ -93,7 +93,9 @@ export function TvIconButton({
     focusable: !disabled,
     focusKey,
     onFocus: onFocusChange,
-    onArrowPress: onArrowPress ? (direction) => onArrowPress(direction) : undefined,
+    onArrowPress: onArrowPress
+      ? (direction) => onArrowPress(direction)
+      : undefined,
   });
 
   // Reveal an off-screen button when focus lands on it (scrollable lists/modals).
@@ -101,23 +103,23 @@ export function TvIconButton({
     if (scrollOnFocus && focused) {
       (
         ref as Ref<HTMLButtonElement> & { current: HTMLButtonElement | null }
-      ).current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      ).current?.scrollIntoView({ block: "nearest", inline: "nearest" });
     }
   }, [scrollOnFocus, focused, ref]);
 
   const cls = [
-    'tv-icon-button',
+    "tv-icon-button",
     `tv-icon-button--${size}`,
-    'tv-focusable',
+    "tv-focusable",
     // A disabled button always reads as neutral, matching TvButton.
-    kind && !disabled ? `tv-icon-button--${kind}` : '',
-    selected && !disabled ? 'tv-icon-button--selected' : '',
-    focused ? 'tv-focusable--focused' : '',
-    disabled ? 'tv-icon-button--disabled' : '',
+    kind && !disabled ? `tv-icon-button--${kind}` : "",
+    selected && !disabled ? "tv-icon-button--selected" : "",
+    focused ? "tv-focusable--focused" : "",
+    disabled ? "tv-icon-button--disabled" : "",
     className,
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
   return (
     <button
@@ -134,7 +136,7 @@ export function TvIconButton({
       <span
         className="tv-icon-button__icon"
         aria-hidden="true"
-        style={{ '--tv-icon-button-icon': `url("${icon}")` } as CSSProperties}
+        style={{ "--tv-icon-button-icon": `url("${icon}")` } as CSSProperties}
       />
     </button>
   );

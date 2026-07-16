@@ -36,11 +36,7 @@ function toggleId(
   });
 }
 
-export function ReviewTailorSection({
-  profile,
-  exportCtl,
-  workflow,
-}: Props) {
+export function ReviewTailorSection({ profile, exportCtl, workflow }: Props) {
   const t = useTranslations("ApplicationDetailPage");
   const locale = useLocale();
   const micLang: "en" | "es" = locale === "es" ? "es" : "en";

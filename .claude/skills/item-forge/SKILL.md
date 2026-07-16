@@ -8,7 +8,7 @@ description: Author a new flat inventory item in apps/mob-forge end-to-end from 
 Author a new Minecraft 1.20.2 NeoForge **inventory item** in `apps/mob-forge`
 from a natural-language description. Items are far simpler than mobs: a flat
 item (`item/generated` or `item/handheld`) has **no geometry** — the game
-auto-extrudes the in-hand slab from the sprite's alpha, so the 16×16 sprite *is*
+auto-extrudes the in-hand slab from the sprite's alpha, so the 16×16 sprite _is_
 the model. There is no GeckoLib, no rig, no animation, no entity, no renderer.
 
 The authoritative technical recipe lives in `apps/mob-forge/CLAUDE.md` →
@@ -23,7 +23,7 @@ skill, CLAUDE.md wins.**
 - ✅ **Inventory items**: gems/materials, food, and tools/weapons (swords, etc.).
   Anything held or carried but never placed in the world.
 - ❌ **Not blocks.** If the thing is placeable in the world (a candle, lamp, ore,
-  decorative block), it is a *block* (Block + BlockItem + blockstate + world
+  decorative block), it is a _block_ (Block + BlockItem + blockstate + world
   behaviour) — out of scope. Say so and stop, don't fake it as an item.
 - ❌ **Not mobs.** Use `/mob-forge` for entities.
 
@@ -49,6 +49,7 @@ pipeline runs unattended right up to the in-game check.
 Work top-to-bottom; each phase gates the next. Track progress with the task tool.
 
 ### 0. Clarify + enrich the prompt (do this before anything else)
+
 A one-line item prompt is usually under-specified. Before locking the name, turn
 the raw description into a complete build spec by (a) asking about genuine
 ambiguities and (b) proposing sensible gap-fillers. Use `AskUserQuestion` so
@@ -73,6 +74,7 @@ Confirm the final one-paragraph build spec back to the user before proceeding
 defaults").
 
 ### 1. Lock the name first (naming discipline, closes R6)
+
 Choose the item id (lower_snake, e.g. `emberblade`) and reuse it VERBATIM
 everywhere: the registry name in `ModItems`, `tools/items/<id>.item.json`,
 `textures/item/<id>.png`, `models/item/<id>.json`, `blockbench/items/<id>.bbmodel`,
@@ -80,6 +82,7 @@ and the `item.mobforge.<id>` lang key. Write the list down; every later step mus
 match it.
 
 ### 2. Author the sprite spec + render it
+
 Write `tools/items/<id>.item.json` — a `palette` (char → RGBA) and a 16×16
 `grid` of chars (`.` = transparent). Keep it readable at icon scale: strong
 silhouette, a dark outline, 1–2 shading tones, a highlight. Mirror the reference
@@ -95,29 +98,33 @@ It writes `textures/item/<id>.png` **and** `blockbench/items/<id>.bbmodel`
 reads as the intended object before moving on — re-author the grid if not.
 
 ### 3. Java layer
+
 Mirror the matching reference in `registry/ModItems.java`:
 
 - **Gem / material** → `new Item(new Item.Properties())`.
 - **Food** → `new Item(new Item.Properties().food(new FoodProperties.Builder()
-  .nutrition(n).saturationMod(s).build()))`.
+.nutrition(n).saturationMod(s).build()))`.
 - **Tool / weapon** → a `SwordItem` (or other tiered item) with a per-item
   `ForgeItemTier(uses, speed, attackDamageBonus, level, enchantmentValue,
-  Ingredient.EMPTY)`; durability flows from the tier's `uses`.
+Ingredient.EMPTY)`; durability flows from the tier's `uses`.
 
 Then add the item to `registry/ModCreativeTabs.java`'s `displayItems` list so it
 shows in the **Mob Forge Items** tab. Obey the 1.20.2 syntax rules in CLAUDE.md.
 
 ### 4. Assets + lang
+
 - `models/item/<id>.json` → `{ "parent": "minecraft:item/generated", "textures":
-  { "layer0": "mobforge:item/<id>" } }` for icons; use
+{ "layer0": "mobforge:item/<id>" } }` for icons; use
   **`minecraft:item/handheld`** for swords/tools (correct in-hand grip).
 - Add `"item.mobforge.<id>": "<Display Name>"` to `lang/en_us.json`.
 
 ### 5. Build
+
 `pnpm --filter=mob-forge build` → expect BUILD SUCCESSFUL, and confirm the new
 assets packaged into the jar (`unzip -l build/libs/*.jar | grep <id>`).
 
 ### 6. Attended in-game verification
+
 Ask the operator to launch `pnpm --filter=mob-forge dev`, open the **Mob Forge
 Items** creative tab, and grab the new item. Confirm the icon renders, the name
 is right, and behaviour works (food is edible; a weapon swings/deals damage).
@@ -126,6 +133,7 @@ paint the texture in the Paint tab, export the PNG over the build output, and
 rebuild — the CLAUDE.md "Authoring an item" section documents that touch-up loop.
 
 ## Definition of done
+
 Report which held; log any manual intervention as a gap (a partial pass).
 
 1. A compiling Java `Item` registration (correct type for the category), no
@@ -138,5 +146,6 @@ Report which held; log any manual intervention as a gap (a partial pass).
    load-time crash; behaviour matches the description (in-game confirmation).
 
 ## On completion
+
 - Report against the Definition of done above.
 - **Do NOT commit** unless the user explicitly asks.

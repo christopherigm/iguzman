@@ -5,6 +5,8 @@ import "./gradient-builder.css";
 import { Box } from "./box";
 import { Typography } from "./typography";
 import { TextInput } from "./text-input";
+import { Button } from "./button";
+import { IconButton } from "./icon-button";
 
 export type GradientType = "linear" | "radial" | "solid";
 
@@ -289,14 +291,14 @@ export function GradientBuilder({
       {/* Type tabs */}
       <Box display="flex" gap="6px">
         {TYPES.map((tp) => (
-          <button
+          <Button
             key={tp}
-            type="button"
-            className={`gb__type-btn${type === tp && canParse ? " gb__type-btn--active" : ""}`}
+            text={l[tp]}
+            size="md"
+            kind={type === tp && canParse ? "primary" : undefined}
             onClick={() => handleTypeChange(tp)}
-          >
-            {l[tp]}
-          </button>
+            aria-pressed={type === tp && canParse}
+          />
         ))}
       </Box>
 
@@ -343,9 +345,7 @@ export function GradientBuilder({
                 {type === "solid" ? l.color : l.stops}
               </Typography>
               {type !== "solid" && (
-                <button type="button" className="gb__add-btn" onClick={addStop}>
-                  + {l.addStop}
-                </button>
+                <Button text={`+ ${l.addStop}`} size="sm" onClick={addStop} />
               )}
             </Box>
             {stops.map((stop, i) => (
@@ -378,15 +378,14 @@ export function GradientBuilder({
                       %
                     </Typography>
                     {stops.length > 2 && (
-                      <button
-                        type="button"
-                        className="gb__remove-btn"
+                      <IconButton
+                        icon="/icons/close.svg"
+                        size="sm"
+                        kind="error"
                         onClick={() => removeStop(i)}
                         aria-label={l.removeStop}
                         title={l.removeStop}
-                      >
-                        ×
-                      </button>
+                      />
                     )}
                   </>
                 )}

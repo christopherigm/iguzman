@@ -501,7 +501,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'short_description', 'en_short_description',
             'slug', 'sku', 'barcode',
             'image', 'images', 'variants',
-            'href', 'fit', 'background_color',
+            'href', 'video_link', 'fit', 'background_color',
             'price', 'compare_price', 'cost_price', 'currency',
             'in_stock', 'stock_count', 'is_featured',
             'is_ai_generated', 'is_verified',
@@ -527,6 +527,7 @@ class ProductWriteSerializer(serializers.Serializer):
     short_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     en_short_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     href = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    video_link = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
     fit = serializers.ChoiceField(
         choices=[c[0] for c in [('cover', ''), ('contain', ''), ('fill', ''), ('scale-down', ''), ('none', '')]],
         required=False, allow_null=True,
@@ -607,7 +608,7 @@ class ProductWriteSerializer(serializers.Serializer):
 
     _SCALAR_FIELDS = [
         'name', 'en_name', 'description', 'en_description',
-        'short_description', 'en_short_description', 'href', 'fit',
+        'short_description', 'en_short_description', 'href', 'video_link', 'fit',
         'background_color', 'system', 'brand', 'category',
         'slug', 'sku', 'barcode',
         'price', 'compare_price', 'cost_price', 'currency',
@@ -804,7 +805,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             'short_description', 'en_short_description',
             'slug', 'sku',
             'image', 'images', 'variants',
-            'href', 'fit', 'background_color',
+            'href', 'video_link', 'fit', 'background_color',
             'price', 'compare_price', 'cost_price', 'currency',
             'is_featured', 'is_ai_generated', 'is_verified',
             'duration', 'modality',
@@ -828,6 +829,7 @@ class ServiceWriteSerializer(serializers.Serializer):
     short_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     en_short_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     href = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    video_link = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
     fit = serializers.ChoiceField(
         choices=[c[0] for c in [('cover', ''), ('contain', ''), ('fill', ''), ('scale-down', ''), ('none', '')]],
         required=False, allow_null=True,
@@ -898,7 +900,7 @@ class ServiceWriteSerializer(serializers.Serializer):
 
     _SCALAR_FIELDS = [
         'name', 'en_name', 'description', 'en_description',
-        'short_description', 'en_short_description', 'href', 'fit',
+        'short_description', 'en_short_description', 'href', 'video_link', 'fit',
         'background_color', 'system', 'brand', 'category',
         'slug', 'sku',
         'price', 'compare_price', 'cost_price', 'currency',

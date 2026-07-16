@@ -11,9 +11,6 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import "./admin-sidebar.css";
 import { ADMIN_NAV_ITEMS } from "./admin-nav-items";
 
-export const ADMIN_AI_PROVIDER_KEY = "admin-ai-provider";
-export type AdminAiProvider = "groq" | "ollama";
-
 export function AdminSidebar() {
   const t = useTranslations("Admin");
   const pathname = usePathname();
@@ -23,25 +20,10 @@ export function AdminSidebar() {
   // null limbo while the client catches up. This only gates the sidebar UI:
   // proxy.ts guards the route and Django enforces the permission on every call.
   const authorized = useSession()?.isAdmin === true;
-  const [aiProvider, setAiProvider] = useState<AdminAiProvider>(() => {
-    if (typeof window === "undefined") return "groq";
-    const stored = localStorage.getItem(
-      ADMIN_AI_PROVIDER_KEY,
-    ) as AdminAiProvider | null;
-    return stored === "ollama" || stored === "groq" ? stored : "groq";
-  });
 
   useEffect(() => {
     if (!authorized) router.replace("/auth");
   }, [authorized, router]);
-
-  const handleProviderChange = (provider: AdminAiProvider) => {
-    setAiProvider(provider);
-    localStorage.setItem(ADMIN_AI_PROVIDER_KEY, provider);
-    window.dispatchEvent(
-      new CustomEvent("admin-ai-provider-change", { detail: provider }),
-    );
-  };
 
   if (!authorized) return null;
   if (pathname === "/admin") return null;
@@ -106,27 +88,6 @@ export function AdminSidebar() {
             );
           })}
         </ul>
-
-        <div className="admin-sidebar__provider">
-          <div className="admin-sidebar__provider-label">{t("aiProvider")}</div>
-          <div className="admin-sidebar__provider-buttons">
-            {(["groq", "ollama"] as AdminAiProvider[]).map((provider) => {
-              const active = aiProvider === provider;
-              return (
-                <Button
-                  key={provider}
-                  flex="1"
-                  size="md"
-                  kind={active ? "success" : undefined}
-                  onClick={() => handleProviderChange(provider)}
-                  aria-pressed={active}
-                >
-                  {t(`${provider}Provider`)}
-                </Button>
-              );
-            })}
-          </div>
-        </div>
       </nav>
 
       {open && (

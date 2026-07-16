@@ -167,14 +167,14 @@ The extract feature colocates in the `extract/` route folder
 (`app/[locale]/(dashboard)/extract/`). The one exception is `skeleton-json.ts`,
 which lives in `lib/` because `lib/matrix.ts` also depends on the `SkeletonJson` type.
 
-| File                              | Role                                       |
-| --------------------------------- | ------------------------------------------ |
+| File                              | Role                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------ |
 | `lib/skeleton-json.ts`            | `SkeletonJson` type - the sanitized output (shared with `lib/matrix.ts`) |
-| `extract/ast-worker-types.ts`     | Message types for main thread ↔ worker     |
-| `extract/ast-worker.ts`           | Web Worker: manifest + import extraction   |
-| `extract/use-ast-extractor.ts`    | React hook managing the worker lifecycle   |
-| `extract/use-directory-picker.ts` | File System Access API picker (unchanged)  |
-| `public/wasm/`                    | WASM grammar files served as static assets |
+| `extract/ast-worker-types.ts`     | Message types for main thread ↔ worker                                   |
+| `extract/ast-worker.ts`           | Web Worker: manifest + import extraction                                 |
+| `extract/use-ast-extractor.ts`    | React hook managing the worker lifecycle                                 |
+| `extract/use-directory-picker.ts` | File System Access API picker (unchanged)                                |
+| `public/wasm/`                    | WASM grammar files served as static assets                               |
 
 ## Environment Variables
 

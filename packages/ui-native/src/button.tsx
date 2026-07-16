@@ -5,18 +5,18 @@ import {
   type PressableProps,
   type TextStyle,
   type ViewStyle,
-} from 'react-native';
-import { useTheme } from './theme-provider';
-import type { ThemeColors } from './theme';
+} from "react-native";
+import { useTheme } from "./theme-provider";
+import type { ThemeColors } from "./theme";
 
 /** Semantic color intent (mirrors `@repo/ui`'s `ButtonKind`). */
-export type ButtonKind = 'primary' | 'success' | 'error' | 'warning';
+export type ButtonKind = "primary" | "success" | "error" | "warning";
 /** Visual treatment of the intent color. */
-export type ButtonVariant = 'solid' | 'outline' | 'ghost';
+export type ButtonVariant = "solid" | "outline" | "ghost";
 
 export interface ButtonProps {
   children: string;
-  onPress?: PressableProps['onPress'];
+  onPress?: PressableProps["onPress"];
   /** Semantic color intent. @default 'primary' */
   kind?: ButtonKind;
   /** Fill treatment. @default 'solid' */
@@ -31,18 +31,21 @@ export interface ButtonProps {
   styles?: ViewStyle;
 }
 
-function intentColors(kind: ButtonKind, colors: ThemeColors): {
+function intentColors(
+  kind: ButtonKind,
+  colors: ThemeColors,
+): {
   fill: string;
   onFill: string;
 } {
   switch (kind) {
-    case 'success':
+    case "success":
       return { fill: colors.success, onFill: colors.successForeground };
-    case 'error':
+    case "error":
       return { fill: colors.error, onFill: colors.errorForeground };
-    case 'warning':
+    case "warning":
       return { fill: colors.warning, onFill: colors.warningForeground };
-    case 'primary':
+    case "primary":
     default:
       return { fill: colors.accent, onFill: colors.accentForeground };
   }
@@ -59,8 +62,8 @@ function intentColors(kind: ButtonKind, colors: ThemeColors): {
 export function Button({
   children,
   onPress,
-  kind = 'primary',
-  variant = 'solid',
+  kind = "primary",
+  variant = "solid",
   disabled = false,
   loading = false,
   fullWidth = false,
@@ -72,31 +75,31 @@ export function Button({
   const { fill, onFill } = intentColors(kind, colors);
   const isDisabled = disabled || loading;
 
-  const solid = variant === 'solid';
-  const outline = variant === 'outline';
+  const solid = variant === "solid";
+  const outline = variant === "outline";
 
   const textColor = solid ? onFill : fill;
   const spinnerColor = solid ? onFill : fill;
 
   const base: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: spacing.sm,
     paddingVertical: spacing.sm + 2,
     paddingHorizontal: spacing.md,
     borderRadius: radius.md,
-    backgroundColor: solid ? fill : 'transparent',
+    backgroundColor: solid ? fill : "transparent",
     borderWidth: outline ? 1 : 0,
-    borderColor: outline ? fill : 'transparent',
+    borderColor: outline ? fill : "transparent",
     opacity: isDisabled ? 0.5 : 1,
-    ...(fullWidth ? { alignSelf: 'stretch' } : { alignSelf: 'flex-start' }),
+    ...(fullWidth ? { alignSelf: "stretch" } : { alignSelf: "flex-start" }),
   };
 
   const label: TextStyle = {
     color: textColor,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   };
 
   return (

@@ -23,9 +23,22 @@
   background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
 
+/* Square variant for uploaders laid out side by side in a grid, so an empty
+   cell matches the aspect of the thumbnail that replaces it once filled. */
+.aiu__dropzone--compact {
+  aspect-ratio: 1;
+  justify-content: center;
+  padding: 8px;
+  gap: 4px;
+}
+
 .aiu__dropzone-icon {
   font-size: 32px;
   line-height: 1;
+}
+
+.aiu__dropzone--compact .aiu__dropzone-icon {
+  font-size: 24px;
 }
 
 /* Native file <input> - visually hidden, covers the dropzone. */
@@ -84,7 +97,11 @@
   inset: 0;
   opacity: 0;
   transition: opacity 0.15s;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4) 0%, transparent 50%);
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.4) 0%,
+    transparent 50%
+  );
 }
 
 .aiu__thumb:hover .aiu__thumb-overlay {

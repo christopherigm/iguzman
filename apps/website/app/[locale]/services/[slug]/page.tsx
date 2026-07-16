@@ -4,9 +4,12 @@ import { setRequestLocale, getTranslations } from "next-intl/server";
 import { Container } from "@repo/ui/core-elements/container";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { getService } from "@/lib/catalog";
+import { getSystem } from "@/lib/system";
+import { getRequestOrigin, toShareDescription } from "@/lib/metadata";
 import type { ServiceDetail, ServiceVariantFull } from "@/lib/catalog";
 import type { GalleryImage } from "@/components/item-gallery-client";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
+import { ItemHeroVideo } from "@/components/item-hero-video";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import {
@@ -25,7 +28,11 @@ export async function generateMetadata({
   params: Promise<{ locale: string; slug: string }>;
 }): Promise<Metadata> {
   const { locale, slug } = await params;
-  const service = await getService(slug);
+  const [service, system, origin] = await Promise.all([
+    getService(slug),
+    getSystem(),
+    getRequestOrigin(),
+  ]);
   if (!service) return {};
 
   const name =
@@ -34,19 +41,36 @@ export async function generateMetadata({
     service.en_name ??
     slug;
 
+  // Share cards get the trimmed blurb; the <meta name="description"> keeps the
+  // full body for search engines.
   const description =
     (locale === "en" ? service.en_description : service.description) ??
     service.description ??
     service.en_description ??
     undefined;
+  const shareDescription = toShareDescription(description);
+
+  const url = `${origin}/${locale}/services/${slug}`;
+  const image = service.image ?? service.images.find((img) => img.image)?.image;
 
   return {
+    metadataBase: new URL(origin),
     title: name,
-    description: description ?? undefined,
+    description,
+    alternates: { canonical: url },
     openGraph: {
+      type: "website",
+      url,
+      siteName: system?.site_name ?? undefined,
       title: name,
-      description: description ?? undefined,
-      images: service.image ? [{ url: service.image }] : undefined,
+      description: shareDescription,
+      images: image ? [{ url: image, alt: name }] : undefined,
+    },
+    twitter: {
+      card: image ? "summary_large_image" : "summary",
+      title: name,
+      description: shareDescription,
+      images: image ? [image] : undefined,
     },
   };
 }
@@ -121,33 +145,42 @@ export default async function ServicePage({ params, searchParams }: Props) {
   // Clear the fixed navbar (top) and add page-bottom breathing room via the
   // shared @repo/ui CSS vars, instead of importing the heavy "use client"
   // navbar module (NavbarSpacer/PageBottomSpacer) into this server component.
+  // With a hero video the navbar instead overlays it, exactly as it overlays
+  // the landing page's Hero - so the spacing is dropped.
   return (
-    <Container
-      paddingX={10}
-      paddingTop="var(--ui-navbar-height, 57px)"
-      paddingBottom="var(--ui-page-bottom-spacing, 64px)"
-    >
-      <Breadcrumbs items={breadcrumbs} />
-      <Grid container spacing={4} marginBottom="48px">
-        <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
-          <ItemGalleryClient
-            images={galleryImages}
-            placeholderColor={service.background_color ?? undefined}
-          />
+    <>
+      {service.video_link && (
+        <ItemHeroVideo url={service.video_link} title={displayName} />
+      )}
+      <Container
+        paddingX={10}
+        paddingTop={
+          service.video_link ? undefined : "var(--ui-navbar-height, 57px)"
+        }
+        paddingBottom="var(--ui-page-bottom-spacing, 64px)"
+      >
+        <Breadcrumbs items={breadcrumbs} />
+        <Grid container spacing={2} marginBottom={18}>
+          <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
+            <ItemGalleryClient
+              images={galleryImages}
+              placeholderColor={service.background_color ?? undefined}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
+            <ServiceDetailPanel
+              service={service}
+              selectedVariant={selectedVariant}
+              locale={locale}
+            />
+          </Grid>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
-          <ServiceDetailPanel
-            service={service}
-            selectedVariant={selectedVariant}
-            locale={locale}
-          />
-        </Grid>
-      </Grid>
-      <ServiceDetailSections
-        service={service}
-        selectedVariant={selectedVariant}
-        locale={locale}
-      />
-    </Container>
+        <ServiceDetailSections
+          service={service}
+          selectedVariant={selectedVariant}
+          locale={locale}
+        />
+      </Container>
+    </>
   );
 }

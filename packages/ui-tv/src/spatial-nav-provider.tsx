@@ -1,4 +1,4 @@
-import { init } from '@noriginmedia/norigin-spatial-navigation';
+import { init } from "@noriginmedia/norigin-spatial-navigation";
 
 let started = false;
 

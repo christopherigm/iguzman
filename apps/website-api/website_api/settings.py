@@ -14,8 +14,14 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Local development reads .env; in Docker/Helm the same names arrive as real
+# environment variables, which load_dotenv leaves untouched (it never overrides).
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
@@ -263,3 +269,16 @@ if _CORS_ALLOWED_ORIGINS:
     CORS_ALLOWED_ORIGINS = [o.strip() for o in _CORS_ALLOWED_ORIGINS.split(',') if o.strip()]
 else:
     CORS_ALLOW_ALL_ORIGINS = DEBUG
+
+# LLM providers
+#
+# All AI calls go through core/services/llm.py: Groq is primary, OpenRouter is the
+# fallback for any Groq failure. Mirrors cinelog-api's configuration.
+
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+GROQ_MODEL = os.environ.get('GROQ_MODEL', 'openai/gpt-oss-120b')
+
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
+OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-instruct')
+
+LLM_REQUEST_TIMEOUT = float(os.environ.get('LLM_REQUEST_TIMEOUT', '20'))

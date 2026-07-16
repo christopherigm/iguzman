@@ -2,17 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Thumbs, Navigation, FreeMode } from "swiper/modules";
+import { Thumbs, FreeMode } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
 import { Box } from "@repo/ui/core-elements/box";
-import { Button } from "@repo/ui/core-elements/button";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import getImageDimensionsFromUrl from "@repo/helpers/get-image-dimensions-from-url";
 import "swiper/css";
-import "swiper/css/navigation";
 import "swiper/css/free-mode";
 import "swiper/css/thumbs";
 import "./item-gallery-client.css";
+import Card from "@repo/ui/core-elements/card";
 
 export interface GalleryImage {
   url: string;
@@ -28,7 +29,9 @@ export function ItemGalleryClient({
   images,
   placeholderColor,
 }: ItemGalleryClientProps) {
+  const t = useTranslations("Gallery");
   const [thumbsSwiper, setThumbsSwiper] = useState<SwiperType | null>(null);
+  const [mainSwiper, setMainSwiper] = useState<SwiperType | null>(null);
   const [slideAspectRatio, setSlideAspectRatio] = useState<number | null>(null);
   const [imageAspectRatios, setImageAspectRatios] = useState<(number | null)[]>(
     [],
@@ -44,22 +47,31 @@ export function ItemGalleryClient({
     }, 250);
   }, []);
 
+  const showPrevFullscreen = useCallback(() => {
+    setFullscreenIndex((i) =>
+      i === null ? null : (i - 1 + images.length) % images.length,
+    );
+  }, [images.length]);
+
+  const showNextFullscreen = useCallback(() => {
+    setFullscreenIndex((i) => (i === null ? null : (i + 1) % images.length));
+  }, [images.length]);
+
   useEffect(() => {
     if (fullscreenIndex === null) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeFullscreen();
-      if (e.key === "ArrowLeft")
-        setFullscreenIndex((i) =>
-          i === null ? null : (i - 1 + images.length) % images.length,
-        );
-      if (e.key === "ArrowRight")
-        setFullscreenIndex((i) =>
-          i === null ? null : (i + 1) % images.length,
-        );
+      if (e.key === "ArrowLeft") showPrevFullscreen();
+      if (e.key === "ArrowRight") showNextFullscreen();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [fullscreenIndex, closeFullscreen, images.length]);
+  }, [
+    fullscreenIndex,
+    closeFullscreen,
+    showPrevFullscreen,
+    showNextFullscreen,
+  ]);
 
   useEffect(() => {
     if (images.length === 0) return;
@@ -96,63 +108,91 @@ export function ItemGalleryClient({
       : 1.5;
 
   return (
-    <Box flexDirection="column" gap={8} width="100%">
-      <Swiper
-        modules={[Thumbs, Navigation, FreeMode]}
-        thumbs={{
-          swiper: thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null,
-        }}
-        navigation
-        loop={images.length > 1}
-        spaceBetween={15}
-        className="item-gallery__main"
-      >
-        {images.map((img, i) => (
-          <SwiperSlide key={i}>
-            <Box
-              width="100%"
-              maxHeight="clamp(320px, 50vh, 520px)"
-              styles={{
-                position: "relative",
-                aspectRatio:
-                  slideAspectRatio !== null
-                    ? String(slideAspectRatio)
-                    : "1 / 1",
-              }}
-            >
-              <Image
-                fill
-                src={img.url}
-                alt={img.alt}
-                sizes="(min-width: 1200px) 40vw, (min-width: 600px) 50vw, 100vw"
-                priority={i === 0}
-                style={{ objectFit: "contain" }}
-              />
-              <Button
-                unstyled
-                className="item-gallery__fullscreen-btn"
-                display="flex"
-                width={36}
-                height={36}
-                borderRadius="50%"
-                alignItems="center"
-                justifyContent="center"
-                styles={{ position: "absolute", bottom: 8, right: 8, zIndex: 10 }}
-                aria-label="Expand image"
-                onClick={() => setFullscreenIndex(i)}
+    <Card flexDirection="column" gap={8} width="100%" padding={8}>
+      <Box width="100%" styles={{ position: "relative" }}>
+        <Swiper
+          modules={[Thumbs, FreeMode]}
+          onSwiper={setMainSwiper}
+          thumbs={{
+            swiper:
+              thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null,
+          }}
+          loop={images.length > 1}
+          spaceBetween={15}
+          className="item-gallery__main"
+        >
+          {images.map((img, i) => (
+            <SwiperSlide key={i}>
+              <Box
+                width="100%"
+                maxHeight="clamp(320px, 50vh, 520px)"
+                styles={{
+                  position: "relative",
+                  aspectRatio:
+                    slideAspectRatio !== null
+                      ? String(slideAspectRatio)
+                      : "1 / 1",
+                }}
               >
                 <Image
-                  src="/icons/fullscreen.svg"
-                  alt=""
-                  width={20}
-                  height={20}
-                  style={{ filter: "invert(1)" }}
+                  fill
+                  src={img.url}
+                  alt={img.alt}
+                  sizes="(min-width: 1200px) 40vw, (min-width: 600px) 50vw, 100vw"
+                  priority={i === 0}
+                  style={{ objectFit: "contain" }}
                 />
-              </Button>
-            </Box>
-          </SwiperSlide>
-        ))}
-      </Swiper>
+                <IconButton
+                  icon="/icons/fullscreen.svg"
+                  aria-label={t("expand")}
+                  styles={{
+                    position: "absolute",
+                    bottom: 8,
+                    right: 8,
+                    zIndex: 10,
+                  }}
+                  onClick={() => setFullscreenIndex(i)}
+                  kind="success"
+                  translucent
+                />
+              </Box>
+            </SwiperSlide>
+          ))}
+        </Swiper>
+
+        {images.length > 1 && (
+          <>
+            <IconButton
+              icon="/icons/prev.svg"
+              aria-label={t("previous")}
+              styles={{
+                position: "absolute",
+                left: 8,
+                top: "50%",
+                transform: "translateY(-50%)",
+                zIndex: 10,
+              }}
+              onClick={() => mainSwiper?.slidePrev()}
+              kind="success"
+              translucent
+            />
+            <IconButton
+              icon="/icons/next.svg"
+              aria-label={t("next")}
+              styles={{
+                position: "absolute",
+                right: 8,
+                top: "50%",
+                transform: "translateY(-50%)",
+                zIndex: 10,
+              }}
+              onClick={() => mainSwiper?.slideNext()}
+              kind="success"
+              translucent
+            />
+          </>
+        )}
+      </Box>
 
       {images.length > 1 && (
         <Swiper
@@ -224,29 +264,52 @@ export function ItemGalleryClient({
               style={{ objectFit: "contain" }}
             />
           </Box>
-          <Button
-            unstyled
-            className="item-gallery__overlay-close"
-            display="flex"
-            width={36}
-            height={36}
-            borderRadius="50%"
-            alignItems="center"
-            justifyContent="center"
+          {images.length > 1 && (
+            <>
+              <IconButton
+                icon="/icons/prev.svg"
+                aria-label={t("previous")}
+                styles={{
+                  position: "absolute",
+                  left: 16,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  showPrevFullscreen();
+                }}
+                kind="success"
+                translucent
+              />
+              <IconButton
+                icon="/icons/next.svg"
+                aria-label={t("next")}
+                styles={{
+                  position: "absolute",
+                  right: 16,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  showNextFullscreen();
+                }}
+                kind="success"
+                translucent
+              />
+            </>
+          )}
+          <IconButton
+            icon="/icons/close.svg"
+            aria-label={t("close")}
             styles={{ position: "absolute", top: 16, right: 16 }}
-            aria-label="Close fullscreen"
             onClick={closeFullscreen}
-          >
-            <Image
-              src="/icons/close.svg"
-              alt=""
-              width={24}
-              height={24}
-              style={{ filter: "invert(1)" }}
-            />
-          </Button>
+            kind="error"
+            translucent
+          />
         </Box>
       )}
-    </Box>
+    </Card>
   );
 }

@@ -17,7 +17,7 @@ These IDs originate in the PRD's risk register but are self-defined here so this
 file stands alone:
 
 - **R3a** — GeckoLib model export depends on the plugin chain; there is no
-  GeckoLib export *codec* (see the export recipe).
+  GeckoLib export _codec_ (see the export recipe).
 - **R3b** — animation export has no MCP file-export method; resolved via the
   `risky_eval` `AnimationCodec.compileFile` path.
 - **R6** — naming collisions between Java registry names and asset/bone names
@@ -50,7 +50,7 @@ All versions live in **`gradle.properties`** (single source of truth): Minecraft
 `pnpm setup-minecraft`.
 
 > **Why 1.20.2, not 1.20.1?** 1.20.1 has no maintained NeoGradle/`net.neoforged`
-> MDK — the only 1.20.1 MDK is a ModDevGradle-*legacyforge* scaffold targeting
+> MDK — the only 1.20.1 MDK is a ModDevGradle-_legacyforge_ scaffold targeting
 > MinecraftForge (`net.minecraftforge.*`). NeoForge's own NeoGradle MDKs begin at
 > 1.20.2, so 1.20.2 is the earliest version that gives genuine NeoForge tooling.
 
@@ -63,7 +63,7 @@ For the 20.2.x (1.20.2) line specifically:
   FML passes the mod event bus in by parameter type. Do **not** use the
   1.20.1/Forge-style no-arg constructor + `FMLJavaModLoadingContext.get().getModEventBus()`.
 - Metadata file is **`META-INF/mods.toml`** (the `neoforge.mods.toml` rename comes later, in 1.20.5+).
-- In `mods.toml`, dependencies use the Forge-era boolean **`mandatory=true`**, *not* the
+- In `mods.toml`, dependencies use the Forge-era boolean **`mandatory=true`**, _not_ the
   newer **`type="required"`** (that arrives in 20.3/1.20.4). On 20.2 the wrong one
   fails mod discovery with `InvalidModFileException: Missing required field mandatory`,
   which cascades into a misleading `Failed to find system mod: minecraft`.
@@ -103,7 +103,7 @@ We keep authoring mobs **head/face toward +Z** — that is what the pipeline
 naturally produces and what `tools/mob_face.py` assumes (its `front` alias =
 the +Z / `south` box-UV face; flipping that would desync every `tools/faces/*.json`
 spec). To make a +Z-front model travel forwards, **wrap the whole rig in one
-extra root bone that carries a rigid 180° Y rotation**. Because it is a *rigid*
+extra root bone that carries a rigid 180° Y rotation**. Because it is a _rigid_
 rotation applied at render time (not a coordinate flip), it preserves every
 cube's box-UV texturing — no repaint, no UV edits, no animation changes (bones
 are still referenced by their original names).
@@ -148,10 +148,10 @@ Two hard facts learned by driving the real plugin, both contradicting the naive
 
 1. **The GeckoLib plugin registers NO export codec.** `list_export_formats` never
    shows a GeckoLib entry; its `geckolib_model` format reuses the `project`
-   (`.bbmodel`) codec. Export is done by two *menu actions*, not codecs:
+   (`.bbmodel`) codec. Export is done by two _menu actions_, not codecs:
    `export_geckolib_model` (→ `.geo.json`) and `export_geckolib_animations`.
 2. **`export_geckolib_animations` just delegates to the built-in
-   `export_animation_file`** — GeckoLib animations *are* plain Bedrock
+   `export_animation_file`** — GeckoLib animations _are_ plain Bedrock
    `.animation.json` (`format_version 1.8.0`). That built-in opens a confirmation
    **Dialog**, so triggering it over MCP hangs waiting for a click.
 
@@ -174,7 +174,7 @@ file. The working, dialog-free path is `risky_eval`:
 
 ### Plugin install is programmatic (not just a GUI step)
 
-The **"GeckoLib Models & Animations"** plugin (store id **`geckolib`**; *not* the
+The **"GeckoLib Models & Animations"** plugin (store id **`geckolib`**; _not_ the
 deprecated `animation_utils`) can be installed over MCP when the store is loaded:
 `Plugins.all.find(p=>p.id==='geckolib').download(true)`. It registers the
 `geckolib_model` format. (Its Blockbench-plugin version, e.g. 4.2.5, is
@@ -201,8 +201,8 @@ the same string. (There is no delete-texture MCP tool; remove a stray one via
 ### Per-part UV layout (so each body part is hand-paintable)
 
 **The goal:** after the pipeline finishes, the operator can open the mob in
-Blockbench and paint (or add detail to) any one body part *without the paint
-bleeding onto other parts*. That only works when **every cube owns its own
+Blockbench and paint (or add detail to) any one body part _without the paint
+bleeding onto other parts_. That only works when **every cube owns its own
 non-overlapping rectangle** on the texture — one shared atlas, distinct regions,
 not one region shared by all.
 
@@ -217,11 +217,11 @@ atlas with a distinct rect per cube.
 `place_cube`s exist and **before** export. Over `risky_eval`:
 
 1. Select every element (`selectAll()` is unreliable — set `el.selected=true` on
-   each `Outliner.elements` entry *and* push it into the global `selected` array).
+   each `Outliner.elements` entry _and_ push it into the global `selected` array).
 2. Stub `Blockbench.showMessageBox` to a no-op for the call — sub-pixel faces
    (e.g. 0.7-wide claw tubes) pop a blocking warning dialog that hangs MCP.
 3. `TextureGenerator.generateTemplate({rearrange_uv:true, box_uv:true,
-   double_use:false, power:true, padding:0}, cb)` — pass a **callback fn as the
+double_use:false, power:true, padding:0}, cb)` — pass a **callback fn as the
    2nd arg** so it covers all elements in single-texture formats. This repacks
    non-overlapping box-UV offsets for every cube and grows
    `Project.texture_width/height` to the smallest power-of-two atlas that fits
@@ -231,7 +231,7 @@ atlas with a distinct rect per cube.
    So afterward, regenerate the PNG at the new `texture_width/height`, filled with
    the mob's base colour (a flat fill is fine — it is the blank canvas the
    operator paints on), and load it back (`t.fromDataURL(url); t.updateSource(url);
-   Canvas.updateAll()`).
+Canvas.updateAll()`).
 5. **Re-export `geo.json`** — the `uv` offsets and `texture_width/height` changed,
    so an un-re-exported model still samples `uv:[0,0]` in game.
 
@@ -239,7 +239,7 @@ Then **verify the PNG's real dimensions on disk** (`struct.unpack` of the IHDR) 
 the tool's success message and byte count will not reveal a wrong-size canvas.
 
 > The box-UV net Blockbench stores per face (needed only if you repack UVs
-> deterministically *outside* Blockbench, e.g. a retrofit script): for a cube
+> deterministically _outside_ Blockbench, e.g. a retrofit script): for a cube
 > `size=(w,h,d)` at offset `(u,v)` —
 > `east=[u, v+d, u+d, v+d+h]`, `north=[u+d, v+d, u+d+w, v+d+h]`,
 > `west=[u+d+w, v+d, u+2d+w, v+d+h]`, `south=[u+2d+w, v+d, u+2d+2w, v+d+h]`,
@@ -266,7 +266,7 @@ below.
 
 **Decide the anatomy first.** From the build spec, list which of eyes, mouth,
 nose, nostrils, brows, whiskers, and **ears** the animal actually has — a seal
-has eyes + nose + a mouth and *no* external ears; a cat has all of them. Only
+has eyes + nose + a mouth and _no_ external ears; a cat has all of them. Only
 add what the creature has; a spurious mouth on an eyeball is worse than none.
 
 **Eyes/mouth/nose = paint (`paint`).** Author a spec at
@@ -291,7 +291,7 @@ is the worked reference.
 
 **Ears (and horns/antennae) = geometry, not paint.** External ears must be real
 cubes so they cast shape, animate with the head, and get their own UV rect. Add
-them in the **modeling phase**, parented to the head bone, *before* the UV
+them in the **modeling phase**, parented to the head bone, _before_ the UV
 repack — then the repack gives them atlas rectangles and `mob_face.py paint` can
 add inner-ear detail like any other part. To get symmetric, correctly-placed ear
 geometry, run:
@@ -317,7 +317,7 @@ without lossy reconstruction.
   `textures/entity/<id>.png` directly, **keeping the same pixel dimensions and UV
   layout**, then `pnpm --filter=mob-forge build`. No Blockbench needed. For
   facial features prefer `tools/mob_face.py paint` (see "Facial features + ears"
-  above) — it edits the PNG *and* re-embeds it into the `.bbmodel` for you. Only
+  above) — it edits the PNG _and_ re-embeds it into the `.bbmodel` for you. Only
   re-export the geo if you change the texture resolution or repack UVs.
 - **Hand-painting a single part** (recolour the head, add a stripe to the tail):
   because the pipeline now gives every cube its own non-overlapping rectangle (see
@@ -327,7 +327,7 @@ without lossy reconstruction.
   panel shows exactly which rectangle you are editing. Save the PNG **and** the
   `.bbmodel`, then rebuild. (If a mob still has all cubes at `uv:[0,0]` — an old
   16×16 model — repack it first with the "Per-part UV layout" recipe, otherwise
-  painting *will* bleed.)
+  painting _will_ bleed.)
 - **Geometry / UV / animation change:** open `blockbench/<id>.bbmodel`, edit,
   re-export `geo.json` + `animation.json` via the `risky_eval` recipe above, save
   the `png`, **and save the `.bbmodel`**. If you rename a bone or animation id,
@@ -370,17 +370,19 @@ contract, and the `risky_eval` export steps all live here, not in the skill).
 
 Items are **not** mobs, and the item pipeline shares almost nothing with the mob
 one — no GeckoLib, no rig, no animation, no entity, no renderer, no Blockbench
-*required*. Use the **`/item-forge <description>`** skill
+_required_. Use the **`/item-forge <description>`** skill
 (`.claude/skills/item-forge/SKILL.md`) — e.g. `/item-forge a ruby-encrusted
 dagger`. This section is the authoritative item recipe.
 
 ### Scope: flat inventory items only (not blocks)
+
 This covers items you hold or carry: **gems/materials, food, and tools/weapons**.
 A **block** (a placeable candle, lamp, ore, decorative block) is a different thing
 — Block + `BlockItem` + blockstate + world behaviour — and is **out of scope**;
 don't fake a placeable object as an item.
 
-### The sprite *is* the model — there is no geometry
+### The sprite _is_ the model — there is no geometry
+
 A flat item (`item/generated` or `item/handheld`) has **no cubes to author**.
 Minecraft auto-extrudes the little in-hand 3D slab straight from the sprite's
 alpha channel at runtime, so a 16×16 PNG is the entire visual. The only thing to
@@ -389,6 +391,7 @@ uses the `item/handheld` parent for the in-hand grip and a `SwordItem` + `Tier`
 for behaviour.)
 
 ### Files per item (reuse the id verbatim — R6)
+
 For an item `emberblade`:
 
 - spec: `tools/items/emberblade.item.json`
@@ -401,6 +404,7 @@ The worked references are `ruby` (gem/inert), `sunberry` (food), and `emberblade
 (sword) — mirror the one matching the category.
 
 ### Generate the sprite — `tools/item_sprite.py` (Python 3 + Pillow)
+
 Deterministic, no Blockbench. The spec is a `palette` (char → RGBA, `.` =
 transparent) and a 16×16 `grid` of chars. Render with:
 
@@ -414,6 +418,7 @@ outline, 1–2 shading tones, a highlight. **Look at the PNG** before continuing
 (Pillow install is the same as `mob_face.py` — see "Facial features + ears".)
 
 ### Java (1.20.2) — item type by category
+
 Register in `registry/ModItems.java` (mirror the references), then add the item
 to `registry/ModCreativeTabs.java`'s `displayItems` so it shows in the **Mob Forge
 Items** tab. That custom `CreativeModeTab` is registered on
@@ -422,10 +427,10 @@ spawn eggs stay in the vanilla `SPAWN_EGGS` tab.
 
 - **Gem / material** → `new Item(new Item.Properties())`.
 - **Food** → `new Item(new Item.Properties().food(new FoodProperties.Builder()
-  .nutrition(n).saturationMod(s).build()))`. On 20.2 the builder method is
+.nutrition(n).saturationMod(s).build()))`. On 20.2 the builder method is
   **`saturationMod`** (it becomes `saturationModifier` in 1.20.5+ — R7).
 - **Tool / weapon** → `new SwordItem(tier, attackDamageModifier, attackSpeedModifier,
-  new Item.Properties())` with a per-item `com.iguzman.mobforge.item.ForgeItemTier`
+new Item.Properties())` with a per-item `com.iguzman.mobforge.item.ForgeItemTier`
   (`uses, speed, attackDamageBonus, level, enchantmentValue, Ingredient.EMPTY`).
   **Durability flows from the tier's `uses`** (`TieredItem` applies
   `defaultDurability(tier.getUses())`); final attack damage = 1 (base) +
@@ -433,11 +438,13 @@ spawn eggs stay in the vanilla `SPAWN_EGGS` tab.
   `<Item>`) is required — `register` infers the concrete item type.
 
 ### Item model parent
+
 `models/item/<id>.json` → `{ "parent": "minecraft:item/generated", "textures": {
 "layer0": "mobforge:item/<id>" } }` for icons; use **`minecraft:item/handheld`**
 for swords/tools so they sit right in the hand.
 
 ### Editing / touch-up in Blockbench (source vs build output)
+
 Same contract as mobs: **`blockbench/items/<id>.bbmodel` is the editable source;
 the `png` is a build output.** The `.bbmodel` is a Generic-Model project that just
 carries the sprite as a paintable texture (a flat item has no geometry to edit).

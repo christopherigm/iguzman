@@ -1,11 +1,6 @@
-import type { ReactNode } from 'react';
-import {
-  ScrollView,
-  StatusBar,
-  View,
-  type ViewStyle,
-} from 'react-native';
-import { useTheme } from './theme-provider';
+import type { ReactNode } from "react";
+import { ScrollView, StatusBar, View, type ViewStyle } from "react-native";
+import { useTheme } from "./theme-provider";
 
 export interface ScreenProps {
   children: ReactNode;
@@ -45,11 +40,11 @@ export function Screen({
 
   const content: ViewStyle = {
     padding: pad,
-    ...(center ? { alignItems: 'center', justifyContent: 'center' } : {}),
+    ...(center ? { alignItems: "center", justifyContent: "center" } : {}),
     ...(scroll ? { flexGrow: 1 } : { flex: 1 }),
   };
 
-  const barStyle = scheme === 'dark' ? 'light-content' : 'dark-content';
+  const barStyle = scheme === "dark" ? "light-content" : "dark-content";
 
   if (scroll) {
     return (

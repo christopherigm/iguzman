@@ -6,8 +6,8 @@ description: The design playbook for building EXCEPTIONAL, non-generic customer 
 # site-design — make a customer site look designed, not generated
 
 This is the **craft** companion to `apps/website/sites/CLAUDE.md` (the structural
-recipe). CLAUDE.md tells you *where code goes and how tenancy resolves*; this
-skill tells you *how to make the result look genuinely good* — bespoke, calm,
+recipe). CLAUDE.md tells you _where code goes and how tenancy resolves_; this
+skill tells you _how to make the result look genuinely good_ — bespoke, calm,
 and free of the tells that mark a page as machine-generated.
 
 > **The whole point of in-house design:** every customer site should look like a
@@ -88,18 +88,18 @@ it, or it belongs in a named site-local component.
 These are the patterns that make a page read as auto-generated. Treat each as a
 hard **don't** unless the customer's brand specifically calls for it.
 
-| Tell (don't) | Do instead |
-| --- | --- |
-| **Purple / violet / indigo / magenta** as the default accent or in gradients (the #1 giveaway). The old bdrone `#e040fb` magenta secondary was exactly this. | Drive color from the tenant's real brand (`System.primary_color` → already the theme `--accent`). If a brand *is* purple, fine — but never *default* to purple. |
-| **`transform: translateY(-Npx)` lift on hover**, `scale(1.05)` bounce, springy card hops. | Signal interactivity with **color, shadow (`elevation`), or opacity** transitions — the core Button/Card already do this well. Keep motion subtle and ≤200ms. |
-| **Gradient soup** — diagonal multi-stop brand gradients behind every band, glowing blobs, `linear-gradient(135deg, …)` everywhere. | Create section rhythm with a **solid neutral band** (`backgroundColor="var(--surface-2)"`) behind alternate sections. Reserve any gradient for a single deliberate moment (e.g. a hero overlay), never as wallpaper. |
-| **Glassmorphism everywhere** — `backdrop-filter: blur()` on every card. | Flat surfaces + real borders (`--border`) and elevation. Blur is opt-in and rare. |
-| **Neon glows / heavy `box-shadow` in accent color.** | Neutral elevation shadows (the `elevation` prop scale). |
-| **Emoji used as UI icons** (🚀 ✨ 🎯 in headings/buttons). | The `Icon` component with real SVG paths, or no icon. |
-| **The generic hero:** centered headline + subhead + two pill buttons floating over a gradient blob, identical for every business. | A hero grounded in the customer's actual offer and imagery; vary composition (split, full-bleed photo, left-aligned) by business type — see §4. |
-| **Everything is a uniform 3-up card grid.** | Vary section shape: a split feature, a wide media band, a list, a single testimonial — not five identical grids stacked. |
-| **Faux copy / faux stats** ("Trusted by 10,000+ users", lorem). | Copy and numbers come from the DB (the customer's real content via `/seed-site` + CMS). Never hardcode marketing claims. |
-| **Rounded-everything at huge radii** (`borderRadius: 24`+ on every box) or **hairline 1px everything**. | A consistent, moderate radius scale (cards ~10–12, media ~16–20) applied with intent. |
+| Tell (don't)                                                                                                                                                 | Do instead                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Purple / violet / indigo / magenta** as the default accent or in gradients (the #1 giveaway). The old bdrone `#e040fb` magenta secondary was exactly this. | Drive color from the tenant's real brand (`System.primary_color` → already the theme `--accent`). If a brand _is_ purple, fine — but never _default_ to purple.                                                      |
+| **`transform: translateY(-Npx)` lift on hover**, `scale(1.05)` bounce, springy card hops.                                                                    | Signal interactivity with **color, shadow (`elevation`), or opacity** transitions — the core Button/Card already do this well. Keep motion subtle and ≤200ms.                                                        |
+| **Gradient soup** — diagonal multi-stop brand gradients behind every band, glowing blobs, `linear-gradient(135deg, …)` everywhere.                           | Create section rhythm with a **solid neutral band** (`backgroundColor="var(--surface-2)"`) behind alternate sections. Reserve any gradient for a single deliberate moment (e.g. a hero overlay), never as wallpaper. |
+| **Glassmorphism everywhere** — `backdrop-filter: blur()` on every card.                                                                                      | Flat surfaces + real borders (`--border`) and elevation. Blur is opt-in and rare.                                                                                                                                    |
+| **Neon glows / heavy `box-shadow` in accent color.**                                                                                                         | Neutral elevation shadows (the `elevation` prop scale).                                                                                                                                                              |
+| **Emoji used as UI icons** (🚀 ✨ 🎯 in headings/buttons).                                                                                                   | The `Icon` component with real SVG paths, or no icon.                                                                                                                                                                |
+| **The generic hero:** centered headline + subhead + two pill buttons floating over a gradient blob, identical for every business.                            | A hero grounded in the customer's actual offer and imagery; vary composition (split, full-bleed photo, left-aligned) by business type — see §4.                                                                      |
+| **Everything is a uniform 3-up card grid.**                                                                                                                  | Vary section shape: a split feature, a wide media band, a list, a single testimonial — not five identical grids stacked.                                                                                             |
+| **Faux copy / faux stats** ("Trusted by 10,000+ users", lorem).                                                                                              | Copy and numbers come from the DB (the customer's real content via `/seed-site` + CMS). Never hardcode marketing claims.                                                                                             |
+| **Rounded-everything at huge radii** (`borderRadius: 24`+ on every box) or **hairline 1px everything**.                                                      | A consistent, moderate radius scale (cards ~10–12, media ~16–20) applied with intent.                                                                                                                                |
 
 Quick self-audit before finishing — grep your diff for the mechanical tells:
 
@@ -123,7 +123,7 @@ Score a landing against these. A site should clear all six.
    variant; you adjust `fontWeight` and `color`, not `fontSize`.
 3. **Color restraint.** One brand accent (`--accent`, tenant-driven) + the
    neutral tokens (`--foreground`, `--background`, `--surface-2`, `--border`,
-   `--muted-foreground`). That's the palette. Accent is for *emphasis* (primary
+   `--muted-foreground`). That's the palette. Accent is for _emphasis_ (primary
    CTA, active state, a single highlight), not for filling large areas.
 4. **Spacing rhythm.** Pick one vertical section-padding value and reuse it
    (e.g. `paddingY={64}` on section wrappers, `{48}` on mobile via responsive
@@ -133,7 +133,7 @@ Score a landing against these. A site should clear all six.
    story (see archetypes), and adjacent sections should differ in shape and
    background so the eye has rhythm. Alternate plain / `--surface-2` bands.
 6. **Responsive, theme-aware, accessible.** No horizontal body scroll at any
-   width; verify light *and* dark; every image has real `alt`; headings nest
+   width; verify light _and_ dark; every image has real `alt`; headings nest
    correctly; interactive targets are ≥40px.
 
 ---

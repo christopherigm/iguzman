@@ -50,7 +50,10 @@ export function saveResumePoint(slug: string, point: ResumePoint): void {
       clearResumePoint(slug);
       return;
     }
-    if (point.duration > 0 && point.position >= point.duration - END_MARGIN_MS) {
+    if (
+      point.duration > 0 &&
+      point.position >= point.duration - END_MARGIN_MS
+    ) {
       clearResumePoint(slug);
       return;
     }

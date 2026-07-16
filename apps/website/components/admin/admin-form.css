@@ -18,6 +18,19 @@
   grid-column: 1 / -1;
 }
 
+/* Paired ES/EN textarea: full width until md, then one column each so the two
+   languages sit side by side. */
+.af__field--pair {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 900px) {
+  /* md */
+  .af__field--pair {
+    grid-column: auto;
+  }
+}
+
 /* ── Enhance / translate icon button ─────────────────────────────────────────
    `Button unstyled` icon toggle; the hover tint, active tint and busy opacity
    are state-driven and must be reachable by CSS selectors. */

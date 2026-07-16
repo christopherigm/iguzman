@@ -131,8 +131,9 @@ export default function AdminProductCategoryFormPage({ params }: Props) {
       } else if (existingImage.length === 0) {
         payload.image = null;
       }
-      if (payload.parent === "" || payload.parent === null)
-        delete payload.parent;
+      // Clear with an explicit null. Updates are PATCH, so an omitted key means
+      // "leave unchanged" - it cannot clear a value.
+      if (payload.parent === "") payload.parent = null;
       if (isNew) {
         const created = await createProductCategory(payload);
         setSuccess(t("saved"));
@@ -197,6 +198,7 @@ export default function AdminProductCategoryFormPage({ params }: Props) {
             ? `${t("newItem")} - ${t("productCategories")}`
             : `${t("edit")} - ${t("productCategories")}`
         }
+        editingName={isNew ? undefined : String(values.name ?? "")}
         fields={fields}
         values={values}
         onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
@@ -204,21 +206,22 @@ export default function AdminProductCategoryFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
-      >
-        <Box display="flex" flexDirection="column" gap="8px">
-          <Typography variant="label">{t("image") ?? "Image"}</Typography>
-          <AdminImageUploader
-            existingImages={existingImage}
-            onChange={(n, _d, o) => {
-              setPendingImage(n);
-              setExistingImage((prev) =>
-                prev.filter((img) => o.includes(img.id)),
-              );
-            }}
-            maxImages={1}
-          />
-        </Box>
-      </AdminForm>
+        imagesSlot={
+          <Box display="flex" flexDirection="column" gap="8px">
+            <Typography variant="label">{t("image") ?? "Image"}</Typography>
+            <AdminImageUploader
+              existingImages={existingImage}
+              onChange={(n, _d, o) => {
+                setPendingImage(n);
+                setExistingImage((prev) =>
+                  prev.filter((img) => o.includes(img.id)),
+                );
+              }}
+              maxImages={1}
+            />
+          </Box>
+        }
+      />
     </>
   );
 }

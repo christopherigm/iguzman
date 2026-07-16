@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { getWorkExperiences, getEducations, getLanguages, getProjects } from "@/lib/career";
+import {
+  getWorkExperiences,
+  getEducations,
+  getLanguages,
+  getProjects,
+} from "@/lib/career";
 import { getSkills } from "@/lib/matrix";
 import type { ExportData } from "../detail-constants";
 

@@ -1,11 +1,11 @@
-import { Link } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Box } from '@repo/ui-native/box';
-import { Button } from '@repo/ui-native/button';
-import { Screen } from '@repo/ui-native/screen';
-import { Typography } from '@repo/ui-native/typography';
+import { Link } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Box } from "@repo/ui-native/box";
+import { Button } from "@repo/ui-native/button";
+import { Screen } from "@repo/ui-native/screen";
+import { Typography } from "@repo/ui-native/typography";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'not set';
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "not set";
 
 /** Home route - a props-first showcase of @repo/ui-native. */
 export default function Home() {
@@ -21,12 +21,7 @@ export default function Home() {
           </Typography>
         </Box>
 
-        <Box
-          gap={12}
-          padding={16}
-          borderRadius={8}
-          backgroundColor="#00000010"
-        >
+        <Box gap={12} padding={16} borderRadius={8} backgroundColor="#00000010">
           <Typography variant="label" color="accent">
             API
           </Typography>

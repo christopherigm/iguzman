@@ -117,6 +117,12 @@
     "invalidDetail": "Este link de redefinição de senha é inválido ou expirou. Por favor, solicite um novo.",
     "requestNewLink": "Solicitar um novo link"
   },
+  "Gallery": {
+    "previous": "Imagem anterior",
+    "next": "Próxima imagem",
+    "expand": "Ampliar imagem",
+    "close": "Fechar tela cheia"
+  },
   "ItemDetail": {
     "home": "Início",
     "brand": "Marca",
@@ -132,6 +138,8 @@
     "buyNow": "Comprar agora",
     "bookNow": "Reservar agora",
     "addToFavorites": "Adicionar aos favoritos",
+    "share": "Compartilhar",
+    "linkCopied": "Link copiado para a área de transferência",
     "description": "Sobre este item",
     "specifications": "Especificações",
     "physicalDetails": "Detalhes físicos",
@@ -142,7 +150,8 @@
     "duration": "Duração",
     "modalityOnline": "Online",
     "modalityInPerson": "Presencial",
-    "modalityHybrid": "Híbrido"
+    "modalityHybrid": "Híbrido",
+    "expandVideo": "Ampliar vídeo"
   },
   "CatalogCategories": {
     "heading": "Categorias"
@@ -217,6 +226,7 @@
     "users": "Usuários",
     "newItem": "Novo",
     "edit": "Editar",
+    "editingItem": "Editando \"{name}\"",
     "delete": "Excluir",
     "save": "Salvar",
     "saving": "Salvando…",
@@ -306,6 +316,8 @@
     "breadcrumbAdmin": "Admin",
     "enhanceLabel": "Melhorar com IA",
     "translateLabel": "Traduzir com IA",
+    "langEnglish": "English",
+    "langSpanish": "Español",
     "enhanceModelTitle": "Melhoria de texto com IA",
     "enhanceModelText": "Na primeira vez que usar a função Melhorar, o modelo de IA (~350 MB) será baixado uma vez no seu navegador. Isso pode levar um momento. Continuar?",
     "downloadingModel": "Baixando modelo de IA",
@@ -320,9 +332,13 @@
     "logoAssetsModalText": "Deseja gerar automaticamente o favicon e os ícones do manifesto (1080×, 512×, 256×, 192×, 128×) a partir do logo enviado?",
     "generatingAssets": "Gerando recursos…",
     "errorGenerateAssets": "Falha ao gerar recursos a partir do logo.",
-    "aiProvider": "Provedor de IA",
-    "groqProvider": "Groq",
-    "ollamaProvider": "Ollama"
+    "logoHero": "Logotipo (Hero)",
+    "favicon": "Favicon",
+    "heroImage": "Imagem Hero",
+    "aboutImage": "Imagem Sobre",
+    "manifestIcon": "Manifest {size}",
+    "brandImages": "Imagens da marca",
+    "manifestImages": "Ícones do manifest"
   },
   "GradientBuilder": {
     "linear": "Linear",
@@ -388,6 +404,7 @@
   "AdminImageUploader": {
     "dropzoneLabel": "Enviar imagens",
     "dropzoneText": "Arraste imagens aqui ou clique para enviar",
+    "dropzoneTextCompact": "Enviar",
     "dropzoneHint": "PNG, JPG, WEBP suportados",
     "deleteImage": "Excluir imagem",
     "main": "Principal",

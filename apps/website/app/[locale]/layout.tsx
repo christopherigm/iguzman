@@ -22,7 +22,7 @@ import { SessionProvider } from "@repo/auth/session-provider";
 import { NavbarClient } from "./navbar-client";
 import { DevSiteSwitcher } from "./dev-site-switcher";
 import { Footer } from "@/components/footer";
-import { FooterVisibility } from "@/components/footer-visibility";
+import { HideOnAdmin } from "@/components/hide-on-admin";
 import packageJson from "@/package.json";
 import { getSystem } from "@/lib/system";
 import { DEV_SITE_COOKIE, SITE_CONFIGS } from "@/sites/registry";
@@ -145,21 +145,23 @@ export default async function LocaleLayout({ children, params }: Props) {
                   />
                   {children}
                   {isDev && (
-                    <DevSiteSwitcher
-                      sites={SITE_CONFIGS.map((c) => ({
-                        slug: c.slug,
-                        name: c.name,
-                      }))}
-                      current={devSite}
-                      cookieName={DEV_SITE_COOKIE}
-                    />
+                    <HideOnAdmin>
+                      <DevSiteSwitcher
+                        sites={SITE_CONFIGS.map((c) => ({
+                          slug: c.slug,
+                          name: c.name,
+                        }))}
+                        current={devSite}
+                        cookieName={DEV_SITE_COOKIE}
+                      />
+                    </HideOnAdmin>
                   )}
-                  <FooterVisibility>
+                  <HideOnAdmin>
                     <Footer
                       logo={system?.img_logo ?? "/logo.png"}
                       system={system}
                     />
-                  </FooterVisibility>
+                  </HideOnAdmin>
                 </PaletteProvider>
               </ThemeProvider>
             </SessionProvider>

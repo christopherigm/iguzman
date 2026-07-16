@@ -1,16 +1,11 @@
-import {
-  createContext,
-  useContext,
-  useMemo,
-  type ReactNode,
-} from 'react';
-import { useColorScheme } from 'react-native';
+import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { useColorScheme } from "react-native";
 import {
   DEFAULT_PALETTE,
   resolveTheme,
   type PaletteName,
   type Theme,
-} from './theme';
+} from "./theme";
 
 const ThemeContext = createContext<Theme | null>(null);
 
@@ -21,7 +16,7 @@ export interface ThemeProviderProps {
    * Force a color scheme instead of following the OS. Omit to track the
    * device's light/dark setting via `useColorScheme`.
    */
-  scheme?: 'light' | 'dark';
+  scheme?: "light" | "dark";
   children: ReactNode;
 }
 
@@ -35,11 +30,8 @@ export function ThemeProvider({
   children,
 }: ThemeProviderProps) {
   const osScheme = useColorScheme();
-  const active = scheme ?? (osScheme === 'dark' ? 'dark' : 'light');
-  const theme = useMemo(
-    () => resolveTheme(palette, active),
-    [palette, active],
-  );
+  const active = scheme ?? (osScheme === "dark" ? "dark" : "light");
+  const theme = useMemo(() => resolveTheme(palette, active), [palette, active]);
   return (
     <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>
   );
@@ -51,5 +43,5 @@ export function ThemeProvider({
  */
 export function useTheme(): Theme {
   const ctx = useContext(ThemeContext);
-  return ctx ?? resolveTheme(DEFAULT_PALETTE, 'light');
+  return ctx ?? resolveTheme(DEFAULT_PALETTE, "light");
 }

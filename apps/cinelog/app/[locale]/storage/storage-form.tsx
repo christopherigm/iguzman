@@ -62,7 +62,11 @@ const EMPTY_FORM: S3BucketInput = {
 };
 
 /** The add-a-bucket form. Calls back on a successful create so the list refreshes. */
-function AddBucketForm({ onCreated }: { onCreated: (bucket: S3Bucket) => void }) {
+function AddBucketForm({
+  onCreated,
+}: {
+  onCreated: (bucket: S3Bucket) => void;
+}) {
   const t = useTranslations("StoragePage");
   const [form, setForm] = useState<S3BucketInput>(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
@@ -226,9 +230,10 @@ export function StorageForm() {
   const [buckets, setBuckets] = useState<S3Bucket[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
-  const [toast, setToast] = useState<{ message: string; isError: boolean } | null>(
-    null,
-  );
+  const [toast, setToast] = useState<{
+    message: string;
+    isError: boolean;
+  } | null>(null);
 
   useEffect(() => {
     listBuckets()

@@ -153,7 +153,12 @@ export function DigitalCopySelector({
           disabled={disabled}
         />
       ) : bucketsLoaded && buckets.length === 0 ? (
-        <Box display="flex" flexDirection="column" gap={8} alignItems="flex-start">
+        <Box
+          display="flex"
+          flexDirection="column"
+          gap={8}
+          alignItems="flex-start"
+        >
           <Typography variant="caption" styles={{ opacity: 0.7 }}>
             {t("noBuckets")}
           </Typography>

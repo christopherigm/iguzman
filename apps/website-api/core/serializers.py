@@ -635,3 +635,27 @@ class BrandWriteSerializer(serializers.Serializer):
             instance.save(update_fields=update_fields)
 
         return instance
+
+
+# ---------------------------------------------------------------------------
+# AI chat
+# ---------------------------------------------------------------------------
+
+class AiChatMessageSerializer(serializers.Serializer):
+    """One chat message. Mirrors the OpenAI wire shape the frontend hook sends."""
+
+    role = serializers.ChoiceField(choices=["system", "user", "assistant"])
+    content = serializers.CharField(trim_whitespace=False, max_length=32000)
+
+
+class AiChatSerializer(serializers.Serializer):
+    """
+    Body of POST /api/ai/chat/.
+
+    The client does not choose a provider or a model - `stream`, `model` and `seed`
+    arrive from the shared hook and are deliberately ignored, since provider choice
+    (Groq, falling back to OpenRouter) is a backend concern.
+    """
+
+    messages = AiChatMessageSerializer(many=True, allow_empty=False, max_length=50)
+    temperature = serializers.FloatField(min_value=0, max_value=2, default=0.7)

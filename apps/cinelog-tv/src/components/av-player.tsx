@@ -75,7 +75,5 @@ export function AvPlayer({
 
   // An <object> of this type is the AVPlay display placeholder; the decoded
   // video paints on its hardware plane.
-  return (
-    <object ref={ref} type="application/avplayer" className="av-player" />
-  );
+  return <object ref={ref} type="application/avplayer" className="av-player" />;
 }

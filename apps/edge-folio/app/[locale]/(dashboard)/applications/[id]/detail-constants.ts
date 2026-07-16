@@ -5,7 +5,12 @@ import type {
   CompanyAnalysis,
   CompanyIntel,
 } from "@/lib/applications";
-import type { WorkExperience, Education, Language, Project } from "@/lib/career";
+import type {
+  WorkExperience,
+  Education,
+  Language,
+  Project,
+} from "@/lib/career";
 import type { Skill } from "@/lib/matrix";
 
 export const STATUSES: ApplicationStatus[] = [

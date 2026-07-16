@@ -364,9 +364,7 @@ function CardBlock({ card, width }: { card: PdfCard; width: string }) {
         <Text style={styles.cardTitle}>{clean(card.title)}</Text>
       </View>
       {card.badge ? (
-        <Text
-          style={[styles.badge, card.accent ? { color: card.accent } : {}]}
-        >
+        <Text style={[styles.badge, card.accent ? { color: card.accent } : {}]}>
           {clean(card.badge)}
         </Text>
       ) : null}
@@ -407,8 +405,7 @@ function Block({ block }: { block: PdfBlock }) {
       // Per-card width derived from the requested column count (defaults to 3).
       // The 2%-shy widths leave room for the 6pt grid gap between cards.
       const columns = block.columns ?? 3;
-      const width =
-        columns <= 1 ? "100%" : columns === 2 ? "48%" : "32%";
+      const width = columns <= 1 ? "100%" : columns === 2 ? "48%" : "32%";
       return (
         <View style={styles.cardsGrid}>
           {block.cards.map((c, i) => (

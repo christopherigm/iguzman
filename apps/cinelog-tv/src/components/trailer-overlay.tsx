@@ -83,7 +83,8 @@ function YouTubeEmbed({
               event.target.playVideo();
             },
             onStateChange: (event) => {
-              if (event.data === YT.PlayerState.PLAYING) clearTimeout(playTimer);
+              if (event.data === YT.PlayerState.PLAYING)
+                clearTimeout(playTimer);
             },
             onError: fail,
           },

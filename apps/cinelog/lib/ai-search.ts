@@ -31,7 +31,9 @@ let pendingQuery: string | null = null;
 export function requestAiSearch(query: string): void {
   pendingQuery = query;
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent<string>(AI_SEARCH_EVENT, { detail: query }));
+    window.dispatchEvent(
+      new CustomEvent<string>(AI_SEARCH_EVENT, { detail: query }),
+    );
   }
 }
 

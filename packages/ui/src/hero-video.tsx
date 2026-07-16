@@ -5,14 +5,36 @@ import ReactPlayer from "react-player";
 
 type Props = {
   url: string;
+  /** Play/pause playback. Set false to hold a background hero while another player has the user's attention. */
+  playing?: boolean;
+  /** Show the player's native controls. Enabling this also makes the player interactive. */
+  controls?: boolean;
+  /** Mute playback. Browsers only autoplay muted video, so unmute only where the user opted in. */
+  muted?: boolean;
+  /** Loop playback when the video ends. */
+  loop?: boolean;
+  /**
+   * 'cover' crops the video to fill the container (hero backgrounds);
+   * 'contain' letterboxes it so the whole frame is visible (fullscreen viewing).
+   */
+  fit?: "cover" | "contain";
 };
 
 /**
  * Thin 'use client' wrapper around ReactPlayer for use inside the Hero server
  * component. Renders only after mount to avoid SSR/hydration mismatches
  * (ReactPlayer relies on browser APIs and must not run on the server).
+ *
+ * Defaults reproduce the muted, controlless, cropped background used by `Hero`.
  */
-export function HeroVideo({ url }: Props) {
+export function HeroVideo({
+  url,
+  playing = true,
+  controls = false,
+  muted = true,
+  loop = true,
+  fit = "cover",
+}: Props) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -22,20 +44,25 @@ export function HeroVideo({ url }: Props) {
 
   if (!mounted) return null;
 
+  const isCover = fit === "cover";
+
   return (
     <div
       style={{
         position: "absolute",
         inset: 0,
         overflow: "hidden",
-        pointerEvents: "none",
+        // A controlless background must never swallow clicks meant for the
+        // elements above it; with controls the player has to be reachable.
+        pointerEvents: controls ? "auto" : "none",
       }}
     >
       {/*
-       * Center the player and ensure it always covers the container.
+       * Center the player. When cropping to cover:
        *   - minWidth/minHeight: 100% → always fills the hero box
        *   - aspectRatio 16/9 → expands whichever axis needs more room
        *     so the video is never letterboxed inside the hero
+       * When containing, the player simply fills the (already 16/9) box.
        */}
       <div
         style={{
@@ -43,11 +70,11 @@ export function HeroVideo({ url }: Props) {
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
-          minWidth: "100%",
-          minHeight: "100%",
-          width: "auto",
-          height: "auto",
-          aspectRatio: "16 / 9",
+          minWidth: isCover ? "100%" : undefined,
+          minHeight: isCover ? "100%" : undefined,
+          width: isCover ? "auto" : "100%",
+          height: isCover ? "auto" : "100%",
+          aspectRatio: isCover ? "16 / 9" : undefined,
         }}
       >
         {/*
@@ -58,16 +85,16 @@ export function HeroVideo({ url }: Props) {
          */}
         <ReactPlayer
           src={url}
-          playing
-          muted
-          loop
-          controls={false}
+          playing={playing}
+          muted={muted}
+          loop={loop}
+          controls={controls}
           playsInline
           width="100%"
           height="100%"
           config={{
             youtube: { rel: 0 },
-            vimeo: { background: true },
+            vimeo: { background: !controls },
           }}
         />
       </div>

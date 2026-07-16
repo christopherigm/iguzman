@@ -1,7 +1,7 @@
-import { createContext, useContext, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
-import en from './messages/en.json';
-import es from './messages/es.json';
+import { createContext, useContext, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import en from "./messages/en.json";
+import es from "./messages/es.json";
 
 const MESSAGES = { en, es } as const;
 type Locale = keyof typeof MESSAGES;
@@ -16,7 +16,7 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocale] = useState<Locale>(() =>
-    navigator.language.startsWith('es') ? 'es' : 'en',
+    navigator.language.startsWith("es") ? "es" : "en",
   );
 
   const value = useMemo<I18nContextValue>(() => {
@@ -29,6 +29,6 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
 export function useT(): I18nContextValue {
   const ctx = useContext(I18nContext);
-  if (!ctx) throw new Error('useT must be used within <I18nProvider>');
+  if (!ctx) throw new Error("useT must be used within <I18nProvider>");
   return ctx;
 }

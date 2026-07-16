@@ -137,6 +137,7 @@ export default function AdminVariantOptionFormPage({ params }: Props) {
             ? `${t("newItem")} - ${t("variantOptions")}`
             : `${t("edit")} - ${t("variantOptions")}`
         }
+        editingName={isNew ? undefined : String(values.name ?? "")}
         fields={fields}
         values={values}
         onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}

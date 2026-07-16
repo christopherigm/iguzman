@@ -90,116 +90,117 @@ const FLEX_CONTAINER_KEYS: (keyof BoxProps)[] = [
  *   Content
  * </Box>
  */
-export const Box = React.forwardRef<HTMLDivElement, BoxProps>(function Box(
-  props,
-  ref,
-) {
-  const {
-    styles,
-    children,
-    className,
-    id,
-    role,
-    onClick,
-    onKeyDown,
-    onAnimationEnd,
-    onDragOver,
-    onDragEnter,
-    onDragLeave,
-    onDrop,
-    onDragStart,
-    onDragEnd,
-    tabIndex,
-    translucent = false,
-    href,
-    target,
-    prefetch,
-  } = props;
+export const Box = React.forwardRef<HTMLDivElement, BoxProps>(
+  function Box(props, ref) {
+    const {
+      styles,
+      children,
+      className,
+      id,
+      role,
+      onClick,
+      onKeyDown,
+      onAnimationEnd,
+      onDragOver,
+      onDragEnter,
+      onDragLeave,
+      onDrop,
+      onDragStart,
+      onDragEnd,
+      tabIndex,
+      translucent = false,
+      href,
+      target,
+      prefetch,
+    } = props;
 
-  const built = buildStyleProps(props);
-  // Infer flex display so flex container props aren't silently inert on a
-  // default `display: block` div. Explicit `display` always wins.
-  if (
-    built.display === undefined &&
-    FLEX_CONTAINER_KEYS.some((key) => props[key] !== undefined)
-  ) {
-    built.display = "flex";
-  }
+    const built = buildStyleProps(props);
+    // Infer flex display so flex container props aren't silently inert on a
+    // default `display: block` div. Explicit `display` always wins.
+    if (
+      built.display === undefined &&
+      FLEX_CONTAINER_KEYS.some((key) => props[key] !== undefined)
+    ) {
+      built.display = "flex";
+    }
 
-  const style: CSSProperties = {
-    ...built,
-    // Same backdrop blur as the translucent Navbar / Badge. The
-    // translucent/tinted background lets the blur read through.
-    ...(translucent
-      ? { backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }
-      : {}),
-    ...styles,
-  };
+    const style: CSSProperties = {
+      ...built,
+      // Same backdrop blur as the translucent Navbar / Badge. The
+      // translucent/tinted background lets the blur read through.
+      ...(translucent
+        ? { backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }
+        : {}),
+      ...styles,
+    };
 
-  const sharedAria = {
-    "aria-label": props["aria-label"],
-    "aria-labelledby": props["aria-labelledby"],
-    "aria-describedby": props["aria-describedby"],
-    ...(props["aria-hidden"] !== undefined
-      ? { "aria-hidden": props["aria-hidden"] }
-      : {}),
-    ...(role !== undefined ? { role } : {}),
-  };
+    const sharedAria = {
+      "aria-label": props["aria-label"],
+      "aria-labelledby": props["aria-labelledby"],
+      "aria-describedby": props["aria-describedby"],
+      ...(props["aria-hidden"] !== undefined
+        ? { "aria-hidden": props["aria-hidden"] }
+        : {}),
+      ...(role !== undefined ? { role } : {}),
+    };
 
-  // Polymorphic branch: render a `next/link` anchor when `href` is set, so a
-  // whole Box/Card can itself be a navigation target instead of wrapping one.
-  if (href !== undefined) {
+    // Polymorphic branch: render a `next/link` anchor when `href` is set, so a
+    // whole Box/Card can itself be a navigation target instead of wrapping one.
+    if (href !== undefined) {
+      return (
+        <Link
+          href={href}
+          prefetch={prefetch}
+          target={target}
+          rel={target === "_blank" ? "noopener noreferrer" : undefined}
+          id={id}
+          className={className}
+          style={style}
+          tabIndex={tabIndex}
+          onClick={
+            onClick as unknown as React.MouseEventHandler<HTMLAnchorElement>
+          }
+          onKeyDown={
+            onKeyDown as unknown as React.KeyboardEventHandler<HTMLAnchorElement>
+          }
+          {...sharedAria}
+        >
+          {children}
+        </Link>
+      );
+    }
+
     return (
-      <Link
-        href={href}
-        prefetch={prefetch}
-        target={target}
-        rel={target === "_blank" ? "noopener noreferrer" : undefined}
+      <div
+        ref={ref}
         id={id}
         className={className}
         style={style}
         tabIndex={tabIndex}
-        onClick={onClick as unknown as React.MouseEventHandler<HTMLAnchorElement>}
-        onKeyDown={
-          onKeyDown as unknown as React.KeyboardEventHandler<HTMLAnchorElement>
-        }
-        {...sharedAria}
+        aria-label={props["aria-label"]}
+        aria-labelledby={props["aria-labelledby"]}
+        aria-describedby={props["aria-describedby"]}
+        onClick={onClick}
+        onKeyDown={onKeyDown}
+        onAnimationEnd={onAnimationEnd}
+        onDragOver={onDragOver}
+        onDragEnter={onDragEnter}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        {...(role !== undefined ? { role } : {})}
+        {...(props["aria-hidden"] !== undefined
+          ? { "aria-hidden": props["aria-hidden"] }
+          : {})}
+        {...(props["aria-modal"] !== undefined
+          ? { "aria-modal": props["aria-modal"] }
+          : {})}
       >
         {children}
-      </Link>
+      </div>
     );
-  }
-
-  return (
-    <div
-      ref={ref}
-      id={id}
-      className={className}
-      style={style}
-      tabIndex={tabIndex}
-      aria-label={props["aria-label"]}
-      aria-labelledby={props["aria-labelledby"]}
-      aria-describedby={props["aria-describedby"]}
-      onClick={onClick}
-      onKeyDown={onKeyDown}
-      onAnimationEnd={onAnimationEnd}
-      onDragOver={onDragOver}
-      onDragEnter={onDragEnter}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      {...(role !== undefined ? { role } : {})}
-      {...(props["aria-hidden"] !== undefined
-        ? { "aria-hidden": props["aria-hidden"] }
-        : {})}
-      {...(props["aria-modal"] !== undefined
-        ? { "aria-modal": props["aria-modal"] }
-        : {})}
-    >
-      {children}
-    </div>
-  );
-});
+  },
+);
 
 export default Box;

@@ -123,9 +123,12 @@ export default function AdminHighlightFormPage({ params }: Props) {
     setSuccess(null);
     try {
       const payload: Record<string, unknown> = { ...values, system: systemId };
-      if (!payload.href) delete payload.href;
+      // Send null (not an omitted key) so a cleared field is actually cleared -
+      // this is a PATCH, and an absent key means "leave unchanged".
+      if (!payload.href) payload.href = null;
+      if (!payload.icon) payload.icon = null;
+      // The slug is read-only and derived server-side; omit it when empty.
       if (!payload.slug) delete payload.slug;
-      if (!payload.icon) delete payload.icon;
       if (pendingImage.length > 0) {
         payload.image = pendingImage[0]?.base64;
       } else if (existingImage.length === 0) {
@@ -209,6 +212,7 @@ export default function AdminHighlightFormPage({ params }: Props) {
             ? `${t("newItem")} - ${t("highlights")}`
             : `${t("edit")} - ${t("highlights")}`
         }
+        editingName={isNew ? undefined : String(values.name ?? "")}
         fields={fields}
         values={values}
         onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
@@ -216,21 +220,22 @@ export default function AdminHighlightFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
-      >
-        <Box display="flex" flexDirection="column" gap="8px">
-          <Typography variant="label">{t("image") ?? "Image"}</Typography>
-          <AdminImageUploader
-            existingImages={existingImage}
-            onChange={(n, _d, o) => {
-              setPendingImage(n);
-              setExistingImage((prev) =>
-                prev.filter((img) => o.includes(img.id)),
-              );
-            }}
-            maxImages={1}
-          />
-        </Box>
-      </AdminForm>
+        imagesSlot={
+          <Box display="flex" flexDirection="column" gap="8px">
+            <Typography variant="label">{t("image") ?? "Image"}</Typography>
+            <AdminImageUploader
+              existingImages={existingImage}
+              onChange={(n, _d, o) => {
+                setPendingImage(n);
+                setExistingImage((prev) =>
+                  prev.filter((img) => o.includes(img.id)),
+                );
+              }}
+              maxImages={1}
+            />
+          </Box>
+        }
+      />
     </>
   );
 }

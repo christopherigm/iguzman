@@ -108,12 +108,7 @@ export async function Footer({ logo, system }: Props) {
 
           {/* Column 2 - Navigation */}
           <Grid size={{ xs: 12, sm: 4, md: 4 }}>
-            <Typography
-              as="h3"
-              variant="h5"
-              fontWeight={700}
-              marginBottom={20}
-            >
+            <Typography as="h3" variant="h5" fontWeight={700} marginBottom={20}>
               {t("navigationHeading")}
             </Typography>
             <Grid container spacingY={1} spacingX={2}>
@@ -129,12 +124,7 @@ export async function Footer({ logo, system }: Props) {
 
           {/* Column 3 - Company */}
           <Grid size={{ xs: 12, sm: 4, md: 4 }}>
-            <Typography
-              as="h3"
-              variant="h5"
-              fontWeight={700}
-              marginBottom={20}
-            >
+            <Typography as="h3" variant="h5" fontWeight={700} marginBottom={20}>
               {t("companyHeading")}
             </Typography>
             <Grid container spacingY={1} spacingX={2}>

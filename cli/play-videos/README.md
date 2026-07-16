@@ -93,20 +93,20 @@ picks up an `en`/`es` language choice on start and stays open until you choose
 **Exit**, so you can adjust settings and play repeatedly without re-invoking the
 script. Every flag below has an equivalent menu entry:
 
-| Menu entry                       | Equivalent flag(s)                         |
-| -------------------------------- | ------------------------------------------ |
-| Play media (audio or video)      | the positional `<file/dir/playlist>`       |
-| Audio device                     | `--audio-device` (built from `aplay -l`)   |
-| Video connector                  | `--connector` (built from mpv's DRM probe) |
-| Display mode                     | `--mode`                                   |
-| Loop                             | `--loop` / `--loop=<N>`                     |
-| Volume                           | `--volume`                                 |
-| Max ALSA mixer                   | `--no-max-volume` (on by default)          |
-| Enhance (GPU)                    | `--enhance` / `--sdr-to-hdr`               |
-| Audio output                     | `--ao`                                      |
-| Shuffle / Mute / Audio-only      | `--shuffle` / `--mute` / `--audio-only`    |
-| List connectors / audio devices  | `--list-connectors` / `--list-audio-devices` |
-| Fix audio / video issues         | runs `fix-video.sh` + `fix-audio.sh`       |
+| Menu entry                      | Equivalent flag(s)                           |
+| ------------------------------- | -------------------------------------------- |
+| Play media (audio or video)     | the positional `<file/dir/playlist>`         |
+| Audio device                    | `--audio-device` (built from `aplay -l`)     |
+| Video connector                 | `--connector` (built from mpv's DRM probe)   |
+| Display mode                    | `--mode`                                     |
+| Loop                            | `--loop` / `--loop=<N>`                      |
+| Volume                          | `--volume`                                   |
+| Max ALSA mixer                  | `--no-max-volume` (on by default)            |
+| Enhance (GPU)                   | `--enhance` / `--sdr-to-hdr`                 |
+| Audio output                    | `--ao`                                       |
+| Shuffle / Mute / Audio-only     | `--shuffle` / `--mute` / `--audio-only`      |
+| List connectors / audio devices | `--list-connectors` / `--list-audio-devices` |
+| Fix audio / video issues        | runs `fix-video.sh` + `fix-audio.sh`         |
 
 The last-played path is remembered and offered as the default the next time you
 choose **Play media**.
@@ -272,15 +272,15 @@ Diagnoses why `--vo=drm` will not start, and repairs the driver-side causes by w
 
 mpv's DRM output needs **three things at once**. When any one is missing, mpv prints a message that names the symptom but not the cause:
 
-| Requirement            | What breaks without it                                   | mpv says                                  |
-| ---------------------- | -------------------------------------------------------- | ----------------------------------------- |
-| A real console VT      | SSH and terminal emulators cannot drive DRM output       | `VT_GETMODE failed`                       |
-| Atomic modesetting     | `radeon` has none; `amdgpu` disables Display Core on DCE-8 | `Failed to create DRM atomic context`     |
-| DRM master             | A running display manager owns the GPU                   | (silent, or fails to acquire the device)  |
+| Requirement        | What breaks without it                                     | mpv says                                 |
+| ------------------ | ---------------------------------------------------------- | ---------------------------------------- |
+| A real console VT  | SSH and terminal emulators cannot drive DRM output         | `VT_GETMODE failed`                      |
+| Atomic modesetting | `radeon` has none; `amdgpu` disables Display Core on DCE-8 | `Failed to create DRM atomic context`    |
+| DRM master         | A running display manager owns the GPU                     | (silent, or fails to acquire the device) |
 
 ### The AMD case
 
-Old AMD APUs - **Temash, Kabini, Kaveri, Beema, Mullins** (GCN/CIK) - bind to the legacy `radeon` driver, which has **no atomic KMS**. Forcing `amdgpu` fixes that, but `amdgpu` then falls back to its *own* legacy display path on DCE-8 hardware, which also has no atomic. Display Core must be forced on as well.
+Old AMD APUs - **Temash, Kabini, Kaveri, Beema, Mullins** (GCN/CIK) - bind to the legacy `radeon` driver, which has **no atomic KMS**. Forcing `amdgpu` fixes that, but `amdgpu` then falls back to its _own_ legacy display path on DCE-8 hardware, which also has no atomic. Display Core must be forced on as well.
 
 All five parameters are **a single unit**: `amdgpu.dc=1` does nothing unless `amdgpu` owns the card, and `amdgpu` will not claim it while `radeon.*_support` is enabled.
 
@@ -314,13 +314,13 @@ sudo dmesg | grep -i 'display core'   # [drm] Display Core initialized with v...
 ./fix-video.sh [OPTIONS]
 ```
 
-| Option            | Default | Description                                                        |
-| ----------------- | ------- | ------------------------------------------------------------------ |
-| `-n`, `--dry-run` | off     | Show what would be fixed without applying changes                  |
-| `-y`, `--yes`     | off     | Apply GRUB fixes without prompting (never reboots)                 |
-| `-q`, `--quiet`   | off     | Suppress informational output (errors still shown)                 |
-| `--headless`      | off     | Also set the boot target to `multi-user.target`, freeing the GPU   |
-| `-h`, `--help`    | -       | Show usage and exit                                                |
+| Option            | Default | Description                                                      |
+| ----------------- | ------- | ---------------------------------------------------------------- |
+| `-n`, `--dry-run` | off     | Show what would be fixed without applying changes                |
+| `-y`, `--yes`     | off     | Apply GRUB fixes without prompting (never reboots)               |
+| `-q`, `--quiet`   | off     | Suppress informational output (errors still shown)               |
+| `--headless`      | off     | Also set the boot target to `multi-user.target`, freeing the GPU |
+| `-h`, `--help`    | -       | Show usage and exit                                              |
 
 Exits `0` when there was nothing to fix (or everything was fixed), `1` when issues remain.
 
@@ -361,7 +361,7 @@ Inspects all ALSA mixer controls and automatically fixes common issues: muted ch
 - `Master`, `PCM`, `Speaker`, `Headphone`, and `Front` controls are unmuted and have volume > 0
 - `IEC958` (the S/PDIF + HDMI switch) is unmuted. It carries **no volume level**, so it is only ever unmuted, never given a percentage.
 
-By default only *broken* controls (muted, or at 0%) are touched - a control you deliberately set to 40% is left alone. `--force` overrides that and sets every volume-capable control to `--volume`.
+By default only _broken_ controls (muted, or at 0%) are touched - a control you deliberately set to 40% is left alone. `--force` overrides that and sets every volume-capable control to `--volume`.
 
 ### Usage
 
@@ -475,7 +475,7 @@ newgrp video
 
 **Playback is quiet even with `--volume 100`**
 
-`--volume` is mpv's *software* volume and never touches the ALSA mixer. `play-videos.sh` maxes the hardware mixer for you before playback - unless you passed `--no-max-volume` or toggled **Max ALSA mixer** off. To do it by hand:
+`--volume` is mpv's _software_ volume and never touches the ALSA mixer. `play-videos.sh` maxes the hardware mixer for you before playback - unless you passed `--no-max-volume` or toggled **Max ALSA mixer** off. To do it by hand:
 
 ```bash
 ./fix-audio.sh --force            # every control to 100%, unmuted

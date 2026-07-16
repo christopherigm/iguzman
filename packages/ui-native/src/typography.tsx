@@ -1,35 +1,39 @@
-import { Text, type TextProps as RNTextProps, type TextStyle } from 'react-native';
-import { useTheme } from './theme-provider';
-import { typeScale, type TypeVariant } from './theme';
+import {
+  Text,
+  type TextProps as RNTextProps,
+  type TextStyle,
+} from "react-native";
+import { useTheme } from "./theme-provider";
+import { typeScale, type TypeVariant } from "./theme";
 
 export interface TypographyProps {
   /** Type scale variant. Sets font size, line height, and default weight. */
   variant?: TypeVariant;
-  children: RNTextProps['children'];
+  children: RNTextProps["children"];
   /** Text color. Defaults to the theme `foreground`; `'muted'` uses the muted token. */
-  color?: string | 'foreground' | 'muted' | 'accent';
-  textAlign?: TextStyle['textAlign'];
-  fontWeight?: TextStyle['fontWeight'];
+  color?: string | "foreground" | "muted" | "accent";
+  textAlign?: TextStyle["textAlign"];
+  fontWeight?: TextStyle["fontWeight"];
   /** Truncate to N lines with an ellipsis. */
   numberOfLines?: number;
-  accessibilityRole?: RNTextProps['accessibilityRole'];
+  accessibilityRole?: RNTextProps["accessibilityRole"];
   testID?: string;
   /** Escape hatch: raw `TextStyle` merged last. */
   styles?: TextStyle;
-  onPress?: RNTextProps['onPress'];
+  onPress?: RNTextProps["onPress"];
 }
 
 function resolveColor(
-  color: TypographyProps['color'],
-  colors: ReturnType<typeof useTheme>['colors'],
+  color: TypographyProps["color"],
+  colors: ReturnType<typeof useTheme>["colors"],
 ): string {
   switch (color) {
     case undefined:
-    case 'foreground':
+    case "foreground":
       return colors.foreground;
-    case 'muted':
+    case "muted":
       return colors.muted;
-    case 'accent':
+    case "accent":
       return colors.accent;
     default:
       return color;
@@ -45,7 +49,7 @@ function resolveColor(
  * <Typography variant="caption" color="muted">Subtitle</Typography>
  */
 export function Typography({
-  variant = 'body',
+  variant = "body",
   children,
   color,
   textAlign,

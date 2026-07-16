@@ -1,7 +1,7 @@
 # seed_assets/ — placeholder pool + brief inputs for `seed_site`
 
 This directory feeds the **`seed_site`** management command (driven by the
-**`/seed-site`** skill). It turns a JSON *brief* into a customer's initial
+**`/seed-site`** skill). It turns a JSON _brief_ into a customer's initial
 `System` + success stories + highlights + product/service catalog, so a freshly
 scaffolded site renders **full and alive** — real copy, placeholder images and
 links — instead of an empty shell.
@@ -14,14 +14,14 @@ links — instead of an empty shell.
 
 ## What's here
 
-| File | Purpose |
-| --- | --- |
-| `placeholder-1.jpg … placeholder-8.jpg` | **Generic image pool.** Any record whose `image` is omitted round-robins through these, so nothing is ever blank. |
+| File                                                                                | Purpose                                                                                                                                  |
+| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `placeholder-1.jpg … placeholder-8.jpg`                                             | **Generic image pool.** Any record whose `image` is omitted round-robins through these, so nothing is ever blank.                        |
 | `hero.jpg`, `about.jpg`, `logo.png`, `logo-hero.png`, `favicon.png`, `manifest.png` | Named `System` branding assets (referenced from `system.assets` in the brief). `manifest.png` (1080²) fills all five PWA manifest sizes. |
-| `links.json` | URL pool: `video_link` (hero YouTube) + `href[]` (story/product outbound links). Used when the brief omits them. |
-| `brief.example.json` | A complete, filled example brief — the schema by example. |
-| `briefs/` | Per-customer briefs the `/seed-site` skill writes here as `<host>.json`. Git-ignored. |
-| `exports/` | Generated site payloads (`export_site <host> --output …`) consumed by `pnpm publish-site`. Git-ignored. |
+| `links.json`                                                                        | URL pool: `video_link` (hero YouTube) + `href[]` (story/product outbound links). Used when the brief omits them.                         |
+| `brief.example.json`                                                                | A complete, filled example brief — the schema by example.                                                                                |
+| `briefs/`                                                                           | Per-customer briefs the `/seed-site` skill writes here as `<host>.json`. Git-ignored.                                                    |
+| `exports/`                                                                          | Generated site payloads (`export_site <host> --output …`) consumed by `pnpm publish-site`. Git-ignored.                                  |
 
 **Swap the placeholders for your own dummies at will** — keep the same filenames
 (`placeholder-1.jpg` … or add more `placeholder-*`), or point brief `image`
@@ -54,6 +54,7 @@ fields at any new file you drop in here.
 ```
 
 Notes:
+
 - Products/services default to `is_featured: true` so they show in the
   `CatalogItems` block (which requests `?featured=true`).
 - Slugs are auto-generated and **host-namespaced** (`<host-token>-<slug>`) so two

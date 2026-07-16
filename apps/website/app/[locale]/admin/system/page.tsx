@@ -3,10 +3,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
+import { type NewImage } from "@/components/admin-image-uploader/admin-image-uploader";
+import { SystemImages, type SystemImageState } from "./system-images";
 import {
-  AdminImageUploader,
-  type NewImage,
-} from "@/components/admin-image-uploader/admin-image-uploader";
+  LOGO_DERIVED_FIELDS,
+  SYSTEM_IMAGE_FIELDS,
+} from "./system-image-fields";
 import { getSystem, updateSystem } from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
 import { GradientBuilder } from "@repo/ui/core-elements/gradient-builder";
@@ -15,18 +17,6 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import logoToAssets from "@repo/helpers/logo-to-assets";
-
-/** Fields that are auto-generated from the logo when the user confirms. */
-const LOGO_DERIVED_FIELDS = [
-  "img_favicon",
-  "img_manifest_1080",
-  "img_manifest_512",
-  "img_manifest_256",
-  "img_manifest_192",
-  "img_manifest_128",
-] as const;
-
-type LogoDerivedField = (typeof LOGO_DERIVED_FIELDS)[number];
 
 /** Converts a data URI to a synthetic File object (required by NewImage type). */
 async function dataUrlToFile(dataUrl: string, filename: string): Promise<File> {
@@ -70,23 +60,14 @@ export default function AdminSystemPage() {
   });
 
   // Individual image fields tracked separately (each is a single base64 upload)
-  const [images, setImages] = useState<
-    Record<
-      string,
-      { existing: { id: number; url: string }[]; pending: NewImage[] }
-    >
-  >({
-    img_logo: { existing: [], pending: [] },
-    img_logo_hero: { existing: [], pending: [] },
-    img_favicon: { existing: [], pending: [] },
-    img_hero: { existing: [], pending: [] },
-    img_about: { existing: [], pending: [] },
-    img_manifest_1080: { existing: [], pending: [] },
-    img_manifest_512: { existing: [], pending: [] },
-    img_manifest_256: { existing: [], pending: [] },
-    img_manifest_192: { existing: [], pending: [] },
-    img_manifest_128: { existing: [], pending: [] },
-  });
+  const [images, setImages] = useState<Record<string, SystemImageState>>(() =>
+    Object.fromEntries(
+      SYSTEM_IMAGE_FIELDS.map((field) => [
+        field,
+        { existing: [], pending: [] },
+      ]),
+    ),
+  );
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -139,21 +120,9 @@ export default function AdminSystemPage() {
           enabled: data.enabled ?? true,
         });
         // Populate existing images
-        const imageFields = [
-          "img_logo",
-          "img_logo_hero",
-          "img_favicon",
-          "img_hero",
-          "img_about",
-          "img_manifest_1080",
-          "img_manifest_512",
-          "img_manifest_256",
-          "img_manifest_192",
-          "img_manifest_128",
-        ] as const;
         setImages((prev) => {
           const next = { ...prev };
-          imageFields.forEach((field) => {
+          SYSTEM_IMAGE_FIELDS.forEach((field) => {
             const url = data[field];
             next[field] = {
               existing: url ? [{ id: systemId, url: String(url) }] : [],
@@ -329,22 +298,20 @@ export default function AdminSystemPage() {
     { key: "enabled", label: t("enabled"), type: "boolean" },
   ];
 
-  const IMAGE_LABELS: Record<string, string> = {
-    img_logo: "Logo",
-    img_logo_hero: "Logo (Hero)",
-    img_favicon: "Favicon",
-    img_hero: "Hero Image",
-    img_about: "About Image",
-    img_manifest_1080: "Manifest 1080×",
-    img_manifest_512: "Manifest 512×",
-    img_manifest_256: "Manifest 256×",
-    img_manifest_192: "Manifest 192×",
-    img_manifest_128: "Manifest 128×",
-  };
-
-  /** Fields whose uploader key includes `derivedImageKey` so they re-mount after generation. */
-  const isDerivedField = (field: string): field is LogoDerivedField =>
-    (LOGO_DERIVED_FIELDS as readonly string[]).includes(field);
+  const handleImageChange = (
+    field: string,
+    newImages: NewImage[],
+    orderedExistingIds: number[],
+  ) =>
+    setImages((prev) => ({
+      ...prev,
+      [field]: {
+        existing: (prev[field]?.existing ?? []).filter((img) =>
+          orderedExistingIds.includes(img.id),
+        ),
+        pending: newImages,
+      },
+    }));
 
   if (loading)
     return (
@@ -372,6 +339,13 @@ export default function AdminSystemPage() {
         saving={saving}
         error={error}
         success={success}
+        imagesSlot={
+          <SystemImages
+            images={images}
+            onImageChange={handleImageChange}
+            derivedImageKey={derivedImageKey}
+          />
+        }
       >
         <GradientBuilder
           label={t("highlightsBg")}
@@ -409,31 +383,6 @@ export default function AdminSystemPage() {
             rawCss: tGb("rawCss"),
           }}
         />
-        {Object.entries(images).map(([field, state]) => (
-          <Box key={field} display="flex" flexDirection="column" gap="8px">
-            <Typography variant="label">
-              {IMAGE_LABELS[field] ?? field}
-            </Typography>
-            <AdminImageUploader
-              key={
-                isDerivedField(field) ? `${field}-${derivedImageKey}` : field
-              }
-              existingImages={state.existing}
-              onChange={(newImages, _deletedIds, orderedExistingIds) =>
-                setImages((prev) => ({
-                  ...prev,
-                  [field]: {
-                    existing: (prev[field]?.existing ?? []).filter((img) =>
-                      orderedExistingIds.includes(img.id),
-                    ),
-                    pending: newImages,
-                  },
-                }))
-              }
-              maxImages={1}
-            />
-          </Box>
-        ))}
       </AdminForm>
 
       {showLogoAssetsModal && (

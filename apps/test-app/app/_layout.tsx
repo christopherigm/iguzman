@@ -1,6 +1,6 @@
-import { Stack } from 'expo-router';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ThemeProvider } from '@repo/ui-native/theme-provider';
+import { Stack } from "expo-router";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { ThemeProvider } from "@repo/ui-native/theme-provider";
 
 /**
  * Root layout. Wraps every route in the safe-area + theme providers. The

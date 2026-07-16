@@ -1,8 +1,8 @@
-import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CSSProperties, Ref, ReactNode } from 'react';
-import './tokens.css';
-import './tv-scrollable.css';
+import { useFocusable } from "@noriginmedia/norigin-spatial-navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties, Ref, ReactNode } from "react";
+import "./tokens.css";
+import "./tv-scrollable.css";
 
 export interface TvScrollableProps {
   children: ReactNode;
@@ -64,12 +64,12 @@ export function TvScrollable({
       if (!el) return true;
       const step = scrollStep ?? Math.round(el.clientHeight * 0.8);
       const max = el.scrollHeight - el.clientHeight;
-      if (direction === 'down' && el.scrollTop < max - 1) {
+      if (direction === "down" && el.scrollTop < max - 1) {
         el.scrollTop = Math.min(max, el.scrollTop + step);
         updateEdges();
         return false; // consumed - keep focus here
       }
-      if (direction === 'up' && el.scrollTop > 0) {
+      if (direction === "up" && el.scrollTop > 0) {
         el.scrollTop = Math.max(0, el.scrollTop - step);
         updateEdges();
         return false;
@@ -98,9 +98,14 @@ export function TvScrollable({
     return () => observer.disconnect();
   }, [updateEdges]);
 
-  const cls = ['tv-scrollable', 'tv-focusable', focused ? 'tv-focusable--focused' : '', className]
+  const cls = [
+    "tv-scrollable",
+    "tv-focusable",
+    focused ? "tv-focusable--focused" : "",
+    className,
+  ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
   const viewportStyle: CSSProperties | undefined =
     maxHeight === undefined ? undefined : { maxHeight };
@@ -116,10 +121,16 @@ export function TvScrollable({
         {children}
       </div>
       {edges.top && (
-        <div className="tv-scrollable__fade tv-scrollable__fade--top" aria-hidden="true" />
+        <div
+          className="tv-scrollable__fade tv-scrollable__fade--top"
+          aria-hidden="true"
+        />
       )}
       {edges.bottom && (
-        <div className="tv-scrollable__fade tv-scrollable__fade--bottom" aria-hidden="true" />
+        <div
+          className="tv-scrollable__fade tv-scrollable__fade--bottom"
+          aria-hidden="true"
+        />
       )}
     </div>
   );

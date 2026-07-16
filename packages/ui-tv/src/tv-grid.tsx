@@ -1,7 +1,10 @@
-import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
-import { useEffect } from 'react';
-import type { ReactNode, Ref } from 'react';
-import './tv-grid.css';
+import {
+  useFocusable,
+  FocusContext,
+} from "@noriginmedia/norigin-spatial-navigation";
+import { useEffect } from "react";
+import type { ReactNode, Ref } from "react";
+import "./tv-grid.css";
 
 export interface TvGridProps {
   children: ReactNode;
@@ -25,7 +28,7 @@ export function TvGrid({ children, focusOnMount, className }: TvGridProps) {
     if (focusOnMount) focusSelf();
   }, [focusOnMount, focusSelf]);
 
-  const cls = ['tv-grid', className].filter(Boolean).join(' ');
+  const cls = ["tv-grid", className].filter(Boolean).join(" ");
 
   return (
     <FocusContext.Provider value={focusKey}>

@@ -109,7 +109,8 @@ function buildTracks(
 ): PlayerTrack[] {
   // Only trust the metadata mapping when the counts line up; a mismatch means
   // the file's track order isn't the metadata order, so derive labels instead.
-  const useMetadata = languages.length === tracks.length && languages.length > 0;
+  const useMetadata =
+    languages.length === tracks.length && languages.length > 0;
   return tracks.map((track, i) => {
     const label = useMetadata
       ? (languages[i] ?? `${fallback} ${i + 1}`)
@@ -303,7 +304,10 @@ export function useStreamPlayer({
     try {
       const from = player.getCurrentTime();
       const total = player.getDuration();
-      const target = Math.max(0, Math.min(from + deltaMs, Math.max(total - 1000, 0)));
+      const target = Math.max(
+        0,
+        Math.min(from + deltaMs, Math.max(total - 1000, 0)),
+      );
       // Reflect the jump immediately; oncurrentplaytime will confirm it.
       setCurrentTime(target);
       player.seekTo(target);

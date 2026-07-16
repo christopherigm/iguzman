@@ -34,12 +34,18 @@ interface Props {
  * the generated letter, its async generation (with polling) and PDF export, and
  * the TN-category suggestion modal.
  */
-export function NaftaLetterSection({ app, profile, companyDescription }: Props) {
+export function NaftaLetterSection({
+  app,
+  profile,
+  companyDescription,
+}: Props) {
   const t = useTranslations("ApplicationDetailPage");
   const locale = useLocale();
 
   // Letter parameters
-  const [tnProfession, setTnProfession] = useState(profile?.tn_profession ?? "");
+  const [tnProfession, setTnProfession] = useState(
+    profile?.tn_profession ?? "",
+  );
   const [isContinuation, setIsContinuation] = useState(false);
   const [citizenship, setCitizenship] = useState(profile?.citizenship ?? "");
   const [dob, setDob] = useState("");

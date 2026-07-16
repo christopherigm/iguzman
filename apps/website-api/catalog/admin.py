@@ -175,7 +175,7 @@ class ProductAdmin(admin.ModelAdmin):
             'fields': ('system', 'category', 'brand', 'enabled', 'is_featured', 'is_ai_generated', 'is_verified', 'version', 'created', 'modified'),
         }),
         ('Content (ES)', {
-            'fields': ('name', 'slug', 'description', 'image', 'fit', 'background_color', 'href'),
+            'fields': ('name', 'slug', 'description', 'image', 'fit', 'background_color', 'href', 'video_link'),
         }),
         ('Content (EN)', {
             'fields': ('en_name', 'en_description'),
@@ -219,7 +219,7 @@ class ServiceAdmin(admin.ModelAdmin):
             'fields': ('system', 'category', 'brand', 'enabled', 'is_featured', 'is_ai_generated', 'is_verified', 'version', 'created', 'modified'),
         }),
         ('Content (ES)', {
-            'fields': ('name', 'slug', 'description', 'image', 'fit', 'background_color', 'href'),
+            'fields': ('name', 'slug', 'description', 'image', 'fit', 'background_color', 'href', 'video_link'),
         }),
         ('Content (EN)', {
             'fields': ('en_name', 'en_description'),

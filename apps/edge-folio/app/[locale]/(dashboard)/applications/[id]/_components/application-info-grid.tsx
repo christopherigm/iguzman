@@ -5,10 +5,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { Grid } from "@repo/ui/core-elements/grid";
 import type { JobApplication } from "@/lib/applications";
-import {
-  MatchMetrics,
-  type MatchMetricItem,
-} from "@/components/match-metrics";
+import { MatchMetrics, type MatchMetricItem } from "@/components/match-metrics";
 import { InfoField, InfoCard } from "./detail-primitives";
 import { formatSalary } from "../detail-constants";
 

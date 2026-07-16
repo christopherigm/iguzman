@@ -10,6 +10,7 @@
     "./use-speech-to-text": "./src/use-speech-to-text.ts",
     "./use-text-to-speech": "./src/use-text-to-speech.ts",
     "./use-groq": "./src/use-groq.ts",
+    "./use-llm": "./src/use-llm.ts",
     "./use-ollama": "./src/use-ollama.ts",
     "./use-web-search": "./src/use-web-search.ts"
   },

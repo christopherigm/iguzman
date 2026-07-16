@@ -97,7 +97,11 @@ export function StreamOverlay({
   // bare stream and one started on the progress bar are the same burst. The
   // callbacks are referentially stable, so effects can depend on them directly.
   const burst = useSkipBurst(player);
-  const { skip: skipBurst, commit: commitBurst, isPending: burstPending } = burst;
+  const {
+    skip: skipBurst,
+    commit: commitBurst,
+    isPending: burstPending,
+  } = burst;
 
   // ----- resume prompt -----
   const startPlayback = (at: number) => {

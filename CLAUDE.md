@@ -112,7 +112,7 @@ Real Samsung TVs on Tizen 6.0 run **Chromium 76** (2019). Whenever you write CSS
 for a TV app or for `@repo/ui-tv`, write it for **Chromium 76**, not your laptop:
 no `aspect-ratio` (88+), no `inset` shorthand (87+), no `color-mix()` (111+),
 prefer `margin` over flexbox `gap`, and never rely on a percentage height inside
-a box whose own height is *derived* (e.g. from `top:0; bottom:0`) - give such a
+a box whose own height is _derived_ (e.g. from `top:0; bottom:0`) - give such a
 box an explicit height. The Tizen emulator and `pnpm dev` both run a modern
 Chromium, so these gaps only surface on the physical TV after packaging.
 

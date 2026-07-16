@@ -30,14 +30,14 @@ bespoke artifact**, instead of a non-expert + a builder UI.
 
 ### Ownership split
 
-| Layer | Owner | Where |
-| --- | --- | --- |
-| Landing composition, sections, custom pages, layout, UX, animations | **Team** | `sites/<slug>/` |
-| Theme fine-tuning beyond palette | **Team** | `sites/<slug>/` |
-| Brand kit: logo, favicon, hero, slogan, name, colors | **Customer** | `System` (CMS) |
-| About/mission/vision, legal (privacy/terms/user-data) | **Customer** | `System` (CMS) |
-| Products, services, categories, variants, brands, stories, highlights | **Customer** | catalog/core (CMS) |
-| Auth, account, verify/reset, i18n, PWA, theme | **Platform (shared)** | app-wide |
+| Layer                                                                 | Owner                 | Where              |
+| --------------------------------------------------------------------- | --------------------- | ------------------ |
+| Landing composition, sections, custom pages, layout, UX, animations   | **Team**              | `sites/<slug>/`    |
+| Theme fine-tuning beyond palette                                      | **Team**              | `sites/<slug>/`    |
+| Brand kit: logo, favicon, hero, slogan, name, colors                  | **Customer**          | `System` (CMS)     |
+| About/mission/vision, legal (privacy/terms/user-data)                 | **Customer**          | `System` (CMS)     |
+| Products, services, categories, variants, brands, stories, highlights | **Customer**          | catalog/core (CMS) |
+| Auth, account, verify/reset, i18n, PWA, theme                         | **Platform (shared)** | app-wide           |
 
 ## Architecture: single app, host-resolved sites
 

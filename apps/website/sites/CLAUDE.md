@@ -44,7 +44,7 @@ updating its `registry.ts` entry and `site.config.ts` `slug`.
 - **Committed, per-site (ours to build):** everything under `sites/<slug>/`.
 - **Shared platform (do NOT fork per site):** auth, account, admin CMS,
   navbar/footer, the block library in `apps/website/components/`, the data
-  helpers in `apps/website/lib/`, i18n, theme. A site *composes* these; it does
+  helpers in `apps/website/lib/`, i18n, theme. A site _composes_ these; it does
   not copy them.
 - **Backend (never touched to add a site):** the Django `System` record and its
   catalog/brand/content is created in the Django admin. The frontend only reads
@@ -87,7 +87,7 @@ that `lib/resolve-site.ts` honors **in development only** — `getSite()` resolv
 to that slug and `getTenantHost()` follows its `systemHost`, so the backend
 loads the right tenant's data too. Choose "Default (by host)" to clear the
 cookie. The cookie is ignored in production; real deploys always resolve by
-host. This is how you build-and-verify a site *before* the domain/ingress steps
+host. This is how you build-and-verify a site _before_ the domain/ingress steps
 exist. The switcher is wired in `app/[locale]/layout.tsx` from `SITE_CONFIGS`
 (exported by `registry.ts`).
 
@@ -113,10 +113,10 @@ Add the eager config import and one `SITES` entry above the marked lines; keep
 `_default` **last** (it is the fallback):
 
 ```ts
-import acmeConfig from "./acme/site.config";        // <- above <new-site:import>
+import acmeConfig from "./acme/site.config"; // <- above <new-site:import>
 
 const SITES: SiteEntry[] = [
-  { config: acmeConfig, load: () => import("./acme") },   // <- above <new-site:entry>
+  { config: acmeConfig, load: () => import("./acme") }, // <- above <new-site:entry>
   { config: defaultConfig, load: () => import("./_default") },
 ];
 ```
@@ -129,14 +129,14 @@ Build a site by composing the shared, already-tenant-aware components in
 `apps/website/components/` — each resolves the current tenant on its own via the
 `lib/` data helpers, so you rarely fetch data by hand. Core blocks:
 
-| Block (`@/components/…`) | Renders | Backend source |
-| --- | --- | --- |
-| `hero` (`Hero`) | Hero with logo/slogan/video/bg | `System` |
-| `success-stories` (`SuccessStories`) | Stories slider | `getSuccessStories()` |
-| `company-highlights` (`CompanyHighlights`) | Highlights grid | `getHighlights()` |
-| `catalog-categories` (`CatalogCategories`) | Product/service category tiles | `getProductCategories()` / `getServiceCategories()` |
-| `catalog-items` (`CatalogItems`) | Featured product/service cards | `getFeaturedProducts()` / `getFeaturedServices()` |
-| `buyable-card`, `product-detail`, `service-detail`, `category-detail` | Item/detail rendering | catalog helpers |
+| Block (`@/components/…`)                                              | Renders                        | Backend source                                      |
+| --------------------------------------------------------------------- | ------------------------------ | --------------------------------------------------- |
+| `hero` (`Hero`)                                                       | Hero with logo/slogan/video/bg | `System`                                            |
+| `success-stories` (`SuccessStories`)                                  | Stories slider                 | `getSuccessStories()`                               |
+| `company-highlights` (`CompanyHighlights`)                            | Highlights grid                | `getHighlights()`                                   |
+| `catalog-categories` (`CatalogCategories`)                            | Product/service category tiles | `getProductCategories()` / `getServiceCategories()` |
+| `catalog-items` (`CatalogItems`)                                      | Featured product/service cards | `getFeaturedProducts()` / `getFeaturedServices()`   |
+| `buyable-card`, `product-detail`, `service-detail`, `category-detail` | Item/detail rendering          | catalog helpers                                     |
 
 Data helpers (all in `apps/website/lib/`, all host-resolved + `React.cache`d):
 `getSystem`, `getSuccessStories`/`getSuccessStory`, `getHighlights`/`getHighlight`,
@@ -158,7 +158,7 @@ not change.
 
 The blocks above render **nothing** until the backend has data: a `System`
 record and its stories/highlights/catalog. Scaffolding a `sites/<slug>/` folder
-gives you the *composition*; the *words and images* come from the DB, matched by
+gives you the _composition_; the _words and images_ come from the DB, matched by
 host. To populate a new site's **initial content** end-to-end, use the
 **`/seed-site`** skill (a separate Claude session — it runs a strategy interview,
 then seeds), which drives the backend command:
@@ -183,7 +183,7 @@ python manage.py seed_site --brief seed_assets/briefs/<host>.json --reset
   products/services (`is_featured=True` so they surface in `CatalogItems`).
 - `--reset` wipes that System's prior seeded content for clean, idempotent
   re-runs. Slugs are auto host-namespaced to avoid global collisions.
-- **Frontend seeding vs. backend seeding:** this skill/command is the *only*
+- **Frontend seeding vs. backend seeding:** this skill/command is the _only_
   place to populate content. Do **not** hard-code copy or images into
   `landing.tsx` — that bypasses the customer's CMS self-edit surface. The
   customer later refines everything in the admin CMS; the seed is their starting
@@ -212,7 +212,7 @@ which **upserts** it by host + slug. Key properties:
   wipes the System's prior content first for a clean replace.
 - **It writes to prod, so it confirms first** (skip with `-y`).
 - **Deploy ordering:** the `/api/publish-site/` endpoint ships in the
-  **website-api image**, so redeploy website-api *before* publishing. Then, per
+  **website-api image**, so redeploy website-api _before_ publishing. Then, per
   new site: (1) `pnpm publish-site <host>` creates the prod `System` + content →
   (2) `pnpm sync-website-hosts` picks up the now-existing `System.host` for
   ingress + CORS → (3) redeploy `website` if you added a new `sites/<slug>/`.
@@ -235,7 +235,7 @@ admin CMS; a later re-publish only refreshes text content, preserving CMS images
 - Respect light/dark theme (the app is theme-aware via `ThemeProvider`). **The
   layout already drives the theme `--accent` from the tenant's
   `System.primary_color`** (`app/[locale]/layout.tsx`), so brand color flows into
-  every core component automatically — a `<Button kind="primary">` is *already*
+  every core component automatically — a `<Button kind="primary">` is _already_
   the customer's brand color. Never re-pass the brand color to a core Button.
 - **Core-element purity — never restyle `@repo/ui`, extend it in the site.** Use
   core elements with their own props first: `<Button kind="primary" size="lg" />`

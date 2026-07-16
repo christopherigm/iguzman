@@ -19,12 +19,7 @@ import { Select } from "@repo/ui/core-elements/select";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { Toast } from "@repo/ui/core-elements/toast";
 import { SpeechButton } from "@repo/ui/core-elements/speech-button";
-import { useOllamaProxy, type LlmMessage } from "@repo/ui/use-ollama";
-import { useGroqProxy } from "@repo/ui/use-groq";
-import {
-  ADMIN_AI_PROVIDER_KEY,
-  type AdminAiProvider,
-} from "@/app/[locale]/admin/admin-sidebar";
+import { useLlmProxy, type LlmMessage } from "@repo/ui/use-llm";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { Slider } from "@repo/ui/core-elements/slider";
 import {
@@ -199,6 +194,12 @@ function deriveGroupLabel(label: string): string {
     .trim();
 }
 
+// ── Top toggles ────────────────────────────────────────────────────────────
+
+// Status flags that belong above the form rather than buried at the bottom,
+// in this display order. Any other boolean field renders in place.
+const TOP_TOGGLE_KEYS = ["is_featured", "enabled"];
+
 // ── FieldDef / AdminFormProps ──────────────────────────────────────────────
 
 export interface FieldDef {
@@ -225,6 +226,12 @@ export interface FieldDef {
 
 interface AdminFormProps {
   title: string;
+  /**
+   * Spanish name of the record being edited. When set, it replaces `title` with
+   * "Editing <name>". Leave undefined for new records and for forms that don't
+   * edit a named record (system settings).
+   */
+  editingName?: string;
   fields: FieldDef[];
   values: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
@@ -234,6 +241,12 @@ interface AdminFormProps {
   saving?: boolean;
   error?: string | null;
   success?: string | null;
+  /**
+   * Image uploaders, rendered directly below the record's name (and its EN
+   * counterpart, when paired) rather than at the bottom with `children` - they
+   * are central to the record and shouldn't sit behind a scroll of text fields.
+   */
+  imagesSlot?: React.ReactNode;
   children?: React.ReactNode;
 }
 
@@ -241,6 +254,7 @@ interface AdminFormProps {
 
 export function AdminForm({
   title,
+  editingName,
   fields,
   values,
   onChange,
@@ -250,43 +264,23 @@ export function AdminForm({
   saving,
   error,
   success,
+  imagesSlot,
   children,
 }: AdminFormProps) {
   const t = useTranslations("Admin");
   const router = useRouter();
 
-  // ── AI provider (read from sidebar localStorage selection) ───────────────
-  const [aiProvider, setAiProvider] = useState<AdminAiProvider>(() => {
-    if (typeof window === "undefined") return "groq";
-    const stored = localStorage.getItem(
-      ADMIN_AI_PROVIDER_KEY,
-    ) as AdminAiProvider | null;
-    return stored === "ollama" || stored === "groq" ? stored : "groq";
-  });
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const provider = (e as CustomEvent<AdminAiProvider>).detail;
-      if (provider === "ollama" || provider === "groq") setAiProvider(provider);
-    };
-    window.addEventListener("admin-ai-provider-change", handler);
-    return () =>
-      window.removeEventListener("admin-ai-provider-change", handler);
-  }, []);
-
-  // ── LLM hooks (both must be called unconditionally) ───────────────────────
-  // No auth headers: the proxy routes authenticate the caller from the HTTP-only
-  // cookie, which the browser sends automatically.
-  const ollamaHook = useOllamaProxy({ temperature: 0.7 });
-  const groqHook = useGroqProxy({ temperature: 0.7 });
-
+  // ── LLM ───────────────────────────────────────────────────────────────────
+  // The provider is website-api's call (Groq, falling back to OpenRouter), so
+  // there is nothing to choose here. No auth headers either: the proxy route
+  // authenticates the caller from the HTTP-only cookie the browser sends anyway.
   const {
     streamingText,
     isGenerating,
     generate,
     abort,
     reset: resetLlm,
-  } = aiProvider === "ollama" ? ollamaHook : groqHook;
+  } = useLlmProxy({ temperature: 0.7 });
 
   // Tracks which operation ('enhance' | 'translate') is currently streaming.
   const activeOperationRef = useRef<"enhance" | "translate" | null>(null);
@@ -320,6 +314,15 @@ export function AdminForm({
       setTranslatePreview(streamingText);
   }, [streamingText]);
 
+  // ── Top toggles pulled out of the field flow ──────────────────────────────
+  const [topToggles, bodyFields] = useMemo(() => {
+    const top = TOP_TOGGLE_KEYS.map((key) =>
+      fields.find((f) => f.key === key && f.type === "boolean"),
+    ).filter((f): f is FieldDef => Boolean(f));
+    const topKeys = new Set(top.map((f) => f.key));
+    return [top, fields.filter((f) => !topKeys.has(f.key))];
+  }, [fields]);
+
   // ── Pair map: key → paired key (bidirectional) ────────────────────────────
   const pairMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -336,6 +339,20 @@ export function AdminForm({
     return map;
   }, [fields]);
 
+  // ── Where the images slot goes ────────────────────────────────────────────
+  // Directly below the record's name - which is the first field, plus its EN
+  // counterpart when the name is a paired field, so the images never split the
+  // ES/EN pair.
+  const imagesSlotIndex = useMemo(() => {
+    const first = bodyFields[0];
+    if (!first) return -1;
+    const pairedKey = pairMap.get(first.key);
+    const pairedIndex = pairedKey
+      ? bodyFields.findIndex((f) => f.key === pairedKey)
+      : -1;
+    return Math.max(0, pairedIndex);
+  }, [bodyFields, pairMap]);
+
   // A field gets a translate button when it's in a pair and is a text-like type.
   const isTranslatable = (field: FieldDef) =>
     pairMap.has(field.key) &&
@@ -346,6 +363,20 @@ export function AdminForm({
   // Show the group header before the ES field of each pair.
   const needsGroupHeader = (field: FieldDef) =>
     pairMap.has(field.key) && !field.key.startsWith("en_");
+
+  // A paired field sits under a group header that already names it, so it only
+  // needs to say which language it holds.
+  const fieldLabelText = (field: FieldDef) => {
+    if (!pairMap.has(field.key)) return field.label;
+    return field.key.startsWith("en_") ? t("langEnglish") : t("langSpanish");
+  };
+
+  // Textareas take the full row, except a paired ES/EN one, which drops to a
+  // single column at md so both languages sit side by side.
+  const fieldSpanClass = (field: FieldDef) => {
+    if (field.type !== "textarea") return undefined;
+    return pairMap.has(field.key) ? "af__field--pair" : "af__field--full";
+  };
 
   // ── Enhance handlers ──────────────────────────────────────────────────────
 
@@ -462,7 +493,7 @@ export function AdminForm({
 
   return (
     <>
-      <Box flexDirection="column" gap={20} maxWidth="900px" marginBottom={40}>
+      <Box flexDirection="column" gap={20} marginBottom={40}>
         <Box
           display="flex"
           alignItems="center"
@@ -470,7 +501,9 @@ export function AdminForm({
           gap={16}
         >
           <Typography as="h1" variant="h3" margin={0}>
-            {title}
+            {editingName?.trim()
+              ? t("editingItem", { name: editingName.trim() })
+              : title}
           </Typography>
           <Box display="flex" alignItems="center" gap={8}>
             {!hideCancel && (
@@ -485,32 +518,67 @@ export function AdminForm({
 
         {error && <Toast message={error} variant="error" />}
         {success && (
-          <Toast message={success} variant="success" position="bottom-center" />
+          <Toast message={success} variant="success" position="top-center" />
         )}
 
         <form className="af__form" onSubmit={handleSubmit} noValidate>
           <Box className="af__grid">
-            {fields.map((field) => (
+            {/* ── Status toggles, above every field ── */}
+            {topToggles.length > 0 && (
+              <Box
+                className="af__field--full"
+                display="flex"
+                alignItems="center"
+                flexWrap="wrap"
+                gap={24}
+                paddingBottom={16}
+                styles={{
+                  borderBottom:
+                    "1px solid color-mix(in srgb, var(--foreground) 20%, transparent)",
+                }}
+              >
+                {topToggles.map((field) => (
+                  <Box
+                    key={field.key}
+                    display="flex"
+                    alignItems="center"
+                    gap={10}
+                  >
+                    <Switch
+                      checked={Boolean(values[field.key])}
+                      onChange={(v) => onChange(field.key, v)}
+                    />
+                    <Typography
+                      as="span"
+                      variant="body"
+                      fontWeight={500}
+                      color="var(--foreground)"
+                    >
+                      {field.label}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            )}
+
+            {bodyFields.map((field, index) => (
               <Fragment key={field.key}>
                 {/* ── Pair group header (shown before the ES field of each pair) ── */}
                 {needsGroupHeader(field) && (
                   <Box
                     className="af__field--full"
-                    paddingTop={6}
+                    paddingTop={32}
                     paddingBottom={2}
-                    marginBottom={2}
                     styles={{
                       borderBottom:
-                        "1px solid color-mix(in srgb, var(--foreground) 12%, transparent)",
+                        "1px solid color-mix(in srgb, var(--foreground) 20%, transparent)",
                     }}
                   >
                     <Typography
                       variant="label"
-                      fontWeight={700}
-                      color="color-mix(in srgb, var(--foreground) 45%, transparent)"
-                      // 11px sub-scale group header, below the label (12px) tier
+                      fontWeight={800}
+                      color="color-mix(in srgb, var(--foreground) 75%, transparent)"
                       styles={{
-                        fontSize: 11,
                         letterSpacing: "0.06em",
                         textTransform: "uppercase",
                       }}
@@ -522,9 +590,7 @@ export function AdminForm({
 
                 <Box
                   flexDirection="column"
-                  className={
-                    field.type === "textarea" ? "af__field--full" : undefined
-                  }
+                  className={fieldSpanClass(field)}
                   gap={field.fieldError ? 4 : undefined}
                 >
                   {field.type === "boolean" ? (
@@ -603,7 +669,7 @@ export function AdminForm({
                           className="af__label"
                           htmlFor={`field-${field.key}`}
                         >
-                          {field.label}
+                          {fieldLabelText(field)}
                           {field.required && (
                             <Typography
                               as="span"
@@ -707,7 +773,7 @@ export function AdminForm({
                               : "text"
                         }
                         multirow={field.type === "textarea"}
-                        rows={field.type === "textarea" ? 4 : undefined}
+                        rows={field.type === "textarea" ? 7 : undefined}
                         placeholder={field.placeholder}
                         disabled={field.disabled ?? field.type === "slug"}
                         onBlur={field.onBlur}
@@ -739,6 +805,7 @@ export function AdminForm({
                                   text={t("enhanceStop")}
                                   onClick={handleDiscardEnhance}
                                   size="md"
+                                  kind="error"
                                 />
                               ) : (
                                 <>
@@ -803,10 +870,21 @@ export function AdminForm({
                             </Box>
                           </Box>
                         )}
-
                     </Box>
                   )}
                 </Box>
+
+                {/* ── Image uploaders, right below the name field(s) ── */}
+                {index === imagesSlotIndex && imagesSlot && (
+                  <Box
+                    className="af__field--full"
+                    flexDirection="column"
+                    gap={16}
+                    paddingTop={8}
+                  >
+                    {imagesSlot}
+                  </Box>
+                )}
               </Fragment>
             ))}
           </Box>

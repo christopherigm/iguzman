@@ -125,6 +125,12 @@
     "productLabel": "Product",
     "serviceLabel": "Service"
   },
+  "Gallery": {
+    "previous": "Previous image",
+    "next": "Next image",
+    "expand": "Expand image",
+    "close": "Close fullscreen"
+  },
   "ItemDetail": {
     "home": "Home",
     "brand": "Brand",
@@ -140,6 +146,8 @@
     "buyNow": "Buy Now",
     "bookNow": "Book Now",
     "addToFavorites": "Add to favorites",
+    "share": "Share",
+    "linkCopied": "Link copied to clipboard",
     "description": "About this item",
     "specifications": "Specifications",
     "physicalDetails": "Physical Details",
@@ -150,7 +158,8 @@
     "duration": "Duration",
     "modalityOnline": "Online",
     "modalityInPerson": "In Person",
-    "modalityHybrid": "Hybrid"
+    "modalityHybrid": "Hybrid",
+    "expandVideo": "Expand video"
   },
   "CategoryDetail": {
     "home": "Home",
@@ -217,6 +226,7 @@
     "users": "Users",
     "newItem": "New",
     "edit": "Edit",
+    "editingItem": "Editing \"{name}\"",
     "delete": "Delete",
     "save": "Save",
     "saving": "Saving…",
@@ -306,6 +316,8 @@
     "breadcrumbAdmin": "Admin",
     "enhanceLabel": "Enhance with AI",
     "translateLabel": "Translate with AI",
+    "langEnglish": "English",
+    "langSpanish": "Español",
     "enhanceModelTitle": "AI Text Enhancement",
     "enhanceModelText": "The first time you use the Enhance feature, the AI model (~350 MB) is downloaded once to your browser. This may take a minute. Continue?",
     "downloadingModel": "Downloading AI model",
@@ -320,9 +332,13 @@
     "logoAssetsModalText": "Would you like to automatically generate the favicon and manifest icons (1080×, 512×, 256×, 192×, 128×) from the uploaded logo?",
     "generatingAssets": "Generating assets…",
     "errorGenerateAssets": "Failed to generate assets from logo.",
-    "aiProvider": "AI Provider",
-    "groqProvider": "Groq",
-    "ollamaProvider": "Ollama"
+    "logoHero": "Logo (Hero)",
+    "favicon": "Favicon",
+    "heroImage": "Hero Image",
+    "aboutImage": "About Image",
+    "manifestIcon": "Manifest {size}",
+    "brandImages": "Brand images",
+    "manifestImages": "Manifest icons"
   },
   "GradientBuilder": {
     "linear": "Linear",
@@ -388,6 +404,7 @@
   "AdminImageUploader": {
     "dropzoneLabel": "Upload images",
     "dropzoneText": "Drop images here or click to upload",
+    "dropzoneTextCompact": "Upload",
     "dropzoneHint": "PNG, JPG, WEBP supported",
     "deleteImage": "Delete image",
     "main": "Main",

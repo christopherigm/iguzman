@@ -13,7 +13,7 @@ Chromium 76** - a 2019 engine, far older than any dev machine. Whenever you add
 or change CSS in this app (or in `@repo/ui-tv`, which this app consumes), write
 it for **Chromium 76**, not for your laptop's browser.
 
-**Why this bites repeatedly:** the Tizen *emulator* and `pnpm dev` in a desktop
+**Why this bites repeatedly:** the Tizen _emulator_ and `pnpm dev` in a desktop
 browser both run a modern Chromium, so anything you write renders fine there.
 The bug only shows up on the physical TV, after packaging - the slowest possible
 feedback loop. Assume "works in the emulator" tells you nothing about the device.
@@ -26,16 +26,16 @@ diagnose it as a **CSS-support gap first**, not a network/CORS/TLS problem.
 The full list lives in `packages/ui-tv/CLAUDE.md` → "Old Tizen browser - CSS
 support floor". The ones that have actually broken this app:
 
-| Don't use | Min version | Do instead |
-| --------- | ----------- | ---------- |
-| `aspect-ratio` | 88 | `padding-top` ratio hack (see `TvImage`) |
-| `inset` shorthand | 87 | explicit `top` / `right` / `bottom` / `left` |
-| `color-mix()` | 111 | a palette token, or `opacity` for muted text |
-| `gap` (flexbox) | 84 | `margin` on the children |
-| **percentage height off a derived-height box** | — | give the box an **explicit** height (`100vh`, fixed px) |
+| Don't use                                      | Min version | Do instead                                              |
+| ---------------------------------------------- | ----------- | ------------------------------------------------------- |
+| `aspect-ratio`                                 | 88          | `padding-top` ratio hack (see `TvImage`)                |
+| `inset` shorthand                              | 87          | explicit `top` / `right` / `bottom` / `left`            |
+| `color-mix()`                                  | 111         | a palette token, or `opacity` for muted text            |
+| `gap` (flexbox)                                | 84          | `margin` on the children                                |
+| **percentage height off a derived-height box** | —           | give the box an **explicit** height (`100vh`, fixed px) |
 
 That last row is the one that broke both backdrops: an element whose own height
-comes from `top:0; bottom:0` (a *derived* height) does **not** give a child's
+comes from `top:0; bottom:0` (a _derived_ height) does **not** give a child's
 `height: 100%` something to resolve against on Chromium 76 - the child collapses
 to zero and the image, though downloaded, never paints. Fixed-size flow elements
 (explicit px width/height) are immune; the trap is percentage/auto sizing.

@@ -1,4 +1,9 @@
+import json
+import logging
+
+from django.conf import settings
 from django.core.cache import cache
+from django.http import StreamingHttpResponse
 
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication
@@ -9,6 +14,7 @@ from rest_framework.views import APIView
 from core.permissions import IsSystemAdmin
 from .models import Brand, CompanyHighlight, CompanyHighlightItem, SuccessStory, SuccessStoryImage, System
 from .serializers import (
+    AiChatSerializer,
     BrandSerializer,
     BrandWriteSerializer,
     CompanyHighlightItemSerializer,
@@ -22,10 +28,18 @@ from .serializers import (
     SystemSerializer,
     SystemWriteSerializer,
 )
+from core.services.llm import stream_chat
 from core.site_payload import apply_payload
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_CACHE_TTL = 3600  # 1 hour
 CACHE_TTL = 300  # 5 minutes
+
+
+def _sse_data(payload):
+    """Serialize one Server-Sent Events data frame."""
+    return f"data: {json.dumps(payload)}\n\n"
 
 
 def _invalidate_pattern(pattern):
@@ -804,3 +818,50 @@ class SlugCheckView(APIView):
                 pass
 
         return Response({"available": not qs.exists()})
+
+
+class AiChatView(APIView):
+    """
+    POST /api/ai/chat/ - stream an LLM completion back as OpenAI-shaped SSE.
+
+    Admin-only: the sole caller is the admin CMS (enhance / translate on the
+    content forms). Provider choice lives in `core.services.llm` - Groq first,
+    OpenRouter as fallback - so no client can pick one.
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    def post(self, request):
+        serializer = AiChatSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        messages = [dict(m) for m in serializer.validated_data["messages"]]
+        temperature = serializer.validated_data["temperature"]
+
+        # Checked up front: once the first chunk is yielded the 200 is committed and
+        # a misconfiguration could only be reported inside the stream.
+        if not settings.GROQ_API_KEY and not settings.OPENROUTER_API_KEY:
+            return Response(
+                {"detail": "No LLM provider is configured."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        response = StreamingHttpResponse(
+            self._sse(messages, temperature),
+            content_type="text/event-stream",
+        )
+        response["Cache-Control"] = "no-cache"
+        # nginx buffers proxied responses by default, which would hold the whole
+        # completion back and deliver it in one lump - defeating the streaming UI.
+        response["X-Accel-Buffering"] = "no"
+        return response
+
+    def _sse(self, messages, temperature):
+        try:
+            for token in stream_chat(messages, temperature):
+                yield _sse_data({"choices": [{"delta": {"content": token}}]})
+        except Exception:
+            # Provider errors are logged in full but reported generically: the body
+            # of an upstream error is not something to forward to a browser.
+            logger.exception("AI chat stream failed")
+            yield _sse_data({"error": {"message": "The AI provider is unavailable. Please try again."}})
+        yield "data: [DONE]\n\n"

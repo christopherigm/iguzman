@@ -125,6 +125,12 @@
     "productLabel": "Producto",
     "serviceLabel": "Servicio"
   },
+  "Gallery": {
+    "previous": "Imagen anterior",
+    "next": "Imagen siguiente",
+    "expand": "Ampliar imagen",
+    "close": "Cerrar pantalla completa"
+  },
   "ItemDetail": {
     "home": "Inicio",
     "brand": "Marca",
@@ -140,6 +146,8 @@
     "buyNow": "Comprar ahora",
     "bookNow": "Reservar ahora",
     "addToFavorites": "Agregar a favoritos",
+    "share": "Compartir",
+    "linkCopied": "Enlace copiado al portapapeles",
     "description": "Acerca de este artículo",
     "specifications": "Especificaciones",
     "physicalDetails": "Detalles físicos",
@@ -150,7 +158,8 @@
     "duration": "Duración",
     "modalityOnline": "En línea",
     "modalityInPerson": "En persona",
-    "modalityHybrid": "Híbrido"
+    "modalityHybrid": "Híbrido",
+    "expandVideo": "Ampliar video"
   },
   "CategoryDetail": {
     "home": "Inicio",
@@ -217,6 +226,7 @@
     "users": "Usuarios",
     "newItem": "Nuevo",
     "edit": "Editar",
+    "editingItem": "Editando \"{name}\"",
     "delete": "Eliminar",
     "save": "Guardar",
     "saving": "Guardando…",
@@ -306,6 +316,8 @@
     "breadcrumbAdmin": "Admin",
     "enhanceLabel": "Mejorar con IA",
     "translateLabel": "Traducir con IA",
+    "langEnglish": "English",
+    "langSpanish": "Español",
     "enhanceModelTitle": "Mejora de texto con IA",
     "enhanceModelText": "La primera vez que uses la función Mejorar, el modelo de IA (~350 MB) se descarga una vez en tu navegador. Esto puede tardar un momento. ¿Continuar?",
     "downloadingModel": "Descargando modelo de IA",
@@ -320,9 +332,13 @@
     "logoAssetsModalText": "¿Deseas generar automáticamente el favicon y los íconos del manifest (1080×, 512×, 256×, 192×, 128×) a partir del logo subido?",
     "generatingAssets": "Generando recursos…",
     "errorGenerateAssets": "No se pudieron generar los recursos desde el logo.",
-    "aiProvider": "Proveedor de IA",
-    "groqProvider": "Groq",
-    "ollamaProvider": "Ollama"
+    "logoHero": "Logotipo (Hero)",
+    "favicon": "Favicon",
+    "heroImage": "Imagen Hero",
+    "aboutImage": "Imagen de Acerca de",
+    "manifestIcon": "Manifest {size}",
+    "brandImages": "Imágenes de marca",
+    "manifestImages": "Iconos del manifest"
   },
   "GradientBuilder": {
     "linear": "Lineal",
@@ -388,6 +404,7 @@
   "AdminImageUploader": {
     "dropzoneLabel": "Subir imágenes",
     "dropzoneText": "Arrastra imágenes aquí o haz clic para subir",
+    "dropzoneTextCompact": "Subir",
     "dropzoneHint": "Se admiten PNG, JPG y WEBP",
     "deleteImage": "Eliminar imagen",
     "main": "Principal",

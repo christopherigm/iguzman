@@ -1,11 +1,14 @@
-import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
-import { useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import type { ReactNode, Ref } from 'react';
-import { TvButton } from './tv-button';
-import { TvText } from './tv-typography';
-import { onBackButton } from './remote-keys';
-import './tv-confirmation-modal.css';
+import {
+  useFocusable,
+  FocusContext,
+} from "@noriginmedia/norigin-spatial-navigation";
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
+import type { ReactNode, Ref } from "react";
+import { TvButton } from "./tv-button";
+import { TvText } from "./tv-typography";
+import { onBackButton } from "./remote-keys";
+import "./tv-confirmation-modal.css";
 
 export interface TvConfirmationModalProps {
   /** Modal heading. */
@@ -48,10 +51,10 @@ export function TvConfirmationModal({
   okCallback,
   cancelCallback,
   children,
-  okLabel = 'OK',
-  cancelLabel = 'Cancel',
+  okLabel = "OK",
+  cancelLabel = "Cancel",
   okDisabled = false,
-  panelMaxWidth = '1500px',
+  panelMaxWidth = "1500px",
 }: TvConfirmationModalProps) {
   // Trap focus inside the panel and delegate the initial focus to its first
   // focusable child (an option button, or OK when there are none).
@@ -70,7 +73,7 @@ export function TvConfirmationModal({
 
   useEffect(() => onBackButton(dismiss), [dismiss]);
 
-  if (typeof document === 'undefined') return null;
+  if (typeof document === "undefined") return null;
 
   const modal = (
     <FocusContext.Provider value={focusKey}>
@@ -95,7 +98,9 @@ export function TvConfirmationModal({
           </div>
 
           <div className="tv-modal-actions">
-            {cancelCallback && <TvButton onPress={cancelCallback}>{cancelLabel}</TvButton>}
+            {cancelCallback && (
+              <TvButton onPress={cancelCallback}>{cancelLabel}</TvButton>
+            )}
             <TvButton kind="primary" onPress={okCallback} disabled={okDisabled}>
               {okLabel}
             </TvButton>

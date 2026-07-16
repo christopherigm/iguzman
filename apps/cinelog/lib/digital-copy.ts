@@ -67,6 +67,7 @@ export function isPresignedUrl(rawUrl: string): boolean {
  */
 export function isSelfHostedCopy(rawUrl: string): boolean {
   return (
-    !isProviderCopy(rawUrl) && (isDirectStream(rawUrl) || isPresignedUrl(rawUrl))
+    !isProviderCopy(rawUrl) &&
+    (isDirectStream(rawUrl) || isPresignedUrl(rawUrl))
   );
 }

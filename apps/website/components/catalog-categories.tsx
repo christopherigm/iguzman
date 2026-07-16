@@ -57,12 +57,7 @@ export function CategoryCard({
       styles={{ position: "relative", textDecoration: "none" }}
     >
       {image && (
-        <Image
-          fill
-          src={image}
-          alt={name}
-          style={{ objectFit: "cover" }}
-        />
+        <Image fill src={image} alt={name} style={{ objectFit: "cover" }} />
       )}
       {image && (
         <Box
@@ -92,9 +87,7 @@ export function CategoryCard({
               : "rgba(255, 255, 255, 0.15)"
           }
           textColor={
-            accentBadge
-              ? "var(--accent, #6366f1)"
-              : "rgba(255, 255, 255, 0.85)"
+            accentBadge ? "var(--accent, #6366f1)" : "rgba(255, 255, 255, 0.85)"
           }
           style={{
             width: "fit-content",

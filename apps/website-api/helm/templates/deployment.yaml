@@ -42,6 +42,18 @@ spec:
               containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
 
+          {{- /* ── Whole-Secret env bundle ── */}}
+          {{- /* Every key in the Secret becomes an env var. Anything listed under
+                 `env` below WINS over this: Kubernetes gives `env` precedence over
+                 `envFrom`. Keys that are not valid env var names (e.g. kebab-case
+                 `db-password`) are skipped by the kubelet, so reference those via
+                 `envFromSecret` instead. */}}
+          {{- with .Values.envFromSecretBundle }}
+          envFrom:
+            - secretRef:
+                name: {{ . }}
+          {{- end }}
+
           {{- /* ── Plain environment variables ── */}}
           {{- if or .Values.env .Values.envFromSecret }}
           env:

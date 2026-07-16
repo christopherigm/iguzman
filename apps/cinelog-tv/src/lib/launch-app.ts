@@ -218,7 +218,8 @@ function alertWithInstalledMatches(
           (hits.length ? hits.join("\n") : `none for ${needles.join(", ")}`),
       );
     },
-    (err) => alert(`${baseMessage}\n\ngetAppsInfo failed: ${describeError(err)}`),
+    (err) =>
+      alert(`${baseMessage}\n\ngetAppsInfo failed: ${describeError(err)}`),
   );
 }
 

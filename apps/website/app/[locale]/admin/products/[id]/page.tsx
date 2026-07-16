@@ -86,6 +86,7 @@ export default function AdminProductFormPage({ params }: Props) {
     dimension_unit: "cm",
     weight_unit: "kg",
     href: "",
+    video_link: "",
   });
 
   const [existingImages, setExistingImages] = useState<
@@ -192,6 +193,7 @@ export default function AdminProductFormPage({ params }: Props) {
             dimension_unit: product.dimension_unit ?? "cm",
             weight_unit: product.weight_unit ?? "kg",
             href: product.href ?? "",
+            video_link: product.video_link ?? "",
           });
           const imgs = (images as Record<string, unknown>[]).map((i) => ({
             id: i.id as number,
@@ -225,7 +227,8 @@ export default function AdminProductFormPage({ params }: Props) {
     setSuccess(null);
     try {
       const payload: Record<string, unknown> = { ...values, system: systemId };
-      // Strip empty optional fields
+      // Clear empty optional fields with an explicit null. Updates are PATCH, so
+      // an omitted key means "leave unchanged" - it cannot clear a value.
       [
         "compare_price",
         "cost_price",
@@ -237,12 +240,14 @@ export default function AdminProductFormPage({ params }: Props) {
         "sku",
         "barcode",
         "href",
+        "video_link",
+        "category",
+        "brand",
+        "dimension_unit",
+        "weight_unit",
       ].forEach((k) => {
-        if (payload[k] === "" || payload[k] === null) delete payload[k];
+        if (payload[k] === "") payload[k] = null;
       });
-      if (payload.category === "" || payload.category === null)
-        delete payload.category;
-      if (payload.brand === "" || payload.brand === null) delete payload.brand;
 
       let productId: number;
       if (isNew) {
@@ -346,6 +351,11 @@ export default function AdminProductFormPage({ params }: Props) {
     },
     { key: "href", label: t("link") ?? "Link", type: "url" },
     {
+      key: "video_link",
+      label: t("videoLink") ?? "Hero Video Link",
+      type: "url",
+    },
+    {
       key: "description",
       label: t("description") ?? "Description (ES)",
       type: "textarea",
@@ -390,6 +400,7 @@ export default function AdminProductFormPage({ params }: Props) {
             ? `${t("newItem")} - ${t("products")}`
             : `${t("edit")} - ${t("products")}`
         }
+        editingName={isNew ? undefined : String(values.name ?? "")}
         fields={fields}
         values={values}
         onChange={handleChange}
@@ -397,16 +408,17 @@ export default function AdminProductFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
-      >
-        <Box display="flex" flexDirection="column" gap="8px">
-          <Typography variant="label">{t("images") ?? "Images"}</Typography>
-          <AdminImageUploader
-            existingImages={existingImages}
-            onChange={handleImagesChange}
-            maxImages={10}
-          />
-        </Box>
-      </AdminForm>
+        imagesSlot={
+          <Box display="flex" flexDirection="column" gap="8px">
+            <Typography variant="label">{t("images") ?? "Images"}</Typography>
+            <AdminImageUploader
+              existingImages={existingImages}
+              onChange={handleImagesChange}
+              maxImages={10}
+            />
+          </Box>
+        }
+      />
     </>
   );
 }

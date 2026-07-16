@@ -24,6 +24,6 @@ export function onBackButton(handler: () => void): () => void {
   const listener = (event: KeyboardEvent) => {
     if (event.keyCode === TV_KEYS.BACK) handler();
   };
-  window.addEventListener('keydown', listener);
-  return () => window.removeEventListener('keydown', listener);
+  window.addEventListener("keydown", listener);
+  return () => window.removeEventListener("keydown", listener);
 }

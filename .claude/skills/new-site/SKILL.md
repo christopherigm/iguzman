@@ -49,7 +49,7 @@ customer was given, ask for one before starting.
    `_default` last). If the CLI is unavailable, create the folder by hand
    mirroring `_default/` and register it per `sites/CLAUDE.md`.
 3. **Configure.** Fill `site.config.ts`: `slug`, `name`, all `hosts` (production
-   + preview), and `systemHost` (the customer's `System.host`).
+   - preview), and `systemHost` (the customer's `System.host`).
 4. **Design the landing.** **First invoke the `/site-design` skill** and follow
    it — pick the layout archetype for the customer's business type, apply the
    craft rubric, and avoid the AI-look tells. Rework `landing.tsx` into a unique,
@@ -88,7 +88,7 @@ customer was given, ask for one before starting.
    content (it writes a brief and runs `website-api`'s `seed_site` command, using
    the `seed_assets/` placeholder pool). Keeping it a separate call stops the long
    interview transcript from eating this build's context. Tell the operator:
-   *"run `/seed-site <domain>` in a new session to populate the landing."*
+   _"run `/seed-site <domain>` in a new session to populate the landing."_
 8. **Hand off the domain step.** Remind the operator that a real public domain
    also needs its `System.host` created and `pnpm sync-website-hosts` run so the
    ingress routes it to this app.

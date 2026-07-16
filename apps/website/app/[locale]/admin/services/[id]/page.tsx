@@ -69,6 +69,7 @@ export default function AdminServiceFormPage({ params }: Props) {
     is_featured: false,
     enabled: true,
     href: "",
+    video_link: "",
   });
   const [existingImage, setExistingImage] = useState<
     { id: number; url: string }[]
@@ -170,6 +171,7 @@ export default function AdminServiceFormPage({ params }: Props) {
             is_featured: data.is_featured ?? false,
             enabled: data.enabled ?? true,
             href: data.href ?? "",
+            video_link: data.video_link ?? "",
           });
           if (data.image) {
             setExistingImage([{ id: Number(id), url: String(data.image) }]);
@@ -192,13 +194,21 @@ export default function AdminServiceFormPage({ params }: Props) {
     setSuccess(null);
     try {
       const payload: Record<string, unknown> = { ...values, system: systemId };
-      ["compare_price", "cost_price", "sku", "href", "duration"].forEach(
-        (k) => {
-          if (payload[k] === "" || payload[k] === null) delete payload[k];
-        },
-      );
-      if (payload.category === "") delete payload.category;
-      if (payload.brand === "") delete payload.brand;
+      // Clear empty optional fields with an explicit null. Updates are PATCH, so
+      // an omitted key means "leave unchanged" - it cannot clear a value.
+      [
+        "compare_price",
+        "cost_price",
+        "sku",
+        "href",
+        "video_link",
+        "duration",
+        "category",
+        "brand",
+        "modality",
+      ].forEach((k) => {
+        if (payload[k] === "") payload[k] = null;
+      });
       if (pendingImage.length > 0) {
         payload.image = pendingImage[0]?.base64;
       } else if (existingImage.length === 0) {
@@ -295,6 +305,11 @@ export default function AdminServiceFormPage({ params }: Props) {
     },
     { key: "href", label: t("link") ?? "Link", type: "url" },
     {
+      key: "video_link",
+      label: t("videoLink") ?? "Hero Video Link",
+      type: "url",
+    },
+    {
       key: "description",
       label: t("description") ?? "Description (ES)",
       type: "textarea",
@@ -337,6 +352,7 @@ export default function AdminServiceFormPage({ params }: Props) {
             ? `${t("newItem")} - ${t("services")}`
             : `${t("edit")} - ${t("services")}`
         }
+        editingName={isNew ? undefined : String(values.name ?? "")}
         fields={fields}
         values={values}
         onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
@@ -344,33 +360,38 @@ export default function AdminServiceFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
-      >
-        <Box display="flex" flexDirection="column" gap="8px">
-          <Typography variant="label">{t("image") ?? "Main Image"}</Typography>
-          <AdminImageUploader
-            existingImages={existingImage}
-            onChange={(n, _d, o) => {
-              setPendingImage(n);
-              setExistingImage((prev) =>
-                prev.filter((img) => o.includes(img.id)),
-              );
-            }}
-            maxImages={1}
-          />
-        </Box>
-        <Box display="flex" flexDirection="column" gap="8px">
-          <Typography variant="label">{t("images") ?? "Images"}</Typography>
-          <AdminImageUploader
-            existingImages={existingImages}
-            onChange={(n, d, o) => {
-              setPendingNewImages(n);
-              setPendingDeletedIds(d);
-              setPendingOrder(o);
-            }}
-            maxImages={10}
-          />
-        </Box>
-      </AdminForm>
+        imagesSlot={
+          <>
+            <Box display="flex" flexDirection="column" gap="8px">
+              <Typography variant="label">
+                {t("image") ?? "Main Image"}
+              </Typography>
+              <AdminImageUploader
+                existingImages={existingImage}
+                onChange={(n, _d, o) => {
+                  setPendingImage(n);
+                  setExistingImage((prev) =>
+                    prev.filter((img) => o.includes(img.id)),
+                  );
+                }}
+                maxImages={1}
+              />
+            </Box>
+            <Box display="flex" flexDirection="column" gap="8px">
+              <Typography variant="label">{t("images") ?? "Images"}</Typography>
+              <AdminImageUploader
+                existingImages={existingImages}
+                onChange={(n, d, o) => {
+                  setPendingNewImages(n);
+                  setPendingDeletedIds(d);
+                  setPendingOrder(o);
+                }}
+                maxImages={10}
+              />
+            </Box>
+          </>
+        }
+      />
     </>
   );
 }

@@ -66,10 +66,16 @@ ENV DJANGO_SETTINGS_MODULE=website_api.settings
 
 EXPOSE 8000
 
-# 2 sync workers is appropriate for a 0.5-CPU container.
-# Increase via GUNICORN_WORKERS env var or by editing the Helm values.
+# 2 workers is appropriate for a 0.5-CPU container.
+#
+# Threaded (gthread) rather than sync workers: /api/ai/chat/ streams an LLM
+# completion, which holds its worker for the whole generation. With 2 sync workers
+# a pair of concurrent enhance requests would block every other API call until they
+# finished; threads keep those waits off the request path.
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["gunicorn", "website_api.wsgi:application", \
      "--bind", "0.0.0.0:8000", \
+     "--worker-class", "gthread", \
      "--workers", "2", \
+     "--threads", "8", \
      "--timeout", "120"]

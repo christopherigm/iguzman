@@ -119,7 +119,9 @@ export function BuyableCard({
           />
         ) : (
           <Box
-            backgroundColor={data.background_color ?? "var(--surface-3, #e5e7eb)"}
+            backgroundColor={
+              data.background_color ?? "var(--surface-3, #e5e7eb)"
+            }
             styles={{ position: "absolute", inset: 0 }}
           />
         )}

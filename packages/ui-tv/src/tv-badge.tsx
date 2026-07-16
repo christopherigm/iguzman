@@ -1,5 +1,5 @@
-import type { CSSProperties, ReactNode } from 'react';
-import './tv-badge.css';
+import type { CSSProperties, ReactNode } from "react";
+import "./tv-badge.css";
 
 /**
  * Visual variant of the badge.
@@ -7,10 +7,10 @@ import './tv-badge.css';
  * - `outlined` - transparent background with a colored border
  * - `subtle`   - translucent neutral wash that reads on a dark backdrop
  */
-export type TvBadgeVariant = 'filled' | 'outlined' | 'subtle';
+export type TvBadgeVariant = "filled" | "outlined" | "subtle";
 
 /** Size preset for the badge (scaled up for 10-foot legibility). */
-export type TvBadgeSize = 'sm' | 'md' | 'lg';
+export type TvBadgeSize = "sm" | "md" | "lg";
 
 export interface TvBadgeProps {
   /** Text content displayed inside the badge. */
@@ -39,20 +39,25 @@ export interface TvBadgeProps {
  */
 export function TvBadge({
   children,
-  variant = 'filled',
-  size = 'md',
+  variant = "filled",
+  size = "md",
   color,
   textColor,
   className,
   style,
 }: TvBadgeProps) {
   const cssVars: Record<string, string> = {};
-  if (color) cssVars['--tv-badge-bg'] = color;
-  if (textColor) cssVars['--tv-badge-fg'] = textColor;
+  if (color) cssVars["--tv-badge-bg"] = color;
+  if (textColor) cssVars["--tv-badge-fg"] = textColor;
 
-  const cls = ['tv-badge', `tv-badge--${variant}`, `tv-badge--${size}`, className]
+  const cls = [
+    "tv-badge",
+    `tv-badge--${variant}`,
+    `tv-badge--${size}`,
+    className,
+  ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
   return (
     <span className={cls} style={{ ...cssVars, ...style }}>

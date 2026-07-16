@@ -62,9 +62,7 @@ export default async function BlogPage({ params }: Props) {
         size="lg"
         paddingX={10}
         marginTop={32}
-        paddingTop={
-          !heroImage ? "var(--ui-navbar-height, 57px)" : undefined
-        }
+        paddingTop={!heroImage ? "var(--ui-navbar-height, 57px)" : undefined}
         paddingBottom="var(--ui-page-bottom-spacing, 64px)"
       >
         <Breadcrumbs items={breadcrumbs} />

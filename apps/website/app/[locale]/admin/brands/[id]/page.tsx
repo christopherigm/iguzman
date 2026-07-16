@@ -144,6 +144,7 @@ export default function AdminBrandFormPage({ params }: Props) {
             ? `${t("newItem")} - ${t("brands")}`
             : `${t("edit")} - ${t("brands")}`
         }
+        editingName={isNew ? undefined : String(values.name ?? "")}
         fields={fields}
         values={values}
         onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
@@ -151,21 +152,22 @@ export default function AdminBrandFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
-      >
-        <Box display="flex" flexDirection="column" gap="8px">
-          <Typography variant="label">{t("logo") ?? "Logo"}</Typography>
-          <AdminImageUploader
-            existingImages={existingLogo}
-            onChange={(n, _d, o) => {
-              setPendingLogo(n);
-              setExistingLogo((prev) =>
-                prev.filter((img) => o.includes(img.id)),
-              );
-            }}
-            maxImages={1}
-          />
-        </Box>
-      </AdminForm>
+        imagesSlot={
+          <Box display="flex" flexDirection="column" gap="8px">
+            <Typography variant="label">{t("logo") ?? "Logo"}</Typography>
+            <AdminImageUploader
+              existingImages={existingLogo}
+              onChange={(n, _d, o) => {
+                setPendingLogo(n);
+                setExistingLogo((prev) =>
+                  prev.filter((img) => o.includes(img.id)),
+                );
+              }}
+              maxImages={1}
+            />
+          </Box>
+        }
+      />
     </>
   );
 }

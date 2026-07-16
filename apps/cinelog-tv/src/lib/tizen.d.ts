@@ -22,7 +22,11 @@ interface TizenCurrentApplication {
 
 interface TizenApplicationManager {
   getCurrentApplication(): TizenCurrentApplication;
-  launch(id: string, onSuccess?: () => void, onError?: (error: unknown) => void): void;
+  launch(
+    id: string,
+    onSuccess?: () => void,
+    onError?: (error: unknown) => void,
+  ): void;
   launchAppControl(
     control: TizenApplicationControl,
     id?: string | null,
@@ -63,7 +67,10 @@ interface TizenStatic {
     category?: string | null,
     data?: TizenApplicationControlData[],
   ) => TizenApplicationControl;
-  ApplicationControlData: new (key: string, value: string[]) => TizenApplicationControlData;
+  ApplicationControlData: new (
+    key: string,
+    value: string[],
+  ) => TizenApplicationControlData;
 }
 
 /**
@@ -87,7 +94,12 @@ interface AVPlayListener {
 interface AVPlay {
   open(url: string): void;
   close(): void;
-  setDisplayRect(left: number, top: number, width: number, height: number): void;
+  setDisplayRect(
+    left: number,
+    top: number,
+    width: number,
+    height: number,
+  ): void;
   setDisplayMethod(
     method:
       | "PLAYER_DISPLAY_MODE_LETTER_BOX"

@@ -104,9 +104,9 @@ Keep it efficient: a good interview is ~6–12 sharp exchanges, not 40 timid one
 
 ## Notes
 
-- **This seeds the *local* DB only.** Once the operator has verified the site
+- **This seeds the _local_ DB only.** Once the operator has verified the site
   locally, publishing it to production is a separate step: `pnpm publish-site
-  <host>` serializes this content out of the local DB and upserts it into the prod
+<host>` serializes this content out of the local DB and upserts it into the prod
   Django (placeholder images skipped — the customer uploads real ones via the
   CMS). See `apps/website/sites/CLAUDE.md` → "Publishing to production". Not part
   of this skill; just point the operator to it when the seed looks good.

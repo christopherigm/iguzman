@@ -125,7 +125,10 @@ export default function AdminSuccessStoryFormPage({ params }: Props) {
     setSuccess(null);
     try {
       const payload: Record<string, unknown> = { ...values, system: systemId };
-      if (!payload.href) delete payload.href;
+      // Send null (not an omitted key) so a cleared field is actually cleared -
+      // this is a PATCH, and an absent key means "leave unchanged".
+      if (!payload.href) payload.href = null;
+      // The slug is read-only and derived server-side; omit it when empty.
       if (!payload.slug) delete payload.slug;
       if (pendingImage.length > 0) {
         payload.image = pendingImage[0]?.base64;
@@ -222,6 +225,7 @@ export default function AdminSuccessStoryFormPage({ params }: Props) {
             ? `${t("newItem")} - ${t("successStories")}`
             : `${t("edit")} - ${t("successStories")}`
         }
+        editingName={isNew ? undefined : String(values.name ?? "")}
         fields={fields}
         values={values}
         onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
@@ -229,37 +233,40 @@ export default function AdminSuccessStoryFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
-      >
-        <Box display="flex" flexDirection="column" gap="8px">
-          <Typography variant="label">
-            {t("coverImage") ?? "Cover Image"}
-          </Typography>
-          <AdminImageUploader
-            existingImages={existingImage}
-            onChange={(n, _d, o) => {
-              setPendingImage(n);
-              setExistingImage((prev) =>
-                prev.filter((img) => o.includes(img.id)),
-              );
-            }}
-            maxImages={1}
-          />
-        </Box>
-        <Box display="flex" flexDirection="column" gap="8px">
-          <Typography variant="label">
-            {t("images") ?? "Gallery Images"}
-          </Typography>
-          <AdminImageUploader
-            existingImages={existingGallery}
-            onChange={(n, d, o) => {
-              setPendingNewGallery(n);
-              setPendingDeletedGalleryIds(d);
-              setPendingGalleryOrder(o);
-            }}
-            maxImages={20}
-          />
-        </Box>
-      </AdminForm>
+        imagesSlot={
+          <>
+            <Box display="flex" flexDirection="column" gap="8px">
+              <Typography variant="label">
+                {t("coverImage") ?? "Cover Image"}
+              </Typography>
+              <AdminImageUploader
+                existingImages={existingImage}
+                onChange={(n, _d, o) => {
+                  setPendingImage(n);
+                  setExistingImage((prev) =>
+                    prev.filter((img) => o.includes(img.id)),
+                  );
+                }}
+                maxImages={1}
+              />
+            </Box>
+            <Box display="flex" flexDirection="column" gap="8px">
+              <Typography variant="label">
+                {t("images") ?? "Gallery Images"}
+              </Typography>
+              <AdminImageUploader
+                existingImages={existingGallery}
+                onChange={(n, d, o) => {
+                  setPendingNewGallery(n);
+                  setPendingDeletedGalleryIds(d);
+                  setPendingGalleryOrder(o);
+                }}
+                maxImages={20}
+              />
+            </Box>
+          </>
+        }
+      />
     </>
   );
 }

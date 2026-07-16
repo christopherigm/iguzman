@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    AiChatView,
     BrandDetailView,
     BrandListCreateView,
     CompanyHighlightBySlugView,
@@ -41,4 +42,6 @@ urlpatterns = [
     path("brands/<int:pk>/", BrandDetailView.as_view(), name="brand-detail"),
 
     path("check-slug/", SlugCheckView.as_view(), name="check-slug"),
+
+    path("ai/chat/", AiChatView.as_view(), name="ai-chat"),
 ]
