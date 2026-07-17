@@ -161,7 +161,11 @@ export default async function ProductPage({ params, searchParams }: Props) {
   return (
     <>
       {product.video_link && (
-        <ItemHeroVideo url={product.video_link} title={displayName} />
+        <ItemHeroVideo
+          url={product.video_link}
+          title={displayName}
+          parallax={false}
+        />
       )}
       <Container
         paddingX={10}

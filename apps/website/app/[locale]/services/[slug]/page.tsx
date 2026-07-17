@@ -157,7 +157,11 @@ export default async function ServicePage({ params, searchParams }: Props) {
   return (
     <>
       {service.video_link && (
-        <ItemHeroVideo url={service.video_link} title={displayName} />
+        <ItemHeroVideo
+          url={service.video_link}
+          title={displayName}
+          parallax={false}
+        />
       )}
       <Container
         paddingX={10}

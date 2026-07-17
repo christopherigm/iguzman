@@ -13,6 +13,7 @@ export function Hero({ system }: Props) {
       logoImage={system?.img_logo_hero}
       logoAlt={system?.site_name}
       slogan={system?.slogan}
+      parallax={false}
     />
   );
 }

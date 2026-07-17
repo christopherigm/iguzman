@@ -10,6 +10,22 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { BuyableCard, type BuyableItem } from "./buyable-card";
 import "./catalog-items.css";
 
+/**
+ * A stable pseudo-random ordering key for one item on a given day. An FNV-1a
+ * hash over the item's kind, id and the day seed: deterministic per day, but
+ * spread out enough that the grid reads as shuffled rather than "products then
+ * services".
+ */
+function shuffleKey(item: BuyableItem, daySeed: number): number {
+  const input = `${item.kind}-${item.data.id}-${daySeed}`;
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
 export async function CatalogItems() {
   const [products, services, locale, t] = await Promise.all([
     getFeaturedProducts(),
@@ -20,15 +36,19 @@ export async function CatalogItems() {
 
   if (products.length === 0 && services.length === 0) return null;
 
-  // Shuffle products and services together. Server component: shuffling per
-  // request is intentional and has no hydration concern (rendered once).
+  // Interleave products and services in a stable, per-day order. Keying the sort
+  // on a hash of each item's identity plus the calendar day keeps the order
+  // identical across re-renders within a day, so a `router.refresh()` triggered
+  // by liking or adding to cart never reshuffles the grid - while still rotating
+  // the mix to something fresh each day.
+  // eslint-disable-next-line react-hooks/purity
+  const daySeed = Math.floor(Date.now() / 86_400_000);
   const items: BuyableItem[] = [
     ...products.map((data): BuyableItem => ({ kind: "product", data })),
     ...services.map(
       (data: FeaturedService): BuyableItem => ({ kind: "service", data }),
     ),
-    // eslint-disable-next-line react-hooks/purity
-  ].sort(() => Math.random() - 0.5);
+  ].sort((a, b) => shuffleKey(a, daySeed) - shuffleKey(b, daySeed));
 
   return (
     <section className="catalog-items-section">
