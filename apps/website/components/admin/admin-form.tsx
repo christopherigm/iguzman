@@ -198,7 +198,7 @@ function deriveGroupLabel(label: string): string {
 
 // Status flags that belong above the form rather than buried at the bottom,
 // in this display order. Any other boolean field renders in place.
-const TOP_TOGGLE_KEYS = ["is_featured", "enabled"];
+const TOP_TOGGLE_KEYS = ["is_featured", "enabled", "in_stock"];
 
 // ── FieldDef / AdminFormProps ──────────────────────────────────────────────
 

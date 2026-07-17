@@ -250,6 +250,7 @@
     "shippingTo": "Shipping to",
     "backToOrders": "Back to orders",
     "quantityTimesPrice": "{quantity} × {price}",
+    "buyAgain": "Buy again",
     "status_pending": "Payment pending",
     "status_paid": "Payment confirmed",
     "status_failed": "Payment failed",
@@ -257,7 +258,10 @@
     "status_refunded": "Order refunded",
     "statusConfirming": "Confirming your payment…",
     "statusConfirmingSlow": "Still confirming your payment. This can take a moment — you can safely leave this page, your order is saved.",
-    "paidNote": "Thank you! We've received your payment and your order is confirmed."
+    "paidNote": "Thank you! We've received your payment and your order is confirmed.",
+    "deleteOrder": "Delete order",
+    "deleteTitle": "Delete this order?",
+    "deleteText": "Order #{id} will be permanently removed from your history. This can't be undone."
   },
   "VerifyEmailPage": {
     "loading": "Verifying your account, please wait…",

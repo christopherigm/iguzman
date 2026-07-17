@@ -1,5 +1,12 @@
+/*
+ * Breadcrumbs own the tight gap to the page title/content that follows them.
+ * The space ABOVE the breadcrumbs comes from the page Container's marginTop
+ * (convention: 16). Do NOT add a marginTop to the <h1> that follows - this
+ * margin-bottom is the single source of the breadcrumbs-to-title group gap.
+ */
 .breadcrumbs {
-  padding: 12px 0;
+  padding: 0;
+  margin-bottom: 8px;
 }
 
 .breadcrumbs__list {

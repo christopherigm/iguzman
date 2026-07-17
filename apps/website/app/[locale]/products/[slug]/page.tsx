@@ -81,28 +81,31 @@ function buildGalleryImages(
 ): GalleryImage[] {
   const images: GalleryImage[] = [];
   const name = product.en_name ?? product.name ?? product.slug;
+  const seen = new Set<string>();
+  const push = (url: string | null, alt: string) => {
+    if (url && !seen.has(url)) {
+      seen.add(url);
+      images.push({ url, alt });
+    }
+  };
 
   // If a variant is selected and has its own images, use those
   if (selectedVariant) {
-    if (selectedVariant.effective_image) {
-      images.push({ url: selectedVariant.effective_image, alt: name });
-    }
+    push(selectedVariant.effective_image, name);
     for (const img of selectedVariant.images) {
-      if (img.image) {
-        images.push({ url: img.image, alt: img.name ?? name });
-      }
+      push(img.image, img.name ?? name);
     }
     if (images.length > 0) return images;
   }
 
-  // Fallback to product-level images
-  if (product.image) {
-    images.push({ url: product.image, alt: name });
-  }
+  // Prefer the product's gallery images.
   for (const img of product.images) {
-    if (img.image) {
-      images.push({ url: img.image, alt: img.name ?? name });
-    }
+    push(img.image, img.name ?? name);
+  }
+  // Only fall back to the main image when the gallery has none of its own -
+  // otherwise the main image (usually also the first gallery image) shows twice.
+  if (images.length === 0) {
+    push(product.image, name);
   }
 
   return images;
@@ -162,6 +165,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
       )}
       <Container
         paddingX={10}
+        marginTop={16}
         paddingTop={
           product.video_link ? undefined : "var(--ui-navbar-height, 57px)"
         }

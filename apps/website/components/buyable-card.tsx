@@ -135,9 +135,7 @@ export async function BuyableCard({
           variant="filled"
           size="sm"
           color={
-            kind === "product"
-              ? "rgba(255,255,255,0.15)"
-              : "rgba(99,102,241,0.8)"
+            kind === "product" ? "rgb(34, 181, 32)" : "rgba(99,102,241,0.8)"
           }
           textColor="#fff"
           style={{ position: "absolute", top: 8, left: 8, zIndex: 1 }}

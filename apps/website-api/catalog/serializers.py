@@ -146,6 +146,16 @@ class ProductImageWriteSerializer(serializers.Serializer):
         instance.save(update_fields=['image'])
         return instance
 
+        proc = ImageProcessingSerializer(
+            data={'base64_image': image_data},
+            max_size=(900, 900),
+            quality=85,
+        )
+        proc.is_valid()
+        proc.save_to_field(instance.image, f'product_{product.pk}_img_{instance.pk}.jpg')
+        instance.save(update_fields=['image'])
+        return instance
+
 
 # ---------------------------------------------------------------------------
 # Product serializers
@@ -511,11 +521,19 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def get_image(self, obj):
         request = self.context.get('request')
-        if not obj.image:
+        # The main image is the product's own `image` field; when it is empty
+        # (e.g. products whose images were only added through the CMS gallery),
+        # fall back to the first gallery image so the thumbnail still resolves.
+        image = obj.image
+        if not image:
+            gallery = sorted(obj.images.all(), key=lambda i: i.sort_order)
+            first = next((i for i in gallery if i.image), None)
+            image = first.image if first else None
+        if not image:
             return None
         if request:
-            return request.build_absolute_uri(obj.image.url)
-        return obj.image.url
+            return request.build_absolute_uri(image.url)
+        return image.url
 
 
 class ProductWriteSerializer(serializers.Serializer):

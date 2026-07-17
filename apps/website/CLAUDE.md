@@ -117,6 +117,54 @@ and rationale live in `apps/prds/website-sites.md`.
 
 When adding a new shared utility class to `globals.css`, update this table so the catalogue stays current.
 
+## Page Header Spacing - Breadcrumbs + Title as a Tight Group
+
+Every page follows the same vertical rhythm at the top: the **breadcrumbs and the
+page `<h1>` read as one tight group**, with a small gap above the group (from the
+navbar/hero) and a small gap between the breadcrumbs and the title. Don't reintroduce
+the large gaps this convention exists to remove.
+
+The spacing lives in exactly two places, so a new page gets it for free:
+
+1. **The `Breadcrumbs` component owns the gap _below_ itself.** `breadcrumbs.css`
+   (`@repo/ui/core-elements/breadcrumbs`) has `padding: 0; margin-bottom: 8px`. That
+   8px is the single source of the breadcrumbs → title gap.
+2. **The page `Container` owns the gap _above_ the group** via `marginTop={16}`.
+
+**When you build a new page, follow this exact shape:**
+
+```tsx
+<Container
+  paddingX={10}
+  marginTop={16} /* + paddingTop navbar-height when there is no hero */
+>
+  <Breadcrumbs items={breadcrumbs} />
+  {/* No marginTop on the h1 - the breadcrumbs' margin-bottom is the group gap */}
+  <Typography as="h1" variant="h1" marginBottom={32}>
+    {title}
+  </Typography>
+  ...
+</Container>
+```
+
+Rules:
+
+- **Never add `marginTop` to the `<h1>` that follows breadcrumbs.** The breadcrumbs'
+  `margin-bottom` already provides the group gap; a title `marginTop` double-spaces it.
+- **Use `marginTop={16}` on the page `Container`** (not the old `32`) for the space
+  above the group. Admin pages inherit this from `admin/layout.tsx`'s Container, so
+  admin route files add breadcrumbs with no wrapper margin of their own.
+- The title's `marginBottom` (the gap from the group to the page content) is
+  independent - keep whatever the page needs (commonly `32`, or `8` on detail pages).
+- **When the first block after breadcrumbs is a _section wrapper_ (not an `<h1>`),
+  cancel that wrapper's top padding so it doesn't reintroduce a large gap.** The
+  breadcrumbs' 8px margin-bottom is still the only group gap. Concretely: the catalog
+  listing pages (`categories/{products,services}`) add `catalog-section--flush-top`
+  to the **first** rendered `.catalog-section` (its `padding: 48px 0 56px` rhythm is
+  meant for _stacked_ sections, not the one directly under the breadcrumbs), and
+  `components/category-detail.tsx` renders its root `<Box>` with no `paddingTop` for
+  the same reason. Don't restore those top paddings.
+
 ## Shared Constants - Don't Duplicate Across Sibling Files
 
 Before defining a constant, type, or pure utility function in a component file, check whether it already exists in a shared file in the same directory. If the same value appears (or is about to appear) in two or more sibling files, extract it into a dedicated shared module in their common parent directory.

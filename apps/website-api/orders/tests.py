@@ -164,7 +164,7 @@ class CheckoutTests(TestCase):
         response = self._checkout()
 
         self.assertEqual(response.status_code, 201)
-        order = Order.objects.get(pk=response.json()["order_id"])
+        order = Order.objects.get(public_id=response.json()["order_id"])
         self.assertEqual(order.status, Order.STATUS_PENDING)
         self.assertEqual(order.currency, "USD")
         self.assertEqual(order.subtotal, Decimal("24.00"))
@@ -188,7 +188,7 @@ class CheckoutTests(TestCase):
         self.product.name = "Renamed Bag"
         self.product.save()
 
-        line = Order.objects.get(pk=order_id).lines.get()
+        line = Order.objects.get(public_id=order_id).lines.get()
         self.assertEqual(line.unit_price, Decimal("10.00"))
         self.assertEqual(line.name, "Bag")
 
@@ -474,7 +474,7 @@ class OrderReadTests(TestCase):
         self.assertEqual(response.json()[0]["item_count"], 2)
 
     def test_detail_returns_lines(self):
-        response = self.client.get(f"/api/orders/{self.order.pk}/")
+        response = self.client.get(f"/api/orders/{self.order.public_id}/")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["lines"][0]["name"], "Bag")
@@ -485,15 +485,26 @@ class OrderReadTests(TestCase):
         self.order.stripe_payment_intent_id = "pi_test_secret"
         self.order.save()
 
-        body = json.dumps(self.client.get(f"/api/orders/{self.order.pk}/").json())
+        body = json.dumps(self.client.get(f"/api/orders/{self.order.public_id}/").json())
 
         self.assertNotIn("cs_test_secret", body)
         self.assertNotIn("pi_test_secret", body)
 
+    def test_detail_is_addressed_by_public_id_not_the_sequential_pk(self):
+        response = self.client.get(f"/api/orders/{self.order.public_id}/")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["public_id"], str(self.order.public_id))
+        # The sequential pk stays server-side - never serialised, and its route
+        # no longer resolves.
+        self.assertNotIn("id", body)
+        self.assertEqual(self.client.get(f"/api/orders/{self.order.pk}/").status_code, 404)
+
     def test_another_users_order_is_not_found(self):
         self.client.force_login(self.other_user)
 
-        response = self.client.get(f"/api/orders/{self.order.pk}/")
+        response = self.client.get(f"/api/orders/{self.order.public_id}/")
 
         self.assertEqual(response.status_code, 404)
 
@@ -515,3 +526,90 @@ class OrderReadTests(TestCase):
         self.assertIsNone(line.product_id)
         self.assertEqual(line.name, "Bag")
         self.assertEqual(line.unit_price, Decimal("10.00"))
+
+
+class OrderDeleteTests(TestCase):
+    """DELETE /api/orders/<public_id>/ - a customer removing their own order.
+
+    The one rule with teeth: a paid (or refunded) order is money that changed
+    hands and cannot be erased; only an order that never completed payment may
+    be deleted.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.user = self._make_user("a@acme.test", self.system)
+        self.other_user = self._make_user("b@acme.test", self.system)
+        self.client.force_login(self.user)
+
+    def _make_user(self, email, system):
+        user = User.objects.create_user(f"{system.id}_{email}", password="x", email=email)
+        user.profile.system = system
+        user.profile.save()
+        return user
+
+    def _order(self, status):
+        order = Order.objects.create(
+            system=self.system, user=self.user, status=status,
+            currency="USD", subtotal=Decimal("20.00"), total=Decimal("20.00"),
+        )
+        OrderLine.objects.create(
+            order=order, kind="product", name="Bag",
+            unit_price=Decimal("10.00"), quantity=2, line_total=Decimal("20.00"),
+            currency="USD",
+        )
+        return order
+
+    def test_pending_order_is_deleted_with_its_lines(self):
+        order = self._order(Order.STATUS_PENDING)
+
+        response = self.client.delete(f"/api/orders/{order.public_id}/")
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Order.objects.filter(pk=order.pk).exists())
+        self.assertFalse(OrderLine.objects.filter(order_id=order.pk).exists())
+
+    def test_failed_and_canceled_orders_are_deletable(self):
+        for st in (Order.STATUS_FAILED, Order.STATUS_CANCELED):
+            order = self._order(st)
+            response = self.client.delete(f"/api/orders/{order.public_id}/")
+            self.assertEqual(response.status_code, 204, st)
+            self.assertFalse(Order.objects.filter(pk=order.pk).exists(), st)
+
+    def test_a_paid_order_cannot_be_deleted(self):
+        order = self._order(Order.STATUS_PAID)
+
+        response = self.client.delete(f"/api/orders/{order.public_id}/")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["code"], "ORDER_NOT_DELETABLE")
+        self.assertTrue(Order.objects.filter(pk=order.pk).exists())
+
+    def test_a_refunded_order_cannot_be_deleted(self):
+        order = self._order(Order.STATUS_REFUNDED)
+
+        response = self.client.delete(f"/api/orders/{order.public_id}/")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Order.objects.filter(pk=order.pk).exists())
+
+    def test_another_users_order_is_a_404_not_a_403(self):
+        """Scoped to the caller, so the endpoint cannot be used to probe which
+        order ids exist - a stranger's id is simply absent, never forbidden."""
+        order = self._order(Order.STATUS_PENDING)
+        self.client.force_login(self.other_user)
+
+        response = self.client.delete(f"/api/orders/{order.public_id}/")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Order.objects.filter(pk=order.pk).exists())
+
+    def test_delete_evicts_the_cached_order_list(self):
+        order = self._order(Order.STATUS_PENDING)
+        # Prime the list cache, then confirm the delete drops the row from it.
+        self.assertEqual(len(self.client.get("/api/orders/").json()), 1)
+
+        self.client.delete(f"/api/orders/{order.public_id}/")
+
+        self.assertEqual(self.client.get("/api/orders/").json(), [])

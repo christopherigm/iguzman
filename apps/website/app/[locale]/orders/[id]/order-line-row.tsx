@@ -4,8 +4,10 @@ import { getTranslations } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
+import { Badge } from "@repo/ui/core-elements/badge";
 import type { OrderLine } from "@/lib/orders";
 import { formatPrice } from "@/lib/price";
+import { BuyNowButton } from "@/components/buy-now-button";
 
 interface OrderLineRowProps {
   line: OrderLine;
@@ -24,7 +26,13 @@ interface OrderLineRowProps {
  * just without a picture to click.
  */
 export async function OrderLineRow({ line }: OrderLineRowProps) {
-  const t = await getTranslations("Orders");
+  const [t, itemT] = await Promise.all([
+    getTranslations("Orders"),
+    getTranslations("CatalogItems"),
+  ]);
+
+  const productLabel = itemT("productLabel");
+  const serviceLabel = itemT("serviceLabel");
 
   const href =
     line.item_slug === null
@@ -61,8 +69,8 @@ export async function OrderLineRow({ line }: OrderLineRowProps) {
   );
 
   return (
-    <Card padding={0} border="none" elevation={2} backgroundColor="var(--surface-1)">
-      <Box gap={14} padding={12} alignItems="center" width="100%">
+    <Card padding={0}>
+      <Box gap={14} padding={8} alignItems="center" width="100%">
         {href ? (
           <Link href={href} prefetch>
             {image}
@@ -73,8 +81,32 @@ export async function OrderLineRow({ line }: OrderLineRowProps) {
 
         <Box flexDirection="column" gap={4} flex={1} minWidth={0}>
           <Typography as="h3" variant="h6" margin={0} color="var(--on-surface)">
-            {line.name}
+            {href ? (
+              <Link
+                href={href}
+                prefetch
+                style={{ color: "inherit", textDecoration: "none" }}
+              >
+                {line.name}
+              </Link>
+            ) : (
+              line.name
+            )}
           </Typography>
+          <Box alignItems="center" gap={6} flexWrap="wrap">
+            <Badge
+              variant="filled"
+              size="sm"
+              color={
+                line.kind === "product"
+                  ? "rgb(34, 181, 32)"
+                  : "rgba(99,102,241,0.8)"
+              }
+              textColor="#fff"
+            >
+              {line.kind === "product" ? productLabel : serviceLabel}
+            </Badge>
+          </Box>
           {line.variant_label ? (
             <Typography
               variant="caption"
@@ -96,15 +128,33 @@ export async function OrderLineRow({ line }: OrderLineRowProps) {
           </Typography>
         </Box>
 
-        <Typography
-          as="span"
-          variant="h6"
-          fontWeight={700}
-          margin={0}
-          color="var(--on-surface)"
+        <Box
+          flexDirection="column"
+          alignItems="flex-end"
+          gap={10}
+          flex="0 0 auto"
         >
-          {formatPrice(line.line_total, line.currency)}
-        </Typography>
+          <Typography
+            as="span"
+            variant="h6"
+            fontWeight={700}
+            margin={0}
+            color="var(--on-surface)"
+          >
+            {formatPrice(line.line_total, line.currency)}
+          </Typography>
+          {line.item_id !== null && (
+            // The order page is auth-gated (`getOrder` is scoped to the caller),
+            // so a rendered line always belongs to a signed-in customer.
+            <BuyNowButton
+              kind={line.kind}
+              id={line.item_id}
+              isLoggedIn
+              text={t("buyAgain")}
+              size="sm"
+            />
+          )}
+        </Box>
       </Box>
     </Card>
   );

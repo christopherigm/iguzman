@@ -1,6 +1,5 @@
 import { getTranslations } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
-import { Button } from "@repo/ui/core-elements/button";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
@@ -12,6 +11,7 @@ import { isFavorite } from "@/lib/favorites";
 import { toShareDescription } from "@/lib/metadata";
 import { formatPrice, discountPercent } from "@/lib/price";
 import { AddToCartButton } from "./add-to-cart-button";
+import { BuyNowButton } from "./buy-now-button";
 import { FavoriteButton } from "./favorite-button";
 import { VariantSelectorClient } from "./variant-selector-client";
 
@@ -199,17 +199,21 @@ export async function ProductDetailPanel({
             isLoggedIn={session !== null}
             disabled={!inStock}
             display="button"
+            buttonKind="warning"
             size="lg"
             flex="1"
             minWidth={140}
           />
-          <Button
+          <BuyNowButton
+            kind="product"
+            id={product.id}
+            variantId={selectedVariant?.id ?? null}
+            isLoggedIn={session !== null}
+            disabled={!inStock}
             text={t("buyNow")}
-            kind="primary"
             size="lg"
             flex="1"
             minWidth={140}
-            disabled={!inStock}
           />
         </Box>
       </Card>

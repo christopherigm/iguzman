@@ -89,17 +89,13 @@ export default async function ServiceCategoryPage({ params }: Props) {
       )}
       <Container
         paddingX={10}
-        marginTop={32}
+        marginTop={16}
         paddingTop={!hasImage ? "var(--ui-navbar-height, 57px)" : undefined}
         paddingBottom="var(--ui-page-bottom-spacing, 64px)"
       >
         <Breadcrumbs items={breadcrumbs} />
         {description && (
-          <Typography
-            variant="none"
-            className="section-subtitle"
-            marginTop={16}
-          >
+          <Typography variant="none" className="section-subtitle">
             {description}
           </Typography>
         )}

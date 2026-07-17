@@ -54,7 +54,8 @@ export function CartLine({
     item.en_name ??
     "";
 
-  const href = kind === "product" ? `/products/${item.slug}` : `/services/${item.slug}`;
+  const href =
+    kind === "product" ? `/products/${item.slug}` : `/services/${item.slug}`;
 
   const image = line.variant?.effective_image ?? item.image;
 
@@ -63,7 +64,10 @@ export function CartLine({
   const variantLabel = line.variant?.option_values
     .map((ov) => {
       const value =
-        (locale === "en" ? ov.en_name : ov.name) ?? ov.name ?? ov.en_name ?? ov.slug;
+        (locale === "en" ? ov.en_name : ov.name) ??
+        ov.name ??
+        ov.en_name ??
+        ov.slug;
       return `${ov.option_name}: ${value}`;
     })
     .join(" · ");
@@ -97,7 +101,9 @@ export function CartLine({
 
     startTransition(async () => {
       try {
-        const res = await fetch(`/api/auth/cart/${line.id}`, { method: "DELETE" });
+        const res = await fetch(`/api/auth/cart/${line.id}`, {
+          method: "DELETE",
+        });
         if (!res.ok) {
           setRemoved(false);
           return;
@@ -134,7 +140,9 @@ export function CartLine({
             height={88}
             flex="0 0 auto"
             borderRadius={8}
-            backgroundColor={item.background_color ?? "var(--surface-3, #e5e7eb)"}
+            backgroundColor={
+              item.background_color ?? "var(--surface-3, #e5e7eb)"
+            }
             styles={{ position: "relative", overflow: "hidden" }}
           >
             {image && (
@@ -175,7 +183,7 @@ export function CartLine({
                   size="sm"
                   color={
                     kind === "product"
-                      ? "rgba(255,255,255,0.15)"
+                      ? "rgb(34, 181, 32)"
                       : "rgba(99,102,241,0.8)"
                   }
                   textColor="#fff"
@@ -183,7 +191,12 @@ export function CartLine({
                   {kind === "product" ? productLabel : serviceLabel}
                 </Badge>
                 {!line.in_stock && (
-                  <Badge variant="filled" size="sm" color="#ef4444" textColor="#fff">
+                  <Badge
+                    variant="filled"
+                    size="sm"
+                    color="#ef4444"
+                    textColor="#fff"
+                  >
                     {t("outOfStock")}
                   </Badge>
                 )}

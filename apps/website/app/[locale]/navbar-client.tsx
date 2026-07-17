@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { usePathname } from "@repo/i18n/navigation";
 import { Navbar } from "@repo/ui/core-elements/navbar";
 import { useSession } from "@repo/auth/session-provider";
 import { useAuthActions } from "@repo/auth/use-auth-actions";
@@ -23,7 +22,6 @@ export function NavbarClient({
   cartCount,
 }: NavbarClientProps) {
   const t = useTranslations("Navbar");
-  const pathname = usePathname();
   // Comes from the server via SessionProvider, decoded from the access-token
   // cookie - so the admin link and the account menu are already right in the
   // first HTML instead of popping in after hydration.
@@ -49,31 +47,31 @@ export function NavbarClient({
       }
     : { label: "", href: "/auth", icon: "/icons/user.svg" };
 
+  // Every applicable item stays in the bar on every page - including Home and
+  // the current page. The shared Navbar marks the active item with a bottom
+  // border (via usePathname), so we no longer hide the page you are on.
   const navItems = [
-    ...(pathname === "/" ? [] : [{ label: t("home"), href: "/" }]),
-    ...(productCount > 0 && !pathname.startsWith("/categories/products")
+    { label: t("home"), href: "/" },
+    ...(productCount > 0
       ? [{ label: t("products"), href: "/categories/products" }]
       : []),
-    ...(serviceCount > 0 && !pathname.startsWith("/categories/services")
+    ...(serviceCount > 0
       ? [{ label: t("services"), href: "/categories/services" }]
       : []),
-    ...(isLoggedIn && !pathname.startsWith("/favorites")
-      ? [{ label: t("favorites"), href: "/favorites" }]
-      : []),
-    // The count rides in the label rather than a badge, keeping the entry a
-    // plain text item like every other one here. It comes from the server on
-    // each render, so it is already right in the first HTML.
-    ...(isLoggedIn && !pathname.startsWith("/cart")
+    ...(isLoggedIn
       ? [
+          { label: t("favorites"), href: "/favorites" },
           {
             label: cartCount > 0 ? `${t("cart")} (${cartCount})` : t("cart"),
             href: "/cart",
           },
+          {
+            label: t("orders"),
+            href: "/orders",
+          },
         ]
       : []),
-    ...(isAdmin && !pathname.startsWith("/admin")
-      ? [{ label: t("admin"), href: "/admin" }]
-      : []),
+    ...(isAdmin ? [{ label: t("admin"), href: "/admin" }] : []),
   ];
 
   return (

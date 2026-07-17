@@ -65,7 +65,7 @@ export default async function ServicesPage({ params }: Props) {
       )}
       <Container
         paddingX={10}
-        marginTop={32}
+        marginTop={16}
         paddingTop={!heroImage ? "var(--ui-navbar-height, 57px)" : undefined}
       >
         <Breadcrumbs items={breadcrumbs} />
@@ -80,7 +80,7 @@ export default async function ServicesPage({ params }: Props) {
           </Typography>
         )}
         {categories.length > 0 && (
-          <section className="catalog-section">
+          <section className="catalog-section catalog-section--flush-top">
             <Box
               marginBottom={32}
               display="flex"
@@ -120,7 +120,11 @@ export default async function ServicesPage({ params }: Props) {
           </section>
         )}
         {services.length > 0 && (
-          <section className="catalog-section">
+          <section
+            className={`catalog-section${
+              categories.length === 0 ? " catalog-section--flush-top" : ""
+            }`}
+          >
             <Box
               marginBottom={32}
               display="flex"

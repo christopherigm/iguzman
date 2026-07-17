@@ -20,7 +20,9 @@ export default async function AdminLayout({ children, params }: Props) {
       <Box height="var(--ui-navbar-height, 57px)" />
       <Box className="admin-shell">
         <AdminSidebar />
-        <Container paddingX={10}>{children}</Container>
+        <Container paddingX={10} marginTop={16}>
+          {children}
+        </Container>
       </Box>
     </>
   );

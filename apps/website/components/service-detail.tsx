@@ -1,6 +1,5 @@
 import { getTranslations } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
-import { Button } from "@repo/ui/core-elements/button";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
@@ -12,6 +11,7 @@ import { isFavorite } from "@/lib/favorites";
 import { toShareDescription } from "@/lib/metadata";
 import { formatPrice, discountPercent } from "@/lib/price";
 import { AddToCartButton } from "./add-to-cart-button";
+import { BuyNowButton } from "./buy-now-button";
 import { FavoriteButton } from "./favorite-button";
 import { VariantSelectorClient } from "./variant-selector-client";
 
@@ -206,13 +206,15 @@ export async function ServiceDetailPanel({
             flex="1"
             minWidth={140}
           />
-          <Button
+          <BuyNowButton
+            kind="service"
+            id={service.id}
+            variantId={selectedVariant?.id ?? null}
+            isLoggedIn={session !== null}
             text={t("buyNow")}
-            kind="success"
             size="lg"
             flex="1"
             minWidth={140}
-            icon="/icons/happy-heart-eyes.svg"
           />
         </Box>
       </Card>

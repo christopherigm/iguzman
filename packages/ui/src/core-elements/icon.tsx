@@ -55,6 +55,7 @@ export const Icon = ({
     backgroundColor: backgroundColor || "transparent",
     borderRadius: outerRadius,
     shadow,
+    flexShrink: 0,
     ...props,
   } as UIComponentProps);
 

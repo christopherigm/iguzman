@@ -36,7 +36,10 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
  * delayed we stop and say "confirming" - never "failed", which would be a lie
  * about money that has almost certainly already moved.
  */
-export function OrderStatusBanner({ status, justPaid }: OrderStatusBannerProps) {
+export function OrderStatusBanner({
+  status,
+  justPaid,
+}: OrderStatusBannerProps) {
   const t = useTranslations("Orders");
   const router = useRouter();
   const [attempts, setAttempts] = useState(0);
@@ -71,9 +74,9 @@ export function OrderStatusBanner({ status, justPaid }: OrderStatusBannerProps) 
     <Box
       flexDirection="column"
       gap={6}
-      padding={16}
-      borderRadius={10}
-      backgroundColor="color-mix(in srgb, var(--surface-2) 70%, transparent)"
+      padding={10}
+      borderRadius={8}
+      backgroundColor="color-mix(in srgb, var(--surface-1) 70%, transparent)"
       border={`1px solid ${color}`}
       width="100%"
     >

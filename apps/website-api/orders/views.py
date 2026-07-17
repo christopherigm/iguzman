@@ -179,7 +179,7 @@ class CheckoutView(APIView):
                 system=system,
                 order=order,
                 lines=lines,
-                success_url=f"{base_url}/{locale}/orders/{order.pk}?session_id={{CHECKOUT_SESSION_ID}}",
+                success_url=f"{base_url}/{locale}/orders/{order.public_id}?session_id={{CHECKOUT_SESSION_ID}}",
                 cancel_url=f"{base_url}/{locale}/cart",
                 customer_email=request.user.email or "",
             )
@@ -204,7 +204,7 @@ class CheckoutView(APIView):
         invalidate_orders(request.user.id, system.id)
 
         logger.info("Checkout session %s created for order %s", session.id, order.pk)
-        return Response({"url": session.url, "order_id": order.pk}, status=status.HTTP_201_CREATED)
+        return Response({"url": session.url, "order_id": str(order.public_id)}, status=status.HTTP_201_CREATED)
 
 
 def _in_stock(item) -> bool:
@@ -235,37 +235,84 @@ class OrderListView(APIView):
         orders = (
             Order.objects
             .filter(user=request.user, system=system)
-            .prefetch_related("lines")
+            .prefetch_related(
+                "lines", "lines__product", "lines__service",
+                "lines__product_variant", "lines__service_variant",
+                # The image preview falls back to the item's gallery when it has
+                # no own `image`; prefetch it so the strip is not an N+1.
+                "lines__product__images", "lines__service__images",
+            )
         )
         data = OrderSummarySerializer(orders, many=True, context={"request": request}).data
         cache.set(cache_key, data, ORDERS_CACHE_TTL)
         return Response(data)
 
 
-class OrderDetailView(APIView):
-    """GET /api/orders/<pk>/ - one order in full.
+# A paid order is a record of money that changed hands, and a refunded one was
+# paid before it was reversed - both are financial history the customer must not
+# be able to erase. Only orders that never completed a payment (a pending session
+# they abandoned, or one Stripe expired/failed) may be removed from the history.
+DELETABLE_STATUSES = frozenset(
+    {Order.STATUS_PENDING, Order.STATUS_FAILED, Order.STATUS_CANCELED}
+)
 
-    Uncached on purpose: the confirmation page polls this while the webhook is
-    still in flight, and a cached `pending` would outlive the payment.
+
+class OrderDetailView(APIView):
+    """GET/DELETE /api/orders/<public_id>/ - one order in full, or remove it.
+
+    Addressed by the public UUID, never the pk: the sequential id stays inside
+    the database. Uncached on purpose: the confirmation page polls this while
+    the webhook is still in flight, and a cached `pending` would outlive the
+    payment.
     """
 
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request, pk):
+    def get(self, request, public_id):
         # Filtering by user is the authorization check: another user's order id
         # simply does not exist as far as this request is concerned.
         order = (
             Order.objects
-            .filter(pk=pk, user=request.user, system=user_system(request))
+            .filter(public_id=public_id, user=request.user, system=user_system(request))
             .prefetch_related(
                 "lines", "lines__product", "lines__service",
                 "lines__product_variant", "lines__service_variant",
+                # The serializer falls back to the item's gallery when it has no
+                # own `image`; prefetch it so that fallback is not an N+1.
+                "lines__product__images", "lines__service__images",
             )
             .first()
         )
         if order is None:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(OrderSerializer(order, context={"request": request}).data)
+
+    def delete(self, request, public_id):
+        """Remove one of the caller's own orders from their history.
+
+        Scoped to the user, exactly as the GET is: another user's id is a 404,
+        never a 403, so this endpoint cannot be used to probe which order ids
+        exist. A paid or refunded order is refused (403) - it is financial
+        history, not clutter (see `DELETABLE_STATUSES`). The delete cascades to
+        the order's lines.
+        """
+        order = (
+            Order.objects
+            .filter(public_id=public_id, user=request.user, system=user_system(request))
+            .first()
+        )
+        if order is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        if order.status not in DELETABLE_STATUSES:
+            return Response(
+                {"detail": "A paid order cannot be deleted.", "code": "ORDER_NOT_DELETABLE"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        system_id = order.system_id
+        order.delete()
+        invalidate_orders(request.user.id, system_id or 0)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class StripeWebhookView(APIView):

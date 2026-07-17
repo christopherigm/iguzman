@@ -111,6 +111,7 @@ export default function AdminUsersPage() {
         basePath="/admin/users"
         loading={loading}
         error={error}
+        hideCreate
       />
     </>
   );

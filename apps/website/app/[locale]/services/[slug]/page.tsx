@@ -81,20 +81,27 @@ function buildGalleryImages(
 ): GalleryImage[] {
   const images: GalleryImage[] = [];
   const name = service.en_name ?? service.name ?? service.slug;
+  const seen = new Set<string>();
+  const push = (url: string | null, alt: string) => {
+    if (url && !seen.has(url)) {
+      seen.add(url);
+      images.push({ url, alt });
+    }
+  };
 
   if (selectedVariant?.effective_image) {
-    images.push({ url: selectedVariant.effective_image, alt: name });
+    push(selectedVariant.effective_image, name);
     if (images.length > 0) return images;
   }
 
-  // Fallback to service-level images
-  if (service.image) {
-    images.push({ url: service.image, alt: name });
-  }
+  // Prefer the service's gallery images.
   for (const img of service.images) {
-    if (img.image) {
-      images.push({ url: img.image, alt: img.name ?? name });
-    }
+    push(img.image, img.name ?? name);
+  }
+  // Only fall back to the main image when the gallery has none of its own -
+  // otherwise the main image (usually also the first gallery image) shows twice.
+  if (images.length === 0) {
+    push(service.image, name);
   }
 
   return images;
@@ -154,6 +161,7 @@ export default async function ServicePage({ params, searchParams }: Props) {
       )}
       <Container
         paddingX={10}
+        marginTop={16}
         paddingTop={
           service.video_link ? undefined : "var(--ui-navbar-height, 57px)"
         }

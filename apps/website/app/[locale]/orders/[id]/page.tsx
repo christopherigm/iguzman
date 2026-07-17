@@ -9,7 +9,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { Grid } from "@repo/ui/core-elements/grid";
-import { getOrder } from "@/lib/orders";
+import { getOrder, orderRef } from "@/lib/orders";
 import { formatPrice } from "@/lib/price";
 import { OrderStatusBanner } from "./order-status-banner";
 import { OrderLineRow } from "./order-line-row";
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     namespace: "Orders",
   })) as (key: string, values?: Record<string, string>) => string;
 
-  return { title: t("detailTitle", { id }) };
+  return { title: t("detailTitle", { id: orderRef(id) }) };
 }
 
 /**
@@ -42,11 +42,10 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
   const { locale, id } = await params;
   setRequestLocale(locale);
 
-  const orderId = Number(id);
-  if (!Number.isInteger(orderId) || orderId <= 0) notFound();
-
+  // `id` is the order's public UUID. A malformed one is simply not found: the
+  // Django lookup is scoped to the caller, so a bad or foreign id is a 404 here.
   const [order, query, t] = await Promise.all([
-    getOrder(orderId),
+    getOrder(id),
     searchParams,
     getTranslations("Orders"),
   ]);
@@ -58,7 +57,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },
     { label: t("heading"), href: "/orders" },
-    { label: t("breadcrumb", { id: order.id }) },
+    { label: t("breadcrumb", { id: orderRef(order.public_id) }) },
   ];
 
   const hasShipping = Boolean(order.shipping_line1);
@@ -67,13 +66,13 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
     <Container
       size="lg"
       paddingX={10}
-      marginTop={32}
+      marginTop={16}
       paddingTop="var(--ui-navbar-height, 57px)"
       paddingBottom="var(--ui-page-bottom-spacing, 64px)"
     >
       <Breadcrumbs items={breadcrumbs} />
-      <Typography as="h1" variant="h1" marginTop={24} marginBottom={8}>
-        {t("detailTitle", { id: String(order.id) })}
+      <Typography as="h1" variant="h1" marginBottom={8}>
+        {t("detailTitle", { id: orderRef(order.public_id) })}
       </Typography>
       <Typography
         variant="body"
@@ -105,15 +104,17 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
         <Grid size={{ xs: 12, md: 4 }}>
           <Card
             gap={14}
-            backgroundColor="var(--surface-1)"
-            elevation={3}
-            border="none"
             styles={{
               position: "sticky",
               top: "calc(var(--ui-navbar-height, 57px) + 16px)",
             }}
           >
-            <Typography as="h2" variant="h5" margin={0} color="var(--on-surface)">
+            <Typography
+              as="h2"
+              variant="h5"
+              margin={0}
+              color="var(--on-surface)"
+            >
               {t("summary")}
             </Typography>
 
@@ -146,7 +147,11 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
 
             {hasShipping ? (
               <>
-                <Box height={1} flex="0 0 auto" backgroundColor="var(--border)" />
+                <Box
+                  height={1}
+                  flex="0 0 auto"
+                  backgroundColor="var(--border)"
+                />
                 <Box flexDirection="column" gap={2}>
                   <Typography
                     as="h3"
@@ -182,7 +187,12 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
               </>
             ) : null}
 
-            <Button text={t("backToOrders")} href="/orders" kind="primary" width="100%" />
+            <Button
+              text={t("backToOrders")}
+              href="/orders"
+              kind="primary"
+              width="100%"
+            />
           </Card>
         </Grid>
       </Grid>

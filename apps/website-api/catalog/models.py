@@ -87,10 +87,10 @@ class Product(Buyable):
     is_verified = models.BooleanField(default=False)
 
     # Physical dimensions (all optional)
-    length = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
-    width = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
-    height = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
-    weight = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
+    length = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
+    width = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
+    height = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
+    weight = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
     dimension_unit = models.CharField(
         max_length=4, choices=DIMENSION_UNIT_CHOICES, default='cm', null=True, blank=True
     )
@@ -410,10 +410,10 @@ class ProductVariant(BaseVariant):
     stock_count = models.PositiveIntegerField(null=True, blank=True)
 
     # Physical overrides (null = inherit from product)
-    weight = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
-    length = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
-    width = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
-    height = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
+    weight = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
+    length = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
+    width = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
+    height = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
 
     class Meta(BaseVariant.Meta):
         verbose_name = 'Product Variant'

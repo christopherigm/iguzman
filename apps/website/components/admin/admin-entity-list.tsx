@@ -37,6 +37,12 @@ interface AdminEntityListProps {
   onToggleEnabled?: (id: number, enabled: boolean) => Promise<void>;
   loading?: boolean;
   error?: string | null;
+  /**
+   * Hides the "+ New Item" button. Use for entities that cannot be created from
+   * the CMS (e.g. users, who self-register) - the shared `[id]` form for those
+   * is edit-only, so a "new" link would route to a non-existent record.
+   */
+  hideCreate?: boolean;
 }
 
 export function AdminEntityList({
@@ -48,6 +54,7 @@ export function AdminEntityList({
   onToggleEnabled,
   loading,
   error,
+  hideCreate,
 }: AdminEntityListProps) {
   const t = useTranslations("Admin");
   const tCommon = useTranslations("Common");
@@ -67,9 +74,11 @@ export function AdminEntityList({
         <Typography as="h1" variant="h3" margin={0}>
           {title}
         </Typography>
-        <Link href={`${basePath}/new`} prefetch>
-          <Button text={`+ ${t("newItem")}`} kind="primary" size="md" />
-        </Link>
+        {!hideCreate && (
+          <Link href={`${basePath}/new`} prefetch>
+            <Button text={`+ ${t("newItem")}`} kind="primary" size="md" />
+          </Link>
+        )}
       </Box>
 
       {loading && (

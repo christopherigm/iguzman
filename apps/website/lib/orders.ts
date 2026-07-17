@@ -16,70 +16,14 @@ import { cache } from "react";
 import { unstable_rethrow } from "next/navigation";
 import { getSession } from "@repo/auth/session";
 import { apiFetch } from "./api-fetch";
+import type { Order, OrderSummary } from "./orders-shared";
 import logger from "./logger";
 
-/** Mirrors `Order.STATUS_CHOICES` in website-api. */
-export type OrderStatus =
-  | "pending"
-  | "paid"
-  | "failed"
-  | "canceled"
-  | "refunded";
-
-/**
- * One purchased line, served from the order's own snapshot rather than the
- * catalog - `name` and `unit_price` are what was actually charged, so they stay
- * correct after the item is re-priced or renamed.
- *
- * `image`, `item_id` and `item_slug` are the exception: they are read through
- * the catalog FK and go null once the item is deleted, which is why the order
- * page must render a line without them.
- */
-export interface OrderLine {
-  id: number;
-  kind: "product" | "service";
-  name: string;
-  variant_label: string;
-  sku: string;
-  unit_price: string;
-  quantity: number;
-  line_total: string;
-  currency: string;
-  image: string | null;
-  item_id: number | null;
-  item_slug: string | null;
-}
-
-export interface Order {
-  id: number;
-  status: OrderStatus;
-  currency: string;
-  subtotal: string;
-  total: string;
-  email: string;
-  shipping_name: string;
-  shipping_line1: string;
-  shipping_line2: string;
-  shipping_city: string;
-  shipping_state: string;
-  shipping_postal_code: string;
-  shipping_country: string;
-  created_at: string;
-  paid_at: string | null;
-  item_count: number;
-  lines: OrderLine[];
-}
-
-/** An order-history row: no lines, matching what the list endpoint serves. */
-export interface OrderSummary {
-  id: number;
-  status: OrderStatus;
-  currency: string;
-  total: string;
-  created_at: string;
-  paid_at: string | null;
-  item_count: number;
-}
+// The order types and the pure `orderRef` helper live in `./orders-shared` so a
+// client component can use them without importing this server-only module (which
+// pulls in `apiFetch` → `next/headers`). Re-exported here so existing callers
+// keep importing them from `@/lib/orders`.
+export * from "./orders-shared";
 
 export const getOrders = cache(async (): Promise<OrderSummary[]> => {
   if ((await getSession()) === null) return [];
@@ -108,21 +52,24 @@ export const getOrders = cache(async (): Promise<OrderSummary[]> => {
  * re-reads this while the Stripe webhook is still in flight, and a cached
  * `pending` would outlive the payment it is waiting for.
  */
-export async function getOrder(id: number): Promise<Order | null> {
+export async function getOrder(publicId: string): Promise<Order | null> {
   if ((await getSession()) === null) return null;
 
   try {
-    const res = await apiFetch(`/api/orders/${id}/`, { cache: "no-store" });
+    const res = await apiFetch(`/api/orders/${publicId}/`, { cache: "no-store" });
     if (!res.ok) {
       if (res.status !== 401 && res.status !== 404) {
-        logger.warn({ status: res.status, id }, "Order API returned non-OK status");
+        logger.warn(
+          { status: res.status, publicId },
+          "Order API returned non-OK status",
+        );
       }
       return null;
     }
     return (await res.json()) as Order;
   } catch (err) {
     unstable_rethrow(err);
-    logger.error({ err, id }, "Failed to fetch order");
+    logger.error({ err, publicId }, "Failed to fetch order");
     return null;
   }
 }

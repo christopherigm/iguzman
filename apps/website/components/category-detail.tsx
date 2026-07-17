@@ -57,7 +57,7 @@ export async function CategoryDetail({
         }));
 
   return (
-    <Box flexDirection="column" paddingTop={24} paddingBottom={56}>
+    <Box flexDirection="column" paddingBottom={56}>
       {/* Title - only shown when there is no hero image */}
       {showTitle && name && (
         <Typography as="h1" variant="h2" marginBottom={12}>

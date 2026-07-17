@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal
 
 from django.contrib.auth.models import User
@@ -37,6 +38,15 @@ class Order(models.Model):
         (STATUS_CANCELED, "Canceled"),
         (STATUS_REFUNDED, "Refunded"),
     ]
+
+    # The order's public handle: what the confirmation URL, the order-history
+    # links and the detail API path all address it by. The integer pk stays the
+    # internal key (every OrderLine FK and the admin hang off it), but it never
+    # leaves the database - a sequential id in a URL would leak how many orders
+    # the tenant has taken and let anyone walk the neighbours' order numbers.
+    # Generated the moment the row is created, so it exists for a `pending`
+    # order too, unlike any Stripe id, which is only set once payment moves.
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
 
     system = models.ForeignKey(
         "core.System",

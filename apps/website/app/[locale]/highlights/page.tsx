@@ -67,12 +67,12 @@ export default async function HighlightsPage({ params }: Props) {
       <Container
         size="lg"
         paddingX={10}
-        marginTop={32}
+        marginTop={16}
         paddingTop={!heroImage ? "var(--ui-navbar-height, 57px)" : undefined}
         paddingBottom="var(--ui-page-bottom-spacing, 64px)"
       >
         <Breadcrumbs items={breadcrumbs} />
-        <Typography as="h1" variant="h1" marginTop={24} marginBottom={32}>
+        <Typography as="h1" variant="h1" marginBottom={32}>
           {t("heading")}
         </Typography>
 

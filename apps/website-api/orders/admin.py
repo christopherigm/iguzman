@@ -21,7 +21,7 @@ class OrderLineInline(admin.TabularInline):
 class OrderAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "system", "status", "total", "currency", "created_at", "paid_at")
     list_filter = ("status", "system", "currency")
-    search_fields = ("id", "user__email", "user__username", "email", "stripe_session_id", "stripe_payment_intent_id")
+    search_fields = ("id", "public_id", "user__email", "user__username", "email", "stripe_session_id", "stripe_payment_intent_id")
     raw_id_fields = ("user",)
     date_hierarchy = "created_at"
     inlines = [OrderLineInline]
@@ -30,6 +30,7 @@ class OrderAdmin(admin.ModelAdmin):
     # the one thing an operator legitimately changes by hand (marking a refund
     # they issued in the Stripe dashboard).
     readonly_fields = (
+        "public_id",
         "system", "user", "currency", "subtotal", "total",
         "stripe_session_id", "stripe_payment_intent_id",
         "email", "shipping_name", "shipping_line1", "shipping_line2",
@@ -39,7 +40,7 @@ class OrderAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ("Order", {
-            "fields": ("system", "user", "status", "created_at", "updated_at", "paid_at"),
+            "fields": ("public_id", "system", "user", "status", "created_at", "updated_at", "paid_at"),
         }),
         ("Totals", {
             "fields": ("currency", "subtotal", "total"),

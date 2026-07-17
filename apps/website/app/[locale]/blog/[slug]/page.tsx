@@ -117,12 +117,12 @@ export default async function SuccessStoryDetailPage({ params }: Props) {
       <Container
         size="md"
         paddingX={10}
-        marginTop={32}
+        marginTop={16}
         paddingTop={!hasImage ? "var(--ui-navbar-height, 57px)" : undefined}
         paddingBottom="var(--ui-page-bottom-spacing, 64px)"
       >
         <Breadcrumbs items={breadcrumbs} />
-        <Typography as="h1" variant="h1" marginTop={24}>
+        <Typography as="h1" variant="h1">
           {name}
         </Typography>
         <Typography variant="body" marginTop={8}>

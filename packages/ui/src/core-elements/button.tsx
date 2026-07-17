@@ -24,8 +24,8 @@ const SIZE_STYLES: Record<
   Pick<CSSProperties, "padding" | "fontSize" | "borderRadius">
 > = {
   sm: { padding: "6px", fontSize: 13, borderRadius: 6 },
-  md: { padding: "8px 14px", fontSize: 13, borderRadius: 6 },
-  lg: { padding: "10px 20px", fontSize: 14, borderRadius: 8 },
+  md: { padding: "8px", fontSize: 13, borderRadius: 6 },
+  lg: { padding: "10px", fontSize: 14, borderRadius: 8 },
 };
 
 const KIND_STYLES: Record<
