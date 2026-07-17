@@ -64,6 +64,7 @@ export function AdminImageUploader({
   const [isDragOver, setIsDragOver] = useState(false);
   const [entries, setEntries] = useState<ImageEntry[]>(() =>
     existingImages
+      .filter((img) => Boolean(img.url))
       .slice()
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       .map((img, i) => ({

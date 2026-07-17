@@ -64,6 +64,7 @@ export default async function CartPage({ params }: Props) {
                   locale={locale}
                   productLabel={itemT("productLabel")}
                   serviceLabel={itemT("serviceLabel")}
+                  menuLabel={itemT("menuLabel")}
                 />
               ))}
             </Box>

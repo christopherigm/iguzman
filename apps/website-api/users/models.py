@@ -142,6 +142,13 @@ class CartItem(models.Model):
         on_delete=models.CASCADE,
         related_name='cart_items',
     )
+    menu_item = models.ForeignKey(
+        'catalog.MenuItem',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='cart_items',
+    )
     product_variant = models.ForeignKey(
         'catalog.ProductVariant',
         null=True,
@@ -156,6 +163,14 @@ class CartItem(models.Model):
         on_delete=models.CASCADE,
         related_name='cart_items',
     )
+    # A menu item's chosen ingredient selection, normalised to a sorted list of
+    # {"ingredient": <id>, "quantity": <int>} (see catalog.normalize_selection).
+    # It is part of a menu line's identity - two of the same dish with different
+    # customisation are two lines - which is why, unlike product/service variants,
+    # menu lines are not deduped by a database unique constraint (a JSON column
+    # cannot express "same selection"); the cart write path merges them instead.
+    # Empty list = the dish exactly as listed.
+    customization = models.JSONField(default=list, blank=True)
     quantity = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -189,15 +204,19 @@ class CartItem(models.Model):
             ),
             models.CheckConstraint(
                 condition=(
-                    models.Q(product__isnull=False, service__isnull=True)
-                    | models.Q(product__isnull=True, service__isnull=False)
+                    models.Q(product__isnull=False, service__isnull=True, menu_item__isnull=True)
+                    | models.Q(product__isnull=True, service__isnull=False, menu_item__isnull=True)
+                    | models.Q(product__isnull=True, service__isnull=True, menu_item__isnull=False)
                 ),
                 name='cart_item_exactly_one_target',
             ),
+            # A variant may only pair with its own parent kind; a menu item has no
+            # variants, so neither variant column may be set alongside one.
             models.CheckConstraint(
                 condition=(
                     models.Q(product__isnull=False, service_variant__isnull=True)
                     | models.Q(service__isnull=False, product_variant__isnull=True)
+                    | models.Q(menu_item__isnull=False, product_variant__isnull=True, service_variant__isnull=True)
                 ),
                 name='cart_item_variant_matches_target',
             ),
@@ -209,11 +228,15 @@ class CartItem(models.Model):
 
     @property
     def kind(self):
-        return 'product' if self.product_id else 'service'
+        if self.product_id:
+            return 'product'
+        if self.service_id:
+            return 'service'
+        return 'menu_item'
 
     @property
     def target(self):
-        return self.product or self.service
+        return self.product or self.service or self.menu_item
 
     @property
     def variant(self):
@@ -222,9 +245,14 @@ class CartItem(models.Model):
     @property
     def unit_price(self):
         """What one of this line costs today - the variant's price when it
-        overrides, else the buyable's own."""
+        overrides, the menu item's price for its chosen ingredients when it is a
+        menu line, else the buyable's own base price."""
         variant = self.variant
-        return variant.effective_price if variant else self.target.price
+        if variant:
+            return variant.effective_price
+        if self.menu_item_id:
+            return self.menu_item.price_for_selection(self.customization)
+        return self.target.price
 
     @property
     def line_total(self):

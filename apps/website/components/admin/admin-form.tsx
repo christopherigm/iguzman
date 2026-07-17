@@ -198,7 +198,7 @@ function deriveGroupLabel(label: string): string {
 
 // Status flags that belong above the form rather than buried at the bottom,
 // in this display order. Any other boolean field renders in place.
-const TOP_TOGGLE_KEYS = ["is_featured", "enabled", "in_stock"];
+const TOP_TOGGLE_KEYS = ["is_available", "is_featured", "enabled", "in_stock"];
 
 // ── FieldDef / AdminFormProps ──────────────────────────────────────────────
 
@@ -518,7 +518,9 @@ export function AdminForm({
 
   return (
     <>
-      <Box flexDirection="column" gap={20} marginBottom={40}>
+      {/* paddingBottom clears the fixed Save button so trailing content
+          (e.g. the recipe editor's "Add Step" button) is never hidden under it. */}
+      <Box flexDirection="column" gap={20} marginBottom={40} paddingBottom={96}>
         <Box
           display="flex"
           alignItems="center"

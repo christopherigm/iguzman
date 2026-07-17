@@ -46,6 +46,7 @@ from .models import (
     VariantOption, VariantOptionValue,
     ProductVariant, ProductVariantImage,
     ServiceVariant,
+    MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient, RecipeStep,
 )
 from .serializers import (
     ProductCategorySerializer,
@@ -70,6 +71,15 @@ from .serializers import (
     ProductVariantImageWriteSerializer,
     ServiceVariantSerializer,
     ServiceVariantWriteSerializer,
+    MenuCategorySerializer,
+    MenuCategoryWriteSerializer,
+    MenuItemSerializer,
+    MenuItemWriteSerializer,
+    MenuItemImageSerializer,
+    MenuItemImageWriteSerializer,
+    MenuItemIngredientSerializer,
+    MenuItemIngredientWriteSerializer,
+    MenuItemRecipeSerializer,
 )
 
 
@@ -117,6 +127,7 @@ class ProductCategoryListCreateView(APIView):
         serializer = ProductCategoryWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         category = serializer.save()
+        _invalidate_pattern('catalog:product_categories:*')
         return Response(ProductCategorySerializer(category, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
@@ -241,6 +252,7 @@ class ProductListCreateView(APIView):
         serializer = ProductWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         product = serializer.create(serializer.validated_data)
+        _invalidate_pattern('catalog:products:*')
         return Response(ProductSerializer(product, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
@@ -415,6 +427,7 @@ class ServiceCategoryListCreateView(APIView):
         serializer = ServiceCategoryWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         category = serializer.save()
+        _invalidate_pattern('catalog:service_categories:*')
         return Response(ServiceCategorySerializer(category, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
@@ -540,6 +553,7 @@ class ServiceListCreateView(APIView):
         serializer = ServiceWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         service = serializer.create(serializer.validated_data)
+        _invalidate_pattern('catalog:services:*')
         return Response(ServiceSerializer(service, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
@@ -638,6 +652,7 @@ class VariantOptionListCreateView(APIView):
         serializer = VariantOptionWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         option = serializer.save()
+        _invalidate_pattern('catalog:variant_options:*')
         return Response(VariantOptionSerializer(option, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
@@ -1119,3 +1134,452 @@ class ServiceImageDetailView(APIView):
         cache.delete(f'catalog:service:{pk}')
         _invalidate_pattern('catalog:services:*')
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# Menu category views
+# ---------------------------------------------------------------------------
+
+class MenuCategoryListCreateView(APIView):
+    """
+    GET  /api/catalog/menu-categories/   - list menu categories (public).
+    POST /api/catalog/menu-categories/   - create a menu category (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def get(self, request):
+        system_id = request.query_params.get('system')
+        if not system_id:
+            system = _resolve_system(request)
+            if system is None:
+                return Response([], status=status.HTTP_200_OK)
+            system_id = system.id
+
+        disabled_visible = show_disabled(request)
+        cache_key = _scoped_list_key('catalog:menu_categories', request, system_id, disabled_visible)
+
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        qs = MenuCategory.objects.filter(system_id=system_id)
+        if not disabled_visible:
+            qs = qs.filter(enabled=True)
+
+        parent_id = request.query_params.get('parent')
+        if parent_id == 'null':
+            qs = qs.filter(parent__isnull=True)
+        elif parent_id:
+            qs = qs.filter(parent_id=parent_id)
+
+        data = MenuCategorySerializer(qs, many=True, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
+
+    def post(self, request):
+        serializer = MenuCategoryWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        category = serializer.save()
+        _invalidate_pattern('catalog:menu_categories:*')
+        return Response(MenuCategorySerializer(category, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+class MenuCategoryDetailView(APIView):
+    """
+    GET    /api/catalog/menu-categories/<pk>/  - retrieve (public).
+    PATCH  /api/catalog/menu-categories/<pk>/  - partial update (admin only).
+    DELETE /api/catalog/menu-categories/<pk>/  - delete (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def _get_object(self, pk):
+        try:
+            return MenuCategory.objects.get(pk=pk)
+        except MenuCategory.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        cache_key = f'catalog:menu_category:{pk}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        category = self._get_object(pk)
+        if category is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        data = MenuCategorySerializer(category, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
+
+    def patch(self, request, pk):
+        category = self._get_object(pk)
+        if category is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = MenuCategoryWriteSerializer(category, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        category = serializer.save()
+        cache.delete(f'catalog:menu_category:{pk}')
+        _invalidate_pattern('catalog:menu_categories:*')
+        return Response(MenuCategorySerializer(category, context={'request': request}).data)
+
+    def delete(self, request, pk):
+        category = self._get_object(pk)
+        if category is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        category.delete()
+        cache.delete(f'catalog:menu_category:{pk}')
+        _invalidate_pattern('catalog:menu_categories:*')
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# Menu item views
+# ---------------------------------------------------------------------------
+
+class MenuItemListCreateView(APIView):
+    """
+    GET  /api/catalog/menu-items/   - list menu items (public).
+    POST /api/catalog/menu-items/   - create a menu item (admin only).
+
+    Query params (GET):
+      system    - filter by system pk
+      category  - filter by menu category pk
+      brand     - filter by brand pk
+      featured  - 'true' to show only featured items
+      available - 'true' to show only orderable items
+      dietary   - one of 'vegetarian' | 'vegan' | 'gluten_free'
+      search    - text search on name
+      include_disabled - 'true' to also return disabled items (system admins only)
+    """
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def get(self, request):
+        system_id = request.query_params.get('system')
+        if not system_id:
+            system = _resolve_system(request)
+            if system is None:
+                return Response([], status=status.HTTP_200_OK)
+            system_id = system.id
+
+        disabled_visible = show_disabled(request)
+        cache_key = _scoped_list_key('catalog:menu_items', request, system_id, disabled_visible)
+
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        qs = MenuItem.objects.filter(system_id=system_id).select_related('brand', 'category', 'system').prefetch_related('images', 'ingredients')
+        if not disabled_visible:
+            qs = qs.filter(enabled=True)
+
+        category_id = request.query_params.get('category')
+        if category_id:
+            qs = qs.filter(category_id=category_id)
+
+        brand_id = request.query_params.get('brand')
+        if brand_id:
+            qs = qs.filter(brand_id=brand_id)
+
+        if request.query_params.get('featured') == 'true':
+            qs = qs.filter(is_featured=True)
+
+        if request.query_params.get('available') == 'true':
+            qs = qs.filter(is_available=True)
+
+        dietary = request.query_params.get('dietary')
+        if dietary == 'vegetarian':
+            qs = qs.filter(is_vegetarian=True)
+        elif dietary == 'vegan':
+            qs = qs.filter(is_vegan=True)
+        elif dietary == 'gluten_free':
+            qs = qs.filter(is_gluten_free=True)
+
+        slug = request.query_params.get('slug')
+        if slug:
+            qs = qs.filter(slug=slug)
+
+        search = request.query_params.get('search')
+        if search:
+            qs = qs.filter(name__icontains=search)
+
+        data = MenuItemSerializer(qs, many=True, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
+
+    def post(self, request):
+        serializer = MenuItemWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        menu_item = serializer.create(serializer.validated_data)
+        _invalidate_pattern('catalog:menu_items:*')
+        return Response(MenuItemSerializer(menu_item, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+class MenuItemDetailView(APIView):
+    """
+    GET    /api/catalog/menu-items/<pk>/  - retrieve (public).
+    PATCH  /api/catalog/menu-items/<pk>/  - partial update (admin only).
+    DELETE /api/catalog/menu-items/<pk>/  - delete (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def _get_object(self, pk):
+        try:
+            return MenuItem.objects.select_related('brand', 'category', 'system').prefetch_related('images', 'ingredients').get(pk=pk)
+        except MenuItem.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        cache_key = f'catalog:menu_item:{pk}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        menu_item = self._get_object(pk)
+        if menu_item is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        data = MenuItemSerializer(menu_item, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
+
+    def patch(self, request, pk):
+        menu_item = self._get_object(pk)
+        if menu_item is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = MenuItemWriteSerializer(menu_item, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        menu_item = serializer.update(menu_item, serializer.validated_data)
+        cache.delete(f'catalog:menu_item:{pk}')
+        _invalidate_pattern('catalog:menu_items:*')
+        return Response(MenuItemSerializer(menu_item, context={'request': request}).data)
+
+    def delete(self, request, pk):
+        menu_item = self._get_object(pk)
+        if menu_item is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        menu_item.delete()
+        cache.delete(f'catalog:menu_item:{pk}')
+        cache.delete(f'catalog:menu_item_ingredients:{pk}')
+        cache.delete(f'catalog:menu_item_recipe:{pk}')
+        _invalidate_pattern('catalog:menu_items:*')
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MenuItemImageListCreateView(APIView):
+    """
+    GET  /api/catalog/menu-items/<pk>/images/  - list images (public).
+    POST /api/catalog/menu-items/<pk>/images/  - add an image (admin only, base64).
+    """
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def _get_item(self, pk):
+        try:
+            return MenuItem.objects.get(pk=pk)
+        except MenuItem.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        menu_item = self._get_item(pk)
+        if menu_item is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = MenuItemImageSerializer(menu_item.images.all(), many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def post(self, request, pk):
+        menu_item = self._get_item(pk)
+        if menu_item is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = MenuItemImageWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        image = serializer.save(menu_item)
+        cache.delete(f'catalog:menu_item:{pk}')
+        _invalidate_pattern('catalog:menu_items:*')
+        return Response(MenuItemImageSerializer(image, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+class MenuItemImageDetailView(APIView):
+    """
+    PATCH  /api/catalog/menu-items/<pk>/images/<img_pk>/  - update sort_order / name (admin only).
+    DELETE /api/catalog/menu-items/<pk>/images/<img_pk>/  - remove an image (admin only).
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    def _get_image(self, pk, img_pk):
+        try:
+            return MenuItemImage.objects.get(pk=img_pk, menu_item_id=pk)
+        except MenuItemImage.DoesNotExist:
+            return None
+
+    def patch(self, request, pk, img_pk):
+        image = self._get_image(pk, img_pk)
+        if image is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if 'name' in request.data:
+            image.name = request.data['name']
+        if 'sort_order' in request.data:
+            image.sort_order = request.data['sort_order']
+        image.save(update_fields=[f for f in ['name', 'sort_order'] if f in request.data])
+        cache.delete(f'catalog:menu_item:{pk}')
+        _invalidate_pattern('catalog:menu_items:*')
+        return Response(MenuItemImageSerializer(image, context={'request': request}).data)
+
+    def delete(self, request, pk, img_pk):
+        image = self._get_image(pk, img_pk)
+        if image is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        image.delete()
+        cache.delete(f'catalog:menu_item:{pk}')
+        _invalidate_pattern('catalog:menu_items:*')
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# Menu item ingredient views
+# ---------------------------------------------------------------------------
+
+class MenuItemIngredientListCreateView(APIView):
+    """
+    GET  /api/catalog/menu-items/<pk>/ingredients/  - list ingredients (public).
+    POST /api/catalog/menu-items/<pk>/ingredients/  - create an ingredient (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def _get_item(self, pk):
+        try:
+            return MenuItem.objects.get(pk=pk)
+        except MenuItem.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        cache_key = f'catalog:menu_item_ingredients:{pk}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        menu_item = self._get_item(pk)
+        if menu_item is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        qs = menu_item.ingredients.filter(enabled=True)
+        data = MenuItemIngredientSerializer(qs, many=True, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
+
+    def post(self, request, pk):
+        menu_item = self._get_item(pk)
+        if menu_item is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = MenuItemIngredientWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        ingredient = serializer.create(serializer.validated_data, menu_item=menu_item)
+        cache.delete(f'catalog:menu_item_ingredients:{pk}')
+        cache.delete(f'catalog:menu_item:{pk}')
+        _invalidate_pattern('catalog:menu_items:*')
+        return Response(MenuItemIngredientSerializer(ingredient, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+class MenuItemIngredientDetailView(APIView):
+    """
+    GET    /api/catalog/menu-items/<pk>/ingredients/<ing_pk>/  - retrieve (public).
+    PATCH  /api/catalog/menu-items/<pk>/ingredients/<ing_pk>/  - partial update (admin only).
+    DELETE /api/catalog/menu-items/<pk>/ingredients/<ing_pk>/  - delete (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def _get_object(self, pk, ing_pk):
+        try:
+            return MenuItemIngredient.objects.get(pk=ing_pk, menu_item_id=pk)
+        except MenuItemIngredient.DoesNotExist:
+            return None
+
+    def get(self, request, pk, ing_pk):
+        ingredient = self._get_object(pk, ing_pk)
+        if ingredient is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(MenuItemIngredientSerializer(ingredient, context={'request': request}).data)
+
+    def patch(self, request, pk, ing_pk):
+        ingredient = self._get_object(pk, ing_pk)
+        if ingredient is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = MenuItemIngredientWriteSerializer(ingredient, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        ingredient = serializer.update(ingredient, serializer.validated_data)
+        cache.delete(f'catalog:menu_item_ingredients:{pk}')
+        cache.delete(f'catalog:menu_item:{pk}')
+        _invalidate_pattern('catalog:menu_items:*')
+        return Response(MenuItemIngredientSerializer(ingredient, context={'request': request}).data)
+
+    def delete(self, request, pk, ing_pk):
+        ingredient = self._get_object(pk, ing_pk)
+        if ingredient is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        ingredient.delete()
+        cache.delete(f'catalog:menu_item_ingredients:{pk}')
+        cache.delete(f'catalog:menu_item:{pk}')
+        _invalidate_pattern('catalog:menu_items:*')
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# Recipe view (INTERNAL - admin only for every method, including GET)
+# ---------------------------------------------------------------------------
+
+class MenuItemRecipeView(APIView):
+    """
+    GET /api/catalog/menu-items/<pk>/recipe/  - the internal recipe (admin only).
+    PUT /api/catalog/menu-items/<pk>/recipe/  - replace notes + ordered steps (admin only).
+
+    Unlike every other catalog endpoint, GET here is NOT public: a recipe is the
+    kitchen's own IP, so it never leaves the admin surface.
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    def _get_item(self, pk):
+        try:
+            return MenuItem.objects.prefetch_related('recipe_steps').get(pk=pk)
+        except MenuItem.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        menu_item = self._get_item(pk)
+        if menu_item is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(MenuItemRecipeSerializer(menu_item, context={'request': request}).data)
+
+    def put(self, request, pk):
+        menu_item = self._get_item(pk)
+        if menu_item is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = MenuItemRecipeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(menu_item)
+        cache.delete(f'catalog:menu_item:{pk}')
+        _invalidate_pattern('catalog:menu_items:*')
+        menu_item = self._get_item(pk)
+        return Response(MenuItemRecipeSerializer(menu_item, context={'request': request}).data)

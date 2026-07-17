@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers
 
 from core.models import Brand, System, CURRENCY_CHOICES
@@ -8,7 +9,9 @@ from .models import (
     VariantOption, VariantOptionValue,
     ProductVariant, ProductVariantImage,
     ServiceVariant,
+    MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient, RecipeStep,
     DIMENSION_UNIT_CHOICES, WEIGHT_UNIT_CHOICES, MODALITY_CHOICES,
+    QUANTITY_UNIT_CHOICES,
 )
 
 
@@ -129,31 +132,24 @@ class ProductImageWriteSerializer(serializers.Serializer):
 
     def save(self, product):
         image_data = self.validated_data['image']
-        instance = ProductImage(
-            product=product,
-            name=self.validated_data.get('name'),
-            sort_order=self.validated_data.get('sort_order', 0),
-        )
-        instance.save()
+        # Atomic so a failed image write (e.g. unwritable MEDIA_ROOT) rolls back
+        # the row insert instead of leaving an orphan with an empty image field.
+        with transaction.atomic():
+            instance = ProductImage(
+                product=product,
+                name=self.validated_data.get('name'),
+                sort_order=self.validated_data.get('sort_order', 0),
+            )
+            instance.save()
 
-        proc = ImageProcessingSerializer(
-            data={'base64_image': image_data},
-            max_size=(900, 900),
-            quality=85,
-        )
-        proc.is_valid()
-        proc.save_to_field(instance.image, f'product_{product.pk}_img_{instance.pk}.jpg')
-        instance.save(update_fields=['image'])
-        return instance
-
-        proc = ImageProcessingSerializer(
-            data={'base64_image': image_data},
-            max_size=(900, 900),
-            quality=85,
-        )
-        proc.is_valid()
-        proc.save_to_field(instance.image, f'product_{product.pk}_img_{instance.pk}.jpg')
-        instance.save(update_fields=['image'])
+            proc = ImageProcessingSerializer(
+                data={'base64_image': image_data},
+                max_size=(900, 900),
+                quality=85,
+            )
+            proc.is_valid()
+            proc.save_to_field(instance.image, f'product_{product.pk}_img_{instance.pk}.jpg')
+            instance.save(update_fields=['image'])
         return instance
 
 
@@ -703,21 +699,24 @@ class ServiceImageWriteSerializer(serializers.Serializer):
 
     def save(self, service):
         image_data = self.validated_data['image']
-        instance = ServiceImage(
-            service=service,
-            name=self.validated_data.get('name'),
-            sort_order=self.validated_data.get('sort_order', 0),
-        )
-        instance.save()
+        # Atomic so a failed image write (e.g. unwritable MEDIA_ROOT) rolls back
+        # the row insert instead of leaving an orphan with an empty image field.
+        with transaction.atomic():
+            instance = ServiceImage(
+                service=service,
+                name=self.validated_data.get('name'),
+                sort_order=self.validated_data.get('sort_order', 0),
+            )
+            instance.save()
 
-        proc = ImageProcessingSerializer(
-            data={'base64_image': image_data},
-            max_size=(900, 900),
-            quality=85,
-        )
-        proc.is_valid()
-        proc.save_to_field(instance.image, f'service_{service.pk}_img_{instance.pk}.jpg')
-        instance.save(update_fields=['image'])
+            proc = ImageProcessingSerializer(
+                data={'base64_image': image_data},
+                max_size=(900, 900),
+                quality=85,
+            )
+            proc.is_valid()
+            proc.save_to_field(instance.image, f'service_{service.pk}_img_{instance.pk}.jpg')
+            instance.save(update_fields=['image'])
         return instance
 
 
@@ -955,3 +954,453 @@ class ServiceWriteSerializer(serializers.Serializer):
         proc.is_valid()
         proc.save_to_field(service.image, f'service_{service.pk}.jpg')
         service.save(update_fields=['image'])
+
+
+# ---------------------------------------------------------------------------
+# MenuCategory serializers
+# ---------------------------------------------------------------------------
+
+class MenuCategorySerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+    item_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MenuCategory
+        fields = [
+            'id', 'enabled', 'created', 'modified', 'version',
+            'system', 'parent', 'name', 'en_name', 'slug',
+            'description', 'en_description', 'image', 'item_count',
+        ]
+        read_only_fields = ['id', 'created', 'modified', 'version']
+
+    def get_image(self, obj):
+        request = self.context.get('request')
+        if not obj.image:
+            return None
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url
+
+    def get_item_count(self, obj):
+        return obj.menu_items.filter(enabled=True).count()
+
+
+class MenuCategoryWriteSerializer(serializers.ModelSerializer):
+    image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
+    class Meta:
+        model = MenuCategory
+        fields = [
+            'system', 'parent', 'name', 'en_name', 'slug',
+            'description', 'en_description', 'enabled', 'image',
+        ]
+
+    def validate_slug(self, value):
+        qs = MenuCategory.objects.filter(slug=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('A menu category with this slug already exists.')
+        return value
+
+    def validate_image(self, value):
+        if not value:
+            return value
+        sub = ImageProcessingSerializer(data={'base64_image': value}, max_size=(1200, 1200), quality=85)
+        if not sub.is_valid():
+            raise serializers.ValidationError(sub.errors['base64_image'])
+        return value
+
+    def create(self, validated_data):
+        image_data = validated_data.pop('image', None)
+        instance = super().create(validated_data)
+        if image_data:
+            self._save_image(instance, image_data)
+        return instance
+
+    def update(self, instance, validated_data):
+        clear_image = 'image' in validated_data and not validated_data.get('image')
+        image_data = validated_data.pop('image', None)
+        instance = super().update(instance, validated_data)
+        if image_data:
+            self._save_image(instance, image_data)
+        elif clear_image:
+            instance.image = None
+            instance.save(update_fields=['image'])
+        return instance
+
+    def _save_image(self, instance, image_data):
+        proc = ImageProcessingSerializer(data={'base64_image': image_data}, max_size=(1200, 1200), quality=85)
+        proc.is_valid()
+        proc.save_to_field(instance.image, f'menu_category_{instance.pk}.jpg')
+        instance.save(update_fields=['image'])
+
+
+# ---------------------------------------------------------------------------
+# MenuItem ingredient serializers
+# ---------------------------------------------------------------------------
+
+class MenuItemIngredientSerializer(serializers.ModelSerializer):
+    included_units = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = MenuItemIngredient
+        fields = [
+            'id', 'enabled', 'created', 'modified', 'version',
+            'menu_item', 'name', 'en_name',
+            'quantity', 'unit', 'price',
+            'is_default', 'is_removable', 'max_quantity',
+            'included_units', 'sort_order',
+        ]
+        read_only_fields = ['id', 'created', 'modified', 'version', 'menu_item']
+
+
+class MenuItemIngredientWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MenuItemIngredient
+        fields = [
+            'name', 'en_name', 'quantity', 'unit', 'price',
+            'is_default', 'is_removable', 'max_quantity', 'sort_order', 'enabled',
+        ]
+
+    def validate_unit(self, value):
+        if value in (None, ''):
+            return value
+        valid = {c[0] for c in QUANTITY_UNIT_CHOICES}
+        if value not in valid:
+            raise serializers.ValidationError('Invalid unit.')
+        return value
+
+    def validate_max_quantity(self, value):
+        if value < 1:
+            raise serializers.ValidationError('max_quantity must be at least 1.')
+        return value
+
+    def create(self, validated_data, menu_item):
+        return MenuItemIngredient.objects.create(menu_item=menu_item, **validated_data)
+
+    def update(self, instance, validated_data):
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        instance.save()
+        return instance
+
+
+# ---------------------------------------------------------------------------
+# MenuItem image serializers
+# ---------------------------------------------------------------------------
+
+class MenuItemImageSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MenuItemImage
+        fields = ['id', 'image', 'name', 'fit', 'background_color', 'sort_order']
+
+    def get_image(self, obj):
+        request = self.context.get('request')
+        if not obj.image:
+            return None
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url
+
+
+class MenuItemImageWriteSerializer(serializers.Serializer):
+    image = serializers.CharField()
+    name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
+
+    def validate_image(self, value):
+        sub = ImageProcessingSerializer(
+            data={'base64_image': value},
+            max_size=(900, 900),
+            quality=85,
+        )
+        if not sub.is_valid():
+            raise serializers.ValidationError(sub.errors['base64_image'])
+        return value
+
+    def save(self, menu_item):
+        # Atomic so a failed image write (e.g. unwritable MEDIA_ROOT) rolls back
+        # the row insert instead of leaving an orphan with an empty image field.
+        with transaction.atomic():
+            instance = MenuItemImage(
+                menu_item=menu_item,
+                name=self.validated_data.get('name'),
+                sort_order=self.validated_data.get('sort_order', 0),
+            )
+            instance.save()
+            proc = ImageProcessingSerializer(
+                data={'base64_image': self.validated_data['image']},
+                max_size=(900, 900),
+                quality=85,
+            )
+            proc.is_valid()
+            proc.save_to_field(instance.image, f'menu_item_{menu_item.pk}_img_{instance.pk}.jpg')
+            instance.save(update_fields=['image'])
+        return instance
+
+
+# ---------------------------------------------------------------------------
+# Recipe step serializers (INTERNAL - admin only)
+# ---------------------------------------------------------------------------
+
+class RecipeStepSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RecipeStep
+        fields = [
+            'id', 'step_number', 'instruction', 'en_instruction',
+            'image', 'sort_order',
+        ]
+
+    def get_image(self, obj):
+        request = self.context.get('request')
+        if not obj.image:
+            return None
+        return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+
+
+class RecipeStepWriteSerializer(serializers.Serializer):
+    """One step within the recipe PUT payload. ``image`` is an optional base64
+    string (unchanged when omitted, cleared when explicitly null/blank)."""
+
+    step_number = serializers.IntegerField(min_value=1, required=False, default=1)
+    instruction = serializers.CharField()
+    en_instruction = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
+    image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
+    def validate_image(self, value):
+        if not value:
+            return value
+        sub = ImageProcessingSerializer(data={'base64_image': value}, max_size=(900, 900), quality=85)
+        if not sub.is_valid():
+            raise serializers.ValidationError(sub.errors['base64_image'])
+        return value
+
+
+class MenuItemRecipeSerializer(serializers.Serializer):
+    """The whole internal recipe for a menu item: notes plus ordered steps.
+
+    Read returns the current recipe; write (PUT) replaces the step list wholesale
+    - the CMS edits the recipe as one panel, so a full replace is simpler and
+    less error-prone than diffing individual step rows.
+    """
+
+    recipe_notes = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    prep_time_minutes = serializers.IntegerField(min_value=0, required=False, allow_null=True)
+    cook_time_minutes = serializers.IntegerField(min_value=0, required=False, allow_null=True)
+    servings = serializers.IntegerField(min_value=0, required=False, allow_null=True)
+    steps = RecipeStepWriteSerializer(many=True, required=False)
+
+    def to_representation(self, instance):
+        request = self.context.get('request')
+        return {
+            'recipe_notes': instance.recipe_notes,
+            'prep_time_minutes': instance.prep_time_minutes,
+            'cook_time_minutes': instance.cook_time_minutes,
+            'servings': instance.servings,
+            'steps': RecipeStepSerializer(
+                instance.recipe_steps.all(), many=True, context={'request': request}
+            ).data,
+        }
+
+    def save(self, menu_item):
+        data = self.validated_data
+        for field in ('recipe_notes', 'prep_time_minutes', 'cook_time_minutes', 'servings'):
+            if field in data:
+                setattr(menu_item, field, data[field])
+        menu_item.save(update_fields=[
+            f for f in ('recipe_notes', 'prep_time_minutes', 'cook_time_minutes', 'servings')
+            if f in data
+        ] or None)
+
+        if 'steps' in data:
+            menu_item.recipe_steps.all().delete()
+            for idx, step in enumerate(data['steps']):
+                image_data = step.get('image')
+                obj = RecipeStep(
+                    menu_item=menu_item,
+                    step_number=step.get('step_number', idx + 1),
+                    instruction=step['instruction'],
+                    en_instruction=step.get('en_instruction'),
+                    sort_order=step.get('sort_order', idx),
+                )
+                obj.save()
+                if image_data:
+                    proc = ImageProcessingSerializer(
+                        data={'base64_image': image_data}, max_size=(900, 900), quality=85
+                    )
+                    proc.is_valid()
+                    proc.save_to_field(obj.image, f'recipe_step_{menu_item.pk}_{obj.pk}.jpg')
+                    obj.save(update_fields=['image'])
+        return menu_item
+
+
+# ---------------------------------------------------------------------------
+# MenuItem serializers
+# ---------------------------------------------------------------------------
+
+class MenuItemSerializer(serializers.ModelSerializer):
+    """Public menu-item read. Deliberately omits the internal recipe
+    (``recipe_notes`` and the RecipeStep list) - that is kitchen IP served only
+    through the admin-gated recipe endpoint."""
+
+    image = serializers.SerializerMethodField()
+    images = MenuItemImageSerializer(many=True, read_only=True)
+    ingredients = MenuItemIngredientSerializer(many=True, read_only=True)
+    brand_name = serializers.CharField(source='brand.name', read_only=True, default=None)
+    category_name = serializers.CharField(source='category.name', read_only=True, default=None)
+    category_slug = serializers.SlugRelatedField(source='category', slug_field='slug', read_only=True)
+
+    class Meta:
+        model = MenuItem
+        fields = [
+            'id', 'enabled', 'created', 'modified', 'version',
+            'system', 'category', 'category_name', 'category_slug',
+            'brand', 'brand_name',
+            'name', 'en_name', 'description', 'en_description',
+            'short_description', 'en_short_description',
+            'slug', 'sku',
+            'image', 'images', 'ingredients',
+            'href', 'video_link', 'fit', 'background_color',
+            'price', 'compare_price', 'cost_price', 'currency',
+            'is_available', 'is_featured', 'is_ai_generated', 'is_verified',
+            'calories', 'spice_level', 'servings',
+            'prep_time_minutes', 'cook_time_minutes',
+            'is_organic', 'is_vegetarian', 'is_vegan', 'is_gluten_free', 'allergens',
+        ]
+
+    def get_image(self, obj):
+        request = self.context.get('request')
+        image = obj.image
+        if not image:
+            gallery = sorted(obj.images.all(), key=lambda i: i.sort_order)
+            first = next((i for i in gallery if i.image), None)
+            image = first.image if first else None
+        if not image:
+            return None
+        if request:
+            return request.build_absolute_uri(image.url)
+        return image.url
+
+
+class MenuItemWriteSerializer(serializers.Serializer):
+    # BasePicture fields
+    name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    en_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    short_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_short_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    href = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    video_link = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    fit = serializers.ChoiceField(
+        choices=[c[0] for c in [('cover', ''), ('contain', ''), ('fill', ''), ('scale-down', ''), ('none', '')]],
+        required=False, allow_null=True,
+    )
+    background_color = serializers.CharField(max_length=25, required=False, allow_null=True, allow_blank=True)
+
+    # FK relations
+    system = serializers.PrimaryKeyRelatedField(
+        queryset=System.objects.all(), required=False, allow_null=True,
+    )
+    brand = serializers.PrimaryKeyRelatedField(
+        queryset=Brand.objects.all(), required=False, allow_null=True,
+    )
+    category = serializers.PrimaryKeyRelatedField(
+        queryset=MenuCategory.objects.all(), required=False, allow_null=True,
+    )
+
+    # Menu-item-specific fields
+    slug = serializers.SlugField(max_length=255)
+    sku = serializers.CharField(max_length=100, required=False, allow_null=True, allow_blank=True)
+
+    price = serializers.DecimalField(max_digits=12, decimal_places=2)
+    compare_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
+    cost_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
+    currency = serializers.ChoiceField(choices=[c[0] for c in CURRENCY_CHOICES], required=False, default='USD')
+
+    enabled = serializers.BooleanField(required=False)
+    is_available = serializers.BooleanField(required=False)
+    is_featured = serializers.BooleanField(required=False)
+    is_ai_generated = serializers.BooleanField(required=False)
+    is_verified = serializers.BooleanField(required=False)
+
+    calories = serializers.IntegerField(min_value=0, required=False, allow_null=True)
+    spice_level = serializers.IntegerField(min_value=0, max_value=5, required=False, allow_null=True)
+    servings = serializers.IntegerField(min_value=0, required=False, allow_null=True)
+    prep_time_minutes = serializers.IntegerField(min_value=0, required=False, allow_null=True)
+    cook_time_minutes = serializers.IntegerField(min_value=0, required=False, allow_null=True)
+    is_organic = serializers.BooleanField(required=False)
+    is_vegetarian = serializers.BooleanField(required=False)
+    is_vegan = serializers.BooleanField(required=False)
+    is_gluten_free = serializers.BooleanField(required=False)
+    allergens = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    recipe_notes = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
+    # Image as base64 string
+    image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
+    def validate_image(self, value):
+        if not value:
+            return value
+        sub = ImageProcessingSerializer(
+            data={'base64_image': value},
+            max_size=(900, 900),
+            quality=85,
+        )
+        if not sub.is_valid():
+            raise serializers.ValidationError(sub.errors['base64_image'])
+        return value
+
+    def validate_slug(self, value):
+        qs = MenuItem.objects.filter(slug=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('A menu item with this slug already exists.')
+        return value
+
+    def validate_sku(self, value):
+        if not value:
+            return value
+        qs = MenuItem.objects.filter(sku=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('A menu item with this SKU already exists.')
+        return value
+
+    def create(self, validated_data):
+        image_data = validated_data.pop('image', None)
+        menu_item = MenuItem(**validated_data)
+        menu_item.save()
+        if image_data:
+            self._save_image(menu_item, image_data)
+        return menu_item
+
+    def update(self, instance, validated_data):
+        clear_image = 'image' in validated_data and not validated_data.get('image')
+        image_data = validated_data.pop('image', None)
+        for field_name, value in validated_data.items():
+            setattr(instance, field_name, value)
+        if clear_image:
+            instance.image = None
+        instance.save()
+        if image_data:
+            self._save_image(instance, image_data)
+        return instance
+
+    def _save_image(self, menu_item, image_data):
+        proc = ImageProcessingSerializer(
+            data={'base64_image': image_data},
+            max_size=(900, 900),
+            quality=85,
+        )
+        proc.is_valid()
+        proc.save_to_field(menu_item.image, f'menu_item_{menu_item.pk}.jpg')
+        menu_item.save(update_fields=['image'])

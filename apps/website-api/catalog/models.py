@@ -485,3 +485,305 @@ class ServiceVariant(BaseVariant):
     @property
     def effective_modality(self):
         return self.modality if self.modality is not None else self.service.modality
+
+
+# ---------------------------------------------------------------------------
+# Menu (food) system
+# ---------------------------------------------------------------------------
+#
+# The third buyable family alongside Product and Service, for restaurants and
+# food businesses: meals, dishes, drinks, packaged food. It differs from Product
+# in two ways that earn it its own model rather than a Product category:
+#
+#   * Ingredients are *priced customisation*. A MenuItem carries a fixed base
+#     price plus a list of MenuItemIngredient rows; each ingredient may be a
+#     default (included in the base) or an optional add-on with a per-unit
+#     up-charge. What the customer picks adjusts the price up from the base, and
+#     the chosen selection travels through the cart into the order snapshot.
+#   * A Recipe (RecipeStep rows) is *internal*: preparation instructions for the
+#     kitchen, never served on the public API. See RecipeStep.
+
+QUANTITY_UNIT_CHOICES = [
+    ('g', 'Grams'),
+    ('kg', 'Kilograms'),
+    ('mg', 'Milligrams'),
+    ('ml', 'Milliliters'),
+    ('l', 'Liters'),
+    ('oz', 'Ounces'),
+    ('lb', 'Pounds'),
+    ('cup', 'Cups'),
+    ('tbsp', 'Tablespoons'),
+    ('tsp', 'Teaspoons'),
+    ('pc', 'Pieces'),
+    ('slice', 'Slices'),
+    ('scoop', 'Scoops'),
+]
+
+
+class MenuCategory(RegularPicture):
+    system = models.ForeignKey(
+        'core.System',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='menu_categories',
+    )
+    parent = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='children',
+    )
+    slug = models.SlugField(max_length=255, unique=True)
+
+    class Meta:
+        verbose_name = 'Menu Category'
+        verbose_name_plural = 'Menu Categories'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class MenuItem(Buyable):
+    """
+    A purchasable meal, dish, or drink.
+
+    Inherits from Buyable which provides:
+      - Common: enabled, created, modified, version
+      - BasePicture: name, en_name, description, en_description, href, fit, background_color
+      - StandardPicture: image (max 900px)
+      - Buyable: system (FK), brand (FK), price, compare_price, cost_price, currency
+
+    ``price`` is the *base* price; the customer's ingredient choices (see
+    ``MenuItemIngredient``) add up-charges on top. ``price_for_selection`` is the
+    single source of truth for that arithmetic and is used by the cart, checkout,
+    and storefront alike so a customised price can never drift between them.
+    """
+
+    category = models.ForeignKey(
+        MenuCategory,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='menu_items',
+    )
+    slug = models.SlugField(max_length=255, unique=True)
+
+    # Identifier
+    sku = models.CharField(max_length=100, null=True, blank=True, unique=True)
+
+    video_link = models.URLField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text='YouTube, Vimeo or direct video URL rendered as a hero above the detail page.',
+    )
+
+    # Availability / display. Food is not stock-counted like a product; a dish is
+    # either on the menu today or it isn't, so a single boolean stands in for the
+    # product's in_stock + stock_count pair.
+    is_available = models.BooleanField(
+        default=True, help_text='Whether this item can be ordered right now.'
+    )
+    is_featured = models.BooleanField(default=False)
+    is_ai_generated = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False)
+
+    # Dietary / serving metadata (all optional, public).
+    calories = models.PositiveIntegerField(null=True, blank=True, help_text='kcal per serving.')
+    spice_level = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text='0-5, where 0 is not spicy.'
+    )
+    is_organic = models.BooleanField(default=False)
+    is_vegetarian = models.BooleanField(default=False)
+    is_vegan = models.BooleanField(default=False)
+    is_gluten_free = models.BooleanField(default=False)
+    allergens = models.CharField(
+        max_length=255, null=True, blank=True,
+        help_text='Comma-separated allergen list, e.g. "peanuts, dairy, gluten".',
+    )
+
+    # Recipe metadata (INTERNAL - kitchen prep, never served on the public API).
+    prep_time_minutes = models.PositiveIntegerField(null=True, blank=True)
+    cook_time_minutes = models.PositiveIntegerField(null=True, blank=True)
+    servings = models.PositiveIntegerField(null=True, blank=True)
+    recipe_notes = models.TextField(
+        null=True, blank=True, help_text='Internal kitchen notes; not exposed publicly.'
+    )
+
+    class Meta:
+        verbose_name = 'Menu Item'
+        verbose_name_plural = 'Menu Items'
+        ordering = ['-created']
+
+    def __str__(self):
+        return self.name or self.slug
+
+    def price_for_selection(self, selection) -> Decimal:
+        """Base price plus every up-charge implied by ``selection``.
+
+        ``selection`` is a normalised list of ``{"ingredient": <id>, "quantity":
+        <int>}`` dicts (see ``normalize_selection``). Only ingredients that
+        belong to this item are counted, and only the units charged for beyond
+        what the base already includes: a default ingredient's first unit is free
+        (removing it never refunds - the base was already paid), and every unit
+        above that costs ``ingredient.price``. This is the *only* place the
+        customised total is computed.
+        """
+        by_id = {ing.id: ing for ing in self.ingredients.all()}
+        total = self.price
+        for row in (selection or []):
+            ingredient = by_id.get(row.get('ingredient'))
+            if ingredient is None:
+                continue
+            total += ingredient.upcharge_for_quantity(row.get('quantity', 0))
+        return total
+
+
+class MenuItemImage(StandardPicture):
+    """Additional gallery images for a menu item."""
+
+    menu_item = models.ForeignKey(
+        MenuItem,
+        on_delete=models.CASCADE,
+        related_name='images',
+    )
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Menu Item Image'
+        verbose_name_plural = 'Menu Item Images'
+        ordering = ['sort_order']
+
+    def __str__(self):
+        return f"Image for {self.menu_item} (#{self.sort_order})"
+
+
+class MenuItemIngredient(Common):
+    """One priced, customisable component of a MenuItem.
+
+    The pricing model is *base price + add-on deltas* (see ``MenuItem``):
+
+      - ``is_default`` - included in the item's base price and pre-selected.
+      - ``is_removable`` - a default the customer may deselect. Removing it does
+        not refund (the base already covered it); it just changes the kitchen
+        ticket.
+      - ``price`` - the up-charge for one *chargeable* unit. For a default
+        ingredient the first unit is free and this applies to each extra; for an
+        optional add-on every selected unit is charged.
+      - ``max_quantity`` - the largest quantity the customer may select (e.g. 2
+        for "double patty"). ``quantity``/``unit`` are the descriptive recipe
+        portion (e.g. 100 g of cheese) and do not affect price.
+    """
+
+    menu_item = models.ForeignKey(
+        MenuItem,
+        on_delete=models.CASCADE,
+        related_name='ingredients',
+    )
+    name = models.CharField(max_length=255)
+    en_name = models.CharField(max_length=255, null=True, blank=True)
+
+    # Descriptive portion (display only).
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    unit = models.CharField(
+        max_length=8, choices=QUANTITY_UNIT_CHOICES, null=True, blank=True,
+    )
+
+    price = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'),
+        help_text='Up-charge per chargeable unit. 0 for a free included ingredient.',
+    )
+    is_default = models.BooleanField(
+        default=True, help_text='Included in the base price and pre-selected.'
+    )
+    is_removable = models.BooleanField(
+        default=True, help_text='Whether a default ingredient can be removed by the customer.'
+    )
+    max_quantity = models.PositiveSmallIntegerField(
+        default=1, help_text='Largest quantity the customer may select.'
+    )
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Menu Item Ingredient'
+        verbose_name_plural = 'Menu Item Ingredients'
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.menu_item})"
+
+    @property
+    def included_units(self) -> int:
+        """Units already covered by the base price (1 for a default, else 0)."""
+        return 1 if self.is_default else 0
+
+    def upcharge_for_quantity(self, quantity) -> Decimal:
+        """Price contribution of selecting ``quantity`` of this ingredient."""
+        try:
+            qty = int(quantity)
+        except (TypeError, ValueError):
+            return Decimal('0.00')
+        qty = max(0, min(qty, self.max_quantity))
+        chargeable = max(0, qty - self.included_units)
+        return self.price * chargeable
+
+
+class RecipeStep(Common):
+    """One step of a MenuItem's internal preparation recipe.
+
+    Deliberately kitchen-facing only: RecipeStep is never included in the public
+    MenuItem serializer, and its API endpoints require system-admin auth for
+    every method (including GET). It is business IP, not customer-facing content.
+    """
+
+    menu_item = models.ForeignKey(
+        MenuItem,
+        on_delete=models.CASCADE,
+        related_name='recipe_steps',
+    )
+    step_number = models.PositiveSmallIntegerField(default=1)
+    instruction = models.TextField()
+    en_instruction = models.TextField(null=True, blank=True)
+    image = models.ImageField(null=True, blank=True, upload_to=picture)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Recipe Step'
+        verbose_name_plural = 'Recipe Steps'
+        ordering = ['sort_order', 'step_number']
+
+    def __str__(self):
+        return f"Step {self.step_number} for {self.menu_item}"
+
+
+def normalize_selection(selection, ingredients):
+    """Canonicalise a customer's ingredient selection for storage & comparison.
+
+    Returns a list of ``{"ingredient": <id>, "quantity": <int>}`` sorted by
+    ingredient id, keeping only ids that belong to ``ingredients`` and only rows
+    whose effective quantity differs from the ingredient's default (so two carts
+    that mean the same thing compare equal, and the "no changes" case stores an
+    empty list). ``quantity`` is clamped to ``[0, max_quantity]``.
+    """
+    by_id = {ing.id: ing for ing in ingredients}
+    rows = {}
+    for row in (selection or []):
+        ing = by_id.get(row.get('ingredient'))
+        if ing is None:
+            continue
+        try:
+            qty = int(row.get('quantity', 0))
+        except (TypeError, ValueError):
+            continue
+        qty = max(0, min(qty, ing.max_quantity))
+        rows[ing.id] = qty
+    normalized = []
+    for ing in ingredients:
+        qty = rows.get(ing.id, ing.included_units)
+        if qty != ing.included_units:
+            normalized.append({'ingredient': ing.id, 'quantity': qty})
+    normalized.sort(key=lambda r: r['ingredient'])
+    return normalized

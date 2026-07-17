@@ -256,6 +256,171 @@ export async function deleteServiceCategory(pk: number) {
   return parseResponse<void>(res);
 }
 
+// ---- Menu Items (food) ----
+export async function listMenuItems(systemId: number) {
+  const res = await adminFetch(
+    `/api/catalog/menu-items/?system=${systemId}&include_disabled=true`,
+  );
+  return parseResponse<Record<string, unknown>[]>(res);
+}
+export async function getMenuItem(pk: number) {
+  const res = await adminFetch(`/api/catalog/menu-items/${pk}/`);
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function createMenuItem(data: Record<string, unknown>) {
+  const res = await adminFetch(`/api/catalog/menu-items/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function updateMenuItem(
+  pk: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(`/api/catalog/menu-items/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function deleteMenuItem(pk: number) {
+  const res = await adminFetch(`/api/catalog/menu-items/${pk}/`, {
+    method: "DELETE",
+  });
+  return parseResponse<void>(res);
+}
+
+// ---- Menu Item Images ----
+export async function listMenuItemImages(menuItemId: number) {
+  const res = await adminFetch(`/api/catalog/menu-items/${menuItemId}/images/`);
+  return parseResponse<Record<string, unknown>[]>(res);
+}
+export async function createMenuItemImage(
+  menuItemId: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(
+    `/api/catalog/menu-items/${menuItemId}/images/`,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    },
+  );
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function deleteMenuItemImage(menuItemId: number, imgId: number) {
+  const res = await adminFetch(
+    `/api/catalog/menu-items/${menuItemId}/images/${imgId}/`,
+    { method: "DELETE" },
+  );
+  return parseResponse<void>(res);
+}
+export async function updateMenuItemImage(
+  menuItemId: number,
+  imgId: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(
+    `/api/catalog/menu-items/${menuItemId}/images/${imgId}/`,
+    { method: "PATCH", body: JSON.stringify(data) },
+  );
+  return parseResponse<Record<string, unknown>>(res);
+}
+
+// ---- Menu Item Ingredients ----
+export async function listMenuItemIngredients(menuItemId: number) {
+  const res = await adminFetch(
+    `/api/catalog/menu-items/${menuItemId}/ingredients/`,
+  );
+  return parseResponse<Record<string, unknown>[]>(res);
+}
+export async function createMenuItemIngredient(
+  menuItemId: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(
+    `/api/catalog/menu-items/${menuItemId}/ingredients/`,
+    { method: "POST", body: JSON.stringify(data) },
+  );
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function updateMenuItemIngredient(
+  menuItemId: number,
+  ingId: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(
+    `/api/catalog/menu-items/${menuItemId}/ingredients/${ingId}/`,
+    { method: "PATCH", body: JSON.stringify(data) },
+  );
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function deleteMenuItemIngredient(
+  menuItemId: number,
+  ingId: number,
+) {
+  const res = await adminFetch(
+    `/api/catalog/menu-items/${menuItemId}/ingredients/${ingId}/`,
+    { method: "DELETE" },
+  );
+  return parseResponse<void>(res);
+}
+
+// ---- Menu Item Recipe (internal) ----
+export async function getMenuItemRecipe(menuItemId: number) {
+  const res = await adminFetch(`/api/catalog/menu-items/${menuItemId}/recipe/`);
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function saveMenuItemRecipe(
+  menuItemId: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(
+    `/api/catalog/menu-items/${menuItemId}/recipe/`,
+    {
+      method: "PUT",
+      body: JSON.stringify(data),
+    },
+  );
+  return parseResponse<Record<string, unknown>>(res);
+}
+
+// ---- Menu Categories ----
+export async function listMenuCategories(systemId: number) {
+  const res = await adminFetch(
+    `/api/catalog/menu-categories/?system=${systemId}&include_disabled=true`,
+  );
+  return parseResponse<Record<string, unknown>[]>(res);
+}
+export async function getMenuCategory(pk: number) {
+  const res = await adminFetch(`/api/catalog/menu-categories/${pk}/`);
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function createMenuCategory(data: Record<string, unknown>) {
+  const res = await adminFetch(`/api/catalog/menu-categories/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function updateMenuCategory(
+  pk: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(`/api/catalog/menu-categories/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function deleteMenuCategory(pk: number) {
+  const res = await adminFetch(`/api/catalog/menu-categories/${pk}/`, {
+    method: "DELETE",
+  });
+  return parseResponse<void>(res);
+}
+
 // ---- Brands ----
 export async function listBrands(systemId: number) {
   const res = await adminFetch(

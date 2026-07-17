@@ -408,6 +408,7 @@ class CartItemSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField(read_only=True)
     item = serializers.SerializerMethodField()
     variant = serializers.SerializerMethodField()
+    customization = serializers.SerializerMethodField()
     unit_price = serializers.SerializerMethodField()
     line_total = serializers.SerializerMethodField()
     currency = serializers.SerializerMethodField()
@@ -416,9 +417,13 @@ class CartItemSerializer(serializers.Serializer):
     def get_item(self, obj):
         # Imported here for the same reason as FavoriteSerializer.get_item: a
         # module-level import would make users ↔ catalog a cycle at app-load.
-        from catalog.serializers import ProductSerializer, ServiceSerializer
+        from catalog.serializers import ProductSerializer, ServiceSerializer, MenuItemSerializer
 
-        serializer = ProductSerializer if obj.product_id else ServiceSerializer
+        serializer = {
+            'product': ProductSerializer,
+            'service': ServiceSerializer,
+            'menu_item': MenuItemSerializer,
+        }[obj.kind]
         return serializer(obj.target, context=self.context).data
 
     def get_variant(self, obj):
@@ -430,6 +435,30 @@ class CartItemSerializer(serializers.Serializer):
         serializer = ProductVariantSerializer if obj.product_id else ServiceVariantSerializer
         return serializer(variant, context=self.context).data
 
+    def get_customization(self, obj):
+        """The chosen ingredients for a menu line, resolved to labels + up-charges
+        the cart page can render directly. Empty for products, services, and
+        uncustomised menu items."""
+        if not obj.menu_item_id or not obj.customization:
+            return []
+        by_id = {ing.id: ing for ing in obj.menu_item.ingredients.all()}
+        rows = []
+        for row in obj.customization:
+            ingredient = by_id.get(row.get('ingredient'))
+            if ingredient is None:
+                continue
+            qty = int(row.get('quantity', 0))
+            rows.append({
+                'ingredient': ingredient.id,
+                'name': ingredient.name,
+                'en_name': ingredient.en_name,
+                'quantity': qty,
+                'unit_price': str(ingredient.price),
+                'line_upcharge': str(ingredient.upcharge_for_quantity(qty)),
+                'removed': ingredient.is_default and qty == 0,
+            })
+        return rows
+
     def get_unit_price(self, obj):
         return str(obj.unit_price)
 
@@ -440,22 +469,34 @@ class CartItemSerializer(serializers.Serializer):
         return obj.target.currency
 
     def get_in_stock(self, obj):
-        """Services are always orderable; only products carry stock.
+        """Services are always orderable; a menu item follows its availability
+        flag; only products carry stock.
 
         Reported per line so the cart can flag an item that sold out after it was
         added - the variant's own flag wins when the line has one.
         """
         if obj.service_id:
             return True
+        if obj.menu_item_id:
+            return obj.menu_item.is_available
         if obj.product_variant_id:
             return obj.product_variant.in_stock
         return obj.product.in_stock
 
 
+class CartCustomizationRowSerializer(serializers.Serializer):
+    """One chosen ingredient in an add-to-cart request."""
+
+    ingredient = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=0, max_value=99)
+
+
 class CartItemWriteSerializer(serializers.Serializer):
-    kind = serializers.ChoiceField(choices=["product", "service"])
+    kind = serializers.ChoiceField(choices=["product", "service", "menu_item"])
     id = serializers.IntegerField()
     variant_id = serializers.IntegerField(required=False, allow_null=True)
+    # Menu items only: the chosen ingredient selection. Ignored for product/service.
+    customization = CartCustomizationRowSerializer(many=True, required=False)
     quantity = serializers.IntegerField(required=False, min_value=1, max_value=99, default=1)
 
 

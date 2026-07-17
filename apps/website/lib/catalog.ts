@@ -385,3 +385,136 @@ export async function getService(slug: string): Promise<ServiceDetail | null> {
     `service(${slug})`,
   );
 }
+
+// ---------------------------------------------------------------------------
+// Menu (food) types + fetchers
+// ---------------------------------------------------------------------------
+
+export interface MenuCategory {
+  id: number;
+  enabled: boolean;
+  slug: string;
+  name: string | null;
+  en_name: string | null;
+  description: string | null;
+  en_description: string | null;
+  image: string | null;
+  item_count: number;
+}
+
+export interface MenuItemIngredient {
+  id: number;
+  name: string;
+  en_name: string | null;
+  quantity: string | null;
+  unit: string | null;
+  price: string;
+  is_default: boolean;
+  is_removable: boolean;
+  max_quantity: number;
+  included_units: number;
+  sort_order: number;
+}
+
+export interface MenuItemImageT {
+  id: number;
+  image: string | null;
+  name: string | null;
+  sort_order: number;
+}
+
+/** Shape shared by the menu listing card and the detail page - the public
+ *  MenuItem serializer returns the same fields for both. */
+export interface MenuItemDetail {
+  id: number;
+  slug: string;
+  name: string | null;
+  en_name: string | null;
+  description: string | null;
+  en_description: string | null;
+  short_description: string | null;
+  en_short_description: string | null;
+  image: string | null;
+  video_link: string | null;
+  background_color: string | null;
+  price: string;
+  compare_price: string | null;
+  currency: string;
+  is_available: boolean;
+  is_featured: boolean;
+  category: number | null;
+  category_name: string | null;
+  category_slug: string | null;
+  brand: number | null;
+  brand_name: string | null;
+  calories: number | null;
+  spice_level: number | null;
+  servings: number | null;
+  prep_time_minutes: number | null;
+  cook_time_minutes: number | null;
+  is_organic: boolean;
+  is_vegetarian: boolean;
+  is_vegan: boolean;
+  is_gluten_free: boolean;
+  allergens: string | null;
+  images: MenuItemImageT[];
+  ingredients: MenuItemIngredient[];
+}
+
+export const getMenuCategories = cache(async (): Promise<MenuCategory[]> => {
+  const host = await getTenantHost();
+  return fetchWithHost<MenuCategory>(
+    "/api/catalog/menu-categories/",
+    host,
+    "menu categories",
+  );
+});
+
+export const getAllMenuItems = cache(async (): Promise<MenuItemDetail[]> => {
+  const host = await getTenantHost();
+  return fetchWithHost<MenuItemDetail>(
+    "/api/catalog/menu-items/",
+    host,
+    "all menu items",
+  );
+});
+
+export const getFeaturedMenuItems = cache(
+  async (): Promise<MenuItemDetail[]> => {
+    const host = await getTenantHost();
+    return fetchWithHost<MenuItemDetail>(
+      "/api/catalog/menu-items/?featured=true",
+      host,
+      "featured menu items",
+    );
+  },
+);
+
+export async function getMenuCategory(
+  slug: string,
+): Promise<MenuCategory | null> {
+  const categories = await getMenuCategories();
+  return categories.find((c) => c.slug === slug) ?? null;
+}
+
+export async function getMenuItemsByCategory(
+  categoryId: number,
+): Promise<MenuItemDetail[]> {
+  const host = await getTenantHost();
+  return fetchWithHost<MenuItemDetail>(
+    `/api/catalog/menu-items/?category=${categoryId}`,
+    host,
+    `menu items(category=${categoryId})`,
+  );
+}
+
+export async function getMenuItem(
+  slug: string,
+): Promise<MenuItemDetail | null> {
+  const host = await getTenantHost();
+  return fetchOneWithHost<MenuItemDetail>(
+    `/api/catalog/menu-items/?slug=${encodeURIComponent(slug)}`,
+    host,
+    `menu item(${slug})`,
+  );
+}

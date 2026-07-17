@@ -30,12 +30,23 @@ export type OrderStatus =
  * the catalog FK and go null once the item is deleted, which is why the order
  * page must render a line without them.
  */
+/** One snapshotted customisation on a purchased menu line (see the API's
+ *  OrderLine.customization). Frozen at checkout so it survives catalog edits. */
+export interface OrderLineCustomization {
+  name: string;
+  quantity: number;
+  unit_price: string;
+  line_upcharge: string;
+  removed: boolean;
+}
+
 export interface OrderLine {
   id: number;
-  kind: "product" | "service";
+  kind: "product" | "service" | "menu_item";
   name: string;
   variant_label: string;
   sku: string;
+  customization: OrderLineCustomization[];
   unit_price: string;
   quantity: number;
   line_total: string;

@@ -9,6 +9,7 @@ from .models import (
     VariantOption, VariantOptionValue,
     ProductVariant, ProductVariantImage,
     ServiceVariant,
+    MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient, RecipeStep,
 )
 
 
@@ -397,4 +398,130 @@ class ServiceVariantAdmin(admin.ModelAdmin):
         cache.delete(f'catalog:service_variants:{obj.service_id}')
         cache.delete(f'catalog:service:{obj.service_id}')
         _invalidate_pattern('catalog:services:*')
+        super().delete_model(request, obj)
+
+
+# ---------------------------------------------------------------------------
+# Menu (food) admins
+# ---------------------------------------------------------------------------
+
+class MenuItemImageInline(admin.TabularInline):
+    model = MenuItemImage
+    extra = 0
+    fields = ('image', 'name', 'sort_order', 'enabled')
+    readonly_fields = ('created', 'modified')
+
+
+class MenuItemIngredientInline(admin.TabularInline):
+    model = MenuItemIngredient
+    extra = 0
+    fields = (
+        'name', 'en_name', 'quantity', 'unit', 'price',
+        'is_default', 'is_removable', 'max_quantity', 'sort_order', 'enabled',
+    )
+
+
+class RecipeStepInline(admin.StackedInline):
+    model = RecipeStep
+    extra = 0
+    fields = (('step_number', 'sort_order'), 'instruction', 'en_instruction', 'image')
+
+
+@admin.register(MenuCategory)
+class MenuCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'system', 'parent', 'enabled', 'modified')
+    list_filter = ('enabled', 'system')
+    search_fields = ('name', 'en_name', 'slug')
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ('created', 'modified', 'version')
+
+    fieldsets = (
+        ('Identity', {
+            'fields': ('system', 'parent', 'enabled', 'version', 'created', 'modified'),
+        }),
+        ('Content (ES)', {
+            'fields': ('name', 'slug', 'description'),
+        }),
+        ('Content (EN)', {
+            'fields': ('en_name', 'en_description'),
+            'classes': ('collapse',),
+        }),
+        ('Media', {
+            'fields': ('image', 'fit', 'background_color', 'href'),
+        }),
+    )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        cache.delete(f'catalog:menu_category:{obj.pk}')
+        _invalidate_pattern('catalog:menu_categories:*')
+
+    def delete_model(self, request, obj):
+        cache.delete(f'catalog:menu_category:{obj.pk}')
+        _invalidate_pattern('catalog:menu_categories:*')
+        super().delete_model(request, obj)
+
+
+@admin.register(MenuItem)
+class MenuItemAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'category', 'brand', 'price', 'currency', 'is_available', 'is_featured', 'is_ai_generated', 'is_verified', 'enabled', 'modified')
+    list_filter = ('enabled', 'is_available', 'is_featured', 'is_organic', 'is_vegetarian', 'is_vegan', 'is_gluten_free', 'is_ai_generated', 'is_verified', 'currency', 'system', 'category', 'brand')
+    search_fields = ('name', 'en_name', 'slug', 'sku')
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ('created', 'modified', 'version')
+    inlines = [MenuItemImageInline, MenuItemIngredientInline, RecipeStepInline]
+
+    fieldsets = (
+        ('Identity', {
+            'fields': ('system', 'category', 'brand', 'enabled', 'is_available', 'is_featured', 'is_ai_generated', 'is_verified', 'version', 'created', 'modified'),
+        }),
+        ('Content (ES)', {
+            'fields': ('name', 'slug', 'description', 'short_description', 'image', 'fit', 'background_color', 'href', 'video_link'),
+        }),
+        ('Content (EN)', {
+            'fields': ('en_name', 'en_description', 'en_short_description'),
+            'classes': ('collapse',),
+        }),
+        ('Pricing', {
+            'fields': ('price', 'compare_price', 'cost_price', 'currency', 'sku'),
+        }),
+        ('Dietary & Serving', {
+            'fields': ('calories', 'spice_level', 'servings', 'is_organic', 'is_vegetarian', 'is_vegan', 'is_gluten_free', 'allergens'),
+        }),
+        ('Recipe (internal)', {
+            'fields': ('prep_time_minutes', 'cook_time_minutes', 'recipe_notes'),
+            'classes': ('collapse',),
+            'description': 'Kitchen prep details. Not exposed on the public API.',
+        }),
+    )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        cache.delete(f'catalog:menu_item:{obj.pk}')
+        _invalidate_pattern('catalog:menu_items:*')
+
+    def delete_model(self, request, obj):
+        cache.delete(f'catalog:menu_item:{obj.pk}')
+        cache.delete(f'catalog:menu_item_ingredients:{obj.pk}')
+        _invalidate_pattern('catalog:menu_items:*')
+        super().delete_model(request, obj)
+
+
+@admin.register(MenuItemIngredient)
+class MenuItemIngredientAdmin(admin.ModelAdmin):
+    list_display = ('name', 'menu_item', 'price', 'is_default', 'is_removable', 'max_quantity', 'sort_order', 'enabled')
+    list_filter = ('enabled', 'is_default', 'is_removable', 'menu_item__system')
+    search_fields = ('name', 'en_name', 'menu_item__name')
+    readonly_fields = ('created', 'modified', 'version')
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        cache.delete(f'catalog:menu_item_ingredients:{obj.menu_item_id}')
+        cache.delete(f'catalog:menu_item:{obj.menu_item_id}')
+        _invalidate_pattern('catalog:menu_items:*')
+
+    def delete_model(self, request, obj):
+        cache.delete(f'catalog:menu_item_ingredients:{obj.menu_item_id}')
+        cache.delete(f'catalog:menu_item:{obj.menu_item_id}')
+        _invalidate_pattern('catalog:menu_items:*')
         super().delete_model(request, obj)

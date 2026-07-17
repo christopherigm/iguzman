@@ -797,6 +797,8 @@ class SlugCheckView(APIView):
         "service": ("catalog", "Service"),
         "service-category": ("catalog", "ServiceCategory"),
         "variant-option": ("catalog", "VariantOption"),
+        "menu-item": ("catalog", "MenuItem"),
+        "menu-category": ("catalog", "MenuCategory"),
     }
 
     def get(self, request):

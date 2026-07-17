@@ -23,6 +23,15 @@ from .views import (
     ProductVariantImageDetailView,
     ServiceVariantListCreateView,
     ServiceVariantDetailView,
+    MenuCategoryListCreateView,
+    MenuCategoryDetailView,
+    MenuItemListCreateView,
+    MenuItemDetailView,
+    MenuItemImageListCreateView,
+    MenuItemImageDetailView,
+    MenuItemIngredientListCreateView,
+    MenuItemIngredientDetailView,
+    MenuItemRecipeView,
 )
 
 urlpatterns = [
@@ -65,4 +74,23 @@ urlpatterns = [
     path('catalog/variant-options/<int:pk>/', VariantOptionDetailView.as_view(), name='variant-option-detail'),
     path('catalog/variant-options/<int:pk>/values/', VariantOptionValueListCreateView.as_view(), name='variant-option-value-list'),
     path('catalog/variant-options/<int:pk>/values/<int:val_pk>/', VariantOptionValueDetailView.as_view(), name='variant-option-value-detail'),
+
+    # Menu categories
+    path('catalog/menu-categories/', MenuCategoryListCreateView.as_view(), name='menu-category-list'),
+    path('catalog/menu-categories/<int:pk>/', MenuCategoryDetailView.as_view(), name='menu-category-detail'),
+
+    # Menu items
+    path('catalog/menu-items/', MenuItemListCreateView.as_view(), name='menu-item-list'),
+    path('catalog/menu-items/<int:pk>/', MenuItemDetailView.as_view(), name='menu-item-detail'),
+
+    # Menu item images
+    path('catalog/menu-items/<int:pk>/images/', MenuItemImageListCreateView.as_view(), name='menu-item-image-list'),
+    path('catalog/menu-items/<int:pk>/images/<int:img_pk>/', MenuItemImageDetailView.as_view(), name='menu-item-image-detail'),
+
+    # Menu item ingredients (priced customisation)
+    path('catalog/menu-items/<int:pk>/ingredients/', MenuItemIngredientListCreateView.as_view(), name='menu-item-ingredient-list'),
+    path('catalog/menu-items/<int:pk>/ingredients/<int:ing_pk>/', MenuItemIngredientDetailView.as_view(), name='menu-item-ingredient-detail'),
+
+    # Menu item recipe (internal, admin only)
+    path('catalog/menu-items/<int:pk>/recipe/', MenuItemRecipeView.as_view(), name='menu-item-recipe'),
 ]

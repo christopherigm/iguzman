@@ -20,6 +20,7 @@ interface CartLineProps {
   locale: string;
   productLabel: string;
   serviceLabel: string;
+  menuLabel: string;
 }
 
 const MAX_QUANTITY = 99;
@@ -39,6 +40,7 @@ export function CartLine({
   locale,
   productLabel,
   serviceLabel,
+  menuLabel,
 }: CartLineProps) {
   const t = useTranslations("Cart");
   const router = useRouter();
@@ -55,7 +57,25 @@ export function CartLine({
     "";
 
   const href =
-    kind === "product" ? `/products/${item.slug}` : `/services/${item.slug}`;
+    kind === "product"
+      ? `/products/${item.slug}`
+      : kind === "service"
+        ? `/services/${item.slug}`
+        : `/menu/${item.slug}`;
+
+  const kindLabel =
+    kind === "product"
+      ? productLabel
+      : kind === "service"
+        ? serviceLabel
+        : menuLabel;
+
+  const kindColor =
+    kind === "product"
+      ? "rgb(34, 181, 32)"
+      : kind === "service"
+        ? "rgba(99,102,241,0.8)"
+        : "rgba(234,88,12,0.85)";
 
   const image = line.variant?.effective_image ?? item.image;
 
@@ -181,14 +201,10 @@ export function CartLine({
                 <Badge
                   variant="filled"
                   size="sm"
-                  color={
-                    kind === "product"
-                      ? "rgb(34, 181, 32)"
-                      : "rgba(99,102,241,0.8)"
-                  }
+                  color={kindColor}
                   textColor="#fff"
                 >
-                  {kind === "product" ? productLabel : serviceLabel}
+                  {kindLabel}
                 </Badge>
                 {!line.in_stock && (
                   <Badge
@@ -210,6 +226,30 @@ export function CartLine({
                 >
                   {variantLabel}
                 </Typography>
+              )}
+
+              {line.customization.length > 0 && (
+                <Box flexDirection="column" gap={2}>
+                  {line.customization.map((row) => {
+                    const rowName =
+                      (locale === "en" ? row.en_name : row.name) ?? row.name;
+                    const upcharge = parseFloat(row.line_upcharge);
+                    return (
+                      <Typography
+                        key={row.ingredient}
+                        variant="caption"
+                        margin={0}
+                        color="color-mix(in srgb, var(--foreground) 60%, transparent)"
+                      >
+                        {row.removed
+                          ? `− ${rowName}`
+                          : `${row.quantity}× ${rowName}`}
+                        {upcharge > 0 &&
+                          ` (+${formatPrice(row.line_upcharge, line.currency)})`}
+                      </Typography>
+                    );
+                  })}
+                </Box>
               )}
             </Box>
 

@@ -12,7 +12,7 @@ def resolve_line_image(obj, request=None):
     gallery still shows. Read through the FK, so it goes null once the catalog
     item is deleted. Shared by the line serializer and the history-list preview.
     """
-    target = obj.product or obj.service
+    target = obj.product or obj.service or obj.menu_item
     variant = obj.product_variant or obj.service_variant
     source = None
     if variant is not None and variant.image:
@@ -55,7 +55,7 @@ class OrderLineSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderLine
         fields = [
-            "id", "kind", "name", "variant_label", "sku",
+            "id", "kind", "name", "variant_label", "sku", "customization",
             "unit_price", "quantity", "line_total", "currency",
             "image", "item_id", "item_slug",
         ]
@@ -69,11 +69,11 @@ class OrderLineSerializer(serializers.ModelSerializer):
 
     def get_item_id(self, obj):
         """The catalog id, so the order page can link back - null once deleted."""
-        target = obj.product or obj.service
+        target = obj.product or obj.service or obj.menu_item
         return target.pk if target else None
 
     def get_item_slug(self, obj):
-        target = obj.product or obj.service
+        target = obj.product or obj.service or obj.menu_item
         return getattr(target, "slug", None) if target else None
 
 

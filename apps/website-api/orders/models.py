@@ -124,6 +124,9 @@ class OrderLine(models.Model):
     service = models.ForeignKey(
         "catalog.Service", null=True, blank=True, on_delete=models.SET_NULL, related_name="order_lines",
     )
+    menu_item = models.ForeignKey(
+        "catalog.MenuItem", null=True, blank=True, on_delete=models.SET_NULL, related_name="order_lines",
+    )
     product_variant = models.ForeignKey(
         "catalog.ProductVariant", null=True, blank=True, on_delete=models.SET_NULL, related_name="order_lines",
     )
@@ -131,13 +134,21 @@ class OrderLine(models.Model):
         "catalog.ServiceVariant", null=True, blank=True, on_delete=models.SET_NULL, related_name="order_lines",
     )
 
-    # `kind` is stored rather than derived from which FK is set, because both may
+    # `kind` is stored rather than derived from which FK is set, because all may
     # be NULL once the catalog item is gone - and a line that can no longer say
-    # whether it sold a product or a service is not much of a record.
-    kind = models.CharField(max_length=8, choices=[("product", "Product"), ("service", "Service")])
+    # whether it sold a product, a service, or a menu item is not much of a record.
+    kind = models.CharField(
+        max_length=9,
+        choices=[("product", "Product"), ("service", "Service"), ("menu_item", "Menu Item")],
+    )
     name = models.CharField(max_length=255)
     variant_label = models.CharField(max_length=255, blank=True, default="")
     sku = models.CharField(max_length=128, blank=True, default="")
+    # A menu line's chosen customisation, snapshotted as a human-readable list of
+    # {"name", "quantity", "unit_price", "line_upcharge", "removed"} at checkout,
+    # so the order still reads back in full after the ingredient rows are gone.
+    # Empty for products, services, and uncustomised menu items.
+    customization = models.JSONField(default=list, blank=True)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
     quantity = models.PositiveIntegerField(default=1)
     line_total = models.DecimalField(max_digits=12, decimal_places=2)

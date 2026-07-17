@@ -20,8 +20,24 @@ import type {
   FeaturedProduct,
   FeaturedService,
   BuyableVariant,
+  MenuItemDetail,
 } from "./catalog";
 import logger from "./logger";
+
+/**
+ * One chosen ingredient on a menu line, resolved server-side to a label and its
+ * up-charge so the cart can render it without re-reading the catalog. `removed`
+ * marks a default ingredient the customer took off.
+ */
+export interface CartCustomizationRow {
+  ingredient: number;
+  name: string;
+  en_name: string | null;
+  quantity: number;
+  unit_price: string;
+  line_upcharge: string;
+  removed: boolean;
+}
 
 /**
  * One line of the cart. `unit_price` and `line_total` are resolved server-side
@@ -33,6 +49,7 @@ export type CartItem = {
   quantity: number;
   created_at: string;
   variant: BuyableVariant | null;
+  customization: CartCustomizationRow[];
   unit_price: string;
   line_total: string;
   currency: string;
@@ -40,6 +57,7 @@ export type CartItem = {
 } & (
   | { kind: "product"; item: FeaturedProduct }
   | { kind: "service"; item: FeaturedService }
+  | { kind: "menu_item"; item: MenuItemDetail }
 );
 
 /** A subtotal, per currency: `Buyable.currency` is per item, so a cart can hold
@@ -66,7 +84,7 @@ export interface Cart {
  */
 export interface CartLineRef {
   line_id: number;
-  kind: "product" | "service";
+  kind: "product" | "service" | "menu_item";
   id: number;
   variant_id: number | null;
 }

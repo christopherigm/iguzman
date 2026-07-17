@@ -31,15 +31,28 @@ export async function OrderLineRow({ line }: OrderLineRowProps) {
     getTranslations("CatalogItems"),
   ]);
 
-  const productLabel = itemT("productLabel");
-  const serviceLabel = itemT("serviceLabel");
+  const kindLabel =
+    line.kind === "product"
+      ? itemT("productLabel")
+      : line.kind === "service"
+        ? itemT("serviceLabel")
+        : itemT("menuLabel");
+
+  const kindColor =
+    line.kind === "product"
+      ? "rgb(34, 181, 32)"
+      : line.kind === "service"
+        ? "rgba(99,102,241,0.8)"
+        : "rgba(234,88,12,0.85)";
 
   const href =
     line.item_slug === null
       ? null
       : line.kind === "product"
         ? `/products/${line.item_slug}`
-        : `/services/${line.item_slug}`;
+        : line.kind === "service"
+          ? `/services/${line.item_slug}`
+          : `/menu/${line.item_slug}`;
 
   const image = line.image ? (
     <Box
@@ -97,14 +110,10 @@ export async function OrderLineRow({ line }: OrderLineRowProps) {
             <Badge
               variant="filled"
               size="sm"
-              color={
-                line.kind === "product"
-                  ? "rgb(34, 181, 32)"
-                  : "rgba(99,102,241,0.8)"
-              }
+              color={kindColor}
               textColor="#fff"
             >
-              {line.kind === "product" ? productLabel : serviceLabel}
+              {kindLabel}
             </Badge>
           </Box>
           {line.variant_label ? (
@@ -116,6 +125,27 @@ export async function OrderLineRow({ line }: OrderLineRowProps) {
               {line.variant_label}
             </Typography>
           ) : null}
+          {line.customization.length > 0 && (
+            <Box flexDirection="column" gap={2}>
+              {line.customization.map((row, idx) => {
+                const upcharge = parseFloat(row.line_upcharge);
+                return (
+                  <Typography
+                    key={idx}
+                    variant="caption"
+                    margin={0}
+                    color="color-mix(in srgb, var(--foreground) 60%, transparent)"
+                  >
+                    {row.removed
+                      ? `− ${row.name}`
+                      : `${row.quantity}× ${row.name}`}
+                    {upcharge > 0 &&
+                      ` (+${formatPrice(row.line_upcharge, line.currency)})`}
+                  </Typography>
+                );
+              })}
+            </Box>
+          )}
           <Typography
             variant="caption"
             margin={0}
@@ -143,17 +173,32 @@ export async function OrderLineRow({ line }: OrderLineRowProps) {
           >
             {formatPrice(line.line_total, line.currency)}
           </Typography>
-          {line.item_id !== null && (
-            // The order page is auth-gated (`getOrder` is scoped to the caller),
-            // so a rendered line always belongs to a signed-in customer.
-            <BuyNowButton
-              kind={line.kind}
-              id={line.item_id}
-              isLoggedIn
-              text={t("buyAgain")}
-              size="sm"
-            />
-          )}
+          {line.item_id !== null &&
+            (line.kind === "menu_item" ? (
+              // A menu item is re-ordered by re-customising it, so link back to
+              // its detail page rather than one-click re-adding the base dish.
+              href && (
+                <Link
+                  href={href}
+                  prefetch
+                  style={{ color: "inherit", textDecoration: "none" }}
+                >
+                  <Badge variant="outlined" size="sm">
+                    {t("buyAgain")}
+                  </Badge>
+                </Link>
+              )
+            ) : (
+              // The order page is auth-gated (`getOrder` is scoped to the caller),
+              // so a rendered line always belongs to a signed-in customer.
+              <BuyNowButton
+                kind={line.kind}
+                id={line.item_id}
+                isLoggedIn
+                text={t("buyAgain")}
+                size="sm"
+              />
+            ))}
         </Box>
       </Box>
     </Card>

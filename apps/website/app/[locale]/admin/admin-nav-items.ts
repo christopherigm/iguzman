@@ -24,6 +24,18 @@ export const ADMIN_NAV_ITEMS = [
     icon: "🏷️",
     descKey: "serviceCategoriesDesc",
   },
+  {
+    key: "menuItems",
+    href: "/admin/menu-items",
+    icon: "🍽️",
+    descKey: "menuItemsDesc",
+  },
+  {
+    key: "menuCategories",
+    href: "/admin/menu-categories",
+    icon: "🏷️",
+    descKey: "menuCategoriesDesc",
+  },
   { key: "brands", href: "/admin/brands", icon: "🎯", descKey: "brandsDesc" },
   {
     key: "variantOptions",

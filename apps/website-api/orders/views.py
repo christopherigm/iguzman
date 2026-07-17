@@ -52,9 +52,40 @@ def _cart_qs(user, system):
     return (
         CartItem.objects
         .filter(user=user, system=system)
-        .select_related('product', 'service', 'product_variant', 'service_variant')
-        .prefetch_related('product_variant__option_values', 'service_variant__option_values')
+        .select_related('product', 'service', 'menu_item', 'product_variant', 'service_variant')
+        .prefetch_related(
+            'product_variant__option_values', 'service_variant__option_values',
+            'menu_item__ingredients',
+        )
     )
+
+
+def _customization_snapshot(item):
+    """A human-readable freeze of a menu line's chosen ingredients.
+
+    Built from the item's normalised selection and today's ingredient rows, so
+    the order records exactly what the kitchen and the customer agreed to - and
+    keeps rendering after the ingredient rows are edited or deleted. Returns []
+    for products, services, and menu items left exactly as listed.
+    """
+    if not item.menu_item_id or not item.customization:
+        return []
+    by_id = {ing.id: ing for ing in item.menu_item.ingredients.all()}
+    snapshot = []
+    for row in item.customization:
+        ingredient = by_id.get(row.get('ingredient'))
+        if ingredient is None:
+            continue
+        qty = int(row.get('quantity', 0))
+        chargeable = max(0, qty - ingredient.included_units)
+        snapshot.append({
+            'name': ingredient.name,
+            'quantity': qty,
+            'unit_price': str(ingredient.price),
+            'line_upcharge': str(ingredient.upcharge_for_quantity(qty)),
+            'removed': ingredient.is_default and qty == 0,
+        })
+    return snapshot
 
 
 def _variant_label(variant) -> str:
@@ -153,11 +184,13 @@ class CheckoutView(APIView):
                     kind=item.kind,
                     product=item.product,
                     service=item.service,
+                    menu_item=item.menu_item,
                     product_variant=item.product_variant,
                     service_variant=item.service_variant,
                     name=item.target.name or "",
                     variant_label=_variant_label(item.variant),
                     sku=getattr(item.variant, "sku", "") or getattr(item.target, "sku", "") or "",
+                    customization=_customization_snapshot(item),
                     unit_price=item.unit_price,
                     quantity=item.quantity,
                     line_total=item.line_total,
@@ -208,13 +241,16 @@ class CheckoutView(APIView):
 
 
 def _in_stock(item) -> bool:
-    """Services are always orderable; only products carry stock.
+    """Services are always orderable; a menu item follows its own availability
+    flag; only products carry stock.
 
     The same rule CartItemSerializer.get_in_stock reports to the cart page, so
     what the customer was shown and what checkout enforces cannot drift.
     """
     if item.service_id:
         return True
+    if item.menu_item_id:
+        return item.menu_item.is_available
     if item.product_variant_id:
         return item.product_variant.in_stock
     return item.product.in_stock
@@ -236,11 +272,11 @@ class OrderListView(APIView):
             Order.objects
             .filter(user=request.user, system=system)
             .prefetch_related(
-                "lines", "lines__product", "lines__service",
+                "lines", "lines__product", "lines__service", "lines__menu_item",
                 "lines__product_variant", "lines__service_variant",
                 # The image preview falls back to the item's gallery when it has
                 # no own `image`; prefetch it so the strip is not an N+1.
-                "lines__product__images", "lines__service__images",
+                "lines__product__images", "lines__service__images", "lines__menu_item__images",
             )
         )
         data = OrderSummarySerializer(orders, many=True, context={"request": request}).data

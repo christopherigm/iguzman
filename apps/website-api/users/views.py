@@ -28,7 +28,9 @@ from webauthn.helpers.structs import (
     UserVerificationRequirement,
 )
 
-from catalog.models import Product, ProductVariant, Service, ServiceVariant
+from catalog.models import (
+    Product, ProductVariant, Service, ServiceVariant, MenuItem, normalize_selection,
+)
 from core.models import System
 from core.permissions import IsSystemAdmin
 from core.tenancy import user_system
@@ -779,11 +781,12 @@ def _cart_qs(request, system):
         CartItem.objects
         .filter(user=request.user, system=system)
         .select_related(
-            'product', 'service', 'product_variant', 'service_variant',
+            'product', 'service', 'menu_item', 'product_variant', 'service_variant',
         )
         .prefetch_related(
             'product__images', 'product__variants',
             'service__images', 'service__variants',
+            'menu_item__images', 'menu_item__ingredients',
             'product_variant__option_values', 'service_variant__option_values',
         )
     )
@@ -798,12 +801,13 @@ def _resolve_target(system, kind, target_id, variant_id):
     cannot be attached to this line. That second check is the one the database
     cannot make for us - a CheckConstraint sees only one row's columns.
     """
-    model = Product if kind == "product" else Service
+    model = {"product": Product, "service": Service, "menu_item": MenuItem}[kind]
     target = model.objects.filter(pk=target_id, system=system, enabled=True).first()
     if target is None:
         return None, None, "Not found."
 
-    if variant_id is None:
+    # Menu items customise through ingredients, not variants - never a variant.
+    if kind == "menu_item" or variant_id is None:
         return target, None, None
 
     variant_model = ProductVariant if kind == "product" else ServiceVariant
@@ -876,6 +880,9 @@ class CartListView(APIView):
         if error:
             return Response({"detail": error}, status=status.HTTP_404_NOT_FOUND)
 
+        if kind == "menu_item":
+            return self._add_menu_item(request, system, target, serializer.validated_data, quantity)
+
         variant_field = f"{kind}_variant"
         # Adding what is already in the cart raises the quantity instead of
         # creating a second identical line - the uniqueness constraints would
@@ -894,6 +901,46 @@ class CartListView(APIView):
 
         invalidate_cart(request.user.id, system.id if system else 0)
 
+        return Response(
+            CartItemSerializer(item, context={"request": request}).data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+    def _add_menu_item(self, request, system, menu_item, data, quantity):
+        """Add (or increment) a menu line, where the ingredient selection is part
+        of the line's identity.
+
+        A database unique constraint cannot express "same selection" over a JSON
+        column, so the merge is done here: normalise the chosen ingredients, then
+        look for an existing line of this dish whose stored selection matches and
+        bump its quantity, otherwise create a new line. Locked against the same
+        double-click race the product path guards.
+        """
+        ingredients = list(menu_item.ingredients.filter(enabled=True))
+        selection = normalize_selection(data.get("customization", []), ingredients)
+
+        with transaction.atomic():
+            existing = (
+                CartItem.objects
+                .select_for_update()
+                .filter(user=request.user, system=system, menu_item=menu_item)
+            )
+            match = next((row for row in existing if row.customization == selection), None)
+            if match is not None:
+                match.quantity = min(match.quantity + quantity, 99)
+                match.save(update_fields=["quantity", "updated_at"])
+                item, created = match, False
+            else:
+                item = CartItem.objects.create(
+                    user=request.user,
+                    system=system,
+                    menu_item=menu_item,
+                    customization=selection,
+                    quantity=quantity,
+                )
+                created = True
+
+        invalidate_cart(request.user.id, system.id if system else 0)
         return Response(
             CartItemSerializer(item, context={"request": request}).data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
@@ -923,8 +970,8 @@ class CartItemDetailView(APIView):
         return CartItem.objects.filter(
             pk=pk, user=request.user, system=_user_system(request),
         ).select_related(
-            'product', 'service', 'product_variant', 'service_variant',
-        ).first()
+            'product', 'service', 'menu_item', 'product_variant', 'service_variant',
+        ).prefetch_related('menu_item__ingredients').first()
 
     def patch(self, request, pk):
         serializer = CartItemUpdateSerializer(data=request.data)
@@ -1001,17 +1048,27 @@ class CartIdsView(APIView):
             return Response(cached)
 
         rows = CartItem.objects.filter(user=request.user, system=system).values_list(
-            "id", "product_id", "service_id", "product_variant_id", "service_variant_id",
+            "id", "product_id", "service_id", "menu_item_id",
+            "product_variant_id", "service_variant_id",
         )
+
+        def _kind(product_id, service_id):
+            if product_id:
+                return "product"
+            if service_id:
+                return "service"
+            return "menu_item"
+
         data = {
             "lines": [
                 {
                     "line_id": line_id,
-                    "kind": "product" if product_id else "service",
-                    "id": product_id or service_id,
+                    "kind": _kind(product_id, service_id),
+                    "id": product_id or service_id or menu_item_id,
                     "variant_id": product_variant_id or service_variant_id,
                 }
-                for line_id, product_id, service_id, product_variant_id, service_variant_id in rows
+                for line_id, product_id, service_id, menu_item_id,
+                product_variant_id, service_variant_id in rows
             ],
         }
         cache.set(cache_key, data, CART_CACHE_TTL)
