@@ -9,6 +9,8 @@ django-redis==5.4.0
 django-colorfield==0.11.0
 django-cors-headers==4.9.0
 webauthn==2.7.1
+cryptography==46.0.6
+stripe==14.2.0
 groq==1.4.0
 openai>=1.0.0
 python-dotenv==1.1.1

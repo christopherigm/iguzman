@@ -46,6 +46,38 @@ and `@repo/auth/password-requirements`; the `PasswordPolicy` messages are shared
 `mapPasswordErrors`. Never add `validators=[validate_password]` in `website-api` -
 use `run_password_validators`.
 
+## Checkout - the Stripe keys are not in this app
+
+Cart checkout posts to `/api/auth/checkout`, a thin `apiFetch` pass-through to
+website-api's `/api/orders/checkout/`, which returns a hosted Stripe Checkout URL
+to redirect to. **The same split as the LLM calls, for the same reason**: this app
+is multi-tenant, each `System` connects its own Stripe account, and those keys
+live encrypted in Django. There is no `stripe` dependency here and no
+`STRIPE_SECRET_KEY` - never add one.
+
+Unlike `video-downloader/components/credits-page.tsx` (the reference for this
+flow), which builds the Stripe session in a Next route from one global env key,
+nothing here may touch a Stripe credential.
+
+- **The request body carries only a locale.** Items, quantities, prices and
+  currency are read from the cart server-side. A client that could name a price
+  could name its own.
+- **`/orders/[id]` is the confirmation page and the permanent record.** The
+  `session_id` Stripe appends is not proof of payment - only the signed webhook
+  marks an order paid. `order-status-banner.tsx` refreshes for a few seconds when
+  it lands on a still-`pending` order, then says "confirming", never "failed".
+- **`getOrder` is not `cache()`d** across requests - a cached `pending` would
+  outlive the webhook it is waiting for. `getOrders` (the history list) is.
+- **The cart button's disabled state is decided server-side** (`stripe_configured`
+  from `getSystem()`, plus `totals.length > 1` for a mixed-currency cart) so it
+  renders right in the first HTML. Django re-checks both; this only drives what
+  the customer sees.
+- **In the admin CMS, a blank Stripe secret field means "leave unchanged".** The
+  API never returns those keys, so the inputs always load blank - submitting `""`
+  would wipe a tenant's credentials the first time anyone edited the slogan.
+  `admin/system/page.tsx` deletes empty secret keys from the payload; keep that if
+  you touch the form.
+
 ## Per-Customer Sites (domain-driven frontend)
 
 This app is **one Next.js app, many customer sites**. Each customer gets a

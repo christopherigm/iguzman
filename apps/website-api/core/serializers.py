@@ -423,9 +423,18 @@ class SystemSerializer(serializers.ModelSerializer):
     img_hero = serializers.SerializerMethodField()
     product_count = serializers.SerializerMethodField()
     service_count = serializers.SerializerMethodField()
+    stripe_configured = serializers.BooleanField(read_only=True)
+    stripe_webhook_url = serializers.SerializerMethodField()
 
     class Meta:
         model = System
+        # GET /api/system/ is AllowAny and feeds every public page, so nothing
+        # secret may appear here. `stripe_enabled` / `stripe_configured` are safe
+        # - they say only whether this site takes payments, which the checkout
+        # button announces anyway - while the keys themselves have no read path
+        # at all. Never add stripe_secret_key_encrypted or
+        # stripe_webhook_secret_encrypted to this list; a public endpoint would
+        # hand every tenant's ciphertext to anyone who asked.
         fields = [
             "id", "enabled", "created", "modified", "version",
             "site_name", "site_description", "en_site_description", "host",
@@ -443,6 +452,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "privacy_policy", "en_privacy_policy",
             "terms_and_conditions", "en_terms_and_conditions",
             "user_data", "en_user_data",
+            "stripe_enabled", "stripe_configured", "stripe_webhook_url",
             "product_count", "service_count",
         ]
 
@@ -466,6 +476,27 @@ class SystemSerializer(serializers.ModelSerializer):
     def get_img_about(self, obj):        return self._image_url(obj, "img_about")
     def get_img_hero(self, obj):         return self._image_url(obj, "img_hero")
 
+    def get_stripe_webhook_url(self, obj):
+        """The endpoint this tenant registers in their own Stripe dashboard.
+
+        Built here because it is the API's own address, and the CMS that displays
+        it is a browser component: `API_URL` is server-only in the website app, so
+        the frontend genuinely cannot construct this. Not a secret - it is a
+        public endpoint, and the signing secret is what protects it.
+
+        That applies to `stripe_webhook_token` in the path too: it routes an event
+        to the right tenant, it does not authenticate it. Appearing on this
+        AllowAny endpoint is therefore harmless - an unsigned POST to a known
+        token is still rejected - and it cannot be hidden per-user anyway, since
+        this response is cached by host/pk and would be served to whoever asked
+        second. Never treat the token as a credential.
+        """
+        from django.urls import reverse
+
+        path = reverse("stripe-webhook", args=[obj.stripe_webhook_token])
+        request = self.context.get("request")
+        return request.build_absolute_uri(path) if request else path
+
     def get_product_count(self, obj):
         from catalog.models import Product
         return Product.objects.filter(system=obj, enabled=True).count()
@@ -486,7 +517,16 @@ _TEXT_FIELDS = [
     "terms_and_conditions", "en_terms_and_conditions",
     "user_data", "en_user_data",
     "enabled",
+    "stripe_enabled", "stripe_publishable_key",
 ]
+
+# Written through System.set_stripe_*() rather than setattr, because the column
+# they land in holds ciphertext. Kept out of _TEXT_FIELDS so a future edit to
+# that list cannot accidentally start writing a plaintext secret to the DB.
+_STRIPE_SECRET_FIELDS = {
+    "stripe_secret_key": "set_stripe_secret_key",
+    "stripe_webhook_secret": "set_stripe_webhook_secret",
+}
 
 
 class SystemWriteSerializer(serializers.Serializer):
@@ -522,6 +562,16 @@ class SystemWriteSerializer(serializers.Serializer):
     user_data    = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     en_user_data = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
+    # Stripe. The two secrets are write_only and have no read counterpart
+    # anywhere: once submitted they can be replaced but never fetched back, so a
+    # compromised admin session cannot exfiltrate a tenant's Stripe keys. Send ""
+    # to clear one. `stripe_configured` on the read serializer is how the CMS
+    # tells whether they are set without seeing them.
+    stripe_enabled         = serializers.BooleanField(required=False)
+    stripe_publishable_key = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    stripe_secret_key      = serializers.CharField(max_length=255, required=False, allow_blank=True, write_only=True)
+    stripe_webhook_secret  = serializers.CharField(max_length=255, required=False, allow_blank=True, write_only=True)
+
     # Base64 image fields
     img_logo          = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     img_logo_hero     = serializers.CharField(required=False, allow_null=True, allow_blank=True)
@@ -551,6 +601,13 @@ class SystemWriteSerializer(serializers.Serializer):
             if field_name in self.validated_data:
                 setattr(instance, field_name, self.validated_data[field_name])
                 update_fields.append(field_name)
+
+        # Stripe secrets - encrypted on the way in, so they set the *_encrypted
+        # column rather than the name the API accepts.
+        for field_name, setter in _STRIPE_SECRET_FIELDS.items():
+            if field_name in self.validated_data:
+                getattr(instance, setter)(self.validated_data[field_name])
+                update_fields.append(f"{field_name}_encrypted")
 
         # Image fields
         for field_name, cfg in _IMAGE_FIELDS.items():

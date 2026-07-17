@@ -1,10 +1,11 @@
 import { getTranslations } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
-import { Button } from "@repo/ui/core-elements/button";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import type { CartTotal } from "@/lib/cart";
+import { getSystem } from "@/lib/system";
 import { formatPrice } from "@/lib/price";
+import { CheckoutButton } from "./checkout-button";
 
 interface CartSummaryProps {
   totals: CartTotal[];
@@ -20,11 +21,21 @@ interface CartSummaryProps {
  * one, and a single number across them would be arithmetic on incomparable
  * units. Most carts have exactly one row here.
  *
- * The CTA is deliberately inert: checkout is not built yet, so the button holds
- * its place and says so rather than leading anywhere.
+ * That grouping is also what decides whether checkout can run at all: a Stripe
+ * Checkout Session is single-currency, so more than one row here has no single
+ * total to charge. The server settles that (and whether this tenant has Stripe
+ * connected) before rendering, so the button never flickers from enabled to
+ * disabled after hydration. Django re-checks both - this only drives what the
+ * customer sees.
  */
 export async function CartSummary({ totals, count }: CartSummaryProps) {
-  const t = await getTranslations("Cart");
+  const [t, system] = await Promise.all([getTranslations("Cart"), getSystem()]);
+
+  const blockedReason = !system?.stripe_configured
+    ? ("unavailable" as const)
+    : totals.length > 1
+      ? ("mixedCurrency" as const)
+      : null;
 
   return (
     <Card
@@ -81,22 +92,7 @@ export async function CartSummary({ totals, count }: CartSummaryProps) {
         {t("taxesNote")}
       </Typography>
 
-      <Button
-        text={t("checkout")}
-        kind="primary"
-        size="lg"
-        width="100%"
-        disabled
-      />
-
-      <Typography
-        variant="caption"
-        margin={0}
-        color="color-mix(in srgb, var(--foreground) 55%, transparent)"
-        styles={{ textAlign: "center" }}
-      >
-        {t("checkoutComingSoon")}
-      </Typography>
+      <CheckoutButton blockedReason={blockedReason} />
     </Card>
   );
 }

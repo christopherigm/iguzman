@@ -58,8 +58,14 @@ export function createAuthProxy({
     const res = NextResponse.redirect(
       new URL(`/${localeOf(request.nextUrl.pathname)}${authPath}`, request.url),
     );
-    res.cookies.delete(ACCESS_COOKIE);
-    res.cookies.delete(REFRESH_COOKIE);
+    // Only clear cookies we were actually shown. Set-Cookie is not subject to
+    // SameSite, so a request that merely could not send its cookies would
+    // otherwise have them deleted here - turning one unreadable request into a
+    // real logout, with the tokens still perfectly valid.
+    if (request.cookies.has(ACCESS_COOKIE) || request.cookies.has(REFRESH_COOKIE)) {
+      res.cookies.delete(ACCESS_COOKIE);
+      res.cookies.delete(REFRESH_COOKIE);
+    }
     return res;
   };
 

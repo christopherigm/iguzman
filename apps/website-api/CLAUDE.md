@@ -105,6 +105,60 @@ Driven by `pnpm publish-site <host>` (`cli/website/website.sh publish`). `seed_s
 imports `SYSTEM_TEXT_FIELDS` from `site_payload` so seeding and publishing agree
 on which System fields are copyable content.
 
+## Payments - per-tenant Stripe, and the rules around it
+
+This is a **multi-tenant** payments stack: every `System` connects its **own
+Stripe account**. There is deliberately **no project-wide `STRIPE_SECRET_KEY`** -
+if you find yourself reaching for one, the design has been misread.
+
+- **Credentials live on `System`, encrypted at rest.** `stripe_secret_key` and
+  `stripe_webhook_secret` are Fernet ciphertext (`core/crypto.py`, ported from
+  `cinelog-api/core/crypto.py`); `set_stripe_*()` encrypts, the same-named
+  property decrypts. `STRIPE_CREDENTIALS_ENCRYPTION_KEY` is the only global knob,
+  and **rotating it (or `SECRET_KEY`, which it falls back to) orphans every
+  stored credential** and silently breaks checkout for every tenant.
+- **The secrets have no read path, anywhere.** They are `write_only` on
+  `SystemWriteSerializer` and `exclude`d from `SystemAdmin`. `GET /api/system/`
+  is `AllowAny` and feeds every public page, so **never** add
+  `stripe_secret_key_encrypted` / `stripe_webhook_secret_encrypted` to
+  `SystemSerializer.fields` - it would hand every tenant's ciphertext to anyone
+  who asked. `stripe_configured` is the only thing the API will say about them.
+- **The webhook is the only thing that may mark an order paid.** The browser's
+  return to the success URL is a plain redirect - forgeable, replayable, and
+  often never followed. `StripeWebhookView` must stay idempotent: Stripe retries
+  on any non-2xx and can double-deliver.
+- **The webhook URL is per system**
+  (`/api/orders/stripe/webhook/<stripe_webhook_token>/`), because each tenant's
+  account signs with its own secret. A single shared endpoint would have to try
+  every tenant's secret against every event and could not tell a forgery from a
+  mis-routed delivery. The order lookup is scoped to the verified `System` for
+  the same reason.
+- **That path uses `System.stripe_webhook_token`, not the pk, and not `host`.**
+  Not the pk because the tenant is shown this URL in the CMS to paste into
+  Stripe, and the pk would hand it every other tenant's addressable id. Not
+  `host` because host is editable on that same CMS page: a tenant renaming its
+  domain would silently unhook its endpoint, and payments would stop being
+  confirmed with nothing in the logs to say why. The token is opaque, immutable
+  and unique - but it only **routes**. It is not a credential (it appears on the
+  AllowAny `GET /api/system/`); the signature is what authenticates.
+- **Return URLs come from `System.host`, never from a request header.**
+  `X-Website-Host` is client-settable; using it for `success_url` would make
+  checkout an open redirect on the tenant's own domain.
+- **`OrderLine` snapshots; `CartItem` deliberately does not.** A cart reflects
+  today's catalog; an order must reflect what was charged, forever. Never
+  "simplify" an order line to read its price back through the FK - those FKs are
+  `SET_NULL` provenance and go null when the catalog item is deleted.
+- **Amounts go to Stripe in minor units** via `to_minor_units()`. CLP is in
+  `CURRENCY_CHOICES` and is zero-decimal: a bare `* 100` overcharges 100-fold.
+- A mixed-currency cart is **refused** (`MIXED_CURRENCY`), not converted - a
+  Checkout Session is single-currency and `Buyable.currency` is per item.
+
+Tests live in `orders/tests.py` and cover the parts that cost real money:
+idempotent redelivery, cross-tenant events, unpaid-but-completed sessions,
+signature rejection, and the snapshot surviving a price change. Run them with
+`REDIS_URL='' python manage.py test orders` (the local `.env` points Redis at the
+cluster).
+
 ## LLM calls - always through `core/services/llm.py`
 
 Every AI call in the website stack runs here, not in the Next.js app. `stream_chat`

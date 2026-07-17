@@ -342,9 +342,77 @@ class System(Common):
     user_data = models.TextField(null=True, blank=True)
     en_user_data = models.TextField(null=True, blank=True)
 
+    # ── Stripe ────────────────────────────────────────────────────────────────
+    # Each System is a separate business and connects its *own* Stripe account,
+    # so there is no project-wide key: the credentials live here, per tenant.
+    # The two secrets are stored as Fernet ciphertext (see core.crypto) because,
+    # unlike a password, we must be able to read them back - one to call Stripe
+    # as this tenant, the other to verify the signature on its webhooks.
+    stripe_enabled = models.BooleanField(
+        default=False,
+        help_text="Whether this site can take payments. Checkout refuses unless this is on AND both Stripe secrets are set.",
+    )
+    # Publishable by design (Stripe intends it to be shipped to browsers), so it
+    # is stored in the clear. Unused by the hosted-Checkout flow; kept because a
+    # tenant pastes it alongside the secret key and Elements would need it.
+    stripe_publishable_key = models.CharField(max_length=255, blank=True, default="")
+    # Fernet ciphertext - decrypted only server-side, never serialized back out.
+    stripe_secret_key_encrypted = models.TextField(blank=True, default="")
+    stripe_webhook_secret_encrypted = models.TextField(blank=True, default="")
+    # Names this tenant in its own Stripe webhook URL, in place of the pk.
+    #
+    # Opaque and immutable, and both halves matter. Opaque, so handing a tenant
+    # the endpoint to paste into their dashboard does not also hand them another
+    # tenant's addressable id. Immutable, so it cannot be `host`: host is
+    # editable on the admin page, and a tenant renaming their domain would
+    # silently unhook the endpoint Stripe delivers to - payments would stop being
+    # confirmed and orders would sit pending forever, with nothing in the logs to
+    # say why (Stripe's retries would 404 against an id nobody looks at).
+    stripe_webhook_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+
     class Meta:
         verbose_name = "System"
         verbose_name_plural = "Systems"
 
     def __str__(self):
         return f"{self.site_name} ({self.host})"
+
+    def set_stripe_secret_key(self, raw_secret: str) -> None:
+        """Encrypt and store the plaintext Stripe secret key ('' clears it)."""
+        from core.crypto import encrypt
+        self.stripe_secret_key_encrypted = encrypt(raw_secret) if raw_secret else ""
+
+    def set_stripe_webhook_secret(self, raw_secret: str) -> None:
+        """Encrypt and store the plaintext webhook signing secret ('' clears it)."""
+        from core.crypto import encrypt
+        self.stripe_webhook_secret_encrypted = encrypt(raw_secret) if raw_secret else ""
+
+    @property
+    def stripe_secret_key(self) -> str:
+        """Decrypt and return the plaintext Stripe secret key (server-side only)."""
+        from core.crypto import decrypt
+        if not self.stripe_secret_key_encrypted:
+            return ""
+        return decrypt(self.stripe_secret_key_encrypted)
+
+    @property
+    def stripe_webhook_secret(self) -> str:
+        """Decrypt and return the plaintext webhook signing secret (server-side only)."""
+        from core.crypto import decrypt
+        if not self.stripe_webhook_secret_encrypted:
+            return ""
+        return decrypt(self.stripe_webhook_secret_encrypted)
+
+    @property
+    def stripe_configured(self) -> bool:
+        """Whether checkout can run: switched on and both secrets present.
+
+        The webhook secret counts because without it a payment can never be
+        confirmed - the order would sit pending forever - so a site missing it is
+        not "partly working", it is broken in a way that takes money first.
+        """
+        return bool(
+            self.stripe_enabled
+            and self.stripe_secret_key_encrypted
+            and self.stripe_webhook_secret_encrypted
+        )

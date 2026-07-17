@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import { type NewImage } from "@/components/admin-image-uploader/admin-image-uploader";
 import { SystemImages, type SystemImageState } from "./system-images";
+import { PaymentsSection } from "./payments-section";
 import {
   LOGO_DERIVED_FIELDS,
   SYSTEM_IMAGE_FIELDS,
@@ -58,7 +59,22 @@ export default function AdminSystemPage() {
     user_data: "",
     en_user_data: "",
     enabled: true,
+    stripe_enabled: false,
+    stripe_publishable_key: "",
+    // Always blank: the API has no read path for these, by design. Blank means
+    // "leave unchanged" - see `stripeConfigured` and handleSubmit.
+    stripe_secret_key: "",
+    stripe_webhook_secret: "",
   });
+
+  /** Whether Stripe keys are already stored, per the API's write-only flag. */
+  const [stripeConfigured, setStripeConfigured] = useState(false);
+  /**
+   * The webhook endpoint this tenant registers in their Stripe dashboard.
+   * Supplied by the API rather than built here: it is the *API's* origin, and
+   * `API_URL` is server-only in this app, so the browser cannot construct it.
+   */
+  const [stripeWebhookUrl, setStripeWebhookUrl] = useState("");
 
   // Individual image fields tracked separately (each is a single base64 upload)
   const [images, setImages] = useState<Record<string, SystemImageState>>(() =>
@@ -119,7 +135,15 @@ export default function AdminSystemPage() {
           user_data: data.user_data ?? "",
           en_user_data: data.en_user_data ?? "",
           enabled: data.enabled ?? true,
+          stripe_enabled: data.stripe_enabled ?? false,
+          stripe_publishable_key: data.stripe_publishable_key ?? "",
+          // Not read from `data`: the API never returns them. They stay blank,
+          // which the submit handler reads as "leave the stored ones alone".
+          stripe_secret_key: "",
+          stripe_webhook_secret: "",
         });
+        setStripeConfigured(Boolean(data.stripe_configured));
+        setStripeWebhookUrl(String(data.stripe_webhook_url ?? ""));
         // Populate existing images
         setImages((prev) => {
           const next = { ...prev };
@@ -203,6 +227,14 @@ export default function AdminSystemPage() {
           if (payload[k] === "") payload[k] = null;
         },
       );
+      // A blank secret means "leave it alone", not "clear it" - the API never
+      // sends these back, so the fields load blank on every visit, and
+      // submitting "" would wipe the tenant's Stripe keys the first time anyone
+      // edited an unrelated field like the slogan. To stop taking payments,
+      // switch `stripe_enabled` off; to rotate a key, paste the new one.
+      (["stripe_secret_key", "stripe_webhook_secret"] as const).forEach((k) => {
+        if (payload[k] === "") delete payload[k];
+      });
       // Attach pending images as base64
       Object.entries(images).forEach(([field, state]) => {
         if (state.pending.length > 0) {
@@ -212,6 +244,17 @@ export default function AdminSystemPage() {
         }
       });
       await updateSystem(systemId, payload);
+      // The pasted secrets are now stored; clear the inputs so they are not left
+      // sitting in the DOM, and re-read the flag that says whether both landed.
+      if (payload.stripe_secret_key || payload.stripe_webhook_secret) {
+        setValues((prev) => ({
+          ...prev,
+          stripe_secret_key: "",
+          stripe_webhook_secret: "",
+        }));
+        const fresh = await getSystem(systemId);
+        setStripeConfigured(Boolean(fresh.stripe_configured));
+      }
       setSuccess(t("saved"));
     } catch {
       setError(t("errorSave"));
@@ -297,6 +340,9 @@ export default function AdminSystemPage() {
     },
     { key: "en_user_data", label: "User Data Policy (EN)", type: "textarea" },
     { key: "enabled", label: t("enabled"), type: "boolean" },
+    // The stripe_* fields are deliberately absent: they live in PaymentsSection,
+    // which owns their heading, the setup steps and the endpoint URL as one
+    // thing. They are still keys in `values`, so handleSubmit is unaffected.
   ];
 
   const handleImageChange = (
@@ -340,6 +386,22 @@ export default function AdminSystemPage() {
         saving={saving}
         error={error}
         success={success}
+        slots={[
+          {
+            // Above the site description: connecting Stripe is setup work a new
+            // tenant does once and needs to find, not something to scroll past
+            // the whole content of the site to reach.
+            beforeKey: "site_description",
+            node: (
+              <PaymentsSection
+                values={values}
+                onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
+                webhookUrl={stripeWebhookUrl}
+                configured={stripeConfigured}
+              />
+            ),
+          },
+        ]}
         imagesSlot={
           <SystemImages
             images={images}

@@ -31,6 +31,7 @@ from webauthn.helpers.structs import (
 from catalog.models import Product, ProductVariant, Service, ServiceVariant
 from core.models import System
 from core.permissions import IsSystemAdmin
+from core.tenancy import user_system
 from .cache import (
     CART_CACHE_TTL,
     FAVORITES_CACHE_TTL,
@@ -654,16 +655,10 @@ class PasskeyCredentialDetailView(APIView):
 
 # ── Favorites ─────────────────────────────────────────────────────────────────
 
-def _user_system(request):
-    """The tenant this user belongs to, or None.
-
-    Mirrors the passkey views: the System is taken from the profile (set at
-    signup), never from anything the browser sends.
-    """
-    try:
-        return request.user.profile.system
-    except Exception:
-        return None
+# The tenant lookup moved to core.tenancy when orders started needing the same
+# answer; aliased rather than renamed because this module calls it in a dozen
+# places and the leading underscore still says "not part of this app's API".
+_user_system = user_system
 
 
 def _favorites_qs(request, system):

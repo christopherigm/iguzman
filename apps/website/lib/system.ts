@@ -45,6 +45,15 @@ export interface System {
   en_terms_and_conditions: string;
   user_data: string;
   en_user_data: string;
+  /** Whether this tenant has switched payments on. */
+  stripe_enabled: boolean;
+  /**
+   * Whether checkout can actually run: `stripe_enabled` *and* both Stripe
+   * secrets present. The keys themselves have no read path - this flag is the
+   * only thing the API will say about them. The cart reads it to decide whether
+   * to offer a checkout button at all.
+   */
+  stripe_configured: boolean;
   product_count: number;
   service_count: number;
 }

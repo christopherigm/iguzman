@@ -9,10 +9,16 @@ export const REFRESH_COOKIE = "refresh_token";
 
 const IS_PROD = process.env.NODE_ENV === "production";
 
+// `lax`, not `strict`. Strict withholds the cookies on a cross-site top-level
+// navigation, which is exactly how a customer comes back from a hosted payment
+// or OAuth page (Stripe Checkout → /orders/<id>): the request would arrive with
+// no cookies, read as logged out, and bounce to /auth. Lax still withholds them
+// on cross-site POST/fetch, which is the CSRF protection that actually matters
+// here - no state-changing GET is authenticated by these cookies alone.
 export const COOKIE_OPTS = {
   httpOnly: true,
   secure: IS_PROD,
-  sameSite: "strict" as const,
+  sameSite: "lax" as const,
   path: "/",
 };
 

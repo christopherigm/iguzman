@@ -119,10 +119,15 @@ class BrandAdmin(admin.ModelAdmin):
 
 @admin.register(System)
 class SystemAdmin(admin.ModelAdmin):
-    list_display = ("site_name", "host", "primary_color", "secondary_color", "enabled", "modified")
-    list_filter = ("enabled",)
+    list_display = ("site_name", "host", "primary_color", "secondary_color", "enabled", "stripe_configured", "modified")
+    list_filter = ("enabled", "stripe_enabled")
     search_fields = ("site_name", "host")
-    readonly_fields = ("created", "modified", "version")
+    readonly_fields = ("created", "modified", "version", "stripe_configured")
+    # The Stripe secrets are never editable or viewable here - the ciphertext
+    # columns are excluded outright, and the plaintext only ever enters through
+    # the CMS's write-only serializer fields. Same stance as cinelog-api's
+    # S3BucketAdmin.
+    exclude = ("stripe_secret_key_encrypted", "stripe_webhook_secret_encrypted")
 
     fieldsets = (
         ("Identity", {
@@ -150,6 +155,18 @@ class SystemAdmin(admin.ModelAdmin):
         }),
         ("Catalog Items Section", {
             "fields": ("catalog_items_bg",),
+        }),
+        ("Payments (Stripe)", {
+            "fields": ("stripe_enabled", "stripe_publishable_key", "stripe_configured"),
+            "description": (
+                "This site's own Stripe account. The secret key and webhook signing "
+                "secret are set from the site's CMS and are encrypted at rest - they "
+                "cannot be read back here or anywhere else. 'Stripe configured' shows "
+                "whether both are present; checkout stays off until they are. The "
+                "site's own webhook endpoint - the one it pastes into its Stripe "
+                "dashboard - is shown to it in the CMS."
+            ),
+            "classes": ("collapse",),
         }),
         ("Content (ES)", {
             "fields": ("about", "mission", "vision"),

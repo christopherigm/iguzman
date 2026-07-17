@@ -35,6 +35,7 @@ import { TvMovieCard } from "@/components/tv-movie-card";
 import { TvPagination, pageFocusKey } from "@/components/tv-pagination";
 import { useT } from "@/i18n/provider";
 import dice from "@/icons/dice.svg";
+import playStream from "@/icons/play-stream.svg";
 import search from "@/icons/search.svg";
 import "./home.css";
 
@@ -53,6 +54,10 @@ const SIGNOUT_BUTTON_KEY = "home-signout-button";
 // than throwing it into the grid, so the user can press Enter repeatedly to keep
 // re-rolling until they like what they see; clearing the shuffle also parks here.
 const SHUFFLE_BUTTON_KEY = "home-shuffle-button";
+// Focus key for the stream button. Like shuffle, it stays mounted in both states
+// (it's a toggle, not a button plus a separate Clear), so focus stays on it
+// across the refetch and the user can press Enter again to clear the filter.
+const STREAM_BUTTON_KEY = "home-stream-button";
 
 // Upper bound for a shuffle seed. The server derives the permutation from
 // `seed mod (2^31 - 1)` and treats 0 as 1, so any value in [1, 2^31 - 2] is a
@@ -142,6 +147,12 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
   const shuffleSeed = searchParams.get("shuffle");
   const shuffleActive = shuffleSeed !== null;
 
+  // Whether the grid is narrowed to titles with a stream (the user's own digital
+  // copy link). In the URL alongside `page`/`genre`/`shuffle` for the same
+  // reason: it survives the round-trip to the movie detail, so coming back shows
+  // the same narrowed grid rather than the whole library.
+  const streamActive = searchParams.get("stream") === "1";
+
   const [movies, setMovies] = useState<Movie[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [status, setStatus] = useState<Status>("loading");
@@ -208,7 +219,7 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
 
   useEffect(() => {
     let active = true;
-    getMovies(page, appliedGenres, shuffleSeed)
+    getMovies(page, appliedGenres, shuffleSeed, streamActive)
       .then((data) => {
         if (!active) return;
         setMovies(data.results);
@@ -227,7 +238,7 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
     return () => {
       active = false;
     };
-  }, [page, appliedGenres, shuffleSeed, onSignOut]);
+  }, [page, appliedGenres, shuffleSeed, streamActive, onSignOut]);
 
   // Load the genre list once for the filter modal. A failed/unauthorized load
   // just leaves the modal empty - the movies fetch above owns sign-out.
@@ -436,6 +447,23 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
     requestGridFocusReset("first");
   }, [setSearchParams, requestGridFocusReset]);
 
+  // Toggle the stream filter on/off. Either way the result re-pages from the top
+  // (the old page number means nothing in a different-sized result). Focus stays
+  // on the button - it survives the re-render in both states - so pressing Enter
+  // again clears the filter, which is the only way back out of it.
+  const toggleStream = useCallback(() => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (params.get("stream") === "1") params.delete("stream");
+        else params.set("stream", "1");
+        params.delete("page");
+        return params;
+      },
+      { replace: true },
+    );
+  }, [setSearchParams]);
+
   // Leave AI mode: drop the snapshot and fall back to the normal library grid,
   // focusing its first card (or the Genres button when empty, via the effect).
   const clearAiSearch = useCallback(() => {
@@ -570,6 +598,18 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
                     {t("clearShuffle")}
                   </TvButton>
                 )}
+                {/* Narrow the grid to titles the user has a stream (digital
+                    copy) for. A toggle: it stays lit while the filter is on and
+                    pressing it again clears it - no separate Clear button, so
+                    focus can stay put across the refetch. Only in normal mode,
+                    like the genre and shuffle controls. */}
+                <TvIconButton
+                  icon={playStream}
+                  ariaLabel={t("streamFilter")}
+                  focusKey={STREAM_BUTTON_KEY}
+                  selected={streamActive}
+                  onPress={toggleStream}
+                />
               </>
             )}
             {(status === "ready" || aiActive) && (
@@ -618,9 +658,11 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
           <TvText variant="body">
             {aiActive
               ? t("aiEmpty")
-              : appliedGenres.length > 0
-                ? t("emptyFiltered")
-                : t("empty")}
+              : streamActive
+                ? t("emptyStream")
+                : appliedGenres.length > 0
+                  ? t("emptyFiltered")
+                  : t("empty")}
           </TvText>
         )}
 

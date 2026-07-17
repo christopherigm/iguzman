@@ -213,7 +213,14 @@ export interface FieldDef {
     | "url"
     | "select"
     | "color"
-    | "slug";
+    | "slug"
+    /**
+     * A write-only secret (an API key). Masked as you type, and - because the
+     * API never sends one back - always loads blank: an empty value means
+     * "leave unchanged", so the form must omit it from the payload rather than
+     * submit "" and wipe the stored secret.
+     */
+    | "password";
   options?: { value: string | number; label: string }[];
   required?: boolean;
   placeholder?: string;
@@ -247,6 +254,16 @@ interface AdminFormProps {
    * are central to the record and shouldn't sit behind a scroll of text fields.
    */
   imagesSlot?: React.ReactNode;
+  /**
+   * Self-contained blocks to render inside the field flow, each immediately
+   * above the row for `beforeKey` and spanning the full grid width.
+   *
+   * For a group of fields that is its own subject (payment credentials, say):
+   * it can own its heading, its instructions and its inputs in one component
+   * and still sit where it belongs among the fields, rather than being exiled
+   * to the bottom with `children`.
+   */
+  slots?: { beforeKey: string; node: React.ReactNode }[];
   children?: React.ReactNode;
 }
 
@@ -265,6 +282,7 @@ export function AdminForm({
   error,
   success,
   imagesSlot,
+  slots,
   children,
 }: AdminFormProps) {
   const t = useTranslations("Admin");
@@ -323,6 +341,12 @@ export function AdminForm({
     const topKeys = new Set(top.map((f) => f.key));
     return [top, fields.filter((f) => !topKeys.has(f.key))];
   }, [fields]);
+
+  // ── Slots, by the field key each renders above ────────────────────────────
+  const slotMap = useMemo(
+    () => new Map((slots ?? []).map((s) => [s.beforeKey, s.node])),
+    [slots],
+  );
 
   // ── Pair map: key → paired key (bidirectional) ────────────────────────────
   const pairMap = useMemo(() => {
@@ -564,6 +588,13 @@ export function AdminForm({
 
             {bodyFields.map((field, index) => (
               <Fragment key={field.key}>
+                {/* ── Slot block, above this field's row ── */}
+                {slotMap.has(field.key) && (
+                  <Box className="af__field--full" flexDirection="column">
+                    {slotMap.get(field.key)}
+                  </Box>
+                )}
+
                 {/* ── Pair group header (shown before the ES field of each pair) ── */}
                 {needsGroupHeader(field) && (
                   <Box
@@ -771,7 +802,9 @@ export function AdminForm({
                             ? "number"
                             : field.type === "url"
                               ? "url"
-                              : "text"
+                              : field.type === "password"
+                                ? "password"
+                                : "text"
                         }
                         multirow={field.type === "textarea"}
                         rows={field.type === "textarea" ? 7 : undefined}

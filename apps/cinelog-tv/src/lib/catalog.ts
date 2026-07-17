@@ -106,11 +106,18 @@ export class NotFoundError extends Error {
  * seed, so page 2 of a shuffle continues page 1 instead of re-drawing the deck.
  * Re-rolling means passing a new seed. Applies on top of `genres` - shuffling a
  * filtered library re-orders only the movies that pass the filter.
+ *
+ * `streamOnly` (the stream button) narrows the page to titles the user has a
+ * digital copy of. It maps to the API's `?media_format=digital`, which filters on
+ * the requesting user's own ownership row having a `digital_copy_url` - the same
+ * per-user signal that gates a card's digital icon - rather than the shared
+ * `formats` list. Combines with `genres` and the shuffle.
  */
 export async function getMovies(
   page = 1,
   genres: string[] = [],
   shuffleSeed: string | null = null,
+  streamOnly = false,
 ): Promise<Paginated<Movie>> {
   const params = new URLSearchParams({
     scope: "library",
@@ -119,6 +126,7 @@ export async function getMovies(
   });
   // `genre` repeats once per selected slug (AND across the m2m on the server).
   for (const slug of genres) params.append("genre", slug);
+  if (streamOnly) params.set("media_format", "digital");
   if (shuffleSeed) {
     params.set("ordering", "random");
     params.set("seed", shuffleSeed);

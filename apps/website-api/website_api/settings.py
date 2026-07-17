@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'core',
     'users',
     'catalog',
+    'orders',
 ]
 
 MIDDLEWARE = [
@@ -282,3 +283,20 @@ OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-instruct')
 
 LLM_REQUEST_TIMEOUT = float(os.environ.get('LLM_REQUEST_TIMEOUT', '20'))
+
+# Stripe
+# ------
+# There is deliberately no STRIPE_SECRET_KEY here: this is a multi-tenant API and
+# every System holds its own Stripe account's keys, encrypted at rest (see
+# core.crypto and core.models.System). The only global knob is the key those
+# ciphertexts are encrypted with.
+#
+# When unset, core.crypto derives one from SECRET_KEY. Set a dedicated key in any
+# environment where SECRET_KEY may rotate - rotating it would orphan every stored
+# Stripe credential and silently break checkout for every tenant.
+STRIPE_CREDENTIALS_ENCRYPTION_KEY = os.environ.get('STRIPE_CREDENTIALS_ENCRYPTION_KEY', '')
+
+# How long a Checkout Session stays payable (seconds). Stripe's own floor is 30
+# minutes; a pending Order whose session lapses is left for the customer to
+# re-checkout rather than being resurrected.
+STRIPE_CHECKOUT_SESSION_TTL = int(os.environ.get('STRIPE_CHECKOUT_SESSION_TTL', 30 * 60))
