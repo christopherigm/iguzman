@@ -38,6 +38,10 @@ from django.db import transaction
 from django.utils.text import slugify
 
 from catalog.models import (
+    MenuCategory,
+    MenuItem,
+    MenuItemImage,
+    MenuItemIngredient,
     Product,
     ProductCategory,
     ProductImage,
@@ -141,6 +145,7 @@ class Command(BaseCommand):
             self._seed_highlights(system, brief.get("highlights") or [])
             self._seed_products(system, brief.get("product_categories") or [])
             self._seed_services(system, brief.get("service_categories") or [])
+            self._seed_menu(system, brief.get("menu_categories") or [])
 
         self.stdout.write(
             self.style.SUCCESS(
@@ -259,6 +264,8 @@ class Command(BaseCommand):
             "product_categories": system.product_categories.all().delete()[0],
             "services": Service.objects.filter(system=system).delete()[0],
             "service_categories": system.service_categories.all().delete()[0],
+            "menu_items": MenuItem.objects.filter(system=system).delete()[0],
+            "menu_categories": system.menu_categories.all().delete()[0],
         }
         self.stdout.write(f"  Reset prior content: {counts}")
 
@@ -416,3 +423,72 @@ class Command(BaseCommand):
                     img.save()
         if categories:
             self.stdout.write(f"  Seeded {n_cat} service categories / {n_item} services")
+
+    # ------------------------------------------------------------------ #
+    # Catalog - menu (food)
+    # ------------------------------------------------------------------ #
+
+    def _seed_menu(self, system: System, categories: list) -> None:
+        n_cat = n_item = n_ing = 0
+        for ci, c in enumerate(categories):
+            cat = MenuCategory(
+                system=system,
+                name=c.get("name"),
+                en_name=c.get("en_name"),
+                description=c.get("description"),
+                short_description=c.get("short_description"),
+                slug=self._uslug(c.get("slug") or c.get("name") or f"category-{ci + 1}", f"mcat-{ci + 1}"),
+            )
+            self._attach(cat, "image", c.get("image"))
+            cat.save()
+            n_cat += 1
+            for mi, m in enumerate(c.get("menu_items") or []):
+                item = MenuItem(
+                    system=system,
+                    category=cat,
+                    name=m.get("name"),
+                    en_name=m.get("en_name"),
+                    description=m.get("description"),
+                    en_description=m.get("en_description"),
+                    short_description=m.get("short_description"),
+                    en_short_description=m.get("en_short_description"),
+                    href=self._href(m.get("href")),
+                    price=self._price(m.get("price")),
+                    compare_price=self._price(m["compare_price"]) if m.get("compare_price") else None,
+                    currency=m.get("currency") or "USD",
+                    is_featured=m.get("is_featured", True),
+                    is_available=m.get("is_available", True),
+                    calories=m.get("calories"),
+                    spice_level=m.get("spice_level"),
+                    is_organic=m.get("is_organic", False),
+                    is_vegetarian=m.get("is_vegetarian", False),
+                    is_vegan=m.get("is_vegan", False),
+                    is_gluten_free=m.get("is_gluten_free", False),
+                    allergens=m.get("allergens"),
+                    slug=self._uslug(m.get("slug") or m.get("name") or f"menu-item-{ci}-{mi}", f"menu-item-{ci}-{mi}"),
+                )
+                self._attach(item, "image", m.get("image"))
+                item.save()
+                n_item += 1
+                for gi, g in enumerate(m.get("gallery") or []):
+                    img = MenuItemImage(menu_item=item, sort_order=gi)
+                    self._attach(img, "image", g)
+                    img.save()
+                for ii, ing in enumerate(m.get("ingredients") or []):
+                    MenuItemIngredient.objects.create(
+                        menu_item=item,
+                        name=ing.get("name"),
+                        en_name=ing.get("en_name"),
+                        quantity=self._price(ing["quantity"]) if ing.get("quantity") is not None else None,
+                        unit=ing.get("unit"),
+                        price=self._price(ing.get("price", 0)),
+                        is_default=ing.get("is_default", True),
+                        is_removable=ing.get("is_removable", True),
+                        max_quantity=ing.get("max_quantity", 1),
+                        sort_order=ing.get("sort_order", ii),
+                    )
+                    n_ing += 1
+        if categories:
+            self.stdout.write(
+                f"  Seeded {n_cat} menu categories / {n_item} menu items / {n_ing} ingredients"
+            )

@@ -93,6 +93,14 @@ authoritative recipe (site contract, host→site→tenant chain, block library,
 registration, styling rules, checklist) is **`sites/CLAUDE.md`**; the strategy
 and rationale live in `apps/prds/website-sites.md`.
 
+**Interaction language.** The site skills (`/new-site`, `/seed-site`, and
+`/site-design` when entered directly) each begin by asking the operator whether
+to conduct the session in **English or Spanish**, then run all interaction —
+questions, the seed interview, summaries, hand-offs — in that language. It's the
+conversation language only; it doesn't change the code or the site's own content
+language (the bilingual `en_*` seed fields are decided separately in
+`/seed-site`).
+
 ## Shared utility classes in `app/globals.css`
 
 | Class                   | Use for                                                                                                       |

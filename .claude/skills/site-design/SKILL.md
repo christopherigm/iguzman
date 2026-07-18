@@ -19,6 +19,15 @@ If anything here conflicts with `sites/CLAUDE.md` or the repo styling rules,
 **those win** — this skill never overrides the props-first rule or the tenancy
 contract.
 
+> **Interaction language:** this skill is normally invoked mid-way through
+> `/new-site`, where the operator has already chosen English or Spanish for the
+> session — keep speaking that language (design notes, questions, the review you
+> narrate). If you reach this skill without that choice having been made (e.g.
+> asked directly to "improve a site's visuals"), ask **English or Spanish** first
+> via `AskUserQuestion` and then conduct all interaction in the chosen language.
+> This affects only what you say to the operator, never the code or the site's own
+> content.
+
 ---
 
 ## 1. Core-element purity — never restyle `@repo/ui`, extend it in the site
@@ -148,13 +157,24 @@ customer and compose from the block library (`@/components/*`) + site-local
   are, split with one image, primary + secondary CTA) → **Highlights** (why us /
   capabilities, on a `--surface-2` band) → **Service categories** → featured
   **Service items** → **Success stories** (proof) → contact CTA.
-- **Restaurant / hospitality / local venue:** Hero (full-bleed food photo, name +
-  one line + "View menu") → short **Intro** (the story, warm and brief) →
-  **Menu/Category** tiles → **Highlights** (hours, location, ambiance) →
-  **Success stories** (reviews). Imagery-led; minimal text.
+- **Restaurant / food / hospitality** (restaurant, **bakery / bread**, café,
+  taquería, caterer — anything selling prepared food): Hero (full-bleed food
+  photo, name + one line + "View menu") → short **Intro** (the story, warm and
+  brief) → **Menu category** tiles + featured **menu items** → **Highlights**
+  (hours, location, ambiance, or what's real/organic/house-made) → **Success
+  stories** (reviews). Imagery-led; minimal text. This is a **menu** business:
+  its catalog is `MenuItem`s (the `"food"` card kind), **not products** — the
+  shared `CatalogCategories`/`CatalogItems` blocks already render the food family,
+  so compose them as usual; you don't build a menu block. If a dish has priced
+  add-in `ingredients`, its detail page carries the **`menu-item-customizer`** —
+  design item cards and the detail hero to leave room for it, not as an
+  afterthought. (Family choice + the model live in `sites/CLAUDE.md` → "The three
+  Buyable families".)
 - **Product / e-commerce / catalog:** Hero (product-forward) → **Featured
   products** (the star, not buried) → **Categories** (shop by) → **Highlights**
   (shipping/guarantee/quality) → **Success stories**. Lead with product, not prose.
+  (A business selling **prepared food** — even packaged, like a bakery — is the
+  Restaurant/food archetype above, not this one; its catalog is menu items.)
 - **Portfolio / studio / creator:** Hero (bold type, one signature image) →
   **Highlights** (selected work as a varied grid) → **Intro** (about/approach) →
   **Success stories** → contact. Let whitespace and imagery carry it.

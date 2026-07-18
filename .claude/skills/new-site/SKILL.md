@@ -14,6 +14,20 @@ self-edits the brand kit + content via the backend CMS.**
 `/new-site` — a domain, a customer name, and/or a design brief). If no domain or
 customer was given, ask for one before starting.
 
+## First — choose the interaction language
+
+**Before any other step**, ask the operator which language to conduct this
+session in — **English or Spanish** — using `AskUserQuestion`. Conduct **all**
+subsequent interaction in the chosen language: every question, confirmation,
+summary, and hand-off message you write to the operator. **If they pick Spanish,
+everything you say to the operator is in Spanish** (the questions in the pipeline
+below, the design review, the closing instructions — all of it).
+
+This is the **conversation** language only. It does **not** change the code you
+write, identifier/slug conventions, or the site's own content language — a
+Spanish-speaking operator can still be building an English or bilingual site, and
+the bilingual `en_*` seed fields are decided separately in `/seed-site`.
+
 ## Read these FIRST — source of truth, do not duplicate their contents
 
 - **`apps/website/sites/CLAUDE.md`** — the authoritative recipe: the site
@@ -38,12 +52,37 @@ customer was given, ask for one before starting.
   `_default` until then.
 - You are building **frontend only**; do not add backend models/endpoints here.
 
+## The food family — recognise a menu business
+
+The catalog has three Buyable families (full reference:
+`apps/website/sites/CLAUDE.md` → "The three Buyable families"): **products**
+(physical goods), **services** (booked work), and **menu items** (**food**). A
+restaurant, **bakery / bread** maker, café, juice bar, taquería, cloud kitchen or
+caterer is a **menu** business — its catalog is `MenuItem`s (base price + priced
+`ingredients`), not products. What this means for the **frontend** you build here:
+
+- **Composition doesn't change** — `CatalogItems` and `CatalogCategories` already
+  auto-fold all three families and render whatever the backend has, tagging each
+  card with its `kind` (`"product" | "service" | "food"`). You do **not** build a
+  separate menu block; just compose the shared catalog blocks and the food shows
+  up once seeded. Detail rendering is `menu-detail` + `menu-item-customizer`.
+- **The design archetype does change** — a food business uses the
+  restaurant/food layout archetype in `/site-design`, not the product-store one.
+- **The catalog content is seeded as `menu_categories`** by `/seed-site` (step 7),
+  which owns the product-vs-menu decision for the data. When the business is
+  clearly food, tell that session it's a menu business; when it's genuinely mixed
+  or ambiguous (packaged goods *and* made-to-order food), flag it so the operator
+  is asked rather than guessed at — one `System` can carry all three families.
+
 ## Pipeline
 
 1. **Confirm identity.** Resolve the primary **domain**, a folder **slug**
    (kebab-case, derived from the domain/customer), the **customer name**, and
    any preview hosts. Read the design brief for tone, sections, and any extra
-   pages (about, contact, later menu/booking).
+   pages (about, contact, booking). **Note the business type** — in particular,
+   whether it's a **food** business (restaurant, bakery/bread, café, taquería,
+   caterer…), because that picks the food design archetype in step 4 and means
+   its catalog is **menu items**, not products (see "The food family" below).
 2. **Scaffold.** Run `pnpm new-site <domain>` (it creates `sites/<slug>/` from
    the `_default` shape and inserts the `registry.ts` import + entry, keeping
    `_default` last). If the CLI is unavailable, create the folder by hand
@@ -51,8 +90,9 @@ customer was given, ask for one before starting.
 3. **Configure.** Fill `site.config.ts`: `slug`, `name`, all `hosts` (production
    - preview), and `systemHost` (the customer's `System.host`).
 4. **Design the landing.** **First invoke the `/site-design` skill** and follow
-   it — pick the layout archetype for the customer's business type, apply the
-   craft rubric, and avoid the AI-look tells. Rework `landing.tsx` into a unique,
+   it — pick the layout archetype for the customer's business type (a **food**
+   business uses the restaurant/food archetype — see "The food family" above),
+   apply the craft rubric, and avoid the AI-look tells. Rework `landing.tsx` into a unique,
    well-structured composition — deliberate section order, strong hero, clear
    hierarchy — built from the block library (`@/components/*`) and cached `lib/`
    data helpers. Site-specific sections go in `sites/<slug>/sections/`; a bespoke

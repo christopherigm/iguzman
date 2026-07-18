@@ -3,8 +3,8 @@ export_site - serialize a customer System's content into a portable JSON payload
 
 This is the local (dev) half of **publishing a site to production**: once a site
 has been seeded (`seed_site`) and verified locally, `export_site` reads its
-`System` + success stories + highlights + product/service catalog out of the
-current database into a brief-shaped JSON document (with real slugs; image files
+`System` + success stories + highlights + product/service/menu catalog out of
+the current database into a brief-shaped JSON document (with real slugs; image files
 omitted - the customer uploads real images in the prod CMS). The `pnpm
 publish-site` script feeds that payload to the production `/api/publish-site/`
 endpoint, which upserts it.

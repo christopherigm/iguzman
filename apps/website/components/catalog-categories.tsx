@@ -3,8 +3,10 @@ import { getTranslations, getLocale } from "next-intl/server";
 import {
   getProductCategories,
   getServiceCategories,
+  getMenuCategories,
   type ProductCategory,
   type ServiceCategory,
+  type MenuCategory,
 } from "@/lib/catalog";
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
@@ -156,14 +158,20 @@ export function CategoryCard({
 }
 
 export async function CatalogCategories() {
-  const [productCategories, serviceCategories, locale, t] = await Promise.all([
-    getProductCategories(),
-    getServiceCategories(),
-    getLocale(),
-    getTranslations("CatalogCategories"),
-  ]);
+  const [productCategories, serviceCategories, menuCategories, locale, t] =
+    await Promise.all([
+      getProductCategories(),
+      getServiceCategories(),
+      getMenuCategories(),
+      getLocale(),
+      getTranslations("CatalogCategories"),
+    ]);
 
-  if (productCategories.length === 0 && serviceCategories.length === 0)
+  if (
+    productCategories.length === 0 &&
+    serviceCategories.length === 0 &&
+    menuCategories.length === 0
+  )
     return null;
 
   return (
@@ -218,6 +226,30 @@ export async function CatalogCategories() {
                 itemCount={cat.item_count}
                 type="service"
                 href={`/categories/services/${cat.slug}/`}
+              />
+            </Grid>
+          );
+        })}
+        {menuCategories.map((cat: MenuCategory) => {
+          const name =
+            (locale === "en" ? cat.en_name : cat.name) ??
+            cat.name ??
+            cat.en_name ??
+            "";
+          const description =
+            (locale === "en" ? cat.en_description : cat.description) ??
+            cat.description ??
+            cat.en_description ??
+            "";
+          return (
+            <Grid key={`food-${cat.id}`} size={{ xs: 6, sm: 4, lg: 3 }}>
+              <CategoryCard
+                name={name}
+                description={description}
+                image={cat.image}
+                itemCount={cat.item_count}
+                type="food"
+                href={`/categories/food/${cat.slug}/`}
               />
             </Grid>
           );

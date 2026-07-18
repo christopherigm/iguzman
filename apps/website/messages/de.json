@@ -22,6 +22,27 @@
       "productsCta": "Produkte ansehen"
     }
   },
+  "PanOrganicoSite": {
+    "intro": {
+      "eyebrow": "Hausgemacht",
+      "viewBreads": "Unsere Brote ansehen",
+      "learnMore": "Unsere Geschichte"
+    },
+    "about": {
+      "eyebrow": "Unsere Geschichte",
+      "title": "Über uns",
+      "titleNamed": "Über {name}",
+      "placeholder": "Wir bereiten unsere Geschichte vor. Schauen Sie bald wieder vorbei, um zu erfahren, wie wir jedes Brot zu Hause backen.",
+      "missionHeading": "Unsere Mission",
+      "visionHeading": "Unsere Vision"
+    },
+    "contact": {
+      "eyebrow": "Brot bestellen",
+      "heading": "Kontaktieren Sie uns",
+      "subtitle": "Lust auf ein frisch gebackenes Brot? Entdecken Sie unsere Bio-Brote und starten wir Ihre Bestellung.",
+      "productsCta": "Unsere Brote ansehen"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

@@ -1,6 +1,6 @@
 ---
 name: seed-site
-description: Populate a customer site's INITIAL CONTENT (the backend data the landing page renders) after /new-site has scaffolded the frontend. Runs a business-strategist discovery interview - challenging the operator's assumptions one question at a time until the concept is sharp - then writes a JSON brief and runs the website-api `seed_site` command to create the System copy + success stories + highlights + product/service catalog, with placeholder images and YouTube/links from seed_assets/. Use when the user asks to populate/seed a new site, fill in landing content, or "make the landing look complete" for a customer in the website app (e.g. "/seed-site acme.com").
+description: Populate a customer site's INITIAL CONTENT (the backend data the landing page renders) after /new-site has scaffolded the frontend. Runs a business-strategist discovery interview - challenging the operator's assumptions one question at a time until the concept is sharp - then writes a JSON brief and runs the website-api `seed_site` command to create the System copy + success stories + highlights + catalog (products, services, OR menu items for food businesses), with placeholder images and YouTube/links from seed_assets/. Use when the user asks to populate/seed a new site, fill in landing content, or "make the landing look complete" for a customer in the website app (e.g. "/seed-site acme.com").
 ---
 
 # seed-site — interview-to-populated landing
@@ -18,13 +18,32 @@ interview transcript never competes with the frontend build for context. The
 target site is named in the arguments after `/seed-site` (a host or customer). If
 none is given, ask which site to populate.
 
+## First — choose the interaction language
+
+**Before the interview begins**, ask the operator which language to conduct this
+session in — **English or Spanish** — using `AskUserQuestion`. Conduct **all**
+subsequent interaction in the chosen language: the entire strategy interview
+(every question, every push-back and counter-argument), the concept summary you
+read back, and the closing hand-off. **If they pick Spanish, run the whole
+interview in Spanish.**
+
+This is the **conversation** language only — it is independent of the site's
+content. The brief you write and seed can still be English, Spanish, or bilingual
+regardless of which language you interviewed in; whether to fill the bilingual
+`en_*` mirror fields is its own decision, made under "Voice & brand" during the
+interview.
+
 ## Read these FIRST — the contract you fill
 
 - **`apps/website-api/seed_assets/README.md`** — the brief JSON schema, the
   placeholder image pool, `links.json`, and how `seed_site` maps a brief to
   records. **This is the source of truth for field names; do not invent fields.**
 - **`apps/website-api/seed_assets/brief.example.json`** — a complete filled
-  brief. Copy its shape.
+  brief. Copy its shape. **Note:** it illustrates only the product/service
+  families. For a **food** business, copy the menu shape from
+  **`apps/website-api/seed_assets/briefs/panbueno.iguzman.com.mx.json`** (an
+  organic bread maker whose loaves/muffins are `menu_items` with priced
+  `ingredients`).
 - **`apps/website/sites/CLAUDE.md`** → "Seeding initial content" — how the data
   layer relates to the frontend blocks you are feeding.
 
@@ -63,9 +82,10 @@ to sell.** A landing page seeded from mushy positioning is worthless.
    - **Proof (CFO/PM hat)** — concrete outcomes, numbers, named-but-anonymizable
      customers. These become **success stories** (make them quantified and
      specific, not "great experience").
-   - **Catalog** — the real products/services, sensible categories, and
-     **realistic prices + currency** (CFO: challenge margins/price points that
-     don't add up).
+   - **Catalog** — the real offerings, sensible categories, and **realistic
+     prices + currency** (CFO: challenge margins/price points that don't add up).
+     **First decide which of the three Buyable families this catalog is** (see
+     the food rule below) — it changes which brief section you write.
    - **Voice & brand** — tone, primary/secondary colors, bilingual? (fill `en_*`
      mirror fields if the site serves English + Spanish).
    - **Assets** — do they have a hero video (YouTube), logo, real photos? If not,
@@ -76,6 +96,35 @@ to sell.** A landing page seeded from mushy positioning is worthless.
    for the operator to confirm before you build.
 
 Keep it efficient: a good interview is ~6–12 sharp exchanges, not 40 timid ones.
+
+### The food rule — pick the right Buyable family before you write catalog
+
+The backend has **three** purchasable families, each its own brief section and
+model (full reference: `apps/website/sites/CLAUDE.md` → "The three Buyable
+families"). Choosing wrong makes the catalog un-seedable-correctly, so settle it
+*during* the Catalog part of the interview:
+
+- **`product_categories` → products** — physical/shippable goods (SKU, stock).
+- **`service_categories` → services** — booked/performed work (duration, modality).
+- **`menu_categories` → menu items** — **food.**
+
+**When the business sells food, use `menu_categories`, never `product_categories`.**
+A restaurant, **bakery / bread** maker, café, juice bar, taquería, cloud kitchen,
+caterer, or anyone selling meals/dishes/drinks is a **menu** business. The reason
+is the data model, not the vibe: a `MenuItem` carries a **base `price` plus priced
+`ingredients`** the customer customises (add nuts +$25, double patty, hold the
+cheese) — which the seed populates — plus an *internal* recipe the operator adds
+later in the CMS. A `Product` can express none of this. Model a bakery's bread as
+a product and you silently throw away ingredient customisation.
+
+- **When it's genuinely mixed or ambiguous, ask the operator** rather than
+  guessing — a shop selling packaged goods *and* made-to-order food, a bakery that
+  also sells branded merch, "a store for my restaurant." One `System` can carry
+  all three families at once (the catalog blocks fold them together), so the
+  answer can legitimately be "both" — but confirm it, don't assume.
+- This is a first-class interview decision. Fold it into the Catalog questioning
+  (e.g. "Is what you sell prepared food, or packaged/physical goods?") and let the
+  answer pick the brief section you write in Part 2.
 
 ## Part 2 — Build the brief & seed
 
@@ -89,6 +138,12 @@ Keep it efficient: a good interview is ~6–12 sharp exchanges, not 40 timid one
      omit it (the command round-robins the pool). Only set a named asset if the
      operator actually provided a file in `seed_assets/`.
    - Prices realistic; `is_featured` stays true so items surface in `CatalogItems`.
+   - **Write the catalog section the food rule picked** — `product_categories`,
+     `service_categories`, and/or `menu_categories`. For `menu_categories`, give
+     each `menu_item` its `ingredients` list: mark base components
+     `is_default: true` at `price: 0`, and each add-on `is_default: false` with a
+     realistic per-unit `price` (and `max_quantity` for "double X"). Leave the
+     internal recipe out — the seed doesn't populate `recipe_steps`.
    - Fill `en_*` fields only when the site is bilingual.
 6. **Run the seeder** from `apps/website-api`:
    ```bash

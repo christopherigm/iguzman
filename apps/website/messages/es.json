@@ -22,6 +22,27 @@
       "productsCta": "Ver productos"
     }
   },
+  "PanOrganicoSite": {
+    "intro": {
+      "eyebrow": "Hecho en casa",
+      "viewBreads": "Ver nuestros panes",
+      "learnMore": "Nuestra historia"
+    },
+    "about": {
+      "eyebrow": "Nuestra historia",
+      "title": "Sobre nosotros",
+      "titleNamed": "Sobre {name}",
+      "placeholder": "Estamos preparando nuestra historia. Vuelve pronto para conocer cómo horneamos cada pan en casa.",
+      "missionHeading": "Nuestra misión",
+      "visionHeading": "Nuestra visión"
+    },
+    "contact": {
+      "eyebrow": "Pide tu pan",
+      "heading": "Ponte en contacto",
+      "subtitle": "¿Se te antoja un pan recién horneado? Descubre nuestros panes orgánicos y hagamos tu pedido.",
+      "productsCta": "Ver nuestros panes"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

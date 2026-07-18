@@ -123,36 +123,75 @@ const SITES: SiteEntry[] = [
 
 `pnpm new-site <domain>` does this insertion for you.
 
+## The three Buyable families — pick the right one
+
+The backend catalog has **three** purchasable families, all subclasses of
+`Buyable` (same `price`/`currency`/`brand`/`image`), each with its own category,
+detail page, and cart/checkout wiring:
+
+| Family        | Backend model (`catalog/models.py`)     | For                                             | The thing that earns it its own model                                                                                                       |
+| ------------- | --------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Product**   | `Product` + `ProductVariant`            | Physical/tangible goods, shippable inventory    | SKU, stock count, dimensions/weight; fixed **variants** (Size=L, Color=Red) each a distinct priced SKU                                       |
+| **Service**   | `Service` + `ServiceVariant`            | Booked/performed work                           | Duration, modality (online/in-person); variants are session lengths/packages                                                                |
+| **Menu item** | `MenuItem` + `MenuItemIngredient`       | **Food** — restaurants, bakeries, cafés, drinks | Priced **ingredient customisation** (base price + per-add-on deltas via `price_for_selection`), dietary flags, and an **internal** recipe    |
+
+**Decision rule — when the business sells food, use MenuItem, not Product.**
+A restaurant, bakery/**bread** maker, café, juice bar, taquería, cloud kitchen,
+caterer, or anyone selling meals/dishes/drinks is a **menu** business: model its
+catalog as `MenuCategory` + `MenuItem`, **never** as products. The reason is the
+model, not the vibe — food is *customised by priced ingredients* (add nuts +$25,
+double patty, hold the cheese) and carries an *internal kitchen recipe*, neither
+of which a `Product` can express. A `MenuItem`'s `price` is the **base**; the
+customer's ingredient picks add up-charges on top, and that selection travels
+through the cart into the order snapshot. See the reference brief
+**`apps/website-api/seed_assets/briefs/panbueno.iguzman.com.mx.json`** (an
+organic bread maker whose loaves and muffins are MenuItems with priced add-ins)
+and the built site **`sites/panorganico/`**.
+
+**When it's genuinely mixed or ambiguous, ask the user** rather than guessing —
+e.g. a shop selling both packaged goods *and* made-to-order food, a bakery that
+also sells branded merch, or "a store for my restaurant." One `System` can carry
+all three families at once (the catalog blocks fold them together), so the answer
+can be "both" — but confirm it; don't silently model a bakery's bread as products
+and lose the ingredient customisation. Guidance for the seed strategy interview
+that decides this lives in the **`/seed-site`** skill.
+
 ## The block library (backend-connected sections you compose)
 
 Build a site by composing the shared, already-tenant-aware components in
 `apps/website/components/` — each resolves the current tenant on its own via the
 `lib/` data helpers, so you rarely fetch data by hand. Core blocks:
 
-| Block (`@/components/…`)                                              | Renders                        | Backend source                                      |
-| --------------------------------------------------------------------- | ------------------------------ | --------------------------------------------------- |
-| `hero` (`Hero`)                                                       | Hero with logo/slogan/video/bg | `System`                                            |
-| `success-stories` (`SuccessStories`)                                  | Stories slider                 | `getSuccessStories()`                               |
-| `company-highlights` (`CompanyHighlights`)                            | Highlights grid                | `getHighlights()`                                   |
-| `catalog-categories` (`CatalogCategories`)                            | Product/service category tiles | `getProductCategories()` / `getServiceCategories()` |
-| `catalog-items` (`CatalogItems`)                                      | Featured product/service cards | `getFeaturedProducts()` / `getFeaturedServices()`   |
-| `buyable-card`, `product-detail`, `service-detail`, `category-detail` | Item/detail rendering          | catalog helpers                                     |
+| Block (`@/components/…`)                                                                  | Renders                              | Backend source                                                            |
+| ----------------------------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------- |
+| `hero` (`Hero`)                                                                           | Hero with logo/slogan/video/bg       | `System`                                                                  |
+| `success-stories` (`SuccessStories`)                                                     | Stories slider                       | `getSuccessStories()`                                                     |
+| `company-highlights` (`CompanyHighlights`)                                               | Highlights grid                      | `getHighlights()`                                                         |
+| `catalog-categories` (`CatalogCategories`)                                               | Product/service/menu category tiles  | `getProductCategories()` / `getServiceCategories()` / `getMenuCategories()` |
+| `catalog-items` (`CatalogItems`)                                                         | Featured product/service/food cards  | `getFeaturedProducts()` / `getFeaturedServices()` / `getFeaturedMenuItems()` |
+| `buyable-card`, `product-detail`, `service-detail`, `menu-detail`, `category-detail`     | Item/detail rendering                | catalog helpers                                                          |
+| `menu-item-customizer`                                                                   | Priced-ingredient picker on a dish   | `getMenuItem()` (its `ingredients`)                                       |
+
+**The two catalog blocks auto-fold all three [Buyable](#the-three-buyable-families--pick-the-right-one) families.** `CatalogCategories` and `CatalogItems` each fetch products, services **and** menu items in one pass, tag every card with its `kind` (`"product" | "service" | "food"`), and render whatever exists — a food-only business gets a menu-only landing from the same block, and a family with zero rows is simply omitted (never a blank section). You do **not** compose a separate "menu" block; put `<CatalogItems />` / `<CatalogCategories />` in the landing and the food shows up when the backend has it.
 
 Data helpers (all in `apps/website/lib/`, all host-resolved + `React.cache`d):
 `getSystem`, `getSuccessStories`/`getSuccessStory`, `getHighlights`/`getHighlight`,
 `getProductCategories`, `getServiceCategories`, `getFeaturedProducts`,
 `getFeaturedServices`, `getAllProducts`, `getAllServices`, `getProduct`,
-`getService`, `getProductsByCategory`, `getServicesByCategory`. **Prefer these
-over calling the API directly** — they carry the `X-Website-Host` forwarding and
-caching.
+`getService`, `getProductsByCategory`, `getServicesByCategory`, and — for the
+food family — `getMenuCategories`/`getMenuCategory`, `getFeaturedMenuItems`,
+`getAllMenuItems`, `getMenuItemsByCategory`, `getMenuItem` (all in
+`lib/catalog.ts`). **Prefer these over calling the API directly** — they carry the
+`X-Website-Host` forwarding and caching.
 
 A site-specific section that has no shared equivalent goes in
 `sites/<slug>/sections/` and may call the same `lib/` helpers. If a section
 proves reusable across sites, promote it to `apps/website/components/`.
 
-Future capabilities (calendar, booking, menu…) will arrive as new blocks +
-`lib/` helpers here; a site opts in by composing them — the site structure does
-not change.
+Future capabilities (calendar, booking…) will arrive as new blocks + `lib/`
+helpers here; a site opts in by composing them — the site structure does not
+change. (The **menu/food** family already landed this way — see "The three
+Buyable families" above.)
 
 ## Seeding initial content (the data layer)
 
@@ -179,8 +218,15 @@ python manage.py seed_site --brief seed_assets/briefs/<host>.json --reset
   files from `seed_assets/` into `MEDIA_ROOT` and links each record; unset image
   fields round-robin the pool, so a seeded page never shows a blank slot.
 - **What it creates:** upserts the `System` (by host) + its copy/colors/video,
-  then success stories, highlights, product & service categories with featured
-  products/services (`is_featured=True` so they surface in `CatalogItems`).
+  then success stories, highlights, and any of the three catalog families the
+  brief includes: `product_categories` → products, `service_categories` →
+  services, and **`menu_categories` → menu items** (each dish carrying its
+  `ingredients` list of priced add-ins/defaults, plus optional `recipe` steps).
+  Featured items (`is_featured=True`) surface in `CatalogItems`. Pick the family
+  that fits the business (see "The three Buyable families" above) — a **food**
+  business's brief uses `menu_categories`, not `product_categories`. The reference
+  brief `seed_assets/briefs/panbueno.iguzman.com.mx.json` shows the menu shape end
+  to end (`brief.example.json` only illustrates the product/service families).
 - `--reset` wipes that System's prior seeded content for clean, idempotent
   re-runs. Slugs are auto host-namespaced to avoid global collisions.
 - **Frontend seeding vs. backend seeding:** this skill/command is the _only_
@@ -200,10 +246,16 @@ pnpm publish-site <host> --reset  # exact replace of the System's prior content
 ```
 
 `publish-site` serializes the site's `System` + success stories + highlights +
-product/service catalog out of the local DB (via `apps/website-api`'s
+the product/service/menu catalog out of the local DB (via `apps/website-api`'s
 `export_site` command → `core/site_payload.py`) and POSTs it to the production
 `POST /api/publish-site/` endpoint (admin Basic auth, like `sync-website-hosts`),
 which **upserts** it by host + slug. Key properties:
+
+- **Menu items publish with their priced `ingredients`, but not their recipe.**
+  A food site's `MenuCategory`/`MenuItem` catalog travels like products/services
+  do; each dish carries its ingredient add-ins/defaults so customised pricing
+  works in prod. The **internal `recipe_steps` are kitchen IP** and are neither
+  seeded nor published — the customer maintains them in the prod CMS.
 
 - **Images are not transported.** Every image is a Django `ImageField` (a file),
   not portable data — so the placeholder pool stays in dev. The customer uploads

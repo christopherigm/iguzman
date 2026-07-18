@@ -105,6 +105,10 @@ class PublishSiteView(APIView):
             "catalog:products*",
             "catalog:service_categories*",
             "catalog:services*",
+            "catalog:menu_categories*",
+            "catalog:menu_category*",
+            "catalog:menu_items*",
+            "catalog:menu_item*",
         ):
             _invalidate_pattern(pattern)
 

@@ -22,6 +22,27 @@
       "productsCta": "Browse products"
     }
   },
+  "PanOrganicoSite": {
+    "intro": {
+      "eyebrow": "Home-made",
+      "viewBreads": "See our breads",
+      "learnMore": "Our story"
+    },
+    "about": {
+      "eyebrow": "Our story",
+      "title": "About us",
+      "titleNamed": "About {name}",
+      "placeholder": "We're getting our story ready. Check back soon to learn how we bake each loaf at home.",
+      "missionHeading": "Our mission",
+      "visionHeading": "Our vision"
+    },
+    "contact": {
+      "eyebrow": "Order your bread",
+      "heading": "Get in touch",
+      "subtitle": "Craving a freshly baked loaf? Discover our organic breads and let's get your order started.",
+      "productsCta": "See our breads"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

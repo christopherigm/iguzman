@@ -124,7 +124,7 @@ class Brand(Common):
         "core.System",
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name="brands",
     )
 
@@ -151,7 +151,7 @@ class Buyable(StandardPicture):
         "core.System",
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name="+",
     )
     brand = models.ForeignKey(
@@ -186,7 +186,7 @@ class SuccessStory(RegularPicture):
         "core.System",
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name="success_stories",
     )
     slug = models.SlugField(max_length=255, unique=True, null=True, blank=True)
@@ -234,7 +234,7 @@ class CompanyHighlight(RegularPicture):
         "core.System",
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name="highlights",
     )
     SIZE_CHOICES = [

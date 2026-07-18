@@ -22,6 +22,27 @@
       "productsCta": "Ver produtos"
     }
   },
+  "PanOrganicoSite": {
+    "intro": {
+      "eyebrow": "Feito em casa",
+      "viewBreads": "Ver nossos pães",
+      "learnMore": "Nossa história"
+    },
+    "about": {
+      "eyebrow": "Nossa história",
+      "title": "Sobre nós",
+      "titleNamed": "Sobre {name}",
+      "placeholder": "Estamos preparando a nossa história. Volte em breve para saber como fazemos cada pão em casa.",
+      "missionHeading": "Nossa missão",
+      "visionHeading": "Nossa visão"
+    },
+    "contact": {
+      "eyebrow": "Peça seu pão",
+      "heading": "Entre em contato",
+      "subtitle": "Com vontade de um pão fresquinho? Conheça nossos pães orgânicos e vamos começar seu pedido.",
+      "productsCta": "Ver nossos pães"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

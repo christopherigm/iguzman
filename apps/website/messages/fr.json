@@ -22,6 +22,27 @@
       "productsCta": "Voir les produits"
     }
   },
+  "PanOrganicoSite": {
+    "intro": {
+      "eyebrow": "Fait maison",
+      "viewBreads": "Voir nos pains",
+      "learnMore": "Notre histoire"
+    },
+    "about": {
+      "eyebrow": "Notre histoire",
+      "title": "À propos",
+      "titleNamed": "À propos de {name}",
+      "placeholder": "Nous préparons notre histoire. Revenez bientôt pour découvrir comment nous préparons chaque pain à la maison.",
+      "missionHeading": "Notre mission",
+      "visionHeading": "Notre vision"
+    },
+    "contact": {
+      "eyebrow": "Commandez votre pain",
+      "heading": "Contactez-nous",
+      "subtitle": "Envie d'un pain fraîchement cuit ? Découvrez nos pains bio et lançons votre commande.",
+      "productsCta": "Voir nos pains"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

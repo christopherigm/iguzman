@@ -27,14 +27,14 @@ class ProductCategory(RegularPicture):
         'core.System',
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name='product_categories',
     )
     parent = models.ForeignKey(
         'self',
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name='children',
     )
     slug = models.SlugField(max_length=255, unique=True)
@@ -63,7 +63,7 @@ class Product(Buyable):
         ProductCategory,
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name='products',
     )
     slug = models.SlugField(max_length=255, unique=True)
@@ -119,14 +119,14 @@ class ServiceCategory(RegularPicture):
         'core.System',
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name='service_categories',
     )
     parent = models.ForeignKey(
         'self',
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name='children',
     )
     slug = models.SlugField(max_length=255, unique=True)
@@ -155,7 +155,7 @@ class Service(Buyable):
         ServiceCategory,
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name='services',
     )
     slug = models.SlugField(max_length=255, unique=True)
@@ -241,7 +241,7 @@ class VariantOption(Common):
         'core.System',
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name='variant_options',
     )
     name = models.CharField(max_length=100)
@@ -525,14 +525,14 @@ class MenuCategory(RegularPicture):
         'core.System',
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name='menu_categories',
     )
     parent = models.ForeignKey(
         'self',
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name='children',
     )
     slug = models.SlugField(max_length=255, unique=True)
@@ -566,7 +566,7 @@ class MenuItem(Buyable):
         MenuCategory,
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name='menu_items',
     )
     slug = models.SlugField(max_length=255, unique=True)

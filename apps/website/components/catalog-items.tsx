@@ -2,7 +2,9 @@ import { getTranslations, getLocale } from "next-intl/server";
 import {
   getFeaturedProducts,
   getFeaturedServices,
+  getFeaturedMenuItems,
   type FeaturedService,
+  type MenuItemDetail,
 } from "@/lib/catalog";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -27,14 +29,17 @@ function shuffleKey(item: BuyableItem, daySeed: number): number {
 }
 
 export async function CatalogItems() {
-  const [products, services, locale, t] = await Promise.all([
+  const [products, services, menuItems, locale, t, tMenu] = await Promise.all([
     getFeaturedProducts(),
     getFeaturedServices(),
+    getFeaturedMenuItems(),
     getLocale(),
     getTranslations("CatalogItems"),
+    getTranslations("Menu"),
   ]);
 
-  if (products.length === 0 && services.length === 0) return null;
+  if (products.length === 0 && services.length === 0 && menuItems.length === 0)
+    return null;
 
   // Interleave products and services in a stable, per-day order. Keying the sort
   // on a hash of each item's identity plus the calendar day keeps the order
@@ -47,6 +52,9 @@ export async function CatalogItems() {
     ...products.map((data): BuyableItem => ({ kind: "product", data })),
     ...services.map(
       (data: FeaturedService): BuyableItem => ({ kind: "service", data }),
+    ),
+    ...menuItems.map(
+      (data: MenuItemDetail): BuyableItem => ({ kind: "food", data }),
     ),
   ].sort((a, b) => shuffleKey(a, daySeed) - shuffleKey(b, daySeed));
 
@@ -68,6 +76,8 @@ export async function CatalogItems() {
               locale={locale}
               productLabel={t("productLabel")}
               serviceLabel={t("serviceLabel")}
+              menuLabel={t("menuLabel")}
+              fromLabel={tMenu("from")}
             />
           </Grid>
         ))}

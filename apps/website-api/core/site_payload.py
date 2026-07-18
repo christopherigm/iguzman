@@ -2,9 +2,11 @@
 site_payload - portable serialize / apply for a customer System's content.
 
 This is the backbone of **publishing a site to production**. A site's landing
-page is 100 % backend-driven (System + success stories + highlights + product /
-service catalog), so "publishing" a locally-seeded, tested site means moving
-*that content* into the production database.
+page is 100 % backend-driven (System + success stories + highlights + the
+product / service / menu catalog), so "publishing" a locally-seeded, tested site
+means moving *that content* into the production database. Menu items carry their
+priced `ingredients`; the internal `recipe_steps` are kitchen IP and are not
+seeded or published - the customer maintains them in the production CMS.
 
 `serialize_system` turns a `System` (and its children) into a plain, brief-shaped
 dict - the same schema `seed_site` consumes (see `seed_assets/README.md`) but with
@@ -33,6 +35,9 @@ from django.db import transaction
 from django.utils.text import slugify
 
 from catalog.models import (
+    MenuCategory,
+    MenuItem,
+    MenuItemIngredient,
     Product,
     ProductCategory,
     Service,
@@ -105,6 +110,18 @@ BUYABLE_TEXT_FIELDS = (
     "short_description",
     "href",
 )
+# Menu-item dietary/serving flags carried only when truthy (they default False /
+# null on the target, so a lean payload never needs the falsy case).
+MENU_ITEM_FLAG_FIELDS = (
+    "calories",
+    "spice_level",
+    "is_organic",
+    "is_vegetarian",
+    "is_vegan",
+    "is_gluten_free",
+    "allergens",
+)
+INGREDIENT_TEXT_FIELDS = ("name", "en_name", "unit")
 
 
 # --------------------------------------------------------------------------- #
@@ -183,6 +200,42 @@ def _service_category_dict(c: ServiceCategory) -> dict:
     }
 
 
+def _ingredient_dict(i: MenuItemIngredient) -> dict:
+    d = {"sort_order": i.sort_order, **_pick(i, INGREDIENT_TEXT_FIELDS)}
+    if i.quantity is not None:
+        d["quantity"] = str(i.quantity)
+    d["price"] = str(i.price)
+    d["is_default"] = i.is_default
+    d["is_removable"] = i.is_removable
+    d["max_quantity"] = i.max_quantity
+    return d
+
+
+def _menu_item_dict(m: MenuItem) -> dict:
+    d = {"slug": m.slug, **_pick(m, BUYABLE_TEXT_FIELDS)}
+    d["price"] = str(m.price)
+    if m.compare_price is not None:
+        d["compare_price"] = str(m.compare_price)
+    d["currency"] = m.currency
+    d["is_featured"] = m.is_featured
+    d["is_available"] = m.is_available
+    # Dietary/serving flags travel only when set (see MENU_ITEM_FLAG_FIELDS).
+    for f in MENU_ITEM_FLAG_FIELDS:
+        v = getattr(m, f)
+        if v not in (None, "", False):
+            d[f] = v
+    d["ingredients"] = [_ingredient_dict(i) for i in m.ingredients.all()]
+    return d
+
+
+def _menu_category_dict(c: MenuCategory) -> dict:
+    return {
+        "slug": c.slug,
+        **_pick(c, CATEGORY_FIELDS),
+        "menu_items": [_menu_item_dict(m) for m in c.menu_items.all()],
+    }
+
+
 def serialize_system(system: System) -> dict:
     """Serialize a System + its content into a portable, brief-shaped dict
     (image files omitted)."""
@@ -202,6 +255,12 @@ def serialize_system(system: System) -> dict:
         "service_categories": [
             _service_category_dict(c)
             for c in system.service_categories.all().prefetch_related("services")
+        ],
+        "menu_categories": [
+            _menu_category_dict(c)
+            for c in system.menu_categories.all().prefetch_related(
+                "menu_items__ingredients"
+            )
         ],
     }
 
@@ -238,6 +297,8 @@ def _reset(system: System) -> None:
     system.product_categories.all().delete()
     Service.objects.filter(system=system).delete()
     system.service_categories.all().delete()
+    MenuItem.objects.filter(system=system).delete()
+    system.menu_categories.all().delete()
 
 
 def _upsert(counts: dict, was_created: bool) -> None:
@@ -352,12 +413,66 @@ def _apply_services(system, categories) -> dict:
     return counts
 
 
+def _apply_menu(system, categories) -> dict:
+    counts = {"created": 0, "updated": 0, "categories": 0}
+    for c in categories:
+        cslug = _slug_of(c)
+        if not cslug:
+            continue
+        cat, _ = MenuCategory.objects.update_or_create(
+            slug=cslug, defaults=_defaults(system, c, CATEGORY_FIELDS)
+        )
+        counts["categories"] += 1
+        for m in c.get("menu_items") or []:
+            mslug = _slug_of(m)
+            if not mslug:
+                continue
+            defaults = _defaults(system, m, BUYABLE_TEXT_FIELDS)
+            defaults["category"] = cat
+            defaults["price"] = _decimal(m.get("price"))
+            defaults["compare_price"] = (
+                _decimal(m["compare_price"]) if m.get("compare_price") else None
+            )
+            defaults["currency"] = m.get("currency") or "USD"
+            defaults["is_featured"] = m.get("is_featured", True)
+            defaults["is_available"] = m.get("is_available", True)
+            for f in MENU_ITEM_FLAG_FIELDS:
+                if m.get(f) is not None:
+                    defaults[f] = m[f]
+            item, created = MenuItem.objects.update_or_create(
+                slug=mslug, defaults=defaults
+            )
+            _upsert(counts, created)
+            # Ingredients have no global slug; key them by (menu_item, sort_order)
+            # so a re-publish updates in place rather than duplicating - the same
+            # pattern used for highlight sub-items above.
+            for k, ing in enumerate(m.get("ingredients") or []):
+                ing_defaults = {}
+                for f in INGREDIENT_TEXT_FIELDS:
+                    if ing.get(f) is not None:
+                        ing_defaults[f] = ing[f]
+                ing_defaults["quantity"] = (
+                    _decimal(ing["quantity"]) if ing.get("quantity") is not None else None
+                )
+                ing_defaults["price"] = _decimal(ing.get("price", 0))
+                ing_defaults["is_default"] = ing.get("is_default", True)
+                ing_defaults["is_removable"] = ing.get("is_removable", True)
+                ing_defaults["max_quantity"] = ing.get("max_quantity", 1)
+                MenuItemIngredient.objects.update_or_create(
+                    menu_item=item,
+                    sort_order=ing.get("sort_order", k),
+                    defaults=ing_defaults,
+                )
+    return counts
+
+
 def apply_payload(payload: dict, *, reset: bool = False) -> dict:
     """Upsert a System + its content from a serialized payload into THIS database.
 
     Matches the System by host and every child by slug. Image fields are left
     untouched on update (never clobbers customer-uploaded images). `reset=True`
-    deletes the System's prior stories/highlights/catalog first. Returns a
+    deletes the System's prior stories/highlights/catalog (product, service and
+    menu) first. Returns a
     per-section created/updated summary.
     """
     sys_data = payload.get("system") or {}
@@ -386,5 +501,6 @@ def apply_payload(payload: dict, *, reset: bool = False) -> dict:
             "highlights": _apply_highlights(system, payload.get("highlights") or []),
             "product_categories": _apply_products(system, payload.get("product_categories") or []),
             "service_categories": _apply_services(system, payload.get("service_categories") or []),
+            "menu_categories": _apply_menu(system, payload.get("menu_categories") or []),
         }
     return summary
