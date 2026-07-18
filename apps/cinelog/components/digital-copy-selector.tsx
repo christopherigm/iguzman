@@ -160,9 +160,7 @@ export function DigitalCopySelector({
           gap={8}
           alignItems="flex-start"
         >
-          <Typography variant="caption" styles={{ opacity: 0.7 }}>
-            {t("noBuckets")}
-          </Typography>
+          <Typography variant="caption">{t("noBuckets")}</Typography>
           <LinkButton label={t("manageBuckets")} href="/storage" />
         </Box>
       ) : (
@@ -210,9 +208,7 @@ export function DigitalCopySelector({
               </Typography>
             )}
             {!loadingObjects && !browseError && objects.length === 0 && (
-              <Typography variant="caption" styles={{ opacity: 0.7 }}>
-                {t("browseEmpty")}
-              </Typography>
+              <Typography variant="caption">{t("browseEmpty")}</Typography>
             )}
             {objects.map((obj) => (
               <Button

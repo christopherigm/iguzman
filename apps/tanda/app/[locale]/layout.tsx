@@ -81,7 +81,10 @@ export default async function LocaleLayout({ children, params }: Props) {
   const themeResolvedCookie = cookieStore.get(RESOLVED_COOKIE_NAME)?.value as
     | ResolvedTheme
     | undefined;
-  const initialMode: ThemeMode = themeModeCookie ?? "system";
+  // Default first-time visitors (no saved theme-mode cookie) to a light theme
+  // rather than following the OS setting. The ThemeSwitch still lets a visitor
+  // pick dark, and that choice persists via the cookie.
+  const initialMode: ThemeMode = themeModeCookie ?? "light";
   const initialResolved: ResolvedTheme =
     initialMode === "system"
       ? (themeResolvedCookie ?? "light")
@@ -101,7 +104,7 @@ export default async function LocaleLayout({ children, params }: Props) {
       suppressHydrationWarning
     >
       <head>
-        <ThemeScript />
+        <ThemeScript defaultMode="light" />
         {/* iOS PWA splash screens */}
         <link
           rel="apple-touch-startup-image"

@@ -79,6 +79,18 @@ export function MenuItemCustomizer({
     return sum;
   }, [basePrice, ingredients, quantities]);
 
+  // Included ingredients (those the base already comes with) render first;
+  // the removable add-ons follow, sorted A→Z by their localised name.
+  const sortedIngredients = useMemo(() => {
+    const nameOf = (ing: MenuItemIngredient) =>
+      (locale === "en" ? ing.en_name : ing.name) ?? ing.name;
+    const included = ingredients.filter((i) => i.included_units > 0);
+    const addOns = ingredients
+      .filter((i) => i.included_units <= 0)
+      .sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
+    return [...included, ...addOns];
+  }, [ingredients, locale]);
+
   const showToast = (kind: ToastKind) =>
     setToast((prev) => ({ kind, id: (prev?.id ?? 0) + 1 }));
 
@@ -157,7 +169,7 @@ export function MenuItemCustomizer({
             {t("customize", { name: menuItemName })}
           </Typography>
 
-          {ingredients.map((ing) => {
+          {sortedIngredients.map((ing) => {
             const qty = quantities[ing.id] ?? ing.included_units;
             const min = minFor(ing);
             const name = (locale === "en" ? ing.en_name : ing.name) ?? ing.name;
@@ -175,60 +187,72 @@ export function MenuItemCustomizer({
                 <Box flexDirection="column" gap={2} flex="1" minWidth={160}>
                   <Typography variant="body" margin={0}>
                     {name}
-                    {ing.quantity &&
+                    {!included &&
+                      ing.quantity &&
                       ` · ${ing.quantity}${ing.unit ? ` ${ing.unit}` : ""}`}
                   </Typography>
-                  <Typography
-                    variant="caption"
-                    margin={0}
-                    color="color-mix(in srgb, var(--foreground) 55%, transparent)"
-                  >
-                    {price > 0
-                      ? t("perUnitUpcharge", {
-                          price: formatPrice(ing.price, currency),
-                        })
-                      : included
-                        ? t("included")
+                  {!included && (
+                    <Typography
+                      variant="caption"
+                      margin={0}
+                      color="var(--foreground)"
+                    >
+                      {price > 0
+                        ? t("perUnitUpcharge", {
+                            price: formatPrice(ing.price, currency),
+                          })
                         : t("free")}
-                  </Typography>
+                    </Typography>
+                  )}
                 </Box>
 
-                <Box
-                  alignItems="center"
-                  gap={4}
-                  padding={2}
-                  borderRadius={8}
-                  border="1px solid var(--border, #e5e7eb)"
-                >
-                  <Button
-                    text="−"
-                    aria-label={t("decrease")}
-                    title={t("decrease")}
-                    size="sm"
-                    minWidth={30}
-                    disabled={qty <= min}
-                    onClick={() => setQty(ing, qty - 1)}
-                  />
+                {included ? (
                   <Typography
                     as="span"
-                    variant="h6"
+                    variant="label"
                     margin={0}
-                    minWidth={28}
-                    styles={{ textAlign: "center" }}
-                    aria-live="polite"
+                    color="var(--foreground)"
                   >
-                    {qty}
+                    {t("included")}
                   </Typography>
-                  <Button
-                    text="+"
-                    aria-label={t("increase")}
-                    title={t("increase")}
-                    size="sm"
-                    minWidth={30}
-                    disabled={qty >= ing.max_quantity}
-                    onClick={() => setQty(ing, qty + 1)}
-                  />
-                </Box>
+                ) : (
+                  <Box
+                    alignItems="center"
+                    gap={4}
+                    padding={2}
+                    borderRadius={8}
+                    border="1px solid var(--border, #e5e7eb)"
+                  >
+                    <Button
+                      text="−"
+                      aria-label={t("decrease")}
+                      title={t("decrease")}
+                      size="sm"
+                      minWidth={30}
+                      disabled={qty <= min}
+                      onClick={() => setQty(ing, qty - 1)}
+                    />
+                    <Typography
+                      as="span"
+                      variant="h6"
+                      margin={0}
+                      minWidth={28}
+                      styles={{ textAlign: "center" }}
+                      aria-live="polite"
+                    >
+                      {qty}
+                    </Typography>
+                    <Button
+                      text="+"
+                      aria-label={t("increase")}
+                      title={t("increase")}
+                      size="sm"
+                      minWidth={30}
+                      disabled={qty >= ing.max_quantity}
+                      onClick={() => setQty(ing, qty + 1)}
+                    />
+                  </Box>
+                )}
               </Box>
             );
           })}
@@ -237,11 +261,7 @@ export function MenuItemCustomizer({
 
       <Box flexDirection="column" gap={12}>
         <Box flexDirection="column" gap={2}>
-          <Typography
-            variant="caption"
-            margin={0}
-            color="color-mix(in srgb, var(--foreground) 55%, transparent)"
-          >
+          <Typography variant="caption" margin={0} color="var(--foreground)">
             {t("total")}
           </Typography>
           <Box alignItems="baseline" flexWrap="wrap" gap="8px 12px">

@@ -3,6 +3,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
+import { Button } from "@repo/ui/core-elements/button";
 import type { SuccessStory } from "@/lib/success-stories";
 
 export function StoryCard({
@@ -56,18 +57,14 @@ export function StoryCard({
       <Badge
         variant="filled"
         color="rgba(0, 0, 0, 0.42)"
-        textColor="rgba(255, 255, 255, 0.88)"
+        textColor="#fff"
+        uppercase
+        translucent
         style={{
           position: "absolute",
           top: 14,
           right: 14,
           zIndex: 2,
-          padding: "4px 10px",
-          fontWeight: 500,
-          letterSpacing: "0.04em",
-          textTransform: "uppercase",
-          backdropFilter: "blur(8px)",
-          WebkitBackdropFilter: "blur(8px)",
         }}
       >
         {date}
@@ -104,8 +101,8 @@ export function StoryCard({
 
         {description && (
           <Typography
-            variant="caption"
-            color="rgba(255,255,255,0.8)"
+            variant="body"
+            color="#fff"
             margin={0}
             styles={{
               display: "-webkit-box",
@@ -120,22 +117,16 @@ export function StoryCard({
         )}
 
         {(story.slug || story.href) && (
-          <Box marginTop={10} justifyContent="flex-end">
-            <Badge
-              variant="filled"
-              color="rgba(255, 255, 255, 0.1)"
-              textColor="#fff"
-              style={{
-                padding: "5px 13px",
-                fontSize: 12,
-                letterSpacing: "0.04em",
-                border: "1.5px solid rgba(255, 255, 255, 0.55)",
-                backdropFilter: "blur(4px)",
-                WebkitBackdropFilter: "blur(4px)",
-              }}
-            >
-              {readMore} →
-            </Badge>
+          <Box
+            marginTop={10}
+            justifyContent="flex-end"
+            styles={{
+              zIndex: 2,
+            }}
+          >
+            <Button kind="primary" icon="/icons/next.svg" iconPosition="end">
+              {readMore}
+            </Button>
           </Box>
         )}
       </Box>

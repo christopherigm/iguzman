@@ -230,7 +230,7 @@ export function MovieFilters({
           <Box display="flex" flexDirection="column" gap={16}>
             {/* Disc / physical format - single-select icon toggles. */}
             <Box display="flex" flexDirection="column" gap={6}>
-              <Typography variant="caption" styles={{ opacity: 0.7 }}>
+              <Typography variant="caption">
                 {t("discFormatHeading")}
               </Typography>
               <Box display="flex" flexWrap="wrap" gap={8}>
@@ -258,7 +258,7 @@ export function MovieFilters({
 
             {/* Audio formats - multi-select, AND-filtered. */}
             <Box display="flex" flexDirection="column" gap={6}>
-              <Typography variant="caption" styles={{ opacity: 0.7 }}>
+              <Typography variant="caption">
                 {t("audioFormatHeading")}
               </Typography>
               <Box display="flex" flexWrap="wrap" gap={8}>
@@ -282,7 +282,7 @@ export function MovieFilters({
 
             {/* Video / HDR formats - multi-select, AND-filtered. */}
             <Box display="flex" flexDirection="column" gap={6}>
-              <Typography variant="caption" styles={{ opacity: 0.7 }}>
+              <Typography variant="caption">
                 {t("videoFormatHeading")}
               </Typography>
               <Box display="flex" flexWrap="wrap" gap={8}>

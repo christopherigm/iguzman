@@ -57,3 +57,16 @@
   padding: 3px 10px;
   font-size: 13px;
 }
+
+/* ── Modifiers ────────────────────────────────────── */
+.ui-badge--uppercase {
+  text-transform: uppercase;
+}
+
+/* Opt-in backdrop blur for badges floating over translucent surfaces
+   (e.g. over an image). Off by default - backdrop-filter re-samples the
+   backdrop every frame and is a major scroll-jank source. */
+.ui-badge--translucent {
+  backdrop-filter: blur(38px);
+  -webkit-backdrop-filter: blur(38px);
+}

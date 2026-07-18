@@ -26,9 +26,7 @@ export default async function AddMoviePage({ params }: Props) {
         <Typography as="h1" variant="h2" fontWeight={700}>
           {t("pageTitle")}
         </Typography>
-        <Typography variant="body" styles={{ opacity: 0.6 }}>
-          {t("pageSubtitle")}
-        </Typography>
+        <Typography variant="body">{t("pageSubtitle")}</Typography>
       </Box>
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 6 }}>

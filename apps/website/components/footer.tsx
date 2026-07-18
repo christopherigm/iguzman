@@ -68,7 +68,7 @@ export async function Footer({ logo, system }: Props) {
                 <Typography
                   as="p"
                   variant="body"
-                  color="color-mix(in srgb, var(--foreground) 80%, transparent)"
+                  color="var(--foreground)"
                   styles={{ fontStyle: "italic", overflowWrap: "break-word" }}
                 >
                   {system.slogan}
@@ -78,7 +78,7 @@ export async function Footer({ logo, system }: Props) {
                 <Typography
                   as="p"
                   variant="body"
-                  color="color-mix(in srgb, var(--foreground) 60%, transparent)"
+                  color="var(--foreground)"
                   styles={{
                     lineHeight: 1.6,
                     overflowWrap: "break-word",
@@ -152,7 +152,7 @@ export async function Footer({ logo, system }: Props) {
             as="p"
             variant="body"
             textAlign="center"
-            color="color-mix(in srgb, var(--foreground) 60%, transparent)"
+            color="var(--foreground)"
             styles={{ lineHeight: 1.6, overflowWrap: "break-word" }}
           >
             {t("copyright", {

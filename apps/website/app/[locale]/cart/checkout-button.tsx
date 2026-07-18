@@ -86,7 +86,7 @@ export function CheckoutButton({ blockedReason }: CheckoutButtonProps) {
         <Typography
           variant="caption"
           margin={0}
-          color={error ? "var(--error, #ef4444)" : "color-mix(in srgb, var(--foreground) 55%, transparent)"}
+          color={error ? "var(--error, #ef4444)" : "var(--foreground)"}
           styles={{ textAlign: "center" }}
           aria-live="polite"
         >
@@ -96,7 +96,7 @@ export function CheckoutButton({ blockedReason }: CheckoutButtonProps) {
         <Typography
           variant="caption"
           margin={0}
-          color="color-mix(in srgb, var(--foreground) 55%, transparent)"
+          color="var(--foreground)"
           styles={{ textAlign: "center" }}
         >
           {t("checkoutSecureNote")}

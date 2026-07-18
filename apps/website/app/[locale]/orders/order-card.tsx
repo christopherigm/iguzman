@@ -141,11 +141,7 @@ export function OrderCard({ order, locale }: OrderCardProps) {
         </Badge>
       </Box>
 
-      <Typography
-        variant="caption"
-        margin={0}
-        color="color-mix(in srgb, var(--foreground) 55%, transparent)"
-      >
+      <Typography variant="caption" margin={0} color="var(--foreground)">
         {t("placedOn", {
           date: new Date(order.created_at).toLocaleDateString(locale, {
             year: "numeric",

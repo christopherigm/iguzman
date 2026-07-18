@@ -611,7 +611,7 @@ export function AdminForm({
                     <Typography
                       variant="label"
                       fontWeight={800}
-                      color="color-mix(in srgb, var(--foreground) 75%, transparent)"
+                      color="var(--foreground)"
                       styles={{
                         letterSpacing: "0.06em",
                         textTransform: "uppercase",

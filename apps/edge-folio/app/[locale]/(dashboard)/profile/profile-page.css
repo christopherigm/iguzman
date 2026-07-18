@@ -187,7 +187,7 @@
 }
 
 .profile__review-link:hover {
-  opacity: 0.8;
+  color: color-mix(in srgb, var(--primary, #06b6d4) 80%, #000);
 }
 
 /* ── Summary field label row ── */

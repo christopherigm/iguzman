@@ -74,11 +74,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
       <Typography as="h1" variant="h1" marginBottom={8}>
         {t("detailTitle", { id: orderRef(order.public_id) })}
       </Typography>
-      <Typography
-        variant="body"
-        marginBottom={24}
-        color="color-mix(in srgb, var(--foreground) 60%, transparent)"
-      >
+      <Typography variant="body" marginBottom={24} color="var(--foreground)">
         {t("placedOn", {
           date: new Date(order.created_at).toLocaleDateString(locale, {
             year: "numeric",
@@ -121,11 +117,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
             <Box height={1} flex="0 0 auto" backgroundColor="var(--border)" />
 
             <Box alignItems="center" justifyContent="space-between" gap={8}>
-              <Typography
-                as="span"
-                variant="body"
-                color="color-mix(in srgb, var(--foreground) 65%, transparent)"
-              >
+              <Typography as="span" variant="body" color="var(--foreground)">
                 {t("itemCount", { count: order.item_count })}
               </Typography>
             </Box>
@@ -178,7 +170,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
                         key={line}
                         variant="caption"
                         margin={0}
-                        color="color-mix(in srgb, var(--foreground) 65%, transparent)"
+                        color="var(--foreground)"
                       >
                         {line}
                       </Typography>

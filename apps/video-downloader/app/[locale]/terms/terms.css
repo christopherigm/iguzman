@@ -1,11 +1,9 @@
 .terms-meta {
-  opacity: 0.6;
   display: block;
   margin-top: 6px;
 }
 
 .terms-intro {
-  opacity: 0.85;
   line-height: 1.7;
 }
 
@@ -17,5 +15,4 @@
 
 .terms-section p {
   line-height: 1.7;
-  opacity: 0.85;
 }

@@ -246,9 +246,7 @@ export function MovieEditForm({
       />
 
       <Box display="flex" flexDirection="column" gap={8}>
-        <Typography variant="caption" styles={{ opacity: 0.7 }}>
-          {t("barcodesLabel")}
-        </Typography>
+        <Typography variant="caption">{t("barcodesLabel")}</Typography>
         {barcodes.map((bc, index) => (
           <Box
             key={index}

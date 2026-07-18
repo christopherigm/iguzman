@@ -222,7 +222,7 @@ export function CartLine({
                 <Typography
                   variant="caption"
                   margin={0}
-                  color="color-mix(in srgb, var(--foreground) 60%, transparent)"
+                  color="var(--foreground)"
                 >
                   {variantLabel}
                 </Typography>
@@ -239,7 +239,7 @@ export function CartLine({
                         key={row.ingredient}
                         variant="caption"
                         margin={0}
-                        color="color-mix(in srgb, var(--foreground) 60%, transparent)"
+                        color="var(--foreground)"
                       >
                         {row.removed
                           ? `− ${rowName}`
@@ -313,11 +313,7 @@ export function CartLine({
                 />
               </Box>
 
-              <Typography
-                as="span"
-                variant="caption"
-                color="color-mix(in srgb, var(--foreground) 55%, transparent)"
-              >
+              <Typography as="span" variant="caption" color="var(--foreground)">
                 {formatPrice(line.unit_price, line.currency)} {t("each")}
               </Typography>
             </Box>

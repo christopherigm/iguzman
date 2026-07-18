@@ -32,11 +32,12 @@
   color: var(--primary, #06b6d4);
   text-decoration: none;
   word-break: break-all;
-  transition: opacity 0.15s ease;
+  transition: color 0.15s ease;
 }
 
 .detail__url:hover {
-  opacity: 0.75;
+  color: color-mix(in srgb, var(--primary, #06b6d4) 80%, #000);
+  text-decoration: underline;
 }
 
 .detail__divider {

@@ -104,11 +104,7 @@ export function BarcodeScanner() {
         <Typography as="h2" variant="h4">
           {t("scannerHeading")}
         </Typography>
-        <Typography
-          variant="caption"
-          color="var(--foreground)"
-          styles={{ opacity: 0.6 }}
-        >
+        <Typography variant="caption" color="var(--foreground)">
           {t("subtitle")}
         </Typography>
       </Box>
@@ -209,7 +205,6 @@ export function BarcodeScanner() {
             variant="caption"
             textAlign="center"
             color="var(--foreground)"
-            styles={{ opacity: 0.55 }}
           >
             {t("permissionHelp")}
           </Typography>
@@ -218,11 +213,7 @@ export function BarcodeScanner() {
 
       {/* Scan count */}
       {scanStatus === "scanning" && scanCount > 0 && (
-        <Typography
-          variant="caption"
-          color="var(--foreground)"
-          styles={{ opacity: 0.45 }}
-        >
+        <Typography variant="caption" color="var(--foreground)">
           {t("scanCount", { count: scanCount })}
         </Typography>
       )}
@@ -251,7 +242,7 @@ export function BarcodeScanner() {
             variant="caption"
             textAlign="center"
             color="var(--foreground)"
-            styles={{ opacity: 0.45, fontFamily: "monospace" }}
+            styles={{ fontFamily: "monospace" }}
           >
             {lastScan.barcode}
           </Typography>

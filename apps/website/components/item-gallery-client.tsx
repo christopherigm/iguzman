@@ -83,9 +83,17 @@ export function ItemGalleryClient({
         .filter((r) => r !== null)
         .map((r) => r!.aspectRatio);
       if (ratios.length === 0) return;
-      // Use the most-portrait (smallest width/height ratio) so the tallest
-      // image fills the slide without letterboxing.
-      setSlideAspectRatio(Math.min(...ratios));
+      // "The large image" is the most-portrait (smallest width/height ratio)
+      // one, which drives the slide size. Cap the slide to an Instagram-style
+      // frame based on that reference image's orientation: a 4:5 (portrait)
+      // frame when it's portrait, a 5:4 (landscape) frame otherwise. Every
+      // image is object-fit: cover, so they fill this capped frame.
+      const referenceRatio = Math.min(...ratios);
+      const PORTRAIT_FRAME = 4 / 5; // 0.8
+      const LANDSCAPE_FRAME = 5 / 4; // 1.25
+      setSlideAspectRatio(
+        referenceRatio < 1 ? PORTRAIT_FRAME : LANDSCAPE_FRAME,
+      );
     });
   }, [images]);
 
@@ -127,10 +135,12 @@ export function ItemGalleryClient({
                 width="100%"
                 styles={{
                   position: "relative",
-                  // Size the slide to the tallest (most-portrait) image so a
-                  // vertical image fills 100% width and height; shorter images
-                  // are centred within it. No max-height cap - the gallery
-                  // grows to fit the image on both mobile and desktop.
+                  overflow: "hidden",
+                  // The slide is capped to a fixed 4:5 (portrait) or 5:4
+                  // (landscape) frame derived from the large image's
+                  // orientation - see slideAspectRatio above. Every image is
+                  // object-fit: cover, so they scale up to fill the frame
+                  // (cropping their edges) instead of being letterboxed.
                   aspectRatio:
                     slideAspectRatio !== null
                       ? String(slideAspectRatio)
@@ -143,7 +153,7 @@ export function ItemGalleryClient({
                   alt={img.alt}
                   sizes="(min-width: 1200px) 40vw, (min-width: 600px) 50vw, 100vw"
                   priority={i === 0}
-                  style={{ objectFit: "contain" }}
+                  style={{ objectFit: "cover" }}
                 />
                 <IconButton
                   icon="/icons/fullscreen.svg"

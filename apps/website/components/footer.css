@@ -9,7 +9,7 @@
    must live in CSS. */
 .footer__link {
   font-size: 0.875rem; /* h6 / 14px */
-  color: color-mix(in srgb, var(--foreground) 65%, transparent);
+  color: var(--foreground);
   text-decoration: none;
   transition: color 0.2s ease;
   width: fit-content;

@@ -43,7 +43,10 @@ export async function CartSummary({ totals, count }: CartSummaryProps) {
       backgroundColor="var(--surface-1)"
       elevation={3}
       border="none"
-      styles={{ position: "sticky", top: "calc(var(--ui-navbar-height, 57px) + 16px)" }}
+      styles={{
+        position: "sticky",
+        top: "calc(var(--ui-navbar-height, 57px) + 16px)",
+      }}
     >
       <Typography as="h2" variant="h5" margin={0} color="var(--on-surface)">
         {t("summary")}
@@ -52,11 +55,7 @@ export async function CartSummary({ totals, count }: CartSummaryProps) {
       <Box height={1} flex="0 0 auto" backgroundColor="var(--border)" />
 
       <Box alignItems="center" justifyContent="space-between" gap={8}>
-        <Typography
-          as="span"
-          variant="body"
-          color="color-mix(in srgb, var(--foreground) 65%, transparent)"
-        >
+        <Typography as="span" variant="body" color="var(--foreground)">
           {t("itemCount", { count })}
         </Typography>
       </Box>
@@ -84,11 +83,7 @@ export async function CartSummary({ totals, count }: CartSummaryProps) {
         </Box>
       ))}
 
-      <Typography
-        variant="caption"
-        margin={0}
-        color="color-mix(in srgb, var(--foreground) 55%, transparent)"
-      >
+      <Typography variant="caption" margin={0} color="var(--foreground)">
         {t("taxesNote")}
       </Typography>
 

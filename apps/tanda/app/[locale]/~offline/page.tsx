@@ -16,7 +16,7 @@ export default function OfflinePage() {
         <h1 style={{ fontSize: "2rem", marginBottom: "1rem" }}>
           You are offline
         </h1>
-        <p style={{ fontSize: "1.125rem", opacity: 0.7, maxWidth: "28rem" }}>
+        <p style={{ fontSize: "1.125rem", maxWidth: "28rem" }}>
           It looks like you lost your internet connection. Please check your
           network and try again.
         </p>

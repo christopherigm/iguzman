@@ -238,7 +238,7 @@ export function VideoGrid({
         <Typography
           variant="body"
           color="var(--foreground-muted, #999)"
-          styles={{ fontSize: 13, fontWeight: 500, opacity: 0.6 }}
+          styles={{ fontSize: 13, fontWeight: 500 }}
         >
           {t("emptyState")}
         </Typography>
@@ -416,7 +416,7 @@ export function VideoGrid({
           <Typography
             variant="body"
             color="var(--foreground-muted, #999)"
-            styles={{ fontSize: 13, fontWeight: 500, opacity: 0.6 }}
+            styles={{ fontSize: 13, fontWeight: 500 }}
           >
             {t("noResults")}
           </Typography>

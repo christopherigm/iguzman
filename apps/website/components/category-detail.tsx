@@ -86,7 +86,7 @@ export async function CategoryDetail({
             as="span"
             variant="h6"
             fontWeight={500}
-            color="color-mix(in srgb, var(--foreground) 45%, transparent)"
+            color="var(--foreground)"
           >
             {count}
           </Typography>

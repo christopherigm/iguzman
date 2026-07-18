@@ -21,7 +21,7 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
   pending: "var(--warning, #f59e0b)",
   failed: "var(--error, #ef4444)",
   canceled: "var(--error, #ef4444)",
-  refunded: "color-mix(in srgb, var(--foreground) 55%, transparent)",
+  refunded: "var(--foreground)",
 };
 
 /**
@@ -90,11 +90,7 @@ export function OrderStatusBanner({
         {message}
       </Typography>
       {status === "paid" ? (
-        <Typography
-          variant="caption"
-          margin={0}
-          color="color-mix(in srgb, var(--foreground) 65%, transparent)"
-        >
+        <Typography variant="caption" margin={0} color="var(--foreground)">
           {t("paidNote")}
         </Typography>
       ) : null}

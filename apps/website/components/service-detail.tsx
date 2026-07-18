@@ -110,20 +110,12 @@ export async function ServiceDetailPanel({
         {(service.brand_name || service.category_name) && (
           <Box flexWrap="wrap" gap="8px 20px">
             {service.brand_name && (
-              <Typography
-                as="span"
-                variant="caption"
-                color="color-mix(in srgb, var(--foreground) 60%, transparent)"
-              >
+              <Typography as="span" variant="caption" color="var(--foreground)">
                 {t("brand")}: <strong>{service.brand_name}</strong>
               </Typography>
             )}
             {service.category_name && (
-              <Typography
-                as="span"
-                variant="caption"
-                color="color-mix(in srgb, var(--foreground) 60%, transparent)"
-              >
+              <Typography as="span" variant="caption" color="var(--foreground)">
                 {t("category")}: <strong>{service.category_name}</strong>
               </Typography>
             )}
@@ -173,11 +165,7 @@ export async function ServiceDetailPanel({
 
         {/* SKU */}
         {(selectedVariant?.sku ?? service.sku) && (
-          <Typography
-            as="span"
-            variant="caption"
-            color="color-mix(in srgb, var(--foreground) 45%, transparent)"
-          >
+          <Typography as="span" variant="caption" color="var(--foreground)">
             {t("sku")}: {selectedVariant?.sku ?? service.sku}
           </Typography>
         )}
@@ -296,7 +284,7 @@ export async function ServiceDetailSections({
       </Typography>
       <Typography
         variant="body"
-        color="color-mix(in srgb, var(--foreground) 80%, transparent)"
+        color="var(--foreground)"
         styles={{ lineHeight: 1.7, whiteSpace: "pre-line" }}
       >
         {description}

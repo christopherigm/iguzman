@@ -117,11 +117,7 @@ export async function OrderLineRow({ line }: OrderLineRowProps) {
             </Badge>
           </Box>
           {line.variant_label ? (
-            <Typography
-              variant="caption"
-              margin={0}
-              color="color-mix(in srgb, var(--foreground) 60%, transparent)"
-            >
+            <Typography variant="caption" margin={0} color="var(--foreground)">
               {line.variant_label}
             </Typography>
           ) : null}
@@ -134,7 +130,7 @@ export async function OrderLineRow({ line }: OrderLineRowProps) {
                     key={idx}
                     variant="caption"
                     margin={0}
-                    color="color-mix(in srgb, var(--foreground) 60%, transparent)"
+                    color="var(--foreground)"
                   >
                     {row.removed
                       ? `− ${row.name}`
@@ -146,11 +142,7 @@ export async function OrderLineRow({ line }: OrderLineRowProps) {
               })}
             </Box>
           )}
-          <Typography
-            variant="caption"
-            margin={0}
-            color="color-mix(in srgb, var(--foreground) 55%, transparent)"
-          >
+          <Typography variant="caption" margin={0} color="var(--foreground)">
             {t("quantityTimesPrice", {
               quantity: line.quantity,
               price: formatPrice(line.unit_price, line.currency),

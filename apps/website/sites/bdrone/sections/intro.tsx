@@ -62,7 +62,7 @@ export async function Intro() {
               <Typography
                 as="p"
                 variant="body"
-                styles={{ whiteSpace: "pre-line", opacity: 0.85 }}
+                styles={{ whiteSpace: "pre-line" }}
               >
                 {body}
               </Typography>

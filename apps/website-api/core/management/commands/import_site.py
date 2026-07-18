@@ -8,10 +8,12 @@ database **including its images**, so a developer can work against a faithful co
 of what customers actually see.
 
 Unlike publish, this reuses the API's existing **public read endpoints** (system,
-success stories, highlights, product/service catalog) rather than a dedicated
+success stories, highlights, product/service/menu catalog) rather than a dedicated
 endpoint, so it works against production today with no redeploy. Each read
 endpoint already returns absolute image URLs; this command downloads those files
-and re-saves them onto the local records' ImageFields.
+and re-saves them onto the local records' ImageFields. Menu items bring their
+priced `ingredients`; the internal `recipe_steps` are kitchen IP and are never
+served on the public API, so they are not imported.
 
 Semantics (see `cli/website/website.sh pull`, which drives this):
   * The System is matched/created by host and its text + image fields overwritten.
@@ -27,7 +29,7 @@ Usage:
         --sections system,stories,highlights,products,services
 
 `--sections` is a comma list drawn from: system, stories, highlights, products,
-services (default: all). Pass `--no-reset` to upsert without wiping first.
+services, menu (default: all). Pass `--no-reset` to upsert without wiping first.
 """
 
 from __future__ import annotations
@@ -44,6 +46,10 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from catalog.models import (
+    MenuCategory,
+    MenuItem,
+    MenuItemImage,
+    MenuItemIngredient,
     Product,
     ProductCategory,
     ProductImage,
@@ -60,7 +66,7 @@ from core.models import (
 )
 from core.site_payload import SYSTEM_TEXT_FIELDS
 
-ALL_SECTIONS = ("system", "stories", "highlights", "products", "services")
+ALL_SECTIONS = ("system", "stories", "highlights", "products", "services", "menu")
 
 # The production WAF rejects the default "Python-urllib/x.y" User-Agent with a
 # 403, so every request (JSON reads + image downloads) sends a browser-like one.
@@ -118,6 +124,19 @@ SERVICE_FIELDS = (
     "price", "compare_price", "cost_price", "currency",
     "is_featured", "is_ai_generated", "is_verified",
     "duration", "modality",
+)
+MENU_ITEM_FIELDS = (
+    "name", "en_name", "description", "en_description",
+    "short_description", "en_short_description",
+    "sku", "href", "fit", "background_color",
+    "price", "compare_price", "cost_price", "currency",
+    "is_available", "is_featured", "is_ai_generated", "is_verified",
+    "calories", "spice_level", "servings",
+    "is_organic", "is_vegetarian", "is_vegan", "is_gluten_free", "allergens",
+)
+INGREDIENT_FIELDS = (
+    "name", "en_name", "quantity", "unit", "price",
+    "is_default", "is_removable", "max_quantity", "sort_order",
 )
 
 
@@ -186,6 +205,8 @@ class Command(BaseCommand):
                 self._import_products(system)
             if "services" in sections:
                 self._import_services(system)
+            if "menu" in sections:
+                self._import_menu(system)
 
         self.stdout.write(self.style.SUCCESS(
             f"Imported '{self.host}' from {self.api_url} "
@@ -370,3 +391,45 @@ class Command(BaseCommand):
                 self._attach(img, "image", g.get("image"))
                 img.save()
         self.stdout.write(f"  Imported {len(cats)} service categories / {len(services)} services")
+
+    # ------------------------------------------------------------------ #
+    # Catalog - menu (food)
+    # ------------------------------------------------------------------ #
+
+    def _import_menu(self, system):
+        if self.reset:
+            MenuItem.objects.filter(system=system).delete()
+            system.menu_categories.all().delete()
+
+        cats = self._get("/api/catalog/menu-categories/")
+        cat_by_slug = {}
+        for c in cats:
+            cat, _ = MenuCategory.objects.update_or_create(
+                slug=c.get("slug"),
+                defaults={"system": system, **self._scalars(c, CATEGORY_FIELDS)},
+            )
+            self._attach(cat, "image", c.get("image"))
+            cat.save()
+            cat_by_slug[c.get("slug")] = cat
+
+        items = self._get("/api/catalog/menu-items/")
+        for m in items:
+            defaults = {"system": system, **self._scalars(m, MENU_ITEM_FIELDS)}
+            defaults["category"] = cat_by_slug.get(m.get("category_slug"))
+            item, _ = MenuItem.objects.update_or_create(
+                slug=m.get("slug"), defaults=defaults
+            )
+            self._attach(item, "image", m.get("image"))
+            item.save()
+            # Priced ingredients (the internal recipe steps are never public).
+            item.ingredients.all().delete()
+            for ing in m.get("ingredients") or []:
+                MenuItemIngredient.objects.create(
+                    menu_item=item, **self._scalars(ing, INGREDIENT_FIELDS)
+                )
+            item.images.all().delete()
+            for g in m.get("images") or []:
+                img = MenuItemImage(menu_item=item, **self._scalars(g, GALLERY_FIELDS))
+                self._attach(img, "image", g.get("image"))
+                img.save()
+        self.stdout.write(f"  Imported {len(cats)} menu categories / {len(items)} menu items")

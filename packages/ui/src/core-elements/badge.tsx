@@ -28,6 +28,15 @@ export interface BadgeProps {
   color?: string;
   /** Foreground text color override (CSS value). Only used with `filled` variant. */
   textColor?: string;
+  /** Renders the label in uppercase. @default false */
+  uppercase?: boolean;
+  /**
+   * When `true`, applies `backdrop-filter: blur(8px)` so the badge blends into a
+   * translucent surface (e.g. floating over an image). Off by default -
+   * backdrop-filter is expensive to composite, so it is opt-in.
+   * @default false
+   */
+  translucent?: boolean;
   /** Extra CSS class names. */
   className?: string;
   /** Inline style overrides. */
@@ -50,6 +59,8 @@ export const Badge: React.FC<BadgeProps> = ({
   size = "md",
   color,
   textColor,
+  uppercase = false,
+  translucent = false,
   className,
   style,
 }) => {
@@ -61,6 +72,8 @@ export const Badge: React.FC<BadgeProps> = ({
     "ui-badge",
     `ui-badge--${variant}`,
     `ui-badge--${size}`,
+    uppercase && "ui-badge--uppercase",
+    translucent && "ui-badge--translucent",
     className,
   ]
     .filter(Boolean)

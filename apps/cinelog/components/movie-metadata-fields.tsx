@@ -126,9 +126,7 @@ export function MovieMetadataFields({
           disabled={disabled}
         />
         <Box display="flex" flexDirection="column" gap={4}>
-          <Typography variant="caption" styles={{ opacity: 0.7 }}>
-            {t("formatLabel")}
-          </Typography>
+          <Typography variant="caption">{t("formatLabel")}</Typography>
           <Box display="flex" gap={4} alignItems="center">
             {/* "digital" is omitted here: a digital copy is set via the
                 digital-copy URL input (its presence implies the format), so it
@@ -161,9 +159,7 @@ export function MovieMetadataFields({
       </Box>
 
       <Box display="flex" flexDirection="column" gap={6}>
-        <Typography variant="caption" styles={{ opacity: 0.7 }}>
-          {t("audioLabel")}
-        </Typography>
+        <Typography variant="caption">{t("audioLabel")}</Typography>
         <Box display="flex" gap={6} flexWrap="wrap">
           {AUDIO_FORMAT_BUTTONS.map(({ value: code, label }) => {
             const selected = value.audioFormats.includes(code);
@@ -185,9 +181,7 @@ export function MovieMetadataFields({
       </Box>
 
       <Box display="flex" flexDirection="column" gap={6}>
-        <Typography variant="caption" styles={{ opacity: 0.7 }}>
-          {t("hdrLabel")}
-        </Typography>
+        <Typography variant="caption">{t("hdrLabel")}</Typography>
         <Box display="flex" gap={6} flexWrap="wrap">
           {HDR_FORMAT_BUTTONS.map(({ value: code, label }) => {
             const selected = value.hdrFormats.includes(code);
@@ -255,9 +249,7 @@ export function MovieMetadataFields({
         disabled={disabled}
       />
       <Box display="flex" flexDirection="column" gap={4}>
-        <Typography variant="caption" styles={{ opacity: 0.7 }}>
-          {t("digitalCopyLabel")}
-        </Typography>
+        <Typography variant="caption">{t("digitalCopyLabel")}</Typography>
         <DigitalCopySelector
           value={value.digitalCopyUrl}
           onChange={(digitalCopyUrl) => onPatch({ digitalCopyUrl })}

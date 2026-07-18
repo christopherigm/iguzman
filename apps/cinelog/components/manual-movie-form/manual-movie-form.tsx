@@ -72,11 +72,7 @@ export function ManualMovieForm() {
         <Typography as="h2" variant="h4">
           {t("formHeading")}
         </Typography>
-        <Typography
-          variant="caption"
-          color="var(--foreground)"
-          styles={{ opacity: 0.6 }}
-        >
+        <Typography variant="caption" color="var(--foreground)">
           {t("formSubtitle")}
         </Typography>
       </Box>

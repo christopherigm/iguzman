@@ -125,15 +125,10 @@ export function HighlightCard({
           {category && (
             <Badge
               variant="filled"
-              color="transparent"
-              textColor="rgba(255, 255, 255, 0.75)"
+              textColor="#fff"
+              uppercase
               style={{
                 width: "fit-content",
-                padding: "3px 10px",
-                borderRadius: 8,
-                border: "1px solid rgba(255, 255, 255, 0.35)",
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
               }}
             >
               {category}
@@ -178,11 +173,7 @@ export function HighlightCard({
           )}
 
           {description && (
-            <Typography
-              variant="body"
-              margin={0}
-              color="rgba(255, 255, 255, 0.72)"
-            >
+            <Typography variant="body" margin={0} color="#fff">
               {description}
             </Typography>
           )}

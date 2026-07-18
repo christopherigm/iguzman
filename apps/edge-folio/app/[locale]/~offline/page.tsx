@@ -25,7 +25,7 @@ export default function OfflinePage() {
         <Typography
           as="p"
           variant="body"
-          styles={{ fontSize: "1.125rem", opacity: 0.7, maxWidth: "28rem" }}
+          styles={{ fontSize: "1.125rem", maxWidth: "28rem" }}
         >
           It looks like you lost your internet connection. Please check your
           network and try again.

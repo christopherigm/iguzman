@@ -37,7 +37,7 @@ a {
   margin: 0 0 24px;
   font-size: clamp(14px, 1.5vw, 16px);
   line-height: 1.6;
-  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+  color: var(--foreground);
 }
 
 /* ── Card content padding ────────────────────────────────────────────────────
@@ -216,7 +216,7 @@ a {
 
 .item-compare-price {
   font-size: clamp(14px, 1.8vw, 17px);
-  color: color-mix(in srgb, var(--foreground) 45%, transparent);
+  color: var(--foreground);
   text-decoration: line-through;
 }
 
@@ -251,7 +251,7 @@ a {
 .item-specs-table td:first-child {
   font-weight: 600;
   width: 40%;
-  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  color: var(--foreground);
   padding-right: 16px;
 }
 

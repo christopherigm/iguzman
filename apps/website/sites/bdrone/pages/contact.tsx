@@ -57,7 +57,6 @@ export async function Contact() {
             textAlign="center"
             fontWeight={400}
             maxWidth={560}
-            styles={{ opacity: 0.8 }}
           >
             {t("contact.subtitle")}
           </Typography>

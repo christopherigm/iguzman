@@ -108,11 +108,7 @@ export async function MenuDetailPanel({ item, locale }: MenuDetailProps) {
         )}
 
         {item.category_name && (
-          <Typography
-            as="span"
-            variant="caption"
-            color="color-mix(in srgb, var(--foreground) 60%, transparent)"
-          >
+          <Typography as="span" variant="caption" color="var(--foreground)">
             {t("category")}: <strong>{item.category_name}</strong>
           </Typography>
         )}
@@ -185,10 +181,7 @@ export async function MenuDetailPanel({ item, locale }: MenuDetailProps) {
           <Typography as="h2" variant="none" className="item-section-heading">
             {tMenu("allergens")}
           </Typography>
-          <Typography
-            variant="body"
-            color="color-mix(in srgb, var(--foreground) 80%, transparent)"
-          >
+          <Typography variant="body" color="var(--foreground)">
             {item.allergens}
           </Typography>
         </Card>
@@ -216,7 +209,7 @@ export async function MenuDetailSections({ item, locale }: MenuDetailProps) {
       </Typography>
       <Typography
         variant="body"
-        color="color-mix(in srgb, var(--foreground) 80%, transparent)"
+        color="var(--foreground)"
         styles={{ lineHeight: 1.7, whiteSpace: "pre-line" }}
       >
         {description}

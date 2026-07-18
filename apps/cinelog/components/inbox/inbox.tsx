@@ -134,7 +134,7 @@ export function Inbox() {
           size="md"
         />
       </Box>
-      <Typography variant="body" styles={{ opacity: 0.6 }} marginTop={4}>
+      <Typography variant="body" marginTop={4}>
         {t("subtitle")}
       </Typography>
 
@@ -151,7 +151,7 @@ export function Inbox() {
       )}
 
       {status === "ready" && items.length === 0 && (
-        <Typography variant="body" textAlign="center" styles={{ opacity: 0.6 }}>
+        <Typography variant="body" textAlign="center">
           {t("empty")}
         </Typography>
       )}

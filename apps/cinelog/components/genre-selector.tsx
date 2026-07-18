@@ -52,11 +52,7 @@ export function GenreSelector({
       width="100%"
       alignItems={align === "center" ? "center" : undefined}
     >
-      {label && (
-        <Typography variant="caption" styles={{ opacity: 0.7 }}>
-          {label}
-        </Typography>
-      )}
+      {label && <Typography variant="caption">{label}</Typography>}
       <Box
         display="flex"
         flexWrap="wrap"

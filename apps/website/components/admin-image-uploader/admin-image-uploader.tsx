@@ -212,11 +212,7 @@ export function AdminImageUploader({
             {compact ? t("dropzoneTextCompact") : t("dropzoneText")}
           </Typography>
           {!compact && (
-            <Typography
-              as="span"
-              variant="caption"
-              color="color-mix(in srgb, var(--foreground) 50%, transparent)"
-            >
+            <Typography as="span" variant="caption" color="var(--foreground)">
               {t("dropzoneHint")}
             </Typography>
           )}
@@ -294,18 +290,14 @@ export function AdminImageUploader({
                 {index === 0 && (
                   <Badge
                     variant="filled"
+                    size="sm"
                     color="var(--accent)"
                     textColor="white"
+                    uppercase
                     style={{
                       position: "absolute",
                       bottom: 4,
                       left: 4,
-                      padding: "2px 5px",
-                      borderRadius: 8,
-                      fontSize: 9,
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
                     }}
                   >
                     {t("main")}
@@ -322,7 +314,7 @@ export function AdminImageUploader({
           variant="body"
           textAlign="center"
           padding={8}
-          color="color-mix(in srgb, var(--foreground) 50%, transparent)"
+          color="var(--foreground)"
         >
           {t("maxReached")}
         </Typography>

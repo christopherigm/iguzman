@@ -91,7 +91,7 @@ export function VariantSelectorClient({
               as="span"
               variant="label"
               fontWeight={600}
-              color="color-mix(in srgb, var(--foreground) 70%, transparent)"
+              color="var(--foreground)"
               styles={{ textTransform: "uppercase", letterSpacing: "0.04em" }}
             >
               {optionName}

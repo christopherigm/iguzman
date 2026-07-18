@@ -8,7 +8,7 @@
 #   pnpm pull-site [host] [-y]                    -> website.sh pull ...
 #
 # publish  Serializes a locally-seeded site's System + success stories +
-#          highlights + product/service catalog out of the LOCAL database (via
+#          highlights + product/service/menu catalog out of the LOCAL database (via
 #          `manage.py export_site`), then POSTs that payload to the production
 #          `/api/publish-site/` endpoint, which upserts it. Image files are NOT
 #          transported - the customer uploads real images in the production CMS;
@@ -22,8 +22,8 @@
 #          CSRF_TRUSTED_ORIGINS / ALLOWED_HOSTS in apps/website-api/helm/values.yaml.
 #
 # pull     The inverse of publish: pulls a production site's content DOWN into the
-#          LOCAL database - System + success stories + highlights + product/service
-#          catalog - INCLUDING images (downloaded into local media). Lists the
+#          LOCAL database - System + success stories + highlights + product/service/
+#          menu catalog - INCLUDING images (downloaded into local media). Lists the
 #          production sites, lets you pick one and check which sections to import
 #          (all by default), then runs `manage.py import_site`, which reuses the
 #          API's public read endpoints (no prod redeploy) and resets each selected
@@ -106,7 +106,7 @@ setup_strings() {
     ERR_PAYLOAD_INVALID_JSON="Error: la carga exportada no es JSON válido"
     ERR_CREDS_REQUIRED="Error: se requieren la URL de la API y las credenciales de administrador"
     MSG_PUBLISHING="Publicando '%s' en %s"
-    SUMMARY_COUNTS="%s historias, %s destacados, %s cat. de productos, %s cat. de servicios."
+    SUMMARY_COUNTS="%s historias, %s destacados, %s cat. de productos, %s cat. de servicios, %s cat. de menú."
     MSG_RESET_NOTE="--reset: reemplaza el contenido existente de este Sistema"
     CONFIRM_PUBLISH="Escribe '%s' para publicar: "
     MSG_ABORTED="Cancelado."
@@ -140,6 +140,7 @@ setup_strings() {
     SEC_HIGHLIGHTS="Destacados"
     SEC_PRODUCTS="Productos"
     SEC_SERVICES="Servicios"
+    SEC_MENU="Menú"
   else
     WELCOME="Website Multi-Tenant Ops"
     SUBTITLE="Publish, sync and pull website content."
@@ -167,7 +168,7 @@ setup_strings() {
     ERR_PAYLOAD_INVALID_JSON="Error: exported payload is not valid JSON"
     ERR_CREDS_REQUIRED="Error: API URL and admin credentials are required"
     MSG_PUBLISHING="Publishing '%s' to %s"
-    SUMMARY_COUNTS="%s stories, %s highlights, %s product cat., %s service cat."
+    SUMMARY_COUNTS="%s stories, %s highlights, %s product cat., %s service cat., %s menu cat."
     MSG_RESET_NOTE="--reset: replaces this System's existing content"
     CONFIRM_PUBLISH="Type '%s' to publish: "
     MSG_ABORTED="Aborted."
@@ -201,6 +202,7 @@ setup_strings() {
     SEC_HIGHLIGHTS="Highlights"
     SEC_PRODUCTS="Products"
     SEC_SERVICES="Services"
+    SEC_MENU="Menu"
   fi
 }
 
@@ -529,14 +531,15 @@ cmd_publish() {
   fi
 
   # 3. Confirm (writes to production!).
-  local stories highlights prodcat servcat
+  local stories highlights prodcat servcat menucat
   stories="$(printf '%s' "$payload"    | jq -r '(.success_stories // [])    | length')"
   highlights="$(printf '%s' "$payload" | jq -r '(.highlights // [])         | length')"
   prodcat="$(printf '%s' "$payload"    | jq -r '(.product_categories // []) | length')"
   servcat="$(printf '%s' "$payload"    | jq -r '(.service_categories // []) | length')"
+  menucat="$(printf '%s' "$payload"    | jq -r '(.menu_categories // [])    | length')"
 
   info "\n  $(printf "${MSG_PUBLISHING}" "$host" "$API_URL")"
-  info "    $(printf "${SUMMARY_COUNTS}" "$stories" "$highlights" "$prodcat" "$servcat")"
+  info "    $(printf "${SUMMARY_COUNTS}" "$stories" "$highlights" "$prodcat" "$servcat" "$menucat")"
   [[ "$reset" == "1" ]] && info "    ${MSG_RESET_NOTE}"
 
   if [[ "$AUTO_YES" != "1" ]]; then
@@ -678,7 +681,7 @@ cmd_sync() {
 
 # ── pull ──────────────────────────────────────────────────────────────────────
 
-PULL_SECTIONS=(system stories highlights products services)
+PULL_SECTIONS=(system stories highlights products services menu)
 
 # select_sections : interactive checklist (all checked by default). Sets the
 # global CHOSEN to a comma-joined list of the checked section keys.
@@ -688,8 +691,8 @@ select_sections() {
     CHOSEN="$(IFS=,; echo "${PULL_SECTIONS[*]}")"; return
   fi
 
-  _CB_LABELS=("${SEC_SYSTEM}" "${SEC_STORIES}" "${SEC_HIGHLIGHTS}" "${SEC_PRODUCTS}" "${SEC_SERVICES}")
-  _CB_SEL=(1 1 1 1 1)
+  _CB_LABELS=("${SEC_SYSTEM}" "${SEC_STORIES}" "${SEC_HIGHLIGHTS}" "${SEC_PRODUCTS}" "${SEC_SERVICES}" "${SEC_MENU}")
+  _CB_SEL=(1 1 1 1 1 1)
 
   info "\n  ${LBL_SECTIONS_TO_IMPORT}"
   printf "  %s\n" "$(clr_dim "${CB_PROMPT}")"

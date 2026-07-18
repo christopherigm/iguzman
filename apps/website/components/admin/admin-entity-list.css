@@ -13,7 +13,7 @@
   font-size: 0.75rem; /* label / 12px */
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: color-mix(in srgb, var(--foreground) 55%, transparent);
+  color: var(--foreground);
   background: color-mix(in srgb, var(--foreground) 4%, transparent);
   border-bottom: 1px solid
     color-mix(in srgb, var(--foreground) 10%, transparent);

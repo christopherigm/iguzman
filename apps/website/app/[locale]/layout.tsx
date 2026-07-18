@@ -99,7 +99,10 @@ export default async function LocaleLayout({ children, params }: Props) {
   const themeResolvedCookie = cookieStore.get(RESOLVED_COOKIE_NAME)?.value as
     | ResolvedTheme
     | undefined;
-  const initialMode: ThemeMode = themeModeCookie ?? "system";
+  // Customer sites default to a light theme for first-time visitors (no saved
+  // theme-mode cookie yet) rather than following the OS setting. The ThemeSwitch
+  // still lets a visitor pick dark, and that choice persists via the cookie.
+  const initialMode: ThemeMode = themeModeCookie ?? "light";
   const initialResolved: ResolvedTheme =
     initialMode === "system"
       ? (themeResolvedCookie ?? "light")
@@ -128,7 +131,7 @@ export default async function LocaleLayout({ children, params }: Props) {
       suppressHydrationWarning
     >
       <head>
-        <ThemeScript />
+        <ThemeScript defaultMode="light" />
       </head>
       <body style={bodyStyle}>
         <SerwistProvider swUrl="/sw.js">

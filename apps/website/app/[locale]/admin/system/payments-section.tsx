@@ -102,7 +102,7 @@ export function PaymentsSection({
         <Typography
           variant="label"
           fontWeight={800}
-          color="color-mix(in srgb, var(--foreground) 75%, transparent)"
+          color="var(--foreground)"
           styles={{ letterSpacing: "0.06em", textTransform: "uppercase" }}
         >
           {t("paymentsTitle")}
@@ -131,11 +131,7 @@ export function PaymentsSection({
       {/* ── Step 1: the API keys ── */}
       <Box flexDirection="column" gap={8}>
         <StepHeading number="1" text={t("paymentsStepKeysTitle")} />
-        <Typography
-          variant="caption"
-          margin={0}
-          color="color-mix(in srgb, var(--foreground) 65%, transparent)"
-        >
+        <Typography variant="caption" margin={0} color="var(--foreground)">
           {t("paymentsStepKeysHelp")}
         </Typography>
         <StripeLink href={STRIPE_API_KEYS_URL} text={t("paymentsKeysLink")} />
@@ -169,11 +165,7 @@ export function PaymentsSection({
       {/* ── Step 2: the webhook ── */}
       <Box flexDirection="column" gap={8}>
         <StepHeading number="2" text={t("paymentsStepWebhookTitle")} />
-        <Typography
-          variant="caption"
-          margin={0}
-          color="color-mix(in srgb, var(--foreground) 65%, transparent)"
-        >
+        <Typography variant="caption" margin={0} color="var(--foreground)">
           {t("paymentsStepWebhookHelp")}
         </Typography>
         <StripeLink
@@ -186,7 +178,7 @@ export function PaymentsSection({
             as="span"
             variant="label"
             fontWeight={600}
-            color="color-mix(in srgb, var(--foreground) 75%, transparent)"
+            color="var(--foreground)"
           >
             {t("paymentsWebhookUrlLabel")}
           </Typography>
@@ -221,7 +213,7 @@ export function PaymentsSection({
           variant="caption"
           margin={0}
           marginTop={4}
-          color="color-mix(in srgb, var(--foreground) 65%, transparent)"
+          color="var(--foreground)"
         >
           {t("paymentsEventsHelp")}
         </Typography>

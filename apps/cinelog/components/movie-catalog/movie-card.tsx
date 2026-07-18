@@ -80,11 +80,7 @@ export function MovieCard({ movie, view }: Props) {
             height="100%"
             backgroundColor="var(--surface-2)"
           >
-            <Typography
-              variant="caption"
-              textAlign="center"
-              styles={{ opacity: 0.6 }}
-            >
+            <Typography variant="caption" textAlign="center">
               {t("noCover")}
             </Typography>
           </Box>
@@ -123,9 +119,7 @@ export function MovieCard({ movie, view }: Props) {
               {movie.title}
             </Typography>
             {movie.director && (
-              <Typography variant="caption" styles={{ opacity: 0.9 }}>
-                {movie.director}
-              </Typography>
+              <Typography variant="caption">{movie.director}</Typography>
             )}
             <Box display="flex" gap={6} flexWrap="wrap">
               {movie.year && (
@@ -179,9 +173,7 @@ export function MovieCard({ movie, view }: Props) {
               {movie.title}
             </Typography>
             {movie.year && (
-              <Typography variant="caption" styles={{ opacity: 0.6 }}>
-                {movie.year}
-              </Typography>
+              <Typography variant="caption">{movie.year}</Typography>
             )}
           </Box>
           {showAdd && (

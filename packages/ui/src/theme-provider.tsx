@@ -131,11 +131,23 @@ function useTheme(): ThemeContextValue {
 
 // --- ThemeScript (inline fallback for zero-flash SSR) ---
 
-function ThemeScript() {
+function ThemeScript({
+  defaultMode = "system",
+}: {
+  /**
+   * Theme mode used when the visitor has no saved `theme-mode` cookie yet.
+   * Defaults to `"system"` (follow the OS setting). Pass `"light"` or `"dark"`
+   * to make an app default to a fixed theme for first-time visitors while still
+   * honoring the ThemeSwitch cookie once they change it. Must match the
+   * `initialMode` fallback the layout passes to `ThemeProvider`, or the first
+   * paint will flash.
+   */
+  defaultMode?: ThemeMode;
+} = {}) {
   return (
     <script
       dangerouslySetInnerHTML={{
-        __html: `(function(){try{var m=document.cookie.match(/(^|;)\\s*${COOKIE_NAME}=([^;]+)/);var mode=m?m[2]:'system';var resolved=mode;if(mode==='system'){resolved=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.cookie='${RESOLVED_COOKIE_NAME}='+resolved+';path=/;max-age=${COOKIE_MAX_AGE};SameSite=Lax'}document.documentElement.setAttribute('data-theme',resolved);document.documentElement.style.colorScheme=resolved}catch(e){}})()`,
+        __html: `(function(){try{var m=document.cookie.match(/(^|;)\\s*${COOKIE_NAME}=([^;]+)/);var mode=m?m[2]:'${defaultMode}';var resolved=mode;if(mode==='system'){resolved=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.cookie='${RESOLVED_COOKIE_NAME}='+resolved+';path=/;max-age=${COOKIE_MAX_AGE};SameSite=Lax'}document.documentElement.setAttribute('data-theme',resolved);document.documentElement.style.colorScheme=resolved}catch(e){}})()`,
       }}
     />
   );

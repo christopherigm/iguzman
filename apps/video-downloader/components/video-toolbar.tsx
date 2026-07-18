@@ -246,12 +246,7 @@ export function VideoToolbar({
 
             <Typography variant="body" className="vt-page-info">
               {page} / {totalPages}
-              <Typography
-                as="span"
-                variant="none"
-                marginLeft={4}
-                styles={{ opacity: 0.7 }}
-              >
+              <Typography as="span" variant="none" marginLeft={4}>
                 ({filteredCount})
               </Typography>
             </Typography>

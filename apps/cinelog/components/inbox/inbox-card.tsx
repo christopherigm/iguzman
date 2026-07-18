@@ -240,11 +240,7 @@ export function InboxCard({ item, categories, onAccept, onReject }: Props) {
                 height="100%"
                 backgroundColor="var(--surface-2)"
               >
-                <Typography
-                  variant="caption"
-                  textAlign="center"
-                  styles={{ opacity: 0.6 }}
-                >
+                <Typography variant="caption" textAlign="center">
                   {t("noCover")}
                 </Typography>
               </Box>
@@ -259,9 +255,7 @@ export function InboxCard({ item, categories, onAccept, onReject }: Props) {
 
         <Box flexDirection="column" gap={16} flex={1} minWidth={0}>
           {item.error_message && (
-            <Typography variant="caption" styles={{ opacity: 0.7 }}>
-              {item.error_message}
-            </Typography>
+            <Typography variant="caption">{item.error_message}</Typography>
           )}
 
           <MovieMetadataFields
@@ -324,9 +318,7 @@ export function InboxCard({ item, categories, onAccept, onReject }: Props) {
 
       {showCandidates && item.candidates.length > 0 && (
         <Box flexDirection="column" gap={8}>
-          <Typography variant="label" styles={{ opacity: 0.7 }}>
-            {t("pickMatch")}
-          </Typography>
+          <Typography variant="label">{t("pickMatch")}</Typography>
           <Box display="flex" gap={12} className="inbox-card__candidates">
             {item.candidates.map((candidate) => {
               const selected = candidate.tmdb_id === tmdbId;
@@ -388,11 +380,7 @@ export function InboxCard({ item, categories, onAccept, onReject }: Props) {
                         height="100%"
                         backgroundColor="var(--surface-2)"
                       >
-                        <Typography
-                          variant="caption"
-                          textAlign="center"
-                          styles={{ opacity: 0.6 }}
-                        >
+                        <Typography variant="caption" textAlign="center">
                           {t("noCover")}
                         </Typography>
                       </Box>
@@ -427,7 +415,6 @@ export function InboxCard({ item, categories, onAccept, onReject }: Props) {
                   {candidate.overview && (
                     <Typography
                       variant="label"
-                      styles={{ opacity: 0.6 }}
                       className="inbox-card__candidate-overview"
                     >
                       {candidate.overview}

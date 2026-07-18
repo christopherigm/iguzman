@@ -176,7 +176,7 @@ export async function BuyableCard({
 
         <Badge
           variant="filled"
-          size="sm"
+          size="md"
           color={
             kind === "product"
               ? "rgb(34, 181, 32)"
@@ -234,7 +234,7 @@ export async function BuyableCard({
         {name && (
           <Typography
             as="h3"
-            variant="h5"
+            variant="h4"
             margin={0}
             color="var(--foreground)"
             styles={{
@@ -250,9 +250,9 @@ export async function BuyableCard({
 
         {description && (
           <Typography
-            variant="caption"
+            variant="body"
             margin={0}
-            color="color-mix(in srgb, var(--foreground) 85%, transparent)"
+            color="var(--foreground)"
             styles={{
               lineHeight: 1.5,
               display: "-webkit-box",
@@ -268,17 +268,13 @@ export async function BuyableCard({
         <Box flexDirection="column" gap={8} marginTop="auto" paddingTop={4}>
           <Box alignItems="baseline" gap={6} flexWrap="wrap">
             {kind === "food" && fromLabel && (
-              <Typography
-                as="span"
-                variant="caption"
-                color="color-mix(in srgb, var(--foreground) 75%, transparent)"
-              >
+              <Typography as="span" variant="caption" color="var(--foreground)">
                 {fromLabel}
               </Typography>
             )}
             <Typography
               as="span"
-              variant="h6"
+              variant="h4"
               fontWeight={700}
               color="var(--foreground)"
             >
@@ -290,7 +286,7 @@ export async function BuyableCard({
                   as="span"
                   variant="label"
                   fontWeight={400}
-                  color="color-mix(in srgb, var(--foreground) 65%, transparent)"
+                  color="var(--foreground)"
                   // 11px sub-scale: compare price sits below the label (12px) tier
                   styles={{ fontSize: 11, textDecoration: "line-through" }}
                 >

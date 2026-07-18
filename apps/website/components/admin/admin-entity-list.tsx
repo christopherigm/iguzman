@@ -86,7 +86,7 @@ export function AdminEntityList({
           padding="32px 16px"
           borderRadius={8}
           backgroundColor="color-mix(in srgb, var(--foreground) 3%, transparent)"
-          color="color-mix(in srgb, var(--foreground) 60%, transparent)"
+          color="var(--foreground)"
           styles={{ textAlign: "center" }}
         >
           <Typography variant="body">{t("loading")}</Typography>
@@ -110,7 +110,7 @@ export function AdminEntityList({
           padding="32px 16px"
           borderRadius={8}
           backgroundColor="color-mix(in srgb, var(--foreground) 3%, transparent)"
-          color="color-mix(in srgb, var(--foreground) 60%, transparent)"
+          color="var(--foreground)"
           styles={{ textAlign: "center" }}
         >
           <Typography variant="body">{t("noItems")}</Typography>
@@ -250,11 +250,7 @@ function EnabledSwitch({
  */
 export function EmptyCell() {
   return (
-    <Typography
-      as="span"
-      variant="body"
-      color="color-mix(in srgb, var(--foreground) 35%, transparent)"
-    >
+    <Typography as="span" variant="body" color="var(--foreground)">
       -
     </Typography>
   );

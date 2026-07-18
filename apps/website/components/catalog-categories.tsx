@@ -86,26 +86,9 @@ export function CategoryCard({
         <Badge
           variant="filled"
           size="md"
-          color={
-            accentBadge
-              ? "rgba(var(--accent-rgb, 99, 102, 241), 0.18)"
-              : "rgba(255, 255, 255, 0.15)"
-          }
-          textColor={
-            accentBadge ? "var(--accent, #6366f1)" : "rgba(255, 255, 255, 0.85)"
-          }
-          style={{
-            width: "fit-content",
-            padding: "3px 10px",
-            borderRadius: 8,
-            border: `1px solid ${
-              accentBadge
-                ? "rgba(var(--accent-rgb, 99, 102, 241), 0.45)"
-                : "rgba(255, 255, 255, 0.35)"
-            }`,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-          }}
+          textColor={accentBadge ? "var(--accent, #6366f1)" : "#fff"}
+          uppercase
+          style={{ width: "fit-content" }}
         >
           {label}
         </Badge>
@@ -115,7 +98,7 @@ export function CategoryCard({
             as="h3"
             variant="h3"
             margin={0}
-            color={hasImage ? "#fff" : "var(--on-surface)"}
+            color={hasImage ? "#fff" : "var(--foreground)"}
           >
             {name}
           </Typography>
@@ -125,11 +108,7 @@ export function CategoryCard({
           <Typography
             variant="body"
             margin={0}
-            color={
-              hasImage
-                ? "rgba(255, 255, 255, 0.72)"
-                : "var(--on-surface-muted, rgba(0, 0, 0, 0.55))"
-            }
+            color={hasImage ? "#fff" : "var(--foreground)"}
             styles={{
               display: "-webkit-box",
               WebkitLineClamp: 2,
@@ -144,11 +123,7 @@ export function CategoryCard({
         <Typography
           as="span"
           variant="label"
-          color={
-            hasImage
-              ? "rgba(255, 255, 255, 0.55)"
-              : "var(--on-surface-muted, rgba(0, 0, 0, 0.45))"
-          }
+          color={hasImage ? "#fff" : "var(--foreground)"}
         >
           {countLabel}
         </Typography>

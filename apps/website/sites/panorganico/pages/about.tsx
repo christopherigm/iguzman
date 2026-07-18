@@ -61,12 +61,7 @@ export async function About() {
             : t("about.title")}
         </Typography>
         {system?.slogan && (
-          <Typography
-            as="p"
-            variant="h4"
-            fontWeight={400}
-            styles={{ opacity: 0.75 }}
-          >
+          <Typography as="p" variant="h4" fontWeight={400}>
             {system.slogan}
           </Typography>
         )}
@@ -83,7 +78,7 @@ export async function About() {
               {about}
             </Typography>
           ) : (
-            <Typography as="p" variant="body" styles={{ opacity: 0.7 }}>
+            <Typography as="p" variant="body">
               {t("about.placeholder")}
             </Typography>
           )}
@@ -129,7 +124,7 @@ export async function About() {
                   <Typography
                     as="p"
                     variant="body"
-                    styles={{ whiteSpace: "pre-line", opacity: 0.85 }}
+                    styles={{ whiteSpace: "pre-line" }}
                   >
                     {mission}
                   </Typography>
@@ -151,7 +146,7 @@ export async function About() {
                   <Typography
                     as="p"
                     variant="body"
-                    styles={{ whiteSpace: "pre-line", opacity: 0.85 }}
+                    styles={{ whiteSpace: "pre-line" }}
                   >
                     {vision}
                   </Typography>

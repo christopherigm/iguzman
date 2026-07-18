@@ -59,7 +59,6 @@ const HDR_LABELS = new Map(
 );
 
 const LABEL_STYLES = {
-  opacity: 0.6,
   textTransform: "uppercase" as const,
   letterSpacing: "0.05em",
 };
@@ -440,7 +439,7 @@ export function MovieDetail({
                 <Typography variant="body" role="alert">
                   {t("streamUnsupported")}
                 </Typography>
-                <Typography variant="caption" styles={{ opacity: 0.7 }}>
+                <Typography variant="caption">
                   {t("streamUnsupportedHint")}
                 </Typography>
               </Box>
@@ -681,9 +680,7 @@ export function MovieDetail({
                 height="100%"
                 backgroundColor="var(--surface-2)"
               >
-                <Typography variant="caption" styles={{ opacity: 0.6 }}>
-                  {t("noCover")}
-                </Typography>
+                <Typography variant="caption">{t("noCover")}</Typography>
               </Box>
             )}
           </Box>
