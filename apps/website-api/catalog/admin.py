@@ -416,7 +416,7 @@ class MenuItemIngredientInline(admin.TabularInline):
     model = MenuItemIngredient
     extra = 0
     fields = (
-        'name', 'en_name', 'quantity', 'unit', 'price',
+        'name', 'en_name', 'quantity', 'unit', 'calories', 'price',
         'is_default', 'is_removable', 'max_quantity', 'sort_order', 'enabled',
     )
 
@@ -486,7 +486,7 @@ class MenuItemAdmin(admin.ModelAdmin):
             'fields': ('price', 'compare_price', 'cost_price', 'currency', 'sku'),
         }),
         ('Dietary & Serving', {
-            'fields': ('calories', 'spice_level', 'servings', 'is_organic', 'is_vegetarian', 'is_vegan', 'is_gluten_free', 'allergens'),
+            'fields': ('spice_level', 'servings', 'is_organic', 'is_vegetarian', 'is_vegan', 'is_gluten_free', 'allergens'),
         }),
         ('Recipe (internal)', {
             'fields': ('prep_time_minutes', 'cook_time_minutes', 'recipe_notes'),
@@ -509,7 +509,7 @@ class MenuItemAdmin(admin.ModelAdmin):
 
 @admin.register(MenuItemIngredient)
 class MenuItemIngredientAdmin(admin.ModelAdmin):
-    list_display = ('name', 'menu_item', 'price', 'is_default', 'is_removable', 'max_quantity', 'sort_order', 'enabled')
+    list_display = ('name', 'menu_item', 'price', 'calories', 'is_default', 'is_removable', 'max_quantity', 'sort_order', 'enabled')
     list_filter = ('enabled', 'is_default', 'is_removable', 'menu_item__system')
     search_fields = ('name', 'en_name', 'menu_item__name')
     readonly_fields = ('created', 'modified', 'version')

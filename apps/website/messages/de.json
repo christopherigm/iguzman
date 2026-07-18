@@ -462,6 +462,7 @@
     "addIngredient": "Zutat hinzufügen",
     "ingredientsHint": "Standardzutaten sind im Grundpreis enthalten. Legen Sie einen Aufpreis für optionale Extras fest, die der Kunde hinzufügen kann.",
     "noIngredients": "Noch keine Zutaten.",
+    "dragToReorder": "Zum Neuordnen ziehen",
     "ingredientName": "Name",
     "upcharge": "Aufpreis",
     "portion": "Portion",

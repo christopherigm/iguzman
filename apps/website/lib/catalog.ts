@@ -408,6 +408,7 @@ export interface MenuItemIngredient {
   en_name: string | null;
   quantity: string | null;
   unit: string | null;
+  calories: number | null;
   price: string;
   is_default: boolean;
   is_removable: boolean;
@@ -447,7 +448,6 @@ export interface MenuItemDetail {
   category_slug: string | null;
   brand: number | null;
   brand_name: string | null;
-  calories: number | null;
   spice_level: number | null;
   servings: number | null;
   prep_time_minutes: number | null;

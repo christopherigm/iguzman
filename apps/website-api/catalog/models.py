@@ -592,7 +592,6 @@ class MenuItem(Buyable):
     is_verified = models.BooleanField(default=False)
 
     # Dietary / serving metadata (all optional, public).
-    calories = models.PositiveIntegerField(null=True, blank=True, help_text='kcal per serving.')
     spice_level = models.PositiveSmallIntegerField(
         null=True, blank=True, help_text='0-5, where 0 is not spicy.'
     )
@@ -690,6 +689,9 @@ class MenuItemIngredient(Common):
     quantity = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     unit = models.CharField(
         max_length=8, choices=QUANTITY_UNIT_CHOICES, null=True, blank=True,
+    )
+    calories = models.PositiveIntegerField(
+        null=True, blank=True, help_text='kcal contributed by one unit of this ingredient.'
     )
 
     price = models.DecimalField(

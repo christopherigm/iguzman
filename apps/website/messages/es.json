@@ -462,6 +462,7 @@
     "addIngredient": "Añadir ingrediente",
     "ingredientsHint": "Los predeterminados se incluyen en el precio base. Fija un cargo extra para complementos o extras que el cliente pueda añadir.",
     "noIngredients": "Aún no hay ingredientes.",
+    "dragToReorder": "Arrastrar para reordenar",
     "ingredientName": "Nombre",
     "upcharge": "Cargo extra",
     "portion": "Porción",

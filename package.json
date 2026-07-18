@@ -22,6 +22,7 @@
     "publish-site": "bash cli/website/website.sh publish",
     "pull-site": "bash cli/website/website.sh pull",
     "deploy-app": "bash cli/deploy-app/deploy-app.sh",
+    "disk-cleanup": "bash cli/disk-cleanup/disk-cleanup.sh",
     "django-superuser": "bash cli/django-superuser/django-superuser.sh",
     "deploy-postgres": "bash cli/deploy-postgres/deploy-postgres.sh",
     "deploy-mongodb": "bash cli/deploy-mongodb/deploy-mongodb.sh",

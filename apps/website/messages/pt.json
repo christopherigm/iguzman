@@ -462,6 +462,7 @@
     "addIngredient": "Adicionar ingrediente",
     "ingredientsHint": "Os padrões estão incluídos no preço base. Defina um acréscimo para complementos ou extras que o cliente pode adicionar.",
     "noIngredients": "Ainda não há ingredientes.",
+    "dragToReorder": "Arraste para reordenar",
     "ingredientName": "Nome",
     "upcharge": "Acréscimo",
     "portion": "Porção",

@@ -131,11 +131,11 @@ MENU_ITEM_FIELDS = (
     "sku", "href", "fit", "background_color",
     "price", "compare_price", "cost_price", "currency",
     "is_available", "is_featured", "is_ai_generated", "is_verified",
-    "calories", "spice_level", "servings",
+    "spice_level", "servings",
     "is_organic", "is_vegetarian", "is_vegan", "is_gluten_free", "allergens",
 )
 INGREDIENT_FIELDS = (
-    "name", "en_name", "quantity", "unit", "price",
+    "name", "en_name", "quantity", "unit", "calories", "price",
     "is_default", "is_removable", "max_quantity", "sort_order",
 )
 

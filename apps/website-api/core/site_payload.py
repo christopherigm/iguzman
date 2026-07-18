@@ -113,7 +113,6 @@ BUYABLE_TEXT_FIELDS = (
 # Menu-item dietary/serving flags carried only when truthy (they default False /
 # null on the target, so a lean payload never needs the falsy case).
 MENU_ITEM_FLAG_FIELDS = (
-    "calories",
     "spice_level",
     "is_organic",
     "is_vegetarian",
@@ -204,6 +203,8 @@ def _ingredient_dict(i: MenuItemIngredient) -> dict:
     d = {"sort_order": i.sort_order, **_pick(i, INGREDIENT_TEXT_FIELDS)}
     if i.quantity is not None:
         d["quantity"] = str(i.quantity)
+    if i.calories is not None:
+        d["calories"] = i.calories
     d["price"] = str(i.price)
     d["is_default"] = i.is_default
     d["is_removable"] = i.is_removable
@@ -454,6 +455,7 @@ def _apply_menu(system, categories) -> dict:
                 ing_defaults["quantity"] = (
                     _decimal(ing["quantity"]) if ing.get("quantity") is not None else None
                 )
+                ing_defaults["calories"] = ing.get("calories")
                 ing_defaults["price"] = _decimal(ing.get("price", 0))
                 ing_defaults["is_default"] = ing.get("is_default", True)
                 ing_defaults["is_removable"] = ing.get("is_removable", True)

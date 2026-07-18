@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import type { DragEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -18,6 +20,7 @@ export interface IngredientRow {
   price: string;
   quantity: string;
   unit: string;
+  calories: string;
   is_default: boolean;
   is_removable: boolean;
   max_quantity: string;
@@ -51,6 +54,7 @@ export function newIngredientRow(): IngredientRow {
     price: "0.00",
     quantity: "",
     unit: "",
+    calories: "",
     is_default: true,
     is_removable: true,
     max_quantity: "1",
@@ -69,19 +73,56 @@ interface Props {
  *
  * Each row is one customisation the customer sees: defaults are included and
  * pre-selected; `price` is the up-charge per chargeable unit; `max_quantity`
- * caps how many the customer may add (2 = "double"). Pure/controlled - it holds
- * no persistence logic; the parent page diffs the list against the loaded rows
- * and calls the create/update/delete API on save.
+ * caps how many the customer may add (2 = "double"). Rows are drag-reorderable
+ * (their array order is persisted as `sort_order`), and "Add ingredient" inserts
+ * a fresh row at the top. Pure/controlled - it holds no persistence logic; the
+ * parent page diffs the list against the loaded rows and calls the
+ * create/update/delete API on save.
  */
 export function MenuIngredientsEditor({ value, onChange, currency }: Props) {
   const t = useTranslations("Admin");
+
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const update = (key: string, patch: Partial<IngredientRow>) =>
     onChange(value.map((r) => (r.key === key ? { ...r, ...patch } : r)));
 
   const remove = (key: string) => onChange(value.filter((r) => r.key !== key));
 
-  const add = () => onChange([...value, newIngredientRow()]);
+  // New rows go to the top so the just-added ingredient is immediately visible
+  // without scrolling past the existing list.
+  const add = () => onChange([newIngredientRow(), ...value]);
+
+  // Drag-to-reorder: the handle starts the drag; each row is a drop target.
+  const handleDragStart = (index: number) => setDragIndex(index);
+  const handleDragOver = (e: DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+  const handleDrop = (e: DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === dropIndex) {
+      setDragIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+    const next = [...value];
+    const [moved] = next.splice(dragIndex, 1);
+    if (!moved) {
+      setDragIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+    next.splice(dropIndex, 0, moved);
+    onChange(next);
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
 
   return (
     <Box display="flex" flexDirection="column" gap="12px">
@@ -111,94 +152,126 @@ export function MenuIngredientsEditor({ value, onChange, currency }: Props) {
         </Typography>
       )}
 
-      {value.map((row) => (
-        <Box
-          key={row.key}
-          padding="12px"
-          borderRadius="10px"
-          border="1px solid var(--border, #e5e7eb)"
-          backgroundColor="var(--surface-2, #f9fafb)"
-          display="flex"
-          flexDirection="column"
-          gap="10px"
-        >
+      {value.map((row, index) => {
+        const isOver = dragOverIndex === index && dragIndex !== index;
+        return (
           <Box
-            display="grid"
+            key={row.key}
+            padding="12px"
+            borderRadius="10px"
+            border={
+              isOver
+                ? "1px solid var(--accent, #06b6d4)"
+                : "1px solid var(--border, #e5e7eb)"
+            }
+            backgroundColor="var(--surface-2, #f9fafb)"
+            display="flex"
+            flexDirection="column"
             gap="10px"
-            styles={{
-              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-            }}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDragEnter={(e) => e.preventDefault()}
+            onDrop={(e) => handleDrop(e, index)}
+            styles={{ opacity: dragIndex === index ? 0.5 : 1 }}
           >
-            <TextInput
-              label={t("ingredientName")}
-              value={row.name}
-              onChange={(v) => update(row.key, { name: v })}
-            />
-            <TextInput
-              label="Name (EN)"
-              value={row.en_name}
-              onChange={(v) => update(row.key, { en_name: v })}
-            />
-            <TextInput
-              label={`${t("upcharge")} (${currency})`}
-              format="number"
-              value={row.price}
-              onChange={(v) => update(row.key, { price: v })}
-            />
-            <TextInput
-              label={t("portion")}
-              format="number"
-              value={row.quantity}
-              onChange={(v) => update(row.key, { quantity: v })}
-            />
-            <Select
-              label={t("unit")}
-              value={row.unit}
-              onChange={(v) => update(row.key, { unit: v })}
-              options={UNIT_OPTIONS}
-            />
-            <TextInput
-              label={t("maxQuantity")}
-              format="number"
-              value={row.max_quantity}
-              onChange={(v) => update(row.key, { max_quantity: v })}
-            />
-          </Box>
+            <Box display="flex" alignItems="center" gap="8px">
+              <span
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragEnd={handleDragEnd}
+                aria-label={t("dragToReorder")}
+                title={t("dragToReorder")}
+                style={{
+                  cursor: "grab",
+                  userSelect: "none",
+                  fontSize: 16,
+                  lineHeight: 1,
+                  color: "var(--muted, #6b7280)",
+                }}
+              >
+                ⠿
+              </span>
+            </Box>
 
-          <Box display="flex" alignItems="center" gap="20px" flexWrap="wrap">
-            <Box display="flex" alignItems="center" gap="8px">
-              <Switch
-                checked={row.is_default}
-                onChange={(c) => update(row.key, { is_default: c })}
-                aria-label={t("includedByDefault")}
-              />
-              <Typography variant="caption">
-                {t("includedByDefault")}
-              </Typography>
-            </Box>
-            <Box display="flex" alignItems="center" gap="8px">
-              <Switch
-                checked={row.is_removable}
-                onChange={(c) => update(row.key, { is_removable: c })}
-                aria-label={t("removable")}
-              />
-              <Typography variant="caption">{t("removable")}</Typography>
-            </Box>
-            <Button
-              text={t("remove")}
-              unstyled
-              size="sm"
-              onClick={() => remove(row.key)}
-              type="button"
+            <Box
+              display="grid"
+              gap="10px"
               styles={{
-                color: "var(--danger, #e53935)",
-                marginLeft: "auto",
-                cursor: "pointer",
+                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
               }}
-            />
+            >
+              <TextInput
+                label={t("ingredientName")}
+                value={row.name}
+                onChange={(v) => update(row.key, { name: v })}
+              />
+              <TextInput
+                label="Name (EN)"
+                value={row.en_name}
+                onChange={(v) => update(row.key, { en_name: v })}
+              />
+              <TextInput
+                label={`${t("upcharge")} (${currency})`}
+                format="number"
+                value={row.price}
+                onChange={(v) => update(row.key, { price: v })}
+              />
+              <TextInput
+                label={t("portion")}
+                format="number"
+                value={row.quantity}
+                onChange={(v) => update(row.key, { quantity: v })}
+              />
+              <Select
+                label={t("unit")}
+                value={row.unit}
+                onChange={(v) => update(row.key, { unit: v })}
+                options={UNIT_OPTIONS}
+              />
+              <TextInput
+                label={`${t("calories")} (kcal)`}
+                format="number"
+                value={row.calories}
+                onChange={(v) => update(row.key, { calories: v })}
+              />
+              <TextInput
+                label={t("maxQuantity")}
+                format="number"
+                value={row.max_quantity}
+                onChange={(v) => update(row.key, { max_quantity: v })}
+              />
+            </Box>
+
+            <Box display="flex" alignItems="center" gap="20px" flexWrap="wrap">
+              <Box display="flex" alignItems="center" gap="8px">
+                <Switch
+                  checked={row.is_default}
+                  onChange={(c) => update(row.key, { is_default: c })}
+                  aria-label={t("includedByDefault")}
+                />
+                <Typography variant="caption">
+                  {t("includedByDefault")}
+                </Typography>
+              </Box>
+              <Box display="flex" alignItems="center" gap="8px">
+                <Switch
+                  checked={row.is_removable}
+                  onChange={(c) => update(row.key, { is_removable: c })}
+                  aria-label={t("removable")}
+                />
+                <Typography variant="caption">{t("removable")}</Typography>
+              </Box>
+              <Button
+                text={t("remove")}
+                kind="error"
+                size="sm"
+                onClick={() => remove(row.key)}
+                type="button"
+                marginLeft="auto"
+              />
+            </Box>
           </Box>
-        </Box>
-      ))}
+        );
+      })}
     </Box>
   );
 }

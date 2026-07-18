@@ -126,7 +126,6 @@ export async function MenuDetailPanel({ item, locale }: MenuDetailProps) {
     : 0;
 
   const hasFoodDetails =
-    item.calories != null ||
     (item.spice_level != null && item.spice_level > 0) ||
     item.servings != null ||
     item.prep_time_minutes != null ||
@@ -157,12 +156,6 @@ export async function MenuDetailPanel({ item, locale }: MenuDetailProps) {
           </Typography>
           <table className="item-specs-table">
             <tbody>
-              {item.calories != null && (
-                <tr>
-                  <td>{tMenu("calories")}</td>
-                  <td>{tMenu("caloriesValue", { value: item.calories })}</td>
-                </tr>
-              )}
               {item.spice_level != null && item.spice_level > 0 && (
                 <tr>
                   <td>{tMenu("spiceLevel")}</td>

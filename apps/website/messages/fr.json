@@ -462,6 +462,7 @@
     "addIngredient": "Ajouter un ingrédient",
     "ingredientsHint": "Les ingrédients par défaut sont inclus dans le prix de base. Définissez un supplément pour les extras optionnels que le client peut ajouter.",
     "noIngredients": "Aucun ingrédient pour le moment.",
+    "dragToReorder": "Glisser pour réorganiser",
     "ingredientName": "Nom",
     "upcharge": "Supplément",
     "portion": "Portion",

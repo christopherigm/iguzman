@@ -50,8 +50,8 @@ fields at any new file you drop in here.
   "highlights":      [ { "name", "category", "description", "icon?", "size?", "image?", "items?": [ { "name","description","icon?","image?" } ] } ],
   "product_categories": [ { "name", "image?", "products":  [ { "name","description","price","currency?","is_featured?","image?","gallery?":[] } ] } ],
   "service_categories": [ { "name", "image?", "services":  [ { "name","description","price","currency?","modality?","duration?","is_featured?","image?" } ] } ],
-  "menu_categories":    [ { "name", "image?", "menu_items": [ { "name","description","price","currency?","is_featured?","is_organic?","is_vegetarian?","is_vegan?","is_gluten_free?","calories?","allergens?","image?","gallery?":[],
-                            "ingredients": [ { "name","price","is_default?","is_removable?","max_quantity?","quantity?","unit?","sort_order?" } ] } ] } ]
+  "menu_categories":    [ { "name", "image?", "menu_items": [ { "name","description","price","currency?","is_featured?","is_organic?","is_vegetarian?","is_vegan?","is_gluten_free?","allergens?","image?","gallery?":[],
+                            "ingredients": [ { "name","price","calories?","is_default?","is_removable?","max_quantity?","quantity?","unit?","sort_order?" } ] } ] } ]
 }
 ```
 

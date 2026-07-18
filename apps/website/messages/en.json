@@ -462,6 +462,7 @@
     "addIngredient": "Add ingredient",
     "ingredientsHint": "Defaults are included in the base price. Set an up-charge for optional add-ons or extras a customer can add.",
     "noIngredients": "No ingredients yet.",
+    "dragToReorder": "Drag to reorder",
     "ingredientName": "Name",
     "upcharge": "Up-charge",
     "portion": "Portion",
