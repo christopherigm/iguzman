@@ -1,6 +1,7 @@
 import React, { CSSProperties } from "react";
 import { HeroVideo } from "./hero-video";
 import { ParallaxLayer } from "./parallax-layer";
+import { Container } from "./core-elements/container";
 import "./hero.css";
 
 export type HeroProps = {
@@ -135,19 +136,21 @@ export function Hero({
             </>
           )}
           {slogan && (
-            <p
-              style={{
-                margin: 0,
-                color: "#fff",
-                textAlign: "center",
-                fontSize: "clamp(1.25rem, 3vw, 2rem)",
-                fontWeight: 600,
-                letterSpacing: "0.04em",
-                textShadow: "0 2px 8px rgba(0,0,0,0.7)",
-              }}
-            >
-              {slogan}
-            </p>
+            <Container size="md" paddingX={16}>
+              <p
+                style={{
+                  margin: 0,
+                  color: "#fff",
+                  textAlign: "center",
+                  fontSize: "clamp(1.25rem, 3vw, 2rem)",
+                  fontWeight: 600,
+                  letterSpacing: "0.04em",
+                  textShadow: "0 2px 8px rgba(0,0,0,0.7)",
+                }}
+              >
+                {slogan}
+              </p>
+            </Container>
           )}
         </div>
       )}
