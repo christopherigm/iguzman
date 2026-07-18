@@ -10,6 +10,8 @@ interface NavbarClientProps {
   version: string;
   productCount: number;
   serviceCount: number;
+  /** Number of enabled menu items; drives the Food link, 0 hides it. */
+  foodCount: number;
   /** Total quantity in the signed-in user's cart; 0 when logged out. */
   cartCount: number;
 }
@@ -19,6 +21,7 @@ export function NavbarClient({
   version,
   productCount,
   serviceCount,
+  foodCount,
   cartCount,
 }: NavbarClientProps) {
   const t = useTranslations("Navbar");
@@ -57,6 +60,9 @@ export function NavbarClient({
       : []),
     ...(serviceCount > 0
       ? [{ label: t("services"), href: "/categories/services" }]
+      : []),
+    ...(foodCount > 0
+      ? [{ label: t("food"), href: "/categories/food" }]
       : []),
     ...(isLoggedIn
       ? [

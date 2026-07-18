@@ -125,9 +125,12 @@ export function ItemGalleryClient({
             <SwiperSlide key={i}>
               <Box
                 width="100%"
-                maxHeight="clamp(320px, 50vh, 520px)"
                 styles={{
                   position: "relative",
+                  // Size the slide to the tallest (most-portrait) image so a
+                  // vertical image fills 100% width and height; shorter images
+                  // are centred within it. No max-height cap - the gallery
+                  // grows to fit the image on both mobile and desktop.
                   aspectRatio:
                     slideAspectRatio !== null
                       ? String(slideAspectRatio)

@@ -7,7 +7,14 @@ import { AddToCartButton } from "./add-to-cart-button";
 import { FavoriteButton } from "./favorite-button";
 
 interface BuyableCardActionsProps {
-  kind: "product" | "service";
+  /**
+   * A `food` item's card add-to-cart adds the base line - the dish with its
+   * default ingredients at the "from" price - so a customer can order the
+   * standard version without opening the customiser (the detail page is still
+   * where ingredients are added/removed). Its favorite and its cart line are
+   * both keyed `menu_item`, the kind those APIs know it by.
+   */
+  kind: "product" | "service" | "food";
   /** The catalog item's id. */
   id: number;
   /** Item name - the share sheet's title. */
@@ -73,7 +80,7 @@ export function BuyableCardActions({
         stopPropagation
       />
       <FavoriteButton
-        kind={kind}
+        kind={kind === "food" ? "menu_item" : kind}
         id={id}
         initialFavorite={initialFavorite}
         isLoggedIn={isLoggedIn}

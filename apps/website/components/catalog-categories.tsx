@@ -13,7 +13,7 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { Badge } from "@repo/ui/core-elements/badge";
 import "./catalog-categories.css";
 
-type CategoryType = "product" | "service";
+type CategoryType = "product" | "service" | "food";
 
 interface CategoryCardProps {
   name: string;
@@ -32,11 +32,14 @@ export function CategoryCard({
   type,
   href,
 }: CategoryCardProps) {
-  const label = type === "product" ? "Product" : "Service";
+  const label =
+    type === "product" ? "Product" : type === "service" ? "Service" : "Menu";
   const countLabel =
     type === "product"
       ? `${itemCount} product${itemCount !== 1 ? "s" : ""}`
-      : `${itemCount} service${itemCount !== 1 ? "s" : ""}`;
+      : type === "service"
+        ? `${itemCount} service${itemCount !== 1 ? "s" : ""}`
+        : `${itemCount} item${itemCount !== 1 ? "s" : ""}`;
 
   const hasImage = Boolean(image);
   // Service badge picks up an accent tint only on flat (image-less) cards;

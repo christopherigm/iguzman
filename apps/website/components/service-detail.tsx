@@ -134,12 +134,12 @@ export async function ServiceDetailPanel({
         {(effectiveDuration || effectiveModality) && (
           <Box flexWrap="wrap" gap={8}>
             {effectiveDuration && (
-              <Badge variant="subtle" color="var(--accent)" size="lg">
+              <Badge variant="filled" color="var(--accent)" size="lg">
                 ⏱ {formatDuration(effectiveDuration)}
               </Badge>
             )}
             {effectiveModality && (
-              <Badge variant="subtle" color="var(--accent)" size="lg">
+              <Badge variant="filled" color="var(--accent)" size="lg">
                 {modalityLabels[effectiveModality] ?? effectiveModality}
               </Badge>
             )}

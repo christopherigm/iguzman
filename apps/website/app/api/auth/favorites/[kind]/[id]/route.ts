@@ -7,7 +7,7 @@ export async function DELETE(
 ) {
   const { kind, id } = await params;
 
-  if (kind !== "product" && kind !== "service") {
+  if (kind !== "product" && kind !== "service" && kind !== "menu_item") {
     return NextResponse.json({ detail: "Not found." }, { status: 404 });
   }
 

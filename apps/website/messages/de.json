@@ -37,6 +37,7 @@
     "admin": "Administrator",
     "products": "Produkte",
     "services": "Dienstleistungen",
+    "food": "Essen",
     "favorites": "Favoriten",
     "cart": "Warenkorb",
     "orders": "Bestellungen"
@@ -175,6 +176,7 @@
     "home": "Startseite",
     "products": "Produkte",
     "services": "Dienste",
+    "food": "Speisekarte",
     "noItems": "Keine Artikel in dieser Kategorie gefunden."
   },
   "ServicesPage": {
@@ -183,6 +185,11 @@
     "itemsHeading": "Alle Dienste",
     "productLabel": "Produkt",
     "serviceLabel": "Dienst"
+  },
+  "FoodPage": {
+    "heading": "Speisekarte",
+    "categoriesHeading": "Speisekarten-Kategorien",
+    "itemsHeading": "Alle Gerichte"
   },
   "ProductsPage": {
     "heading": "Produkte",
@@ -540,7 +547,7 @@
     "unavailable": "Nicht verfügbar",
     "empty": "Noch keine Gerichte auf der Speisekarte.",
     "moreDishes": "Weitere Gerichte",
-    "customize": "Anpassen",
+    "customize": "{name} anpassen",
     "total": "Gesamt",
     "addToCart": "In den Warenkorb",
     "addedToCart": "Zum Warenkorb hinzugefügt",
@@ -555,6 +562,14 @@
     "vegan": "Vegan",
     "glutenFree": "Glutenfrei",
     "caloriesValue": "{value} kcal",
-    "servesValue": "Für {value}"
+    "buyNow": "Jetzt kaufen",
+    "foodDetails": "Gericht-Details",
+    "calories": "Kalorien",
+    "spiceLevel": "Schärfegrad",
+    "servings": "Portionen",
+    "prepTime": "Zubereitungszeit",
+    "cookTime": "Garzeit",
+    "minutesValue": "{value} Min.",
+    "organic": "Bio"
   }
 }

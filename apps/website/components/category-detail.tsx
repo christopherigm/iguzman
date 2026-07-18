@@ -5,8 +5,10 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import type {
   ProductCategory,
   ServiceCategory,
+  MenuCategory,
   FeaturedProduct,
   FeaturedService,
+  MenuItemDetail,
 } from "@/lib/catalog";
 import { BuyableCard, type BuyableItem } from "./buyable-card";
 
@@ -25,6 +27,13 @@ type CategoryDetailProps =
       items: FeaturedService[];
       locale: string;
       showTitle?: boolean;
+    }
+  | {
+      category: MenuCategory;
+      kind: "food";
+      items: MenuItemDetail[];
+      locale: string;
+      showTitle?: boolean;
     };
 
 export async function CategoryDetail({
@@ -34,9 +43,10 @@ export async function CategoryDetail({
   locale,
   showTitle = false,
 }: CategoryDetailProps) {
-  const [t, tCatalog] = await Promise.all([
+  const [t, tCatalog, tMenu] = await Promise.all([
     getTranslations("CategoryDetail"),
     getTranslations("CatalogItems"),
+    getTranslations("Menu"),
   ]);
 
   const name =
@@ -45,16 +55,17 @@ export async function CategoryDetail({
     category.en_name ??
     "";
 
-  const buyableItems: BuyableItem[] =
+  // Products, services and food all share BuyableCard for a consistent grid;
+  // a food card just drops the add-to-cart control (it links to its customiser).
+  // `items` is cast per branch because destructuring `kind` off the union loses
+  // its correlation with `items`.
+  const heading =
     kind === "product"
-      ? (items as FeaturedProduct[]).map((data) => ({
-          kind: "product" as const,
-          data,
-        }))
-      : (items as FeaturedService[]).map((data) => ({
-          kind: "service" as const,
-          data,
-        }));
+      ? t("products")
+      : kind === "service"
+        ? t("services")
+        : t("food");
+  const count = items.length;
 
   return (
     <Box flexDirection="column" paddingBottom={56}>
@@ -68,21 +79,21 @@ export async function CategoryDetail({
       {/* Items section */}
       <Box alignItems="baseline" gap={12} flexWrap="wrap" marginBottom={24}>
         <Typography as="h2" variant="h3" className="section-title">
-          {kind === "product" ? t("products") : t("services")}
+          {heading}
         </Typography>
-        {buyableItems.length > 0 && (
+        {count > 0 && (
           <Typography
             as="span"
             variant="h6"
             fontWeight={500}
             color="color-mix(in srgb, var(--foreground) 45%, transparent)"
           >
-            {buyableItems.length}
+            {count}
           </Typography>
         )}
       </Box>
 
-      {buyableItems.length === 0 ? (
+      {count === 0 ? (
         <Box paddingY={48}>
           <Typography variant="none" className="section-subtitle">
             {t("noItems")}
@@ -90,7 +101,18 @@ export async function CategoryDetail({
         </Box>
       ) : (
         <Grid container spacing={2}>
-          {buyableItems.map((item) => (
+          {(kind === "product"
+            ? (items as FeaturedProduct[]).map(
+                (data): BuyableItem => ({ kind: "product", data }),
+              )
+            : kind === "service"
+              ? (items as FeaturedService[]).map(
+                  (data): BuyableItem => ({ kind: "service", data }),
+                )
+              : (items as MenuItemDetail[]).map(
+                  (data): BuyableItem => ({ kind: "food", data }),
+                )
+          ).map((item) => (
             <Grid
               key={`${item.kind}-${item.data.id}`}
               size={{ xs: 6, sm: 3, lg: 2 }}
@@ -100,6 +122,8 @@ export async function CategoryDetail({
                 locale={locale}
                 productLabel={tCatalog("productLabel")}
                 serviceLabel={tCatalog("serviceLabel")}
+                menuLabel={tCatalog("menuLabel")}
+                fromLabel={tMenu("from")}
               />
             </Grid>
           ))}

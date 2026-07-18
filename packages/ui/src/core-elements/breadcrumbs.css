@@ -28,13 +28,21 @@
 }
 
 .breadcrumbs__separator {
-  color: color-mix(in srgb, var(--foreground) 40%, transparent);
+  color: color-mix(in srgb, var(--foreground) 60%, transparent);
   font-size: 14px;
   user-select: none;
 }
 
+/*
+ * Links use the brand --accent, but that variable can be overridden with a
+ * single customer brand color applied in BOTH themes (see PaletteProvider's
+ * `accent` prop), so a dark-blue brand accent would be unreadable on a dark
+ * --background. Blending toward --foreground adaptively guarantees contrast:
+ * it lightens the accent in dark mode and darkens it in light mode, keeping
+ * the brand hue while staying legible against the page background.
+ */
 .breadcrumbs__link {
-  color: var(--accent);
+  color: color-mix(in srgb, var(--accent) 75%, var(--foreground));
   text-decoration: none;
   transition: opacity 0.15s ease;
 }
@@ -45,7 +53,7 @@
 }
 
 .breadcrumbs__current {
-  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+  color: var(--foreground);
   font-size: 13px;
   white-space: nowrap;
   overflow: hidden;

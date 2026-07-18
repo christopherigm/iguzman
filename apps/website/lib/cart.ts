@@ -87,6 +87,12 @@ export interface CartLineRef {
   kind: "product" | "service" | "menu_item";
   id: number;
   variant_id: number | null;
+  /**
+   * A menu line with a non-default ingredient selection. Always false for
+   * product/service. The card adds/removes only the base (default) line, so it
+   * matches on `!customized` and leaves customised siblings alone.
+   */
+  customized: boolean;
 }
 
 const EMPTY_CART: Cart = { items: [], count: 0, totals: [] };
@@ -175,16 +181,22 @@ export const getCartLines = cache(async (): Promise<CartLineRef[]> => {
  * is not in the cart. A card showing the default variant therefore reads as "not
  * in cart" while a different variant of it sits in the cart - which is correct:
  * clicking its button would add that other line, not touch the existing one.
+ *
+ * For `menu_item` the identity is the ingredient selection rather than a variant:
+ * the card only adds/removes the base (default-ingredients) line, so it matches
+ * the uncustomised line and ignores any customised siblings in the cart.
  */
 export async function findCartLineId(
-  kind: "product" | "service",
+  kind: "product" | "service" | "menu_item",
   id: number,
   variantId: number | null,
 ): Promise<number | null> {
   const lines = await getCartLines();
-  const match = lines.find(
-    (line) =>
-      line.kind === kind && line.id === id && line.variant_id === variantId,
-  );
+  const match = lines.find((line) => {
+    if (line.kind !== kind || line.id !== id) return false;
+    return kind === "menu_item"
+      ? !line.customized
+      : line.variant_id === variantId;
+  });
   return match?.line_id ?? null;
 }

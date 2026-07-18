@@ -63,8 +63,8 @@ class PasskeyCredentialAdmin(admin.ModelAdmin):
 class FavoriteAdmin(admin.ModelAdmin):
     list_display = ("user", "kind", "target", "system", "created_at")
     list_filter = ("system", "created_at")
-    search_fields = ("user__username", "user__email", "product__name", "service__name")
-    raw_id_fields = ("user", "product", "service")
+    search_fields = ("user__username", "user__email", "product__name", "service__name", "menu_item__name")
+    raw_id_fields = ("user", "product", "service", "menu_item")
     readonly_fields = ("created_at",)
 
     @admin.display(description="Kind")

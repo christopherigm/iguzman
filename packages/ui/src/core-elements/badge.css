@@ -20,7 +20,9 @@
 /* ── Variant: filled (default) ────────────────────── */
 .ui-badge--filled {
   background-color: var(--badge-bg, var(--accent, #06b6d4));
-  color: var(--badge-fg, var(--accent-foreground, #fff));
+  /* Filled (accent-backed) badges keep white text in every theme;
+     only an explicit textColor (--badge-fg) overrides it. */
+  color: var(--badge-fg, #fff);
 }
 
 /* ── Variant: outlined ────────────────────────────── */

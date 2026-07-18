@@ -10,13 +10,18 @@ import type { IconButtonSize } from "@repo/ui/core-elements/icon-button";
 import type { ButtonSize, ButtonKind } from "@repo/ui/core-elements/button";
 
 interface AddToCartButtonProps {
-  kind: "product" | "service";
+  /**
+   * `food` adds the menu item's base line - its default ingredients at the "from"
+   * price - by posting an empty `customization`. Product/service add by variant.
+   */
+  kind: "product" | "service" | "food";
   /** The catalog item's id - not the CartItem row's. */
   id: number;
   /**
    * The variant being added, when the item has one. This is part of the line's
    * identity server-side, so a card that omits it and a detail page that sends
-   * the selected one deliberately produce different lines.
+   * the selected one deliberately produce different lines. Ignored for `food`,
+   * which has no variants.
    */
   variantId?: number | null;
   /**
@@ -132,7 +137,13 @@ export function AddToCartButton({
           : await fetch("/api/auth/cart", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ kind, id, variant_id: variantId }),
+              // Food posts the base line: kind `menu_item` with no ingredient
+              // changes. Product/service post their variant.
+              body: JSON.stringify(
+                kind === "food"
+                  ? { kind: "menu_item", id, customization: [], quantity: 1 }
+                  : { kind, id, variant_id: variantId },
+              ),
             });
 
         if (!res.ok) {

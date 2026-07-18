@@ -144,6 +144,7 @@ export default async function LocaleLayout({ children, params }: Props) {
                     version={`v${packageJson.version}`}
                     productCount={system?.product_count ?? 0}
                     serviceCount={system?.service_count ?? 0}
+                    foodCount={system?.menu_item_count ?? 0}
                     cartCount={cartCount}
                   />
                   {children}

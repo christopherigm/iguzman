@@ -41,7 +41,7 @@ export async function generateMetadata({
     item.en_description ??
     undefined;
 
-  const url = `${origin}/${locale}/menu/${slug}`;
+  const url = `${origin}/${locale}/food/${slug}`;
   const image = item.image ?? item.images.find((img) => img.image)?.image;
 
   return {
@@ -95,12 +95,12 @@ export default async function MenuItemPage({ params }: Props) {
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },
-    { label: tMenu("menu"), href: "/menu" },
+    { label: tMenu("menu"), href: "/categories/food" },
     ...(item.category_name && item.category_slug
       ? [
           {
             label: item.category_name,
-            href: `/menu?category=${item.category_slug}`,
+            href: `/categories/food/${item.category_slug}`,
           },
         ]
       : []),

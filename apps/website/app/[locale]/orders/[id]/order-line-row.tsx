@@ -52,7 +52,7 @@ export async function OrderLineRow({ line }: OrderLineRowProps) {
         ? `/products/${line.item_slug}`
         : line.kind === "service"
           ? `/services/${line.item_slug}`
-          : `/menu/${line.item_slug}`;
+          : `/food/${line.item_slug}`;
 
   const image = line.image ? (
     <Box

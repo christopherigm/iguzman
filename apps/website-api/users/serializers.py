@@ -377,14 +377,18 @@ class FavoriteSerializer(serializers.Serializer):
     def get_item(self, obj):
         # Imported here: catalog.serializers imports from core, and a module-level
         # import would make users ↔ catalog a cycle at app-load time.
-        from catalog.serializers import ProductSerializer, ServiceSerializer
+        from catalog.serializers import ProductSerializer, ServiceSerializer, MenuItemSerializer
 
-        serializer = ProductSerializer if obj.product_id else ServiceSerializer
+        serializer = {
+            'product': ProductSerializer,
+            'service': ServiceSerializer,
+            'menu_item': MenuItemSerializer,
+        }[obj.kind]
         return serializer(obj.target, context=self.context).data
 
 
 class FavoriteWriteSerializer(serializers.Serializer):
-    kind = serializers.ChoiceField(choices=["product", "service"])
+    kind = serializers.ChoiceField(choices=["product", "service", "menu_item"])
     id = serializers.IntegerField()
 
 

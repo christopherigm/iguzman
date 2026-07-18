@@ -18,19 +18,25 @@ import { cache } from "react";
 import { unstable_rethrow } from "next/navigation";
 import { getSession } from "@repo/auth/session";
 import { apiFetch } from "./api-fetch";
-import type { FeaturedProduct, FeaturedService } from "./catalog";
+import type {
+  FeaturedProduct,
+  FeaturedService,
+  MenuItemDetail,
+} from "./catalog";
 import logger from "./logger";
 
 export type FavoriteItem =
   | { id: number; kind: "product"; created_at: string; item: FeaturedProduct }
-  | { id: number; kind: "service"; created_at: string; item: FeaturedService };
+  | { id: number; kind: "service"; created_at: string; item: FeaturedService }
+  | { id: number; kind: "menu_item"; created_at: string; item: MenuItemDetail };
 
 export interface FavoriteIds {
   products: number[];
   services: number[];
+  menu_items: number[];
 }
 
-const EMPTY_IDS: FavoriteIds = { products: [], services: [] };
+const EMPTY_IDS: FavoriteIds = { products: [], services: [], menu_items: [] };
 
 export const getFavorites = cache(async (): Promise<FavoriteItem[]> => {
   try {
@@ -85,11 +91,11 @@ export const getFavoriteIds = cache(async (): Promise<FavoriteIds> => {
 
 /** Whether `id` is saved, for a logged-out user always false. */
 export async function isFavorite(
-  kind: "product" | "service",
+  kind: "product" | "service" | "menu_item",
   id: number,
 ): Promise<boolean> {
   const ids = await getFavoriteIds();
-  return kind === "product"
-    ? ids.products.includes(id)
-    : ids.services.includes(id);
+  if (kind === "product") return ids.products.includes(id);
+  if (kind === "service") return ids.services.includes(id);
+  return ids.menu_items.includes(id);
 }

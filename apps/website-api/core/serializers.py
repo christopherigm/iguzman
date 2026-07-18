@@ -423,6 +423,7 @@ class SystemSerializer(serializers.ModelSerializer):
     img_hero = serializers.SerializerMethodField()
     product_count = serializers.SerializerMethodField()
     service_count = serializers.SerializerMethodField()
+    menu_item_count = serializers.SerializerMethodField()
     stripe_configured = serializers.BooleanField(read_only=True)
     stripe_webhook_url = serializers.SerializerMethodField()
 
@@ -453,7 +454,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "terms_and_conditions", "en_terms_and_conditions",
             "user_data", "en_user_data",
             "stripe_enabled", "stripe_configured", "stripe_webhook_url",
-            "product_count", "service_count",
+            "product_count", "service_count", "menu_item_count",
         ]
 
     def _image_url(self, obj, field_name):
@@ -504,6 +505,10 @@ class SystemSerializer(serializers.ModelSerializer):
     def get_service_count(self, obj):
         from catalog.models import Service
         return Service.objects.filter(system=obj, enabled=True).count()
+
+    def get_menu_item_count(self, obj):
+        from catalog.models import MenuItem
+        return MenuItem.objects.filter(system=obj, enabled=True).count()
 
 
 _TEXT_FIELDS = [

@@ -37,6 +37,7 @@
     "admin": "Administrador",
     "products": "Productos",
     "services": "Servicios",
+    "food": "Comida",
     "favorites": "Favoritos",
     "cart": "Carrito",
     "orders": "Pedidos"
@@ -175,6 +176,7 @@
     "home": "Inicio",
     "products": "Productos",
     "services": "Servicios",
+    "food": "Menú",
     "noItems": "No se encontraron artículos en esta categoría."
   },
   "ServicesPage": {
@@ -183,6 +185,11 @@
     "itemsHeading": "Todos los Servicios",
     "productLabel": "Producto",
     "serviceLabel": "Servicio"
+  },
+  "FoodPage": {
+    "heading": "Menú",
+    "categoriesHeading": "Categorías del Menú",
+    "itemsHeading": "Todos los Platos"
   },
   "ProductsPage": {
     "heading": "Productos",
@@ -540,7 +547,7 @@
     "unavailable": "No disponible",
     "empty": "Aún no hay platos en el menú.",
     "moreDishes": "Más platos",
-    "customize": "Personaliza",
+    "customize": "Personaliza tu {name}",
     "total": "Total",
     "addToCart": "Añadir al carrito",
     "addedToCart": "Añadido al carrito",
@@ -555,6 +562,14 @@
     "vegan": "Vegano",
     "glutenFree": "Sin gluten",
     "caloriesValue": "{value} kcal",
-    "servesValue": "Para {value}"
+    "buyNow": "Comprar ahora",
+    "foodDetails": "Detalles del plato",
+    "calories": "Calorías",
+    "spiceLevel": "Nivel de picante",
+    "servings": "Raciones",
+    "prepTime": "Tiempo de preparación",
+    "cookTime": "Tiempo de cocción",
+    "minutesValue": "{value} min",
+    "organic": "Orgánico"
   }
 }

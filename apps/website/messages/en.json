@@ -37,6 +37,7 @@
     "admin": "Admin",
     "products": "Products",
     "services": "Services",
+    "food": "Food",
     "favorites": "Favorites",
     "cart": "Cart",
     "orders": "Orders"
@@ -175,6 +176,7 @@
     "home": "Home",
     "products": "Products",
     "services": "Services",
+    "food": "Menu",
     "noItems": "No items found in this category."
   },
   "ServicesPage": {
@@ -183,6 +185,11 @@
     "itemsHeading": "All Services",
     "productLabel": "Product",
     "serviceLabel": "Service"
+  },
+  "FoodPage": {
+    "heading": "Menu",
+    "categoriesHeading": "Menu Categories",
+    "itemsHeading": "All Dishes"
   },
   "ProductsPage": {
     "heading": "Products",
@@ -540,7 +547,7 @@
     "unavailable": "Unavailable",
     "empty": "No dishes on the menu yet.",
     "moreDishes": "More dishes",
-    "customize": "Customize",
+    "customize": "Customize your {name}",
     "total": "Total",
     "addToCart": "Add to cart",
     "addedToCart": "Added to cart",
@@ -555,6 +562,14 @@
     "vegan": "Vegan",
     "glutenFree": "Gluten-free",
     "caloriesValue": "{value} kcal",
-    "servesValue": "Serves {value}"
+    "buyNow": "Buy now",
+    "foodDetails": "Food Details",
+    "calories": "Calories",
+    "spiceLevel": "Spice level",
+    "servings": "Servings",
+    "prepTime": "Prep time",
+    "cookTime": "Cook time",
+    "minutesValue": "{value} min",
+    "organic": "Organic"
   }
 }

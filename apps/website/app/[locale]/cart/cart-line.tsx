@@ -61,7 +61,7 @@ export function CartLine({
       ? `/products/${item.slug}`
       : kind === "service"
         ? `/services/${item.slug}`
-        : `/menu/${item.slug}`;
+        : `/food/${item.slug}`;
 
   const kindLabel =
     kind === "product"

@@ -7,6 +7,7 @@ import { getSession } from "@repo/auth/session";
 import type {
   FeaturedProduct,
   FeaturedService,
+  MenuItemDetail,
   BuyableVariant,
 } from "@/lib/catalog";
 import { findCartLineId } from "@/lib/cart";
@@ -17,7 +18,8 @@ import { BuyableCardActions } from "./buyable-card-actions";
 
 export type BuyableItem =
   | { kind: "product"; data: FeaturedProduct }
-  | { kind: "service"; data: FeaturedService };
+  | { kind: "service"; data: FeaturedService }
+  | { kind: "food"; data: MenuItemDetail };
 
 function defaultVariant(
   variants: BuyableVariant[],
@@ -30,13 +32,26 @@ export async function BuyableCard({
   locale,
   productLabel,
   serviceLabel,
+  menuLabel,
+  fromLabel,
 }: {
   item: BuyableItem;
   locale: string;
   productLabel: string;
   serviceLabel: string;
+  /** Corner badge label for a `food` item; required when a food card renders. */
+  menuLabel?: string;
+  /**
+   * "from" prefix for a `food` item's price - add-ons raise it, so the card
+   * price is a starting point. Required when a food card renders.
+   */
+  fromLabel?: string;
 }) {
   const { kind, data } = item;
+
+  // The favorites API knows a menu item as `menu_item`; product/service keep
+  // their own kind. This is the only place the two names diverge.
+  const favoriteKind = kind === "food" ? "menu_item" : kind;
 
   // The heart rides on every card, wherever the card is rendered, so it resolves
   // its own state instead of making each grid thread it down. Both reads are
@@ -45,7 +60,7 @@ export async function BuyableCard({
   // logged-out heart is still rendered - clicking it routes to /auth.
   const [session, favorite, origin] = await Promise.all([
     getSession(),
-    isFavorite(kind, data.id),
+    isFavorite(favoriteKind, data.id),
     getRequestOrigin(),
   ]);
 
@@ -55,20 +70,41 @@ export async function BuyableCard({
     data.en_name ??
     "";
 
+  // Food prefers its short blurb (the card's line), falling back to the full
+  // description; product/service have one description field.
   const description =
-    (locale === "en" ? data.en_description : data.description) ??
-    data.description ??
-    data.en_description ??
-    "";
+    item.kind === "food"
+      ? ((locale === "en"
+          ? item.data.en_short_description
+          : item.data.short_description) ??
+        (locale === "en" ? item.data.en_description : item.data.description) ??
+        item.data.description ??
+        "")
+      : ((locale === "en" ? data.en_description : data.description) ??
+        data.description ??
+        data.en_description ??
+        "");
 
   const href =
-    kind === "product" ? `/products/${data.slug}` : `/services/${data.slug}`;
+    kind === "product"
+      ? `/products/${data.slug}`
+      : kind === "service"
+        ? `/services/${data.slug}`
+        : `/food/${data.slug}`;
 
-  const variant = defaultVariant(data.variants);
+  // Only product/service carry variants; a menu item is priced whole and
+  // customised on its detail page, so it has no card-level variant.
+  const variant =
+    item.kind === "food" ? undefined : defaultVariant(item.data.variants);
   const effectivePrice = variant?.effective_price ?? data.price;
   const effectiveCompare =
     variant?.effective_compare_price ?? data.compare_price;
-  const image = variant?.effective_image ?? data.image;
+  const image =
+    item.kind === "food"
+      ? (item.data.image ??
+        item.data.images.find((i) => i.image)?.image ??
+        null)
+      : (variant?.effective_image ?? data.image);
 
   const discount = effectiveCompare
     ? discountPercent(effectivePrice, effectiveCompare)
@@ -76,21 +112,28 @@ export async function BuyableCard({
 
   const hasImage = Boolean(image);
 
-  // A service is always orderable; only products carry stock, and a variant's
-  // own flag wins over the product's. Mirrors the API's per-line stock check.
+  // A service is always orderable and food follows its own availability flag;
+  // only products carry stock, where a variant's own flag wins over the
+  // product's. Mirrors the API's per-line stock check.
   const inStock =
-    kind === "service"
-      ? true
-      : (variant?.in_stock ?? (data as FeaturedProduct).in_stock);
+    item.kind === "food"
+      ? item.data.is_available
+      : item.kind === "service"
+        ? true
+        : (variant?.in_stock ?? item.data.in_stock);
 
-  const duration =
-    kind === "service" ? (data as FeaturedService).duration : null;
+  const duration = item.kind === "service" ? item.data.duration : null;
 
   // Whether the card's own variant is already a line, and which line it is - the
-  // button turns into "remove" and needs the row's id to delete it. Read after
-  // `variant` resolves because the variant is half the line's identity; the
-  // lookup is `cache()`d per request, so the grid still costs one fetch.
-  const cartLineId = await findCartLineId(kind, data.id, variant?.id ?? null);
+  // button turns into "remove" and needs the row's id to delete it. A food card
+  // adds the base (default-ingredients) line, so it resolves the uncustomised
+  // menu line. Read after `variant` resolves because the variant is half the
+  // line's identity; the lookup is `cache()`d per request, so the grid still
+  // costs one fetch.
+  const cartLineId =
+    item.kind === "food"
+      ? await findCartLineId("menu_item", data.id, null)
+      : await findCartLineId(item.kind, data.id, variant?.id ?? null);
 
   return (
     <Card
@@ -135,12 +178,20 @@ export async function BuyableCard({
           variant="filled"
           size="sm"
           color={
-            kind === "product" ? "rgb(34, 181, 32)" : "rgba(99,102,241,0.8)"
+            kind === "product"
+              ? "rgb(34, 181, 32)"
+              : kind === "service"
+                ? "rgba(99,102,241,0.8)"
+                : "rgba(234,88,12,0.85)"
           }
           textColor="#fff"
           style={{ position: "absolute", top: 8, left: 8, zIndex: 1 }}
         >
-          {kind === "product" ? productLabel : serviceLabel}
+          {kind === "product"
+            ? productLabel
+            : kind === "service"
+              ? serviceLabel
+              : menuLabel}
         </Badge>
 
         {/* Duration and discount share the bottom-left corner. Only services
@@ -185,7 +236,7 @@ export async function BuyableCard({
             as="h3"
             variant="h5"
             margin={0}
-            color="var(--on-surface)"
+            color="var(--foreground)"
             styles={{
               display: "-webkit-box",
               WebkitLineClamp: 2,
@@ -201,7 +252,7 @@ export async function BuyableCard({
           <Typography
             variant="caption"
             margin={0}
-            color="var(--on-surface-muted, rgba(0, 0, 0, 0.55))"
+            color="color-mix(in srgb, var(--foreground) 85%, transparent)"
             styles={{
               lineHeight: 1.5,
               display: "-webkit-box",
@@ -216,11 +267,20 @@ export async function BuyableCard({
 
         <Box flexDirection="column" gap={8} marginTop="auto" paddingTop={4}>
           <Box alignItems="baseline" gap={6} flexWrap="wrap">
+            {kind === "food" && fromLabel && (
+              <Typography
+                as="span"
+                variant="caption"
+                color="color-mix(in srgb, var(--foreground) 75%, transparent)"
+              >
+                {fromLabel}
+              </Typography>
+            )}
             <Typography
               as="span"
               variant="h6"
               fontWeight={700}
-              color="var(--on-surface)"
+              color="var(--foreground)"
             >
               {formatPrice(effectivePrice, data.currency)}
             </Typography>
@@ -230,7 +290,7 @@ export async function BuyableCard({
                   as="span"
                   variant="label"
                   fontWeight={400}
-                  color="var(--on-surface-muted, rgba(0, 0, 0, 0.45))"
+                  color="color-mix(in srgb, var(--foreground) 65%, transparent)"
                   // 11px sub-scale: compare price sits below the label (12px) tier
                   styles={{ fontSize: 11, textDecoration: "line-through" }}
                 >

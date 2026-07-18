@@ -5,7 +5,13 @@ from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 
-from catalog.models import Product, ProductVariant, Service
+from catalog.models import (
+    MenuItem,
+    MenuItemIngredient,
+    Product,
+    ProductVariant,
+    Service,
+)
 from core.models import System
 
 from .models import CartItem
@@ -159,6 +165,17 @@ class CartApiTests(TestCase):
         )
         self.other_product = Product.objects.create(
             system=self.system, name="Mug", slug="mug", price=Decimal("5.00"), currency="USD"
+        )
+
+        self.menu_item = MenuItem.objects.create(
+            system=self.system, name="Burger", slug="burger",
+            price=Decimal("12.00"), currency="USD",
+        )
+        # A default, chargeable-when-doubled ingredient, so a non-empty selection
+        # (a double patty) is possible and reads as a customised line.
+        self.patty = MenuItemIngredient.objects.create(
+            menu_item=self.menu_item, name="Patty",
+            price=Decimal("3.00"), is_default=True, max_quantity=2,
         )
 
         self.user = self._make_user("a@acme.test", self.system)
@@ -318,6 +335,7 @@ class CartApiTests(TestCase):
                     "kind": "product",
                     "id": self.product.id,
                     "variant_id": self.variant.id,
+                    "customized": False,
                 }
             ],
         )
@@ -326,6 +344,22 @@ class CartApiTests(TestCase):
         self._add(kind="product", id=self.product.id)
 
         self.assertIsNone(self._ids()[0]["variant_id"])
+
+    def test_ids_flags_a_customised_menu_line(self):
+        """The card adds the base (default-ingredients) menu line, so the ids feed
+        must flag which menu lines are customised - otherwise a card's remove
+        button could delete a double-patty line it never put there."""
+        base = self._add(kind="menu_item", id=self.menu_item.id).json()["id"]
+        doubled = self._add(
+            kind="menu_item",
+            id=self.menu_item.id,
+            customization=[{"ingredient": self.patty.id, "quantity": 2}],
+        ).json()["id"]
+
+        self.assertEqual(
+            {(line["line_id"], line["customized"]) for line in self._ids()},
+            {(base, False), (doubled, True)},
+        )
 
     def test_ids_tells_two_variants_of_one_product_apart(self):
         """The card matches on item *and* variant, so the two lines must arrive as

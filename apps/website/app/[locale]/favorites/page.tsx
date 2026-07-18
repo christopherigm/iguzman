@@ -27,10 +27,11 @@ export default async function FavoritesPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const [favorites, t, itemT] = await Promise.all([
+  const [favorites, t, itemT, menuT] = await Promise.all([
     getFavorites(),
     getTranslations("Favorites"),
     getTranslations("CatalogItems"),
+    getTranslations("Menu"),
   ]);
 
   const breadcrumbs: BreadcrumbItem[] = [
@@ -77,11 +78,18 @@ export default async function FavoritesPage({ params }: Props) {
               >
                 <BuyableCard
                   item={
-                    { kind: favorite.kind, data: favorite.item } as BuyableItem
+                    {
+                      // The favorites API keys food as `menu_item`; the card
+                      // knows it as `food`.
+                      kind: favorite.kind === "menu_item" ? "food" : favorite.kind,
+                      data: favorite.item,
+                    } as BuyableItem
                   }
                   locale={locale}
                   productLabel={itemT("productLabel")}
                   serviceLabel={itemT("serviceLabel")}
+                  menuLabel={itemT("menuLabel")}
+                  fromLabel={menuT("from")}
                 />
               </Grid>
             ))}

@@ -7,7 +7,7 @@ import { IconButton } from "@repo/ui/core-elements/icon-button";
 import type { IconButtonSize } from "@repo/ui/core-elements/icon-button";
 
 interface FavoriteButtonProps {
-  kind: "product" | "service";
+  kind: "product" | "service" | "menu_item";
   /** The catalog item's id - not the Favorite row's. */
   id: number;
   /** Server-rendered initial state, from `isFavorite()`. */

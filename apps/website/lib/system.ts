@@ -56,6 +56,7 @@ export interface System {
   stripe_configured: boolean;
   product_count: number;
   service_count: number;
+  menu_item_count: number;
 }
 
 /**

@@ -75,7 +75,9 @@ export const Switch = ({
         width: 20,
         height: 20,
         borderRadius: "50%",
-        background: "var(--accent-foreground, white)",
+        // The knob stays white in every theme (both the accent-on and the
+        // surface-off track are dark enough for a white thumb).
+        background: "#ffffff",
         transform: value ? "translateX(16px)" : "translateX(0)",
         transition: "transform 150ms ease-in-out",
       }}

@@ -39,7 +39,9 @@ const KIND_STYLES: Record<
   },
   primary: {
     backgroundColor: "var(--accent, #06b6d4)",
-    color: "var(--accent-foreground, #ffffff)",
+    // Primary buttons must keep white text in every theme (the accent
+    // background is dark enough in both light and dark palettes).
+    color: "#ffffff",
   },
   success: {
     backgroundColor: "var(--success, #16a34a)",

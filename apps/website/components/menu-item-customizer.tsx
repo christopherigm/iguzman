@@ -6,13 +6,17 @@ import { useRouter } from "@repo/i18n/navigation";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
+import { Badge } from "@repo/ui/core-elements/badge";
 import { Toast } from "@repo/ui/core-elements/toast";
 import type { MenuItemIngredient } from "@/lib/catalog";
 import { formatPrice } from "@/lib/price";
 
 interface Props {
   menuItemId: number;
+  menuItemName: string;
   basePrice: string;
+  comparePrice: string | null;
+  discount: number;
   currency: string;
   ingredients: MenuItemIngredient[];
   isAvailable: boolean;
@@ -35,7 +39,10 @@ type ToastKind = "added" | "failed";
  */
 export function MenuItemCustomizer({
   menuItemId,
+  menuItemName,
   basePrice,
+  comparePrice,
+  discount,
   currency,
   ingredients,
   isAvailable,
@@ -75,11 +82,9 @@ export function MenuItemCustomizer({
   const showToast = (kind: ToastKind) =>
     setToast((prev) => ({ kind, id: (prev?.id ?? 0) + 1 }));
 
-  const handleAdd = () => {
-    if (!isLoggedIn) {
-      router.push("/auth");
-      return;
-    }
+  // Only the deltas from what the base already includes travel to the server;
+  // it recomputes and stores the price, so nothing here is trusted about money.
+  const addToCart = () => {
     const customization = ingredients
       .map((ing) => ({
         ingredient: ing.id,
@@ -90,18 +95,26 @@ export function MenuItemCustomizer({
         return ing && row.quantity !== ing.included_units;
       });
 
+    return fetch("/api/auth/cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "menu_item",
+        id: menuItemId,
+        customization,
+        quantity: 1,
+      }),
+    });
+  };
+
+  const handleAdd = () => {
+    if (!isLoggedIn) {
+      router.push("/auth");
+      return;
+    }
     startTransition(async () => {
       try {
-        const res = await fetch("/api/auth/cart", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            kind: "menu_item",
-            id: menuItemId,
-            customization,
-            quantity: 1,
-          }),
-        });
+        const res = await addToCart();
         if (!res.ok) {
           showToast("failed");
           return;
@@ -114,12 +127,34 @@ export function MenuItemCustomizer({
     });
   };
 
+  // The express path: add the configured dish, then go straight to checkout.
+  // A failed add stays put with a toast rather than sending the customer to a
+  // cart the dish never reached.
+  const handleBuyNow = () => {
+    if (!isLoggedIn) {
+      router.push("/auth");
+      return;
+    }
+    startTransition(async () => {
+      try {
+        const res = await addToCart();
+        if (!res.ok) {
+          showToast("failed");
+          return;
+        }
+        router.push("/cart");
+      } catch {
+        showToast("failed");
+      }
+    });
+  };
+
   return (
     <Box flexDirection="column" gap={16}>
       {ingredients.length > 0 && (
         <Box flexDirection="column" gap={10}>
           <Typography as="h2" variant="none" className="item-section-heading">
-            {t("customize")}
+            {t("customize", { name: menuItemName })}
           </Typography>
 
           {ingredients.map((ing) => {
@@ -134,7 +169,6 @@ export function MenuItemCustomizer({
                 alignItems="center"
                 justifyContent="space-between"
                 gap={12}
-                paddingY={8}
                 flexWrap="wrap"
                 styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
               >
@@ -201,12 +235,7 @@ export function MenuItemCustomizer({
         </Box>
       )}
 
-      <Box
-        alignItems="center"
-        justifyContent="space-between"
-        gap={12}
-        flexWrap="wrap"
-      >
+      <Box flexDirection="column" gap={12}>
         <Box flexDirection="column" gap={2}>
           <Typography
             variant="caption"
@@ -215,21 +244,52 @@ export function MenuItemCustomizer({
           >
             {t("total")}
           </Typography>
-          <Typography as="span" variant="none" className="item-price">
-            {formatPrice(total.toFixed(2), currency)}
-          </Typography>
+          <Box alignItems="baseline" flexWrap="wrap" gap="8px 12px">
+            <Typography as="span" variant="none" className="item-price">
+              {formatPrice(total.toFixed(2), currency)}
+            </Typography>
+            {comparePrice &&
+              parseFloat(comparePrice) > parseFloat(basePrice) && (
+                <Typography
+                  as="span"
+                  variant="none"
+                  className="item-compare-price"
+                >
+                  {formatPrice(comparePrice, currency)}
+                </Typography>
+              )}
+            {discount > 0 && (
+              <Badge variant="filled" color="#ef4444" textColor="#fff">
+                -{discount}%
+              </Badge>
+            )}
+          </Box>
         </Box>
 
-        <Button
-          text={t("addToCart")}
-          icon="/icons/add-to-cart.svg"
-          kind="warning"
-          size="lg"
-          flex="1"
-          minWidth={160}
-          disabled={!isAvailable || isPending}
-          onClick={handleAdd}
-        />
+        {/* Add to cart + Buy now share the width, wrapping on very narrow
+            widths so the buttons never get crushed. */}
+        <Box alignItems="center" gap={10} width="100%" flexWrap="wrap">
+          <Button
+            text={t("addToCart")}
+            icon="/icons/add-to-cart.svg"
+            kind="warning"
+            size="lg"
+            flex="1"
+            minWidth={140}
+            disabled={!isAvailable || isPending}
+            onClick={handleAdd}
+          />
+          <Button
+            text={t("buyNow")}
+            icon="/icons/happy-heart-eyes.svg"
+            kind="success"
+            size="lg"
+            flex="1"
+            minWidth={140}
+            disabled={!isAvailable || isPending}
+            onClick={handleBuyNow}
+          />
+        </Box>
       </Box>
 
       {!isAvailable && (

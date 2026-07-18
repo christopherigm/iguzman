@@ -31,11 +31,12 @@ class UserProfile(models.Model):
 
 
 class Favorite(models.Model):
-    """A product or service a user has saved.
+    """A product, service or menu item a user has saved.
 
-    One row per saved item, holding exactly one of `product` / `service` - the
-    CheckConstraint is what keeps a row from meaning "both" or "neither", so the
-    `kind` the API reports can always be derived from which column is set.
+    One row per saved item, holding exactly one of `product` / `service` /
+    `menu_item` - the CheckConstraint is what keeps a row from meaning "several"
+    or "none", so the `kind` the API reports can always be derived from which
+    column is set.
 
     `system` scopes the row to the tenant the user saved it from: the catalog is
     per-System, so listing favorites without this filter would surface another
@@ -64,6 +65,13 @@ class Favorite(models.Model):
         on_delete=models.CASCADE,
         related_name='favorites',
     )
+    menu_item = models.ForeignKey(
+        'catalog.MenuItem',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='favorites',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -79,10 +87,16 @@ class Favorite(models.Model):
                 condition=models.Q(service__isnull=False),
                 name='unique_user_service_favorite',
             ),
+            models.UniqueConstraint(
+                fields=['user', 'menu_item'],
+                condition=models.Q(menu_item__isnull=False),
+                name='unique_user_menu_item_favorite',
+            ),
             models.CheckConstraint(
                 condition=(
-                    models.Q(product__isnull=False, service__isnull=True)
-                    | models.Q(product__isnull=True, service__isnull=False)
+                    models.Q(product__isnull=False, service__isnull=True, menu_item__isnull=True)
+                    | models.Q(product__isnull=True, service__isnull=False, menu_item__isnull=True)
+                    | models.Q(product__isnull=True, service__isnull=True, menu_item__isnull=False)
                 ),
                 name='favorite_exactly_one_target',
             ),
@@ -90,11 +104,15 @@ class Favorite(models.Model):
 
     @property
     def kind(self):
-        return 'product' if self.product_id else 'service'
+        if self.product_id:
+            return 'product'
+        if self.service_id:
+            return 'service'
+        return 'menu_item'
 
     @property
     def target(self):
-        return self.product or self.service
+        return self.product or self.service or self.menu_item
 
     def __str__(self):
         return f"{self.user.email} ♥ {self.target}"

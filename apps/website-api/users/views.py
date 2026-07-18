@@ -667,10 +667,11 @@ def _favorites_qs(request, system):
     return (
         Favorite.objects
         .filter(user=request.user, system=system)
-        .select_related('product', 'service')
+        .select_related('product', 'service', 'menu_item')
         .prefetch_related(
             'product__images', 'product__variants',
             'service__images', 'service__variants',
+            'menu_item__images', 'menu_item__ingredients',
         )
     )
 
@@ -678,7 +679,7 @@ def _favorites_qs(request, system):
 class FavoriteListView(APIView):
     """
     GET  /api/auth/favorites/  - the authenticated user's saved items.
-    POST /api/auth/favorites/  - save one, body {"kind": "product"|"service", "id": N}.
+    POST /api/auth/favorites/  - save one, body {"kind": "product"|"service"|"menu_item", "id": N}.
     """
 
     permission_classes = (IsAuthenticated,)
@@ -702,7 +703,7 @@ class FavoriteListView(APIView):
         target_id = serializer.validated_data["id"]
 
         system = _user_system(request)
-        model = Product if kind == "product" else Service
+        model = {"product": Product, "service": Service, "menu_item": MenuItem}[kind]
         # Scoping the lookup to the user's System is what stops a crafted id from
         # attaching another tenant's item to this account.
         target = model.objects.filter(pk=target_id, system=system, enabled=True).first()
@@ -732,7 +733,7 @@ class FavoriteDetailView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def delete(self, request, kind, pk):
-        if kind not in ("product", "service"):
+        if kind not in ("product", "service", "menu_item"):
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 
         system = _user_system(request)
@@ -764,11 +765,12 @@ class FavoriteIdsView(APIView):
             return Response(cached)
 
         rows = Favorite.objects.filter(user=request.user, system=system).values_list(
-            "product_id", "service_id",
+            "product_id", "service_id", "menu_item_id",
         )
         data = {
-            "products": [p for p, _ in rows if p is not None],
-            "services": [s for _, s in rows if s is not None],
+            "products": [p for p, _, _ in rows if p is not None],
+            "services": [s for _, s, _ in rows if s is not None],
+            "menu_items": [m for _, _, m in rows if m is not None],
         }
         cache.set(cache_key, data, FAVORITES_CACHE_TTL)
         return Response(data)
@@ -1049,7 +1051,7 @@ class CartIdsView(APIView):
 
         rows = CartItem.objects.filter(user=request.user, system=system).values_list(
             "id", "product_id", "service_id", "menu_item_id",
-            "product_variant_id", "service_variant_id",
+            "product_variant_id", "service_variant_id", "customization",
         )
 
         def _kind(product_id, service_id):
@@ -1066,9 +1068,14 @@ class CartIdsView(APIView):
                     "kind": _kind(product_id, service_id),
                     "id": product_id or service_id or menu_item_id,
                     "variant_id": product_variant_id or service_variant_id,
+                    # A menu line's ingredient selection is part of its identity,
+                    # but the catalog card only ever adds/removes the base line;
+                    # this flag lets it match that one and ignore customised
+                    # siblings. Always false for product/service.
+                    "customized": bool(customization),
                 }
                 for line_id, product_id, service_id, menu_item_id,
-                product_variant_id, service_variant_id in rows
+                product_variant_id, service_variant_id, customization in rows
             ],
         }
         cache.set(cache_key, data, CART_CACHE_TTL)
