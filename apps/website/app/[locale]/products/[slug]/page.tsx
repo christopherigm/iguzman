@@ -13,6 +13,7 @@ import { ItemHeroVideo } from "@/components/item-hero-video";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import {
+  ProductDetailHeader,
   ProductDetailPanel,
   ProductDetailSections,
 } from "@/components/product-detail";
@@ -176,6 +177,11 @@ export default async function ProductPage({ params, searchParams }: Props) {
         paddingBottom="var(--ui-page-bottom-spacing, 64px)"
       >
         <Breadcrumbs items={breadcrumbs} />
+        <ProductDetailHeader
+          product={product}
+          selectedVariant={selectedVariant}
+          locale={locale}
+        />
         <Grid container spacing={2} marginBottom={18}>
           <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
             <ItemGalleryClient

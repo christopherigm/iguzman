@@ -28,17 +28,20 @@ interface ServiceDetailProps {
   locale: string;
 }
 
-export async function ServiceDetailPanel({
+/**
+ * Full-width page header for a service: the name plus its share / favorite
+ * actions, the brand / category meta and the duration / modality badges.
+ * Rendered above the gallery-and-buy-box grid so it spans both columns.
+ */
+export async function ServiceDetailHeader({
   service,
   selectedVariant,
   locale,
 }: ServiceDetailProps) {
-  // Looked up for the *selected* variant - see the note in ProductDetailPanel.
-  const [t, session, favorite, cartLineId] = await Promise.all([
+  const [t, session, favorite] = await Promise.all([
     getTranslations("ItemDetail"),
     getSession(),
     isFavorite("service", service.id),
-    findCartLineId("service", service.id, selectedVariant?.id ?? null),
   ]);
 
   const name =
@@ -52,6 +55,97 @@ export async function ServiceDetailPanel({
     service.description ??
     service.en_description ??
     "";
+
+  const effectiveDuration =
+    selectedVariant?.effective_duration ?? service.duration;
+  const effectiveModality =
+    selectedVariant?.effective_modality ?? service.modality;
+
+  const modalityLabels: Record<string, string> = {
+    online: t("modalityOnline"),
+    in_person: t("modalityInPerson"),
+    hybrid: t("modalityHybrid"),
+  };
+
+  return (
+    <Box flexDirection="column" gap={8} marginBottom={18}>
+      {/* Name + share / favorite actions */}
+      <Box alignItems="flex-start" justifyContent="space-between" gap={12}>
+        {name && (
+          <Typography
+            as="h1"
+            variant="h2"
+            flex="1"
+            minWidth={0}
+            styles={{ lineHeight: 1.25 }}
+          >
+            {name}
+          </Typography>
+        )}
+        <Box alignItems="center" gap={8}>
+          <ShareButton
+            title={name}
+            text={toShareDescription(shareText)}
+            label={t("share")}
+            copiedLabel={t("linkCopied")}
+            size="md"
+          />
+          <FavoriteButton
+            kind="service"
+            id={service.id}
+            initialFavorite={favorite}
+            isLoggedIn={session !== null}
+            size="md"
+          />
+        </Box>
+      </Box>
+
+      {/* Meta: brand / category */}
+      {(service.brand_name || service.category_name) && (
+        <Box flexWrap="wrap" gap="8px 20px">
+          {service.brand_name && (
+            <Typography as="span" variant="caption" color="var(--foreground)">
+              {t("brand")}: <strong>{service.brand_name}</strong>
+            </Typography>
+          )}
+          {service.category_name && (
+            <Typography as="span" variant="caption" color="var(--foreground)">
+              {t("category")}: <strong>{service.category_name}</strong>
+            </Typography>
+          )}
+        </Box>
+      )}
+
+      {/* Service badges: duration + modality */}
+      {(effectiveDuration || effectiveModality) && (
+        <Box flexWrap="wrap" gap={8}>
+          {effectiveDuration && (
+            <Badge variant="filled" color="var(--accent)" size="lg">
+              ⏱ {formatDuration(effectiveDuration)}
+            </Badge>
+          )}
+          {effectiveModality && (
+            <Badge variant="filled" color="var(--accent)" size="lg">
+              {modalityLabels[effectiveModality] ?? effectiveModality}
+            </Badge>
+          )}
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+export async function ServiceDetailPanel({
+  service,
+  selectedVariant,
+  locale,
+}: ServiceDetailProps) {
+  // Looked up for the *selected* variant - see the note in ProductDetailPanel.
+  const [t, session, cartLineId] = await Promise.all([
+    getTranslations("ItemDetail"),
+    getSession(),
+    findCartLineId("service", service.id, selectedVariant?.id ?? null),
+  ]);
 
   const effectivePrice = selectedVariant?.effective_price ?? service.price;
   const effectiveCompare =
@@ -74,71 +168,6 @@ export async function ServiceDetailPanel({
 
   return (
     <Box flexDirection="column" gap={18} paddingY={4}>
-      <Box flexDirection="column" gap={8}>
-        {/* Name + share / favorite actions */}
-        <Box alignItems="flex-start" justifyContent="space-between" gap={12}>
-          {name && (
-            <Typography
-              as="h1"
-              variant="h2"
-              flex="1"
-              minWidth={0}
-              styles={{ lineHeight: 1.25 }}
-            >
-              {name}
-            </Typography>
-          )}
-          <Box alignItems="center" gap={8}>
-            <ShareButton
-              title={name}
-              text={toShareDescription(shareText)}
-              label={t("share")}
-              copiedLabel={t("linkCopied")}
-              size="md"
-            />
-            <FavoriteButton
-              kind="service"
-              id={service.id}
-              initialFavorite={favorite}
-              isLoggedIn={session !== null}
-              size="md"
-            />
-          </Box>
-        </Box>
-
-        {/* Meta: brand / category */}
-        {(service.brand_name || service.category_name) && (
-          <Box flexWrap="wrap" gap="8px 20px">
-            {service.brand_name && (
-              <Typography as="span" variant="caption" color="var(--foreground)">
-                {t("brand")}: <strong>{service.brand_name}</strong>
-              </Typography>
-            )}
-            {service.category_name && (
-              <Typography as="span" variant="caption" color="var(--foreground)">
-                {t("category")}: <strong>{service.category_name}</strong>
-              </Typography>
-            )}
-          </Box>
-        )}
-
-        {/* Service badges: duration + modality */}
-        {(effectiveDuration || effectiveModality) && (
-          <Box flexWrap="wrap" gap={8}>
-            {effectiveDuration && (
-              <Badge variant="filled" color="var(--accent)" size="lg">
-                ⏱ {formatDuration(effectiveDuration)}
-              </Badge>
-            )}
-            {effectiveModality && (
-              <Badge variant="filled" color="var(--accent)" size="lg">
-                {modalityLabels[effectiveModality] ?? effectiveModality}
-              </Badge>
-            )}
-          </Box>
-        )}
-      </Box>
-
       {/* Buy box: price, variant selector and CTAs grouped as one unit */}
       <Card gap={18}>
         {/* Pricing */}

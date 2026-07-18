@@ -13,6 +13,7 @@ import { ItemHeroVideo } from "@/components/item-hero-video";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import {
+  ServiceDetailHeader,
   ServiceDetailPanel,
   ServiceDetailSections,
 } from "@/components/service-detail";
@@ -172,6 +173,11 @@ export default async function ServicePage({ params, searchParams }: Props) {
         paddingBottom="var(--ui-page-bottom-spacing, 64px)"
       >
         <Breadcrumbs items={breadcrumbs} />
+        <ServiceDetailHeader
+          service={service}
+          selectedVariant={selectedVariant}
+          locale={locale}
+        />
         <Grid container spacing={2} marginBottom={18}>
           <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
             <ItemGalleryClient

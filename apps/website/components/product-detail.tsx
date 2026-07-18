@@ -21,19 +21,19 @@ interface ProductDetailProps {
   locale: string;
 }
 
-export async function ProductDetailPanel({
+/**
+ * Full-width page header for a product: the name plus its share / favorite
+ * actions and the brand / category meta. Rendered above the gallery-and-buy-box
+ * grid so it spans both columns.
+ */
+export async function ProductDetailHeader({
   product,
-  selectedVariant,
   locale,
 }: ProductDetailProps) {
-  // The cart line is looked up for the *selected* variant, so switching variants
-  // re-renders this panel with the answer for the one now on screen: the CTA
-  // offers to remove the size already in the cart and to add the one that isn't.
-  const [t, session, favorite, cartLineId] = await Promise.all([
+  const [t, session, favorite] = await Promise.all([
     getTranslations("ItemDetail"),
     getSession(),
     isFavorite("product", product.id),
-    findCartLineId("product", product.id, selectedVariant?.id ?? null),
   ]);
 
   const name =
@@ -47,6 +47,72 @@ export async function ProductDetailPanel({
     product.description ??
     product.en_description ??
     "";
+
+  return (
+    <Box flexDirection="column" gap={8} marginBottom={18}>
+      {/* Name + share / favorite actions */}
+      <Box alignItems="flex-start" justifyContent="space-between" gap={12}>
+        {name && (
+          <Typography
+            as="h1"
+            variant="h2"
+            flex="1"
+            minWidth={0}
+            styles={{ lineHeight: 1.25 }}
+          >
+            {name}
+          </Typography>
+        )}
+        <Box alignItems="center" gap={8}>
+          <ShareButton
+            title={name}
+            text={toShareDescription(shareText)}
+            label={t("share")}
+            copiedLabel={t("linkCopied")}
+            size="md"
+          />
+          <FavoriteButton
+            kind="product"
+            id={product.id}
+            initialFavorite={favorite}
+            isLoggedIn={session !== null}
+            size="md"
+          />
+        </Box>
+      </Box>
+
+      {/* Meta: brand / category */}
+      {(product.brand_name || product.category_name) && (
+        <Box flexWrap="wrap" gap="8px 20px">
+          {product.brand_name && (
+            <Typography as="span" variant="caption" color="var(--foreground)">
+              {t("brand")}: <strong>{product.brand_name}</strong>
+            </Typography>
+          )}
+          {product.category_name && (
+            <Typography as="span" variant="caption" color="var(--foreground)">
+              {t("category")}: <strong>{product.category_name}</strong>
+            </Typography>
+          )}
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+export async function ProductDetailPanel({
+  product,
+  selectedVariant,
+  locale,
+}: ProductDetailProps) {
+  // The cart line is looked up for the *selected* variant, so switching variants
+  // re-renders this panel with the answer for the one now on screen: the CTA
+  // offers to remove the size already in the cart and to add the one that isn't.
+  const [t, session, cartLineId] = await Promise.all([
+    getTranslations("ItemDetail"),
+    getSession(),
+    findCartLineId("product", product.id, selectedVariant?.id ?? null),
+  ]);
 
   const effectivePrice = selectedVariant?.effective_price ?? product.price;
   const effectiveCompare =
@@ -67,55 +133,6 @@ export async function ProductDetailPanel({
 
   return (
     <Box flexDirection="column" gap={18} paddingY={4}>
-      <Box flexDirection="column" gap={8}>
-        {/* Name + share / favorite actions */}
-        <Box alignItems="flex-start" justifyContent="space-between" gap={12}>
-          {name && (
-            <Typography
-              as="h1"
-              variant="h2"
-              flex="1"
-              minWidth={0}
-              styles={{ lineHeight: 1.25 }}
-            >
-              {name}
-            </Typography>
-          )}
-          <Box alignItems="center" gap={8}>
-            <ShareButton
-              title={name}
-              text={toShareDescription(shareText)}
-              label={t("share")}
-              copiedLabel={t("linkCopied")}
-              size="md"
-            />
-            <FavoriteButton
-              kind="product"
-              id={product.id}
-              initialFavorite={favorite}
-              isLoggedIn={session !== null}
-              size="md"
-            />
-          </Box>
-        </Box>
-
-        {/* Meta: brand / category */}
-        {(product.brand_name || product.category_name) && (
-          <Box flexWrap="wrap" gap="8px 20px">
-            {product.brand_name && (
-              <Typography as="span" variant="caption" color="var(--foreground)">
-                {t("brand")}: <strong>{product.brand_name}</strong>
-              </Typography>
-            )}
-            {product.category_name && (
-              <Typography as="span" variant="caption" color="var(--foreground)">
-                {t("category")}: <strong>{product.category_name}</strong>
-              </Typography>
-            )}
-          </Box>
-        )}
-      </Box>
-
       {/* Buy box: price, stock, variant selector and CTAs grouped as one unit */}
       <Card gap={18}>
         {/* Pricing */}

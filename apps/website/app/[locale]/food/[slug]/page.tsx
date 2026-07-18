@@ -10,7 +10,11 @@ import { ItemGalleryClient } from "@/components/item-gallery-client";
 import { ItemHeroVideo } from "@/components/item-hero-video";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
-import { MenuDetailPanel, MenuDetailSections } from "@/components/menu-detail";
+import {
+  MenuDetailHeader,
+  MenuDetailPanel,
+  MenuDetailSections,
+} from "@/components/menu-detail";
 import type { MenuItemDetail } from "@/lib/catalog";
 
 type Props = {
@@ -125,6 +129,7 @@ export default async function MenuItemPage({ params }: Props) {
         paddingBottom="var(--ui-page-bottom-spacing, 64px)"
       >
         <Breadcrumbs items={breadcrumbs} />
+        <MenuDetailHeader item={item} locale={locale} />
         <Grid container spacing={2} marginBottom={18}>
           <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
             <ItemGalleryClient
