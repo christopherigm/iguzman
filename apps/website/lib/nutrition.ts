@@ -22,6 +22,15 @@ export function nutritionRows(
   );
 }
 
+/** Portion as "<qty> <unit>", rounded to at most one decimal so a per-serving
+ *  division (e.g. 100 g ÷ 3) doesn't print a long fraction and an integer-like
+ *  value (e.g. 180.00) prints without trailing zeros ("180"). */
+export function formatPortion(quantity: number, unit: string): string {
+  const rounded = Math.round(quantity * 10) / 10;
+  const value = Number.isFinite(rounded) ? String(rounded) : String(quantity);
+  return `${value} ${unit}`;
+}
+
 // ---------------------------------------------------------------------------
 // Portion scaling (mirrors the backend so the full FDA label can be computed
 // client-side from the already-embedded `ingredient_detail`)

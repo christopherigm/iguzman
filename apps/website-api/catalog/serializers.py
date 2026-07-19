@@ -1161,7 +1161,7 @@ class MenuItemIngredientSerializer(serializers.ModelSerializer):
             'menu_item', 'ingredient', 'ingredient_detail',
             'name', 'en_name', 'image',
             'quantity', 'unit', 'calories', 'price',
-            'is_removable', 'max_quantity',
+            'is_removable', 'is_internal', 'max_quantity',
             'number_of_free_portions', 'default_quantity',
             'included_units', 'default_units', 'sort_order',
         ]
@@ -1184,7 +1184,7 @@ class MenuItemIngredientWriteSerializer(serializers.ModelSerializer):
         model = MenuItemIngredient
         fields = [
             'ingredient', 'quantity', 'unit', 'price',
-            'is_removable', 'max_quantity',
+            'is_removable', 'is_internal', 'max_quantity',
             'number_of_free_portions', 'default_quantity',
             'sort_order', 'enabled',
         ]

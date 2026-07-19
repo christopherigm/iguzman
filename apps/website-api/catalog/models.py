@@ -636,8 +636,10 @@ class MenuItem(Buyable):
         """Base price plus every up-charge implied by ``selection``.
 
         ``selection`` is a normalised list of ``{"ingredient": <id>, "quantity":
-        <int>}`` dicts (see ``normalize_selection``). Only ingredients that
-        belong to this item are counted, and only the units charged for beyond
+        <int>}`` dicts (see ``normalize_selection``). Internal ingredients are
+        skipped entirely - they are kitchen-only recipe components excluded from
+        the customer's total. Only customer-facing ingredients that belong to
+        this item are counted, and only the units charged for beyond
         what the base already includes (``included_units``, i.e. the free
         portions): a default ingredient's included units are free (removing them
         never refunds - the base was already paid), and every unit above that
@@ -646,7 +648,9 @@ class MenuItem(Buyable):
         default that itself carries an up-charge is still counted. This is the
         *only* place the customised total is computed.
         """
-        by_id = {ing.id: ing for ing in self.ingredients.all()}
+        by_id = {
+            ing.id: ing for ing in self.ingredients.all() if not ing.is_internal
+        }
         chosen = {}
         for row in (selection or []):
             ingredient = by_id.get(row.get('ingredient'))
@@ -820,6 +824,13 @@ class MenuItemIngredient(Common):
                   'each unit charged at price. Off: included by default in the base '
                   'price and locked into the dish.',
     )
+    is_internal = models.BooleanField(
+        default=False,
+        help_text='Internal recipe-only component. Hidden from the customer '
+                  'customiser and excluded from the price, but still counted in '
+                  'the public nutrition label (it is really in the food). For '
+                  'kitchen/recipe use, e.g. cooking oil or a seasoning base.',
+    )
     max_quantity = models.PositiveSmallIntegerField(
         default=1, help_text='Largest quantity the customer may select.'
     )
@@ -956,9 +967,11 @@ def normalize_selection(selection, ingredients):
     whose effective quantity differs from the ingredient's default
     (``default_units``, so two carts that mean the same thing compare equal, and
     the "no changes" case stores an empty list). ``quantity`` is clamped to
-    ``[0, max_quantity]``.
+    ``[0, max_quantity]``. Internal ingredients are excluded - they are
+    kitchen-only, not customer-selectable, and never priced.
     """
-    by_id = {ing.id: ing for ing in ingredients}
+    customer_ingredients = [ing for ing in ingredients if not ing.is_internal]
+    by_id = {ing.id: ing for ing in customer_ingredients}
     rows = {}
     for row in (selection or []):
         ing = by_id.get(row.get('ingredient'))
@@ -971,7 +984,7 @@ def normalize_selection(selection, ingredients):
         qty = max(0, min(qty, ing.max_quantity))
         rows[ing.id] = qty
     normalized = []
-    for ing in ingredients:
+    for ing in customer_ingredients:
         qty = rows.get(ing.id, ing.default_units)
         if qty != ing.default_units:
             normalized.append({'ingredient': ing.id, 'quantity': qty})

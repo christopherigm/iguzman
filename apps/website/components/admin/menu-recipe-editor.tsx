@@ -68,7 +68,7 @@ export function MenuRecipeEditor({ value, onChange }: Props) {
 
   return (
     <Box display="flex" flexDirection="column" gap="12px">
-      <Typography variant="label">{t("recipe")}</Typography>
+      <Typography variant="h6">{t("recipe")}</Typography>
       <Typography variant="caption" color="var(--muted, #6b7280)">
         {t("recipeHint")}
       </Typography>

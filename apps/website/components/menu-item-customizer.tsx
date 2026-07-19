@@ -11,6 +11,7 @@ import { Badge } from "@repo/ui/core-elements/badge";
 import { Toast } from "@repo/ui/core-elements/toast";
 import type { MenuItemIngredient } from "@/lib/catalog";
 import { formatPrice } from "@/lib/price";
+import { formatPortion } from "@/lib/nutrition";
 import { useMenuCustomization } from "./menu-customization-context";
 
 interface Props {
@@ -62,6 +63,15 @@ export function MenuItemCustomizer({
   // nutrition label (rendered in a separate page row) mirrors every change.
   const { quantities, setQuantity } = useMenuCustomization();
 
+  // Internal ingredients are kitchen-only recipe components: hidden from the
+  // customiser and excluded from the price (the server does the same in
+  // `price_for_selection`). They still reach the nutrition label - which reads
+  // the full ingredient list separately - because they are really in the food.
+  const visibleIngredients = useMemo(
+    () => ingredients.filter((ing) => !ing.is_internal),
+    [ingredients],
+  );
+
   // Included (non-removable) ingredients are locked at 1; removable add-ons can
   // go down to 0.
   const minFor = (ing: MenuItemIngredient) => (ing.is_removable ? 0 : 1);
@@ -73,13 +83,13 @@ export function MenuItemCustomizer({
 
   const total = useMemo(() => {
     let sum = parseFloat(basePrice);
-    for (const ing of ingredients) {
+    for (const ing of visibleIngredients) {
       const qty = quantities[ing.id] ?? ing.default_units;
       const chargeable = Math.max(0, qty - ing.included_units);
       sum += chargeable * parseFloat(ing.price);
     }
     return sum;
-  }, [basePrice, ingredients, quantities]);
+  }, [basePrice, visibleIngredients, quantities]);
 
   // Order: included-by-default first (locked essentials), then the free
   // add-ons, then the paid add-ons. A stable sort keeps each group in the
@@ -89,8 +99,8 @@ export function MenuItemCustomizer({
       if (!ing.is_removable) return 0;
       return parseFloat(ing.price) === 0 ? 1 : 2;
     };
-    return [...ingredients].sort((a, b) => rank(a) - rank(b));
-  }, [ingredients]);
+    return [...visibleIngredients].sort((a, b) => rank(a) - rank(b));
+  }, [visibleIngredients]);
 
   const showToast = (kind: ToastKind) =>
     setToast((prev) => ({ kind, id: (prev?.id ?? 0) + 1 }));
@@ -98,13 +108,13 @@ export function MenuItemCustomizer({
   // Only the deltas from what the base already includes travel to the server;
   // it recomputes and stores the price, so nothing here is trusted about money.
   const addToCart = () => {
-    const customization = ingredients
+    const customization = visibleIngredients
       .map((ing) => ({
         ingredient: ing.id,
         quantity: quantities[ing.id] ?? ing.default_units,
       }))
       .filter((row) => {
-        const ing = ingredients.find((i) => i.id === row.ingredient);
+        const ing = visibleIngredients.find((i) => i.id === row.ingredient);
         return ing && row.quantity !== ing.default_units;
       });
 
@@ -164,7 +174,7 @@ export function MenuItemCustomizer({
 
   return (
     <Box flexDirection="column" gap={16}>
-      {ingredients.length > 0 && (
+      {visibleIngredients.length > 0 && (
         <Box flexDirection="column" gap={10}>
           <Typography as="h2" variant="none" className="item-section-heading">
             {t("customize", { name: menuItemName })}
@@ -210,7 +220,11 @@ export function MenuItemCustomizer({
                     <Typography variant="body" margin={0}>
                       {name}
                       {ing.quantity &&
-                        ` · ${ing.quantity}${ing.unit ? ` ${ing.unit}` : ""}`}
+                        ` · ${
+                          ing.unit
+                            ? formatPortion(parseFloat(ing.quantity), ing.unit)
+                            : formatPortion(parseFloat(ing.quantity), "").trim()
+                        }`}
                     </Typography>
                     {/* The price slot: a locked "Included" for a non-removable
                         ingredient, otherwise its per-unit up-charge (or "Free"). */}
@@ -235,44 +249,57 @@ export function MenuItemCustomizer({
                   </Box>
                 </Box>
 
-                {/* A horizontal stepper (− qty +) kept on the right; a
-                    non-removable ingredient is locked, so it has no stepper. */}
+                {/* A horizontal stepper (− qty +) kept on the right, with the
+                    running portion total beneath it; a non-removable ingredient
+                    is locked, so it has no stepper. */}
                 {!included && (
-                  <Box
-                    alignItems="center"
-                    gap={4}
-                    padding={2}
-                    borderRadius={8}
-                    border="1px solid var(--border, #e5e7eb)"
-                  >
-                    <Button
-                      text="−"
-                      aria-label={t("decrease")}
-                      title={t("decrease")}
-                      size="sm"
-                      minWidth={30}
-                      disabled={qty <= min}
-                      onClick={() => setQty(ing, qty - 1)}
-                    />
-                    <Typography
-                      as="span"
-                      variant="h6"
-                      margin={0}
-                      minWidth={28}
-                      styles={{ textAlign: "center" }}
-                      aria-live="polite"
+                  <Box flexDirection="column" alignItems="flex-end" gap={4}>
+                    <Box
+                      alignItems="center"
+                      gap={4}
+                      padding={2}
+                      borderRadius={8}
+                      border="1px solid var(--border, #e5e7eb)"
                     >
-                      {qty}
-                    </Typography>
-                    <Button
-                      text="+"
-                      aria-label={t("increase")}
-                      title={t("increase")}
-                      size="sm"
-                      minWidth={30}
-                      disabled={qty >= ing.max_quantity}
-                      onClick={() => setQty(ing, qty + 1)}
-                    />
+                      <Button
+                        text="−"
+                        aria-label={t("decrease")}
+                        title={t("decrease")}
+                        size="sm"
+                        minWidth={30}
+                        disabled={qty <= min}
+                        onClick={() => setQty(ing, qty - 1)}
+                      />
+                      <Typography
+                        as="span"
+                        variant="h6"
+                        margin={0}
+                        minWidth={28}
+                        styles={{ textAlign: "center" }}
+                        aria-live="polite"
+                      >
+                        {qty}
+                      </Typography>
+                      <Button
+                        text="+"
+                        aria-label={t("increase")}
+                        title={t("increase")}
+                        size="sm"
+                        minWidth={30}
+                        disabled={qty >= ing.max_quantity}
+                        onClick={() => setQty(ing, qty + 1)}
+                      />
+                    </Box>
+                    {ing.quantity && ing.unit && (
+                      <Typography
+                        variant="caption"
+                        margin={0}
+                        color="var(--foreground)"
+                        aria-live="polite"
+                      >
+                        {formatPortion(qty * parseFloat(ing.quantity), ing.unit)}
+                      </Typography>
+                    )}
                   </Box>
                 )}
               </Box>

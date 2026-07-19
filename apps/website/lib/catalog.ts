@@ -461,6 +461,11 @@ export interface MenuItemIngredient {
    * each unit charged `price`.
    */
   is_removable: boolean;
+  /**
+   * Internal recipe-only component: hidden from the customiser and excluded from
+   * pricing, but still counted in the nutrition label. For kitchen/recipe use.
+   */
+  is_internal: boolean;
   max_quantity: number;
   /** Units the customer gets free before `price` applies (removable add-ons). */
   number_of_free_portions: number;

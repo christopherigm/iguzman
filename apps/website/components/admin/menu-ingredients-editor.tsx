@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
@@ -9,10 +9,11 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Button } from "@repo/ui/core-elements/button";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Select } from "@repo/ui/core-elements/select";
 import { Switch } from "@repo/ui/core-elements/switch";
-import "./menu-ingredients-editor.css";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 
 /** One editable ingredient row. `id` is present once persisted; `key` is a
  *  stable client id used only for React list identity.
@@ -34,6 +35,11 @@ export interface IngredientRow {
    * optional add-on the customer adds up to `max_quantity`, each unit charged.
    */
   is_removable: boolean;
+  /**
+   * Internal recipe-only component: hidden from the customer customiser and
+   * excluded from pricing, but still counted in the public nutrition label.
+   */
+  is_internal: boolean;
   max_quantity: string;
   /** Units the customer gets free before `price` applies (removable add-ons). */
   number_of_free_portions: string;
@@ -83,6 +89,7 @@ export function newIngredientRow(): IngredientRow {
     // New rows default to included-by-default (part of the base recipe); flip
     // "Removable" on to make it a customer-chosen add-on.
     is_removable: false,
+    is_internal: false,
     max_quantity: "1",
     number_of_free_portions: "0",
     default_quantity: "0",
@@ -106,8 +113,8 @@ interface Props {
  * by default (locked, in the base price); on makes it an optional add-on where
  * `price` is the up-charge per unit and `max_quantity` caps how many the
  * customer may add (2 = "double"). Rows are drag-reorderable (their array order
- * is persisted as `sort_order`), and "Add ingredient" inserts a fresh row at the
- * top. Pure/controlled - it holds no persistence logic; the parent page diffs
+ * is persisted as `sort_order`), and "Add ingredient" appends a fresh row at the
+ * end (scrolling it into view). Pure/controlled - it holds no persistence logic; the parent page diffs
  * the list against the loaded rows and calls the create/update/delete API on
  * save.
  */
@@ -118,18 +125,41 @@ export function MenuIngredientsEditor({
   catalog,
 }: Props) {
   const t = useTranslations("Admin");
+  const tCommon = useTranslations("Common");
 
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  // Sort mode strips each card down to image + picker + drag handle so rows are
+  // easy to re-arrange; the move handle is hidden entirely when it is off.
+  const [sortMode, setSortMode] = useState(false);
+  // Key of the row awaiting delete confirmation (null = no modal open).
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+
+  // Sentinel at the end of the list + a one-shot flag so we only scroll after an
+  // "Add ingredient" click, not on every re-render (edits, reorders, deletes).
+  const listEndRef = useRef<HTMLDivElement | null>(null);
+  const shouldScrollRef = useRef(false);
 
   const update = (key: string, patch: Partial<IngredientRow>) =>
     onChange(value.map((r) => (r.key === key ? { ...r, ...patch } : r)));
 
   const remove = (key: string) => onChange(value.filter((r) => r.key !== key));
 
-  // New rows go to the top so the just-added ingredient is immediately visible
-  // without scrolling past the existing list.
-  const add = () => onChange([newIngredientRow(), ...value]);
+  // New rows go to the end of the list; the effect below scrolls the freshly
+  // added row into view once it has rendered.
+  const add = () => {
+    shouldScrollRef.current = true;
+    onChange([...value, newIngredientRow()]);
+  };
+
+  useEffect(() => {
+    if (!shouldScrollRef.current) return;
+    shouldScrollRef.current = false;
+    listEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
+  }, [value.length]);
 
   const catalogOptions = [
     { value: "", label: t("selectIngredient") ?? "— Select —" },
@@ -192,14 +222,24 @@ export function MenuIngredientsEditor({
         justifyContent="space-between"
         gap="12px"
       >
-        <Typography variant="label">{t("ingredients")}</Typography>
-        <Button
-          text={t("addIngredient")}
-          kind="primary"
-          size="sm"
-          onClick={add}
-          type="button"
-        />
+        <Typography variant="h6">{t("ingredients")}</Typography>
+        <Box display="flex" alignItems="center" gap="12px">
+          <Box display="flex" alignItems="center" gap="8px">
+            <Switch
+              checked={sortMode}
+              onChange={setSortMode}
+              aria-label={t("sortIngredients")}
+            />
+            <Typography variant="caption">{t("sortIngredients")}</Typography>
+          </Box>
+          <Button
+            text={t("addShort")}
+            kind="primary"
+            size="sm"
+            onClick={add}
+            type="button"
+          />
+        </Box>
       </Box>
 
       <Typography variant="caption" color="var(--muted, #6b7280)">
@@ -217,6 +257,9 @@ export function MenuIngredientsEditor({
       <Grid container spacing={1.5}>
         {value.map((row, index) => {
           const isOver = dragOverIndex === index && dragIndex !== index;
+          // Rows carry an `id` only once persisted; a missing id means this
+          // ingredient is new and not yet saved - flag it with a green underline.
+          const isUnsaved = row.id === undefined;
           const hint = basisHint(row);
           const pickedImage =
             catalog.find((c) => c.id === row.ingredient)?.image ?? null;
@@ -235,80 +278,69 @@ export function MenuIngredientsEditor({
                 styles={{
                   opacity: dragIndex === index ? 0.5 : 1,
                   overflow: "visible",
+                  // An internal ingredient is flagged with a purple bottom
+                  // border so kitchen-only rows are identifiable at a glance;
+                  // it takes precedence over the green "unsaved" hint.
+                  ...(row.is_internal
+                    ? { borderBottom: "3px solid var(--internal, #9333ea)" }
+                    : isUnsaved
+                      ? { borderBottom: "3px solid var(--success, #16a34a)" }
+                      : {}),
                 }}
               >
-                {/* Row 1: switches stacked on the left, delete + move handle on
-                the right - so on a narrow (xs) card the buttons sit beside the
-                switches instead of wrapping underneath them. */}
-                <Box
-                  display="flex"
-                  alignItems="flex-start"
-                  justifyContent="space-between"
-                  gap="12px"
-                >
+                {/* Row 1 (edit mode only): the Removable + Internal switches
+                and the delete button share one row at every breakpoint. Hidden
+                in sort mode, where the card collapses to just the picker +
+                inline drag handle. */}
+                {!sortMode && (
                   <Box
                     display="flex"
-                    flexDirection="column"
-                    gap="8px"
-                    className="menu-ingredient-toggles"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    gap="12px"
                   >
-                    <Box display="flex" alignItems="center" gap="8px">
-                      <Switch
-                        checked={row.enabled}
-                        onChange={(c) => update(row.key, { enabled: c })}
-                        aria-label={t("enabled")}
-                      />
-                      <Typography variant="caption">{t("enabled")}</Typography>
+                    <Box display="flex" alignItems="center" gap="16px">
+                      <Box display="flex" alignItems="center" gap="8px">
+                        <Switch
+                          checked={row.is_removable}
+                          onChange={(c) => update(row.key, { is_removable: c })}
+                          aria-label={t("removable")}
+                        />
+                        <Typography variant="caption">
+                          {t("removable")}
+                        </Typography>
+                      </Box>
+                      <Box display="flex" alignItems="center" gap="8px">
+                        <Switch
+                          checked={row.is_internal}
+                          onChange={(c) => update(row.key, { is_internal: c })}
+                          aria-label={t("internal")}
+                        />
+                        <Typography variant="caption">
+                          {t("internal")}
+                        </Typography>
+                      </Box>
                     </Box>
-                    <Box display="flex" alignItems="center" gap="8px">
-                      <Switch
-                        checked={row.is_removable}
-                        onChange={(c) => update(row.key, { is_removable: c })}
-                        aria-label={t("removable")}
-                      />
-                      <Typography variant="caption">
-                        {t("removable")}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Box display="flex" alignItems="center" gap="8px">
-                    <Button
-                      text={t("remove")}
+                    <IconButton
+                      icon="/icons/delete-trash-icon.svg"
                       kind="error"
                       size="sm"
-                      onClick={() => remove(row.key)}
+                      aria-label={t("remove")}
+                      title={t("remove")}
+                      onClick={() => setPendingDelete(row.key)}
                       type="button"
                     />
-                    {/* The move handle doubles as the drag source for reordering. */}
-                    <span
-                      draggable
-                      onDragStart={() => handleDragStart(index)}
-                      onDragEnd={handleDragEnd}
-                      aria-label={t("dragToReorder")}
-                      title={t("dragToReorder")}
-                      style={{
-                        cursor: "grab",
-                        userSelect: "none",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        padding: "6px 10px",
-                        fontSize: 16,
-                        lineHeight: 1,
-                        borderRadius: 8,
-                        border: "1px solid var(--border, #e5e7eb)",
-                        color: "var(--muted, #6b7280)",
-                      }}
-                    >
-                      ⠿
-                    </span>
                   </Box>
-                </Box>
+                )}
 
                 {/* Row 2: a thumbnail of the picked ingredient beside the picker
                 (with a nutrition-basis hint), above the portion + pricing fields. */}
                 <Box display="flex" flexDirection="column" gap="6px">
-                  <Box display="flex" alignItems="flex-end" gap="8px">
+                  <Box
+                    display="flex"
+                    alignItems={sortMode ? "center" : "flex-end"}
+                    gap="8px"
+                  >
                     <Box
                       width={40}
                       height={40}
@@ -341,66 +373,114 @@ export function MenuIngredientsEditor({
                         options={catalogOptions}
                       />
                     </Box>
+                    {/* The move handle sits inline with the picker; it doubles
+                    as the drag source and is only shown in sort mode. */}
+                    {sortMode && (
+                      <span
+                        draggable
+                        onDragStart={() => handleDragStart(index)}
+                        onDragEnd={handleDragEnd}
+                        aria-label={t("dragToReorder")}
+                        title={t("dragToReorder")}
+                        style={{
+                          cursor: "grab",
+                          userSelect: "none",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flex: "0 0 auto",
+                          padding: "6px 10px",
+                          height: 40,
+                          fontSize: 16,
+                          lineHeight: 1,
+                          borderRadius: 8,
+                          border: "1px solid var(--border, #e5e7eb)",
+                          color: "var(--muted, #6b7280)",
+                        }}
+                      >
+                        ⠿
+                      </span>
+                    )}
                   </Box>
-                  {hint && (
+                  {!sortMode && hint && (
                     <Typography variant="caption" color="var(--muted, #6b7280)">
                       {hint}
                     </Typography>
                   )}
                 </Box>
 
-                <Box
-                  display="grid"
-                  gap="10px"
-                  alignItems="start"
-                  styles={{
-                    gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
-                  }}
-                >
-                  <TextInput
-                    label={`${t("upcharge")} (${currency})`}
-                    format="number"
-                    value={row.price}
-                    onChange={(v) => update(row.key, { price: v })}
-                  />
-                  <TextInput
-                    label={t("portion")}
-                    format="number"
-                    value={row.quantity}
-                    onChange={(v) => update(row.key, { quantity: v })}
-                  />
-                  <Select
-                    label={t("unit")}
-                    value={row.unit}
-                    onChange={(v) => update(row.key, { unit: v })}
-                    options={UNIT_OPTIONS}
-                  />
-                  <TextInput
-                    label={t("maxQuantity")}
-                    format="number"
-                    value={row.max_quantity}
-                    onChange={(v) => update(row.key, { max_quantity: v })}
-                  />
-                  <TextInput
-                    label={t("freePortions")}
-                    format="number"
-                    value={row.number_of_free_portions}
-                    onChange={(v) =>
-                      update(row.key, { number_of_free_portions: v })
-                    }
-                  />
-                  <TextInput
-                    label={t("defaultQuantity")}
-                    format="number"
-                    value={row.default_quantity}
-                    onChange={(v) => update(row.key, { default_quantity: v })}
-                  />
-                </Box>
+                {!sortMode && (
+                  <Box
+                    display="grid"
+                    gap="10px"
+                    alignItems="start"
+                    styles={{
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(120px, 1fr))",
+                    }}
+                  >
+                    <TextInput
+                      label={`${t("upcharge")} (${currency})`}
+                      format="number"
+                      value={row.price}
+                      onChange={(v) => update(row.key, { price: v })}
+                    />
+                    <TextInput
+                      label={t("portion")}
+                      format="number"
+                      value={row.quantity}
+                      onChange={(v) => update(row.key, { quantity: v })}
+                    />
+                    <Select
+                      label={t("unit")}
+                      value={row.unit}
+                      onChange={(v) => update(row.key, { unit: v })}
+                      options={UNIT_OPTIONS}
+                    />
+                    <TextInput
+                      label={t("maxQuantity")}
+                      format="number"
+                      value={row.max_quantity}
+                      onChange={(v) => update(row.key, { max_quantity: v })}
+                    />
+                    <TextInput
+                      label={t("freePortions")}
+                      format="number"
+                      value={row.number_of_free_portions}
+                      onChange={(v) =>
+                        update(row.key, { number_of_free_portions: v })
+                      }
+                    />
+                    <TextInput
+                      label={t("defaultQuantity")}
+                      format="number"
+                      value={row.default_quantity}
+                      onChange={(v) => update(row.key, { default_quantity: v })}
+                    />
+                  </Box>
+                )}
               </Card>
             </Grid>
           );
         })}
       </Grid>
+
+      {/* Scroll anchor: `add` scrolls this into view so the new last row shows. */}
+      <Box ref={listEndRef} height={0} aria-hidden={true} />
+
+      {pendingDelete !== null && (
+        <ConfirmationModal
+          title={t("deleteIngredientTitle")}
+          text={t("deleteIngredientText")}
+          okCallback={() => {
+            remove(pendingDelete);
+            setPendingDelete(null);
+          }}
+          cancelCallback={() => setPendingDelete(null)}
+          okLabel={tCommon("ok")}
+          cancelLabel={tCommon("cancel")}
+        />
+      )}
     </Box>
   );
 }

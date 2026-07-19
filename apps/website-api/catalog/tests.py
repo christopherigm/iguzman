@@ -235,6 +235,28 @@ class MenuItemPricingTests(TestCase):
         )
         self.assertEqual(selection, [{"ingredient": self.cheese.id, "quantity": 2}])
 
+    def test_internal_ingredient_is_excluded_from_price(self):
+        # An internal (kitchen-only) ingredient never affects the customer's
+        # total, even when it carries an up-charge and is named in a selection.
+        oil_ing = Ingredient.objects.create(
+            system=self.system, name="Oil", slug="oil", unit="ml",
+        )
+        oil = MenuItemIngredient.objects.create(
+            menu_item=self.item, ingredient=oil_ing, price=Decimal("5.00"),
+            is_removable=True, max_quantity=3, is_internal=True,
+        )
+        self.assertEqual(
+            self.item.price_for_selection([{"ingredient": oil.id, "quantity": 3}]),
+            Decimal("8.00"),
+        )
+        # It is also dropped from a normalised selection: not customer-selectable.
+        self.assertEqual(
+            normalize_selection(
+                [{"ingredient": oil.id, "quantity": 3}], self.item.ingredients.all()
+            ),
+            [],
+        )
+
     def test_selection_ignores_foreign_ingredients(self):
         other = MenuItem.objects.create(
             system=self.system, name="Burrito", slug="burrito", price=Decimal("10.00"),

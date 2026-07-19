@@ -10,6 +10,7 @@ import type { MenuItemIngredient } from "@/lib/catalog";
 import {
   NUTRIENT_ROWS,
   formatNutrientAmount,
+  formatPortion,
   nutritionRows,
   scaleNutrient,
 } from "@/lib/nutrition";
@@ -37,14 +38,6 @@ type NutritionView = "ingredients" | "facts";
 interface SelectedRow {
   ing: MenuItemIngredient;
   qty: number;
-}
-
-/** Portion as "<qty> <unit>", rounded to at most one decimal so a per-serving
- *  division (e.g. 100 g ÷ 3) doesn't print a long fraction. */
-function formatPortion(quantity: number, unit: string): string {
-  const rounded = Math.round(quantity * 10) / 10;
-  const value = Number.isFinite(rounded) ? String(rounded) : quantity;
-  return `${value} ${unit}`;
 }
 
 interface NutritionLabelProps {

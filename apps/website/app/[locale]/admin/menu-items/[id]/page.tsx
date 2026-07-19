@@ -251,6 +251,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
             quantity: i.quantity == null ? "" : String(i.quantity),
             unit: String(i.unit ?? ""),
             is_removable: Boolean(i.is_removable),
+            is_internal: Boolean(i.is_internal),
             max_quantity: String(i.max_quantity ?? "1"),
             number_of_free_portions: String(i.number_of_free_portions ?? "0"),
             default_quantity: String(i.default_quantity ?? "0"),
@@ -296,16 +297,27 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     for (const ingId of deleted) {
       await deleteMenuItemIngredient(menuItemId, ingId).catch(() => null);
     }
+    // Reconcile the rows we send with the ids the API assigns, so a freshly
+    // created row carries its `id` on the next save (updated, not re-created).
+    // Without this, a second save re-POSTs every new row from the first save
+    // and duplicates it.
+    const reconciled: IngredientRow[] = [];
     for (let i = 0; i < ingredients.length; i++) {
       const row = ingredients[i];
-      // A row is only persistable once a reusable ingredient has been picked.
-      if (!row || row.ingredient === "") continue;
+      if (!row) continue;
+      // A row is only persistable once a reusable ingredient has been picked;
+      // keep unpicked rows in state untouched so the editor doesn't lose them.
+      if (row.ingredient === "") {
+        reconciled.push(row);
+        continue;
+      }
       const payload: Record<string, unknown> = {
         ingredient: row.ingredient,
         price: row.price === "" ? "0.00" : row.price,
         quantity: row.quantity === "" ? null : row.quantity,
         unit: row.unit || null,
         is_removable: row.is_removable,
+        is_internal: row.is_internal,
         max_quantity: row.max_quantity === "" ? 1 : Number(row.max_quantity),
         number_of_free_portions:
           row.number_of_free_portions === ""
@@ -320,10 +332,25 @@ export default function AdminMenuItemFormPage({ params }: Props) {
         await updateMenuItemIngredient(menuItemId, row.id, payload).catch(
           () => null,
         );
+        reconciled.push(row);
       } else {
-        await createMenuItemIngredient(menuItemId, payload).catch(() => null);
+        const created = await createMenuItemIngredient(
+          menuItemId,
+          payload,
+        ).catch(() => null);
+        const newId = created?.id;
+        // On a failed create the row keeps no id and is retried next save.
+        reconciled.push(
+          typeof newId === "number" ? { ...row, id: newId } : row,
+        );
       }
     }
+    setIngredients(reconciled);
+    setOriginalIngredientIds(
+      reconciled
+        .map((r) => r.id)
+        .filter((n): n is number => typeof n === "number"),
+    );
   };
 
   const persistRecipe = async (menuItemId: number) => {

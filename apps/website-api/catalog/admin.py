@@ -419,7 +419,7 @@ class MenuItemIngredientInline(admin.TabularInline):
     autocomplete_fields = ('ingredient',)
     fields = (
         'ingredient', 'quantity', 'unit', 'price',
-        'is_removable', 'max_quantity',
+        'is_removable', 'is_internal', 'max_quantity',
         'number_of_free_portions', 'default_quantity',
         'sort_order', 'enabled',
     )
@@ -562,8 +562,8 @@ class IngredientAdmin(admin.ModelAdmin):
 
 @admin.register(MenuItemIngredient)
 class MenuItemIngredientAdmin(admin.ModelAdmin):
-    list_display = ('ingredient', 'menu_item', 'quantity', 'unit', 'price', 'calories', 'is_removable', 'max_quantity', 'number_of_free_portions', 'default_quantity', 'sort_order', 'enabled')
-    list_filter = ('enabled', 'is_removable', 'menu_item__system')
+    list_display = ('ingredient', 'menu_item', 'quantity', 'unit', 'price', 'calories', 'is_removable', 'is_internal', 'max_quantity', 'number_of_free_portions', 'default_quantity', 'sort_order', 'enabled')
+    list_filter = ('enabled', 'is_removable', 'is_internal', 'menu_item__system')
     search_fields = ('ingredient__name', 'ingredient__en_name', 'menu_item__name')
     autocomplete_fields = ('ingredient',)
     readonly_fields = ('created', 'modified', 'version')
