@@ -98,17 +98,6 @@ export function MenuItemCustomizer({
     return sum;
   }, [basePrice, visibleIngredients, quantities, options]);
 
-  // Order: included-by-default first (locked essentials), then the free
-  // add-ons, then the paid add-ons. A stable sort keeps each group in the
-  // admin-set `sort_order` the API already returns them in.
-  const sortedIngredients = useMemo(() => {
-    const rank = (ing: MenuItemIngredient) => {
-      if (!ing.is_removable) return 0;
-      return parseFloat(ing.price) === 0 ? 1 : 2;
-    };
-    return [...visibleIngredients].sort((a, b) => rank(a) - rank(b));
-  }, [visibleIngredients]);
-
   const showToast = (kind: ToastKind) =>
     setToast((prev) => ({ kind, id: (prev?.id ?? 0) + 1 }));
 
@@ -202,7 +191,9 @@ export function MenuItemCustomizer({
             {t("customize", { name: menuItemName })}
           </Typography>
 
-          {sortedIngredients.map((ing) => {
+          {/* Rendered in the admin-set `sort_order` the API already returns
+              them in - ordering is owned by the admin ingredients editor. */}
+          {visibleIngredients.map((ing) => {
             const qty = quantities[ing.id] ?? ing.default_units;
             const min = minFor(ing);
             // A single-select choice group offers alternatives; the customer's
