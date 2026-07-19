@@ -34,6 +34,7 @@ from .views import (
     MenuItemRecipeView,
     IngredientListCreateView,
     IngredientDetailView,
+    IngredientNutritionLookupView,
 )
 
 urlpatterns = [
@@ -79,6 +80,8 @@ urlpatterns = [
 
     # Ingredients (reusable, System-scoped catalog referenced by menu items)
     path('catalog/ingredients/', IngredientListCreateView.as_view(), name='ingredient-list'),
+    # Static path before <int:pk> so "nutrition-lookup" is never read as a pk.
+    path('catalog/ingredients/nutrition-lookup/', IngredientNutritionLookupView.as_view(), name='ingredient-nutrition-lookup'),
     path('catalog/ingredients/<int:pk>/', IngredientDetailView.as_view(), name='ingredient-detail'),
 
     # Menu categories

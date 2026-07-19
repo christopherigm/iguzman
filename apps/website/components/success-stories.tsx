@@ -1,4 +1,5 @@
 import { getTranslations, getLocale } from "next-intl/server";
+import { getSession } from "@repo/auth/session";
 import { getSuccessStories } from "@/lib/success-stories";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { StoriesSliderClient } from "./stories-slider-client";
@@ -6,10 +7,12 @@ import "./success-stories.css";
 import Box from "@repo/ui/core-elements/box";
 
 export async function SuccessStories() {
-  const [stories, t, locale] = await Promise.all([
+  const [stories, t, adminT, locale, session] = await Promise.all([
     getSuccessStories(),
     getTranslations("SuccessStories"),
+    getTranslations("Admin"),
     getLocale(),
+    getSession(),
   ]);
 
   if (stories.length === 0) return null;
@@ -25,6 +28,8 @@ export async function SuccessStories() {
         stories={stories}
         locale={locale}
         readMore={t("readMore")}
+        isAdmin={session?.isAdmin ?? false}
+        editLabel={adminT("edit")}
       />
     </section>
   );

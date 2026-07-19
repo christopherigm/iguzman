@@ -106,6 +106,7 @@ export default async function ServicesPage({ params }: Props) {
                 return (
                   <Grid key={cat.id} size={{ xs: 6, sm: 4, lg: 3 }}>
                     <CategoryCard
+                      id={cat.id}
                       name={name}
                       description={description}
                       image={cat.image}

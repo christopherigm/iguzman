@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { DragEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
+import { Grid } from "@repo/ui/core-elements/grid";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Button } from "@repo/ui/core-elements/button";
@@ -26,7 +27,10 @@ export interface IngredientRow {
   price: string;
   quantity: string;
   unit: string;
-  is_default: boolean;
+  /**
+   * `false` = included by default (locked, in the base price); `true` = an
+   * optional add-on the customer adds up to `max_quantity`, each unit charged.
+   */
   is_removable: boolean;
   max_quantity: string;
   enabled: boolean;
@@ -68,8 +72,9 @@ export function newIngredientRow(): IngredientRow {
     price: "0.00",
     quantity: "",
     unit: "",
-    is_default: true,
-    is_removable: true,
+    // New rows default to included-by-default (part of the base recipe); flip
+    // "Removable" on to make it a customer-chosen add-on.
+    is_removable: false,
     max_quantity: "1",
     enabled: true,
   };
@@ -87,8 +92,9 @@ interface Props {
  * Editor for a menu item's priced ingredients (base price + add-on deltas).
  *
  * Each row picks one reusable Ingredient from the tenant catalog, then sets the
- * recipe portion and pricing: defaults are included and pre-selected; `price`
- * is the up-charge per chargeable unit; `max_quantity` caps how many the
+ * recipe portion and pricing. "Removable" off means the ingredient is included
+ * by default (locked, in the base price); on makes it an optional add-on where
+ * `price` is the up-charge per unit and `max_quantity` caps how many the
  * customer may add (2 = "double"). Rows are drag-reorderable (their array order
  * is persisted as `sort_order`), and "Add ingredient" inserts a fresh row at the
  * top. Pure/controlled - it holds no persistence logic; the parent page diffs
@@ -196,143 +202,152 @@ export function MenuIngredientsEditor({
         </Typography>
       )}
 
-      {value.map((row, index) => {
-        const isOver = dragOverIndex === index && dragIndex !== index;
-        const hint = basisHint(row);
-        return (
-          <Card
-            key={row.key}
-            gap="10px"
-            border={
-              isOver
-                ? "1px solid var(--accent, #06b6d4)"
-                : "1px solid var(--border, #e5e7eb)"
-            }
-            onDragOver={(e) => handleDragOver(e, index)}
-            onDragEnter={(e) => e.preventDefault()}
-            onDrop={(e) => handleDrop(e, index)}
-            styles={{
-              opacity: dragIndex === index ? 0.5 : 1,
-              overflow: "visible",
-            }}
-          >
-            {/* Row 1: switches on the left; delete + move handle pushed right.
+      {/* One card per ingredient, laid out two-up from `md` (full width below).
+          Each card is a grid item so the row wraps cleanly on narrow screens. */}
+      <Grid container spacing={1.5}>
+        {value.map((row, index) => {
+          const isOver = dragOverIndex === index && dragIndex !== index;
+          const hint = basisHint(row);
+          return (
+            <Grid key={row.key} size={{ xs: 12, md: 6 }}>
+              <Card
+                gap="10px"
+                border={
+                  isOver
+                    ? "1px solid var(--accent, #06b6d4)"
+                    : "1px solid var(--border, #e5e7eb)"
+                }
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragEnter={(e) => e.preventDefault()}
+                onDrop={(e) => handleDrop(e, index)}
+                styles={{
+                  opacity: dragIndex === index ? 0.5 : 1,
+                  overflow: "visible",
+                }}
+              >
+                {/* Row 1: switches on the left; delete + move handle pushed right.
                 Wraps on narrow screens so nothing overflows the card. */}
-            <Box display="flex" alignItems="center" gap="16px" flexWrap="wrap">
-              <Box display="flex" alignItems="center" gap="8px">
-                <Switch
-                  checked={row.enabled}
-                  onChange={(c) => update(row.key, { enabled: c })}
-                  aria-label={t("enabled")}
-                />
-                <Typography variant="caption">{t("enabled")}</Typography>
-              </Box>
-              <Box display="flex" alignItems="center" gap="8px">
-                <Switch
-                  checked={row.is_default}
-                  onChange={(c) => update(row.key, { is_default: c })}
-                  aria-label={t("includedByDefault")}
-                />
-                <Typography variant="caption">
-                  {t("includedByDefault")}
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  gap="16px"
+                  flexWrap="wrap"
+                >
+                  <Box display="flex" alignItems="center" gap="8px">
+                    <Switch
+                      checked={row.enabled}
+                      onChange={(c) => update(row.key, { enabled: c })}
+                      aria-label={t("enabled")}
+                    />
+                    <Typography variant="caption">{t("enabled")}</Typography>
+                  </Box>
+                  <Box display="flex" alignItems="center" gap="8px">
+                    <Switch
+                      checked={row.is_removable}
+                      onChange={(c) => update(row.key, { is_removable: c })}
+                      aria-label={t("removable")}
+                    />
+                    <Typography variant="caption">{t("removable")}</Typography>
+                  </Box>
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    gap="8px"
+                    marginLeft="auto"
+                  >
+                    <Button
+                      text={t("remove")}
+                      kind="error"
+                      size="sm"
+                      onClick={() => remove(row.key)}
+                      type="button"
+                    />
+                    {/* The move handle doubles as the drag source for reordering. */}
+                    <span
+                      draggable
+                      onDragStart={() => handleDragStart(index)}
+                      onDragEnd={handleDragEnd}
+                      aria-label={t("dragToReorder")}
+                      title={t("dragToReorder")}
+                      style={{
+                        cursor: "grab",
+                        userSelect: "none",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "6px 10px",
+                        fontSize: 16,
+                        lineHeight: 1,
+                        borderRadius: 8,
+                        border: "1px solid var(--border, #e5e7eb)",
+                        color: "var(--muted, #6b7280)",
+                      }}
+                    >
+                      ⠿
+                    </span>
+                  </Box>
+                </Box>
+
+                <Typography variant="caption" color="var(--muted, #6b7280)">
+                  {t("removableHint")}
                 </Typography>
-              </Box>
-              <Box display="flex" alignItems="center" gap="8px">
-                <Switch
-                  checked={row.is_removable}
-                  onChange={(c) => update(row.key, { is_removable: c })}
-                  aria-label={t("removable")}
-                />
-                <Typography variant="caption">{t("removable")}</Typography>
-              </Box>
-              <Box display="flex" alignItems="center" gap="8px" marginLeft="auto">
-                <Button
-                  text={t("remove")}
-                  kind="error"
-                  size="sm"
-                  onClick={() => remove(row.key)}
-                  type="button"
-                />
-                {/* The move handle doubles as the drag source for reordering. */}
-                <span
-                  draggable
-                  onDragStart={() => handleDragStart(index)}
-                  onDragEnd={handleDragEnd}
-                  aria-label={t("dragToReorder")}
-                  title={t("dragToReorder")}
-                  style={{
-                    cursor: "grab",
-                    userSelect: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "6px 10px",
-                    fontSize: 16,
-                    lineHeight: 1,
-                    borderRadius: 8,
-                    border: "1px solid var(--border, #e5e7eb)",
-                    color: "var(--muted, #6b7280)",
+
+                {/* Row 2: the ingredient picker (with a nutrition-basis hint) above
+                the portion + pricing fields. */}
+                <Box display="flex" flexDirection="column" gap="6px">
+                  <Select
+                    label={t("ingredient")}
+                    value={row.ingredient === "" ? "" : String(row.ingredient)}
+                    onChange={(v) =>
+                      update(row.key, { ingredient: v === "" ? "" : Number(v) })
+                    }
+                    options={catalogOptions}
+                  />
+                  {hint && (
+                    <Typography variant="caption" color="var(--muted, #6b7280)">
+                      {hint}
+                    </Typography>
+                  )}
+                </Box>
+
+                <Box
+                  display="grid"
+                  gap="10px"
+                  alignItems="start"
+                  styles={{
+                    gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
                   }}
                 >
-                  ⠿
-                </span>
-              </Box>
-            </Box>
-
-            {/* Row 2: the ingredient picker (with a nutrition-basis hint) above
-                the portion + pricing fields. */}
-            <Box display="flex" flexDirection="column" gap="6px">
-              <Select
-                label={t("ingredient")}
-                value={row.ingredient === "" ? "" : String(row.ingredient)}
-                onChange={(v) =>
-                  update(row.key, { ingredient: v === "" ? "" : Number(v) })
-                }
-                options={catalogOptions}
-              />
-              {hint && (
-                <Typography variant="caption" color="var(--muted, #6b7280)">
-                  {hint}
-                </Typography>
-              )}
-            </Box>
-
-            <Box
-              display="grid"
-              gap="10px"
-              alignItems="start"
-              styles={{
-                gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
-              }}
-            >
-              <TextInput
-                label={`${t("upcharge")} (${currency})`}
-                format="number"
-                value={row.price}
-                onChange={(v) => update(row.key, { price: v })}
-              />
-              <TextInput
-                label={t("portion")}
-                format="number"
-                value={row.quantity}
-                onChange={(v) => update(row.key, { quantity: v })}
-              />
-              <Select
-                label={t("unit")}
-                value={row.unit}
-                onChange={(v) => update(row.key, { unit: v })}
-                options={UNIT_OPTIONS}
-              />
-              <TextInput
-                label={t("maxQuantity")}
-                format="number"
-                value={row.max_quantity}
-                onChange={(v) => update(row.key, { max_quantity: v })}
-              />
-            </Box>
-          </Card>
-        );
-      })}
+                  <TextInput
+                    label={`${t("upcharge")} (${currency})`}
+                    format="number"
+                    value={row.price}
+                    onChange={(v) => update(row.key, { price: v })}
+                  />
+                  <TextInput
+                    label={t("portion")}
+                    format="number"
+                    value={row.quantity}
+                    onChange={(v) => update(row.key, { quantity: v })}
+                  />
+                  <Select
+                    label={t("unit")}
+                    value={row.unit}
+                    onChange={(v) => update(row.key, { unit: v })}
+                    options={UNIT_OPTIONS}
+                  />
+                  <TextInput
+                    label={t("maxQuantity")}
+                    format="number"
+                    value={row.max_quantity}
+                    onChange={(v) => update(row.key, { max_quantity: v })}
+                  />
+                </Box>
+              </Card>
+            </Grid>
+          );
+        })}
+      </Grid>
     </Box>
   );
 }

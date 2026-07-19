@@ -323,6 +323,7 @@
     "editingItem": "Editing \"{name}\"",
     "delete": "Delete",
     "save": "Save",
+    "viewInProduction": "View in production",
     "saving": "Saving…",
     "cancel": "Cancel",
     "confirmDeleteTitle": "Delete item?",
@@ -511,7 +512,18 @@
     "nutrientVitaminD": "Vitamin D (mcg)",
     "nutrientCalcium": "Calcium (mg)",
     "nutrientIron": "Iron (mg)",
-    "nutrientPotassium": "Potassium (mg)"
+    "nutrientPotassium": "Potassium (mg)",
+    "nutritionSearchWeb": "Search on web",
+    "nutritionSearchHint": "Uses the name, unit and basis above to find nutrition facts online.",
+    "nutritionSearchSearching": "Searching…",
+    "nutritionSearchResultsTitle": "Nutrition found on the web",
+    "nutritionSearchApply": "Apply",
+    "nutritionSearchDiscard": "Discard",
+    "nutritionSearchNone": "No nutrition data was found on the web for this ingredient.",
+    "nutritionSearchError": "The nutrition lookup failed. Please try again.",
+    "nutritionSearchWas": "was {value}",
+    "portions": "Servings per item",
+    "removableHint": "On: an add-on the customer adds (up to max). Off: included by default in the base price."
   },
   "GradientBuilder": {
     "linear": "Linear",
@@ -619,6 +631,7 @@
     "prepTime": "Prep time",
     "cookTime": "Cook time",
     "minutesValue": "{value} min",
-    "organic": "Organic"
+    "organic": "Organic",
+    "servingsPerItem": "{value} servings per item"
   }
 }

@@ -360,6 +360,9 @@ export default function AdminServiceFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
+        productionHref={
+          !isNew && values.slug ? `/services/${String(values.slug)}` : undefined
+        }
         imagesSlot={
           <>
             <Box display="flex" flexDirection="column" gap="8px">

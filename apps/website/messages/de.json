@@ -323,6 +323,7 @@
     "editingItem": "\"{name}\" wird bearbeitet",
     "delete": "Löschen",
     "save": "Speichern",
+    "viewInProduction": "In Produktion ansehen",
     "saving": "Wird gespeichert…",
     "cancel": "Abbrechen",
     "confirmDeleteTitle": "Eintrag löschen?",
@@ -511,7 +512,18 @@
     "nutrientVitaminD": "Vitamin D (µg)",
     "nutrientCalcium": "Kalzium (mg)",
     "nutrientIron": "Eisen (mg)",
-    "nutrientPotassium": "Kalium (mg)"
+    "nutrientPotassium": "Kalium (mg)",
+    "nutritionSearchWeb": "Im Web suchen",
+    "nutritionSearchHint": "Nutzt Name, Einheit und Basis oben, um Nährwerte online zu finden.",
+    "nutritionSearchSearching": "Suche…",
+    "nutritionSearchResultsTitle": "Im Web gefundene Nährwerte",
+    "nutritionSearchApply": "Übernehmen",
+    "nutritionSearchDiscard": "Verwerfen",
+    "nutritionSearchNone": "Für diese Zutat wurden keine Nährwertdaten im Web gefunden.",
+    "nutritionSearchError": "Die Nährwertsuche ist fehlgeschlagen. Bitte versuche es erneut.",
+    "nutritionSearchWas": "vorher {value}",
+    "portions": "Portionen pro Gericht",
+    "removableHint": "An: Zusatz, den der Kunde hinzufügt (bis Max.). Aus: standardmäßig im Grundpreis enthalten."
   },
   "GradientBuilder": {
     "linear": "Linear",
@@ -619,6 +631,7 @@
     "prepTime": "Zubereitungszeit",
     "cookTime": "Garzeit",
     "minutesValue": "{value} Min.",
-    "organic": "Bio"
+    "organic": "Bio",
+    "servingsPerItem": "{value} Portionen pro Gericht"
   }
 }

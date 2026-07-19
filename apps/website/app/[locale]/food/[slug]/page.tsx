@@ -16,7 +16,9 @@ import {
   MenuDetailSections,
   MenuDetailNutrition,
   menuItemShowsNutrition,
+  enabledIngredients,
 } from "@/components/menu-detail";
+import { MenuCustomizationProvider } from "@/components/menu-customization-context";
 import type { MenuItemDetail } from "@/lib/catalog";
 
 type Props = {
@@ -135,31 +137,35 @@ export default async function MenuItemPage({ params }: Props) {
         {/* Row 1: title, badges, category (spans both columns). */}
         <MenuDetailHeader item={item} locale={locale} />
 
-        {/* Row 2: gallery + customize/buy/allergens, side by side on desktop. */}
-        <Grid container spacing={2} marginBottom={18}>
-          <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
-            <ItemGalleryClient
-              images={galleryImages}
-              placeholderColor={item.background_color ?? undefined}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
-            <MenuDetailPanel item={item} locale={locale} />
-          </Grid>
-        </Grid>
-
-        {/* Row 3: "About this item" long-form description. */}
-        <MenuDetailSections item={item} locale={locale} />
-
-        {/* Row 4: nutrition label - a narrow column on desktop, full-width on
-            mobile. Only rendered when the item opts in and has chartable data. */}
-        {menuItemShowsNutrition(item) && (
-          <Grid container spacing={2} marginTop={18}>
-            <Grid size={{ xs: 12, md: 4, lg: 3 }}>
-              <MenuDetailNutrition item={item} locale={locale} />
+        {/* The customiser (row 2) and the nutrition label (row 4) share the
+            selected-quantity state so the label mirrors the customiser live. */}
+        <MenuCustomizationProvider ingredients={enabledIngredients(item)}>
+          {/* Row 2: gallery + customize/buy/allergens, side by side on desktop. */}
+          <Grid container spacing={2} marginBottom={18}>
+            <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
+              <ItemGalleryClient
+                images={galleryImages}
+                placeholderColor={item.background_color ?? undefined}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
+              <MenuDetailPanel item={item} locale={locale} />
             </Grid>
           </Grid>
-        )}
+
+          {/* Row 3: "About this item" long-form description. */}
+          <MenuDetailSections item={item} locale={locale} />
+
+          {/* Row 4: nutrition label - a narrow column on desktop, full-width on
+              mobile. Only rendered when the item opts in and has chartable data. */}
+          {menuItemShowsNutrition(item) && (
+            <Grid container spacing={2} marginTop={18}>
+              <Grid size={{ xs: 12, md: 4, lg: 3 }}>
+                <MenuDetailNutrition item={item} locale={locale} />
+              </Grid>
+            </Grid>
+          )}
+        </MenuCustomizationProvider>
       </Container>
     </>
   );

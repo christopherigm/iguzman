@@ -13,11 +13,14 @@ import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Badge } from "@repo/ui/core-elements/badge";
+import { getSession } from "@repo/auth/session";
+import { AdminEditButton } from "./admin-edit-button";
 import "./catalog-categories.css";
 
 type CategoryType = "product" | "service" | "food";
 
 interface CategoryCardProps {
+  id: number;
   name: string;
   description: string;
   image: string | null;
@@ -26,7 +29,8 @@ interface CategoryCardProps {
   href: string;
 }
 
-export function CategoryCard({
+export async function CategoryCard({
+  id,
   name,
   description,
   image,
@@ -47,6 +51,21 @@ export function CategoryCard({
   // Service badge picks up an accent tint only on flat (image-less) cards;
   // product cards and every image card use the light-on-dark treatment.
   const accentBadge = type === "service" && !hasImage;
+
+  // Admin edit shortcut, keyed to the per-kind category admin route. Resolved
+  // per card; `getSession` is `cache()`d per request so a grid of N cards costs
+  // one session decode between them. Only rendered for an admin viewer.
+  const [session, tAdmin] = await Promise.all([
+    getSession(),
+    getTranslations("Admin"),
+  ]);
+
+  const adminEditHref =
+    type === "product"
+      ? `/admin/product-categories/${id}`
+      : type === "service"
+        ? `/admin/service-categories/${id}`
+        : `/admin/menu-categories/${id}`;
 
   return (
     <Card
@@ -75,6 +94,29 @@ export function CategoryCard({
         />
       )}
 
+      {/* Kind badge rides the top-left corner over the image. */}
+      <Badge
+        variant="filled"
+        size="md"
+        textColor={accentBadge ? "var(--accent, #6366f1)" : "#fff"}
+        uppercase
+        style={{ position: "absolute", top: 8, left: 8, zIndex: 2 }}
+      >
+        {label}
+      </Badge>
+
+      {/* Admin-only edit shortcut, riding the top-right corner. */}
+      {session?.isAdmin && (
+        <Box styles={{ position: "absolute", top: 8, right: 8, zIndex: 2 }}>
+          <AdminEditButton
+            href={adminEditHref}
+            label={tAdmin("edit")}
+            size="sm"
+            solid
+          />
+        </Box>
+      )}
+
       <Box
         flexDirection="column"
         gap={10}
@@ -83,16 +125,6 @@ export function CategoryCard({
         className="card-content"
         styles={{ position: "relative", zIndex: 1 }}
       >
-        <Badge
-          variant="filled"
-          size="md"
-          textColor={accentBadge ? "var(--accent, #6366f1)" : "#fff"}
-          uppercase
-          style={{ width: "fit-content" }}
-        >
-          {label}
-        </Badge>
-
         {name && (
           <Typography
             as="h3"
@@ -171,6 +203,7 @@ export async function CatalogCategories() {
           return (
             <Grid key={`product-${cat.id}`} size={{ xs: 6, sm: 4, lg: 3 }}>
               <CategoryCard
+                id={cat.id}
                 name={name}
                 description={description}
                 image={cat.image}
@@ -195,6 +228,7 @@ export async function CatalogCategories() {
           return (
             <Grid key={`service-${cat.id}`} size={{ xs: 6, sm: 4, lg: 3 }}>
               <CategoryCard
+                id={cat.id}
                 name={name}
                 description={description}
                 image={cat.image}
@@ -219,6 +253,7 @@ export async function CatalogCategories() {
           return (
             <Grid key={`food-${cat.id}`} size={{ xs: 6, sm: 4, lg: 3 }}>
               <CategoryCard
+                id={cat.id}
                 name={name}
                 description={description}
                 image={cat.image}

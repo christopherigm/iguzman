@@ -439,6 +439,8 @@ export interface Ingredient extends IngredientNutrition {
 
 export interface MenuItemIngredient {
   id: number;
+  /** Whether the ingredient is active; disabled rows are hidden from customers. */
+  enabled: boolean;
   /** The referenced reusable Ingredient's id. */
   ingredient: number;
   /** The full referenced ingredient, when the API embeds it. */
@@ -453,7 +455,11 @@ export interface MenuItemIngredient {
   /** kcal this portion contributes, scaled from the ingredient. */
   calories: number | null;
   price: string;
-  is_default: boolean;
+  /**
+   * `false` = included by default (locked, in the base price, shown as
+   * "Included"); `true` = an optional add-on the customer adjusts 0→max_quantity,
+   * each unit charged `price`.
+   */
   is_removable: boolean;
   max_quantity: number;
   included_units: number;
@@ -494,6 +500,7 @@ export interface MenuItemDetail {
   brand_name: string | null;
   spice_level: number | null;
   servings: number | null;
+  portions: number | null;
   prep_time_minutes: number | null;
   cook_time_minutes: number | null;
   is_organic: boolean;

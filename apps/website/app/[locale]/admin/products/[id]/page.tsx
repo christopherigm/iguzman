@@ -408,6 +408,9 @@ export default function AdminProductFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
+        productionHref={
+          !isNew && values.slug ? `/products/${String(values.slug)}` : undefined
+        }
         imagesSlot={
           <Box display="flex" flexDirection="column" gap="8px">
             <Typography variant="label">{t("images") ?? "Images"}</Typography>

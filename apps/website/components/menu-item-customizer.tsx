@@ -11,6 +11,7 @@ import { Badge } from "@repo/ui/core-elements/badge";
 import { Toast } from "@repo/ui/core-elements/toast";
 import type { MenuItemIngredient } from "@/lib/catalog";
 import { formatPrice } from "@/lib/price";
+import { useMenuCustomization } from "./menu-customization-context";
 
 interface Props {
   menuItemId: number;
@@ -57,17 +58,17 @@ export function MenuItemCustomizer({
     null,
   );
 
-  // Quantity per ingredient id, initialised to what the base already includes.
-  const [quantities, setQuantities] = useState<Record<number, number>>(() =>
-    Object.fromEntries(ingredients.map((i) => [i.id, i.included_units])),
-  );
+  // Quantity per ingredient id lives in the shared customisation context so the
+  // nutrition label (rendered in a separate page row) mirrors every change.
+  const { quantities, setQuantity } = useMenuCustomization();
 
-  const minFor = (ing: MenuItemIngredient) =>
-    ing.is_default && !ing.is_removable ? 1 : 0;
+  // Included (non-removable) ingredients are locked at 1; removable add-ons can
+  // go down to 0.
+  const minFor = (ing: MenuItemIngredient) => (ing.is_removable ? 0 : 1);
 
   const setQty = (ing: MenuItemIngredient, next: number) => {
     const clamped = Math.max(minFor(ing), Math.min(next, ing.max_quantity));
-    setQuantities((prev) => ({ ...prev, [ing.id]: clamped }));
+    setQuantity(ing.id, clamped);
   };
 
   const total = useMemo(() => {
@@ -80,17 +81,16 @@ export function MenuItemCustomizer({
     return sum;
   }, [basePrice, ingredients, quantities]);
 
-  // Included ingredients (those the base already comes with) render first;
-  // the removable add-ons follow, sorted A→Z by their localised name.
+  // Order: included-by-default first (locked essentials), then the free
+  // add-ons, then the paid add-ons. A stable sort keeps each group in the
+  // admin-set `sort_order` the API already returns them in.
   const sortedIngredients = useMemo(() => {
-    const nameOf = (ing: MenuItemIngredient) =>
-      (locale === "en" ? ing.en_name : ing.name) ?? ing.name;
-    const included = ingredients.filter((i) => i.included_units > 0);
-    const addOns = ingredients
-      .filter((i) => i.included_units <= 0)
-      .sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
-    return [...included, ...addOns];
-  }, [ingredients, locale]);
+    const rank = (ing: MenuItemIngredient) => {
+      if (!ing.is_removable) return 0;
+      return parseFloat(ing.price) === 0 ? 1 : 2;
+    };
+    return [...ingredients].sort((a, b) => rank(a) - rank(b));
+  }, [ingredients]);
 
   const showToast = (kind: ToastKind) =>
     setToast((prev) => ({ kind, id: (prev?.id ?? 0) + 1 }));
@@ -175,7 +175,9 @@ export function MenuItemCustomizer({
             const min = minFor(ing);
             const name = (locale === "en" ? ing.en_name : ing.name) ?? ing.name;
             const price = parseFloat(ing.price);
-            const included = ing.included_units > 0;
+            // Non-removable ingredients are included by default: locked, in the
+            // base price, shown as an "Included" line with no price or stepper.
+            const included = !ing.is_removable;
             return (
               <Box
                 key={ing.id}
@@ -207,8 +209,7 @@ export function MenuItemCustomizer({
                   <Box flexDirection="column" gap={2}>
                     <Typography variant="body" margin={0}>
                       {name}
-                      {!included &&
-                        ing.quantity &&
+                      {ing.quantity &&
                         ` · ${ing.quantity}${ing.unit ? ` ${ing.unit}` : ""}`}
                     </Typography>
                     {!included && (

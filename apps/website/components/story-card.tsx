@@ -5,15 +5,22 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { Button } from "@repo/ui/core-elements/button";
 import type { SuccessStory } from "@/lib/success-stories";
+import { AdminEditButton } from "./admin-edit-button";
 
 export function StoryCard({
   story,
   locale,
   readMore,
+  isAdmin = false,
+  editLabel,
 }: {
   story: SuccessStory;
   locale: string;
   readMore: string;
+  /** Show the admin edit shortcut. Only pass `true` for an admin viewer. */
+  isAdmin?: boolean;
+  /** Translated "Edit" label / tooltip - required when `isAdmin` is true. */
+  editLabel?: string;
 }) {
   const name =
     (locale === "en" ? story.en_name : story.name) ??
@@ -63,12 +70,24 @@ export function StoryCard({
         style={{
           position: "absolute",
           top: 14,
-          right: 14,
+          left: 14,
           zIndex: 2,
         }}
       >
         {date}
       </Badge>
+
+      {/* Admin-only edit shortcut, riding the top-right corner. */}
+      {isAdmin && editLabel && (
+        <Box styles={{ position: "absolute", top: 14, right: 14, zIndex: 3 }}>
+          <AdminEditButton
+            href={`/admin/success-stories/${story.id}`}
+            label={editLabel}
+            size="sm"
+            solid
+          />
+        </Box>
+      )}
 
       <Box
         className="card-content"

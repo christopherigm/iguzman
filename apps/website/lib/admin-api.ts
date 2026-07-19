@@ -362,6 +362,25 @@ export async function deleteIngredient(pk: number) {
   });
   return parseResponse<void>(res);
 }
+/**
+ * Fetch FDA nutrition values for an ingredient from the open web (scraper +
+ * LLM, all backend-side). Returns each nutrient field as a numeric string, or
+ * `null` for anything the sources didn't support. Nothing is persisted - the
+ * form previews the result and applies only the non-null fields.
+ */
+export async function lookupIngredientNutrition(data: {
+  name?: string;
+  en_name?: string;
+  unit?: string;
+  nutrition_basis_quantity?: string;
+  description?: string;
+}) {
+  const res = await adminFetch(`/api/catalog/ingredients/nutrition-lookup/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<{ nutrients: Record<string, string | null> }>(res);
+}
 
 // ---- Menu Item Ingredients ----
 export async function listMenuItemIngredients(menuItemId: number) {

@@ -19,6 +19,7 @@ import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+import { NutritionWebSearch } from "./nutrition-web-search";
 
 /** Quantity units, matching the API's QUANTITY_UNIT_CHOICES. */
 const UNIT_OPTIONS: { value: string; label: string }[] = [
@@ -224,6 +225,12 @@ export default function AdminIngredientFormPage({ params }: Props) {
     { key: "enabled", label: t("enabled"), type: "boolean" },
   ];
 
+  // The nutrient rows (key + label), reused by the "Search on web" preview so it
+  // labels each fetched value exactly as the panel does.
+  const nutrients = fields
+    .filter((f) => (NUTRIENT_KEYS as readonly string[]).includes(f.key))
+    .map((f) => ({ key: f.key, label: f.label }));
+
   if (loading)
     return (
       <Box padding="24px">
@@ -255,6 +262,20 @@ export default function AdminIngredientFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
+        slots={[
+          {
+            // Renders full-width right below the description (ES/EN) section and
+            // just above the nutrition panel's first field.
+            beforeKey: "calories",
+            node: (
+              <NutritionWebSearch
+                values={values}
+                onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
+                nutrients={nutrients}
+              />
+            ),
+          },
+        ]}
         imagesSlot={
           <Box display="flex" flexDirection="column" gap="8px">
             <Typography variant="label">{t("image") ?? "Image"}</Typography>

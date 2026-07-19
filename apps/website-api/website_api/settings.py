@@ -284,6 +284,13 @@ OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-
 
 LLM_REQUEST_TIMEOUT = float(os.environ.get('LLM_REQUEST_TIMEOUT', '20'))
 
+# Scraper microservice
+#
+# The web search / page-extraction service (https://scraper.iguzman.com.mx) that
+# the ingredient "Search on web" nutrition lookup uses. Shared with cinelog-api.
+SCRAPER_BASE_URL = os.environ.get('SCRAPER_BASE_URL', 'https://scraper.iguzman.com.mx')
+SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
+
 # Stripe
 # ------
 # There is deliberately no STRIPE_SECRET_KEY here: this is a multi-tenant API and

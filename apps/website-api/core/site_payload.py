@@ -115,6 +115,7 @@ BUYABLE_TEXT_FIELDS = (
 # null on the target, so a lean payload never needs the falsy case).
 MENU_ITEM_FLAG_FIELDS = (
     "spice_level",
+    "portions",
     "is_organic",
     "is_vegetarian",
     "is_vegan",
@@ -230,7 +231,6 @@ def _ingredient_dict(i: MenuItemIngredient) -> dict:
     if i.unit:
         d["unit"] = i.unit
     d["price"] = str(i.price)
-    d["is_default"] = i.is_default
     d["is_removable"] = i.is_removable
     d["max_quantity"] = i.max_quantity
     return d
@@ -517,8 +517,7 @@ def _apply_menu(system, categories) -> dict:
                 )
                 ing_defaults["unit"] = ing.get("unit") or None
                 ing_defaults["price"] = _decimal(ing.get("price", 0))
-                ing_defaults["is_default"] = ing.get("is_default", True)
-                ing_defaults["is_removable"] = ing.get("is_removable", True)
+                ing_defaults["is_removable"] = ing.get("is_removable", False)
                 ing_defaults["max_quantity"] = ing.get("max_quantity", 1)
                 MenuItemIngredient.objects.update_or_create(
                     menu_item=item,

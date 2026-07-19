@@ -172,14 +172,14 @@ class CartApiTests(TestCase):
             system=self.system, name="Burger", slug="burger",
             price=Decimal("12.00"), currency="USD",
         )
-        # A default, chargeable-when-doubled ingredient, so a non-empty selection
-        # (a double patty) is possible and reads as a customised line.
+        # An optional add-on (extra patty), so a non-empty selection (a double
+        # patty) is possible and reads as a customised line.
         patty_ing = Ingredient.objects.create(
             system=self.system, name="Patty", slug="patty", unit="pc",
         )
         self.patty = MenuItemIngredient.objects.create(
             menu_item=self.menu_item, ingredient=patty_ing,
-            price=Decimal("3.00"), is_default=True, max_quantity=2,
+            price=Decimal("3.00"), is_removable=True, max_quantity=2,
         )
 
         self.user = self._make_user("a@acme.test", self.system)

@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { Container } from "@repo/ui/core-elements/container";
+import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { Hero } from "@repo/ui/hero";
+import { getSession } from "@repo/auth/session";
 import { getMenuCategory, getMenuItemsByCategory } from "@/lib/catalog";
 import { CategoryDetail } from "@/components/category-detail";
+import { AdminEditButton } from "@/components/admin-edit-button";
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
@@ -49,9 +52,11 @@ export default async function MenuCategoryPage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const [category, t] = await Promise.all([
+  const [category, t, tAdmin, session] = await Promise.all([
     getMenuCategory(slug),
     getTranslations("CategoryDetail"),
+    getTranslations("Admin"),
+    getSession(),
   ]);
 
   if (!category) notFound();
@@ -81,11 +86,37 @@ export default async function MenuCategoryPage({ params }: Props) {
   return (
     <>
       {hasImage && (
-        <Hero
-          backgroundImage={category.image}
-          slogan={name}
-          style={{ height: "clamp(220px, 30vw, 400px)" }}
-        />
+        <Box styles={{ position: "relative" }}>
+          <Hero
+            backgroundImage={category.image}
+            slogan={name}
+            style={{ height: "clamp(220px, 30vw, 400px)" }}
+          />
+          {/* Admin-only edit shortcut, anchored to the bottom of the hero -
+              same slot the item hero uses for its fullscreen control. */}
+          {session?.isAdmin && (
+            <Container
+              size="lg"
+              paddingX={10}
+              paddingBottom={8}
+              styles={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 10,
+              }}
+            >
+              <Box justifyContent="flex-end">
+                <AdminEditButton
+                  href={`/admin/menu-categories/${category.id}`}
+                  label={tAdmin("edit")}
+                  solid
+                />
+              </Box>
+            </Container>
+          )}
+        </Box>
       )}
       <Container
         paddingX={10}

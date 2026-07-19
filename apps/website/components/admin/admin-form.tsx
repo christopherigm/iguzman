@@ -8,7 +8,7 @@ import {
   useMemo,
   Fragment,
 } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@repo/i18n/navigation";
 import "./admin-form.css";
 import { Box } from "@repo/ui/core-elements/box";
@@ -249,6 +249,13 @@ interface AdminFormProps {
   error?: string | null;
   success?: string | null;
   /**
+   * Public production URL for the record being edited, locale-agnostic and
+   * root-relative (e.g. `/products/some-slug`). When set, the fixed action bar
+   * shows a "view in production" button that opens it in a new tab. Leave
+   * undefined for new records and for forms without a public page.
+   */
+  productionHref?: string;
+  /**
    * Image uploaders, rendered directly below the record's name (and its EN
    * counterpart, when paired) rather than at the bottom with `children` - they
    * are central to the record and shouldn't sit behind a scroll of text fields.
@@ -281,12 +288,14 @@ export function AdminForm({
   saving,
   error,
   success,
+  productionHref,
   imagesSlot,
   slots,
   children,
 }: AdminFormProps) {
   const t = useTranslations("Admin");
   const tCommon = useTranslations("Common");
+  const locale = useLocale();
   const router = useRouter();
 
   // ── LLM ───────────────────────────────────────────────────────────────────
@@ -928,21 +937,40 @@ export function AdminForm({
           {/* Extra content (image uploaders, gradient builders, etc.) */}
           {children}
 
+          {/* Fixed action bar, centered at the bottom of the viewport: the
+              production-view shortcut (when the record has a public page) sits
+              beside the primary Save button. */}
           <Box
             display="flex"
+            alignItems="center"
             gap={12}
-            borderRadius={8}
+            padding={10}
+            borderRadius={12}
             border="1px solid color-mix(in srgb, var(--foreground) 12%, transparent)"
             backgroundColor="var(--background)"
             styles={{
               position: "fixed",
               bottom: 24,
-              right: 24,
+              left: "50%",
+              transform: "translateX(-50%)",
               boxShadow:
                 "0 4px 16px color-mix(in srgb, var(--foreground) 12%, transparent)",
               zIndex: 100,
             }}
           >
+            {productionHref && (
+              // Same-tab navigation on purpose: Button's link mode wraps a
+              // type-less <button> (which would submit this form), but for a
+              // same-tab link next/Link calls preventDefault and suppresses
+              // that submit. A `target="_blank"` here would skip the
+              // preventDefault and save the record on every click.
+              <Button
+                text={t("viewInProduction")}
+                href={`/${locale}${productionHref}`}
+                icon="/icons/fullscreen.svg"
+                size="lg"
+              />
+            )}
             <Button
               type="submit"
               text={saving ? t("saving") : t("save")}

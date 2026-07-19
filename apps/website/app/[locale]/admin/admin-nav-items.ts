@@ -1,12 +1,13 @@
 export const ADMIN_NAV_ITEMS = [
   { key: "system", href: "/admin/system", icon: "⚙️", descKey: "systemDesc" },
+
+  { key: "brands", href: "/admin/brands", icon: "🎯", descKey: "brandsDesc" },
   {
     key: "productCategories",
     href: "/admin/product-categories",
     icon: "🏷️",
     descKey: "productCategoriesDesc",
   },
-  { key: "brands", href: "/admin/brands", icon: "🎯", descKey: "brandsDesc" },
   {
     key: "products",
     href: "/admin/products",
@@ -26,23 +27,24 @@ export const ADMIN_NAV_ITEMS = [
     descKey: "servicesDesc",
   },
   {
-    key: "ingredients",
-    href: "/admin/ingredients",
-    icon: "🥕",
-    descKey: "ingredientsDesc",
-  },
-  {
     key: "menuCategories",
     href: "/admin/menu-categories",
     icon: "🏷️",
     descKey: "menuCategoriesDesc",
   },
   {
+    key: "ingredients",
+    href: "/admin/ingredients",
+    icon: "🥕",
+    descKey: "ingredientsDesc",
+  },
+  {
     key: "menuItems",
     href: "/admin/menu-items",
     icon: "🍽️",
     descKey: "menuItemsDesc",
-  },{
+  },
+  {
     key: "variantOptions",
     href: "/admin/variant-options",
     icon: "🔀",

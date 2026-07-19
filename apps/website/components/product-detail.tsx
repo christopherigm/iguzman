@@ -14,6 +14,7 @@ import { AddToCartButton } from "./add-to-cart-button";
 import { BuyNowButton } from "./buy-now-button";
 import { FavoriteButton } from "./favorite-button";
 import { VariantSelectorClient } from "./variant-selector-client";
+import { AdminEditButton } from "./admin-edit-button";
 
 interface ProductDetailProps {
   product: ProductDetail;
@@ -30,8 +31,9 @@ export async function ProductDetailHeader({
   product,
   locale,
 }: ProductDetailProps) {
-  const [t, session, favorite] = await Promise.all([
+  const [t, tAdmin, session, favorite] = await Promise.all([
     getTranslations("ItemDetail"),
+    getTranslations("Admin"),
     getSession(),
     isFavorite("product", product.id),
   ]);
@@ -64,6 +66,13 @@ export async function ProductDetailHeader({
           </Typography>
         )}
         <Box alignItems="center" gap={8}>
+          {session?.isAdmin && (
+            <AdminEditButton
+              href={`/admin/products/${product.id}`}
+              label={tAdmin("edit")}
+              size="md"
+            />
+          )}
           <ShareButton
             title={name}
             text={toShareDescription(shareText)}

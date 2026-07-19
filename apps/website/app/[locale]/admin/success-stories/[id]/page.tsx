@@ -233,6 +233,9 @@ export default function AdminSuccessStoryFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
+        productionHref={
+          !isNew && values.slug ? `/blog/${String(values.slug)}` : undefined
+        }
         imagesSlot={
           <>
             <Box display="flex" flexDirection="column" gap="8px">

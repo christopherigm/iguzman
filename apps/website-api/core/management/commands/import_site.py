@@ -132,14 +132,14 @@ MENU_ITEM_FIELDS = (
     "sku", "href", "fit", "background_color",
     "price", "compare_price", "cost_price", "currency",
     "is_available", "is_featured", "is_ai_generated", "is_verified",
-    "spice_level", "servings",
+    "spice_level", "servings", "portions",
     "is_organic", "is_vegetarian", "is_vegan", "is_gluten_free", "allergens",
 )
 # The menu-item ingredient carries only the portion + pricing now; its identity
 # and nutrition live on the referenced reusable Ingredient (linked by slug).
 INGREDIENT_FIELDS = (
     "quantity", "unit", "price",
-    "is_default", "is_removable", "max_quantity", "sort_order",
+    "is_removable", "max_quantity", "sort_order",
 )
 # The reusable Ingredient catalog: identity + measurement + FDA nutrition.
 INGREDIENT_CATALOG_FIELDS = (

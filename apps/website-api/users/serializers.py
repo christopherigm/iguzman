@@ -459,7 +459,7 @@ class CartItemSerializer(serializers.Serializer):
                 'quantity': qty,
                 'unit_price': str(ingredient.price),
                 'line_upcharge': str(ingredient.upcharge_for_quantity(qty)),
-                'removed': ingredient.is_default and qty == 0,
+                'removed': ingredient.included_units > 0 and qty == 0,
             })
         return rows
 

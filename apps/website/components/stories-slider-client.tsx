@@ -16,10 +16,14 @@ export function StoriesSliderClient({
   stories,
   locale,
   readMore,
+  isAdmin = false,
+  editLabel,
 }: {
   stories: SuccessStory[];
   locale: string;
   readMore: string;
+  isAdmin?: boolean;
+  editLabel?: string;
 }) {
   const t = useTranslations("SuccessStories");
   const [swiper, setSwiper] = useState<SwiperType | null>(null);
@@ -40,7 +44,13 @@ export function StoriesSliderClient({
       >
         {stories.map((story) => (
           <SwiperSlide key={story.id} className="stories-swiper__slide">
-            <StoryCard story={story} locale={locale} readMore={readMore} />
+            <StoryCard
+              story={story}
+              locale={locale}
+              readMore={readMore}
+              isAdmin={isAdmin}
+              editLabel={editLabel}
+            />
           </SwiperSlide>
         ))}
       </Swiper>

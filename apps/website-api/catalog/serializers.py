@@ -1157,7 +1157,7 @@ class MenuItemIngredientSerializer(serializers.ModelSerializer):
             'menu_item', 'ingredient', 'ingredient_detail',
             'name', 'en_name', 'image',
             'quantity', 'unit', 'calories', 'price',
-            'is_default', 'is_removable', 'max_quantity',
+            'is_removable', 'max_quantity',
             'included_units', 'sort_order',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version', 'menu_item']
@@ -1179,7 +1179,7 @@ class MenuItemIngredientWriteSerializer(serializers.ModelSerializer):
         model = MenuItemIngredient
         fields = [
             'ingredient', 'quantity', 'unit', 'price',
-            'is_default', 'is_removable', 'max_quantity', 'sort_order', 'enabled',
+            'is_removable', 'max_quantity', 'sort_order', 'enabled',
         ]
 
     def validate_unit(self, value):
@@ -1389,7 +1389,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
             'price', 'compare_price', 'cost_price', 'currency',
             'is_available', 'is_featured', 'is_ai_generated', 'is_verified',
             'show_nutrition_label',
-            'spice_level', 'servings',
+            'spice_level', 'servings', 'portions',
             'prep_time_minutes', 'cook_time_minutes',
             'is_organic', 'is_vegetarian', 'is_vegan', 'is_gluten_free', 'allergens',
         ]
@@ -1453,6 +1453,7 @@ class MenuItemWriteSerializer(serializers.Serializer):
 
     spice_level = serializers.IntegerField(min_value=0, max_value=5, required=False, allow_null=True)
     servings = serializers.IntegerField(min_value=0, required=False, allow_null=True)
+    portions = serializers.IntegerField(min_value=0, required=False, allow_null=True)
     prep_time_minutes = serializers.IntegerField(min_value=0, required=False, allow_null=True)
     cook_time_minutes = serializers.IntegerField(min_value=0, required=False, allow_null=True)
     is_organic = serializers.BooleanField(required=False)

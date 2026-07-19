@@ -485,6 +485,7 @@ class Command(BaseCommand):
                     is_featured=m.get("is_featured", True),
                     is_available=m.get("is_available", True),
                     spice_level=m.get("spice_level"),
+                    portions=m.get("portions"),
                     is_organic=m.get("is_organic", False),
                     is_vegetarian=m.get("is_vegetarian", False),
                     is_vegan=m.get("is_vegan", False),
@@ -506,8 +507,7 @@ class Command(BaseCommand):
                         quantity=self._price(ing["quantity"]) if ing.get("quantity") is not None else None,
                         unit=ing.get("unit"),
                         price=self._price(ing.get("price", 0)),
-                        is_default=ing.get("is_default", True),
-                        is_removable=ing.get("is_removable", True),
+                        is_removable=ing.get("is_removable", False),
                         max_quantity=ing.get("max_quantity", 1),
                         sort_order=ing.get("sort_order", ii),
                     )

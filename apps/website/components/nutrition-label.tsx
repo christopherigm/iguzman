@@ -1,8 +1,13 @@
-import { getTranslations } from "next-intl/server";
+"use client";
+
+import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import type { MenuItemIngredient } from "@/lib/catalog";
+import { nutritionRows } from "@/lib/nutrition";
+import { useMenuCustomization } from "./menu-customization-context";
 
 /** Reference daily energy intake used to express the total as a % daily value. */
 const DAILY_CALORIES = 2000;
@@ -17,34 +22,19 @@ const HAIRLINE = "1px solid var(--foreground)";
 const RULE_MEDIUM = 4;
 const RULE_THICK = 8;
 
-/**
- * The ingredients that contribute to the nutrition breakdown: only those with a
- * descriptive portion (quantity + unit) *and* a positive calorie value. An
- * ingredient missing any of these can't be meaningfully charted, so it is left
- * out entirely (both here and from the total).
- */
-export function nutritionRows(
-  ingredients: MenuItemIngredient[],
-): MenuItemIngredient[] {
-  return ingredients.filter(
-    (i) =>
-      i.quantity != null &&
-      i.unit != null &&
-      i.calories != null &&
-      i.calories > 0,
-  );
-}
-
-/** Drop a trailing `.0` from the decimal portion string (e.g. "100.0" → "100"). */
-function formatPortion(quantity: string, unit: string): string {
-  const n = Number(quantity);
-  const value = Number.isFinite(n) ? String(n) : quantity;
+/** Portion as "<qty> <unit>", rounded to at most one decimal so a per-serving
+ *  division (e.g. 100 g ÷ 3) doesn't print a long fraction. */
+function formatPortion(quantity: number, unit: string): string {
+  const rounded = Math.round(quantity * 10) / 10;
+  const value = Number.isFinite(rounded) ? String(rounded) : quantity;
   return `${value} ${unit}`;
 }
 
 interface NutritionLabelProps {
   ingredients: MenuItemIngredient[];
   locale: string;
+  /** Servings the dish yields; figures below are divided by it. Null/0 = 1. */
+  portions: number | null;
 }
 
 /**
@@ -53,20 +43,46 @@ interface NutritionLabelProps {
  * separated row per contributing ingredient showing its portion, calories, and
  * share of the total. Monochrome and square-cornered to read as the classic
  * label; the heavy rules track `--foreground` so it works in light and dark.
- * Returns null when no ingredient carries enough data to chart - callers should
- * gate on `nutritionRows` before reserving layout space for it.
+ *
+ * The figures are **live**: each ingredient's contribution scales with the
+ * quantity the customer has chosen in the customiser (shared via
+ * `MenuCustomizationProvider`), so `calories` is per selected unit. Only the
+ * ingredients currently in the order (selected quantity > 0) are listed, and the
+ * total/percentages recompute as the selection changes. Every figure is then
+ * divided by `portions` (the servings the dish yields) so the label reads *per
+ * serving*, with an "N servings per item" line above it. Returns null when
+ * nothing is selected that carries chartable data - callers should still gate on
+ * `nutritionRows` before reserving layout space for it.
  */
-export async function NutritionLabel({
+export function NutritionLabel({
   ingredients,
   locale,
+  portions,
 }: NutritionLabelProps) {
-  const t = await getTranslations("Menu");
+  const t = useTranslations("Menu");
+  const { quantities } = useMenuCustomization();
 
-  const rows = nutritionRows(ingredients);
-  if (rows.length === 0) return null;
+  // Every figure on the label is stated *per serving*: the whole-dish totals are
+  // divided by how many servings the dish yields (1 when unset).
+  const servings = portions && portions > 0 ? portions : 1;
 
-  const total = rows.reduce((sum, i) => sum + (i.calories ?? 0), 0);
-  const dailyValue = Math.round((total / DAILY_CALORIES) * 100);
+  // Each chartable ingredient's contribution scales with the selected quantity;
+  // only the ones actually in the order (qty > 0) are charted.
+  const rows = useMemo(() => {
+    return nutritionRows(ingredients)
+      .map((ing) => {
+        const qty = quantities[ing.id] ?? ing.included_units;
+        return { ing, qty, calories: (ing.calories ?? 0) * qty };
+      })
+      .filter((r) => r.qty > 0 && r.calories > 0);
+  }, [ingredients, quantities]);
+
+  const total = rows.reduce((sum, r) => sum + r.calories, 0);
+  if (rows.length === 0 || total === 0) return null;
+
+  // The whole-dish total split across its servings, and its % of a 2000 kcal day.
+  const perServingTotal = total / servings;
+  const dailyValue = Math.round((perServingTotal / DAILY_CALORIES) * 100);
 
   return (
     <Card
@@ -89,6 +105,17 @@ export async function NutritionLabel({
       >
         {t("nutritionFacts")}
       </Typography>
+
+      {/* "N servings per item", when the dish declares a serving count. */}
+      {portions != null && portions > 0 && (
+        <Typography
+          variant="caption"
+          color="var(--foreground)"
+          paddingBottom={2}
+        >
+          {t("servingsPerItem", { value: servings })}
+        </Typography>
+      )}
 
       {/* Thick divider before "Amount Per Serving". */}
       <Box
@@ -119,7 +146,7 @@ export async function NutritionLabel({
           {t("calories")}
         </Typography>
         <Typography variant="h3" fontWeight={800} color="var(--foreground)">
-          {total}
+          {Math.round(perServingTotal)}
         </Typography>
       </Box>
 
@@ -136,14 +163,16 @@ export async function NutritionLabel({
       </Typography>
 
       {/* One hairline-separated row per contributing ingredient. */}
-      {rows.map((ing) => {
+      {rows.map(({ ing, qty, calories }) => {
         const name =
           (locale === "en" ? ing.en_name : ing.name) ??
           ing.name ??
           ing.en_name ??
           "";
-        const percent =
-          total > 0 ? Math.round((ing.calories! / total) * 100) : 0;
+        const percent = total > 0 ? Math.round((calories / total) * 100) : 0;
+        // Per-serving portion and calories (the whole-dish figures / servings).
+        const portion = (Number(ing.quantity) * qty) / servings;
+        const perServingCalories = Math.round(calories / servings);
 
         return (
           <Box
@@ -179,8 +208,8 @@ export async function NutritionLabel({
                 color="var(--foreground)"
                 styles={{ whiteSpace: "nowrap" }}
               >
-                {formatPortion(ing.quantity!, ing.unit!)} ·{" "}
-                {t("caloriesValue", { value: ing.calories! })}
+                {formatPortion(portion, ing.unit!)} ·{" "}
+                {t("caloriesValue", { value: perServingCalories })}
               </Typography>
 
               {/* Slim monochrome share bar: track + foreground fill. */}

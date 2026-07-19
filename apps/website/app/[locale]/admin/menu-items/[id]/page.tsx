@@ -94,6 +94,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     show_nutrition_label: true,
     enabled: true,
     spice_level: "",
+    portions: "",
     allergens: "",
     is_organic: false,
     is_vegetarian: false,
@@ -223,6 +224,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
             show_nutrition_label: item.show_nutrition_label ?? true,
             enabled: item.enabled ?? true,
             spice_level: item.spice_level ?? "",
+            portions: item.portions ?? "",
             allergens: item.allergens ?? "",
             is_organic: item.is_organic ?? false,
             is_vegetarian: item.is_vegetarian ?? false,
@@ -247,7 +249,6 @@ export default function AdminMenuItemFormPage({ params }: Props) {
             price: String(i.price ?? "0.00"),
             quantity: i.quantity == null ? "" : String(i.quantity),
             unit: String(i.unit ?? ""),
-            is_default: Boolean(i.is_default),
             is_removable: Boolean(i.is_removable),
             max_quantity: String(i.max_quantity ?? "1"),
             enabled: i.enabled !== false,
@@ -301,7 +302,6 @@ export default function AdminMenuItemFormPage({ params }: Props) {
         price: row.price === "" ? "0.00" : row.price,
         quantity: row.quantity === "" ? null : row.quantity,
         unit: row.unit || null,
-        is_default: row.is_default,
         is_removable: row.is_removable,
         max_quantity: row.max_quantity === "" ? 1 : Number(row.max_quantity),
         sort_order: i,
@@ -345,6 +345,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
         "compare_price",
         "cost_price",
         "spice_level",
+        "portions",
         "sku",
         "allergens",
         "href",
@@ -434,6 +435,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
       options: CURRENCY_OPTIONS,
     },
     { key: "spice_level", label: t("spiceLevel"), type: "number" },
+    { key: "portions", label: t("portions"), type: "number" },
     { key: "allergens", label: t("allergens") },
     { key: "href", label: t("link") ?? "Link", type: "url" },
     {
@@ -507,6 +509,9 @@ export default function AdminMenuItemFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
+        productionHref={
+          !isNew && values.slug ? `/food/${String(values.slug)}` : undefined
+        }
         imagesSlot={
           <Box display="flex" flexDirection="column" gap="8px">
             <Typography variant="label">{t("images") ?? "Images"}</Typography>

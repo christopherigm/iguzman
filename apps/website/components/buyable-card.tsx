@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { getTranslations } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -15,6 +16,7 @@ import { isFavorite } from "@/lib/favorites";
 import { getRequestOrigin, toShareDescription } from "@/lib/metadata";
 import { formatPrice, discountPercent } from "@/lib/price";
 import { BuyableCardActions } from "./buyable-card-actions";
+import { AdminEditButton } from "./admin-edit-button";
 
 export type BuyableItem =
   | { kind: "product"; data: FeaturedProduct }
@@ -58,11 +60,21 @@ export async function BuyableCard({
   // `cache()`d per request: a grid of N cards costs one session decode and one
   // ids fetch between them, and an anonymous visitor costs no fetch at all. A
   // logged-out heart is still rendered - clicking it routes to /auth.
-  const [session, favorite, origin] = await Promise.all([
+  const [session, favorite, origin, tAdmin] = await Promise.all([
     getSession(),
     isFavorite(favoriteKind, data.id),
     getRequestOrigin(),
+    getTranslations("Admin"),
   ]);
+
+  // Admin edit shortcut, keyed to the same table the admin CMS uses per kind
+  // (a food item is a `menu_item` there). Only rendered for an admin viewer.
+  const adminEditHref =
+    kind === "product"
+      ? `/admin/products/${data.id}`
+      : kind === "service"
+        ? `/admin/services/${data.id}`
+        : `/admin/menu-items/${data.id}`;
 
   const name =
     (locale === "en" ? data.en_name : data.name) ??
@@ -193,6 +205,18 @@ export async function BuyableCard({
               ? serviceLabel
               : menuLabel}
         </Badge>
+
+        {/* Admin-only edit shortcut, riding the top-right of the image. */}
+        {session?.isAdmin && (
+          <Box styles={{ position: "absolute", top: 8, right: 8, zIndex: 2 }}>
+            <AdminEditButton
+              href={adminEditHref}
+              label={tAdmin("edit")}
+              size="sm"
+              solid
+            />
+          </Box>
+        )}
 
         {/* Duration and discount share the bottom-left corner. Only services
             carry a duration, so on a product the discount sits there alone. */}

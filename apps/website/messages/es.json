@@ -323,6 +323,7 @@
     "editingItem": "Editando \"{name}\"",
     "delete": "Eliminar",
     "save": "Guardar",
+    "viewInProduction": "Ver en producción",
     "saving": "Guardando…",
     "cancel": "Cancelar",
     "confirmDeleteTitle": "¿Eliminar elemento?",
@@ -511,7 +512,18 @@
     "nutrientVitaminD": "Vitamina D (mcg)",
     "nutrientCalcium": "Calcio (mg)",
     "nutrientIron": "Hierro (mg)",
-    "nutrientPotassium": "Potasio (mg)"
+    "nutrientPotassium": "Potasio (mg)",
+    "nutritionSearchWeb": "Buscar en la web",
+    "nutritionSearchHint": "Usa el nombre, la unidad y la base de arriba para buscar información nutricional en línea.",
+    "nutritionSearchSearching": "Buscando…",
+    "nutritionSearchResultsTitle": "Nutrición encontrada en la web",
+    "nutritionSearchApply": "Aplicar",
+    "nutritionSearchDiscard": "Descartar",
+    "nutritionSearchNone": "No se encontró información nutricional en la web para este ingrediente.",
+    "nutritionSearchError": "La búsqueda de nutrición falló. Inténtalo de nuevo.",
+    "nutritionSearchWas": "antes {value}",
+    "portions": "Raciones por plato",
+    "removableHint": "Activado: complemento que el cliente agrega (hasta el máx.). Desactivado: incluido por defecto en el precio base."
   },
   "GradientBuilder": {
     "linear": "Lineal",
@@ -619,6 +631,7 @@
     "prepTime": "Tiempo de preparación",
     "cookTime": "Tiempo de cocción",
     "minutesValue": "{value} min",
-    "organic": "Orgánico"
+    "organic": "Orgánico",
+    "servingsPerItem": "{value} raciones por plato"
   }
 }

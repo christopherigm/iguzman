@@ -149,36 +149,36 @@ class MenuItemPricingTests(TestCase):
         cheese_ing = Ingredient.objects.create(
             system=self.system, name="Cheese", slug="cheese", unit="g",
         )
-        # A free included, removable default.
+        # Included by default: free and locked into the dish (part of the base).
         self.tortilla = MenuItemIngredient.objects.create(
             menu_item=self.item, ingredient=tortilla_ing, price=Decimal("0.00"),
-            is_default=True, is_removable=True, max_quantity=1,
+            is_removable=False, max_quantity=1,
         )
-        # A default that can be doubled: first unit free, extra costs 3.
+        # An optional add-on charged per unit, up to 2 (e.g. extra pork).
         self.pork = MenuItemIngredient.objects.create(
             menu_item=self.item, ingredient=pork_ing, price=Decimal("3.00"),
-            is_default=True, is_removable=True, max_quantity=2,
+            is_removable=True, max_quantity=2,
         )
-        # An optional add-on: each unit charged.
+        # Another optional add-on: each unit charged.
         self.cheese = MenuItemIngredient.objects.create(
             menu_item=self.item, ingredient=cheese_ing, price=Decimal("1.50"),
-            is_default=False, is_removable=True, max_quantity=2,
+            is_removable=True, max_quantity=2,
         )
 
     def test_base_price_when_left_as_listed(self):
         self.assertEqual(self.item.price_for_selection([]), Decimal("8.00"))
 
-    def test_removing_a_default_does_not_refund(self):
+    def test_removing_an_included_ingredient_does_not_refund(self):
         selection = normalize_selection(
             [{"ingredient": self.tortilla.id, "quantity": 0}], self.item.ingredients.all()
         )
         self.assertEqual(selection, [{"ingredient": self.tortilla.id, "quantity": 0}])
         self.assertEqual(self.item.price_for_selection(selection), Decimal("8.00"))
 
-    def test_extra_of_a_default_charges_only_beyond_the_included_unit(self):
-        # Double pork: 1 free (base) + 1 extra @ 3.00
+    def test_add_on_charges_every_selected_unit(self):
+        # Two units of the pork add-on @ 3.00 each, on top of the 8.00 base.
         selection = [{"ingredient": self.pork.id, "quantity": 2}]
-        self.assertEqual(self.item.price_for_selection(selection), Decimal("11.00"))
+        self.assertEqual(self.item.price_for_selection(selection), Decimal("14.00"))
 
     def test_optional_add_on_charges_every_unit(self):
         selection = [{"ingredient": self.cheese.id, "quantity": 2}]
@@ -186,7 +186,7 @@ class MenuItemPricingTests(TestCase):
 
     def test_combined_selection(self):
         selection = [
-            {"ingredient": self.pork.id, "quantity": 2},   # +3.00
+            {"ingredient": self.pork.id, "quantity": 1},    # +3.00
             {"ingredient": self.cheese.id, "quantity": 1},  # +1.50
         ]
         self.assertEqual(self.item.price_for_selection(selection), Decimal("12.50"))
@@ -195,7 +195,7 @@ class MenuItemPricingTests(TestCase):
         selection = normalize_selection(
             [
                 {"ingredient": self.cheese.id, "quantity": 99},  # clamped to 2
-                {"ingredient": self.pork.id, "quantity": 1},     # == included, dropped
+                {"ingredient": self.pork.id, "quantity": 0},     # == included (0), dropped
                 {"ingredient": 999999, "quantity": 5},           # unknown, dropped
             ],
             self.item.ingredients.all(),
@@ -210,7 +210,7 @@ class MenuItemPricingTests(TestCase):
             system=self.system, name="Rice", slug="rice", unit="g",
         )
         foreign = MenuItemIngredient.objects.create(
-            menu_item=other, ingredient=rice_ing, price=Decimal("2.00"), is_default=False,
+            menu_item=other, ingredient=rice_ing, price=Decimal("2.00"), is_removable=True,
         )
         # A selection naming an ingredient from a different item must not price it.
         self.assertEqual(

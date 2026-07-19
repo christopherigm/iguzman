@@ -1,3 +1,5 @@
+import logging
+
 from django.core.cache import cache
 from django.db.models import ProtectedError
 
@@ -9,6 +11,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.models import System
+from core.services.llm import LlmNotConfigured
+from .services.nutrition_lookup import lookup_nutrition
+
+logger = logging.getLogger(__name__)
 
 CACHE_TTL = 300  # 5 minutes
 
@@ -1351,6 +1357,54 @@ class IngredientDetailView(APIView):
         cache.delete(f'catalog:ingredient:{pk}')
         _invalidate_pattern('catalog:ingredients:*')
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class IngredientNutritionLookupView(APIView):
+    """
+    POST /api/catalog/ingredients/nutrition-lookup/  - fetch nutrition from the web.
+
+    Admin-only. Given an ingredient's identity + basis (never saved here), scrapes
+    the open web and has the LLM map the result onto the FDA Nutrition-Facts fields,
+    rescaled to the requested basis. Returns each of ``Ingredient.NUTRIENT_FIELDS``
+    as a value (string) or ``null`` for anything the sources didn't support - the
+    admin form previews these and applies only the non-null ones. Nothing is
+    persisted; the operator still reviews and saves via the normal PATCH/POST.
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    def post(self, request):
+        name = str(request.data.get('name') or '').strip()
+        en_name = str(request.data.get('en_name') or '').strip()
+        if not (name or en_name):
+            return Response(
+                {'detail': 'A name or en_name is required to search.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            nutrients = lookup_nutrition(
+                name=name,
+                en_name=en_name,
+                unit=str(request.data.get('unit') or 'g'),
+                nutrition_basis_quantity=str(request.data.get('nutrition_basis_quantity') or '100'),
+                description=str(request.data.get('description') or ''),
+            )
+        except LlmNotConfigured:
+            return Response(
+                {'detail': 'No LLM provider is configured.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        except Exception:
+            # Scraper/LLM outages shouldn't 500 the CMS - report a clean 502 and
+            # log the detail (upstream error bodies are not for the browser).
+            logger.exception('Ingredient nutrition lookup failed')
+            return Response(
+                {'detail': 'The nutrition lookup service is unavailable. Please try again.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        return Response({'nutrients': nutrients})
 
 
 # ---------------------------------------------------------------------------

@@ -609,6 +609,12 @@ class MenuItem(Buyable):
         max_length=255, null=True, blank=True,
         help_text='Comma-separated allergen list, e.g. "peanuts, dairy, gluten".',
     )
+    portions = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text='Number of servings this dish yields. Drives the per-serving '
+                  'figures and the "servings per item" line on the public '
+                  'nutrition label.',
+    )
 
     # Recipe metadata (INTERNAL - kitchen prep, never served on the public API).
     prep_time_minutes = models.PositiveIntegerField(null=True, blank=True)
@@ -763,16 +769,18 @@ class MenuItemIngredient(Common):
 
     The pricing model is *base price + add-on deltas* (see ``MenuItem``):
 
-      - ``is_default`` - included in the item's base price and pre-selected.
-      - ``is_removable`` - a default the customer may deselect. Removing it does
-        not refund (the base already covered it); it just changes the kitchen
-        ticket.
-      - ``price`` - the up-charge for one *chargeable* unit. For a default
-        ingredient the first unit is free and this applies to each extra; for an
-        optional add-on every selected unit is charged.
-      - ``max_quantity`` - the largest quantity the customer may select (e.g. 2
-        for "double patty"). ``quantity``/``unit`` are the descriptive recipe
-        portion (e.g. 100 g of cheese) and do not affect price.
+      - ``is_removable`` - the single switch describing how the ingredient behaves:
+          * ``False`` - *included by default*: part of the base price, always in
+            the dish, shown to the customer as a locked "Included" line (no price,
+            no stepper).
+          * ``True`` - an *optional add-on*: not in the base, the customer chooses
+            a quantity from 0 up to ``max_quantity``, and every selected unit is
+            charged ``price`` (0 for a free add-on).
+      - ``price`` - the up-charge per selected unit of a removable add-on. Ignored
+        for a non-removable (included) ingredient, which is already in the base.
+      - ``max_quantity`` - the largest quantity the customer may add (e.g. 2 for
+        "double"). ``quantity``/``unit`` are the descriptive recipe portion (e.g.
+        100 g of cheese) and do not affect price.
     """
 
     menu_item = models.ForeignKey(
@@ -799,11 +807,11 @@ class MenuItemIngredient(Common):
         max_digits=12, decimal_places=2, default=Decimal('0.00'),
         help_text='Up-charge per chargeable unit. 0 for a free included ingredient.',
     )
-    is_default = models.BooleanField(
-        default=True, help_text='Included in the base price and pre-selected.'
-    )
     is_removable = models.BooleanField(
-        default=True, help_text='Whether a default ingredient can be removed by the customer.'
+        default=False,
+        help_text='On: an optional add-on the customer chooses (0..max_quantity), '
+                  'each unit charged at price. Off: included by default in the base '
+                  'price and locked into the dish.',
     )
     max_quantity = models.PositiveSmallIntegerField(
         default=1, help_text='Largest quantity the customer may select.'
@@ -849,8 +857,9 @@ class MenuItemIngredient(Common):
 
     @property
     def included_units(self) -> int:
-        """Units already covered by the base price (1 for a default, else 0)."""
-        return 1 if self.is_default else 0
+        """Units already covered by the base price: 1 for an included (non-removable)
+        ingredient, 0 for a removable add-on."""
+        return 0 if self.is_removable else 1
 
     def upcharge_for_quantity(self, quantity) -> Decimal:
         """Price contribution of selecting ``quantity`` of this ingredient."""

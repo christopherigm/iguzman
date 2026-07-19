@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { setRequestLocale, getTranslations } from "next-intl/server";
+import { getSession } from "@repo/auth/session";
 import { Container } from "@repo/ui/core-elements/container";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
@@ -29,10 +30,12 @@ export default async function BlogPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const [stories, t, detailT] = await Promise.all([
+  const [stories, t, detailT, adminT, session] = await Promise.all([
     getSuccessStories(),
     getTranslations("SuccessStories"),
     getTranslations("SuccessStoryDetail"),
+    getTranslations("Admin"),
+    getSession(),
   ]);
 
   const breadcrumbs: BreadcrumbItem[] = [
@@ -78,6 +81,8 @@ export default async function BlogPage({ params }: Props) {
                   story={story}
                   locale={locale}
                   readMore={t("readMore")}
+                  isAdmin={session?.isAdmin ?? false}
+                  editLabel={adminT("edit")}
                 />
               </Grid>
             ))}

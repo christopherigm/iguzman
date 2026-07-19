@@ -14,6 +14,7 @@ import { AddToCartButton } from "./add-to-cart-button";
 import { BuyNowButton } from "./buy-now-button";
 import { FavoriteButton } from "./favorite-button";
 import { VariantSelectorClient } from "./variant-selector-client";
+import { AdminEditButton } from "./admin-edit-button";
 
 function formatDuration(minutes: number): string {
   if (minutes < 60) return `${minutes}m`;
@@ -38,8 +39,9 @@ export async function ServiceDetailHeader({
   selectedVariant,
   locale,
 }: ServiceDetailProps) {
-  const [t, session, favorite] = await Promise.all([
+  const [t, tAdmin, session, favorite] = await Promise.all([
     getTranslations("ItemDetail"),
+    getTranslations("Admin"),
     getSession(),
     isFavorite("service", service.id),
   ]);
@@ -83,6 +85,13 @@ export async function ServiceDetailHeader({
           </Typography>
         )}
         <Box alignItems="center" gap={8}>
+          {session?.isAdmin && (
+            <AdminEditButton
+              href={`/admin/services/${service.id}`}
+              label={tAdmin("edit")}
+              size="md"
+            />
+          )}
           <ShareButton
             title={name}
             text={toShareDescription(shareText)}

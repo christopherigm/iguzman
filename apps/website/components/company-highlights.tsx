@@ -1,5 +1,6 @@
 import Image from "next/image";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
+import { getSession } from "@repo/auth/session";
 import {
   getHighlights,
   type CompanyHighlight,
@@ -12,6 +13,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Grid } from "@repo/ui/core-elements/grid";
 import type { GridSize } from "@repo/ui/core-elements/grid";
 import { Badge } from "@repo/ui/core-elements/badge";
+import { AdminEditButton } from "./admin-edit-button";
 import "./company-highlights.css";
 
 export const HIGHLIGHT_GRID_SIZE: Record<string, GridSize> = {
@@ -65,13 +67,20 @@ function HighlightItemCard({ item }: { item: CompanyHighlightItem }) {
   );
 }
 
-export function HighlightCard({
+export async function HighlightCard({
   highlight,
   locale,
 }: {
   highlight: CompanyHighlight;
   locale: string;
 }) {
+  // The edit shortcut rides on every card; each read is cache()d per request, so
+  // a grid of highlights costs one session decode and one translations load.
+  const [session, tAdmin] = await Promise.all([
+    getSession(),
+    getTranslations("Admin"),
+  ]);
+
   const name =
     (locale === "en" ? highlight.en_name : highlight.name) ??
     highlight.name ??
@@ -113,6 +122,18 @@ export function HighlightCard({
               "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.55) 40%, rgba(0,0,0,0.15) 100%)",
           }}
         />
+      )}
+
+      {/* Admin-only edit shortcut, riding the top-right corner of the card. */}
+      {session?.isAdmin && (
+        <Box styles={{ position: "absolute", top: 8, right: 8, zIndex: 2 }}>
+          <AdminEditButton
+            href={`/admin/highlights/${highlight.id}`}
+            label={tAdmin("edit")}
+            size="sm"
+            solid
+          />
+        </Box>
       )}
 
       <Box
@@ -166,31 +187,53 @@ export function HighlightCard({
             </Box>
           )}
 
-          {name && (
-            <Typography as="h3" variant="h3" margin={0} color="#fff">
-              {name}
-            </Typography>
-          )}
+          {/* Name + description anchor to the bottom of the card (marginTop:auto
+              pushes the group down). The two share one clamp container so the
+              name and blurb together never exceed two rows. */}
+          <Box flexDirection="column" gap={10} marginTop="auto">
+            {(name || description) && (
+              <Box
+                styles={{
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                }}
+              >
+                {name && (
+                  <Typography as="h3" variant="h3" margin={0} color="#fff">
+                    {name}
+                  </Typography>
+                )}
 
-          {description && (
-            <Typography variant="body" margin={0} color="#fff">
-              {description}
-            </Typography>
-          )}
+                {description && (
+                  <Typography
+                    variant="body"
+                    margin={0}
+                    marginTop={name ? 2 : 0}
+                    color="#fff"
+                  >
+                    {description}
+                  </Typography>
+                )}
+              </Box>
+            )}
 
-          {hasItems && (highlight.size === "sm" || highlight.size === "md") && (
-            <Box
-              display="grid"
-              gap={8}
-              alignSelf="center"
-              marginTop={12}
-              styles={{ gridTemplateColumns: "repeat(2, 1fr)" }}
-            >
-              {highlight.items.map((item) => (
-                <HighlightItemCard key={item.id} item={item} />
-              ))}
-            </Box>
-          )}
+            {hasItems &&
+              (highlight.size === "sm" || highlight.size === "md") && (
+                <Box
+                  display="grid"
+                  gap={8}
+                  alignSelf="center"
+                  marginTop={12}
+                  styles={{ gridTemplateColumns: "repeat(2, 1fr)" }}
+                >
+                  {highlight.items.map((item) => (
+                    <HighlightItemCard key={item.id} item={item} />
+                  ))}
+                </Box>
+              )}
+          </Box>
         </Box>
 
         {hasItems && (highlight.size === "lg" || highlight.size === "xl") && (

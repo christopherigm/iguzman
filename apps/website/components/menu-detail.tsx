@@ -5,13 +5,15 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { ShareButton } from "@repo/ui/core-elements/share-button";
 import { getSession } from "@repo/auth/session";
-import type { MenuItemDetail } from "@/lib/catalog";
+import type { MenuItemDetail, MenuItemIngredient } from "@/lib/catalog";
 import { isFavorite } from "@/lib/favorites";
 import { toShareDescription } from "@/lib/metadata";
 import { discountPercent } from "@/lib/price";
+import { nutritionRows } from "@/lib/nutrition";
 import { MenuItemCustomizer } from "./menu-item-customizer";
 import { FavoriteButton } from "./favorite-button";
-import { NutritionLabel, nutritionRows } from "./nutrition-label";
+import { NutritionLabel } from "./nutrition-label";
+import { AdminEditButton } from "./admin-edit-button";
 
 interface MenuDetailProps {
   item: MenuItemDetail;
@@ -19,12 +21,23 @@ interface MenuDetailProps {
 }
 
 /**
+ * The ingredients a customer may actually see: the disabled ones are an admin's
+ * hidden/paused rows and never reach the customiser, nutrition label, or cart.
+ */
+export function enabledIngredients(item: MenuItemDetail): MenuItemIngredient[] {
+  return item.ingredients.filter((i) => i.enabled);
+}
+
+/**
  * Whether the nutrition-label card should render for this item: the admin
- * toggle is on *and* at least one ingredient carries enough data to chart.
- * The detail page uses this to decide whether to reserve a grid row for it.
+ * toggle is on *and* at least one enabled ingredient carries enough data to
+ * chart. The detail page uses this to decide whether to reserve a grid row.
  */
 export function menuItemShowsNutrition(item: MenuItemDetail): boolean {
-  return item.show_nutrition_label && nutritionRows(item.ingredients).length > 0;
+  return (
+    item.show_nutrition_label &&
+    nutritionRows(enabledIngredients(item)).length > 0
+  );
 }
 
 /**
@@ -33,9 +46,10 @@ export function menuItemShowsNutrition(item: MenuItemDetail): boolean {
  * gallery-and-customize grid so it spans both columns.
  */
 export async function MenuDetailHeader({ item, locale }: MenuDetailProps) {
-  const [t, tMenu, session, favorite] = await Promise.all([
+  const [t, tMenu, tAdmin, session, favorite] = await Promise.all([
     getTranslations("ItemDetail"),
     getTranslations("Menu"),
+    getTranslations("Admin"),
     getSession(),
     isFavorite("menu_item", item.id),
   ]);
@@ -76,6 +90,13 @@ export async function MenuDetailHeader({ item, locale }: MenuDetailProps) {
           </Typography>
         )}
         <Box alignItems="center" gap={8}>
+          {session?.isAdmin && (
+            <AdminEditButton
+              href={`/admin/menu-items/${item.id}`}
+              label={tAdmin("edit")}
+              size="md"
+            />
+          )}
           <ShareButton
             title={name}
             text={toShareDescription(shareText)}
@@ -151,7 +172,7 @@ export async function MenuDetailPanel({ item, locale }: MenuDetailProps) {
           comparePrice={item.compare_price}
           discount={discount}
           currency={item.currency}
-          ingredients={item.ingredients}
+          ingredients={enabledIngredients(item)}
           isAvailable={item.is_available}
           isLoggedIn={session !== null}
           locale={locale}
@@ -219,7 +240,13 @@ export async function MenuDetailPanel({ item, locale }: MenuDetailProps) {
  */
 export async function MenuDetailNutrition({ item, locale }: MenuDetailProps) {
   if (!menuItemShowsNutrition(item)) return null;
-  return <NutritionLabel ingredients={item.ingredients} locale={locale} />;
+  return (
+    <NutritionLabel
+      ingredients={enabledIngredients(item)}
+      locale={locale}
+      portions={item.portions}
+    />
+  );
 }
 
 /** Full-width long-form description below the buy box. */
