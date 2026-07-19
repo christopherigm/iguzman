@@ -6,6 +6,7 @@ from django.db import IntegrityError, transaction
 from django.test import TestCase
 
 from catalog.models import (
+    Ingredient,
     MenuItem,
     MenuItemIngredient,
     Product,
@@ -173,8 +174,11 @@ class CartApiTests(TestCase):
         )
         # A default, chargeable-when-doubled ingredient, so a non-empty selection
         # (a double patty) is possible and reads as a customised line.
+        patty_ing = Ingredient.objects.create(
+            system=self.system, name="Patty", slug="patty", unit="pc",
+        )
         self.patty = MenuItemIngredient.objects.create(
-            menu_item=self.menu_item, name="Patty",
+            menu_item=self.menu_item, ingredient=patty_ing,
             price=Decimal("3.00"), is_default=True, max_quantity=2,
         )
 

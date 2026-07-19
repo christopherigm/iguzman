@@ -10,6 +10,7 @@ from .models import (
     ProductVariant, ProductVariantImage,
     ServiceVariant,
     MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient, RecipeStep,
+    Ingredient,
     DIMENSION_UNIT_CHOICES, WEIGHT_UNIT_CHOICES, MODALITY_CHOICES,
     QUANTITY_UNIT_CHOICES,
 )
@@ -1037,27 +1038,33 @@ class MenuCategoryWriteSerializer(serializers.ModelSerializer):
 
 
 # ---------------------------------------------------------------------------
-# MenuItem ingredient serializers
+# Ingredient serializers (reusable, System-scoped catalog)
 # ---------------------------------------------------------------------------
 
-# Aligned to the SmallPicture (256px) mixin backing MenuItemIngredient.image.
+# Aligned to the SmallPicture (256px) mixin backing Ingredient.image (and the
+# MenuItemIngredient serializers below, which read the same image).
 _INGREDIENT_IMAGE_CFG = {'max_size': (256, 256), 'quality': 85, 'force_format': 'JPEG'}
 
+# The identity + measurement fields shared by the read and write serializers,
+# followed by the FDA nutrition panel (pulled straight off the model so the two
+# never drift).
+_INGREDIENT_CORE_FIELDS = [
+    'system', 'name', 'en_name', 'slug', 'description', 'en_description',
+    'unit', 'nutrition_basis_quantity',
+]
 
-class MenuItemIngredientSerializer(serializers.ModelSerializer):
-    included_units = serializers.IntegerField(read_only=True)
+
+class IngredientSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
 
     class Meta:
-        model = MenuItemIngredient
+        model = Ingredient
         fields = [
-            'id', 'enabled', 'created', 'modified', 'version',
-            'menu_item', 'name', 'en_name', 'image',
-            'quantity', 'unit', 'calories', 'price',
-            'is_default', 'is_removable', 'max_quantity',
-            'included_units', 'sort_order',
+            'id', 'enabled', 'created', 'modified', 'version', 'image',
+            *_INGREDIENT_CORE_FIELDS,
+            *Ingredient.NUTRIENT_FIELDS,
         ]
-        read_only_fields = ['id', 'created', 'modified', 'version', 'menu_item']
+        read_only_fields = ['id', 'created', 'modified', 'version']
 
     def get_image(self, obj):
         request = self.context.get('request')
@@ -1066,15 +1073,112 @@ class MenuItemIngredientSerializer(serializers.ModelSerializer):
         return request.build_absolute_uri(obj.image.url) if request else obj.image.url
 
 
-class MenuItemIngredientWriteSerializer(serializers.ModelSerializer):
-    # Declared explicitly (not the model ImageField) so it accepts a base64
-    # string: unchanged when omitted, cleared when explicitly null/blank.
+class IngredientWriteSerializer(serializers.ModelSerializer):
+    # base64 string on the way in: unchanged when omitted, cleared when null/blank.
     image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
+    class Meta:
+        model = Ingredient
+        fields = [
+            'enabled', 'image',
+            *_INGREDIENT_CORE_FIELDS,
+            *Ingredient.NUTRIENT_FIELDS,
+        ]
+
+    def validate_unit(self, value):
+        valid = {c[0] for c in QUANTITY_UNIT_CHOICES}
+        if value not in valid:
+            raise serializers.ValidationError('Invalid unit.')
+        return value
+
+    def validate_slug(self, value):
+        qs = Ingredient.objects.filter(slug=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('An ingredient with this slug already exists.')
+        return value
+
+    def validate_image(self, value):
+        if not value:
+            return value
+        sub = ImageProcessingSerializer(data={'base64_image': value}, **_INGREDIENT_IMAGE_CFG)
+        if not sub.is_valid():
+            raise serializers.ValidationError(sub.errors['base64_image'])
+        return value
+
+    def _apply_image(self, instance, image_data):
+        if image_data:
+            proc = ImageProcessingSerializer(data={'base64_image': image_data}, **_INGREDIENT_IMAGE_CFG)
+            proc.is_valid()
+            proc.save_to_field(instance.image, f'ingredient_{instance.pk}.jpg')
+        else:
+            instance.image = None
+        instance.save(update_fields=['image'])
+
+    def create(self, validated_data):
+        has_image = 'image' in validated_data
+        image_data = validated_data.pop('image', None)
+        instance = super().create(validated_data)
+        if has_image:
+            self._apply_image(instance, image_data)
+        return instance
+
+    def update(self, instance, validated_data):
+        has_image = 'image' in validated_data
+        image_data = validated_data.pop('image', None)
+        instance = super().update(instance, validated_data)
+        if has_image:
+            self._apply_image(instance, image_data)
+        return instance
+
+
+# ---------------------------------------------------------------------------
+# MenuItem ingredient serializers
+# ---------------------------------------------------------------------------
+
+
+class MenuItemIngredientSerializer(serializers.ModelSerializer):
+    included_units = serializers.IntegerField(read_only=True)
+    # Identity and nutrition now live on the shared Ingredient. These read-only
+    # fields flatten it back onto the row so the public shape is unchanged:
+    # `name`/`en_name`/`image` come from the ingredient, `calories` is the
+    # ingredient's per-basis value scaled to this portion.
+    name = serializers.CharField(source='effective_name', read_only=True)
+    en_name = serializers.CharField(source='effective_en_name', read_only=True)
+    calories = serializers.IntegerField(read_only=True)
+    image = serializers.SerializerMethodField()
+    ingredient_detail = IngredientSerializer(source='ingredient', read_only=True)
 
     class Meta:
         model = MenuItemIngredient
         fields = [
-            'name', 'en_name', 'image', 'quantity', 'unit', 'calories', 'price',
+            'id', 'enabled', 'created', 'modified', 'version',
+            'menu_item', 'ingredient', 'ingredient_detail',
+            'name', 'en_name', 'image',
+            'quantity', 'unit', 'calories', 'price',
+            'is_default', 'is_removable', 'max_quantity',
+            'included_units', 'sort_order',
+        ]
+        read_only_fields = ['id', 'created', 'modified', 'version', 'menu_item']
+
+    def get_image(self, obj):
+        request = self.context.get('request')
+        image = obj.effective_image
+        if not image:
+            return None
+        return request.build_absolute_uri(image.url) if request else image.url
+
+
+class MenuItemIngredientWriteSerializer(serializers.ModelSerializer):
+    # Identity/image/nutrition come from the referenced Ingredient now; this row
+    # only carries the recipe portion and pricing.
+    ingredient = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
+
+    class Meta:
+        model = MenuItemIngredient
+        fields = [
+            'ingredient', 'quantity', 'unit', 'price',
             'is_default', 'is_removable', 'max_quantity', 'sort_order', 'enabled',
         ]
 
@@ -1091,43 +1195,13 @@ class MenuItemIngredientWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('max_quantity must be at least 1.')
         return value
 
-    def validate_image(self, value):
-        if not value:
-            return value
-        sub = ImageProcessingSerializer(data={'base64_image': value}, **_INGREDIENT_IMAGE_CFG)
-        if not sub.is_valid():
-            raise serializers.ValidationError(sub.errors['base64_image'])
-        return value
-
-    def _apply_image(self, instance, image_data):
-        """Process a base64 image onto the instance, or clear it. Assumes the
-        instance already has a pk (so the upload path can reference it)."""
-        if image_data:
-            proc = ImageProcessingSerializer(data={'base64_image': image_data}, **_INGREDIENT_IMAGE_CFG)
-            proc.is_valid()
-            proc.save_to_field(instance.image, f'ingredient_{instance.menu_item_id}_{instance.pk}.jpg')
-        else:
-            instance.image = None
-        instance.save(update_fields=['image'])
-
     def create(self, validated_data, menu_item):
-        # `image` is not a model field kwarg here (it holds base64), so it is
-        # popped and processed after the row exists.
-        has_image = 'image' in validated_data
-        image_data = validated_data.pop('image', None)
-        instance = MenuItemIngredient.objects.create(menu_item=menu_item, **validated_data)
-        if has_image:
-            self._apply_image(instance, image_data)
-        return instance
+        return MenuItemIngredient.objects.create(menu_item=menu_item, **validated_data)
 
     def update(self, instance, validated_data):
-        has_image = 'image' in validated_data
-        image_data = validated_data.pop('image', None)
         for field, value in validated_data.items():
             setattr(instance, field, value)
         instance.save()
-        if has_image:
-            self._apply_image(instance, image_data)
         return instance
 
 

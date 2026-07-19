@@ -10,6 +10,7 @@ from .models import (
     ProductVariant, ProductVariantImage,
     ServiceVariant,
     MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient, RecipeStep,
+    Ingredient,
 )
 
 
@@ -415,8 +416,9 @@ class MenuItemImageInline(admin.TabularInline):
 class MenuItemIngredientInline(admin.TabularInline):
     model = MenuItemIngredient
     extra = 0
+    autocomplete_fields = ('ingredient',)
     fields = (
-        'name', 'en_name', 'image', 'quantity', 'unit', 'calories', 'price',
+        'ingredient', 'quantity', 'unit', 'price',
         'is_default', 'is_removable', 'max_quantity', 'sort_order', 'enabled',
     )
 
@@ -507,11 +509,61 @@ class MenuItemAdmin(admin.ModelAdmin):
         super().delete_model(request, obj)
 
 
+@admin.register(Ingredient)
+class IngredientAdmin(admin.ModelAdmin):
+    list_display = ('name', 'unit', 'nutrition_basis_quantity', 'calories', 'system', 'enabled', 'modified')
+    list_filter = ('enabled', 'unit', 'system')
+    search_fields = ('name', 'en_name', 'slug')
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ('created', 'modified', 'version')
+
+    fieldsets = (
+        ('Identity', {
+            'fields': ('system', 'enabled', 'version', 'created', 'modified'),
+        }),
+        ('Content (ES)', {
+            'fields': ('name', 'slug', 'description'),
+        }),
+        ('Content (EN)', {
+            'fields': ('en_name', 'en_description'),
+            'classes': ('collapse',),
+        }),
+        ('Media', {
+            'fields': ('image', 'fit', 'background_color', 'href'),
+        }),
+        ('Measurement', {
+            'fields': ('unit', 'nutrition_basis_quantity'),
+            'description': 'How the ingredient is bought/measured, and the amount '
+                           'the FDA nutrition values below are stated per.',
+        }),
+        ('Nutrition Facts (per basis)', {
+            'fields': (
+                'calories',
+                ('total_fat', 'saturated_fat', 'trans_fat'),
+                ('cholesterol', 'sodium'),
+                ('total_carbohydrate', 'dietary_fiber'),
+                ('total_sugars', 'added_sugars'),
+                'protein',
+                ('vitamin_d', 'calcium', 'iron', 'potassium'),
+            ),
+        }),
+    )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        _invalidate_pattern('catalog:ingredients:*')
+
+    def delete_model(self, request, obj):
+        _invalidate_pattern('catalog:ingredients:*')
+        super().delete_model(request, obj)
+
+
 @admin.register(MenuItemIngredient)
 class MenuItemIngredientAdmin(admin.ModelAdmin):
-    list_display = ('name', 'menu_item', 'price', 'calories', 'is_default', 'is_removable', 'max_quantity', 'sort_order', 'enabled')
+    list_display = ('ingredient', 'menu_item', 'quantity', 'unit', 'price', 'calories', 'is_default', 'is_removable', 'max_quantity', 'sort_order', 'enabled')
     list_filter = ('enabled', 'is_default', 'is_removable', 'menu_item__system')
-    search_fields = ('name', 'en_name', 'menu_item__name')
+    search_fields = ('ingredient__name', 'ingredient__en_name', 'menu_item__name')
+    autocomplete_fields = ('ingredient',)
     readonly_fields = ('created', 'modified', 'version')
 
     def save_model(self, request, obj, form, change):

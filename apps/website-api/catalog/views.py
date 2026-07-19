@@ -1,4 +1,5 @@
 from django.core.cache import cache
+from django.db.models import ProtectedError
 
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -47,6 +48,7 @@ from .models import (
     ProductVariant, ProductVariantImage,
     ServiceVariant,
     MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient, RecipeStep,
+    Ingredient,
 )
 from .serializers import (
     ProductCategorySerializer,
@@ -80,6 +82,8 @@ from .serializers import (
     MenuItemIngredientSerializer,
     MenuItemIngredientWriteSerializer,
     MenuItemRecipeSerializer,
+    IngredientSerializer,
+    IngredientWriteSerializer,
 )
 
 
@@ -1240,6 +1244,116 @@ class MenuCategoryDetailView(APIView):
 
 
 # ---------------------------------------------------------------------------
+# Ingredient views (reusable, System-scoped catalog)
+# ---------------------------------------------------------------------------
+
+class IngredientListCreateView(APIView):
+    """
+    GET  /api/catalog/ingredients/   - list ingredients (public).
+    POST /api/catalog/ingredients/   - create an ingredient (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def get(self, request):
+        system_id = request.query_params.get('system')
+        if not system_id:
+            system = _resolve_system(request)
+            if system is None:
+                return Response([], status=status.HTTP_200_OK)
+            system_id = system.id
+
+        disabled_visible = show_disabled(request)
+        cache_key = _scoped_list_key('catalog:ingredients', request, system_id, disabled_visible)
+
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        qs = Ingredient.objects.filter(system_id=system_id)
+        if not disabled_visible:
+            qs = qs.filter(enabled=True)
+
+        search = request.query_params.get('search')
+        if search:
+            qs = qs.filter(name__icontains=search)
+
+        data = IngredientSerializer(qs, many=True, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
+
+    def post(self, request):
+        serializer = IngredientWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        ingredient = serializer.save()
+        _invalidate_pattern('catalog:ingredients:*')
+        return Response(IngredientSerializer(ingredient, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+class IngredientDetailView(APIView):
+    """
+    GET    /api/catalog/ingredients/<pk>/  - retrieve (public).
+    PATCH  /api/catalog/ingredients/<pk>/  - partial update (admin only).
+    DELETE /api/catalog/ingredients/<pk>/  - delete (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def _get_object(self, pk):
+        try:
+            return Ingredient.objects.get(pk=pk)
+        except Ingredient.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        cache_key = f'catalog:ingredient:{pk}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        ingredient = self._get_object(pk)
+        if ingredient is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        data = IngredientSerializer(ingredient, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
+
+    def patch(self, request, pk):
+        ingredient = self._get_object(pk)
+        if ingredient is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = IngredientWriteSerializer(ingredient, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        ingredient = serializer.save()
+        cache.delete(f'catalog:ingredient:{pk}')
+        _invalidate_pattern('catalog:ingredients:*')
+        # A menu item embeds its ingredients' name/nutrition, so an edit here must
+        # invalidate the menu caches that referenced this ingredient.
+        _invalidate_pattern('catalog:menu_item*')
+        return Response(IngredientSerializer(ingredient, context={'request': request}).data)
+
+    def delete(self, request, pk):
+        ingredient = self._get_object(pk)
+        if ingredient is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            ingredient.delete()
+        except ProtectedError:
+            return Response(
+                {'detail': 'This ingredient is still used by one or more menu items.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+        cache.delete(f'catalog:ingredient:{pk}')
+        _invalidate_pattern('catalog:ingredients:*')
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
 # Menu item views
 # ---------------------------------------------------------------------------
 
@@ -1279,7 +1393,7 @@ class MenuItemListCreateView(APIView):
         if cached is not None:
             return Response(cached)
 
-        qs = MenuItem.objects.filter(system_id=system_id).select_related('brand', 'category', 'system').prefetch_related('images', 'ingredients')
+        qs = MenuItem.objects.filter(system_id=system_id).select_related('brand', 'category', 'system').prefetch_related('images', 'ingredients__ingredient')
         if not disabled_visible:
             qs = qs.filter(enabled=True)
 
@@ -1339,7 +1453,7 @@ class MenuItemDetailView(APIView):
 
     def _get_object(self, pk):
         try:
-            return MenuItem.objects.select_related('brand', 'category', 'system').prefetch_related('images', 'ingredients').get(pk=pk)
+            return MenuItem.objects.select_related('brand', 'category', 'system').prefetch_related('images', 'ingredients__ingredient').get(pk=pk)
         except MenuItem.DoesNotExist:
             return None
 

@@ -46,6 +46,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from catalog.models import (
+    Ingredient,
     MenuCategory,
     MenuItem,
     MenuItemImage,
@@ -134,9 +135,19 @@ MENU_ITEM_FIELDS = (
     "spice_level", "servings",
     "is_organic", "is_vegetarian", "is_vegan", "is_gluten_free", "allergens",
 )
+# The menu-item ingredient carries only the portion + pricing now; its identity
+# and nutrition live on the referenced reusable Ingredient (linked by slug).
 INGREDIENT_FIELDS = (
-    "name", "en_name", "quantity", "unit", "calories", "price",
+    "quantity", "unit", "price",
     "is_default", "is_removable", "max_quantity", "sort_order",
+)
+# The reusable Ingredient catalog: identity + measurement + FDA nutrition.
+INGREDIENT_CATALOG_FIELDS = (
+    "name", "en_name", "description", "en_description",
+    "unit", "nutrition_basis_quantity",
+    "calories", "total_fat", "saturated_fat", "trans_fat", "cholesterol",
+    "sodium", "total_carbohydrate", "dietary_fiber", "total_sugars",
+    "added_sugars", "protein", "vitamin_d", "calcium", "iron", "potassium",
 )
 
 
@@ -412,6 +423,18 @@ class Command(BaseCommand):
             cat.save()
             cat_by_slug[c.get("slug")] = cat
 
+        # The reusable ingredient catalog must exist before menu items link to
+        # it. Import it first, keyed by its stable global slug.
+        ingredient_by_slug = {}
+        for ing in self._get("/api/catalog/ingredients/"):
+            obj, _ = Ingredient.objects.update_or_create(
+                slug=ing.get("slug"),
+                defaults={"system": system, **self._scalars(ing, INGREDIENT_CATALOG_FIELDS)},
+            )
+            self._attach(obj, "image", ing.get("image"))
+            obj.save()
+            ingredient_by_slug[ing.get("slug")] = obj
+
         items = self._get("/api/catalog/menu-items/")
         for m in items:
             defaults = {"system": system, **self._scalars(m, MENU_ITEM_FIELDS)}
@@ -422,10 +445,16 @@ class Command(BaseCommand):
             self._attach(item, "image", m.get("image"))
             item.save()
             # Priced ingredients (the internal recipe steps are never public).
+            # Each references a reusable Ingredient by slug (from ingredient_detail).
             item.ingredients.all().delete()
             for ing in m.get("ingredients") or []:
+                detail = ing.get("ingredient_detail") or {}
+                ingredient = ingredient_by_slug.get(detail.get("slug"))
+                if ingredient is None:
+                    continue
                 MenuItemIngredient.objects.create(
-                    menu_item=item, **self._scalars(ing, INGREDIENT_FIELDS)
+                    menu_item=item, ingredient=ingredient,
+                    **self._scalars(ing, INGREDIENT_FIELDS),
                 )
             item.images.all().delete()
             for g in m.get("images") or []:

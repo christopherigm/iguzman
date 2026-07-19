@@ -32,6 +32,8 @@ from .views import (
     MenuItemIngredientListCreateView,
     MenuItemIngredientDetailView,
     MenuItemRecipeView,
+    IngredientListCreateView,
+    IngredientDetailView,
 )
 
 urlpatterns = [
@@ -74,6 +76,10 @@ urlpatterns = [
     path('catalog/variant-options/<int:pk>/', VariantOptionDetailView.as_view(), name='variant-option-detail'),
     path('catalog/variant-options/<int:pk>/values/', VariantOptionValueListCreateView.as_view(), name='variant-option-value-list'),
     path('catalog/variant-options/<int:pk>/values/<int:val_pk>/', VariantOptionValueDetailView.as_view(), name='variant-option-value-detail'),
+
+    # Ingredients (reusable, System-scoped catalog referenced by menu items)
+    path('catalog/ingredients/', IngredientListCreateView.as_view(), name='ingredient-list'),
+    path('catalog/ingredients/<int:pk>/', IngredientDetailView.as_view(), name='ingredient-detail'),
 
     # Menu categories
     path('catalog/menu-categories/', MenuCategoryListCreateView.as_view(), name='menu-category-list'),

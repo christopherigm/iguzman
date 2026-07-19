@@ -328,6 +328,41 @@ export async function updateMenuItemImage(
   return parseResponse<Record<string, unknown>>(res);
 }
 
+// ---- Ingredients (reusable catalog) ----
+export async function listIngredients(systemId: number) {
+  const res = await adminFetch(
+    `/api/catalog/ingredients/?system=${systemId}&include_disabled=true`,
+  );
+  return parseResponse<Record<string, unknown>[]>(res);
+}
+export async function getIngredient(pk: number) {
+  const res = await adminFetch(`/api/catalog/ingredients/${pk}/`);
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function createIngredient(data: Record<string, unknown>) {
+  const res = await adminFetch(`/api/catalog/ingredients/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function updateIngredient(
+  pk: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(`/api/catalog/ingredients/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function deleteIngredient(pk: number) {
+  const res = await adminFetch(`/api/catalog/ingredients/${pk}/`, {
+    method: "DELETE",
+  });
+  return parseResponse<void>(res);
+}
+
 // ---- Menu Item Ingredients ----
 export async function listMenuItemIngredients(menuItemId: number) {
   // include_disabled is admin-gated server-side, so the CMS editor still sees

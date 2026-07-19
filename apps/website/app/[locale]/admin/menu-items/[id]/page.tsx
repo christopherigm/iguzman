@@ -12,6 +12,7 @@ import {
 import {
   MenuIngredientsEditor,
   type IngredientRow,
+  type IngredientOption,
 } from "@/components/admin/menu-ingredients-editor";
 import {
   MenuRecipeEditor,
@@ -33,6 +34,7 @@ import {
   saveMenuItemRecipe,
   listMenuCategories,
   listBrands,
+  listIngredients,
   checkSlug,
 } from "@/lib/admin-api";
 import { buildSlug } from "@/lib/slug-utils";
@@ -113,6 +115,9 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     [],
   );
   const [recipe, setRecipe] = useState<RecipeValue>(EMPTY_RECIPE);
+  const [ingredientCatalog, setIngredientCatalog] = useState<
+    IngredientOption[]
+  >([]);
 
   const [categoryOptions, setCategoryOptions] = useState<
     { value: string | number; label: string }[]
@@ -153,9 +158,10 @@ export default function AdminMenuItemFormPage({ params }: Props) {
 
   const loadMeta = useCallback(async () => {
     try {
-      const [cats, brands] = await Promise.all([
+      const [cats, brands, ingredients] = await Promise.all([
         listMenuCategories(systemId),
         listBrands(systemId),
+        listIngredients(systemId),
       ]);
       setCategoryOptions(
         cats.map((c) => ({
@@ -167,6 +173,17 @@ export default function AdminMenuItemFormPage({ params }: Props) {
         brands.map((b) => ({
           value: b.id as number,
           label: String(b.name ?? b.id),
+        })),
+      );
+      setIngredientCatalog(
+        ingredients.map((i) => ({
+          id: i.id as number,
+          name: (i.name as string | null) ?? null,
+          en_name: (i.en_name as string | null) ?? null,
+          unit: String(i.unit ?? ""),
+          nutrition_basis_quantity:
+            (i.nutrition_basis_quantity as string | null) ?? null,
+          calories: (i.calories as string | null) ?? null,
         })),
       );
     } catch {
@@ -221,18 +238,15 @@ export default function AdminMenuItemFormPage({ params }: Props) {
               sort_order: i.sort_order as number,
             })),
           );
-          const ingRows = (ings as Record<string, unknown>[]).map((i) => ({
+          const ingRows: IngredientRow[] = (
+            ings as Record<string, unknown>[]
+          ).map((i) => ({
             key: `ing-existing-${i.id}`,
             id: i.id as number,
-            name: String(i.name ?? ""),
-            en_name: String(i.en_name ?? ""),
-            image: i.image ? String(i.image) : null,
-            imageBase64: null,
-            imageRemoved: false,
+            ingredient: (i.ingredient as number | null) ?? "",
             price: String(i.price ?? "0.00"),
             quantity: i.quantity == null ? "" : String(i.quantity),
             unit: String(i.unit ?? ""),
-            calories: i.calories == null ? "" : String(i.calories),
             is_default: Boolean(i.is_default),
             is_removable: Boolean(i.is_removable),
             max_quantity: String(i.max_quantity ?? "1"),
@@ -280,28 +294,19 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     }
     for (let i = 0; i < ingredients.length; i++) {
       const row = ingredients[i];
-      if (!row || !row.name.trim()) continue;
+      // A row is only persistable once a reusable ingredient has been picked.
+      if (!row || row.ingredient === "") continue;
       const payload: Record<string, unknown> = {
-        name: row.name,
-        en_name: row.en_name || null,
+        ingredient: row.ingredient,
         price: row.price === "" ? "0.00" : row.price,
         quantity: row.quantity === "" ? null : row.quantity,
         unit: row.unit || null,
-        calories: row.calories === "" ? null : Number(row.calories),
         is_default: row.is_default,
         is_removable: row.is_removable,
         max_quantity: row.max_quantity === "" ? 1 : Number(row.max_quantity),
         sort_order: i,
         enabled: row.enabled,
       };
-      // Only send `image` when it actually changed: a new upload sends its
-      // base64, an explicit removal sends "" to clear, and leaving it untouched
-      // omits the key so the API keeps the stored image.
-      if (row.imageBase64) {
-        payload.image = row.imageBase64;
-      } else if (row.imageRemoved) {
-        payload.image = "";
-      }
       if (row.id) {
         await updateMenuItemIngredient(menuItemId, row.id, payload).catch(
           () => null,
@@ -529,6 +534,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
             value={ingredients}
             onChange={setIngredients}
             currency={String(values.currency ?? "USD")}
+            catalog={ingredientCatalog}
           />
           <MenuRecipeEditor value={recipe} onChange={setRecipe} />
         </Box>

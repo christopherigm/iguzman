@@ -6,7 +6,9 @@ from decimal import Decimal
 
 from core.models import Brand, System
 
-from .models import Product, MenuItem, MenuItemIngredient, normalize_selection
+from .models import (
+    Product, MenuItem, MenuItemIngredient, Ingredient, normalize_selection,
+)
 
 
 class IncludeDisabledTests(TestCase):
@@ -137,19 +139,29 @@ class MenuItemPricingTests(TestCase):
         self.item = MenuItem.objects.create(
             system=self.system, name="Taco", slug="taco", price=Decimal("8.00"),
         )
+        # Shared, reusable ingredients (identity + nutrition live here now).
+        tortilla_ing = Ingredient.objects.create(
+            system=self.system, name="Tortilla", slug="tortilla", unit="pc",
+        )
+        pork_ing = Ingredient.objects.create(
+            system=self.system, name="Pork", slug="pork", unit="g",
+        )
+        cheese_ing = Ingredient.objects.create(
+            system=self.system, name="Cheese", slug="cheese", unit="g",
+        )
         # A free included, removable default.
         self.tortilla = MenuItemIngredient.objects.create(
-            menu_item=self.item, name="Tortilla", price=Decimal("0.00"),
+            menu_item=self.item, ingredient=tortilla_ing, price=Decimal("0.00"),
             is_default=True, is_removable=True, max_quantity=1,
         )
         # A default that can be doubled: first unit free, extra costs 3.
         self.pork = MenuItemIngredient.objects.create(
-            menu_item=self.item, name="Pork", price=Decimal("3.00"),
+            menu_item=self.item, ingredient=pork_ing, price=Decimal("3.00"),
             is_default=True, is_removable=True, max_quantity=2,
         )
         # An optional add-on: each unit charged.
         self.cheese = MenuItemIngredient.objects.create(
-            menu_item=self.item, name="Cheese", price=Decimal("1.50"),
+            menu_item=self.item, ingredient=cheese_ing, price=Decimal("1.50"),
             is_default=False, is_removable=True, max_quantity=2,
         )
 
@@ -194,11 +206,139 @@ class MenuItemPricingTests(TestCase):
         other = MenuItem.objects.create(
             system=self.system, name="Burrito", slug="burrito", price=Decimal("10.00"),
         )
+        rice_ing = Ingredient.objects.create(
+            system=self.system, name="Rice", slug="rice", unit="g",
+        )
         foreign = MenuItemIngredient.objects.create(
-            menu_item=other, name="Rice", price=Decimal("2.00"), is_default=False,
+            menu_item=other, ingredient=rice_ing, price=Decimal("2.00"), is_default=False,
         )
         # A selection naming an ingredient from a different item must not price it.
         self.assertEqual(
             self.item.price_for_selection([{"ingredient": foreign.id, "quantity": 1}]),
             Decimal("8.00"),
         )
+
+
+class UnitConversionTests(TestCase):
+    """convert_quantity only bridges units within one physical dimension."""
+
+    def test_within_mass(self):
+        from .units import convert_quantity
+        self.assertEqual(convert_quantity(2000, "g", "kg"), Decimal("2"))
+        self.assertEqual(convert_quantity(2, "kg", "g"), Decimal("2000"))
+
+    def test_within_volume(self):
+        from .units import convert_quantity
+        self.assertEqual(convert_quantity(1, "l", "ml"), Decimal("1000"))
+
+    def test_same_unit_is_identity(self):
+        from .units import convert_quantity
+        self.assertEqual(convert_quantity(3, "pc", "pc"), Decimal("3"))
+
+    def test_cross_dimension_and_distinct_count_units_are_unconvertible(self):
+        from .units import convert_quantity
+        self.assertIsNone(convert_quantity(1, "g", "ml"))     # mass vs volume
+        self.assertIsNone(convert_quantity(1, "pc", "slice"))  # two count units
+        self.assertIsNone(convert_quantity(1, "g", None))      # missing unit
+
+
+class IngredientNutritionTests(TestCase):
+    """Nutrition is stored per-basis on Ingredient and scaled to the portion."""
+
+    def setUp(self):
+        self.system = System.objects.create(site_name="Bakery", host="bakery.test")
+        self.butter = Ingredient.objects.create(
+            system=self.system, name="Butter", slug="butter", unit="g",
+            nutrition_basis_quantity=Decimal("100"), calories=Decimal("717"),
+            total_fat=Decimal("81"),
+        )
+        self.orange = Ingredient.objects.create(
+            system=self.system, name="Orange", slug="orange", unit="pc",
+            nutrition_basis_quantity=Decimal("1"), calories=Decimal("62"),
+        )
+        self.item = MenuItem.objects.create(
+            system=self.system, name="Bread", slug="bread", price=Decimal("5.00"),
+        )
+
+    def test_calories_scale_by_mass_portion(self):
+        mii = MenuItemIngredient.objects.create(
+            menu_item=self.item, ingredient=self.butter,
+            quantity=Decimal("20"), unit="g",
+        )
+        self.assertEqual(mii.calories, 143)  # round(717 * 20/100)
+        self.assertEqual(mii.nutrient("total_fat"), Decimal("16.2"))
+
+    def test_calories_scale_by_piece_portion(self):
+        mii = MenuItemIngredient.objects.create(
+            menu_item=self.item, ingredient=self.orange,
+            quantity=Decimal("2"), unit="pc",
+        )
+        self.assertEqual(mii.calories, 124)
+
+    def test_unconvertible_portion_yields_no_calories(self):
+        # Butter's basis is grams; a portion counted in pieces cannot be scaled.
+        mii = MenuItemIngredient.objects.create(
+            menu_item=self.item, ingredient=self.butter,
+            quantity=Decimal("2"), unit="pc",
+        )
+        self.assertIsNone(mii.calories)
+
+    def test_public_menu_read_exposes_scaled_calories(self):
+        MenuItemIngredient.objects.create(
+            menu_item=self.item, ingredient=self.butter,
+            quantity=Decimal("40"), unit="g",
+        )
+        res = self.client.get(f"/api/catalog/menu-items/{self.item.id}/")
+        self.assertEqual(res.status_code, 200)
+        ing = res.json()["ingredients"][0]
+        self.assertEqual(ing["name"], "Butter")
+        self.assertEqual(ing["calories"], 287)  # round(717 * 40/100 = 286.8)
+        self.assertEqual(ing["ingredient"], self.butter.id)
+
+
+class IngredientEndpointTests(TestCase):
+    """The reusable Ingredient catalog is a public-read, admin-write resource."""
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Bakery", host="bakery.test")
+
+    def _host(self):
+        return {"HTTP_X_WEBSITE_HOST": "bakery.test"}
+
+    def _admin_client(self):
+        user = User.objects.create_user("chef", password="x")
+        user.profile.system = self.system
+        user.profile.is_admin = True
+        user.profile.save()
+        client = self.client_class()
+        client.force_login(user)
+        return client
+
+    def test_public_can_list(self):
+        Ingredient.objects.create(system=self.system, name="Flour", slug="flour", unit="g")
+        res = self.client.get("/api/catalog/ingredients/", **self._host())
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(len(res.json()), 1)
+
+    def test_admin_can_create(self):
+        client = self._admin_client()
+        payload = {
+            "system": self.system.id, "name": "Sugar", "slug": "sugar",
+            "unit": "g", "nutrition_basis_quantity": "100", "calories": "387",
+        }
+        res = client.post(
+            "/api/catalog/ingredients/", data=payload,
+            content_type="application/json", **self._host(),
+        )
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(Ingredient.objects.get(slug="sugar").calories, Decimal("387"))
+
+    def test_delete_is_blocked_while_in_use(self):
+        client = self._admin_client()
+        ing = Ingredient.objects.create(system=self.system, name="Salt", slug="salt", unit="g")
+        item = MenuItem.objects.create(system=self.system, name="Pretzel", slug="pretzel", price=Decimal("3"))
+        MenuItemIngredient.objects.create(menu_item=item, ingredient=ing)
+        res = client.delete(f"/api/catalog/ingredients/{ing.id}/", **self._host())
+        self.assertEqual(res.status_code, 409)
+        self.assertTrue(Ingredient.objects.filter(pk=ing.id).exists())

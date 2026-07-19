@@ -1,22 +1,17 @@
 export const ADMIN_NAV_ITEMS = [
   { key: "system", href: "/admin/system", icon: "⚙️", descKey: "systemDesc" },
   {
-    key: "products",
-    href: "/admin/products",
-    icon: "📦",
-    descKey: "productsDesc",
-  },
-  {
     key: "productCategories",
     href: "/admin/product-categories",
     icon: "🏷️",
     descKey: "productCategoriesDesc",
   },
+  { key: "brands", href: "/admin/brands", icon: "🎯", descKey: "brandsDesc" },
   {
-    key: "services",
-    href: "/admin/services",
-    icon: "🛠️",
-    descKey: "servicesDesc",
+    key: "products",
+    href: "/admin/products",
+    icon: "📦",
+    descKey: "productsDesc",
   },
   {
     key: "serviceCategories",
@@ -25,10 +20,16 @@ export const ADMIN_NAV_ITEMS = [
     descKey: "serviceCategoriesDesc",
   },
   {
-    key: "menuItems",
-    href: "/admin/menu-items",
-    icon: "🍽️",
-    descKey: "menuItemsDesc",
+    key: "services",
+    href: "/admin/services",
+    icon: "🛠️",
+    descKey: "servicesDesc",
+  },
+  {
+    key: "ingredients",
+    href: "/admin/ingredients",
+    icon: "🥕",
+    descKey: "ingredientsDesc",
   },
   {
     key: "menuCategories",
@@ -36,8 +37,12 @@ export const ADMIN_NAV_ITEMS = [
     icon: "🏷️",
     descKey: "menuCategoriesDesc",
   },
-  { key: "brands", href: "/admin/brands", icon: "🎯", descKey: "brandsDesc" },
   {
+    key: "menuItems",
+    href: "/admin/menu-items",
+    icon: "🍽️",
+    descKey: "menuItemsDesc",
+  },{
     key: "variantOptions",
     href: "/admin/variant-options",
     icon: "🔀",

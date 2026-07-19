@@ -6,6 +6,8 @@ from django.db import models
 
 from core.models import Buyable, Common, RegularPicture, SmallPicture, StandardPicture, picture
 
+from .units import convert_quantity
+
 
 DIMENSION_UNIT_CHOICES = [
     ('cm', 'Centimeters'),
@@ -664,7 +666,99 @@ class MenuItemImage(StandardPicture):
         return f"Image for {self.menu_item} (#{self.sort_order})"
 
 
-class MenuItemIngredient(SmallPicture):
+class Ingredient(SmallPicture):
+    """A reusable, System-scoped ingredient shared across menu items.
+
+    One ``Ingredient`` is the single source of truth for an edible component's
+    identity (name, image) and its nutrition, so the same "butter" or "orange"
+    can be referenced by many dishes instead of being re-typed on each. A
+    ``MenuItemIngredient`` points at one of these and adds the per-dish recipe
+    *portion* and *pricing*; calories and every other nutrient are then computed
+    by scaling this record's values to that portion.
+
+    Nutrition is stored per a fixed reference amount - ``nutrition_basis_quantity``
+    of ``unit`` (e.g. 100 g, or 1 pc). ``unit`` doubles as *how the ingredient is
+    bought/measured*, so it fits the purchasing reality: an orange is counted in
+    pieces (``unit='pc'``, basis 1), butter is weighed in grams (``unit='g'``,
+    basis 100). See ``nutrient_for_portion`` for the scaling, and ``catalog.units``
+    for the same-dimension conversion it relies on.
+    """
+
+    # The 15 FDA "Nutrition Facts" quantities, each stated per
+    # ``nutrition_basis_quantity`` of ``unit``. Listed once here so the scaling
+    # helper and serializers can iterate them without repetition.
+    NUTRIENT_FIELDS = (
+        'calories', 'total_fat', 'saturated_fat', 'trans_fat', 'cholesterol',
+        'sodium', 'total_carbohydrate', 'dietary_fiber', 'total_sugars',
+        'added_sugars', 'protein', 'vitamin_d', 'calcium', 'iron', 'potassium',
+    )
+
+    system = models.ForeignKey(
+        'core.System',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='ingredients',
+    )
+    # `name` is required here, overriding BasePicture's nullable `name`; `image`
+    # (256px), `en_name`, `description`, etc. come from SmallPicture.
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+
+    # How the ingredient is bought/measured, and the unit the nutrition basis and
+    # every recipe portion are expressed in (orange -> 'pc', butter -> 'g').
+    unit = models.CharField(max_length=8, choices=QUANTITY_UNIT_CHOICES)
+    nutrition_basis_quantity = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal('100'),
+        help_text='The nutrition values below are stated per this many `unit` '
+                  '(e.g. 100 for "per 100 g", 1 for "per piece").',
+    )
+
+    # ── FDA Nutrition Facts panel (all per `nutrition_basis_quantity` `unit`) ──
+    calories = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True, help_text='kcal.'
+    )
+    total_fat = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='grams.')
+    saturated_fat = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='grams.')
+    trans_fat = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='grams.')
+    cholesterol = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='milligrams.')
+    sodium = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='milligrams.')
+    total_carbohydrate = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='grams.')
+    dietary_fiber = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='grams.')
+    total_sugars = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='grams.')
+    added_sugars = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='grams.')
+    protein = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='grams.')
+    vitamin_d = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='micrograms.')
+    calcium = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='milligrams.')
+    iron = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='milligrams.')
+    potassium = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='milligrams.')
+
+    class Meta:
+        verbose_name = 'Ingredient'
+        verbose_name_plural = 'Ingredients'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    def nutrient_for_portion(self, field, quantity, unit):
+        """Scale one stored nutrient to a recipe portion.
+
+        Converts ``quantity`` of ``unit`` into this ingredient's basis ``unit``
+        and scales the per-basis value by ``portion / nutrition_basis_quantity``.
+        Returns ``None`` (nutrient not chartable) when the portion unit is not
+        convertible to the basis unit, the basis is zero, or the value is unset.
+        """
+        base_qty = convert_quantity(quantity, unit, self.unit)
+        if base_qty is None or not self.nutrition_basis_quantity:
+            return None
+        value = getattr(self, field, None)
+        if value is None:
+            return None
+        return value * base_qty / self.nutrition_basis_quantity
+
+
+class MenuItemIngredient(Common):
     """One priced, customisable component of a MenuItem.
 
     The pricing model is *base price + add-on deltas* (see ``MenuItem``):
@@ -686,17 +780,19 @@ class MenuItemIngredient(SmallPicture):
         on_delete=models.CASCADE,
         related_name='ingredients',
     )
-    # `name` is required here, overriding BasePicture's nullable `name`; `image`
-    # (256px), `en_name`, `fit`, `background_color`, etc. come from SmallPicture.
-    name = models.CharField(max_length=255)
+    # Identity (name, image) and nutrition now live on the shared Ingredient;
+    # PROTECT so an ingredient still used by a dish cannot be deleted.
+    ingredient = models.ForeignKey(
+        'Ingredient',
+        on_delete=models.PROTECT,
+        related_name='menu_uses',
+    )
 
-    # Descriptive portion (display only).
+    # The recipe portion. `quantity`/`unit` are descriptive *and* drive the
+    # nutrient scaling (see `calories`/`nutrient`); they do not affect price.
     quantity = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
     unit = models.CharField(
         max_length=8, choices=QUANTITY_UNIT_CHOICES, null=True, blank=True,
-    )
-    calories = models.PositiveIntegerField(
-        null=True, blank=True, help_text='kcal contributed by one unit of this ingredient.'
     )
 
     price = models.DecimalField(
@@ -717,10 +813,39 @@ class MenuItemIngredient(SmallPicture):
     class Meta:
         verbose_name = 'Menu Item Ingredient'
         verbose_name_plural = 'Menu Item Ingredients'
-        ordering = ['sort_order', 'name']
+        ordering = ['sort_order', 'ingredient__name']
 
     def __str__(self):
-        return f"{self.name} ({self.menu_item})"
+        name = self.ingredient.name if self.ingredient_id else '?'
+        return f"{name} ({self.menu_item})"
+
+    # ── Identity delegated to the shared Ingredient ──────────────────────────
+
+    @property
+    def effective_name(self):
+        return self.ingredient.name if self.ingredient_id else None
+
+    @property
+    def effective_en_name(self):
+        return self.ingredient.en_name if self.ingredient_id else None
+
+    @property
+    def effective_image(self):
+        return self.ingredient.image if self.ingredient_id else None
+
+    # ── Nutrition scaled from the Ingredient to this portion ─────────────────
+
+    def nutrient(self, field):
+        """This portion's contribution of one nutrient field, or None."""
+        if not self.ingredient_id:
+            return None
+        return self.ingredient.nutrient_for_portion(field, self.quantity, self.unit)
+
+    @property
+    def calories(self):
+        """kcal this portion contributes, rounded to a whole number, or None."""
+        value = self.nutrient('calories')
+        return None if value is None else int(round(value))
 
     @property
     def included_units(self) -> int:

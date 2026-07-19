@@ -402,13 +402,55 @@ export interface MenuCategory {
   item_count: number;
 }
 
+/** The 15 FDA "Nutrition Facts" quantities, stated per an ingredient's basis. */
+export interface IngredientNutrition {
+  calories: string | null;
+  total_fat: string | null;
+  saturated_fat: string | null;
+  trans_fat: string | null;
+  cholesterol: string | null;
+  sodium: string | null;
+  total_carbohydrate: string | null;
+  dietary_fiber: string | null;
+  total_sugars: string | null;
+  added_sugars: string | null;
+  protein: string | null;
+  vitamin_d: string | null;
+  calcium: string | null;
+  iron: string | null;
+  potassium: string | null;
+}
+
+/** A reusable, System-scoped ingredient with its FDA nutrition panel. Nutrition
+ *  values are stated per `nutrition_basis_quantity` of `unit`. */
+export interface Ingredient extends IngredientNutrition {
+  id: number;
+  enabled: boolean;
+  system: number | null;
+  name: string;
+  en_name: string | null;
+  slug: string;
+  description: string | null;
+  en_description: string | null;
+  image: string | null;
+  unit: string;
+  nutrition_basis_quantity: string;
+}
+
 export interface MenuItemIngredient {
   id: number;
+  /** The referenced reusable Ingredient's id. */
+  ingredient: number;
+  /** The full referenced ingredient, when the API embeds it. */
+  ingredient_detail?: Ingredient;
+  /** Sourced from the referenced ingredient (kept flat for compatibility). */
   name: string;
   en_name: string | null;
   image: string | null;
+  /** The recipe portion; also drives the scaled `calories`. */
   quantity: string | null;
   unit: string | null;
+  /** kcal this portion contributes, scaled from the ingredient. */
   calories: number | null;
   price: string;
   is_default: boolean;

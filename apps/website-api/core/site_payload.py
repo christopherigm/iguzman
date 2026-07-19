@@ -35,6 +35,7 @@ from django.db import transaction
 from django.utils.text import slugify
 
 from catalog.models import (
+    Ingredient,
     MenuCategory,
     MenuItem,
     MenuItemIngredient,
@@ -120,7 +121,11 @@ MENU_ITEM_FLAG_FIELDS = (
     "is_gluten_free",
     "allergens",
 )
-INGREDIENT_TEXT_FIELDS = ("name", "en_name", "unit")
+# The reusable Ingredient catalog: identity + measurement, plus its FDA panel.
+INGREDIENT_CATALOG_TEXT_FIELDS = (
+    "name", "en_name", "description", "en_description", "unit",
+)
+INGREDIENT_NUTRIENT_FIELDS = Ingredient.NUTRIENT_FIELDS
 
 
 # --------------------------------------------------------------------------- #
@@ -199,12 +204,31 @@ def _service_category_dict(c: ServiceCategory) -> dict:
     }
 
 
+def _ingredient_catalog_dict(i: Ingredient) -> dict:
+    """One reusable Ingredient (system-scoped): identity + measurement + the
+    FDA nutrition panel. Keyed by ``slug`` on import."""
+    d = {"slug": i.slug, **_pick(i, INGREDIENT_CATALOG_TEXT_FIELDS)}
+    if i.nutrition_basis_quantity is not None:
+        d["nutrition_basis_quantity"] = str(i.nutrition_basis_quantity)
+    for f in INGREDIENT_NUTRIENT_FIELDS:
+        v = getattr(i, f)
+        if v is not None:
+            d[f] = str(v)
+    return d
+
+
 def _ingredient_dict(i: MenuItemIngredient) -> dict:
-    d = {"sort_order": i.sort_order, **_pick(i, INGREDIENT_TEXT_FIELDS)}
+    """One menu-item ingredient: a reference to a reusable Ingredient (by slug)
+    plus the recipe portion and pricing. Identity/nutrition are not repeated
+    here - they live on the referenced Ingredient."""
+    d = {
+        "sort_order": i.sort_order,
+        "ingredient": i.ingredient.slug if i.ingredient_id else None,
+    }
     if i.quantity is not None:
         d["quantity"] = str(i.quantity)
-    if i.calories is not None:
-        d["calories"] = i.calories
+    if i.unit:
+        d["unit"] = i.unit
     d["price"] = str(i.price)
     d["is_default"] = i.is_default
     d["is_removable"] = i.is_removable
@@ -257,10 +281,16 @@ def serialize_system(system: System) -> dict:
             _service_category_dict(c)
             for c in system.service_categories.all().prefetch_related("services")
         ],
+        # The reusable ingredient catalog is emitted before menu_categories so
+        # an importer can create it first and then link each menu-item
+        # ingredient to it by slug.
+        "ingredients": [
+            _ingredient_catalog_dict(i) for i in system.ingredients.all()
+        ],
         "menu_categories": [
             _menu_category_dict(c)
             for c in system.menu_categories.all().prefetch_related(
-                "menu_items__ingredients"
+                "menu_items__ingredients__ingredient"
             )
         ],
     }
@@ -298,7 +328,10 @@ def _reset(system: System) -> None:
     system.product_categories.all().delete()
     Service.objects.filter(system=system).delete()
     system.service_categories.all().delete()
+    # MenuItem first (cascades its MenuItemIngredient rows), then the reusable
+    # Ingredient catalog they PROTECT-referenced, then the categories.
     MenuItem.objects.filter(system=system).delete()
+    Ingredient.objects.filter(system=system).delete()
     system.menu_categories.all().delete()
 
 
@@ -414,8 +447,33 @@ def _apply_services(system, categories) -> dict:
     return counts
 
 
+def _apply_ingredients(system, items) -> dict:
+    """Upsert the reusable Ingredient catalog (keyed by global slug)."""
+    counts = {"created": 0, "updated": 0}
+    for ing in items:
+        slug = _slug_of(ing)
+        if not slug:
+            continue
+        defaults = _defaults(system, ing, INGREDIENT_CATALOG_TEXT_FIELDS)
+        if ing.get("nutrition_basis_quantity") is not None:
+            defaults["nutrition_basis_quantity"] = _decimal(
+                ing["nutrition_basis_quantity"]
+            )
+        for f in INGREDIENT_NUTRIENT_FIELDS:
+            if ing.get(f) is not None:
+                defaults[f] = _decimal(ing[f])
+        _, created = Ingredient.objects.update_or_create(
+            slug=slug, defaults=defaults
+        )
+        _upsert(counts, created)
+    return counts
+
+
 def _apply_menu(system, categories) -> dict:
     counts = {"created": 0, "updated": 0, "categories": 0}
+    # Menu-item ingredients link to reusable Ingredients by slug (applied just
+    # before this in apply_payload), so resolve them once up front.
+    ingredient_by_slug = {i.slug: i for i in system.ingredients.all()}
     for c in categories:
         cslug = _slug_of(c)
         if not cslug:
@@ -444,18 +502,20 @@ def _apply_menu(system, categories) -> dict:
                 slug=mslug, defaults=defaults
             )
             _upsert(counts, created)
-            # Ingredients have no global slug; key them by (menu_item, sort_order)
+            # Menu-item ingredients reference a reusable Ingredient by slug and
+            # have no global slug themselves; key them by (menu_item, sort_order)
             # so a re-publish updates in place rather than duplicating - the same
-            # pattern used for highlight sub-items above.
+            # pattern used for highlight sub-items above. A row whose referenced
+            # ingredient is unknown (catalog not imported) is skipped.
             for k, ing in enumerate(m.get("ingredients") or []):
-                ing_defaults = {}
-                for f in INGREDIENT_TEXT_FIELDS:
-                    if ing.get(f) is not None:
-                        ing_defaults[f] = ing[f]
+                ingredient = ingredient_by_slug.get(ing.get("ingredient"))
+                if ingredient is None:
+                    continue
+                ing_defaults = {"ingredient": ingredient}
                 ing_defaults["quantity"] = (
                     _decimal(ing["quantity"]) if ing.get("quantity") is not None else None
                 )
-                ing_defaults["calories"] = ing.get("calories")
+                ing_defaults["unit"] = ing.get("unit") or None
                 ing_defaults["price"] = _decimal(ing.get("price", 0))
                 ing_defaults["is_default"] = ing.get("is_default", True)
                 ing_defaults["is_removable"] = ing.get("is_removable", True)
@@ -503,6 +563,8 @@ def apply_payload(payload: dict, *, reset: bool = False) -> dict:
             "highlights": _apply_highlights(system, payload.get("highlights") or []),
             "product_categories": _apply_products(system, payload.get("product_categories") or []),
             "service_categories": _apply_services(system, payload.get("service_categories") or []),
+            # Ingredients before menu items: the latter link to the former by slug.
+            "ingredients": _apply_ingredients(system, payload.get("ingredients") or []),
             "menu_categories": _apply_menu(system, payload.get("menu_categories") or []),
         }
     return summary

@@ -454,8 +454,8 @@ class CartItemSerializer(serializers.Serializer):
             qty = int(row.get('quantity', 0))
             rows.append({
                 'ingredient': ingredient.id,
-                'name': ingredient.name,
-                'en_name': ingredient.en_name,
+                'name': ingredient.effective_name,
+                'en_name': ingredient.effective_en_name,
                 'quantity': qty,
                 'unit_price': str(ingredient.price),
                 'line_upcharge': str(ingredient.upcharge_for_quantity(qty)),

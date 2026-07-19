@@ -38,6 +38,7 @@ from django.db import transaction
 from django.utils.text import slugify
 
 from catalog.models import (
+    Ingredient,
     MenuCategory,
     MenuItem,
     MenuItemImage,
@@ -430,6 +431,31 @@ class Command(BaseCommand):
 
     def _seed_menu(self, system: System, categories: list) -> None:
         n_cat = n_item = n_ing = 0
+        # The brief lists ingredients inline per dish; create one reusable
+        # Ingredient per distinct name and reference it, so a "butter" shared by
+        # two dishes is the same catalog row. `nutrition_basis_quantity` is set to
+        # the first portion so the seeded calories read back at face value.
+        ingredient_cache: dict[str, Ingredient] = {}
+
+        def _get_ingredient(ing: dict) -> Ingredient:
+            name = (ing.get("name") or "ingredient").strip()
+            key = name.lower()
+            cached = ingredient_cache.get(key)
+            if cached is not None:
+                return cached
+            qty = self._price(ing["quantity"]) if ing.get("quantity") is not None else None
+            obj = Ingredient.objects.create(
+                system=system,
+                name=name,
+                en_name=ing.get("en_name"),
+                unit=ing.get("unit") or "g",
+                nutrition_basis_quantity=qty if qty else Decimal("1"),
+                calories=ing.get("calories"),
+                slug=self._uslug(name, "ingredient"),
+            )
+            ingredient_cache[key] = obj
+            return obj
+
         for ci, c in enumerate(categories):
             cat = MenuCategory(
                 system=system,
@@ -476,11 +502,9 @@ class Command(BaseCommand):
                 for ii, ing in enumerate(m.get("ingredients") or []):
                     MenuItemIngredient.objects.create(
                         menu_item=item,
-                        name=ing.get("name"),
-                        en_name=ing.get("en_name"),
+                        ingredient=_get_ingredient(ing),
                         quantity=self._price(ing["quantity"]) if ing.get("quantity") is not None else None,
                         unit=ing.get("unit"),
-                        calories=ing.get("calories"),
                         price=self._price(ing.get("price", 0)),
                         is_default=ing.get("is_default", True),
                         is_removable=ing.get("is_removable", True),
