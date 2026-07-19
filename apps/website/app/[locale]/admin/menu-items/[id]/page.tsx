@@ -89,6 +89,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     brand: "",
     is_available: true,
     is_featured: false,
+    show_nutrition_label: true,
     enabled: true,
     spice_level: "",
     allergens: "",
@@ -202,6 +203,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
             brand: item.brand ?? "",
             is_available: item.is_available ?? true,
             is_featured: item.is_featured ?? false,
+            show_nutrition_label: item.show_nutrition_label ?? true,
             enabled: item.enabled ?? true,
             spice_level: item.spice_level ?? "",
             allergens: item.allergens ?? "",
@@ -224,6 +226,9 @@ export default function AdminMenuItemFormPage({ params }: Props) {
             id: i.id as number,
             name: String(i.name ?? ""),
             en_name: String(i.en_name ?? ""),
+            image: i.image ? String(i.image) : null,
+            imageBase64: null,
+            imageRemoved: false,
             price: String(i.price ?? "0.00"),
             quantity: i.quantity == null ? "" : String(i.quantity),
             unit: String(i.unit ?? ""),
@@ -276,7 +281,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     for (let i = 0; i < ingredients.length; i++) {
       const row = ingredients[i];
       if (!row || !row.name.trim()) continue;
-      const payload = {
+      const payload: Record<string, unknown> = {
         name: row.name,
         en_name: row.en_name || null,
         price: row.price === "" ? "0.00" : row.price,
@@ -289,6 +294,14 @@ export default function AdminMenuItemFormPage({ params }: Props) {
         sort_order: i,
         enabled: row.enabled,
       };
+      // Only send `image` when it actually changed: a new upload sends its
+      // base64, an explicit removal sends "" to clear, and leaving it untouched
+      // omits the key so the API keeps the stored image.
+      if (row.imageBase64) {
+        payload.image = row.imageBase64;
+      } else if (row.imageRemoved) {
+        payload.image = "";
+      }
       if (row.id) {
         await updateMenuItemIngredient(menuItemId, row.id, payload).catch(
           () => null,
@@ -449,6 +462,11 @@ export default function AdminMenuItemFormPage({ params }: Props) {
       type: "boolean",
     },
     { key: "is_featured", label: t("featured") ?? "Featured", type: "boolean" },
+    {
+      key: "show_nutrition_label",
+      label: t("showNutritionLabel") ?? "Show nutrition label",
+      type: "boolean",
+    },
     { key: "enabled", label: t("enabled"), type: "boolean" },
   ];
 

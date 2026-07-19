@@ -406,6 +406,7 @@ export interface MenuItemIngredient {
   id: number;
   name: string;
   en_name: string | null;
+  image: string | null;
   quantity: string | null;
   unit: string | null;
   calories: number | null;
@@ -443,6 +444,7 @@ export interface MenuItemDetail {
   currency: string;
   is_available: boolean;
   is_featured: boolean;
+  show_nutrition_label: boolean;
   category: number | null;
   category_name: string | null;
   category_slug: string | null;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@repo/i18n/navigation";
 import { Box } from "@repo/ui/core-elements/box";
@@ -184,26 +185,46 @@ export function MenuItemCustomizer({
                 flexWrap="wrap"
                 styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
               >
-                <Box flexDirection="column" gap={2} flex="1" minWidth={160}>
-                  <Typography variant="body" margin={0}>
-                    {name}
-                    {!included &&
-                      ing.quantity &&
-                      ` · ${ing.quantity}${ing.unit ? ` ${ing.unit}` : ""}`}
-                  </Typography>
-                  {!included && (
-                    <Typography
-                      variant="caption"
-                      margin={0}
-                      color="var(--foreground)"
+                <Box alignItems="center" gap={10} flex="1" minWidth={160}>
+                  {ing.image && (
+                    <Box
+                      width={44}
+                      height={44}
+                      flex="0 0 auto"
+                      borderRadius={8}
+                      backgroundColor="var(--surface-2)"
+                      styles={{ position: "relative", overflow: "hidden" }}
                     >
-                      {price > 0
-                        ? t("perUnitUpcharge", {
-                            price: formatPrice(ing.price, currency),
-                          })
-                        : t("free")}
-                    </Typography>
+                      <Image
+                        src={ing.image}
+                        alt={name}
+                        fill
+                        sizes="44px"
+                        style={{ objectFit: "cover" }}
+                      />
+                    </Box>
                   )}
+                  <Box flexDirection="column" gap={2}>
+                    <Typography variant="body" margin={0}>
+                      {name}
+                      {!included &&
+                        ing.quantity &&
+                        ` · ${ing.quantity}${ing.unit ? ` ${ing.unit}` : ""}`}
+                    </Typography>
+                    {!included && (
+                      <Typography
+                        variant="caption"
+                        margin={0}
+                        color="var(--foreground)"
+                      >
+                        {price > 0
+                          ? t("perUnitUpcharge", {
+                              price: formatPrice(ing.price, currency),
+                            })
+                          : t("free")}
+                      </Typography>
+                    )}
+                  </Box>
                 </Box>
 
                 {included ? (

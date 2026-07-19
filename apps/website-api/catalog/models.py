@@ -4,7 +4,7 @@ from colorfield.fields import ColorField
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from core.models import Buyable, Common, RegularPicture, StandardPicture, picture
+from core.models import Buyable, Common, RegularPicture, SmallPicture, StandardPicture, picture
 
 
 DIMENSION_UNIT_CHOICES = [
@@ -590,6 +590,10 @@ class MenuItem(Buyable):
     is_featured = models.BooleanField(default=False)
     is_ai_generated = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
+    show_nutrition_label = models.BooleanField(
+        default=True,
+        help_text='Show the calorie/nutrition breakdown card on the public detail page.',
+    )
 
     # Dietary / serving metadata (all optional, public).
     spice_level = models.PositiveSmallIntegerField(
@@ -660,7 +664,7 @@ class MenuItemImage(StandardPicture):
         return f"Image for {self.menu_item} (#{self.sort_order})"
 
 
-class MenuItemIngredient(Common):
+class MenuItemIngredient(SmallPicture):
     """One priced, customisable component of a MenuItem.
 
     The pricing model is *base price + add-on deltas* (see ``MenuItem``):
@@ -682,11 +686,12 @@ class MenuItemIngredient(Common):
         on_delete=models.CASCADE,
         related_name='ingredients',
     )
+    # `name` is required here, overriding BasePicture's nullable `name`; `image`
+    # (256px), `en_name`, `fit`, `background_color`, etc. come from SmallPicture.
     name = models.CharField(max_length=255)
-    en_name = models.CharField(max_length=255, null=True, blank=True)
 
     # Descriptive portion (display only).
-    quantity = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    quantity = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
     unit = models.CharField(
         max_length=8, choices=QUANTITY_UNIT_CHOICES, null=True, blank=True,
     )

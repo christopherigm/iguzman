@@ -1372,7 +1372,7 @@ class MenuItemDetailView(APIView):
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         menu_item.delete()
         cache.delete(f'catalog:menu_item:{pk}')
-        cache.delete(f'catalog:menu_item_ingredients:{pk}')
+        _invalidate_pattern(f'catalog:menu_item_ingredients:{pk}:*')
         cache.delete(f'catalog:menu_item_recipe:{pk}')
         _invalidate_pattern('catalog:menu_items:*')
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -1473,14 +1473,19 @@ class MenuItemIngredientListCreateView(APIView):
             return None
 
     def get(self, request, pk):
-        cache_key = f'catalog:menu_item_ingredients:{pk}'
+        # System admins may request disabled ingredients too (so the CMS editor
+        # can still see/re-enable one it turned off). The resolved flag - not the
+        # raw param - scopes the cache key, or an admin response could be replayed
+        # to the public.
+        disabled_visible = show_disabled(request)
+        cache_key = f'catalog:menu_item_ingredients:{pk}:{int(disabled_visible)}'
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
         menu_item = self._get_item(pk)
         if menu_item is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        qs = menu_item.ingredients.filter(enabled=True)
+        qs = menu_item.ingredients.all() if disabled_visible else menu_item.ingredients.filter(enabled=True)
         data = MenuItemIngredientSerializer(qs, many=True, context={'request': request}).data
         cache.set(cache_key, data, CACHE_TTL)
         return Response(data)
@@ -1492,7 +1497,7 @@ class MenuItemIngredientListCreateView(APIView):
         serializer = MenuItemIngredientWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         ingredient = serializer.create(serializer.validated_data, menu_item=menu_item)
-        cache.delete(f'catalog:menu_item_ingredients:{pk}')
+        _invalidate_pattern(f'catalog:menu_item_ingredients:{pk}:*')
         cache.delete(f'catalog:menu_item:{pk}')
         _invalidate_pattern('catalog:menu_items:*')
         return Response(MenuItemIngredientSerializer(ingredient, context={'request': request}).data, status=status.HTTP_201_CREATED)
@@ -1529,7 +1534,7 @@ class MenuItemIngredientDetailView(APIView):
         serializer = MenuItemIngredientWriteSerializer(ingredient, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         ingredient = serializer.update(ingredient, serializer.validated_data)
-        cache.delete(f'catalog:menu_item_ingredients:{pk}')
+        _invalidate_pattern(f'catalog:menu_item_ingredients:{pk}:*')
         cache.delete(f'catalog:menu_item:{pk}')
         _invalidate_pattern('catalog:menu_items:*')
         return Response(MenuItemIngredientSerializer(ingredient, context={'request': request}).data)
@@ -1539,7 +1544,7 @@ class MenuItemIngredientDetailView(APIView):
         if ingredient is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         ingredient.delete()
-        cache.delete(f'catalog:menu_item_ingredients:{pk}')
+        _invalidate_pattern(f'catalog:menu_item_ingredients:{pk}:*')
         cache.delete(f'catalog:menu_item:{pk}')
         _invalidate_pattern('catalog:menu_items:*')
         return Response(status=status.HTTP_204_NO_CONTENT)

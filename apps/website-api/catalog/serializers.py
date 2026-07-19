@@ -1040,26 +1040,41 @@ class MenuCategoryWriteSerializer(serializers.ModelSerializer):
 # MenuItem ingredient serializers
 # ---------------------------------------------------------------------------
 
+# Aligned to the SmallPicture (256px) mixin backing MenuItemIngredient.image.
+_INGREDIENT_IMAGE_CFG = {'max_size': (256, 256), 'quality': 85, 'force_format': 'JPEG'}
+
+
 class MenuItemIngredientSerializer(serializers.ModelSerializer):
     included_units = serializers.IntegerField(read_only=True)
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = MenuItemIngredient
         fields = [
             'id', 'enabled', 'created', 'modified', 'version',
-            'menu_item', 'name', 'en_name',
+            'menu_item', 'name', 'en_name', 'image',
             'quantity', 'unit', 'calories', 'price',
             'is_default', 'is_removable', 'max_quantity',
             'included_units', 'sort_order',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version', 'menu_item']
 
+    def get_image(self, obj):
+        request = self.context.get('request')
+        if not obj.image:
+            return None
+        return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+
 
 class MenuItemIngredientWriteSerializer(serializers.ModelSerializer):
+    # Declared explicitly (not the model ImageField) so it accepts a base64
+    # string: unchanged when omitted, cleared when explicitly null/blank.
+    image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
     class Meta:
         model = MenuItemIngredient
         fields = [
-            'name', 'en_name', 'quantity', 'unit', 'calories', 'price',
+            'name', 'en_name', 'image', 'quantity', 'unit', 'calories', 'price',
             'is_default', 'is_removable', 'max_quantity', 'sort_order', 'enabled',
         ]
 
@@ -1076,13 +1091,43 @@ class MenuItemIngredientWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('max_quantity must be at least 1.')
         return value
 
+    def validate_image(self, value):
+        if not value:
+            return value
+        sub = ImageProcessingSerializer(data={'base64_image': value}, **_INGREDIENT_IMAGE_CFG)
+        if not sub.is_valid():
+            raise serializers.ValidationError(sub.errors['base64_image'])
+        return value
+
+    def _apply_image(self, instance, image_data):
+        """Process a base64 image onto the instance, or clear it. Assumes the
+        instance already has a pk (so the upload path can reference it)."""
+        if image_data:
+            proc = ImageProcessingSerializer(data={'base64_image': image_data}, **_INGREDIENT_IMAGE_CFG)
+            proc.is_valid()
+            proc.save_to_field(instance.image, f'ingredient_{instance.menu_item_id}_{instance.pk}.jpg')
+        else:
+            instance.image = None
+        instance.save(update_fields=['image'])
+
     def create(self, validated_data, menu_item):
-        return MenuItemIngredient.objects.create(menu_item=menu_item, **validated_data)
+        # `image` is not a model field kwarg here (it holds base64), so it is
+        # popped and processed after the row exists.
+        has_image = 'image' in validated_data
+        image_data = validated_data.pop('image', None)
+        instance = MenuItemIngredient.objects.create(menu_item=menu_item, **validated_data)
+        if has_image:
+            self._apply_image(instance, image_data)
+        return instance
 
     def update(self, instance, validated_data):
+        has_image = 'image' in validated_data
+        image_data = validated_data.pop('image', None)
         for field, value in validated_data.items():
             setattr(instance, field, value)
         instance.save()
+        if has_image:
+            self._apply_image(instance, image_data)
         return instance
 
 
@@ -1269,6 +1314,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
             'href', 'video_link', 'fit', 'background_color',
             'price', 'compare_price', 'cost_price', 'currency',
             'is_available', 'is_featured', 'is_ai_generated', 'is_verified',
+            'show_nutrition_label',
             'spice_level', 'servings',
             'prep_time_minutes', 'cook_time_minutes',
             'is_organic', 'is_vegetarian', 'is_vegan', 'is_gluten_free', 'allergens',
@@ -1329,6 +1375,7 @@ class MenuItemWriteSerializer(serializers.Serializer):
     is_featured = serializers.BooleanField(required=False)
     is_ai_generated = serializers.BooleanField(required=False)
     is_verified = serializers.BooleanField(required=False)
+    show_nutrition_label = serializers.BooleanField(required=False)
 
     spice_level = serializers.IntegerField(min_value=0, max_value=5, required=False, allow_null=True)
     servings = serializers.IntegerField(min_value=0, required=False, allow_null=True)

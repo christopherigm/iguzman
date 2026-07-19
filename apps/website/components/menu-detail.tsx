@@ -11,10 +11,20 @@ import { toShareDescription } from "@/lib/metadata";
 import { discountPercent } from "@/lib/price";
 import { MenuItemCustomizer } from "./menu-item-customizer";
 import { FavoriteButton } from "./favorite-button";
+import { NutritionLabel, nutritionRows } from "./nutrition-label";
 
 interface MenuDetailProps {
   item: MenuItemDetail;
   locale: string;
+}
+
+/**
+ * Whether the nutrition-label card should render for this item: the admin
+ * toggle is on *and* at least one ingredient carries enough data to chart.
+ * The detail page uses this to decide whether to reserve a grid row for it.
+ */
+export function menuItemShowsNutrition(item: MenuItemDetail): boolean {
+  return item.show_nutrition_label && nutritionRows(item.ingredients).length > 0;
 }
 
 /**
@@ -201,6 +211,15 @@ export async function MenuDetailPanel({ item, locale }: MenuDetailProps) {
       )}
     </Box>
   );
+}
+
+/**
+ * Nutrition-label card, gated by the item's admin toggle and the presence of
+ * chartable ingredients. Rendered in its own grid row below "About this item".
+ */
+export async function MenuDetailNutrition({ item, locale }: MenuDetailProps) {
+  if (!menuItemShowsNutrition(item)) return null;
+  return <NutritionLabel ingredients={item.ingredients} locale={locale} />;
 }
 
 /** Full-width long-form description below the buy box. */

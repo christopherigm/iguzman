@@ -330,8 +330,10 @@ export async function updateMenuItemImage(
 
 // ---- Menu Item Ingredients ----
 export async function listMenuItemIngredients(menuItemId: number) {
+  // include_disabled is admin-gated server-side, so the CMS editor still sees
+  // (and can re-enable) an ingredient whose `enabled` switch was turned off.
   const res = await adminFetch(
-    `/api/catalog/menu-items/${menuItemId}/ingredients/`,
+    `/api/catalog/menu-items/${menuItemId}/ingredients/?include_disabled=true`,
   );
   return parseResponse<Record<string, unknown>[]>(res);
 }

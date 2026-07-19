@@ -10,8 +10,16 @@
    grid-column placement have no component-prop equivalent. */
 .af__grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
+}
+
+/* Grid items default to min-width: auto, which refuses to shrink below their
+   content's intrinsic width - a single nowrap child (e.g. the payments webhook
+   URL) then forces the whole grid past the viewport and bleeds out on mobile.
+   min-width: 0 lets items shrink so inner overflow-x boxes scroll instead. */
+.af__grid > * {
+  min-width: 0;
 }
 
 .af__field--full {
@@ -102,7 +110,7 @@
 @media (max-width: 599px) {
   /* xs */
   .af__grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .af__field--full {
     grid-column: 1;

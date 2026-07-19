@@ -416,7 +416,7 @@ class MenuItemIngredientInline(admin.TabularInline):
     model = MenuItemIngredient
     extra = 0
     fields = (
-        'name', 'en_name', 'quantity', 'unit', 'calories', 'price',
+        'name', 'en_name', 'image', 'quantity', 'unit', 'calories', 'price',
         'is_default', 'is_removable', 'max_quantity', 'sort_order', 'enabled',
     )
 
@@ -465,7 +465,7 @@ class MenuCategoryAdmin(admin.ModelAdmin):
 @admin.register(MenuItem)
 class MenuItemAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug', 'category', 'brand', 'price', 'currency', 'is_available', 'is_featured', 'is_ai_generated', 'is_verified', 'enabled', 'modified')
-    list_filter = ('enabled', 'is_available', 'is_featured', 'is_organic', 'is_vegetarian', 'is_vegan', 'is_gluten_free', 'is_ai_generated', 'is_verified', 'currency', 'system', 'category', 'brand')
+    list_filter = ('enabled', 'is_available', 'show_nutrition_label', 'is_featured', 'is_organic', 'is_vegetarian', 'is_vegan', 'is_gluten_free', 'is_ai_generated', 'is_verified', 'currency', 'system', 'category', 'brand')
     search_fields = ('name', 'en_name', 'slug', 'sku')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
@@ -473,7 +473,7 @@ class MenuItemAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Identity', {
-            'fields': ('system', 'category', 'brand', 'enabled', 'is_available', 'is_featured', 'is_ai_generated', 'is_verified', 'version', 'created', 'modified'),
+            'fields': ('system', 'category', 'brand', 'enabled', 'is_available', 'show_nutrition_label', 'is_featured', 'is_ai_generated', 'is_verified', 'version', 'created', 'modified'),
         }),
         ('Content (ES)', {
             'fields': ('name', 'slug', 'description', 'short_description', 'image', 'fit', 'background_color', 'href', 'video_link'),
@@ -502,7 +502,7 @@ class MenuItemAdmin(admin.ModelAdmin):
 
     def delete_model(self, request, obj):
         cache.delete(f'catalog:menu_item:{obj.pk}')
-        cache.delete(f'catalog:menu_item_ingredients:{obj.pk}')
+        _invalidate_pattern(f'catalog:menu_item_ingredients:{obj.pk}:*')
         _invalidate_pattern('catalog:menu_items:*')
         super().delete_model(request, obj)
 
@@ -516,12 +516,12 @@ class MenuItemIngredientAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
-        cache.delete(f'catalog:menu_item_ingredients:{obj.menu_item_id}')
+        _invalidate_pattern(f'catalog:menu_item_ingredients:{obj.menu_item_id}:*')
         cache.delete(f'catalog:menu_item:{obj.menu_item_id}')
         _invalidate_pattern('catalog:menu_items:*')
 
     def delete_model(self, request, obj):
-        cache.delete(f'catalog:menu_item_ingredients:{obj.menu_item_id}')
+        _invalidate_pattern(f'catalog:menu_item_ingredients:{obj.menu_item_id}:*')
         cache.delete(f'catalog:menu_item:{obj.menu_item_id}')
         _invalidate_pattern('catalog:menu_items:*')
         super().delete_model(request, obj)

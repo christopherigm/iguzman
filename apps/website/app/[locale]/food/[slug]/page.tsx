@@ -14,6 +14,8 @@ import {
   MenuDetailHeader,
   MenuDetailPanel,
   MenuDetailSections,
+  MenuDetailNutrition,
+  menuItemShowsNutrition,
 } from "@/components/menu-detail";
 import type { MenuItemDetail } from "@/lib/catalog";
 
@@ -129,7 +131,11 @@ export default async function MenuItemPage({ params }: Props) {
         paddingBottom="var(--ui-page-bottom-spacing, 64px)"
       >
         <Breadcrumbs items={breadcrumbs} />
+
+        {/* Row 1: title, badges, category (spans both columns). */}
         <MenuDetailHeader item={item} locale={locale} />
+
+        {/* Row 2: gallery + customize/buy/allergens, side by side on desktop. */}
         <Grid container spacing={2} marginBottom={18}>
           <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
             <ItemGalleryClient
@@ -141,7 +147,19 @@ export default async function MenuItemPage({ params }: Props) {
             <MenuDetailPanel item={item} locale={locale} />
           </Grid>
         </Grid>
+
+        {/* Row 3: "About this item" long-form description. */}
         <MenuDetailSections item={item} locale={locale} />
+
+        {/* Row 4: nutrition label - a narrow column on desktop, full-width on
+            mobile. Only rendered when the item opts in and has chartable data. */}
+        {menuItemShowsNutrition(item) && (
+          <Grid container spacing={2} marginTop={18}>
+            <Grid size={{ xs: 12, md: 4, lg: 3 }}>
+              <MenuDetailNutrition item={item} locale={locale} />
+            </Grid>
+          </Grid>
+        )}
       </Container>
     </>
   );
