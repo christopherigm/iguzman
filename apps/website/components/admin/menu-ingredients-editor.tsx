@@ -14,6 +14,7 @@ import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Select } from "@repo/ui/core-elements/select";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { useLlmProxy, type LlmMessage } from "@repo/ui/use-llm";
 
 /** One editable ingredient row. `id` is present once persisted; `key` is a
  *  stable client id used only for React list identity.
@@ -22,11 +23,26 @@ import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
  *  Ingredient (`ingredient` holds its id), so this row only carries the recipe
  *  *portion* and *pricing*. Calories are computed by the API from the chosen
  *  ingredient scaled to `quantity`/`unit`. */
+/** One *alternative* ingredient in a single-select choice group. Its `price` is
+ *  the per-unit up-charge when this option is chosen; the recipe portion is the
+ *  parent row's shared `quantity`/`unit`. `key` is a stable client id. */
+export interface IngredientOptionRow {
+  key: string;
+  /** The referenced reusable Ingredient's id ("" until one is picked). */
+  ingredient: number | "";
+  price: string;
+}
+
 export interface IngredientRow {
   key: string;
   id?: number;
-  /** The referenced reusable Ingredient's id ("" until one is picked). */
+  /** The referenced reusable Ingredient's id ("" until one is picked). This is
+   *  the group's *default* option; `options` holds the alternatives. */
   ingredient: number | "";
+  /** Customer-facing label for the choice group (e.g. "Sweetener"), shown as the
+   *  heading above the choice chips. Only used when `options` is non-empty. */
+  group_name: string;
+  group_en_name: string;
   price: string;
   quantity: string;
   unit: string;
@@ -46,6 +62,9 @@ export interface IngredientRow {
   /** Quantity pre-selected for the customer in the stepper (removable add-ons). */
   default_quantity: string;
   enabled: boolean;
+  /** Alternative ingredients for a single-select choice group (empty = plain
+   *  single-ingredient row). Each carries its own per-unit up-charge. */
+  options: IngredientOptionRow[];
 }
 
 /** The subset of an Ingredient the picker needs to render options + a hint. */
@@ -83,6 +102,8 @@ export function newIngredientRow(): IngredientRow {
   return {
     key: `ing-${Date.now()}-${rowCounter}`,
     ingredient: "",
+    group_name: "",
+    group_en_name: "",
     price: "0.00",
     quantity: "",
     unit: "",
@@ -94,15 +115,220 @@ export function newIngredientRow(): IngredientRow {
     number_of_free_portions: "0",
     default_quantity: "0",
     enabled: true,
+    options: [],
+  };
+}
+
+let optionCounter = 0;
+export function newIngredientOptionRow(): IngredientOptionRow {
+  optionCounter += 1;
+  return {
+    key: `opt-${Date.now()}-${optionCounter}`,
+    ingredient: "",
+    price: "0.00",
   };
 }
 
 interface Props {
   value: IngredientRow[];
   onChange: (rows: IngredientRow[]) => void;
-  currency: string;
   /** The tenant's reusable ingredient catalog, for the picker. */
   catalog: IngredientOption[];
+}
+
+/** A 40×40 rounded thumbnail of the picked ingredient (blank placeholder when
+ *  none is chosen yet). Shared by the default row and each alternative option so
+ *  every ingredient shows its image. */
+function IngredientThumb({ image }: { image: string | null }) {
+  return (
+    <Box
+      width={40}
+      height={40}
+      flex="0 0 auto"
+      borderRadius={8}
+      backgroundColor="var(--surface-2)"
+      styles={{ position: "relative", overflow: "hidden" }}
+    >
+      {image && (
+        <Image src={image} alt="" fill sizes="40px" style={{ objectFit: "cover" }} />
+      )}
+    </Box>
+  );
+}
+
+/** Translate a group name between the two languages. Mirrors `admin-form.tsx`'s
+ *  translate prompts so the CMS reads consistently: ES→EN and EN→ES, text only. */
+function buildGroupTranslateMessages(
+  text: string,
+  source: "es" | "en",
+): LlmMessage[] {
+  if (source === "en") {
+    return [
+      {
+        role: "system",
+        content:
+          "You are a professional translator. Translate the following text from English to Spanish. Return only the translated text - no explanations, labels, or formatting marks.",
+      },
+      { role: "user", content: text },
+    ];
+  }
+  return [
+    {
+      role: "system",
+      content:
+        "Eres un traductor profesional. Traduce el siguiente texto del español al inglés. Devuelve únicamente el texto traducido - sin explicaciones, etiquetas ni marcas de formato.",
+    },
+    { role: "user", content: text },
+  ];
+}
+
+/**
+ * The choice-group name pair (ES + EN) with a per-field AI translate button.
+ *
+ * A self-contained slice of `admin-form.tsx`'s translate flow, scoped to one
+ * ingredient row: each field's button streams a translation of its own value
+ * into a preview, which the user accepts into the *other* language or discards.
+ * Its own `useLlmProxy` instance keeps each row's generation independent.
+ */
+function GroupNameFields({
+  groupName,
+  groupEnName,
+  onChange,
+}: {
+  groupName: string;
+  groupEnName: string;
+  onChange: (patch: Partial<IngredientRow>) => void;
+}) {
+  const t = useTranslations("Admin");
+  // `streamingText` is the live preview (it holds the full translation once the
+  // stream ends, and `reset`/`abort` clear it), so no mirrored state is needed.
+  const { streamingText, isGenerating, generate, abort, reset } = useLlmProxy({
+    temperature: 0.3,
+  });
+  // Which field is being translated ("es" = group_name, "en" = group_en_name).
+  const [active, setActive] = useState<"es" | "en" | null>(null);
+
+  const translate = async (source: "es" | "en") => {
+    const text = (source === "es" ? groupName : groupEnName).trim();
+    if (!text) return;
+    setActive(source);
+    reset();
+    await generate(buildGroupTranslateMessages(text, source));
+  };
+
+  const accept = () => {
+    if (active && streamingText) {
+      onChange(
+        active === "es"
+          ? { group_en_name: streamingText }
+          : { group_name: streamingText },
+      );
+    }
+    setActive(null);
+    reset();
+  };
+
+  const discard = () => {
+    if (isGenerating) abort();
+    setActive(null);
+    reset();
+  };
+
+  const field = (source: "es" | "en") => {
+    const value = source === "es" ? groupName : groupEnName;
+    const key = source === "es" ? "group_name" : "group_en_name";
+    return (
+      <Box display="flex" flexDirection="column" gap="6px">
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          minHeight={24}
+        >
+          <Typography variant="label" color="var(--foreground)">
+            {source === "es" ? t("groupName") : t("groupEnName")}
+          </Typography>
+          <Button
+            icon="/icons/translate.svg"
+            iconSize="16px"
+            iconColor={
+              active === source
+                ? "var(--accent, #06b6d4)"
+                : "var(--foreground, #171717)"
+            }
+            disabled={isGenerating || !value.trim()}
+            onClick={() => translate(source)}
+            aria-label={t("translateLabel")}
+            title={t("translateLabel")}
+            type="button"
+          />
+        </Box>
+        <TextInput
+          value={value}
+          onChange={(v) => onChange({ [key]: v } as Partial<IngredientRow>)}
+          minWidth={0}
+        />
+      </Box>
+    );
+  };
+
+  return (
+    <Box display="flex" flexDirection="column" gap="10px">
+      <Box
+        display="grid"
+        gap="10px"
+        alignItems="start"
+        styles={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}
+      >
+        {field("es")}
+        {field("en")}
+      </Box>
+
+      {/* Translate preview: accept writes it into the other language, discard
+          (or stop, mid-stream) drops it. */}
+      {active && (
+        <Box
+          display="flex"
+          flexDirection="column"
+          gap="10px"
+          padding="12px 14px"
+          borderRadius={8}
+          border="1px solid var(--border, #e5e7eb)"
+          backgroundColor="var(--surface-2)"
+        >
+          <Typography variant="body" margin={0}>
+            {streamingText || "…"}
+          </Typography>
+          <Box display="flex" alignItems="center" gap="8px">
+            {isGenerating ? (
+              <Button
+                text={t("enhanceStop")}
+                onClick={discard}
+                size="sm"
+                type="button"
+              />
+            ) : (
+              <>
+                <Button
+                  text={t("enhanceDiscard")}
+                  onClick={discard}
+                  size="sm"
+                  type="button"
+                />
+                <Button
+                  text={t("enhanceAccept")}
+                  onClick={accept}
+                  kind="primary"
+                  size="sm"
+                  type="button"
+                />
+              </>
+            )}
+          </Box>
+        </Box>
+      )}
+    </Box>
+  );
 }
 
 /**
@@ -121,7 +347,6 @@ interface Props {
 export function MenuIngredientsEditor({
   value,
   onChange,
-  currency,
   catalog,
 }: Props) {
   const t = useTranslations("Admin");
@@ -145,6 +370,43 @@ export function MenuIngredientsEditor({
 
   const remove = (key: string) => onChange(value.filter((r) => r.key !== key));
 
+  // Choice-group option mutations, all keyed by the parent row + option key.
+  const addOption = (rowKey: string) =>
+    onChange(
+      value.map((r) =>
+        r.key === rowKey
+          ? { ...r, options: [...r.options, newIngredientOptionRow()] }
+          : r,
+      ),
+    );
+
+  const updateOption = (
+    rowKey: string,
+    optKey: string,
+    patch: Partial<IngredientOptionRow>,
+  ) =>
+    onChange(
+      value.map((r) =>
+        r.key === rowKey
+          ? {
+              ...r,
+              options: r.options.map((o) =>
+                o.key === optKey ? { ...o, ...patch } : o,
+              ),
+            }
+          : r,
+      ),
+    );
+
+  const removeOption = (rowKey: string, optKey: string) =>
+    onChange(
+      value.map((r) =>
+        r.key === rowKey
+          ? { ...r, options: r.options.filter((o) => o.key !== optKey) }
+          : r,
+      ),
+    );
+
   // New rows go to the end of the list; the effect below scrolls the freshly
   // added row into view once it has rendered.
   const add = () => {
@@ -161,18 +423,9 @@ export function MenuIngredientsEditor({
     });
   }, [value.length]);
 
-  const catalogOptions = [
-    { value: "", label: t("selectIngredient") ?? "— Select —" },
-    ...catalog.map((c) => ({
-      value: String(c.id),
-      label: String(c.name ?? c.en_name ?? c.id),
-    })),
-  ];
-
-  // A short "62 kcal per 1 pc" hint for the currently picked ingredient.
-  const basisHint = (row: IngredientRow): string | null => {
-    const picked = catalog.find((c) => c.id === row.ingredient);
-    if (!picked) return null;
+  // A short "62 kcal per 1 pc" hint for a catalog ingredient, shown in
+  // parentheses after its name in the picker.
+  const basisHintFor = (picked: IngredientOption): string | null => {
     const parts: string[] = [];
     if (picked.calories != null && picked.calories !== "")
       parts.push(`${Number(picked.calories)} kcal`);
@@ -181,8 +434,24 @@ export function MenuIngredientsEditor({
         picked.nutrition_basis_quantity ?? "0",
       )} ${picked.unit}`,
     );
-    return parts.join(" ");
+    return parts.join(" ") || null;
   };
+
+  const catalogOptions = [
+    { value: "", label: t("selectIngredient") ?? "— Select —" },
+    ...catalog.map((c) => {
+      const name = String(c.name ?? c.en_name ?? c.id);
+      const hint = basisHintFor(c);
+      return {
+        value: String(c.id),
+        label: hint ? `${name} (${hint})` : name,
+      };
+    }),
+  ];
+
+  // Thumbnail url for a picked ingredient id ("" until one is chosen).
+  const imageFor = (ingredient: number | ""): string | null =>
+    catalog.find((c) => c.id === ingredient)?.image ?? null;
 
   // Drag-to-reorder: the handle starts the drag; each row is a drop target.
   const handleDragStart = (index: number) => setDragIndex(index);
@@ -260,7 +529,6 @@ export function MenuIngredientsEditor({
           // Rows carry an `id` only once persisted; a missing id means this
           // ingredient is new and not yet saved - flag it with a green underline.
           const isUnsaved = row.id === undefined;
-          const hint = basisHint(row);
           const pickedImage =
             catalog.find((c) => c.id === row.ingredient)?.image ?? null;
           return (
@@ -333,32 +601,23 @@ export function MenuIngredientsEditor({
                   </Box>
                 )}
 
+                {/* Group name: once there are alternatives, name the choice so the
+                customer knows what they are picking (e.g. "Sweetener"). Sits above
+                the default picker as the group's heading, with per-field AI
+                translation; hidden for a plain single-ingredient row. */}
+                {!sortMode && row.options.length > 0 && (
+                  <GroupNameFields
+                    groupName={row.group_name}
+                    groupEnName={row.group_en_name}
+                    onChange={(patch) => update(row.key, patch)}
+                  />
+                )}
+
                 {/* Row 2: a thumbnail of the picked ingredient beside the picker
                 (with a nutrition-basis hint), above the portion + pricing fields. */}
                 <Box display="flex" flexDirection="column" gap="6px">
-                  <Box
-                    display="flex"
-                    alignItems={sortMode ? "center" : "flex-end"}
-                    gap="8px"
-                  >
-                    <Box
-                      width={40}
-                      height={40}
-                      flex="0 0 auto"
-                      borderRadius={8}
-                      backgroundColor="var(--surface-2)"
-                      styles={{ position: "relative", overflow: "hidden" }}
-                    >
-                      {pickedImage && (
-                        <Image
-                          src={pickedImage}
-                          alt=""
-                          fill
-                          sizes="40px"
-                          style={{ objectFit: "cover" }}
-                        />
-                      )}
-                    </Box>
+                  <Box display="flex" alignItems="center" gap="8px">
+                    <IngredientThumb image={pickedImage} />
                     <Box flex="1">
                       <Select
                         label={t("ingredient")}
@@ -373,6 +632,33 @@ export function MenuIngredientsEditor({
                         options={catalogOptions}
                       />
                     </Box>
+                    {/* Once there are alternatives the default gets its own inline
+                    up-charge (mirroring each option), and the shared "general"
+                    up-charge is dropped from the grid below. */}
+                    {!sortMode && row.options.length > 0 && (
+                      <Box width={80} flex="0 0 auto">
+                        <TextInput
+                          label={t("upcharge")}
+                          format="number"
+                          value={row.price}
+                          onChange={(v) => update(row.key, { price: v })}
+                          minWidth={0}
+                        />
+                      </Box>
+                    )}
+                    {/* Add a single-select alternative below this default picker
+                    (e.g. Organic sugar / Splenda beside the default Refined). */}
+                    {!sortMode && (
+                      <IconButton
+                        icon="/icons/add.svg"
+                        kind="primary"
+                        size="sm"
+                        aria-label={t("addOption")}
+                        title={t("addOption")}
+                        onClick={() => addOption(row.key)}
+                        type="button"
+                      />
+                    )}
                     {/* The move handle sits inline with the picker; it doubles
                     as the drag source and is only shown in sort mode. */}
                     {sortMode && (
@@ -402,12 +688,61 @@ export function MenuIngredientsEditor({
                       </span>
                     )}
                   </Box>
-                  {!sortMode && hint && (
-                    <Typography variant="caption" color="var(--muted, #6b7280)">
-                      {hint}
-                    </Typography>
-                  )}
                 </Box>
+
+                {/* Single-select alternatives: each is another ingredient the
+                customer may swap in for the default, with its own up-charge and a
+                delete button. The shared portion/pricing fields below apply to all. */}
+                {!sortMode && row.options.length > 0 && (
+                  <Box display="flex" flexDirection="column" gap="8px">
+                    {row.options.map((opt) => (
+                      <Box
+                        key={opt.key}
+                        display="flex"
+                        alignItems="center"
+                        gap="8px"
+                      >
+                        <IngredientThumb image={imageFor(opt.ingredient)} />
+                        <Box flex="1">
+                          <Select
+                            label={t("optionIngredient")}
+                            value={
+                              opt.ingredient === ""
+                                ? ""
+                                : String(opt.ingredient)
+                            }
+                            onChange={(v) =>
+                              updateOption(row.key, opt.key, {
+                                ingredient: v === "" ? "" : Number(v),
+                              })
+                            }
+                            options={catalogOptions}
+                          />
+                        </Box>
+                        <Box width={80} flex="0 0 auto">
+                          <TextInput
+                            label={t("upcharge")}
+                            format="number"
+                            value={opt.price}
+                            onChange={(v) =>
+                              updateOption(row.key, opt.key, { price: v })
+                            }
+                            minWidth={0}
+                          />
+                        </Box>
+                        <IconButton
+                          icon="/icons/delete-trash-icon.svg"
+                          kind="error"
+                          size="sm"
+                          aria-label={t("remove")}
+                          title={t("remove")}
+                          onClick={() => removeOption(row.key, opt.key)}
+                          type="button"
+                        />
+                      </Box>
+                    ))}
+                  </Box>
+                )}
 
                 {!sortMode && (
                   <Box
@@ -419,12 +754,16 @@ export function MenuIngredientsEditor({
                         "repeat(auto-fit, minmax(120px, 1fr))",
                     }}
                   >
-                    <TextInput
-                      label={`${t("upcharge")} (${currency})`}
-                      format="number"
-                      value={row.price}
-                      onChange={(v) => update(row.key, { price: v })}
-                    />
+                    {/* The default's up-charge only lives here when there are no
+                    alternatives; with options it moves inline beside the picker. */}
+                    {row.options.length === 0 && (
+                      <TextInput
+                        label={t("upcharge")}
+                        format="number"
+                        value={row.price}
+                        onChange={(v) => update(row.key, { price: v })}
+                      />
+                    )}
                     <TextInput
                       label={t("portion")}
                       format="number"

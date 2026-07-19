@@ -55,7 +55,7 @@ def _cart_qs(user, system):
         .select_related('product', 'service', 'menu_item', 'product_variant', 'service_variant')
         .prefetch_related(
             'product_variant__option_values', 'service_variant__option_values',
-            'menu_item__ingredients',
+            'menu_item__ingredients', 'menu_item__ingredients__options__ingredient',
         )
     )
 
@@ -77,12 +77,14 @@ def _customization_snapshot(item):
         if ingredient is None:
             continue
         qty = int(row.get('quantity', 0))
-        chargeable = max(0, qty - ingredient.included_units)
+        # Resolve the chosen option (default when unset) so the frozen line names
+        # the exact alternative the customer picked and prices it at that option.
+        chosen_ing, option_price = ingredient.resolve_option(row.get('option'))
         snapshot.append({
-            'name': ingredient.name,
+            'name': chosen_ing.name,
             'quantity': qty,
-            'unit_price': str(ingredient.price),
-            'line_upcharge': str(ingredient.upcharge_for_quantity(qty)),
+            'unit_price': str(option_price),
+            'line_upcharge': str(ingredient.upcharge_for_quantity(qty, option_price)),
             'removed': ingredient.included_units > 0 and qty == 0,
         })
     return snapshot

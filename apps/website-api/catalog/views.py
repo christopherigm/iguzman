@@ -1447,7 +1447,7 @@ class MenuItemListCreateView(APIView):
         if cached is not None:
             return Response(cached)
 
-        qs = MenuItem.objects.filter(system_id=system_id).select_related('brand', 'category', 'system').prefetch_related('images', 'ingredients__ingredient')
+        qs = MenuItem.objects.filter(system_id=system_id).select_related('brand', 'category', 'system').prefetch_related('images', 'ingredients__ingredient', 'ingredients__options__ingredient')
         if not disabled_visible:
             qs = qs.filter(enabled=True)
 
@@ -1507,7 +1507,7 @@ class MenuItemDetailView(APIView):
 
     def _get_object(self, pk):
         try:
-            return MenuItem.objects.select_related('brand', 'category', 'system').prefetch_related('images', 'ingredients__ingredient').get(pk=pk)
+            return MenuItem.objects.select_related('brand', 'category', 'system').prefetch_related('images', 'ingredients__ingredient', 'ingredients__options__ingredient').get(pk=pk)
         except MenuItem.DoesNotExist:
             return None
 
@@ -1654,6 +1654,7 @@ class MenuItemIngredientListCreateView(APIView):
         if menu_item is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         qs = menu_item.ingredients.all() if disabled_visible else menu_item.ingredients.filter(enabled=True)
+        qs = qs.prefetch_related('options__ingredient')
         data = MenuItemIngredientSerializer(qs, many=True, context={'request': request}).data
         cache.set(cache_key, data, CACHE_TTL)
         return Response(data)

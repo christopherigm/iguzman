@@ -15,12 +15,17 @@ import type { MenuItemIngredient } from "@/lib/catalog";
  *
  * The customiser (which the user drives) and the nutrition label (which must
  * mirror it) live in different rows of the page, so the selected quantity per
- * ingredient is lifted here and both read from it. `quantities` is keyed by
- * ingredient id and initialised to what the base already includes.
+ * ingredient - and, for a single-select choice group, the chosen option - are
+ * lifted here and both read from them. Both maps are keyed by the ingredient
+ * *group* id: `quantities` starts at what the base includes, `options` at each
+ * group's default option (its own ingredient id).
  */
 interface MenuCustomizationValue {
   quantities: Record<number, number>;
   setQuantity: (id: number, quantity: number) => void;
+  /** Group id -> chosen option's Ingredient id. */
+  options: Record<number, number>;
+  setOption: (id: number, ingredientId: number) => void;
 }
 
 const MenuCustomizationContext = createContext<MenuCustomizationValue | null>(
@@ -37,6 +42,10 @@ export function MenuCustomizationProvider({
   const [quantities, setQuantities] = useState<Record<number, number>>(() =>
     Object.fromEntries(ingredients.map((i) => [i.id, i.default_units])),
   );
+  // Each group starts on its default option (its own ingredient id).
+  const [options, setOptions] = useState<Record<number, number>>(() =>
+    Object.fromEntries(ingredients.map((i) => [i.id, i.ingredient])),
+  );
 
   const setQuantity = useCallback(
     (id: number, quantity: number) =>
@@ -44,9 +53,15 @@ export function MenuCustomizationProvider({
     [],
   );
 
+  const setOption = useCallback(
+    (id: number, ingredientId: number) =>
+      setOptions((prev) => ({ ...prev, [id]: ingredientId })),
+    [],
+  );
+
   const value = useMemo(
-    () => ({ quantities, setQuantity }),
-    [quantities, setQuantity],
+    () => ({ quantities, setQuantity, options, setOption }),
+    [quantities, setQuantity, options, setOption],
   );
 
   return (

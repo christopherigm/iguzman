@@ -7,7 +7,8 @@ from decimal import Decimal
 from core.models import Brand, System
 
 from .models import (
-    Product, MenuItem, MenuItemIngredient, Ingredient, normalize_selection,
+    Product, MenuItem, MenuItemIngredient, MenuItemIngredientOption,
+    Ingredient, normalize_selection,
 )
 
 
@@ -271,6 +272,89 @@ class MenuItemPricingTests(TestCase):
         self.assertEqual(
             self.item.price_for_selection([{"ingredient": foreign.id, "quantity": 1}]),
             Decimal("8.00"),
+        )
+
+
+class MenuItemChoiceGroupTests(TestCase):
+    """Single-select choice groups: a group whose default ingredient can be
+    swapped for a priced alternative (e.g. Sweetener -> Organic sugar / Splenda).
+    Pinned separately because the ``option`` field threads through pricing,
+    normalisation, and the no-refund invariant."""
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Cafe", host="cafe.test")
+        self.item = MenuItem.objects.create(
+            system=self.system, name="Latte", slug="latte", price=Decimal("4.00"),
+        )
+        self.refined = Ingredient.objects.create(
+            system=self.system, name="Refined sugar", slug="refined", unit="g",
+        )
+        self.organic = Ingredient.objects.create(
+            system=self.system, name="Organic sugar", slug="organic", unit="g",
+        )
+        self.splenda = Ingredient.objects.create(
+            system=self.system, name="Splenda", slug="splenda", unit="g",
+        )
+        # Sweetener: included by default at Refined sugar (free), max 2 units.
+        self.sweetener = MenuItemIngredient.objects.create(
+            menu_item=self.item, ingredient=self.refined, price=Decimal("0.00"),
+            is_removable=True, max_quantity=2, default_quantity=1,
+            number_of_free_portions=1,
+        )
+        MenuItemIngredientOption.objects.create(
+            menu_item_ingredient=self.sweetener, ingredient=self.organic,
+            price=Decimal("0.50"), sort_order=0,
+        )
+        MenuItemIngredientOption.objects.create(
+            menu_item_ingredient=self.sweetener, ingredient=self.splenda,
+            price=Decimal("0.25"), sort_order=1,
+        )
+
+    def test_default_option_left_as_listed_is_base_price(self):
+        self.assertEqual(self.item.price_for_selection([]), Decimal("4.00"))
+
+    def test_picking_a_priced_option_charges_its_delta_over_the_free_unit(self):
+        # One Organic sugar (@0.50) with one free portion baked into the base:
+        # the premium delta is still charged even though the unit is "included".
+        selection = [{"ingredient": self.sweetener.id, "quantity": 1, "option": self.organic.id}]
+        self.assertEqual(self.item.price_for_selection(selection), Decimal("4.50"))
+
+    def test_option_price_scales_with_quantity(self):
+        selection = [{"ingredient": self.sweetener.id, "quantity": 2, "option": self.organic.id}]
+        self.assertEqual(self.item.price_for_selection(selection), Decimal("5.00"))
+
+    def test_normalize_records_a_non_default_option_even_at_default_quantity(self):
+        selection = normalize_selection(
+            [{"ingredient": self.sweetener.id, "quantity": 1, "option": self.splenda.id}],
+            self.item.ingredients.all(),
+        )
+        self.assertEqual(
+            selection,
+            [{"ingredient": self.sweetener.id, "quantity": 1, "option": self.splenda.id}],
+        )
+        self.assertEqual(self.item.price_for_selection(selection), Decimal("4.25"))
+
+    def test_normalize_drops_the_default_option_at_default_quantity(self):
+        selection = normalize_selection(
+            [{"ingredient": self.sweetener.id, "quantity": 1, "option": self.refined.id}],
+            self.item.ingredients.all(),
+        )
+        self.assertEqual(selection, [])
+
+    def test_bogus_option_falls_back_to_default(self):
+        # An option id that is not one of this group's choices is dropped by
+        # normalisation and priced as the default (no crash, no premium).
+        selection = normalize_selection(
+            [{"ingredient": self.sweetener.id, "quantity": 1, "option": 999999}],
+            self.item.ingredients.all(),
+        )
+        self.assertEqual(selection, [])
+        self.assertEqual(
+            self.item.price_for_selection(
+                [{"ingredient": self.sweetener.id, "quantity": 1, "option": 999999}]
+            ),
+            Decimal("4.00"),
         )
 
 

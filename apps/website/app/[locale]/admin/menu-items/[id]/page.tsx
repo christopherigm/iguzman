@@ -247,6 +247,8 @@ export default function AdminMenuItemFormPage({ params }: Props) {
             key: `ing-existing-${i.id}`,
             id: i.id as number,
             ingredient: (i.ingredient as number | null) ?? "",
+            group_name: String(i.group_name ?? ""),
+            group_en_name: String(i.group_en_name ?? ""),
             price: String(i.price ?? "0.00"),
             quantity: i.quantity == null ? "" : String(i.quantity),
             unit: String(i.unit ?? ""),
@@ -256,6 +258,13 @@ export default function AdminMenuItemFormPage({ params }: Props) {
             number_of_free_portions: String(i.number_of_free_portions ?? "0"),
             default_quantity: String(i.default_quantity ?? "0"),
             enabled: i.enabled !== false,
+            options: ((i.options as Record<string, unknown>[]) ?? []).map(
+              (o) => ({
+                key: `opt-existing-${o.id}`,
+                ingredient: (o.ingredient as number | null) ?? "",
+                price: String(o.price ?? "0.00"),
+              }),
+            ),
           }));
           setIngredients(ingRows);
           setOriginalIngredientIds(ingRows.map((r) => r.id as number));
@@ -311,8 +320,14 @@ export default function AdminMenuItemFormPage({ params }: Props) {
         reconciled.push(row);
         continue;
       }
+      // The group label only applies to a choice group; a plain row clears it so
+      // a stray label never lingers after the last alternative is removed.
+      const hasOptions = row.options.some((o) => o.ingredient !== "");
       const payload: Record<string, unknown> = {
         ingredient: row.ingredient,
+        group_name: hasOptions && row.group_name.trim() ? row.group_name : null,
+        group_en_name:
+          hasOptions && row.group_en_name.trim() ? row.group_en_name : null,
         price: row.price === "" ? "0.00" : row.price,
         quantity: row.quantity === "" ? null : row.quantity,
         unit: row.unit || null,
@@ -327,6 +342,15 @@ export default function AdminMenuItemFormPage({ params }: Props) {
           row.default_quantity === "" ? 0 : Number(row.default_quantity),
         sort_order: i,
         enabled: row.enabled,
+        // Full-replace the choice-group alternatives; drop any option whose
+        // ingredient hasn't been picked yet so a blank select never persists.
+        options: row.options
+          .filter((o) => o.ingredient !== "")
+          .map((o, idx) => ({
+            ingredient: o.ingredient,
+            price: o.price === "" ? "0.00" : o.price,
+            sort_order: idx,
+          })),
       };
       if (row.id) {
         await updateMenuItemIngredient(menuItemId, row.id, payload).catch(
@@ -574,7 +598,6 @@ export default function AdminMenuItemFormPage({ params }: Props) {
           <MenuIngredientsEditor
             value={ingredients}
             onChange={setIngredients}
-            currency={String(values.currency ?? "USD")}
             catalog={ingredientCatalog}
           />
           <MenuRecipeEditor value={recipe} onChange={setRecipe} />

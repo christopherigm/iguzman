@@ -452,13 +452,16 @@ class CartItemSerializer(serializers.Serializer):
             if ingredient is None:
                 continue
             qty = int(row.get('quantity', 0))
+            # Resolve the chosen option (default when unset) so the cart line shows
+            # the alternative the customer picked, priced at that option.
+            chosen_ing, option_price = ingredient.resolve_option(row.get('option'))
             rows.append({
                 'ingredient': ingredient.id,
-                'name': ingredient.effective_name,
-                'en_name': ingredient.effective_en_name,
+                'name': chosen_ing.name,
+                'en_name': chosen_ing.en_name,
                 'quantity': qty,
-                'unit_price': str(ingredient.price),
-                'line_upcharge': str(ingredient.upcharge_for_quantity(qty)),
+                'unit_price': str(option_price),
+                'line_upcharge': str(ingredient.upcharge_for_quantity(qty, option_price)),
                 'removed': ingredient.included_units > 0 and qty == 0,
             })
         return rows

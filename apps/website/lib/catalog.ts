@@ -437,11 +437,31 @@ export interface Ingredient extends IngredientNutrition {
   nutrition_basis_quantity: string;
 }
 
+/** One alternative ingredient in a single-select choice group. Its nutrition
+ *  (`ingredient_detail`/`calories`) is stated against the *group's* shared
+ *  portion, so it can substitute for the default without re-deriving the amount. */
+export interface MenuItemIngredientOption {
+  /** The option row's id. */
+  id: number;
+  /** The referenced reusable Ingredient's id (the selection value). */
+  ingredient: number;
+  /** The full referenced ingredient, when the API embeds it. */
+  ingredient_detail?: Ingredient;
+  name: string;
+  en_name: string | null;
+  image: string | null;
+  /** Up-charge per unit when this option is chosen. */
+  price: string;
+  /** kcal this option contributes at the group's portion, or null. */
+  calories: number | null;
+  sort_order: number;
+}
+
 export interface MenuItemIngredient {
   id: number;
   /** Whether the ingredient is active; disabled rows are hidden from customers. */
   enabled: boolean;
-  /** The referenced reusable Ingredient's id. */
+  /** The referenced reusable Ingredient's id (the *default* option of the group). */
   ingredient: number;
   /** The full referenced ingredient, when the API embeds it. */
   ingredient_detail?: Ingredient;
@@ -449,6 +469,11 @@ export interface MenuItemIngredient {
   name: string;
   en_name: string | null;
   image: string | null;
+  /** Optional customer-facing label for a single-select choice group (e.g.
+   *  "Sweetener"), shown as the heading above the choice chips. Null on a plain
+   *  single-ingredient row. */
+  group_name: string | null;
+  group_en_name: string | null;
   /** The recipe portion; also drives the scaled `calories`. */
   quantity: string | null;
   unit: string | null;
@@ -478,6 +503,9 @@ export interface MenuItemIngredient {
    *  for a removable add-on, 1 for a locked non-removable ingredient). */
   default_units: number;
   sort_order: number;
+  /** Alternative ingredients for a single-select choice group; empty for a plain
+   *  single-ingredient row. The default option is this row's own fields. */
+  options: MenuItemIngredientOption[];
 }
 
 export interface MenuItemImageT {

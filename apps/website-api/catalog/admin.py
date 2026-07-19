@@ -9,7 +9,8 @@ from .models import (
     VariantOption, VariantOptionValue,
     ProductVariant, ProductVariantImage,
     ServiceVariant,
-    MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient, RecipeStep,
+    MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient,
+    MenuItemIngredientOption, RecipeStep,
     Ingredient,
 )
 
@@ -418,7 +419,8 @@ class MenuItemIngredientInline(admin.TabularInline):
     extra = 0
     autocomplete_fields = ('ingredient',)
     fields = (
-        'ingredient', 'quantity', 'unit', 'price',
+        'ingredient', 'group_name', 'group_en_name',
+        'quantity', 'unit', 'price',
         'is_removable', 'is_internal', 'max_quantity',
         'number_of_free_portions', 'default_quantity',
         'sort_order', 'enabled',
@@ -560,12 +562,20 @@ class IngredientAdmin(admin.ModelAdmin):
         super().delete_model(request, obj)
 
 
+class MenuItemIngredientOptionInline(admin.TabularInline):
+    model = MenuItemIngredientOption
+    extra = 0
+    autocomplete_fields = ('ingredient',)
+    fields = ('ingredient', 'price', 'sort_order')
+
+
 @admin.register(MenuItemIngredient)
 class MenuItemIngredientAdmin(admin.ModelAdmin):
     list_display = ('ingredient', 'menu_item', 'quantity', 'unit', 'price', 'calories', 'is_removable', 'is_internal', 'max_quantity', 'number_of_free_portions', 'default_quantity', 'sort_order', 'enabled')
     list_filter = ('enabled', 'is_removable', 'is_internal', 'menu_item__system')
     search_fields = ('ingredient__name', 'ingredient__en_name', 'menu_item__name')
     autocomplete_fields = ('ingredient',)
+    inlines = [MenuItemIngredientOptionInline]
     readonly_fields = ('created', 'modified', 'version')
 
     def save_model(self, request, obj, form, change):

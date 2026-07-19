@@ -12,6 +12,7 @@ import { Toast } from "@repo/ui/core-elements/toast";
 import type { MenuItemIngredient } from "@/lib/catalog";
 import { formatPrice } from "@/lib/price";
 import { formatPortion } from "@/lib/nutrition";
+import { ingredientChoices, resolveChoice } from "@/lib/menu-selection";
 import { useMenuCustomization } from "./menu-customization-context";
 
 interface Props {
@@ -61,7 +62,8 @@ export function MenuItemCustomizer({
 
   // Quantity per ingredient id lives in the shared customisation context so the
   // nutrition label (rendered in a separate page row) mirrors every change.
-  const { quantities, setQuantity } = useMenuCustomization();
+  const { quantities, setQuantity, options, setOption } =
+    useMenuCustomization();
 
   // Internal ingredients are kitchen-only recipe components: hidden from the
   // customiser and excluded from the price (the server does the same in
@@ -81,15 +83,20 @@ export function MenuItemCustomizer({
     setQuantity(ing.id, clamped);
   };
 
+  // Mirrors the server's `upcharge_for_quantity`: the base already paid for the
+  // default option's included units, so only the value the customer's *chosen*
+  // option x quantity exceeds that baseline is charged (never negative).
   const total = useMemo(() => {
     let sum = parseFloat(basePrice);
     for (const ing of visibleIngredients) {
       const qty = quantities[ing.id] ?? ing.default_units;
-      const chargeable = Math.max(0, qty - ing.included_units);
-      sum += chargeable * parseFloat(ing.price);
+      const choice = resolveChoice(ing, options[ing.id]);
+      const includedValue = parseFloat(ing.price) * ing.included_units;
+      const selectedValue = parseFloat(choice.price) * qty;
+      sum += Math.max(0, selectedValue - includedValue);
     }
     return sum;
-  }, [basePrice, visibleIngredients, quantities]);
+  }, [basePrice, visibleIngredients, quantities, options]);
 
   // Order: included-by-default first (locked essentials), then the free
   // add-ons, then the paid add-ons. A stable sort keeps each group in the
@@ -109,13 +116,28 @@ export function MenuItemCustomizer({
   // it recomputes and stores the price, so nothing here is trusted about money.
   const addToCart = () => {
     const customization = visibleIngredients
-      .map((ing) => ({
-        ingredient: ing.id,
-        quantity: quantities[ing.id] ?? ing.default_units,
-      }))
+      .map((ing) => {
+        const chosen = options[ing.id] ?? ing.ingredient;
+        const isDefaultOption = chosen === ing.ingredient;
+        const quantity = quantities[ing.id] ?? ing.default_units;
+        return {
+          ingredient: ing.id,
+          quantity,
+          // Only carry `option` when the customer swapped in an alternative; the
+          // server normalises anyway, this just keeps the payload lean.
+          ...(isDefaultOption ? {} : { option: chosen }),
+          _isDefaultOption: isDefaultOption,
+        };
+      })
+      // A row travels when the quantity changed OR a non-default option was picked.
       .filter((row) => {
         const ing = visibleIngredients.find((i) => i.id === row.ingredient);
-        return ing && row.quantity !== ing.default_units;
+        if (!ing) return false;
+        return row.quantity !== ing.default_units || !row._isDefaultOption;
+      })
+      .map(({ _isDefaultOption, ...row }) => {
+        void _isDefaultOption;
+        return row;
       });
 
     return fetch("/api/auth/cart", {
@@ -183,123 +205,209 @@ export function MenuItemCustomizer({
           {sortedIngredients.map((ing) => {
             const qty = quantities[ing.id] ?? ing.default_units;
             const min = minFor(ing);
-            const name = (locale === "en" ? ing.en_name : ing.name) ?? ing.name;
-            const price = parseFloat(ing.price);
+            // A single-select choice group offers alternatives; the customer's
+            // pick drives the name, image, portion nutrition and price shown.
+            const choices = ingredientChoices(ing);
+            const isChoice = choices.length > 1;
+            const selectedId = options[ing.id] ?? ing.ingredient;
+            const choice = resolveChoice(ing, selectedId);
+            const name =
+              (locale === "en" ? choice.en_name : choice.name) ?? choice.name;
+            const price = parseFloat(choice.price);
             // Non-removable ingredients are included by default: locked, in the
-            // base price, shown as an "Included" line with no price or stepper.
+            // base price, shown as an "Included" line with no stepper (a premium
+            // option still shows its up-charge).
             const included = !ing.is_removable;
+            // The admin's label for a choice group (e.g. "Sweetener"), shown as a
+            // heading above the options so the customer knows what they're picking.
+            const groupLabel = isChoice
+              ? (locale === "en" ? ing.group_en_name : ing.group_name) ??
+                ing.group_name
+              : null;
             return (
               <Box
                 key={ing.id}
-                alignItems="center"
-                justifyContent="space-between"
-                gap={12}
-                flexWrap="wrap"
+                flexDirection="column"
+                gap={8}
                 styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
               >
-                <Box alignItems="center" gap={10} flex="1" minWidth={160}>
-                  {ing.image && (
-                    <Box
-                      width={44}
-                      height={44}
-                      flex="0 0 auto"
-                      borderRadius={8}
-                      backgroundColor="var(--surface-2)"
-                      styles={{ position: "relative", overflow: "hidden" }}
-                    >
-                      <Image
-                        src={ing.image}
-                        alt={name}
-                        fill
-                        sizes="44px"
-                        style={{ objectFit: "cover" }}
-                      />
-                    </Box>
-                  )}
-                  <Box flexDirection="column" gap={2}>
-                    <Typography variant="body" margin={0}>
-                      {name}
-                      {ing.quantity &&
-                        ` · ${
-                          ing.unit
-                            ? formatPortion(parseFloat(ing.quantity), ing.unit)
-                            : formatPortion(parseFloat(ing.quantity), "").trim()
-                        }`}
-                    </Typography>
-                    {/* The price slot: a locked "Included" for a non-removable
-                        ingredient, otherwise its per-unit up-charge (or "Free"). */}
-                    <Typography
-                      variant="caption"
-                      margin={0}
-                      color="var(--foreground)"
-                    >
-                      {included
-                        ? t("included")
-                        : price > 0
-                          ? ing.included_units >= 1
-                            ? t("perUnitUpchargeWithFree", {
-                                count: ing.included_units,
-                                price: formatPrice(ing.price, currency),
-                              })
-                            : t("perUnitUpcharge", {
-                                price: formatPrice(ing.price, currency),
-                              })
-                          : t("free")}
-                    </Typography>
-                  </Box>
-                </Box>
-
-                {/* A horizontal stepper (− qty +) kept on the right, with the
-                    running portion total beneath it; a non-removable ingredient
-                    is locked, so it has no stepper. */}
-                {!included && (
-                  <Box flexDirection="column" alignItems="flex-end" gap={4}>
-                    <Box
-                      alignItems="center"
-                      gap={4}
-                      padding={2}
-                      borderRadius={8}
-                      border="1px solid var(--border, #e5e7eb)"
-                    >
-                      <Button
-                        text="−"
-                        aria-label={t("decrease")}
-                        title={t("decrease")}
-                        size="sm"
-                        minWidth={30}
-                        disabled={qty <= min}
-                        onClick={() => setQty(ing, qty - 1)}
-                      />
-                      <Typography
-                        as="span"
-                        variant="h6"
-                        margin={0}
-                        minWidth={28}
-                        styles={{ textAlign: "center" }}
-                        aria-live="polite"
+                {groupLabel && (
+                  <Typography
+                    as="h3"
+                    variant="label"
+                    margin={0}
+                    color="var(--foreground)"
+                    fontWeight={700}
+                  >
+                    {groupLabel}
+                  </Typography>
+                )}
+                <Box
+                  alignItems="center"
+                  justifyContent="space-between"
+                  gap={12}
+                  flexWrap="wrap"
+                >
+                  <Box alignItems="center" gap={10} flex="1" minWidth={160}>
+                    {choice.image && (
+                      <Box
+                        width={44}
+                        height={44}
+                        flex="0 0 auto"
+                        borderRadius={8}
+                        backgroundColor="var(--surface-2)"
+                        styles={{ position: "relative", overflow: "hidden" }}
                       >
-                        {qty}
+                        <Image
+                          src={choice.image}
+                          alt={name}
+                          fill
+                          sizes="44px"
+                          style={{ objectFit: "cover" }}
+                        />
+                      </Box>
+                    )}
+                    <Box flexDirection="column" gap={2}>
+                      <Typography variant="body" margin={0}>
+                        {name}
+                        {ing.quantity &&
+                          ` · ${
+                            ing.unit
+                              ? formatPortion(parseFloat(ing.quantity), ing.unit)
+                              : formatPortion(
+                                  parseFloat(ing.quantity),
+                                  "",
+                                ).trim()
+                          }`}
                       </Typography>
-                      <Button
-                        text="+"
-                        aria-label={t("increase")}
-                        title={t("increase")}
-                        size="sm"
-                        minWidth={30}
-                        disabled={qty >= ing.max_quantity}
-                        onClick={() => setQty(ing, qty + 1)}
-                      />
-                    </Box>
-                    {ing.quantity && ing.unit && (
+                      {/* The price slot: a locked "Included" for a non-removable
+                          ingredient, otherwise its per-unit up-charge (or "Free");
+                          a premium choice-group option shows its up-charge too. */}
                       <Typography
                         variant="caption"
                         margin={0}
                         color="var(--foreground)"
-                        aria-live="polite"
                       >
-                        {formatPortion(qty * parseFloat(ing.quantity), ing.unit)}
+                        {included
+                          ? price > 0
+                            ? t("perUnitUpcharge", {
+                                price: formatPrice(choice.price, currency),
+                              })
+                            : t("included")
+                          : price > 0
+                            ? ing.included_units >= 1
+                              ? t("perUnitUpchargeWithFree", {
+                                  count: ing.included_units,
+                                  price: formatPrice(choice.price, currency),
+                                })
+                              : t("perUnitUpcharge", {
+                                  price: formatPrice(choice.price, currency),
+                                })
+                            : t("free")}
                       </Typography>
-                    )}
+                    </Box>
+                  </Box>
+
+                  {/* A horizontal stepper (− qty +) kept on the right, with the
+                      running portion total beneath it; a non-removable ingredient
+                      is locked, so it has no stepper. */}
+                  {!included && (
+                    <Box flexDirection="column" alignItems="flex-end" gap={4}>
+                      <Box
+                        alignItems="center"
+                        gap={4}
+                        padding={2}
+                        borderRadius={8}
+                        border="1px solid var(--border, #e5e7eb)"
+                      >
+                        <Button
+                          text="−"
+                          aria-label={t("decrease")}
+                          title={t("decrease")}
+                          size="sm"
+                          minWidth={30}
+                          disabled={qty <= min}
+                          onClick={() => setQty(ing, qty - 1)}
+                        />
+                        <Typography
+                          as="span"
+                          variant="h6"
+                          margin={0}
+                          minWidth={28}
+                          styles={{ textAlign: "center" }}
+                          aria-live="polite"
+                        >
+                          {qty}
+                        </Typography>
+                        <Button
+                          text="+"
+                          aria-label={t("increase")}
+                          title={t("increase")}
+                          size="sm"
+                          minWidth={30}
+                          disabled={qty >= ing.max_quantity}
+                          onClick={() => setQty(ing, qty + 1)}
+                        />
+                      </Box>
+                      {ing.quantity && ing.unit && (
+                        <Typography
+                          variant="caption"
+                          margin={0}
+                          color="var(--foreground)"
+                          aria-live="polite"
+                        >
+                          {formatPortion(
+                            qty * parseFloat(ing.quantity),
+                            ing.unit,
+                          )}
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+
+                {/* Single-select option chips: pick exactly one; the chosen chip
+                    drives the name/image/price above and the live nutrition. */}
+                {isChoice && (
+                  <Box
+                    flexWrap="wrap"
+                    gap={8}
+                    paddingBottom={8}
+                    role="group"
+                    aria-label={t("chooseOption", { name })}
+                  >
+                    {choices.map((c) => {
+                      const active = selectedId === c.ingredient;
+                      const cName =
+                        (locale === "en" ? c.en_name : c.name) ?? c.name;
+                      const cPrice = parseFloat(c.price);
+                      return (
+                        <Button
+                          key={c.ingredient}
+                          unstyled
+                          text={
+                            cPrice > 0
+                              ? `${cName} +${formatPrice(c.price, currency)}`
+                              : cName
+                          }
+                          onClick={() => setOption(ing.id, c.ingredient)}
+                          aria-pressed={active}
+                          paddingX={12}
+                          paddingY={6}
+                          borderRadius={999}
+                          backgroundColor={
+                            active ? "var(--accent)" : "var(--surface-2)"
+                          }
+                          color={active ? "#fff" : "var(--foreground)"}
+                          border={
+                            active
+                              ? "1px solid var(--accent)"
+                              : "1px solid var(--border, #e5e7eb)"
+                          }
+                          styles={{ fontWeight: 600, fontSize: "0.8125rem" }}
+                        />
+                      );
+                    })}
                   </Box>
                 )}
               </Box>

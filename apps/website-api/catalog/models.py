@@ -656,11 +656,14 @@ class MenuItem(Buyable):
             ingredient = by_id.get(row.get('ingredient'))
             if ingredient is None:
                 continue
-            chosen[ingredient.id] = row.get('quantity', 0)
+            chosen[ingredient.id] = row
         total = self.price
         for ingredient in by_id.values():
-            qty = chosen.get(ingredient.id, ingredient.default_units)
-            total += ingredient.upcharge_for_quantity(qty)
+            row = chosen.get(ingredient.id)
+            qty = row.get('quantity', ingredient.default_units) if row else ingredient.default_units
+            option_id = row.get('option') if row else None
+            _, unit_price = ingredient.resolve_option(option_id)
+            total += ingredient.upcharge_for_quantity(qty, unit_price)
         return total
 
 
@@ -792,6 +795,14 @@ class MenuItemIngredient(Common):
       - ``max_quantity`` - the largest quantity the customer may add (e.g. 2 for
         "double"). ``quantity``/``unit`` are the descriptive recipe portion (e.g.
         100 g of cheese) and do not affect price.
+
+    A row may also be a **single-select choice group**: ``ingredient`` (below) is
+    the *default* option and drives the base price/nutrition, while
+    ``MenuItemIngredientOption`` rows add *alternative* ingredients the customer
+    may swap in instead (e.g. a "Sweetener" group offering Refined sugar / Organic
+    sugar / Splenda). Every option carries its own per-unit ``price``; the shared
+    ``quantity``/``unit`` portion is used for all of them. A row with no options
+    behaves exactly as a plain single-ingredient row.
     """
 
     menu_item = models.ForeignKey(
@@ -800,12 +811,20 @@ class MenuItemIngredient(Common):
         related_name='ingredients',
     )
     # Identity (name, image) and nutrition now live on the shared Ingredient;
-    # PROTECT so an ingredient still used by a dish cannot be deleted.
+    # PROTECT so an ingredient still used by a dish cannot be deleted. When the
+    # row is a choice group this is the *default* option (see ``options``).
     ingredient = models.ForeignKey(
         'Ingredient',
         on_delete=models.PROTECT,
         related_name='menu_uses',
     )
+
+    # An optional customer-facing label for a single-select choice group (e.g.
+    # "Sweetener", "Choose your protein"). Only meaningful when the row has
+    # ``options``; the customiser shows it as the heading above the choice chips
+    # so the customer knows what they are picking. Empty on a plain row.
+    group_name = models.CharField(max_length=120, null=True, blank=True)
+    group_en_name = models.CharField(max_length=120, null=True, blank=True)
 
     # The recipe portion. `quantity`/`unit` are descriptive *and* drive the
     # nutrient scaling (see `calories`/`nutrient`); they do not affect price.
@@ -920,15 +939,81 @@ class MenuItemIngredient(Common):
             return 1
         return self.default_quantity
 
-    def upcharge_for_quantity(self, quantity) -> Decimal:
-        """Price contribution of selecting ``quantity`` of this ingredient."""
+    def resolve_option(self, option_id):
+        """Resolve a selection's ``option`` id to its ``(ingredient, price)``.
+
+        The group's own ``ingredient``/``price`` is the default option; the
+        ``options`` rows are the alternatives. An empty or unrecognised id falls
+        back to the default, so a stale or forged option can never crash pricing -
+        it simply prices as the default.
+        """
+        if option_id and option_id != self.ingredient_id:
+            for option in self.options.all():
+                if option.ingredient_id == option_id:
+                    return option.ingredient, option.price
+        return self.ingredient, self.price
+
+    def upcharge_for_quantity(self, quantity, option_price=None) -> Decimal:
+        """Price contribution of selecting ``quantity`` of this ingredient.
+
+        ``option_price`` is the per-unit price of the *chosen* option (from
+        ``resolve_option``); it defaults to this row's own ``price`` (the default
+        option). The base price already paid for ``included_units`` of the default
+        option, so only the value selected *beyond* that baseline is charged -
+        which is what lets a premium alternative cost its delta even on an
+        otherwise-"included" group, and never refunds when a cheaper option or
+        fewer units are picked.
+        """
         try:
             qty = int(quantity)
         except (TypeError, ValueError):
             return Decimal('0.00')
         qty = max(0, min(qty, self.max_quantity))
-        chargeable = max(0, qty - self.included_units)
-        return self.price * chargeable
+        unit_price = self.price if option_price is None else option_price
+        # What the base price already covers (default option x its free units)
+        # versus what the customer's chosen option x quantity is worth.
+        included_value = self.price * self.included_units
+        upcharge = unit_price * qty - included_value
+        return upcharge if upcharge > Decimal('0.00') else Decimal('0.00')
+
+
+class MenuItemIngredientOption(models.Model):
+    """One *alternative* ingredient in a single-select choice group.
+
+    The parent ``MenuItemIngredient`` is the group: its own ``ingredient`` is the
+    default option, and each ``MenuItemIngredientOption`` is another ingredient the
+    customer may swap in instead (e.g. Organic sugar or Splenda in place of the
+    default Refined sugar). The group owns the shared portion (``quantity``/
+    ``unit``) and behaviour (removable/max/free); an option only adds *which*
+    ingredient and its own per-unit ``price``.
+    """
+
+    menu_item_ingredient = models.ForeignKey(
+        MenuItemIngredient,
+        on_delete=models.CASCADE,
+        related_name='options',
+    )
+    # PROTECT mirrors the group's default ingredient: an ingredient still offered
+    # as an option cannot be deleted out from under a dish.
+    ingredient = models.ForeignKey(
+        'Ingredient',
+        on_delete=models.PROTECT,
+        related_name='menu_option_uses',
+    )
+    price = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'),
+        help_text='Up-charge per unit when this option is chosen.',
+    )
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Menu Item Ingredient Option'
+        verbose_name_plural = 'Menu Item Ingredient Options'
+        ordering = ['sort_order', 'id']
+
+    def __str__(self):
+        name = self.ingredient.name if self.ingredient_id else '?'
+        return f"{name} (option of {self.menu_item_ingredient_id})"
 
 
 class RecipeStep(Common):
@@ -962,13 +1047,15 @@ class RecipeStep(Common):
 def normalize_selection(selection, ingredients):
     """Canonicalise a customer's ingredient selection for storage & comparison.
 
-    Returns a list of ``{"ingredient": <id>, "quantity": <int>}`` sorted by
-    ingredient id, keeping only ids that belong to ``ingredients`` and only rows
-    whose effective quantity differs from the ingredient's default
-    (``default_units``, so two carts that mean the same thing compare equal, and
-    the "no changes" case stores an empty list). ``quantity`` is clamped to
-    ``[0, max_quantity]``. Internal ingredients are excluded - they are
-    kitchen-only, not customer-selectable, and never priced.
+    Returns a list of ``{"ingredient": <id>, "quantity": <int>}`` (plus an
+    ``"option": <ingredient id>`` when the customer swapped in an alternative
+    from a choice group) sorted by ingredient id, keeping only ids that belong to
+    ``ingredients`` and only rows that differ from the group's default - a changed
+    quantity (vs. ``default_units``) *or* a non-default option - so two carts that
+    mean the same thing compare equal and the "no changes" case stores an empty
+    list. ``quantity`` is clamped to ``[0, max_quantity]`` and ``option`` is kept
+    only when it is a real option of that group. Internal ingredients are excluded
+    - they are kitchen-only, not customer-selectable, and never priced.
     """
     customer_ingredients = [ing for ing in ingredients if not ing.is_internal]
     by_id = {ing.id: ing for ing in customer_ingredients}
@@ -982,11 +1069,24 @@ def normalize_selection(selection, ingredients):
         except (TypeError, ValueError):
             continue
         qty = max(0, min(qty, ing.max_quantity))
-        rows[ing.id] = qty
+        # Keep the chosen alternative only when it is a real option of this group;
+        # the default (or a bogus id) is stored as None.
+        option = row.get('option')
+        valid_option_ids = {ing.ingredient_id} | {o.ingredient_id for o in ing.options.all()}
+        if option not in valid_option_ids:
+            option = None
+        rows[ing.id] = {'quantity': qty, 'option': option}
     normalized = []
     for ing in customer_ingredients:
-        qty = rows.get(ing.id, ing.default_units)
-        if qty != ing.default_units:
-            normalized.append({'ingredient': ing.id, 'quantity': qty})
+        entry = rows.get(ing.id)
+        qty = entry['quantity'] if entry else ing.default_units
+        option = entry['option'] if entry else None
+        is_default_option = option is None or option == ing.ingredient_id
+        if qty == ing.default_units and is_default_option:
+            continue
+        record = {'ingredient': ing.id, 'quantity': qty}
+        if not is_default_option:
+            record['option'] = option
+        normalized.append(record)
     normalized.sort(key=lambda r: r['ingredient'])
     return normalized

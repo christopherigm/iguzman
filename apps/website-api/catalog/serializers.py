@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import transaction
 from rest_framework import serializers
 
@@ -9,7 +11,8 @@ from .models import (
     VariantOption, VariantOptionValue,
     ProductVariant, ProductVariantImage,
     ServiceVariant,
-    MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient, RecipeStep,
+    MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient,
+    MenuItemIngredientOption, RecipeStep,
     Ingredient,
     DIMENSION_UNIT_CHOICES, WEIGHT_UNIT_CHOICES, MODALITY_CHOICES,
     QUANTITY_UNIT_CHOICES,
@@ -1153,6 +1156,10 @@ class MenuItemIngredientSerializer(serializers.ModelSerializer):
     calories = serializers.IntegerField(read_only=True)
     image = serializers.SerializerMethodField()
     ingredient_detail = IngredientSerializer(source='ingredient', read_only=True)
+    # The alternative ingredients of a single-select choice group, each flattened
+    # the same way as the default (name/image from its ingredient, calories scaled
+    # to *this group's* shared portion). Empty for a plain single-ingredient row.
+    options = serializers.SerializerMethodField()
 
     class Meta:
         model = MenuItemIngredient
@@ -1160,10 +1167,11 @@ class MenuItemIngredientSerializer(serializers.ModelSerializer):
             'id', 'enabled', 'created', 'modified', 'version',
             'menu_item', 'ingredient', 'ingredient_detail',
             'name', 'en_name', 'image',
+            'group_name', 'group_en_name',
             'quantity', 'unit', 'calories', 'price',
             'is_removable', 'is_internal', 'max_quantity',
             'number_of_free_portions', 'default_quantity',
-            'included_units', 'default_units', 'sort_order',
+            'included_units', 'default_units', 'sort_order', 'options',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version', 'menu_item']
 
@@ -1174,19 +1182,64 @@ class MenuItemIngredientSerializer(serializers.ModelSerializer):
             return None
         return request.build_absolute_uri(image.url) if request else image.url
 
+    def _abs_url(self, image):
+        if not image:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(image.url) if request else image.url
+
+    def get_options(self, obj):
+        # Scale each option's nutrition against the GROUP's shared portion
+        # (obj.quantity/obj.unit), so the client can render "follow selection"
+        # calories/nutrition without re-deriving the portion.
+        result = []
+        for opt in obj.options.all():
+            ing = opt.ingredient
+            cal = ing.nutrient_for_portion('calories', obj.quantity, obj.unit)
+            result.append({
+                'id': opt.id,
+                'ingredient': opt.ingredient_id,
+                'ingredient_detail': IngredientSerializer(ing, context=self.context).data,
+                'name': ing.name,
+                'en_name': ing.en_name,
+                'image': self._abs_url(ing.image),
+                'price': str(opt.price),
+                'calories': None if cal is None else int(round(cal)),
+                'sort_order': opt.sort_order,
+            })
+        return result
+
+
+class MenuItemIngredientOptionWriteSerializer(serializers.Serializer):
+    """One alternative ingredient in a choice group (write side)."""
+    ingredient = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
+    price = serializers.DecimalField(
+        max_digits=12, decimal_places=2, required=False, default=Decimal('0.00'),
+    )
+    sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
+
+
+# Sentinel distinguishing "options omitted from a partial update" (leave them) from
+# "options: []" (clear them).
+_OPTIONS_UNSET = object()
+
 
 class MenuItemIngredientWriteSerializer(serializers.ModelSerializer):
     # Identity/image/nutrition come from the referenced Ingredient now; this row
     # only carries the recipe portion and pricing.
     ingredient = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
+    # The alternative ingredients of a single-select choice group. Full-replace on
+    # write: whatever list arrives becomes the group's option set (empty clears it).
+    options = MenuItemIngredientOptionWriteSerializer(many=True, required=False)
 
     class Meta:
         model = MenuItemIngredient
         fields = [
-            'ingredient', 'quantity', 'unit', 'price',
+            'ingredient', 'group_name', 'group_en_name',
+            'quantity', 'unit', 'price',
             'is_removable', 'is_internal', 'max_quantity',
             'number_of_free_portions', 'default_quantity',
-            'sort_order', 'enabled',
+            'sort_order', 'enabled', 'options',
         ]
 
     def validate_unit(self, value):
@@ -1228,13 +1281,34 @@ class MenuItemIngredientWriteSerializer(serializers.ModelSerializer):
             )
         return attrs
 
+    def _sync_options(self, instance, options):
+        """Replace the group's option set with ``options`` (a list of validated
+        dicts). Full-replace keeps the write path simple - the client owns the
+        whole list - and an empty list clears the group back to single-ingredient.
+        """
+        instance.options.all().delete()
+        for idx, opt in enumerate(options):
+            MenuItemIngredientOption.objects.create(
+                menu_item_ingredient=instance,
+                ingredient=opt['ingredient'],
+                price=opt.get('price', Decimal('0.00')),
+                sort_order=opt.get('sort_order', idx),
+            )
+
     def create(self, validated_data, menu_item):
-        return MenuItemIngredient.objects.create(menu_item=menu_item, **validated_data)
+        options = validated_data.pop('options', None)
+        instance = MenuItemIngredient.objects.create(menu_item=menu_item, **validated_data)
+        if options:
+            self._sync_options(instance, options)
+        return instance
 
     def update(self, instance, validated_data):
+        options = validated_data.pop('options', _OPTIONS_UNSET)
         for field, value in validated_data.items():
             setattr(instance, field, value)
         instance.save()
+        if options is not _OPTIONS_UNSET:
+            self._sync_options(instance, options)
         return instance
 
 

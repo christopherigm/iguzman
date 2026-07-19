@@ -671,7 +671,7 @@ def _favorites_qs(request, system):
         .prefetch_related(
             'product__images', 'product__variants',
             'service__images', 'service__variants',
-            'menu_item__images', 'menu_item__ingredients',
+            'menu_item__images', 'menu_item__ingredients', 'menu_item__ingredients__options__ingredient',
         )
     )
 
@@ -788,7 +788,7 @@ def _cart_qs(request, system):
         .prefetch_related(
             'product__images', 'product__variants',
             'service__images', 'service__variants',
-            'menu_item__images', 'menu_item__ingredients',
+            'menu_item__images', 'menu_item__ingredients', 'menu_item__ingredients__options__ingredient',
             'product_variant__option_values', 'service_variant__option_values',
         )
     )
@@ -918,7 +918,9 @@ class CartListView(APIView):
         bump its quantity, otherwise create a new line. Locked against the same
         double-click race the product path guards.
         """
-        ingredients = list(menu_item.ingredients.filter(enabled=True))
+        ingredients = list(
+            menu_item.ingredients.filter(enabled=True).prefetch_related('options')
+        )
         selection = normalize_selection(data.get("customization", []), ingredients)
 
         with transaction.atomic():
@@ -973,7 +975,9 @@ class CartItemDetailView(APIView):
             pk=pk, user=request.user, system=_user_system(request),
         ).select_related(
             'product', 'service', 'menu_item', 'product_variant', 'service_variant',
-        ).prefetch_related('menu_item__ingredients').first()
+        ).prefetch_related(
+            'menu_item__ingredients', 'menu_item__ingredients__options__ingredient'
+        ).first()
 
     def patch(self, request, pk):
         serializer = CartItemUpdateSerializer(data=request.data)

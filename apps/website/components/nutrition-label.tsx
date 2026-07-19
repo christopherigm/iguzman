@@ -14,6 +14,7 @@ import {
   nutritionRows,
   scaleNutrient,
 } from "@/lib/nutrition";
+import { resolveChoice } from "@/lib/menu-selection";
 import { useMenuCustomization } from "./menu-customization-context";
 
 /** Reference daily energy intake used to express the total as a % daily value. */
@@ -72,7 +73,7 @@ export function NutritionLabel({
   portions,
 }: NutritionLabelProps) {
   const t = useTranslations("Menu");
-  const { quantities } = useMenuCustomization();
+  const { quantities, options } = useMenuCustomization();
   const [view, setView] = useState<NutritionView>("facts");
 
   // Every figure on the label is stated *per serving*: the whole-dish totals are
@@ -80,14 +81,26 @@ export function NutritionLabel({
   const servings = portions && portions > 0 ? portions : 1;
 
   // The chartable ingredients actually in the order, each with the quantity the
-  // customer selected; both views derive from this.
-  const selected: SelectedRow[] = useMemo(
-    () =>
-      nutritionRows(ingredients)
-        .map((ing) => ({ ing, qty: quantities[ing.id] ?? ing.default_units }))
-        .filter((r) => r.qty > 0),
-    [ingredients, quantities],
-  );
+  // customer selected; both views derive from this. For a single-select choice
+  // group we first substitute the customer's chosen option (its nutrition is
+  // stated against the group's shared portion), so the label follows the pick.
+  const selected: SelectedRow[] = useMemo(() => {
+    const effective = ingredients.map((ing) => {
+      const choice = resolveChoice(ing, options[ing.id]);
+      return {
+        ...ing,
+        ingredient: choice.ingredient,
+        ingredient_detail: choice.ingredient_detail,
+        name: choice.name,
+        en_name: choice.en_name,
+        image: choice.image,
+        calories: choice.calories,
+      };
+    });
+    return nutritionRows(effective)
+      .map((ing) => ({ ing, qty: quantities[ing.id] ?? ing.default_units }))
+      .filter((r) => r.qty > 0);
+  }, [ingredients, quantities, options]);
 
   const totalCalories = selected.reduce(
     (sum, r) => sum + (r.ing.calories ?? 0) * r.qty,
