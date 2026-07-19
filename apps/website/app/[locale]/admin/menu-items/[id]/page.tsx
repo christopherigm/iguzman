@@ -181,6 +181,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
           id: i.id as number,
           name: (i.name as string | null) ?? null,
           en_name: (i.en_name as string | null) ?? null,
+          image: (i.image as string | null) ?? null,
           unit: String(i.unit ?? ""),
           nutrition_basis_quantity:
             (i.nutrition_basis_quantity as string | null) ?? null,
@@ -251,6 +252,8 @@ export default function AdminMenuItemFormPage({ params }: Props) {
             unit: String(i.unit ?? ""),
             is_removable: Boolean(i.is_removable),
             max_quantity: String(i.max_quantity ?? "1"),
+            number_of_free_portions: String(i.number_of_free_portions ?? "0"),
+            default_quantity: String(i.default_quantity ?? "0"),
             enabled: i.enabled !== false,
           }));
           setIngredients(ingRows);
@@ -304,6 +307,12 @@ export default function AdminMenuItemFormPage({ params }: Props) {
         unit: row.unit || null,
         is_removable: row.is_removable,
         max_quantity: row.max_quantity === "" ? 1 : Number(row.max_quantity),
+        number_of_free_portions:
+          row.number_of_free_portions === ""
+            ? 0
+            : Number(row.number_of_free_portions),
+        default_quantity:
+          row.default_quantity === "" ? 0 : Number(row.default_quantity),
         sort_order: i,
         enabled: row.enabled,
       };

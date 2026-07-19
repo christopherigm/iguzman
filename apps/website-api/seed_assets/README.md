@@ -50,8 +50,8 @@ fields at any new file you drop in here.
   "highlights":      [ { "name", "category", "description", "icon?", "size?", "image?", "items?": [ { "name","description","icon?","image?" } ] } ],
   "product_categories": [ { "name", "image?", "products":  [ { "name","description","price","currency?","is_featured?","image?","gallery?":[] } ] } ],
   "service_categories": [ { "name", "image?", "services":  [ { "name","description","price","currency?","modality?","duration?","is_featured?","image?" } ] } ],
-  "menu_categories":    [ { "name", "image?", "menu_items": [ { "name","description","price","currency?","is_featured?","is_organic?","is_vegetarian?","is_vegan?","is_gluten_free?","allergens?","image?","gallery?":[],
-                            "ingredients": [ { "name","price","calories?","is_default?","is_removable?","max_quantity?","quantity?","unit?","sort_order?" } ] } ] } ]
+  "menu_categories":    [ { "name", "image?", "menu_items": [ { "name","description","price","currency?","is_featured?","is_organic?","is_vegetarian?","is_vegan?","is_gluten_free?","allergens?","portions?","image?","gallery?":[],
+                            "ingredients": [ { "name","price","calories?","is_removable?","max_quantity?","quantity?","unit?","sort_order?" } ] } ] } ]
 }
 ```
 
@@ -60,12 +60,14 @@ Notes:
 - Products/services/menu items default to `is_featured: true` so they show in
   the `CatalogItems` block (which requests `?featured=true`).
 - `menu_categories` seed the food (MenuItem) family — priced-ingredient
-  customisation. Each `menu_items[].ingredients[]` row is either a **default**
-  (`is_default: true`, included in the base `price`, first unit free) or an
-  **add-on** (`is_default: false`, `price` charged per selected unit up to
-  `max_quantity`). `quantity`/`unit` are the descriptive recipe portion (display
-  only) and never affect price. See `catalog/models.py` → MenuItem /
-  MenuItemIngredient.
+  customisation. Each `menu_items[].ingredients[]` row is either **included by
+  default** (`is_removable: false` — the default — part of the base `price`,
+  locked into the dish, shown as "Included") or an **add-on**
+  (`is_removable: true`, `price` charged per selected unit up to `max_quantity`,
+  starting at 0). `quantity`/`unit` are the descriptive recipe portion (display
+  only) and never affect price. A `menu_item`'s optional `portions` (servings the
+  dish yields) drives the per-serving figures on the nutrition label. See
+  `catalog/models.py` → MenuItem / MenuItemIngredient.
 - Slugs are auto-generated and **host-namespaced** (`<host-token>-<slug>`) so two
   seeded sites never collide on the globally-unique slug fields.
 - `price` is a string/number → `Decimal`; `currency` is a 3-letter code (USD default).

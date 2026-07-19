@@ -462,7 +462,16 @@ export interface MenuItemIngredient {
    */
   is_removable: boolean;
   max_quantity: number;
+  /** Units the customer gets free before `price` applies (removable add-ons). */
+  number_of_free_portions: number;
+  /** Admin-set quantity pre-selected in the stepper (removable add-ons). */
+  default_quantity: number;
+  /** Free units baked into the base price (= `number_of_free_portions` for a
+   *  removable add-on, 1 for a locked non-removable ingredient). */
   included_units: number;
+  /** Effective pre-selected quantity the stepper starts at (= `default_quantity`
+   *  for a removable add-on, 1 for a locked non-removable ingredient). */
+  default_units: number;
   sort_order: number;
 }
 

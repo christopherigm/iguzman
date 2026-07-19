@@ -35,7 +35,7 @@ export function MenuCustomizationProvider({
   children: ReactNode;
 }) {
   const [quantities, setQuantities] = useState<Record<number, number>>(() =>
-    Object.fromEntries(ingredients.map((i) => [i.id, i.included_units])),
+    Object.fromEntries(ingredients.map((i) => [i.id, i.default_units])),
   );
 
   const setQuantity = useCallback(

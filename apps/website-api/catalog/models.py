@@ -638,18 +638,25 @@ class MenuItem(Buyable):
         ``selection`` is a normalised list of ``{"ingredient": <id>, "quantity":
         <int>}`` dicts (see ``normalize_selection``). Only ingredients that
         belong to this item are counted, and only the units charged for beyond
-        what the base already includes: a default ingredient's first unit is free
-        (removing it never refunds - the base was already paid), and every unit
-        above that costs ``ingredient.price``. This is the *only* place the
-        customised total is computed.
+        what the base already includes (``included_units``, i.e. the free
+        portions): a default ingredient's included units are free (removing them
+        never refunds - the base was already paid), and every unit above that
+        costs ``ingredient.price``. An ingredient omitted from ``selection`` is
+        priced at its ``default_units`` (what the customer gets untouched), so a
+        default that itself carries an up-charge is still counted. This is the
+        *only* place the customised total is computed.
         """
         by_id = {ing.id: ing for ing in self.ingredients.all()}
-        total = self.price
+        chosen = {}
         for row in (selection or []):
             ingredient = by_id.get(row.get('ingredient'))
             if ingredient is None:
                 continue
-            total += ingredient.upcharge_for_quantity(row.get('quantity', 0))
+            chosen[ingredient.id] = row.get('quantity', 0)
+        total = self.price
+        for ingredient in by_id.values():
+            qty = chosen.get(ingredient.id, ingredient.default_units)
+            total += ingredient.upcharge_for_quantity(qty)
         return total
 
 
@@ -816,6 +823,20 @@ class MenuItemIngredient(Common):
     max_quantity = models.PositiveSmallIntegerField(
         default=1, help_text='Largest quantity the customer may select.'
     )
+    number_of_free_portions = models.PositiveSmallIntegerField(
+        default=0,
+        help_text='Units the customer gets at no charge before the per-unit '
+                  'price applies. Must be ≤ max_quantity. Only meaningful for a '
+                  'removable add-on; a non-removable ingredient is always its '
+                  'single included portion regardless.',
+    )
+    default_quantity = models.PositiveSmallIntegerField(
+        default=0,
+        help_text='Quantity pre-selected for the customer in the stepper (and '
+                  'the baseline a "no change" selection is measured against). '
+                  'Must be ≤ max_quantity. Ignored for a non-removable '
+                  'ingredient, which is locked at its single portion.',
+    )
     sort_order = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
@@ -826,6 +847,20 @@ class MenuItemIngredient(Common):
     def __str__(self):
         name = self.ingredient.name if self.ingredient_id else '?'
         return f"{name} ({self.menu_item})"
+
+    def clean(self):
+        super().clean()
+        # The free-portion count is a discount on the customer's selection, so it
+        # can never exceed the cap; the pre-selected default must also fit within
+        # it. Enforced here (admin) and in the write serializer (API).
+        if self.number_of_free_portions > self.max_quantity:
+            raise ValidationError(
+                {'number_of_free_portions': 'Number of free portions cannot exceed max quantity.'}
+            )
+        if self.default_quantity > self.max_quantity:
+            raise ValidationError(
+                {'default_quantity': 'Default quantity cannot exceed max quantity.'}
+            )
 
     # ── Identity delegated to the shared Ingredient ──────────────────────────
 
@@ -857,9 +892,22 @@ class MenuItemIngredient(Common):
 
     @property
     def included_units(self) -> int:
-        """Units already covered by the base price: 1 for an included (non-removable)
-        ingredient, 0 for a removable add-on."""
-        return 0 if self.is_removable else 1
+        """Units already covered by the base price (never charged): the single
+        included portion of a non-removable ingredient, or
+        ``number_of_free_portions`` for a removable add-on (0 = every selected
+        unit is charged)."""
+        if not self.is_removable:
+            return 1
+        return self.number_of_free_portions
+
+    @property
+    def default_units(self) -> int:
+        """The quantity pre-selected for the customer, and the baseline a "no
+        change" selection is measured against: 1 for a locked non-removable
+        ingredient, ``default_quantity`` for a removable add-on."""
+        if not self.is_removable:
+            return 1
+        return self.default_quantity
 
     def upcharge_for_quantity(self, quantity) -> Decimal:
         """Price contribution of selecting ``quantity`` of this ingredient."""
@@ -905,9 +953,10 @@ def normalize_selection(selection, ingredients):
 
     Returns a list of ``{"ingredient": <id>, "quantity": <int>}`` sorted by
     ingredient id, keeping only ids that belong to ``ingredients`` and only rows
-    whose effective quantity differs from the ingredient's default (so two carts
-    that mean the same thing compare equal, and the "no changes" case stores an
-    empty list). ``quantity`` is clamped to ``[0, max_quantity]``.
+    whose effective quantity differs from the ingredient's default
+    (``default_units``, so two carts that mean the same thing compare equal, and
+    the "no changes" case stores an empty list). ``quantity`` is clamped to
+    ``[0, max_quantity]``.
     """
     by_id = {ing.id: ing for ing in ingredients}
     rows = {}
@@ -923,8 +972,8 @@ def normalize_selection(selection, ingredients):
         rows[ing.id] = qty
     normalized = []
     for ing in ingredients:
-        qty = rows.get(ing.id, ing.included_units)
-        if qty != ing.included_units:
+        qty = rows.get(ing.id, ing.default_units)
+        if qty != ing.default_units:
             normalized.append({'ingredient': ing.id, 'quantity': qty})
     normalized.sort(key=lambda r: r['ingredient'])
     return normalized

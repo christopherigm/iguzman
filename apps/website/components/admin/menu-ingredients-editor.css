@@ -1,0 +1,13 @@
+/* The Enabled / Removable toggles stack in a column on xs, where the card is
+   too narrow to fit both inline, and sit side by side in a row from sm up where
+   there is horizontal space. The base column layout is a Box prop (mobile
+   first); this @media override flips it to row and needs !important to beat the
+   inline flex-direction the prop produces. */
+@media (min-width: 600px) {
+  /* sm */
+  .menu-ingredient-toggles {
+    flex-direction: row !important;
+    align-items: center;
+    column-gap: 16px;
+  }
+}

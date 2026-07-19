@@ -139,7 +139,8 @@ MENU_ITEM_FIELDS = (
 # and nutrition live on the referenced reusable Ingredient (linked by slug).
 INGREDIENT_FIELDS = (
     "quantity", "unit", "price",
-    "is_removable", "max_quantity", "sort_order",
+    "is_removable", "max_quantity",
+    "number_of_free_portions", "default_quantity", "sort_order",
 )
 # The reusable Ingredient catalog: identity + measurement + FDA nutrition.
 INGREDIENT_CATALOG_FIELDS = (

@@ -140,10 +140,13 @@ a product and you silently throw away ingredient customisation.
    - Prices realistic; `is_featured` stays true so items surface in `CatalogItems`.
    - **Write the catalog section the food rule picked** — `product_categories`,
      `service_categories`, and/or `menu_categories`. For `menu_categories`, give
-     each `menu_item` its `ingredients` list: mark base components
-     `is_default: true` at `price: 0`, and each add-on `is_default: false` with a
-     realistic per-unit `price` (and `max_quantity` for "double X"). Leave the
-     internal recipe out — the seed doesn't populate `recipe_steps`.
+     each `menu_item` its `ingredients` list: leave base components as
+     `is_removable: false` (the default — included in the base `price`, locked),
+     and mark each optional add-on `is_removable: true` with a realistic per-unit
+     `price` (and `max_quantity` for "double X"). Optionally set `portions` on a
+     `menu_item` (servings the dish yields) to drive the per-serving nutrition
+     label. Leave the internal recipe out — the seed doesn't populate
+     `recipe_steps`.
    - Fill `en_*` fields only when the site is bilingual.
 6. **Run the seeder** from `apps/website-api`:
    ```bash

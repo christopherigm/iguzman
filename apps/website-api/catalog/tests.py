@@ -191,6 +191,39 @@ class MenuItemPricingTests(TestCase):
         ]
         self.assertEqual(self.item.price_for_selection(selection), Decimal("12.50"))
 
+    def test_free_portions_are_not_charged(self):
+        # Cheese with one free portion: the first unit is free, only the second
+        # is charged (@1.50), on top of the 8.00 base.
+        self.cheese.number_of_free_portions = 1
+        self.cheese.save()
+        self.assertEqual(
+            self.item.price_for_selection([{"ingredient": self.cheese.id, "quantity": 1}]),
+            Decimal("8.00"),
+        )
+        self.assertEqual(
+            self.item.price_for_selection([{"ingredient": self.cheese.id, "quantity": 2}]),
+            Decimal("9.50"),
+        )
+
+    def test_default_quantity_is_priced_even_when_untouched(self):
+        # Pork pre-selected at 1 (no free portions) is charged from the base
+        # price, and an empty/omitted selection prices it at that default.
+        self.pork.default_quantity = 1
+        self.pork.save()
+        self.assertEqual(self.item.price_for_selection([]), Decimal("11.00"))
+        # Leaving pork at its default drops the row; the price is unchanged.
+        selection = normalize_selection(
+            [{"ingredient": self.pork.id, "quantity": 1}], self.item.ingredients.all()
+        )
+        self.assertEqual(selection, [])
+        self.assertEqual(self.item.price_for_selection(selection), Decimal("11.00"))
+        # Removing the pre-selected default down to 0 refunds its up-charge.
+        selection = normalize_selection(
+            [{"ingredient": self.pork.id, "quantity": 0}], self.item.ingredients.all()
+        )
+        self.assertEqual(selection, [{"ingredient": self.pork.id, "quantity": 0}])
+        self.assertEqual(self.item.price_for_selection(selection), Decimal("8.00"))
+
     def test_normalize_clamps_and_drops_noops(self):
         selection = normalize_selection(
             [

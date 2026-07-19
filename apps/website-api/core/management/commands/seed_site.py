@@ -509,6 +509,8 @@ class Command(BaseCommand):
                         price=self._price(ing.get("price", 0)),
                         is_removable=ing.get("is_removable", False),
                         max_quantity=ing.get("max_quantity", 1),
+                        number_of_free_portions=ing.get("number_of_free_portions", 0),
+                        default_quantity=ing.get("default_quantity", 0),
                         sort_order=ing.get("sort_order", ii),
                     )
                     n_ing += 1

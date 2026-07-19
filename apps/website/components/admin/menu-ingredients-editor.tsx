@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { DragEvent } from "react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Grid } from "@repo/ui/core-elements/grid";
@@ -11,6 +12,7 @@ import { Button } from "@repo/ui/core-elements/button";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Select } from "@repo/ui/core-elements/select";
 import { Switch } from "@repo/ui/core-elements/switch";
+import "./menu-ingredients-editor.css";
 
 /** One editable ingredient row. `id` is present once persisted; `key` is a
  *  stable client id used only for React list identity.
@@ -33,6 +35,10 @@ export interface IngredientRow {
    */
   is_removable: boolean;
   max_quantity: string;
+  /** Units the customer gets free before `price` applies (removable add-ons). */
+  number_of_free_portions: string;
+  /** Quantity pre-selected for the customer in the stepper (removable add-ons). */
+  default_quantity: string;
   enabled: boolean;
 }
 
@@ -41,6 +47,8 @@ export interface IngredientOption {
   id: number;
   name: string | null;
   en_name: string | null;
+  /** Thumbnail URL so the row can show the picked ingredient at a glance. */
+  image: string | null;
   unit: string;
   nutrition_basis_quantity: string | null;
   calories: string | null;
@@ -76,6 +84,8 @@ export function newIngredientRow(): IngredientRow {
     // "Removable" on to make it a customer-chosen add-on.
     is_removable: false,
     max_quantity: "1",
+    number_of_free_portions: "0",
+    default_quantity: "0",
     enabled: true,
   };
 }
@@ -208,6 +218,8 @@ export function MenuIngredientsEditor({
         {value.map((row, index) => {
           const isOver = dragOverIndex === index && dragIndex !== index;
           const hint = basisHint(row);
+          const pickedImage =
+            catalog.find((c) => c.id === row.ingredient)?.image ?? null;
           return (
             <Grid key={row.key} size={{ xs: 12, md: 6 }}>
               <Card
@@ -225,36 +237,41 @@ export function MenuIngredientsEditor({
                   overflow: "visible",
                 }}
               >
-                {/* Row 1: switches on the left; delete + move handle pushed right.
-                Wraps on narrow screens so nothing overflows the card. */}
+                {/* Row 1: switches stacked on the left, delete + move handle on
+                the right - so on a narrow (xs) card the buttons sit beside the
+                switches instead of wrapping underneath them. */}
                 <Box
                   display="flex"
-                  alignItems="center"
-                  gap="16px"
-                  flexWrap="wrap"
+                  alignItems="flex-start"
+                  justifyContent="space-between"
+                  gap="12px"
                 >
-                  <Box display="flex" alignItems="center" gap="8px">
-                    <Switch
-                      checked={row.enabled}
-                      onChange={(c) => update(row.key, { enabled: c })}
-                      aria-label={t("enabled")}
-                    />
-                    <Typography variant="caption">{t("enabled")}</Typography>
-                  </Box>
-                  <Box display="flex" alignItems="center" gap="8px">
-                    <Switch
-                      checked={row.is_removable}
-                      onChange={(c) => update(row.key, { is_removable: c })}
-                      aria-label={t("removable")}
-                    />
-                    <Typography variant="caption">{t("removable")}</Typography>
-                  </Box>
                   <Box
                     display="flex"
-                    alignItems="center"
+                    flexDirection="column"
                     gap="8px"
-                    marginLeft="auto"
+                    className="menu-ingredient-toggles"
                   >
+                    <Box display="flex" alignItems="center" gap="8px">
+                      <Switch
+                        checked={row.enabled}
+                        onChange={(c) => update(row.key, { enabled: c })}
+                        aria-label={t("enabled")}
+                      />
+                      <Typography variant="caption">{t("enabled")}</Typography>
+                    </Box>
+                    <Box display="flex" alignItems="center" gap="8px">
+                      <Switch
+                        checked={row.is_removable}
+                        onChange={(c) => update(row.key, { is_removable: c })}
+                        aria-label={t("removable")}
+                      />
+                      <Typography variant="caption">
+                        {t("removable")}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Box display="flex" alignItems="center" gap="8px">
                     <Button
                       text={t("remove")}
                       kind="error"
@@ -288,21 +305,43 @@ export function MenuIngredientsEditor({
                   </Box>
                 </Box>
 
-                <Typography variant="caption" color="var(--muted, #6b7280)">
-                  {t("removableHint")}
-                </Typography>
-
-                {/* Row 2: the ingredient picker (with a nutrition-basis hint) above
-                the portion + pricing fields. */}
+                {/* Row 2: a thumbnail of the picked ingredient beside the picker
+                (with a nutrition-basis hint), above the portion + pricing fields. */}
                 <Box display="flex" flexDirection="column" gap="6px">
-                  <Select
-                    label={t("ingredient")}
-                    value={row.ingredient === "" ? "" : String(row.ingredient)}
-                    onChange={(v) =>
-                      update(row.key, { ingredient: v === "" ? "" : Number(v) })
-                    }
-                    options={catalogOptions}
-                  />
+                  <Box display="flex" alignItems="flex-end" gap="8px">
+                    <Box
+                      width={40}
+                      height={40}
+                      flex="0 0 auto"
+                      borderRadius={8}
+                      backgroundColor="var(--surface-2)"
+                      styles={{ position: "relative", overflow: "hidden" }}
+                    >
+                      {pickedImage && (
+                        <Image
+                          src={pickedImage}
+                          alt=""
+                          fill
+                          sizes="40px"
+                          style={{ objectFit: "cover" }}
+                        />
+                      )}
+                    </Box>
+                    <Box flex="1">
+                      <Select
+                        label={t("ingredient")}
+                        value={
+                          row.ingredient === "" ? "" : String(row.ingredient)
+                        }
+                        onChange={(v) =>
+                          update(row.key, {
+                            ingredient: v === "" ? "" : Number(v),
+                          })
+                        }
+                        options={catalogOptions}
+                      />
+                    </Box>
+                  </Box>
                   {hint && (
                     <Typography variant="caption" color="var(--muted, #6b7280)">
                       {hint}
@@ -341,6 +380,20 @@ export function MenuIngredientsEditor({
                     format="number"
                     value={row.max_quantity}
                     onChange={(v) => update(row.key, { max_quantity: v })}
+                  />
+                  <TextInput
+                    label={t("freePortions")}
+                    format="number"
+                    value={row.number_of_free_portions}
+                    onChange={(v) =>
+                      update(row.key, { number_of_free_portions: v })
+                    }
+                  />
+                  <TextInput
+                    label={t("defaultQuantity")}
+                    format="number"
+                    value={row.default_quantity}
+                    onChange={(v) => update(row.key, { default_quantity: v })}
                   />
                 </Box>
               </Card>

@@ -74,7 +74,7 @@ export function MenuItemCustomizer({
   const total = useMemo(() => {
     let sum = parseFloat(basePrice);
     for (const ing of ingredients) {
-      const qty = quantities[ing.id] ?? ing.included_units;
+      const qty = quantities[ing.id] ?? ing.default_units;
       const chargeable = Math.max(0, qty - ing.included_units);
       sum += chargeable * parseFloat(ing.price);
     }
@@ -101,11 +101,11 @@ export function MenuItemCustomizer({
     const customization = ingredients
       .map((ing) => ({
         ingredient: ing.id,
-        quantity: quantities[ing.id] ?? ing.included_units,
+        quantity: quantities[ing.id] ?? ing.default_units,
       }))
       .filter((row) => {
         const ing = ingredients.find((i) => i.id === row.ingredient);
-        return ing && row.quantity !== ing.included_units;
+        return ing && row.quantity !== ing.default_units;
       });
 
     return fetch("/api/auth/cart", {
@@ -171,7 +171,7 @@ export function MenuItemCustomizer({
           </Typography>
 
           {sortedIngredients.map((ing) => {
-            const qty = quantities[ing.id] ?? ing.included_units;
+            const qty = quantities[ing.id] ?? ing.default_units;
             const min = minFor(ing);
             const name = (locale === "en" ? ing.en_name : ing.name) ?? ing.name;
             const price = parseFloat(ing.price);
@@ -212,32 +212,32 @@ export function MenuItemCustomizer({
                       {ing.quantity &&
                         ` · ${ing.quantity}${ing.unit ? ` ${ing.unit}` : ""}`}
                     </Typography>
-                    {!included && (
-                      <Typography
-                        variant="caption"
-                        margin={0}
-                        color="var(--foreground)"
-                      >
-                        {price > 0
-                          ? t("perUnitUpcharge", {
-                              price: formatPrice(ing.price, currency),
-                            })
+                    {/* The price slot: a locked "Included" for a non-removable
+                        ingredient, otherwise its per-unit up-charge (or "Free"). */}
+                    <Typography
+                      variant="caption"
+                      margin={0}
+                      color="var(--foreground)"
+                    >
+                      {included
+                        ? t("included")
+                        : price > 0
+                          ? ing.included_units >= 1
+                            ? t("perUnitUpchargeWithFree", {
+                                count: ing.included_units,
+                                price: formatPrice(ing.price, currency),
+                              })
+                            : t("perUnitUpcharge", {
+                                price: formatPrice(ing.price, currency),
+                              })
                           : t("free")}
-                      </Typography>
-                    )}
+                    </Typography>
                   </Box>
                 </Box>
 
-                {included ? (
-                  <Typography
-                    as="span"
-                    variant="label"
-                    margin={0}
-                    color="var(--foreground)"
-                  >
-                    {t("included")}
-                  </Typography>
-                ) : (
+                {/* A horizontal stepper (− qty +) kept on the right; a
+                    non-removable ingredient is locked, so it has no stepper. */}
+                {!included && (
                   <Box
                     alignItems="center"
                     gap={4}

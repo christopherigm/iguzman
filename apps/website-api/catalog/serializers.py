@@ -1140,6 +1140,10 @@ class IngredientWriteSerializer(serializers.ModelSerializer):
 
 class MenuItemIngredientSerializer(serializers.ModelSerializer):
     included_units = serializers.IntegerField(read_only=True)
+    # The effective pre-selected quantity (1 for a locked non-removable row,
+    # `default_quantity` for a removable add-on); the customiser initialises the
+    # stepper from it.
+    default_units = serializers.IntegerField(read_only=True)
     # Identity and nutrition now live on the shared Ingredient. These read-only
     # fields flatten it back onto the row so the public shape is unchanged:
     # `name`/`en_name`/`image` come from the ingredient, `calories` is the
@@ -1158,7 +1162,8 @@ class MenuItemIngredientSerializer(serializers.ModelSerializer):
             'name', 'en_name', 'image',
             'quantity', 'unit', 'calories', 'price',
             'is_removable', 'max_quantity',
-            'included_units', 'sort_order',
+            'number_of_free_portions', 'default_quantity',
+            'included_units', 'default_units', 'sort_order',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version', 'menu_item']
 
@@ -1179,7 +1184,9 @@ class MenuItemIngredientWriteSerializer(serializers.ModelSerializer):
         model = MenuItemIngredient
         fields = [
             'ingredient', 'quantity', 'unit', 'price',
-            'is_removable', 'max_quantity', 'sort_order', 'enabled',
+            'is_removable', 'max_quantity',
+            'number_of_free_portions', 'default_quantity',
+            'sort_order', 'enabled',
         ]
 
     def validate_unit(self, value):
@@ -1194,6 +1201,32 @@ class MenuItemIngredientWriteSerializer(serializers.ModelSerializer):
         if value < 1:
             raise serializers.ValidationError('max_quantity must be at least 1.')
         return value
+
+    def validate(self, attrs):
+        # Cross-field caps: free portions and the pre-selected default must both
+        # fit within max_quantity. On a partial update, fall back to the stored
+        # value for whichever field the payload omits.
+        instance = getattr(self, 'instance', None)
+
+        def resolved(field, default):
+            if field in attrs:
+                return attrs[field]
+            if instance is not None:
+                return getattr(instance, field)
+            return default
+
+        max_quantity = resolved('max_quantity', 1)
+        free = resolved('number_of_free_portions', 0)
+        default_quantity = resolved('default_quantity', 0)
+        if free > max_quantity:
+            raise serializers.ValidationError(
+                {'number_of_free_portions': 'Number of free portions cannot exceed max quantity.'}
+            )
+        if default_quantity > max_quantity:
+            raise serializers.ValidationError(
+                {'default_quantity': 'Default quantity cannot exceed max quantity.'}
+            )
+        return attrs
 
     def create(self, validated_data, menu_item):
         return MenuItemIngredient.objects.create(menu_item=menu_item, **validated_data)

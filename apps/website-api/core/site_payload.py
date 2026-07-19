@@ -233,6 +233,8 @@ def _ingredient_dict(i: MenuItemIngredient) -> dict:
     d["price"] = str(i.price)
     d["is_removable"] = i.is_removable
     d["max_quantity"] = i.max_quantity
+    d["number_of_free_portions"] = i.number_of_free_portions
+    d["default_quantity"] = i.default_quantity
     return d
 
 
@@ -519,6 +521,8 @@ def _apply_menu(system, categories) -> dict:
                 ing_defaults["price"] = _decimal(ing.get("price", 0))
                 ing_defaults["is_removable"] = ing.get("is_removable", False)
                 ing_defaults["max_quantity"] = ing.get("max_quantity", 1)
+                ing_defaults["number_of_free_portions"] = ing.get("number_of_free_portions", 0)
+                ing_defaults["default_quantity"] = ing.get("default_quantity", 0)
                 MenuItemIngredient.objects.update_or_create(
                     menu_item=item,
                     sort_order=ing.get("sort_order", k),
