@@ -373,13 +373,45 @@ export async function lookupIngredientNutrition(data: {
   en_name?: string;
   unit?: string;
   nutrition_basis_quantity?: string;
-  description?: string;
 }) {
   const res = await adminFetch(`/api/catalog/ingredients/nutrition-lookup/`, {
     method: "POST",
     body: JSON.stringify(data),
   });
   return parseResponse<{ nutrients: Record<string, string | null> }>(res);
+}
+
+/** A purchasing source for an ingredient, from the price lookup or the form. */
+export type IngredientProviderResult = {
+  name: string | null;
+  url: string;
+  price: string | null;
+  currency: string;
+};
+
+/**
+ * Estimate an ingredient's price from the open web and find its providers
+ * (scraper + LLM, all backend-side). Returns a single estimated `price` mapped to
+ * the requested unit/basis/currency, plus the provider sources found (store,
+ * link, quoted price). Nothing is persisted - the form previews the result,
+ * applies the price, and appends the providers.
+ */
+export async function lookupIngredientPrice(data: {
+  name?: string;
+  en_name?: string;
+  unit?: string;
+  nutrition_basis_quantity?: string;
+  currency?: string;
+}) {
+  const res = await adminFetch(`/api/catalog/ingredients/price-lookup/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<{
+    price: string | null;
+    currency: string;
+    providers: IngredientProviderResult[];
+  }>(res);
 }
 
 // ---- Menu Item Ingredients ----

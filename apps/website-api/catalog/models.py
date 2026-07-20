@@ -4,7 +4,15 @@ from colorfield.fields import ColorField
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from core.models import Buyable, Common, RegularPicture, SmallPicture, StandardPicture, picture
+from core.models import (
+    CURRENCY_CHOICES,
+    Buyable,
+    Common,
+    RegularPicture,
+    SmallPicture,
+    StandardPicture,
+    picture,
+)
 
 from .units import convert_quantity
 
@@ -624,6 +632,24 @@ class MenuItem(Buyable):
         null=True, blank=True, help_text='Internal kitchen notes; not exposed publicly.'
     )
 
+    # Sibling variants: other MenuItems that are alternative versions of THIS
+    # dish (e.g. "Orange Bread" <-> "Orange Bread - Vegan"). Unlike a
+    # ProductVariant, a variant here is not a priced customisation of one item -
+    # each variant is its own standalone, orderable MenuItem, and this field only
+    # links the family together so the storefront can offer the customer the
+    # sibling choices. The relation is *symmetrical*: linking one direction makes
+    # the pairing show on both items' detail pages, so a group of siblings only
+    # needs each one added once from either side.
+    variants = models.ManyToManyField(
+        'self',
+        blank=True,
+        symmetrical=True,
+        help_text='Other menu items that are alternative versions of this dish '
+                  '(vegan, gluten-free, a different size, etc.). Shown as choices '
+                  'on the public detail page. The link is mutual - adding it from '
+                  'one item surfaces it on the other too.',
+    )
+
     class Meta:
         verbose_name = 'Menu Item'
         verbose_name_plural = 'Menu Items'
@@ -734,6 +760,15 @@ class Ingredient(SmallPicture):
                   '(e.g. 100 for "per 100 g", 1 for "per piece").',
     )
 
+    # Purchasing price for this ingredient, stated per `nutrition_basis_quantity`
+    # of `unit` (the same reference amount the nutrition panel uses). Optional -
+    # null means "unpriced". `currency` is the currency that price is in.
+    price = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        help_text='Price for `nutrition_basis_quantity` of `unit`. Blank = unpriced.',
+    )
+    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default='USD')
+
     # ── FDA Nutrition Facts panel (all per `nutrition_basis_quantity` `unit`) ──
     calories = models.DecimalField(
         max_digits=8, decimal_places=2, null=True, blank=True, help_text='kcal.'
@@ -776,6 +811,44 @@ class Ingredient(SmallPicture):
         if value is None:
             return None
         return value * base_qty / self.nutrition_basis_quantity
+
+
+class IngredientProvider(models.Model):
+    """A purchasing source (store/supplier) for an Ingredient: a link + its price.
+
+    One Ingredient may list several providers - the places it can be bought from -
+    each with an optional store name, a URL, and the price that source quotes (in
+    its own currency). These back the "Providers" section of the admin ingredient
+    form and can be seeded from the web price lookup, which returns the sources it
+    found. They are informational purchasing references; the ingredient's own
+    ``price`` remains the single value used for costing.
+    """
+
+    ingredient = models.ForeignKey(
+        Ingredient,
+        on_delete=models.CASCADE,
+        related_name='providers',
+    )
+    name = models.CharField(
+        max_length=255, null=True, blank=True,
+        help_text='Store or supplier name, e.g. "Costco".',
+    )
+    url = models.URLField(max_length=500)
+    price = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        help_text="This provider's quoted price. Blank = unquoted.",
+    )
+    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default='USD')
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Ingredient Provider'
+        verbose_name_plural = 'Ingredient Providers'
+        ordering = ['sort_order', 'id']
+
+    def __str__(self):
+        label = self.name or self.url
+        return f"{label} ({self.ingredient.name})" if self.ingredient_id else label
 
 
 class MenuItemIngredient(Common):

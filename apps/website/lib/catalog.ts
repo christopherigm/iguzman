@@ -435,6 +435,10 @@ export interface Ingredient extends IngredientNutrition {
   image: string | null;
   unit: string;
   nutrition_basis_quantity: string;
+  /** Purchasing price for `nutrition_basis_quantity` of `unit`, or null when
+   *  the ingredient is unpriced. `currency` is the currency that price is in. */
+  price: string | null;
+  currency: string;
 }
 
 /** One alternative ingredient in a single-select choice group. Its nutrition
@@ -515,6 +519,17 @@ export interface MenuItemImageT {
   sort_order: number;
 }
 
+/** A sibling variant of a menu item - an alternative version of the same dish
+ *  (e.g. a vegan or gluten-free one), each its own orderable MenuItem. Shallow
+ *  by design: just enough to render a linkable thumbnail on the detail page. */
+export interface MenuItemVariant {
+  id: number;
+  slug: string;
+  name: string | null;
+  en_name: string | null;
+  image: string | null;
+}
+
 /** Shape shared by the menu listing card and the detail page - the public
  *  MenuItem serializer returns the same fields for both. */
 export interface MenuItemDetail {
@@ -552,6 +567,7 @@ export interface MenuItemDetail {
   allergens: string | null;
   images: MenuItemImageT[];
   ingredients: MenuItemIngredient[];
+  variants: MenuItemVariant[];
 }
 
 export const getMenuCategories = cache(async (): Promise<MenuCategory[]> => {

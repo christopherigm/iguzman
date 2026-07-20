@@ -55,7 +55,6 @@ export function NutritionWebSearch({ values, onChange, nutrients }: Props) {
         nutrition_basis_quantity: String(
           values.nutrition_basis_quantity ?? "100",
         ),
-        description: String(values.description || values.en_description || ""),
       });
       const hasAny = Object.values(found).some((v) => v != null);
       if (!hasAny) {

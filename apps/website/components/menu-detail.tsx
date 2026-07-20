@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
@@ -5,7 +6,11 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { ShareButton } from "@repo/ui/core-elements/share-button";
 import { getSession } from "@repo/auth/session";
-import type { MenuItemDetail, MenuItemIngredient } from "@/lib/catalog";
+import type {
+  MenuItemDetail,
+  MenuItemIngredient,
+  MenuItemVariant,
+} from "@/lib/catalog";
 import { isFavorite } from "@/lib/favorites";
 import { toShareDescription } from "@/lib/metadata";
 import { discountPercent } from "@/lib/price";
@@ -140,6 +145,87 @@ export async function MenuDetailHeader({ item, locale }: MenuDetailProps) {
   );
 }
 
+/**
+ * A single variant thumbnail: image (or initial-letter placeholder) above the
+ * variant's name. The item currently being viewed renders highlighted and is
+ * not a link; every sibling links to its own `/food/<slug>` detail page, so the
+ * card reads as a selector across the family of alternative versions.
+ */
+function VariantThumb({
+  slug,
+  name,
+  image,
+  current,
+}: {
+  slug: string;
+  name: string;
+  image: string | null;
+  current: boolean;
+}) {
+  const inner = (
+    <Box flexDirection="column" alignItems="center" gap={8} width={96}>
+      <Box
+        width={96}
+        height={96}
+        borderRadius={8}
+        border={
+          current
+            ? "2px solid var(--primary, #16a34a)"
+            : "1px solid var(--surface-3, #e5e7eb)"
+        }
+        backgroundColor="var(--surface-3, #e5e7eb)"
+        alignItems="center"
+        justifyContent="center"
+        styles={{ position: "relative", overflow: "hidden", flex: "0 0 auto" }}
+      >
+        {image ? (
+          <Image
+            fill
+            src={image}
+            alt={name}
+            sizes="96px"
+            style={{ objectFit: "cover" }}
+          />
+        ) : (
+          <Typography as="span" variant="h5" color="var(--foreground)">
+            {name.charAt(0).toUpperCase()}
+          </Typography>
+        )}
+      </Box>
+      <Typography
+        variant="body"
+        color={current ? "var(--primary, #16a34a)" : "var(--foreground)"}
+        styles={{ textAlign: "center", lineHeight: 1.2 }}
+      >
+        {name}
+      </Typography>
+    </Box>
+  );
+
+  if (current) {
+    // The active item: no link, and marked current for assistive tech.
+    return (
+      <Box aria-current="true" styles={{ textDecoration: "none" }}>
+        {inner}
+      </Box>
+    );
+  }
+
+  return (
+    <Card
+      href={`/food/${slug}`}
+      prefetch
+      padding={0}
+      border="none"
+      elevation={0}
+      backgroundColor="transparent"
+      styles={{ textDecoration: "none" }}
+    >
+      {inner}
+    </Card>
+  );
+}
+
 export async function MenuDetailPanel({ item, locale }: MenuDetailProps) {
   const [tMenu, session] = await Promise.all([
     getTranslations("Menu"),
@@ -162,8 +248,38 @@ export async function MenuDetailPanel({ item, locale }: MenuDetailProps) {
     item.prep_time_minutes != null ||
     item.cook_time_minutes != null;
 
+  // The current item leads the row (highlighted, non-clickable), followed by its
+  // sibling variants - each a link to its own detail page.
+  const variantName = (v: MenuItemVariant) =>
+    (locale === "en" ? v.en_name : v.name) ?? v.name ?? v.en_name ?? "";
+
   return (
-    <Box flexDirection="column" gap={18} paddingY={4}>
+    <Box flexDirection="column" gap={18}>
+      {item.variants.length > 0 && (
+        <Card>
+          <Typography as="h2" variant="none" className="item-section-heading">
+            {tMenu("variants")}
+          </Typography>
+          <Box flexWrap="wrap" gap={12}>
+            <VariantThumb
+              slug={item.slug}
+              name={name}
+              image={item.image}
+              current
+            />
+            {item.variants.map((v) => (
+              <VariantThumb
+                key={v.id}
+                slug={v.slug}
+                name={variantName(v)}
+                image={v.image}
+                current={false}
+              />
+            ))}
+          </Box>
+        </Card>
+      )}
+
       <Card gap={18}>
         <MenuItemCustomizer
           menuItemId={item.id}

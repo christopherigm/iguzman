@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 from core.models import System
 from core.services.llm import LlmNotConfigured
 from .services.nutrition_lookup import lookup_nutrition
+from .services.price_lookup import lookup_price
 
 logger = logging.getLogger(__name__)
 
@@ -1388,7 +1389,6 @@ class IngredientNutritionLookupView(APIView):
                 en_name=en_name,
                 unit=str(request.data.get('unit') or 'g'),
                 nutrition_basis_quantity=str(request.data.get('nutrition_basis_quantity') or '100'),
-                description=str(request.data.get('description') or ''),
             )
         except LlmNotConfigured:
             return Response(
@@ -1405,6 +1405,54 @@ class IngredientNutritionLookupView(APIView):
             )
 
         return Response({'nutrients': nutrients})
+
+
+class IngredientPriceLookupView(APIView):
+    """
+    POST /api/catalog/ingredients/price-lookup/  - estimate price + find providers.
+
+    Admin-only. Given an ingredient's identity + basis + target currency (never
+    saved here), searches the open web and has the LLM estimate a single price for
+    the requested amount/currency and extract the provider sources it found (store,
+    link, quoted price). Returns ``{price, currency, providers}``; the admin form
+    previews it, applies the price and appends the providers. Nothing is persisted;
+    the operator still reviews and saves via the normal PATCH/POST.
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    def post(self, request):
+        name = str(request.data.get('name') or '').strip()
+        en_name = str(request.data.get('en_name') or '').strip()
+        if not (name or en_name):
+            return Response(
+                {'detail': 'A name or en_name is required to search.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            result = lookup_price(
+                name=name,
+                en_name=en_name,
+                unit=str(request.data.get('unit') or 'g'),
+                nutrition_basis_quantity=str(request.data.get('nutrition_basis_quantity') or '100'),
+                currency=str(request.data.get('currency') or 'USD'),
+            )
+        except LlmNotConfigured:
+            return Response(
+                {'detail': 'No LLM provider is configured.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        except Exception:
+            # Scraper/LLM outages shouldn't 500 the CMS - report a clean 502 and
+            # log the detail (upstream error bodies are not for the browser).
+            logger.exception('Ingredient price lookup failed')
+            return Response(
+                {'detail': 'The price lookup service is unavailable. Please try again.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        return Response(result)
 
 
 # ---------------------------------------------------------------------------
@@ -1447,7 +1495,7 @@ class MenuItemListCreateView(APIView):
         if cached is not None:
             return Response(cached)
 
-        qs = MenuItem.objects.filter(system_id=system_id).select_related('brand', 'category', 'system').prefetch_related('images', 'ingredients__ingredient', 'ingredients__options__ingredient')
+        qs = MenuItem.objects.filter(system_id=system_id).select_related('brand', 'category', 'system').prefetch_related('images', 'ingredients__ingredient', 'ingredients__options__ingredient', 'variants', 'variants__images')
         if not disabled_visible:
             qs = qs.filter(enabled=True)
 
@@ -1507,7 +1555,7 @@ class MenuItemDetailView(APIView):
 
     def _get_object(self, pk):
         try:
-            return MenuItem.objects.select_related('brand', 'category', 'system').prefetch_related('images', 'ingredients__ingredient', 'ingredients__options__ingredient').get(pk=pk)
+            return MenuItem.objects.select_related('brand', 'category', 'system').prefetch_related('images', 'ingredients__ingredient', 'ingredients__options__ingredient', 'variants', 'variants__images').get(pk=pk)
         except MenuItem.DoesNotExist:
             return None
 
@@ -1531,6 +1579,10 @@ class MenuItemDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         menu_item = serializer.update(menu_item, serializer.validated_data)
         cache.delete(f'catalog:menu_item:{pk}')
+        # Variants are symmetrical, so editing this item's variant list also
+        # changes what its siblings serialize - clear every menu-item detail key,
+        # not just this one's.
+        _invalidate_pattern('catalog:menu_item:*')
         _invalidate_pattern('catalog:menu_items:*')
         return Response(MenuItemSerializer(menu_item, context={'request': request}).data)
 
@@ -1542,6 +1594,8 @@ class MenuItemDetailView(APIView):
         cache.delete(f'catalog:menu_item:{pk}')
         _invalidate_pattern(f'catalog:menu_item_ingredients:{pk}:*')
         cache.delete(f'catalog:menu_item_recipe:{pk}')
+        # Deleting an item also drops it from its siblings' variant lists.
+        _invalidate_pattern('catalog:menu_item:*')
         _invalidate_pattern('catalog:menu_items:*')
         return Response(status=status.HTTP_204_NO_CONTENT)
 

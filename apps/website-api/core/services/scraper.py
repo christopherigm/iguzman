@@ -109,3 +109,25 @@ def scrape_text(query: str) -> str:
         return combined
 
     return f'{combined}\n\n{extracted}' if combined else extracted
+
+
+def search_results(query: str) -> list[dict]:
+    """Raw web-search results for `query`: a list of ``{title, url, snippet}``.
+
+    Unlike `scrape_text`, this preserves each result's URL, so a caller can
+    attribute extracted facts back to their source page - e.g. the provider links
+    a price lookup wants to keep. Results with no URL are dropped. Best-effort:
+    returns ``[]`` on no results; network/HTTP errors on the search call
+    propagate to the caller.
+    """
+    out = []
+    for r in _search(query):
+        url = (r.get('url') or '').strip()
+        if not url:
+            continue
+        out.append({
+            'title': (r.get('title') or '').strip(),
+            'url': url,
+            'snippet': (r.get('snippet') or '').strip(),
+        })
+    return out

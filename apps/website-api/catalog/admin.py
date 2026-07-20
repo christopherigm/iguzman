@@ -11,7 +11,7 @@ from .models import (
     ServiceVariant,
     MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient,
     MenuItemIngredientOption, RecipeStep,
-    Ingredient,
+    Ingredient, IngredientProvider,
 )
 
 
@@ -475,6 +475,7 @@ class MenuItemAdmin(admin.ModelAdmin):
     search_fields = ('name', 'en_name', 'slug', 'sku')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
+    filter_horizontal = ('variants',)
     inlines = [MenuItemImageInline, MenuItemIngredientInline, RecipeStepInline]
 
     fieldsets = (
@@ -494,6 +495,13 @@ class MenuItemAdmin(admin.ModelAdmin):
         ('Dietary & Serving', {
             'fields': ('spice_level', 'servings', 'portions', 'is_organic', 'is_vegetarian', 'is_vegan', 'is_gluten_free', 'allergens'),
         }),
+        ('Variants', {
+            'fields': ('variants',),
+            'description': 'Other menu items that are alternative versions of this '
+                           'dish (vegan, gluten-free, a different size, etc.). The '
+                           'link is mutual - adding it here surfaces it on the '
+                           "other item's detail page too.",
+        }),
         ('Recipe (internal)', {
             'fields': ('prep_time_minutes', 'cook_time_minutes', 'recipe_notes'),
             'classes': ('collapse',),
@@ -504,19 +512,30 @@ class MenuItemAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         cache.delete(f'catalog:menu_item:{obj.pk}')
+        # Variants are symmetrical, so a change here can also alter a sibling's
+        # serialized output - clear every menu-item cache, not just this one's.
+        _invalidate_pattern('catalog:menu_item:*')
         _invalidate_pattern('catalog:menu_items:*')
 
     def delete_model(self, request, obj):
         cache.delete(f'catalog:menu_item:{obj.pk}')
         _invalidate_pattern(f'catalog:menu_item_ingredients:{obj.pk}:*')
+        _invalidate_pattern('catalog:menu_item:*')
         _invalidate_pattern('catalog:menu_items:*')
         super().delete_model(request, obj)
 
 
+class IngredientProviderInline(admin.TabularInline):
+    model = IngredientProvider
+    extra = 0
+    fields = ('name', 'url', 'price', 'currency', 'sort_order')
+
+
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
-    list_display = ('name', 'unit', 'nutrition_basis_quantity', 'calories', 'system', 'enabled', 'modified')
-    list_filter = ('enabled', 'unit', 'system')
+    inlines = [IngredientProviderInline]
+    list_display = ('name', 'unit', 'nutrition_basis_quantity', 'price', 'currency', 'calories', 'system', 'enabled', 'modified')
+    list_filter = ('enabled', 'unit', 'currency', 'system')
     search_fields = ('name', 'en_name', 'slug')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
@@ -539,6 +558,10 @@ class IngredientAdmin(admin.ModelAdmin):
             'fields': ('unit', 'nutrition_basis_quantity'),
             'description': 'How the ingredient is bought/measured, and the amount '
                            'the FDA nutrition values below are stated per.',
+        }),
+        ('Pricing', {
+            'fields': (('price', 'currency'),),
+            'description': 'Purchasing price for `nutrition_basis_quantity` of `unit`.',
         }),
         ('Nutrition Facts (per basis)', {
             'fields': (

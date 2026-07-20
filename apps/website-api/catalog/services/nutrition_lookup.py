@@ -1,10 +1,11 @@
 """Look up an ingredient's FDA Nutrition-Facts values from the open web.
 
 The admin CMS's ingredient form has a "Search on web" button; it posts the
-ingredient's identity (name / en_name), its nutrition basis (``100 g``, ``1 pc``,
-…) and an optional description here. This module:
+ingredient's identity (name / en_name) and its nutrition basis (``100 g``,
+``1 pc``, …) here. This module:
 
-  1. builds a nutrition-oriented web-search query,
+  1. builds a nutrition-oriented web-search query (English name first, then the
+     basis, then the full FDA field list so vitamins/minerals aren't dropped),
   2. scrapes raw web text via ``core.services.scraper`` (search + fallback
      page-extract),
   3. has the LLM map that messy text onto the 15 nutrient fields, *rescaled to
@@ -55,15 +56,22 @@ _MAX_VALUE = Decimal('999999.99')
 _MAX_INPUT_CHARS = 6000
 
 
-def _build_query(name: str, en_name: str, description: str) -> str:
-    """A web-search query biased toward a nutrition-facts source for the food."""
-    parts = [p for p in (name, en_name) if p]
-    # A short description can disambiguate ("raw", "cooked", a brand), but a long
-    # one just dilutes the query - keep only its first few words.
-    if description:
-        parts.append(' '.join(description.split()[:8]))
-    parts.append('nutrition facts calories protein fat per 100g')
-    return ' '.join(parts)
+def _build_query(name: str, en_name: str, basis: str, unit_label: str) -> str:
+    """A web-search query biased toward a full FDA nutrition-facts source.
+
+    The English name (``en_name``) is preferred when present - it lands on
+    US/FDA-style panels whose fields match what we store; the Spanish ``name`` is
+    the fallback. The basis (e.g. ``100 g``) narrows the panel, and naming every
+    field - including the vitamins and minerals - nudges the source toward one
+    that actually carries them, not just the macros.
+    """
+    food = en_name or name
+    return (
+        f'{food} nutrition facts per {basis} {unit_label} - '
+        'calories, protein, total fat, saturated fat, trans fat, cholesterol, '
+        'sodium, total carbohydrate, dietary fiber, total sugars, added sugars, '
+        'vitamin D, calcium, iron, potassium'
+    )
 
 
 def _system_prompt(basis_quantity: str, unit_label: str) -> str:
@@ -119,7 +127,6 @@ def lookup_nutrition(
     en_name: str = '',
     unit: str = 'g',
     nutrition_basis_quantity: str = '100',
-    description: str = '',
 ) -> dict:
     """Resolve an ingredient's nutrients from the web, scaled to its basis.
 
@@ -134,14 +141,14 @@ def lookup_nutrition(
     if not (name or en_name):
         return empty
 
-    query = _build_query(name.strip(), en_name.strip(), description.strip())
+    unit_label = _UNIT_LABELS.get(unit, unit)
+    basis = str(nutrition_basis_quantity or '100')
+    query = _build_query(name.strip(), en_name.strip(), basis, unit_label)
     raw = scrape_text(query)
     if not raw.strip():
         logger.info('Nutrition lookup: no web text for %r', query)
         return empty
 
-    unit_label = _UNIT_LABELS.get(unit, unit)
-    basis = str(nutrition_basis_quantity or '100')
     result = chat_json(
         messages=[
             {'role': 'system', 'content': _system_prompt(basis, unit_label)},

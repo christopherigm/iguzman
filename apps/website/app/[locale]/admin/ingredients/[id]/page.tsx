@@ -20,6 +20,11 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { NutritionWebSearch } from "./nutrition-web-search";
+import { PriceWebSearch } from "./price-web-search";
+import {
+  IngredientProvidersEditor,
+  type ProviderRow,
+} from "./ingredient-providers-editor";
 
 /** Quantity units, matching the API's QUANTITY_UNIT_CHOICES. */
 const UNIT_OPTIONS: { value: string; label: string }[] = [
@@ -36,6 +41,17 @@ const UNIT_OPTIONS: { value: string; label: string }[] = [
   { value: "pc", label: "pc" },
   { value: "slice", label: "slice" },
   { value: "scoop", label: "scoop" },
+];
+
+/** Currencies, matching the API's CURRENCY_CHOICES (as on the menu-item form). */
+const CURRENCY_OPTIONS = [
+  { value: "USD", label: "USD" },
+  { value: "EUR", label: "EUR" },
+  { value: "MXN", label: "MXN" },
+  { value: "GBP", label: "GBP" },
+  { value: "CAD", label: "CAD" },
+  { value: "CLP", label: "CLP" },
+  { value: "BRL", label: "BRL" },
 ];
 
 /** The FDA nutrition fields (keys match the API), each an optional number. */
@@ -74,6 +90,8 @@ export default function AdminIngredientFormPage({ params }: Props) {
     en_description: "",
     unit: "g",
     nutrition_basis_quantity: "100",
+    price: "",
+    currency: "USD",
     enabled: true,
     ...emptyNutrition,
   });
@@ -81,6 +99,10 @@ export default function AdminIngredientFormPage({ params }: Props) {
     { id: number; url: string }[]
   >([]);
   const [pendingImage, setPendingImage] = useState<NewImage[]>([]);
+  // Purchasing sources for this ingredient (name/link/price/currency). Edited in
+  // the form's local state and persisted (nested) on submit; the web price search
+  // appends to it.
+  const [providers, setProviders] = useState<ProviderRow[]>([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,10 +146,21 @@ export default function AdminIngredientFormPage({ params }: Props) {
             en_description: data.en_description ?? "",
             unit: data.unit ?? "g",
             nutrition_basis_quantity: data.nutrition_basis_quantity ?? "100",
+            price: data.price ?? "",
+            currency: data.currency ?? "USD",
             enabled: data.enabled ?? true,
           };
           for (const k of NUTRIENT_KEYS) loaded[k] = data[k] ?? "";
           setValues(loaded);
+          const loadedProviders = Array.isArray(data.providers)
+            ? (data.providers as Record<string, unknown>[]).map((p) => ({
+                name: String(p.name ?? ""),
+                url: String(p.url ?? ""),
+                price: p.price == null ? "" : String(p.price),
+                currency: String(p.currency ?? "USD"),
+              }))
+            : [];
+          setProviders(loadedProviders);
           if (data.image)
             setExistingImage([{ id: Number(id), url: String(data.image) }]);
         })
@@ -146,6 +179,18 @@ export default function AdminIngredientFormPage({ params }: Props) {
       for (const k of NUTRIENT_KEYS) {
         if (payload[k] === "" || payload[k] == null) payload[k] = null;
       }
+      // A blank price means "unpriced" -> null, never 0.
+      if (payload.price === "" || payload.price == null) payload.price = null;
+      // Providers are a full-replace list; drop rows with no link, and send a
+      // blank provider price as null (unquoted) rather than 0.
+      payload.providers = providers
+        .filter((p) => p.url.trim())
+        .map((p) => ({
+          name: p.name.trim() || null,
+          url: p.url.trim(),
+          price: p.price === "" || p.price == null ? null : p.price,
+          currency: p.currency || "USD",
+        }));
       if (pendingImage.length > 0) {
         payload.image = pendingImage[0]?.base64;
       } else if (existingImage.length === 0) {
@@ -192,6 +237,17 @@ export default function AdminIngredientFormPage({ params }: Props) {
     {
       key: "nutrition_basis_quantity",
       label: t("nutritionBasis") ?? "Nutrition per (amount of unit)",
+      type: "number",
+    },
+    {
+      key: "currency",
+      label: t("currency") ?? "Currency",
+      type: "select",
+      options: CURRENCY_OPTIONS,
+    },
+    {
+      key: "price",
+      label: t("ingredientPrice") ?? "Price (per amount of unit)",
       type: "number",
     },
     {
@@ -263,6 +319,28 @@ export default function AdminIngredientFormPage({ params }: Props) {
         error={error}
         success={success}
         slots={[
+          {
+            // Renders full-width right below the Price field: the web price search
+            // and the Providers section (its Apply target).
+            beforeKey: "description",
+            node: (
+              <>
+                <PriceWebSearch
+                  values={values}
+                  onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
+                  onAddProviders={(rows) =>
+                    setProviders((prev) => [...prev, ...rows])
+                  }
+                />
+                <IngredientProvidersEditor
+                  providers={providers}
+                  onChange={setProviders}
+                  currencyOptions={CURRENCY_OPTIONS}
+                  defaultCurrency={String(values.currency ?? "USD")}
+                />
+              </>
+            ),
+          },
           {
             // Renders full-width right below the description (ES/EN) section and
             // just above the nutrition panel's first field.

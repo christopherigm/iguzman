@@ -77,6 +77,11 @@ export interface IngredientOption {
   unit: string;
   nutrition_basis_quantity: string | null;
   calories: string | null;
+  /** Purchasing price per `nutrition_basis_quantity` of `unit`, or null when the
+   *  ingredient is unpriced; `currency` is the currency that price is in. Used to
+   *  estimate the menu item's ingredient cost. */
+  price: string | null;
+  currency: string;
 }
 
 export const UNIT_OPTIONS = [
@@ -531,29 +536,32 @@ export function MenuIngredientsEditor({
           const isUnsaved = row.id === undefined;
           const pickedImage =
             catalog.find((c) => c.id === row.ingredient)?.image ?? null;
+          // Base four-side border (accent while a drop hovers this card).
+          const baseBorder = isOver
+            ? "1px solid var(--accent, #06b6d4)"
+            : "1px solid var(--border, #e5e7eb)";
+          // Bottom edge doubles as a status flag: purple for an internal
+          // (kitchen-only) row, green for an unsaved one, else the base border.
+          // Always emit `borderBottom` so it's never *removed* on rerender - a
+          // shorthand `border` plus a disappearing `borderBottom` is what
+          // triggers React's shorthand/longhand conflict warning.
+          const bottomBorder = row.is_internal
+            ? "3px solid var(--internal, #9333ea)"
+            : isUnsaved
+              ? "3px solid var(--success, #16a34a)"
+              : baseBorder;
           return (
             <Grid key={row.key} size={{ xs: 12, md: 6 }}>
               <Card
                 gap="10px"
-                border={
-                  isOver
-                    ? "1px solid var(--accent, #06b6d4)"
-                    : "1px solid var(--border, #e5e7eb)"
-                }
+                border={baseBorder}
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDragEnter={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(e, index)}
                 styles={{
                   opacity: dragIndex === index ? 0.5 : 1,
                   overflow: "visible",
-                  // An internal ingredient is flagged with a purple bottom
-                  // border so kitchen-only rows are identifiable at a glance;
-                  // it takes precedence over the green "unsaved" hint.
-                  ...(row.is_internal
-                    ? { borderBottom: "3px solid var(--internal, #9333ea)" }
-                    : isUnsaved
-                      ? { borderBottom: "3px solid var(--success, #16a34a)" }
-                      : {}),
+                  borderBottom: bottomBorder,
                 }}
               >
                 {/* Row 1 (edit mode only): the Removable + Internal switches

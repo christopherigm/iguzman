@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { use } from "react";
 import { useRouter } from "@repo/i18n/navigation";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
+import { StripeNetEstimate } from "@/components/admin/stripe-net-estimate";
 import {
   AdminImageUploader,
   type NewImage,
@@ -408,6 +409,18 @@ export default function AdminProductFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
+        slots={[
+          {
+            beforeKey: "stock_count",
+            node: (
+              <StripeNetEstimate
+                price={values.price}
+                currency={values.currency}
+                costPrice={values.cost_price}
+              />
+            ),
+          },
+        ]}
         productionHref={
           !isNew && values.slug ? `/products/${String(values.slug)}` : undefined
         }

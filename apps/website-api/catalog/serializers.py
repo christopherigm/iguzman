@@ -13,7 +13,7 @@ from .models import (
     ServiceVariant,
     MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient,
     MenuItemIngredientOption, RecipeStep,
-    Ingredient,
+    Ingredient, IngredientProvider,
     DIMENSION_UNIT_CHOICES, WEIGHT_UNIT_CHOICES, MODALITY_CHOICES,
     QUANTITY_UNIT_CHOICES,
 )
@@ -1053,12 +1053,39 @@ _INGREDIENT_IMAGE_CFG = {'max_size': (256, 256), 'quality': 85, 'force_format': 
 # never drift).
 _INGREDIENT_CORE_FIELDS = [
     'system', 'name', 'en_name', 'slug', 'description', 'en_description',
-    'unit', 'nutrition_basis_quantity',
+    'unit', 'nutrition_basis_quantity', 'price', 'currency',
 ]
+
+
+class IngredientProviderSerializer(serializers.ModelSerializer):
+    """A purchasing source row read back on an ingredient (store/link/price)."""
+
+    class Meta:
+        model = IngredientProvider
+        fields = ['id', 'name', 'url', 'price', 'currency', 'sort_order']
+        read_only_fields = ['id']
+
+
+class IngredientProviderWriteSerializer(serializers.Serializer):
+    """One provider row in the ingredient write payload (full-replace list)."""
+
+    name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    url = serializers.URLField(max_length=500)
+    price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
+    currency = serializers.ChoiceField(
+        choices=[c[0] for c in CURRENCY_CHOICES], required=False, default='USD',
+    )
+    sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
+
+
+# Sentinel telling "providers omitted from a partial update" (leave them) apart
+# from "providers: []" (clear them).
+_PROVIDERS_UNSET = object()
 
 
 class IngredientSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
+    providers = IngredientProviderSerializer(many=True, read_only=True)
 
     class Meta:
         model = Ingredient
@@ -1066,6 +1093,7 @@ class IngredientSerializer(serializers.ModelSerializer):
             'id', 'enabled', 'created', 'modified', 'version', 'image',
             *_INGREDIENT_CORE_FIELDS,
             *Ingredient.NUTRIENT_FIELDS,
+            'providers',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
 
@@ -1079,6 +1107,10 @@ class IngredientSerializer(serializers.ModelSerializer):
 class IngredientWriteSerializer(serializers.ModelSerializer):
     # base64 string on the way in: unchanged when omitted, cleared when null/blank.
     image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    # Purchasing sources (store/link/price). Full-replace on write: whatever list
+    # arrives becomes the ingredient's provider set (empty clears it); omitted on a
+    # partial update leaves the existing rows untouched.
+    providers = IngredientProviderWriteSerializer(many=True, required=False)
 
     class Meta:
         model = Ingredient
@@ -1086,6 +1118,7 @@ class IngredientWriteSerializer(serializers.ModelSerializer):
             'enabled', 'image',
             *_INGREDIENT_CORE_FIELDS,
             *Ingredient.NUTRIENT_FIELDS,
+            'providers',
         ]
 
     def validate_unit(self, value):
@@ -1119,20 +1152,41 @@ class IngredientWriteSerializer(serializers.ModelSerializer):
             instance.image = None
         instance.save(update_fields=['image'])
 
+    def _sync_providers(self, instance, providers):
+        """Replace the ingredient's provider rows with ``providers`` (a list of
+        validated dicts). Full-replace keeps the write path simple - the form owns
+        the whole list - and an empty list clears every provider."""
+        instance.providers.all().delete()
+        for idx, prov in enumerate(providers):
+            IngredientProvider.objects.create(
+                ingredient=instance,
+                name=prov.get('name') or None,
+                url=prov['url'],
+                price=prov.get('price'),
+                currency=prov.get('currency') or 'USD',
+                sort_order=prov.get('sort_order', idx),
+            )
+
     def create(self, validated_data):
         has_image = 'image' in validated_data
         image_data = validated_data.pop('image', None)
+        providers = validated_data.pop('providers', None)
         instance = super().create(validated_data)
         if has_image:
             self._apply_image(instance, image_data)
+        if providers is not None:
+            self._sync_providers(instance, providers)
         return instance
 
     def update(self, instance, validated_data):
         has_image = 'image' in validated_data
         image_data = validated_data.pop('image', None)
+        providers = validated_data.pop('providers', _PROVIDERS_UNSET)
         instance = super().update(instance, validated_data)
         if has_image:
             self._apply_image(instance, image_data)
+        if providers is not _PROVIDERS_UNSET:
+            self._sync_providers(instance, providers)
         return instance
 
 
@@ -1470,6 +1524,38 @@ class MenuItemRecipeSerializer(serializers.Serializer):
 # MenuItem serializers
 # ---------------------------------------------------------------------------
 
+def _menu_item_image_url(obj, request):
+    """Best image URL for a MenuItem: its own ``image``, else the first gallery
+    image, else None. Shared by the full serializer and the shallow variant
+    serializer so a variant thumbnail resolves its image exactly like a card."""
+    image = obj.image
+    if not image:
+        gallery = sorted(obj.images.all(), key=lambda i: i.sort_order)
+        first = next((i for i in gallery if i.image), None)
+        image = first.image if first else None
+    if not image:
+        return None
+    if request:
+        return request.build_absolute_uri(image.url)
+    return image.url
+
+
+class MenuItemVariantSerializer(serializers.ModelSerializer):
+    """A sibling variant reference on a MenuItem - only enough to render a
+    linkable thumbnail on the detail page. Deliberately shallow: it does NOT
+    nest ``variants``/``ingredients``, so the public payload can never recurse
+    through the symmetrical relation."""
+
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MenuItem
+        fields = ['id', 'slug', 'name', 'en_name', 'image']
+
+    def get_image(self, obj):
+        return _menu_item_image_url(obj, self.context.get('request'))
+
+
 class MenuItemSerializer(serializers.ModelSerializer):
     """Public menu-item read. Deliberately omits the internal recipe
     (``recipe_notes`` and the RecipeStep list) - that is kitchen IP served only
@@ -1478,6 +1564,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
     images = MenuItemImageSerializer(many=True, read_only=True)
     ingredients = MenuItemIngredientSerializer(many=True, read_only=True)
+    variants = MenuItemVariantSerializer(many=True, read_only=True)
     brand_name = serializers.CharField(source='brand.name', read_only=True, default=None)
     category_name = serializers.CharField(source='category.name', read_only=True, default=None)
     category_slug = serializers.SlugRelatedField(source='category', slug_field='slug', read_only=True)
@@ -1491,7 +1578,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
             'name', 'en_name', 'description', 'en_description',
             'short_description', 'en_short_description',
             'slug', 'sku',
-            'image', 'images', 'ingredients',
+            'image', 'images', 'ingredients', 'variants',
             'href', 'video_link', 'fit', 'background_color',
             'price', 'compare_price', 'cost_price', 'currency',
             'is_available', 'is_featured', 'is_ai_generated', 'is_verified',
@@ -1502,17 +1589,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
         ]
 
     def get_image(self, obj):
-        request = self.context.get('request')
-        image = obj.image
-        if not image:
-            gallery = sorted(obj.images.all(), key=lambda i: i.sort_order)
-            first = next((i for i in gallery if i.image), None)
-            image = first.image if first else None
-        if not image:
-            return None
-        if request:
-            return request.build_absolute_uri(image.url)
-        return image.url
+        return _menu_item_image_url(obj, self.context.get('request'))
 
 
 class MenuItemWriteSerializer(serializers.Serializer):
@@ -1540,6 +1617,11 @@ class MenuItemWriteSerializer(serializers.Serializer):
     )
     category = serializers.PrimaryKeyRelatedField(
         queryset=MenuCategory.objects.all(), required=False, allow_null=True,
+    )
+    # Sibling variants (symmetrical M2M). Written as a list of MenuItem ids; the
+    # relation is set after the item is saved (see create/update).
+    variants = serializers.PrimaryKeyRelatedField(
+        queryset=MenuItem.objects.all(), many=True, required=False,
     )
 
     # Menu-item-specific fields
@@ -1603,10 +1685,20 @@ class MenuItemWriteSerializer(serializers.Serializer):
             raise serializers.ValidationError('A menu item with this SKU already exists.')
         return value
 
+    def validate_variants(self, value):
+        # An item is never its own variant; a symmetrical M2M would otherwise
+        # let it list itself as a sibling.
+        if self.instance:
+            value = [v for v in value if v.pk != self.instance.pk]
+        return value
+
     def create(self, validated_data):
         image_data = validated_data.pop('image', None)
+        variants = validated_data.pop('variants', None)
         menu_item = MenuItem(**validated_data)
         menu_item.save()
+        if variants is not None:
+            menu_item.variants.set(variants)
         if image_data:
             self._save_image(menu_item, image_data)
         return menu_item
@@ -1614,11 +1706,14 @@ class MenuItemWriteSerializer(serializers.Serializer):
     def update(self, instance, validated_data):
         clear_image = 'image' in validated_data and not validated_data.get('image')
         image_data = validated_data.pop('image', None)
+        variants = validated_data.pop('variants', None)
         for field_name, value in validated_data.items():
             setattr(instance, field_name, value)
         if clear_image:
             instance.image = None
         instance.save()
+        if variants is not None:
+            instance.variants.set(variants)
         if image_data:
             self._save_image(instance, image_data)
         return instance

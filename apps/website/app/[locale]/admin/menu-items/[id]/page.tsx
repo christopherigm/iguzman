@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { use } from "react";
 import { useRouter } from "@repo/i18n/navigation";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
+import { MenuPricingSection } from "@/components/admin/menu-pricing-section";
 import {
   AdminImageUploader,
   type NewImage,
@@ -19,9 +20,14 @@ import {
   type RecipeValue,
 } from "@/components/admin/menu-recipe-editor";
 import {
+  MenuVariantsEditor,
+  type VariantOption,
+} from "@/components/admin/menu-variants-editor";
+import {
   getMenuItem,
   createMenuItem,
   updateMenuItem,
+  listMenuItems,
   listMenuItemImages,
   createMenuItemImage,
   deleteMenuItemImage,
@@ -41,19 +47,20 @@ import { buildSlug } from "@/lib/slug-utils";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
+import { Switch } from "@repo/ui/core-elements/switch";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 
 type Props = { params: Promise<{ locale: string; id: string }> };
 
-const CURRENCY_OPTIONS = [
-  { value: "USD", label: "USD" },
-  { value: "EUR", label: "EUR" },
-  { value: "MXN", label: "MXN" },
-  { value: "GBP", label: "GBP" },
-  { value: "CAD", label: "CAD" },
-  { value: "CLP", label: "CLP" },
-  { value: "BRL", label: "BRL" },
-];
+// The dietary/label toggles rendered as one inline, wrapping row below the
+// Variants section (rather than as individual boolean fields in the grid).
+const INLINE_TOGGLE_KEYS = [
+  "is_organic",
+  "is_vegetarian",
+  "is_vegan",
+  "is_gluten_free",
+  "show_nutrition_label",
+] as const;
 
 const EMPTY_RECIPE: RecipeValue = {
   recipe_notes: "",
@@ -69,7 +76,7 @@ function toNullableNumber(v: unknown): number | null {
 }
 
 export default function AdminMenuItemFormPage({ params }: Props) {
-  const { id } = use(params);
+  const { id, locale } = use(params);
   const isNew = id === "new";
   const t = useTranslations("Admin");
   const router = useRouter();
@@ -120,6 +127,11 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     IngredientOption[]
   >([]);
 
+  // Sibling variants: the ids currently linked, and the pool of other menu
+  // items to pick from (self is excluded where the picker is rendered).
+  const [variantIds, setVariantIds] = useState<number[]>([]);
+  const [variantCatalog, setVariantCatalog] = useState<VariantOption[]>([]);
+
   const [categoryOptions, setCategoryOptions] = useState<
     { value: string | number; label: string }[]
   >([]);
@@ -159,11 +171,20 @@ export default function AdminMenuItemFormPage({ params }: Props) {
 
   const loadMeta = useCallback(async () => {
     try {
-      const [cats, brands, ingredients] = await Promise.all([
+      const [cats, brands, ingredients, menuItems] = await Promise.all([
         listMenuCategories(systemId),
         listBrands(systemId),
         listIngredients(systemId),
+        listMenuItems(systemId),
       ]);
+      setVariantCatalog(
+        menuItems.map((m) => ({
+          id: m.id as number,
+          name: (m.name as string | null) ?? null,
+          en_name: (m.en_name as string | null) ?? null,
+          image: (m.image as string | null) ?? null,
+        })),
+      );
       setCategoryOptions(
         cats.map((c) => ({
           value: c.id as number,
@@ -186,6 +207,8 @@ export default function AdminMenuItemFormPage({ params }: Props) {
           nutrition_basis_quantity:
             (i.nutrition_basis_quantity as string | null) ?? null,
           calories: (i.calories as string | null) ?? null,
+          price: (i.price as string | null) ?? null,
+          currency: String(i.currency ?? "USD"),
         })),
       );
     } catch {
@@ -268,6 +291,11 @@ export default function AdminMenuItemFormPage({ params }: Props) {
           }));
           setIngredients(ingRows);
           setOriginalIngredientIds(ingRows.map((r) => r.id as number));
+          setVariantIds(
+            ((item.variants as { id: number }[] | undefined) ?? []).map(
+              (v) => v.id,
+            ),
+          );
           setRecipe({
             recipe_notes: String(rec.recipe_notes ?? ""),
             prep_time_minutes:
@@ -415,6 +443,9 @@ export default function AdminMenuItemFormPage({ params }: Props) {
       ].forEach((k) => {
         if (payload[k] === "") payload[k] = null;
       });
+      // Symmetrical sibling variants, sent as a list of MenuItem ids. The write
+      // serializer strips any self-reference; an empty list clears them all.
+      payload.variants = variantIds;
 
       let menuItemId: number;
       if (isNew) {
@@ -477,23 +508,6 @@ export default function AdminMenuItemFormPage({ params }: Props) {
       options: brandOptions,
       placeholder: "- None -",
     },
-    { key: "price", label: `${t("basePrice")}`, type: "number" },
-    {
-      key: "compare_price",
-      label: t("comparePrice") ?? "Compare Price",
-      type: "number",
-    },
-    {
-      key: "cost_price",
-      label: t("costPrice") ?? "Cost Price",
-      type: "number",
-    },
-    {
-      key: "currency",
-      label: t("currency") ?? "Currency",
-      type: "select",
-      options: CURRENCY_OPTIONS,
-    },
     { key: "spice_level", label: t("spiceLevel"), type: "number" },
     { key: "portions", label: t("portions"), type: "number" },
     { key: "allergens", label: t("allergens") },
@@ -519,23 +533,23 @@ export default function AdminMenuItemFormPage({ params }: Props) {
       label: "Short Description (EN)",
       type: "textarea",
     },
-    { key: "is_organic", label: t("organic"), type: "boolean" },
-    { key: "is_vegetarian", label: t("vegetarian"), type: "boolean" },
-    { key: "is_vegan", label: t("vegan"), type: "boolean" },
-    { key: "is_gluten_free", label: t("glutenFree"), type: "boolean" },
     {
       key: "is_available",
       label: t("available") ?? "Available",
       type: "boolean",
     },
     { key: "is_featured", label: t("featured") ?? "Featured", type: "boolean" },
-    {
-      key: "show_nutrition_label",
-      label: t("showNutritionLabel") ?? "Show nutrition label",
-      type: "boolean",
-    },
     { key: "enabled", label: t("enabled"), type: "boolean" },
   ];
+
+  // Labels for the inline dietary/label toggle row, keyed by field.
+  const toggleLabels: Record<(typeof INLINE_TOGGLE_KEYS)[number], string> = {
+    is_organic: t("organic"),
+    is_vegetarian: t("vegetarian"),
+    is_vegan: t("vegan"),
+    is_gluten_free: t("glutenFree"),
+    show_nutrition_label: t("showNutritionLabel") ?? "Show nutrition label",
+  };
 
   if (loading) {
     return (
@@ -595,12 +609,53 @@ export default function AdminMenuItemFormPage({ params }: Props) {
           paddingTop="20px"
           styles={{ borderTop: "1px solid var(--border, #e5e7eb)" }}
         >
+          {/* Variants sits directly below the Short Description fields. */}
+          <MenuVariantsEditor
+            value={variantIds}
+            onChange={setVariantIds}
+            catalog={
+              isNew
+                ? variantCatalog
+                : variantCatalog.filter((m) => m.id !== Number(id))
+            }
+            locale={locale}
+          />
+
+          {/* Dietary / label toggles, inline and wrapping to new rows as needed. */}
+          <Box display="flex" alignItems="center" flexWrap="wrap" gap="24px">
+            {INLINE_TOGGLE_KEYS.map((key) => (
+              <Box key={key} display="flex" alignItems="center" gap="10px">
+                <Switch
+                  checked={Boolean(values[key])}
+                  onChange={(v) => handleChange(key, v)}
+                  aria-label={toggleLabels[key]}
+                />
+                <Typography
+                  as="span"
+                  variant="body"
+                  fontWeight={500}
+                  color="var(--foreground)"
+                >
+                  {toggleLabels[key]}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+
           <MenuIngredientsEditor
             value={ingredients}
             onChange={setIngredients}
             catalog={ingredientCatalog}
           />
           <MenuRecipeEditor value={recipe} onChange={setRecipe} />
+
+          {/* Pricing & Costs, at the end of the form. */}
+          <MenuPricingSection
+            values={values}
+            onChange={handleChange}
+            ingredients={ingredients}
+            catalog={ingredientCatalog}
+          />
         </Box>
       </AdminForm>
     </>
