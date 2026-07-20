@@ -15,6 +15,7 @@ import { getSystem, updateSystem } from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
 import { GradientBuilder } from "@repo/ui/core-elements/gradient-builder";
 import { Box } from "@repo/ui/core-elements/box";
+import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
@@ -360,6 +361,21 @@ export default function AdminSystemPage() {
     // thing. They are still keys in `values`, so handleSubmit is unaffected.
   ];
 
+  /** Shared by both background builders - same strings, same namespace. */
+  const gradientLabels = {
+    linear: tGb("linear"),
+    radial: tGb("radial"),
+    solid: tGb("solid"),
+    angle: tGb("angle"),
+    color: tGb("color"),
+    stops: tGb("stops"),
+    addStop: tGb("addStop"),
+    removeStop: tGb("removeStop"),
+    pickColor: tGb("pickColor"),
+    opacity: tGb("opacity"),
+    rawCss: tGb("rawCss"),
+  };
+
   const handleImageChange = (
     field: string,
     newImages: NewImage[],
@@ -425,42 +441,28 @@ export default function AdminSystemPage() {
           />
         }
       >
-        <GradientBuilder
-          label={t("highlightsBg")}
-          value={String(values.highlights_bg ?? "")}
-          onChange={(v) => setValues((prev) => ({ ...prev, highlights_bg: v }))}
-          labels={{
-            linear: tGb("linear"),
-            radial: tGb("radial"),
-            solid: tGb("solid"),
-            angle: tGb("angle"),
-            color: tGb("color"),
-            stops: tGb("stops"),
-            addStop: tGb("addStop"),
-            removeStop: tGb("removeStop"),
-            pickColor: tGb("pickColor"),
-            rawCss: tGb("rawCss"),
-          }}
-        />
-        <GradientBuilder
-          label={t("catalogBg")}
-          value={String(values.catalog_items_bg ?? "")}
-          onChange={(v) =>
-            setValues((prev) => ({ ...prev, catalog_items_bg: v }))
-          }
-          labels={{
-            linear: tGb("linear"),
-            radial: tGb("radial"),
-            solid: tGb("solid"),
-            angle: tGb("angle"),
-            color: tGb("color"),
-            stops: tGb("stops"),
-            addStop: tGb("addStop"),
-            removeStop: tGb("removeStop"),
-            pickColor: tGb("pickColor"),
-            rawCss: tGb("rawCss"),
-          }}
-        />
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <GradientBuilder
+              label={t("catalogBg")}
+              value={String(values.catalog_items_bg ?? "")}
+              onChange={(v) =>
+                setValues((prev) => ({ ...prev, catalog_items_bg: v }))
+              }
+              labels={gradientLabels}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <GradientBuilder
+              label={t("highlightsBg")}
+              value={String(values.highlights_bg ?? "")}
+              onChange={(v) =>
+                setValues((prev) => ({ ...prev, highlights_bg: v }))
+              }
+              labels={gradientLabels}
+            />
+          </Grid>
+        </Grid>
         <WatermarkSection
           values={values}
           onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}

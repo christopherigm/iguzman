@@ -14,6 +14,7 @@ import {
   MenuDetailHeader,
   MenuDetailPanel,
   MenuDetailSections,
+  MenuDetailAllergens,
   MenuDetailNutrition,
   menuItemShowsNutrition,
   enabledIngredients,
@@ -156,7 +157,16 @@ export default async function MenuItemPage({ params }: Props) {
           {/* Row 3: "About this item" long-form description. */}
           <MenuDetailSections item={item} locale={locale} />
 
-          {/* Row 4: nutrition label - a narrow column on desktop, full-width on
+          {/* Row 4: allergens - full width below the description. */}
+          {item.allergens && (
+            <Grid container spacing={2} marginTop={18}>
+              <Grid size={{ xs: 12 }}>
+                <MenuDetailAllergens item={item} locale={locale} />
+              </Grid>
+            </Grid>
+          )}
+
+          {/* Row 5: nutrition label - a narrow column on desktop, full-width on
               mobile. Only rendered when the item opts in and has chartable data. */}
           {menuItemShowsNutrition(item) && (
             <Grid container spacing={2} marginTop={18}>

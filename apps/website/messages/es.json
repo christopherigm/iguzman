@@ -611,6 +611,7 @@
     "addStop": "Agregar parada",
     "removeStop": "Eliminar parada",
     "pickColor": "Elegir color",
+    "opacity": "Opacidad",
     "rawCss": "Valor CSS"
   },
   "AccountPage": {
@@ -653,13 +654,12 @@
     "home": "Inicio",
     "products": "Productos",
     "services": "Servicios",
+    "food": "Comida",
+    "highlights": "Destacados",
     "blog": "Blog",
-    "successStories": "Casos de éxito",
+    "favorites": "Favoritos",
+    "cart": "Carrito",
     "about": "Acerca de",
-    "careers": "Empleo",
-    "privacyPolicy": "Política de privacidad",
-    "terms": "Términos y condiciones",
-    "userData": "Política de datos",
     "copyright": "© {year} {name}. Todos los derechos reservados."
   },
   "AdminImageUploader": {
@@ -685,9 +685,8 @@
     "addedToCart": "Añadido al carrito",
     "addFailed": "No se pudo añadir al carrito",
     "included": "Incluido",
-    "free": "Gratis",
     "perUnitUpcharge": "+{price} c/u",
-    "perUnitUpchargeWithFree": "{count} gratis, luego +{price} c/u",
+    "perUnitUpchargeWithIncluded": "{count} incluido(s), luego +{price} c/u",
     "decrease": "Disminuir",
     "increase": "Aumentar",
     "allergens": "Alérgenos",

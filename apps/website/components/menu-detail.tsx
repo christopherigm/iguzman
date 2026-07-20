@@ -335,18 +335,29 @@ export async function MenuDetailPanel({ item, locale }: MenuDetailProps) {
           </table>
         </Card>
       )}
-
-      {item.allergens && (
-        <Card>
-          <Typography as="h2" variant="none" className="item-section-heading">
-            {tMenu("allergens")}
-          </Typography>
-          <Typography variant="body" color="var(--foreground)">
-            {item.allergens}
-          </Typography>
-        </Card>
-      )}
     </Box>
+  );
+}
+
+/**
+ * Allergen notice, rendered full-width in its own grid row below "About this
+ * item" rather than inside the buy-box column - the text reads as a page-level
+ * warning and wraps badly in a narrow column.
+ */
+export async function MenuDetailAllergens({ item }: MenuDetailProps) {
+  if (!item.allergens) return null;
+
+  const tMenu = await getTranslations("Menu");
+
+  return (
+    <Card width="100%">
+      <Typography as="h2" variant="none" className="item-section-heading">
+        {tMenu("allergens")}
+      </Typography>
+      <Typography variant="body" color="var(--foreground)">
+        {item.allergens}
+      </Typography>
+    </Card>
   );
 }
 

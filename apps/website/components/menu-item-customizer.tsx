@@ -288,8 +288,9 @@ export function MenuItemCustomizer({
                           }`}
                       </Typography>
                       {/* The price slot: a locked "Included" for a non-removable
-                          ingredient, otherwise its per-unit up-charge (or "Free");
-                          a premium choice-group option shows its up-charge too. */}
+                          ingredient, otherwise its per-unit up-charge (or
+                          "Included" when it costs nothing); a premium
+                          choice-group option shows its up-charge too. */}
                       <Typography
                         variant="caption"
                         margin={0}
@@ -303,14 +304,14 @@ export function MenuItemCustomizer({
                             : t("included")
                           : price > 0
                             ? ing.included_units >= 1
-                              ? t("perUnitUpchargeWithFree", {
+                              ? t("perUnitUpchargeWithIncluded", {
                                   count: ing.included_units,
                                   price: formatPrice(choice.price, currency),
                                 })
                               : t("perUnitUpcharge", {
                                   price: formatPrice(choice.price, currency),
                                 })
-                            : t("free")}
+                            : t("included")}
                       </Typography>
                     </Box>
                   </Box>

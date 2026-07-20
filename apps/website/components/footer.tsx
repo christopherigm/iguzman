@@ -9,6 +9,7 @@ import { ThemeSwitch } from "@repo/ui/theme-switch";
 import { LocaleSwitcher } from "@repo/ui/core-elements/locale-switcher";
 import { routing } from "@repo/i18n/routing";
 import { type System } from "@/lib/system";
+import { getSite } from "@/lib/resolve-site";
 import "./footer.css";
 
 type Props = {
@@ -17,9 +18,10 @@ type Props = {
 };
 
 export async function Footer({ logo, system }: Props) {
-  const [t, locale] = await Promise.all([
+  const [t, locale, site] = await Promise.all([
     getTranslations("Footer"),
     getLocale(),
+    getSite(),
   ]);
 
   const description =
@@ -27,21 +29,33 @@ export async function Footer({ logo, system }: Props) {
       ? (system?.en_site_description ?? system?.site_description)
       : system?.site_description;
 
+  // Same rule as the navbar: a catalog family only gets a link when the tenant
+  // actually has records of that kind, so a services-only business never shows
+  // an empty Products page. The listing routes live under /categories/* - the
+  // bare /products and /services paths are detail-only ([slug]) and 404.
   const navLinks = [
     { label: t("home"), href: "/" },
-    { label: t("products"), href: "/products" },
-    { label: t("services"), href: "/services" },
+    ...((system?.product_count ?? 0) > 0
+      ? [{ label: t("products"), href: "/categories/products" }]
+      : []),
+    ...((system?.service_count ?? 0) > 0
+      ? [{ label: t("services"), href: "/categories/services" }]
+      : []),
+    ...((system?.menu_item_count ?? 0) > 0
+      ? [{ label: t("food"), href: "/categories/food" }]
+      : []),
+    { label: t("highlights"), href: "/highlights" },
     { label: t("blog"), href: "/blog" },
-    { label: t("successStories"), href: "/success-stories" },
+    // Both work logged-out - a guest's cart and hearts live in their browser.
+    { label: t("favorites"), href: "/favorites" },
+    { label: t("cart"), href: "/cart" },
   ];
 
-  const companyLinks = [
-    { label: t("about"), href: "/about" },
-    { label: t("careers"), href: "/careers" },
-    { label: t("privacyPolicy"), href: "/privacy-policy" },
-    { label: t("terms"), href: "/terms" },
-    { label: t("userData"), href: "/user-data" },
-  ];
+  // "About" is not a platform route: each site declares its own /about in its
+  // `pages` map, so the link exists only for the sites that built one.
+  const companyLinks = site.pages?.["/about"]
+    ? [{ label: t("about"), href: "/about" }]
+    : [];
 
   const currentYear = new Date().getFullYear();
 
@@ -106,14 +120,15 @@ export async function Footer({ logo, system }: Props) {
             </Box>
           </Grid>
 
-          {/* Column 2 - Navigation */}
-          <Grid size={{ xs: 12, sm: 4, md: 4 }}>
+          {/* Column 2 - Navigation. Takes the Company column's width when the
+              resolved site has no extra pages to list. */}
+          <Grid size={{ xs: 12, sm: companyLinks.length > 0 ? 4 : 8 }}>
             <Typography as="h3" variant="h5" fontWeight={700} marginBottom={20}>
               {t("navigationHeading")}
             </Typography>
             <Grid container spacingY={1} spacingX={2}>
               {navLinks.map((link) => (
-                <Grid key={link.href} size={{ xs: 6, sm: 12 }}>
+                <Grid key={link.href} size={{ xs: 6, sm: 6 }}>
                   <Link href={link.href} prefetch className="footer__link">
                     {link.label}
                   </Link>
@@ -123,20 +138,27 @@ export async function Footer({ logo, system }: Props) {
           </Grid>
 
           {/* Column 3 - Company */}
-          <Grid size={{ xs: 12, sm: 4, md: 4 }}>
-            <Typography as="h3" variant="h5" fontWeight={700} marginBottom={20}>
-              {t("companyHeading")}
-            </Typography>
-            <Grid container spacingY={1} spacingX={2}>
-              {companyLinks.map((link) => (
-                <Grid key={link.href} size={{ xs: 6, sm: 12 }}>
-                  <Link href={link.href} prefetch className="footer__link">
-                    {link.label}
-                  </Link>
-                </Grid>
-              ))}
+          {companyLinks.length > 0 && (
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <Typography
+                as="h3"
+                variant="h5"
+                fontWeight={700}
+                marginBottom={20}
+              >
+                {t("companyHeading")}
+              </Typography>
+              <Grid container spacingY={1} spacingX={2}>
+                {companyLinks.map((link) => (
+                  <Grid key={link.href} size={{ xs: 6, sm: 12 }}>
+                    <Link href={link.href} prefetch className="footer__link">
+                      {link.label}
+                    </Link>
+                  </Grid>
+                ))}
+              </Grid>
             </Grid>
-          </Grid>
+          )}
         </Grid>
 
         {/* Bottom bar */}

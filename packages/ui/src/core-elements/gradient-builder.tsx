@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import "./gradient-builder.css";
 import { Box } from "./box";
+import { Card } from "./card";
 import { Typography } from "./typography";
 import { TextInput } from "./text-input";
 import { Button } from "./button";
@@ -25,6 +26,7 @@ export interface GradientBuilderLabels {
   addStop?: string;
   removeStop?: string;
   pickColor?: string;
+  opacity?: string;
   rawCss?: string;
 }
 
@@ -59,6 +61,84 @@ function parseColorStop(part: string): ColorStop | null {
   // bare color (no position - will be auto-assigned)
   if (trimmed) return { color: trimmed, position: -1 };
   return null;
+}
+
+/**
+ * Split a hex color of any length (#rgb, #rgba, #rrggbb, #rrggbbaa) into its
+ * opaque 6-digit form plus a 0-100 alpha. Returns null for non-hex colors.
+ */
+function expandHex(color: string): { hex6: string; alpha: number } | null {
+  const m = color.trim().match(/^#([0-9a-fA-F]{3,8})$/);
+  const d = m?.[1];
+  if (!d) return null;
+  if (d.length === 3 || d.length === 4) {
+    const [r, g, b, a] = d.split("");
+    return {
+      hex6: `#${r}${r}${g}${g}${b}${b}`,
+      alpha: a ? Math.round((parseInt(a + a, 16) / 255) * 100) : 100,
+    };
+  }
+  if (d.length === 6) return { hex6: `#${d}`, alpha: 100 };
+  if (d.length === 8)
+    return {
+      hex6: `#${d.slice(0, 6)}`,
+      alpha: Math.round((parseInt(d.slice(6), 16) / 255) * 100),
+    };
+  return null;
+}
+
+/** The numeric arguments of an `rgb()` / `rgba()` color, in either syntax. */
+function rgbParts(color: string): string[] | null {
+  const inner = color.trim().match(/^rgba?\(([^)]+)\)$/i)?.[1];
+  if (!inner) return null;
+  const nums = inner.split(/[\s,/]+/).filter(Boolean);
+  return nums.length >= 3 ? nums : null;
+}
+
+/** The 0-100 alpha of a stop color; 100 when it carries none. */
+function alphaOf(color: string): number {
+  const hex = expandHex(color);
+  if (hex) return hex.alpha;
+  const raw = rgbParts(color)?.[3];
+  if (raw != null) {
+    const a = parseFloat(raw);
+    if (!Number.isNaN(a))
+      return Math.min(
+        100,
+        Math.max(0, Math.round(raw.endsWith("%") ? a : a * 100)),
+      );
+  }
+  return 100;
+}
+
+/** Whether the alpha of this color can be edited (hex and rgb() only). */
+function supportsAlpha(color: string): boolean {
+  return expandHex(color) !== null || rgbParts(color) !== null;
+}
+
+/** Re-emit `color` with a 0-100 alpha, keeping its original notation. */
+function withAlpha(color: string, alpha: number): string {
+  const hex = expandHex(color);
+  if (hex) {
+    if (alpha >= 100) return hex.hex6;
+    const a = Math.round((alpha / 100) * 255)
+      .toString(16)
+      .padStart(2, "0");
+    return `${hex.hex6}${a}`;
+  }
+  const parts = rgbParts(color);
+  if (parts) {
+    const [r, g, b] = parts;
+    return alpha >= 100
+      ? `rgb(${r}, ${g}, ${b})`
+      : `rgba(${r}, ${g}, ${b}, ${(alpha / 100).toFixed(2)})`;
+  }
+  return color;
+}
+
+/** The value to feed the native swatch, which only accepts 6-digit hex. */
+function swatchValue(color: string): string {
+  return expandHex(color)?.hex6 ?? "#000000";
 }
 
 function autoPosition(stops: ColorStop[]): ColorStop[] {
@@ -158,6 +238,7 @@ const DEFAULT_LABELS: Required<GradientBuilderLabels> = {
   addStop: "Add stop",
   removeStop: "Remove stop",
   pickColor: "Pick color",
+  opacity: "Opacity",
   rawCss: "CSS value",
 };
 
@@ -231,6 +312,19 @@ export function GradientBuilder({
     emit(type, next, angle);
   };
 
+  /** The swatch only knows RGB - keep whatever alpha the stop already had. */
+  const handleSwatch = (i: number, hex6: string) => {
+    const current = stops[i]?.color ?? "#000000";
+    handleStopColor(i, withAlpha(hex6, alphaOf(current)));
+  };
+
+  const handleStopAlpha = (i: number, value: string) => {
+    const current = stops[i]?.color;
+    if (current == null) return;
+    const a = Math.min(100, Math.max(0, parseInt(value) || 0));
+    handleStopColor(i, withAlpha(current, a));
+  };
+
   const handleStopPosition = (i: number, pos: string) => {
     const p = Math.min(100, Math.max(0, parseInt(pos) || 0));
     const next = stops.map((s, idx) => (idx === i ? { ...s, position: p } : s));
@@ -279,14 +373,25 @@ export function GradientBuilder({
   const TYPES: GradientType[] = ["linear", "radial", "solid"];
 
   return (
-    <Box className="gb" flexDirection="column" gap="12px">
+    <Card padding={16} borderRadius={8} gap="12px">
       {label && <label className="gb__label">{label}</label>}
 
-      {/* Live preview */}
+      {/* Live preview, over a checkerboard so alpha is visible */}
       <Box
-        className="gb__preview"
-        styles={rawCss ? { background: rawCss } : undefined}
-      />
+        className="gb__checker"
+        height={160}
+        marginTop="4px"
+        marginBottom="4px"
+        borderRadius={8}
+        border="1px solid color-mix(in srgb, var(--foreground) 12%, transparent)"
+        styles={{ overflow: "hidden" }}
+      >
+        <Box
+          width="100%"
+          height="100%"
+          styles={rawCss ? { background: rawCss } : undefined}
+        />
+      </Box>
 
       {/* Type tabs */}
       <Box display="flex" gap="6px">
@@ -349,46 +454,79 @@ export function GradientBuilder({
               )}
             </Box>
             {stops.map((stop, i) => (
-              <Box key={i} display="flex" alignItems="center" gap="8px">
-                <input
-                  type="color"
-                  value={stop.color.startsWith("#") ? stop.color : "#000000"}
-                  onChange={(e) => handleStopColor(i, e.target.value)}
-                  className="gb__swatch"
-                  title={l.pickColor}
-                />
-                <TextInput
-                  value={stop.color}
-                  onChange={(v) => handleStopColor(i, v)}
-                  placeholder="#000000"
-                  className="gb__stop-text"
-                />
-                {type !== "solid" && (
-                  <>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={stop.position}
-                      onChange={(e) => handleStopPosition(i, e.target.value)}
-                      className="gb__pos-num"
-                      aria-label={`${l.stops} ${i + 1} position`}
-                    />
-                    <Typography as="span" variant="body">
-                      %
-                    </Typography>
-                    {stops.length > 2 && (
-                      <IconButton
-                        icon="/icons/close.svg"
-                        size="sm"
-                        kind="error"
-                        onClick={() => removeStop(i)}
-                        aria-label={l.removeStop}
-                        title={l.removeStop}
+              <Box key={i} flexDirection="column" gap="6px">
+                <Box display="flex" alignItems="center" gap="8px">
+                  <input
+                    type="color"
+                    value={swatchValue(stop.color)}
+                    onChange={(e) => handleSwatch(i, e.target.value)}
+                    className="gb__swatch"
+                    title={l.pickColor}
+                  />
+                  <TextInput
+                    value={stop.color}
+                    onChange={(v) => handleStopColor(i, v)}
+                    placeholder="#000000"
+                    className="gb__stop-text"
+                  />
+                  {type !== "solid" && (
+                    <>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={stop.position}
+                        onChange={(e) => handleStopPosition(i, e.target.value)}
+                        className="gb__pos-num"
+                        aria-label={`${l.stops} ${i + 1} position`}
                       />
-                    )}
-                  </>
-                )}
+                      <Typography as="span" variant="body">
+                        %
+                      </Typography>
+                      {stops.length > 2 && (
+                        <IconButton
+                          icon="/icons/close.svg"
+                          size="sm"
+                          kind="error"
+                          onClick={() => removeStop(i)}
+                          aria-label={l.removeStop}
+                          title={l.removeStop}
+                        />
+                      )}
+                    </>
+                  )}
+                </Box>
+                {/* Alpha: the native swatch is RGB-only, so transparency needs
+                    its own control. Disabled for notations we can't rewrite
+                    (named colors, hsl) rather than silently replacing them. */}
+                <Box display="flex" alignItems="center" gap="8px">
+                  <Typography as="span" variant="body" className="gb__sublabel">
+                    {l.opacity}
+                  </Typography>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={alphaOf(stop.color)}
+                    disabled={!supportsAlpha(stop.color)}
+                    onChange={(e) => handleStopAlpha(i, e.target.value)}
+                    className="gb__range"
+                    aria-label={`${l.opacity} ${i + 1}`}
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={alphaOf(stop.color)}
+                    disabled={!supportsAlpha(stop.color)}
+                    onChange={(e) => handleStopAlpha(i, e.target.value)}
+                    className="gb__pos-num"
+                    aria-label={`${l.opacity} ${i + 1}`}
+                  />
+                  <Typography as="span" variant="body">
+                    %
+                  </Typography>
+                </Box>
               </Box>
             ))}
           </Box>
@@ -407,6 +545,6 @@ export function GradientBuilder({
           className="gb__raw"
         />
       </Box>
-    </Box>
+    </Card>
   );
 }

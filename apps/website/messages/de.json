@@ -611,6 +611,7 @@
     "addStop": "Stopp hinzufügen",
     "removeStop": "Stopp entfernen",
     "pickColor": "Farbe wählen",
+    "opacity": "Deckkraft",
     "rawCss": "CSS-Wert"
   },
   "AccountPage": {
@@ -653,13 +654,12 @@
     "home": "Startseite",
     "products": "Produkte",
     "services": "Dienstleistungen",
+    "food": "Essen",
+    "highlights": "Highlights",
     "blog": "Blog",
-    "successStories": "Erfolgsgeschichten",
+    "favorites": "Favoriten",
+    "cart": "Warenkorb",
     "about": "Über uns",
-    "careers": "Karriere",
-    "privacyPolicy": "Datenschutzrichtlinie",
-    "terms": "Allgemeine Geschäftsbedingungen",
-    "userData": "Nutzerdatenschutz",
     "copyright": "© {year} {name}. Alle Rechte vorbehalten."
   },
   "AdminImageUploader": {
@@ -685,9 +685,8 @@
     "addedToCart": "Zum Warenkorb hinzugefügt",
     "addFailed": "Konnte nicht hinzugefügt werden",
     "included": "Enthalten",
-    "free": "Kostenlos",
     "perUnitUpcharge": "+{price} pro Stück",
-    "perUnitUpchargeWithFree": "{count} gratis, dann +{price} pro Stück",
+    "perUnitUpchargeWithIncluded": "{count} inklusive, dann +{price} pro Stück",
     "decrease": "Verringern",
     "increase": "Erhöhen",
     "allergens": "Allergene",
