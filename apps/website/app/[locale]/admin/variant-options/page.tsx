@@ -11,6 +11,7 @@ import {
 } from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
 import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
+import { useReorder } from "@/hooks/use-reorder";
 
 export default function AdminVariantOptionsPage() {
   const t = useTranslations("Admin");
@@ -42,6 +43,7 @@ export default function AdminVariantOptionsPage() {
     setItems,
     setError,
   );
+  const handleReorder = useReorder(updateVariantOption, setItems, setError);
   const handleDelete = async (id: number) => {
     try {
       await deleteVariantOption(id);
@@ -74,6 +76,7 @@ export default function AdminVariantOptionsPage() {
         basePath="/admin/variant-options"
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
+        onReorder={handleReorder}
         loading={loading}
         error={error}
       />

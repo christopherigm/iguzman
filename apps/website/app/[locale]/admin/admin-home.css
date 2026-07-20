@@ -1,5 +1,9 @@
 .admin-home {
-  padding: 16px 0;
+  /* No top padding: the breadcrumbs' own margin-bottom is the only gap between
+     the header group and the greeting (see website/CLAUDE.md → Page Header
+     Spacing). On xs/sm those breadcrumbs are the fixed bar, so a top padding
+     here reads as a blank band under it. */
+  padding: 0 0 16px;
 }
 
 .admin-home__header {

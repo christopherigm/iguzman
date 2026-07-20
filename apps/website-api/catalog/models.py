@@ -49,10 +49,15 @@ class ProductCategory(RegularPicture):
     )
     slug = models.SlugField(max_length=255, unique=True)
 
+    # Manual display order set by dragging rows in the admin CMS list; all
+    # existing rows are 0, so the alphabetical tiebreak below still applies
+    # until someone re-arranges the list.
+    sort_order = models.PositiveIntegerField(default=0)
+
     class Meta:
         verbose_name = 'Product Category'
         verbose_name_plural = 'Product Categories'
-        ordering = ['name']
+        ordering = ['sort_order', 'name']
 
     def __str__(self):
         return self.name
@@ -111,7 +116,9 @@ class Product(Buyable):
     class Meta:
         verbose_name = 'Product'
         verbose_name_plural = 'Products'
-        ordering = ['-created']
+        # `sort_order` (from Buyable) is the CMS's manual arrangement; newest-first
+        # remains the tiebreak, which is every row's order until one is dragged.
+        ordering = ['sort_order', '-created']
 
     def __str__(self):
         return self.name or self.slug
@@ -141,10 +148,12 @@ class ServiceCategory(RegularPicture):
     )
     slug = models.SlugField(max_length=255, unique=True)
 
+    sort_order = models.PositiveIntegerField(default=0)
+
     class Meta:
         verbose_name = 'Service Category'
         verbose_name_plural = 'Service Categories'
-        ordering = ['name']
+        ordering = ['sort_order', 'name']
 
     def __str__(self):
         return self.name
@@ -192,7 +201,7 @@ class Service(Buyable):
     class Meta:
         verbose_name = 'Service'
         verbose_name_plural = 'Services'
-        ordering = ['-created']
+        ordering = ['sort_order', '-created']
 
     def __str__(self):
         return self.name or self.slug
@@ -258,10 +267,12 @@ class VariantOption(Common):
     en_name = models.CharField(max_length=100, null=True, blank=True)
     slug = models.SlugField(max_length=100, unique=True)
 
+    sort_order = models.PositiveIntegerField(default=0)
+
     class Meta:
         verbose_name = 'Variant Option'
         verbose_name_plural = 'Variant Options'
-        ordering = ['name']
+        ordering = ['sort_order', 'name']
 
     def __str__(self):
         return self.name
@@ -547,10 +558,12 @@ class MenuCategory(RegularPicture):
     )
     slug = models.SlugField(max_length=255, unique=True)
 
+    sort_order = models.PositiveIntegerField(default=0)
+
     class Meta:
         verbose_name = 'Menu Category'
         verbose_name_plural = 'Menu Categories'
-        ordering = ['name']
+        ordering = ['sort_order', 'name']
 
     def __str__(self):
         return self.name
@@ -653,7 +666,7 @@ class MenuItem(Buyable):
     class Meta:
         verbose_name = 'Menu Item'
         verbose_name_plural = 'Menu Items'
-        ordering = ['-created']
+        ordering = ['sort_order', '-created']
 
     def __str__(self):
         return self.name or self.slug
@@ -788,10 +801,12 @@ class Ingredient(SmallPicture):
     iron = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='milligrams.')
     potassium = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='milligrams.')
 
+    sort_order = models.PositiveIntegerField(default=0)
+
     class Meta:
         verbose_name = 'Ingredient'
         verbose_name_plural = 'Ingredients'
-        ordering = ['name']
+        ordering = ['sort_order', 'name']
 
     def __str__(self):
         return self.name

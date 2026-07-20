@@ -11,6 +11,7 @@ import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { listServices, deleteService, updateService } from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
 import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
+import { useReorder } from "@/hooks/use-reorder";
 
 export default function AdminServicesPage() {
   const t = useTranslations("Admin");
@@ -42,6 +43,7 @@ export default function AdminServicesPage() {
     setItems,
     setError,
   );
+  const handleReorder = useReorder(updateService, setItems, setError);
   const handleDelete = async (id: number) => {
     try {
       await deleteService(id);
@@ -84,6 +86,7 @@ export default function AdminServicesPage() {
         basePath="/admin/services"
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
+        onReorder={handleReorder}
         loading={loading}
         error={error}
       />

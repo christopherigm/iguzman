@@ -39,14 +39,14 @@ export function AdminSidebar() {
         aria-label={t("toggleSidebar")}
         aria-expanded={open}
       >
-        <span className="admin-sidebar__toggle-icon">{open ? "✕" : "☰"}</span>
         <Typography
           as="span"
           variant="body"
           className="admin-sidebar__toggle-label"
         >
-          {t("menu")}
+          {t("adminMenu")}
         </Typography>
+        <span className="admin-sidebar__toggle-icon">{open ? "✕" : "☰"}</span>
       </Button>
 
       <nav

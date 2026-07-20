@@ -7,6 +7,7 @@ import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { listBrands, deleteBrand, updateBrand } from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
 import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
+import { useReorder } from "@/hooks/use-reorder";
 
 export default function AdminBrandsPage() {
   const t = useTranslations("Admin");
@@ -34,6 +35,7 @@ export default function AdminBrandsPage() {
   }, [load]);
 
   const handleToggleEnabled = useToggleEnabled(updateBrand, setItems, setError);
+  const handleReorder = useReorder(updateBrand, setItems, setError);
   const handleDelete = async (id: number) => {
     try {
       await deleteBrand(id);
@@ -66,6 +68,7 @@ export default function AdminBrandsPage() {
         basePath="/admin/brands"
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
+        onReorder={handleReorder}
         loading={loading}
         error={error}
       />

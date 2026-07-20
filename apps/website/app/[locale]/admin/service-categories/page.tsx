@@ -11,6 +11,7 @@ import {
 } from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
 import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
+import { useReorder } from "@/hooks/use-reorder";
 
 export default function AdminServiceCategoriesPage() {
   const t = useTranslations("Admin");
@@ -42,6 +43,7 @@ export default function AdminServiceCategoriesPage() {
     setItems,
     setError,
   );
+  const handleReorder = useReorder(updateServiceCategory, setItems, setError);
   const handleDelete = async (id: number) => {
     try {
       await deleteServiceCategory(id);
@@ -75,6 +77,7 @@ export default function AdminServiceCategoriesPage() {
         basePath="/admin/service-categories"
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
+        onReorder={handleReorder}
         loading={loading}
         error={error}
       />

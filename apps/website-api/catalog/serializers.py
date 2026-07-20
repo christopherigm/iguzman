@@ -33,6 +33,7 @@ class ProductCategorySerializer(serializers.ModelSerializer):
             'id', 'enabled', 'created', 'modified', 'version',
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'image', 'item_count',
+            'sort_order',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
 
@@ -56,6 +57,7 @@ class ProductCategoryWriteSerializer(serializers.ModelSerializer):
         fields = [
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'enabled', 'image',
+            'sort_order',
         ]
 
     def validate_slug(self, value):
@@ -201,7 +203,7 @@ class VariantOptionSerializer(serializers.ModelSerializer):
         model = VariantOption
         fields = [
             'id', 'enabled', 'created', 'modified', 'version',
-            'system', 'name', 'en_name', 'slug', 'values',
+            'system', 'name', 'en_name', 'slug', 'values', 'sort_order',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
 
@@ -209,7 +211,7 @@ class VariantOptionSerializer(serializers.ModelSerializer):
 class VariantOptionWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = VariantOption
-        fields = ['system', 'name', 'en_name', 'slug', 'enabled']
+        fields = ['system', 'name', 'en_name', 'slug', 'enabled', 'sort_order']
 
     def validate_slug(self, value):
         qs = VariantOption.objects.filter(slug=value)
@@ -517,6 +519,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'is_ai_generated', 'is_verified',
             'length', 'width', 'height', 'weight',
             'dimension_unit', 'weight_unit',
+            'sort_order',
         ]
 
     def get_image(self, obj):
@@ -551,6 +554,8 @@ class ProductWriteSerializer(serializers.Serializer):
         required=False, allow_null=True,
     )
     background_color = serializers.CharField(max_length=25, required=False, allow_null=True, allow_blank=True)
+    # Manual display order, written by the admin list's drag-to-reorder mode.
+    sort_order = serializers.IntegerField(required=False, min_value=0)
 
     # FK relations (accept PKs)
     system = serializers.PrimaryKeyRelatedField(
@@ -738,6 +743,7 @@ class ServiceCategorySerializer(serializers.ModelSerializer):
             'id', 'enabled', 'created', 'modified', 'version',
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'image', 'item_count',
+            'sort_order',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
 
@@ -761,6 +767,7 @@ class ServiceCategoryWriteSerializer(serializers.ModelSerializer):
         fields = [
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'enabled', 'image',
+            'sort_order',
         ]
 
     def validate_slug(self, value):
@@ -830,6 +837,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             'price', 'compare_price', 'cost_price', 'currency',
             'is_featured', 'is_ai_generated', 'is_verified',
             'duration', 'modality',
+            'sort_order',
         ]
 
     def get_image(self, obj):
@@ -856,6 +864,8 @@ class ServiceWriteSerializer(serializers.Serializer):
         required=False, allow_null=True,
     )
     background_color = serializers.CharField(max_length=25, required=False, allow_null=True, allow_blank=True)
+    # Manual display order, written by the admin list's drag-to-reorder mode.
+    sort_order = serializers.IntegerField(required=False, min_value=0)
 
     # FK relations
     system = serializers.PrimaryKeyRelatedField(
@@ -974,6 +984,7 @@ class MenuCategorySerializer(serializers.ModelSerializer):
             'id', 'enabled', 'created', 'modified', 'version',
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'image', 'item_count',
+            'sort_order',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
 
@@ -997,6 +1008,7 @@ class MenuCategoryWriteSerializer(serializers.ModelSerializer):
         fields = [
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'enabled', 'image',
+            'sort_order',
         ]
 
     def validate_slug(self, value):
@@ -1053,7 +1065,7 @@ _INGREDIENT_IMAGE_CFG = {'max_size': (256, 256), 'quality': 85, 'force_format': 
 # never drift).
 _INGREDIENT_CORE_FIELDS = [
     'system', 'name', 'en_name', 'slug', 'description', 'en_description',
-    'unit', 'nutrition_basis_quantity', 'price', 'currency',
+    'unit', 'nutrition_basis_quantity', 'price', 'currency', 'sort_order',
 ]
 
 
@@ -1586,6 +1598,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
             'spice_level', 'servings', 'portions',
             'prep_time_minutes', 'cook_time_minutes',
             'is_organic', 'is_vegetarian', 'is_vegan', 'is_gluten_free', 'allergens',
+            'sort_order',
         ]
 
     def get_image(self, obj):
@@ -1607,6 +1620,8 @@ class MenuItemWriteSerializer(serializers.Serializer):
         required=False, allow_null=True,
     )
     background_color = serializers.CharField(max_length=25, required=False, allow_null=True, allow_blank=True)
+    # Manual display order, written by the admin list's drag-to-reorder mode.
+    sort_order = serializers.IntegerField(required=False, min_value=0)
 
     # FK relations
     system = serializers.PrimaryKeyRelatedField(

@@ -82,8 +82,20 @@ export function MenuPricingSection({
     }
   };
 
+  /** Bare number for the table cells - the currency lives in the total. */
+  const num = (amount: number) => {
+    try {
+      return new Intl.NumberFormat(locale, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(amount);
+    } catch {
+      return amount.toFixed(2);
+    }
+  };
+
   const cellText = (value: number | null) =>
-    value === null ? "—" : fmt(value);
+    value === null ? "—" : num(value);
 
   return (
     <Box display="flex" flexDirection="column" gap="20px">
@@ -119,68 +131,65 @@ export function MenuPricingSection({
             {t("noIngredientsCost")}
           </Typography>
         ) : (
-          <Box styles={{ overflowX: "auto" }}>
-            <Box
-              display="grid"
-              alignItems="center"
-              styles={{
-                gridTemplateColumns: "minmax(120px, 1.6fr) auto auto auto",
-                columnGap: "16px",
-                rowGap: "8px",
-                minWidth: "360px",
-              }}
-            >
-              {/* Header row. */}
+          <Box
+            display="grid"
+            alignItems="center"
+            styles={{
+              gridTemplateColumns: "minmax(0, 1.6fr) auto auto auto",
+              columnGap: "10px",
+              rowGap: "8px",
+            }}
+          >
+            {/* Header row. */}
+            <Typography as="span" variant="label" color={MUTED}>
+              {t("ingredient")}
+            </Typography>
+            <Box styles={{ textAlign: "right" }}>
               <Typography as="span" variant="label" color={MUTED}>
-                {t("ingredient")}
+                {t("costServed")}
               </Typography>
-              <Box styles={{ textAlign: "right" }}>
-                <Typography as="span" variant="label" color={MUTED}>
-                  {t("costServed")}
-                </Typography>
-              </Box>
-              <Box styles={{ textAlign: "right" }}>
-                <Typography as="span" variant="label" color={MUTED}>
-                  {t("unitCost")}
-                </Typography>
-              </Box>
-              <Box styles={{ textAlign: "right" }}>
-                <Typography as="span" variant="label" color={MUTED}>
-                  {t("lineCost")}
-                </Typography>
-              </Box>
-
-              {cost.lines.map((line) => (
-                <Box
-                  key={line.key}
-                  styles={{ display: "contents" }}
-                  role="row"
-                >
-                  <Box display="flex" flexDirection="column">
-                    <Typography as="span" variant="body">
-                      {line.name}
-                    </Typography>
-                    <Typography as="span" variant="caption" color={MUTED}>
-                      {line.portionLabel ??
-                        (line.unpriced
-                          ? t("costUnpriced")
-                          : line.notConvertible
-                            ? t("costNotConvertible")
-                            : "—")}
-                    </Typography>
-                  </Box>
-                  <NumCell text={`× ${line.servedUnits}`} muted />
-                  <NumCell
-                    text={cellText(line.unitCost)}
-                    muted={line.unitCost === null}
-                  />
-                  <NumCell
-                    text={cellText(line.lineCost)}
-                    muted={line.lineCost === null}
-                  />
-                </Box>
-              ))}
             </Box>
+            <Box styles={{ textAlign: "right" }}>
+              <Typography as="span" variant="label" color={MUTED}>
+                {t("unitCost")}
+              </Typography>
+            </Box>
+            <Box styles={{ textAlign: "right" }}>
+              <Typography as="span" variant="label" color={MUTED}>
+                {t("lineCost")}
+              </Typography>
+            </Box>
+
+            {cost.lines.map((line) => (
+              <Box key={line.key} styles={{ display: "contents" }} role="row">
+                <Box
+                  display="flex"
+                  flexDirection="column"
+                  styles={{ minWidth: 0, overflowWrap: "anywhere" }}
+                >
+                  <Typography as="span" variant="body">
+                    {line.name}
+                  </Typography>
+                  <Typography as="span" variant="caption" color={MUTED}>
+                    {line.portionLabel ??
+                      (line.unpriced
+                        ? t("costUnpriced")
+                        : line.notConvertible
+                          ? t("costNotConvertible")
+                          : "—")}
+                  </Typography>
+                </Box>
+                <NumCell text={String(line.servedUnits)} muted />
+                <NumCell
+                  text={cellText(line.unitCost)}
+                  muted={line.unitCost === null}
+                />
+                <NumCell
+                  text={cellText(line.lineCost)}
+                  muted={line.lineCost === null}
+                />
+              </Box>
+            ))}
           </Box>
         )}
 

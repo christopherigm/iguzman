@@ -83,7 +83,6 @@ export function PriceWebSearch({ values, onChange, onAddProviders }: Props) {
           name: p.name ?? "",
           url: p.url,
           price: p.price ?? "",
-          currency: p.currency,
         })),
       );
     }

@@ -15,6 +15,7 @@ import { Select } from "@repo/ui/core-elements/select";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { useLlmProxy, type LlmMessage } from "@repo/ui/use-llm";
+import "./menu-ingredients-editor.css";
 
 /** One editable ingredient row. `id` is present once persisted; `key` is a
  *  stable client id used only for React list identity.
@@ -640,10 +641,10 @@ export function MenuIngredientsEditor({
                         options={catalogOptions}
                       />
                     </Box>
-                    {/* Once there are alternatives the default gets its own inline
-                    up-charge (mirroring each option), and the shared "general"
-                    up-charge is dropped from the grid below. */}
-                    {!sortMode && row.options.length > 0 && (
+                    {/* The up-charge always sits inline beside the picker, both
+                    for a plain row and for the default of a choice group (where
+                    it mirrors each alternative's own up-charge). */}
+                    {!sortMode && (
                       <Box width={80} flex="0 0 auto">
                         <TextInput
                           label={t("upcharge")}
@@ -752,45 +753,39 @@ export function MenuIngredientsEditor({
                   </Box>
                 )}
 
+                {/* Portion + quantity fields. Two rows on xs (portion/unit,
+                then the three quantities), one row from sm - see the companion
+                CSS for the column tracks. */}
                 {!sortMode && (
                   <Box
                     display="grid"
                     gap="10px"
                     alignItems="start"
-                    styles={{
-                      gridTemplateColumns:
-                        "repeat(auto-fit, minmax(120px, 1fr))",
-                    }}
+                    className="mie__fields"
                   >
-                    {/* The default's up-charge only lives here when there are no
-                    alternatives; with options it moves inline beside the picker. */}
-                    {row.options.length === 0 && (
-                      <TextInput
-                        label={t("upcharge")}
-                        format="number"
-                        value={row.price}
-                        onChange={(v) => update(row.key, { price: v })}
-                      />
-                    )}
                     <TextInput
+                      className="mie__field--wide"
                       label={t("portion")}
                       format="number"
                       value={row.quantity}
                       onChange={(v) => update(row.key, { quantity: v })}
                     />
                     <Select
+                      className="mie__field--wide"
                       label={t("unit")}
                       value={row.unit}
                       onChange={(v) => update(row.key, { unit: v })}
                       options={UNIT_OPTIONS}
                     />
                     <TextInput
-                      label={t("maxQuantity")}
+                      className="mie__field--qty"
+                      label={t("defaultQuantity")}
                       format="number"
-                      value={row.max_quantity}
-                      onChange={(v) => update(row.key, { max_quantity: v })}
+                      value={row.default_quantity}
+                      onChange={(v) => update(row.key, { default_quantity: v })}
                     />
                     <TextInput
+                      className="mie__field--qty"
                       label={t("freePortions")}
                       format="number"
                       value={row.number_of_free_portions}
@@ -799,10 +794,11 @@ export function MenuIngredientsEditor({
                       }
                     />
                     <TextInput
-                      label={t("defaultQuantity")}
+                      className="mie__field--qty"
+                      label={t("maxQuantity")}
                       format="number"
-                      value={row.default_quantity}
-                      onChange={(v) => update(row.key, { default_quantity: v })}
+                      value={row.max_quantity}
+                      onChange={(v) => update(row.key, { max_quantity: v })}
                     />
                   </Box>
                 )}

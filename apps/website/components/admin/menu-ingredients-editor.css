@@ -1,0 +1,35 @@
+/* Portion + pricing field row of an ingredient card.
+   Kept in CSS because the column count changes at the sm breakpoint via @media,
+   and grid-template-columns / grid-column placement have no component-prop
+   equivalent.
+
+   xs: six tracks so "Portion" + "Unit" share the first row (3 + 3) and the three
+   quantity fields split the second one (2 + 2 + 2).
+   sm and up: all five fields sit on a single row. */
+.mie__fields {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+/* Grid items default to min-width: auto and refuse to shrink below their
+   content, which would push the row past the card on narrow screens. */
+.mie__fields > * {
+  min-width: 0;
+}
+
+.mie__field--wide {
+  grid-column: span 3;
+}
+
+.mie__field--qty {
+  grid-column: span 2;
+}
+
+@media (min-width: 600px) {
+  /* sm */
+  .mie__fields {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .mie__fields > * {
+    grid-column: auto;
+  }
+}

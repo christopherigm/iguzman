@@ -11,6 +11,7 @@ import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { listProducts, deleteProduct, updateProduct } from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
 import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
+import { useReorder } from "@/hooks/use-reorder";
 
 export default function AdminProductsPage() {
   const t = useTranslations("Admin");
@@ -44,6 +45,7 @@ export default function AdminProductsPage() {
     setItems,
     setError,
   );
+  const handleReorder = useReorder(updateProduct, setItems, setError);
   const handleDelete = async (id: number) => {
     try {
       await deleteProduct(id);
@@ -87,6 +89,7 @@ export default function AdminProductsPage() {
         basePath="/admin/products"
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
+        onReorder={handleReorder}
         loading={loading}
         error={error}
       />

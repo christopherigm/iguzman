@@ -11,6 +11,7 @@ import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { listMenuItems, deleteMenuItem, updateMenuItem } from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
 import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
+import { useReorder } from "@/hooks/use-reorder";
 
 export default function AdminMenuItemsPage() {
   const t = useTranslations("Admin");
@@ -43,6 +44,7 @@ export default function AdminMenuItemsPage() {
     setItems,
     setError,
   );
+  const handleReorder = useReorder(updateMenuItem, setItems, setError);
   const handleDelete = async (id: number) => {
     try {
       await deleteMenuItem(id);
@@ -85,6 +87,7 @@ export default function AdminMenuItemsPage() {
         basePath="/admin/menu-items"
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
+        onReorder={handleReorder}
         loading={loading}
         error={error}
       />

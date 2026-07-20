@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { DragEvent } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import "./admin-entity-list.css";
@@ -8,6 +9,7 @@ import Image from "next/image";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Button } from "@repo/ui/core-elements/button";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
@@ -35,6 +37,14 @@ interface AdminEntityListProps {
    * fails, so the Switch can roll its optimistic state back.
    */
   onToggleEnabled?: (id: number, enabled: boolean) => Promise<void>;
+  /**
+   * Enables sort mode: a Switch above the table strips every row down to its
+   * image, name and a drag handle so the list can be re-arranged. Called with
+   * the rows in their new order when the switch is turned back off, and must
+   * persist each row's new `sort_order`. Omit for lists that have no manual
+   * order (e.g. users).
+   */
+  onReorder?: (ordered: Record<string, unknown>[]) => Promise<void>;
   loading?: boolean;
   error?: string | null;
   /**
@@ -52,6 +62,7 @@ export function AdminEntityList({
   basePath,
   onDelete,
   onToggleEnabled,
+  onReorder,
   loading,
   error,
   hideCreate,
@@ -60,6 +71,67 @@ export function AdminEntityList({
   const tCommon = useTranslations("Common");
   // The row awaiting delete confirmation; null when the modal is closed.
   const [pendingDelete, setPendingDelete] = useState<number | null>(null);
+  // Sort mode's working copy of the list. Non-null only while the switch is on:
+  // dragging mutates this rather than `items`, so the parent's state stays the
+  // saved order until the reorder is actually persisted.
+  const [draft, setDraft] = useState<Record<string, unknown>[] | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  const sortMode = draft !== null;
+  const rows = draft ?? items;
+  // In sort mode a row collapses to its image and name; the drag handle takes
+  // over the actions cell. Lists without an image column simply show the name.
+  const visibleColumns = sortMode
+    ? columns.filter((c) => c.key === "image" || c.key === "name")
+    : columns;
+
+  const toggleSortMode = async (next: boolean) => {
+    if (next) {
+      setDraft(items);
+      return;
+    }
+    const ordered = draft;
+    if (!ordered || !onReorder) {
+      setDraft(null);
+      return;
+    }
+    setSaving(true);
+    try {
+      await onReorder(ordered);
+      setDraft(null);
+    } catch {
+      // The page surfaced the error; stay in sort mode so the arrangement the
+      // user made is still on screen and they can retry rather than lose it.
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Drag-to-reorder: the handle is the drag source, each row a drop target.
+  const handleDragOver = (e: DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+  const handleDrop = (e: DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === dropIndex || !draft) {
+      handleDragEnd();
+      return;
+    }
+    const next = [...draft];
+    const [moved] = next.splice(dragIndex, 1);
+    if (moved) {
+      next.splice(dropIndex, 0, moved);
+      setDraft(next);
+    }
+    handleDragEnd();
+  };
 
   return (
     <Box flexDirection="column" gap={20}>
@@ -74,12 +146,31 @@ export function AdminEntityList({
         <Typography as="h1" variant="h3" margin={0}>
           {title}
         </Typography>
-        {!hideCreate && (
-          <Link href={`${basePath}/new`} prefetch>
-            <Button text={`+ ${t("newItem")}`} kind="primary" size="md" />
-          </Link>
-        )}
+        <Box display="flex" alignItems="center" gap={16} flexWrap="wrap">
+          {onReorder && items.length > 1 && (
+            <Box display="flex" alignItems="center" gap={8}>
+              <Switch
+                checked={sortMode}
+                onChange={(next) => void toggleSortMode(next)}
+                disabled={saving}
+                aria-label={t("sortRows")}
+              />
+              <Typography variant="caption">{t("sortRows")}</Typography>
+            </Box>
+          )}
+          {!hideCreate && (
+            <Link href={`${basePath}/new`} prefetch>
+              <Button text={`+ ${t("newItem")}`} kind="primary" size="md" />
+            </Link>
+          )}
+        </Box>
       </Box>
+
+      {sortMode && (
+        <Typography variant="caption" color="var(--muted, #6b7280)">
+          {t("sortRowsHint")}
+        </Typography>
+      )}
 
       {loading && (
         <Box
@@ -129,7 +220,7 @@ export function AdminEntityList({
           <table className="ael__table">
             <thead>
               <tr>
-                {columns.map((col) => (
+                {visibleColumns.map((col) => (
                   <th
                     key={col.key}
                     className={`ael__th${col.compact ? " ael__th--compact" : ""}`}
@@ -137,13 +228,27 @@ export function AdminEntityList({
                     {col.label}
                   </th>
                 ))}
-                <th className="ael__th ael__th--actions">{t("actions")}</th>
+                <th className="ael__th ael__th--actions">
+                  {sortMode ? t("order") : t("actions")}
+                </th>
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
-                <tr key={String(item.id)} className="ael__row">
-                  {columns.map((col) => (
+              {rows.map((item, index) => (
+                <tr
+                  key={String(item.id)}
+                  className={`ael__row${
+                    sortMode && dragOverIndex === index && dragIndex !== index
+                      ? " ael__row--drop"
+                      : ""
+                  }${sortMode && dragIndex === index ? " ael__row--dragging" : ""}`}
+                  onDragOver={
+                    sortMode ? (e) => handleDragOver(e, index) : undefined
+                  }
+                  onDragEnter={sortMode ? (e) => e.preventDefault() : undefined}
+                  onDrop={sortMode ? (e) => handleDrop(e, index) : undefined}
+                >
+                  {visibleColumns.map((col) => (
                     <td
                       key={col.key}
                       className={`ael__td${col.compact ? " ael__td--compact" : ""}`}
@@ -163,17 +268,41 @@ export function AdminEntityList({
                     </td>
                   ))}
                   <td className="ael__td ael__td--actions">
-                    <Box display="flex" gap={8} justifyContent="center">
-                      <Link href={`${basePath}/${item.id}`} prefetch>
-                        <Button text={t("edit")} size="sm" />
-                      </Link>
-                      {onDelete && (
-                        <Button
-                          text={t("delete")}
-                          size="sm"
-                          kind="error"
-                          onClick={() => setPendingDelete(item.id as number)}
-                        />
+                    <Box display="flex" gap={8} justifyContent="flex-end">
+                      {sortMode ? (
+                        <span
+                          draggable
+                          onDragStart={() => setDragIndex(index)}
+                          onDragEnd={handleDragEnd}
+                          className="ael__handle"
+                          aria-label={t("dragToReorder")}
+                          title={t("dragToReorder")}
+                        >
+                          ⠿
+                        </span>
+                      ) : (
+                        <>
+                          <IconButton
+                            icon="/icons/edit.svg"
+                            kind="warning"
+                            size="sm"
+                            href={`${basePath}/${item.id}`}
+                            aria-label={t("edit")}
+                            title={t("edit")}
+                          />
+                          {onDelete && (
+                            <IconButton
+                              icon="/icons/delete-trash-icon.svg"
+                              kind="error"
+                              size="sm"
+                              aria-label={t("delete")}
+                              title={t("delete")}
+                              onClick={() =>
+                                setPendingDelete(item.id as number)
+                              }
+                            />
+                          )}
+                        </>
                       )}
                     </Box>
                   </td>

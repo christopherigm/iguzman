@@ -11,6 +11,7 @@ import {
 } from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
 import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
+import { useReorder } from "@/hooks/use-reorder";
 
 export default function AdminIngredientsPage() {
   const t = useTranslations("Admin");
@@ -43,6 +44,7 @@ export default function AdminIngredientsPage() {
     setItems,
     setError,
   );
+  const handleReorder = useReorder(updateIngredient, setItems, setError);
   const handleDelete = async (id: number) => {
     try {
       await deleteIngredient(id);
@@ -76,6 +78,7 @@ export default function AdminIngredientsPage() {
         basePath="/admin/ingredients"
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
+        onReorder={handleReorder}
         loading={loading}
         error={error}
       />

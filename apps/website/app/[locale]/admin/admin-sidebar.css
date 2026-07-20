@@ -104,8 +104,20 @@
     display: none;
   }
 
+  /* Right end of the fixed bar under the global navbar; the page breadcrumbs
+     fill the rest of the strip to its left (see admin-layout.css). */
   .admin-sidebar__toggle {
     display: flex;
+    justify-content: flex-end;
+    position: fixed;
+    top: var(--ui-navbar-height, 57px);
+    right: 0;
+    z-index: 151;
+    width: var(--admin-menu-w, 104px);
+    height: var(--admin-bar-h, 44px);
+    padding: 0 12px;
+    gap: 6px;
+    overflow: hidden;
   }
 
   .admin-sidebar {

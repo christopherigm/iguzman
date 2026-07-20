@@ -11,6 +11,7 @@ import {
 } from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
 import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
+import { useReorder } from "@/hooks/use-reorder";
 
 export default function AdminHighlightsPage() {
   const t = useTranslations("Admin");
@@ -42,6 +43,7 @@ export default function AdminHighlightsPage() {
     setItems,
     setError,
   );
+  const handleReorder = useReorder(updateHighlight, setItems, setError);
   const handleDelete = async (id: number) => {
     try {
       await deleteHighlight(id);
@@ -76,6 +78,7 @@ export default function AdminHighlightsPage() {
         basePath="/admin/highlights"
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
+        onReorder={handleReorder}
         loading={loading}
         error={error}
       />

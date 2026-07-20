@@ -123,7 +123,7 @@ class SuccessStorySerializer(serializers.ModelSerializer):
             "short_description", "en_short_description",
             "description", "en_description",
             "image", "fit", "background_color", "href",
-            "slug",
+            "slug", "sort_order",
             "images",
         ]
 
@@ -154,6 +154,8 @@ class SuccessStoryWriteSerializer(serializers.Serializer):
     background_color = serializers.CharField(max_length=32, required=False, allow_null=True, allow_blank=True)
     slug        = serializers.SlugField(max_length=255, required=False, allow_null=True, allow_blank=True)
     enabled     = serializers.BooleanField(required=False)
+    # Manual display order, written by the admin list's drag-to-reorder mode.
+    sort_order  = serializers.IntegerField(min_value=0, required=False)
     image       = serializers.CharField(required=False, allow_null=True, allow_blank=True)  # base64
 
     def validate_image(self, value):
@@ -168,7 +170,7 @@ class SuccessStoryWriteSerializer(serializers.Serializer):
             "system", "name", "en_name",
             "short_description", "en_short_description",
             "description", "en_description",
-            "href", "fit", "background_color", "slug", "enabled",
+            "href", "fit", "background_color", "slug", "enabled", "sort_order",
         ]
         update_fields = []
         for field_name in scalar_fields:
@@ -645,7 +647,7 @@ class BrandSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Brand
-        fields = ["id", "enabled", "created", "modified", "name", "slug", "logo", "system"]
+        fields = ["id", "enabled", "created", "modified", "name", "slug", "logo", "system", "sort_order"]
 
     def get_logo(self, obj):
         request = self.context.get("request")
@@ -666,6 +668,8 @@ class BrandWriteSerializer(serializers.Serializer):
     slug    = serializers.SlugField(max_length=255, required=False)
     enabled = serializers.BooleanField(required=False)
     system  = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), required=False, allow_null=True)
+    # Manual display order, written by the admin list's drag-to-reorder mode.
+    sort_order = serializers.IntegerField(min_value=0, required=False)
     logo    = serializers.CharField(required=False, allow_null=True, allow_blank=True)  # base64
 
     def validate_logo(self, value):
@@ -676,7 +680,7 @@ class BrandWriteSerializer(serializers.Serializer):
         return value
 
     def save(self, instance):
-        scalar_fields = ["name", "slug", "enabled", "system"]
+        scalar_fields = ["name", "slug", "enabled", "system", "sort_order"]
         update_fields = []
         for field_name in scalar_fields:
             if field_name in self.validated_data:

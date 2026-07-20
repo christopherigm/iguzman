@@ -157,7 +157,6 @@ export default function AdminIngredientFormPage({ params }: Props) {
                 name: String(p.name ?? ""),
                 url: String(p.url ?? ""),
                 price: p.price == null ? "" : String(p.price),
-                currency: String(p.currency ?? "USD"),
               }))
             : [];
           setProviders(loadedProviders);
@@ -182,14 +181,15 @@ export default function AdminIngredientFormPage({ params }: Props) {
       // A blank price means "unpriced" -> null, never 0.
       if (payload.price === "" || payload.price == null) payload.price = null;
       // Providers are a full-replace list; drop rows with no link, and send a
-      // blank provider price as null (unquoted) rather than 0.
+      // blank provider price as null (unquoted) rather than 0. They are priced
+      // in the ingredient's own currency — there is no per-provider currency.
       payload.providers = providers
         .filter((p) => p.url.trim())
         .map((p) => ({
           name: p.name.trim() || null,
           url: p.url.trim(),
           price: p.price === "" || p.price == null ? null : p.price,
-          currency: p.currency || "USD",
+          currency: String(values.currency ?? "USD"),
         }));
       if (pendingImage.length > 0) {
         payload.image = pendingImage[0]?.base64;
@@ -335,8 +335,6 @@ export default function AdminIngredientFormPage({ params }: Props) {
                 <IngredientProvidersEditor
                   providers={providers}
                   onChange={setProviders}
-                  currencyOptions={CURRENCY_OPTIONS}
-                  defaultCurrency={String(values.currency ?? "USD")}
                 />
               </>
             ),

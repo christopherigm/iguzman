@@ -127,11 +127,15 @@ class Brand(Common):
         on_delete=models.CASCADE,
         related_name="brands",
     )
+    # Manual display order set by dragging rows in the admin CMS list. Every
+    # existing row defaults to 0, so the alphabetical order below stays in
+    # effect until someone actually re-arranges the list.
+    sort_order = models.PositiveIntegerField(default=0)
 
     class Meta:
         verbose_name = "Brand"
         verbose_name_plural = "Brands"
-        ordering = ["name"]
+        ordering = ["sort_order", "name"]
 
     def __str__(self):
         return self.name
@@ -168,6 +172,12 @@ class Buyable(StandardPicture):
     cost_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default="USD")
 
+    # Manual display order set by dragging rows in the admin CMS list. Concrete
+    # subclasses put it first in their `ordering` so the CMS arrangement is what
+    # the customer sees; their old ordering field stays as the tiebreak, which
+    # is what every row uses until it is dragged (they all default to 0).
+    sort_order = models.PositiveIntegerField(default=0)
+
     class Meta:
         abstract = True
 
@@ -190,11 +200,12 @@ class SuccessStory(RegularPicture):
         related_name="success_stories",
     )
     slug = models.SlugField(max_length=255, unique=True, null=True, blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
 
     class Meta:
         verbose_name = "Success Story"
         verbose_name_plural = "Success Stories"
-        ordering = ["-created"]
+        ordering = ["sort_order", "-created"]
 
     def __str__(self):
         return self.name or f"Story #{self.pk}"

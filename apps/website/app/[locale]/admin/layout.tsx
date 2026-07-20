@@ -20,7 +20,17 @@ export default async function AdminLayout({ children, params }: Props) {
       <Box height="var(--ui-navbar-height, 57px)" />
       <Box className="admin-shell">
         <AdminSidebar />
-        <Container paddingX={10} marginTop={16}>
+        {/* `admin-content` is a styling hook only (see admin-layout.css): on
+            xs/sm it lets the page's first <Breadcrumbs> become the fixed bar
+            beside the "Admin Menu ☰" toggle. */}
+        {/* paddingBottom: every admin page (lists, forms) otherwise ends flush
+            against the bottom of the page with no breathing room. */}
+        <Container
+          className="admin-content"
+          paddingX={10}
+          marginTop={16}
+          paddingBottom={40}
+        >
           {children}
         </Container>
       </Box>
