@@ -126,11 +126,11 @@ class OrderLine(models.Model):
     """One purchased item, frozen at the moment of checkout.
 
     Every displayable fact is copied here rather than read through the FKs:
-    `name`, `unit_price` and `variant_label` are what the customer saw and agreed
-    to pay, and re-deriving them from the catalog later would rewrite history the
-    first time a price changes. The FKs are kept only as provenance - which is
-    why they are SET_NULL: deleting a product must not delete the record that it
-    was once sold, and the line still renders in full without it.
+    `name` and `unit_price` are what the customer saw and agreed to pay, and
+    re-deriving them from the catalog later would rewrite history the first time
+    a price changes. The FKs are kept only as provenance - which is why they are
+    SET_NULL: deleting a product must not delete the record that it was once
+    sold, and the line still renders in full without it.
     """
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="lines")
@@ -144,13 +144,6 @@ class OrderLine(models.Model):
     menu_item = models.ForeignKey(
         "catalog.MenuItem", null=True, blank=True, on_delete=models.SET_NULL, related_name="order_lines",
     )
-    product_variant = models.ForeignKey(
-        "catalog.ProductVariant", null=True, blank=True, on_delete=models.SET_NULL, related_name="order_lines",
-    )
-    service_variant = models.ForeignKey(
-        "catalog.ServiceVariant", null=True, blank=True, on_delete=models.SET_NULL, related_name="order_lines",
-    )
-
     # `kind` is stored rather than derived from which FK is set, because all may
     # be NULL once the catalog item is gone - and a line that can no longer say
     # whether it sold a product, a service, or a menu item is not much of a record.
@@ -159,7 +152,6 @@ class OrderLine(models.Model):
         choices=[("product", "Product"), ("service", "Service"), ("menu_item", "Menu Item")],
     )
     name = models.CharField(max_length=255)
-    variant_label = models.CharField(max_length=255, blank=True, default="")
     sku = models.CharField(max_length=128, blank=True, default="")
     # A menu line's chosen customisation, snapshotted as a human-readable list of
     # {"name", "quantity", "unit_price", "line_upcharge", "removed"} at checkout,

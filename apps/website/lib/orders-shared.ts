@@ -44,7 +44,6 @@ export interface OrderLine {
   id: number;
   kind: "product" | "service" | "menu_item";
   name: string;
-  variant_label: string;
   sku: string;
   customization: OrderLineCustomization[];
   unit_price: string;

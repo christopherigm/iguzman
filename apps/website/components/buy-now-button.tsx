@@ -12,12 +12,6 @@ interface BuyNowButtonProps {
   kind: "product" | "service";
   /** The catalog item's id - not the CartItem row's. */
   id: number;
-  /**
-   * The variant to add, when the item has one. A past order line does not carry
-   * a variant id (only a snapshot label), so "Buy again" omits it and re-adds
-   * the base item; the detail pages pass the selected variant.
-   */
-  variantId?: number | null;
   isLoggedIn: boolean;
   disabled?: boolean;
   /** The localized label - the server passes "Buy now" / "Buy again". */
@@ -45,7 +39,6 @@ interface BuyNowButtonProps {
 export function BuyNowButton({
   kind,
   id,
-  variantId = null,
   isLoggedIn,
   disabled = false,
   text,
@@ -64,7 +57,7 @@ export function BuyNowButton({
     if (!isLoggedIn) {
       // A guest buys the same way, straight into localStorage - the write is
       // synchronous, so there is nothing to await before navigating.
-      addGuestCartLine({ kind, id, variant_id: variantId, quantity: 1 });
+      addGuestCartLine({ kind, id, quantity: 1 });
       router.push("/cart");
       return;
     }
@@ -74,7 +67,7 @@ export function BuyNowButton({
         const res = await fetch("/api/auth/cart", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ kind, id, variant_id: variantId }),
+          body: JSON.stringify({ kind, id }),
         });
 
         if (!res.ok) {

@@ -6,18 +6,11 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
-import type { BuyableVariant } from "@/lib/catalog";
 import { toShareDescription } from "@/lib/share";
 import { formatPrice, discountPercent } from "@/lib/price";
 import { BuyableCardActions } from "./buyable-card-actions";
 import { AdminEditButton } from "./admin-edit-button";
 import type { BuyableItem } from "./buyable-card";
-
-function defaultVariant(
-  variants: BuyableVariant[],
-): BuyableVariant | undefined {
-  return variants.find((v) => v.is_default) ?? variants[0];
-}
 
 export interface BuyableCardViewProps {
   item: BuyableItem;
@@ -127,19 +120,16 @@ export function BuyableCardView({
         ? `/services/${data.slug}`
         : `/food/${data.slug}`;
 
-  // Only product/service carry variants; a menu item is priced whole and
-  // customised on its detail page, so it has no card-level variant.
-  const variant =
-    item.kind === "food" ? undefined : defaultVariant(item.data.variants);
-  const effectivePrice = variant?.effective_price ?? data.price;
-  const effectiveCompare =
-    variant?.effective_compare_price ?? data.compare_price;
+  // A sibling variant is its own catalog item with its own card, so a card only
+  // ever prices and pictures the item it is for.
+  const effectivePrice = data.price;
+  const effectiveCompare = data.compare_price;
   const image =
     item.kind === "food"
       ? (item.data.image ??
         item.data.images.find((i) => i.image)?.image ??
         null)
-      : (variant?.effective_image ?? data.image);
+      : data.image;
 
   const discount = effectiveCompare
     ? discountPercent(effectivePrice, effectiveCompare)
@@ -148,14 +138,13 @@ export function BuyableCardView({
   const hasImage = Boolean(image);
 
   // A service is always orderable and food follows its own availability flag;
-  // only products carry stock, where a variant's own flag wins over the
-  // product's. Mirrors the API's per-line stock check.
+  // only products carry stock. Mirrors the API's per-line stock check.
   const inStock =
     item.kind === "food"
       ? item.data.is_available
       : item.kind === "service"
         ? true
-        : (variant?.in_stock ?? item.data.in_stock);
+        : item.data.in_stock;
 
   const duration = item.kind === "service" ? item.data.duration : null;
 
@@ -365,7 +354,6 @@ export function BuyableCardView({
             shareUrl={`${origin}${href}`}
             initialFavorite={initialFavorite}
             isLoggedIn={isLoggedIn}
-            variantId={variant?.id ?? null}
             cartLineId={cartLineId}
             inStock={inStock}
           />

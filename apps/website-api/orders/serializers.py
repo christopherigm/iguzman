@@ -8,18 +8,15 @@ from .models import Order, OrderLine
 def resolve_line_image(obj, request=None):
     """The image URL for one order line, or None.
 
-    Prefers the variant/item `image` field, then falls back to the first gallery
+    Prefers the item's `image` field, then falls back to the first gallery
     picture (`images`, by `sort_order`) - the same order as
     `ProductSerializer.get_image` - so an item pictured only through the CMS
     gallery still shows. Read through the FK, so it goes null once the catalog
     item is deleted. Shared by the line serializer and the history-list preview.
     """
     target = obj.product or obj.service or obj.menu_item
-    variant = obj.product_variant or obj.service_variant
     source = None
-    if variant is not None and variant.image:
-        source = variant.image
-    elif target is not None and target.image:
+    if target is not None and target.image:
         source = target.image
     elif target is not None:
         gallery = sorted(target.images.all(), key=lambda i: i.sort_order)
@@ -43,7 +40,7 @@ class OrderLineSerializer(serializers.ModelSerializer):
     media directory without bound for no gain.
 
     The lookup mirrors the catalog's own `ProductSerializer.get_image`: prefer
-    the variant/item `image` field, then fall back to the first gallery image
+    the item's `image` field, then fall back to the first gallery image
     (`images`, by `sort_order`). Many items carry no `image` of their own and
     were only ever given pictures through the CMS gallery, so without this
     fallback the order line would show a blank placeholder for an item whose
@@ -57,7 +54,7 @@ class OrderLineSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderLine
         fields = [
-            "id", "kind", "name", "variant_label", "sku", "customization",
+            "id", "kind", "name", "sku", "customization",
             "unit_price", "quantity", "line_total", "currency",
             "image", "item_id", "item_slug",
         ]

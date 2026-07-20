@@ -18,20 +18,13 @@ import {
 interface AddToCartButtonProps {
   /**
    * `food` adds the menu item's base line - its default ingredients at the "from"
-   * price - by posting an empty `customization`. Product/service add by variant.
+   * price - by posting an empty `customization`.
    */
   kind: "product" | "service" | "food";
   /** The catalog item's id - not the CartItem row's. */
   id: number;
   /**
-   * The variant being added, when the item has one. This is part of the line's
-   * identity server-side, so a card that omits it and a detail page that sends
-   * the selected one deliberately produce different lines. Ignored for `food`,
-   * which has no variants.
-   */
-  variantId?: number | null;
-  /**
-   * The cart line for this exact item+variant, when it is already in the cart.
+   * The cart line for this exact item, when it is already in the cart.
    * Its presence flips the button to its remove state, and it is the row id the
    * delete addresses - the catalog id cannot name a line. Null/omitted means
    * "not in the cart", the plain add state.
@@ -102,7 +95,6 @@ const TOAST_MESSAGES: Record<ToastKind, string> = {
 export function AddToCartButton({
   kind,
   id,
-  variantId = null,
   cartLineId = null,
   isLoggedIn,
   disabled = false,
@@ -132,7 +124,7 @@ export function AddToCartButton({
   const cartKind = kind === "food" ? "menu_item" : kind;
 
   // A guest line's handle is its index in localStorage, which -1 means "absent".
-  const guestLine = findGuestCartLine(guest, cartKind, id, variantId);
+  const guestLine = findGuestCartLine(guest, cartKind, id);
   const inCart = isLoggedIn ? cartLineId !== null : guestLine !== -1;
 
   const label = inCart ? t("removeFromCart") : t("addToCart");
@@ -155,9 +147,7 @@ export function AddToCartButton({
         addGuestCartLine({
           kind: cartKind,
           id,
-          ...(cartKind === "menu_item"
-            ? { customization: [] }
-            : { variant_id: variantId }),
+          ...(cartKind === "menu_item" ? { customization: [] } : {}),
           quantity: 1,
         });
         showToast("added");
@@ -173,11 +163,11 @@ export function AddToCartButton({
               method: "POST",
               headers: { "Content-Type": "application/json" },
               // Food posts the base line: kind `menu_item` with no ingredient
-              // changes. Product/service post their variant.
+              // changes.
               body: JSON.stringify(
                 kind === "food"
                   ? { kind: "menu_item", id, customization: [], quantity: 1 }
-                  : { kind, id, variant_id: variantId },
+                  : { kind, id },
               ),
             });
 

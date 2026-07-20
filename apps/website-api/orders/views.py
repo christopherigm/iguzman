@@ -53,9 +53,8 @@ def _cart_qs(user, system):
     return (
         CartItem.objects
         .filter(user=user, system=system)
-        .select_related('product', 'service', 'menu_item', 'product_variant', 'service_variant')
+        .select_related('product', 'service', 'menu_item')
         .prefetch_related(
-            'product_variant__option_values', 'service_variant__option_values',
             'menu_item__ingredients', 'menu_item__ingredients__options__ingredient',
         )
     )
@@ -89,17 +88,6 @@ def _customization_snapshot(item):
             'removed': ingredient.included_units > 0 and qty == 0,
         })
     return snapshot
-
-
-def _variant_label(variant) -> str:
-    """"Size: Large, Color: Red" - what distinguishes this variant, frozen as text.
-
-    Matches BaseVariant.__str__'s option rendering. Stored on the line because
-    the variant row may be gone by the time anyone reads the order back.
-    """
-    if variant is None:
-        return ""
-    return ", ".join(str(value) for value in variant.option_values.all())
 
 
 class CheckoutView(APIView):
@@ -244,11 +232,8 @@ class CheckoutView(APIView):
                     product=item.product,
                     service=item.service,
                     menu_item=item.menu_item,
-                    product_variant=item.product_variant,
-                    service_variant=item.service_variant,
                     name=item.target.name or "",
-                    variant_label=_variant_label(item.variant),
-                    sku=getattr(item.variant, "sku", "") or getattr(item.target, "sku", "") or "",
+                    sku=getattr(item.target, "sku", "") or "",
                     customization=_customization_snapshot(item),
                     unit_price=item.unit_price,
                     quantity=item.quantity,
@@ -314,8 +299,6 @@ def _in_stock(item) -> bool:
         return True
     if item.menu_item_id:
         return item.menu_item.is_available
-    if item.product_variant_id:
-        return item.product_variant.in_stock
     return item.product.in_stock
 
 
@@ -336,7 +319,6 @@ class OrderListView(APIView):
             .filter(user=request.user, system=system)
             .prefetch_related(
                 "lines", "lines__product", "lines__service", "lines__menu_item",
-                "lines__product_variant", "lines__service_variant",
                 # The image preview falls back to the item's gallery when it has
                 # no own `image`; prefetch it so the strip is not an N+1.
                 "lines__product__images", "lines__service__images", "lines__menu_item__images",
@@ -393,7 +375,6 @@ class OrderDetailView(APIView):
             .filter(public_id=public_id, system=request_system(request))
             .prefetch_related(
                 "lines", "lines__product", "lines__service",
-                "lines__product_variant", "lines__service_variant",
                 # The serializer falls back to the item's gallery when it has no
                 # own `image`; prefetch it so that fallback is not an N+1.
                 "lines__product__images", "lines__service__images",
@@ -610,7 +591,7 @@ class StripeWebhookView(APIView):
         worst possible moment - after the customer has already been charged.
         """
         for line in order.lines.all():
-            target = line.product_variant or line.product
+            target = line.product
             if target is None or target.stock_count is None:
                 continue
             type(target).objects.filter(pk=target.pk).update(

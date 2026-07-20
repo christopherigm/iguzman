@@ -4,7 +4,6 @@ import type {
   FeaturedProduct,
   FeaturedService,
   MenuItemDetail,
-  BuyableVariant,
 } from "@/lib/catalog";
 import { findCartLineId } from "@/lib/cart";
 import { isFavorite } from "@/lib/favorites";
@@ -15,12 +14,6 @@ export type BuyableItem =
   | { kind: "product"; data: FeaturedProduct }
   | { kind: "service"; data: FeaturedService }
   | { kind: "food"; data: MenuItemDetail };
-
-function defaultVariant(
-  variants: BuyableVariant[],
-): BuyableVariant | undefined {
-  return variants.find((v) => v.is_default) ?? variants[0];
-}
 
 /**
  * A catalog card, with everything only the server can answer resolved first.
@@ -66,20 +59,14 @@ export async function BuyableCard({
     getTranslations("Admin"),
   ]);
 
-  // Only product/service carry variants; a menu item is priced whole and
-  // customised on its detail page, so it has no card-level variant.
-  const variant =
-    item.kind === "food" ? undefined : defaultVariant(item.data.variants);
-
-  // Whether the card's own variant is already a line, and which line it is - the
+  // Whether this card's item is already a line, and which line it is - the
   // button turns into "remove" and needs the row's id to delete it. A food card
   // adds the base (default-ingredients) line, so it resolves the uncustomised
-  // menu line. Read after `variant` resolves because the variant is half the
-  // line's identity.
+  // menu line. A sibling variant is its own item with its own card.
   const cartLineId =
     item.kind === "food"
-      ? await findCartLineId("menu_item", data.id, null)
-      : await findCartLineId(item.kind, data.id, variant?.id ?? null);
+      ? await findCartLineId("menu_item", data.id)
+      : await findCartLineId(item.kind, data.id);
 
   return (
     <BuyableCardView

@@ -100,31 +100,33 @@ export const getServiceCategories = cache(
   },
 );
 
-export interface BuyableVariantOptionValue {
+/** A sibling variant of a product - an alternative version of the same item
+ *  (a different size, color or material), each its own orderable Product.
+ *  Shallow by design: just enough to render a linkable thumbnail on the detail
+ *  page. Mirrors `MenuItemVariant`. */
+export interface ProductVariant {
   id: number;
-  option: number;
-  option_name: string;
+  slug: string;
   name: string | null;
   en_name: string | null;
-  slug: string;
-  sort_order: number;
-  color: string | null;
+  image: string | null;
+  price: string;
+  currency: string;
+  in_stock: boolean;
 }
 
-export interface BuyableVariant {
+/** A sibling variant of a service - an alternative version of the same offering
+ *  (a different duration, modality or package), each its own bookable Service. */
+export interface ServiceVariant {
   id: number;
-  is_default: boolean;
-  option_values: BuyableVariantOptionValue[];
-  effective_name: string;
-  effective_price: string;
-  effective_compare_price: string | null;
-  effective_image: string | null;
-  /**
-   * Products only - a service variant carries no stock, so this is absent there
-   * rather than false. Where a product variant has it, it overrides the
-   * product's own flag (matching the API's per-line stock check).
-   */
-  in_stock?: boolean;
+  slug: string;
+  name: string | null;
+  en_name: string | null;
+  image: string | null;
+  price: string;
+  currency: string;
+  duration: number | null;
+  modality: string | null;
 }
 
 export interface FeaturedProduct {
@@ -141,7 +143,7 @@ export interface FeaturedProduct {
   currency: string;
   in_stock: boolean;
   is_featured: boolean;
-  variants: BuyableVariant[];
+  variants: ProductVariant[];
 }
 
 export interface FeaturedService {
@@ -159,7 +161,7 @@ export interface FeaturedService {
   is_featured: boolean;
   modality: string | null;
   duration: number | null;
-  variants: BuyableVariant[];
+  variants: ServiceVariant[];
 }
 
 // ---------------------------------------------------------------------------
@@ -171,38 +173,6 @@ export interface ProductImage {
   image: string | null;
   name: string | null;
   sort_order: number;
-}
-
-export interface ProductVariantImage {
-  id: number;
-  image: string | null;
-  name: string | null;
-  sort_order: number;
-}
-
-export interface ProductVariantFull {
-  id: number;
-  is_default: boolean;
-  sort_order: number;
-  name: string | null;
-  en_name: string | null;
-  sku: string | null;
-  barcode: string | null;
-  price: string | null;
-  compare_price: string | null;
-  in_stock: boolean;
-  stock_count: number | null;
-  weight: string | null;
-  length: string | null;
-  width: string | null;
-  height: string | null;
-  image: string | null;
-  images: ProductVariantImage[];
-  option_values: BuyableVariantOptionValue[];
-  effective_name: string;
-  effective_price: string;
-  effective_compare_price: string | null;
-  effective_image: string | null;
 }
 
 export interface ProductDetail {
@@ -235,7 +205,7 @@ export interface ProductDetail {
   dimension_unit: string | null;
   weight_unit: string | null;
   images: ProductImage[];
-  variants: ProductVariantFull[];
+  variants: ProductVariant[];
 }
 
 export interface ServiceImage {
@@ -243,27 +213,6 @@ export interface ServiceImage {
   image: string | null;
   name: string | null;
   sort_order: number;
-}
-
-export interface ServiceVariantFull {
-  id: number;
-  is_default: boolean;
-  sort_order: number;
-  name: string | null;
-  en_name: string | null;
-  sku: string | null;
-  price: string | null;
-  compare_price: string | null;
-  duration: number | null;
-  modality: string | null;
-  image: string | null;
-  option_values: BuyableVariantOptionValue[];
-  effective_name: string;
-  effective_price: string;
-  effective_compare_price: string | null;
-  effective_image: string | null;
-  effective_duration: number | null;
-  effective_modality: string | null;
 }
 
 export interface ServiceDetail {
@@ -289,7 +238,7 @@ export interface ServiceDetail {
   duration: number | null;
   modality: string | null;
   images: ServiceImage[];
-  variants: ServiceVariantFull[];
+  variants: ServiceVariant[];
 }
 
 export const getFeaturedProducts = cache(

@@ -29,7 +29,7 @@ from webauthn.helpers.structs import (
 )
 
 from catalog.models import (
-    Product, ProductVariant, Service, ServiceVariant, MenuItem, normalize_selection,
+    Product, Service, MenuItem, normalize_selection,
 )
 from core.models import System
 from core.permissions import IsSystemAdmin
@@ -702,8 +702,7 @@ def _favorites_qs(request, system):
         .filter(user=request.user, system=system)
         .select_related('product', 'service', 'menu_item')
         .prefetch_related(
-            'product__images', 'product__variants',
-            'service__images', 'service__variants',
+            'product__images', 'service__images',
             'menu_item__images', 'menu_item__ingredients', 'menu_item__ingredients__options__ingredient',
         )
     )
@@ -785,7 +784,7 @@ class FavoriteIdsView(APIView):
 
     The detail pages only need to know whether *this* item is saved; serving them
     the full favorites payload to answer a boolean would fetch every saved item's
-    images and variants on every product view.
+    images on every product view.
     """
 
     permission_classes = (IsAuthenticated,)
@@ -815,44 +814,25 @@ def _cart_qs(request, system):
     return (
         CartItem.objects
         .filter(user=request.user, system=system)
-        .select_related(
-            'product', 'service', 'menu_item', 'product_variant', 'service_variant',
-        )
+        .select_related('product', 'service', 'menu_item')
         .prefetch_related(
-            'product__images', 'product__variants',
-            'service__images', 'service__variants',
+            'product__images', 'service__images',
             'menu_item__images', 'menu_item__ingredients', 'menu_item__ingredients__options__ingredient',
-            'product_variant__option_values', 'service_variant__option_values',
         )
     )
 
 
-def _resolve_target(system, kind, target_id, variant_id):
-    """The buyable and variant a write refers to, or (None, None, error).
+def _resolve_target(system, kind, target_id):
+    """The buyable a write refers to, or (None, error).
 
-    Every lookup is scoped to the user's System, which is what stops a crafted id
-    from putting another tenant's item in this cart; the variant is then looked
-    up *through* its parent, so a variant id belonging to a different product
-    cannot be attached to this line. That second check is the one the database
-    cannot make for us - a CheckConstraint sees only one row's columns.
+    The lookup is scoped to the user's System, which is what stops a crafted id
+    from putting another tenant's item in this cart.
     """
     model = {"product": Product, "service": Service, "menu_item": MenuItem}[kind]
     target = model.objects.filter(pk=target_id, system=system, enabled=True).first()
     if target is None:
-        return None, None, "Not found."
-
-    # Menu items customise through ingredients, not variants - never a variant.
-    if kind == "menu_item" or variant_id is None:
-        return target, None, None
-
-    variant_model = ProductVariant if kind == "product" else ServiceVariant
-    variant = variant_model.objects.filter(
-        pk=variant_id, enabled=True, **{kind: target},
-    ).first()
-    if variant is None:
-        return None, None, "Variant not found for this item."
-
-    return target, variant, None
+        return None, "Not found."
+    return target, None
 
 
 def _menu_selection(menu_item, customization):
@@ -863,7 +843,7 @@ def _menu_selection(menu_item, customization):
     return normalize_selection(customization or [], ingredients)
 
 
-def _add_cart_line(user, system, kind, target, variant, quantity):
+def _add_cart_line(user, system, kind, target, quantity):
     """Add a product/service line, or raise the quantity of the one already there.
 
     Adding what is already in the cart raises the quantity instead of creating a
@@ -878,7 +858,7 @@ def _add_cart_line(user, system, kind, target, variant, quantity):
         item, created = CartItem.objects.select_for_update().get_or_create(
             user=user,
             system=system,
-            **{kind: target, f"{kind}_variant": variant},
+            **{kind: target},
             defaults={"quantity": quantity},
         )
         if not created:
@@ -945,8 +925,7 @@ def _cart_payload(request, system):
 class CartListView(APIView):
     """
     GET    /api/auth/cart/ - the authenticated user's cart, with totals.
-    POST   /api/auth/cart/ - add a line, body
-                             {"kind", "id", "variant_id"?, "quantity"?}.
+    POST   /api/auth/cart/ - add a line, body {"kind", "id", "quantity"?}.
     DELETE /api/auth/cart/ - empty the cart.
     """
 
@@ -968,18 +947,17 @@ class CartListView(APIView):
         serializer.is_valid(raise_exception=True)
         kind = serializer.validated_data["kind"]
         target_id = serializer.validated_data["id"]
-        variant_id = serializer.validated_data.get("variant_id")
         quantity = serializer.validated_data["quantity"]
 
         system = _user_system(request)
-        target, variant, error = _resolve_target(system, kind, target_id, variant_id)
+        target, error = _resolve_target(system, kind, target_id)
         if error:
             return Response({"detail": error}, status=status.HTTP_404_NOT_FOUND)
 
         if kind == "menu_item":
             return self._add_menu_item(request, system, target, serializer.validated_data, quantity)
 
-        item, created = _add_cart_line(request.user, system, kind, target, variant, quantity)
+        item, created = _add_cart_line(request.user, system, kind, target, quantity)
         invalidate_cart(request.user.id, system.id if system else 0)
 
         return Response(
@@ -1011,8 +989,9 @@ class CartItemDetailView(APIView):
     PATCH  /api/auth/cart/<id>/ - set a line's quantity, body {"quantity": N}.
     DELETE /api/auth/cart/<id>/ - drop the line.
 
-    Keyed by the CartItem row's id, unlike the favorites detail view: a line is
-    identified by item *and* variant, so the catalog id alone cannot name it.
+    Keyed by the CartItem row's id, unlike the favorites detail view: a menu line
+    is identified by item *and* ingredient selection, so the catalog id alone
+    cannot name it.
     """
 
     permission_classes = (IsAuthenticated,)
@@ -1023,7 +1002,7 @@ class CartItemDetailView(APIView):
         return CartItem.objects.filter(
             pk=pk, user=request.user, system=_user_system(request),
         ).select_related(
-            'product', 'service', 'menu_item', 'product_variant', 'service_variant',
+            'product', 'service', 'menu_item',
         ).prefetch_related(
             'menu_item__ingredients', 'menu_item__ingredients__options__ingredient'
         ).first()
@@ -1057,7 +1036,7 @@ class CartCountView(APIView):
     """GET /api/auth/cart/count/ - total quantity in the cart.
 
     The navbar renders this on every page. Serving it the full cart payload to
-    print one number would fetch every line's images and variants on every
+    print one number would fetch every line's images on every
     navigation, which is the same reasoning as FavoriteIdsView.
     """
 
@@ -1083,14 +1062,11 @@ class CartIdsView(APIView):
 
     The counterpart of FavoriteIdsView for the catalog cards, which only need to
     know whether *this* item is already in the cart; serving them the full cart
-    payload to answer that would fetch every line's images and variants on every
-    grid render.
+    payload to answer that would fetch every line's images on every grid render.
 
-    It cannot be a list of catalog ids the way favorites is, for the two reasons
-    the cart differs: a line is identified by item *and* variant, so the catalog
-    id alone does not name one; and removing a line needs the CartItem row's own
-    id. Each entry therefore carries the triple the card matches on plus the
-    `line_id` it would delete.
+    It cannot be a list of catalog ids the way favorites is, because removing a
+    line needs the CartItem row's own id. Each entry therefore carries the pair
+    the card matches on plus the `line_id` it would delete.
     """
 
     permission_classes = (IsAuthenticated,)
@@ -1103,8 +1079,7 @@ class CartIdsView(APIView):
             return Response(cached)
 
         rows = CartItem.objects.filter(user=request.user, system=system).values_list(
-            "id", "product_id", "service_id", "menu_item_id",
-            "product_variant_id", "service_variant_id", "customization",
+            "id", "product_id", "service_id", "menu_item_id", "customization",
         )
 
         def _kind(product_id, service_id):
@@ -1120,15 +1095,13 @@ class CartIdsView(APIView):
                     "line_id": line_id,
                     "kind": _kind(product_id, service_id),
                     "id": product_id or service_id or menu_item_id,
-                    "variant_id": product_variant_id or service_variant_id,
                     # A menu line's ingredient selection is part of its identity,
                     # but the catalog card only ever adds/removes the base line;
                     # this flag lets it match that one and ignore customised
                     # siblings. Always false for product/service.
                     "customized": bool(customization),
                 }
-                for line_id, product_id, service_id, menu_item_id,
-                product_variant_id, service_variant_id, customization in rows
+                for line_id, product_id, service_id, menu_item_id, customization in rows
             ],
         }
         cache.set(cache_key, data, CART_CACHE_TTL)
@@ -1241,7 +1214,7 @@ class GuestMergeView(APIView):
                 _add_menu_line(user, system, line.menu_item, line.customization, line.quantity)
             else:
                 _add_cart_line(
-                    user, system, line.kind, line.target, line.variant, line.quantity,
+                    user, system, line.kind, line.target, line.quantity,
                 )
 
         system_id = system.id if system else 0

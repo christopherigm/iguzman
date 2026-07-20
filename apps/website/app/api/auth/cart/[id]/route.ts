@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { apiFetch } from "@/lib/api-fetch";
 
 /**
- * A cart line is addressed by its own row id, not by the catalog item's - a line
- * is identified by item *and* variant, so the catalog id alone cannot name it.
+ * A cart line is addressed by its own row id, not by the catalog item's - a menu
+ * line is identified by item *and* ingredient selection, so the catalog id alone
+ * cannot name it.
  * (This is where the cart parts ways with `/api/auth/favorites/[kind]/[id]`.)
  */
 

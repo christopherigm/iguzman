@@ -93,8 +93,8 @@ export async function deleteProduct(pk: number) {
 export type CloneNames = { name: string; en_name: string };
 
 /**
- * Deep-copy a catalog record: its own row, child rows (gallery, variants,
- * ingredients, recipe) and its **own copies of the image files**.
+ * Deep-copy a catalog record: its own row, child rows (gallery, ingredients,
+ * recipe) and its **own copies of the image files**.
  *
  * Server-side on purpose - the browser could only duplicate an image by
  * downloading it and re-uploading it as base64. The copy is made from what is
@@ -580,41 +580,6 @@ export async function updateBrand(pk: number, data: Record<string, unknown>) {
 }
 export async function deleteBrand(pk: number) {
   const res = await adminFetch(`/api/brands/${pk}/`, { method: "DELETE" });
-  return parseResponse<void>(res);
-}
-
-// ---- Variant Options ----
-export async function listVariantOptions(systemId: number) {
-  const res = await adminFetch(
-    `/api/catalog/variant-options/?system=${systemId}&include_disabled=true`,
-  );
-  return parseResponse<Record<string, unknown>[]>(res);
-}
-export async function getVariantOption(pk: number) {
-  const res = await adminFetch(`/api/catalog/variant-options/${pk}/`);
-  return parseResponse<Record<string, unknown>>(res);
-}
-export async function createVariantOption(data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/catalog/variant-options/`, {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
-  return parseResponse<Record<string, unknown>>(res);
-}
-export async function updateVariantOption(
-  pk: number,
-  data: Record<string, unknown>,
-) {
-  const res = await adminFetch(`/api/catalog/variant-options/${pk}/`, {
-    method: "PATCH",
-    body: JSON.stringify(data),
-  });
-  return parseResponse<Record<string, unknown>>(res);
-}
-export async function deleteVariantOption(pk: number) {
-  const res = await adminFetch(`/api/catalog/variant-options/${pk}/`, {
-    method: "DELETE",
-  });
   return parseResponse<void>(res);
 }
 

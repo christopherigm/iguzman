@@ -2,7 +2,7 @@
  * The anonymous visitor's cart and favorites, in localStorage.
  *
  * A guest has no rows, so the browser holds **references** - which item, which
- * variant, which ingredients, how many - and nothing else. Every price, label
+ * ingredients, how many - and nothing else. Every price, label
  * and stock flag comes back from `POST /api/guest/resolve/`, which reads them
  * out of the catalog server-side. That split is deliberate and load-bearing: a
  * cached price in localStorage would be a price the customer could edit, and
@@ -44,7 +44,6 @@ export interface GuestCartLine {
   kind: BuyableKind;
   /** The catalog item's id. */
   id: number;
-  variant_id?: number | null;
   customization?: GuestCustomizationRow[];
   quantity: number;
 }
@@ -62,8 +61,8 @@ export interface GuestState {
 export const EMPTY_GUEST_STATE: GuestState = { cart: [], favorites: [] };
 
 /**
- * What makes two guest lines the same line: the item, the variant, and - for a
- * menu line - the ingredient selection, which is part of that line's identity.
+ * What makes two guest lines the same line: the item and - for a menu line -
+ * the ingredient selection, which is part of that line's identity.
  *
  * Only an approximation of the server's `normalize_selection`, which also knows
  * each group's defaults. That is fine: this decides whether *the browser* merges
@@ -75,7 +74,7 @@ function lineKey(line: GuestCartLine): string {
     .sort((a, b) => a.ingredient - b.ingredient)
     .map((row) => `${row.ingredient}:${row.quantity}:${row.option ?? ""}`)
     .join(",");
-  return `${line.kind}:${line.id}:${line.variant_id ?? ""}:${customization}`;
+  return `${line.kind}:${line.id}:${customization}`;
 }
 
 /** Whether two references point at the same catalog item. */
@@ -281,24 +280,24 @@ export function removeGuestCartLine(index: number): void {
 }
 
 /**
- * The handle of the line for exactly this item and variant, or -1.
+ * The handle of the line for exactly this item, or -1. A sibling variant is its
+ * own catalog item, so it has its own line and its own handle.
  *
- * For `menu_item` the identity is the ingredient selection rather than a
- * variant, and the catalog card only ever adds/removes the *base* line - so this
- * matches the uncustomised one and leaves customised siblings alone, exactly as
+ * For `menu_item` the identity also includes the ingredient selection, and the
+ * catalog card only ever adds/removes the *base* line - so this matches the
+ * uncustomised one and leaves customised siblings alone, exactly as
  * `findCartLineId` does for a signed-in cart.
  */
 export function findGuestCartLine(
   state: GuestState,
   kind: BuyableKind,
   id: number,
-  variantId: number | null,
 ): number {
   return state.cart.findIndex((line) => {
     if (line.kind !== kind || line.id !== id) return false;
     return kind === "menu_item"
       ? (line.customization?.length ?? 0) === 0
-      : (line.variant_id ?? null) === variantId;
+      : true;
   });
 }
 

@@ -5,7 +5,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { ShareButton } from "@repo/ui/core-elements/share-button";
 import { getSession } from "@repo/auth/session";
-import type { ProductDetail, ProductVariantFull } from "@/lib/catalog";
+import type { ProductDetail } from "@/lib/catalog";
 import { findCartLineId } from "@/lib/cart";
 import { isFavorite } from "@/lib/favorites";
 import { toShareDescription } from "@/lib/metadata";
@@ -13,12 +13,11 @@ import { formatPrice, discountPercent } from "@/lib/price";
 import { AddToCartButton } from "./add-to-cart-button";
 import { BuyNowButton } from "./buy-now-button";
 import { FavoriteButton } from "./favorite-button";
-import { VariantSelectorClient } from "./variant-selector-client";
 import { AdminEditButton } from "./admin-edit-button";
+import { VariantThumbs } from "./variant-thumbs";
 
 interface ProductDetailProps {
   product: ProductDetail;
-  selectedVariant: ProductVariantFull | null;
   locale: string;
 }
 
@@ -111,52 +110,47 @@ export async function ProductDetailHeader({
 
 export async function ProductDetailPanel({
   product,
-  selectedVariant,
   locale,
 }: ProductDetailProps) {
-  // The cart line is looked up for the *selected* variant, so switching variants
-  // re-renders this panel with the answer for the one now on screen: the CTA
-  // offers to remove the size already in the cart and to add the one that isn't.
+  // A sibling variant is its own Product with its own page, so this only ever
+  // looks up the line for the product actually being viewed.
   const [t, session, cartLineId] = await Promise.all([
     getTranslations("ItemDetail"),
     getSession(),
-    findCartLineId("product", product.id, selectedVariant?.id ?? null),
+    findCartLineId("product", product.id),
   ]);
 
-  const effectivePrice = selectedVariant?.effective_price ?? product.price;
-  const effectiveCompare =
-    selectedVariant?.effective_compare_price ?? product.compare_price;
+  const displayName =
+    (locale === "en" ? product.en_name : product.name) ??
+    product.name ??
+    product.en_name ??
+    product.slug;
 
-  const discount = effectiveCompare
-    ? discountPercent(effectivePrice, effectiveCompare)
+  const discount = product.compare_price
+    ? discountPercent(product.price, product.compare_price)
     : 0;
 
-  const inStock = selectedVariant?.in_stock ?? product.in_stock;
-  const stockCount = selectedVariant?.stock_count ?? product.stock_count;
-
-  const length = selectedVariant?.length ?? product.length;
-  const width = selectedVariant?.width ?? product.width;
-  const height = selectedVariant?.height ?? product.height;
-  const weight = selectedVariant?.weight ?? product.weight;
-  const hasDimensions = length || width || height || weight;
+  const { in_stock: inStock, stock_count: stockCount } = product;
+  const hasDimensions =
+    product.length || product.width || product.height || product.weight;
 
   return (
     <Box flexDirection="column" gap={18} paddingY={4}>
-      {/* Buy box: price, stock, variant selector and CTAs grouped as one unit */}
+      {/* Buy box: price, stock, variants and CTAs grouped as one unit */}
       <Card gap={18}>
         {/* Pricing */}
         <Box alignItems="baseline" flexWrap="wrap" gap="8px 12px">
           <Typography as="span" variant="none" className="item-price">
-            {formatPrice(effectivePrice, product.currency)}
+            {formatPrice(product.price, product.currency)}
           </Typography>
-          {effectiveCompare &&
-            parseFloat(effectiveCompare) > parseFloat(effectivePrice) && (
+          {product.compare_price &&
+            parseFloat(product.compare_price) > parseFloat(product.price) && (
               <Typography
                 as="span"
                 variant="none"
                 className="item-compare-price"
               >
-                {formatPrice(effectiveCompare, product.currency)}
+                {formatPrice(product.compare_price, product.currency)}
               </Typography>
             )}
           {discount > 0 && (
@@ -183,17 +177,22 @@ export async function ProductDetailPanel({
         </Box>
 
         {/* SKU */}
-        {(selectedVariant?.sku ?? product.sku) && (
+        {product.sku && (
           <Typography as="span" variant="caption" color="var(--foreground)">
-            {t("sku")}: {selectedVariant?.sku ?? product.sku}
+            {t("sku")}: {product.sku}
           </Typography>
         )}
 
-        {/* Variant selector */}
+        {/* Sibling variants - each its own product page. */}
         {product.variants.length > 0 && (
-          <VariantSelectorClient
+          <VariantThumbs
+            basePath="/products"
+            current={{
+              slug: product.slug,
+              name: displayName,
+              image: product.image,
+            }}
             variants={product.variants}
-            selectedVariantId={selectedVariant?.id ?? null}
             locale={locale}
           />
         )}
@@ -204,7 +203,6 @@ export async function ProductDetailPanel({
           <AddToCartButton
             kind="product"
             id={product.id}
-            variantId={selectedVariant?.id ?? null}
             cartLineId={cartLineId}
             isLoggedIn={session !== null}
             disabled={!inStock}
@@ -217,7 +215,6 @@ export async function ProductDetailPanel({
           <BuyNowButton
             kind="product"
             id={product.id}
-            variantId={selectedVariant?.id ?? null}
             isLoggedIn={session !== null}
             disabled={!inStock}
             text={t("buyNow")}
@@ -247,16 +244,16 @@ export async function ProductDetailPanel({
                 <td>{product.category_name}</td>
               </tr>
             )}
-            {(selectedVariant?.sku ?? product.sku) && (
+            {product.sku && (
               <tr>
                 <td>{t("sku")}</td>
-                <td>{selectedVariant?.sku ?? product.sku}</td>
+                <td>{product.sku}</td>
               </tr>
             )}
-            {(selectedVariant?.barcode ?? product.barcode) && (
+            {product.barcode && (
               <tr>
                 <td>{t("barcode")}</td>
-                <td>{selectedVariant?.barcode ?? product.barcode}</td>
+                <td>{product.barcode}</td>
               </tr>
             )}
             {product.currency && (
@@ -283,19 +280,21 @@ export async function ProductDetailPanel({
           </Typography>
           <table className="item-specs-table">
             <tbody>
-              {weight && (
+              {product.weight && (
                 <tr>
                   <td>{t("weight")}</td>
                   <td>
-                    {weight} {product.weight_unit ?? ""}
+                    {product.weight} {product.weight_unit ?? ""}
                   </td>
                 </tr>
               )}
-              {(length || width || height) && (
+              {(product.length || product.width || product.height) && (
                 <tr>
                   <td>{t("dimensions")}</td>
                   <td>
-                    {[length, width, height].filter(Boolean).join(" × ")}{" "}
+                    {[product.length, product.width, product.height]
+                      .filter(Boolean)
+                      .join(" × ")}{" "}
                     {product.dimension_unit ?? ""}
                   </td>
                 </tr>

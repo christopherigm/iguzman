@@ -6,7 +6,7 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { getProduct } from "@/lib/catalog";
 import { getSystem } from "@/lib/system";
 import { getRequestOrigin, toShareDescription } from "@/lib/metadata";
-import type { ProductDetail, ProductVariantFull } from "@/lib/catalog";
+import type { ProductDetail } from "@/lib/catalog";
 import type { GalleryImage } from "@/components/item-gallery-client";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
 import { ItemHeroVideo } from "@/components/item-hero-video";
@@ -20,7 +20,6 @@ import {
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
-  searchParams: Promise<{ variant?: string }>;
 };
 
 export async function generateMetadata({
@@ -76,10 +75,7 @@ export async function generateMetadata({
   };
 }
 
-function buildGalleryImages(
-  product: ProductDetail,
-  selectedVariant: ProductVariantFull | null,
-): GalleryImage[] {
+function buildGalleryImages(product: ProductDetail): GalleryImage[] {
   const images: GalleryImage[] = [];
   const name = product.en_name ?? product.name ?? product.slug;
   const seen = new Set<string>();
@@ -89,15 +85,6 @@ function buildGalleryImages(
       images.push({ url, alt });
     }
   };
-
-  // If a variant is selected and has its own images, use those
-  if (selectedVariant) {
-    push(selectedVariant.effective_image, name);
-    for (const img of selectedVariant.images) {
-      push(img.image, img.name ?? name);
-    }
-    if (images.length > 0) return images;
-  }
 
   // Prefer the product's gallery images.
   for (const img of product.images) {
@@ -112,9 +99,8 @@ function buildGalleryImages(
   return images;
 }
 
-export default async function ProductPage({ params, searchParams }: Props) {
+export default async function ProductPage({ params }: Props) {
   const { locale, slug } = await params;
-  const { variant: variantIdStr } = await searchParams;
   setRequestLocale(locale);
 
   const [product, t, tNav] = await Promise.all([
@@ -125,14 +111,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
 
   if (!product) notFound();
 
-  const variantId = variantIdStr ? parseInt(variantIdStr, 10) : null;
-  const selectedVariant =
-    product.variants.find((v) => v.id === variantId) ??
-    product.variants.find((v) => v.is_default) ??
-    product.variants[0] ??
-    null;
-
-  const galleryImages = buildGalleryImages(product, selectedVariant);
+  const galleryImages = buildGalleryImages(product);
 
   const displayName =
     (locale === "en" ? product.en_name : product.name) ??
@@ -177,11 +156,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
         paddingBottom="var(--ui-page-bottom-spacing, 64px)"
       >
         <Breadcrumbs items={breadcrumbs} />
-        <ProductDetailHeader
-          product={product}
-          selectedVariant={selectedVariant}
-          locale={locale}
-        />
+        <ProductDetailHeader product={product} locale={locale} />
         <Grid container spacing={2} marginBottom={18}>
           <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
             <ItemGalleryClient
@@ -190,18 +165,10 @@ export default async function ProductPage({ params, searchParams }: Props) {
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
-            <ProductDetailPanel
-              product={product}
-              selectedVariant={selectedVariant}
-              locale={locale}
-            />
+            <ProductDetailPanel product={product} locale={locale} />
           </Grid>
         </Grid>
-        <ProductDetailSections
-          product={product}
-          selectedVariant={selectedVariant}
-          locale={locale}
-        />
+        <ProductDetailSections product={product} locale={locale} />
       </Container>
     </>
   );

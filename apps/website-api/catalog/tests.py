@@ -10,9 +10,8 @@ from decimal import Decimal
 from core.models import Brand, System
 
 from .models import (
-    Product, ProductImage, ProductVariant, MenuItem, MenuItemIngredient,
-    MenuItemIngredientOption, Ingredient, RecipeStep, VariantOption,
-    VariantOptionValue, normalize_selection,
+    Product, ProductImage, MenuItem, MenuItemIngredient,
+    MenuItemIngredientOption, Ingredient, RecipeStep, normalize_selection,
 )
 
 
@@ -568,22 +567,18 @@ class CloneTests(TestCase):
         self.assertNotEqual(clone_gallery.image.name, gallery.image.name)
         self.assertTrue(default_storage.exists(clone_gallery.image.name))
 
-    def test_product_clone_copies_variants_with_their_option_values(self):
+    def test_product_clone_joins_the_originals_variant_family(self):
         product = Product.objects.create(system=self.system, name="Mug", slug="mug")
-        option = VariantOption.objects.create(system=self.system, name="Size", slug="size")
-        large = VariantOptionValue.objects.create(option=option, name="Large", slug="large")
-        variant = ProductVariant.objects.create(product=product, sku="MUG-L", price=Decimal("15"))
-        variant.option_values.add(large)
+        sibling = Product.objects.create(system=self.system, name="Mug XL", slug="mug-xl")
+        product.variants.add(sibling)
 
         res = self._clone(self._admin_client(), f"/api/catalog/products/{product.id}/clone/")
         clone = Product.objects.get(pk=res.json()["id"])
 
-        clone_variant = clone.variants.get()
-        self.assertNotEqual(clone_variant.id, variant.id)
-        self.assertEqual(clone_variant.price, Decimal("15"))
-        self.assertIsNone(clone_variant.sku)
-        # Option *values* are shared vocabulary, not per-product rows - reused, not copied.
-        self.assertEqual(list(clone_variant.option_values.all()), [large])
+        # Siblings are standalone products, so the family is linked, not copied.
+        self.assertEqual(list(clone.variants.all()), [sibling])
+        # A copy is not automatically an alternative version of its original.
+        self.assertNotIn(product, clone.variants.all())
 
     def test_cloning_the_same_name_twice_still_yields_unique_slugs(self):
         product = Product.objects.create(system=self.system, name="Mug", slug="mug")

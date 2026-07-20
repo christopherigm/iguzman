@@ -86,10 +86,10 @@ class FavoriteAdmin(admin.ModelAdmin):
 
 @admin.register(CartItem)
 class CartItemAdmin(admin.ModelAdmin):
-    list_display = ("user", "kind", "target", "variant", "quantity", "system", "updated_at")
+    list_display = ("user", "kind", "target", "quantity", "system", "updated_at")
     list_filter = ("system", "created_at")
     search_fields = ("user__username", "user__email", "product__name", "service__name")
-    raw_id_fields = ("user", "product", "service", "product_variant", "service_variant")
+    raw_id_fields = ("user", "product", "service", "menu_item")
     readonly_fields = ("created_at", "updated_at")
 
     @admin.display(description="Kind")
@@ -99,10 +99,6 @@ class CartItemAdmin(admin.ModelAdmin):
     @admin.display(description="Item")
     def target(self, obj):
         return obj.target
-
-    @admin.display(description="Variant")
-    def variant(self, obj):
-        return obj.variant
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)

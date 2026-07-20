@@ -136,10 +136,14 @@ def _clone_gallery(images, model, parent_attname, parent):
 
 @transaction.atomic
 def clone_product(product, name, en_name):
-    """Copy a Product, its gallery, and its variants (with their images)."""
-    from catalog.models import (
-        Product, ProductImage, ProductVariant, ProductVariantImage,
-    )
+    """Copy a Product and its gallery.
+
+    The `variants` M2M (sibling products) is copied as-is, so the clone joins the
+    same family the original belongs to. The relation is symmetrical, so the
+    clone is *not* linked to the original itself - a copy is not automatically an
+    alternative version of what it was copied from; the operator links it if it is.
+    """
+    from catalog.models import Product, ProductImage
 
     clone = _clone_row(
         product,
@@ -154,22 +158,19 @@ def clone_product(product, name, en_name):
 
     _clone_gallery(product.images.all(), ProductImage, 'product_id', clone)
 
-    for variant in product.variants.all():
-        variant_clone = _clone_row(
-            variant, ProductVariant, overrides={'product_id': clone.pk, 'sku': None}
-        )
-        variant_clone.option_values.set(variant.option_values.all())
-        _clone_gallery(
-            variant.images.all(), ProductVariantImage, 'variant_id', variant_clone
-        )
+    clone.variants.set(product.variants.all())
 
     return clone
 
 
 @transaction.atomic
 def clone_service(service, name, en_name):
-    """Copy a Service, its gallery, and its variants."""
-    from catalog.models import Service, ServiceImage, ServiceVariant
+    """Copy a Service and its gallery.
+
+    The `variants` M2M (sibling services) is copied as-is - see `clone_product`
+    for why the clone is not linked to the original.
+    """
+    from catalog.models import Service, ServiceImage
 
     clone = _clone_row(
         service,
@@ -184,11 +185,7 @@ def clone_service(service, name, en_name):
 
     _clone_gallery(service.images.all(), ServiceImage, 'service_id', clone)
 
-    for variant in service.variants.all():
-        variant_clone = _clone_row(
-            variant, ServiceVariant, overrides={'service_id': clone.pk, 'sku': None}
-        )
-        variant_clone.option_values.set(variant.option_values.all())
+    clone.variants.set(service.variants.all())
 
     return clone
 

@@ -35,7 +35,7 @@ interface CartLineProps {
 const MAX_QUANTITY = 99;
 
 /**
- * One row of the cart: image, name, variant, quantity stepper, line total.
+ * One row of the cart: image, name, quantity stepper, line total.
  *
  * Optimistic like the heart - the number moves on click and rolls back if the
  * write fails - because a stepper that waits for a round-trip before painting
@@ -87,21 +87,7 @@ export function CartLine({
         ? "rgba(99,102,241,0.8)"
         : "rgba(234,88,12,0.85)";
 
-  const image = line.variant?.effective_image ?? item.image;
-
-  // The variant's option values ("Size: Small, Color: Red") are what tell two
-  // otherwise-identical lines apart, so they are the one thing that must show.
-  const variantLabel = line.variant?.option_values
-    .map((ov) => {
-      const value =
-        (locale === "en" ? ov.en_name : ov.name) ??
-        ov.name ??
-        ov.en_name ??
-        ov.slug;
-      return `${ov.option_name}: ${value}`;
-    })
-    .join(" · ");
-
+  const image = item.image;
   const changeQuantity = (next: number) => {
     if (next < 1 || next > MAX_QUANTITY || next === quantity) return;
 
@@ -203,16 +189,6 @@ export function CartLine({
                   </Badge>
                 )}
               </Box>
-
-              {variantLabel && (
-                <Typography
-                  variant="caption"
-                  margin={0}
-                  color="var(--foreground)"
-                >
-                  {variantLabel}
-                </Typography>
-              )}
 
               {line.customization.length > 0 && (
                 <Box flexDirection="column" gap={2}>

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { use } from "react";
 import { useRouter } from "@repo/i18n/navigation";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
-import { MenuPricingSection } from "@/components/admin/menu-pricing-section";
+import { PricingSection } from "@/components/admin/pricing-section";
 import {
   AdminImageUploader,
   type NewImage,
@@ -20,9 +20,9 @@ import {
   type RecipeValue,
 } from "@/components/admin/menu-recipe-editor";
 import {
-  MenuVariantsEditor,
+  VariantsEditor,
   type VariantOption,
-} from "@/components/admin/menu-variants-editor";
+} from "@/components/admin/variants-editor";
 import {
   getMenuItem,
   cloneMenuItem,
@@ -625,7 +625,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
           styles={{ borderTop: "1px solid var(--border, #e5e7eb)" }}
         >
           {/* Variants sits directly below the Short Description fields. */}
-          <MenuVariantsEditor
+          <VariantsEditor
             value={variantIds}
             onChange={setVariantIds}
             catalog={
@@ -665,7 +665,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
           <MenuRecipeEditor value={recipe} onChange={setRecipe} />
 
           {/* Pricing & Costs, at the end of the form. */}
-          <MenuPricingSection
+          <PricingSection
             values={values}
             onChange={handleChange}
             ingredients={ingredients}

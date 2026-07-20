@@ -61,7 +61,7 @@ export const getFavorites = cache(async (): Promise<FavoriteItem[]> => {
 /**
  * Just the saved ids, for the detail pages' and catalog cards' on/off check -
  * fetching the full favorites payload to answer one boolean would pull every
- * saved item's images and variants on every product view.
+ * saved item's images on every product view.
  */
 export const getFavoriteIds = cache(async (): Promise<FavoriteIds> => {
   // An anonymous visitor has no favorites, and every catalog card asks. Without

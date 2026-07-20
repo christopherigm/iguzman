@@ -5,16 +5,21 @@ import { useTranslations } from "next-intl";
 import { use } from "react";
 import { useRouter } from "@repo/i18n/navigation";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
-import { StripeNetEstimate } from "@/components/admin/stripe-net-estimate";
+import { PricingSection } from "@/components/admin/pricing-section";
 import {
   AdminImageUploader,
   type NewImage,
 } from "@/components/admin-image-uploader/admin-image-uploader";
 import {
+  VariantsEditor,
+  type VariantOption,
+} from "@/components/admin/variants-editor";
+import {
   getProduct,
   cloneProduct,
   createProduct,
   updateProduct,
+  listProducts,
   listProductImages,
   createProductImage,
   deleteProductImage,
@@ -31,15 +36,6 @@ import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 
 type Props = { params: Promise<{ locale: string; id: string }> };
 
-const CURRENCY_OPTIONS = [
-  { value: "USD", label: "USD" },
-  { value: "EUR", label: "EUR" },
-  { value: "MXN", label: "MXN" },
-  { value: "GBP", label: "GBP" },
-  { value: "CAD", label: "CAD" },
-  { value: "BRL", label: "BRL" },
-];
-
 const DIM_UNIT_OPTIONS = [
   { value: "cm", label: "cm" },
   { value: "in", label: "in" },
@@ -55,7 +51,7 @@ const WEIGHT_UNIT_OPTIONS = [
 ];
 
 export default function AdminProductFormPage({ params }: Props) {
-  const { id } = use(params);
+  const { id, locale } = use(params);
   const isNew = id === "new";
   const t = useTranslations("Admin");
   const router = useRouter();
@@ -97,6 +93,12 @@ export default function AdminProductFormPage({ params }: Props) {
   const [pendingNewImages, setPendingNewImages] = useState<NewImage[]>([]);
   const [pendingDeletedIds, setPendingDeletedIds] = useState<number[]>([]);
   const [pendingOrder, setPendingOrder] = useState<number[]>([]);
+
+  // Sibling variants: the ids currently linked, and the pool of other products
+  // to pick from (self is excluded where the picker is rendered).
+  const [variantIds, setVariantIds] = useState<number[]>([]);
+  const [variantCatalog, setVariantCatalog] = useState<VariantOption[]>([]);
+
   const [categoryOptions, setCategoryOptions] = useState<
     { value: string | number; label: string }[]
   >([]);
@@ -139,10 +141,19 @@ export default function AdminProductFormPage({ params }: Props) {
 
   const loadMeta = useCallback(async () => {
     try {
-      const [cats, brands] = await Promise.all([
+      const [cats, brands, products] = await Promise.all([
         listProductCategories(systemId),
         listBrands(systemId),
+        listProducts(systemId),
       ]);
+      setVariantCatalog(
+        products.map((p) => ({
+          id: p.id as number,
+          name: (p.name as string | null) ?? null,
+          en_name: (p.en_name as string | null) ?? null,
+          image: (p.image as string | null) ?? null,
+        })),
+      );
       setCategoryOptions(
         cats.map((c) => ({
           value: c.id as number,
@@ -203,6 +214,11 @@ export default function AdminProductFormPage({ params }: Props) {
             sort_order: i.sort_order as number,
           }));
           setExistingImages(imgs);
+          setVariantIds(
+            ((product.variants as { id: number }[] | undefined) ?? []).map(
+              (v) => v.id,
+            ),
+          );
         })
         .catch(() => setError(t("errorLoad")))
         .finally(() => setLoading(false));
@@ -250,6 +266,9 @@ export default function AdminProductFormPage({ params }: Props) {
       ].forEach((k) => {
         if (payload[k] === "") payload[k] = null;
       });
+      // Symmetrical sibling variants, sent as a list of Product ids. The write
+      // serializer strips any self-reference; an empty list clears them all.
+      payload.variants = variantIds;
 
       let productId: number;
       if (isNew) {
@@ -325,23 +344,8 @@ export default function AdminProductFormPage({ params }: Props) {
       options: brandOptions,
       placeholder: "- None -",
     },
-    { key: "price", label: t("price") ?? "Price", type: "number" },
-    {
-      key: "compare_price",
-      label: t("comparePrice") ?? "Compare Price",
-      type: "number",
-    },
-    {
-      key: "cost_price",
-      label: t("costPrice") ?? "Cost Price",
-      type: "number",
-    },
-    {
-      key: "currency",
-      label: t("currency") ?? "Currency",
-      type: "select",
-      options: CURRENCY_OPTIONS,
-    },
+    // price / compare_price / cost_price / currency are deliberately absent
+    // here: they live in the Pricing & Costs section at the end of the form.
     {
       key: "stock_count",
       label: t("stockCount") ?? "Stock Count",
@@ -424,18 +428,6 @@ export default function AdminProductFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
-        slots={[
-          {
-            beforeKey: "stock_count",
-            node: (
-              <StripeNetEstimate
-                price={values.price}
-                currency={values.currency}
-                costPrice={values.cost_price}
-              />
-            ),
-          },
-        ]}
         productionHref={
           !isNew && values.slug ? `/products/${String(values.slug)}` : undefined
         }
@@ -449,7 +441,31 @@ export default function AdminProductFormPage({ params }: Props) {
             />
           </Box>
         }
-      />
+      >
+        <Box
+          display="flex"
+          flexDirection="column"
+          gap="28px"
+          marginTop="12px"
+          paddingTop="20px"
+          styles={{ borderTop: "1px solid var(--border, #e5e7eb)" }}
+        >
+          {/* Variants sits directly below the Short Description fields. */}
+          <VariantsEditor
+            value={variantIds}
+            onChange={setVariantIds}
+            catalog={
+              isNew
+                ? variantCatalog
+                : variantCatalog.filter((p) => p.id !== Number(id))
+            }
+            locale={locale}
+          />
+
+          {/* Pricing & Costs, at the end of the form. */}
+          <PricingSection values={values} onChange={handleChange} />
+        </Box>
+      </AdminForm>
     </>
   );
 }

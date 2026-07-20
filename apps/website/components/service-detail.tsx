@@ -5,7 +5,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { ShareButton } from "@repo/ui/core-elements/share-button";
 import { getSession } from "@repo/auth/session";
-import type { ServiceDetail, ServiceVariantFull } from "@/lib/catalog";
+import type { ServiceDetail } from "@/lib/catalog";
 import { findCartLineId } from "@/lib/cart";
 import { isFavorite } from "@/lib/favorites";
 import { toShareDescription } from "@/lib/metadata";
@@ -13,8 +13,8 @@ import { formatPrice, discountPercent } from "@/lib/price";
 import { AddToCartButton } from "./add-to-cart-button";
 import { BuyNowButton } from "./buy-now-button";
 import { FavoriteButton } from "./favorite-button";
-import { VariantSelectorClient } from "./variant-selector-client";
 import { AdminEditButton } from "./admin-edit-button";
+import { VariantThumbs } from "./variant-thumbs";
 
 function formatDuration(minutes: number): string {
   if (minutes < 60) return `${minutes}m`;
@@ -25,7 +25,6 @@ function formatDuration(minutes: number): string {
 
 interface ServiceDetailProps {
   service: ServiceDetail;
-  selectedVariant: ServiceVariantFull | null;
   locale: string;
 }
 
@@ -36,7 +35,6 @@ interface ServiceDetailProps {
  */
 export async function ServiceDetailHeader({
   service,
-  selectedVariant,
   locale,
 }: ServiceDetailProps) {
   const [t, tAdmin, session, favorite] = await Promise.all([
@@ -58,10 +56,8 @@ export async function ServiceDetailHeader({
     service.en_description ??
     "";
 
-  const effectiveDuration =
-    selectedVariant?.effective_duration ?? service.duration;
-  const effectiveModality =
-    selectedVariant?.effective_modality ?? service.modality;
+  const effectiveDuration = service.duration;
+  const effectiveModality = service.modality;
 
   const modalityLabels: Record<string, string> = {
     online: t("modalityOnline"),
@@ -146,28 +142,28 @@ export async function ServiceDetailHeader({
 
 export async function ServiceDetailPanel({
   service,
-  selectedVariant,
   locale,
 }: ServiceDetailProps) {
-  // Looked up for the *selected* variant - see the note in ProductDetailPanel.
+  // A sibling variant is its own Service with its own page - see the note in
+  // ProductDetailPanel.
   const [t, session, cartLineId] = await Promise.all([
     getTranslations("ItemDetail"),
     getSession(),
-    findCartLineId("service", service.id, selectedVariant?.id ?? null),
+    findCartLineId("service", service.id),
   ]);
 
-  const effectivePrice = selectedVariant?.effective_price ?? service.price;
-  const effectiveCompare =
-    selectedVariant?.effective_compare_price ?? service.compare_price;
+  const displayName =
+    (locale === "en" ? service.en_name : service.name) ??
+    service.name ??
+    service.en_name ??
+    service.slug;
 
-  const discount = effectiveCompare
-    ? discountPercent(effectivePrice, effectiveCompare)
+  const discount = service.compare_price
+    ? discountPercent(service.price, service.compare_price)
     : 0;
 
-  const effectiveDuration =
-    selectedVariant?.effective_duration ?? service.duration;
-  const effectiveModality =
-    selectedVariant?.effective_modality ?? service.modality;
+  const effectiveDuration = service.duration;
+  const effectiveModality = service.modality;
 
   const modalityLabels: Record<string, string> = {
     online: t("modalityOnline"),
@@ -177,21 +173,21 @@ export async function ServiceDetailPanel({
 
   return (
     <Box flexDirection="column" gap={18} paddingY={4}>
-      {/* Buy box: price, variant selector and CTAs grouped as one unit */}
+      {/* Buy box: price, variants and CTAs grouped as one unit */}
       <Card gap={18}>
         {/* Pricing */}
         <Box alignItems="baseline" flexWrap="wrap" gap="8px 12px">
           <Typography as="span" variant="none" className="item-price">
-            {formatPrice(effectivePrice, service.currency)}
+            {formatPrice(service.price, service.currency)}
           </Typography>
-          {effectiveCompare &&
-            parseFloat(effectiveCompare) > parseFloat(effectivePrice) && (
+          {service.compare_price &&
+            parseFloat(service.compare_price) > parseFloat(service.price) && (
               <Typography
                 as="span"
                 variant="none"
                 className="item-compare-price"
               >
-                {formatPrice(effectiveCompare, service.currency)}
+                {formatPrice(service.compare_price, service.currency)}
               </Typography>
             )}
           {discount > 0 && (
@@ -202,17 +198,22 @@ export async function ServiceDetailPanel({
         </Box>
 
         {/* SKU */}
-        {(selectedVariant?.sku ?? service.sku) && (
+        {service.sku && (
           <Typography as="span" variant="caption" color="var(--foreground)">
-            {t("sku")}: {selectedVariant?.sku ?? service.sku}
+            {t("sku")}: {service.sku}
           </Typography>
         )}
 
-        {/* Variant selector */}
+        {/* Sibling variants - each its own service page. */}
         {service.variants.length > 0 && (
-          <VariantSelectorClient
+          <VariantThumbs
+            basePath="/services"
+            current={{
+              slug: service.slug,
+              name: displayName,
+              image: service.image,
+            }}
             variants={service.variants}
-            selectedVariantId={selectedVariant?.id ?? null}
             locale={locale}
           />
         )}
@@ -223,7 +224,6 @@ export async function ServiceDetailPanel({
           <AddToCartButton
             kind="service"
             id={service.id}
-            variantId={selectedVariant?.id ?? null}
             cartLineId={cartLineId}
             isLoggedIn={session !== null}
             display="button"
@@ -235,7 +235,6 @@ export async function ServiceDetailPanel({
           <BuyNowButton
             kind="service"
             id={service.id}
-            variantId={selectedVariant?.id ?? null}
             isLoggedIn={session !== null}
             text={t("buyNow")}
             size="lg"
@@ -278,10 +277,10 @@ export async function ServiceDetailPanel({
                 <td>{formatDuration(effectiveDuration)}</td>
               </tr>
             )}
-            {(selectedVariant?.sku ?? service.sku) && (
+            {service.sku && (
               <tr>
                 <td>{t("sku")}</td>
-                <td>{selectedVariant?.sku ?? service.sku}</td>
+                <td>{service.sku}</td>
               </tr>
             )}
             {service.currency && (

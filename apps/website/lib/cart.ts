@@ -19,7 +19,6 @@ import { apiFetch } from "./api-fetch";
 import type {
   FeaturedProduct,
   FeaturedService,
-  BuyableVariant,
   MenuItemDetail,
 } from "./catalog";
 import logger from "./logger";
@@ -40,15 +39,14 @@ export interface CartCustomizationRow {
 }
 
 /**
- * One line of the cart. `unit_price` and `line_total` are resolved server-side
- * for the line's variant, so nothing here has to re-derive a price from the
- * catalog payload; they are strings, matching every other price in this API.
+ * One line of the cart. `unit_price` and `line_total` are resolved server-side,
+ * so nothing here has to re-derive a price from the catalog payload; they are
+ * strings, matching every other price in this API.
  */
 export type CartItem = {
   id: number;
   quantity: number;
   created_at: string;
-  variant: BuyableVariant | null;
   customization: CartCustomizationRow[];
   unit_price: string;
   line_total: string;
@@ -79,14 +77,13 @@ export interface Cart {
  *
  * `line_id` is the CartItem row's own id - the thing `DELETE /api/auth/cart/[id]`
  * takes - which is why this cannot be a list of catalog ids the way `FavoriteIds`
- * is. `variant_id` is part of the match because it is part of the line's
- * identity: the same product in two sizes is two lines.
+ * is. A variant is its own catalog item, so the same family in two sizes is two
+ * lines with two different `id`s.
  */
 export interface CartLineRef {
   line_id: number;
   kind: "product" | "service" | "menu_item";
   id: number;
-  variant_id: number | null;
   /**
    * A menu line with a non-default ingredient selection. Always false for
    * product/service. The card adds/removes only the base (default) line, so it
@@ -119,7 +116,7 @@ export const getCart = cache(async (): Promise<Cart> => {
 /**
  * Just the total quantity, for the navbar badge. The navbar renders on every
  * page, and fetching the full cart to print one number would pull every line's
- * images and variants on every navigation - the same reasoning as
+ * images on every navigation - the same reasoning as
  * `getFavoriteIds`.
  */
 export const getCartCount = cache(async (): Promise<number> => {
@@ -149,7 +146,7 @@ export const getCartCount = cache(async (): Promise<number> => {
 /**
  * The cart as bare line references, for the catalog cards' in-cart check - the
  * same trade as `getFavoriteIds`: a grid of N cards asks N times, and answering
- * each from the full cart would pull every line's images and variants.
+ * each from the full cart would pull every line's images.
  */
 export const getCartLines = cache(async (): Promise<CartLineRef[]> => {
   // An anonymous visitor has no cart, and every card asks. Without this the
@@ -177,26 +174,23 @@ export const getCartLines = cache(async (): Promise<CartLineRef[]> => {
 });
 
 /**
- * The id of the cart line for exactly this item *and* variant, or null when it
- * is not in the cart. A card showing the default variant therefore reads as "not
- * in cart" while a different variant of it sits in the cart - which is correct:
- * clicking its button would add that other line, not touch the existing one.
+ * The id of the cart line for exactly this item, or null when it is not in the
+ * cart. A sibling variant is its own catalog item, so a card reads only its own
+ * line - a different variant of the same family sitting in the cart correctly
+ * leaves this one showing as "not in cart".
  *
- * For `menu_item` the identity is the ingredient selection rather than a variant:
- * the card only adds/removes the base (default-ingredients) line, so it matches
- * the uncustomised line and ignores any customised siblings in the cart.
+ * For `menu_item` the identity also includes the ingredient selection: the card
+ * only adds/removes the base (default-ingredients) line, so it matches the
+ * uncustomised line and ignores any customised siblings in the cart.
  */
 export async function findCartLineId(
   kind: "product" | "service" | "menu_item",
   id: number,
-  variantId: number | null,
 ): Promise<number | null> {
   const lines = await getCartLines();
   const match = lines.find((line) => {
     if (line.kind !== kind || line.id !== id) return false;
-    return kind === "menu_item"
-      ? !line.customized
-      : line.variant_id === variantId;
+    return kind === "menu_item" ? !line.customized : true;
   });
   return match?.line_id ?? null;
 }

@@ -113,10 +113,7 @@ export async function CategoryDetail({
                   (data): BuyableItem => ({ kind: "food", data }),
                 )
           ).map((item) => (
-            <Grid
-              key={`${item.kind}-${item.data.id}`}
-              size={{ xs: 6, sm: 3 }}
-            >
+            <Grid key={`${item.kind}-${item.data.id}`} size={{ xs: 6, sm: 3 }}>
               <BuyableCard
                 item={item}
                 locale={locale}

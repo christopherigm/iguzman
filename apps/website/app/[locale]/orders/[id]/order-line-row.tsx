@@ -17,7 +17,7 @@ interface OrderLineRowProps {
  * One purchased line, rendered entirely from the order's own snapshot.
  *
  * Shaped like `CartLine` but static - there is nothing to change about a line
- * that has been paid for. Note that `name`, `variant_label` and `unit_price`
+ * that has been paid for. Note that `name` and `unit_price`
  * come off the line itself, not the catalog, which is what keeps this row
  * showing what was actually charged after the item is re-priced or renamed.
  *
@@ -116,11 +116,6 @@ export async function OrderLineRow({ line }: OrderLineRowProps) {
               {kindLabel}
             </Badge>
           </Box>
-          {line.variant_label ? (
-            <Typography variant="caption" margin={0} color="var(--foreground)">
-              {line.variant_label}
-            </Typography>
-          ) : null}
           {line.customization.length > 0 && (
             <Box flexDirection="column" gap={2}>
               {line.customization.map((row, idx) => {

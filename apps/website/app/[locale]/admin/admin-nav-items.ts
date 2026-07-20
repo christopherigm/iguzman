@@ -45,12 +45,6 @@ export const ADMIN_NAV_ITEMS = [
     descKey: "menuItemsDesc",
   },
   {
-    key: "variantOptions",
-    href: "/admin/variant-options",
-    icon: "🔀",
-    descKey: "variantOptionsDesc",
-  },
-  {
     key: "successStories",
     href: "/admin/success-stories",
     icon: "⭐",

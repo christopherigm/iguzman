@@ -400,7 +400,7 @@ class CartItemSerializer(serializers.Serializer):
 
     Mirrors `FavoriteSerializer` - `item` carries the full catalog payload so the
     frontend reuses its existing card - and adds what a line needs on top: the
-    chosen variant, the quantity, and the prices resolved for that variant.
+    quantity and the prices resolved for it.
 
     Prices are strings, matching how DRF renders every other DecimalField in this
     API; the frontend already parses catalog prices the same way.
@@ -411,7 +411,6 @@ class CartItemSerializer(serializers.Serializer):
     quantity = serializers.IntegerField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
     item = serializers.SerializerMethodField()
-    variant = serializers.SerializerMethodField()
     customization = serializers.SerializerMethodField()
     unit_price = serializers.SerializerMethodField()
     line_total = serializers.SerializerMethodField()
@@ -429,15 +428,6 @@ class CartItemSerializer(serializers.Serializer):
             'menu_item': MenuItemSerializer,
         }[obj.kind]
         return serializer(obj.target, context=self.context).data
-
-    def get_variant(self, obj):
-        from catalog.serializers import ProductVariantSerializer, ServiceVariantSerializer
-
-        variant = obj.variant
-        if variant is None:
-            return None
-        serializer = ProductVariantSerializer if obj.product_id else ServiceVariantSerializer
-        return serializer(variant, context=self.context).data
 
     def get_customization(self, obj):
         """The chosen ingredients for a menu line, resolved to labels + up-charges
@@ -480,14 +470,12 @@ class CartItemSerializer(serializers.Serializer):
         flag; only products carry stock.
 
         Reported per line so the cart can flag an item that sold out after it was
-        added - the variant's own flag wins when the line has one.
+        added.
         """
         if obj.service_id:
             return True
         if obj.menu_item_id:
             return obj.menu_item.is_available
-        if obj.product_variant_id:
-            return obj.product_variant.in_stock
         return obj.product.in_stock
 
 
@@ -510,7 +498,6 @@ class CartCustomizationRowSerializer(serializers.Serializer):
 class CartItemWriteSerializer(serializers.Serializer):
     kind = serializers.ChoiceField(choices=["product", "service", "menu_item"])
     id = serializers.IntegerField()
-    variant_id = serializers.IntegerField(required=False, allow_null=True)
     # Menu items only: the chosen ingredient selection. Ignored for product/service.
     customization = CartCustomizationRowSerializer(many=True, required=False)
     quantity = serializers.IntegerField(required=False, min_value=1, max_value=99, default=1)

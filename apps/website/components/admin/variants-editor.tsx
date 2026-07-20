@@ -8,7 +8,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Switch } from "@repo/ui/core-elements/switch";
 
-/** The subset of a MenuItem the variants picker needs: a linkable identity and
+/** The subset of a buyable the variants picker needs: a linkable identity and
  *  a thumbnail. The parent already excludes the item being edited from this
  *  list, so an item can never be offered as its own variant. */
 export interface VariantOption {
@@ -19,27 +19,26 @@ export interface VariantOption {
 }
 
 interface Props {
-  /** Currently selected variant (MenuItem) ids. */
+  /** Currently selected sibling ids. */
   value: number[];
   onChange: (value: number[]) => void;
-  /** Other menu items in the same system (self already excluded). */
+  /** The other items of the same kind in this system (self already excluded). */
   catalog: VariantOption[];
   locale: string;
 }
 
 /**
- * Multi-select section for a menu item's sibling variants (e.g. a vegan or
- * gluten-free version of the same dish). The relation is symmetrical on the
- * backend, so ticking an item here surfaces the pairing on that item's detail
- * page too. The parent page sends the selected ids as the `variants` field on
- * save.
+ * Multi-select section for a buyable's sibling variants - a vegan version of a
+ * dish, a larger size of a product, a shorter session of a service. Used by the
+ * menu-item, product and service admin forms alike, because all three model
+ * variants the same way: each sibling is its own standalone, orderable record,
+ * and this only links the family together.
+ *
+ * The relation is symmetrical on the backend, so ticking an item here surfaces
+ * the pairing on that item's detail page too. The parent page sends the selected
+ * ids as the `variants` field on save.
  */
-export function MenuVariantsEditor({
-  value,
-  onChange,
-  catalog,
-  locale,
-}: Props) {
+export function VariantsEditor({ value, onChange, catalog, locale }: Props) {
   const t = useTranslations("Admin");
   const [query, setQuery] = useState("");
 

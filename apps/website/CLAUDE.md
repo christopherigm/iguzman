@@ -62,7 +62,7 @@ nothing here may touch a Stripe credential.
 - **A signed-in request body carries only a locale.** Items, quantities, prices
   and currency are read from the customer's cart rows server-side. A guest's
   body also carries their cart, but only as **references** (`{kind, id,
-variant_id?, customization?, quantity}`) - Django re-prices every one of them
+customization?, quantity}`) - Django re-prices every one of them
   from the catalog before creating a session. Either way: a client that could
   name a price could name its own.
 - **`/orders/[id]` is the confirmation page and the permanent record.** The
@@ -87,8 +87,8 @@ variant_id?, customization?, quantity}`) - Django re-prices every one of them
 hearts live in `localStorage` (`lib/guest-cart.ts`), and are folded into the
 account on sign-in.
 
-- **The browser stores _references_, never prices.** `{kind, id, variant_id?,
-customization?, quantity}` and nothing else. Everything displayable comes back
+- **The browser stores _references_, never prices.** `{kind, id, customization?,
+quantity}` and nothing else. Everything displayable comes back
   from `POST /api/guest/resolve` (→ website-api's public `/api/guest/resolve/`,
   host-scoped), which prices the refs from the catalog and returns the **same
   `Cart` payload** a signed-in cart renders. Never cache a price locally: the

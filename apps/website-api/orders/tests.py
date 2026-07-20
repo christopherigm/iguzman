@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase
 
-from catalog.models import Product, ProductVariant, Service
+from catalog.models import Product, Service
 from core.crypto import decrypt, encrypt
 from core.models import System
 from users.models import CartItem
@@ -121,9 +121,6 @@ class CheckoutTests(TestCase):
             system=self.system, name="Bag", slug="bag",
             price=Decimal("10.00"), currency="USD",
         )
-        self.variant = ProductVariant.objects.create(
-            product=self.product, name="Small", price=Decimal("8.00"),
-        )
         self.user = self._make_user("a@acme.test", self.system)
         self.client.force_login(self.user)
 
@@ -157,8 +154,7 @@ class CheckoutTests(TestCase):
     @patch("orders.views.create_checkout_session", return_value=_StubSession())
     def test_checkout_snapshots_the_cart_onto_the_order(self, mock_create):
         CartItem.objects.create(
-            user=self.user, system=self.system, product=self.product,
-            product_variant=self.variant, quantity=3,
+            user=self.user, system=self.system, product=self.product, quantity=3,
         )
 
         response = self._checkout()
@@ -167,14 +163,14 @@ class CheckoutTests(TestCase):
         order = Order.objects.get(public_id=response.json()["order_id"])
         self.assertEqual(order.status, Order.STATUS_PENDING)
         self.assertEqual(order.currency, "USD")
-        self.assertEqual(order.subtotal, Decimal("24.00"))
+        self.assertEqual(order.subtotal, Decimal("30.00"))
         self.assertEqual(order.stripe_session_id, "cs_test_123")
 
         line = order.lines.get()
         self.assertEqual(line.name, "Bag")
-        self.assertEqual(line.unit_price, Decimal("8.00"))
+        self.assertEqual(line.unit_price, Decimal("10.00"))
         self.assertEqual(line.quantity, 3)
-        self.assertEqual(line.line_total, Decimal("24.00"))
+        self.assertEqual(line.line_total, Decimal("30.00"))
         self.assertEqual(response.json()["url"], "https://checkout.stripe.com/c/pay/cs_test_123")
 
     @patch("orders.views.create_checkout_session", return_value=_StubSession())
@@ -194,7 +190,7 @@ class CheckoutTests(TestCase):
 
     @patch("orders.views.create_checkout_session", return_value=_StubSession())
     def test_a_null_sku_snapshots_as_blank_rather_than_crashing(self, mock_create):
-        """`sku` is nullable on Product/Service/variants but NOT NULL on the
+        """`sku` is nullable on Product/Service but NOT NULL on the
         order line, so the snapshot must coalesce rather than pass None through."""
         self.assertIsNone(self.product.sku)
         CartItem.objects.create(user=self.user, system=self.system, product=self.product)
@@ -205,12 +201,11 @@ class CheckoutTests(TestCase):
         self.assertEqual(Order.objects.get().lines.get().sku, "")
 
     @patch("orders.views.create_checkout_session", return_value=_StubSession())
-    def test_a_variant_without_a_sku_inherits_its_parents(self, mock_create):
+    def test_the_items_sku_is_snapshotted_onto_the_line(self, mock_create):
         self.product.sku = "BAG"
         self.product.save()
         CartItem.objects.create(
-            user=self.user, system=self.system,
-            product=self.product, product_variant=self.variant,
+            user=self.user, system=self.system, product=self.product,
         )
 
         self._checkout()

@@ -6,7 +6,7 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { getService } from "@/lib/catalog";
 import { getSystem } from "@/lib/system";
 import { getRequestOrigin, toShareDescription } from "@/lib/metadata";
-import type { ServiceDetail, ServiceVariantFull } from "@/lib/catalog";
+import type { ServiceDetail } from "@/lib/catalog";
 import type { GalleryImage } from "@/components/item-gallery-client";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
 import { ItemHeroVideo } from "@/components/item-hero-video";
@@ -20,7 +20,6 @@ import {
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
-  searchParams: Promise<{ variant?: string }>;
 };
 
 export async function generateMetadata({
@@ -76,10 +75,7 @@ export async function generateMetadata({
   };
 }
 
-function buildGalleryImages(
-  service: ServiceDetail,
-  selectedVariant: ServiceVariantFull | null,
-): GalleryImage[] {
+function buildGalleryImages(service: ServiceDetail): GalleryImage[] {
   const images: GalleryImage[] = [];
   const name = service.en_name ?? service.name ?? service.slug;
   const seen = new Set<string>();
@@ -89,11 +85,6 @@ function buildGalleryImages(
       images.push({ url, alt });
     }
   };
-
-  if (selectedVariant?.effective_image) {
-    push(selectedVariant.effective_image, name);
-    if (images.length > 0) return images;
-  }
 
   // Prefer the service's gallery images.
   for (const img of service.images) {
@@ -108,9 +99,8 @@ function buildGalleryImages(
   return images;
 }
 
-export default async function ServicePage({ params, searchParams }: Props) {
+export default async function ServicePage({ params }: Props) {
   const { locale, slug } = await params;
-  const { variant: variantIdStr } = await searchParams;
   setRequestLocale(locale);
 
   const [service, t, tNav] = await Promise.all([
@@ -121,14 +111,7 @@ export default async function ServicePage({ params, searchParams }: Props) {
 
   if (!service) notFound();
 
-  const variantId = variantIdStr ? parseInt(variantIdStr, 10) : null;
-  const selectedVariant =
-    service.variants.find((v) => v.id === variantId) ??
-    service.variants.find((v) => v.is_default) ??
-    service.variants[0] ??
-    null;
-
-  const galleryImages = buildGalleryImages(service, selectedVariant);
+  const galleryImages = buildGalleryImages(service);
 
   const displayName =
     (locale === "en" ? service.en_name : service.name) ??
@@ -173,11 +156,7 @@ export default async function ServicePage({ params, searchParams }: Props) {
         paddingBottom="var(--ui-page-bottom-spacing, 64px)"
       >
         <Breadcrumbs items={breadcrumbs} />
-        <ServiceDetailHeader
-          service={service}
-          selectedVariant={selectedVariant}
-          locale={locale}
-        />
+        <ServiceDetailHeader service={service} locale={locale} />
         <Grid container spacing={2} marginBottom={18}>
           <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
             <ItemGalleryClient
@@ -186,18 +165,10 @@ export default async function ServicePage({ params, searchParams }: Props) {
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
-            <ServiceDetailPanel
-              service={service}
-              selectedVariant={selectedVariant}
-              locale={locale}
-            />
+            <ServiceDetailPanel service={service} locale={locale} />
           </Grid>
         </Grid>
-        <ServiceDetailSections
-          service={service}
-          selectedVariant={selectedVariant}
-          locale={locale}
-        />
+        <ServiceDetailSections service={service} locale={locale} />
       </Container>
     </>
   );

@@ -5,16 +5,21 @@ import { useTranslations } from "next-intl";
 import { use } from "react";
 import { useRouter } from "@repo/i18n/navigation";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
-import { StripeNetEstimate } from "@/components/admin/stripe-net-estimate";
+import { PricingSection } from "@/components/admin/pricing-section";
 import {
   AdminImageUploader,
   type NewImage,
 } from "@/components/admin-image-uploader/admin-image-uploader";
 import {
+  VariantsEditor,
+  type VariantOption,
+} from "@/components/admin/variants-editor";
+import {
   getService,
   cloneService,
   createService,
   updateService,
+  listServices,
   listServiceImages,
   createServiceImage,
   deleteServiceImage,
@@ -31,14 +36,6 @@ import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 
 type Props = { params: Promise<{ locale: string; id: string }> };
 
-const CURRENCY_OPTIONS = [
-  { value: "USD", label: "USD" },
-  { value: "EUR", label: "EUR" },
-  { value: "MXN", label: "MXN" },
-  { value: "GBP", label: "GBP" },
-  { value: "CAD", label: "CAD" },
-  { value: "BRL", label: "BRL" },
-];
 const MODALITY_OPTIONS = [
   { value: "online", label: "Online" },
   { value: "in_person", label: "In Person" },
@@ -46,7 +43,7 @@ const MODALITY_OPTIONS = [
 ];
 
 export default function AdminServiceFormPage({ params }: Props) {
-  const { id } = use(params);
+  const { id, locale } = use(params);
   const isNew = id === "new";
   const t = useTranslations("Admin");
   const router = useRouter();
@@ -83,6 +80,12 @@ export default function AdminServiceFormPage({ params }: Props) {
   const [pendingNewImages, setPendingNewImages] = useState<NewImage[]>([]);
   const [pendingDeletedIds, setPendingDeletedIds] = useState<number[]>([]);
   const [pendingOrder, setPendingOrder] = useState<number[]>([]);
+
+  // Sibling variants: the ids currently linked, and the pool of other services
+  // to pick from (self is excluded where the picker is rendered).
+  const [variantIds, setVariantIds] = useState<number[]>([]);
+  const [variantCatalog, setVariantCatalog] = useState<VariantOption[]>([]);
+
   const [categoryOptions, setCategoryOptions] = useState<
     { value: string | number; label: string }[]
   >([]);
@@ -125,10 +128,19 @@ export default function AdminServiceFormPage({ params }: Props) {
 
   const loadMeta = useCallback(async () => {
     try {
-      const [cats, brands] = await Promise.all([
+      const [cats, brands, services] = await Promise.all([
         listServiceCategories(systemId),
         listBrands(systemId),
+        listServices(systemId),
       ]);
+      setVariantCatalog(
+        services.map((s) => ({
+          id: s.id as number,
+          name: (s.name as string | null) ?? null,
+          en_name: (s.en_name as string | null) ?? null,
+          image: (s.image as string | null) ?? null,
+        })),
+      );
       setCategoryOptions(
         cats.map((c) => ({
           value: c.id as number,
@@ -184,11 +196,19 @@ export default function AdminServiceFormPage({ params }: Props) {
             sort_order: i.sort_order as number,
           }));
           setExistingImages(imgs);
+          setVariantIds(
+            ((data.variants as { id: number }[] | undefined) ?? []).map(
+              (v) => v.id,
+            ),
+          );
         })
         .catch(() => setError(t("errorLoad")))
         .finally(() => setLoading(false));
     }
   }, [id, isNew, loadMeta, t]);
+
+  const handleChange = (key: string, value: unknown) =>
+    setValues((prev) => ({ ...prev, [key]: value }));
 
   const handleSubmit = async () => {
     setSaving(true);
@@ -211,6 +231,9 @@ export default function AdminServiceFormPage({ params }: Props) {
       ].forEach((k) => {
         if (payload[k] === "") payload[k] = null;
       });
+      // Symmetrical sibling variants, sent as a list of Service ids. The write
+      // serializer strips any self-reference; an empty list clears them all.
+      payload.variants = variantIds;
       if (pendingImage.length > 0) {
         payload.image = pendingImage[0]?.base64;
       } else if (existingImage.length === 0) {
@@ -289,23 +312,8 @@ export default function AdminServiceFormPage({ params }: Props) {
       options: brandOptions,
       placeholder: "- None -",
     },
-    { key: "price", label: t("price") ?? "Price", type: "number" },
-    {
-      key: "compare_price",
-      label: t("comparePrice") ?? "Compare Price",
-      type: "number",
-    },
-    {
-      key: "cost_price",
-      label: t("costPrice") ?? "Cost Price",
-      type: "number",
-    },
-    {
-      key: "currency",
-      label: t("currency") ?? "Currency",
-      type: "select",
-      options: CURRENCY_OPTIONS,
-    },
+    // price / compare_price / cost_price / currency are deliberately absent
+    // here: they live in the Pricing & Costs section at the end of the form.
     {
       key: "duration",
       label: t("duration") ?? "Duration (min)",
@@ -371,23 +379,11 @@ export default function AdminServiceFormPage({ params }: Props) {
         onClone={isNew ? undefined : handleClone}
         fields={fields}
         values={values}
-        onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
+        onChange={handleChange}
         onSubmit={handleSubmit}
         saving={saving}
         error={error}
         success={success}
-        slots={[
-          {
-            beforeKey: "duration",
-            node: (
-              <StripeNetEstimate
-                price={values.price}
-                currency={values.currency}
-                costPrice={values.cost_price}
-              />
-            ),
-          },
-        ]}
         productionHref={
           !isNew && values.slug ? `/services/${String(values.slug)}` : undefined
         }
@@ -422,7 +418,31 @@ export default function AdminServiceFormPage({ params }: Props) {
             </Box>
           </>
         }
-      />
+      >
+        <Box
+          display="flex"
+          flexDirection="column"
+          gap="28px"
+          marginTop="12px"
+          paddingTop="20px"
+          styles={{ borderTop: "1px solid var(--border, #e5e7eb)" }}
+        >
+          {/* Variants sits directly below the Short Description fields. */}
+          <VariantsEditor
+            value={variantIds}
+            onChange={setVariantIds}
+            catalog={
+              isNew
+                ? variantCatalog
+                : variantCatalog.filter((s) => s.id !== Number(id))
+            }
+            locale={locale}
+          />
+
+          {/* Pricing & Costs, at the end of the form. */}
+          <PricingSection values={values} onChange={handleChange} />
+        </Box>
+      </AdminForm>
     </>
   );
 }

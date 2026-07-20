@@ -34,16 +34,11 @@ interface BuyableCardActionsProps {
   initialFavorite: boolean;
   isLoggedIn: boolean;
   /**
-   * The variant the card is showing (its default), so the line added from here
-   * matches the price printed on it. Null when the item has no variants.
-   */
-  variantId: number | null;
-  /**
-   * The cart line for this card's item+variant, when it is already in the cart.
+   * The cart line for this card's item, when it is already in the cart.
    * Turns the add button into a remove one, which deletes that line.
    */
   cartLineId: number | null;
-  /** The card's variant is out of stock - the add button is offered disabled. */
+  /** The card's item is out of stock - the add button is offered disabled. */
   inStock: boolean;
 }
 
@@ -62,7 +57,6 @@ export function BuyableCardActions({
   shareUrl,
   initialFavorite,
   isLoggedIn,
-  variantId,
   cartLineId,
   inStock,
 }: BuyableCardActionsProps) {
@@ -90,7 +84,6 @@ export function BuyableCardActions({
       <AddToCartButton
         kind={kind}
         id={id}
-        variantId={variantId}
         cartLineId={cartLineId}
         isLoggedIn={isLoggedIn}
         disabled={!inStock}

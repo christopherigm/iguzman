@@ -88,7 +88,7 @@ def create_checkout_session(system, order, lines, success_url, cancel_url, custo
                         "currency": currency,
                         "unit_amount": to_minor_units(line.unit_price, order.currency),
                         "product_data": {
-                            "name": line.name if not line.variant_label else f"{line.name} ({line.variant_label})",
+                            "name": line.name,
                         },
                     },
                 }

@@ -1,7 +1,7 @@
 """The anonymous visitor's cart and favorites.
 
 A guest has no rows: their cart lives in the browser's localStorage as a list of
-bare **references** - kind, id, variant, ingredient selection, quantity - and is
+bare **references** - kind, id, ingredient selection, quantity - and is
 sent here to be priced. Nothing about money is ever taken from the client. The
 reference names *what* was chosen; every price, label, image and stock flag is
 read back out of the catalog on this side, exactly as it is for a signed-in
@@ -22,9 +22,7 @@ and `GuestMergeView` (turn it into rows at login).
 from catalog.models import (
     MenuItem,
     Product,
-    ProductVariant,
     Service,
-    ServiceVariant,
     normalize_selection,
 )
 
@@ -39,15 +37,15 @@ MAX_QUANTITY = 99
 _MODELS = {"product": Product, "service": Service, "menu_item": MenuItem}
 
 
-def _dedupe_key(kind, target_id, variant_id, selection):
+def _dedupe_key(kind, target_id, selection):
     """What makes two references the same line.
 
-    The same triple a signed-in cart is deduped by: item, variant, and - for a
-    menu line - the ingredient selection, which is part of that line's identity
+    The same pair a signed-in cart is deduped by: the item and - for a menu
+    line - the ingredient selection, which is part of that line's identity
     (two of the same dish customised differently are two lines). The selection is
     already normalised to a sorted list, so equal choices compare equal.
     """
-    return (kind, target_id, variant_id, repr(selection))
+    return (kind, target_id, repr(selection))
 
 
 def resolve_guest_cart(system, refs):
@@ -67,8 +65,7 @@ def resolve_guest_cart(system, refs):
     can sit in localStorage for weeks, and an item that has since been disabled
     or deleted must not make the whole cart un-renderable. The caller sees the
     difference as a shorter list than it sent. Every lookup is scoped to
-    `system`, and a variant is looked up *through* its parent, so a crafted id
-    cannot pull in another tenant's item or pair a variant with the wrong one.
+    `system`, so a crafted id cannot pull in another tenant's item.
     """
     if system is None:
         return []
@@ -88,7 +85,6 @@ def resolve_guest_cart(system, refs):
         if target is None:
             continue
 
-        variant = None
         selection = []
 
         if kind == "menu_item":
@@ -96,21 +92,10 @@ def resolve_guest_cart(system, refs):
                 target.ingredients.filter(enabled=True).prefetch_related("options")
             )
             selection = normalize_selection(ref.get("customization") or [], ingredients)
-        elif ref.get("variant_id") is not None:
-            variant_model = ProductVariant if kind == "product" else ServiceVariant
-            variant = variant_model.objects.filter(
-                pk=ref["variant_id"], enabled=True, **{kind: target},
-            ).first()
-            # A variant that no longer resolves drops the line rather than
-            # silently falling back to the base item: the customer chose a size,
-            # and quietly charging them for a different one is worse than
-            # dropping it.
-            if variant is None:
-                continue
 
         quantity = min(max(int(ref.get("quantity") or 1), 1), MAX_QUANTITY)
 
-        key = _dedupe_key(kind, target.pk, getattr(variant, "pk", None), selection)
+        key = _dedupe_key(kind, target.pk, selection)
         existing = seen.get(key)
         if existing is not None:
             # Two references to the same line are one line of the summed
@@ -122,10 +107,7 @@ def resolve_guest_cart(system, refs):
             system=system,
             quantity=quantity,
             customization=selection,
-            **{
-                kind: target,
-                **({f"{kind}_variant": variant} if variant is not None else {}),
-            },
+            **{kind: target},
         )
         # The guest line's handle: where this reference sits in the browser's
         # own array, which is the only thing the client can act on.

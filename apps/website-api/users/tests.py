@@ -10,7 +10,6 @@ from catalog.models import (
     MenuItem,
     MenuItemIngredient,
     Product,
-    ProductVariant,
     Service,
 )
 from core.models import System
@@ -22,7 +21,7 @@ class CartConstraintTests(TestCase):
     """The database-level rules a cart line must obey.
 
     These are constraints rather than view logic because a line that means
-    "both a product and a service", or that exists twice for the same variant,
+    "both a product and a service", or that exists twice for the same item,
     is corrupt no matter which code path wrote it.
     """
 
@@ -32,14 +31,8 @@ class CartConstraintTests(TestCase):
         self.product = Product.objects.create(
             system=self.system, name="Bag", slug="bag", price=Decimal("10.00")
         )
-        self.variant = ProductVariant.objects.create(
-            product=self.product, name="Small", price=Decimal("8.00")
-        )
 
-    def test_duplicate_line_without_a_variant_is_rejected(self):
-        """The NULL-distinct trap: SQL considers two NULL variants different, so
-        a single unique index over (user, product, variant) would let the same
-        variant-less product be inserted any number of times."""
+    def test_duplicate_line_for_the_same_product_is_rejected(self):
         CartItem.objects.create(user=self.user, system=self.system, product=self.product)
 
         with self.assertRaises(IntegrityError):
@@ -48,38 +41,16 @@ class CartConstraintTests(TestCase):
                     user=self.user, system=self.system, product=self.product
                 )
 
-    def test_duplicate_line_with_the_same_variant_is_rejected(self):
-        CartItem.objects.create(
-            user=self.user,
-            system=self.system,
-            product=self.product,
-            product_variant=self.variant,
+    def test_two_variants_of_one_product_are_two_independent_lines(self):
+        """A variant is its own standalone Product, so the family members do not
+        collide on the per-product unique constraint."""
+        large = Product.objects.create(
+            system=self.system, name="Bag XL", slug="bag-xl", price=Decimal("15.00")
         )
+        self.product.variants.add(large)
 
-        with self.assertRaises(IntegrityError):
-            with transaction.atomic():
-                CartItem.objects.create(
-                    user=self.user,
-                    system=self.system,
-                    product=self.product,
-                    product_variant=self.variant,
-                )
-
-    def test_the_same_product_in_two_variants_is_two_lines(self):
-        large = ProductVariant.objects.create(product=self.product, name="Large")
-
-        CartItem.objects.create(
-            user=self.user,
-            system=self.system,
-            product=self.product,
-            product_variant=self.variant,
-        )
-        CartItem.objects.create(
-            user=self.user,
-            system=self.system,
-            product=self.product,
-            product_variant=large,
-        )
+        CartItem.objects.create(user=self.user, system=self.system, product=self.product)
+        CartItem.objects.create(user=self.user, system=self.system, product=large)
 
         self.assertEqual(CartItem.objects.filter(user=self.user).count(), 2)
 
@@ -100,18 +71,6 @@ class CartConstraintTests(TestCase):
                     service=service,
                 )
 
-    def test_a_variant_cannot_cross_over_to_the_other_target(self):
-        service = Service.objects.create(system=self.system, name="Fix", slug="fix")
-
-        with self.assertRaises(IntegrityError):
-            with transaction.atomic():
-                CartItem.objects.create(
-                    user=self.user,
-                    system=self.system,
-                    service=service,
-                    product_variant=self.variant,
-                )
-
     def test_quantity_cannot_drop_below_one(self):
         with self.assertRaises(IntegrityError):
             with transaction.atomic():
@@ -119,30 +78,16 @@ class CartConstraintTests(TestCase):
                     user=self.user, system=self.system, product=self.product, quantity=0
                 )
 
-    def test_unit_price_prefers_the_variant_over_the_product(self):
+    def test_unit_price_reads_the_products_own_price(self):
         line = CartItem.objects.create(
             user=self.user,
             system=self.system,
             product=self.product,
-            product_variant=self.variant,
             quantity=3,
         )
 
-        self.assertEqual(line.unit_price, Decimal("8.00"))
-        self.assertEqual(line.line_total, Decimal("24.00"))
-
-    def test_unit_price_falls_back_to_the_product_when_the_variant_has_none(self):
-        inherits = ProductVariant.objects.create(product=self.product, name="Plain")
-        line = CartItem.objects.create(
-            user=self.user,
-            system=self.system,
-            product=self.product,
-            product_variant=inherits,
-            quantity=2,
-        )
-
         self.assertEqual(line.unit_price, Decimal("10.00"))
-        self.assertEqual(line.line_total, Decimal("20.00"))
+        self.assertEqual(line.line_total, Decimal("30.00"))
 
 
 class CartApiTests(TestCase):
@@ -161,9 +106,12 @@ class CartApiTests(TestCase):
             price=Decimal("10.00"),
             currency="USD",
         )
-        self.variant = ProductVariant.objects.create(
-            product=self.product, name="Small", price=Decimal("8.00")
+        # A sibling variant of `product` - its own standalone, orderable Product.
+        self.variant = Product.objects.create(
+            system=self.system, name="Bag Small", slug="bag-small",
+            price=Decimal("8.00"), currency="USD",
         )
+        self.product.variants.add(self.variant)
         self.other_product = Product.objects.create(
             system=self.system, name="Mug", slug="mug", price=Decimal("5.00"), currency="USD"
         )
@@ -209,24 +157,14 @@ class CartApiTests(TestCase):
         self.assertEqual(response.json()["quantity"], 5)
         self.assertEqual(CartItem.objects.filter(user=self.user).count(), 1)
 
-    def test_add_with_a_variant_prices_the_line_from_the_variant(self):
-        response = self._add(
-            kind="product", id=self.product.id, variant_id=self.variant.id
-        )
+    def test_adding_a_variant_adds_that_products_own_line_at_its_own_price(self):
+        """A variant is a standalone Product, so it is added by its own id and
+        priced from its own row - not as a modifier on its sibling."""
+        response = self._add(kind="product", id=self.variant.id)
 
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.json()["variant"]["id"], self.variant.id)
+        self.assertEqual(response.json()["item"]["id"], self.variant.id)
         self.assertEqual(response.json()["unit_price"], "8.00")
-
-    def test_a_variant_of_a_different_product_is_refused(self):
-        """The check the database cannot make: the columns are individually valid,
-        but the variant does not belong to the product being added."""
-        response = self._add(
-            kind="product", id=self.other_product.id, variant_id=self.variant.id
-        )
-
-        self.assertEqual(response.status_code, 404)
-        self.assertEqual(CartItem.objects.count(), 0)
 
     def test_another_tenants_product_cannot_be_added(self):
         foreign = Product.objects.create(
@@ -326,10 +264,8 @@ class CartApiTests(TestCase):
     def _ids(self):
         return self.client.get("/api/auth/cart/ids/").json()["lines"]
 
-    def test_ids_names_each_line_by_item_variant_and_row(self):
-        line_id = self._add(
-            kind="product", id=self.product.id, variant_id=self.variant.id
-        ).json()["id"]
+    def test_ids_names_each_line_by_item_and_row(self):
+        line_id = self._add(kind="product", id=self.product.id).json()["id"]
 
         self.assertEqual(
             self._ids(),
@@ -338,16 +274,10 @@ class CartApiTests(TestCase):
                     "line_id": line_id,
                     "kind": "product",
                     "id": self.product.id,
-                    "variant_id": self.variant.id,
                     "customized": False,
                 }
             ],
         )
-
-    def test_ids_reports_no_variant_as_null(self):
-        self._add(kind="product", id=self.product.id)
-
-        self.assertIsNone(self._ids()[0]["variant_id"])
 
     def test_ids_flags_a_customised_menu_line(self):
         """The card adds the base (default-ingredients) menu line, so the ids feed
@@ -366,17 +296,15 @@ class CartApiTests(TestCase):
         )
 
     def test_ids_tells_two_variants_of_one_product_apart(self):
-        """The card matches on item *and* variant, so the two lines must arrive as
-        two entries with their own row ids - otherwise one card's remove button
+        """Sibling variants are two distinct Products, so they arrive as two
+        entries with their own row ids - otherwise one card's remove button
         would delete the other variant's line."""
         plain = self._add(kind="product", id=self.product.id).json()["id"]
-        small = self._add(
-            kind="product", id=self.product.id, variant_id=self.variant.id
-        ).json()["id"]
+        small = self._add(kind="product", id=self.variant.id).json()["id"]
 
         self.assertEqual(
-            {(line["line_id"], line["variant_id"]) for line in self._ids()},
-            {(plain, None), (small, self.variant.id)},
+            {(line["line_id"], line["id"]) for line in self._ids()},
+            {(plain, self.product.id), (small, self.variant.id)},
         )
 
     def test_ids_drops_a_line_as_soon_as_it_is_deleted(self):
@@ -413,9 +341,12 @@ class GuestCartTests(TestCase):
             system=self.system, name="Bag", slug="bag",
             price=Decimal("10.00"), currency="USD",
         )
-        self.variant = ProductVariant.objects.create(
-            product=self.product, name="Small", price=Decimal("8.00"),
+        # A sibling variant of `product` - its own standalone, orderable Product.
+        self.variant = Product.objects.create(
+            system=self.system, name="Bag Small", slug="bag-small",
+            price=Decimal("8.00"), currency="USD",
         )
+        self.product.variants.add(self.variant)
 
     def _resolve(self, cart=None, favorites=None, host="acme.test"):
         return self.client.post(
@@ -427,7 +358,7 @@ class GuestCartTests(TestCase):
 
     def test_a_reference_is_priced_from_the_catalog(self):
         response = self._resolve([
-            {"kind": "product", "id": self.product.id, "variant_id": self.variant.id, "quantity": 2},
+            {"kind": "product", "id": self.variant.id, "quantity": 2},
         ])
 
         self.assertEqual(response.status_code, 200)
