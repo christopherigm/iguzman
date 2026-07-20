@@ -1,5 +1,8 @@
+import base64
+
 from django.contrib.auth.models import User
 from django.core.cache import cache
+from django.core.files.storage import default_storage
 from django.test import TestCase
 
 from decimal import Decimal
@@ -7,8 +10,9 @@ from decimal import Decimal
 from core.models import Brand, System
 
 from .models import (
-    Product, MenuItem, MenuItemIngredient, MenuItemIngredientOption,
-    Ingredient, normalize_selection,
+    Product, ProductImage, ProductVariant, MenuItem, MenuItemIngredient,
+    MenuItemIngredientOption, Ingredient, RecipeStep, VariantOption,
+    VariantOptionValue, normalize_selection,
 )
 
 
@@ -481,3 +485,172 @@ class IngredientEndpointTests(TestCase):
         res = client.delete(f"/api/catalog/ingredients/{ing.id}/", **self._host())
         self.assertEqual(res.status_code, 409)
         self.assertTrue(Ingredient.objects.filter(pk=ing.id).exists())
+
+
+class CloneTests(TestCase):
+    """The CMS "Clone" button, which is a deep copy - not a second row pointing
+    at the first one's children and files."""
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Deli", host="deli.test")
+
+    def _admin_client(self):
+        user = User.objects.create_user("owner", password="x")
+        user.profile.system = self.system
+        user.profile.is_admin = True
+        user.profile.save()
+        client = self.client_class()
+        client.force_login(user)
+        return client
+
+    def _image(self, name="pic.png"):
+        """A 1x1 PNG, small enough that the resize pipeline leaves it alone."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        raw = base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8"
+            "z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+        )
+        return SimpleUploadedFile(name, raw, content_type="image/png")
+
+    def _clone(self, client, path, **body):
+        payload = {"name": "Copy", "en_name": "Copy EN"}
+        payload.update(body)
+        return client.post(
+            path, data=payload, content_type="application/json",
+            **{"HTTP_X_WEBSITE_HOST": "deli.test"},
+        )
+
+    # ── auth ────────────────────────────────────────────────────────────────
+
+    def test_clone_requires_admin(self):
+        product = Product.objects.create(system=self.system, name="Mug", slug="mug")
+        res = self._clone(self.client_class(), f"/api/catalog/products/{product.id}/clone/")
+        self.assertIn(res.status_code, (401, 403))
+        self.assertEqual(Product.objects.count(), 1)
+
+    def test_clone_rejects_a_blank_name(self):
+        product = Product.objects.create(system=self.system, name="Mug", slug="mug")
+        res = self._clone(
+            self._admin_client(), f"/api/catalog/products/{product.id}/clone/", name="  "
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(Product.objects.count(), 1)
+
+    # ── product ─────────────────────────────────────────────────────────────
+
+    def test_product_clone_copies_gallery_files_and_drops_the_sku(self):
+        product = Product.objects.create(
+            system=self.system, name="Mug", slug="mug", sku="MUG-1",
+            price=Decimal("12.00"), image=self._image(),
+        )
+        gallery = ProductImage.objects.create(product=product, image=self._image("g.png"))
+
+        res = self._clone(self._admin_client(), f"/api/catalog/products/{product.id}/clone/")
+        self.assertEqual(res.status_code, 201, res.content)
+
+        clone = Product.objects.get(pk=res.json()["id"])
+        self.assertNotEqual(clone.id, product.id)
+        self.assertEqual(clone.name, "Copy")
+        self.assertEqual(clone.en_name, "Copy EN")
+        self.assertEqual(clone.price, Decimal("12.00"))
+        # sku is unique=True - a copied one would collide.
+        self.assertIsNone(clone.sku)
+        self.assertEqual(clone.slug, f"{self.system.id}-copy")
+
+        # Own file, and the file really exists: deleting one must not blank the other.
+        self.assertTrue(clone.image.name)
+        self.assertNotEqual(clone.image.name, product.image.name)
+        self.assertTrue(default_storage.exists(clone.image.name))
+
+        clone_gallery = clone.images.get()
+        self.assertNotEqual(clone_gallery.id, gallery.id)
+        self.assertNotEqual(clone_gallery.image.name, gallery.image.name)
+        self.assertTrue(default_storage.exists(clone_gallery.image.name))
+
+    def test_product_clone_copies_variants_with_their_option_values(self):
+        product = Product.objects.create(system=self.system, name="Mug", slug="mug")
+        option = VariantOption.objects.create(system=self.system, name="Size", slug="size")
+        large = VariantOptionValue.objects.create(option=option, name="Large", slug="large")
+        variant = ProductVariant.objects.create(product=product, sku="MUG-L", price=Decimal("15"))
+        variant.option_values.add(large)
+
+        res = self._clone(self._admin_client(), f"/api/catalog/products/{product.id}/clone/")
+        clone = Product.objects.get(pk=res.json()["id"])
+
+        clone_variant = clone.variants.get()
+        self.assertNotEqual(clone_variant.id, variant.id)
+        self.assertEqual(clone_variant.price, Decimal("15"))
+        self.assertIsNone(clone_variant.sku)
+        # Option *values* are shared vocabulary, not per-product rows - reused, not copied.
+        self.assertEqual(list(clone_variant.option_values.all()), [large])
+
+    def test_cloning_the_same_name_twice_still_yields_unique_slugs(self):
+        product = Product.objects.create(system=self.system, name="Mug", slug="mug")
+        client = self._admin_client()
+        first = self._clone(client, f"/api/catalog/products/{product.id}/clone/")
+        second = self._clone(client, f"/api/catalog/products/{product.id}/clone/")
+        self.assertEqual(second.status_code, 201, second.content)
+        self.assertNotEqual(first.json()["slug"], second.json()["slug"])
+
+    # ── menu item ───────────────────────────────────────────────────────────
+
+    def test_menu_item_clone_copies_ingredients_options_and_recipe(self):
+        item = MenuItem.objects.create(
+            system=self.system, name="Latte", slug="latte", price=Decimal("4.00"),
+        )
+        sugar = Ingredient.objects.create(system=self.system, name="Sugar", slug="sugar", unit="g")
+        splenda = Ingredient.objects.create(system=self.system, name="Splenda", slug="splenda", unit="g")
+        row = MenuItemIngredient.objects.create(
+            menu_item=item, ingredient=sugar, group_name="Sweetener",
+            price=Decimal("0.50"), is_removable=True, max_quantity=3,
+        )
+        MenuItemIngredientOption.objects.create(
+            menu_item_ingredient=row, ingredient=splenda, price=Decimal("0.75"),
+        )
+        RecipeStep.objects.create(
+            menu_item=item, step_number=1, instruction="Steam the milk",
+            image=self._image("step.png"),
+        )
+
+        res = self._clone(self._admin_client(), f"/api/catalog/menu-items/{item.id}/clone/")
+        self.assertEqual(res.status_code, 201, res.content)
+        clone = MenuItem.objects.get(pk=res.json()["id"])
+
+        clone_row = clone.ingredients.get()
+        self.assertNotEqual(clone_row.id, row.id)
+        self.assertEqual(clone_row.group_name, "Sweetener")
+        self.assertEqual(clone_row.price, Decimal("0.50"))
+        # The shared Ingredient catalog is referenced, never duplicated.
+        self.assertEqual(clone_row.ingredient_id, sugar.id)
+        self.assertEqual(Ingredient.objects.count(), 2)
+
+        clone_option = clone_row.options.get()
+        self.assertEqual(clone_option.ingredient_id, splenda.id)
+        self.assertEqual(clone_option.price, Decimal("0.75"))
+
+        clone_step = clone.recipe_steps.get()
+        self.assertEqual(clone_step.instruction, "Steam the milk")
+        self.assertTrue(default_storage.exists(clone_step.image.name))
+
+        # A copy is not automatically an alternative version of its original.
+        self.assertNotIn(item, clone.variants.all())
+
+    def test_menu_item_clone_prices_a_selection_off_its_own_rows(self):
+        """The clone's pricing must run on the clone's ingredient ids, not the
+        original's - otherwise a customised order on the copy prices as base."""
+        item = MenuItem.objects.create(
+            system=self.system, name="Latte", slug="latte", price=Decimal("4.00"),
+        )
+        sugar = Ingredient.objects.create(system=self.system, name="Sugar", slug="sugar", unit="g")
+        MenuItemIngredient.objects.create(
+            menu_item=item, ingredient=sugar, price=Decimal("0.50"),
+            is_removable=True, max_quantity=3,
+        )
+
+        res = self._clone(self._admin_client(), f"/api/catalog/menu-items/{item.id}/clone/")
+        clone = MenuItem.objects.get(pk=res.json()["id"])
+        clone_row = clone.ingredients.get()
+
+        selection = [{"ingredient": clone_row.id, "quantity": 2}]
+        self.assertEqual(clone.price_for_selection(selection), Decimal("5.00"))

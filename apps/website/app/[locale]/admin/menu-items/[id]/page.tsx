@@ -25,6 +25,7 @@ import {
 } from "@/components/admin/menu-variants-editor";
 import {
   getMenuItem,
+  cloneMenuItem,
   createMenuItem,
   updateMenuItem,
   listMenuItems,
@@ -483,6 +484,18 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     }
   };
 
+  // Cloning happens server-side (it has to copy the image *files*), and clones
+  // the stored record - so anything unsaved in this form is deliberately left
+  // out. The dialog says so.
+  const handleClone = async (names: { name: string; en_name: string }) => {
+    const created = await cloneMenuItem(Number(id), names);
+    // The route only changes its dynamic segment, so this page may re-render
+    // rather than remount; without this it would show the original's values
+    // until the new record's fetch lands.
+    setLoading(true);
+    router.push(`/admin/menu-items/${created.id as number}`);
+  };
+
   const fields: FieldDef[] = [
     { key: "name", label: t("name"), required: true, onBlur: handleNameBlur },
     { key: "en_name", label: "Name (EN)" },
@@ -576,6 +589,8 @@ export default function AdminMenuItemFormPage({ params }: Props) {
             : `${t("edit")} - ${t("menuItems")}`
         }
         editingName={isNew ? undefined : String(values.name ?? "")}
+        isEditing={!isNew}
+        onClone={isNew ? undefined : handleClone}
         fields={fields}
         values={values}
         onChange={handleChange}

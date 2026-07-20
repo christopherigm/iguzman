@@ -86,6 +86,28 @@ export async function deleteProduct(pk: number) {
   return parseResponse<void>(res);
 }
 
+/**
+ * The names a clone is created with. `en_name` may be blank - the API stores
+ * that as "no English name" rather than an empty one.
+ */
+export type CloneNames = { name: string; en_name: string };
+
+/**
+ * Deep-copy a catalog record: its own row, child rows (gallery, variants,
+ * ingredients, recipe) and its **own copies of the image files**.
+ *
+ * Server-side on purpose - the browser could only duplicate an image by
+ * downloading it and re-uploading it as base64. The copy is made from what is
+ * stored, so unsaved edits in the form are not part of it.
+ */
+export async function cloneProduct(pk: number, names: CloneNames) {
+  const res = await adminFetch(`/api/catalog/products/${pk}/clone/`, {
+    method: "POST",
+    body: JSON.stringify(names),
+  });
+  return parseResponse<Record<string, unknown>>(res);
+}
+
 // ---- Product Images ----
 export async function listProductImages(productId: number) {
   const res = await adminFetch(`/api/catalog/products/${productId}/images/`);
@@ -185,6 +207,15 @@ export async function deleteService(pk: number) {
     method: "DELETE",
   });
   return parseResponse<void>(res);
+}
+
+/** Deep-copy a service. See `cloneProduct`. */
+export async function cloneService(pk: number, names: CloneNames) {
+  const res = await adminFetch(`/api/catalog/services/${pk}/clone/`, {
+    method: "POST",
+    body: JSON.stringify(names),
+  });
+  return parseResponse<Record<string, unknown>>(res);
 }
 
 // ---- Service Images ----
@@ -289,6 +320,19 @@ export async function deleteMenuItem(pk: number) {
     method: "DELETE",
   });
   return parseResponse<void>(res);
+}
+
+/**
+ * Deep-copy a menu item. See `cloneProduct`. Ingredients themselves are shared
+ * catalog records, so the clone references the same ones rather than duplicating
+ * them.
+ */
+export async function cloneMenuItem(pk: number, names: CloneNames) {
+  const res = await adminFetch(`/api/catalog/menu-items/${pk}/clone/`, {
+    method: "POST",
+    body: JSON.stringify(names),
+  });
+  return parseResponse<Record<string, unknown>>(res);
 }
 
 // ---- Menu Item Images ----

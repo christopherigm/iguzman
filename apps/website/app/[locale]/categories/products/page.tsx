@@ -140,7 +140,7 @@ export default async function ProductsPage({ params }: Props) {
               {products.map((product) => {
                 const item: BuyableItem = { kind: "product", data: product };
                 return (
-                  <Grid key={product.id} size={{ xs: 6, sm: 3, lg: 2 }}>
+                  <Grid key={product.id} size={{ xs: 6, sm: 3}}>
                     <BuyableCard
                       item={item}
                       locale={locale}

@@ -98,7 +98,7 @@ export default async function FavoritesPage({ params }: Props) {
             {favorites.map((favorite) => (
               <Grid
                 key={`${favorite.kind}-${favorite.item.id}`}
-                size={{ xs: 6, sm: 3, lg: 2 }}
+                size={{ xs: 6, sm: 3 }}
               >
                 <BuyableCard
                   item={

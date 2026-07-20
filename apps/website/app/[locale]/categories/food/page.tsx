@@ -140,7 +140,7 @@ export default async function FoodPage({ params }: Props) {
             </Box>
             <Grid container spacing={2}>
               {items.map((item) => (
-                <Grid key={item.id} size={{ xs: 6, sm: 3, lg: 2 }}>
+                <Grid key={item.id} size={{ xs: 6, sm: 3 }}>
                   <BuyableCard
                     item={{ kind: "food", data: item }}
                     locale={locale}

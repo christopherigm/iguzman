@@ -140,7 +140,7 @@ export default async function ServicesPage({ params }: Props) {
               {services.map((service) => {
                 const item: BuyableItem = { kind: "service", data: service };
                 return (
-                  <Grid key={service.id} size={{ xs: 6, sm: 3, lg: 2 }}>
+                  <Grid key={service.id} size={{ xs: 6, sm: 3 }}>
                     <BuyableCard
                       item={item}
                       locale={locale}

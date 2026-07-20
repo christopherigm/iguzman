@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -63,6 +64,31 @@ export function BuyableCardView({
   cartLineId,
 }: BuyableCardViewProps) {
   const { kind, data } = item;
+  const tMenu = useTranslations("Menu");
+
+  // A food card advertises its dietary flags instead of the generic kind badge,
+  // since "which of these can I eat" is the only question a diner scanning a
+  // grid is asking. Vegan is the stronger claim, so it supersedes vegetarian
+  // rather than both showing for the same dish - same rule as `menu-detail`.
+  // With no flag set the kind badge stays, so the corner is never empty.
+  const dietary: { label: string; color: string }[] = [];
+  if (item.kind === "food") {
+    const food = item.data;
+    if (food.is_organic)
+      dietary.push({ label: tMenu("organic"), color: "rgba(101,163,13)" });
+    if (food.is_vegan)
+      dietary.push({ label: tMenu("vegan"), color: "rgba(22,163,74)" });
+    else if (food.is_vegetarian)
+      dietary.push({
+        label: tMenu("vegetarian"),
+        color: "rgba(5,150,105)",
+      });
+    if (food.is_gluten_free)
+      dietary.push({
+        label: tMenu("glutenFree"),
+        color: "rgba(202,138,4)",
+      });
+  }
 
   // Admin edit shortcut, keyed to the same table the admin CMS uses per kind
   // (a food item is a `menu_item` there). Only rendered for an admin viewer.
@@ -172,25 +198,47 @@ export function BuyableCardView({
           />
         )}
 
-        <Badge
-          variant="filled"
-          size="md"
-          color={
-            kind === "product"
-              ? "rgb(34, 181, 32)"
-              : kind === "service"
-                ? "rgba(99,102,241,0.8)"
-                : "rgba(234,88,12,0.85)"
-          }
-          textColor="#fff"
-          style={{ position: "absolute", top: 8, left: 8, zIndex: 1 }}
+        <Box
+          alignItems="flex-start"
+          flexWrap="wrap"
+          gap={4}
+          // Leave the top-right corner clear when the admin edit button is there.
+          maxWidth={isAdmin ? "calc(100% - 60px)" : "calc(100% - 16px)"}
+          styles={{ position: "absolute", top: 8, left: 8, zIndex: 1 }}
         >
-          {kind === "product"
-            ? productLabel
-            : kind === "service"
-              ? serviceLabel
-              : menuLabel}
-        </Badge>
+          {dietary.length > 0 ? (
+            dietary.map((d) => (
+              <Badge
+                key={d.label}
+                variant="filled"
+                size="md"
+                color={d.color}
+                textColor="#fff"
+              >
+                {d.label}
+              </Badge>
+            ))
+          ) : (
+            <Badge
+              variant="filled"
+              size="md"
+              color={
+                kind === "product"
+                  ? "rgb(34, 181, 32)"
+                  : kind === "service"
+                    ? "rgba(99,102,241)"
+                    : "rgba(234,88,12)"
+              }
+              textColor="#fff"
+            >
+              {kind === "product"
+                ? productLabel
+                : kind === "service"
+                  ? serviceLabel
+                  : menuLabel}
+            </Badge>
+          )}
+        </Box>
 
         {/* Admin-only edit shortcut, riding the top-right of the image. */}
         {isAdmin && (
@@ -216,7 +264,7 @@ export function BuyableCardView({
             {duration != null && (
               <Badge
                 variant="filled"
-                size="sm"
+                size="md"
                 color="rgba(0,0,0,0.6)"
                 textColor="#fff"
               >
@@ -229,7 +277,7 @@ export function BuyableCardView({
             {discount > 0 && (
               <Badge
                 variant="filled"
-                size="sm"
+                size="md"
                 color="#ef4444"
                 textColor="#fff"
               >

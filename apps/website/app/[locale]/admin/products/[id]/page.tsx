@@ -12,6 +12,7 @@ import {
 } from "@/components/admin-image-uploader/admin-image-uploader";
 import {
   getProduct,
+  cloneProduct,
   createProduct,
   updateProduct,
   listProductImages,
@@ -286,6 +287,18 @@ export default function AdminProductFormPage({ params }: Props) {
     }
   };
 
+  // Cloning happens server-side (it has to copy the image *files*), and clones
+  // the stored record - so anything unsaved in this form is deliberately left
+  // out. The dialog says so.
+  const handleClone = async (names: { name: string; en_name: string }) => {
+    const created = await cloneProduct(Number(id), names);
+    // The route only changes its dynamic segment, so this page may re-render
+    // rather than remount; without this it would show the original's values
+    // until the new record's fetch lands.
+    setLoading(true);
+    router.push(`/admin/products/${created.id as number}`);
+  };
+
   const fields: FieldDef[] = [
     { key: "name", label: t("name"), required: true, onBlur: handleNameBlur },
     { key: "en_name", label: "Name (EN)" },
@@ -402,6 +415,8 @@ export default function AdminProductFormPage({ params }: Props) {
             : `${t("edit")} - ${t("products")}`
         }
         editingName={isNew ? undefined : String(values.name ?? "")}
+        isEditing={!isNew}
+        onClone={isNew ? undefined : handleClone}
         fields={fields}
         values={values}
         onChange={handleChange}

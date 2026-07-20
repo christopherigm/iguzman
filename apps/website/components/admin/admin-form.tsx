@@ -194,6 +194,17 @@ function deriveGroupLabel(label: string): string {
     .trim();
 }
 
+// ── Clone name suffixes ────────────────────────────────────────────────────
+//
+// Appended to the pre-filled names in the clone dialog. These are *content*
+// language, not UI language: `name` is the record's Spanish name and `en_name`
+// its English one, whichever locale the operator has the CMS in. Translating
+// them with `t()` would put "(copy)" on a Spanish name for an English-speaking
+// operator.
+
+const CLONE_SUFFIX_ES = " (copia)";
+const CLONE_SUFFIX_EN = " (copy)";
+
 // ── Top toggles ────────────────────────────────────────────────────────────
 
 // Status flags that belong above the form rather than buried at the bottom,
@@ -245,6 +256,21 @@ interface AdminFormProps {
   onSubmit: () => void;
   onCancel?: () => void;
   hideCancel?: boolean;
+  /**
+   * True when the form edits an existing record rather than creating one. It
+   * only changes the top-left escape hatch's wording - "Cancel" abandons a new
+   * record, but on a saved one there is nothing to cancel, so it reads "Back".
+   */
+  isEditing?: boolean;
+  /**
+   * Deep-copy this record under a new name. When set (and `isEditing`), a
+   * "Clone" button appears beside Back and opens a dialog pre-filled with the
+   * record's names plus a "(copy)" suffix.
+   *
+   * The handler is expected to create the copy and navigate to it; it may throw,
+   * in which case the dialog stays open and reports the failure.
+   */
+  onClone?: (names: { name: string; en_name: string }) => Promise<void> | void;
   saving?: boolean;
   error?: string | null;
   success?: string | null;
@@ -285,6 +311,8 @@ export function AdminForm({
   onSubmit,
   onCancel,
   hideCancel,
+  isEditing,
+  onClone,
   saving,
   error,
   success,
@@ -324,6 +352,13 @@ export function AdminForm({
     string | null
   >(null);
   const [translatePreview, setTranslatePreview] = useState("");
+
+  // ── Clone dialog state ────────────────────────────────────────────────────
+  const [showClone, setShowClone] = useState(false);
+  const [cloneName, setCloneName] = useState("");
+  const [cloneEnName, setCloneEnName] = useState("");
+  const [cloning, setCloning] = useState(false);
+  const [cloneError, setCloneError] = useState<string | null>(null);
 
   // ── Enhance options modal state ───────────────────────────────────────────
   const [showEnhanceOptions, setShowEnhanceOptions] = useState(false);
@@ -509,6 +544,43 @@ export function AdminForm({
     resetLlm();
   };
 
+  // ── Clone handlers ────────────────────────────────────────────────────────
+
+  // Seed the inputs when the dialog opens rather than in an effect, so they
+  // track the record the operator is looking at without a render-phase sync.
+  const openClone = () => {
+    const name = String(values.name ?? "").trim();
+    const enName = String(values.en_name ?? "").trim();
+    setCloneName(name ? `${name}${CLONE_SUFFIX_ES}` : "");
+    setCloneEnName(enName ? `${enName}${CLONE_SUFFIX_EN}` : "");
+    setCloneError(null);
+    setShowClone(true);
+  };
+
+  const handleConfirmClone = async () => {
+    if (!onClone || cloning) return;
+    const name = cloneName.trim();
+    if (!name) return;
+    setCloning(true);
+    setCloneError(null);
+    try {
+      await onClone({ name, en_name: cloneEnName.trim() });
+      setShowClone(false);
+    } catch {
+      // Stay open: the operator's typed names are still in the inputs, so a
+      // retry costs one click rather than re-entering both.
+      setCloneError(t("cloneError"));
+    } finally {
+      setCloning(false);
+    }
+  };
+
+  const handleCancelClone = () => {
+    if (cloning) return;
+    setShowClone(false);
+    setCloneError(null);
+  };
+
   // ── Form submit ───────────────────────────────────────────────────────────
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -544,9 +616,18 @@ export function AdminForm({
           <Box display="flex" alignItems="center" gap={8}>
             {!hideCancel && (
               <Button
-                text={t("cancel")}
+                text={isEditing ? t("back") : t("cancel")}
                 onClick={onCancel ?? (() => router.back())}
                 size="md"
+              />
+            )}
+            {isEditing && onClone && (
+              <Button
+                text={t("clone")}
+                icon="/icons/copy.svg"
+                onClick={openClone}
+                size="md"
+                kind="warning"
               />
             )}
           </Box>
@@ -981,6 +1062,38 @@ export function AdminForm({
           </Box>
         </form>
       </Box>
+
+      {showClone && (
+        <ConfirmationModal
+          title={t("cloneTitle")}
+          text={t("cloneText")}
+          okCallback={handleConfirmClone}
+          cancelCallback={handleCancelClone}
+          okLabel={cloning ? t("cloning") : t("clone")}
+          cancelLabel={tCommon("cancel")}
+          okDisabled={cloning || !cloneName.trim()}
+        >
+          <Box flexDirection="column" gap={16}>
+            <TextInput
+              label={t("cloneNameLabel")}
+              value={cloneName}
+              onChange={setCloneName}
+              disabled={cloning}
+            />
+            <TextInput
+              label={t("cloneEnNameLabel")}
+              value={cloneEnName}
+              onChange={setCloneEnName}
+              disabled={cloning}
+            />
+            {cloneError && (
+              <Typography variant="body" color="var(--error, #e53935)">
+                {cloneError}
+              </Typography>
+            )}
+          </Box>
+        </ConfirmationModal>
+      )}
 
       {showEnhanceOptions && (
         <ConfirmationModal

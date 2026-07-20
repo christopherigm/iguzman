@@ -36,6 +36,9 @@ from .views import (
     IngredientDetailView,
     IngredientNutritionLookupView,
     IngredientPriceLookupView,
+    ProductCloneView,
+    ServiceCloneView,
+    MenuItemCloneView,
 )
 
 urlpatterns = [
@@ -46,6 +49,7 @@ urlpatterns = [
     # Products
     path('catalog/products/', ProductListCreateView.as_view(), name='product-list'),
     path('catalog/products/<int:pk>/', ProductDetailView.as_view(), name='product-detail'),
+    path('catalog/products/<int:pk>/clone/', ProductCloneView.as_view(), name='product-clone'),
 
     # Product images
     path('catalog/products/<int:pk>/images/', ProductImageListCreateView.as_view(), name='product-image-list'),
@@ -64,6 +68,7 @@ urlpatterns = [
     # Services
     path('catalog/services/', ServiceListCreateView.as_view(), name='service-list'),
     path('catalog/services/<int:pk>/', ServiceDetailView.as_view(), name='service-detail'),
+    path('catalog/services/<int:pk>/clone/', ServiceCloneView.as_view(), name='service-clone'),
 
     # Service images
     path('catalog/services/<int:pk>/images/', ServiceImageListCreateView.as_view(), name='service-image-list'),
@@ -93,6 +98,7 @@ urlpatterns = [
     # Menu items
     path('catalog/menu-items/', MenuItemListCreateView.as_view(), name='menu-item-list'),
     path('catalog/menu-items/<int:pk>/', MenuItemDetailView.as_view(), name='menu-item-detail'),
+    path('catalog/menu-items/<int:pk>/clone/', MenuItemCloneView.as_view(), name='menu-item-clone'),
 
     # Menu item images
     path('catalog/menu-items/<int:pk>/images/', MenuItemImageListCreateView.as_view(), name='menu-item-image-list'),

@@ -69,7 +69,7 @@ export async function CatalogItems() {
         {items.map((item) => (
           <Grid
             key={`${item.kind}-${item.data.id}`}
-            size={{ xs: 6, sm: 3, lg: 2 }}
+            size={{ xs: 6, sm: 3 }}
           >
             <BuyableCard
               item={item}

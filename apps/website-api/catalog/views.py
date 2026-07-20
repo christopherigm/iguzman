@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 
 from core.models import System
 from core.services.llm import LlmNotConfigured
+from .services.clone import clone_menu_item, clone_product, clone_service
 from .services.nutrition_lookup import lookup_nutrition
 from .services.price_lookup import lookup_price
 
@@ -1811,3 +1812,93 @@ class MenuItemRecipeView(APIView):
         _invalidate_pattern('catalog:menu_items:*')
         menu_item = self._get_item(pk)
         return Response(MenuItemRecipeSerializer(menu_item, context={'request': request}).data)
+
+
+# ---------------------------------------------------------------------------
+# Clone views (admin only)
+# ---------------------------------------------------------------------------
+#
+# The CMS's "Clone" button: a deep copy of one catalog record so an operator can
+# build a variant of it without re-typing everything. It lives on the server, not
+# in the browser, for one reason above the rest - the copy has to duplicate the
+# record's *image files*, and a browser could only do that by downloading every
+# image and re-uploading it as base64.
+#
+# The clone is made from what is in the database, so unsaved edits sitting in the
+# form are deliberately not part of it (the CMS says so in the confirm dialog).
+
+
+class _BaseCloneView(APIView):
+    """Shared POST handler for the per-resource clone endpoints.
+
+    Subclasses supply the model, the clone function, the read serializer, and the
+    cache keys the new row invalidates.
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    model = None
+    clone_fn = None
+    read_serializer = None
+
+    def _invalidate(self, clone):
+        raise NotImplementedError
+
+    def post(self, request, pk):
+        source = self.model.objects.filter(pk=pk).first()
+        if source is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        name = str(request.data.get('name') or '').strip()
+        if not name:
+            return Response(
+                {'name': ['This field is required.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # Blank means "no English name", which is what a null column says. An
+        # empty string would render as a real (empty) EN name on the storefront.
+        en_name = str(request.data.get('en_name') or '').strip() or None
+
+        clone = type(self).clone_fn(source, name, en_name)
+        self._invalidate(clone)
+        return Response(
+            self.read_serializer(clone, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class ProductCloneView(_BaseCloneView):
+    """POST /api/catalog/products/<pk>/clone/ - deep-copy a product (admin only)."""
+
+    model = Product
+    clone_fn = staticmethod(clone_product)
+    read_serializer = ProductSerializer
+
+    def _invalidate(self, clone):
+        _invalidate_pattern('catalog:products:*')
+
+
+class ServiceCloneView(_BaseCloneView):
+    """POST /api/catalog/services/<pk>/clone/ - deep-copy a service (admin only)."""
+
+    model = Service
+    clone_fn = staticmethod(clone_service)
+    read_serializer = ServiceSerializer
+
+    def _invalidate(self, clone):
+        _invalidate_pattern('catalog:services:*')
+
+
+class MenuItemCloneView(_BaseCloneView):
+    """POST /api/catalog/menu-items/<pk>/clone/ - deep-copy a menu item (admin only)."""
+
+    model = MenuItem
+    clone_fn = staticmethod(clone_menu_item)
+    read_serializer = MenuItemSerializer
+
+    def _invalidate(self, clone):
+        # The clone joins the original's sibling family, and `variants` is
+        # symmetrical - so every menu-item detail payload can change, not just
+        # the two rows involved.
+        _invalidate_pattern('catalog:menu_item:*')
+        _invalidate_pattern('catalog:menu_items:*')

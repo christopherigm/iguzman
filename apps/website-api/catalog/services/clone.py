@@ -1,0 +1,245 @@
+"""Deep-clone a buyable (Product, Service, MenuItem) into a new record.
+
+The CMS's "Clone" button exists so an operator can build a variant of an item
+without re-typing it: the clone is a full, independent copy - its own row, its
+own child rows, and its **own image files** - that can then be edited freely.
+
+Two rules the whole module turns on:
+
+  * **Image files are copied, never shared.** Two rows pointing at one file look
+    fine until the operator deletes or replaces the image on one of them and it
+    vanishes from the other. Every ``ImageField`` is duplicated in storage under
+    a fresh name (``core.models.picture`` mints a uuid), so the copies are
+    unrelated from the moment they exist.
+  * **Unique fields are not copied.** ``sku`` is ``unique=True`` on all three
+    models, so a clone must start with none - carrying it over would fail the
+    insert (or, worse, make two rows fight over one identifier). ``slug`` is
+    likewise regenerated from the clone's new name.
+"""
+
+import os
+import re
+import unicodedata
+
+from django.core.files.storage import default_storage
+from django.db import transaction
+
+from core.models import picture
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _slugify(name: str, system_id) -> str:
+    """Mirror of the CMS's `buildSlug` (apps/website/lib/slug-utils.ts).
+
+    Kept identical so a cloned record's slug is indistinguishable from one the
+    form would have produced for a new record with the same name.
+    """
+    base = unicodedata.normalize('NFD', name or '')
+    base = ''.join(ch for ch in base if unicodedata.category(ch) != 'Mn')
+    base = base.lower()
+    base = re.sub(r'[^a-z0-9\s-]', '', base)
+    base = re.sub(r'\s+', '-', base.strip())
+    base = re.sub(r'-+', '-', base)
+    return f"{system_id}-{base}" if base else f"{system_id}-item"
+
+
+def unique_slug(model, name: str, system_id) -> str:
+    """A slug for `name` that no row of `model` holds yet.
+
+    Cloning is the one flow that reliably collides: "Pizza (copy)" cloned twice
+    yields the same base slug, and `slug` is `unique=True`. Collisions get a
+    numeric suffix rather than an error, because the operator asked for a copy,
+    not for a lecture about slugs.
+    """
+    base = _slugify(name, system_id)
+    candidate = base
+    suffix = 2
+    while model.objects.filter(slug=candidate).exists():
+        candidate = f"{base}-{suffix}"
+        suffix += 1
+    return candidate
+
+
+def copy_image(source_field):
+    """Duplicate a FieldFile in storage and return the new name, or ''.
+
+    Copies the stored bytes directly instead of re-saving through the field, so
+    a `ResizedImageField` doesn't re-encode (and re-degrade) an image that was
+    already processed when it was first uploaded.
+    """
+    if not source_field:
+        return ''
+    old_name = source_field.name
+    if not old_name or not default_storage.exists(old_name):
+        return ''
+    # `picture()` only reads the instance's class name for the folder, and the
+    # copy lives beside the original, so the source's own instance is the right
+    # thing to hand it.
+    new_name = picture(source_field.instance, os.path.basename(old_name))
+    with default_storage.open(old_name, 'rb') as handle:
+        return default_storage.save(new_name, handle)
+
+
+def _copy_fields(source, exclude):
+    """Concrete, non-inherited field values of `source`, minus `exclude`.
+
+    Uses `attname` so foreign keys come back as `<field>_id` and no related
+    object has to be fetched. M2M fields are absent by construction (they aren't
+    in `_meta.concrete_fields`) and are handled explicitly per model.
+    """
+    data = {}
+    for field in source._meta.concrete_fields:
+        if field.primary_key or field.name in exclude or field.attname in exclude:
+            continue
+        data[field.attname] = getattr(source, field.attname)
+    return data
+
+
+# Never carried onto a clone:
+#   pk/created/modified - the clone is a new row with its own timestamps
+#   slug                - regenerated from the clone's name
+#   sku                 - unique=True; the clone starts without an identifier
+#   image               - copied as a file, not as a shared reference
+_BASE_EXCLUDE = {'id', 'created', 'modified', 'slug', 'sku', 'image'}
+
+
+def _clone_row(source, model, overrides=None, exclude=()):
+    """Create a copy of `source` with `overrides` applied.
+
+    Relations in `overrides` must be given by **attname** (`product_id=…`), not
+    by field name. `_copy_fields` emits attnames, and when `Model.__init__` is
+    handed both `product=<obj>` and `product_id=<old id>` the raw id is applied
+    last - silently attaching the copy to the row it was copied from.
+    """
+    data = _copy_fields(source, _BASE_EXCLUDE | set(exclude))
+    # `image` is excluded above so the clone gets a copied file rather than the
+    # original's name; models without one (a MenuItemIngredient row) simply
+    # don't get the key back.
+    if any(f.name == 'image' for f in model._meta.concrete_fields):
+        data['image'] = copy_image(getattr(source, 'image', None))
+    data.update(overrides or {})
+    return model.objects.create(**data)
+
+
+def _clone_gallery(images, model, parent_attname, parent):
+    """Copy a set of gallery image rows onto `parent`."""
+    for image in images:
+        _clone_row(image, model, overrides={parent_attname: parent.pk})
+
+
+# ---------------------------------------------------------------------------
+# Public API - one function per buyable family
+# ---------------------------------------------------------------------------
+
+@transaction.atomic
+def clone_product(product, name, en_name):
+    """Copy a Product, its gallery, and its variants (with their images)."""
+    from catalog.models import (
+        Product, ProductImage, ProductVariant, ProductVariantImage,
+    )
+
+    clone = _clone_row(
+        product,
+        Product,
+        overrides={
+            'name': name,
+            'en_name': en_name,
+            'slug': unique_slug(Product, name, product.system_id),
+            'sku': None,
+        },
+    )
+
+    _clone_gallery(product.images.all(), ProductImage, 'product_id', clone)
+
+    for variant in product.variants.all():
+        variant_clone = _clone_row(
+            variant, ProductVariant, overrides={'product_id': clone.pk, 'sku': None}
+        )
+        variant_clone.option_values.set(variant.option_values.all())
+        _clone_gallery(
+            variant.images.all(), ProductVariantImage, 'variant_id', variant_clone
+        )
+
+    return clone
+
+
+@transaction.atomic
+def clone_service(service, name, en_name):
+    """Copy a Service, its gallery, and its variants."""
+    from catalog.models import Service, ServiceImage, ServiceVariant
+
+    clone = _clone_row(
+        service,
+        Service,
+        overrides={
+            'name': name,
+            'en_name': en_name,
+            'slug': unique_slug(Service, name, service.system_id),
+            'sku': None,
+        },
+    )
+
+    _clone_gallery(service.images.all(), ServiceImage, 'service_id', clone)
+
+    for variant in service.variants.all():
+        variant_clone = _clone_row(
+            variant, ServiceVariant, overrides={'service_id': clone.pk, 'sku': None}
+        )
+        variant_clone.option_values.set(variant.option_values.all())
+
+    return clone
+
+
+@transaction.atomic
+def clone_menu_item(menu_item, name, en_name):
+    """Copy a MenuItem, its gallery, its priced ingredients (with their choice
+    options) and its internal recipe steps.
+
+    Ingredients themselves are *not* copied: `Ingredient` is a System-scoped,
+    deliberately shared catalog record, so the clone's rows point at the same
+    ingredients the original used - which is also what keeps the shared cost and
+    nutrition data in one place.
+
+    The `variants` M2M (sibling dishes) is copied as-is, so the clone joins the
+    same family the original belongs to. The relation is symmetrical, so the
+    clone is *not* linked to the original itself - a copy is not automatically an
+    alternative version of what it was copied from; the operator links it if it is.
+    """
+    from catalog.models import (
+        MenuItem, MenuItemImage, MenuItemIngredient,
+        MenuItemIngredientOption, RecipeStep,
+    )
+
+    clone = _clone_row(
+        menu_item,
+        MenuItem,
+        overrides={
+            'name': name,
+            'en_name': en_name,
+            'slug': unique_slug(MenuItem, name, menu_item.system_id),
+            'sku': None,
+        },
+    )
+
+    _clone_gallery(menu_item.images.all(), MenuItemImage, 'menu_item_id', clone)
+
+    for row in menu_item.ingredients.all():
+        row_clone = _clone_row(
+            row, MenuItemIngredient, overrides={'menu_item_id': clone.pk}
+        )
+        for option in row.options.all():
+            _clone_row(
+                option,
+                MenuItemIngredientOption,
+                overrides={'menu_item_ingredient_id': row_clone.pk},
+            )
+
+    for step in menu_item.recipe_steps.all():
+        _clone_row(step, RecipeStep, overrides={'menu_item_id': clone.pk})
+
+    clone.variants.set(menu_item.variants.all())
+
+    return clone
