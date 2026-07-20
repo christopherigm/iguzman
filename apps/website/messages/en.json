@@ -149,7 +149,10 @@
     "heading": "Featured",
     "productLabel": "Product",
     "serviceLabel": "Service",
-    "menuLabel": "Menu"
+    "menuLabel": "Menu",
+    "browseProducts": "Browse products",
+    "browseServices": "Browse services",
+    "browseFood": "Browse food"
   },
   "Gallery": {
     "previous": "Previous image",
@@ -247,7 +250,6 @@
     "heading": "Cart",
     "home": "Home",
     "empty": "Your cart is empty. Add a product or service to see it here.",
-    "browseProducts": "Browse products",
     "summary": "Order summary",
     "itemCount": "{count, plural, =0 {No items} one {# item} other {# items}}",
     "subtotal": "Subtotal",
@@ -263,7 +265,8 @@
     "checkoutError": "Checkout could not be started. Please try again.",
     "checkoutUnavailable": "This site is not set up to take payments yet.",
     "checkoutMixedCurrency": "Your cart has items in more than one currency. Please check out one currency at a time.",
-    "checkoutOutOfStock": "Some items are no longer available. Please remove them and try again."
+    "checkoutOutOfStock": "Some items are no longer available. Please remove them and try again.",
+    "guestCheckoutNote": "No account needed - we'll email your receipt and give you a link to your order."
   },
   "Orders": {
     "heading": "Orders",
@@ -290,7 +293,8 @@
     "paidNote": "Thank you! We've received your payment and your order is confirmed.",
     "deleteOrder": "Delete order",
     "deleteTitle": "Delete this order?",
-    "deleteText": "Order #{id} will be permanently removed from your history. This can't be undone."
+    "deleteText": "Order #{id} will be permanently removed from your history. This can't be undone.",
+    "continueShopping": "Continue shopping"
   },
   "VerifyEmailPage": {
     "loading": "Verifying your account, please wait…",

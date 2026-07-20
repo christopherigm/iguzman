@@ -191,7 +191,10 @@
     "heading": "Empfohlen",
     "productLabel": "Produkt",
     "serviceLabel": "Dienst",
-    "menuLabel": "Menü"
+    "menuLabel": "Menü",
+    "browseProducts": "Produkte ansehen",
+    "browseServices": "Dienstleistungen ansehen",
+    "browseFood": "Essen ansehen"
   },
   "CategoryDetail": {
     "home": "Startseite",
@@ -247,7 +250,6 @@
     "heading": "Warenkorb",
     "home": "Startseite",
     "empty": "Dein Warenkorb ist leer. Füge ein Produkt oder eine Dienstleistung hinzu, um sie hier zu sehen.",
-    "browseProducts": "Produkte ansehen",
     "summary": "Bestellübersicht",
     "itemCount": "{count, plural, =0 {Keine Artikel} one {# Artikel} other {# Artikel}}",
     "subtotal": "Zwischensumme",
@@ -263,7 +265,8 @@
     "checkoutError": "Der Bezahlvorgang konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
     "checkoutUnavailable": "Diese Website ist noch nicht für Zahlungen eingerichtet.",
     "checkoutMixedCurrency": "Ihr Warenkorb enthält Artikel in mehreren Währungen. Bitte bezahlen Sie eine Währung nach der anderen.",
-    "checkoutOutOfStock": "Einige Artikel sind nicht mehr verfügbar. Bitte entfernen Sie sie und versuchen Sie es erneut."
+    "checkoutOutOfStock": "Einige Artikel sind nicht mehr verfügbar. Bitte entfernen Sie sie und versuchen Sie es erneut.",
+    "guestCheckoutNote": "Kein Konto erforderlich - wir senden dir die Quittung und einen Link zu deiner Bestellung per E-Mail."
   },
   "Orders": {
     "heading": "Bestellungen",
@@ -290,7 +293,8 @@
     "paidNote": "Vielen Dank! Wir haben Ihre Zahlung erhalten und Ihre Bestellung ist bestätigt.",
     "deleteOrder": "Bestellung löschen",
     "deleteTitle": "Diese Bestellung löschen?",
-    "deleteText": "Bestellung Nr. {id} wird dauerhaft aus deinem Verlauf entfernt. Dies kann nicht rückgängig gemacht werden."
+    "deleteText": "Bestellung Nr. {id} wird dauerhaft aus deinem Verlauf entfernt. Dies kann nicht rückgängig gemacht werden.",
+    "continueShopping": "Weiter einkaufen"
   },
   "VerifyEmailPage": {
     "loading": "Ihr Konto wird verifiziert, bitte warten…",

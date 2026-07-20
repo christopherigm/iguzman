@@ -6,6 +6,7 @@ import { useRouter } from "@repo/i18n/navigation";
 import { Button } from "@repo/ui/core-elements/button";
 import { Toast } from "@repo/ui/core-elements/toast";
 import type { ButtonSize } from "@repo/ui/core-elements/button";
+import { addGuestCartLine } from "@/lib/guest-cart";
 
 interface BuyNowButtonProps {
   kind: "product" | "service";
@@ -36,6 +37,10 @@ interface BuyNowButtonProps {
  * navigates, so there is no in-cart/remove state to track. A failed add stays
  * put and shows an error toast rather than sending the customer to a cart the
  * item never reached.
+ *
+ * A logged-out visitor takes the same path into a localStorage cart rather than
+ * being bounced to /auth: buying is what they came to do, and checkout no longer
+ * needs an account.
  */
 export function BuyNowButton({
   kind,
@@ -57,7 +62,10 @@ export function BuyNowButton({
 
   const handleClick = () => {
     if (!isLoggedIn) {
-      router.push("/auth");
+      // A guest buys the same way, straight into localStorage - the write is
+      // synchronous, so there is nothing to await before navigating.
+      addGuestCartLine({ kind, id, variant_id: variantId, quantity: 1 });
+      router.push("/cart");
       return;
     }
 

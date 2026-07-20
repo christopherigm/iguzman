@@ -1,11 +1,6 @@
-import { getTranslations } from "next-intl/server";
-import { Box } from "@repo/ui/core-elements/box";
-import { Card } from "@repo/ui/core-elements/card";
-import { Typography } from "@repo/ui/core-elements/typography";
 import type { CartTotal } from "@/lib/cart";
 import { getSystem } from "@/lib/system";
-import { formatPrice } from "@/lib/price";
-import { CheckoutButton } from "./checkout-button";
+import { CartSummaryCard } from "./cart-summary-card";
 
 interface CartSummaryProps {
   totals: CartTotal[];
@@ -14,22 +9,17 @@ interface CartSummaryProps {
 }
 
 /**
- * The order summary: one subtotal per currency, then the checkout CTA.
+ * The signed-in customer's order summary.
  *
- * Totals are grouped by currency rather than added together because
- * `Buyable.currency` is per item - a System can hold a USD product and an MXN
- * one, and a single number across them would be arithmetic on incomparable
- * units. Most carts have exactly one row here.
- *
- * That grouping is also what decides whether checkout can run at all: a Stripe
- * Checkout Session is single-currency, so more than one row here has no single
- * total to charge. The server settles that (and whether this tenant has Stripe
- * connected) before rendering, so the button never flickers from enabled to
- * disabled after hydration. Django re-checks both - this only drives what the
- * customer sees.
+ * Its only job beyond `CartSummaryCard` (which does all the rendering, shared
+ * with the guest cart) is deciding **on the server** whether checkout can run:
+ * whether this tenant has Stripe connected, and whether the cart is
+ * single-currency. Settling it here is what stops the button flickering from
+ * enabled to disabled after hydration. Django re-checks both - this only drives
+ * what the customer sees.
  */
 export async function CartSummary({ totals, count }: CartSummaryProps) {
-  const [t, system] = await Promise.all([getTranslations("Cart"), getSystem()]);
+  const system = await getSystem();
 
   const blockedReason = !system?.stripe_configured
     ? ("unavailable" as const)
@@ -38,56 +28,11 @@ export async function CartSummary({ totals, count }: CartSummaryProps) {
       : null;
 
   return (
-    <Card
-      gap={14}
-      backgroundColor="var(--surface-1)"
-      elevation={3}
-      border="none"
-      styles={{
-        position: "sticky",
-        top: "calc(var(--ui-navbar-height, 57px) + 16px)",
-      }}
-    >
-      <Typography as="h2" variant="h5" margin={0} color="var(--on-surface)">
-        {t("summary")}
-      </Typography>
-
-      <Box height={1} flex="0 0 auto" backgroundColor="var(--border)" />
-
-      <Box alignItems="center" justifyContent="space-between" gap={8}>
-        <Typography as="span" variant="body" color="var(--foreground)">
-          {t("itemCount", { count })}
-        </Typography>
-      </Box>
-
-      {totals.map((total) => (
-        <Box
-          key={total.currency}
-          alignItems="baseline"
-          justifyContent="space-between"
-          gap={8}
-        >
-          <Typography as="span" variant="body" color="var(--on-surface)">
-            {t("subtotal")}
-            {totals.length > 1 ? ` (${total.currency})` : ""}
-          </Typography>
-          <Typography
-            as="span"
-            variant="h5"
-            fontWeight={700}
-            margin={0}
-            color="var(--on-surface)"
-          >
-            {formatPrice(total.subtotal, total.currency)}
-          </Typography>
-        </Box>
-      ))}
-
-      <Typography variant="caption" margin={0} color="var(--foreground)">
-        {t("taxesNote")}
-      </Typography>
-
-      <CheckoutButton blockedReason={blockedReason} />
-    </Card>
+    <CartSummaryCard
+      totals={totals}
+      count={count}
+      blockedReason={blockedReason}
+      isGuest={false}
+    />
   );
 }

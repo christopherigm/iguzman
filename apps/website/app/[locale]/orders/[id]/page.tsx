@@ -9,6 +9,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { Grid } from "@repo/ui/core-elements/grid";
+import { getSession } from "@repo/auth/session";
 import { getOrder, orderRef } from "@/lib/orders";
 import { formatPrice } from "@/lib/price";
 import { OrderStatusBanner } from "./order-status-banner";
@@ -44,9 +45,10 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
 
   // `id` is the order's public UUID. A malformed one is simply not found: the
   // Django lookup is scoped to the caller, so a bad or foreign id is a 404 here.
-  const [order, query, t] = await Promise.all([
+  const [order, query, session, t] = await Promise.all([
     getOrder(id),
     searchParams,
+    getSession(),
     getTranslations("Orders"),
   ]);
 
@@ -54,9 +56,14 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
   // here rather than a 403 - it does not exist as far as this request is concerned.
   if (!order) notFound();
 
+  // A guest reached this page by its link and has no order history to go back
+  // to - `/orders` would only bounce them to /auth - so the crumb is plain text
+  // for them and a link for a signed-in customer.
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },
-    { label: t("heading"), href: "/orders" },
+    session !== null
+      ? { label: t("heading"), href: "/orders" }
+      : { label: t("heading") },
     { label: t("breadcrumb", { id: orderRef(order.public_id) }) },
   ];
 
@@ -179,9 +186,13 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
               </>
             ) : null}
 
+            {/* A guest has no order history to go back to - send them on to
+                the catalog instead of to a page that would bounce them. */}
             <Button
-              text={t("backToOrders")}
-              href="/orders"
+              text={
+                session !== null ? t("backToOrders") : t("continueShopping")
+              }
+              href={session !== null ? "/orders" : "/"}
               kind="primary"
               width="100%"
             />

@@ -4,6 +4,8 @@ import { useTranslations } from "next-intl";
 import { Navbar } from "@repo/ui/core-elements/navbar";
 import { useSession } from "@repo/auth/session-provider";
 import { useAuthActions } from "@repo/auth/use-auth-actions";
+import { useGuestState } from "@/hooks/use-guest-cart";
+import { guestCartCount } from "@/lib/guest-cart";
 
 interface NavbarClientProps {
   logo: string;
@@ -12,7 +14,10 @@ interface NavbarClientProps {
   serviceCount: number;
   /** Number of enabled menu items; drives the Food link, 0 hides it. */
   foodCount: number;
-  /** Total quantity in the signed-in user's cart; 0 when logged out. */
+  /**
+   * Total quantity in the signed-in user's cart; 0 when logged out - a guest's
+   * cart is in their browser, so it is counted here rather than on the server.
+   */
   cartCount: number;
 }
 
@@ -30,9 +35,15 @@ export function NavbarClient({
   // first HTML instead of popping in after hydration.
   const session = useSession();
   const { signOut } = useAuthActions();
+  const guest = useGuestState();
 
   const isLoggedIn = session !== null;
   const isAdmin = session?.isAdmin === true;
+
+  // A signed-in count is server-rendered and correct in the first HTML; a
+  // guest's can only be known once localStorage is readable, so it appears just
+  // after hydration.
+  const count = isLoggedIn ? cartCount : guestCartCount(guest);
 
   const handleSignOut = () => void signOut("/");
 
@@ -61,22 +72,17 @@ export function NavbarClient({
     ...(serviceCount > 0
       ? [{ label: t("services"), href: "/categories/services" }]
       : []),
-    ...(foodCount > 0
-      ? [{ label: t("food"), href: "/categories/food" }]
-      : []),
-    ...(isLoggedIn
-      ? [
-          { label: t("favorites"), href: "/favorites" },
-          {
-            label: cartCount > 0 ? `${t("cart")} (${cartCount})` : t("cart"),
-            href: "/cart",
-          },
-          {
-            label: t("orders"),
-            href: "/orders",
-          },
-        ]
-      : []),
+    ...(foodCount > 0 ? [{ label: t("food"), href: "/categories/food" }] : []),
+    // Favorites and the cart are shown to everyone: a guest has both, kept in
+    // their browser and merged into their account when they sign in. Order
+    // history stays signed-in only - a guest reaches their order by its link,
+    // and there is no list of "their" orders to show.
+    { label: t("favorites"), href: "/favorites" },
+    {
+      label: count > 0 ? `${t("cart")} (${count})` : t("cart"),
+      href: "/cart",
+    },
+    ...(isLoggedIn ? [{ label: t("orders"), href: "/orders" }] : []),
     ...(isAdmin ? [{ label: t("admin"), href: "/admin" }] : []),
   ];
 

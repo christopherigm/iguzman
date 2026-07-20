@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
 import { setRequestLocale, getTranslations } from "next-intl/server";
-import { Box } from "@repo/ui/core-elements/box";
-import { Button } from "@repo/ui/core-elements/button";
 import { Container } from "@repo/ui/core-elements/container";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { Grid } from "@repo/ui/core-elements/grid";
+import { getSession } from "@repo/auth/session";
 import { getCart } from "@/lib/cart";
-import { CartLine } from "./cart-line";
+import { getSystem } from "@/lib/system";
+import { EmptyCatalogState } from "@/components/empty-catalog-state";
+import { CartLines } from "./cart-lines";
 import { CartSummary } from "./cart-summary";
+import { GuestCartView } from "./guest-cart-view";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -29,8 +31,13 @@ export default async function CartPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const [cart, t, itemT] = await Promise.all([
+  // An anonymous visitor's cart lives in their browser, so the server has
+  // nothing to render for them: `getCart()` returns empty and the page hands off
+  // to `GuestCartView`, which resolves localStorage after hydration.
+  const [session, cart, system, t, itemT] = await Promise.all([
+    getSession(),
     getCart(),
+    getSystem(),
     getTranslations("Cart"),
     getTranslations("CatalogItems"),
   ]);
@@ -53,35 +60,35 @@ export default async function CartPage({ params }: Props) {
         {t("heading")}
       </Typography>
 
-      {cart.items.length > 0 ? (
+      {session === null ? (
+        <GuestCartView
+          locale={locale}
+          productLabel={itemT("productLabel")}
+          serviceLabel={itemT("serviceLabel")}
+          menuLabel={itemT("menuLabel")}
+          stripeConfigured={system?.stripe_configured ?? false}
+          // Built here because it is a server component (it renders the async
+          // Categories grid) and `GuestCartView` is a client component - it can
+          // hold the element and decide when to show it, but not render it.
+          emptyState={<EmptyCatalogState message={t("empty")} />}
+        />
+      ) : cart.items.length > 0 ? (
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 8 }}>
-            <Box flexDirection="column" gap={12}>
-              {cart.items.map((line) => (
-                <CartLine
-                  key={line.id}
-                  line={line}
-                  locale={locale}
-                  productLabel={itemT("productLabel")}
-                  serviceLabel={itemT("serviceLabel")}
-                  menuLabel={itemT("menuLabel")}
-                />
-              ))}
-            </Box>
+            <CartLines
+              lines={cart.items}
+              locale={locale}
+              productLabel={itemT("productLabel")}
+              serviceLabel={itemT("serviceLabel")}
+              menuLabel={itemT("menuLabel")}
+            />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
             <CartSummary totals={cart.totals} count={cart.count} />
           </Grid>
         </Grid>
       ) : (
-        <Box flexDirection="column" alignItems="flex-start" gap={20}>
-          <Typography variant="body">{t("empty")}</Typography>
-          <Button
-            text={t("browseProducts")}
-            href="/categories/products"
-            kind="primary"
-          />
-        </Box>
+        <EmptyCatalogState message={t("empty")} />
       )}
     </Container>
   );

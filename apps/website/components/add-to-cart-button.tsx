@@ -8,6 +8,12 @@ import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { Toast } from "@repo/ui/core-elements/toast";
 import type { IconButtonSize } from "@repo/ui/core-elements/icon-button";
 import type { ButtonSize, ButtonKind } from "@repo/ui/core-elements/button";
+import { useGuestState } from "@/hooks/use-guest-cart";
+import {
+  addGuestCartLine,
+  findGuestCartLine,
+  removeGuestCartLine,
+} from "@/lib/guest-cart";
 
 interface AddToCartButtonProps {
   /**
@@ -73,19 +79,25 @@ const TOAST_MESSAGES: Record<ToastKind, string> = {
 /**
  * Puts an item in the cart, or takes it back out when it is already there.
  *
- * `cartLineId` is what decides which of the two this is, and it comes from the
- * server on every render - there is no local "in cart" state to drift. The add
- * half is not a toggle: clicking twice means "two of these", which the API turns
- * into a quantity bump rather than a second line. Remove is all-or-nothing by
- * contrast: it drops the line whatever its quantity, matching the cart page's
- * own remove button rather than decrementing.
+ * Which of the two it is comes from wherever the cart actually lives: for a
+ * customer that is `cartLineId`, re-read from the server on every render, so
+ * there is no local "in cart" state to drift; for a guest it is the line's index
+ * in localStorage, read through `useGuestState`. A guest's state is only known
+ * after hydration, so a logged-out button settles into its real state a frame
+ * late - the cost of a cart the server cannot see.
  *
- * Neither half flips optimistically the way the heart next to it does, because
- * neither has local state that could stand in for the server's answer: the
- * button shows a pending state and confirms with a toast once the line actually
- * exists (or is gone). `router.refresh()` then re-runs the server components
- * that own the real state - which is what swaps this button's own icon and
- * updates the navbar's count.
+ * The add half is not a toggle either way: clicking twice means "two of these",
+ * which becomes a quantity bump rather than a second line. Remove is
+ * all-or-nothing by contrast: it drops the line whatever its quantity, matching
+ * the cart page's own remove button rather than decrementing.
+ *
+ * The signed-in half does not flip optimistically the way the heart next to it
+ * does, because it has no local state that could stand in for the server's
+ * answer: the button shows a pending state and confirms with a toast once the
+ * line actually exists (or is gone). `router.refresh()` then re-runs the server
+ * components that own the real state - which is what swaps this button's own
+ * icon and updates the navbar's count. A guest write is synchronous and needs
+ * neither.
  */
 export function AddToCartButton({
   kind,
@@ -110,14 +122,23 @@ export function AddToCartButton({
     kind: ToastKind;
     id: number;
   } | null>(null);
+  const guest = useGuestState();
 
   const showToast = (kind: ToastKind) =>
     setToast((previous) => ({ kind, id: (previous?.id ?? 0) + 1 }));
 
-  const inCart = cartLineId !== null;
+  // The API knows a food item as `menu_item`; only this component's own prop
+  // calls it `food`.
+  const cartKind = kind === "food" ? "menu_item" : kind;
+
+  // A guest line's handle is its index in localStorage, which -1 means "absent".
+  const guestLine = findGuestCartLine(guest, cartKind, id, variantId);
+  const inCart = isLoggedIn ? cartLineId !== null : guestLine !== -1;
 
   const label = inCart ? t("removeFromCart") : t("addToCart");
-  const icon = inCart ? "/icons/remove-from-cart.svg" : "/icons/add-to-cart.svg";
+  const icon = inCart
+    ? "/icons/remove-from-cart.svg"
+    : "/icons/add-to-cart.svg";
 
   const handleClick = (e: React.MouseEvent) => {
     if (stopPropagation) {
@@ -126,7 +147,21 @@ export function AddToCartButton({
     }
 
     if (!isLoggedIn) {
-      router.push("/auth");
+      if (inCart) {
+        removeGuestCartLine(guestLine);
+        showToast("removed");
+      } else {
+        // Food adds its base line - the dish as listed, no ingredient changes.
+        addGuestCartLine({
+          kind: cartKind,
+          id,
+          ...(cartKind === "menu_item"
+            ? { customization: [] }
+            : { variant_id: variantId }),
+          quantity: 1,
+        });
+        showToast("added");
+      }
       return;
     }
 

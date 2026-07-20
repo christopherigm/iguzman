@@ -191,7 +191,10 @@
     "heading": "En vedette",
     "productLabel": "Produit",
     "serviceLabel": "Service",
-    "menuLabel": "Menu"
+    "menuLabel": "Menu",
+    "browseProducts": "Voir les produits",
+    "browseServices": "Voir les services",
+    "browseFood": "Voir la nourriture"
   },
   "CategoryDetail": {
     "home": "Accueil",
@@ -247,7 +250,6 @@
     "heading": "Panier",
     "home": "Accueil",
     "empty": "Votre panier est vide. Ajoutez un produit ou un service pour le voir ici.",
-    "browseProducts": "Voir les produits",
     "summary": "Récapitulatif de la commande",
     "itemCount": "{count, plural, =0 {Aucun article} one {# article} other {# articles}}",
     "subtotal": "Sous-total",
@@ -263,7 +265,8 @@
     "checkoutError": "Impossible de démarrer le paiement. Veuillez réessayer.",
     "checkoutUnavailable": "Ce site n'accepte pas encore les paiements.",
     "checkoutMixedCurrency": "Votre panier contient des articles dans plusieurs devises. Veuillez payer une devise à la fois.",
-    "checkoutOutOfStock": "Certains articles ne sont plus disponibles. Veuillez les retirer et réessayer."
+    "checkoutOutOfStock": "Certains articles ne sont plus disponibles. Veuillez les retirer et réessayer.",
+    "guestCheckoutNote": "Aucun compte nécessaire - nous vous enverrons votre reçu et un lien vers votre commande par e-mail."
   },
   "Orders": {
     "heading": "Commandes",
@@ -290,7 +293,8 @@
     "paidNote": "Merci ! Nous avons reçu votre paiement et votre commande est confirmée.",
     "deleteOrder": "Supprimer la commande",
     "deleteTitle": "Supprimer cette commande ?",
-    "deleteText": "La commande n° {id} sera définitivement supprimée de votre historique. Cette action est irréversible."
+    "deleteText": "La commande n° {id} sera définitivement supprimée de votre historique. Cette action est irréversible.",
+    "continueShopping": "Continuer vos achats"
   },
   "VerifyEmailPage": {
     "loading": "Vérification de votre compte, veuillez patienter…",

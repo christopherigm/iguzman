@@ -7,6 +7,8 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
+import { getSession } from "@repo/auth/session";
+import { redirect } from "@repo/i18n/navigation";
 import { getOrders } from "@/lib/orders";
 import { OrderCard } from "./order-card";
 
@@ -28,10 +30,16 @@ export default async function OrdersPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const [orders, t] = await Promise.all([
+  // Guarded here rather than in `proxy.ts`: `/orders/<public_id>` underneath
+  // this route is public (a guest order's only handle is its link), so a path
+  // prefix cannot protect the history list without also locking that out.
+  const [session, orders, t] = await Promise.all([
+    getSession(),
     getOrders(),
     getTranslations("Orders"),
   ]);
+
+  if (session === null) redirect({ href: "/auth", locale });
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },

@@ -144,6 +144,18 @@ if you find yourself reaching for one, the design has been misread.
 - **Return URLs come from `System.host`, never from a request header.**
   `X-Website-Host` is client-settable; using it for `success_url` would make
   checkout an open redirect on the tenant's own domain.
+- **Checkout is `AllowAny`, and `Order.user` is nullable.** A guest's cart
+  arrives as **references** in the body and is priced by `resolve_guest_cart`
+  (`users/guest.py`) into _unsaved_ `CartItem` instances; both branches then run
+  the same `_checkout`. The body never names an amount. An anonymous caller is
+  scoped by `host_system` (a signed-in one always by profile - never let a
+  header pick a logged-in user's tenant). `GET /api/orders/<public_id>/` is
+  likewise `AllowAny`, but `_may_read` only opens up orders with **no** user;
+  DELETE stays owner-only.
+- **Guest orders are claimed by email, and only once Stripe has supplied one.**
+  `orders/claims.py` runs at email verification and at login. `Order.email` is
+  blank until the webhook copies what the customer typed on Stripe's page, so an
+  abandoned guest order has no address for someone to register and sweep up.
 - **`OrderLine` snapshots; `CartItem` deliberately does not.** A cart reflects
   today's catalog; an order must reflect what was charged, forever. Never
   "simplify" an order line to read its price back through the FK - those FKs are

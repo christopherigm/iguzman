@@ -16,6 +16,7 @@ import { cache } from "react";
 import { unstable_rethrow } from "next/navigation";
 import { getSession } from "@repo/auth/session";
 import { apiFetch } from "./api-fetch";
+import { getTenantHost } from "./resolve-site";
 import type { Order, OrderSummary } from "./orders-shared";
 import logger from "./logger";
 
@@ -32,7 +33,10 @@ export const getOrders = cache(async (): Promise<OrderSummary[]> => {
     const res = await apiFetch("/api/orders/", { cache: "no-store" });
     if (!res.ok) {
       if (res.status !== 401) {
-        logger.warn({ status: res.status }, "Orders API returned non-OK status");
+        logger.warn(
+          { status: res.status },
+          "Orders API returned non-OK status",
+        );
       }
       return [];
     }
@@ -53,10 +57,23 @@ export const getOrders = cache(async (): Promise<OrderSummary[]> => {
  * `pending` would outlive the payment it is waiting for.
  */
 export async function getOrder(publicId: string): Promise<Order | null> {
-  if ((await getSession()) === null) return null;
-
+  // No session check, unlike `getOrders`: an order placed without an account has
+  // no owner, and its unguessable `public_id` in the URL is the only handle its
+  // customer will ever have. Django decides who may read what - an *owned* order
+  // is still 404 to anyone but its owner.
+  //
+  // `allowAnonymous` is what lets the request go out with no bearer token at all
+  // (`apiFetch` otherwise short-circuits to 401), and `X-Website-Host` is what
+  // scopes it: with no token there is no profile to take the tenant from, so
+  // Django falls back to the host - the same resolution the public catalog uses.
+  // A signed-in caller ignores the header and is scoped by their profile.
   try {
-    const res = await apiFetch(`/api/orders/${publicId}/`, { cache: "no-store" });
+    const host = await getTenantHost();
+    const res = await apiFetch(`/api/orders/${publicId}/`, {
+      cache: "no-store",
+      allowAnonymous: true,
+      headers: { "X-Website-Host": host },
+    });
     if (!res.ok) {
       if (res.status !== 401 && res.status !== 404) {
         logger.warn(

@@ -259,9 +259,23 @@ class CheckoutTests(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(Order.objects.get().lines.get().kind, "service")
 
-    def test_anonymous_cannot_check_out(self):
+    def test_anonymous_with_nothing_to_buy_is_refused(self):
+        """Guest checkout is allowed, but an empty body is still an empty cart.
+
+        A guest has no rows, so `CART_EMPTY` is the only thing an item-less
+        anonymous checkout can mean - not 401, which is what this asserted before
+        checkout stopped requiring an account.
+        """
         self.client.logout()
-        self.assertIn(self._checkout().status_code, (401, 403))
+        response = self.client.post(
+            "/api/orders/checkout/", {"locale": "en"},
+            content_type="application/json",
+            HTTP_X_WEBSITE_HOST="acme.test",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "CART_EMPTY")
+        self.assertFalse(Order.objects.exists())
 
     @patch("orders.views.create_checkout_session")
     def test_a_stripe_failure_leaves_no_phantom_order(self, mock_create):
@@ -613,3 +627,159 @@ class OrderDeleteTests(TestCase):
         self.client.delete(f"/api/orders/{order.public_id}/")
 
         self.assertEqual(self.client.get("/api/orders/").json(), [])
+
+
+class GuestCheckoutTests(TestCase):
+    """Checkout with no account, and who may read the order that comes out.
+
+    The parts worth pinning down are the two that cost something if they are
+    wrong: that a guest cannot name a price (the money must come from the
+    catalog, never the body), and that an ownerless order's URL is readable
+    while an owned one's is not.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(
+            site_name="Acme", host="acme.test", stripe_enabled=True,
+        )
+        self.system.set_stripe_secret_key("sk_test_123")
+        self.system.set_stripe_webhook_secret("whsec_123")
+        self.system.save()
+
+        self.product = Product.objects.create(
+            system=self.system, name="Bag", slug="bag",
+            price=Decimal("10.00"), currency="USD",
+        )
+
+    def _checkout(self, cart):
+        return self.client.post(
+            "/api/orders/checkout/",
+            {"locale": "en", "cart": cart},
+            content_type="application/json",
+            HTTP_X_WEBSITE_HOST="acme.test",
+        )
+
+    @patch("orders.views.create_checkout_session", return_value=_StubSession())
+    def test_a_guest_can_check_out_and_the_order_has_no_owner(self, mock_create):
+        response = self._checkout([{"kind": "product", "id": self.product.id, "quantity": 2}])
+
+        self.assertEqual(response.status_code, 201)
+        order = Order.objects.get()
+        self.assertIsNone(order.user_id)
+        self.assertEqual(order.total, Decimal("20.00"))
+        # Left blank for Stripe's own page to collect; the webhook fills it in.
+        self.assertEqual(order.email, "")
+
+    @patch("orders.views.create_checkout_session", return_value=_StubSession())
+    def test_a_guest_cannot_name_their_own_price(self, mock_create):
+        """The whole reason the browser holds references rather than a cart."""
+        response = self._checkout([{
+            "kind": "product", "id": self.product.id, "quantity": 1,
+            "price": "0.01", "unit_price": "0.01", "line_total": "0.01",
+        }])
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Order.objects.get().total, Decimal("10.00"))
+
+    @patch("orders.views.create_checkout_session", return_value=_StubSession())
+    def test_another_tenants_item_cannot_be_bought_through_this_host(self, mock_create):
+        other = System.objects.create(site_name="Other", host="other.test")
+        theirs = Product.objects.create(
+            system=other, name="Theirs", slug="theirs",
+            price=Decimal("99.00"), currency="USD",
+        )
+
+        response = self._checkout([{"kind": "product", "id": theirs.id, "quantity": 1}])
+
+        # The reference resolves to nothing in *this* tenant's catalog, so the
+        # cart is empty rather than quietly cross-tenant.
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "CART_EMPTY")
+        self.assertFalse(Order.objects.exists())
+
+    @patch("orders.views.create_checkout_session", return_value=_StubSession())
+    def test_a_guest_order_is_readable_by_its_public_id(self, mock_create):
+        self._checkout([{"kind": "product", "id": self.product.id, "quantity": 1}])
+        order = Order.objects.get()
+
+        response = self.client.get(
+            f"/api/orders/{order.public_id}/", HTTP_X_WEBSITE_HOST="acme.test",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["public_id"], str(order.public_id))
+
+    def test_an_owned_order_is_not_readable_by_a_stranger_with_the_link(self):
+        owner = User.objects.create_user("owner", password="x", email="owner@acme.test")
+        owner.profile.system = self.system
+        owner.profile.save()
+        order = Order.objects.create(
+            system=self.system, user=owner, currency="USD", total=Decimal("10.00"),
+        )
+
+        response = self.client.get(
+            f"/api/orders/{order.public_id}/", HTTP_X_WEBSITE_HOST="acme.test",
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_a_guest_cannot_delete_an_order_they_can_read(self):
+        order = Order.objects.create(
+            system=self.system, user=None, currency="USD", total=Decimal("10.00"),
+        )
+
+        response = self.client.delete(
+            f"/api/orders/{order.public_id}/", HTTP_X_WEBSITE_HOST="acme.test",
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Order.objects.filter(pk=order.pk).exists())
+
+
+class ClaimGuestOrderTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.user = User.objects.create_user("u", password="x", email="Buyer@acme.test")
+        self.user.profile.system = self.system
+        self.user.profile.save()
+
+    def _guest_order(self, email, **kwargs):
+        return Order.objects.create(
+            system=self.system, user=None, email=email,
+            currency="USD", total=Decimal("10.00"), **kwargs,
+        )
+
+    def test_an_order_on_the_same_address_is_claimed_case_insensitively(self):
+        from .claims import claim_guest_orders
+
+        order = self._guest_order("buyer@acme.test")
+
+        self.assertEqual(claim_guest_orders(self.user, self.system), 1)
+        order.refresh_from_db()
+        self.assertEqual(order.user_id, self.user.id)
+
+    def test_an_abandoned_order_with_no_email_is_never_claimed(self):
+        """`email` is blank until the webhook copies what Stripe collected, so a
+        never-paid guest order has no address anyone could register to sweep up."""
+        from .claims import claim_guest_orders
+
+        order = self._guest_order("")
+
+        self.assertEqual(claim_guest_orders(self.user, self.system), 0)
+        order.refresh_from_db()
+        self.assertIsNone(order.user_id)
+
+    def test_another_tenants_order_on_the_same_address_is_not_claimed(self):
+        from .claims import claim_guest_orders
+
+        other = System.objects.create(site_name="Other", host="other.test")
+        order = Order.objects.create(
+            system=other, user=None, email="buyer@acme.test",
+            currency="USD", total=Decimal("10.00"),
+        )
+
+        self.assertEqual(claim_guest_orders(self.user, self.system), 0)
+        order.refresh_from_db()
+        self.assertIsNone(order.user_id)

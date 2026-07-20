@@ -23,6 +23,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api-auth/', include('rest_framework.urls')),
     path('api/auth/', include('users.urls')),
+    # The users app's anonymous endpoints - deliberately outside the /api/auth/
+    # prefix, which reads as "requires a session".
+    path('api/', include('users.public_urls')),
     path('api/', include('core.urls')),
     path('api/', include('catalog.urls')),
     path('api/', include('orders.urls')),

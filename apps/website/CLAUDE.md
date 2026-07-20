@@ -59,9 +59,12 @@ Unlike `video-downloader/components/credits-page.tsx` (the reference for this
 flow), which builds the Stripe session in a Next route from one global env key,
 nothing here may touch a Stripe credential.
 
-- **The request body carries only a locale.** Items, quantities, prices and
-  currency are read from the cart server-side. A client that could name a price
-  could name its own.
+- **A signed-in request body carries only a locale.** Items, quantities, prices
+  and currency are read from the customer's cart rows server-side. A guest's
+  body also carries their cart, but only as **references** (`{kind, id,
+variant_id?, customization?, quantity}`) - Django re-prices every one of them
+  from the catalog before creating a session. Either way: a client that could
+  name a price could name its own.
 - **`/orders/[id]` is the confirmation page and the permanent record.** The
   `session_id` Stripe appends is not proof of payment - only the signed webhook
   marks an order paid. `order-status-banner.tsx` refreshes for a few seconds when
@@ -77,6 +80,42 @@ nothing here may touch a Stripe credential.
   would wipe a tenant's credentials the first time anyone edited the slogan.
   `admin/system/page.tsx` deletes empty secret keys from the payload; keep that if
   you touch the form.
+
+## Anonymous cart, favorites and guest checkout
+
+**A visitor needs no account to save items, fill a cart, or pay.** The cart and
+hearts live in `localStorage` (`lib/guest-cart.ts`), and are folded into the
+account on sign-in.
+
+- **The browser stores _references_, never prices.** `{kind, id, variant_id?,
+customization?, quantity}` and nothing else. Everything displayable comes back
+  from `POST /api/guest/resolve` (→ website-api's public `/api/guest/resolve/`,
+  host-scoped), which prices the refs from the catalog and returns the **same
+  `Cart` payload** a signed-in cart renders. Never cache a price locally: the
+  same refs are re-priced at checkout, so a stored total could only disagree
+  with what is charged.
+- **A guest line's handle is its index in `localStorage`**, echoed back as the
+  line's `id` - the stand-in for a `CartItem` row id, which is what lets one
+  `CartLine` component serve both carts. `resolve_guest_cart` sets it from the
+  index in the list it was **sent**, not the list it returns, because dead refs
+  are dropped; an output position would address the wrong local line.
+- **Read guest state only through `useGuestState()`** (`useSyncExternalStore`
+  over the store). Its server snapshot is empty, so a guest's cart appears one
+  frame after hydration - that gap is unavoidable and only affects logged-out
+  visitors. Don't reintroduce a `useEffect` + `setState` read; the repo's
+  react-hooks rules reject it.
+- **Merging is `<GuestMerge />` in the root layout**, not a hook in the login
+  form - password, passkey, sign-up and "already had a cookie" all have to merge.
+  It POSTs to `/api/auth/guest/merge` (union; quantities summed, capped at 99)
+  and only clears localStorage on a confirmed 200.
+- **`/cart`, `/favorites` and `/orders/[id]` are _not_ in `proxy.ts`'s
+  `protectedPrefixes`.** A guest order has no owner and its unguessable
+  `public_id` is its only handle. The `/orders` **history list** is still
+  signed-in only and guards itself in `page.tsx` - a path prefix can't tell it
+  apart from a public order underneath it.
+- **`getOrder` passes `allowAnonymous: true` + `X-Website-Host`.** With no token
+  there is no profile to take the tenant from, so Django falls back to the host.
+  An _owned_ order stays 404 to anyone but its owner.
 
 ## Per-Customer Sites (domain-driven frontend)
 

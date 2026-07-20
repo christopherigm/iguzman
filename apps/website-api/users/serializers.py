@@ -492,10 +492,19 @@ class CartItemSerializer(serializers.Serializer):
 
 
 class CartCustomizationRowSerializer(serializers.Serializer):
-    """One chosen ingredient in an add-to-cart request."""
+    """One chosen ingredient in an add-to-cart request.
+
+    `option` is the alternative the customer swapped in from a choice group (an
+    Ingredient id), absent when they kept the group's default. It must be
+    declared here even though `normalize_selection` validates it again: DRF drops
+    undeclared keys from `validated_data`, so a missing field here would silently
+    discard every option swap on its way to the cart and price the line at the
+    default ingredient.
+    """
 
     ingredient = serializers.IntegerField()
     quantity = serializers.IntegerField(min_value=0, max_value=99)
+    option = serializers.IntegerField(required=False, allow_null=True)
 
 
 class CartItemWriteSerializer(serializers.Serializer):
@@ -509,3 +518,25 @@ class CartItemWriteSerializer(serializers.Serializer):
 
 class CartItemUpdateSerializer(serializers.Serializer):
     quantity = serializers.IntegerField(min_value=1, max_value=99)
+
+
+class GuestCartSerializer(serializers.Serializer):
+    """A whole anonymous cart, as the references the browser holds.
+
+    Each entry is exactly the body `POST /api/auth/cart/` takes for one line, so
+    a guest line and a signed-in add are validated by the same rules and the
+    frontend builds one shape for both.
+    """
+
+    cart = CartItemWriteSerializer(many=True, required=False, default=list)
+
+
+class GuestStateSerializer(GuestCartSerializer):
+    """A guest's whole local state: their cart and their saved items.
+
+    One payload because the two are always carried together - resolved for
+    rendering by `GuestResolveView`, and turned into rows by `GuestMergeView` the
+    moment the visitor signs in.
+    """
+
+    favorites = FavoriteWriteSerializer(many=True, required=False, default=list)

@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useRouter } from "@repo/i18n/navigation";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Card } from "@repo/ui/core-elements/card";
@@ -21,6 +20,16 @@ interface CartLineProps {
   productLabel: string;
   serviceLabel: string;
   menuLabel: string;
+  /**
+   * Persist a new quantity for this line, resolving to whether it stuck. Owned
+   * by the parent because the two carts are addressed differently: a customer's
+   * line is a row behind `/api/auth/cart/[id]`, a guest's is an index in
+   * localStorage. Everything this component renders is identical either way,
+   * which is the point of passing the writes in rather than branching in here.
+   */
+  onQuantityChange: (quantity: number) => Promise<boolean>;
+  /** Drop the line entirely, resolving to whether it stuck. */
+  onRemove: () => Promise<boolean>;
 }
 
 const MAX_QUANTITY = 99;
@@ -29,11 +38,11 @@ const MAX_QUANTITY = 99;
  * One row of the cart: image, name, variant, quantity stepper, line total.
  *
  * Optimistic like the heart - the number moves on click and rolls back if the
- * request fails - because a stepper that waits for a round-trip before painting
+ * write fails - because a stepper that waits for a round-trip before painting
  * feels broken when you tap it three times. The line total is recomputed locally
- * from the optimistic quantity so the two never disagree mid-flight;
- * `router.refresh()` then re-runs the server components that own the real
- * numbers, which is what corrects the summary and the navbar count.
+ * from the optimistic quantity so the two never disagree mid-flight; the
+ * parent's write then refreshes whatever owns the real numbers, which is what
+ * corrects the summary and the navbar count.
  */
 export function CartLine({
   line,
@@ -41,9 +50,10 @@ export function CartLine({
   productLabel,
   serviceLabel,
   menuLabel,
+  onQuantityChange,
+  onRemove,
 }: CartLineProps) {
   const t = useTranslations("Cart");
-  const router = useRouter();
   const [quantity, setQuantity] = useState(line.quantity);
   const [isPending, startTransition] = useTransition();
   const [removed, setRemoved] = useState(false);
@@ -99,20 +109,7 @@ export function CartLine({
     setQuantity(next);
 
     startTransition(async () => {
-      try {
-        const res = await fetch(`/api/auth/cart/${line.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ quantity: next }),
-        });
-        if (!res.ok) {
-          setQuantity(previous);
-          return;
-        }
-        router.refresh();
-      } catch {
-        setQuantity(previous);
-      }
+      if (!(await onQuantityChange(next))) setQuantity(previous);
     });
   };
 
@@ -120,18 +117,7 @@ export function CartLine({
     setRemoved(true);
 
     startTransition(async () => {
-      try {
-        const res = await fetch(`/api/auth/cart/${line.id}`, {
-          method: "DELETE",
-        });
-        if (!res.ok) {
-          setRemoved(false);
-          return;
-        }
-        router.refresh();
-      } catch {
-        setRemoved(false);
-      }
+      if (!(await onRemove())) setRemoved(false);
     });
   };
 

@@ -12,6 +12,7 @@ from .views import (
     FavoriteDetailView,
     FavoriteIdsView,
     FavoriteListView,
+    GuestMergeView,
     LoginView,
     TokenReissueView,
     PasskeyAuthenticationOptionsView,
@@ -51,6 +52,8 @@ urlpatterns = [
     path("cart/count/", CartCountView.as_view(), name="cart-count"),
     path("cart/ids/", CartIdsView.as_view(), name="cart-ids"),
     path("cart/<int:pk>/", CartItemDetailView.as_view(), name="cart-item-detail"),
+    # Fold a just-signed-in visitor's localStorage cart + favorites into their rows.
+    path("guest/merge/", GuestMergeView.as_view(), name="guest-merge"),
     path("admin/users/", AdminUserListView.as_view(), name="admin-user-list"),
     path("admin/users/<int:pk>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
     # Passkey (WebAuthn)

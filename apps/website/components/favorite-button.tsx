@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@repo/i18n/navigation";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
 import type { IconButtonSize } from "@repo/ui/core-elements/icon-button";
+import { useGuestState } from "@/hooks/use-guest-cart";
+import { isGuestFavorite, toggleGuestFavorite } from "@/lib/guest-cart";
 
 interface FavoriteButtonProps {
   kind: "product" | "service" | "menu_item";
@@ -25,10 +27,17 @@ interface FavoriteButtonProps {
 /**
  * The heart toggle. Red (`kind="error"`) when saved, neutral when not.
  *
- * Optimistic: the icon flips on click and only rolls back if the request fails,
- * so the button never feels laggy. The `router.refresh()` afterwards re-runs the
- * server components (which own the real state) so the favorites page and any
- * other heart on screen agree with the DB.
+ * Works signed in or out, from two different sources of truth. For a customer it
+ * is a row: `initialFavorite` is server-rendered, the click writes through the
+ * API, and `router.refresh()` re-runs the server components so every other heart
+ * on screen agrees with the DB. For a guest it is localStorage, read through
+ * `useGuestState` - which also means the state is only known after hydration, so
+ * a guest's saved hearts fill in a frame late. That is the trade for a heart
+ * that works without an account at all; it used to send them to /auth.
+ *
+ * Optimistic in the signed-in case: the icon flips on click and rolls back only
+ * if the request fails, so the button never feels laggy. The guest case needs no
+ * optimism - the write is synchronous.
  */
 export function FavoriteButton({
   kind,
@@ -42,8 +51,13 @@ export function FavoriteButton({
   const router = useRouter();
   const [favorite, setFavorite] = useState(initialFavorite);
   const [isPending, startTransition] = useTransition();
+  const guest = useGuestState();
 
-  const label = favorite ? t("removeFromFavorites") : t("addToFavorites");
+  // A logged-out heart is whatever localStorage says; `initialFavorite` is the
+  // server's answer and is always false for a guest, so it is not consulted.
+  const isFavorite = isLoggedIn ? favorite : isGuestFavorite(guest, kind, id);
+
+  const label = isFavorite ? t("removeFromFavorites") : t("addToFavorites");
 
   const handleClick = (e: React.MouseEvent) => {
     if (stopPropagation) {
@@ -52,7 +66,9 @@ export function FavoriteButton({
     }
 
     if (!isLoggedIn) {
-      router.push("/auth");
+      // The store notifies every subscriber, so this heart and the favorites
+      // page repaint together with no round-trip.
+      toggleGuestFavorite(kind, id);
       return;
     }
 
@@ -87,8 +103,8 @@ export function FavoriteButton({
       icon="/icons/favorite.svg"
       aria-label={label}
       title={label}
-      aria-pressed={favorite}
-      kind={favorite ? "error" : "default"}
+      aria-pressed={isFavorite}
+      kind={isFavorite ? "error" : "default"}
       size={size}
       disabled={isPending}
       onClick={handleClick}

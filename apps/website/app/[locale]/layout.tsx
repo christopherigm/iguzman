@@ -23,6 +23,7 @@ import { NavbarClient } from "./navbar-client";
 import { DevSiteSwitcher } from "./dev-site-switcher";
 import { Footer } from "@/components/footer";
 import { HideOnAdmin } from "@/components/hide-on-admin";
+import { GuestMerge } from "@/components/guest-merge";
 import packageJson from "@/package.json";
 import { getCartCount } from "@/lib/cart";
 import { getSystem } from "@/lib/system";
@@ -150,6 +151,9 @@ export default async function LocaleLayout({ children, params }: Props) {
                     foodCount={system?.menu_item_count ?? 0}
                     cartCount={cartCount}
                   />
+                  {/* Renders nothing; folds a guest's localStorage cart and
+                      favorites into their account as soon as a session exists. */}
+                  <GuestMerge />
                   {children}
                   {isDev && (
                     <HideOnAdmin>

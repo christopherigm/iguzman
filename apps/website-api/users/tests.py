@@ -401,3 +401,171 @@ class CartApiTests(TestCase):
         self.client.logout()
 
         self.assertEqual(self.client.get("/api/auth/cart/ids/").status_code, 401)
+
+
+class GuestCartTests(TestCase):
+    """The anonymous visitor's cart: priced from the catalog, scoped by host."""
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.product = Product.objects.create(
+            system=self.system, name="Bag", slug="bag",
+            price=Decimal("10.00"), currency="USD",
+        )
+        self.variant = ProductVariant.objects.create(
+            product=self.product, name="Small", price=Decimal("8.00"),
+        )
+
+    def _resolve(self, cart=None, favorites=None, host="acme.test"):
+        return self.client.post(
+            "/api/guest/resolve/",
+            {"cart": cart or [], "favorites": favorites or []},
+            content_type="application/json",
+            HTTP_X_WEBSITE_HOST=host,
+        )
+
+    def test_a_reference_is_priced_from_the_catalog(self):
+        response = self._resolve([
+            {"kind": "product", "id": self.product.id, "variant_id": self.variant.id, "quantity": 2},
+        ])
+
+        self.assertEqual(response.status_code, 200)
+        cart = response.json()["cart"]
+        self.assertEqual(cart["count"], 2)
+        self.assertEqual(cart["totals"], [{"currency": "USD", "subtotal": "16.00"}])
+        self.assertEqual(cart["items"][0]["unit_price"], "8.00")
+
+    def test_repeated_references_to_one_line_are_merged(self):
+        response = self._resolve([
+            {"kind": "product", "id": self.product.id, "quantity": 2},
+            {"kind": "product", "id": self.product.id, "quantity": 3},
+        ])
+
+        cart = response.json()["cart"]
+        self.assertEqual(len(cart["items"]), 1)
+        self.assertEqual(cart["items"][0]["quantity"], 5)
+
+    def test_a_line_handle_is_its_position_in_the_sent_cart(self):
+        """A guest line has no row id, so its index in the *browser's* array
+        stands in for one - that is what the cart page keys, re-quantifies and
+        removes by. It must survive an earlier reference being dropped, or a
+        remove would take out a line the customer never clicked."""
+        other = Product.objects.create(
+            system=self.system, name="Hat", slug="hat",
+            price=Decimal("5.00"), currency="USD",
+        )
+        response = self._resolve([
+            {"kind": "product", "id": 999999, "quantity": 1},
+            {"kind": "product", "id": self.product.id, "quantity": 1},
+            {"kind": "product", "id": other.id, "quantity": 1},
+        ])
+
+        self.assertEqual([i["id"] for i in response.json()["cart"]["items"]], [1, 2])
+
+    def test_a_deleted_item_drops_its_line_instead_of_failing(self):
+        """A cart can sit in localStorage for weeks; one dead reference must not
+        make the whole thing un-renderable."""
+        response = self._resolve([
+            {"kind": "product", "id": self.product.id, "quantity": 1},
+            {"kind": "product", "id": 999999, "quantity": 1},
+        ])
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()["cart"]["items"]), 1)
+
+    def test_another_tenants_item_does_not_resolve(self):
+        other = System.objects.create(site_name="Other", host="other.test")
+        theirs = Product.objects.create(
+            system=other, name="Theirs", slug="theirs", price=Decimal("99.00"),
+        )
+
+        response = self._resolve([{"kind": "product", "id": theirs.id, "quantity": 1}])
+
+        self.assertEqual(response.json()["cart"]["items"], [])
+
+    def test_a_disabled_item_does_not_resolve(self):
+        self.product.enabled = False
+        self.product.save()
+
+        response = self._resolve([{"kind": "product", "id": self.product.id, "quantity": 1}])
+
+        self.assertEqual(response.json()["cart"]["items"], [])
+
+
+class GuestMergeTests(TestCase):
+    """Signing in folds the browser's cart and hearts into the account's rows."""
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.user = User.objects.create_user("1_a@acme.test", password="x", email="a@acme.test")
+        self.user.profile.system = self.system
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+        self.product = Product.objects.create(
+            system=self.system, name="Bag", slug="bag",
+            price=Decimal("10.00"), currency="USD",
+        )
+
+    def _merge(self, cart=None, favorites=None):
+        return self.client.post(
+            "/api/auth/guest/merge/",
+            {"cart": cart or [], "favorites": favorites or []},
+            content_type="application/json",
+        )
+
+    def test_a_guest_line_becomes_a_row(self):
+        response = self._merge([{"kind": "product", "id": self.product.id, "quantity": 2}])
+
+        self.assertEqual(response.status_code, 200)
+        line = CartItem.objects.get(user=self.user)
+        self.assertEqual(line.product_id, self.product.id)
+        self.assertEqual(line.quantity, 2)
+
+    def test_quantities_are_summed_with_what_the_account_already_had(self):
+        CartItem.objects.create(
+            user=self.user, system=self.system, product=self.product, quantity=1,
+        )
+
+        self._merge([{"kind": "product", "id": self.product.id, "quantity": 2}])
+
+        self.assertEqual(CartItem.objects.get(user=self.user).quantity, 3)
+        self.assertEqual(CartItem.objects.filter(user=self.user).count(), 1)
+
+    def test_favorites_union_rather_than_duplicate(self):
+        from .models import Favorite
+
+        Favorite.objects.create(user=self.user, system=self.system, product=self.product)
+
+        self._merge(favorites=[{"kind": "product", "id": self.product.id}])
+
+        self.assertEqual(Favorite.objects.filter(user=self.user).count(), 1)
+
+    def test_the_merged_cart_comes_back_so_the_client_need_not_ask_again(self):
+        response = self._merge([{"kind": "product", "id": self.product.id, "quantity": 2}])
+
+        self.assertEqual(response.json()["count"], 2)
+        self.assertEqual(response.json()["totals"], [{"currency": "USD", "subtotal": "20.00"}])
+
+    def test_a_signed_in_merge_ignores_the_host_header(self):
+        """Tenancy comes from the profile, never from a header a client can set -
+        otherwise a crafted host would reach another tenant's catalog."""
+        other = System.objects.create(site_name="Other", host="other.test")
+        theirs = Product.objects.create(
+            system=other, name="Theirs", slug="theirs", price=Decimal("99.00"),
+        )
+
+        self.client.post(
+            "/api/auth/guest/merge/",
+            {"cart": [{"kind": "product", "id": theirs.id, "quantity": 1}]},
+            content_type="application/json",
+            HTTP_X_WEBSITE_HOST="other.test",
+        )
+
+        self.assertFalse(CartItem.objects.filter(user=self.user).exists())
+
+    def test_anonymous_cannot_merge(self):
+        self.client.logout()
+        self.assertIn(self._merge().status_code, (401, 403))

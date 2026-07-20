@@ -14,8 +14,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.models import System
-from core.tenancy import user_system
+from core.tenancy import host_system, request_system, user_system
 from users.cache import invalidate_cart
+from users.guest import resolve_guest_cart
 from users.models import CartItem
 
 from .cache import ORDERS_CACHE_TTL, invalidate_orders, orders_key
@@ -114,12 +115,19 @@ class CheckoutView(APIView):
     back a Stripe URL; only the webhook (which is signed) may move it to `paid`.
     """
 
-    permission_classes = (IsAuthenticated,)
+    # AllowAny: a visitor may check out without an account. What they may not do
+    # is name a price - the guest branch re-reads every line out of the catalog
+    # exactly as the signed-in branch reads it out of the cart, so the only thing
+    # the body decides either way is *which* items, never what they cost.
+    permission_classes = (AllowAny,)
 
     def post(self, request):
         serializer = CheckoutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         locale = serializer.validated_data.get("locale") or "en"
+
+        if not request.user.is_authenticated:
+            return self._guest_checkout(request, serializer.validated_data, locale)
 
         system = user_system(request)
         if system is None:
@@ -136,6 +144,53 @@ class CheckoutView(APIView):
             )
 
         items = list(_cart_qs(request.user, system))
+        return self._checkout(request, system, request.user, items, locale)
+
+    def _guest_checkout(self, request, data, locale):
+        """Check out an anonymous visitor's localStorage cart.
+
+        The only difference from the signed-in path is where the lines come
+        from - a list of references in the body rather than rows in the database
+        - and that the resulting Order has no `user`. Everything that decides
+        money is identical: `resolve_guest_cart` re-reads each reference out of
+        this tenant's catalog and prices it there, so the body names *which*
+        items and nothing else.
+
+        The tenant comes from the request host, because an anonymous caller has
+        no profile to read one off. That is the same resolution the public
+        catalog uses, and it can only ever select a published catalog - it is not
+        used for the Stripe return URL, which stays derived from `System.host`
+        (see `_site_base_url`) precisely because a header must never steer a
+        redirect in the middle of a payment.
+
+        No email is collected here: Stripe Checkout asks for it, and the webhook
+        copies it onto the order. That address is also what later lets the
+        customer claim the order by registering (`claim_guest_orders`).
+        """
+        system = host_system(request)
+        if system is None:
+            return Response(
+                {"detail": "No system for this host.", "code": "NO_SYSTEM"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not system.stripe_configured:
+            return Response(
+                {"detail": "This site is not set up to take payments.", "code": "PAYMENTS_UNAVAILABLE"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        items = resolve_guest_cart(system, data.get("cart") or [])
+        return self._checkout(request, system, None, items, locale)
+
+    def _checkout(self, request, system, user, items, locale):
+        """Turn a list of priced cart lines into a pending Order and a Stripe
+        session. Shared by both branches so a guest and a customer are charged by
+        exactly the same code - `user` is simply None for a guest.
+
+        `items` are `CartItem` instances; for a guest they are unsaved ones built
+        from the request's references, which every property this reads
+        (`target`, `unit_price`, `line_total`) supports without a row.
+        """
         if not items:
             return Response(
                 {"detail": "Your cart is empty.", "code": "CART_EMPTY"},
@@ -175,10 +230,12 @@ class CheckoutView(APIView):
         with transaction.atomic():
             order = Order.objects.create(
                 system=system,
-                user=request.user,
+                user=user,
                 status=Order.STATUS_PENDING,
                 currency=currency,
-                email=request.user.email or "",
+                # Blank for a guest until the webhook copies across what Stripe
+                # collected - which is also what makes the order claimable later.
+                email=(user.email or "") if user else "",
             )
             lines = [
                 OrderLine.objects.create(
@@ -216,7 +273,8 @@ class CheckoutView(APIView):
                 lines=lines,
                 success_url=f"{base_url}/{locale}/orders/{order.public_id}?session_id={{CHECKOUT_SESSION_ID}}",
                 cancel_url=f"{base_url}/{locale}/cart",
-                customer_email=request.user.email or "",
+                # Omitted for a guest so Stripe's own page asks for it.
+                customer_email=(user.email or "") if user else "",
             )
         except StripeNotConfigured:
             order.delete()
@@ -236,7 +294,10 @@ class CheckoutView(APIView):
 
         order.stripe_session_id = session.id
         order.save(update_fields=["stripe_session_id", "updated_at"])
-        invalidate_orders(request.user.id, system.id)
+        # A guest order belongs to no history list, so there is no cached list to
+        # drop - the confirmation page reads it uncached by public id.
+        if user is not None:
+            invalidate_orders(user.id, system.id)
 
         logger.info("Checkout session %s created for order %s", session.id, order.pk)
         return Response({"url": session.url, "order_id": str(order.public_id)}, status=status.HTTP_201_CREATED)
@@ -295,6 +356,21 @@ DELETABLE_STATUSES = frozenset(
 )
 
 
+def _may_read(request, order) -> bool:
+    """Whether this caller may see this order.
+
+    Two rules, and the first is the one that makes guest checkout work: an order
+    with no `user` is readable by anyone holding its `public_id`, because that
+    unguessable id in the URL is the only handle its customer will ever have.
+    An order *with* a user is readable only by that user - signing in never
+    grants a view of someone else's order, and being signed in never costs a
+    guest the view of their own.
+    """
+    if order.user_id is None:
+        return True
+    return request.user.is_authenticated and order.user_id == request.user.id
+
+
 class OrderDetailView(APIView):
     """GET/DELETE /api/orders/<public_id>/ - one order in full, or remove it.
 
@@ -304,14 +380,17 @@ class OrderDetailView(APIView):
     payment.
     """
 
-    permission_classes = (IsAuthenticated,)
+    # AllowAny because a guest order has no owner to authenticate as. Its
+    # authorization is the id itself: `public_id` is a random UUID4 that only
+    # ever appears in the URL the customer was redirected to, and the GET below
+    # still refuses any order that *does* have an owner unless the caller is
+    # them. An owned order is therefore no more reachable than before.
+    permission_classes = (AllowAny,)
 
     def get(self, request, public_id):
-        # Filtering by user is the authorization check: another user's order id
-        # simply does not exist as far as this request is concerned.
         order = (
             Order.objects
-            .filter(public_id=public_id, user=request.user, system=user_system(request))
+            .filter(public_id=public_id, system=request_system(request))
             .prefetch_related(
                 "lines", "lines__product", "lines__service",
                 "lines__product_variant", "lines__service_variant",
@@ -321,19 +400,26 @@ class OrderDetailView(APIView):
             )
             .first()
         )
-        if order is None:
+        # Ownerless orders are readable by whoever holds the link; an owned one
+        # only by its owner. 404 rather than 403 either way, so this endpoint
+        # cannot be used to probe which order ids exist.
+        if order is None or not _may_read(request, order):
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(OrderSerializer(order, context={"request": request}).data)
 
     def delete(self, request, public_id):
         """Remove one of the caller's own orders from their history.
 
-        Scoped to the user, exactly as the GET is: another user's id is a 404,
-        never a 403, so this endpoint cannot be used to probe which order ids
-        exist. A paid or refunded order is refused (403) - it is financial
-        history, not clutter (see `DELETABLE_STATUSES`). The delete cascades to
-        the order's lines.
+        Scoped to the user, unlike the GET: holding a guest order's link is
+        enough to *read* it but never to destroy it, and an unowned order is not
+        in anyone's history to tidy anyway. Another user's id is a 404, never a
+        403, so this endpoint cannot be used to probe which order ids exist. A
+        paid or refunded order is refused (403) - it is financial history, not
+        clutter (see `DELETABLE_STATUSES`). The delete cascades to the lines.
         """
+        if not request.user.is_authenticated:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
         order = (
             Order.objects
             .filter(public_id=public_id, user=request.user, system=user_system(request))

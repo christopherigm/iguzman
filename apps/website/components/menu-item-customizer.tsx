@@ -13,6 +13,7 @@ import type { MenuItemIngredient } from "@/lib/catalog";
 import { formatPrice } from "@/lib/price";
 import { formatPortion } from "@/lib/nutrition";
 import { ingredientChoices, resolveChoice } from "@/lib/menu-selection";
+import { addGuestCartLine } from "@/lib/guest-cart";
 import { useMenuCustomization } from "./menu-customization-context";
 
 interface Props {
@@ -103,8 +104,8 @@ export function MenuItemCustomizer({
 
   // Only the deltas from what the base already includes travel to the server;
   // it recomputes and stores the price, so nothing here is trusted about money.
-  const addToCart = () => {
-    const customization = visibleIngredients
+  const buildCustomization = () =>
+    visibleIngredients
       .map((ing) => {
         const chosen = options[ing.id] ?? ing.ingredient;
         const isDefaultOption = chosen === ing.ingredient;
@@ -129,21 +130,32 @@ export function MenuItemCustomizer({
         return row;
       });
 
-    return fetch("/api/auth/cart", {
+  const addToCart = () =>
+    fetch("/api/auth/cart", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         kind: "menu_item",
         id: menuItemId,
-        customization,
+        customization: buildCustomization(),
         quantity: 1,
       }),
     });
-  };
+
+  /** The same line, straight into localStorage. Synchronous, so callers have
+   *  nothing to await and no failure to report. */
+  const addToGuestCart = () =>
+    addGuestCartLine({
+      kind: "menu_item",
+      id: menuItemId,
+      customization: buildCustomization(),
+      quantity: 1,
+    });
 
   const handleAdd = () => {
     if (!isLoggedIn) {
-      router.push("/auth");
+      addToGuestCart();
+      showToast("added");
       return;
     }
     startTransition(async () => {
@@ -166,7 +178,8 @@ export function MenuItemCustomizer({
   // cart the dish never reached.
   const handleBuyNow = () => {
     if (!isLoggedIn) {
-      router.push("/auth");
+      addToGuestCart();
+      router.push("/cart");
       return;
     }
     startTransition(async () => {
@@ -212,8 +225,8 @@ export function MenuItemCustomizer({
             // The admin's label for a choice group (e.g. "Sweetener"), shown as a
             // heading above the options so the customer knows what they're picking.
             const groupLabel = isChoice
-              ? (locale === "en" ? ing.group_en_name : ing.group_name) ??
-                ing.group_name
+              ? ((locale === "en" ? ing.group_en_name : ing.group_name) ??
+                ing.group_name)
               : null;
             return (
               <Box
@@ -264,7 +277,10 @@ export function MenuItemCustomizer({
                         {ing.quantity &&
                           ` · ${
                             ing.unit
-                              ? formatPortion(parseFloat(ing.quantity), ing.unit)
+                              ? formatPortion(
+                                  parseFloat(ing.quantity),
+                                  ing.unit,
+                                )
                               : formatPortion(
                                   parseFloat(ing.quantity),
                                   "",

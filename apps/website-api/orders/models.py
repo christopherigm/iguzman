@@ -58,7 +58,19 @@ class Order(models.Model):
     # PROTECT, unlike Favorite/CartItem's CASCADE: deleting a user must not
     # silently erase the record of money they paid. Orders are financial history
     # and outlive the account.
-    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="orders")
+    #
+    # Nullable because checkout does not require an account. A guest order is a
+    # real order with no owner: its only handle is `public_id` in the URL the
+    # customer was redirected to, which is why that id is a random UUID rather
+    # than anything guessable. It stops being ownerless if the customer later
+    # verifies an account on the same email (`claim_guest_orders`).
+    user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="orders",
+    )
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_PENDING)
 
     # One currency per order by construction: a Stripe Checkout Session is
@@ -94,10 +106,15 @@ class Order(models.Model):
         indexes = [
             models.Index(fields=["user", "-created_at"]),
             models.Index(fields=["system", "status"]),
+            # Claiming looks up unowned orders by the email Stripe captured, on
+            # every email verification and login. Without this it is a table scan
+            # of every order the tenant has ever taken.
+            models.Index(fields=["email", "user"]),
         ]
 
     def __str__(self):
-        return f"Order #{self.pk} ({self.status}) for {self.user.email}"
+        who = self.user.email if self.user_id else f"guest <{self.email or 'no email'}>"
+        return f"Order #{self.pk} ({self.status}) for {who}"
 
     @property
     def item_count(self):

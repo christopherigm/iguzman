@@ -33,7 +33,13 @@ from catalog.models import (
 )
 from core.models import System
 from core.permissions import IsSystemAdmin
-from core.tenancy import user_system
+from core.tenancy import host_system, profile_system, user_system
+from orders.claims import claim_guest_orders
+from .guest import (
+    cart_payload,
+    resolve_guest_cart,
+    resolve_guest_favorites,
+)
 from .cache import (
     CART_CACHE_TTL,
     FAVORITES_CACHE_TTL,
@@ -56,6 +62,7 @@ from .serializers import (
     CustomTokenObtainPairSerializer,
     FavoriteSerializer,
     FavoriteWriteSerializer,
+    GuestStateSerializer,
     PasskeyAuthenticationOptionsSerializer,
     PasskeyAuthenticationVerifySerializer,
     PasskeyRegistrationVerifySerializer,
@@ -155,6 +162,10 @@ class VerifyEmailView(APIView):
         user.is_active = True
         user.save(update_fields=["is_active"])
         token_obj.delete()
+        # Verifying the link is what proves this account holds the address, so it
+        # is the moment any guest order Stripe recorded against that address may
+        # become theirs. See orders/claims.py.
+        claim_guest_orders(user, profile_system(user))
         return Response({"detail": "Email verified successfully. You can now log in."}, status=status.HTTP_200_OK)
 
 
@@ -247,6 +258,28 @@ class LoginView(TokenObtainPairView):
 
     permission_classes = (AllowAny,)
     serializer_class = CustomTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+
+        # Also swept here, not only at email verification: an account that
+        # already existed can check out as a guest (the browser simply had no
+        # session at the time), and that purchase should appear in its history at
+        # the next sign-in rather than never. One indexed UPDATE, and a no-op
+        # when there is nothing unowned on this address.
+        if response.status_code == status.HTTP_200_OK:
+            user = getattr(getattr(self, "_serializer", None), "user", None)
+            if user is not None:
+                claim_guest_orders(user, profile_system(user))
+
+        return response
+
+    def get_serializer(self, *args, **kwargs):
+        # Held onto so `post` can reach the authenticated user: the response body
+        # is only tokens, and re-decoding one to find out who just logged in
+        # would be doing the serializer's work twice.
+        self._serializer = super().get_serializer(*args, **kwargs)
+        return self._serializer
 
 
 class TokenReissueView(APIView):
@@ -822,6 +855,67 @@ def _resolve_target(system, kind, target_id, variant_id):
     return target, variant, None
 
 
+def _menu_selection(menu_item, customization):
+    """A menu line's chosen ingredients, canonicalised for storage & comparison."""
+    ingredients = list(
+        menu_item.ingredients.filter(enabled=True).prefetch_related('options')
+    )
+    return normalize_selection(customization or [], ingredients)
+
+
+def _add_cart_line(user, system, kind, target, variant, quantity):
+    """Add a product/service line, or raise the quantity of the one already there.
+
+    Adding what is already in the cart raises the quantity instead of creating a
+    second identical line - the uniqueness constraints would reject that row
+    anyway. Locked, because two rapid clicks would otherwise both read the old
+    quantity and one increment would be lost.
+
+    Shared by the add endpoint and the sign-in merge so a merged guest line
+    lands exactly where a clicked one would; the caller invalidates the cache.
+    """
+    with transaction.atomic():
+        item, created = CartItem.objects.select_for_update().get_or_create(
+            user=user,
+            system=system,
+            **{kind: target, f"{kind}_variant": variant},
+            defaults={"quantity": quantity},
+        )
+        if not created:
+            item.quantity = min(item.quantity + quantity, 99)
+            item.save(update_fields=["quantity", "updated_at"])
+    return item, created
+
+
+def _add_menu_line(user, system, menu_item, selection, quantity):
+    """Add a menu line, or raise the quantity of the one with the same selection.
+
+    A database unique constraint cannot express "same selection" over a JSON
+    column, so the merge is done here: look for an existing line of this dish
+    whose stored selection matches and bump its quantity, otherwise create a new
+    line. Locked against the same double-click race `_add_cart_line` guards.
+    """
+    with transaction.atomic():
+        existing = (
+            CartItem.objects
+            .select_for_update()
+            .filter(user=user, system=system, menu_item=menu_item)
+        )
+        match = next((row for row in existing if row.customization == selection), None)
+        if match is not None:
+            match.quantity = min(match.quantity + quantity, 99)
+            match.save(update_fields=["quantity", "updated_at"])
+            return match, False
+
+        return CartItem.objects.create(
+            user=user,
+            system=system,
+            menu_item=menu_item,
+            customization=selection,
+            quantity=quantity,
+        ), True
+
+
 def _cart_payload(request, system):
     """The whole cart: lines, total quantity, and a subtotal per currency.
 
@@ -885,22 +979,7 @@ class CartListView(APIView):
         if kind == "menu_item":
             return self._add_menu_item(request, system, target, serializer.validated_data, quantity)
 
-        variant_field = f"{kind}_variant"
-        # Adding what is already in the cart raises the quantity instead of
-        # creating a second identical line - the uniqueness constraints would
-        # reject that row anyway. Locked, because two rapid clicks would
-        # otherwise both read the old quantity and one increment would be lost.
-        with transaction.atomic():
-            item, created = CartItem.objects.select_for_update().get_or_create(
-                user=request.user,
-                system=system,
-                **{kind: target, variant_field: variant},
-                defaults={"quantity": quantity},
-            )
-            if not created:
-                item.quantity = min(item.quantity + quantity, 99)
-                item.save(update_fields=["quantity", "updated_at"])
-
+        item, created = _add_cart_line(request.user, system, kind, target, variant, quantity)
         invalidate_cart(request.user.id, system.id if system else 0)
 
         return Response(
@@ -910,39 +989,9 @@ class CartListView(APIView):
 
     def _add_menu_item(self, request, system, menu_item, data, quantity):
         """Add (or increment) a menu line, where the ingredient selection is part
-        of the line's identity.
-
-        A database unique constraint cannot express "same selection" over a JSON
-        column, so the merge is done here: normalise the chosen ingredients, then
-        look for an existing line of this dish whose stored selection matches and
-        bump its quantity, otherwise create a new line. Locked against the same
-        double-click race the product path guards.
-        """
-        ingredients = list(
-            menu_item.ingredients.filter(enabled=True).prefetch_related('options')
-        )
-        selection = normalize_selection(data.get("customization", []), ingredients)
-
-        with transaction.atomic():
-            existing = (
-                CartItem.objects
-                .select_for_update()
-                .filter(user=request.user, system=system, menu_item=menu_item)
-            )
-            match = next((row for row in existing if row.customization == selection), None)
-            if match is not None:
-                match.quantity = min(match.quantity + quantity, 99)
-                match.save(update_fields=["quantity", "updated_at"])
-                item, created = match, False
-            else:
-                item = CartItem.objects.create(
-                    user=request.user,
-                    system=system,
-                    menu_item=menu_item,
-                    customization=selection,
-                    quantity=quantity,
-                )
-                created = True
+        of the line's identity."""
+        selection = _menu_selection(menu_item, data.get("customization", []))
+        item, created = _add_menu_line(request.user, system, menu_item, selection, quantity)
 
         invalidate_cart(request.user.id, system.id if system else 0)
         return Response(
@@ -1084,3 +1133,119 @@ class CartIdsView(APIView):
         }
         cache.set(cache_key, data, CART_CACHE_TTL)
         return Response(data)
+
+
+# ── Guest (anonymous) cart & favorites ────────────────────────────────────────
+
+
+class GuestResolveView(APIView):
+    """POST /api/guest/resolve/ - price an anonymous visitor's local cart.
+
+    An anonymous visitor has no rows: their cart and favorites live in the
+    browser's localStorage as bare references, and this turns those references
+    into the exact payloads the cart and favorites pages already render for a
+    signed-in customer. Body: `{"cart": [...refs], "favorites": [...refs]}`.
+
+    **Nothing about money comes from the client.** The reference names what was
+    chosen; every price, label, image and stock flag is read back out of the
+    catalog here (see `users/guest.py`), which is why a guest cart is as
+    trustworthy as a stored one and why checkout can charge from the same refs.
+
+    Unauthenticated by design, and therefore scoped by host rather than by
+    profile - the same resolution every public catalog endpoint uses. That only
+    picks which tenant's *published* catalog to read, so a crafted host reveals
+    nothing that `GET /api/products/` would not.
+
+    Uncached: the response is a function of the request body, so a cache keyed by
+    anything less than the whole body would serve one visitor another's cart.
+    """
+
+    authentication_classes = []
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = GuestStateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        system = host_system(request)
+        context = {"request": request}
+
+        items = resolve_guest_cart(system, serializer.validated_data["cart"])
+        favorites = resolve_guest_favorites(system, serializer.validated_data["favorites"])
+
+        return Response({
+            "cart": cart_payload(items, context),
+            # Shaped like FavoriteSerializer's output so the favorites grid
+            # renders a guest's saved items with the same component. There is no
+            # row, so there is no row id or created_at: the id is the reference's
+            # position, which is all the client needs to key and unsave it.
+            "favorites": [
+                {
+                    "id": index,
+                    "kind": kind,
+                    "created_at": None,
+                    "item": _favorite_item_payload(kind, target, context),
+                }
+                for index, (kind, target) in enumerate(favorites)
+            ],
+        })
+
+
+def _favorite_item_payload(kind, target, context):
+    # Imported here for the same reason FavoriteSerializer does it: a
+    # module-level import would make users ↔ catalog a cycle at app-load.
+    from catalog.serializers import MenuItemSerializer, ProductSerializer, ServiceSerializer
+
+    serializer = {
+        'product': ProductSerializer,
+        'service': ServiceSerializer,
+        'menu_item': MenuItemSerializer,
+    }[kind]
+    return serializer(target, context=context).data
+
+
+class GuestMergeView(APIView):
+    """POST /api/auth/guest/merge/ - fold a guest's local cart and favorites into
+    the account that just signed in.
+
+    Called once, by the browser, the moment a session appears with local guest
+    state still present. **Union, quantities summed**: a saved item the account
+    already had stays saved, and a line it already had comes back with the two
+    quantities added (capped at 99, as a repeated add is). That is what makes the
+    call idempotent-enough to be safe on a retry only *once* - which is why the
+    client clears localStorage on success and this returns the merged cart so it
+    can render the result without a second round-trip.
+
+    Every line goes through the same `_add_cart_line` / `_add_menu_line` the add
+    endpoint uses, so a merged line is indistinguishable from a clicked one. Refs
+    that no longer resolve are dropped rather than failing the merge: a cart that
+    sat in a browser for weeks must still sign the customer in.
+    """
+
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        serializer = GuestStateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        # A signed-in caller is scoped by their profile, never by the host: the
+        # account's tenant is the one thing here the browser must not choose.
+        system = _user_system(request)
+        user = request.user
+
+        for kind, target in resolve_guest_favorites(system, serializer.validated_data["favorites"]):
+            Favorite.objects.get_or_create(user=user, system=system, **{kind: target})
+
+        for line in resolve_guest_cart(system, serializer.validated_data["cart"]):
+            if line.menu_item_id:
+                _add_menu_line(user, system, line.menu_item, line.customization, line.quantity)
+            else:
+                _add_cart_line(
+                    user, system, line.kind, line.target, line.variant, line.quantity,
+                )
+
+        system_id = system.id if system else 0
+        invalidate_favorites(user.id, system_id)
+        invalidate_cart(user.id, system_id)
+
+        return Response(_cart_payload(request, system))

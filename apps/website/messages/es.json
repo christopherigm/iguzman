@@ -149,7 +149,10 @@
     "heading": "Destacados",
     "productLabel": "Producto",
     "serviceLabel": "Servicio",
-    "menuLabel": "Menú"
+    "menuLabel": "Menú",
+    "browseProducts": "Ver productos",
+    "browseServices": "Ver servicios",
+    "browseFood": "Ver comida"
   },
   "Gallery": {
     "previous": "Imagen anterior",
@@ -247,7 +250,6 @@
     "heading": "Carrito",
     "home": "Inicio",
     "empty": "Tu carrito está vacío. Agrega un producto o servicio para verlo aquí.",
-    "browseProducts": "Ver productos",
     "summary": "Resumen del pedido",
     "itemCount": "{count, plural, =0 {Sin artículos} one {# artículo} other {# artículos}}",
     "subtotal": "Subtotal",
@@ -263,7 +265,8 @@
     "checkoutError": "No se pudo iniciar el pago. Inténtalo de nuevo.",
     "checkoutUnavailable": "Este sitio aún no está configurado para aceptar pagos.",
     "checkoutMixedCurrency": "Tu carrito tiene artículos en más de una moneda. Paga una moneda a la vez.",
-    "checkoutOutOfStock": "Algunos artículos ya no están disponibles. Elimínalos e inténtalo de nuevo."
+    "checkoutOutOfStock": "Algunos artículos ya no están disponibles. Elimínalos e inténtalo de nuevo.",
+    "guestCheckoutNote": "No necesitas una cuenta: te enviaremos el recibo por correo y un enlace a tu pedido."
   },
   "Orders": {
     "heading": "Pedidos",
@@ -290,7 +293,8 @@
     "paidNote": "¡Gracias! Hemos recibido tu pago y tu pedido está confirmado.",
     "deleteOrder": "Eliminar pedido",
     "deleteTitle": "¿Eliminar este pedido?",
-    "deleteText": "El pedido n.º {id} se eliminará permanentemente de tu historial. Esta acción no se puede deshacer."
+    "deleteText": "El pedido n.º {id} se eliminará permanentemente de tu historial. Esta acción no se puede deshacer.",
+    "continueShopping": "Seguir comprando"
   },
   "VerifyEmailPage": {
     "loading": "Verificando tu cuenta, por favor espera…",

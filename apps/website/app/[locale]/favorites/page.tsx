@@ -6,8 +6,12 @@ import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Hero } from "@repo/ui/hero";
+import { getSession } from "@repo/auth/session";
 import { getFavorites } from "@/lib/favorites";
+import { getRequestOrigin } from "@/lib/metadata";
 import { BuyableCard, type BuyableItem } from "@/components/buyable-card";
+import { EmptyCatalogState } from "@/components/empty-catalog-state";
+import { GuestFavorites } from "./guest-favorites";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -27,12 +31,19 @@ export default async function FavoritesPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const [favorites, t, itemT, menuT] = await Promise.all([
+  // A guest's saved items live in their browser, so the server has none to
+  // render: `getFavorites()` comes back empty and `GuestFavorites` resolves
+  // localStorage after hydration.
+  const [session, favorites, origin, t, itemT, menuT] = await Promise.all([
+    getSession(),
     getFavorites(),
+    getRequestOrigin(),
     getTranslations("Favorites"),
     getTranslations("CatalogItems"),
     getTranslations("Menu"),
   ]);
+
+  const isGuest = session === null;
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },
@@ -69,7 +80,20 @@ export default async function FavoritesPage({ params }: Props) {
           {t("heading")}
         </Typography>
 
-        {favorites.length > 0 ? (
+        {isGuest ? (
+          <GuestFavorites
+            locale={locale}
+            productLabel={itemT("productLabel")}
+            serviceLabel={itemT("serviceLabel")}
+            menuLabel={itemT("menuLabel")}
+            fromLabel={menuT("from")}
+            origin={origin}
+            // Built here because it is a server component (it renders the async
+            // Categories grid) and `GuestFavorites` is a client component - it
+            // can hold the element and decide when to show it, but not render it.
+            emptyState={<EmptyCatalogState message={t("empty")} />}
+          />
+        ) : favorites.length > 0 ? (
           <Grid container spacing={2}>
             {favorites.map((favorite) => (
               <Grid
@@ -81,7 +105,8 @@ export default async function FavoritesPage({ params }: Props) {
                     {
                       // The favorites API keys food as `menu_item`; the card
                       // knows it as `food`.
-                      kind: favorite.kind === "menu_item" ? "food" : favorite.kind,
+                      kind:
+                        favorite.kind === "menu_item" ? "food" : favorite.kind,
                       data: favorite.item,
                     } as BuyableItem
                   }
@@ -95,7 +120,7 @@ export default async function FavoritesPage({ params }: Props) {
             ))}
           </Grid>
         ) : (
-          <Typography variant="body">{t("empty")}</Typography>
+          <EmptyCatalogState message={t("empty")} />
         )}
       </Container>
     </>

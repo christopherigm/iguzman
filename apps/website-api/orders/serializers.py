@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from users.serializers import CartItemWriteSerializer
+
 from .models import Order, OrderLine
 
 
@@ -121,10 +123,17 @@ class OrderSummarySerializer(serializers.ModelSerializer):
 
 
 class CheckoutSerializer(serializers.Serializer):
-    """What the browser may say about a checkout: only where to come back to.
+    """What the browser may say about a checkout: where to come back to, and -
+    for a guest only - which items.
 
-    Deliberately no amount, no items and no currency - those are read from the
-    user's cart server-side. A client that could name a price could name its own.
+    Deliberately still no amount and no currency. A signed-in checkout ignores
+    `cart` entirely and reads the rows; a guest's `cart` names *which* catalog
+    items were chosen and nothing more, and every one of them is re-priced
+    server-side from the tenant's catalog before a session is created. A client
+    that could name a price could name its own.
     """
 
     locale = serializers.CharField(max_length=8, required=False, default="en")
+    # Guest checkout only: the anonymous visitor's localStorage cart, in the same
+    # per-line shape `POST /api/auth/cart/` takes.
+    cart = CartItemWriteSerializer(many=True, required=False, default=list)
