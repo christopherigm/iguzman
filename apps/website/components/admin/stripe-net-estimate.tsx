@@ -118,7 +118,9 @@ export function StripeNetEstimate({
       borderRadius={bare ? undefined : 10}
       border={bare ? undefined : `1px solid ${HAIRLINE}`}
       backgroundColor={
-        bare ? undefined : "color-mix(in srgb, var(--foreground) 3%, transparent)"
+        bare
+          ? undefined
+          : "color-mix(in srgb, var(--foreground) 3%, transparent)"
       }
     >
       <Box
@@ -165,11 +167,7 @@ export function StripeNetEstimate({
               value={`−${fmt(fee)}`}
               valueColor={MUTED}
             />
-            <Row
-              label={t("stripeNetPayoutLabel")}
-              value={fmt(payout)}
-              bold
-            />
+            <Row label={t("stripeNetPayoutLabel")} value={fmt(payout)} bold />
 
             {hasCost && (
               <>

@@ -9,9 +9,17 @@ body {
   font-style: normal;
 }
 
+/* The page background is per-tenant (System.background_light / _dark, set as
+   variables on <body> by the locale layout). Both are published and the theme
+   picks one here, so toggling light/dark repaints without a reload. The palette
+   default is the fallback for a tenant that has never set one. */
 body {
   color: var(--foreground);
-  background: var(--surface-2);
+  background: var(--page-background-light, var(--surface-2));
+}
+
+[data-theme="dark"] body {
+  background: var(--page-background-dark, var(--surface-2));
 }
 
 * {

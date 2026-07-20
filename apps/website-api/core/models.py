@@ -346,6 +346,44 @@ class System(Common):
         ),
     )
 
+    # ── Watermark & page background ───────────────────────────────────────────
+    # The logo tiled faintly behind every public page, plus the page background
+    # it sits on. Sizes are px and opacity is a whole percent, because that is
+    # what the CMS sliders emit and what the frontend consumes - storing floats
+    # here would only invite rounding drift between the preview and the site.
+    watermark_enabled = models.BooleanField(
+        default=False,
+        help_text="Tile this site's logo faintly behind every public page.",
+    )
+    watermark_rotation = models.SmallIntegerField(
+        default=-12,
+        help_text="Rotation of the tiled pattern in degrees (-45 to 45).",
+    )
+    watermark_size = models.PositiveSmallIntegerField(
+        default=120,
+        help_text="Drawn width of one logo in px.",
+    )
+    watermark_spacing = models.PositiveSmallIntegerField(
+        default=70,
+        help_text="Empty space between logos in px (added to the tile size).",
+    )
+    watermark_opacity = models.PositiveSmallIntegerField(
+        default=4,
+        help_text="Opacity of the pattern as a whole percent (1-25).",
+    )
+    # Default to the cyan palette's --surface-2, which is what the page
+    # background was hardcoded to before these became editable.
+    background_light = models.CharField(
+        max_length=16,
+        default="#e5e5e5",
+        help_text="Page background color in the light theme.",
+    )
+    background_dark = models.CharField(
+        max_length=16,
+        default="#3c3c3c",
+        help_text="Page background color in the dark theme.",
+    )
+
     privacy_policy = models.TextField(null=True, blank=True)
     en_privacy_policy = models.TextField(null=True, blank=True)
     terms_and_conditions = models.TextField(null=True, blank=True)

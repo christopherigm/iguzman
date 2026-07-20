@@ -90,9 +90,7 @@ function fileExtension(file: File): string {
 }
 
 /** Load a video blob URL just far enough to read its intrinsic metadata. */
-function extractVideoMetadata(
-  objectUrl: string,
-): Promise<{
+function extractVideoMetadata(objectUrl: string): Promise<{
   duration: number | null;
   width: number | null;
   height: number | null;

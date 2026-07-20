@@ -71,7 +71,7 @@ caterer is a **menu** business — its catalog is `MenuItem`s (base price + pric
 - **The catalog content is seeded as `menu_categories`** by `/seed-site` (step 7),
   which owns the product-vs-menu decision for the data. When the business is
   clearly food, tell that session it's a menu business; when it's genuinely mixed
-  or ambiguous (packaged goods *and* made-to-order food), flag it so the operator
+  or ambiguous (packaged goods _and_ made-to-order food), flag it so the operator
   is asked rather than guessed at — one `System` can carry all three families.
 
 ## Pipeline

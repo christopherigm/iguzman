@@ -156,7 +156,13 @@ function IngredientThumb({ image }: { image: string | null }) {
       styles={{ position: "relative", overflow: "hidden" }}
     >
       {image && (
-        <Image src={image} alt="" fill sizes="40px" style={{ objectFit: "cover" }} />
+        <Image
+          src={image}
+          alt=""
+          fill
+          sizes="40px"
+          style={{ objectFit: "cover" }}
+        />
       )}
     </Box>
   );
@@ -350,11 +356,7 @@ function GroupNameFields({
  * the list against the loaded rows and calls the create/update/delete API on
  * save.
  */
-export function MenuIngredientsEditor({
-  value,
-  onChange,
-  catalog,
-}: Props) {
+export function MenuIngredientsEditor({ value, onChange, catalog }: Props) {
   const t = useTranslations("Admin");
   const tCommon = useTranslations("Common");
 

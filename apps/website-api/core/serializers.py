@@ -448,6 +448,9 @@ class SystemSerializer(serializers.ModelSerializer):
             "highlights_title", "en_highlights_title",
             "highlights_subtitle", "en_highlights_subtitle",
             "catalog_items_bg",
+            "watermark_enabled", "watermark_rotation", "watermark_size",
+            "watermark_spacing", "watermark_opacity",
+            "background_light", "background_dark",
             "about", "en_about",
             "mission", "en_mission",
             "vision", "en_vision",
@@ -519,6 +522,9 @@ _TEXT_FIELDS = [
     "highlights_title", "en_highlights_title",
     "highlights_subtitle", "en_highlights_subtitle",
     "catalog_items_bg",
+    "watermark_enabled", "watermark_rotation", "watermark_size",
+    "watermark_spacing", "watermark_opacity",
+    "background_light", "background_dark",
     "about", "en_about", "mission", "en_mission", "vision", "en_vision",
     "privacy_policy", "en_privacy_policy",
     "terms_and_conditions", "en_terms_and_conditions",
@@ -555,6 +561,18 @@ class SystemWriteSerializer(serializers.Serializer):
     en_highlights_subtitle = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     catalog_items_bg = serializers.CharField(max_length=512, required=False, allow_null=True, allow_blank=True)
     enabled         = serializers.BooleanField(required=False)
+
+    # Watermark & page background. The bounds are the same ones the CMS sliders
+    # offer; they are enforced here too because the CMS is not the only possible
+    # caller, and an unbounded size or opacity would paint the logo over the
+    # whole site rather than behind it.
+    watermark_enabled  = serializers.BooleanField(required=False)
+    watermark_rotation = serializers.IntegerField(required=False, min_value=-45, max_value=45)
+    watermark_size     = serializers.IntegerField(required=False, min_value=24, max_value=400)
+    watermark_spacing  = serializers.IntegerField(required=False, min_value=0, max_value=400)
+    watermark_opacity  = serializers.IntegerField(required=False, min_value=1, max_value=25)
+    background_light   = serializers.CharField(max_length=16, required=False)
+    background_dark    = serializers.CharField(max_length=16, required=False)
 
     about               = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     en_about            = serializers.CharField(required=False, allow_null=True, allow_blank=True)

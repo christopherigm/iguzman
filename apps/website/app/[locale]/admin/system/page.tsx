@@ -6,6 +6,7 @@ import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import { type NewImage } from "@/components/admin-image-uploader/admin-image-uploader";
 import { SystemImages, type SystemImageState } from "./system-images";
 import { PaymentsSection } from "./payments-section";
+import { WatermarkSection } from "./watermark-section";
 import {
   LOGO_DERIVED_FIELDS,
   SYSTEM_IMAGE_FIELDS,
@@ -65,6 +66,13 @@ export default function AdminSystemPage() {
     // "leave unchanged" - see `stripeConfigured` and handleSubmit.
     stripe_secret_key: "",
     stripe_webhook_secret: "",
+    watermark_enabled: false,
+    watermark_rotation: -12,
+    watermark_size: 120,
+    watermark_spacing: 70,
+    watermark_opacity: 4,
+    background_light: "#e5e5e5",
+    background_dark: "#3c3c3c",
   });
 
   /** Whether Stripe keys are already stored, per the API's write-only flag. */
@@ -141,6 +149,13 @@ export default function AdminSystemPage() {
           // which the submit handler reads as "leave the stored ones alone".
           stripe_secret_key: "",
           stripe_webhook_secret: "",
+          watermark_enabled: data.watermark_enabled ?? false,
+          watermark_rotation: data.watermark_rotation ?? -12,
+          watermark_size: data.watermark_size ?? 120,
+          watermark_spacing: data.watermark_spacing ?? 70,
+          watermark_opacity: data.watermark_opacity ?? 4,
+          background_light: data.background_light ?? "#e5e5e5",
+          background_dark: data.background_dark ?? "#3c3c3c",
         });
         setStripeConfigured(Boolean(data.stripe_configured));
         setStripeWebhookUrl(String(data.stripe_webhook_url ?? ""));
@@ -445,6 +460,17 @@ export default function AdminSystemPage() {
             pickColor: tGb("pickColor"),
             rawCss: tGb("rawCss"),
           }}
+        />
+        <WatermarkSection
+          values={values}
+          onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
+          // Preview the logo being uploaded right now, if there is one, so the
+          // pattern shown is the one that will ship after saving.
+          logo={
+            images.img_logo?.pending[0]?.preview ??
+            images.img_logo?.existing[0]?.url ??
+            "/logo.png"
+          }
         />
       </AdminForm>
 

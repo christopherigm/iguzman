@@ -92,7 +92,9 @@ export function NutritionWebSearch({ values, onChange, nutrients }: Props) {
     <Box flexDirection="column" gap={10} paddingTop={16}>
       <Box display="flex" alignItems="center" gap={12} flexWrap="wrap">
         <Button
-          text={loading ? t("nutritionSearchSearching") : t("nutritionSearchWeb")}
+          text={
+            loading ? t("nutritionSearchSearching") : t("nutritionSearchWeb")
+          }
           icon="/icons/search.svg"
           iconSize="16px"
           onClick={handleSearch}
@@ -125,7 +127,11 @@ export function NutritionWebSearch({ values, onChange, nutrients }: Props) {
           border="1px solid color-mix(in srgb, var(--accent, #06b6d4) 30%, transparent)"
           backgroundColor="color-mix(in srgb, var(--accent, #06b6d4) 5%, transparent)"
         >
-          <Typography variant="label" fontWeight={700} color="var(--foreground)">
+          <Typography
+            variant="label"
+            fontWeight={700}
+            color="var(--foreground)"
+          >
             {t("nutritionSearchResultsTitle")}
           </Typography>
           <Box

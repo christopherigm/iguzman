@@ -333,7 +333,11 @@ function IngredientBreakdown({
       })}
 
       {/* Thick footer divider, then the reference-diet footnote. */}
-      <Box height={RULE_THICK} backgroundColor="var(--foreground)" marginTop={4} />
+      <Box
+        height={RULE_THICK}
+        backgroundColor="var(--foreground)"
+        marginTop={4}
+      />
       <Typography
         variant="caption"
         color="var(--foreground)"
@@ -387,10 +391,18 @@ function FdaFacts({
         gap={8}
         paddingBottom={2}
       >
-        <Typography variant="caption" fontWeight={700} color="var(--foreground)">
+        <Typography
+          variant="caption"
+          fontWeight={700}
+          color="var(--foreground)"
+        >
           {t("servingSize")}
         </Typography>
-        <Typography variant="caption" fontWeight={700} color="var(--foreground)">
+        <Typography
+          variant="caption"
+          fontWeight={700}
+          color="var(--foreground)"
+        >
           {t("servingSizeAmount")}
         </Typography>
       </Box>
@@ -479,7 +491,11 @@ function FdaFacts({
       })}
 
       {/* Thick footer divider, then the FDA reference-diet footnote. */}
-      <Box height={RULE_THICK} backgroundColor="var(--foreground)" marginTop={4} />
+      <Box
+        height={RULE_THICK}
+        backgroundColor="var(--foreground)"
+        marginTop={4}
+      />
       <Typography
         variant="caption"
         color="var(--foreground)"

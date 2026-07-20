@@ -264,15 +264,27 @@ export default function AdminIngredientFormPage({ params }: Props) {
       t("nutrientSaturatedFat") ?? "Saturated Fat (g)",
     ),
     nutrientField("trans_fat", t("nutrientTransFat") ?? "Trans Fat (g)"),
-    nutrientField("cholesterol", t("nutrientCholesterol") ?? "Cholesterol (mg)"),
+    nutrientField(
+      "cholesterol",
+      t("nutrientCholesterol") ?? "Cholesterol (mg)",
+    ),
     nutrientField("sodium", t("nutrientSodium") ?? "Sodium (mg)"),
     nutrientField(
       "total_carbohydrate",
       t("nutrientTotalCarbohydrate") ?? "Total Carbohydrate (g)",
     ),
-    nutrientField("dietary_fiber", t("nutrientDietaryFiber") ?? "Dietary Fiber (g)"),
-    nutrientField("total_sugars", t("nutrientTotalSugars") ?? "Total Sugars (g)"),
-    nutrientField("added_sugars", t("nutrientAddedSugars") ?? "Added Sugars (g)"),
+    nutrientField(
+      "dietary_fiber",
+      t("nutrientDietaryFiber") ?? "Dietary Fiber (g)",
+    ),
+    nutrientField(
+      "total_sugars",
+      t("nutrientTotalSugars") ?? "Total Sugars (g)",
+    ),
+    nutrientField(
+      "added_sugars",
+      t("nutrientAddedSugars") ?? "Added Sugars (g)",
+    ),
     nutrientField("protein", t("nutrientProtein") ?? "Protein (g)"),
     nutrientField("vitamin_d", t("nutrientVitaminD") ?? "Vitamin D (mcg)"),
     nutrientField("calcium", t("nutrientCalcium") ?? "Calcium (mg)"),
@@ -327,7 +339,9 @@ export default function AdminIngredientFormPage({ params }: Props) {
               <>
                 <PriceWebSearch
                   values={values}
-                  onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
+                  onChange={(k, v) =>
+                    setValues((prev) => ({ ...prev, [k]: v }))
+                  }
                   onAddProviders={(rows) =>
                     setProviders((prev) => [...prev, ...rows])
                   }

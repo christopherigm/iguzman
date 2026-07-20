@@ -62,7 +62,10 @@ export function createAuthProxy({
     // SameSite, so a request that merely could not send its cookies would
     // otherwise have them deleted here - turning one unreadable request into a
     // real logout, with the tokens still perfectly valid.
-    if (request.cookies.has(ACCESS_COOKIE) || request.cookies.has(REFRESH_COOKIE)) {
+    if (
+      request.cookies.has(ACCESS_COOKIE) ||
+      request.cookies.has(REFRESH_COOKIE)
+    ) {
       res.cookies.delete(ACCESS_COOKIE);
       res.cookies.delete(REFRESH_COOKIE);
     }

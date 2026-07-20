@@ -32,6 +32,14 @@ export interface System {
   highlights_subtitle: string | null;
   en_highlights_subtitle: string | null;
   catalog_items_bg: string | null;
+  watermark_enabled: boolean;
+  watermark_rotation: number;
+  watermark_size: number;
+  watermark_spacing: number;
+  /** Whole percent (1-25), not a 0-1 fraction. */
+  watermark_opacity: number;
+  background_light: string;
+  background_dark: string;
   about: string;
   en_about: string;
   mission: string;

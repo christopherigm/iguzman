@@ -210,9 +210,7 @@ export function MenuPricingSection({
           </Typography>
         </Box>
 
-        {(cost.hasUnpriced ||
-          cost.hasNotConvertible ||
-          cost.mixedCurrency) && (
+        {(cost.hasUnpriced || cost.hasNotConvertible || cost.mixedCurrency) && (
           <Typography variant="caption" color={MUTED}>
             {cost.mixedCurrency
               ? t("costMixedCurrencyNote")

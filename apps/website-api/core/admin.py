@@ -156,6 +156,19 @@ class SystemAdmin(admin.ModelAdmin):
         ("Catalog Items Section", {
             "fields": ("catalog_items_bg",),
         }),
+        ("Watermark & Background", {
+            "fields": (
+                "watermark_enabled", "watermark_rotation", "watermark_size",
+                "watermark_spacing", "watermark_opacity",
+                "background_light", "background_dark",
+            ),
+            "description": (
+                "The site's logo tiled faintly behind every public page, and the "
+                "page background it sits on. Normally set from the site's CMS, "
+                "which previews the result live."
+            ),
+            "classes": ("collapse",),
+        }),
         ("Payments (Stripe)", {
             "fields": ("stripe_enabled", "stripe_publishable_key", "stripe_configured"),
             "description": (

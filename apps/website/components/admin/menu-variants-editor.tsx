@@ -34,7 +34,12 @@ interface Props {
  * page too. The parent page sends the selected ids as the `variants` field on
  * save.
  */
-export function MenuVariantsEditor({ value, onChange, catalog, locale }: Props) {
+export function MenuVariantsEditor({
+  value,
+  onChange,
+  catalog,
+  locale,
+}: Props) {
   const t = useTranslations("Admin");
   const [query, setQuery] = useState("");
 

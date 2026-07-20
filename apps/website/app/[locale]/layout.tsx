@@ -24,6 +24,7 @@ import { DevSiteSwitcher } from "./dev-site-switcher";
 import { Footer } from "@/components/footer";
 import { HideOnAdmin } from "@/components/hide-on-admin";
 import { GuestMerge } from "@/components/guest-merge";
+import { LogoWatermark } from "@/components/logo-watermark";
 import packageJson from "@/package.json";
 import { getCartCount } from "@/lib/cart";
 import { getSystem } from "@/lib/system";
@@ -123,6 +124,14 @@ export default async function LocaleLayout({ children, params }: Props) {
     Object.entries(paletteVars),
   ) as React.CSSProperties;
   (bodyStyle as Record<string, string>)["--accent"] = accent;
+  // Both page backgrounds are published as variables and globals.css picks one
+  // per `data-theme`, so the switch still works after hydration - an inline
+  // `background` here would be whatever the server resolved and would go stale
+  // the moment the visitor toggles the theme.
+  (bodyStyle as Record<string, string>)["--page-background-light"] =
+    system?.background_light ?? "#e5e5e5";
+  (bodyStyle as Record<string, string>)["--page-background-dark"] =
+    system?.background_dark ?? "#3c3c3c";
 
   return (
     <html
@@ -143,6 +152,18 @@ export default async function LocaleLayout({ children, params }: Props) {
                 initialResolved={initialResolved}
               >
                 <PaletteProvider palette="cyan" accent={accent}>
+                  {/* Sits behind everything (z-index -1) and off the CMS. */}
+                  {system?.watermark_enabled && (
+                    <HideOnAdmin>
+                      <LogoWatermark
+                        logo={system.img_logo ?? "/logo.png"}
+                        size={system.watermark_size}
+                        spacing={system.watermark_spacing}
+                        rotation={system.watermark_rotation}
+                        opacity={system.watermark_opacity}
+                      />
+                    </HideOnAdmin>
+                  )}
                   <NavbarClient
                     logo={system?.img_logo ?? "/logo.png"}
                     version={`v${packageJson.version}`}

@@ -102,7 +102,7 @@ Keep it efficient: a good interview is ~6–12 sharp exchanges, not 40 timid one
 The backend has **three** purchasable families, each its own brief section and
 model (full reference: `apps/website/sites/CLAUDE.md` → "The three Buyable
 families"). Choosing wrong makes the catalog un-seedable-correctly, so settle it
-*during* the Catalog part of the interview:
+_during_ the Catalog part of the interview:
 
 - **`product_categories` → products** — physical/shippable goods (SKU, stock).
 - **`service_categories` → services** — booked/performed work (duration, modality).
@@ -113,12 +113,12 @@ A restaurant, **bakery / bread** maker, café, juice bar, taquería, cloud kitch
 caterer, or anyone selling meals/dishes/drinks is a **menu** business. The reason
 is the data model, not the vibe: a `MenuItem` carries a **base `price` plus priced
 `ingredients`** the customer customises (add nuts +$25, double patty, hold the
-cheese) — which the seed populates — plus an *internal* recipe the operator adds
+cheese) — which the seed populates — plus an _internal_ recipe the operator adds
 later in the CMS. A `Product` can express none of this. Model a bakery's bread as
 a product and you silently throw away ingredient customisation.
 
 - **When it's genuinely mixed or ambiguous, ask the operator** rather than
-  guessing — a shop selling packaged goods *and* made-to-order food, a bakery that
+  guessing — a shop selling packaged goods _and_ made-to-order food, a bakery that
   also sells branded merch, "a store for my restaurant." One `System` can carry
   all three families at once (the catalog blocks fold them together), so the
   answer can legitimately be "both" — but confirm it, don't assume.

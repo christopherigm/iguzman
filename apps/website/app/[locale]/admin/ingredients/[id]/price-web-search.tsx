@@ -56,7 +56,9 @@ export function PriceWebSearch({ values, onChange, onAddProviders }: Props) {
         name,
         en_name: enName,
         unit: String(values.unit ?? "g"),
-        nutrition_basis_quantity: String(values.nutrition_basis_quantity ?? "100"),
+        nutrition_basis_quantity: String(
+          values.nutrition_basis_quantity ?? "100",
+        ),
         currency,
       });
       if (found.price == null && found.providers.length === 0) {
@@ -133,7 +135,11 @@ export function PriceWebSearch({ values, onChange, onAddProviders }: Props) {
           border="1px solid color-mix(in srgb, var(--accent, #06b6d4) 30%, transparent)"
           backgroundColor="color-mix(in srgb, var(--accent, #06b6d4) 5%, transparent)"
         >
-          <Typography variant="label" fontWeight={700} color="var(--foreground)">
+          <Typography
+            variant="label"
+            fontWeight={700}
+            color="var(--foreground)"
+          >
             {t("priceSearchResultsTitle")}
           </Typography>
 

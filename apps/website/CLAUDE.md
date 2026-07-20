@@ -140,6 +140,28 @@ conversation language only; it doesn't change the code or the site's own content
 language (the bilingual `en_*` seed fields are decided separately in
 `/seed-site`).
 
+## Logo watermark & page background
+
+The tenant's logo can be tiled faintly behind every **public** page
+(`components/logo-watermark.tsx`, rendered by the locale layout inside
+`<HideOnAdmin>` when `System.watermark_enabled`). The tenant tunes rotation,
+size, spacing and opacity - plus the light/dark page background - in the CMS's
+"Watermark & Background" section (`admin/system/watermark-section.tsx`), whose
+preview renders the **same** component so it cannot drift from the site.
+
+Two things to keep if you touch it:
+
+- **Each logo is its own grid cell, not one repeating background.**
+  `background-size` on a raster image sets the drawn size _and_ the repeat
+  period, so there is no CSS way to leave a gap between copies. The cell is
+  `size + spacing`, the logo is drawn `size` wide inside it, and `MAX_TILES`
+  caps how many cells a tiny tile can produce.
+- **Both page backgrounds ship as CSS variables, never as one resolved color.**
+  The layout sets `--page-background-light` / `--page-background-dark` on
+  `<body>` and `globals.css` picks one per `[data-theme]`. An inline
+  `background` would be whatever the server resolved and would go stale the
+  moment the visitor toggles the theme.
+
 ## Shared utility classes in `app/globals.css`
 
 | Class                   | Use for                                                                                                       |

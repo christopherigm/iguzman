@@ -39,7 +39,9 @@ const COUNT = new Set(["pc", "slice", "scoop"]);
 
 const DIMENSIONS = [MASS, VOLUME];
 
-function dimensionFactor(unit: string): [Record<string, number> | null, number] {
+function dimensionFactor(
+  unit: string,
+): [Record<string, number> | null, number] {
   for (const dim of DIMENSIONS) {
     if (unit in dim) return [dim, dim[unit] as number];
   }
@@ -139,11 +141,12 @@ export function computeIngredientsCost(
         : (ing.name ?? ing.en_name ?? String(ing.id))
       : String(row.ingredient);
 
-    const servedUnits = row.is_removable ? Number(row.default_quantity || 0) : 1;
+    const servedUnits = row.is_removable
+      ? Number(row.default_quantity || 0)
+      : 1;
 
     const qty = row.quantity === "" ? null : Number(row.quantity);
-    const portionLabel =
-      qty !== null && row.unit ? `${qty} ${row.unit}` : null;
+    const portionLabel = qty !== null && row.unit ? `${qty} ${row.unit}` : null;
 
     const priceStr = ing?.price ?? null;
     const unpriced = !ing || priceStr === null || priceStr === "";
