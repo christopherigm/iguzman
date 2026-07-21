@@ -1,6 +1,5 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { Button } from "@repo/ui/core-elements/button";
-import { LinkButton } from "@repo/ui/core-elements/link-button";
 import { AboutIntro } from "@/components/about-intro";
 import { getSystem } from "@/lib/system";
 
@@ -29,7 +28,6 @@ export async function Intro() {
   const body = about || system?.slogan || "";
   if (!body) return null;
 
-  const hasServices = (system?.service_count ?? 0) > 0;
   const hasProducts = (system?.product_count ?? 0) > 0;
 
   return (
@@ -40,18 +38,18 @@ export async function Intro() {
       imageSrc={system?.img_about}
       imageAlt={system?.site_name ?? ""}
     >
-      {hasServices && (
-        <Button
-          text={t("intro.exploreServices")}
-          href="/categories/services"
-          kind="primary"
-          size="lg"
-        />
-      )}
+      {/* No "explore services" button here: the hero above already carries that
+          CTA, and repeating it one block later reads as filler. This section's
+          job is the story, so its primary CTA is the one that continues it. */}
+      <Button
+        text={t("intro.learnMore")}
+        href="/about"
+        kind="primary"
+        size="lg"
+      />
       {hasProducts && (
         <Button text={t("intro.viewProducts")} href="/products" size="lg" />
       )}
-      <LinkButton label={t("intro.learnMore")} href="/about" />
     </AboutIntro>
   );
 }

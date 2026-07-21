@@ -8,6 +8,7 @@ import { SystemImages, type SystemImageState } from "./system-images";
 import { PaymentsSection } from "./payments-section";
 import { WatermarkSection } from "./watermark-section";
 import { HeroVideoSection } from "./hero-video-section";
+import { TypographySection } from "./typography-section";
 import {
   LOGO_DERIVED_FIELDS,
   SYSTEM_IMAGE_FIELDS,
@@ -80,6 +81,9 @@ export default function AdminSystemPage() {
     watermark_opacity: 4,
     background_light: "#e5e5e5",
     background_dark: "#3c3c3c",
+    google_font_url: "",
+    font_display: "",
+    font_body: "",
   });
 
   /** Whether Stripe keys are already stored, per the API's write-only flag. */
@@ -168,6 +172,9 @@ export default function AdminSystemPage() {
           watermark_opacity: data.watermark_opacity ?? 4,
           background_light: data.background_light ?? "#e5e5e5",
           background_dark: data.background_dark ?? "#3c3c3c",
+          google_font_url: data.google_font_url ?? "",
+          font_display: data.font_display ?? "",
+          font_body: data.font_body ?? "",
         });
         setStripeConfigured(Boolean(data.stripe_configured));
         setStripeWebhookUrl(String(data.stripe_webhook_url ?? ""));
@@ -431,8 +438,10 @@ export default function AdminSystemPage() {
         success={success}
         slots={[
           {
-            // Right after the Highlights pair, before "About": hero composition,
-            // then the watermark/background, then the two section-background
+            // Right after the Highlights pair, before "About": typography (the
+            // tenant's fonts, since every preview below renders in them), then
+            // hero composition, the watermark/background, then the two
+            // section-background
             // builders they relate to - all the site's look-and-feel controls in
             // one run rather than scattered to the bottom of the form - and then
             // Payments, sitting directly above the About group. (AdminForm keys
@@ -441,6 +450,12 @@ export default function AdminSystemPage() {
             beforeKey: "about",
             node: (
               <Box flexDirection="column">
+                <TypographySection
+                  values={values}
+                  onChange={(k, v) =>
+                    setValues((prev) => ({ ...prev, [k]: v }))
+                  }
+                />
                 <HeroVideoSection
                   values={values}
                   onChange={(k, v) =>

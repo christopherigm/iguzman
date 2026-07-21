@@ -83,7 +83,14 @@ export function AboutIntro({
                 <Typography
                   as="p"
                   variant="body"
-                  styles={{ whiteSpace: "pre-line", lineHeight: 1.75 }}
+                  styles={{
+                    whiteSpace: "pre-line",
+                    lineHeight: 1.75,
+                    // Cap the measure: on a wide screen the half-width column
+                    // still runs past 75 characters a line, which is where
+                    // continuous prose gets tiring to track back from.
+                    maxWidth: "64ch",
+                  }}
                 >
                   {trimAbout(body)}
                 </Typography>

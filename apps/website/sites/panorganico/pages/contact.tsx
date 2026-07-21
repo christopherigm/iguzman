@@ -23,7 +23,9 @@ export async function Contact() {
   ]);
 
   const primary = system?.primary_color ?? "#8a5a2b";
-  const hasProducts = (system?.product_count ?? 0) > 0;
+  // The breads are MenuItems (food), not products - counting/linking products
+  // here would hide the CTA and, when shown, land on an empty listing.
+  const hasBreads = (system?.menu_item_count ?? 0) > 0;
 
   return (
     <Box
@@ -61,11 +63,11 @@ export async function Contact() {
             {t("contact.subtitle")}
           </Typography>
 
-          {hasProducts && (
+          {hasBreads && (
             <Box marginTop="8px">
               <Button
                 text={t("contact.productsCta")}
-                href="/products"
+                href="/categories/food"
                 kind="primary"
                 size="lg"
               />

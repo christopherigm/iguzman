@@ -38,6 +38,8 @@ fields at any new file you drop in here.
     "about": "...", "mission": "...", "vision": "...",
     "highlights_title": "...", "highlights_subtitle": "...",
     "highlights_bg": "...", "catalog_items_bg": "...",
+    "google_font_url": "https://fonts.googleapis.com/css2?family=A&family=B&display=swap",
+    "font_display": "A", "font_body": "B",   // headings / body; both must be in the URL above
     "video_link": "https://youtube...",     // optional; falls back to links.json
     // Any `en_*` mirror field (en_about, en_site_description, …) is copied when present.
     "assets": {                              // filenames in this folder; all optional

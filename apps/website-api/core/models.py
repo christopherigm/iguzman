@@ -1,8 +1,10 @@
 import os
 import uuid
 from decimal import Decimal
+from urllib.parse import urlparse
 
 from colorfield.fields import ColorField
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from core import image_sizes as sizes
@@ -44,6 +46,27 @@ CURRENCY_CHOICES = [
     ("CLP", "Chilean Peso"),
     ("BRL", "Brazilian Real"),
 ]
+
+
+# The only hosts a `google_font_url` may point at. This value is rendered by the
+# frontend into a `<link rel="stylesheet">` in the document head, so it is not
+# merely data: an arbitrary URL here would let whoever can edit a System pull a
+# stylesheet from any origin into every page of that site. Google serves the CSS
+# from fonts.googleapis.com and the font binaries from fonts.gstatic.com; only
+# the first is ever the stylesheet, but both are allowed so a tenant pasting a
+# gstatic URL fails loudly at validation rather than silently rendering nothing.
+GOOGLE_FONT_HOSTS = ("fonts.googleapis.com", "fonts.gstatic.com")
+
+
+def validate_google_font_url(value: str) -> None:
+    """Allow only a Google Fonts URL - see GOOGLE_FONT_HOSTS for why."""
+    if not value:
+        return
+    parsed = urlparse(value)
+    if parsed.scheme != "https" or parsed.hostname not in GOOGLE_FONT_HOSTS:
+        raise ValidationError(
+            "Must be an https URL on %s." % " or ".join(GOOGLE_FONT_HOSTS)
+        )
 
 
 class BasePicture(Common):
@@ -463,6 +486,37 @@ class System(Common):
         max_length=16,
         default="#3c3c3c",
         help_text="Page background color in the dark theme.",
+    )
+
+    # ── Typography ────────────────────────────────────────────────────────────
+    # The tenant's own typeface, loaded from Google Fonts. One URL carries both
+    # families (`css2?family=A&family=B`), and the two name fields say which of
+    # them is the display face and which is the body face - deriving that from
+    # the URL's `family=` order would make the choice implicit and unfixable
+    # from the CMS. All three blank means the site keeps the platform default,
+    # so an existing tenant's typography does not change under it.
+    google_font_url = models.URLField(
+        max_length=512,
+        blank=True,
+        default="",
+        validators=[validate_google_font_url],
+        help_text=(
+            "Google Fonts stylesheet URL loading this site's typefaces, e.g. "
+            "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700"
+            "&family=Karla:wght@400;500;700&display=swap. Blank keeps the default font."
+        ),
+    )
+    font_display = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="CSS family name for headings, e.g. 'Fraunces'. Must be loaded by the URL above.",
+    )
+    font_body = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="CSS family name for body text, e.g. 'Karla'. Must be loaded by the URL above.",
     )
 
     privacy_policy = models.TextField(null=True, blank=True)

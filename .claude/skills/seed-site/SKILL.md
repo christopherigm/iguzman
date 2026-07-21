@@ -86,8 +86,13 @@ to sell.** A landing page seeded from mushy positioning is worthless.
      prices + currency** (CFO: challenge margins/price points that don't add up).
      **First decide which of the three Buyable families this catalog is** (see
      the food rule below) — it changes which brief section you write.
-   - **Voice & brand** — tone, primary/secondary colors, bilingual? (fill `en_*`
-     mirror fields if the site serves English + Spanish).
+   - **Voice & brand** — tone, primary/secondary colors, **typeface**, bilingual?
+     (fill `en_*` mirror fields if the site serves English + Spanish). On the
+     typeface: ask what the brand should _sound_ like in type (editorial and
+     warm? technical and neutral? hand-made?) and propose **one concrete Google
+     Fonts pairing** — a display face for headings and a quieter text face for
+     body — rather than asking the operator to name fonts cold. See the
+     typography note under Part 2.
    - **Assets** — do they have a hero video (YouTube), logo, real photos? If not,
      confirm you'll use the `seed_assets/` placeholder pool and they swap later.
 4. **Know when to stop.** When you can state the positioning in one sentence, name
@@ -148,6 +153,23 @@ a product and you silently throw away ingredient customisation.
      label. Leave the internal recipe out — the seed doesn't populate
      `recipe_steps`.
    - Fill `en_*` fields only when the site is bilingual.
+   - **Set the typography** — `google_font_url` plus `font_display` (headings)
+     and `font_body` (body text). One `css2?family=A&family=B&display=swap` URL
+     loads both families; the two name fields say which is which, so both names
+     **must** appear in the URL. Rules:
+     - The URL must be on `fonts.googleapis.com` — the API rejects any other
+       host, because the site renders it into a `<link rel="stylesheet">`.
+     - Request only the weights the site uses (`Karla:wght@400;500;700`), not
+       the whole family — every extra weight is bytes on first paint.
+     - Always end with `&display=swap` so text paints in the fallback while the
+       font loads.
+     - Omit all three to keep the platform default (Roboto). Naming only
+       `font_body` is legitimate — a single-family site gets it for headings too.
+     - Pick for the business, not for novelty, and **never** default to the
+       geometric-sans-plus-purple look `/site-design` calls out. A farm or an
+       artisan reads well in a soft serif (Fraunces, Bitter) over a quiet
+       grotesque (Karla, Source Sans 3); a technical B2B product usually wants
+       one neutral sans in two weights.
 6. **Run the seeder** from `apps/website-api`:
    ```bash
    python manage.py seed_site --brief seed_assets/briefs/<host>.json --reset

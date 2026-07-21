@@ -51,6 +51,17 @@ export interface System {
   watermark_opacity: number;
   background_light: string;
   background_dark: string;
+  /**
+   * Google Fonts stylesheet URL carrying this tenant's typefaces (one URL can
+   * load both families). Empty keeps the platform default. The API restricts it
+   * to a Google Fonts host, and the layout re-checks before rendering the
+   * `<link>` - see `isGoogleFontUrl` in `lib/fonts.ts`.
+   */
+  google_font_url: string;
+  /** CSS family name used for headings, e.g. "Fraunces". Empty = default. */
+  font_display: string;
+  /** CSS family name used for body text, e.g. "Karla". Empty = default. */
+  font_body: string;
   about: string;
   en_about: string;
   mission: string;

@@ -1,12 +1,28 @@
 @import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap");
 
+/* Typography is per-tenant: `System.google_font_url` + `font_display` /
+   `font_body`, which the locale layout turns into a stylesheet <link> and the
+   two variables below. Neither variable is set for a tenant that has chosen no
+   font, so the Roboto imported above stays the platform default and no existing
+   site changes appearance. Headings read --font-display, everything else
+   --font-body; a tenant naming only a body face gets it for both (the layout
+   copies it into --font-display). */
 html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
-  font-family: "Roboto", sans-serif;
+  font-family: var(--font-body, "Roboto"), sans-serif;
   font-optical-sizing: auto;
   font-style: normal;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display, var(--font-body, "Roboto")), sans-serif;
 }
 
 /* The page background is per-tenant (System.background_light / _dark, set as

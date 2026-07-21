@@ -185,6 +185,16 @@ class SystemAdmin(admin.ModelAdmin):
             ),
             "classes": ("collapse",),
         }),
+        ("Typography", {
+            "fields": ("google_font_url", "font_display", "font_body"),
+            "description": (
+                "The site's typefaces, loaded from Google Fonts. One stylesheet URL "
+                "can carry both families (css2?family=A&family=B); the two name "
+                "fields say which is used for headings and which for body text. "
+                "Leave all three blank to keep the platform default font."
+            ),
+            "classes": ("collapse",),
+        }),
         ("Payments (Stripe)", {
             "fields": ("stripe_enabled", "stripe_publishable_key", "stripe_configured"),
             "description": (

@@ -54,7 +54,9 @@ export function heroLogoBackgroundStyle(
     case "triangle":
       return { clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)" };
     case "pentagon":
-      return { clipPath: "polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)" };
+      return {
+        clipPath: "polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)",
+      };
     case "hexagon":
       return {
         clipPath:
@@ -125,6 +127,33 @@ export type HeroProps = {
   backgroundAlt?: string;
   /** Slogan text rendered centred below the logo (or centred alone if no logo). */
   slogan?: string | null;
+  /**
+   * A quieter supporting line under the slogan - smaller, lighter and less
+   * letter-spaced, so the two lines read as a headline and a subtitle instead
+   * of two equal-weight sentences. Omit for a single-line hero. @default null
+   */
+  subline?: string | null;
+  /**
+   * Horizontal alignment of the slogan block. `start` also caps its measure, so
+   * a left-aligned headline breaks into a tight stack of short lines rather
+   * than running the full width of the container. The logo (in the `default`
+   * layout) stays centred either way. @default "center"
+   */
+  align?: "center" | "start";
+  /**
+   * A call-to-action row rendered under the hero text - the caller's own
+   * `Button`/`LinkButton` primitives, so this component stays free of routing
+   * and translation concerns. Follows `align`. @default undefined
+   */
+  actions?: React.ReactNode;
+  /**
+   * Opacity (0-1) of a flat black scrim over the whole hero, under the content.
+   * The built-in gradient only darkens the bottom ~45%, so text sitting higher
+   * up has to rely on its own text-shadow; a scrim darkens the whole frame
+   * instead and lets the type carry itself. `0` renders no scrim at all.
+   * @default 0
+   */
+  scrim?: number;
   /** Drift the background against the page as it scrolls. Pass false for a static background. */
   parallax?: boolean;
   /** How the logo and slogan are composed over the background. @default "default" */
@@ -191,6 +220,10 @@ export function Hero({
   logoAlt = "",
   backgroundAlt = "",
   slogan,
+  subline,
+  actions,
+  align = "center",
+  scrim = 0,
   parallax = true,
   layout = "default",
   logoBackground = "none",
@@ -210,6 +243,7 @@ export function Hero({
   // badge there is nothing to straddle with, so profile falls back to default.
   const hasBadge = logoBackground !== "none" && Boolean(logoImage);
   const isProfile = layout === "profile" && hasBadge;
+  const isStart = align === "start";
 
   // At scale 1 keep the exact CSS strings the live site uses; only wrap them in
   // a `calc(… * scale)` when a preview actually asks for a smaller content size.
@@ -323,6 +357,20 @@ export function Hero({
         )}
       </ParallaxLayer>
 
+      {/* ── Flat scrim (whole frame, opt-in) ─────────────────── */}
+      {/* Sits under the gradient so the two compose: the scrim evens out a busy
+          background everywhere, the gradient still anchors the bottom edge. */}
+      {scrim > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: `rgba(0,0,0,${Math.min(Math.max(scrim, 0), 1)})`,
+            zIndex: 1,
+          }}
+        />
+      )}
+
       {/* ── Gradient overlay (bottom → mid) ──────────────────── */}
       <div
         style={{
@@ -339,7 +387,7 @@ export function Hero({
           below, so the slogan alone is centred in the space above it. It is
           centred in the *lower* half of that space (`top: 50%`), which sits it
           just above the circle rather than adrift in the middle of the video. */}
-      {(logoImage || slogan) && (
+      {(logoImage || slogan || subline || actions) && (
         <div
           style={{
             position: "absolute",
@@ -373,25 +421,68 @@ export function Hero({
                 }}
               />
             ))}
-          {slogan && (
-            <Container size="md" paddingX={16}>
-              <p
-                style={{
-                  margin: 0,
-                  color: "#fff",
-                  textAlign: "center",
-                  fontSize: scaled("clamp(1.25rem, 3vw, 2rem)"),
-                  fontWeight: 600,
-                  letterSpacing: "0.04em",
-                  textShadow: "0 2px 8px rgba(0,0,0,0.7)",
-                  // Honour the newlines the tenant typed in the multirow slogan
-                  // field: render each line on its own line, but still wrap long
-                  // lines. Consecutive spaces stay collapsed (pre-line, not pre-wrap).
-                  whiteSpace: "pre-line",
-                }}
-              >
-                {slogan}
-              </p>
+          {(slogan || subline || actions) && (
+            <Container size="lg" paddingX={16}>
+              {slogan && (
+                <p
+                  style={{
+                    margin: 0,
+                    color: "#fff",
+                    textAlign: isStart ? "left" : "center",
+                    // Left-aligned type needs a measure, or the headline runs
+                    // the container's full width and stops reading as a stack.
+                    maxWidth: isStart ? "20ch" : undefined,
+                    fontFamily: "var(--font-display, inherit)",
+                    fontSize: scaled("clamp(1.25rem, 3vw, 2rem)"),
+                    fontWeight: 600,
+                    letterSpacing: "0.04em",
+                    // A scrim already carries the contrast, so the shadow -
+                    // which is what makes un-scrimmed hero type look pasted on -
+                    // is only drawn when there is no scrim to rely on.
+                    textShadow:
+                      scrim > 0 ? undefined : "0 2px 8px rgba(0,0,0,0.7)",
+                    // Honour the newlines the tenant typed in the multirow slogan
+                    // field: render each line on its own line, but still wrap long
+                    // lines. Consecutive spaces stay collapsed (pre-line, not pre-wrap).
+                    whiteSpace: "pre-line",
+                  }}
+                >
+                  {slogan}
+                </p>
+              )}
+              {subline && (
+                <p
+                  style={{
+                    margin: slogan ? `${scaled("0.75rem")} 0 0` : 0,
+                    color: "rgba(255,255,255,0.86)",
+                    textAlign: isStart ? "left" : "center",
+                    maxWidth: isStart ? "42ch" : undefined,
+                    marginLeft: isStart ? undefined : "auto",
+                    marginRight: isStart ? undefined : "auto",
+                    fontSize: scaled("clamp(0.9375rem, 1.4vw, 1.125rem)"),
+                    fontWeight: 400,
+                    lineHeight: 1.55,
+                    textShadow:
+                      scrim > 0 ? undefined : "0 1px 6px rgba(0,0,0,0.7)",
+                    whiteSpace: "pre-line",
+                  }}
+                >
+                  {subline}
+                </p>
+              )}
+              {actions && (
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 12,
+                    marginTop: scaled("1.5rem"),
+                    justifyContent: isStart ? "flex-start" : "center",
+                  }}
+                >
+                  {actions}
+                </div>
+              )}
             </Container>
           )}
         </div>

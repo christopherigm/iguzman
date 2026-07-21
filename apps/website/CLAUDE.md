@@ -150,6 +150,18 @@ picks it in the CMS's "Hero video configuration" section
 (`admin/system/hero-video-section.tsx`), whose preview renders the **real**
 `Hero`, so it cannot drift from the site.
 
+The shared `Hero` also takes four optional composition props, all defaulting to
+the historical behaviour so no existing site moved when they landed: `scrim`
+(0-1 flat black over the whole frame - the built-in gradient only darkens the
+bottom ~45%, so text higher up otherwise leans on a text-shadow, which is what
+makes hero type look pasted on), `align` (`"start"` left-aligns the text and
+caps its measure), `subline` (a quieter supporting line under the slogan) and
+`actions` (a CTA row). The website wrapper (`components/hero.tsx`) adds
+`splitSlogan`, which reads the tenant's **first slogan line as the headline and
+the rest as the subline** - the hierarchy is a design decision the site makes,
+without adding a CMS field for the customer to fill. `sites/cafedealtura` uses
+all of it; the default template uses none.
+
 - **`profile` bleeds a logo circle half-way below the video**, so both heroes
   wrap themselves in an extra `Box` and hang the disc off it - the video's own
   box keeps `overflow: hidden`. That wrapper's `marginBottom` reserves the
@@ -158,6 +170,32 @@ picks it in the CMS's "Hero video configuration" section
   resolves per theme from `--page-background-light` / `--page-background-dark`.
   Keep that variable: it is what makes the disc read as a hole through the video
   onto the page, in either theme, without a reload.
+
+## Typography (per-tenant fonts)
+
+A tenant can ship its own typefaces: `System.google_font_url` (one Google Fonts
+stylesheet URL, which can carry both families) plus `font_display` (headings)
+and `font_body` (body text). The CMS section is
+`admin/system/typography-section.tsx`, whose preview loads the **real**
+stylesheet so it cannot drift from the site. `/seed-site` sets all three from
+the brief.
+
+- **The `<link>` is rendered by the locale layout, not `@import`ed from
+  `globals.css`** - the URL is per-tenant, and an `@import` would block on the
+  CSS file before the font fetch even starts. The layout publishes the two
+  families as `--font-display` / `--font-body`; `globals.css` applies
+  `--font-body` to `html, body` and `--font-display` to `h1`-`h6`.
+- **Both variables are unset for a tenant with no font**, so the Roboto
+  `@import` at the top of `globals.css` remains the platform default and no
+  existing site changed appearance when this landed. Don't remove that import
+  without checking every tenant.
+- **The URL is host-restricted in three places** - the model validator, the
+  write serializer, and `isGoogleFontUrl` in `lib/system.ts`. The frontend check
+  is not redundant: the value lands in a `<link rel="stylesheet">` on every page
+  of a tenant's site, and a row written before the validator existed (or straight
+  into the DB) would otherwise pull a stylesheet from an arbitrary origin.
+  `cssFontFamily` likewise rejects, rather than escapes, a family name that
+  isn't plausibly a family name - it ends up in an inline `style` attribute.
 
 ## Logo watermark & page background
 

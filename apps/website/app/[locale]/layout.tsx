@@ -28,6 +28,7 @@ import { LogoWatermark } from "@/components/logo-watermark";
 import packageJson from "@/package.json";
 import { getCartCount } from "@/lib/cart";
 import { getSystem } from "@/lib/system";
+import { isGoogleFontUrl, cssFontFamily } from "@/lib/fonts";
 import { DEV_SITE_COOKIE, SITE_CONFIGS } from "@/sites/registry";
 import "../globals.css";
 
@@ -148,6 +149,24 @@ export default async function LocaleLayout({ children, params }: Props) {
   (bodyStyle as Record<string, string>)["--page-background-dark"] =
     system?.background_dark ?? "#3c3c3c";
 
+  // The tenant's typefaces. Both variables are optional: `globals.css` falls
+  // back to the platform stack, so a tenant that has set no font (or only a
+  // body one) renders exactly as before. The families are published as
+  // variables rather than as a resolved `font-family` here so a component can
+  // ask for the display face specifically (`var(--font-display)`), which is the
+  // whole point of storing the two names separately.
+  const fontUrl = isGoogleFontUrl(system?.google_font_url)
+    ? (system?.google_font_url ?? "")
+    : "";
+  const fontDisplay = fontUrl ? cssFontFamily(system?.font_display) : null;
+  const fontBody = fontUrl ? cssFontFamily(system?.font_body) : null;
+  if (fontBody) (bodyStyle as Record<string, string>)["--font-body"] = fontBody;
+  // A tenant that names only a body face gets it for headings too, which is a
+  // legitimate single-family design - not a missing value to fall back from.
+  const display = fontDisplay ?? fontBody;
+  if (display)
+    (bodyStyle as Record<string, string>)["--font-display"] = display;
+
   return (
     <html
       lang={locale}
@@ -156,6 +175,21 @@ export default async function LocaleLayout({ children, params }: Props) {
       suppressHydrationWarning
     >
       <head>
+        {/* The tenant's own typefaces, if they set any. Rendered here rather
+            than @import-ed from globals.css because the URL is per-tenant, and
+            because an @import blocks on the CSS file before it even starts
+            fetching the font. `isGoogleFontUrl` has already vetted the host. */}
+        {fontUrl && (
+          <>
+            <link rel="preconnect" href="https://fonts.googleapis.com" />
+            <link
+              rel="preconnect"
+              href="https://fonts.gstatic.com"
+              crossOrigin=""
+            />
+            <link rel="stylesheet" href={fontUrl} />
+          </>
+        )}
         <ThemeScript defaultMode="light" />
       </head>
       <body style={bodyStyle}>

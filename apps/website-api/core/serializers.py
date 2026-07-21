@@ -7,7 +7,15 @@ from rest_framework import serializers
 
 from . import image_sizes
 from .image_sizes import REGULAR, SMALL, MEDIUM, STANDARD, image_cfg
-from .models import Brand, CompanyHighlight, CompanyHighlightItem, SuccessStory, SuccessStoryImage, System
+from .models import (
+    Brand,
+    CompanyHighlight,
+    CompanyHighlightItem,
+    SuccessStory,
+    SuccessStoryImage,
+    System,
+    validate_google_font_url,
+)
 
 # ---------------------------------------------------------------------------
 # Image processing
@@ -488,6 +496,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "watermark_enabled", "watermark_rotation", "watermark_intercalated",
             "watermark_size", "watermark_spacing", "watermark_opacity",
             "background_light", "background_dark",
+            "google_font_url", "font_display", "font_body",
             "about", "en_about",
             "mission", "en_mission",
             "vision", "en_vision",
@@ -564,6 +573,7 @@ _TEXT_FIELDS = [
     "watermark_enabled", "watermark_rotation", "watermark_intercalated",
     "watermark_size", "watermark_spacing", "watermark_opacity",
     "background_light", "background_dark",
+    "google_font_url", "font_display", "font_body",
     "about", "en_about", "mission", "en_mission", "vision", "en_vision",
     "privacy_policy", "en_privacy_policy",
     "terms_and_conditions", "en_terms_and_conditions",
@@ -631,6 +641,16 @@ class SystemWriteSerializer(serializers.Serializer):
     watermark_opacity  = serializers.IntegerField(required=False, min_value=1, max_value=25)
     background_light   = serializers.CharField(max_length=16, required=False)
     background_dark    = serializers.CharField(max_length=16, required=False)
+
+    # Typography. The URL is host-restricted by the same validator the model
+    # uses, because the frontend renders it into a <link rel="stylesheet"> - see
+    # core.models.validate_google_font_url.
+    google_font_url = serializers.URLField(
+        max_length=512, required=False, allow_blank=True,
+        validators=[validate_google_font_url],
+    )
+    font_display = serializers.CharField(max_length=64, required=False, allow_blank=True)
+    font_body    = serializers.CharField(max_length=64, required=False, allow_blank=True)
 
     about               = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     en_about            = serializers.CharField(required=False, allow_null=True, allow_blank=True)

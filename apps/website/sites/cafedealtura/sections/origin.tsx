@@ -1,6 +1,5 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { Button } from "@repo/ui/core-elements/button";
-import { LinkButton } from "@repo/ui/core-elements/link-button";
 import { AboutIntro } from "@/components/about-intro";
 import { getSystem } from "@/lib/system";
 import { localized } from "../localized";
@@ -26,8 +25,6 @@ export async function Origin() {
   const body = about || system?.slogan || "";
   if (!body) return null;
 
-  const hasProducts = (system?.product_count ?? 0) > 0;
-
   return (
     <AboutIntro
       eyebrow={t("origin.eyebrow")}
@@ -36,15 +33,15 @@ export async function Origin() {
       imageSrc={system?.img_about}
       imageAlt={system?.site_name ?? ""}
     >
-      {hasProducts && (
-        <Button
-          text={t("origin.viewCoffees")}
-          href="/categories/products"
-          kind="primary"
-          size="lg"
-        />
-      )}
-      <LinkButton label={t("origin.learnMore")} href="/about" />
+      {/* No "view our coffees" button here: the hero above already carries that
+          CTA, and repeating it two blocks later reads as filler. This section's
+          job is the story, so its CTA is the one that continues it. */}
+      <Button
+        text={t("origin.learnMore")}
+        href="/about"
+        kind="primary"
+        size="lg"
+      />
     </AboutIntro>
   );
 }
