@@ -139,9 +139,9 @@ export function ItemHeroVideo({
       {isProfile ? (
         <>
           {/* Centred in what the circle leaves, biased low: the box spans the
-              lower half of the video and stops half a circle short of the
-              bottom edge, so the title sits just above the disc rather than
-              adrift in the middle of the frame. */}
+              lower half of the video and stops half a circle (plus a 24px gap)
+              short of the bottom edge, so the title sits just above the disc -
+              clear of it - rather than adrift in the middle of the frame. */}
           <Box
             alignItems="center"
             justifyContent="center"
@@ -151,7 +151,7 @@ export function ItemHeroVideo({
               top: "50%",
               left: 0,
               right: 0,
-              bottom: `calc(${profileSize} / 2)`,
+              bottom: `calc(${profileSize} / 2 + 24px)`,
               zIndex: 10,
             }}
           >

@@ -209,7 +209,11 @@ function buildCss(
   if (type === "solid") return stops[0]?.color ?? "#000000";
   const stopsStr = stops.map((s) => `${s.color} ${s.position}%`).join(", ");
   if (type === "linear") return `linear-gradient(${angle}deg, ${stopsStr})`;
-  return `radial-gradient(circle at center, ${stopsStr})`;
+  // `ellipse`, not `circle`: the value paints wide, short section bands, and a
+  // circle ignores their aspect ratio - it gets sized to the far corners and
+  // its transition runs off the top/bottom edges. An ellipse follows the box's
+  // shape; `farthest-corner` keeps a soft falloff that ends at the corners.
+  return `radial-gradient(ellipse farthest-corner at center, ${stopsStr})`;
 }
 
 // ── component ─────────────────────────────────────────────────────────────────

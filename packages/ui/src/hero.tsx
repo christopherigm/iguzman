@@ -89,6 +89,26 @@ export const HERO_BADGE_SHADOW =
   "drop-shadow(0 3px 5px rgba(0,0,0,0.21)) drop-shadow(0 4px 11px rgba(0,0,0,0.105))";
 
 /**
+ * Same-origin URL for a (possibly cross-origin) logo, safe to use as a CSS
+ * `mask-image`. A cross-origin mask image that is not served CORS-clean resolves
+ * to an *empty* mask in Chromium/WebKit - the masked element is then clipped away
+ * entirely. That is why the `logo`-shape plate shows in development (media served
+ * same-origin from localhost) but vanishes in production (media served from a
+ * separate API/CDN origin, leaving only the logo drawn on top). Routing an
+ * absolute http(s) raster URL through Next's same-origin image optimizer removes
+ * the cross-origin barrier; an SVG (which the optimizer refuses without
+ * `dangerouslyAllowSVG`), a `data:` URI, or a relative/same-origin path is left
+ * untouched. Shared so both hero consumers resolve the mask the same way.
+ */
+export function heroLogoMaskUrl(logoUrl: string): string {
+  const isRemote = /^https?:\/\//i.test(logoUrl);
+  const isSvg = /\.svg(?:[?#]|$)/i.test(logoUrl);
+  return isRemote && !isSvg
+    ? `/_next/image?url=${encodeURIComponent(logoUrl)}&w=384&q=75`
+    : logoUrl;
+}
+
+/**
  * Style for the `logo`-shape badge's backing plate: a solid fill clipped to the
  * logo's own alpha via a CSS mask, so the badge reads as a page-coloured hole in
  * the shape of the logo (the raster analogue of the geometric plates). `contain`
@@ -96,9 +116,10 @@ export const HERO_BADGE_SHADOW =
  * transparent (alpha) logo. Shared so both hero consumers cut the plate the same.
  */
 export function heroLogoMaskStyle(logoUrl: string): CSSProperties {
+  const src = heroLogoMaskUrl(logoUrl);
   return {
-    WebkitMaskImage: `url("${logoUrl}")`,
-    maskImage: `url("${logoUrl}")`,
+    WebkitMaskImage: `url("${src}")`,
+    maskImage: `url("${src}")`,
     WebkitMaskSize: "contain",
     maskSize: "contain",
     WebkitMaskRepeat: "no-repeat",
@@ -113,6 +134,14 @@ export function heroLogoMaskStyle(logoUrl: string): CSSProperties {
  * phone widths a fixed 200px disc would eat most of the hero.
  */
 export const HERO_PROFILE_LOGO_SIZE = "clamp(145px, 20vw, 250px)";
+
+/**
+ * Diameter of the logo badge in the `default` layout. Smaller than the `profile`
+ * disc because here the badge shares the frame with the slogan/subline/CTA
+ * stacked below it: at the profile disc's size that stack would push the badge up
+ * under the fixed navbar (the very bug the content overlay's top inset fixes).
+ */
+const DEFAULT_LOGO_SIZE = "clamp(96px, 13vw, 160px)";
 
 export type HeroProps = {
   /** YouTube, Vimeo, or direct video file URL. Takes priority over backgroundImage. */
@@ -259,6 +288,17 @@ export function Hero({
       : `calc((${HERO_PROFILE_LOGO_SIZE}) * ${badgeScale})`,
   );
 
+  // The drawn badge diameter. In `profile` the badge *is* the straddling disc, so
+  // it keeps `profileLogoSize` (which the wrapper margin and disc offsets are
+  // built on). In `default` it sits above the text stack and must clear the
+  // navbar, so it draws at the smaller `DEFAULT_LOGO_SIZE`.
+  const badgeBaseSize = isProfile ? HERO_PROFILE_LOGO_SIZE : DEFAULT_LOGO_SIZE;
+  const badgeSize = scaled(
+    badgeScale === 1
+      ? badgeBaseSize
+      : `calc((${badgeBaseSize}) * ${badgeScale})`,
+  );
+
   // Fraction of the badge the logo is drawn at. Scaling the `cover` image down
   // about its centre keeps the exact 100% look and reveals a ring of the badge's
   // own background around a shrunk logo.
@@ -271,8 +311,8 @@ export function Hero({
   const isLogoShape = logoBackground === "logo";
   const badge = hasBadge ? (
     <Box
-      width={profileLogoSize}
-      height={profileLogoSize}
+      width={badgeSize}
+      height={badgeSize}
       // Geometric shapes are opaque page-background plates; the `logo` shape
       // draws its plate through a mask (below) instead, so the box stays clear.
       backgroundColor={
@@ -385,16 +425,19 @@ export function Hero({
       {/* ── Centred logo + slogan ─────────────────────────────── */}
       {/* In the profile layout the logo has left this stack for the circle
           below, so the slogan alone is centred in the space above it. It is
-          centred in the *lower* half of that space (`top: 50%`), which sits it
-          just above the circle rather than adrift in the middle of the video. */}
+          centred in the *lower* half of that space (`top: 50%`), sitting it just
+          above the circle (with a 24px gap) rather than adrift in the middle of
+          the video. In the default layout the stack is inset from the top by the
+          navbar height so the centred logo+text never tucks under the fixed
+          navbar overlaying the hero's top edge. */}
       {(logoImage || slogan || subline || actions) && (
         <div
           style={{
             position: "absolute",
-            top: isProfile ? "50%" : 0,
+            top: isProfile ? "50%" : "var(--ui-navbar-height, 57px)",
             left: 0,
             right: 0,
-            bottom: isProfile ? `calc(${profileLogoSize} / 2)` : 0,
+            bottom: isProfile ? `calc(${profileLogoSize} / 2 + 24px)` : 0,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",

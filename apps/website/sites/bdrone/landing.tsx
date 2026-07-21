@@ -3,6 +3,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Container } from "@repo/ui/core-elements/container";
 import { getSystem } from "@/lib/system";
+import { fitSectionBackground } from "@/lib/section-background";
 import { Hero } from "@/components/hero";
 import { SuccessStories } from "@/components/success-stories";
 import { CompanyHighlights } from "@/components/company-highlights";
@@ -41,8 +42,8 @@ export async function Landing() {
   const band = "color-mix(in srgb, var(--accent) 6%, var(--surface-2))";
   // `||`, not `??`: clearing the field in the CMS stores an empty string, which
   // would otherwise paint the band as `background: ""` (i.e. nothing).
-  const highlightsBg = system?.highlights_bg || band;
-  const itemsBg = system?.catalog_items_bg || band;
+  const highlightsBg = fitSectionBackground(system?.highlights_bg || band);
+  const itemsBg = fitSectionBackground(system?.catalog_items_bg || band);
 
   const hasServices = (system?.service_count ?? 0) > 0;
 
