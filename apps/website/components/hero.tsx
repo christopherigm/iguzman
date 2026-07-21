@@ -14,6 +14,9 @@ export function Hero({ system }: Props) {
       logoAlt={system?.site_name}
       slogan={system?.slogan}
       layout={system?.hero_video_layout ?? "default"}
+      logoBackground={system?.hero_logo_background ?? "none"}
+      profileLogoScale={(system?.hero_logo_scale ?? 100) / 100}
+      profileBackgroundScale={(system?.hero_logo_background_scale ?? 100) / 100}
       parallax={false}
     />
   );

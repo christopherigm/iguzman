@@ -157,10 +157,19 @@ class SystemAdmin(admin.ModelAdmin):
             "fields": ("catalog_items_bg",),
         }),
         ("Hero Video", {
-            "fields": ("hero_video_layout",),
+            "fields": (
+                "hero_video_layout",
+                "hero_logo_background",
+                "hero_logo_background_scale",
+                "hero_logo_scale",
+            ),
             "description": (
                 "How the logo and text are composed over the hero video, on the "
-                "landing page and on item detail pages that have one."
+                "landing page and on item detail pages that have one. The logo "
+                "background shape (and its size) apply in either layout; 'None' "
+                "draws the logo with no backing shape, and 'Logo silhouette' "
+                "clips the backing to the logo's own shape (needs a transparent "
+                "logo)."
             ),
         }),
         ("Watermark & Background", {

@@ -128,6 +128,9 @@ export default async function MenuItemPage({ params }: Props) {
           layout={system?.hero_video_layout ?? "default"}
           logo={system?.img_logo_hero}
           logoAlt={system?.site_name ?? ""}
+          logoScale={(system?.hero_logo_scale ?? 100) / 100}
+          backgroundScale={(system?.hero_logo_background_scale ?? 100) / 100}
+          shape={system?.hero_logo_background ?? "none"}
         />
       )}
       <Container

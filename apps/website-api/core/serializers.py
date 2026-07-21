@@ -483,7 +483,8 @@ class SystemSerializer(serializers.ModelSerializer):
             "highlights_title", "en_highlights_title",
             "highlights_subtitle", "en_highlights_subtitle",
             "catalog_items_bg",
-            "hero_video_layout",
+            "hero_video_layout", "hero_logo_background", "hero_logo_scale",
+            "hero_logo_background_scale",
             "watermark_enabled", "watermark_rotation", "watermark_size",
             "watermark_spacing", "watermark_opacity",
             "background_light", "background_dark",
@@ -558,7 +559,8 @@ _TEXT_FIELDS = [
     "highlights_title", "en_highlights_title",
     "highlights_subtitle", "en_highlights_subtitle",
     "catalog_items_bg",
-    "hero_video_layout",
+    "hero_video_layout", "hero_logo_background", "hero_logo_scale",
+    "hero_logo_background_scale",
     "watermark_enabled", "watermark_rotation", "watermark_size",
     "watermark_spacing", "watermark_opacity",
     "background_light", "background_dark",
@@ -603,6 +605,18 @@ class SystemWriteSerializer(serializers.Serializer):
     hero_video_layout = serializers.ChoiceField(
         choices=[c[0] for c in System.HERO_LAYOUT_CHOICES], required=False
     )
+    # The shape drawn behind the logo, in either layout. Constrained to the shapes
+    # the frontend can render - an unknown value would fall back to no badge.
+    hero_logo_background = serializers.ChoiceField(
+        choices=[c[0] for c in System.HERO_LOGO_BACKGROUND_CHOICES], required=False
+    )
+    # The same bounds the CMS slider offers; enforced here because the CMS is not
+    # the only possible caller. Below 50 the logo would all but vanish inside the
+    # disc; above 100 there is nothing more to fill.
+    hero_logo_scale = serializers.IntegerField(required=False, min_value=50, max_value=100)
+    # Same bounds and rationale as hero_logo_scale; below 50 the badge is too
+    # small to read as a backing, above 100 there is nothing bigger to draw.
+    hero_logo_background_scale = serializers.IntegerField(required=False, min_value=50, max_value=100)
     enabled         = serializers.BooleanField(required=False)
 
     # Watermark & page background. The bounds are the same ones the CMS sliders

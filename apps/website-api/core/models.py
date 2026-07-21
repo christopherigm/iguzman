@@ -366,6 +366,58 @@ class System(Common):
         default=HERO_LAYOUT_DEFAULT,
         help_text="How the logo and text are laid out over the hero video.",
     )
+    # ── Logo background badge ─────────────────────────────────────────────────
+    # A decorative shape drawn behind the hero logo, in either layout. In the
+    # "profile" layout it is the badge straddling the video's bottom edge (the
+    # former hard-coded circle, now any shape); in "default" it is a badge centred
+    # behind the logo over the video. "none" draws the logo with no backing shape,
+    # which is also what the "profile" layout falls back to - with no badge there
+    # is nothing to straddle the edge with, so it renders like the default layout.
+    HERO_LOGO_BG_NONE = "none"
+    HERO_LOGO_BG_CIRCLE = "circle"
+    HERO_LOGO_BG_SQUARE = "square"
+    HERO_LOGO_BG_ROUNDED = "rounded"
+    HERO_LOGO_BG_TRIANGLE = "triangle"
+    HERO_LOGO_BG_PENTAGON = "pentagon"
+    HERO_LOGO_BG_HEXAGON = "hexagon"
+    HERO_LOGO_BG_OCTAGON = "octagon"
+    HERO_LOGO_BG_LOGO = "logo"
+    HERO_LOGO_BACKGROUND_CHOICES = (
+        (HERO_LOGO_BG_NONE, "None"),
+        (HERO_LOGO_BG_CIRCLE, "Circle"),
+        (HERO_LOGO_BG_SQUARE, "Square"),
+        (HERO_LOGO_BG_ROUNDED, "Square with rounded corners (8px)"),
+        (HERO_LOGO_BG_TRIANGLE, "Triangle"),
+        (HERO_LOGO_BG_PENTAGON, "Pentagon"),
+        (HERO_LOGO_BG_HEXAGON, "Hexagon"),
+        (HERO_LOGO_BG_OCTAGON, "Octagon"),
+        # Clips the plate to the logo's own silhouette (via a CSS mask on the
+        # logo's alpha) instead of a geometric shape; needs a transparent logo.
+        (HERO_LOGO_BG_LOGO, "Logo silhouette (transparent logo)"),
+    )
+    hero_logo_background = models.CharField(
+        max_length=16,
+        choices=HERO_LOGO_BACKGROUND_CHOICES,
+        default=HERO_LOGO_BG_NONE,
+        help_text="Shape drawn behind the hero logo, in either layout. 'None' draws the logo plain.",
+    )
+    # The drawn size of the logo inside the background shape, as a whole percent of
+    # the badge. 100 is edge-to-edge "cover" fill; below that the logo shrinks,
+    # centred, leaving a ring of the badge's page-background colour around it. Only
+    # meaningful when hero_logo_background is not "none". Stored as a whole percent
+    # (not a float) because that is what the CMS slider emits and the frontend consumes.
+    hero_logo_scale = models.PositiveSmallIntegerField(
+        default=100,
+        help_text="Logo size inside the background shape, as a whole percent (50-100).",
+    )
+    # The drawn size of the badge itself, as a whole percent of its default
+    # diameter; below 100 the whole badge (shape and logo) shrinks about its
+    # centre. Independent of hero_logo_scale, which sizes the logo within the
+    # badge. Only meaningful when hero_logo_background is not "none".
+    hero_logo_background_scale = models.PositiveSmallIntegerField(
+        default=100,
+        help_text="Background badge size, as a whole percent of its default diameter (50-100).",
+    )
 
     # ── Watermark & page background ───────────────────────────────────────────
     # The logo tiled faintly behind every public page, plus the page background

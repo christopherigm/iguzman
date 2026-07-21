@@ -20,14 +20,28 @@ export interface GalleryImage {
   alt: string;
 }
 
+type GalleryOrientation = "horizontal" | "vertical";
+
+/**
+ * Per-breakpoint override for the gallery slide orientation. Each key pins the
+ * slide to a horizontal (5:4) or vertical (4:5) frame within that breakpoint
+ * band only. Omitted breakpoints fall back to the JS-computed aspect ratio.
+ * e.g. { xs: "horizontal", sm: "horizontal" } forces landscape below 900px.
+ */
+export type GalleryForceOrientation = Partial<
+  Record<"xs" | "sm" | "md" | "lg" | "xl", GalleryOrientation>
+>;
+
 interface ItemGalleryClientProps {
   images: GalleryImage[];
   placeholderColor?: string;
+  forceOrientation?: GalleryForceOrientation | null;
 }
 
 export function ItemGalleryClient({
   images,
   placeholderColor,
+  forceOrientation,
 }: ItemGalleryClientProps) {
   const t = useTranslations("Gallery");
   const [thumbsSwiper, setThumbsSwiper] = useState<SwiperType | null>(null);
@@ -97,6 +111,14 @@ export function ItemGalleryClient({
     });
   }, [images]);
 
+  const slideClassName = [
+    "item-gallery__slide",
+    ...Object.entries(forceOrientation ?? {}).map(
+      ([breakpoint, orientation]) =>
+        `item-gallery__slide--${breakpoint}-${orientation}`,
+    ),
+  ].join(" ");
+
   if (images.length === 0) {
     return (
       <Box
@@ -132,6 +154,7 @@ export function ItemGalleryClient({
           {images.map((img, i) => (
             <SwiperSlide key={i}>
               <Box
+                className={slideClassName}
                 width="100%"
                 styles={{
                   position: "relative",

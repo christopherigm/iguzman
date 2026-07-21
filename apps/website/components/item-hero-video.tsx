@@ -10,7 +10,12 @@ import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { HeroVideo } from "@repo/ui/hero-video";
 import { ParallaxLayer } from "@repo/ui/parallax-layer";
-import type { HeroLayout } from "@repo/ui/hero";
+import {
+  heroLogoBackgroundStyle,
+  heroLogoMaskStyle,
+  HERO_BADGE_SHADOW,
+} from "@repo/ui/hero";
+import type { HeroLayout, HeroLogoBackground } from "@repo/ui/hero";
 
 /**
  * Diameter of the `profile` logo circle. Smaller than the landing `Hero`'s,
@@ -30,10 +35,28 @@ interface ItemHeroVideoProps {
    * `System.hero_video_layout`. @default "default"
    */
   layout?: HeroLayout;
-  /** Logo shown in the circle of the `profile` layout (`System.img_logo_hero`). */
+  /** Logo shown in the badge of the `profile` layout (`System.img_logo_hero`). */
   logo?: string | null;
   /** Alt text for the logo - the site name. */
   logoAlt?: string;
+  /**
+   * Shape of the badge behind the logo (`System.hero_logo_background`). `none`
+   * removes the badge, so a `profile` layout falls back to the plain title-only
+   * hero. @default "none"
+   */
+  shape?: HeroLogoBackground;
+  /**
+   * Drawn size of the logo inside the circle as a fraction of the disc
+   * (`System.hero_logo_scale / 100`). `1` is the edge-to-edge `cover` fill; a
+   * smaller value shrinks the logo about the disc's centre. @default 1
+   */
+  logoScale?: number;
+  /**
+   * Drawn size of the badge itself as a fraction of its default diameter
+   * (`System.hero_logo_background_scale / 100`). `1` is the full size; a smaller
+   * value shrinks the whole badge about its centre. @default 1
+   */
+  backgroundScale?: number;
 }
 
 /**
@@ -49,14 +72,30 @@ export function ItemHeroVideo({
   layout = "default",
   logo,
   logoAlt = "",
+  logoScale = 1,
+  backgroundScale = 1,
+  shape = "none",
 }: ItemHeroVideoProps) {
   const t = useTranslations("ItemDetail");
   const tCommon = useTranslations("Common");
   const [fullscreen, setFullscreen] = useState(false);
 
-  // Without a logo there is no circle to straddle the edge with, so the profile
-  // layout has nothing to render and falls back to the default one.
-  const isProfile = layout === "profile" && Boolean(logo);
+  // Without a logo or a chosen shape there is no badge to straddle the edge
+  // with, so the profile layout has nothing to render and falls back to default.
+  const isProfile = layout === "profile" && Boolean(logo) && shape !== "none";
+
+  // Fraction of the disc the logo is drawn at; a value < 1 shrinks the cover
+  // render about the disc's centre, leaving a ring of disc background around it.
+  const clampedLogoScale = Math.min(Math.max(logoScale, 0.1), 1);
+
+  // The `logo` shape follows the logo's own silhouette (masked plate) instead of
+  // a geometric clip; the badge size is shrunk by `backgroundScale`.
+  const isLogoShape = shape === "logo";
+  const clampedBgScale = Math.min(Math.max(backgroundScale, 0.1), 1);
+  const profileSize =
+    clampedBgScale === 1
+      ? PROFILE_LOGO_SIZE
+      : `calc((${PROFILE_LOGO_SIZE}) * ${clampedBgScale})`;
 
   const expandButton = (
     <IconButton
@@ -112,7 +151,7 @@ export function ItemHeroVideo({
               top: "50%",
               left: 0,
               right: 0,
-              bottom: `calc(${PROFILE_LOGO_SIZE} / 2)`,
+              bottom: `calc(${profileSize} / 2)`,
               zIndex: 10,
             }}
           >
@@ -188,37 +227,65 @@ export function ItemHeroVideo({
         // page content below the circle rather than behind it.
         <Box
           width="100%"
-          marginBottom={`calc(${PROFILE_LOGO_SIZE} / 2 + 16px)`}
+          marginBottom={`calc(${profileSize} / 2 + 16px)`}
           styles={{ position: "relative" }}
         >
           {video}
           <Box
-            width={PROFILE_LOGO_SIZE}
-            height={PROFILE_LOGO_SIZE}
-            borderRadius="50%"
-            // The page's own background (resolved per theme in globals.css), so
-            // the disc reads as a hole through the video onto the page.
-            backgroundColor="var(--page-background, var(--background))"
-            elevation={5}
+            width={profileSize}
+            height={profileSize}
+            // Geometric shapes are opaque page-background plates (resolved per
+            // theme in globals.css); the `logo` shape draws its plate through a
+            // mask instead, so the box itself stays clear.
+            backgroundColor={
+              isLogoShape ? undefined : "var(--page-background, var(--background))"
+            }
             alignItems="center"
             justifyContent="center"
             styles={{
               position: "absolute",
               left: "50%",
-              bottom: `calc(${PROFILE_LOGO_SIZE} / -2)`,
+              bottom: `calc(${profileSize} / -2)`,
               transform: "translateX(-50%)",
               overflow: "hidden",
+              // drop-shadow, not box-shadow (elevation): the latter is clipped
+              // away by the polygon clip-paths and ignores the masked outline.
+              filter: HERO_BADGE_SHADOW,
               zIndex: 3,
+              ...(isLogoShape ? {} : heroLogoBackgroundStyle(shape)),
             }}
           >
-            {/* Fills the disc edge to edge (`cover`), so the circle reads as
-                the logo itself rather than as a plate with a stamp on it. */}
+            {isLogoShape && logo && (
+              // Page-background plate clipped to the logo's own silhouette.
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  zIndex: 0,
+                  background: "var(--page-background, var(--background))",
+                  ...heroLogoMaskStyle(logo),
+                }}
+              />
+            )}
+            {/* A geometric badge fills the disc edge to edge (`cover`) so it
+                reads as the logo itself rather than a plate with a stamp on it;
+                the `logo` shape instead `contain`s the whole mark so its outline
+                matches the masked plate. A smaller scale shrinks either about
+                the badge's centre. */}
             <Image
               src={logo ?? ""}
               alt={logoAlt}
               fill
               sizes="200px"
-              style={{ objectFit: "cover" }}
+              style={{
+                zIndex: 1,
+                objectFit: isLogoShape ? "contain" : "cover",
+                transform:
+                  clampedLogoScale === 1
+                    ? undefined
+                    : `scale(${clampedLogoScale})`,
+              }}
             />
           </Box>
         </Box>

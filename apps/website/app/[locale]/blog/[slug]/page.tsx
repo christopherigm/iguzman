@@ -12,6 +12,7 @@ import { RichText } from "@repo/ui/core-elements/rich-text";
 import { getSuccessStory } from "@/lib/success-stories";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
 import type { GalleryImage } from "@/components/item-gallery-client";
+import "@/components/item-detail.css";
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
@@ -151,15 +152,13 @@ export default async function SuccessStoryDetailPage({ params }: Props) {
               <ItemGalleryClient
                 images={galleryImages}
                 placeholderColor={story.background_color ?? undefined}
+                forceOrientation={{ xs: "horizontal", sm: "horizontal" }}
               />
             </Grid>
           )}
           {description && (
             <Grid size={{ xs: 12, md: galleryImages.length > 0 ? 6 : 12 }}>
-              <Box
-                paddingRight={20}
-                styles={{ borderRight: "3px solid var(--accent)" }}
-              >
+              <Box paddingRight={20} className="item-detail__description">
                 <RichText>{description}</RichText>
               </Box>
             </Grid>

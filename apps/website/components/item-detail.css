@@ -1,0 +1,10 @@
+/* ── Detail description column ─────────────────────────────────────────────────
+   The accent right divider only reads correctly in the md+ two-column layout
+   (gallery beside description). On xs/sm the grid stacks to a single column, so
+   the border is applied from the md breakpoint (900px) up only — matching
+   @repo/ui's grid. Padding stays a prop; this class is media-query-only. */
+@media (min-width: 900px) {
+  .item-detail__description {
+    border-right: 3px solid var(--accent);
+  }
+}

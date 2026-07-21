@@ -1,0 +1,24 @@
+/**
+ * Media box for the shared AboutIntro block.
+ *
+ * Mobile-first: below md (the 900px point where the Grid stacks) the photo is a
+ * wide 5:4 landscape crop that follows the copy. At md+ the columns sit side by
+ * side, so the photo drops the aspect ratio and takes the taller fixed height
+ * that fills the row next to the story.
+ */
+.about-intro__media {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 16px;
+  background-color: var(--surface-2);
+  aspect-ratio: 5 / 4;
+}
+
+@media (min-width: 900px) {
+  .about-intro__media {
+    aspect-ratio: auto;
+    height: 460px;
+    max-height: 62vh;
+  }
+}

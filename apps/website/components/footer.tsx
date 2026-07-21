@@ -24,11 +24,6 @@ export async function Footer({ logo, system }: Props) {
     getSite(),
   ]);
 
-  const description =
-    locale === "en"
-      ? (system?.en_site_description ?? system?.site_description)
-      : system?.site_description;
-
   // Same rule as the navbar: a catalog family only gets a link when the tenant
   // actually has records of that kind, so a services-only business never shows
   // an empty Products page. The listing routes live under /categories/* - the
@@ -83,26 +78,13 @@ export async function Footer({ logo, system }: Props) {
                   as="p"
                   variant="body"
                   color="var(--foreground)"
-                  styles={{ fontStyle: "italic", overflowWrap: "break-word" }}
-                >
-                  {system.slogan}
-                </Typography>
-              )}
-              {description && (
-                <Typography
-                  as="p"
-                  variant="body"
-                  color="var(--foreground)"
                   styles={{
-                    lineHeight: 1.6,
+                    fontStyle: "italic",
                     overflowWrap: "break-word",
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
+                    whiteSpace: "pre-line",
                   }}
                 >
-                  {description}
+                  {system.slogan}
                 </Typography>
               )}
               <Box

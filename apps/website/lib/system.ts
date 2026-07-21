@@ -1,5 +1,5 @@
 import { cache } from "react";
-import type { HeroLayout } from "@repo/ui/hero";
+import type { HeroLayout, HeroLogoBackground } from "@repo/ui/hero";
 import { getTenantHost } from "./resolve-site";
 import { API_URL } from "./config";
 import logger from "./logger";
@@ -35,6 +35,12 @@ export interface System {
   catalog_items_bg: string | null;
   /** How the logo and text are composed over the hero video. */
   hero_video_layout: HeroLayout;
+  /** Shape drawn behind the hero logo, in either layout ("none" = no badge). */
+  hero_logo_background: HeroLogoBackground;
+  /** Logo size inside the background shape, as a whole percent (50-100). */
+  hero_logo_scale: number;
+  /** Badge size as a whole percent of its default diameter (50-100). */
+  hero_logo_background_scale: number;
   watermark_enabled: boolean;
   watermark_rotation: number;
   watermark_size: number;

@@ -10,6 +10,7 @@ import { Hero } from "@repo/ui/hero";
 import { getHighlight } from "@/lib/highlights";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
 import type { GalleryImage } from "@/components/item-gallery-client";
+import "@/components/item-detail.css";
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
@@ -119,15 +120,13 @@ export default async function HighlightDetailPage({ params }: Props) {
               <ItemGalleryClient
                 images={galleryImages}
                 placeholderColor={highlight.background_color ?? undefined}
+                forceOrientation={{ xs: "horizontal", sm: "horizontal" }}
               />
             </Grid>
           )}
           {description && (
             <Grid size={{ xs: 12, md: galleryImages.length > 0 ? 6 : 12 }}>
-              <Box
-                paddingRight={20}
-                styles={{ borderRight: "3px solid var(--accent)" }}
-              >
+              <Box paddingRight={20} className="item-detail__description">
                 <Typography
                   variant="body"
                   styles={{ whiteSpace: "pre-line", lineHeight: 1.75 }}

@@ -45,7 +45,7 @@
   .ui-navbar--translucent {
     background-color: color-mix(
       in srgb,
-      var(--accent-foreground, #ffffff) 20%,
+      var(--accent-foreground, #ffffff) 60%,
       transparent
     );
   }

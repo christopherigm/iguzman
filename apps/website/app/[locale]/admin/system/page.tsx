@@ -50,6 +50,9 @@ export default function AdminSystemPage() {
     en_highlights_subtitle: "",
     catalog_items_bg: "",
     hero_video_layout: "default",
+    hero_logo_background: "none",
+    hero_logo_scale: 100,
+    hero_logo_background_scale: 100,
     about: "",
     en_about: "",
     mission: "",
@@ -134,6 +137,9 @@ export default function AdminSystemPage() {
           en_highlights_subtitle: data.en_highlights_subtitle ?? "",
           catalog_items_bg: data.catalog_items_bg ?? "",
           hero_video_layout: data.hero_video_layout ?? "default",
+          hero_logo_background: data.hero_logo_background ?? "none",
+          hero_logo_scale: data.hero_logo_scale ?? 100,
+          hero_logo_background_scale: data.hero_logo_background_scale ?? 100,
           about: data.about ?? "",
           en_about: data.en_about ?? "",
           mission: data.mission ?? "",
@@ -294,8 +300,9 @@ export default function AdminSystemPage() {
       label: t("enSiteDescription") ?? "Site Description (EN)",
       type: "textarea",
     },
-    { key: "host", label: t("host") ?? "Host", required: true },
-    { key: "slogan", label: t("slogan") ?? "Slogan" },
+    // `host` is intentionally not editable here (kept in `values` so it still
+    // round-trips unchanged), and `slogan` has moved into HeroVideoSection,
+    // beside the live hero preview.
     {
       key: "video_link",
       label: t("videoLink") ?? "Hero Video Link",
@@ -422,17 +429,84 @@ export default function AdminSystemPage() {
         success={success}
         slots={[
           {
-            // Above the site description: connecting Stripe is setup work a new
-            // tenant does once and needs to find, not something to scroll past
-            // the whole content of the site to reach.
-            beforeKey: "site_description",
+            // Right after the Highlights pair, before "About": hero composition,
+            // then the watermark/background, then the two section-background
+            // builders they relate to - all the site's look-and-feel controls in
+            // one run rather than scattered to the bottom of the form - and then
+            // Payments, sitting directly above the About group. (AdminForm keys
+            // slots by `beforeKey` in a Map, so both blocks share this one
+            // "about" node rather than registering two slots for the same key.)
+            beforeKey: "about",
             node: (
-              <PaymentsSection
-                values={values}
-                onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
-                webhookUrl={stripeWebhookUrl}
-                configured={stripeConfigured}
-              />
+              <Box flexDirection="column">
+                <HeroVideoSection
+                  values={values}
+                  onChange={(k, v) =>
+                    setValues((prev) => ({ ...prev, [k]: v }))
+                  }
+                  // Preview the hero logo / background being uploaded right now,
+                  // if there is one, so the layout shown is the one that will
+                  // ship. No "/logo.png" fallback: this app ships no such file,
+                  // so it would preview the profile layout with an empty circle.
+                  // With no logo at all the preview simply shows the default
+                  // layout, since profile has nothing to put in the circle.
+                  logo={
+                    images.img_logo_hero?.pending[0]?.preview ??
+                    images.img_logo_hero?.existing[0]?.url ??
+                    images.img_logo?.pending[0]?.preview ??
+                    images.img_logo?.existing[0]?.url
+                  }
+                  backgroundImage={
+                    images.img_hero?.pending[0]?.preview ??
+                    images.img_hero?.existing[0]?.url
+                  }
+                />
+                <WatermarkSection
+                  values={values}
+                  onChange={(k, v) =>
+                    setValues((prev) => ({ ...prev, [k]: v }))
+                  }
+                  // Preview the logo being uploaded right now, if there is one,
+                  // so the pattern shown is the one that will ship after saving.
+                  logo={
+                    images.img_logo?.pending[0]?.preview ??
+                    images.img_logo?.existing[0]?.url ??
+                    "/logo.png"
+                  }
+                />
+                <Grid container spacing={2} paddingTop={32}>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <GradientBuilder
+                      label={t("catalogBg")}
+                      value={String(values.catalog_items_bg ?? "")}
+                      onChange={(v) =>
+                        setValues((prev) => ({ ...prev, catalog_items_bg: v }))
+                      }
+                      labels={gradientLabels}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <GradientBuilder
+                      label={t("highlightsBg")}
+                      value={String(values.highlights_bg ?? "")}
+                      onChange={(v) =>
+                        setValues((prev) => ({ ...prev, highlights_bg: v }))
+                      }
+                      labels={gradientLabels}
+                    />
+                  </Grid>
+                </Grid>
+                <Box paddingTop={32}>
+                  <PaymentsSection
+                    values={values}
+                    onChange={(k, v) =>
+                      setValues((prev) => ({ ...prev, [k]: v }))
+                    }
+                    webhookUrl={stripeWebhookUrl}
+                    configured={stripeConfigured}
+                  />
+                </Box>
+              </Box>
             ),
           },
         ]}
@@ -443,61 +517,7 @@ export default function AdminSystemPage() {
             derivedImageKey={derivedImageKey}
           />
         }
-      >
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <GradientBuilder
-              label={t("catalogBg")}
-              value={String(values.catalog_items_bg ?? "")}
-              onChange={(v) =>
-                setValues((prev) => ({ ...prev, catalog_items_bg: v }))
-              }
-              labels={gradientLabels}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <GradientBuilder
-              label={t("highlightsBg")}
-              value={String(values.highlights_bg ?? "")}
-              onChange={(v) =>
-                setValues((prev) => ({ ...prev, highlights_bg: v }))
-              }
-              labels={gradientLabels}
-            />
-          </Grid>
-        </Grid>
-        <HeroVideoSection
-          values={values}
-          onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
-          // Preview the hero logo / background being uploaded right now, if
-          // there is one, so the layout shown is the one that will ship. No
-          // "/logo.png" fallback: this app ships no such file, so it would
-          // preview the profile layout with an empty circle. With no logo at
-          // all the preview simply shows what the site will show - the default
-          // layout, since profile has nothing to put in the circle.
-          logo={
-            images.img_logo_hero?.pending[0]?.preview ??
-            images.img_logo_hero?.existing[0]?.url ??
-            images.img_logo?.pending[0]?.preview ??
-            images.img_logo?.existing[0]?.url
-          }
-          backgroundImage={
-            images.img_hero?.pending[0]?.preview ??
-            images.img_hero?.existing[0]?.url
-          }
-        />
-        <WatermarkSection
-          values={values}
-          onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
-          // Preview the logo being uploaded right now, if there is one, so the
-          // pattern shown is the one that will ship after saving.
-          logo={
-            images.img_logo?.pending[0]?.preview ??
-            images.img_logo?.existing[0]?.url ??
-            "/logo.png"
-          }
-        />
-      </AdminForm>
+      />
 
       {showLogoAssetsModal && (
         <ConfirmationModal
