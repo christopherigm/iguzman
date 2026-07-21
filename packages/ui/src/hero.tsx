@@ -9,11 +9,15 @@ import "./hero.css";
  * How the logo and the text are composed over a hero video.
  *
  * - `default` - both centred over the video, logo above the text.
+ * - `none` - the logo is dropped entirely; only the text (slogan/subline) and
+ *   any `actions` are centred over the video. For a tenant whose video already
+ *   carries the branding, or who wants a text-only hero.
  * - `profile` - the logo sits in a circle straddling the hero's bottom edge
  *   (half in, half out) the way a profile picture sits on a cover photo, with
- *   the text centred in the space left above it.
+ *   the text centred in the space left above it. With no logo background the
+ *   bare logo straddles the edge instead of a badge.
  */
-export type HeroLayout = "default" | "profile";
+export type HeroLayout = "default" | "none" | "profile";
 
 /**
  * The shape drawn behind the hero logo (the "logo background" badge). `none`
@@ -36,6 +40,56 @@ export type HeroLogoBackground =
   | "hexagon"
   | "octagon"
   | "logo";
+
+/**
+ * Shape of the dark overlay drawn between the hero background and its content -
+ * what keeps white type legible over an arbitrary video frame.
+ *
+ * - `none` - no overlay; the background shows through untouched.
+ * - `full` - a flat tint over the whole frame.
+ * - `bottom` - the historical default: dark at the bottom edge, clear by mid-frame.
+ * - `top` - its mirror, for text composed against the top edge.
+ * - `both` - dark at both edges, clear through the middle.
+ * - `vignette` - clear in the centre, darkening towards the corners.
+ */
+export type HeroOverlayStyle =
+  | "none"
+  | "full"
+  | "bottom"
+  | "top"
+  | "both"
+  | "vignette";
+
+/**
+ * CSS `background` for the hero's dark overlay, or `undefined` when the chosen
+ * style/opacity draws nothing. `opacity` is the 0-1 strength of the *darkest*
+ * part of the overlay - the gradient styles fade from it to transparent.
+ *
+ * Exported so every hero consumer (this component and the website's
+ * `ItemHeroVideo`) resolves the tenant's setting to the same pixels; a second
+ * hand-written gradient is how the landing hero and the item hero drift apart.
+ */
+export function heroOverlayBackground(
+  style: HeroOverlayStyle,
+  opacity: number,
+): string | undefined {
+  const a = Math.min(Math.max(opacity, 0), 1);
+  if (style === "none" || a === 0) return undefined;
+  const dark = `rgba(0,0,0,${a})`;
+  const clear = "rgba(0,0,0,0)";
+  switch (style) {
+    case "full":
+      return dark;
+    case "top":
+      return `linear-gradient(to bottom, ${dark} 0%, ${clear} 55%)`;
+    case "both":
+      return `linear-gradient(to bottom, ${dark} 0%, ${clear} 35%, ${clear} 65%, ${dark} 100%)`;
+    case "vignette":
+      return `radial-gradient(ellipse at center, ${clear} 40%, ${dark} 100%)`;
+    default:
+      return `linear-gradient(to top, ${dark} 0%, ${clear} 55%)`;
+  }
+}
 
 /**
  * Maps a logo-background shape to the CSS that clips a square badge to it.
@@ -143,6 +197,93 @@ export const HERO_PROFILE_LOGO_SIZE = "clamp(145px, 20vw, 250px)";
  */
 const DEFAULT_LOGO_SIZE = "clamp(96px, 13vw, 160px)";
 
+/**
+ * Diameter of the brandmark circle that straddles the top of a hero text frame.
+ * Grows a little with the viewport, like the profile disc, so it does not look
+ * tiny on a wide hero nor overwhelm a phone-width one.
+ */
+const HERO_FRAME_BADGE_SIZE = "clamp(36px, 4.55vw, 50px)";
+
+/**
+ * Wraps a hero's section/page heading in a thin outline frame. When `image` is
+ * given (the tenant's brandmark) it sits in a white circle straddling the top
+ * border - half above the line, half below - the way a badge caps a plate; with
+ * no image the frame is just the outline. Exported and shared so every hero
+ * consumer (this component and the website's `ItemHeroVideo`) frames its text
+ * identically, the way `heroOverlayBackground`/the badge helpers keep the two
+ * heroes from drifting.
+ *
+ * `scale` multiplies the badge and padding for a constrained preview, matching
+ * the `Hero`'s `contentScale`.
+ */
+export function HeroTextFrame({
+  children,
+  image,
+  imageAlt = "",
+  scale = 1,
+}: {
+  children: React.ReactNode;
+  /** Brandmark shown in the top-centre circle; omit for a bare outline. */
+  image?: string | null;
+  imageAlt?: string;
+  /** Preview multiplier for the badge + padding. @default 1 */
+  scale?: number;
+}) {
+  const sized = (v: string) => (scale === 1 ? v : `calc((${v}) * ${scale})`);
+  const badge = sized(HERO_FRAME_BADGE_SIZE);
+  return (
+    <div
+      style={{
+        position: "relative",
+        display: "inline-block",
+        // Reserve the half of the badge that overhangs the top border, so an
+        // ancestor never clips it and it never collides with content above.
+        marginTop: image ? `calc(${badge} / 2)` : undefined,
+      }}
+    >
+      {image && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: badge,
+            height: badge,
+            borderRadius: "50%",
+            background: "#fff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+            zIndex: 1,
+          }}
+        >
+          <img
+            src={image}
+            alt={imageAlt}
+            style={{ width: "72%", height: "72%", objectFit: "contain" }}
+          />
+        </div>
+      )}
+      <div
+        style={{
+          border: "2px solid rgba(255,255,255,0.9)",
+          padding: sized("0.8em 1.7em"),
+          // Clear the lower half of the overhanging badge plus a small gap, so
+          // the heading never tucks under it.
+          paddingTop: image
+            ? `calc(${badge} / 2 + ${sized("0.7em")})`
+            : undefined,
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export type HeroProps = {
   /** YouTube, Vimeo, or direct video file URL. Takes priority over backgroundImage. */
   videoUrl?: string | null;
@@ -183,8 +324,31 @@ export type HeroProps = {
    * @default 0
    */
   scrim?: number;
+  /**
+   * Shape of the dark overlay between the background and the content. The
+   * default reproduces the historical hard-coded gradient, so a hero that says
+   * nothing about the overlay looks exactly as it always did. @default "bottom"
+   */
+  overlayStyle?: HeroOverlayStyle;
+  /**
+   * Strength (0-1) of the darkest part of `overlayStyle`. `0` removes the
+   * overlay whatever the style. @default 0.75
+   */
+  overlayOpacity?: number;
   /** Drift the background against the page as it scrolls. Pass false for a static background. */
   parallax?: boolean;
+  /**
+   * Wrap the slogan/subline in an outline frame (see `HeroTextFrame`). Used for
+   * section/page headings over a hero - not the landing hero. @default false
+   */
+  frame?: boolean;
+  /**
+   * Brandmark shown in the circle straddling the top of the text frame. Only
+   * meaningful with `frame`; omit for a bare outline. @default null
+   */
+  frameImage?: string | null;
+  /** Alt text for the frame's brandmark image. */
+  frameImageAlt?: string;
   /** How the logo and slogan are composed over the background. @default "default" */
   layout?: HeroLayout;
   /**
@@ -253,7 +417,12 @@ export function Hero({
   actions,
   align = "center",
   scrim = 0,
+  overlayStyle = "bottom",
+  overlayOpacity = 0.75,
   parallax = true,
+  frame = false,
+  frameImage = null,
+  frameImageAlt = "",
   layout = "default",
   logoBackground = "none",
   contentScale = 1,
@@ -268,11 +437,25 @@ export function Hero({
   if (!hasBackground && !logoImage) return null;
 
   // A badge is only drawn when a shape is chosen AND there is a logo to put in
-  // it. In the profile layout it is what straddles the bottom edge; with no
-  // badge there is nothing to straddle with, so profile falls back to default.
-  const hasBadge = logoBackground !== "none" && Boolean(logoImage);
-  const isProfile = layout === "profile" && hasBadge;
+  // it. The profile layout needs only the logo, though: with no shape the bare
+  // mark is what straddles the bottom edge, so "none" changes the backing plate
+  // and not the layout. With no logo at all there is nothing to hang off the
+  // edge, so profile falls back to default.
+  // The `none` layout drops the logo entirely (badge or bare mark), leaving only
+  // the text and any actions over the video. It also rules out the profile
+  // treatment, which is a logo layout.
+  const hideLogo = layout === "none";
+  const hasBadge =
+    !hideLogo && logoBackground !== "none" && Boolean(logoImage);
+  const isProfile = layout === "profile" && Boolean(logoImage);
   const isStart = align === "start";
+
+  // The tenant-configured overlay, and whether the type can stop carrying its
+  // own shadow: only an overlay that darkens the whole frame (a flat tint, or a
+  // scrim) does that - a gradient leaves the far edge as bright as the video.
+  const overlay = heroOverlayBackground(overlayStyle, overlayOpacity);
+  const litFromBelow =
+    scrim > 0 || (overlayStyle === "full" && Boolean(overlay));
 
   // At scale 1 keep the exact CSS strings the live site uses; only wrap them in
   // a `calc(… * scale)` when a preview actually asks for a smaller content size.
@@ -362,6 +545,93 @@ export function Hero({
     </Box>
   ) : null;
 
+  // What straddles the hero's bottom edge in the `profile` layout: the badge
+  // when a shape is chosen, otherwise the logo itself, drawn `contain` in a box
+  // of the same diameter so it keeps its own silhouette with nothing behind it.
+  const profileMark =
+    hasBadge || !logoImage ? (
+      badge
+    ) : (
+      <img
+        src={logoImage}
+        alt={logoAlt}
+        style={{
+          display: "block",
+          width: profileLogoSize,
+          height: profileLogoSize,
+          objectFit: "contain",
+          // drop-shadow, not elevation: it traces the mark, not its bounding box.
+          filter: HERO_BADGE_SHADOW,
+        }}
+      />
+    );
+
+  // The slogan/subline/actions stack, shared between the framed and unframed
+  // renders below so the frame is a pure wrapper and neither copy can drift.
+  const textContent = (
+    <>
+      {slogan && (
+        <p
+          style={{
+            margin: 0,
+            color: "#fff",
+            textAlign: isStart ? "left" : "center",
+            // Left-aligned type needs a measure, or the headline runs
+            // the container's full width and stops reading as a stack.
+            maxWidth: isStart ? "20ch" : undefined,
+            fontFamily: "var(--font-display, inherit)",
+            fontSize: scaled("clamp(1.25rem, 3vw, 2rem)"),
+            fontWeight: 600,
+            letterSpacing: "0.04em",
+            // An overlay that covers the whole frame already carries
+            // the contrast, so the shadow - which is what makes
+            // un-scrimmed hero type look pasted on - is only drawn when
+            // there is nothing behind the type to rely on.
+            textShadow: litFromBelow ? undefined : "0 2px 8px rgba(0,0,0,0.7)",
+            // Honour the newlines the tenant typed in the multirow slogan
+            // field: render each line on its own line, but still wrap long
+            // lines. Consecutive spaces stay collapsed (pre-line, not pre-wrap).
+            whiteSpace: "pre-line",
+          }}
+        >
+          {slogan}
+        </p>
+      )}
+      {subline && (
+        <p
+          style={{
+            margin: slogan ? `${scaled("0.75rem")} 0 0` : 0,
+            color: "rgba(255,255,255,0.86)",
+            textAlign: isStart ? "left" : "center",
+            maxWidth: isStart ? "42ch" : undefined,
+            marginLeft: isStart ? undefined : "auto",
+            marginRight: isStart ? undefined : "auto",
+            fontSize: scaled("clamp(0.9375rem, 1.4vw, 1.125rem)"),
+            fontWeight: 400,
+            lineHeight: 1.55,
+            textShadow: litFromBelow ? undefined : "0 1px 6px rgba(0,0,0,0.7)",
+            whiteSpace: "pre-line",
+          }}
+        >
+          {subline}
+        </p>
+      )}
+      {actions && (
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 12,
+            marginTop: scaled("1.5rem"),
+            justifyContent: isStart ? "flex-start" : "center",
+          }}
+        >
+          {actions}
+        </div>
+      )}
+    </>
+  );
+
   const hero = (
     <div
       className={[!hasVideo ? "hero--image" : "", className]
@@ -411,16 +681,17 @@ export function Hero({
         />
       )}
 
-      {/* ── Gradient overlay (bottom → mid) ──────────────────── */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background:
-            "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 55%)",
-          zIndex: 1,
-        }}
-      />
+      {/* ── Dark overlay (shape + strength are the tenant's) ─── */}
+      {overlay && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: overlay,
+            zIndex: 1,
+          }}
+        />
+      )}
 
       {/* ── Centred logo + slogan ─────────────────────────────── */}
       {/* In the profile layout the logo has left this stack for the circle
@@ -430,7 +701,7 @@ export function Hero({
           the video. In the default layout the stack is inset from the top by the
           navbar height so the centred logo+text never tucks under the fixed
           navbar overlaying the hero's top edge. */}
-      {(logoImage || slogan || subline || actions) && (
+      {((logoImage && !hideLogo) || slogan || subline || actions) && (
         <div
           style={{
             position: "absolute",
@@ -451,6 +722,7 @@ export function Hero({
               logo over the video. */}
           {logoImage &&
             !isProfile &&
+            !hideLogo &&
             (hasBadge ? (
               badge
             ) : (
@@ -466,65 +738,21 @@ export function Hero({
             ))}
           {(slogan || subline || actions) && (
             <Container size="lg" paddingX={16}>
-              {slogan && (
-                <p
-                  style={{
-                    margin: 0,
-                    color: "#fff",
-                    textAlign: isStart ? "left" : "center",
-                    // Left-aligned type needs a measure, or the headline runs
-                    // the container's full width and stops reading as a stack.
-                    maxWidth: isStart ? "20ch" : undefined,
-                    fontFamily: "var(--font-display, inherit)",
-                    fontSize: scaled("clamp(1.25rem, 3vw, 2rem)"),
-                    fontWeight: 600,
-                    letterSpacing: "0.04em",
-                    // A scrim already carries the contrast, so the shadow -
-                    // which is what makes un-scrimmed hero type look pasted on -
-                    // is only drawn when there is no scrim to rely on.
-                    textShadow:
-                      scrim > 0 ? undefined : "0 2px 8px rgba(0,0,0,0.7)",
-                    // Honour the newlines the tenant typed in the multirow slogan
-                    // field: render each line on its own line, but still wrap long
-                    // lines. Consecutive spaces stay collapsed (pre-line, not pre-wrap).
-                    whiteSpace: "pre-line",
-                  }}
-                >
-                  {slogan}
-                </p>
-              )}
-              {subline && (
-                <p
-                  style={{
-                    margin: slogan ? `${scaled("0.75rem")} 0 0` : 0,
-                    color: "rgba(255,255,255,0.86)",
-                    textAlign: isStart ? "left" : "center",
-                    maxWidth: isStart ? "42ch" : undefined,
-                    marginLeft: isStart ? undefined : "auto",
-                    marginRight: isStart ? undefined : "auto",
-                    fontSize: scaled("clamp(0.9375rem, 1.4vw, 1.125rem)"),
-                    fontWeight: 400,
-                    lineHeight: 1.55,
-                    textShadow:
-                      scrim > 0 ? undefined : "0 1px 6px rgba(0,0,0,0.7)",
-                    whiteSpace: "pre-line",
-                  }}
-                >
-                  {subline}
-                </p>
-              )}
-              {actions && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 12,
-                    marginTop: scaled("1.5rem"),
-                    justifyContent: isStart ? "flex-start" : "center",
-                  }}
-                >
-                  {actions}
+              {frame ? (
+                // inline-block frame, centred (or left-aligned) via the parent's
+                // text-align - so the outline hugs the heading rather than the
+                // whole container width.
+                <div style={{ textAlign: isStart ? "left" : "center" }}>
+                  <HeroTextFrame
+                    image={frameImage}
+                    imageAlt={frameImageAlt}
+                    scale={contentScale}
+                  >
+                    {textContent}
+                  </HeroTextFrame>
                 </div>
+              ) : (
+                textContent
               )}
             </Container>
           )}
@@ -555,7 +783,7 @@ export function Hero({
           zIndex: 3,
         }}
       >
-        {badge}
+        {profileMark}
       </Box>
     </Box>
   );

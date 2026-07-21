@@ -50,6 +50,13 @@ type Props = {
   onChange: (key: string, value: unknown) => void;
   /** URL of the logo to preview - the pending upload if there is one. */
   logo: string;
+  /**
+   * URL of the brandmark to preview - the pending upload if there is one, else
+   * undefined when the tenant has not uploaded one. Its presence is what shows
+   * the "Use brandmark" switch, and it is what the preview tiles when that
+   * switch is on.
+   */
+  brandmark?: string;
 };
 
 /**
@@ -61,13 +68,17 @@ type Props = {
  * follows the CMS's own theme, which is also which of the two background
  * pickers it is showing.
  */
-export function WatermarkSection({ values, onChange, logo }: Props) {
+export function WatermarkSection({ values, onChange, logo, brandmark }: Props) {
   const t = useTranslations("Admin");
   const { state } = useTheme();
   const isDark = state.resolved === "dark";
 
   const enabled = Boolean(values.watermark_enabled);
   const intercalated = Boolean(values.watermark_intercalated);
+  const useBrandmark = Boolean(values.watermark_use_brandmark);
+  // Tile the brandmark only when it exists AND the switch is on; otherwise the
+  // logo, exactly as the public site resolves it in the locale layout.
+  const watermarkImage = useBrandmark && brandmark ? brandmark : logo;
   const rotation = Number(values.watermark_rotation ?? -12);
   const spacing = Number(values.watermark_spacing ?? 70);
   const size = Number(values.watermark_size ?? 120);
@@ -135,6 +146,31 @@ export function WatermarkSection({ values, onChange, logo }: Props) {
             {t("watermarkIntercalated")}
           </Typography>
         </Box>
+
+        {/* Only offered once a brandmark exists to switch to; otherwise there is
+            nothing to use in the logo's place. Disabled with the watermark off,
+            like the intercalate toggle beside it. */}
+        {brandmark && (
+          <Box display="flex" alignItems="center" gap={10}>
+            <Switch
+              checked={useBrandmark}
+              disabled={!enabled}
+              onChange={(v) => onChange("watermark_use_brandmark", v)}
+            />
+            <Typography
+              as="span"
+              variant="body"
+              fontWeight={500}
+              color={
+                enabled
+                  ? "var(--foreground)"
+                  : "var(--muted-foreground, #6b7280)"
+              }
+            >
+              {t("watermarkUseBrandmark")}
+            </Typography>
+          </Box>
+        )}
       </Box>
 
       {/* spacing is in 8px base units, not px - 3 is the 24px gutter. */}
@@ -220,7 +256,7 @@ export function WatermarkSection({ values, onChange, logo }: Props) {
               {enabled && (
                 <LogoWatermark
                   inline
-                  logo={logo}
+                  logo={watermarkImage}
                   size={size}
                   spacing={spacing}
                   rotation={rotation}

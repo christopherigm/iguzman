@@ -1,5 +1,9 @@
 import { cache } from "react";
-import type { HeroLayout, HeroLogoBackground } from "@repo/ui/hero";
+import type {
+  HeroLayout,
+  HeroLogoBackground,
+  HeroOverlayStyle,
+} from "@repo/ui/hero";
 import { getTenantHost } from "./resolve-site";
 import { API_URL } from "./config";
 import logger from "./logger";
@@ -22,6 +26,8 @@ export interface System {
   img_manifest_256: string | null;
   img_manifest_192: string | null;
   img_manifest_128: string | null;
+  /** A small company symbol / brandmark, tiled as an alternate watermark and shown in cards. */
+  img_brandmark: string | null;
   img_hero: string | null;
   video_link: string | null;
   slogan: string | null;
@@ -41,10 +47,22 @@ export interface System {
   hero_logo_scale: number;
   /** Badge size as a whole percent of its default diameter (50-100). */
   hero_logo_background_scale: number;
+  /** Shape of the dark overlay drawn over the hero background. */
+  hero_overlay_style: HeroOverlayStyle;
+  /** Overlay strength as a whole percent (0-100), not a 0-1 fraction. */
+  hero_overlay_opacity: number;
+  /**
+   * Wrap the section/page heading over a hero (category, highlight and item
+   * detail pages - not the landing hero) in an outline frame, with the
+   * brandmark in a circle on top when `img_brandmark` is set.
+   */
+  hero_text_frame: boolean;
   watermark_enabled: boolean;
   watermark_rotation: number;
   /** Alternate each logo's rotation so neighbours lean opposite ways. */
   watermark_intercalated: boolean;
+  /** Tile the brandmark instead of the logo in the page watermark (needs `img_brandmark`). */
+  watermark_use_brandmark: boolean;
   watermark_size: number;
   watermark_spacing: number;
   /** Whole percent (1-25), not a 0-1 fraction. */

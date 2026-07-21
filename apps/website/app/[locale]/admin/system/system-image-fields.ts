@@ -5,6 +5,7 @@ export const BRAND_IMAGE_FIELDS = [
   "img_logo",
   "img_logo_hero",
   "img_favicon",
+  "img_brandmark",
   "img_hero",
   "img_about",
 ] as const;

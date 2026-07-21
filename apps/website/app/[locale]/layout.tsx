@@ -205,7 +205,14 @@ export default async function LocaleLayout({ children, params }: Props) {
                   {system?.watermark_enabled && (
                     <HideOnAdmin>
                       <LogoWatermark
-                        logo={system.img_logo ?? "/logo.png"}
+                        // Tile the brandmark when the tenant switched it on and
+                        // uploaded one; otherwise the logo.
+                        logo={
+                          (system.watermark_use_brandmark &&
+                            system.img_brandmark) ||
+                          system.img_logo ||
+                          "/logo.png"
+                        }
                         size={system.watermark_size}
                         spacing={system.watermark_spacing}
                         rotation={system.watermark_rotation}

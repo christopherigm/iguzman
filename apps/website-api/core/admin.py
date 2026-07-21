@@ -139,7 +139,7 @@ class SystemAdmin(admin.ModelAdmin):
         ("Branding", {
             "fields": (
                 "primary_color", "secondary_color",
-                "img_logo", "img_logo_hero", "img_favicon",
+                "img_logo", "img_logo_hero", "img_favicon", "img_brandmark",
                 "img_manifest_1080", "img_manifest_512", "img_manifest_256", "img_manifest_192", "img_manifest_128",
             ),
         }),
@@ -162,6 +162,9 @@ class SystemAdmin(admin.ModelAdmin):
                 "hero_logo_background",
                 "hero_logo_background_scale",
                 "hero_logo_scale",
+                "hero_overlay_style",
+                "hero_overlay_opacity",
+                "hero_text_frame",
             ),
             "description": (
                 "How the logo and text are composed over the hero video, on the "
@@ -169,12 +172,15 @@ class SystemAdmin(admin.ModelAdmin):
                 "background shape (and its size) apply in either layout; 'None' "
                 "draws the logo with no backing shape, and 'Logo silhouette' "
                 "clips the backing to the logo's own shape (needs a transparent "
-                "logo)."
+                "logo). The overlay is the dark layer between the background "
+                "and the text; its style picks the shape and the opacity its "
+                "strength (0 draws none)."
             ),
         }),
         ("Watermark & Background", {
             "fields": (
                 "watermark_enabled", "watermark_rotation", "watermark_intercalated",
+                "watermark_use_brandmark",
                 "watermark_size", "watermark_spacing", "watermark_opacity",
                 "background_light", "background_dark",
             ),

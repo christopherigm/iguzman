@@ -332,6 +332,12 @@ class System(Common):
     img_manifest_192 = models.ImageField(null=True, blank=True, upload_to=picture)
     img_manifest_128 = models.ImageField(null=True, blank=True, upload_to=picture)
 
+    # A small company symbol / brandmark, distinct from the full logo: a mini
+    # icon used in cards, or tiled as the page-background watermark in place of
+    # the logo (see `watermark_use_brandmark`). Stored small and PNG-forced for
+    # its alpha channel by the write serializer's _IMAGE_FIELDS (SMALL tier).
+    img_brandmark = models.ImageField(null=True, blank=True, upload_to=picture)
+
     img_hero = models.ImageField(null=True, blank=True, upload_to=picture)
     video_link = models.URLField(max_length=255, null=True, blank=True)
     slogan = models.CharField(max_length=255, null=True, blank=True, default="Company slogan")
@@ -378,9 +384,11 @@ class System(Common):
     # in a circle straddling the video's bottom edge, the way a profile picture
     # sits on a cover photo.
     HERO_LAYOUT_DEFAULT = "default"
+    HERO_LAYOUT_NONE = "none"
     HERO_LAYOUT_PROFILE = "profile"
     HERO_LAYOUT_CHOICES = (
         (HERO_LAYOUT_DEFAULT, "Default - logo and text over the video"),
+        (HERO_LAYOUT_NONE, "None - text and buttons only, no logo over the video"),
         (HERO_LAYOUT_PROFILE, "Profile - logo in a circle on the bottom edge"),
     )
     hero_video_layout = models.CharField(
@@ -441,6 +449,47 @@ class System(Common):
         default=100,
         help_text="Background badge size, as a whole percent of its default diameter (50-100).",
     )
+    # ── Hero dark overlay ─────────────────────────────────────────────────────
+    # The dark layer between the hero background and the text over it - what
+    # keeps white type legible over an arbitrary video frame. The default pair
+    # ("bottom" at 75%) reproduces the gradient both heroes used to hard-code, so
+    # every existing tenant looks unchanged until they touch these.
+    HERO_OVERLAY_NONE = "none"
+    HERO_OVERLAY_FULL = "full"
+    HERO_OVERLAY_BOTTOM = "bottom"
+    HERO_OVERLAY_TOP = "top"
+    HERO_OVERLAY_BOTH = "both"
+    HERO_OVERLAY_VIGNETTE = "vignette"
+    HERO_OVERLAY_STYLE_CHOICES = (
+        (HERO_OVERLAY_NONE, "None - no overlay"),
+        (HERO_OVERLAY_FULL, "Full - flat tint over the whole frame"),
+        (HERO_OVERLAY_BOTTOM, "Bottom to top - dark at the bottom edge"),
+        (HERO_OVERLAY_TOP, "Top to bottom - dark at the top edge"),
+        (HERO_OVERLAY_BOTH, "Top and bottom - clear through the middle"),
+        (HERO_OVERLAY_VIGNETTE, "Vignette - clear centre, dark edges"),
+    )
+    hero_overlay_style = models.CharField(
+        max_length=16,
+        choices=HERO_OVERLAY_STYLE_CHOICES,
+        default=HERO_OVERLAY_BOTTOM,
+        help_text="Shape of the dark overlay drawn over the hero background.",
+    )
+    # A whole percent, not a float, for the same reason as the scales above: it
+    # is what the CMS slider emits and what the frontend consumes. 0 draws no
+    # overlay whatever the style is set to.
+    hero_overlay_opacity = models.PositiveSmallIntegerField(
+        default=75,
+        help_text="Strength of the darkest part of the overlay, as a whole percent (0-100).",
+    )
+    # When on, the section/page heading over a hero (category, highlight and item
+    # detail pages - not the landing hero) is wrapped in a thin outline frame; if
+    # a brandmark image is set it sits in a circle straddling the top of the
+    # frame, otherwise it is just the outline. Off by default, so existing sites
+    # are unchanged.
+    hero_text_frame = models.BooleanField(
+        default=False,
+        help_text="Wrap the hero section/page heading in an outline frame (with the brandmark badge if set).",
+    )
 
     # ── Watermark & page background ───────────────────────────────────────────
     # The logo tiled faintly behind every public page, plus the page background
@@ -462,6 +511,13 @@ class System(Common):
     watermark_intercalated = models.BooleanField(
         default=False,
         help_text="Alternate each logo's rotation so neighbours lean opposite ways.",
+    )
+    # When on, the page-background watermark tiles the brandmark
+    # (`img_brandmark`) instead of the logo. Ignored - and hidden in the CMS -
+    # unless a brandmark image has been uploaded.
+    watermark_use_brandmark = models.BooleanField(
+        default=False,
+        help_text="Tile the brandmark instead of the logo in the page watermark (needs a brandmark image).",
     )
     watermark_size = models.PositiveSmallIntegerField(
         default=120,

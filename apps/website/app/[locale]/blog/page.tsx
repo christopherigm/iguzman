@@ -6,7 +6,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { Grid } from "@repo/ui/core-elements/grid";
-import { Hero } from "@repo/ui/hero";
+import { SectionHero } from "@/components/section-hero";
 import { getSuccessStories } from "@/lib/success-stories";
 import { StoryCard } from "@/components/story-card";
 
@@ -55,7 +55,7 @@ export default async function BlogPage({ params }: Props) {
   return (
     <>
       {heroImage && (
-        <Hero
+        <SectionHero
           backgroundImage={heroImage}
           slogan={t("heading")}
           style={{ height: "clamp(220px, 30vw, 400px)" }}

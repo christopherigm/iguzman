@@ -13,9 +13,15 @@ import { ParallaxLayer } from "@repo/ui/parallax-layer";
 import {
   heroLogoBackgroundStyle,
   heroLogoMaskStyle,
+  heroOverlayBackground,
+  HeroTextFrame,
   HERO_BADGE_SHADOW,
 } from "@repo/ui/hero";
-import type { HeroLayout, HeroLogoBackground } from "@repo/ui/hero";
+import type {
+  HeroLayout,
+  HeroLogoBackground,
+  HeroOverlayStyle,
+} from "@repo/ui/hero";
 
 /**
  * Diameter of the `profile` logo circle. Smaller than the landing `Hero`'s,
@@ -57,6 +63,26 @@ interface ItemHeroVideoProps {
    * value shrinks the whole badge about its centre. @default 1
    */
   backgroundScale?: number;
+  /**
+   * Shape of the dark overlay over the video (`System.hero_overlay_style`). The
+   * default is the gradient this hero has always drawn. @default "bottom"
+   */
+  overlayStyle?: HeroOverlayStyle;
+  /**
+   * Strength (0-1) of the darkest part of the overlay
+   * (`System.hero_overlay_opacity / 100`). @default 0.75
+   */
+  overlayOpacity?: number;
+  /**
+   * Wrap the title in an outline frame (`System.hero_text_frame`). When on, the
+   * title is centred over the video (rather than sitting at the bottom edge) and
+   * the fullscreen control moves to the top-right corner. @default false
+   */
+  frame?: boolean;
+  /** Brandmark shown in the frame's top circle (`System.img_brandmark`). */
+  brandmark?: string | null;
+  /** Alt text for the frame's brandmark - the site name. */
+  brandmarkAlt?: string;
 }
 
 /**
@@ -75,14 +101,26 @@ export function ItemHeroVideo({
   logoScale = 1,
   backgroundScale = 1,
   shape = "none",
+  overlayStyle = "bottom",
+  overlayOpacity = 0.75,
+  frame = false,
+  brandmark = null,
+  brandmarkAlt = "",
 }: ItemHeroVideoProps) {
   const t = useTranslations("ItemDetail");
   const tCommon = useTranslations("Common");
   const [fullscreen, setFullscreen] = useState(false);
 
-  // Without a logo or a chosen shape there is no badge to straddle the edge
-  // with, so the profile layout has nothing to render and falls back to default.
-  const isProfile = layout === "profile" && Boolean(logo) && shape !== "none";
+  // The profile layout needs only a logo: with no shape the bare mark straddles
+  // the edge instead of a badge, exactly as in the landing `Hero`. Without a
+  // logo there is nothing to hang off the edge, so it falls back to default.
+  const hasBadge = shape !== "none";
+  const isProfile = layout === "profile" && Boolean(logo);
+
+  // The title is centred over the video (instead of pinned to the bottom edge)
+  // in the profile layout - where the bottom row belongs to the disc - and
+  // whenever the outline frame is on, since a bottom-pinned frame reads wrong.
+  const showCentered = isProfile || frame;
 
   // Fraction of the disc the logo is drawn at; a value < 1 shrinks the cover
   // render about the disc's centre, leaving a ring of disc background around it.
@@ -96,6 +134,10 @@ export function ItemHeroVideo({
     clampedBgScale === 1
       ? PROFILE_LOGO_SIZE
       : `calc((${PROFILE_LOGO_SIZE}) * ${clampedBgScale})`;
+
+  // The tenant's dark overlay, resolved by the same helper the landing `Hero`
+  // uses so the two heroes cannot drift. `undefined` = nothing to draw.
+  const overlay = heroOverlayBackground(overlayStyle, overlayOpacity);
 
   const expandButton = (
     <IconButton
@@ -122,54 +164,70 @@ export function ItemHeroVideo({
         <HeroVideo url={url} playing={!fullscreen} />
       </ParallaxLayer>
       {/* Scrim - keeps the white title legible over an arbitrary video frame. */}
-      <Box
-        aria-hidden
-        height="45%"
-        styles={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background:
-            "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 100%)",
-          pointerEvents: "none",
-          zIndex: 1,
-        }}
-      />
-      {isProfile ? (
+      {overlay && (
+        <Box
+          aria-hidden
+          styles={{
+            position: "absolute",
+            inset: 0,
+            background: overlay,
+            pointerEvents: "none",
+            zIndex: 1,
+          }}
+        />
+      )}
+      {showCentered ? (
         <>
-          {/* Centred in what the circle leaves, biased low: the box spans the
-              lower half of the video and stops half a circle (plus a 24px gap)
-              short of the bottom edge, so the title sits just above the disc -
-              clear of it - rather than adrift in the middle of the frame. */}
+          {/* Centred title. In the profile layout it is biased low (top: 50%)
+              and stops half a circle short of the bottom edge, so it sits just
+              above the disc; with the frame alone it centres in the full video
+              (below the navbar). Either way the bottom row is free, so the
+              expand button moves to the top-right corner. */}
           <Box
             alignItems="center"
             justifyContent="center"
             paddingX={24}
             styles={{
               position: "absolute",
-              top: "50%",
+              top: isProfile ? "50%" : "var(--ui-navbar-height, 57px)",
               left: 0,
               right: 0,
-              bottom: `calc(${profileSize} / 2 + 24px)`,
+              bottom: isProfile ? `calc(${profileSize} / 2 + 24px)` : 0,
               zIndex: 10,
             }}
           >
-            <Typography
-              as="span"
-              variant="h2"
-              color="#fff"
-              textAlign="center"
-              styles={{
-                lineHeight: 1.25,
-                textShadow: "0 2px 8px rgba(0,0,0,0.7)",
-              }}
-            >
-              {title}
-            </Typography>
+            {frame ? (
+              <HeroTextFrame image={brandmark} imageAlt={brandmarkAlt}>
+                <Typography
+                  as="span"
+                  variant="h2"
+                  color="#fff"
+                  textAlign="center"
+                  styles={{
+                    lineHeight: 1.25,
+                    textShadow: "0 2px 8px rgba(0,0,0,0.7)",
+                  }}
+                >
+                  {title}
+                </Typography>
+              </HeroTextFrame>
+            ) : (
+              <Typography
+                as="span"
+                variant="h2"
+                color="#fff"
+                textAlign="center"
+                styles={{
+                  lineHeight: 1.25,
+                  textShadow: "0 2px 8px rgba(0,0,0,0.7)",
+                }}
+              >
+                {title}
+              </Typography>
+            )}
           </Box>
-          {/* The bottom row is the circle's now, so the expand button moves to
-              the corner it no longer shares. */}
+          {/* The bottom row is free (disc or frame owns the centre), so the
+              expand button moves to the corner it no longer shares. */}
           <Box
             styles={{
               position: "absolute",
@@ -236,9 +294,12 @@ export function ItemHeroVideo({
             height={profileSize}
             // Geometric shapes are opaque page-background plates (resolved per
             // theme in globals.css); the `logo` shape draws its plate through a
-            // mask instead, so the box itself stays clear.
+            // mask instead, and with no shape at all there is no plate - the
+            // logo hangs over the edge on its own - so the box stays clear.
             backgroundColor={
-              isLogoShape ? undefined : "var(--page-background, var(--background))"
+              isLogoShape || !hasBadge
+                ? undefined
+                : "var(--page-background, var(--background))"
             }
             alignItems="center"
             justifyContent="center"
@@ -252,7 +313,9 @@ export function ItemHeroVideo({
               // away by the polygon clip-paths and ignores the masked outline.
               filter: HERO_BADGE_SHADOW,
               zIndex: 3,
-              ...(isLogoShape ? {} : heroLogoBackgroundStyle(shape)),
+              ...(isLogoShape || !hasBadge
+                ? {}
+                : heroLogoBackgroundStyle(shape)),
             }}
           >
             {isLogoShape && logo && (
@@ -280,9 +343,9 @@ export function ItemHeroVideo({
               sizes="200px"
               style={{
                 zIndex: 1,
-                objectFit: isLogoShape ? "contain" : "cover",
+                objectFit: isLogoShape || !hasBadge ? "contain" : "cover",
                 transform:
-                  clampedLogoScale === 1
+                  clampedLogoScale === 1 || !hasBadge
                     ? undefined
                     : `scale(${clampedLogoScale})`,
               }}

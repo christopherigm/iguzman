@@ -6,7 +6,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
-import { Hero } from "@repo/ui/hero";
+import { SectionHero } from "@/components/section-hero";
 import { getSession } from "@repo/auth/session";
 import { getProductCategory, getProductsByCategory } from "@/lib/catalog";
 import { CategoryDetail } from "@/components/category-detail";
@@ -87,7 +87,7 @@ export default async function ProductCategoryPage({ params }: Props) {
     <>
       {hasImage && (
         <Box styles={{ position: "relative" }}>
-          <Hero
+          <SectionHero
             backgroundImage={category.image}
             slogan={name}
             style={{ height: "clamp(220px, 30vw, 400px)" }}

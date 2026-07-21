@@ -446,6 +446,9 @@ _IMAGE_FIELDS = {
     "img_manifest_128": {"max_size": (128, 128),              "quality": 85, "force_format": "PNG"},
     "img_about":        image_cfg(REGULAR, quality=90),
     "img_hero":         {"max_size": (1920, 1080),            "quality": 90},
+    # The brandmark is a small identity mark that must hold alpha, like the logo -
+    # tiled as a watermark and shown in cards - so it is PNG-forced at the SMALL tier.
+    "img_brandmark":    image_cfg(SMALL, quality=90, force_format="PNG"),
 }
 
 
@@ -464,6 +467,7 @@ class SystemSerializer(serializers.ModelSerializer):
     img_manifest_256 = serializers.SerializerMethodField()
     img_manifest_192 = serializers.SerializerMethodField()
     img_manifest_128 = serializers.SerializerMethodField()
+    img_brandmark = serializers.SerializerMethodField()
     img_about = serializers.SerializerMethodField()
     img_hero = serializers.SerializerMethodField()
     product_count = serializers.SerializerMethodField()
@@ -486,6 +490,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "site_name", "site_description", "en_site_description", "host",
             "img_logo", "img_logo_hero", "img_favicon",
             "img_manifest_1080", "img_manifest_512", "img_manifest_256", "img_manifest_192", "img_manifest_128",
+            "img_brandmark",
             "img_hero", "video_link", "slogan", "primary_color", "secondary_color",
             "highlights_bg",
             "highlights_title", "en_highlights_title",
@@ -493,7 +498,9 @@ class SystemSerializer(serializers.ModelSerializer):
             "catalog_items_bg",
             "hero_video_layout", "hero_logo_background", "hero_logo_scale",
             "hero_logo_background_scale",
+            "hero_overlay_style", "hero_overlay_opacity", "hero_text_frame",
             "watermark_enabled", "watermark_rotation", "watermark_intercalated",
+            "watermark_use_brandmark",
             "watermark_size", "watermark_spacing", "watermark_opacity",
             "background_light", "background_dark",
             "google_font_url", "font_display", "font_body",
@@ -525,6 +532,7 @@ class SystemSerializer(serializers.ModelSerializer):
     def get_img_manifest_256(self, obj): return self._image_url(obj, "img_manifest_256")
     def get_img_manifest_192(self, obj): return self._image_url(obj, "img_manifest_192")
     def get_img_manifest_128(self, obj): return self._image_url(obj, "img_manifest_128")
+    def get_img_brandmark(self, obj):    return self._image_url(obj, "img_brandmark")
     def get_img_about(self, obj):        return self._image_url(obj, "img_about")
     def get_img_hero(self, obj):         return self._image_url(obj, "img_hero")
 
@@ -570,7 +578,9 @@ _TEXT_FIELDS = [
     "catalog_items_bg",
     "hero_video_layout", "hero_logo_background", "hero_logo_scale",
     "hero_logo_background_scale",
+    "hero_overlay_style", "hero_overlay_opacity", "hero_text_frame",
     "watermark_enabled", "watermark_rotation", "watermark_intercalated",
+    "watermark_use_brandmark",
     "watermark_size", "watermark_spacing", "watermark_opacity",
     "background_light", "background_dark",
     "google_font_url", "font_display", "font_body",
@@ -627,6 +637,15 @@ class SystemWriteSerializer(serializers.Serializer):
     # Same bounds and rationale as hero_logo_scale; below 50 the badge is too
     # small to read as a backing, above 100 there is nothing bigger to draw.
     hero_logo_background_scale = serializers.IntegerField(required=False, min_value=50, max_value=100)
+    # Constrained to the overlay shapes the frontend can render - an unknown
+    # value would fall back to the default gradient, which reads as the setting
+    # having been ignored. 0 opacity is allowed: it is how a tenant turns the
+    # overlay off without losing the style they had picked.
+    hero_overlay_style = serializers.ChoiceField(
+        choices=[c[0] for c in System.HERO_OVERLAY_STYLE_CHOICES], required=False
+    )
+    hero_overlay_opacity = serializers.IntegerField(required=False, min_value=0, max_value=100)
+    hero_text_frame = serializers.BooleanField(required=False)
     enabled         = serializers.BooleanField(required=False)
 
     # Watermark & page background. The bounds are the same ones the CMS sliders
@@ -635,6 +654,7 @@ class SystemWriteSerializer(serializers.Serializer):
     # whole site rather than behind it.
     watermark_enabled  = serializers.BooleanField(required=False)
     watermark_intercalated = serializers.BooleanField(required=False)
+    watermark_use_brandmark = serializers.BooleanField(required=False)
     watermark_rotation = serializers.IntegerField(required=False, min_value=-45, max_value=45)
     watermark_size     = serializers.IntegerField(required=False, min_value=24, max_value=400)
     watermark_spacing  = serializers.IntegerField(required=False, min_value=0, max_value=400)
@@ -684,6 +704,7 @@ class SystemWriteSerializer(serializers.Serializer):
     img_manifest_256  = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     img_manifest_192  = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     img_manifest_128  = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    img_brandmark     = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     img_about         = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     img_hero          = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 

@@ -6,7 +6,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
-import { Hero } from "@repo/ui/hero";
+import { SectionHero } from "@/components/section-hero";
 import { getMenuCategories, getAllMenuItems } from "@/lib/catalog";
 import { CategoryCard } from "@/components/catalog-categories";
 import { BuyableCard } from "@/components/buyable-card";
@@ -58,7 +58,7 @@ export default async function FoodPage({ params }: Props) {
   return (
     <>
       {heroImage && (
-        <Hero
+        <SectionHero
           backgroundImage={heroImage}
           slogan={t("heading")}
           style={{ height: "clamp(220px, 30vw, 400px)" }}

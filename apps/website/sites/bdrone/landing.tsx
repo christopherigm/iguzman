@@ -23,9 +23,10 @@ import { Intro } from "./sections/intro";
  * The hero is not the centred, equal-weight composition the shared block
  * defaults to: `splitSlogan` reads the tenant's first slogan line as the
  * headline and the rest as a quieter subline, `align="start"` sets that stack
- * against the left gutter with a capped measure, and `scrim` darkens the whole
- * frame - aerial footage is bright sky and moving detail, so type over it needs
- * an even ground instead of a text-shadow to survive the shot.
+ * against the left gutter with a capped measure. The darkening that keeps that
+ * type legible over bright, moving aerial footage is the tenant's own hero
+ * overlay (`System.hero_overlay_*`, tuned in the CMS) - the site adds none of
+ * its own, so the CMS preview matches the live hero exactly.
  *
  * Rhythm comes from a neutral band behind alternate sections - not brand
  * gradients. The band is `--surface-2` with a few percent of the brand navy
@@ -53,7 +54,6 @@ export async function Landing() {
         system={system}
         splitSlogan
         align="start"
-        scrim={0.42}
         actions={
           hasServices && (
             <Button

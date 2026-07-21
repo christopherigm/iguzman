@@ -132,6 +132,23 @@ authoritative recipe (site contract, host→site→tenant chain, block library,
 registration, styling rules, checklist) is **`sites/CLAUDE.md`**; the strategy
 and rationale live in `apps/prds/website-sites.md`.
 
+**The dev site switcher is a _public-site_ preview, not a CMS switch.** In
+development, `app/[locale]/dev-site-switcher.tsx` writes the `__dev_site`
+cookie so any site can be previewed on `127.0.0.1:3000`; it steers `getSite()`
+→ `getTenantHost()` → the `X-Website-Host` every `lib/` helper sends. The CMS
+does **not** follow it: `systemId` is a claim on the access token and Django
+re-derives it from the same token on every write, so `/admin` always edits the
+tenant you signed in as. That is the tenancy invariant (`core/tenancy.py`) and
+must not grow a dev-only escape hatch.
+
+Because the switcher is also rendered on `/admin` (from `admin/layout.tsx`,
+bottom-**right** so it clears the fixed sidebar), that gap is closed by
+`admin/dev-tenant-guard.tsx`: in development, when the previewed site has a
+`System` of its own that isn't the session's, a `ConfirmationModal` says so and
+its only action logs out and returns home. Keep the guard if you touch the
+switcher - without it the CMS silently paints one customer's branding while
+saving to another's data.
+
 **Interaction language.** The site skills (`/new-site`, `/seed-site`, and
 `/site-design` when entered directly) each begin by asking the operator whether
 to conduct the session in **English or Spanish**, then run all interaction —
@@ -142,30 +159,50 @@ language (the bilingual `en_*` seed fields are decided separately in
 
 ## Hero video layout
 
-`System.hero_video_layout` (`"default"` | `"profile"`) decides how the logo and
-the text are composed over a hero video, and applies in two places: the landing
+`System.hero_video_layout` (`"default"` | `"none"` | `"profile"`) decides how the
+logo and the text are composed over a hero video (`"none"` drops the logo and
+keeps only the text/CTA), and applies in two places: the landing
 `Hero` (`components/hero.tsx` → `@repo/ui/hero`) and the item detail hero
 (`components/item-hero-video.tsx`, on product/service/food pages). The tenant
 picks it in the CMS's "Hero video configuration" section
 (`admin/system/hero-video-section.tsx`), whose preview renders the **real**
 `Hero`, so it cannot drift from the site.
 
-The shared `Hero` also takes four optional composition props, all defaulting to
-the historical behaviour so no existing site moved when they landed: `scrim`
-(0-1 flat black over the whole frame - the built-in gradient only darkens the
-bottom ~45%, so text higher up otherwise leans on a text-shadow, which is what
-makes hero type look pasted on), `align` (`"start"` left-aligns the text and
-caps its measure), `subline` (a quieter supporting line under the slogan) and
-`actions` (a CTA row). The website wrapper (`components/hero.tsx`) adds
+The shared `Hero` takes several optional composition props, all defaulting to
+the historical behaviour: `align` (`"start"` left-aligns the text and caps its
+measure), `subline` (a quieter supporting line under the slogan) and `actions`
+(a CTA row). The website wrapper (`components/hero.tsx`) surfaces those plus
 `splitSlogan`, which reads the tenant's **first slogan line as the headline and
 the rest as the subline** - the hierarchy is a design decision the site makes,
 without adding a CMS field for the customer to fill. `sites/cafedealtura` uses
 all of it; the default template uses none.
 
+The shared `Hero` also has a `scrim` prop (0-1 flat black over the whole frame),
+but **the website wrapper deliberately does not expose it**, so a customer site
+cannot add darkening on top of the tenant's overlay. It once did (bdrone,
+panorganico and cafedealtura each set a `scrim`), and that was the bug: the CMS
+"Hero video configuration" preview renders the shared `Hero` with the tenant's
+overlay only and knows nothing of a site's scrim, so any scrim made the live
+hero darker than the preview - reading as "the overlay setting is ignored". The
+tenant's `hero_overlay_*` is now the single source of hero darkening on the
+landing, which is exactly what the preview shows.
+
 - **`profile` bleeds a logo circle half-way below the video**, so both heroes
   wrap themselves in an extra `Box` and hang the disc off it - the video's own
   box keeps `overflow: hidden`. That wrapper's `marginBottom` reserves the
   overhang; without it the page's first block would sit behind the circle.
+- **The dark overlay over the hero is two more tenant fields**, applying to
+  both heroes: `hero_overlay_style` (`none` | `full` | `bottom` | `top` |
+  `both` | `vignette`) and `hero_overlay_opacity` (a whole percent, 0-100).
+  Their defaults (`bottom` at 75) are exactly the gradient both heroes used to
+  hard-code, so nothing moved when they landed. Both heroes resolve them
+  through `heroOverlayBackground` from `@repo/ui/hero` - never re-write the
+  gradient locally, or the item hero and the landing hero drift apart. This
+  overlay is the **only** darkening on the landing hero; the website wrapper does
+  not pass the shared `Hero`'s `scrim` prop (see above), so what the CMS preview
+  shows is what ships. Don't reintroduce a per-site scrim to "help legibility" -
+  it darkens the live hero invisibly to the preview; raise `hero_overlay_opacity`
+  or pick a stronger style instead.
 - **The circle paints `var(--page-background, …)`**, which `globals.css`
   resolves per theme from `--page-background-light` / `--page-background-dark`.
   Keep that variable: it is what makes the disc read as a hole through the video

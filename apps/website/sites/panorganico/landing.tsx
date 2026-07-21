@@ -25,9 +25,10 @@ import { Intro } from "./sections/intro";
  * The hero is not the centred, equal-weight composition the shared block
  * defaults to: `splitSlogan` reads the baker's first slogan line as the headline
  * and the rest as a quieter subline, `align="start"` sets that stack against the
- * left gutter with a capped measure, and `scrim` darkens the whole frame so the
- * type carries itself over a warm, busy photo of bread instead of leaning on a
- * text-shadow.
+ * left gutter with a capped measure. The darkening that carries that type over a
+ * warm, busy photo of bread is the baker's own hero overlay
+ * (`System.hero_overlay_*`, tuned in the CMS) - the site adds none of its own,
+ * so the CMS preview matches the live hero exactly.
  *
  * Rhythm comes from calm neutral bands behind alternate sections, never brand
  * gradients. The band is `--surface-2` with a few percent of the terracotta
@@ -57,7 +58,6 @@ export async function Landing() {
         system={system}
         splitSlogan
         align="start"
-        scrim={0.4}
         actions={
           hasBreads && (
             <Button

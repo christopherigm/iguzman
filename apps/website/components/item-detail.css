@@ -8,3 +8,13 @@
     border-right: 3px solid var(--accent);
   }
 }
+
+/* ── Centered copy on the stacked mobile layout ─────────────────────────────
+   Short-description and description read centered on xs/sm, where the grid is a
+   single column, and revert to the default left alignment from md (900px) up,
+   where the gallery sits beside the description. Media-query-only class. */
+@media (max-width: 899.98px) {
+  .item-detail__center-mobile {
+    text-align: center;
+  }
+}

@@ -6,7 +6,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
-import { Hero } from "@repo/ui/hero";
+import { SectionHero } from "@/components/section-hero";
 import { getHighlight } from "@/lib/highlights";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
 import type { GalleryImage } from "@/components/item-gallery-client";
@@ -78,7 +78,7 @@ export default async function HighlightDetailPage({ params }: Props) {
   return (
     <>
       {hasImage && (
-        <Hero
+        <SectionHero
           backgroundImage={highlight.image}
           slogan={name}
           style={{ height: "clamp(220px, 30vw, 500px)" }}
@@ -110,7 +110,11 @@ export default async function HighlightDetailPage({ params }: Props) {
           {name}
         </Typography>
         {shortDescription && (
-          <Typography variant="body" marginTop={16}>
+          <Typography
+            variant="body"
+            marginTop={16}
+            className="item-detail__center-mobile"
+          >
             {shortDescription}
           </Typography>
         )}
@@ -126,7 +130,10 @@ export default async function HighlightDetailPage({ params }: Props) {
           )}
           {description && (
             <Grid size={{ xs: 12, md: galleryImages.length > 0 ? 6 : 12 }}>
-              <Box paddingRight={20} className="item-detail__description">
+              <Box
+                paddingRight={20}
+                className="item-detail__description item-detail__center-mobile"
+              >
                 <Typography
                   variant="body"
                   styles={{ whiteSpace: "pre-line", lineHeight: 1.75 }}

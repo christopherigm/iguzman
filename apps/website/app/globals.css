@@ -32,18 +32,21 @@ h6 {
 /* Resolved once, per theme, as `--page-background`: components that must paint
    the *page's* color on top of something else (the profile hero's logo circle,
    which straddles the video's bottom edge) can then read a single variable
-   instead of re-deriving the light/dark choice in their own CSS. */
-:root {
-  --page-background: var(--page-background-light, var(--surface-2));
-}
-
-[data-theme="dark"] {
-  --page-background: var(--page-background-dark, var(--surface-2));
-}
-
+   instead of re-deriving the light/dark choice in their own CSS.
+   Declared on `body`, not `:root`: the tenant's `--page-background-light/-dark`
+   and the palette's `--surface-2` fallback are all set inline on <body> by the
+   locale layout, and custom properties don't inherit upward, so resolving this
+   on :root (a parent of <body>) would never see them. `data-theme` lives on
+   <html>, hence the `[data-theme="dark"] body` override. Descendants of <body>
+   still inherit `--page-background`. */
 body {
+  --page-background: var(--page-background-light, var(--surface-2));
   color: var(--foreground);
   background: var(--page-background);
+}
+
+[data-theme="dark"] body {
+  --page-background: var(--page-background-dark, var(--surface-2));
 }
 
 * {

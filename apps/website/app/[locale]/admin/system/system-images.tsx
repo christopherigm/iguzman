@@ -45,6 +45,7 @@ export function SystemImages({
     img_logo: t("logo"),
     img_logo_hero: t("logoHero"),
     img_favicon: t("favicon"),
+    img_brandmark: t("brandmark"),
     img_hero: t("heroImage"),
     img_about: t("aboutImage"),
     img_manifest_1080: t("manifestIcon", { size: "1080×" }),

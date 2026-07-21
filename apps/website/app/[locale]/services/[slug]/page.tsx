@@ -151,7 +151,12 @@ export default async function ServicePage({ params }: Props) {
           logoAlt={system?.site_name ?? ""}
           logoScale={(system?.hero_logo_scale ?? 100) / 100}
           backgroundScale={(system?.hero_logo_background_scale ?? 100) / 100}
+          overlayStyle={system?.hero_overlay_style ?? "bottom"}
+          overlayOpacity={(system?.hero_overlay_opacity ?? 75) / 100}
           shape={system?.hero_logo_background ?? "none"}
+          frame={system?.hero_text_frame ?? false}
+          brandmark={system?.img_brandmark}
+          brandmarkAlt={system?.site_name ?? ""}
         />
       )}
       <Container

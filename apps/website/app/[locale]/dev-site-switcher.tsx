@@ -17,10 +17,16 @@ export function DevSiteSwitcher({
   sites,
   current,
   cookieName,
+  side = "left",
 }: {
   sites: { slug: string; name: string }[];
   current: string;
   cookieName: string;
+  /**
+   * Which bottom corner to float in. The CMS keeps its own fixed sidebar down
+   * the left edge, so `admin/layout.tsx` puts the switcher on the right there.
+   */
+  side?: "left" | "right";
 }) {
   const router = useRouter();
 
@@ -46,7 +52,7 @@ export function DevSiteSwitcher({
       styles={{
         position: "fixed",
         bottom: 16,
-        left: 16,
+        [side]: 16,
         zIndex: 2000,
         width: 200,
       }}

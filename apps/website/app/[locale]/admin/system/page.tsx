@@ -54,6 +54,9 @@ export default function AdminSystemPage() {
     hero_logo_background: "none",
     hero_logo_scale: 100,
     hero_logo_background_scale: 100,
+    hero_overlay_style: "bottom",
+    hero_overlay_opacity: 75,
+    hero_text_frame: false,
     about: "",
     en_about: "",
     mission: "",
@@ -76,6 +79,7 @@ export default function AdminSystemPage() {
     watermark_enabled: false,
     watermark_rotation: -12,
     watermark_intercalated: false,
+    watermark_use_brandmark: false,
     watermark_size: 120,
     watermark_spacing: 70,
     watermark_opacity: 4,
@@ -145,6 +149,9 @@ export default function AdminSystemPage() {
           hero_logo_background: data.hero_logo_background ?? "none",
           hero_logo_scale: data.hero_logo_scale ?? 100,
           hero_logo_background_scale: data.hero_logo_background_scale ?? 100,
+          hero_overlay_style: data.hero_overlay_style ?? "bottom",
+          hero_overlay_opacity: data.hero_overlay_opacity ?? 75,
+          hero_text_frame: data.hero_text_frame ?? false,
           about: data.about ?? "",
           en_about: data.en_about ?? "",
           mission: data.mission ?? "",
@@ -167,6 +174,7 @@ export default function AdminSystemPage() {
           watermark_enabled: data.watermark_enabled ?? false,
           watermark_rotation: data.watermark_rotation ?? -12,
           watermark_intercalated: data.watermark_intercalated ?? false,
+          watermark_use_brandmark: data.watermark_use_brandmark ?? false,
           watermark_size: data.watermark_size ?? 120,
           watermark_spacing: data.watermark_spacing ?? 70,
           watermark_opacity: data.watermark_opacity ?? 4,
@@ -477,6 +485,12 @@ export default function AdminSystemPage() {
                     images.img_hero?.pending[0]?.preview ??
                     images.img_hero?.existing[0]?.url
                   }
+                  // The brandmark, if uploaded: shown in the circle atop the
+                  // text-frame preview, exactly as the section/detail heroes render it.
+                  brandmark={
+                    images.img_brandmark?.pending[0]?.preview ??
+                    images.img_brandmark?.existing[0]?.url
+                  }
                 />
                 <WatermarkSection
                   values={values}
@@ -489,6 +503,12 @@ export default function AdminSystemPage() {
                     images.img_logo?.pending[0]?.preview ??
                     images.img_logo?.existing[0]?.url ??
                     "/logo.png"
+                  }
+                  // The brandmark, if one is uploaded: enables the "Use
+                  // brandmark" switch and is what the preview tiles when it is on.
+                  brandmark={
+                    images.img_brandmark?.pending[0]?.preview ??
+                    images.img_brandmark?.existing[0]?.url
                   }
                 />
                 <Grid container spacing={2} paddingTop={32}>

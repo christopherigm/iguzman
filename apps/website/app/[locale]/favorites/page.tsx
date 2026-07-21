@@ -5,7 +5,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { Grid } from "@repo/ui/core-elements/grid";
-import { Hero } from "@repo/ui/hero";
+import { SectionHero } from "@/components/section-hero";
 import { getSession } from "@repo/auth/session";
 import { getFavorites } from "@/lib/favorites";
 import { getRequestOrigin } from "@/lib/metadata";
@@ -62,7 +62,7 @@ export default async function FavoritesPage({ params }: Props) {
   return (
     <>
       {heroImage && (
-        <Hero
+        <SectionHero
           backgroundImage={heroImage}
           slogan={t("heading")}
           style={{ height: "clamp(220px, 30vw, 400px)" }}

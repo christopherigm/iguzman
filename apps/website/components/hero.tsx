@@ -20,8 +20,6 @@ type Props = {
   splitSlogan?: boolean;
   /** Horizontal alignment of the hero text. @default "center" */
   align?: "center" | "start";
-  /** Flat black scrim over the whole hero, 0-1. @default 0 */
-  scrim?: number;
 };
 
 export function Hero({
@@ -29,7 +27,6 @@ export function Hero({
   actions,
   splitSlogan = false,
   align = "center",
-  scrim = 0,
 }: Props) {
   // `\n` is what the CMS's multirow slogan field stores. Split on the first one
   // only, so a three-line slogan keeps lines 2-3 together in the subline.
@@ -46,11 +43,12 @@ export function Hero({
       subline={splitSlogan ? subline || null : null}
       actions={actions}
       align={align}
-      scrim={scrim}
       layout={system?.hero_video_layout ?? "default"}
       logoBackground={system?.hero_logo_background ?? "none"}
       profileLogoScale={(system?.hero_logo_scale ?? 100) / 100}
       profileBackgroundScale={(system?.hero_logo_background_scale ?? 100) / 100}
+      overlayStyle={system?.hero_overlay_style ?? "bottom"}
+      overlayOpacity={(system?.hero_overlay_opacity ?? 75) / 100}
       parallax={false}
     />
   );
