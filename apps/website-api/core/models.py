@@ -432,6 +432,14 @@ class System(Common):
         default=-12,
         help_text="Rotation of the tiled pattern in degrees (-45 to 45).",
     )
+    # When on, neighbouring logos lean opposite ways (a checkerboard of
+    # +rotation / -rotation) instead of the whole pattern sharing one tilt, so
+    # `watermark_rotation` becomes the alternation amplitude rather than a
+    # uniform angle.
+    watermark_intercalated = models.BooleanField(
+        default=False,
+        help_text="Alternate each logo's rotation so neighbours lean opposite ways.",
+    )
     watermark_size = models.PositiveSmallIntegerField(
         default=120,
         help_text="Drawn width of one logo in px.",

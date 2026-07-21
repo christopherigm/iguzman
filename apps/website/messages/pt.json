@@ -423,6 +423,7 @@
     "watermarkTitle": "Marca d'água e fundo",
     "watermarkIntro": "Repita seu logo de forma sutil atrás de cada página e escolha a cor de fundo sobre a qual ele aparece. Páginas de administração nunca recebem marca d'água.",
     "watermarkEnabled": "Mostrar a marca d'água do logo",
+    "watermarkIntercalated": "Alternar rotação",
     "watermarkRotation": "Rotação",
     "watermarkSpacing": "Espaço entre os logos (px)",
     "watermarkSize": "Tamanho do logo (px)",

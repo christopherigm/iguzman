@@ -423,6 +423,7 @@
     "watermarkTitle": "Filigrane et arrière-plan",
     "watermarkIntro": "Répétez discrètement votre logo derrière chaque page et choisissez la couleur de fond sur laquelle il s'affiche. Les pages d'administration ne sont jamais filigranées.",
     "watermarkEnabled": "Afficher le filigrane du logo",
+    "watermarkIntercalated": "Alterner la rotation",
     "watermarkRotation": "Rotation",
     "watermarkSpacing": "Espace entre les logos (px)",
     "watermarkSize": "Taille du logo (px)",

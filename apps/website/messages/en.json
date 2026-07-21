@@ -423,6 +423,7 @@
     "watermarkTitle": "Watermark & Background",
     "watermarkIntro": "Tile your logo faintly behind every page, and choose the page background it sits on. Admin pages are never watermarked.",
     "watermarkEnabled": "Show the logo watermark",
+    "watermarkIntercalated": "Alternate rotation",
     "watermarkRotation": "Rotation",
     "watermarkSpacing": "Space between logos (px)",
     "watermarkSize": "Logo size (px)",

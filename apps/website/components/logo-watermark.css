@@ -53,6 +53,25 @@
   background-position: center;
 }
 
+/* ── Intercalated variant ────────────────────────────────────────────────────
+   Instead of tilting the whole layer as one block, alternate each logo so
+   neighbours lean opposite ways. `:nth-child` walks the flat tile list, so on
+   the grid the ± rotation lands as a diagonal checkerboard. The layer keeps its
+   150% / -25% overscan (tiles simply clip at the edges under `overflow: hidden`)
+   but drops its own rotation, so `--logo-watermark-rotation` now reads as the
+   alternation amplitude rather than a uniform angle. */
+.logo-watermark--intercalated .logo-watermark__grid {
+  transform: none;
+}
+
+.logo-watermark--intercalated .logo-watermark__tile:nth-child(odd) {
+  transform: rotate(var(--logo-watermark-rotation, -12deg));
+}
+
+.logo-watermark--intercalated .logo-watermark__tile:nth-child(even) {
+  transform: rotate(calc(-1 * var(--logo-watermark-rotation, -12deg)));
+}
+
 @media (max-width: 600px) {
   /* sm - a desktop-scaled pattern reads as giant blobs on a phone. */
   .logo-watermark__grid {

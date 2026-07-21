@@ -174,8 +174,8 @@ class SystemAdmin(admin.ModelAdmin):
         }),
         ("Watermark & Background", {
             "fields": (
-                "watermark_enabled", "watermark_rotation", "watermark_size",
-                "watermark_spacing", "watermark_opacity",
+                "watermark_enabled", "watermark_rotation", "watermark_intercalated",
+                "watermark_size", "watermark_spacing", "watermark_opacity",
                 "background_light", "background_dark",
             ),
             "description": (

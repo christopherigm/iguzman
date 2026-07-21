@@ -423,6 +423,7 @@
     "watermarkTitle": "Wasserzeichen & Hintergrund",
     "watermarkIntro": "Zeige dein Logo dezent gekachelt hinter jeder Seite und wähle die Hintergrundfarbe darunter. Admin-Seiten erhalten nie ein Wasserzeichen.",
     "watermarkEnabled": "Logo-Wasserzeichen anzeigen",
+    "watermarkIntercalated": "Rotation abwechseln",
     "watermarkRotation": "Drehung",
     "watermarkSpacing": "Abstand zwischen Logos (px)",
     "watermarkSize": "Logogröße (px)",

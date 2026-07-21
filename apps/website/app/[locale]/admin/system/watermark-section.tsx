@@ -67,6 +67,7 @@ export function WatermarkSection({ values, onChange, logo }: Props) {
   const isDark = state.resolved === "dark";
 
   const enabled = Boolean(values.watermark_enabled);
+  const intercalated = Boolean(values.watermark_intercalated);
   const rotation = Number(values.watermark_rotation ?? -12);
   const spacing = Number(values.watermark_spacing ?? 70);
   const size = Number(values.watermark_size ?? 120);
@@ -99,20 +100,41 @@ export function WatermarkSection({ values, onChange, logo }: Props) {
         {t("watermarkIntro")}
       </Typography>
 
-      {/* Outside the two columns: it governs both of them. */}
-      <Box display="flex" alignItems="center" gap={10}>
-        <Switch
-          checked={enabled}
-          onChange={(v) => onChange("watermark_enabled", v)}
-        />
-        <Typography
-          as="span"
-          variant="body"
-          fontWeight={500}
-          color="var(--foreground)"
-        >
-          {t("watermarkEnabled")}
-        </Typography>
+      {/* Outside the two columns: they govern both of them. The intercalate
+          toggle sits in the same row and only bites while the watermark is on. */}
+      <Box display="flex" alignItems="center" gap={24} flexWrap="wrap">
+        <Box display="flex" alignItems="center" gap={10}>
+          <Switch
+            checked={enabled}
+            onChange={(v) => onChange("watermark_enabled", v)}
+          />
+          <Typography
+            as="span"
+            variant="body"
+            fontWeight={500}
+            color="var(--foreground)"
+          >
+            {t("watermarkEnabled")}
+          </Typography>
+        </Box>
+
+        <Box display="flex" alignItems="center" gap={10}>
+          <Switch
+            checked={intercalated}
+            disabled={!enabled}
+            onChange={(v) => onChange("watermark_intercalated", v)}
+          />
+          <Typography
+            as="span"
+            variant="body"
+            fontWeight={500}
+            color={
+              enabled ? "var(--foreground)" : "var(--muted-foreground, #6b7280)"
+            }
+          >
+            {t("watermarkIntercalated")}
+          </Typography>
+        </Box>
       </Box>
 
       {/* spacing is in 8px base units, not px - 3 is the 24px gutter. */}
@@ -202,6 +224,7 @@ export function WatermarkSection({ values, onChange, logo }: Props) {
                   size={size}
                   spacing={spacing}
                   rotation={rotation}
+                  intercalated={intercalated}
                   opacity={opacity}
                 />
               )}

@@ -43,6 +43,8 @@ export interface System {
   hero_logo_background_scale: number;
   watermark_enabled: boolean;
   watermark_rotation: number;
+  /** Alternate each logo's rotation so neighbours lean opposite ways. */
+  watermark_intercalated: boolean;
   watermark_size: number;
   watermark_spacing: number;
   /** Whole percent (1-25), not a 0-1 fraction. */

@@ -19,6 +19,12 @@ type Props = {
   spacing?: number;
   /** Rotation of the whole pattern, degrees. */
   rotation?: number;
+  /**
+   * Alternate each logo's rotation instead of tilting the whole pattern as one
+   * block, so neighbouring logos lean opposite ways (a checkerboard of
+   * +rotation / -rotation). `rotation` then reads as the alternation amplitude.
+   */
+  intercalated?: boolean;
   /** Opacity of the pattern as a whole percent (1-25). */
   opacity?: number;
   /**
@@ -44,6 +50,7 @@ export function LogoWatermark({
   size = 120,
   spacing = 70,
   rotation = -12,
+  intercalated = false,
   opacity = 4,
   inline = false,
 }: Props) {
@@ -56,9 +63,13 @@ export function LogoWatermark({
   return (
     <div
       aria-hidden="true"
-      className={
-        inline ? "logo-watermark logo-watermark--inline" : "logo-watermark"
-      }
+      className={[
+        "logo-watermark",
+        inline && "logo-watermark--inline",
+        intercalated && "logo-watermark--intercalated",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       style={
         {
           "--logo-watermark-image": `url("${encodeURI(logo)}")`,

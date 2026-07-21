@@ -175,6 +175,7 @@ export default async function LocaleLayout({ children, params }: Props) {
                         size={system.watermark_size}
                         spacing={system.watermark_spacing}
                         rotation={system.watermark_rotation}
+                        intercalated={system.watermark_intercalated}
                         opacity={system.watermark_opacity}
                       />
                     </HideOnAdmin>

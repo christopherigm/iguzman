@@ -78,6 +78,7 @@ SYSTEM_TEXT_FIELDS = (
     "hero_logo_background_scale",
     "watermark_enabled",
     "watermark_rotation",
+    "watermark_intercalated",
     "watermark_size",
     "watermark_spacing",
     "watermark_opacity",
