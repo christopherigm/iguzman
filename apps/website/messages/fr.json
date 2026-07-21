@@ -43,6 +43,37 @@
       "productsCta": "Voir nos pains"
     }
   },
+  "CafeAlturaSite": {
+    "origin": {
+      "eyebrow": "De la parcelle à votre tasse",
+      "viewCoffees": "Voir nos cafés",
+      "learnMore": "Découvrir la ferme"
+    },
+    "wholesale": {
+      "eyebrow": "Vente en gros",
+      "heading": "Vous achetez du café en volume ?",
+      "body": "Nous travaillons directement avec les cafés, les torréfacteurs et les boutiques qui revendent nos grains. Écrivez-nous et nous parlerons récolte, conditionnements et délais de livraison.",
+      "cta": "Acheter en gros"
+    },
+    "about": {
+      "eyebrow": "Notre histoire",
+      "title": "La ferme et la famille",
+      "titleNamed": "À propos de {name}",
+      "placeholder": "Nous préparons notre histoire. Revenez bientôt pour rencontrer la famille et découvrir comment nous plantons et récoltons notre café.",
+      "missionHeading": "Notre mission",
+      "visionHeading": "Notre vision",
+      "productsCta": "Voir nos cafés",
+      "wholesaleCta": "Acheter en gros"
+    },
+    "wholesalePage": {
+      "eyebrow": "Vente en gros",
+      "heading": "Du café directement du producteur",
+      "subtitle": "Si vous vendez du café dans votre établissement, votre torréfaction ou votre boutique, vous pouvez l'acheter directement à la famille qui le plante et le récolte. Dites-nous ce qu'il vous faut et nous préparerons la commande avec vous.",
+      "productsCta": "Voir le catalogue",
+      "aboutCta": "Découvrir la ferme",
+      "commitmentHeading": "Notre engagement"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

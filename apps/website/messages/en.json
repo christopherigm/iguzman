@@ -43,6 +43,37 @@
       "productsCta": "See our breads"
     }
   },
+  "CafeAlturaSite": {
+    "origin": {
+      "eyebrow": "From the plot to your cup",
+      "viewCoffees": "See our coffees",
+      "learnMore": "Meet the farm"
+    },
+    "wholesale": {
+      "eyebrow": "Wholesale",
+      "heading": "Buying coffee by the sack?",
+      "body": "We work directly with cafés, roasters and shops that resell our beans. Write to us and we'll talk harvest, formats and delivery times.",
+      "cta": "Buy wholesale"
+    },
+    "about": {
+      "eyebrow": "Our story",
+      "title": "The farm and the family",
+      "titleNamed": "About {name}",
+      "placeholder": "We're getting our story ready. Check back soon to meet the family and see how we plant and harvest our coffee.",
+      "missionHeading": "Our mission",
+      "visionHeading": "Our vision",
+      "productsCta": "See our coffees",
+      "wholesaleCta": "Buy wholesale"
+    },
+    "wholesalePage": {
+      "eyebrow": "Wholesale",
+      "heading": "Coffee straight from the grower",
+      "subtitle": "If you sell coffee in your café, roastery or shop, you can buy it directly from the family that plants and harvests it. Tell us what you need and we'll put the order together with you.",
+      "productsCta": "Browse the catalog",
+      "aboutCta": "Meet the farm",
+      "commitmentHeading": "Our commitment"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

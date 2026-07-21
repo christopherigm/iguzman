@@ -40,9 +40,24 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-export const viewport: Viewport = {
-  themeColor: "#68c3f7",
-};
+// The browser UI color (Android Chrome's toolbar, iOS Safari's tab bar) comes
+// from the resolved tenant's brand, not a platform default. `themeColor` only
+// varies by media query, so the two brand colors map onto the two color
+// schemes: primary in light, secondary in dark (falling back to primary when a
+// tenant hasn't set one).
+export async function generateViewport(): Promise<Viewport> {
+  const system = await getSystem();
+
+  const primary = system?.primary_color ?? "#68c3f7";
+  const secondary = system?.secondary_color ?? primary;
+
+  return {
+    themeColor: [
+      { media: "(prefers-color-scheme: light)", color: primary },
+      { media: "(prefers-color-scheme: dark)", color: secondary },
+    ],
+  };
+}
 
 export async function generateMetadata({
   params,

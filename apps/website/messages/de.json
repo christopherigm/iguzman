@@ -43,6 +43,37 @@
       "productsCta": "Unsere Brote ansehen"
     }
   },
+  "CafeAlturaSite": {
+    "origin": {
+      "eyebrow": "Von der Plantage in deine Tasse",
+      "viewCoffees": "Unsere Kaffees ansehen",
+      "learnMore": "Die Finca kennenlernen"
+    },
+    "wholesale": {
+      "eyebrow": "Großhandel",
+      "heading": "Kaufst du Kaffee in größeren Mengen?",
+      "body": "Wir arbeiten direkt mit Cafés, Röstereien und Läden zusammen, die unsere Bohnen weiterverkaufen. Schreib uns, und wir sprechen über Ernte, Gebinde und Lieferzeiten.",
+      "cta": "Im Großhandel kaufen"
+    },
+    "about": {
+      "eyebrow": "Unsere Geschichte",
+      "title": "Die Finca und die Familie",
+      "titleNamed": "Über {name}",
+      "placeholder": "Wir bereiten unsere Geschichte gerade vor. Schau bald wieder vorbei, um die Familie kennenzulernen und zu sehen, wie wir unseren Kaffee anbauen und ernten.",
+      "missionHeading": "Unsere Mission",
+      "visionHeading": "Unsere Vision",
+      "productsCta": "Unsere Kaffees ansehen",
+      "wholesaleCta": "Im Großhandel kaufen"
+    },
+    "wholesalePage": {
+      "eyebrow": "Großhandel",
+      "heading": "Kaffee direkt vom Erzeuger",
+      "subtitle": "Wenn du Kaffee in deinem Café, deiner Rösterei oder deinem Laden verkaufst, kannst du ihn direkt bei der Familie kaufen, die ihn anbaut und erntet. Sag uns, was du brauchst, und wir stellen die Bestellung gemeinsam zusammen.",
+      "productsCta": "Zum Katalog",
+      "aboutCta": "Die Finca kennenlernen",
+      "commitmentHeading": "Unser Versprechen"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

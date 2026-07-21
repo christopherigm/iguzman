@@ -83,7 +83,9 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     description: system?.site_description ?? "Website application",
     start_url: "/",
     display: "standalone",
-    background_color: "#000000",
+    // Splash screen background stays white; the brand color drives the
+    // installed app's title/status bar via `theme_color`.
+    background_color: "#ffffff",
     theme_color: system?.primary_color ?? "#68c3f7",
     orientation: "portrait-primary",
     icons,

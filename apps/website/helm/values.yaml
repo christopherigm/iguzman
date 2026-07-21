@@ -43,6 +43,10 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
+    - host: cafedealtura.iguzman.com.mx
+      paths:
+        - path: /
+          pathType: Prefix
     - host: panbueno.iguzman.com.mx
       paths:
         - path: /
@@ -52,6 +56,7 @@ ingress:
       hosts:
         - website.iguzman.com.mx
         - bdrone.com.mx
+        - cafedealtura.iguzman.com.mx
         - panbueno.iguzman.com.mx
 
 # ─── Environment variables ──────────────────────────────────

@@ -43,6 +43,37 @@
       "productsCta": "Ver nuestros panes"
     }
   },
+  "CafeAlturaSite": {
+    "origin": {
+      "eyebrow": "Del cafetal a tu taza",
+      "viewCoffees": "Ver nuestros cafés",
+      "learnMore": "Conoce la finca"
+    },
+    "wholesale": {
+      "eyebrow": "Mayoreo",
+      "heading": "¿Vendes café por volumen?",
+      "body": "Trabajamos directo con cafeterías, tostadores y tiendas que revenden nuestro grano. Escríbenos y platicamos de cosecha, presentaciones y tiempos de entrega.",
+      "cta": "Compra por mayoreo"
+    },
+    "about": {
+      "eyebrow": "Nuestra historia",
+      "title": "La finca y la familia",
+      "titleNamed": "Sobre {name}",
+      "placeholder": "Estamos preparando nuestra historia. Vuelve pronto para conocer a la familia y la forma en que sembramos y cosechamos nuestro café.",
+      "missionHeading": "Nuestra misión",
+      "visionHeading": "Nuestra visión",
+      "productsCta": "Ver nuestros cafés",
+      "wholesaleCta": "Compra por mayoreo"
+    },
+    "wholesalePage": {
+      "eyebrow": "Mayoreo",
+      "heading": "Café directo del productor",
+      "subtitle": "Si vendes café en tu cafetería, tostaduría o tienda, puedes comprarlo directamente a la familia que lo siembra y lo cosecha. Cuéntanos qué necesitas y armamos el pedido contigo.",
+      "productsCta": "Ver el catálogo",
+      "aboutCta": "Conoce la finca",
+      "commitmentHeading": "Nuestro compromiso"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

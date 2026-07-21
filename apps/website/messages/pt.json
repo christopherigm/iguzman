@@ -43,6 +43,37 @@
       "productsCta": "Ver nossos pães"
     }
   },
+  "CafeAlturaSite": {
+    "origin": {
+      "eyebrow": "Do cafezal à sua xícara",
+      "viewCoffees": "Ver nossos cafés",
+      "learnMore": "Conheça a fazenda"
+    },
+    "wholesale": {
+      "eyebrow": "Atacado",
+      "heading": "Compra café em volume?",
+      "body": "Trabalhamos direto com cafeterias, torrefações e lojas que revendem nossos grãos. Escreva para nós e conversamos sobre safra, embalagens e prazos de entrega.",
+      "cta": "Comprar no atacado"
+    },
+    "about": {
+      "eyebrow": "Nossa história",
+      "title": "A fazenda e a família",
+      "titleNamed": "Sobre {name}",
+      "placeholder": "Estamos preparando nossa história. Volte em breve para conhecer a família e ver como plantamos e colhemos o nosso café.",
+      "missionHeading": "Nossa missão",
+      "visionHeading": "Nossa visão",
+      "productsCta": "Ver nossos cafés",
+      "wholesaleCta": "Comprar no atacado"
+    },
+    "wholesalePage": {
+      "eyebrow": "Atacado",
+      "heading": "Café direto do produtor",
+      "subtitle": "Se você vende café na sua cafeteria, torrefação ou loja, pode comprá-lo diretamente da família que planta e colhe. Conte o que precisa e montamos o pedido com você.",
+      "productsCta": "Ver o catálogo",
+      "aboutCta": "Conheça a fazenda",
+      "commitmentHeading": "Nosso compromisso"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

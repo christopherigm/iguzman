@@ -15,6 +15,7 @@ import type { SiteConfig, SiteModule } from "./types";
 import defaultConfig from "./_default/site.config";
 import bdroneConfig from "./bdrone/site.config";
 import panorganicoConfig from "./panorganico/site.config";
+import cafedealturaConfig from "./cafedealtura/site.config";
 // <new-site:import> - the CLI inserts new `import <slug>Config from ...` lines above this marker.
 
 /**
@@ -33,6 +34,7 @@ interface SiteEntry {
 const SITES: SiteEntry[] = [
   { config: bdroneConfig, load: () => import("./bdrone") },
   { config: panorganicoConfig, load: () => import("./panorganico") },
+  { config: cafedealturaConfig, load: () => import("./cafedealtura") },
   // <new-site:entry> - the CLI inserts new `{ config, load }` entries above this marker.
   { config: defaultConfig, load: () => import("./_default") },
 ];
