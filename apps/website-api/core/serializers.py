@@ -498,7 +498,8 @@ class SystemSerializer(serializers.ModelSerializer):
             "catalog_items_bg",
             "hero_video_layout", "hero_logo_background", "hero_logo_scale",
             "hero_logo_background_scale",
-            "hero_overlay_style", "hero_overlay_opacity", "hero_text_frame",
+            "hero_overlay_style", "hero_overlay_opacity", "hero_overlay_extent",
+            "hero_text_frame",
             "watermark_enabled", "watermark_rotation", "watermark_intercalated",
             "watermark_use_brandmark",
             "watermark_size", "watermark_spacing", "watermark_opacity",
@@ -578,7 +579,8 @@ _TEXT_FIELDS = [
     "catalog_items_bg",
     "hero_video_layout", "hero_logo_background", "hero_logo_scale",
     "hero_logo_background_scale",
-    "hero_overlay_style", "hero_overlay_opacity", "hero_text_frame",
+    "hero_overlay_style", "hero_overlay_opacity", "hero_overlay_extent",
+    "hero_text_frame",
     "watermark_enabled", "watermark_rotation", "watermark_intercalated",
     "watermark_use_brandmark",
     "watermark_size", "watermark_spacing", "watermark_opacity",
@@ -645,6 +647,10 @@ class SystemWriteSerializer(serializers.Serializer):
         choices=[c[0] for c in System.HERO_OVERLAY_STYLE_CHOICES], required=False
     )
     hero_overlay_opacity = serializers.IntegerField(required=False, min_value=0, max_value=100)
+    # How far the gradient overlay reaches, on the same 0-100 scale the CMS
+    # slider emits; 50 is the neutral default reach. Independent of the strength
+    # above.
+    hero_overlay_extent = serializers.IntegerField(required=False, min_value=0, max_value=100)
     hero_text_frame = serializers.BooleanField(required=False)
     enabled         = serializers.BooleanField(required=False)
 

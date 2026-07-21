@@ -51,6 +51,8 @@ export interface System {
   hero_overlay_style: HeroOverlayStyle;
   /** Overlay strength as a whole percent (0-100), not a 0-1 fraction. */
   hero_overlay_opacity: number;
+  /** How far the gradient overlay reaches, as a whole percent (0-100); 50 = default reach. */
+  hero_overlay_extent: number;
   /**
    * Wrap the section/page heading over a hero (category, highlight and item
    * detail pages - not the landing hero) in an outline frame, with the

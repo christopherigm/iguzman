@@ -61,9 +61,24 @@ export type HeroOverlayStyle =
   | "vignette";
 
 /**
+ * Neutral value for `heroOverlayBackground`'s `extent`: the point on the 0-100
+ * scale that reproduces the gradients this component used to hard-code. Each
+ * style keeps its own historical fade stop as the value at this extent, so a
+ * hero that says nothing about extent (or a stored row that predates the field)
+ * looks exactly as it always did.
+ */
+export const DEFAULT_HERO_OVERLAY_EXTENT = 50;
+
+/**
  * CSS `background` for the hero's dark overlay, or `undefined` when the chosen
  * style/opacity draws nothing. `opacity` is the 0-1 strength of the *darkest*
  * part of the overlay - the gradient styles fade from it to transparent.
+ *
+ * `extent` (0-100) scales *how far* the darkening reaches across the frame - a
+ * taller/shorter dark band - independently of `opacity` (how dark it gets).
+ * `DEFAULT_HERO_OVERLAY_EXTENT` (50) is the neutral point that reproduces the
+ * old hard-coded stops; larger reaches further, smaller pulls it back to the
+ * edge. `full` is a flat tint, so `extent` does nothing to it.
  *
  * Exported so every hero consumer (this component and the website's
  * `ItemHeroVideo`) resolves the tenant's setting to the same pixels; a second
@@ -72,22 +87,33 @@ export type HeroOverlayStyle =
 export function heroOverlayBackground(
   style: HeroOverlayStyle,
   opacity: number,
+  extent: number = DEFAULT_HERO_OVERLAY_EXTENT,
 ): string | undefined {
   const a = Math.min(Math.max(opacity, 0), 1);
   if (style === "none" || a === 0) return undefined;
   const dark = `rgba(0,0,0,${a})`;
   const clear = "rgba(0,0,0,0)";
+  // `reach` is 1 at the neutral extent, so multiplying a style's historical stop
+  // by it leaves that stop unchanged at 50 and scales it linearly either side.
+  const reach = Math.min(Math.max(extent, 0), 100) / DEFAULT_HERO_OVERLAY_EXTENT;
+  const pct = (n: number) => Math.round(Math.min(Math.max(n, 0), 100));
   switch (style) {
     case "full":
       return dark;
     case "top":
-      return `linear-gradient(to bottom, ${dark} 0%, ${clear} 55%)`;
-    case "both":
-      return `linear-gradient(to bottom, ${dark} 0%, ${clear} 35%, ${clear} 65%, ${dark} 100%)`;
+      return `linear-gradient(to bottom, ${dark} 0%, ${clear} ${pct(55 * reach)}%)`;
+    case "both": {
+      // Cap each side below the mid-line so the two clear stops stay ordered
+      // (a stop past 50% would cross its mirror and invert the gradient).
+      const stop = Math.min(pct(35 * reach), 49);
+      return `linear-gradient(to bottom, ${dark} 0%, ${clear} ${stop}%, ${clear} ${100 - stop}%, ${dark} 100%)`;
+    }
     case "vignette":
-      return `radial-gradient(ellipse at center, ${clear} 40%, ${dark} 100%)`;
+      // Reach grows the *dark* ring, which shrinks the clear centre from its
+      // historical 40% radius (dark ring = 60% at the neutral extent).
+      return `radial-gradient(ellipse at center, ${clear} ${pct(100 - 60 * reach)}%, ${dark} 100%)`;
     default:
-      return `linear-gradient(to top, ${dark} 0%, ${clear} 55%)`;
+      return `linear-gradient(to top, ${dark} 0%, ${clear} ${pct(55 * reach)}%)`;
   }
 }
 
@@ -206,9 +232,11 @@ const HERO_FRAME_BADGE_SIZE = "clamp(36px, 4.55vw, 50px)";
 
 /**
  * Wraps a hero's section/page heading in a thin outline frame. When `image` is
- * given (the tenant's brandmark) it sits in a white circle straddling the top
- * border - half above the line, half below - the way a badge caps a plate; with
- * no image the frame is just the outline. Exported and shared so every hero
+ * given (the tenant's brandmark) it sits in a white circle cradled at the top:
+ * the top border breaks in the centre and rises on either side into two curved
+ * shoulders that meet the circle's lower flanks, leaving the circle mostly above
+ * the line (the way a bean caps a café plate). With no image the frame is just
+ * the outline. Exported and shared so every hero
  * consumer (this component and the website's `ItemHeroVideo`) frames its text
  * identically, the way `heroOverlayBackground`/the badge helpers keep the two
  * heroes from drifting.
@@ -231,23 +259,123 @@ export function HeroTextFrame({
 }) {
   const sized = (v: string) => (scale === 1 ? v : `calc((${v}) * ${scale})`);
   const badge = sized(HERO_FRAME_BADGE_SIZE);
+  const border = "rgba(255,255,255,0.9)";
+
+  // Bare outline (no brandmark): the original full-border frame, unchanged.
+  if (!image) {
+    return (
+      <div style={{ position: "relative", display: "inline-block" }}>
+        <div
+          style={{
+            border: `2px solid ${border}`,
+            padding: sized("0.8em 1.7em"),
+          }}
+        >
+          {children}
+        </div>
+      </div>
+    );
+  }
+
+  // Cradled brandmark: the top border is drawn as two straight flanks with a
+  // centred gap, bridged by an SVG that rises into two shoulders meeting the
+  // circle's lower flanks. The circle itself sits mostly above the frame.
+  // Widths derive from the (responsive) badge diameter so the cradle scales
+  // with it; the SVG keeps a fixed 210×60 viewBox (same 3.5 ratio as its box,
+  // so `preserveAspectRatio: none` doesn't distort it) and a non-scaling 2px
+  // stroke so the shoulders stay the same weight as the 2px flanks/side borders.
+  const cradleW = `calc((${badge}) * 2.1)`;
+  const cradleH = `calc((${badge}) * 0.6)`;
+  // Each flank runs from the outer corner (2px outside the padding box, over the
+  // side border) to the edge of the centred cradle gap.
+  const flankW = `calc(50% - (${cradleW}) / 2 + 2px)`;
   return (
     <div
       style={{
         position: "relative",
         display: "inline-block",
-        // Reserve the half of the badge that overhangs the top border, so an
-        // ancestor never clips it and it never collides with content above.
-        marginTop: image ? `calc(${badge} / 2)` : undefined,
+        // Reserve the space the circle + shoulders occupy above the frame, so
+        // an ancestor never clips them.
+        marginTop: `calc((${badge}) * 0.85 + 8px)`,
       }}
     >
-      {image && (
+      <div
+        style={{
+          position: "relative",
+          borderLeft: `2px solid ${border}`,
+          borderRight: `2px solid ${border}`,
+          borderBottom: `2px solid ${border}`,
+          borderTop: "none",
+          padding: sized("0.8em 1.7em"),
+        }}
+      >
+        {/* Straight top-border flanks, gapped in the centre for the cradle.
+            They start 2px outside the padding box (`left/right: -2`) so they run
+            fully over the side borders and close the top corners. */}
         <div
           style={{
             position: "absolute",
-            top: 0,
+            top: -1,
+            left: -2,
+            width: flankW,
+            height: 2,
+            background: border,
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            top: -1,
+            right: -2,
+            width: flankW,
+            height: 2,
+            background: border,
+          }}
+        />
+        {/* The two rising shoulders that cradle the circle. Each is a convex
+            arc (bulging up) that rises off the flank and eases into the circle's
+            lower flank; its viewBox coords in the 210×60 box correspond to a
+            circle centred at (105, 25) with radius 50 (the badge), and the arc
+            ends a few units *inside* that circle so its tip tucks under the
+            badge (drawn on top), guaranteeing a seamless join. */}
+        <svg
+          viewBox="0 0 210 60"
+          preserveAspectRatio="none"
+          aria-hidden
+          style={{
+            position: "absolute",
             left: "50%",
-            transform: "translate(-50%, -50%)",
+            top: `calc(-1 * (${cradleH}))`,
+            transform: "translateX(-50%)",
+            width: cradleW,
+            height: cradleH,
+            overflow: "visible",
+          }}
+        >
+          <path
+            d="M0,60 Q26,36 66,30"
+            fill="none"
+            stroke={border}
+            strokeWidth={2}
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+          <path
+            d="M210,60 Q184,36 144,30"
+            fill="none"
+            stroke={border}
+            strokeWidth={2}
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+        {/* The brandmark circle, sitting in the cradle above the frame. */}
+        <div
+          style={{
+            position: "absolute",
+            top: `calc((${badge}) * -0.85)`,
+            left: "50%",
+            transform: "translateX(-50%)",
             width: badge,
             height: badge,
             borderRadius: "50%",
@@ -266,18 +394,6 @@ export function HeroTextFrame({
             style={{ width: "72%", height: "72%", objectFit: "contain" }}
           />
         </div>
-      )}
-      <div
-        style={{
-          border: "2px solid rgba(255,255,255,0.9)",
-          padding: sized("0.8em 1.7em"),
-          // Clear the lower half of the overhanging badge plus a small gap, so
-          // the heading never tucks under it.
-          paddingTop: image
-            ? `calc(${badge} / 2 + ${sized("0.7em")})`
-            : undefined,
-        }}
-      >
         {children}
       </div>
     </div>
@@ -335,6 +451,12 @@ export type HeroProps = {
    * overlay whatever the style. @default 0.75
    */
   overlayOpacity?: number;
+  /**
+   * How far the gradient overlay reaches across the frame (0-100), independent
+   * of `overlayOpacity`. `DEFAULT_HERO_OVERLAY_EXTENT` (50) reproduces the
+   * historical stops; a flat `full` overlay ignores it. @default 50
+   */
+  overlayExtent?: number;
   /** Drift the background against the page as it scrolls. Pass false for a static background. */
   parallax?: boolean;
   /**
@@ -419,6 +541,7 @@ export function Hero({
   scrim = 0,
   overlayStyle = "bottom",
   overlayOpacity = 0.75,
+  overlayExtent = DEFAULT_HERO_OVERLAY_EXTENT,
   parallax = true,
   frame = false,
   frameImage = null,
@@ -453,7 +576,7 @@ export function Hero({
   // The tenant-configured overlay, and whether the type can stop carrying its
   // own shadow: only an overlay that darkens the whole frame (a flat tint, or a
   // scrim) does that - a gradient leaves the far edge as bright as the video.
-  const overlay = heroOverlayBackground(overlayStyle, overlayOpacity);
+  const overlay = heroOverlayBackground(overlayStyle, overlayOpacity, overlayExtent);
   const litFromBelow =
     scrim > 0 || (overlayStyle === "full" && Boolean(overlay));
 

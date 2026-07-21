@@ -481,6 +481,16 @@ class System(Common):
         default=75,
         help_text="Strength of the darkest part of the overlay, as a whole percent (0-100).",
     )
+    # How far the gradient overlay reaches across the frame, independent of its
+    # strength above - a taller or shorter dark band. 50 is the neutral point
+    # that reproduces the frontend's historical fade stops, so an existing hero
+    # is unchanged until the tenant moves the slider; a flat "full" style ignores
+    # it. A whole percent, like the fields above, for the same slider/consumer
+    # reason.
+    hero_overlay_extent = models.PositiveSmallIntegerField(
+        default=50,
+        help_text="How far the gradient overlay reaches across the frame, as a whole percent (0-100); 50 is the default reach.",
+    )
     # When on, the section/page heading over a hero (category, highlight and item
     # detail pages - not the landing hero) is wrapped in a thin outline frame; if
     # a brandmark image is set it sits in a circle straddling the top of the

@@ -164,6 +164,7 @@ class SystemAdmin(admin.ModelAdmin):
                 "hero_logo_scale",
                 "hero_overlay_style",
                 "hero_overlay_opacity",
+                "hero_overlay_extent",
                 "hero_text_frame",
             ),
             "description": (

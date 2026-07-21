@@ -92,6 +92,16 @@ const OVERLAY_OPACITY_STEPS: SliderStep[] = [
   0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100,
 ].map((v) => ({ value: v, label: `${v}%` }));
 
+/**
+ * Overlay extent - how far the gradient reaches across the frame, on the same
+ * whole-percent scale the API stores. 50 is the neutral reach that reproduces
+ * the site's historical gradients; the slider lets the tenant pull the dark band
+ * in towards the edge or push it further across.
+ */
+const OVERLAY_EXTENT_STEPS: SliderStep[] = [
+  0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100,
+].map((v) => ({ value: v, label: `${v}%` }));
+
 type Props = {
   values: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
@@ -150,6 +160,7 @@ export function HeroVideoSection({
       : "bottom"
   ) as HeroOverlayStyle;
   const overlayOpacity = Number(values.hero_overlay_opacity ?? 75);
+  const overlayExtent = Number(values.hero_overlay_extent ?? 50);
   const textFrame = Boolean(values.hero_text_frame);
 
   return (
@@ -241,11 +252,13 @@ export function HeroVideoSection({
               </>
             )}
 
-            {/* The dark overlay between the video and the text. Its shape and
-                its strength are one control each; at "none" nothing is drawn,
-                so the strength slider hides rather than sitting there with no
-                effect. Hiding it keeps the stored value, so turning the overlay
-                back on restores the strength the tenant had picked. */}
+            {/* The dark overlay between the video and the text. Its shape,
+                strength and reach are one control each; at "none" nothing is
+                drawn, so the strength/reach sliders hide rather than sitting
+                there with no effect. Hiding them keeps the stored values, so
+                turning the overlay back on restores what the tenant had picked.
+                The reach slider also hides for "full" (a flat tint has no
+                gradient to move). */}
             <Select
               label={t("heroOverlayStyle")}
               value={overlayStyle}
@@ -261,6 +274,14 @@ export function HeroVideoSection({
                 steps={OVERLAY_OPACITY_STEPS}
                 value={overlayOpacity}
                 onChange={(v) => onChange("hero_overlay_opacity", Number(v))}
+              />
+            )}
+            {overlayStyle !== "none" && overlayStyle !== "full" && (
+              <Slider
+                label={t("heroOverlayExtent")}
+                steps={OVERLAY_EXTENT_STEPS}
+                value={overlayExtent}
+                onChange={(v) => onChange("hero_overlay_extent", Number(v))}
               />
             )}
           </Box>
@@ -296,6 +317,7 @@ export function HeroVideoSection({
                 profileBackgroundScale={logoBackgroundScale / 100}
                 overlayStyle={overlayStyle}
                 overlayOpacity={overlayOpacity / 100}
+                overlayExtent={overlayExtent}
                 contentScale={0.5}
                 style={{ height: 240, borderRadius: 10 }}
               />

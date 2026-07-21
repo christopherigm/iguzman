@@ -191,13 +191,18 @@ landing, which is exactly what the preview shows.
   wrap themselves in an extra `Box` and hang the disc off it - the video's own
   box keeps `overflow: hidden`. That wrapper's `marginBottom` reserves the
   overhang; without it the page's first block would sit behind the circle.
-- **The dark overlay over the hero is two more tenant fields**, applying to
+- **The dark overlay over the hero is three tenant fields**, applying to
   both heroes: `hero_overlay_style` (`none` | `full` | `bottom` | `top` |
-  `both` | `vignette`) and `hero_overlay_opacity` (a whole percent, 0-100).
-  Their defaults (`bottom` at 75) are exactly the gradient both heroes used to
-  hard-code, so nothing moved when they landed. Both heroes resolve them
-  through `heroOverlayBackground` from `@repo/ui/hero` - never re-write the
-  gradient locally, or the item hero and the landing hero drift apart. This
+  `both` | `vignette`), `hero_overlay_opacity` (a whole percent, 0-100 - how
+  *dark* it gets) and `hero_overlay_extent` (a whole percent, 0-100 - how *far*
+  the gradient reaches across the frame, a taller/shorter dark band). Their
+  defaults (`bottom`, 75, 50) are exactly the gradient both heroes used to
+  hard-code, so nothing moved when they landed - `hero_overlay_extent`'s 50 is
+  the neutral reach each style is anchored to. `extent` has no effect on `full`
+  (a flat tint has no gradient to move), so the CMS hides its slider there. Both
+  heroes resolve the three through `heroOverlayBackground(style, opacity, extent)`
+  from `@repo/ui/hero` - never re-write the gradient locally, or the item hero
+  and the landing hero drift apart. This
   overlay is the **only** darkening on the landing hero; the website wrapper does
   not pass the shared `Hero`'s `scrim` prop (see above), so what the CMS preview
   shows is what ships. Don't reintroduce a per-site scrim to "help legibility" -

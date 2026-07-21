@@ -49,6 +49,7 @@ export function Hero({
       profileBackgroundScale={(system?.hero_logo_background_scale ?? 100) / 100}
       overlayStyle={system?.hero_overlay_style ?? "bottom"}
       overlayOpacity={(system?.hero_overlay_opacity ?? 75) / 100}
+      overlayExtent={system?.hero_overlay_extent ?? 50}
       parallax={false}
     />
   );

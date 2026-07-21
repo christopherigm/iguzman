@@ -132,6 +132,7 @@ export default async function MenuItemPage({ params }: Props) {
           backgroundScale={(system?.hero_logo_background_scale ?? 100) / 100}
           overlayStyle={system?.hero_overlay_style ?? "bottom"}
           overlayOpacity={(system?.hero_overlay_opacity ?? 75) / 100}
+          overlayExtent={system?.hero_overlay_extent ?? 50}
           shape={system?.hero_logo_background ?? "none"}
           frame={system?.hero_text_frame ?? false}
           brandmark={system?.img_brandmark}

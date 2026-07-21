@@ -74,6 +74,11 @@ interface ItemHeroVideoProps {
    */
   overlayOpacity?: number;
   /**
+   * How far the gradient overlay reaches across the frame, 0-100
+   * (`System.hero_overlay_extent`); 50 reproduces the historical reach. @default 50
+   */
+  overlayExtent?: number;
+  /**
    * Wrap the title in an outline frame (`System.hero_text_frame`). When on, the
    * title is centred over the video (rather than sitting at the bottom edge) and
    * the fullscreen control moves to the top-right corner. @default false
@@ -103,6 +108,7 @@ export function ItemHeroVideo({
   shape = "none",
   overlayStyle = "bottom",
   overlayOpacity = 0.75,
+  overlayExtent = 50,
   frame = false,
   brandmark = null,
   brandmarkAlt = "",
@@ -137,7 +143,7 @@ export function ItemHeroVideo({
 
   // The tenant's dark overlay, resolved by the same helper the landing `Hero`
   // uses so the two heroes cannot drift. `undefined` = nothing to draw.
-  const overlay = heroOverlayBackground(overlayStyle, overlayOpacity);
+  const overlay = heroOverlayBackground(overlayStyle, overlayOpacity, overlayExtent);
 
   const expandButton = (
     <IconButton

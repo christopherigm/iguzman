@@ -422,6 +422,7 @@
     "heroLogoSize": "Logo size in background",
     "heroOverlayStyle": "Dark overlay",
     "heroOverlayOpacity": "Overlay strength",
+    "heroOverlayExtent": "Overlay size",
     "heroOverlayNone": "None",
     "heroOverlayFull": "Full frame",
     "heroOverlayBottom": "Bottom to top",

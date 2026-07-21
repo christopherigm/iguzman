@@ -422,6 +422,7 @@
     "heroLogoSize": "Tamaño del logo en el fondo",
     "heroOverlayStyle": "Superposición oscura",
     "heroOverlayOpacity": "Intensidad de la superposición",
+    "heroOverlayExtent": "Tamaño de la superposición",
     "heroOverlayNone": "Ninguna",
     "heroOverlayFull": "Pantalla completa",
     "heroOverlayBottom": "De abajo hacia arriba",

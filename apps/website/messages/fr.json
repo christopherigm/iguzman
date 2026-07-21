@@ -422,6 +422,7 @@
     "heroLogoSize": "Taille du logo dans l'arrière-plan",
     "heroOverlayStyle": "Voile sombre",
     "heroOverlayOpacity": "Intensité du voile",
+    "heroOverlayExtent": "Taille du voile",
     "heroOverlayNone": "Aucun",
     "heroOverlayFull": "Image entière",
     "heroOverlayBottom": "De bas en haut",

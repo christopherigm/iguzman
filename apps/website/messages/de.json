@@ -422,6 +422,7 @@
     "heroLogoSize": "Logogröße im Hintergrund",
     "heroOverlayStyle": "Dunkle Überlagerung",
     "heroOverlayOpacity": "Stärke der Überlagerung",
+    "heroOverlayExtent": "Größe der Überlagerung",
     "heroOverlayNone": "Keine",
     "heroOverlayFull": "Ganzes Bild",
     "heroOverlayBottom": "Von unten nach oben",
