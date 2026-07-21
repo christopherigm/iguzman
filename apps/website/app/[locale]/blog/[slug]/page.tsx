@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { setRequestLocale, getTranslations } from "next-intl/server";
+import { Box } from "@repo/ui/core-elements/box";
 import { Container } from "@repo/ui/core-elements/container";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { Box } from "@repo/ui/core-elements/box";
+import { Grid } from "@repo/ui/core-elements/grid";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { Hero } from "@repo/ui/hero";
@@ -115,37 +116,55 @@ export default async function SuccessStoryDetailPage({ params }: Props) {
         />
       )}
       <Container
-        size="md"
+        size="lg"
         paddingX={10}
         marginTop={16}
         paddingTop={!hasImage ? "var(--ui-navbar-height, 57px)" : undefined}
         paddingBottom="var(--ui-page-bottom-spacing, 64px)"
       >
         <Breadcrumbs items={breadcrumbs} />
+        <Typography
+          as="span"
+          variant="label"
+          color="var(--accent)"
+          fontWeight={700}
+          marginBottom={8}
+          styles={{
+            display: "block",
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+          }}
+        >
+          {formattedDate}
+        </Typography>
         <Typography as="h1" variant="h1">
           {name}
-        </Typography>
-        <Typography variant="body" marginTop={8}>
-          {formattedDate}
         </Typography>
         {shortDescription && (
           <Typography variant="body" marginTop={16}>
             {shortDescription}
           </Typography>
         )}
-        {galleryImages.length > 0 && (
-          <Box marginTop={32}>
-            <ItemGalleryClient
-              images={galleryImages}
-              placeholderColor={story.background_color ?? undefined}
-            />
-          </Box>
-        )}
-        {description && (
-          <Box marginTop={32}>
-            <RichText>{description}</RichText>
-          </Box>
-        )}
+        <Grid container spacing={4} marginTop={32}>
+          {galleryImages.length > 0 && (
+            <Grid size={{ xs: 12, md: 6 }}>
+              <ItemGalleryClient
+                images={galleryImages}
+                placeholderColor={story.background_color ?? undefined}
+              />
+            </Grid>
+          )}
+          {description && (
+            <Grid size={{ xs: 12, md: galleryImages.length > 0 ? 6 : 12 }}>
+              <Box
+                paddingRight={20}
+                styles={{ borderRight: "3px solid var(--accent)" }}
+              >
+                <RichText>{description}</RichText>
+              </Box>
+            </Grid>
+          )}
+        </Grid>
       </Container>
     </>
   );

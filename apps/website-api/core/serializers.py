@@ -5,25 +5,41 @@ from django.core.files.base import ContentFile
 from PIL import Image, ImageOps
 from rest_framework import serializers
 
+from . import image_sizes
+from .image_sizes import REGULAR, SMALL, MEDIUM, STANDARD, image_cfg
 from .models import Brand, CompanyHighlight, CompanyHighlightItem, SuccessStory, SuccessStoryImage, System
 
 # ---------------------------------------------------------------------------
 # Image processing
 # ---------------------------------------------------------------------------
 
+# Formats worth storing as uploaded. A PNG is usually a logo, screenshot or
+# flat-color graphic, and re-encoding one as JPEG puts visible ringing around
+# every hard edge; WEBP is already smaller than what we would replace it with.
+# Anything else (HEIC, TIFF, BMP, GIF, …) becomes JPEG.
+PRESERVED_FORMATS = {"PNG", "WEBP"}
+
+_EXTENSIONS = {"JPEG": "jpg", "PNG": "png", "WEBP": "webp"}
+
+
 class ImageProcessingSerializer(serializers.Serializer):
     """
     Accepts a base64-encoded image and processes it.
 
     Parameters (set as class attributes or pass via __init__):
-      max_size    (int, int) - thumbnail bounding box, default (512, 512)
+      max_size    (int, int) - thumbnail bounding box, default (512, 512).
+                               Prefer core.image_sizes.image_cfg() over spelling
+                               a size out here - see that module.
       quality     int        - quality 1-95, default 90
-      force_format str       - Pillow format string ('JPEG', 'PNG', …), default 'JPEG'
+      force_format str       - Pillow format string ('JPEG', 'PNG', …). Default
+                               None keeps PNG/WEBP uploads in their own format
+                               and converts everything else to JPEG. Set it only
+                               for fields that must always be one format.
     """
 
-    max_size = (512, 512)
+    max_size = image_sizes.box(image_sizes.MEDIUM)
     quality = 90
-    force_format = "JPEG"
+    force_format = None
 
     base64_image = serializers.CharField(write_only=True)
 
@@ -50,17 +66,24 @@ class ImageProcessingSerializer(serializers.Serializer):
             raise serializers.ValidationError("The provided file is not a valid image.")
         return value
 
+    def _resolve_format(self, img):
+        """The format to store in: the configured one, else the upload's own."""
+        if self.force_format:
+            return self.force_format.upper()
+        fmt = (img.format or "JPEG").upper()
+        return fmt if fmt in PRESERVED_FORMATS else "JPEG"
+
     def process_image(self):
-        """Return a BytesIO containing the processed image."""
+        """Return (BytesIO, format) for the processed image."""
         raw = self.validated_data["base64_image"]
         if "," in raw:
             raw = raw.split(",", 1)[1]
         image_bytes = base64.b64decode(raw)
 
         img = Image.open(BytesIO(image_bytes))
+        fmt = self._resolve_format(img)
         img = ImageOps.exif_transpose(img)
 
-        fmt = self.force_format.upper()
         if fmt == "JPEG" and img.mode not in ("RGB",):
             img = img.convert("RGB")
         elif fmt == "PNG" and img.mode not in ("RGBA", "RGB", "P"):
@@ -71,18 +94,23 @@ class ImageProcessingSerializer(serializers.Serializer):
         output = BytesIO()
         img.save(output, format=fmt, quality=self.quality, optimize=True)
         output.seek(0)
-        return output
+        return output, fmt
 
     def save_to_field(self, image_field, filename):
         """
         Process the image and save it to a Django ImageField / FileField.
 
+        The caller's extension is advisory: it is rewritten to match the format
+        actually written, since that now depends on what was uploaded.
+
         Usage:
             serializer.save_to_field(instance.avatar, "avatar_42.jpg")
             instance.save(update_fields=["avatar"])
         """
-        output = self.process_image()
-        image_field.save(filename, ContentFile(output.read()), save=False)
+        output, fmt = self.process_image()
+        base = filename.rsplit(".", 1)[0]
+        name = f"{base}.{_EXTENSIONS.get(fmt, 'jpg')}"
+        image_field.save(name, ContentFile(output.read()), save=False)
 
 
 # ---------------------------------------------------------------------------
@@ -136,7 +164,11 @@ class SuccessStorySerializer(serializers.ModelSerializer):
         return obj.image.url
 
 
-_STORY_IMAGE_CFG = {"max_size": (900, 900), "quality": 85, "force_format": "JPEG"}
+# SuccessStory.image is the story's hero (RegularPicture); its gallery children
+# are StandardPicture. Two tiers, so two configs - they were one, which stored
+# every hero at the gallery's 900 px.
+_STORY_IMAGE_CFG = image_cfg(REGULAR)
+_STORY_GALLERY_IMAGE_CFG = image_cfg(STANDARD)
 
 
 class SuccessStoryWriteSerializer(serializers.Serializer):
@@ -202,7 +234,7 @@ class SuccessStoryImageWriteSerializer(serializers.Serializer):
     sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
 
     def validate_image(self, value):
-        sub = ImageProcessingSerializer(data={"base64_image": value}, **_STORY_IMAGE_CFG)
+        sub = ImageProcessingSerializer(data={"base64_image": value}, **_STORY_GALLERY_IMAGE_CFG)
         if not sub.is_valid():
             raise serializers.ValidationError(sub.errors["base64_image"])
         return value
@@ -215,7 +247,7 @@ class SuccessStoryImageWriteSerializer(serializers.Serializer):
             sort_order=self.validated_data.get("sort_order", 0),
         )
         instance.save()
-        proc = ImageProcessingSerializer(data={"base64_image": image_data}, **_STORY_IMAGE_CFG)
+        proc = ImageProcessingSerializer(data={"base64_image": image_data}, **_STORY_GALLERY_IMAGE_CFG)
         proc.is_valid()
         proc.save_to_field(instance.image, f"storyimage_{instance.pk}.jpg")
         instance.save(update_fields=["image"])
@@ -226,8 +258,8 @@ class SuccessStoryImageWriteSerializer(serializers.Serializer):
 # Company Highlight serializers
 # ---------------------------------------------------------------------------
 
-_HIGHLIGHT_IMAGE_CFG = {"max_size": (512, 512), "quality": 85, "force_format": "JPEG"}
-_HIGHLIGHT_ITEM_IMAGE_CFG = {"max_size": (256, 256), "quality": 85, "force_format": "JPEG"}
+_HIGHLIGHT_IMAGE_CFG = image_cfg(REGULAR)
+_HIGHLIGHT_ITEM_IMAGE_CFG = image_cfg(SMALL)
 
 
 class CompanyHighlightItemSerializer(serializers.ModelSerializer):
@@ -390,20 +422,23 @@ class CompanyHighlightItemWriteSerializer(serializers.Serializer):
 # System image field configuration
 # ---------------------------------------------------------------------------
 
+# Logos, the favicon and the manifest icons keep force_format="PNG": they are
+# identity assets that must hold an alpha channel whatever the tenant uploads,
+# and the manifest sizes are fixed by the PWA spec rather than by a tier. The
+# two photographic fields take whatever was uploaded (PNG/WEBP kept, else JPEG) -
+# forcing a photo to PNG at quality 95 only produced multi-megabyte files.
 _IMAGE_FIELDS = {
-    "img_logo":         {"max_size": (512, 512),   "quality": 95, "force_format": "PNG"},
-    "img_logo_hero":    {"max_size": (512, 512),   "quality": 95, "force_format": "PNG"},
-    "img_favicon":      {"max_size": (64, 64),     "quality": 80, "force_format": "PNG"},
-    "img_manifest_1080":{"max_size": (1080, 1080), "quality": 85, "force_format": "PNG"},
-    "img_manifest_512": {"max_size": (512, 512),   "quality": 85, "force_format": "PNG"},
-    "img_manifest_256": {"max_size": (256, 256),   "quality": 85, "force_format": "PNG"},
-    "img_manifest_192": {"max_size": (192, 192),   "quality": 85, "force_format": "PNG"},
-    "img_manifest_128": {"max_size": (128, 128),   "quality": 85, "force_format": "PNG"},
-    "img_about":        {"max_size": (1200, 1200), "quality": 95, "force_format": "PNG"},
-    "img_hero":         {"max_size": (1920, 1080), "quality": 90, "force_format": "JPEG"},
+    "img_logo":         {"max_size": image_sizes.box(MEDIUM), "quality": 95, "force_format": "PNG"},
+    "img_logo_hero":    {"max_size": image_sizes.box(MEDIUM), "quality": 95, "force_format": "PNG"},
+    "img_favicon":      {"max_size": (64, 64),                "quality": 80, "force_format": "PNG"},
+    "img_manifest_1080":{"max_size": (1080, 1080),            "quality": 85, "force_format": "PNG"},
+    "img_manifest_512": {"max_size": (512, 512),              "quality": 85, "force_format": "PNG"},
+    "img_manifest_256": {"max_size": (256, 256),              "quality": 85, "force_format": "PNG"},
+    "img_manifest_192": {"max_size": (192, 192),              "quality": 85, "force_format": "PNG"},
+    "img_manifest_128": {"max_size": (128, 128),              "quality": 85, "force_format": "PNG"},
+    "img_about":        image_cfg(REGULAR, quality=90),
+    "img_hero":         {"max_size": (1920, 1080),            "quality": 90},
 }
-
-_EXT = {"JPEG": "jpg", "PNG": "png"}
 
 
 # ---------------------------------------------------------------------------
@@ -645,9 +680,8 @@ class SystemWriteSerializer(serializers.Serializer):
                 continue
             proc = ImageProcessingSerializer(data={"base64_image": value}, **cfg)
             proc.is_valid()  # already validated above
-            ext = _EXT.get(cfg["force_format"].upper(), "png")
-            filename = f"{field_name}_{instance.pk}.{ext}"
-            proc.save_to_field(getattr(instance, field_name), filename)
+            # No extension: save_to_field appends the one matching what it wrote.
+            proc.save_to_field(getattr(instance, field_name), f"{field_name}_{instance.pk}")
             update_fields.append(field_name)
 
         if update_fields:
@@ -676,7 +710,8 @@ class BrandSerializer(serializers.ModelSerializer):
         return obj.logo.url
 
 
-_BRAND_LOGO_CFG = {"max_size": (512, 512), "quality": 90, "force_format": "PNG"}
+# Forced PNG for the same reason as System.img_logo: a brand mark needs alpha.
+_BRAND_LOGO_CFG = image_cfg(MEDIUM, quality=90, force_format="PNG")
 
 
 class BrandWriteSerializer(serializers.Serializer):

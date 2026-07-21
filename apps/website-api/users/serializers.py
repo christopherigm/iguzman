@@ -5,6 +5,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from core.models import System
+from core.image_sizes import MEDIUM, box
 from core.serializers import ImageProcessingSerializer
 
 
@@ -197,7 +198,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 
 class ProfilePictureSerializer(ImageProcessingSerializer):
-    """Accepts a base64-encoded image, resizes it to max 512x512 at 90% JPEG quality."""
+    """Accepts a base64-encoded image and resizes it to max 512x512 at quality 90.
+
+    A PNG or WEBP avatar is stored as uploaded; anything else becomes JPEG.
+    """
+
+    max_size = box(MEDIUM)
+    quality = 90
 
     def save(self, user):
         profile = user.profile

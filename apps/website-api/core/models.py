@@ -5,6 +5,7 @@ from decimal import Decimal
 from colorfield.fields import ColorField
 from django.db import models
 
+from core import image_sizes as sizes
 from core.fields import ResizedImageField
 
 
@@ -109,11 +110,13 @@ def picture_mixin(max_width: int, quality: int = 85):
 
 
 # Standard size tiers - use these directly or call picture_mixin() for custom sizes.
-SmallPicture = picture_mixin(256)               # thumbnails, avatars
-MediumPicture = picture_mixin(512, quality=90)  # cards, previews
-StandardPicture = picture_mixin(900)            # stories, highlights, buyables
-RegularPicture = picture_mixin(1200)            # content images, banners
-LargePicture = picture_mixin(3840, quality=90)  # hero images, full-bleed
+# The numbers live in core.image_sizes because the write serializers must resize
+# to the same tier; see that module for why they cannot be spelled out twice.
+SmallPicture = picture_mixin(sizes.SMALL)                # thumbnails, avatars
+MediumPicture = picture_mixin(sizes.MEDIUM, quality=90)  # cards, previews
+StandardPicture = picture_mixin(sizes.STANDARD)          # buyables, gallery images
+RegularPicture = picture_mixin(sizes.REGULAR)            # stories, highlights, content
+LargePicture = picture_mixin(sizes.LARGE, quality=90)    # hero images, full-bleed
 
 
 class Brand(Common):

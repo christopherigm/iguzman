@@ -85,6 +85,51 @@ Examples requiring confirmation before exposure:
 - `email`, `phone_number`, `date_of_birth`, or other PII
 - `token`, `secret`, `api_key`, `refresh_token`
 
+## Image sizes - the serializer decides, not the model
+
+**`core/image_sizes.py` is the single source of truth for stored dimensions.**
+Model tiers (`picture_mixin()`) and write serializers both read their numbers
+from it. Never type a size literal at either site.
+
+The reason is a trap that already cost us: **`ResizedImageField` does not run on
+API uploads.** `ImageProcessingSerializer.save_to_field` calls
+`FieldFile.save(...)`, which writes to storage and sets `_committed = True`;
+`ResizedImageField.pre_save` only resizes when `not file._committed`, so it
+always skips. `seed_site._attach` writes the same way. The model tier therefore
+only applies to uploads through a **Django admin form** - for everything else the
+serializer's `max_size` is the one and only size that is ever applied, and the
+smaller of the two numbers silently wins with nothing in the logs. That is how
+every CMS-uploaded `CompanyHighlight` came to be stored at 512 px in a field
+declaring 1200.
+
+When adding an image field, follow this:
+
+```python
+# models.py - tier from the shared constants
+class Thing(RegularPicture):     # -> image_sizes.REGULAR
+    ...
+
+# serializers.py - the SAME tier, or the file is stored at the wrong size
+_THING_IMAGE_CFG = image_cfg(REGULAR)
+```
+
+Two more things `image_cfg` encodes:
+
+- **`max_size` is a bounding box on both axes**, while the model tier is a max
+  *width*. A portrait image is capped by its height, so a REGULAR portrait comes
+  out ~800 px wide, not 1200. Size the tier for the taller dimension.
+- **`force_format` defaults to None**, which keeps PNG/WEBP uploads in their own
+  format and converts everything else to JPEG - a PNG is usually a logo or
+  screenshot, and re-encoding one as JPEG rings every hard edge. Pass it
+  explicitly only for fields that must always be one format regardless of the
+  upload: `System.img_logo`/`img_favicon`/`img_manifest_*` and `Brand.logo` force
+  PNG because they need an alpha channel. `save_to_field` rewrites the caller's
+  file extension to match what was actually written, so pass a base name without
+  one when the format is not fixed.
+
+Re-encoding is destructive and the original is never kept: fixing a size only
+affects **future** uploads, and existing rows have to be re-uploaded in the CMS.
+
 ## Publishing a site's content (dev → prod)
 
 `core/site_payload.py` is the portable serialize/apply layer for a `System`'s

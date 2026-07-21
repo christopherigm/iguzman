@@ -4,6 +4,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from core.models import Brand, System, CURRENCY_CHOICES
+from core.image_sizes import REGULAR, SMALL, STANDARD, image_cfg
 from core.serializers import ImageProcessingSerializer
 from .models import (
     ProductCategory, Product, ProductImage,
@@ -68,7 +69,7 @@ class ProductCategoryWriteSerializer(serializers.ModelSerializer):
     def validate_image(self, value):
         if not value:
             return value
-        sub = ImageProcessingSerializer(data={'base64_image': value}, max_size=(1200, 1200), quality=85)
+        sub = ImageProcessingSerializer(data={'base64_image': value}, **image_cfg(REGULAR))
         if not sub.is_valid():
             raise serializers.ValidationError(sub.errors['base64_image'])
         return value
@@ -92,7 +93,7 @@ class ProductCategoryWriteSerializer(serializers.ModelSerializer):
         return instance
 
     def _save_image(self, instance, image_data):
-        proc = ImageProcessingSerializer(data={'base64_image': image_data}, max_size=(1200, 1200), quality=85)
+        proc = ImageProcessingSerializer(data={'base64_image': image_data}, **image_cfg(REGULAR))
         proc.is_valid()
         proc.save_to_field(instance.image, f'product_category_{instance.pk}.jpg')
         instance.save(update_fields=['image'])
@@ -126,8 +127,7 @@ class ProductImageWriteSerializer(serializers.Serializer):
     def validate_image(self, value):
         sub = ImageProcessingSerializer(
             data={'base64_image': value},
-            max_size=(900, 900),
-            quality=85,
+            **image_cfg(STANDARD),
         )
         if not sub.is_valid():
             raise serializers.ValidationError(sub.errors['base64_image'])
@@ -147,8 +147,7 @@ class ProductImageWriteSerializer(serializers.Serializer):
 
             proc = ImageProcessingSerializer(
                 data={'base64_image': image_data},
-                max_size=(900, 900),
-                quality=85,
+                **image_cfg(STANDARD),
             )
             proc.is_valid()
             proc.save_to_field(instance.image, f'product_{product.pk}_img_{instance.pk}.jpg')
@@ -296,8 +295,7 @@ class ProductWriteSerializer(serializers.Serializer):
             return value
         sub = ImageProcessingSerializer(
             data={'base64_image': value},
-            max_size=(900, 900),
-            quality=85,
+            **image_cfg(STANDARD),
         )
         if not sub.is_valid():
             raise serializers.ValidationError(sub.errors['base64_image'])
@@ -368,8 +366,7 @@ class ProductWriteSerializer(serializers.Serializer):
     def _save_image(self, product, image_data):
         proc = ImageProcessingSerializer(
             data={'base64_image': image_data},
-            max_size=(900, 900),
-            quality=85,
+            **image_cfg(STANDARD),
         )
         proc.is_valid()
         proc.save_to_field(product.image, f'product_{product.pk}.jpg')
@@ -404,8 +401,7 @@ class ServiceImageWriteSerializer(serializers.Serializer):
     def validate_image(self, value):
         sub = ImageProcessingSerializer(
             data={'base64_image': value},
-            max_size=(900, 900),
-            quality=85,
+            **image_cfg(STANDARD),
         )
         if not sub.is_valid():
             raise serializers.ValidationError(sub.errors['base64_image'])
@@ -425,8 +421,7 @@ class ServiceImageWriteSerializer(serializers.Serializer):
 
             proc = ImageProcessingSerializer(
                 data={'base64_image': image_data},
-                max_size=(900, 900),
-                quality=85,
+                **image_cfg(STANDARD),
             )
             proc.is_valid()
             proc.save_to_field(instance.image, f'service_{service.pk}_img_{instance.pk}.jpg')
@@ -486,7 +481,7 @@ class ServiceCategoryWriteSerializer(serializers.ModelSerializer):
     def validate_image(self, value):
         if not value:
             return value
-        sub = ImageProcessingSerializer(data={'base64_image': value}, max_size=(1200, 1200), quality=85)
+        sub = ImageProcessingSerializer(data={'base64_image': value}, **image_cfg(REGULAR))
         if not sub.is_valid():
             raise serializers.ValidationError(sub.errors['base64_image'])
         return value
@@ -510,7 +505,7 @@ class ServiceCategoryWriteSerializer(serializers.ModelSerializer):
         return instance
 
     def _save_image(self, instance, image_data):
-        proc = ImageProcessingSerializer(data={'base64_image': image_data}, max_size=(1200, 1200), quality=85)
+        proc = ImageProcessingSerializer(data={'base64_image': image_data}, **image_cfg(REGULAR))
         proc.is_valid()
         proc.save_to_field(instance.image, f'service_category_{instance.pk}.jpg')
         instance.save(update_fields=['image'])
@@ -630,8 +625,7 @@ class ServiceWriteSerializer(serializers.Serializer):
             return value
         sub = ImageProcessingSerializer(
             data={'base64_image': value},
-            max_size=(900, 900),
-            quality=85,
+            **image_cfg(STANDARD),
         )
         if not sub.is_valid():
             raise serializers.ValidationError(sub.errors['base64_image'])
@@ -701,8 +695,7 @@ class ServiceWriteSerializer(serializers.Serializer):
     def _save_image(self, service, image_data):
         proc = ImageProcessingSerializer(
             data={'base64_image': image_data},
-            max_size=(900, 900),
-            quality=85,
+            **image_cfg(STANDARD),
         )
         proc.is_valid()
         proc.save_to_field(service.image, f'service_{service.pk}.jpg')
@@ -761,7 +754,7 @@ class MenuCategoryWriteSerializer(serializers.ModelSerializer):
     def validate_image(self, value):
         if not value:
             return value
-        sub = ImageProcessingSerializer(data={'base64_image': value}, max_size=(1200, 1200), quality=85)
+        sub = ImageProcessingSerializer(data={'base64_image': value}, **image_cfg(REGULAR))
         if not sub.is_valid():
             raise serializers.ValidationError(sub.errors['base64_image'])
         return value
@@ -785,7 +778,7 @@ class MenuCategoryWriteSerializer(serializers.ModelSerializer):
         return instance
 
     def _save_image(self, instance, image_data):
-        proc = ImageProcessingSerializer(data={'base64_image': image_data}, max_size=(1200, 1200), quality=85)
+        proc = ImageProcessingSerializer(data={'base64_image': image_data}, **image_cfg(REGULAR))
         proc.is_valid()
         proc.save_to_field(instance.image, f'menu_category_{instance.pk}.jpg')
         instance.save(update_fields=['image'])
@@ -797,7 +790,7 @@ class MenuCategoryWriteSerializer(serializers.ModelSerializer):
 
 # Aligned to the SmallPicture (256px) mixin backing Ingredient.image (and the
 # MenuItemIngredient serializers below, which read the same image).
-_INGREDIENT_IMAGE_CFG = {'max_size': (256, 256), 'quality': 85, 'force_format': 'JPEG'}
+_INGREDIENT_IMAGE_CFG = image_cfg(SMALL)
 
 # The identity + measurement fields shared by the read and write serializers,
 # followed by the FDA nutrition panel (pulled straight off the model so the two
@@ -1145,8 +1138,7 @@ class MenuItemImageWriteSerializer(serializers.Serializer):
     def validate_image(self, value):
         sub = ImageProcessingSerializer(
             data={'base64_image': value},
-            max_size=(900, 900),
-            quality=85,
+            **image_cfg(STANDARD),
         )
         if not sub.is_valid():
             raise serializers.ValidationError(sub.errors['base64_image'])
@@ -1164,8 +1156,7 @@ class MenuItemImageWriteSerializer(serializers.Serializer):
             instance.save()
             proc = ImageProcessingSerializer(
                 data={'base64_image': self.validated_data['image']},
-                max_size=(900, 900),
-                quality=85,
+                **image_cfg(STANDARD),
             )
             proc.is_valid()
             proc.save_to_field(instance.image, f'menu_item_{menu_item.pk}_img_{instance.pk}.jpg')
@@ -1207,7 +1198,7 @@ class RecipeStepWriteSerializer(serializers.Serializer):
     def validate_image(self, value):
         if not value:
             return value
-        sub = ImageProcessingSerializer(data={'base64_image': value}, max_size=(900, 900), quality=85)
+        sub = ImageProcessingSerializer(data={'base64_image': value}, **image_cfg(STANDARD))
         if not sub.is_valid():
             raise serializers.ValidationError(sub.errors['base64_image'])
         return value
@@ -1263,7 +1254,7 @@ class MenuItemRecipeSerializer(serializers.Serializer):
                 obj.save()
                 if image_data:
                     proc = ImageProcessingSerializer(
-                        data={'base64_image': image_data}, max_size=(900, 900), quality=85
+                        data={'base64_image': image_data}, **image_cfg(STANDARD)
                     )
                     proc.is_valid()
                     proc.save_to_field(obj.image, f'recipe_step_{menu_item.pk}_{obj.pk}.jpg')
@@ -1398,8 +1389,7 @@ class MenuItemWriteSerializer(serializers.Serializer):
             return value
         sub = ImageProcessingSerializer(
             data={'base64_image': value},
-            max_size=(900, 900),
-            quality=85,
+            **image_cfg(STANDARD),
         )
         if not sub.is_valid():
             raise serializers.ValidationError(sub.errors['base64_image'])
@@ -1459,8 +1449,7 @@ class MenuItemWriteSerializer(serializers.Serializer):
     def _save_image(self, menu_item, image_data):
         proc = ImageProcessingSerializer(
             data={'base64_image': image_data},
-            max_size=(900, 900),
-            quality=85,
+            **image_cfg(STANDARD),
         )
         proc.is_valid()
         proc.save_to_field(menu_item.image, f'menu_item_{menu_item.pk}.jpg')

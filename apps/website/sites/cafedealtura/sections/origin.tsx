@@ -13,10 +13,10 @@ import { localized } from "../localized";
  * "The origin" section for Café de Altura - the family-farm story that is the
  * whole reason a visitor buys from the producer instead of a middleman.
  *
- * Image-led split (photo of the plot on the left, story on the right at md+),
- * deliberately the mirror of the other sites' intro so this landing reads as
- * its own thing. The story text sits behind a thin accent rule, which is the
- * single accent moment in the section - the primary CTA carries the rest.
+ * Two-column split (story on the left, photo of the plot on the right at md+),
+ * so on mobile the copy leads and the image follows below it. The story text
+ * sits behind a thin accent rule, which is the single accent moment in the
+ * section - the primary CTA carries the rest.
  *
  * All copy and imagery are DB-driven (`System.about` / `img_about`), so the
  * family self-edits them in the CMS; only the composition is ours.
@@ -41,28 +41,6 @@ export async function Origin() {
     <Container paddingX={10}>
       <Box paddingY={64}>
         <Grid container spacing={4} alignItems="center">
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Box
-              width="100%"
-              height={460}
-              maxHeight="62vh"
-              borderRadius={16}
-              elevation={6}
-              backgroundColor="var(--surface-2)"
-              styles={{ position: "relative", overflow: "hidden" }}
-            >
-              {system?.img_about && (
-                <Image
-                  fill
-                  src={system.img_about}
-                  alt={system?.site_name ?? ""}
-                  sizes="(max-width: 900px) 100vw, 50vw"
-                  style={{ objectFit: "cover" }}
-                />
-              )}
-            </Box>
-          </Grid>
-
           <Grid size={{ xs: 12, md: 6 }}>
             <Box display="flex" flexDirection="column" gap="20px">
               <Typography
@@ -109,6 +87,28 @@ export async function Origin() {
                 )}
                 <LinkButton label={t("origin.learnMore")} href="/about" />
               </Box>
+            </Box>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Box
+              width="100%"
+              height={460}
+              maxHeight="62vh"
+              borderRadius={16}
+              elevation={6}
+              backgroundColor="var(--surface-2)"
+              styles={{ position: "relative", overflow: "hidden" }}
+            >
+              {system?.img_about && (
+                <Image
+                  fill
+                  src={system.img_about}
+                  alt={system?.site_name ?? ""}
+                  sizes="(max-width: 900px) 100vw, 50vw"
+                  style={{ objectFit: "cover" }}
+                />
+              )}
             </Box>
           </Grid>
         </Grid>
