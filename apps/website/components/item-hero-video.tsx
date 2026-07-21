@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Container } from "@repo/ui/core-elements/container";
@@ -9,6 +10,13 @@ import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { HeroVideo } from "@repo/ui/hero-video";
 import { ParallaxLayer } from "@repo/ui/parallax-layer";
+import type { HeroLayout } from "@repo/ui/hero";
+
+/**
+ * Diameter of the `profile` logo circle. Smaller than the landing `Hero`'s,
+ * because this hero is itself shorter - the same disc would dominate it.
+ */
+const PROFILE_LOGO_SIZE = "clamp(115px, 14vw, 192px)";
 
 interface ItemHeroVideoProps {
   /** YouTube, Vimeo or direct video URL. */
@@ -17,6 +25,15 @@ interface ItemHeroVideoProps {
   title: string;
   /** Drift the video against the page as it scrolls, matching the landing `Hero`. */
   parallax?: boolean;
+  /**
+   * How the logo and title are composed over the video - the tenant's
+   * `System.hero_video_layout`. @default "default"
+   */
+  layout?: HeroLayout;
+  /** Logo shown in the circle of the `profile` layout (`System.img_logo_hero`). */
+  logo?: string | null;
+  /** Alt text for the logo - the site name. */
+  logoAlt?: string;
 }
 
 /**
@@ -29,12 +46,30 @@ export function ItemHeroVideo({
   url,
   title,
   parallax = true,
+  layout = "default",
+  logo,
+  logoAlt = "",
 }: ItemHeroVideoProps) {
   const t = useTranslations("ItemDetail");
   const tCommon = useTranslations("Common");
   const [fullscreen, setFullscreen] = useState(false);
 
-  return (
+  // Without a logo there is no circle to straddle the edge with, so the profile
+  // layout has nothing to render and falls back to the default one.
+  const isProfile = layout === "profile" && Boolean(logo);
+
+  const expandButton = (
+    <IconButton
+      icon="/icons/fullscreen.svg"
+      aria-label={t("expandVideo")}
+      title={t("expandVideo")}
+      onClick={() => setFullscreen(true)}
+      kind="success"
+      translucent
+    />
+  );
+
+  const video = (
     <Box
       width="100%"
       height="clamp(300px, 35vw, 500px)"
@@ -62,45 +97,134 @@ export function ItemHeroVideo({
           zIndex: 1,
         }}
       />
-      <Container
-        size="lg"
-        paddingX={10}
-        paddingBottom={8}
-        styles={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 10,
-        }}
-      >
-        <Box alignItems="center" justifyContent="space-between" gap={12}>
-          <Typography
-            as="span"
-            variant="h2"
-            color="#fff"
-            flex="1"
-            minWidth={0}
+      {isProfile ? (
+        <>
+          {/* Centred in what the circle leaves, biased low: the box spans the
+              lower half of the video and stops half a circle short of the
+              bottom edge, so the title sits just above the disc rather than
+              adrift in the middle of the frame. */}
+          <Box
+            alignItems="center"
+            justifyContent="center"
+            paddingX={24}
             styles={{
-              lineHeight: 1.25,
-              textShadow: "0 2px 8px rgba(0,0,0,0.7)",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
+              position: "absolute",
+              top: "50%",
+              left: 0,
+              right: 0,
+              bottom: `calc(${PROFILE_LOGO_SIZE} / 2)`,
+              zIndex: 10,
             }}
           >
-            {title}
-          </Typography>
-          <IconButton
-            icon="/icons/fullscreen.svg"
-            aria-label={t("expandVideo")}
-            title={t("expandVideo")}
-            onClick={() => setFullscreen(true)}
-            kind="success"
-            translucent
-          />
+            <Typography
+              as="span"
+              variant="h2"
+              color="#fff"
+              textAlign="center"
+              styles={{
+                lineHeight: 1.25,
+                textShadow: "0 2px 8px rgba(0,0,0,0.7)",
+              }}
+            >
+              {title}
+            </Typography>
+          </Box>
+          {/* The bottom row is the circle's now, so the expand button moves to
+              the corner it no longer shares. */}
+          <Box
+            styles={{
+              position: "absolute",
+              top: "calc(var(--ui-navbar-height, 57px) + 8px)",
+              right: 12,
+              zIndex: 11,
+            }}
+          >
+            {expandButton}
+          </Box>
+        </>
+      ) : (
+        <Container
+          size="lg"
+          paddingX={10}
+          paddingBottom={8}
+          styles={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 10,
+          }}
+        >
+          <Box alignItems="center" justifyContent="space-between" gap={12}>
+            <Typography
+              as="span"
+              variant="h2"
+              color="#fff"
+              flex="1"
+              minWidth={0}
+              styles={{
+                lineHeight: 1.25,
+                textShadow: "0 2px 8px rgba(0,0,0,0.7)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {title}
+            </Typography>
+            {expandButton}
+          </Box>
+        </Container>
+      )}
+    </Box>
+  );
+
+  return (
+    <>
+      {isProfile ? (
+        // The circle bleeds half its height below the video, so it hangs off
+        // this wrapper instead of the `overflow: hidden` box that crops the
+        // video. The wrapper's bottom margin reserves the overhang, keeping the
+        // page content below the circle rather than behind it.
+        <Box
+          width="100%"
+          marginBottom={`calc(${PROFILE_LOGO_SIZE} / 2 + 16px)`}
+          styles={{ position: "relative" }}
+        >
+          {video}
+          <Box
+            width={PROFILE_LOGO_SIZE}
+            height={PROFILE_LOGO_SIZE}
+            borderRadius="50%"
+            // The page's own background (resolved per theme in globals.css), so
+            // the disc reads as a hole through the video onto the page.
+            backgroundColor="var(--page-background, var(--background))"
+            elevation={5}
+            alignItems="center"
+            justifyContent="center"
+            styles={{
+              position: "absolute",
+              left: "50%",
+              bottom: `calc(${PROFILE_LOGO_SIZE} / -2)`,
+              transform: "translateX(-50%)",
+              overflow: "hidden",
+              zIndex: 3,
+            }}
+          >
+            {/* Fills the disc edge to edge (`cover`), so the circle reads as
+                the logo itself rather than as a plate with a stamp on it. */}
+            <Image
+              src={logo ?? ""}
+              alt={logoAlt}
+              fill
+              sizes="200px"
+              style={{ objectFit: "cover" }}
+            />
+          </Box>
         </Box>
-      </Container>
+      ) : (
+        video
+      )}
       {fullscreen && (
         <ConfirmationModal
           title={title}
@@ -139,6 +263,6 @@ export function ItemHeroVideo({
           </Box>
         </ConfirmationModal>
       )}
-    </Box>
+    </>
   );
 }

@@ -103,8 +103,9 @@ export default async function ProductPage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const [product, t, tNav] = await Promise.all([
+  const [product, system, t, tNav] = await Promise.all([
     getProduct(slug),
+    getSystem(),
     getTranslations("ItemDetail"),
     getTranslations("CategoryDetail"),
   ]);
@@ -145,6 +146,9 @@ export default async function ProductPage({ params }: Props) {
           url={product.video_link}
           title={displayName}
           parallax={false}
+          layout={system?.hero_video_layout ?? "default"}
+          logo={system?.img_logo_hero}
+          logoAlt={system?.site_name ?? ""}
         />
       )}
       <Container

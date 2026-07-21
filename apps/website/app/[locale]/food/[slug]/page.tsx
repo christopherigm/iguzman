@@ -8,6 +8,7 @@ import { getRequestOrigin, toShareDescription } from "@/lib/metadata";
 import type { GalleryImage } from "@/components/item-gallery-client";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
 import { ItemHeroVideo } from "@/components/item-hero-video";
+import { getSystem } from "@/lib/system";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import {
@@ -86,8 +87,9 @@ export default async function MenuItemPage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const [item, t, tMenu] = await Promise.all([
+  const [item, system, t, tMenu] = await Promise.all([
     getMenuItem(slug),
+    getSystem(),
     getTranslations("ItemDetail"),
     getTranslations("Menu"),
   ]);
@@ -123,6 +125,9 @@ export default async function MenuItemPage({ params }: Props) {
           url={item.video_link}
           title={displayName}
           parallax={false}
+          layout={system?.hero_video_layout ?? "default"}
+          logo={system?.img_logo_hero}
+          logoAlt={system?.site_name ?? ""}
         />
       )}
       <Container

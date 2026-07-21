@@ -72,6 +72,7 @@ SYSTEM_TEXT_FIELDS = (
     "highlights_subtitle",
     "en_highlights_subtitle",
     "catalog_items_bg",
+    "hero_video_layout",
     "watermark_enabled",
     "watermark_rotation",
     "watermark_size",

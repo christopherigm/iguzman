@@ -156,6 +156,13 @@ class SystemAdmin(admin.ModelAdmin):
         ("Catalog Items Section", {
             "fields": ("catalog_items_bg",),
         }),
+        ("Hero Video", {
+            "fields": ("hero_video_layout",),
+            "description": (
+                "How the logo and text are composed over the hero video, on the "
+                "landing page and on item detail pages that have one."
+            ),
+        }),
         ("Watermark & Background", {
             "fields": (
                 "watermark_enabled", "watermark_rotation", "watermark_size",

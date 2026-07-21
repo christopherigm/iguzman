@@ -1,4 +1,5 @@
 import { cache } from "react";
+import type { HeroLayout } from "@repo/ui/hero";
 import { getTenantHost } from "./resolve-site";
 import { API_URL } from "./config";
 import logger from "./logger";
@@ -32,6 +33,8 @@ export interface System {
   highlights_subtitle: string | null;
   en_highlights_subtitle: string | null;
   catalog_items_bg: string | null;
+  /** How the logo and text are composed over the hero video. */
+  hero_video_layout: HeroLayout;
   watermark_enabled: boolean;
   watermark_rotation: number;
   watermark_size: number;

@@ -13,13 +13,21 @@ body {
    variables on <body> by the locale layout). Both are published and the theme
    picks one here, so toggling light/dark repaints without a reload. The palette
    default is the fallback for a tenant that has never set one. */
-body {
-  color: var(--foreground);
-  background: var(--page-background-light, var(--surface-2));
+/* Resolved once, per theme, as `--page-background`: components that must paint
+   the *page's* color on top of something else (the profile hero's logo circle,
+   which straddles the video's bottom edge) can then read a single variable
+   instead of re-deriving the light/dark choice in their own CSS. */
+:root {
+  --page-background: var(--page-background-light, var(--surface-2));
 }
 
-[data-theme="dark"] body {
-  background: var(--page-background-dark, var(--surface-2));
+[data-theme="dark"] {
+  --page-background: var(--page-background-dark, var(--surface-2));
+}
+
+body {
+  color: var(--foreground);
+  background: var(--page-background);
 }
 
 * {

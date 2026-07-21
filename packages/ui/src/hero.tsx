@@ -1,8 +1,25 @@
 import React, { CSSProperties } from "react";
 import { HeroVideo } from "./hero-video";
 import { ParallaxLayer } from "./parallax-layer";
+import { Box } from "./core-elements/box";
 import { Container } from "./core-elements/container";
 import "./hero.css";
+
+/**
+ * How the logo and the text are composed over a hero video.
+ *
+ * - `default` - both centred over the video, logo above the text.
+ * - `profile` - the logo sits in a circle straddling the hero's bottom edge
+ *   (half in, half out) the way a profile picture sits on a cover photo, with
+ *   the text centred in the space left above it.
+ */
+export type HeroLayout = "default" | "profile";
+
+/**
+ * Diameter of the `profile` logo circle. Grows with the viewport, because at
+ * phone widths a fixed 200px disc would eat most of the hero.
+ */
+export const HERO_PROFILE_LOGO_SIZE = "clamp(145px, 20vw, 250px)";
 
 export type HeroProps = {
   /** YouTube, Vimeo, or direct video file URL. Takes priority over backgroundImage. */
@@ -19,6 +36,8 @@ export type HeroProps = {
   slogan?: string | null;
   /** Drift the background against the page as it scrolls. Pass false for a static background. */
   parallax?: boolean;
+  /** How the logo and slogan are composed over the background. @default "default" */
+  layout?: HeroLayout;
   /** Additional styles applied to the outermost container. */
   style?: CSSProperties;
   className?: string;
@@ -54,6 +73,7 @@ export function Hero({
   backgroundAlt = "",
   slogan,
   parallax = true,
+  layout = "default",
   style,
   className,
 }: HeroProps) {
@@ -62,7 +82,11 @@ export function Hero({
 
   if (!hasBackground && !logoImage) return null;
 
-  return (
+  // The circle is the whole point of the profile layout - with no logo to put
+  // in it there is nothing to straddle the edge with, so fall back to default.
+  const isProfile = layout === "profile" && Boolean(logoImage);
+
+  const hero = (
     <div
       className={[!hasVideo ? "hero--image" : "", className]
         .filter(Boolean)
@@ -109,11 +133,18 @@ export function Hero({
       />
 
       {/* ── Centred logo + slogan ─────────────────────────────── */}
+      {/* In the profile layout the logo has left this stack for the circle
+          below, so the slogan alone is centred in the space above it. It is
+          centred in the *lower* half of that space (`top: 50%`), which sits it
+          just above the circle rather than adrift in the middle of the video. */}
       {(logoImage || slogan) && (
         <div
           style={{
             position: "absolute",
-            inset: 0,
+            top: isProfile ? "50%" : 0,
+            left: 0,
+            right: 0,
+            bottom: isProfile ? `calc(${HERO_PROFILE_LOGO_SIZE} / 2)` : 0,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -122,7 +153,7 @@ export function Hero({
             zIndex: 2,
           }}
         >
-          {logoImage && (
+          {logoImage && !isProfile && (
             <>
               <img
                 src={logoImage}
@@ -155,6 +186,49 @@ export function Hero({
         </div>
       )}
     </div>
+  );
+
+  if (!isProfile) return hero;
+
+  // The circle bleeds half its height below the hero, so it cannot live inside
+  // the `overflow: hidden` box that crops the video. It hangs off this wrapper
+  // instead, which reserves the overhang as bottom margin so the page content
+  // underneath starts below the circle rather than behind it.
+  return (
+    <Box
+      width="100%"
+      marginBottom={`calc(${HERO_PROFILE_LOGO_SIZE} / 2 + 16px)`}
+      styles={{ position: "relative" }}
+    >
+      {hero}
+      <Box
+        width={HERO_PROFILE_LOGO_SIZE}
+        height={HERO_PROFILE_LOGO_SIZE}
+        borderRadius="50%"
+        // The page's own background, resolved per theme by the app, so the disc
+        // reads as a hole punched through the video into the page beneath it.
+        backgroundColor="var(--page-background, var(--background))"
+        elevation={5}
+        alignItems="center"
+        justifyContent="center"
+        styles={{
+          position: "absolute",
+          left: "50%",
+          bottom: `calc(${HERO_PROFILE_LOGO_SIZE} / -2)`,
+          transform: "translateX(-50%)",
+          overflow: "hidden",
+          zIndex: 3,
+        }}
+      >
+        {/* Fills the disc edge to edge (`cover`), so the circle reads as the
+            logo itself rather than as a plate with a stamp on it. */}
+        <img
+          src={logoImage ?? ""}
+          alt={logoAlt}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+      </Box>
+    </Box>
   );
 }
 

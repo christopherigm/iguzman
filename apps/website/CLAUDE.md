@@ -140,6 +140,25 @@ conversation language only; it doesn't change the code or the site's own content
 language (the bilingual `en_*` seed fields are decided separately in
 `/seed-site`).
 
+## Hero video layout
+
+`System.hero_video_layout` (`"default"` | `"profile"`) decides how the logo and
+the text are composed over a hero video, and applies in two places: the landing
+`Hero` (`components/hero.tsx` → `@repo/ui/hero`) and the item detail hero
+(`components/item-hero-video.tsx`, on product/service/food pages). The tenant
+picks it in the CMS's "Hero video configuration" section
+(`admin/system/hero-video-section.tsx`), whose preview renders the **real**
+`Hero`, so it cannot drift from the site.
+
+- **`profile` bleeds a logo circle half-way below the video**, so both heroes
+  wrap themselves in an extra `Box` and hang the disc off it - the video's own
+  box keeps `overflow: hidden`. That wrapper's `marginBottom` reserves the
+  overhang; without it the page's first block would sit behind the circle.
+- **The circle paints `var(--page-background, …)`**, which `globals.css`
+  resolves per theme from `--page-background-light` / `--page-background-dark`.
+  Keep that variable: it is what makes the disc read as a hole through the video
+  onto the page, in either theme, without a reload.
+
 ## Logo watermark & page background
 
 The tenant's logo can be tiled faintly behind every **public** page

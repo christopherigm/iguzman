@@ -7,6 +7,7 @@ import { type NewImage } from "@/components/admin-image-uploader/admin-image-upl
 import { SystemImages, type SystemImageState } from "./system-images";
 import { PaymentsSection } from "./payments-section";
 import { WatermarkSection } from "./watermark-section";
+import { HeroVideoSection } from "./hero-video-section";
 import {
   LOGO_DERIVED_FIELDS,
   SYSTEM_IMAGE_FIELDS,
@@ -48,6 +49,7 @@ export default function AdminSystemPage() {
     highlights_subtitle: "",
     en_highlights_subtitle: "",
     catalog_items_bg: "",
+    hero_video_layout: "default",
     about: "",
     en_about: "",
     mission: "",
@@ -131,6 +133,7 @@ export default function AdminSystemPage() {
           highlights_subtitle: data.highlights_subtitle ?? "",
           en_highlights_subtitle: data.en_highlights_subtitle ?? "",
           catalog_items_bg: data.catalog_items_bg ?? "",
+          hero_video_layout: data.hero_video_layout ?? "default",
           about: data.about ?? "",
           en_about: data.en_about ?? "",
           mission: data.mission ?? "",
@@ -463,6 +466,26 @@ export default function AdminSystemPage() {
             />
           </Grid>
         </Grid>
+        <HeroVideoSection
+          values={values}
+          onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
+          // Preview the hero logo / background being uploaded right now, if
+          // there is one, so the layout shown is the one that will ship. No
+          // "/logo.png" fallback: this app ships no such file, so it would
+          // preview the profile layout with an empty circle. With no logo at
+          // all the preview simply shows what the site will show - the default
+          // layout, since profile has nothing to put in the circle.
+          logo={
+            images.img_logo_hero?.pending[0]?.preview ??
+            images.img_logo_hero?.existing[0]?.url ??
+            images.img_logo?.pending[0]?.preview ??
+            images.img_logo?.existing[0]?.url
+          }
+          backgroundImage={
+            images.img_hero?.pending[0]?.preview ??
+            images.img_hero?.existing[0]?.url
+          }
+        />
         <WatermarkSection
           values={values}
           onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}

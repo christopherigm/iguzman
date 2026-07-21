@@ -103,8 +103,9 @@ export default async function ServicePage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const [service, t, tNav] = await Promise.all([
+  const [service, system, t, tNav] = await Promise.all([
     getService(slug),
+    getSystem(),
     getTranslations("ItemDetail"),
     getTranslations("CategoryDetail"),
   ]);
@@ -145,6 +146,9 @@ export default async function ServicePage({ params }: Props) {
           url={service.video_link}
           title={displayName}
           parallax={false}
+          layout={system?.hero_video_layout ?? "default"}
+          logo={system?.img_logo_hero}
+          logoAlt={system?.site_name ?? ""}
         />
       )}
       <Container

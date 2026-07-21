@@ -349,6 +349,24 @@ class System(Common):
         ),
     )
 
+    # ── Hero video layout ─────────────────────────────────────────────────────
+    # How the logo and text are composed over the hero video, on the landing
+    # page and on every item detail page that has one. "profile" places the logo
+    # in a circle straddling the video's bottom edge, the way a profile picture
+    # sits on a cover photo.
+    HERO_LAYOUT_DEFAULT = "default"
+    HERO_LAYOUT_PROFILE = "profile"
+    HERO_LAYOUT_CHOICES = (
+        (HERO_LAYOUT_DEFAULT, "Default - logo and text over the video"),
+        (HERO_LAYOUT_PROFILE, "Profile - logo in a circle on the bottom edge"),
+    )
+    hero_video_layout = models.CharField(
+        max_length=16,
+        choices=HERO_LAYOUT_CHOICES,
+        default=HERO_LAYOUT_DEFAULT,
+        help_text="How the logo and text are laid out over the hero video.",
+    )
+
     # ── Watermark & page background ───────────────────────────────────────────
     # The logo tiled faintly behind every public page, plus the page background
     # it sits on. Sizes are px and opacity is a whole percent, because that is

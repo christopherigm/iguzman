@@ -483,6 +483,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "highlights_title", "en_highlights_title",
             "highlights_subtitle", "en_highlights_subtitle",
             "catalog_items_bg",
+            "hero_video_layout",
             "watermark_enabled", "watermark_rotation", "watermark_size",
             "watermark_spacing", "watermark_opacity",
             "background_light", "background_dark",
@@ -557,6 +558,7 @@ _TEXT_FIELDS = [
     "highlights_title", "en_highlights_title",
     "highlights_subtitle", "en_highlights_subtitle",
     "catalog_items_bg",
+    "hero_video_layout",
     "watermark_enabled", "watermark_rotation", "watermark_size",
     "watermark_spacing", "watermark_opacity",
     "background_light", "background_dark",
@@ -595,6 +597,12 @@ class SystemWriteSerializer(serializers.Serializer):
     highlights_subtitle    = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     en_highlights_subtitle = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     catalog_items_bg = serializers.CharField(max_length=512, required=False, allow_null=True, allow_blank=True)
+    # Constrained to the layouts the frontend can actually render - an unknown
+    # value would silently fall back to "default" on the site, which reads as
+    # the setting having been ignored.
+    hero_video_layout = serializers.ChoiceField(
+        choices=[c[0] for c in System.HERO_LAYOUT_CHOICES], required=False
+    )
     enabled         = serializers.BooleanField(required=False)
 
     # Watermark & page background. The bounds are the same ones the CMS sliders
