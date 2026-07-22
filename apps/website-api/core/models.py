@@ -333,9 +333,10 @@ class System(Common):
     img_manifest_128 = models.ImageField(null=True, blank=True, upload_to=picture)
 
     # A small company symbol / brandmark, distinct from the full logo: a mini
-    # icon used in cards, or tiled as the page-background watermark in place of
-    # the logo (see `watermark_use_brandmark`). Stored small and PNG-forced for
-    # its alpha channel by the write serializer's _IMAGE_FIELDS (SMALL tier).
+    # icon used in cards, or tiled in the page-background watermark alongside or
+    # in place of the logo (see `watermark_show_brandmark`). Stored small and
+    # PNG-forced for its alpha channel by the write serializer's _IMAGE_FIELDS
+    # (SMALL tier).
     img_brandmark = models.ImageField(null=True, blank=True, upload_to=picture)
 
     img_hero = models.ImageField(null=True, blank=True, upload_to=picture)
@@ -522,12 +523,19 @@ class System(Common):
         default=False,
         help_text="Alternate each logo's rotation so neighbours lean opposite ways.",
     )
-    # When on, the page-background watermark tiles the brandmark
-    # (`img_brandmark`) instead of the logo. Ignored - and hidden in the CMS -
-    # unless a brandmark image has been uploaded.
-    watermark_use_brandmark = models.BooleanField(
+    # Which images the page-background watermark tiles. With both on it
+    # intercalates them (alternating logo / brandmark tiles); with one on it
+    # tiles that image; with neither on it paints nothing. `watermark_show_logo`
+    # tiles `img_logo`, `watermark_show_brandmark` tiles `img_brandmark` - the
+    # latter is ignored (and its switch hidden in the CMS) unless a brandmark
+    # image has been uploaded.
+    watermark_show_logo = models.BooleanField(
+        default=True,
+        help_text="Include the logo in the page watermark.",
+    )
+    watermark_show_brandmark = models.BooleanField(
         default=False,
-        help_text="Tile the brandmark instead of the logo in the page watermark (needs a brandmark image).",
+        help_text="Include the brandmark in the page watermark (needs a brandmark image). With the logo also on, the two are intercalated.",
     )
     watermark_size = models.PositiveSmallIntegerField(
         default=120,
@@ -647,6 +655,10 @@ class System(Common):
     # guest cart uses - resolved to live cards on the frontend. It is deliberately
     # NOT part of SYSTEM_TEXT_FIELDS (seed/publish): the ids are per-environment,
     # so the trio is picked in each environment's CMS, while the copy below travels.
+    # A single switch to show or hide the whole Spotlight block on the landing,
+    # independent of whether copy/items are filled in. Defaults on, so existing
+    # tenants with a configured spotlight keep rendering it unchanged.
+    spotlight_enabled = models.BooleanField(default=True)
     spotlight_label = models.CharField(max_length=255, null=True, blank=True)
     en_spotlight_label = models.CharField(max_length=255, null=True, blank=True)
     spotlight_title = models.CharField(max_length=255, null=True, blank=True)

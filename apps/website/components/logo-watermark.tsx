@@ -13,6 +13,13 @@ const MAX_TILES = 1200;
 type Props = {
   /** Absolute or app-relative URL of the tenant logo to tile. */
   logo: string;
+  /**
+   * A second image to intercalate with `logo`: when set, tiles alternate
+   * between `logo` and this (a checkerboard of the two images). Used to tile
+   * the logo and the brandmark together; left undefined when only one image is
+   * being tiled.
+   */
+  secondaryLogo?: string;
   /** Drawn width of one logo, px. */
   size?: number;
   /** Empty space between logos, px. */
@@ -47,6 +54,7 @@ type Props = {
  */
 export function LogoWatermark({
   logo,
+  secondaryLogo,
   size = 120,
   spacing = 70,
   rotation = -12,
@@ -67,12 +75,16 @@ export function LogoWatermark({
         "logo-watermark",
         inline && "logo-watermark--inline",
         intercalated && "logo-watermark--intercalated",
+        secondaryLogo && "logo-watermark--two-images",
       ]
         .filter(Boolean)
         .join(" ")}
       style={
         {
           "--logo-watermark-image": `url("${encodeURI(logo)}")`,
+          ...(secondaryLogo && {
+            "--logo-watermark-image-2": `url("${encodeURI(secondaryLogo)}")`,
+          }),
           "--logo-watermark-tile": `${tile}px`,
           "--logo-watermark-size": `${size}px`,
           "--logo-watermark-rotation": `${rotation}deg`,

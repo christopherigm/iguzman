@@ -83,7 +83,8 @@ SYSTEM_TEXT_FIELDS = (
     "watermark_enabled",
     "watermark_rotation",
     "watermark_intercalated",
-    "watermark_use_brandmark",
+    "watermark_show_logo",
+    "watermark_show_brandmark",
     "watermark_size",
     "watermark_spacing",
     "watermark_opacity",
@@ -95,6 +96,7 @@ SYSTEM_TEXT_FIELDS = (
     "video_link",
     # Spotlight promo copy travels with the site; `spotlight_items` does not -
     # its item ids are per-environment, so the trio is re-picked in each CMS.
+    "spotlight_enabled",
     "spotlight_label",
     "en_spotlight_label",
     "spotlight_title",

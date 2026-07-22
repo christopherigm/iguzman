@@ -1,13 +1,21 @@
-"""Cross-model cache invalidation for category renames/deletes.
+"""Cross-model cache invalidation between a buyable family and its categories.
 
-Product/Service/MenuItem serializers embed ``category_name`` and
-``category_slug`` (source ``category.*``), cached under the item's ``catalog:*``
-namespaces. ``category`` is SET_NULL, so deleting a category nulls it on every
-item that used it, and renaming/re-slugging a category changes the embedded
-value - either way the cached item payloads go stale. The category admins only
-invalidate their own ``catalog:*_categories:*`` list namespace, so each category
-kind clears its buyable family's caches here instead. A signal covers admin
-single + bulk delete, the API view, and any cascade uniformly.
+Two directions, both stale-making, both handled here so a single signal covers
+admin single + bulk delete, the API views, and any cascade uniformly:
+
+1. **Category -> items.** Product/Service/MenuItem serializers embed
+   ``category_name`` and ``category_slug`` (source ``category.*``), cached under
+   the item's ``catalog:*`` namespaces. ``category`` is SET_NULL, so deleting a
+   category nulls it on every item that used it, and renaming/re-slugging a
+   category changes the embedded value - either way the cached item payloads go
+   stale.
+
+2. **Items -> category.** Each category serializer exposes ``item_count``
+   (``obj.<family>s.filter(enabled=True).count()``), baked into the cached
+   category list + detail payloads. Adding, deleting, enabling/disabling, or
+   re-categorising an item changes that count, so the category caches go stale.
+   ``post_save`` fires on create *and* update (covering an ``enabled`` toggle or
+   a ``category`` reassignment); ``post_delete`` covers removals.
 """
 
 from django.db.models.signals import post_delete, post_save
@@ -15,13 +23,22 @@ from django.dispatch import receiver
 
 from core.cache import invalidate_pattern
 
-from .models import MenuCategory, ProductCategory, ServiceCategory
+from .models import (
+    MenuCategory, MenuItem, Product, ProductCategory, Service, ServiceCategory,
+)
 
 
 def _invalidate_family(family):
     invalidate_pattern(f"catalog:{family}s:*")  # list endpoints (plural prefix)
     invalidate_pattern(f"catalog:{family}:*")   # detail endpoints (per-pk)
 
+
+def _invalidate_categories(kind):
+    invalidate_pattern(f"catalog:{kind}_categories:*")  # list (item_count)
+    invalidate_pattern(f"catalog:{kind}_category:*")    # detail (item_count)
+
+
+# ── Category -> item caches ──────────────────────────────────────────────────
 
 @receiver(post_save, sender=ProductCategory)
 @receiver(post_delete, sender=ProductCategory)
@@ -39,3 +56,23 @@ def invalidate_services_on_category_change(sender, instance, **kwargs):
 @receiver(post_delete, sender=MenuCategory)
 def invalidate_menu_items_on_category_change(sender, instance, **kwargs):
     _invalidate_family("menu_item")
+
+
+# ── Item -> category caches (item_count) ─────────────────────────────────────
+
+@receiver(post_save, sender=Product)
+@receiver(post_delete, sender=Product)
+def invalidate_product_categories_on_item_change(sender, instance, **kwargs):
+    _invalidate_categories("product")
+
+
+@receiver(post_save, sender=Service)
+@receiver(post_delete, sender=Service)
+def invalidate_service_categories_on_item_change(sender, instance, **kwargs):
+    _invalidate_categories("service")
+
+
+@receiver(post_save, sender=MenuItem)
+@receiver(post_delete, sender=MenuItem)
+def invalidate_menu_categories_on_item_change(sender, instance, **kwargs):
+    _invalidate_categories("menu")

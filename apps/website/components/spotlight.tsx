@@ -43,6 +43,10 @@ function pick(
 export async function Spotlight() {
   const [system, locale] = await Promise.all([getSystem(), getLocale()]);
 
+  // The tenant's master switch for this block - off hides it entirely, even
+  // when copy and items are filled in. Defaults on for legacy rows with no flag.
+  if (system && system.spotlight_enabled === false) return null;
+
   const refs = (system?.spotlight_items ?? []).slice(0, 3);
   const title = pick(locale, system?.spotlight_title, system?.en_spotlight_title);
 
@@ -91,71 +95,67 @@ export async function Spotlight() {
   return (
     <Container paddingX={10}>
       <Box paddingY={64}>
-        <Box
-          padding={40}
-          borderRadius={16}
-          backgroundColor="var(--surface-2)"
-          border="1px solid var(--border)"
-        >
-          <Grid container spacing={4} alignItems="center">
-            <Grid size={{ xs: 12, md: 5 }}>
-              <Box flexDirection="column" gap="14px">
-                {label && (
-                  <Typography
-                    as="span"
-                    variant="label"
-                    color="var(--accent)"
-                    fontWeight={700}
-                    styles={{
-                      letterSpacing: "0.14em",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {label}
-                  </Typography>
-                )}
-                <Typography as="h2" variant="h2" fontWeight={800}>
-                  {title}
+        <Grid container spacing={4} alignItems="center">
+          <Grid size={{ xs: 12, md: 5 }}>
+            <Box flexDirection="column" gap="14px">
+              {label && (
+                <Typography
+                  as="span"
+                  variant="label"
+                  color="var(--accent)"
+                  fontWeight={700}
+                  styles={{
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {label}
                 </Typography>
-                {text && (
-                  <Typography as="p" variant="body" styles={{ lineHeight: 1.7 }}>
-                    {text}
-                  </Typography>
-                )}
-                {buttonLabel && buttonLink && (
-                  <Box marginTop={4}>
-                    <Button
-                      text={buttonLabel}
-                      href={buttonLink}
-                      kind="primary"
-                      size="lg"
-                    />
-                  </Box>
-                )}
-              </Box>
-            </Grid>
+              )}
+              <Typography as="h2" variant="h2" fontWeight={800}>
+                {title}
+              </Typography>
+              {text && (
+                <Typography as="p" variant="body" styles={{ lineHeight: 1.7 }}>
+                  {text}
+                </Typography>
+              )}
+              {buttonLabel && buttonLink && (
+                <Box marginTop={4}>
+                  <Button
+                    text={buttonLabel}
+                    href={buttonLink}
+                    kind="primary"
+                    size="lg"
+                  />
+                </Box>
+              )}
+            </Box>
+          </Grid>
 
-            <Grid size={{ xs: 12, md: 7 }}>
-              <Grid container spacing={2}>
-                {items.map((item) => (
-                  <Grid
-                    key={`${item.kind}-${item.data.id}`}
-                    size={{ xs: 6, sm: 4 }}
-                  >
-                    <BuyableCard
-                      item={item}
-                      locale={locale}
-                      productLabel={t("productLabel")}
-                      serviceLabel={t("serviceLabel")}
-                      menuLabel={t("menuLabel")}
-                      fromLabel={tMenu("from")}
-                    />
-                  </Grid>
-                ))}
-              </Grid>
+          <Grid size={{ xs: 12, md: 7 }}>
+            <Grid container spacing={2}>
+              {items.map((item, index) => (
+                <Grid
+                  key={`${item.kind}-${item.data.id}`}
+                  size={{ xs: 6, sm: 4 }}
+                  // Only the third card wraps to a lonely row on xs (2-up);
+                  // hide it below sm so mobile shows a clean pair, all three sm+.
+                  hidden={{ xs: index === 2 }}
+                >
+                  <BuyableCard
+                    item={item}
+                    locale={locale}
+                    productLabel={t("productLabel")}
+                    serviceLabel={t("serviceLabel")}
+                    menuLabel={t("menuLabel")}
+                    fromLabel={tMenu("from")}
+                  />
+                </Grid>
+              ))}
             </Grid>
           </Grid>
-        </Box>
+        </Grid>
       </Box>
     </Container>
   );

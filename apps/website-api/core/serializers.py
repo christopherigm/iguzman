@@ -501,7 +501,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "hero_overlay_style", "hero_overlay_opacity", "hero_overlay_extent",
             "hero_text_frame",
             "watermark_enabled", "watermark_rotation", "watermark_intercalated",
-            "watermark_use_brandmark",
+            "watermark_show_logo", "watermark_show_brandmark",
             "watermark_size", "watermark_spacing", "watermark_opacity",
             "background_light", "background_dark",
             "google_font_url", "font_display", "font_body",
@@ -514,6 +514,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "user_data", "en_user_data",
             "stripe_enabled", "stripe_configured", "stripe_webhook_url",
             "pay_in_store_enabled", "pay_on_delivery_enabled",
+            "spotlight_enabled",
             "spotlight_label", "en_spotlight_label",
             "spotlight_title", "en_spotlight_title",
             "spotlight_text", "en_spotlight_text",
@@ -588,7 +589,7 @@ _TEXT_FIELDS = [
     "hero_overlay_style", "hero_overlay_opacity", "hero_overlay_extent",
     "hero_text_frame",
     "watermark_enabled", "watermark_rotation", "watermark_intercalated",
-    "watermark_use_brandmark",
+    "watermark_show_logo", "watermark_show_brandmark",
     "watermark_size", "watermark_spacing", "watermark_opacity",
     "background_light", "background_dark",
     "google_font_url", "font_display", "font_body",
@@ -599,6 +600,7 @@ _TEXT_FIELDS = [
     "enabled",
     "stripe_enabled", "stripe_publishable_key",
     "pay_in_store_enabled", "pay_on_delivery_enabled",
+    "spotlight_enabled",
     "spotlight_label", "en_spotlight_label",
     "spotlight_title", "en_spotlight_title",
     "spotlight_text", "en_spotlight_text",
@@ -672,7 +674,8 @@ class SystemWriteSerializer(serializers.Serializer):
     # whole site rather than behind it.
     watermark_enabled  = serializers.BooleanField(required=False)
     watermark_intercalated = serializers.BooleanField(required=False)
-    watermark_use_brandmark = serializers.BooleanField(required=False)
+    watermark_show_logo = serializers.BooleanField(required=False)
+    watermark_show_brandmark = serializers.BooleanField(required=False)
     watermark_rotation = serializers.IntegerField(required=False, min_value=-45, max_value=45)
     watermark_size     = serializers.IntegerField(required=False, min_value=24, max_value=400)
     watermark_spacing  = serializers.IntegerField(required=False, min_value=0, max_value=400)
@@ -718,6 +721,7 @@ class SystemWriteSerializer(serializers.Serializer):
     pay_on_delivery_enabled = serializers.BooleanField(required=False)
 
     # Spotlight section - a promo panel + up to three hand-picked catalog items.
+    spotlight_enabled          = serializers.BooleanField(required=False)
     spotlight_label            = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     en_spotlight_label         = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     spotlight_title            = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)

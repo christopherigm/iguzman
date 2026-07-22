@@ -10,6 +10,15 @@ import "./grid.css";
 export type GridSize = Partial<Record<Breakpoint, number>>;
 
 /**
+ * Per-breakpoint visibility toggle. Each entry hides the item **within that
+ * breakpoint's own band only** (range-scoped, not cascading like `size`): e.g.
+ * `{ xs: true }` hides it below `sm` and shows it from `sm` up, while
+ * `{ md: true }` hides it only between `md` and `lg`. Compose bands to hide
+ * across a wider range (`{ md: true, lg: true, xl: true }` = "hidden from md up").
+ */
+export type GridHidden = Partial<Record<Breakpoint, boolean>>;
+
+/**
  * Responsive masonry column count per breakpoint.
  * Mobile-first: xs is the base; larger breakpoints override at their min-width.
  */
@@ -37,6 +46,12 @@ export interface GridProps extends UIComponentProps {
   item?: boolean;
   /** Responsive column span per breakpoint (1-12). */
   size?: GridSize;
+  /**
+   * Per-breakpoint visibility. Each `true` entry sets `display: none` within
+   * that breakpoint's band only (see {@link GridHidden}). The breakpoint
+   * thresholds live once in `grid.css`, so no consumer writes a media query.
+   */
+  hidden?: GridHidden;
   /** Uniform gap between items in base-unit multiples (8px * n). Applies to container. */
   spacing?: number;
   /** Horizontal gap in base-unit multiples. Overrides `spacing` for the x-axis. */
@@ -67,6 +82,7 @@ function buildGridClasses(
   container: boolean,
   isItem: boolean,
   size: GridSize | undefined,
+  hidden: GridHidden | undefined,
   masonryColumns: MasonryColumns | undefined,
   className: string | undefined,
 ): string {
@@ -96,6 +112,16 @@ function buildGridClasses(
       const cols = size[bp];
       if (cols !== undefined && cols >= 1 && cols <= 12) {
         classes.push(`ui-grid-${bp}-${Math.round(cols)}`);
+      }
+    }
+  }
+
+  // Per-breakpoint visibility - each band's media query lives in grid.css.
+  if (hidden) {
+    const breakpoints = Object.keys(hidden) as Breakpoint[];
+    for (const bp of breakpoints) {
+      if (hidden[bp]) {
+        classes.push(`ui-grid-hidden-${bp}`);
       }
     }
   }
@@ -135,6 +161,7 @@ export const Grid: React.FC<GridProps> = (props) => {
     masonry,
     item,
     size,
+    hidden,
     spacing,
     spacingX,
     spacingY,
@@ -151,6 +178,7 @@ export const Grid: React.FC<GridProps> = (props) => {
     container,
     isItem,
     size,
+    hidden,
     masonryColumns,
     className,
   );

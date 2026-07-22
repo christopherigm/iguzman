@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Select, type SelectOption } from "@repo/ui/core-elements/select";
+import { Switch } from "@repo/ui/core-elements/switch";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Typography } from "@repo/ui/core-elements/typography";
 import {
@@ -149,6 +150,11 @@ export function SpotlightSection({ values, onChange, systemId }: Props) {
 
   const noneOption: SelectOption = { value: "", label: t("spotlightItemNone") };
 
+  // The master switch: default on, so a tenant with a configured spotlight keeps
+  // rendering it. When off the whole block is hidden on the site, regardless of
+  // the copy and items below.
+  const enabled = values.spotlight_enabled !== false;
+
   return (
     <Box flexDirection="column" gap={16} paddingTop={32}>
       {/* Matches the pair-group headers AdminForm renders, so this reads as a
@@ -173,6 +179,23 @@ export function SpotlightSection({ values, onChange, systemId }: Props) {
       <Typography variant="body" margin={0}>
         {t("spotlightIntro")}
       </Typography>
+
+      {/* Master switch for the whole block - off hides it on the site even when
+          the copy and items below are filled in. */}
+      <Box display="flex" alignItems="center" gap={10}>
+        <Switch
+          checked={enabled}
+          onChange={(v) => onChange("spotlight_enabled", v)}
+        />
+        <Typography
+          as="span"
+          variant="body"
+          fontWeight={500}
+          color="var(--foreground)"
+        >
+          {t("spotlightEnabled")}
+        </Typography>
+      </Box>
 
       {/* The bilingual copy - each pair carries a Translate button (Text also
           gets Speech + Enhance), exactly like the rest of the admin form. */}

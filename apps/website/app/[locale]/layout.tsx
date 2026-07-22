@@ -201,26 +201,40 @@ export default async function LocaleLayout({ children, params }: Props) {
                 initialResolved={initialResolved}
               >
                 <PaletteProvider palette="cyan" accent={accent}>
-                  {/* Sits behind everything (z-index -1) and off the CMS. */}
-                  {system?.watermark_enabled && (
-                    <HideOnAdmin>
-                      <LogoWatermark
-                        // Tile the brandmark when the tenant switched it on and
-                        // uploaded one; otherwise the logo.
-                        logo={
-                          (system.watermark_use_brandmark &&
-                            system.img_brandmark) ||
-                          system.img_logo ||
-                          "/logo.png"
-                        }
-                        size={system.watermark_size}
-                        spacing={system.watermark_spacing}
-                        rotation={system.watermark_rotation}
-                        intercalated={system.watermark_intercalated}
-                        opacity={system.watermark_opacity}
-                      />
-                    </HideOnAdmin>
-                  )}
+                  {/* Sits behind everything (z-index -1) and off the CMS.
+                      Which images tile: the logo, the brandmark (only if one is
+                      uploaded), or both intercalated. With neither selected the
+                      layer paints nothing, so it is not rendered at all. */}
+                  {system?.watermark_enabled &&
+                    (() => {
+                      const showBrandmark =
+                        system.watermark_show_brandmark &&
+                        !!system.img_brandmark;
+                      const logo = system.img_logo || "/logo.png";
+                      const primary = system.watermark_show_logo
+                        ? logo
+                        : showBrandmark
+                          ? system.img_brandmark
+                          : undefined;
+                      const secondary =
+                        system.watermark_show_logo && showBrandmark
+                          ? system.img_brandmark
+                          : undefined;
+                      if (!primary) return null;
+                      return (
+                        <HideOnAdmin>
+                          <LogoWatermark
+                            logo={primary}
+                            secondaryLogo={secondary}
+                            size={system.watermark_size}
+                            spacing={system.watermark_spacing}
+                            rotation={system.watermark_rotation}
+                            intercalated={system.watermark_intercalated}
+                            opacity={system.watermark_opacity}
+                          />
+                        </HideOnAdmin>
+                      );
+                    })()}
                   <NavbarClient
                     logo={system?.img_logo ?? "/logo.png"}
                     version={`v${packageJson.version}`}

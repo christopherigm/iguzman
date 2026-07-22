@@ -158,6 +158,7 @@ class SystemAdmin(admin.ModelAdmin):
         }),
         ("Spotlight Section", {
             "fields": (
+                "spotlight_enabled",
                 "spotlight_label", "en_spotlight_label",
                 "spotlight_title", "en_spotlight_title",
                 "spotlight_text", "en_spotlight_text",
@@ -195,7 +196,7 @@ class SystemAdmin(admin.ModelAdmin):
         ("Watermark & Background", {
             "fields": (
                 "watermark_enabled", "watermark_rotation", "watermark_intercalated",
-                "watermark_use_brandmark",
+                "watermark_show_logo", "watermark_show_brandmark",
                 "watermark_size", "watermark_spacing", "watermark_opacity",
                 "background_light", "background_dark",
             ),

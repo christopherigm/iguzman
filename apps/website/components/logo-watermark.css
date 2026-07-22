@@ -72,6 +72,16 @@
   transform: rotate(calc(-1 * var(--logo-watermark-rotation, -12deg)));
 }
 
+/* ── Two-image variant ───────────────────────────────────────────────────────
+   When a second image is supplied (logo + brandmark), alternate the tile image
+   so neighbours show different marks. Odd tiles keep the default image; even
+   tiles draw the second one. `:nth-child` walks the flat tile list, so the two
+   images land as a diagonal checkerboard - independent of the rotation
+   alternation above, which the two variants compose with cleanly. */
+.logo-watermark--two-images .logo-watermark__tile:nth-child(even) {
+  background-image: var(--logo-watermark-image-2);
+}
+
 @media (max-width: 600px) {
   /* sm - a desktop-scaled pattern reads as giant blobs on a phone. */
   .logo-watermark__grid {

@@ -369,6 +369,42 @@
   }
 }
 
+/* ===== Per-breakpoint visibility (range-scoped) =====
+ * `ui-grid-hidden-<bp>` hides the item within that breakpoint's own band only,
+ * so `hidden={{ xs: true }}` hides below sm and shows from sm up. These are the
+ * single source of the breakpoint thresholds for the `hidden` prop - consumers
+ * never write a media query. Bands mirror the BREAKPOINTS scale in utils.ts. */
+@media (max-width: 599.98px) {
+  /* below sm */
+  .ui-grid-hidden-xs {
+    display: none;
+  }
+}
+@media (min-width: 600px) and (max-width: 899.98px) {
+  /* sm only */
+  .ui-grid-hidden-sm {
+    display: none;
+  }
+}
+@media (min-width: 900px) and (max-width: 1199.98px) {
+  /* md only */
+  .ui-grid-hidden-md {
+    display: none;
+  }
+}
+@media (min-width: 1200px) and (max-width: 1535.98px) {
+  /* lg only */
+  .ui-grid-hidden-lg {
+    display: none;
+  }
+}
+@media (min-width: 1536px) {
+  /* xl and up */
+  .ui-grid-hidden-xl {
+    display: none;
+  }
+}
+
 /* ===== xl (min-width: 1536px) ===== */
 @media (min-width: 1536px) {
   .ui-grid-xl-1 {

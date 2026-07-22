@@ -73,8 +73,13 @@ export interface System {
   watermark_rotation: number;
   /** Alternate each logo's rotation so neighbours lean opposite ways. */
   watermark_intercalated: boolean;
-  /** Tile the brandmark instead of the logo in the page watermark (needs `img_brandmark`). */
-  watermark_use_brandmark: boolean;
+  /** Include the logo in the page watermark. */
+  watermark_show_logo: boolean;
+  /**
+   * Include the brandmark in the page watermark (needs `img_brandmark`). With
+   * `watermark_show_logo` also on, the two images are intercalated.
+   */
+  watermark_show_brandmark: boolean;
   watermark_size: number;
   watermark_spacing: number;
   /** Whole percent (1-25), not a 0-1 fraction. */
@@ -120,6 +125,7 @@ export interface System {
   pay_on_delivery_enabled: boolean;
   /** Spotlight section - a promo panel + up to three hand-picked catalog items.
    *  Copy is bilingual; the button link is a single path/URL. All optional. */
+  spotlight_enabled: boolean;
   spotlight_label: string | null;
   en_spotlight_label: string | null;
   spotlight_title: string | null;

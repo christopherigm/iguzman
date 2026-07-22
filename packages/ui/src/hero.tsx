@@ -297,6 +297,11 @@ export function HeroTextFrame({
         // Reserve the space the circle + shoulders occupy above the frame, so
         // an ancestor never clips them.
         marginTop: `calc((${badge}) * 0.85 + 8px)`,
+        // The top-only reserve pushes the outline box below true centre in the
+        // flex column that centres this block. Bump it back up with a matching
+        // bottom margin so the framed heading keeps the vertically-centred feel
+        // the bare-outline branch already has.
+        marginBottom: `calc((${badge}) * 0.85 + 8px)`,
       }}
     >
       <div
