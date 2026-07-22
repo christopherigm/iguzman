@@ -53,7 +53,7 @@
   height: 240px;
 }
 
-@media (min-width: 600px) {
+@media (--sm) {
   /* sm */
   .music-player__cover-wrap {
     width: 300px;
@@ -109,7 +109,7 @@
 
 /* ── Controls ── */
 
-@media (min-width: 600px) {
+@media (--sm) {
   /* sm */
   .music-player__controls {
     gap: 28px;

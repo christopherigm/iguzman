@@ -12,6 +12,7 @@ import { Button } from "@repo/ui/core-elements/button";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { Switch } from "@repo/ui/core-elements/switch";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 
 export interface Column {
@@ -165,6 +166,9 @@ export function AdminEntityList({
           )}
         </Box>
       </Box>
+
+      {/* Reorder persistence progress, directly under the header row. */}
+      {saving && <ProgressBar />}
 
       {sortMode && (
         <Typography variant="caption" color="var(--muted, #6b7280)">

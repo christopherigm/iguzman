@@ -9,6 +9,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Button } from "@repo/ui/core-elements/button";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { Badge } from "@repo/ui/core-elements/badge";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { useRouter } from "@repo/i18n/navigation";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import "./user-form.css";
@@ -90,8 +91,20 @@ export default function AdminUserFormPage({ params }: Props) {
           <Typography as="h1" variant="h3">
             {t("edit")} - {t("users")}
           </Typography>
-          <Button text={t("cancel")} size="md" onClick={() => router.back()} />
+          <Box display="flex" alignItems="center" gap={8}>
+            <Button text={t("cancel")} size="md" onClick={() => router.back()} />
+            <Button
+              text={saving ? t("saving") : t("save")}
+              onClick={handleSave}
+              disabled={saving}
+              kind="primary"
+              size="md"
+            />
+          </Box>
         </Box>
+
+        {/* Save progress, directly under the header action row. */}
+        {saving && <ProgressBar />}
 
         {error && (
           <Box className="uf__banner uf__banner--error">

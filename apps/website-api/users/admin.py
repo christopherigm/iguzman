@@ -22,6 +22,14 @@ class UserProfileInline(admin.StackedInline):
 
 class UserAdmin(BaseUserAdmin):
     inlines = (UserProfileInline,)
+    list_display = BaseUserAdmin.list_display + ("site",)
+    list_select_related = ("profile", "profile__system")
+    list_filter = BaseUserAdmin.list_filter + ("profile__system",)
+
+    @admin.display(description="Site", ordering="profile__system")
+    def site(self, obj):
+        profile = getattr(obj, "profile", None)
+        return profile.system if profile and profile.system_id else "—"
 
 
 admin.site.unregister(User)

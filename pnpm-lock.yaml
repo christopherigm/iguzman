@@ -69,7 +69,7 @@ importers:
         specifier: 16.3.0-canary.66
         version: 16.3.0-canary.66(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       next-intl:
-        specifier: '>=4.9.1'
+        specifier: ^4.13.0
         version: 4.13.0(@swc/helpers@0.5.21)(next@16.3.0-canary.66(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(typescript@6.0.3)
       pino:
         specifier: ^10.3.1
@@ -87,6 +87,9 @@ importers:
         specifier: ^12.2.0
         version: 12.2.0
     devDependencies:
+      '@csstools/postcss-global-data':
+        specifier: ^4.0.0
+        version: 4.0.0(postcss@8.5.17)
       '@repo/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
@@ -102,12 +105,21 @@ importers:
       '@types/react-dom':
         specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.17)
+      autoprefixer:
+        specifier: ^10.5.4
+        version: 10.5.4(postcss@8.5.17)
       eslint:
         specifier: ^9.39.4
         version: 9.39.4
+      postcss-custom-media:
+        specifier: ^12.0.1
+        version: 12.0.1(postcss@8.5.17)
       serwist:
         specifier: ^9.5.11
         version: 9.5.11(browserslist@4.28.2)(typescript@6.0.3)
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
       typescript:
         specifier: 6.0.3
         version: 6.0.3
@@ -189,7 +201,7 @@ importers:
         specifier: 16.3.0-canary.66
         version: 16.3.0-canary.66(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       next-intl:
-        specifier: '>=4.9.1'
+        specifier: ^4.13.0
         version: 4.13.0(@swc/helpers@0.5.21)(next@16.3.0-canary.66(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(typescript@6.0.3)
       pino:
         specifier: ^10.3.1
@@ -207,6 +219,9 @@ importers:
         specifier: ^0.26.9
         version: 0.26.9
     devDependencies:
+      '@csstools/postcss-global-data':
+        specifier: ^4.0.0
+        version: 4.0.0(postcss@8.5.17)
       '@repo/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
@@ -222,12 +237,21 @@ importers:
       '@types/react-dom':
         specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.17)
+      autoprefixer:
+        specifier: ^10.5.4
+        version: 10.5.4(postcss@8.5.17)
       eslint:
         specifier: ^9.39.4
         version: 9.39.4
+      postcss-custom-media:
+        specifier: ^12.0.1
+        version: 12.0.1(postcss@8.5.17)
       serwist:
         specifier: ^9.5.11
         version: 9.5.11(browserslist@4.28.2)(typescript@6.0.3)
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
       typescript:
         specifier: 6.0.3
         version: 6.0.3
@@ -258,7 +282,7 @@ importers:
         specifier: 16.3.0-canary.66
         version: 16.3.0-canary.66(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       next-intl:
-        specifier: '>=4.9.1'
+        specifier: ^4.13.0
         version: 4.13.0(@swc/helpers@0.5.21)(next@16.3.0-canary.66(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(typescript@6.0.3)
       pino:
         specifier: ^10.3.1
@@ -273,6 +297,9 @@ importers:
         specifier: ^12.2.0
         version: 12.2.0
     devDependencies:
+      '@csstools/postcss-global-data':
+        specifier: ^4.0.0
+        version: 4.0.0(postcss@8.5.17)
       '@repo/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
@@ -288,12 +315,21 @@ importers:
       '@types/react-dom':
         specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.17)
+      autoprefixer:
+        specifier: ^10.5.4
+        version: 10.5.4(postcss@8.5.17)
       eslint:
         specifier: ^9.39.4
         version: 9.39.4
+      postcss-custom-media:
+        specifier: ^12.0.1
+        version: 12.0.1(postcss@8.5.17)
       serwist:
         specifier: ^9.5.11
         version: 9.5.11(browserslist@4.28.2)(typescript@6.0.3)
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
       typescript:
         specifier: 6.0.3
         version: 6.0.3
@@ -367,7 +403,7 @@ importers:
         specifier: 16.3.0-canary.66
         version: 16.3.0-canary.66(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       next-intl:
-        specifier: '>=4.9.1'
+        specifier: ^4.13.0
         version: 4.13.0(@swc/helpers@0.5.21)(next@16.3.0-canary.66(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(typescript@6.0.3)
       pino:
         specifier: ^10.3.1
@@ -382,6 +418,9 @@ importers:
         specifier: ^12.2.0
         version: 12.2.0
     devDependencies:
+      '@csstools/postcss-global-data':
+        specifier: ^4.0.0
+        version: 4.0.0(postcss@8.5.17)
       '@repo/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
@@ -397,12 +436,21 @@ importers:
       '@types/react-dom':
         specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.17)
+      autoprefixer:
+        specifier: ^10.5.4
+        version: 10.5.4(postcss@8.5.17)
       eslint:
         specifier: ^9.39.4
         version: 9.39.4
+      postcss-custom-media:
+        specifier: ^12.0.1
+        version: 12.0.1(postcss@8.5.17)
       serwist:
         specifier: ^9.5.11
         version: 9.5.11(browserslist@4.28.2)(typescript@6.0.3)
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
       typescript:
         specifier: 6.0.3
         version: 6.0.3
@@ -518,6 +566,9 @@ importers:
         specifier: ^12.2.0
         version: 12.2.0
     devDependencies:
+      '@csstools/postcss-global-data':
+        specifier: ^4.0.0
+        version: 4.0.0(postcss@8.5.17)
       '@repo/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
@@ -533,12 +584,21 @@ importers:
       '@types/react-dom':
         specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.17)
+      autoprefixer:
+        specifier: ^10.5.4
+        version: 10.5.4(postcss@8.5.17)
       eslint:
         specifier: ^9.39.4
         version: 9.39.4
+      postcss-custom-media:
+        specifier: ^12.0.1
+        version: 12.0.1(postcss@8.5.17)
       serwist:
         specifier: ^9.5.11
         version: 9.5.11(browserslist@4.28.2)(typescript@6.0.3)
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
       typescript:
         specifier: 6.0.3
         version: 6.0.3
@@ -615,6 +675,9 @@ importers:
       serwist:
         specifier: ^9.5.11
         version: 9.5.11(browserslist@4.28.2)(typescript@6.0.3)
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
       typescript:
         specifier: 6.0.3
         version: 6.0.3
@@ -14834,7 +14897,7 @@ snapshots:
       '@webassemblyjs/wasm-parser': 1.14.1
       acorn: 8.16.0
       acorn-import-phases: 1.0.4(acorn@8.16.0)
-      browserslist: 4.28.2
+      browserslist: 4.28.7
       chrome-trace-event: 1.0.4
       enhanced-resolve: 5.20.1
       es-module-lexer: 2.0.0

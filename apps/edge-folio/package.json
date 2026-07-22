@@ -1,10 +1,13 @@
 {
   "name": "edge-folio",
-  "version": "0.1.104",
+  "version": "0.1.105",
   "type": "module",
   "private": true,
   "scripts": {
+    "gen:breakpoints": "tsx scripts/gen-breakpoints-css.ts",
+    "predev": "pnpm gen:breakpoints",
     "dev": "next dev --port 3000",
+    "prebuild": "pnpm gen:breakpoints",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
@@ -21,7 +24,7 @@
     "@simplewebauthn/browser": "^13.1.0",
     "@swc/helpers": "^0.5.23",
     "next": "16.3.0-canary.66",
-    "next-intl": "^4",
+    "next-intl": "^4.13.0",
     "pino": "^10.3.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
@@ -29,13 +32,17 @@
     "web-tree-sitter": "^0.26.9"
   },
   "devDependencies": {
+    "@csstools/postcss-global-data": "^4.0.0",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^26.0.0",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
+    "autoprefixer": "^10.5.4",
     "eslint": "^9.39.4",
+    "postcss-custom-media": "^12.0.1",
     "serwist": "^9.5.11",
+    "tsx": "^4.22.4",
     "typescript": "6.0.3"
   }
 }

@@ -27,7 +27,7 @@
   align-self: center;
 }
 
-@media (min-width: 900px) {
+@media (--md) {
   /* md - tablet/desktop: cover and form side by side */
   .inbox-card__layout {
     flex-direction: row;

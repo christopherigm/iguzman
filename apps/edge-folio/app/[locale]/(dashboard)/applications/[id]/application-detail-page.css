@@ -50,7 +50,7 @@
   margin-top: 0;
 }
 
-@media (min-width: 600px) {
+@media (--sm) {
   /* sm - buttons sit beside the title column */
   .detail__header-actions {
     margin-top: 30px;

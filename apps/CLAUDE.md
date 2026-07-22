@@ -228,3 +228,40 @@ declare module "swiper/css/*";
 ```
 
 **Rule:** If you add a new CSS side-effect import from a third-party package and TypeScript raises TS2882, add a `declare module` entry to the app's `css.d.ts`. Never create a separate per-package `.d.ts` file - `css.d.ts` is the single place for these declarations.
+
+## Responsive breakpoints in CSS (`@custom-media`)
+
+**Never hardcode a breakpoint pixel value in a `@media` query.** The scale lives once
+in `@repo/ui`'s `BREAKPOINTS` (`packages/ui/src/core-elements/breakpoints.ts` - a
+deliberately React-free module so build scripts can import it), and **every** Next.js
+app in `apps/` consumes it through PostCSS `@custom-media` tokens. This is standardised
+across all apps - the moving parts are identical in each:
+
+- `scripts/gen-breakpoints-css.ts` reads `BREAKPOINTS` and writes
+  `app/breakpoints.generated.css` (committed; **never edit by hand**). It runs on
+  `predev`/`prebuild` via `pnpm gen:breakpoints`, so a changed scale flows into CSS
+  automatically. If you change `BREAKPOINTS`, regenerate and re-commit the file in
+  every app (`pnpm -r gen:breakpoints`).
+- `postcss.config.mjs` wires two plugins: `@csstools/postcss-global-data` injects the
+  generated `@custom-media` rules into every CSS file, then `postcss-custom-media`
+  resolves them. Defining this config opts the app out of Next's built-in PostCSS, so
+  `autoprefixer` is listed explicitly - keep it. The four devDeps
+  (`@csstools/postcss-global-data`, `postcss-custom-media`, `autoprefixer`, `tsx`) and
+  the `gen:breakpoints`/`predev`/`prebuild` scripts are the same in every app.
+- In any `.css` file, write the token, not the pixels:
+
+  ```css
+  @media (--below-sm) { … }   /* below the sm breakpoint (mobile only) */
+  @media (--md)       { … }   /* from md up */
+  @media (--only-lg)  { … }   /* within the lg band only */
+  ```
+
+  Available tokens (generated): `--sm`/`--md`/`--lg`/`--xl` (min-width, "from X up"),
+  `--below-sm`…`--below-xl` (max-width, "under X"), and `--only-xs`…`--only-xl` (single
+  band). An off-scale value (e.g. an old `768px`) snaps to the nearest token
+  (`--below-md`) rather than staying a literal - the scale is the single source of truth.
+
+For `@repo/ui` **components** (`Grid`, etc.), still prefer props over CSS - e.g.
+`Grid`'s `hidden={{ xs: true }}` hides at a breakpoint with no media query at all.
+`@custom-media` is for the CSS that genuinely needs a media query. `apps/website`'s
+`CLAUDE.md` carries a longer version of this note; the mechanism is identical everywhere.

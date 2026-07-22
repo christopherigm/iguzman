@@ -1,10 +1,10 @@
 {
   "name": "website",
-  "version": "0.1.141",
+  "version": "0.1.145",
   "type": "module",
   "private": true,
   "scripts": {
-    "gen:breakpoints": "node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/gen-breakpoints-css.ts",
+    "gen:breakpoints": "tsx scripts/gen-breakpoints-css.ts",
     "predev": "pnpm gen:breakpoints",
     "dev": "next dev --port 3000",
     "prebuild": "pnpm gen:breakpoints",
@@ -39,6 +39,7 @@
     "eslint": "^9.39.4",
     "postcss-custom-media": "^12.0.1",
     "serwist": "^9.5.11",
+    "tsx": "^4.22.4",
     "typescript": "6.0.3"
   }
 }

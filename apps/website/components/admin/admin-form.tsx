@@ -13,6 +13,7 @@ import { Switch } from "@repo/ui/core-elements/switch";
 import { Toast } from "@repo/ui/core-elements/toast";
 import { useLlmProxy } from "@repo/ui/use-llm";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { Slider } from "@repo/ui/core-elements/slider";
 import {
   PARAGRAPH_WORD_COUNTS,
@@ -470,8 +471,18 @@ export function AdminForm({
                 kind="warning"
               />
             )}
+            <Button
+              text={saving ? t("saving") : t("save")}
+              onClick={onSubmit}
+              disabled={saving}
+              kind="primary"
+              size="md"
+            />
           </Box>
         </Box>
+
+        {/* Save progress, directly under the header action row. */}
+        {saving && <ProgressBar />}
 
         {error && <Toast message={error} variant="error" />}
         {success && (

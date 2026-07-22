@@ -28,7 +28,7 @@
   align-items: start;
 }
 
-@media (max-width: 768px) {
+@media (--below-md) {
   .simulator__compare-grid {
     grid-template-columns: 1fr;
   }

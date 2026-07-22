@@ -3,7 +3,7 @@
   flex-shrink: 0;
 }
 
-@media (max-width: 599px) { /* xs */
+@media (--below-sm) {
   .help-layout {
     flex-direction: column;
   }

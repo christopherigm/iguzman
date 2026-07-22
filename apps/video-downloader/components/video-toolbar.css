@@ -150,7 +150,7 @@
 
 /* ── Responsive: stack on narrow screens ─────────────── */
 
-@media (max-width: 540px) {
+@media (--below-sm) {
   .vt-bar {
     gap: 6px;
   }

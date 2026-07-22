@@ -195,21 +195,13 @@ xl: 1536 px
 ```
 
 - **In TypeScript/TSX** - use the `Breakpoint` type and `BREAKPOINTS` record directly; never hardcode pixel values for breakpoint logic.
-- **In CSS** - prefer generating `@custom-media` tokens from this scale over hardcoding pixels. `apps/website` does this (PostCSS `@custom-media` fed by a generated file - see its `CLAUDE.md` → "Responsive breakpoints in CSS"); write `@media (--below-sm)` there, not a literal. In an app with no such pipeline yet, use the same pixel values in `@media` queries and add an inline comment with the breakpoint name so the mapping stays clear:
+- **In CSS** - **every** Next.js app in `apps/` generates `@custom-media` tokens from this scale at build time (PostCSS `@custom-media` fed by a committed generated file - see `apps/CLAUDE.md` → "Responsive breakpoints in CSS (`@custom-media`)"). Write the token, never a pixel literal:
 
 ```css
-@media (min-width: 600px) {
-  /* sm */
-}
-@media (min-width: 900px) {
-  /* md */
-}
-@media (min-width: 1200px) {
-  /* lg */
-}
-@media (min-width: 1536px) {
-  /* xl */
-}
+@media (--below-sm) { … }   /* below the sm breakpoint (mobile only) */
+@media (--sm)       { … }   /* from sm up */
+@media (--md)       { … }   /* from md up */
+@media (--only-lg)  { … }   /* within the lg band only */
 ```
 
 ## Styling Conventions

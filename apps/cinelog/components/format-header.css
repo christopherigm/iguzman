@@ -7,7 +7,7 @@
   --fh-icon: var(--fh-i-xs);
 }
 
-@media (min-width: 600px) {
+@media (--sm) {
   /* sm */
   .format-header {
     --fh-height: var(--fh-h-sm);
@@ -15,7 +15,7 @@
   }
 }
 
-@media (min-width: 900px) {
+@media (--md) {
   /* md */
   .format-header {
     --fh-height: var(--fh-h-md);
@@ -23,7 +23,7 @@
   }
 }
 
-@media (min-width: 1200px) {
+@media (--lg) {
   /* lg */
   .format-header {
     --fh-height: var(--fh-h-lg);
@@ -31,7 +31,7 @@
   }
 }
 
-@media (min-width: 1536px) {
+@media (--xl) {
   /* xl */
   .format-header {
     --fh-height: var(--fh-h-xl);

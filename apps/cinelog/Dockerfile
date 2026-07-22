@@ -1,6 +1,6 @@
 # syntax=docker.io/docker/dockerfile:1
 
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 
 FROM base AS pruner
 RUN npm install -g turbo@^2
@@ -30,7 +30,7 @@ RUN find -L /app/node_modules/.pnpm -maxdepth 5 \
         cp -rL "$src/." "$dest/"; \
       done
 
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
