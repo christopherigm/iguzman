@@ -22,6 +22,19 @@
       "productsCta": "Produkte ansehen"
     }
   },
+  "SuperTortasSite": {
+    "intro": {
+      "eyebrow": "Frisch zubereitet",
+      "viewMenu": "Zur Speisekarte",
+      "contact": "So bestellst du"
+    },
+    "contact": {
+      "eyebrow": "Jetzt bestellen",
+      "heading": "Bestelle deine Tortas",
+      "subtitle": "Lust auf eine üppige Torta? Bestelle jetzt und wir bereiten sie frisch zu – mit Lieferung in Papalotla und Umgebung.",
+      "menuCta": "Zur Speisekarte"
+    }
+  },
   "PanOrganicoSite": {
     "intro": {
       "eyebrow": "Hausgemacht",

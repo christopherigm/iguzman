@@ -22,6 +22,19 @@
       "productsCta": "Voir les produits"
     }
   },
+  "SuperTortasSite": {
+    "intro": {
+      "eyebrow": "Préparées minute",
+      "viewMenu": "Voir le menu",
+      "contact": "Comment commander"
+    },
+    "contact": {
+      "eyebrow": "Passez commande",
+      "heading": "Commandez vos tortas",
+      "subtitle": "Envie d'une torta bien garnie ? Passez commande et nous la préparons minute, avec livraison à Papalotla et alentours.",
+      "menuCta": "Voir le menu"
+    }
+  },
   "PanOrganicoSite": {
     "intro": {
       "eyebrow": "Fait maison",

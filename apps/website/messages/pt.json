@@ -22,6 +22,19 @@
       "productsCta": "Ver produtos"
     }
   },
+  "SuperTortasSite": {
+    "intro": {
+      "eyebrow": "Feitas na hora",
+      "viewMenu": "Ver o cardápio",
+      "contact": "Como pedir"
+    },
+    "contact": {
+      "eyebrow": "Faça seu pedido",
+      "heading": "Peça suas tortas",
+      "subtitle": "Bateu vontade de uma torta caprichada? Faça seu pedido e preparamos na hora, com entrega em Papalotla e região.",
+      "menuCta": "Ver o cardápio"
+    }
+  },
   "PanOrganicoSite": {
     "intro": {
       "eyebrow": "Feito em casa",

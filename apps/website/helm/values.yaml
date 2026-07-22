@@ -43,11 +43,15 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
+    - host: panbueno.iguzman.com.mx
+      paths:
+        - path: /
+          pathType: Prefix
     - host: cafedealtura.iguzman.com.mx
       paths:
         - path: /
           pathType: Prefix
-    - host: panbueno.iguzman.com.mx
+    - host: supertortaselchino.iguzman.com.mx
       paths:
         - path: /
           pathType: Prefix
@@ -56,8 +60,9 @@ ingress:
       hosts:
         - website.iguzman.com.mx
         - bdrone.com.mx
-        - cafedealtura.iguzman.com.mx
         - panbueno.iguzman.com.mx
+        - cafedealtura.iguzman.com.mx
+        - supertortaselchino.iguzman.com.mx
 
 # ─── Environment variables ──────────────────────────────────
 # Plain environment variables injected into the container.

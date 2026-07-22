@@ -22,6 +22,19 @@
       "productsCta": "Browse products"
     }
   },
+  "SuperTortasSite": {
+    "intro": {
+      "eyebrow": "Made to order",
+      "viewMenu": "View the menu",
+      "contact": "How to order"
+    },
+    "contact": {
+      "eyebrow": "Place your order",
+      "heading": "Order your tortas",
+      "subtitle": "Craving a loaded torta? Place your order and we'll make it fresh, with delivery in Papalotla and nearby.",
+      "menuCta": "View the menu"
+    }
+  },
   "PanOrganicoSite": {
     "intro": {
       "eyebrow": "Home-made",
