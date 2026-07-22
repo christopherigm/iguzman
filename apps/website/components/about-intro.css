@@ -15,7 +15,7 @@
   aspect-ratio: 5 / 4;
 }
 
-@media (min-width: 900px) {
+@media (--md) {
   .about-intro__media {
     aspect-ratio: auto;
     height: 460px;

@@ -333,6 +333,38 @@ Rules:
   `components/category-detail.tsx` renders its root `<Box>` with no `paddingTop` for
   the same reason. Don't restore those top paddings.
 
+## Responsive breakpoints in CSS (`@custom-media`)
+
+**Never hardcode a breakpoint pixel value in a `@media` query in this app.** The
+scale lives once in `@repo/ui`'s `BREAKPOINTS` (`packages/ui/src/core-elements/breakpoints.ts`
+- a deliberately React-free module so build scripts can import it), and CSS
+consumes it through PostCSS `@custom-media` tokens.
+
+- `scripts/gen-breakpoints-css.ts` reads `BREAKPOINTS` and writes
+  `app/breakpoints.generated.css` (committed; **never edit by hand**). It runs on
+  `predev`/`prebuild` via `pnpm gen:breakpoints`, so a changed scale flows into
+  CSS automatically. Regenerate and re-commit if you touch `BREAKPOINTS`.
+- `postcss.config.mjs` wires two plugins: `@csstools/postcss-global-data` injects
+  those `@custom-media` rules into every CSS file, then `postcss-custom-media`
+  resolves them. Defining this config opts the app out of Next's built-in PostCSS,
+  so `autoprefixer` is listed explicitly - keep it.
+- In any `.css` file, write the token, not the pixels:
+
+  ```css
+  @media (--below-sm) { … }   /* below the sm breakpoint (mobile only) */
+  @media (--md)       { … }   /* from md up */
+  @media (--only-lg)  { … }   /* within the lg band only */
+  ```
+
+  Available tokens (generated): `--sm`/`--md`/`--lg`/`--xl` (min-width, "from X
+  up"), `--below-sm`…`--below-xl` (max-width, "under X"), and `--only-xs`…`--only-xl`
+  (single band). Verified under both dev (Turbopack) and `next build --webpack` -
+  both read the same `postcss.config.mjs`.
+
+For `@repo/ui` **components** (`Grid`, etc.), still prefer props over CSS - e.g.
+`Grid`'s `hidden={{ xs: true }}` hides at a breakpoint with no media query at all.
+`@custom-media` is for the CSS that genuinely needs a media query.
+
 ## Shared Constants - Don't Duplicate Across Sibling Files
 
 Before defining a constant, type, or pure utility function in a component file, check whether it already exists in a shared file in the same directory. If the same value appears (or is about to appear) in two or more sibling files, extract it into a dedicated shared module in their common parent directory.

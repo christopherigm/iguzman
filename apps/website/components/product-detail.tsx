@@ -135,7 +135,7 @@ export async function ProductDetailPanel({
     product.length || product.width || product.height || product.weight;
 
   return (
-    <Box flexDirection="column" gap={18} paddingY={4}>
+    <Box flexDirection="column" gap={18}>
       {/* Buy box: price, stock, variants and CTAs grouped as one unit */}
       <Card gap={18}>
         {/* Pricing */}

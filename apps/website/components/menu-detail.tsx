@@ -115,6 +115,12 @@ export async function MenuDetailHeader({ item, locale }: MenuDetailProps) {
         </Box>
       </Box>
 
+      {item.category_name && (
+        <Typography as="span" variant="caption" color="var(--foreground)">
+          {t("category")}: <strong>{item.category_name}</strong>
+        </Typography>
+      )}
+
       {/* Dietary badges - one per matching boolean flag */}
       {dietary.length > 0 && (
         <Box flexWrap="wrap" gap={6} alignItems="center">
@@ -130,12 +136,6 @@ export async function MenuDetailHeader({ item, locale }: MenuDetailProps) {
             </Badge>
           ))}
         </Box>
-      )}
-
-      {item.category_name && (
-        <Typography as="span" variant="caption" color="var(--foreground)">
-          {t("category")}: <strong>{item.category_name}</strong>
-        </Typography>
       )}
     </Box>
   );

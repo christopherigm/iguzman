@@ -32,7 +32,7 @@
   grid-column: 1 / -1;
 }
 
-@media (min-width: 900px) {
+@media (--md) {
   /* md */
   .af__field--pair {
     grid-column: auto;
@@ -107,7 +107,7 @@
   cursor: not-allowed;
 }
 
-@media (max-width: 599px) {
+@media (--below-sm) {
   /* xs */
   .af__grid {
     grid-template-columns: minmax(0, 1fr);

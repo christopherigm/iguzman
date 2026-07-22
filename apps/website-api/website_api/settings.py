@@ -177,6 +177,13 @@ STORAGES = {
 MEDIA_URL = '/media/'
 MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', str(BASE_DIR / 'media')))
 
+# Public origin the API serves its media from, used to build absolute image URLs
+# in contexts that have no request to resolve them against (e.g. branded emails,
+# whose tenant logo must load from an email client). This is the API's own host,
+# not a per-tenant domain: uploaded media lives on the API and every frontend
+# already loads System images straight from here.
+MEDIA_BASE_URL = os.environ.get('MEDIA_BASE_URL', 'https://website-api.iguzman.com.mx').rstrip('/')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 

@@ -13,10 +13,11 @@
    The slide aspect-ratio is normally computed in JS and applied inline. When a
    consumer opts in per breakpoint, these classes override it — `horizontal`
    pins a 5:4 landscape frame, `vertical` a 4:5 portrait frame. Each rule is
-   range-scoped to a single breakpoint band (matching @repo/ui's grid: sm 600px,
-   md 900px, lg 1200px, xl 1536px), so e.g. { xs, sm } only affects <900px.
-   `!important` is required to beat the inline aspect-ratio. */
-@media (max-width: 599.98px) {
+   range-scoped to a single breakpoint band via the generated `--only-*`
+   custom-media tokens (resolved from @repo/ui's BREAKPOINTS at build time), so
+   e.g. { xs, sm } only affects <900px. `!important` beats the inline
+   aspect-ratio. */
+@media (--only-xs) {
   .item-gallery__slide--xs-horizontal {
     aspect-ratio: 5 / 4 !important;
   }
@@ -24,7 +25,7 @@
     aspect-ratio: 4 / 5 !important;
   }
 }
-@media (min-width: 600px) and (max-width: 899.98px) {
+@media (--only-sm) {
   .item-gallery__slide--sm-horizontal {
     aspect-ratio: 5 / 4 !important;
   }
@@ -32,7 +33,7 @@
     aspect-ratio: 4 / 5 !important;
   }
 }
-@media (min-width: 900px) and (max-width: 1199.98px) {
+@media (--only-md) {
   .item-gallery__slide--md-horizontal {
     aspect-ratio: 5 / 4 !important;
   }
@@ -40,7 +41,7 @@
     aspect-ratio: 4 / 5 !important;
   }
 }
-@media (min-width: 1200px) and (max-width: 1535.98px) {
+@media (--only-lg) {
   .item-gallery__slide--lg-horizontal {
     aspect-ratio: 5 / 4 !important;
   }
@@ -48,7 +49,7 @@
     aspect-ratio: 4 / 5 !important;
   }
 }
-@media (min-width: 1536px) {
+@media (--only-xl) {
   .item-gallery__slide--xl-horizontal {
     aspect-ratio: 5 / 4 !important;
   }

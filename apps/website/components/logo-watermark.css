@@ -82,7 +82,7 @@
   background-image: var(--logo-watermark-image-2);
 }
 
-@media (max-width: 600px) {
+@media (--below-sm) {
   /* sm - a desktop-scaled pattern reads as giant blobs on a phone. */
   .logo-watermark__grid {
     grid-template-columns: repeat(

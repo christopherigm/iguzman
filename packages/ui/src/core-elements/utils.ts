@@ -134,21 +134,10 @@ export function buildStyleProps(props: UIComponentProps): CSSProperties {
   return style as CSSProperties;
 }
 
-/**
- * Breakpoint keys for the responsive grid system.
- */
-export type Breakpoint = "xs" | "sm" | "md" | "lg" | "xl";
-
-/**
- * Breakpoint minimum-width values in pixels (mobile-first).
- */
-export const BREAKPOINTS: Record<Breakpoint, number> = {
-  xs: 0,
-  sm: 600,
-  md: 900,
-  lg: 1200,
-  xl: 1536,
-};
+// The breakpoint scale lives in its own React-free module so build scripts can
+// import it; re-exported here for the many consumers that import from `./utils`.
+export type { Breakpoint } from "./breakpoints";
+export { BREAKPOINTS } from "./breakpoints";
 
 /**
  * Represents a navigation menu item.

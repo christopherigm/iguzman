@@ -1,10 +1,13 @@
 {
   "name": "website",
-  "version": "0.1.140",
+  "version": "0.1.141",
   "type": "module",
   "private": true,
   "scripts": {
+    "gen:breakpoints": "node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/gen-breakpoints-css.ts",
+    "predev": "pnpm gen:breakpoints",
     "dev": "next dev --port 3000",
+    "prebuild": "pnpm gen:breakpoints",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
@@ -26,12 +29,15 @@
     "swiper": "^12.2.0"
   },
   "devDependencies": {
+    "@csstools/postcss-global-data": "^4.0.0",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^26.0.0",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
+    "autoprefixer": "^10.5.4",
     "eslint": "^9.39.4",
+    "postcss-custom-media": "^12.0.1",
     "serwist": "^9.5.11",
     "typescript": "6.0.3"
   }

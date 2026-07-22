@@ -128,7 +128,7 @@
   background: #e53935;
 }
 
-@media (min-width: 600px) {
+@media (--sm) {
   /* sm */
   .aiu__grid {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));

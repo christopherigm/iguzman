@@ -24,7 +24,7 @@
   grid-column: span 2;
 }
 
-@media (min-width: 600px) {
+@media (--sm) {
   /* sm */
   .mie__fields {
     grid-template-columns: repeat(5, minmax(0, 1fr));

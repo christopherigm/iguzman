@@ -1,9 +1,10 @@
 /* ── Detail description column ─────────────────────────────────────────────────
    The accent right divider only reads correctly in the md+ two-column layout
    (gallery beside description). On xs/sm the grid stacks to a single column, so
-   the border is applied from the md breakpoint (900px) up only — matching
-   @repo/ui's grid. Padding stays a prop; this class is media-query-only. */
-@media (min-width: 900px) {
+   the border is applied from the md breakpoint up only — matching @repo/ui's
+   grid. The `--md` custom-media resolves to the shared BREAKPOINTS scale at
+   build time (see app/breakpoints.generated.css). Media-query-only class. */
+@media (--md) {
   .item-detail__description {
     border-right: 3px solid var(--accent);
   }
@@ -11,9 +12,10 @@
 
 /* ── Centered copy on the stacked mobile layout ─────────────────────────────
    Short-description and description read centered on xs/sm, where the grid is a
-   single column, and revert to the default left alignment from md (900px) up,
-   where the gallery sits beside the description. Media-query-only class. */
-@media (max-width: 899.98px) {
+   single column, and revert to the default left alignment from md up, where the
+   gallery sits beside the description. `--below-md` resolves to the shared
+   BREAKPOINTS scale at build time. Media-query-only class. */
+@media (--below-md) {
   .item-detail__center-mobile {
     text-align: center;
   }

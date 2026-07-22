@@ -98,7 +98,7 @@
   display: none;
 }
 
-@media (max-width: 899px) {
+@media (--below-md) {
   /* md */
   .admin-sidebar__spacer {
     display: none;

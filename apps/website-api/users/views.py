@@ -5,8 +5,9 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.db import models, transaction
+from email.utils import formataddr
 from django.template.loader import render_to_string
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -86,26 +87,78 @@ def _get_rp_id_and_origin(system):
     return rp_id, rp_origin
 
 
+def _email_brand(user):
+    """Tenant branding + base URL for an account email addressed to `user`.
+
+    The account this email is about belongs to exactly one tenant (its
+    `profile.system`), and the link must point at *that* tenant's own domain -
+    not the global `FRONTEND_URL`, which would drop every customer onto the
+    default site. Media (the logo) lives on the API and is embedded by absolute
+    URL because an email client has no request to resolve it against. Falls back
+    to the global frontend when a user somehow has no resolvable System.
+    """
+    system = profile_system(user)
+    if system and system.host:
+        base_url = f"https://{system.host}"
+    else:
+        base_url = settings.FRONTEND_URL.rstrip('/')
+
+    logo_url = None
+    if system and system.img_logo:
+        logo_url = f"{settings.MEDIA_BASE_URL}{system.img_logo.url}"
+
+    site_name = (system.site_name if system else None) or "iGuzman"
+    return {
+        'base_url': base_url.rstrip('/'),
+        'site_name': site_name,
+        'logo_url': logo_url,
+        'primary_color': (system.primary_color if system else None) or '#2196f3',
+        'secondary_color': (system.secondary_color if system else None) or '#e040fb',
+        'slogan': (system.slogan if system else None) or '',
+        'from_email': formataddr((site_name, settings.DEFAULT_FROM_EMAIL)),
+    }
+
+
+def _send_branded_email(user, subject, template, path, expiry_hours):
+    """Render `template`.{txt,html} with tenant branding and send both parts.
+
+    `path` is appended to the tenant's own base URL to form the action link, so
+    the recipient always lands on their own domain.
+    """
+    brand = _email_brand(user)
+    ctx = {
+        'first_name': user.first_name or user.username,
+        'action_url': f"{brand['base_url']}{path}",
+        'expiry_hours': expiry_hours,
+        **brand,
+    }
+    text_body = render_to_string(f'users/{template}.txt', ctx)
+    html_body = render_to_string(f'users/{template}.html', ctx)
+    message = EmailMultiAlternatives(subject, text_body, brand['from_email'], [user.email])
+    message.attach_alternative(html_body, 'text/html')
+    message.send(fail_silently=False)
+
+
 def _send_password_reset_email(user, token_obj):
     expiry_hours = getattr(settings, 'PASSWORD_RESET_TOKEN_EXPIRY_HOURS', 1)
-    reset_url = f"{settings.FRONTEND_URL}/reset-password/{token_obj.token}"
-    body = render_to_string('users/password_reset_email.txt', {
-        'first_name': user.first_name or user.username,
-        'reset_url': reset_url,
-        'expiry_hours': expiry_hours,
-    })
-    send_mail('Reset your password', body, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+    _send_branded_email(
+        user,
+        'Restablecer contraseña / Reset your password',
+        'password_reset_email',
+        f"/reset-password/{token_obj.token}",
+        expiry_hours,
+    )
 
 
 def _send_verification_email(user, token_obj):
     expiry_hours = getattr(settings, 'EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS', 24)
-    verification_url = f"{settings.FRONTEND_URL}/verify-email/{token_obj.token}"
-    body = render_to_string('users/verification_email.txt', {
-        'first_name': user.first_name or user.username,
-        'verification_url': verification_url,
-        'expiry_hours': expiry_hours,
-    })
-    send_mail('Verify your email address', body, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+    _send_branded_email(
+        user,
+        'Verifica tu correo / Verify your email address',
+        'verification_email',
+        f"/verify-email/{token_obj.token}",
+        expiry_hours,
+    )
 
 
 class SignUpView(generics.CreateAPIView):

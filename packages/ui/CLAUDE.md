@@ -184,7 +184,7 @@ When creating a new component in `packages/ui/src/core-elements/` or changing th
 
 ## Breakpoints
 
-All responsive behaviour must align with the breakpoint scale defined in `packages/ui/src/core-elements/utils.ts`:
+All responsive behaviour must align with the breakpoint scale, the single source of truth for every breakpoint threshold in the monorepo. It lives in `packages/ui/src/core-elements/breakpoints.ts` (a React-free module so build tooling can import it) and is re-exported from `core-elements/utils` for backwards compatibility - import from either `@repo/ui/core-elements/breakpoints` or `@repo/ui/core-elements/utils`:
 
 ```
 xs:   0 px   (mobile base)
@@ -195,7 +195,7 @@ xl: 1536 px
 ```
 
 - **In TypeScript/TSX** - use the `Breakpoint` type and `BREAKPOINTS` record directly; never hardcode pixel values for breakpoint logic.
-- **In CSS** - use the same pixel values in `@media` queries and add an inline comment with the breakpoint name so the mapping stays clear:
+- **In CSS** - prefer generating `@custom-media` tokens from this scale over hardcoding pixels. `apps/website` does this (PostCSS `@custom-media` fed by a generated file - see its `CLAUDE.md` → "Responsive breakpoints in CSS"); write `@media (--below-sm)` there, not a literal. In an app with no such pipeline yet, use the same pixel values in `@media` queries and add an inline comment with the breakpoint name so the mapping stays clear:
 
 ```css
 @media (min-width: 600px) {

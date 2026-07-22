@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>{{ site_name }}</title>
+</head>
+<body style="margin:0; padding:0; width:100%; background-color:#f4f5f7; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
+  {% if preheader %}
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent; height:0; width:0;">{{ preheader }}</div>
+  {% endif %}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f7;">
+    <tr>
+      <td align="center" style="padding:32px 12px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px; max-width:600px; background-color:#ffffff; border-radius:14px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background-color:{{ primary_color|default:'#2196f3' }}; padding:32px;">
+              {% if logo_url %}
+                <img src="{{ logo_url }}" alt="{{ site_name }}" height="52" style="display:block; height:52px; max-height:52px; width:auto; border:0; outline:none; text-decoration:none;">
+              {% else %}
+                <span style="font-family:Arial,Helvetica,sans-serif; font-size:24px; font-weight:700; color:#ffffff; letter-spacing:0.5px;">{{ site_name }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          <!-- Accent line (secondary color) -->
+          <tr><td style="height:4px; line-height:4px; font-size:0; background-color:{{ secondary_color|default:'#e040fb' }};">&nbsp;</td></tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:36px 36px 8px 36px; font-family:Arial,Helvetica,sans-serif; color:#1f2933; font-size:16px; line-height:1.6;">
+              {% block body %}{% endblock %}
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 36px 32px 36px; font-family:Arial,Helvetica,sans-serif; color:#8a94a6; font-size:12px; line-height:1.5; text-align:center; border-top:1px solid #edf0f5;">
+              <strong style="color:#52606d;">{{ site_name }}</strong>{% if slogan %} &nbsp;·&nbsp; {{ slogan }}{% endif %}
+              <br>
+              <a href="{{ base_url }}" target="_blank" style="color:{{ primary_color|default:'#2196f3' }}; text-decoration:none;">{{ base_url }}</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

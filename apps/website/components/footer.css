@@ -19,7 +19,7 @@
   color: var(--accent);
 }
 
-@media (max-width: 599px) {
+@media (--below-sm) {
   /* below sm */
   .footer {
     padding-top: 40px;

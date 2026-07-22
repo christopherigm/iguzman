@@ -11,7 +11,7 @@
   background: var(--background);
 }
 
-@media (max-width: 899px) {
+@media (--below-md) {
   /* md */
   .admin-shell {
     flex-direction: column;

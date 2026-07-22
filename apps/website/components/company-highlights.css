@@ -17,7 +17,7 @@
 }
 
 /* Mobile + tablet (xs, sm, md): sm/md/lg cards shrink card height */
-@media (max-width: 1199px) {
+@media (--below-lg) {
   /* below lg */
   .highlight-card--sm,
   .highlight-card--md,

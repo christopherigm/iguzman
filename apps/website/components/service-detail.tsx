@@ -172,7 +172,7 @@ export async function ServiceDetailPanel({
   };
 
   return (
-    <Box flexDirection="column" gap={18} paddingY={4}>
+    <Box flexDirection="column" gap={18}>
       {/* Buy box: price, variants and CTAs grouped as one unit */}
       <Card gap={18}>
         {/* Pricing */}
