@@ -620,6 +620,50 @@ class System(Common):
     # say why (Stripe's retries would 404 against an id nobody looks at).
     stripe_webhook_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
 
+    # ── Offline payment ─────────────────────────────────────────────────────────
+    # Independent of Stripe and of each other: a tenant may take card payments
+    # online, let customers pay in store, accept cash on delivery, any
+    # combination, or none. Checkout gates each offline branch on its own flag the
+    # same way it gates the online branch on `stripe_configured`. Unlike Stripe
+    # these need no credentials, so a plain boolean is the whole switch.
+    pay_in_store_enabled = models.BooleanField(
+        default=False,
+        help_text="Let customers place an order to pay when they pick it up in store.",
+    )
+    pay_on_delivery_enabled = models.BooleanField(
+        default=False,
+        help_text="Let customers place an order to pay on delivery (collects a delivery address).",
+    )
+
+    # ── Spotlight section ─────────────────────────────────────────────────────
+    # An editorial promo panel paired with up to three hand-picked catalog items,
+    # rendered by the shared `Spotlight` block on a site's landing (café de altura
+    # uses it for "wholesale", pan orgánico for "vegan breads", …). The left
+    # column is label → title → text → button (all bilingual, DB-driven per
+    # tenant); the right column renders the chosen items as catalog cards.
+    #
+    # `spotlight_items` is an ordered list of
+    # {"kind": "product"|"service"|"food", "id": <int>} refs - the same shape the
+    # guest cart uses - resolved to live cards on the frontend. It is deliberately
+    # NOT part of SYSTEM_TEXT_FIELDS (seed/publish): the ids are per-environment,
+    # so the trio is picked in each environment's CMS, while the copy below travels.
+    spotlight_label = models.CharField(max_length=255, null=True, blank=True)
+    en_spotlight_label = models.CharField(max_length=255, null=True, blank=True)
+    spotlight_title = models.CharField(max_length=255, null=True, blank=True)
+    en_spotlight_title = models.CharField(max_length=255, null=True, blank=True)
+    spotlight_text = models.TextField(null=True, blank=True)
+    en_spotlight_text = models.TextField(null=True, blank=True)
+    spotlight_button_label = models.CharField(max_length=255, null=True, blank=True)
+    en_spotlight_button_label = models.CharField(max_length=255, null=True, blank=True)
+    # Internal path (e.g. "/mayoreo") or an absolute URL - a CharField, not a
+    # URLField, so an in-site relative link validates. The frontend routes it.
+    spotlight_button_link = models.CharField(max_length=255, null=True, blank=True)
+    spotlight_items = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Ordered refs of the featured items, e.g. [{"kind": "product", "id": 12}]. Max 3.',
+    )
+
     class Meta:
         verbose_name = "System"
         verbose_name_plural = "Systems"

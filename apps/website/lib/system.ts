@@ -8,6 +8,16 @@ import { getTenantHost } from "./resolve-site";
 import { API_URL } from "./config";
 import logger from "./logger";
 
+/**
+ * A reference to one hand-picked catalog item in the Spotlight section. Same
+ * `{kind, id}` shape the guest cart uses; `food` is the MenuItem family. The
+ * frontend resolves these to live cards via the `getAll*` catalog helpers.
+ */
+export interface SpotlightRef {
+  kind: "product" | "service" | "food";
+  id: number;
+}
+
 export interface System {
   id: number;
   enabled: boolean;
@@ -104,6 +114,22 @@ export interface System {
    * to offer a checkout button at all.
    */
   stripe_configured: boolean;
+  /** Offline checkout switches, independent of Stripe and of each other. The
+   *  cart offers a "pay in store" / "pay on delivery" option on each flag. */
+  pay_in_store_enabled: boolean;
+  pay_on_delivery_enabled: boolean;
+  /** Spotlight section - a promo panel + up to three hand-picked catalog items.
+   *  Copy is bilingual; the button link is a single path/URL. All optional. */
+  spotlight_label: string | null;
+  en_spotlight_label: string | null;
+  spotlight_title: string | null;
+  en_spotlight_title: string | null;
+  spotlight_text: string | null;
+  en_spotlight_text: string | null;
+  spotlight_button_label: string | null;
+  en_spotlight_button_label: string | null;
+  spotlight_button_link: string | null;
+  spotlight_items: SpotlightRef[];
   product_count: number;
   service_count: number;
   menu_item_count: number;

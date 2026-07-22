@@ -5,6 +5,24 @@
  * in a Node.js / server-side context.
  */
 
+/** Options controlling how the manifest icons are composed. */
+export interface LogoAssetsOptions {
+  /**
+   * Solid background color painted behind the logo on the **manifest icons**
+   * (e.g. `"#ffffff"`). Omit / leave blank for a transparent background. The
+   * favicon is never affected - it always stays transparent and edge-to-edge.
+   */
+  background?: string;
+  /**
+   * How much of each manifest icon the logo fills, as a percent (0-100). The
+   * remainder becomes even padding around the logo. Installed PWA icons on
+   * Android / iOS are cropped into a rounded (or circular) mask, so a logo that
+   * fills the whole square gets its corners clipped; padding keeps it clear of
+   * the safe zone. Defaults to `100` (no padding). Does not affect the favicon.
+   */
+  logoScale?: number;
+}
+
 export interface LogoAssets {
   /** 32×32 ICO (single embedded PNG) for use as `img_favicon`. */
   img_favicon: string;
@@ -30,17 +48,35 @@ const loadImage = (src: string): Promise<HTMLImageElement> =>
   });
 
 /**
- * Draws the logo letter-boxed (centered, aspect-ratio preserved) on a
- * transparent square canvas and returns a PNG data URI.
+ * Draws the logo letter-boxed (centered, aspect-ratio preserved) on a square
+ * canvas and returns a PNG data URI.
+ *
+ * With no options the logo fills the square (letter-boxed) on a transparent
+ * background - the original behaviour. `background` paints a solid fill first;
+ * `logoScale` (0-100) shrinks the logo into a centered box of that percent of
+ * the canvas, leaving even padding around it.
  */
-const logoToSquarePng = (img: HTMLImageElement, size: number): string => {
+const logoToSquarePng = (
+  img: HTMLImageElement,
+  size: number,
+  options: LogoAssetsOptions = {},
+): string => {
+  const { background, logoScale = 100 } = options;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas 2D context unavailable");
 
-  const scale = Math.min(size / img.naturalWidth, size / img.naturalHeight);
+  if (background) {
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, size, size);
+  }
+
+  // The logo is fit inside a centered box `logoScale`% of the canvas; the gap
+  // between that box and the canvas edge is the padding.
+  const box = size * (Math.max(0, Math.min(100, logoScale)) / 100);
+  const scale = Math.min(box / img.naturalWidth, box / img.naturalHeight);
   const w = Math.round(img.naturalWidth * scale);
   const h = Math.round(img.naturalHeight * scale);
   const x = Math.round((size - w) / 2);
@@ -102,6 +138,9 @@ const pngDataUrlToIco = (pngDataUrl: string): string => {
  *
  * @param logoBase64 - Base64 data URI of the source logo (any image format
  *   accepted by `HTMLImageElement`, e.g. PNG, JPEG, WEBP, SVG).
+ * @param options - Optional {@link LogoAssetsOptions} controlling the manifest
+ *   icons' background fill and logo padding. The favicon ignores both and stays
+ *   transparent and edge-to-edge.
  * @returns A {@link LogoAssets} object containing data URIs for all five
  *   derived assets.
  *
@@ -118,17 +157,22 @@ const pngDataUrlToIco = (pngDataUrl: string): string => {
  * // assets.img_manifest_128   → data:image/png;base64,...
  * ```
  */
-const logoToAssets = async (logoBase64: string): Promise<LogoAssets> => {
+const logoToAssets = async (
+  logoBase64: string,
+  options: LogoAssetsOptions = {},
+): Promise<LogoAssets> => {
   const img = await loadImage(logoBase64);
+  // The favicon stays transparent and edge-to-edge - background/padding are for
+  // the installed-PWA icons only, which get cropped into a rounded mask.
   const favicon32 = logoToSquarePng(img, 32);
 
   return {
     img_favicon: pngDataUrlToIco(favicon32),
-    img_manifest_1080: logoToSquarePng(img, 1080),
-    img_manifest_512: logoToSquarePng(img, 512),
-    img_manifest_256: logoToSquarePng(img, 256),
-    img_manifest_192: logoToSquarePng(img, 192),
-    img_manifest_128: logoToSquarePng(img, 128),
+    img_manifest_1080: logoToSquarePng(img, 1080, options),
+    img_manifest_512: logoToSquarePng(img, 512, options),
+    img_manifest_256: logoToSquarePng(img, 256, options),
+    img_manifest_192: logoToSquarePng(img, 192, options),
+    img_manifest_128: logoToSquarePng(img, 128, options),
   };
 };
 

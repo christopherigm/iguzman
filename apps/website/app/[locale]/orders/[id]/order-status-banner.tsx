@@ -5,12 +5,16 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@repo/i18n/navigation";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
-import type { OrderStatus } from "@/lib/orders";
+import type { OrderStatus, PaymentMethod } from "@/lib/orders";
 
 interface OrderStatusBannerProps {
   status: OrderStatus;
   /** True when Stripe redirected here, i.e. the customer just paid. */
   justPaid: boolean;
+  /** How the order is paid - drives the instruction under a `placed` order. */
+  paymentMethod: PaymentMethod;
+  /** Whether the tenant has handed the order over (an axis apart from payment). */
+  fulfilled: boolean;
 }
 
 const POLL_INTERVAL_MS = 2000;
@@ -18,6 +22,9 @@ const MAX_POLLS = 10;
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
   paid: "var(--success, #22c55e)",
+  // Placed but not yet paid: the same "action still pending" amber as a Stripe
+  // order awaiting its webhook.
+  placed: "var(--warning, #f59e0b)",
   pending: "var(--warning, #f59e0b)",
   failed: "var(--error, #ef4444)",
   canceled: "var(--error, #ef4444)",
@@ -39,6 +46,8 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 export function OrderStatusBanner({
   status,
   justPaid,
+  paymentMethod,
+  fulfilled,
 }: OrderStatusBannerProps) {
   const t = useTranslations("Orders");
   const router = useRouter();
@@ -92,6 +101,18 @@ export function OrderStatusBanner({
       {status === "paid" ? (
         <Typography variant="caption" margin={0} color="var(--foreground)">
           {t("paidNote")}
+        </Typography>
+      ) : null}
+      {/* A placed offline order: tell the customer what happens next - pay in
+          store when they pick up, or on delivery. */}
+      {status === "placed" && paymentMethod !== "online" ? (
+        <Typography variant="caption" margin={0} color="var(--foreground)">
+          {t(`placedNote_${paymentMethod}`)}
+        </Typography>
+      ) : null}
+      {fulfilled ? (
+        <Typography variant="caption" margin={0} color="var(--foreground)">
+          {t("fulfilledNote")}
         </Typography>
       ) : null}
     </Box>

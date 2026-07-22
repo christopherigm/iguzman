@@ -6,14 +6,16 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { useTranslations } from "next-intl";
 import type { CartTotal } from "@/lib/cart";
 import { formatPrice } from "@/lib/price";
-import { CheckoutButton } from "./checkout-button";
+import { CheckoutSection, type AvailableMethods } from "./checkout-section";
 
 export interface CartSummaryCardProps {
   totals: CartTotal[];
   /** Total quantity, matching the navbar's count - not the number of lines. */
   count: number;
-  /** Why checkout cannot run, or null when it can. */
-  blockedReason: "unavailable" | "mixedCurrency" | null;
+  /** Which payment methods this tenant offers, each on its own tenant switch. */
+  methods: AvailableMethods;
+  /** The cart spans more than one currency, so no method can charge it. */
+  mixedCurrency: boolean;
   /** Check out from localStorage rather than from the customer's rows. */
   isGuest: boolean;
 }
@@ -22,9 +24,9 @@ export interface CartSummaryCardProps {
  * The order summary card: one subtotal per currency, then the checkout CTA.
  *
  * The rendering half of the summary, shared by the signed-in cart (whose server
- * component decides `blockedReason` before the first byte) and the guest cart
- * (which decides it on the client from the same two facts). Splitting it this
- * way is what keeps one design for both carts.
+ * component resolves the available payment `methods` before the first byte) and
+ * the guest cart (which reads the same server-sent flags). Splitting it this way
+ * is what keeps one design for both carts.
  *
  * Totals are grouped by currency rather than added together because
  * `Buyable.currency` is per item, so a System can hold a USD product and an MXN
@@ -36,7 +38,8 @@ export interface CartSummaryCardProps {
 export function CartSummaryCard({
   totals,
   count,
-  blockedReason,
+  methods,
+  mixedCurrency,
   isGuest,
 }: CartSummaryCardProps) {
   const t = useTranslations("Cart");
@@ -91,7 +94,11 @@ export function CartSummaryCard({
         {t("taxesNote")}
       </Typography>
 
-      <CheckoutButton blockedReason={blockedReason} isGuest={isGuest} />
+      <CheckoutSection
+        methods={methods}
+        mixedCurrency={mixedCurrency}
+        isGuest={isGuest}
+      />
 
       {isGuest && (
         <Typography

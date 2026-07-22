@@ -6,6 +6,7 @@ import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import { type NewImage } from "@/components/admin-image-uploader/admin-image-uploader";
 import { SystemImages, type SystemImageState } from "./system-images";
 import { PaymentsSection } from "./payments-section";
+import { SpotlightSection } from "./spotlight-section";
 import { WatermarkSection } from "./watermark-section";
 import { HeroVideoSection } from "./hero-video-section";
 import { TypographySection } from "./typography-section";
@@ -21,6 +22,7 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { ManifestAssetsModal } from "./manifest-assets-modal";
 import logoToAssets from "@repo/helpers/logo-to-assets";
 
 /** Converts a data URI to a synthetic File object (required by NewImage type). */
@@ -77,6 +79,18 @@ export default function AdminSystemPage() {
     // "leave unchanged" - see `stripeConfigured` and handleSubmit.
     stripe_secret_key: "",
     stripe_webhook_secret: "",
+    pay_in_store_enabled: false,
+    pay_on_delivery_enabled: false,
+    spotlight_label: "",
+    en_spotlight_label: "",
+    spotlight_title: "",
+    en_spotlight_title: "",
+    spotlight_text: "",
+    en_spotlight_text: "",
+    spotlight_button_label: "",
+    en_spotlight_button_label: "",
+    spotlight_button_link: "",
+    spotlight_items: [],
     watermark_enabled: false,
     watermark_rotation: -12,
     watermark_intercalated: false,
@@ -117,6 +131,11 @@ export default function AdminSystemPage() {
 
   // Logo-to-assets modal state
   const [showLogoAssetsModal, setShowLogoAssetsModal] = useState(false);
+  // Second-step modal: manifest icon background + logo padding.
+  const [showManifestOptionsModal, setShowManifestOptionsModal] =
+    useState(false);
+  const [manifestBackground, setManifestBackground] = useState("#ffffff");
+  const [manifestLogoScale, setManifestLogoScale] = useState(80);
   const [generatingAssets, setGeneratingAssets] = useState(false);
   // Incrementing this key forces the derived-field uploaders to re-mount and
   // pick up the newly generated existing images.
@@ -173,6 +192,18 @@ export default function AdminSystemPage() {
           // which the submit handler reads as "leave the stored ones alone".
           stripe_secret_key: "",
           stripe_webhook_secret: "",
+          pay_in_store_enabled: data.pay_in_store_enabled ?? false,
+          pay_on_delivery_enabled: data.pay_on_delivery_enabled ?? false,
+          spotlight_label: data.spotlight_label ?? "",
+          en_spotlight_label: data.en_spotlight_label ?? "",
+          spotlight_title: data.spotlight_title ?? "",
+          en_spotlight_title: data.en_spotlight_title ?? "",
+          spotlight_text: data.spotlight_text ?? "",
+          en_spotlight_text: data.en_spotlight_text ?? "",
+          spotlight_button_label: data.spotlight_button_label ?? "",
+          en_spotlight_button_label: data.en_spotlight_button_label ?? "",
+          spotlight_button_link: data.spotlight_button_link ?? "",
+          spotlight_items: data.spotlight_items ?? [],
           watermark_enabled: data.watermark_enabled ?? false,
           watermark_rotation: data.watermark_rotation ?? -12,
           watermark_intercalated: data.watermark_intercalated ?? false,
@@ -221,7 +252,12 @@ export default function AdminSystemPage() {
 
     setGeneratingAssets(true);
     try {
-      const assets = await logoToAssets(logoBase64);
+      // The favicon ignores these; only the manifest icons get the background
+      // fill and padding (installed PWA icons are cropped into a rounded mask).
+      const assets = await logoToAssets(logoBase64, {
+        background: manifestBackground,
+        logoScale: manifestLogoScale,
+      });
 
       // Build synthetic NewImage entries for each derived field.
       const entries = await Promise.all(
@@ -256,7 +292,7 @@ export default function AdminSystemPage() {
       setError(t("errorGenerateAssets"));
     } finally {
       setGeneratingAssets(false);
-      setShowLogoAssetsModal(false);
+      setShowManifestOptionsModal(false);
     }
   };
 
@@ -453,8 +489,9 @@ export default function AdminSystemPage() {
             // hero composition, the watermark/background, then the two
             // section-background
             // builders they relate to - all the site's look-and-feel controls in
-            // one run rather than scattered to the bottom of the form - and then
-            // Payments, sitting directly above the About group. (AdminForm keys
+            // one run rather than scattered to the bottom of the form - then the
+            // Spotlight section, and then Payments, sitting directly above the
+            // About group. (AdminForm keys
             // slots by `beforeKey` in a Map, so both blocks share this one
             // "about" node rather than registering two slots for the same key.)
             beforeKey: "about",
@@ -535,6 +572,13 @@ export default function AdminSystemPage() {
                     />
                   </Grid>
                 </Grid>
+                <SpotlightSection
+                  values={values}
+                  onChange={(k, v) =>
+                    setValues((prev) => ({ ...prev, [k]: v }))
+                  }
+                  systemId={systemId}
+                />
                 <Box paddingTop={32}>
                   <PaymentsSection
                     values={values}
@@ -562,15 +606,32 @@ export default function AdminSystemPage() {
         <ConfirmationModal
           title={t("logoAssetsModalTitle")}
           text={t("logoAssetsModalText")}
-          okCallback={handleGenerateAssets}
+          // Confirming here doesn't generate yet - it opens the second modal
+          // where the manifest icons' background and padding are chosen.
+          okCallback={() => {
+            setShowLogoAssetsModal(false);
+            setShowManifestOptionsModal(true);
+          }}
           cancelCallback={() => setShowLogoAssetsModal(false)}
           okLabel={tCommon("ok")}
           cancelLabel={tCommon("cancel")}
-        >
-          {generatingAssets && (
-            <Typography variant="body">{t("generatingAssets")}</Typography>
-          )}
-        </ConfirmationModal>
+        />
+      )}
+
+      {showManifestOptionsModal && (
+        <ManifestAssetsModal
+          logo={
+            images.img_logo?.pending[0]?.preview ??
+            images.img_logo?.existing[0]?.url
+          }
+          background={manifestBackground}
+          onBackgroundChange={setManifestBackground}
+          logoScale={manifestLogoScale}
+          onLogoScaleChange={setManifestLogoScale}
+          generating={generatingAssets}
+          okCallback={handleGenerateAssets}
+          cancelCallback={() => setShowManifestOptionsModal(false)}
+        />
       )}
     </>
   );

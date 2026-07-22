@@ -18,6 +18,9 @@ interface GuestCartViewProps {
    *  on the server so the checkout button never flickers from enabled to
    *  disabled after hydration. */
   stripeConfigured: boolean;
+  /** The two offline payment switches, read on the server alongside Stripe. */
+  payInStoreEnabled: boolean;
+  payOnDeliveryEnabled: boolean;
   /** The empty-cart call to action plus the Categories grid, rendered on the
    *  server (it is async and reads the catalog) and handed down as an element
    *  because this component cannot render a server component itself. */
@@ -44,6 +47,8 @@ export function GuestCartView({
   serviceLabel,
   menuLabel,
   stripeConfigured,
+  payInStoreEnabled,
+  payOnDeliveryEnabled,
   emptyState,
 }: GuestCartViewProps) {
   const guest = useGuestState();
@@ -127,6 +132,8 @@ export function GuestCartView({
           totals={cart.totals}
           count={cart.count}
           stripeConfigured={stripeConfigured}
+          payInStoreEnabled={payInStoreEnabled}
+          payOnDeliveryEnabled={payOnDeliveryEnabled}
         />
       </Grid>
     </Grid>

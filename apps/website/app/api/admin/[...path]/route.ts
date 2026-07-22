@@ -13,6 +13,7 @@ const ALLOWED_PREFIXES = [
   "highlights/",
   "check-slug/",
   "auth/admin/users/",
+  "orders/admin/",
 ];
 
 function isAllowed(path: string): boolean {

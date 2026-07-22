@@ -67,6 +67,8 @@ export default async function CartPage({ params }: Props) {
           serviceLabel={itemT("serviceLabel")}
           menuLabel={itemT("menuLabel")}
           stripeConfigured={system?.stripe_configured ?? false}
+          payInStoreEnabled={system?.pay_in_store_enabled ?? false}
+          payOnDeliveryEnabled={system?.pay_on_delivery_enabled ?? false}
           // Built here because it is a server component (it renders the async
           // Categories grid) and `GuestCartView` is a client component - it can
           // hold the element and decide when to show it, but not render it.

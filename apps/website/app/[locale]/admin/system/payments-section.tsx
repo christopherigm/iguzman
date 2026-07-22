@@ -268,6 +268,72 @@ export function PaymentsSection({
           </Typography>
         </Box>
       )}
+
+      {/* ── Offline payment methods ──
+          Independent of Stripe and of each other: a customer places the order
+          and pays in person, so these need no credentials and work even with no
+          Stripe account connected. */}
+      <Box
+        paddingBottom={2}
+        marginTop={16}
+        styles={{
+          borderBottom:
+            "1px solid color-mix(in srgb, var(--foreground) 20%, transparent)",
+        }}
+      >
+        <Typography
+          variant="label"
+          fontWeight={800}
+          color="var(--foreground)"
+          styles={{ letterSpacing: "0.06em", textTransform: "uppercase" }}
+        >
+          {t("offlinePaymentsTitle")}
+        </Typography>
+      </Box>
+
+      <Typography variant="body" margin={0}>
+        {t("offlinePaymentsIntro")}
+      </Typography>
+
+      <Box flexDirection="column" gap={4}>
+        <Box display="flex" alignItems="center" gap={10}>
+          <Switch
+            checked={Boolean(values.pay_in_store_enabled)}
+            onChange={(v) => onChange("pay_in_store_enabled", v)}
+          />
+          <Typography
+            as="span"
+            variant="body"
+            fontWeight={500}
+            color="var(--foreground)"
+          >
+            {t("payInStoreEnabled")}
+          </Typography>
+        </Box>
+        <Typography variant="caption" margin={0} color="var(--foreground)">
+          {t("payInStoreHelp")}
+        </Typography>
+      </Box>
+
+      <Box flexDirection="column" gap={4}>
+        <Box display="flex" alignItems="center" gap={10}>
+          <Switch
+            checked={Boolean(values.pay_on_delivery_enabled)}
+            onChange={(v) => onChange("pay_on_delivery_enabled", v)}
+          />
+          <Typography
+            as="span"
+            variant="body"
+            fontWeight={500}
+            color="var(--foreground)"
+          >
+            {t("payOnDeliveryEnabled")}
+          </Typography>
+        </Box>
+        <Typography variant="caption" margin={0} color="var(--foreground)">
+          {t("payOnDeliveryHelp")}
+        </Typography>
+      </Box>
     </Box>
   );
 }

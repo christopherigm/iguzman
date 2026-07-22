@@ -1,9 +1,20 @@
 from django.urls import path
 
-from .views import CheckoutView, OrderDetailView, OrderListView, StripeWebhookView
+from .views import (
+    AdminOrderDetailView,
+    AdminOrderListView,
+    CheckoutView,
+    OrderDetailView,
+    OrderListView,
+    StripeWebhookView,
+)
 
 urlpatterns = [
     path("orders/checkout/", CheckoutView.as_view(), name="order-checkout"),
+    # Tenant order management. Ahead of the customer routes below, though the
+    # `<uuid>` converter would not match "admin" anyway.
+    path("orders/admin/", AdminOrderListView.as_view(), name="admin-order-list"),
+    path("orders/admin/<uuid:public_id>/", AdminOrderDetailView.as_view(), name="admin-order-detail"),
     path("orders/", OrderListView.as_view(), name="order-list"),
     path("orders/<uuid:public_id>/", OrderDetailView.as_view(), name="order-detail"),
     # Keyed per tenant because each tenant's Stripe account signs with its own

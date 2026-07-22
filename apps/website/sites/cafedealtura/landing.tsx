@@ -9,8 +9,8 @@ import { SuccessStories } from "@/components/success-stories";
 import { CompanyHighlights } from "@/components/company-highlights";
 import { CatalogCategories } from "@/components/catalog-categories";
 import { CatalogItems } from "@/components/catalog-items";
+import { Spotlight } from "@/components/spotlight";
 import { Origin } from "./sections/origin";
-import { Wholesale } from "./sections/wholesale";
 
 /**
  * Bespoke landing for Café de Altura (cafedealtura.iguzman.com.mx) - a family
@@ -94,7 +94,11 @@ export async function Landing() {
         </Container>
       </Box>
 
-      <Wholesale />
+      {/* The wholesale (mayoreo) invitation - now the shared, DB-driven Spotlight
+          block: label → title → text → CTA on the left, the family's three
+          featured coffees on the right. The family edits every word and picks
+          the trio in the CMS. */}
+      <Spotlight />
 
       <Container paddingX={10}>
         <SuccessStories />

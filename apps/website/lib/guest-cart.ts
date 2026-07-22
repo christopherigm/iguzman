@@ -334,6 +334,16 @@ export function toggleGuestFavorite(kind: BuyableKind, id: number): boolean {
   return saved;
 }
 
+/**
+ * Empty the cart but keep the favorites. Called once a guest's cart has become a
+ * real order (offline checkout places the order synchronously, so leaving the
+ * localStorage cart full would invite them to re-place it) - unlike
+ * `clearGuestState`, which drops favorites too and only runs after a merge.
+ */
+export function clearGuestCart(): void {
+  update((state) => ({ ...state, cart: [] }));
+}
+
 /** Drop everything. Called once the state has been merged into an account. */
 export function clearGuestState(): void {
   if (typeof window === "undefined") return;

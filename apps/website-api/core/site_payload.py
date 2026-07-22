@@ -93,6 +93,17 @@ SYSTEM_TEXT_FIELDS = (
     "font_display",
     "font_body",
     "video_link",
+    # Spotlight promo copy travels with the site; `spotlight_items` does not -
+    # its item ids are per-environment, so the trio is re-picked in each CMS.
+    "spotlight_label",
+    "en_spotlight_label",
+    "spotlight_title",
+    "en_spotlight_title",
+    "spotlight_text",
+    "en_spotlight_text",
+    "spotlight_button_label",
+    "en_spotlight_button_label",
+    "spotlight_button_link",
     "privacy_policy",
     "en_privacy_policy",
     "terms_and_conditions",

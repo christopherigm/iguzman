@@ -8,32 +8,36 @@ interface GuestCartSummaryProps {
   count: number;
   /** `stripe_configured` for this tenant, read on the server and passed down. */
   stripeConfigured: boolean;
+  /** `pay_in_store_enabled` / `pay_on_delivery_enabled`, likewise server-read. */
+  payInStoreEnabled: boolean;
+  payOnDeliveryEnabled: boolean;
 }
 
 /**
  * The guest's order summary - `CartSummary`'s client twin.
  *
- * Same two blocking rules, decided from the same two facts. The Stripe half
- * still comes from the server (the page reads `getSystem()` and passes it in);
- * only the currency half has to be computed here, because a guest's totals do
- * not exist until the browser's references have been resolved.
+ * The available payment methods still come from the server (the page reads
+ * `getSystem()` and passes the three flags in); only the currency check has to
+ * be computed here, because a guest's totals do not exist until the browser's
+ * references have been resolved.
  */
 export function GuestCartSummary({
   totals,
   count,
   stripeConfigured,
+  payInStoreEnabled,
+  payOnDeliveryEnabled,
 }: GuestCartSummaryProps) {
-  const blockedReason = !stripeConfigured
-    ? ("unavailable" as const)
-    : totals.length > 1
-      ? ("mixedCurrency" as const)
-      : null;
-
   return (
     <CartSummaryCard
       totals={totals}
       count={count}
-      blockedReason={blockedReason}
+      methods={{
+        online: stripeConfigured,
+        inStore: payInStoreEnabled,
+        onDelivery: payOnDeliveryEnabled,
+      }}
+      mixedCurrency={totals.length > 1}
       isGuest
     />
   );

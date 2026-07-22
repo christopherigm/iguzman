@@ -14,6 +14,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.models import System
+from core.permissions import IsSystemAdmin
 from core.tenancy import host_system, request_system, user_system
 from users.cache import invalidate_cart
 from users.guest import resolve_guest_cart
@@ -21,7 +22,14 @@ from users.models import CartItem
 
 from .cache import ORDERS_CACHE_TTL, invalidate_orders, orders_key
 from .models import Order, OrderLine
-from .serializers import CheckoutSerializer, OrderSerializer, OrderSummarySerializer
+from .serializers import (
+    AdminOrderActionSerializer,
+    AdminOrderSerializer,
+    AdminOrderSummarySerializer,
+    CheckoutSerializer,
+    OrderSerializer,
+    OrderSummarySerializer,
+)
 from .services.stripe_gateway import (
     StripeGatewayError,
     StripeNotConfigured,
@@ -112,10 +120,12 @@ class CheckoutView(APIView):
     def post(self, request):
         serializer = CheckoutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        locale = serializer.validated_data.get("locale") or "en"
+        data = serializer.validated_data
+        locale = data.get("locale") or "en"
+        method = data.get("payment_method") or Order.PAYMENT_ONLINE
 
         if not request.user.is_authenticated:
-            return self._guest_checkout(request, serializer.validated_data, locale)
+            return self._guest_checkout(request, data, locale, method)
 
         system = user_system(request)
         if system is None:
@@ -123,18 +133,43 @@ class CheckoutView(APIView):
                 {"detail": "No system for this user.", "code": "NO_SYSTEM"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if not system.stripe_configured:
-            # Not 500: nothing is broken, this site simply has not connected a
-            # Stripe account. The frontend hides the button on the same signal.
-            return Response(
-                {"detail": "This site is not set up to take payments.", "code": "PAYMENTS_UNAVAILABLE"},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
+        unavailable = self._method_unavailable(system, method)
+        if unavailable is not None:
+            return unavailable
 
         items = list(_cart_qs(request.user, system))
-        return self._checkout(request, system, request.user, items, locale)
+        return self._checkout(request, system, request.user, items, locale, method, data)
 
-    def _guest_checkout(self, request, data, locale):
+    def _method_unavailable(self, system, method):
+        """A 503 Response if `system` does not offer `method`, else None.
+
+        Each payment method is gated on its own tenant switch, exactly as it is
+        surfaced to the frontend: online on `stripe_configured`, and the two
+        offline methods on their own booleans. Not a 500 in any case - a site not
+        offering a method is a configuration fact, not a fault, and the cart hides
+        the option on the same signal.
+        """
+        if method == Order.PAYMENT_ONLINE:
+            if not system.stripe_configured:
+                return Response(
+                    {"detail": "This site is not set up to take payments.", "code": "PAYMENTS_UNAVAILABLE"},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+        elif method == Order.PAYMENT_IN_STORE:
+            if not system.pay_in_store_enabled:
+                return Response(
+                    {"detail": "This site does not offer paying in store.", "code": "METHOD_UNAVAILABLE"},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+        elif method == Order.PAYMENT_ON_DELIVERY:
+            if not system.pay_on_delivery_enabled:
+                return Response(
+                    {"detail": "This site does not offer paying on delivery.", "code": "METHOD_UNAVAILABLE"},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+        return None
+
+    def _guest_checkout(self, request, data, locale, method):
         """Check out an anonymous visitor's localStorage cart.
 
         The only difference from the signed-in path is where the lines come
@@ -151,9 +186,11 @@ class CheckoutView(APIView):
         (see `_site_base_url`) precisely because a header must never steer a
         redirect in the middle of a payment.
 
-        No email is collected here: Stripe Checkout asks for it, and the webhook
-        copies it onto the order. That address is also what later lets the
-        customer claim the order by registering (`claim_guest_orders`).
+        For an online order no email is collected here: Stripe Checkout asks for
+        it, and the webhook copies it onto the order. An offline order has no
+        Stripe page, so its `contact` (validated present) is what fills that in -
+        and that address is likewise what later lets the customer claim the order
+        by registering (`claim_guest_orders`).
         """
         system = host_system(request)
         if system is None:
@@ -161,24 +198,29 @@ class CheckoutView(APIView):
                 {"detail": "No system for this host.", "code": "NO_SYSTEM"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if not system.stripe_configured:
-            return Response(
-                {"detail": "This site is not set up to take payments.", "code": "PAYMENTS_UNAVAILABLE"},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
+        unavailable = self._method_unavailable(system, method)
+        if unavailable is not None:
+            return unavailable
 
         items = resolve_guest_cart(system, data.get("cart") or [])
-        return self._checkout(request, system, None, items, locale)
+        return self._checkout(request, system, None, items, locale, method, data)
 
-    def _checkout(self, request, system, user, items, locale):
-        """Turn a list of priced cart lines into a pending Order and a Stripe
-        session. Shared by both branches so a guest and a customer are charged by
-        exactly the same code - `user` is simply None for a guest.
+    def _checkout(self, request, system, user, items, locale, method, data):
+        """Turn a list of priced cart lines into an Order.
+
+        Shared by every branch - signed-in or guest, online or offline - so all
+        four are priced by exactly the same code: `user` is simply None for a
+        guest, and `method` decides only what happens *after* the order and its
+        snapshotted lines exist. An online order gets a Stripe session and stays
+        `pending`; an offline one is finalized here and stays `placed`. Neither
+        reads a price from the body - `data` only carries who and where.
 
         `items` are `CartItem` instances; for a guest they are unsaved ones built
         from the request's references, which every property this reads
         (`target`, `unit_price`, `line_total`) supports without a row.
         """
+        is_offline = method in (Order.PAYMENT_IN_STORE, Order.PAYMENT_ON_DELIVERY)
+        contact = data.get("contact") or {}
         if not items:
             return Response(
                 {"detail": "Your cart is empty.", "code": "CART_EMPTY"},
@@ -219,11 +261,20 @@ class CheckoutView(APIView):
             order = Order.objects.create(
                 system=system,
                 user=user,
-                status=Order.STATUS_PENDING,
+                # An offline order is born `placed` (no Stripe session will ever
+                # move it off `pending`); an online one waits on the webhook.
+                status=Order.STATUS_PLACED if is_offline else Order.STATUS_PENDING,
+                payment_method=method,
                 currency=currency,
-                # Blank for a guest until the webhook copies across what Stripe
+                # Online: blank for a guest until the webhook copies what Stripe
                 # collected - which is also what makes the order claimable later.
-                email=(user.email or "") if user else "",
+                # Offline: taken from the contact form (or the account), since no
+                # Stripe page will ever fill it in.
+                email=(
+                    (contact.get("email") or (user.email if user else "") or "").strip()
+                    if is_offline
+                    else ((user.email or "") if user else "")
+                ),
             )
             lines = [
                 OrderLine.objects.create(
@@ -249,6 +300,11 @@ class CheckoutView(APIView):
             # in here, where they would be indistinguishable after the fact.
             order.total = subtotal
             order.save(update_fields=["subtotal", "total"])
+
+        if is_offline:
+            return self._finalize_offline(
+                order, user, system, method, locale, contact, data.get("shipping") or {},
+            )
 
         base_url = _site_base_url(system)
         try:
@@ -286,6 +342,73 @@ class CheckoutView(APIView):
 
         logger.info("Checkout session %s created for order %s", session.id, order.pk)
         return Response({"url": session.url, "order_id": str(order.public_id)}, status=status.HTTP_201_CREATED)
+
+    def _finalize_offline(self, order, user, system, method, locale, contact, shipping):
+        """Complete a pay-in-store / pay-on-delivery order without Stripe.
+
+        An offline order has no session and no webhook, so the two things the
+        webhook does for an online one - clearing the cart and drawing down stock
+        - happen here, at placement, in one transaction. The order stays `placed`:
+        real and recorded, waiting on the tenant to take payment and hand it over.
+        Those two are tracked independently (`status` vs `fulfilled`), so nothing
+        here marks it paid - the customer has not paid yet.
+        """
+        order.phone = (contact.get("phone") or "").strip()
+        order.shipping_name = (contact.get("name") or "").strip()
+        if method == Order.PAYMENT_ON_DELIVERY:
+            order.shipping_line1 = (shipping.get("line1") or "").strip()
+            order.shipping_line2 = (shipping.get("line2") or "").strip()
+            order.shipping_city = (shipping.get("city") or "").strip()
+            order.shipping_state = (shipping.get("state") or "").strip()
+            order.shipping_postal_code = (shipping.get("postal_code") or "").strip()
+            order.shipping_country = (shipping.get("country") or "").strip()
+
+        with transaction.atomic():
+            order.save()
+            _decrement_order_stock(order)
+            # The order is the record now; leaving the cart full would invite the
+            # customer to order the same thing twice. A guest has no server-side
+            # cart to clear.
+            if user is not None:
+                CartItem.objects.filter(user=user, system=system).delete()
+
+        if user is not None:
+            invalidate_cart(user.id, system.id)
+            invalidate_orders(user.id, system.id)
+
+        logger.info("Offline order %s placed via %s", order.pk, method)
+        return Response(
+            {
+                "order_id": str(order.public_id),
+                # The browser is already on the tenant's domain, so a relative
+                # path is enough - and it sidesteps deriving an origin that is
+                # wrong in local dev (see `_site_base_url`).
+                "redirect": f"/{locale}/orders/{order.public_id}",
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+def _decrement_order_stock(order):
+    """Draw down `stock_count` for the products an order actually sold.
+
+    An F() expression, not read-modify-write: two orders confirming at once would
+    otherwise both read the same count and one decrement would vanish. A null
+    `stock_count` means the tenant does not track units, so there is nothing to
+    draw down - only the `in_stock` flag, which is theirs to set.
+
+    Clamped at zero because `stock_count` is a PositiveIntegerField: an oversell
+    would otherwise try to write a negative and raise. Shared by the Stripe
+    webhook (on payment) and offline checkout (on placement), so stock is drawn
+    down exactly once however the order was taken.
+    """
+    for line in order.lines.all():
+        target = line.product
+        if target is None or target.stock_count is None:
+            continue
+        type(target).objects.filter(pk=target.pk).update(
+            stock_count=Greatest(F("stock_count") - line.quantity, Value(0)),
+        )
 
 
 def _in_stock(item) -> bool:
@@ -420,6 +543,131 @@ class OrderDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class AdminOrderListView(APIView):
+    """GET /api/orders/admin/ - every order for the admin's tenant.
+
+    The tenant-facing counterpart to `OrderListView` (which is scoped to one
+    customer): this is scoped to the whole `System`, so it includes guest orders
+    too - they have no `user` but they do have a `system`. Ordered newest-first by
+    the model default, so the list opens on what just came in.
+
+    Not cached, unlike the customer's history: a placed offline order changes
+    state when the tenant acts on it here, and a stale list would show an order
+    the tenant just fulfilled as still outstanding.
+    """
+
+    permission_classes = (IsSystemAdmin,)
+
+    def get(self, request):
+        system = user_system(request)
+        if system is None:
+            return Response([], status=status.HTTP_200_OK)
+        orders = (
+            Order.objects
+            .filter(system=system)
+            .prefetch_related("lines")
+        )
+        data = AdminOrderSummarySerializer(orders, many=True, context={"request": request}).data
+        return Response(data)
+
+
+class AdminOrderDetailView(APIView):
+    """GET/POST /api/orders/admin/<public_id>/ - one order, and the actions on it.
+
+    Scoped to the admin's own `System`: another tenant's order id is a 404, never
+    a 403, so the endpoint cannot be used to probe which orders exist elsewhere.
+    POST applies one management action (see `AdminOrderActionSerializer`).
+    """
+
+    permission_classes = (IsSystemAdmin,)
+
+    def _get_order(self, request, public_id):
+        system = user_system(request)
+        if system is None:
+            return None
+        return (
+            Order.objects
+            .filter(public_id=public_id, system=system)
+            .prefetch_related(
+                "lines", "lines__product", "lines__service", "lines__menu_item",
+                "lines__product__images", "lines__service__images", "lines__menu_item__images",
+            )
+            .first()
+        )
+
+    def get(self, request, public_id):
+        order = self._get_order(request, public_id)
+        if order is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(AdminOrderSerializer(order, context={"request": request}).data)
+
+    def post(self, request, public_id):
+        order = self._get_order(request, public_id)
+        if order is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = AdminOrderActionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        action = serializer.validated_data["action"]
+
+        error = self._apply_action(order, action)
+        if error is not None:
+            return error
+
+        invalidate_orders(order.user_id, order.system_id or 0)
+        return Response(AdminOrderSerializer(order, context={"request": request}).data)
+
+    def _apply_action(self, order, action):
+        """Run one action, or return a 4xx Response explaining why it cannot run.
+
+        Payment and fulfillment are the two independent axes the tenant tracks:
+        `mark_paid`/`cancel` move `status`, `mark_fulfilled`/`unmark_fulfilled`
+        toggle the `fulfilled` flag, and neither touches the other.
+        """
+        Action = AdminOrderActionSerializer
+
+        if action == Action.MARK_PAID:
+            # Only an offline order is marked paid by hand. An online order's money
+            # is Stripe's to confirm - the signed webhook is the single source of
+            # truth there, and a manual flip would let the CMS assert a payment
+            # that never cleared.
+            if order.payment_method == Order.PAYMENT_ONLINE:
+                return Response(
+                    {"detail": "An online order is marked paid by Stripe, not by hand.",
+                     "code": "ONLINE_ORDER"},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            if order.status not in {Order.STATUS_PLACED, Order.STATUS_PENDING}:
+                return Response(
+                    {"detail": "Only a placed order can be marked paid.", "code": "BAD_TRANSITION"},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            order.status = Order.STATUS_PAID
+            order.paid_at = timezone.now()
+            order.save(update_fields=["status", "paid_at", "updated_at"])
+
+        elif action == Action.CANCEL:
+            if order.status not in {Order.STATUS_PLACED, Order.STATUS_PENDING}:
+                return Response(
+                    {"detail": "Only an outstanding order can be canceled.", "code": "BAD_TRANSITION"},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            order.status = Order.STATUS_CANCELED
+            order.save(update_fields=["status", "updated_at"])
+
+        elif action == Action.MARK_FULFILLED:
+            order.fulfilled = True
+            order.fulfilled_at = timezone.now()
+            order.save(update_fields=["fulfilled", "fulfilled_at", "updated_at"])
+
+        elif action == Action.UNMARK_FULFILLED:
+            order.fulfilled = False
+            order.fulfilled_at = None
+            order.save(update_fields=["fulfilled", "fulfilled_at", "updated_at"])
+
+        return None
+
+
 class StripeWebhookView(APIView):
     """
     POST /api/orders/stripe/webhook/<token>/ - Stripe's payment notifications.
@@ -538,7 +786,7 @@ class StripeWebhookView(APIView):
             order.email = session.get("customer_details", {}).get("email") or order.email
             self._apply_shipping(order, session)
             order.save()
-            self._decrement_stock(order)
+            _decrement_order_stock(order)
             # The cart did its job the moment the order was written; leaving it
             # full would invite the customer to pay for the same thing twice.
             CartItem.objects.filter(user=order.user, system=order.system).delete()
@@ -578,22 +826,3 @@ class StripeWebhookView(APIView):
         order.shipping_postal_code = address.get("postal_code") or ""
         order.shipping_country = address.get("country") or ""
 
-    def _decrement_stock(self, order):
-        """Draw down `stock_count` for the products actually sold.
-
-        An F() expression, not read-modify-write: two orders confirming at once
-        would otherwise both read the same count and one decrement would vanish.
-        A null `stock_count` means the tenant does not track units, so there is
-        nothing to draw down - only the `in_stock` flag, which is theirs to set.
-
-        Clamped at zero because `stock_count` is a PositiveIntegerField: an
-        oversell would otherwise try to write a negative and raise here, at the
-        worst possible moment - after the customer has already been charged.
-        """
-        for line in order.lines.all():
-            target = line.product
-            if target is None or target.stock_count is None:
-                continue
-            type(target).objects.filter(pk=target.pk).update(
-                stock_count=Greatest(F("stock_count") - line.quantity, Value(0)),
-            )

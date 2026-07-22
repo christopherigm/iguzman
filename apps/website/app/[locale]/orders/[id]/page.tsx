@@ -97,6 +97,8 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
             <OrderStatusBanner
               status={order.status}
               justPaid={Boolean(query.session_id)}
+              paymentMethod={order.payment_method}
+              fulfilled={order.fulfilled}
             />
             {order.lines.map((line) => (
               <OrderLineRow key={line.id} line={line} />

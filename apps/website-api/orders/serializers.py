@@ -88,8 +88,9 @@ class OrderSerializer(serializers.ModelSerializer):
         # tenant's payment-account internals. `status` is what the confirmation
         # page reads.
         fields = [
-            "public_id", "status", "currency", "subtotal", "total",
-            "email", "shipping_name", "shipping_line1", "shipping_line2",
+            "public_id", "status", "payment_method", "fulfilled",
+            "currency", "subtotal", "total",
+            "email", "phone", "shipping_name", "shipping_line1", "shipping_line2",
             "shipping_city", "shipping_state", "shipping_postal_code", "shipping_country",
             "created_at", "paid_at", "item_count", "lines",
         ]
@@ -109,7 +110,8 @@ class OrderSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = [
-            "public_id", "status", "currency", "total",
+            "public_id", "status", "payment_method", "fulfilled",
+            "currency", "total",
             "created_at", "paid_at", "item_count", "line_images",
         ]
 
@@ -119,18 +121,149 @@ class OrderSummarySerializer(serializers.ModelSerializer):
         return [url for url in images if url]
 
 
-class CheckoutSerializer(serializers.Serializer):
-    """What the browser may say about a checkout: where to come back to, and -
-    for a guest only - which items.
+class AdminOrderSummarySerializer(serializers.ModelSerializer):
+    """One row in the tenant's order-management list.
 
-    Deliberately still no amount and no currency. A signed-in checkout ignores
-    `cart` entirely and reads the rows; a guest's `cart` names *which* catalog
-    items were chosen and nothing more, and every one of them is re-priced
-    server-side from the tenant's catalog before a session is created. A client
-    that could name a price could name its own.
+    A superset of the customer's history row: it also carries how the customer is
+    paying, whether the order has been fulfilled, and who placed it - the columns
+    a tenant sorts and acts on. Still no Stripe ids (the tenant's payment-account
+    internals have no place in the CMS).
     """
+
+    item_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Order
+        fields = [
+            "public_id", "status", "payment_method", "fulfilled",
+            "currency", "total", "email", "phone", "shipping_name",
+            "created_at", "paid_at", "fulfilled_at", "item_count",
+        ]
+
+
+class AdminOrderSerializer(serializers.ModelSerializer):
+    """One order in full for the tenant's management detail view.
+
+    Unlike the customer's `OrderSerializer` this exposes the fulfillment axis
+    (`fulfilled`/`fulfilled_at`), the payment method, and the phone the offline
+    form collected - everything the tenant needs to fulfil the order - but still
+    never the Stripe ids.
+    """
+
+    lines = OrderLineSerializer(many=True, read_only=True)
+    item_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Order
+        fields = [
+            "public_id", "status", "payment_method", "fulfilled",
+            "currency", "subtotal", "total",
+            "email", "phone", "shipping_name", "shipping_line1", "shipping_line2",
+            "shipping_city", "shipping_state", "shipping_postal_code", "shipping_country",
+            "created_at", "paid_at", "fulfilled_at", "item_count", "lines",
+        ]
+
+
+class AdminOrderActionSerializer(serializers.Serializer):
+    """A single management action a tenant takes on one order.
+
+    Deliberately an action verb rather than a free `status` write: the legal
+    transitions are few and each one has side effects (stamping `paid_at`,
+    toggling `fulfilled` on its own axis), so naming the intent keeps an
+    accidental jump to an impossible state - or clobbering the fulfillment flag
+    while setting payment - off the table.
+    """
+
+    MARK_PAID = "mark_paid"
+    MARK_FULFILLED = "mark_fulfilled"
+    UNMARK_FULFILLED = "unmark_fulfilled"
+    CANCEL = "cancel"
+
+    action = serializers.ChoiceField(
+        choices=[MARK_PAID, MARK_FULFILLED, UNMARK_FULFILLED, CANCEL],
+    )
+
+
+class CheckoutContactSerializer(serializers.Serializer):
+    """The customer's contact details for an **offline** order.
+
+    Only used by pay-in-store / pay-on-delivery: an online order gets its contact
+    from Stripe's hosted page instead, so this is never read on that branch. A
+    name and at least one way to reach the customer are required (enforced in
+    `CheckoutSerializer.validate`), so the tenant can actually confirm a pickup or
+    a delivery.
+    """
+
+    name = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+    email = serializers.EmailField(required=False, allow_blank=True, default="")
+    phone = serializers.CharField(max_length=32, required=False, allow_blank=True, default="")
+
+
+class CheckoutShippingSerializer(serializers.Serializer):
+    """The delivery address for a **pay-on-delivery** order.
+
+    Required only for that method (see `CheckoutSerializer.validate`); pay-in-store
+    and online orders never send it. Mirrors the address columns on `Order`.
+    """
+
+    line1 = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+    line2 = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+    city = serializers.CharField(max_length=128, required=False, allow_blank=True, default="")
+    state = serializers.CharField(max_length=128, required=False, allow_blank=True, default="")
+    postal_code = serializers.CharField(max_length=32, required=False, allow_blank=True, default="")
+    country = serializers.CharField(max_length=2, required=False, allow_blank=True, default="")
+
+
+class CheckoutSerializer(serializers.Serializer):
+    """What the browser may say about a checkout: where to come back to, how the
+    customer is paying, and - for a guest, or any offline order - the details we
+    cannot read off a Stripe page.
+
+    Deliberately still no amount and no currency. A signed-in online checkout
+    ignores `cart` entirely and reads the rows; a guest's `cart` names *which*
+    catalog items were chosen and nothing more, and every one of them is re-priced
+    server-side from the tenant's catalog before an order is created. A client
+    that could name a price could name its own - offline included: `contact` and
+    `shipping` decide who and where, never how much.
+    """
+
+    ONLINE = "online"
+    IN_STORE = "in_store"
+    ON_DELIVERY = "on_delivery"
+    OFFLINE_METHODS = frozenset({IN_STORE, ON_DELIVERY})
 
     locale = serializers.CharField(max_length=8, required=False, default="en")
     # Guest checkout only: the anonymous visitor's localStorage cart, in the same
     # per-line shape `POST /api/auth/cart/` takes.
     cart = CartItemWriteSerializer(many=True, required=False, default=list)
+    payment_method = serializers.ChoiceField(
+        choices=[ONLINE, IN_STORE, ON_DELIVERY], required=False, default=ONLINE,
+    )
+    contact = CheckoutContactSerializer(required=False)
+    shipping = CheckoutShippingSerializer(required=False)
+
+    def validate(self, attrs):
+        method = attrs.get("payment_method", self.ONLINE)
+        if method not in self.OFFLINE_METHODS:
+            return attrs
+
+        # No Stripe page collects these for an offline order, so our own form is
+        # the only place they can come from. A name plus one contact channel is
+        # the floor for the tenant to confirm the order.
+        contact = attrs.get("contact") or {}
+        if not (contact.get("name") or "").strip():
+            raise serializers.ValidationError(
+                {"contact": {"name": "A name is required to place this order."}}
+            )
+        if not (contact.get("email") or "").strip() and not (contact.get("phone") or "").strip():
+            raise serializers.ValidationError(
+                {"contact": "An email or a phone number is required to place this order."}
+            )
+
+        if method == self.ON_DELIVERY:
+            shipping = attrs.get("shipping") or {}
+            if not (shipping.get("line1") or "").strip() or not (shipping.get("city") or "").strip():
+                raise serializers.ValidationError(
+                    {"shipping": "A delivery address is required for pay on delivery."}
+                )
+        return attrs

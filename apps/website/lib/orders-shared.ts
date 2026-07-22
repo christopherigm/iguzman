@@ -13,13 +13,19 @@
  * these from `@/lib/orders` unchanged.
  */
 
-/** Mirrors `Order.STATUS_CHOICES` in website-api. */
+/** Mirrors `Order.STATUS_CHOICES` in website-api. `placed` is an offline order
+ *  (pay-in-store / pay-on-delivery) awaiting the tenant to take payment - it
+ *  never has a Stripe session, which is what keeps it apart from `pending`. */
 export type OrderStatus =
   | "pending"
+  | "placed"
   | "paid"
   | "failed"
   | "canceled"
   | "refunded";
+
+/** Mirrors `Order.PAYMENT_METHOD_CHOICES` in website-api. */
+export type PaymentMethod = "online" | "in_store" | "on_delivery";
 
 /**
  * One purchased line, served from the order's own snapshot rather than the
@@ -59,10 +65,15 @@ export interface Order {
   /** The public UUID the order is addressed by - never the sequential DB id. */
   public_id: string;
   status: OrderStatus;
+  payment_method: PaymentMethod;
+  /** Fulfillment is a separate axis from payment: an order can be handed over
+   *  before or after it is marked paid. */
+  fulfilled: boolean;
   currency: string;
   subtotal: string;
   total: string;
   email: string;
+  phone: string;
   shipping_name: string;
   shipping_line1: string;
   shipping_line2: string;
@@ -84,6 +95,8 @@ export interface Order {
 export interface OrderSummary {
   public_id: string;
   status: OrderStatus;
+  payment_method: PaymentMethod;
+  fulfilled: boolean;
   currency: string;
   total: string;
   created_at: string;

@@ -1,0 +1,93 @@
+/* The payment-method chooser: a row of selector cards (icon over label), the
+   same shape as the variant thumbnails. Layout lives on the native elements
+   (fieldset, legend, label, span) - the @repo/ui Typography inside carries its
+   own props. The radio stays in the DOM for keyboard/AT and drives the selected
+   state via :checked; it is visually hidden. */
+
+.checkout-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-inline-size: 0;
+}
+
+.checkout-methods__legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 0.75rem; /* label / 12px - native <legend>, no Typography here */
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.checkout-method {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  cursor: pointer;
+}
+
+/* Visually hidden, but focusable: it remains the group's real control. */
+.checkout-method__radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.checkout-method__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 88px;
+  border-radius: 8px;
+  border: 1px solid var(--surface-3, #e5e7eb);
+  background-color: var(--surface-2);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.checkout-method:hover .checkout-method__icon {
+  border-color: var(--primary, var(--on-surface));
+}
+
+.checkout-method__radio:checked + .checkout-method__icon {
+  border: 2px solid var(--primary, #16a34a);
+  background-color: color-mix(
+    in srgb,
+    var(--primary, var(--on-surface)) 8%,
+    transparent
+  );
+}
+
+.checkout-method__radio:focus-visible + .checkout-method__icon {
+  outline: 2px solid var(--primary, #16a34a);
+  outline-offset: 2px;
+}
+
+/* The icon is a solid-color glyph masked from the source SVG, so it tints with
+   the theme foreground (and the primary when selected) instead of staying the
+   file's hard-coded black. The source URL arrives per option as --icon. */
+.checkout-method__glyph {
+  width: 40px;
+  height: 40px;
+  background-color: var(--foreground);
+  transition: background-color 0.15s ease;
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+}
+
+.checkout-method__radio:checked + .checkout-method__icon .checkout-method__glyph {
+  background-color: var(--primary, #16a34a);
+}

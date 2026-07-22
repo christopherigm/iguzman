@@ -778,3 +778,204 @@ class ClaimGuestOrderTests(TestCase):
         self.assertEqual(claim_guest_orders(self.user, self.system), 0)
         order.refresh_from_db()
         self.assertIsNone(order.user_id)
+
+
+class OfflineCheckoutTests(TestCase):
+    """Pay-in-store / pay-on-delivery: an order placed without Stripe.
+
+    These are the parts unique to the offline path - no session, no webhook, so
+    the cart-clear and stock draw-down that the webhook does for an online order
+    have to happen at placement instead, and the contact/address the Stripe page
+    would have collected come from our own form.
+    """
+
+    def setUp(self):
+        cache.clear()
+        # No Stripe on purpose: an offline order must not need it.
+        self.system = System.objects.create(
+            site_name="Acme", host="acme.test",
+            pay_in_store_enabled=True, pay_on_delivery_enabled=True,
+        )
+        self.product = Product.objects.create(
+            system=self.system, name="Bag", slug="bag",
+            price=Decimal("10.00"), currency="USD", stock_count=5,
+        )
+        self.user = User.objects.create_user("u", password="x", email="a@acme.test")
+        self.user.profile.system = self.system
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    def _post(self, body):
+        return self.client.post(
+            "/api/orders/checkout/", body,
+            content_type="application/json", HTTP_X_WEBSITE_HOST="acme.test",
+        )
+
+    def test_pay_in_store_places_the_order_and_clears_cart_and_stock(self):
+        CartItem.objects.create(
+            user=self.user, system=self.system, product=self.product, quantity=2,
+        )
+
+        response = self._post({
+            "locale": "en",
+            "payment_method": "in_store",
+            "contact": {"name": "Jo", "phone": "555-1234"},
+        })
+
+        self.assertEqual(response.status_code, 201)
+        self.assertNotIn("url", response.json())
+        order = Order.objects.get(public_id=response.json()["order_id"])
+        self.assertEqual(order.status, Order.STATUS_PLACED)
+        self.assertEqual(order.payment_method, Order.PAYMENT_IN_STORE)
+        self.assertEqual(order.shipping_name, "Jo")
+        self.assertEqual(order.phone, "555-1234")
+        self.assertIsNone(order.paid_at)
+        self.assertFalse(order.fulfilled)
+        # The two things the webhook would have done, done here instead.
+        self.assertFalse(CartItem.objects.filter(user=self.user).exists())
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_count, 3)
+        self.assertEqual(response.json()["redirect"], f"/en/orders/{order.public_id}")
+
+    def test_pay_in_store_requires_a_name_and_a_contact_channel(self):
+        CartItem.objects.create(user=self.user, system=self.system, product=self.product)
+
+        response = self._post({
+            "locale": "en", "payment_method": "in_store",
+            "contact": {"name": "Jo"},  # no email or phone
+        })
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Order.objects.exists())
+
+    def test_pay_on_delivery_requires_an_address(self):
+        CartItem.objects.create(user=self.user, system=self.system, product=self.product)
+
+        response = self._post({
+            "locale": "en", "payment_method": "on_delivery",
+            "contact": {"name": "Jo", "phone": "555-1234"},
+        })
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Order.objects.exists())
+
+    def test_pay_on_delivery_snapshots_the_delivery_address(self):
+        CartItem.objects.create(user=self.user, system=self.system, product=self.product)
+
+        response = self._post({
+            "locale": "en", "payment_method": "on_delivery",
+            "contact": {"name": "Jo", "phone": "555-1234"},
+            "shipping": {"line1": "1 High St", "city": "Springfield", "country": "US"},
+        })
+
+        self.assertEqual(response.status_code, 201)
+        order = Order.objects.get()
+        self.assertEqual(order.payment_method, Order.PAYMENT_ON_DELIVERY)
+        self.assertEqual(order.shipping_line1, "1 High St")
+        self.assertEqual(order.shipping_city, "Springfield")
+
+    def test_a_disabled_method_is_refused(self):
+        self.system.pay_in_store_enabled = False
+        self.system.save()
+        CartItem.objects.create(user=self.user, system=self.system, product=self.product)
+
+        response = self._post({
+            "locale": "en", "payment_method": "in_store",
+            "contact": {"name": "Jo", "phone": "555-1234"},
+        })
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["code"], "METHOD_UNAVAILABLE")
+        self.assertFalse(Order.objects.exists())
+
+    def test_guest_can_place_an_offline_order_with_their_own_contact(self):
+        self.client.logout()
+
+        response = self._post({
+            "locale": "en", "payment_method": "in_store",
+            "contact": {"name": "Guest", "email": "guest@x.test"},
+            "cart": [{"kind": "product", "id": self.product.id, "quantity": 1}],
+        })
+
+        self.assertEqual(response.status_code, 201)
+        order = Order.objects.get()
+        self.assertIsNone(order.user_id)
+        self.assertEqual(order.email, "guest@x.test")
+        self.assertEqual(order.status, Order.STATUS_PLACED)
+
+
+class AdminOrderManagementTests(TestCase):
+    """The tenant's order list and the mark-paid / mark-fulfilled actions."""
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(
+            site_name="Acme", host="acme.test", pay_in_store_enabled=True,
+        )
+        self.other_system = System.objects.create(site_name="Beta", host="beta.test")
+        self.admin = self._make_user("admin@acme.test", self.system, is_admin=True)
+        self.order = Order.objects.create(
+            system=self.system, status=Order.STATUS_PLACED,
+            payment_method=Order.PAYMENT_IN_STORE, currency="USD",
+            subtotal=Decimal("10.00"), total=Decimal("10.00"),
+        )
+        self.client.force_login(self.admin)
+
+    def _make_user(self, email, system, is_admin=False):
+        user = User.objects.create_user(f"{system.id}_{email}", password="x", email=email)
+        user.profile.system = system
+        user.profile.is_admin = is_admin
+        user.profile.save()
+        return user
+
+    def _action(self, public_id, action):
+        return self.client.post(
+            f"/api/orders/admin/{public_id}/",
+            {"action": action}, content_type="application/json",
+        )
+
+    def test_list_returns_the_tenants_orders(self):
+        response = self.client.get("/api/orders/admin/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]["payment_method"], "in_store")
+
+    def test_a_non_admin_is_forbidden(self):
+        self.client.force_login(self._make_user("u@acme.test", self.system))
+        self.assertEqual(self.client.get("/api/orders/admin/").status_code, 403)
+
+    def test_another_tenants_order_is_a_404(self):
+        theirs = Order.objects.create(
+            system=self.other_system, status=Order.STATUS_PLACED,
+            payment_method=Order.PAYMENT_IN_STORE, currency="USD",
+        )
+        self.assertEqual(self._action(theirs.public_id, "mark_paid").status_code, 404)
+
+    def test_mark_paid_moves_an_offline_placed_order_to_paid(self):
+        response = self._action(self.order.public_id, "mark_paid")
+        self.assertEqual(response.status_code, 200)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.STATUS_PAID)
+        self.assertIsNotNone(self.order.paid_at)
+
+    def test_mark_paid_refuses_an_online_order(self):
+        online = Order.objects.create(
+            system=self.system, status=Order.STATUS_PENDING,
+            payment_method=Order.PAYMENT_ONLINE, currency="USD",
+        )
+        response = self._action(online.public_id, "mark_paid")
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "ONLINE_ORDER")
+
+    def test_fulfillment_is_independent_of_payment(self):
+        # Fulfilled without being paid: a valid state on the two-axis model.
+        self._action(self.order.public_id, "mark_fulfilled")
+        self.order.refresh_from_db()
+        self.assertTrue(self.order.fulfilled)
+        self.assertEqual(self.order.status, Order.STATUS_PLACED)
+        self.assertIsNotNone(self.order.fulfilled_at)
+
+        self._action(self.order.public_id, "unmark_fulfilled")
+        self.order.refresh_from_db()
+        self.assertFalse(self.order.fulfilled)
+        self.assertIsNone(self.order.fulfilled_at)

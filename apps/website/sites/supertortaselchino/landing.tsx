@@ -9,6 +9,7 @@ import { SuccessStories } from "@/components/success-stories";
 import { CompanyHighlights } from "@/components/company-highlights";
 import { CatalogCategories } from "@/components/catalog-categories";
 import { CatalogItems } from "@/components/catalog-items";
+import { Spotlight } from "@/components/spotlight";
 import { Intro } from "./sections/intro";
 
 /**
@@ -84,6 +85,12 @@ export async function Landing() {
           <CatalogItems />
         </Container>
       </Box>
+      
+      {/* Shared, DB-driven Spotlight: the baker uses it to showcase a trio of
+          featured breads (e.g. the vegan loaves) beside a short pitch + CTA.
+          Renders nothing until she fills the copy and picks three items in the
+          CMS, so it stays out of the way until configured. */}
+      <Spotlight />
 
       <Container paddingX={10}>
         <CatalogCategories />

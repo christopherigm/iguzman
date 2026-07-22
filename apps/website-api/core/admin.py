@@ -156,6 +156,20 @@ class SystemAdmin(admin.ModelAdmin):
         ("Catalog Items Section", {
             "fields": ("catalog_items_bg",),
         }),
+        ("Spotlight Section", {
+            "fields": (
+                "spotlight_label", "en_spotlight_label",
+                "spotlight_title", "en_spotlight_title",
+                "spotlight_text", "en_spotlight_text",
+                "spotlight_button_label", "en_spotlight_button_label",
+                "spotlight_button_link", "spotlight_items",
+            ),
+            "description": (
+                "A promo panel paired with up to three hand-picked catalog items, "
+                "rendered by the Spotlight block on the landing. 'Items' is an "
+                'ordered JSON list of refs, e.g. [{"kind": "product", "id": 12}].'
+            ),
+        }),
         ("Hero Video", {
             "fields": (
                 "hero_video_layout",

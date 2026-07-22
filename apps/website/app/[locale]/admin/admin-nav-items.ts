@@ -56,5 +56,6 @@ export const ADMIN_NAV_ITEMS = [
     icon: "✨",
     descKey: "highlightsDesc",
   },
+  { key: "orders", href: "/admin/orders", icon: "📋", descKey: "ordersDesc" },
   { key: "users", href: "/admin/users", icon: "👥", descKey: "usersDesc" },
 ] as const;

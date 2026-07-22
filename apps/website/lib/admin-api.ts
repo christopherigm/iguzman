@@ -4,6 +4,8 @@
  * HTTP-only cookie and transparently refreshes it on 401 - so there is no token
  * for this module (or any other browser code) to hold.
  */
+import type { Order, OrderStatus, PaymentMethod } from "./orders-shared";
+
 async function adminFetch(
   path: string,
   options: RequestInit = {},
@@ -711,4 +713,57 @@ export async function updateAdminUser(
     body: JSON.stringify(data),
   });
   return parseResponse<Record<string, unknown>>(res);
+}
+
+// ---- Orders (tenant management) ----
+
+/** One order in full for the CMS - the customer `Order` plus the fulfillment
+ *  timestamp the tenant needs; still no Stripe ids. */
+export interface AdminOrder extends Order {
+  fulfilled_at: string | null;
+}
+
+/** One row in the CMS order list (see the API's AdminOrderSummarySerializer). */
+export interface AdminOrderSummary {
+  public_id: string;
+  status: OrderStatus;
+  payment_method: PaymentMethod;
+  fulfilled: boolean;
+  currency: string;
+  total: string;
+  email: string;
+  phone: string;
+  shipping_name: string;
+  created_at: string;
+  paid_at: string | null;
+  fulfilled_at: string | null;
+  item_count: number;
+}
+
+/** The management actions the CMS can take on one order. */
+export type AdminOrderAction =
+  | "mark_paid"
+  | "mark_fulfilled"
+  | "unmark_fulfilled"
+  | "cancel";
+
+export async function listAdminOrders() {
+  const res = await adminFetch(`/api/orders/admin/`);
+  return parseResponse<AdminOrderSummary[]>(res);
+}
+
+export async function getAdminOrder(publicId: string) {
+  const res = await adminFetch(`/api/orders/admin/${publicId}/`);
+  return parseResponse<AdminOrder>(res);
+}
+
+export async function adminOrderAction(
+  publicId: string,
+  action: AdminOrderAction,
+) {
+  const res = await adminFetch(`/api/orders/admin/${publicId}/`, {
+    method: "POST",
+    body: JSON.stringify({ action }),
+  });
+  return parseResponse<AdminOrder>(res);
 }

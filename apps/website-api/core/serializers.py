@@ -513,6 +513,12 @@ class SystemSerializer(serializers.ModelSerializer):
             "terms_and_conditions", "en_terms_and_conditions",
             "user_data", "en_user_data",
             "stripe_enabled", "stripe_configured", "stripe_webhook_url",
+            "pay_in_store_enabled", "pay_on_delivery_enabled",
+            "spotlight_label", "en_spotlight_label",
+            "spotlight_title", "en_spotlight_title",
+            "spotlight_text", "en_spotlight_text",
+            "spotlight_button_label", "en_spotlight_button_label",
+            "spotlight_button_link", "spotlight_items",
             "product_count", "service_count", "menu_item_count",
         ]
 
@@ -592,6 +598,12 @@ _TEXT_FIELDS = [
     "user_data", "en_user_data",
     "enabled",
     "stripe_enabled", "stripe_publishable_key",
+    "pay_in_store_enabled", "pay_on_delivery_enabled",
+    "spotlight_label", "en_spotlight_label",
+    "spotlight_title", "en_spotlight_title",
+    "spotlight_text", "en_spotlight_text",
+    "spotlight_button_label", "en_spotlight_button_label",
+    "spotlight_button_link", "spotlight_items",
 ]
 
 # Written through System.set_stripe_*() rather than setattr, because the column
@@ -701,6 +713,22 @@ class SystemWriteSerializer(serializers.Serializer):
     stripe_secret_key      = serializers.CharField(max_length=255, required=False, allow_blank=True, write_only=True)
     stripe_webhook_secret  = serializers.CharField(max_length=255, required=False, allow_blank=True, write_only=True)
 
+    # Offline payment toggles - no credentials, just switches (see the model).
+    pay_in_store_enabled    = serializers.BooleanField(required=False)
+    pay_on_delivery_enabled = serializers.BooleanField(required=False)
+
+    # Spotlight section - a promo panel + up to three hand-picked catalog items.
+    spotlight_label            = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    en_spotlight_label         = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    spotlight_title            = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    en_spotlight_title         = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    spotlight_text             = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_spotlight_text          = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    spotlight_button_label     = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    en_spotlight_button_label  = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    spotlight_button_link      = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    spotlight_items            = serializers.JSONField(required=False)
+
     # Base64 image fields
     img_logo          = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     img_logo_hero     = serializers.CharField(required=False, allow_null=True, allow_blank=True)
@@ -713,6 +741,37 @@ class SystemWriteSerializer(serializers.Serializer):
     img_brandmark     = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     img_about         = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     img_hero          = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
+    # The three catalog families a spotlight item may reference. "food" is the
+    # MenuItem family (the frontend's kind name), matching the guest-cart refs.
+    _SPOTLIGHT_KINDS = {"product", "service", "food"}
+
+    def validate_spotlight_items(self, value):
+        """A list of at most three {"kind", "id"} refs - existence is resolved on
+        the frontend, this only enforces the shape so a malformed blob can't land
+        in the JSON column."""
+        if value in (None, ""):
+            return []
+        if not isinstance(value, list):
+            raise serializers.ValidationError("Must be a list of item references.")
+        if len(value) > 3:
+            raise serializers.ValidationError("At most three items may be featured.")
+        cleaned = []
+        for entry in value:
+            if not isinstance(entry, dict):
+                raise serializers.ValidationError("Each item must be an object.")
+            kind = entry.get("kind")
+            item_id = entry.get("id")
+            if kind not in self._SPOTLIGHT_KINDS:
+                raise serializers.ValidationError(
+                    f"kind must be one of {sorted(self._SPOTLIGHT_KINDS)}."
+                )
+            try:
+                item_id = int(item_id)
+            except (TypeError, ValueError):
+                raise serializers.ValidationError("id must be an integer.")
+            cleaned.append({"kind": kind, "id": item_id})
+        return cleaned
 
     def validate(self, attrs):
         for field_name, cfg in _IMAGE_FIELDS.items():

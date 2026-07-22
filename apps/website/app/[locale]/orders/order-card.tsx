@@ -19,6 +19,7 @@ import { formatPrice } from "@/lib/price";
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
   paid: "#22c55e",
+  placed: "#f59e0b",
   pending: "#f59e0b",
   failed: "#ef4444",
   canceled: "#ef4444",

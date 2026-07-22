@@ -26,6 +26,7 @@ class Order(models.Model):
     """
 
     STATUS_PENDING = "pending"
+    STATUS_PLACED = "placed"
     STATUS_PAID = "paid"
     STATUS_FAILED = "failed"
     STATUS_CANCELED = "canceled"
@@ -33,10 +34,31 @@ class Order(models.Model):
 
     STATUS_CHOICES = [
         (STATUS_PENDING, "Pending"),
+        # An offline order (pay-in-store / pay-on-delivery) is born here rather
+        # than `pending`: `pending` means "a Stripe session exists and we are
+        # waiting on the webhook", which an offline order never has. Keeping them
+        # apart is what stops an abandoned online checkout and a real placed
+        # offline order from sharing a bucket in the tenant's order list.
+        (STATUS_PLACED, "Placed"),
         (STATUS_PAID, "Paid"),
         (STATUS_FAILED, "Failed"),
         (STATUS_CANCELED, "Canceled"),
         (STATUS_REFUNDED, "Refunded"),
+    ]
+
+    # How the customer is paying. `online` is Stripe (the historical default and
+    # what every existing row is). The two offline methods create the order
+    # directly with no Stripe session and no webhook - which is why an offline
+    # order clears the cart and draws down stock at checkout time, the work the
+    # webhook does for an online one.
+    PAYMENT_ONLINE = "online"
+    PAYMENT_IN_STORE = "in_store"
+    PAYMENT_ON_DELIVERY = "on_delivery"
+
+    PAYMENT_METHOD_CHOICES = [
+        (PAYMENT_ONLINE, "Online (Stripe)"),
+        (PAYMENT_IN_STORE, "Pay in store"),
+        (PAYMENT_ON_DELIVERY, "Pay on delivery"),
     ]
 
     # The order's public handle: what the confirmation URL, the order-history
@@ -72,6 +94,17 @@ class Order(models.Model):
         related_name="orders",
     )
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    payment_method = models.CharField(
+        max_length=16, choices=PAYMENT_METHOD_CHOICES, default=PAYMENT_ONLINE,
+    )
+
+    # Fulfillment is a **separate axis** from payment: a pay-on-delivery order is
+    # handed over (fulfilled) at the same moment it is paid, but a pay-in-store
+    # order may be picked up (fulfilled) before or after the money is recorded,
+    # and an online order is paid long before it ships. So the tenant marks
+    # "paid" (which moves `status`) and "fulfilled" (this flag) independently.
+    fulfilled = models.BooleanField(default=False)
+    fulfilled_at = models.DateTimeField(null=True, blank=True)
 
     # One currency per order by construction: a Stripe Checkout Session is
     # single-currency, and Buyable.currency is per item, so checkout refuses a
@@ -89,6 +122,10 @@ class Order(models.Model):
     # Captured by Stripe Checkout and copied here by the webhook - our own
     # record, so it stays correct if the customer later edits their profile.
     email = models.EmailField(blank=True, default="")
+    # Collected by our own checkout form for offline orders (an online order gets
+    # its contact from Stripe's page instead), so the tenant can reach the
+    # customer about a pickup or a delivery. Blank on historical online orders.
+    phone = models.CharField(max_length=32, blank=True, default="")
     shipping_name = models.CharField(max_length=255, blank=True, default="")
     shipping_line1 = models.CharField(max_length=255, blank=True, default="")
     shipping_line2 = models.CharField(max_length=255, blank=True, default="")
