@@ -140,6 +140,14 @@ export function OrderCard({ order, locale }: OrderCardProps) {
         >
           {t(`status_${order.status}`)}
         </Badge>
+        {/* Fulfillment is a separate axis from payment - a "Completed" badge so
+            the customer can tell at a glance which orders have been handed over,
+            without opening each one. */}
+        {order.fulfilled && (
+          <Badge variant="subtle" size="sm" color="#22c55e">
+            {t("completed")}
+          </Badge>
+        )}
       </Box>
 
       <Typography variant="caption" margin={0} color="var(--foreground)">

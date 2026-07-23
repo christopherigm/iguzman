@@ -358,7 +358,8 @@
     "status_placed": "Pedido realizado",
     "placedNote_in_store": "Paga al recoger tu pedido.",
     "placedNote_on_delivery": "Paga al recibir tu pedido.",
-    "fulfilledNote": "Tu pedido ha sido completado."
+    "fulfilledNote": "Tu pedido ha sido completado.",
+    "completed": "Completado"
   },
   "VerifyEmailPage": {
     "loading": "Verificando tu cuenta, por favor espera…",

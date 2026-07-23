@@ -358,7 +358,8 @@
     "status_placed": "Bestellung aufgegeben",
     "placedNote_in_store": "Bitte zahlen Sie beim Abholen Ihrer Bestellung.",
     "placedNote_on_delivery": "Bitte zahlen Sie bei Lieferung Ihrer Bestellung.",
-    "fulfilledNote": "Ihre Bestellung wurde ausgeführt."
+    "fulfilledNote": "Ihre Bestellung wurde ausgeführt.",
+    "completed": "Abgeschlossen"
   },
   "VerifyEmailPage": {
     "loading": "Ihr Konto wird verifiziert, bitte warten…",

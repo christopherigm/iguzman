@@ -358,7 +358,8 @@
     "status_placed": "Order placed",
     "placedNote_in_store": "Please pay when you pick up your order.",
     "placedNote_on_delivery": "Please pay when your order is delivered.",
-    "fulfilledNote": "Your order has been fulfilled."
+    "fulfilledNote": "Your order has been fulfilled.",
+    "completed": "Completed"
   },
   "VerifyEmailPage": {
     "loading": "Verifying your account, please wait…",

@@ -1,10 +1,20 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { getSite } from "@/lib/resolve-site";
+import { getSystem } from "@/lib/system";
+import { getRequestOrigin, systemShareMetadata } from "@/lib/metadata";
 
 type Props = {
   params: Promise<{ locale: string; sitePath: string[] }>;
 };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale, sitePath } = await params;
+  const [system, origin] = await Promise.all([getSystem(), getRequestOrigin()]);
+  const path = "/" + sitePath.join("/");
+  return systemShareMetadata({ system, locale, origin, path });
+}
 
 /**
  * Per-site extra-page dispatcher. Serves the bespoke top-level pages a site
