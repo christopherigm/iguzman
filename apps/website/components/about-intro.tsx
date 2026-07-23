@@ -60,7 +60,7 @@ export function AboutIntro({
     <Container paddingX={10}>
       <Box paddingY={64}>
         <Grid container spacing={4} alignItems="center">
-          <Grid size={{ xs: 12, md: 6 }}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <Box display="flex" flexDirection="column" gap="20px">
               <Typography
                 as="span"
@@ -110,7 +110,7 @@ export function AboutIntro({
             </Box>
           </Grid>
 
-          <Grid size={{ xs: 12, md: 6 }}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             {/* Plain div (not a @repo/ui Box) so the responsive height/aspect
                 ratio can live entirely in CSS - an inline `styles` value would
                 out-specificity the md media-query override. */}

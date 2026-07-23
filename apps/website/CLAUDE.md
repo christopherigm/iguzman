@@ -333,6 +333,32 @@ Rules:
   `components/category-detail.tsx` renders its root `<Box>` with no `paddingTop` for
   the same reason. Don't restore those top paddings.
 
+## Two-column media/text layouts - split at `sm`, not `md`
+
+**A section that pairs a media column (image, gallery) with a text column must go
+two-up from the `sm` breakpoint, not `md`.** Any new view, page, or section that
+lays out "image/gallery on one side, copy on the other" should use `Grid`
+`size={{ xs: 12, sm: 6 }}` - full width only on the smallest (`xs`) phones, two
+columns from `sm` (tablets) up. Don't default such a split to `md: 6`; it wastes
+the tablet band by stacking content that comfortably fits side by side.
+
+- The rule applies to the whole pairing, including any **sibling card pair** in
+  the same section (e.g. an About page's mission/vision cards) - keep the
+  breakpoint consistent so the section doesn't reflow at two different widths.
+- Established users of this shape (**follow them for new pages**): the blog inner
+  page (`app/[locale]/blog/[slug]/page.tsx`), the highlights inner page
+  (`app/[locale]/highlights/[slug]/page.tsx`), the shared landing block
+  (`components/about-intro.tsx`), and the per-site `/about` pages
+  (`sites/*/pages/about.tsx`) - all use `sm: 6`.
+- **Prefer the `Grid` `size` prop over a CSS `@media` query** for the split (it's
+  the props-first rule, and `Grid` reads the same `BREAKPOINTS` scale). When a
+  description column should span full width if its media sibling is absent, keep
+  the conditional on the same breakpoint:
+  `size={{ xs: 12, sm: hasMedia ? 6 : 12 }}`.
+- Only drop to `md: 6` when the two columns genuinely can't share a tablet width
+  (very wide fixed content, a table that would overflow) - and say why in a
+  comment, since `sm` is the default this repo now expects.
+
 ## Responsive breakpoints in CSS (`@custom-media`)
 
 **Never hardcode a breakpoint pixel value in a `@media` query in this app.** The

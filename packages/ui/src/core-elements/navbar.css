@@ -84,7 +84,7 @@
   gap: 4px;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 600px) {
   .ui-navbar-menu {
     display: flex;
   }
@@ -159,7 +159,7 @@
   background-color: var(--surface-1, rgba(0, 0, 0, 0.04));
 }
 
-@media (min-width: 900px) {
+@media (min-width: 600px) {
   .ui-navbar-hamburger {
     display: none;
   }

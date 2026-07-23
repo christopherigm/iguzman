@@ -120,7 +120,7 @@ export default async function HighlightDetailPage({ params }: Props) {
         )}
         <Grid container spacing={4} marginTop={32}>
           {galleryImages.length > 0 && (
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ItemGalleryClient
                 images={galleryImages}
                 placeholderColor={highlight.background_color ?? undefined}
@@ -129,7 +129,7 @@ export default async function HighlightDetailPage({ params }: Props) {
             </Grid>
           )}
           {description && (
-            <Grid size={{ xs: 12, md: galleryImages.length > 0 ? 6 : 12 }}>
+            <Grid size={{ xs: 12, sm: galleryImages.length > 0 ? 6 : 12 }}>
               <Box
                 paddingRight={20}
                 className="item-detail__description item-detail__center-mobile"
