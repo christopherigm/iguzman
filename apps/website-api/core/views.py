@@ -4,6 +4,7 @@ import logging
 from django.conf import settings
 from django.core.cache import cache
 from django.http import StreamingHttpResponse
+from django.utils import timezone
 
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication
@@ -33,7 +34,7 @@ from .serializers import (
     SystemSerializer,
     SystemWriteSerializer,
 )
-from core.services.contact import send_contact_message_notification
+from core.services.contact import send_contact_message_notification, send_contact_message_reply
 from core.services.llm import stream_chat
 from core.site_payload import apply_payload
 
@@ -1016,6 +1017,59 @@ class AdminContactMessageDetailView(APIView):
         instance.delete()
         _invalidate_pattern("core:contact_messages:*")
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AdminContactMessageReplyView(APIView):
+    """POST /api/contact-messages/admin/<pk>/reply/ - email the customer a reply.
+
+    Admin-only and system-scoped like the rest of the inbox. The reply is recorded
+    on the message (body, subject, who, when) **only if the email actually went
+    out**, so the inbox's "Replied" state never lies and a second admin can see it
+    was already answered. Marks the message read as a side effect.
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    def post(self, request, pk):
+        system_id = _get_admin_system_id(request)
+        try:
+            message = ContactMessage.objects.get(pk=pk, system_id=system_id)
+        except ContactMessage.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        body = (request.data.get("body") or "").strip()
+        subject = (request.data.get("subject") or "").strip()
+        if not body:
+            return Response(
+                {"detail": "A reply message is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            send_contact_message_reply(message, body, subject or None)
+        except Exception:
+            # Nothing is recorded on a send failure, so the admin can retry and the
+            # inbox keeps showing the message as un-answered.
+            logger.exception("Failed to send contact-message reply for #%s", message.pk)
+            return Response(
+                {"detail": "The reply could not be sent. Please try again."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        message.reply_body = body
+        message.reply_subject = subject or None
+        message.replied_at = timezone.now()
+        message.replied_by = request.user
+        message.is_read = True
+        message.save(
+            update_fields=[
+                "reply_body", "reply_subject", "replied_at", "replied_by", "is_read"
+            ]
+        )
+        _invalidate_pattern("core:contact_messages:*")
+        return Response(
+            ContactMessageSerializer(message, context={"request": request}).data
+        )
 
 
 def _signed_in_system(user):

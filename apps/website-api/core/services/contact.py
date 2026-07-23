@@ -113,3 +113,49 @@ def send_contact_message_notification(message):
     email.attach_alternative(html_body, "text/html")
     email.send(fail_silently=False)
     return len(recipients)
+
+
+def send_contact_message_reply(message, body, subject=None):
+    """Email the customer an admin's reply to their contact message.
+
+    The inverse of ``send_contact_message_notification``: it goes **to the
+    customer** (`message.email`), branded as the tenant, and sets `reply_to` to the
+    tenant's admins so the customer's reply lands back in the inbox rather than the
+    platform mailbox. Raises on a mail failure so the caller never records a reply
+    that did not actually go out."""
+    system = message.system
+    brand = _tenant_brand(system)
+    admin_recipients = _admin_emails(system)
+
+    if subject:
+        subject_line = subject
+    elif message.subject:
+        subject_line = f"Re: {message.subject}"
+    else:
+        subject_line = "Re: your message"
+
+    ctx = {
+        "customer_name": message.name,
+        "original_subject": message.subject or "",
+        "original_body": message.message,
+        "reply_subject": subject or "",
+        "reply_body": body,
+        # A link back to the tenant's own site, not the admin panel this time.
+        "action_url": brand["base_url"],
+        **brand,
+    }
+
+    text_body = render_to_string("core/contact_message_reply_email.txt", ctx)
+    html_body = render_to_string("core/contact_message_reply_email.html", ctx)
+
+    email = EmailMultiAlternatives(
+        subject_line,
+        text_body,
+        brand["from_email"],
+        to=[message.email],
+        # A customer's reply should reach the tenant's admins; fall back to the
+        # from-address if the tenant somehow has no active admin addresses.
+        reply_to=admin_recipients or [brand["from_email"]],
+    )
+    email.attach_alternative(html_body, "text/html")
+    email.send(fail_silently=False)

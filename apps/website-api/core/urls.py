@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     AdminContactMessageDetailView,
     AdminContactMessageListView,
+    AdminContactMessageReplyView,
     AiChatView,
     BranchDetailView,
     BranchListCreateView,
@@ -54,6 +55,7 @@ urlpatterns = [
     path("contact-messages/", ContactMessageCreateView.as_view(), name="contact-message-create"),
     path("contact-messages/admin/", AdminContactMessageListView.as_view(), name="contact-message-admin-list"),
     path("contact-messages/admin/<int:pk>/", AdminContactMessageDetailView.as_view(), name="contact-message-admin-detail"),
+    path("contact-messages/admin/<int:pk>/reply/", AdminContactMessageReplyView.as_view(), name="contact-message-admin-reply"),
 
     path("check-slug/", SlugCheckView.as_view(), name="check-slug"),
 

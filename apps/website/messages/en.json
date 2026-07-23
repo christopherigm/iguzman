@@ -1005,6 +1005,17 @@
     "message": "Message",
     "kind_product": "product",
     "kind_service": "service",
-    "kind_food": "menu item"
+    "kind_food": "menu item",
+    "replied": "Replied",
+    "replyAgain": "Reply again",
+    "replyViaEmail": "Reply via email app",
+    "replyTitle": "Reply to {name}",
+    "replySubjectLabel": "Subject",
+    "replyBodyLabel": "Your reply",
+    "sendReply": "Send reply",
+    "sending": "Sending…",
+    "replyErrorSend": "The reply could not be sent. Please try again.",
+    "sentReplyHeading": "Your reply",
+    "repliedMeta": "Replied by {name} on {date}"
   }
 }

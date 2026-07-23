@@ -1005,6 +1005,17 @@
     "message": "Nachricht",
     "kind_product": "Produkt",
     "kind_service": "Dienstleistung",
-    "kind_food": "Gericht"
+    "kind_food": "Gericht",
+    "replied": "Beantwortet",
+    "replyAgain": "Erneut antworten",
+    "replyViaEmail": "Per E-Mail-App antworten",
+    "replyTitle": "An {name} antworten",
+    "replySubjectLabel": "Betreff",
+    "replyBodyLabel": "Deine Antwort",
+    "sendReply": "Antwort senden",
+    "sending": "Wird gesendet…",
+    "replyErrorSend": "Die Antwort konnte nicht gesendet werden. Bitte versuche es erneut.",
+    "sentReplyHeading": "Deine Antwort",
+    "repliedMeta": "Beantwortet von {name} am {date}"
   }
 }

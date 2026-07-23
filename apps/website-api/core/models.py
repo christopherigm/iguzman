@@ -856,6 +856,20 @@ class ContactMessage(Common):
 
     is_read = models.BooleanField(default=False)
 
+    # An admin's reply, sent back to the customer from the inbox. These are set
+    # only once the reply email has actually gone out, so the inbox can show a
+    # truthful "Replied" state and a second admin does not answer again unaware.
+    reply_subject = models.CharField(max_length=255, null=True, blank=True)
+    reply_body = models.TextField(null=True, blank=True)
+    replied_at = models.DateTimeField(null=True, blank=True)
+    replied_by = models.ForeignKey(
+        "auth.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+
     class Meta:
         verbose_name = "Contact Message"
         verbose_name_plural = "Contact Messages"

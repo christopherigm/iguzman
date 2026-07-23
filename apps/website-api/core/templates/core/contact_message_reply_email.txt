@@ -1,0 +1,12 @@
+{{ site_name }}
+
+Hola {{ customer_name }}, / Hi {{ customer_name }},
+
+{{ reply_body }}
+{% if original_body %}
+--- Tu mensaje original / Your original message ---
+{% if original_subject %}{{ original_subject }}
+{% endif %}{{ original_body }}
+{% endif %}
+{{ site_name }}
+{{ action_url }}

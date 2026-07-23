@@ -1005,6 +1005,17 @@
     "message": "Message",
     "kind_product": "produit",
     "kind_service": "service",
-    "kind_food": "plat"
+    "kind_food": "plat",
+    "replied": "Répondu",
+    "replyAgain": "Répondre à nouveau",
+    "replyViaEmail": "Répondre via l'app e-mail",
+    "replyTitle": "Répondre à {name}",
+    "replySubjectLabel": "Objet",
+    "replyBodyLabel": "Votre réponse",
+    "sendReply": "Envoyer la réponse",
+    "sending": "Envoi…",
+    "replyErrorSend": "La réponse n'a pas pu être envoyée. Veuillez réessayer.",
+    "sentReplyHeading": "Votre réponse",
+    "repliedMeta": "Répondu par {name} le {date}"
   }
 }

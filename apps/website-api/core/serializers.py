@@ -996,6 +996,9 @@ class ContactMessageSerializer(serializers.ModelSerializer):
     """Read serializer for the admin inbox. Carries the customer's PII, so it is
     only ever served behind IsSystemAdmin - never a public endpoint."""
 
+    # Who sent the reply, resolved to a display name (never the raw account).
+    replied_by_name = serializers.SerializerMethodField()
+
     class Meta:
         model = ContactMessage
         fields = [
@@ -1003,7 +1006,14 @@ class ContactMessageSerializer(serializers.ModelSerializer):
             "name", "email", "subject", "message",
             "related_kind", "related_id", "related_name",
             "is_read",
+            "reply_subject", "reply_body", "replied_at", "replied_by_name",
         ]
+
+    def get_replied_by_name(self, obj):
+        user = obj.replied_by
+        if user is None:
+            return None
+        return (f"{user.first_name} {user.last_name}".strip() or user.username)
 
 
 class ContactMessageCreateSerializer(serializers.Serializer):

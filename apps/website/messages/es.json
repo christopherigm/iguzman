@@ -1005,6 +1005,17 @@
     "message": "Mensaje",
     "kind_product": "producto",
     "kind_service": "servicio",
-    "kind_food": "platillo"
+    "kind_food": "platillo",
+    "replied": "Respondido",
+    "replyAgain": "Responder de nuevo",
+    "replyViaEmail": "Responder con app de correo",
+    "replyTitle": "Responder a {name}",
+    "replySubjectLabel": "Asunto",
+    "replyBodyLabel": "Tu respuesta",
+    "sendReply": "Enviar respuesta",
+    "sending": "Enviando…",
+    "replyErrorSend": "No se pudo enviar la respuesta. Inténtalo de nuevo.",
+    "sentReplyHeading": "Tu respuesta",
+    "repliedMeta": "Respondido por {name} el {date}"
   }
 }

@@ -160,14 +160,17 @@ class BranchAdmin(admin.ModelAdmin):
 
 @admin.register(ContactMessage)
 class ContactMessageAdmin(admin.ModelAdmin):
-    list_display = ("name", "email", "system", "related_name", "is_read", "created")
+    list_display = ("name", "email", "system", "related_name", "is_read", "replied_at", "created")
     list_filter = ("is_read", "system", "related_kind")
     search_fields = ("name", "email", "subject", "message", "related_name")
     # The message is a customer record, not editable content; everything is
-    # read-only except the read flag the inbox toggles.
+    # read-only except the read flag the inbox toggles. The reply is sent from the
+    # CMS inbox (never composed here), so its fields are read-only too.
     readonly_fields = (
         "system", "user", "name", "email", "subject", "message",
-        "related_kind", "related_id", "related_name", "created", "modified", "version",
+        "related_kind", "related_id", "related_name",
+        "reply_subject", "reply_body", "replied_at", "replied_by",
+        "created", "modified", "version",
     )
 
     def save_model(self, request, obj, form, change):

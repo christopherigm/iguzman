@@ -1,0 +1,14 @@
+{% extends "users/email_base.html" %}
+{% block body %}
+  <p style="margin:0 0 16px 0;">Hola {{ customer_name }}, / Hi {{ customer_name }},</p>
+  <p style="margin:0 0 16px 0;">Respuesta de <strong>{{ site_name }}</strong> a tu mensaje. / A reply from <strong>{{ site_name }}</strong> to your message.</p>
+
+  <div style="margin:16px 0; padding:16px 18px; background-color:#f4f5f7; border-radius:10px; font-size:15px; color:#1f2933; line-height:1.6; white-space:pre-wrap;">{{ reply_body }}</div>
+
+  {% if original_body %}
+  <p style="margin:24px 0 6px 0; font-size:13px; color:#8a94a6;">Tu mensaje original / Your original message{% if original_subject %}: {{ original_subject }}{% endif %}</p>
+  <div style="margin:0; padding:10px 16px; border-left:3px solid #edf0f5; font-size:14px; color:#52606d; line-height:1.6; white-space:pre-wrap;">{{ original_body }}</div>
+  {% endif %}
+
+  {% include "users/_email_button.html" with url=action_url label="Visitar el sitio / Visit the site" primary_color=primary_color %}
+{% endblock %}

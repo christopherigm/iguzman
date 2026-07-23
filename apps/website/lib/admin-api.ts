@@ -732,6 +732,11 @@ export interface AdminContactMessage {
   related_id: number | null;
   related_name: string | null;
   is_read: boolean;
+  // An admin's reply sent back to the customer, recorded once the email went out.
+  reply_subject: string | null;
+  reply_body: string | null;
+  replied_at: string | null;
+  replied_by_name: string | null;
 }
 
 export async function listContactMessages() {
@@ -757,6 +762,21 @@ export async function deleteContactMessage(pk: number) {
     method: "DELETE",
   });
   return parseResponse<void>(res);
+}
+/**
+ * Email the customer a reply from the inbox. The reply is recorded on the message
+ * (and marks it read) server-side only if the email actually went out, so the
+ * returned message carries the truthful `replied_at` / `replied_by_name`.
+ */
+export async function replyToContactMessage(
+  pk: number,
+  data: { subject?: string; body: string },
+) {
+  const res = await adminFetch(`/api/contact-messages/admin/${pk}/reply/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<AdminContactMessage>(res);
 }
 
 // ---- Slug check ----
