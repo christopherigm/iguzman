@@ -2,7 +2,16 @@ from django.contrib import admin
 from django.core.cache import cache
 
 from .cache import invalidate_pattern as _invalidate_pattern
-from .models import Brand, CompanyHighlight, CompanyHighlightItem, SuccessStory, SuccessStoryImage, System
+from .models import (
+    Branch,
+    Brand,
+    CompanyHighlight,
+    CompanyHighlightItem,
+    ContactMessage,
+    SuccessStory,
+    SuccessStoryImage,
+    System,
+)
 
 
 class CompanyHighlightItemInline(admin.TabularInline):
@@ -117,6 +126,59 @@ class BrandAdmin(admin.ModelAdmin):
         super().delete_model(request, obj)
 
 
+@admin.register(Branch)
+class BranchAdmin(admin.ModelAdmin):
+    list_display = ("name", "system", "is_main", "phone", "enabled", "modified")
+    list_filter = ("enabled", "is_main", "system")
+    search_fields = ("name", "en_name", "address", "phone")
+    readonly_fields = ("created", "modified", "version")
+    fieldsets = (
+        ("Identity", {
+            "fields": ("system", "is_main", "enabled", "sort_order", "version", "created", "modified"),
+        }),
+        ("Name", {
+            "fields": ("name", "en_name"),
+        }),
+        ("Contact", {
+            "fields": ("address", "phone", "whatsapp", "email"),
+        }),
+        ("Coordinates", {
+            "fields": ("latitude", "longitude"),
+        }),
+    )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        cache.delete(f"core:branch:{obj.pk}")
+        _invalidate_pattern("core:branches:*")
+
+    def delete_model(self, request, obj):
+        cache.delete(f"core:branch:{obj.pk}")
+        _invalidate_pattern("core:branches:*")
+        super().delete_model(request, obj)
+
+
+@admin.register(ContactMessage)
+class ContactMessageAdmin(admin.ModelAdmin):
+    list_display = ("name", "email", "system", "related_name", "is_read", "created")
+    list_filter = ("is_read", "system", "related_kind")
+    search_fields = ("name", "email", "subject", "message", "related_name")
+    # The message is a customer record, not editable content; everything is
+    # read-only except the read flag the inbox toggles.
+    readonly_fields = (
+        "system", "user", "name", "email", "subject", "message",
+        "related_kind", "related_id", "related_name", "created", "modified", "version",
+    )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        _invalidate_pattern("core:contact_messages:*")
+
+    def delete_model(self, request, obj):
+        _invalidate_pattern("core:contact_messages:*")
+        super().delete_model(request, obj)
+
+
 @admin.register(System)
 class SystemAdmin(admin.ModelAdmin):
     list_display = ("site_name", "host", "primary_color", "secondary_color", "enabled", "stripe_configured", "modified")
@@ -135,6 +197,15 @@ class SystemAdmin(admin.ModelAdmin):
         }),
         ("Site Description", {
             "fields": ("site_description", "en_site_description"),
+        }),
+        ("Contact", {
+            "fields": ("contact_email", "social_links"),
+            "description": (
+                "Site-wide contact details for the contact page. 'Social links' is "
+                'an ordered JSON list, e.g. [{"platform": "instagram", "url": '
+                '"https://instagram.com/acme"}]. Physical locations are managed as '
+                "Branches."
+            ),
         }),
         ("Branding", {
             "fields": (

@@ -1,0 +1,35 @@
+{% extends "users/email_base.html" %}
+{% block body %}
+  <!-- Spanish -->
+  <h1 style="margin:0 0 16px 0; font-size:22px; font-weight:700; color:#1f2933;">Nuevo mensaje de contacto</h1>
+  <p style="margin:0 0 16px 0;">Recibiste un mensaje a través del sitio de <strong>{{ site_name }}</strong>.</p>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px 0; font-size:15px; color:#1f2933;">
+    <tr>
+      <td style="padding:6px 0; color:#8a94a6; width:120px;">Nombre / Name</td>
+      <td style="padding:6px 0;"><strong>{{ sender_name }}</strong></td>
+    </tr>
+    <tr>
+      <td style="padding:6px 0; color:#8a94a6;">Correo / Email</td>
+      <td style="padding:6px 0;"><a href="mailto:{{ sender_email }}" style="color:{{ primary_color|default:'#2196f3' }};">{{ sender_email }}</a></td>
+    </tr>
+    {% if subject %}
+    <tr>
+      <td style="padding:6px 0; color:#8a94a6;">Asunto / Subject</td>
+      <td style="padding:6px 0;">{{ subject }}</td>
+    </tr>
+    {% endif %}
+    {% if related_name %}
+    <tr>
+      <td style="padding:6px 0; color:#8a94a6;">Sobre / About</td>
+      <td style="padding:6px 0;">{{ related_name }}{% if related_label %} <span style="color:#8a94a6;">({{ related_label }})</span>{% endif %}</td>
+    </tr>
+    {% endif %}
+  </table>
+
+  <div style="margin:16px 0; padding:16px 18px; background-color:#f4f5f7; border-radius:10px; font-size:15px; color:#1f2933; line-height:1.6; white-space:pre-wrap;">{{ body }}</div>
+
+  {% include "users/_email_button.html" with url=action_url label="Ver en el panel / Open in dashboard" primary_color=primary_color %}
+
+  <p style="margin:8px 0 0 0; font-size:14px; color:#52606d;">Puedes responder directamente a este correo para contestarle al cliente. / You can reply directly to this email to answer the customer.</p>
+{% endblock %}

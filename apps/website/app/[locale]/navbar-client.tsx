@@ -15,6 +15,12 @@ interface NavbarClientProps {
   /** Number of enabled menu items; drives the Food link, 0 hides it. */
   foodCount: number;
   /**
+   * Whether to show the Contact link: true when the tenant has a contact email
+   * or at least one branch, i.e. when the public contact page has something to
+   * show. Resolved server-side from the System payload.
+   */
+  showContact: boolean;
+  /**
    * Total quantity in the signed-in user's cart; 0 when logged out - a guest's
    * cart is in their browser, so it is counted here rather than on the server.
    */
@@ -27,6 +33,7 @@ export function NavbarClient({
   productCount,
   serviceCount,
   foodCount,
+  showContact,
   cartCount,
 }: NavbarClientProps) {
   const t = useTranslations("Navbar");
@@ -83,6 +90,7 @@ export function NavbarClient({
       href: "/cart",
     },
     ...(isLoggedIn ? [{ label: t("orders"), href: "/orders" }] : []),
+    ...(showContact ? [{ label: t("contact"), href: "/contact" }] : []),
     ...(isAdmin ? [{ label: t("admin"), href: "/admin" }] : []),
   ];
 

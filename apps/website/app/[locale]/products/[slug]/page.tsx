@@ -16,6 +16,7 @@ import {
   ProductDetailHeader,
   ProductDetailPanel,
   ProductDetailSections,
+  ProductDetailQuestion,
 } from "@/components/product-detail";
 
 type Props = {
@@ -182,6 +183,7 @@ export default async function ProductPage({ params }: Props) {
           </Grid>
         </Grid>
         <ProductDetailSections product={product} locale={locale} />
+        <ProductDetailQuestion product={product} locale={locale} />
       </Container>
     </>
   );

@@ -8,14 +8,45 @@ from rest_framework import serializers
 from . import image_sizes
 from .image_sizes import REGULAR, SMALL, MEDIUM, STANDARD, image_cfg
 from .models import (
+    Branch,
     Brand,
     CompanyHighlight,
     CompanyHighlightItem,
+    ContactMessage,
     SuccessStory,
     SuccessStoryImage,
     System,
     validate_google_font_url,
 )
+
+
+def validate_social_links(value):
+    """Normalise a `social_links` value to a list of {"platform", "url"} dicts.
+
+    Shared by the System write serializer (and available to anything else that
+    stores the same shape). Enforces the shape only - the platform is free-form
+    and lowercased, so a new network needs no code change. Raises
+    ``serializers.ValidationError`` on a malformed blob.
+    """
+    if value in (None, ""):
+        return []
+    if not isinstance(value, list):
+        raise serializers.ValidationError("Must be a list of social links.")
+    if len(value) > 20:
+        raise serializers.ValidationError("At most twenty social links are allowed.")
+    cleaned = []
+    for entry in value:
+        if not isinstance(entry, dict):
+            raise serializers.ValidationError("Each link must be an object.")
+        platform = entry.get("platform")
+        url = entry.get("url")
+        if not platform or not isinstance(platform, str):
+            raise serializers.ValidationError("Each link needs a platform.")
+        if not url or not isinstance(url, str):
+            raise serializers.ValidationError("Each link needs a url.")
+        cleaned.append({"platform": platform.strip().lower()[:32], "url": url.strip()[:512]})
+    return cleaned
+
 
 # ---------------------------------------------------------------------------
 # Image processing
@@ -473,6 +504,7 @@ class SystemSerializer(serializers.ModelSerializer):
     product_count = serializers.SerializerMethodField()
     service_count = serializers.SerializerMethodField()
     menu_item_count = serializers.SerializerMethodField()
+    branch_count = serializers.SerializerMethodField()
     stripe_configured = serializers.BooleanField(read_only=True)
     stripe_webhook_url = serializers.SerializerMethodField()
 
@@ -492,6 +524,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "img_manifest_1080", "img_manifest_512", "img_manifest_256", "img_manifest_192", "img_manifest_128",
             "img_brandmark",
             "img_hero", "video_link", "slogan", "primary_color", "secondary_color",
+            "contact_email", "social_links",
             "highlights_bg",
             "highlights_title", "en_highlights_title",
             "highlights_subtitle", "en_highlights_subtitle",
@@ -521,6 +554,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "spotlight_button_label", "en_spotlight_button_label",
             "spotlight_button_link", "spotlight_items",
             "product_count", "service_count", "menu_item_count",
+            "branch_count",
         ]
 
     def _image_url(self, obj, field_name):
@@ -577,9 +611,15 @@ class SystemSerializer(serializers.ModelSerializer):
         from catalog.models import MenuItem
         return MenuItem.objects.filter(system=obj, enabled=True).count()
 
+    def get_branch_count(self, obj):
+        # Drives whether the public Contact link appears (a Contact page is worth
+        # showing once a tenant has a physical location or a contact email).
+        return obj.branches.filter(enabled=True).count()
+
 
 _TEXT_FIELDS = [
     "site_name", "site_description", "en_site_description", "host", "video_link", "slogan", "primary_color", "secondary_color",
+    "contact_email", "social_links",
     "highlights_bg",
     "highlights_title", "en_highlights_title",
     "highlights_subtitle", "en_highlights_subtitle",
@@ -629,6 +669,9 @@ class SystemWriteSerializer(serializers.Serializer):
     slogan          = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     primary_color   = serializers.CharField(max_length=16, required=False)
     secondary_color = serializers.CharField(max_length=16, required=False)
+    # Site-wide contact details (see the model). Business contact info, not PII.
+    contact_email   = serializers.EmailField(max_length=254, required=False, allow_null=True, allow_blank=True)
+    social_links    = serializers.JSONField(required=False)
     highlights_bg   = serializers.CharField(max_length=512, required=False, allow_null=True, allow_blank=True)
     highlights_title    = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     en_highlights_title = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
@@ -777,6 +820,13 @@ class SystemWriteSerializer(serializers.Serializer):
             cleaned.append({"kind": kind, "id": item_id})
         return cleaned
 
+    def validate_social_links(self, value):
+        """A list of {"platform", "url"} refs; shape only, so a malformed blob
+        can't land in the JSON column. The platform is free-form (lowercased) so
+        a new network needs no code change - the frontend maps it to an icon and
+        falls back to a globe for one it doesn't recognise."""
+        return validate_social_links(value)
+
     def validate(self, attrs):
         for field_name, cfg in _IMAGE_FIELDS.items():
             value = attrs.get(field_name)
@@ -887,6 +937,95 @@ class BrandWriteSerializer(serializers.Serializer):
             instance.save(update_fields=update_fields)
 
         return instance
+
+
+# ---------------------------------------------------------------------------
+# Branch
+# ---------------------------------------------------------------------------
+
+class BranchSerializer(serializers.ModelSerializer):
+    """Read serializer for a physical location. Public - business contact info."""
+
+    class Meta:
+        model = Branch
+        fields = [
+            "id", "enabled", "created", "modified",
+            "system", "is_main",
+            "name", "en_name", "address", "phone", "whatsapp", "email",
+            "latitude", "longitude", "sort_order",
+        ]
+
+
+class BranchWriteSerializer(serializers.Serializer):
+    """Write serializer for Branch - all fields optional (PATCH semantics)."""
+
+    system     = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), required=False, allow_null=True)
+    is_main    = serializers.BooleanField(required=False)
+    name       = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    en_name    = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    address    = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    phone      = serializers.CharField(max_length=32, required=False, allow_null=True, allow_blank=True)
+    whatsapp   = serializers.CharField(max_length=32, required=False, allow_null=True, allow_blank=True)
+    email      = serializers.EmailField(max_length=254, required=False, allow_null=True, allow_blank=True)
+    latitude   = serializers.DecimalField(max_digits=10, decimal_places=8, required=False, allow_null=True, min_value=-90, max_value=90)
+    longitude  = serializers.DecimalField(max_digits=11, decimal_places=8, required=False, allow_null=True, min_value=-180, max_value=180)
+    enabled    = serializers.BooleanField(required=False)
+    sort_order = serializers.IntegerField(min_value=0, required=False)
+
+    _SCALAR_FIELDS = [
+        "system", "is_main", "name", "en_name", "address", "phone", "whatsapp",
+        "email", "latitude", "longitude", "enabled", "sort_order",
+    ]
+
+    def save(self, instance):
+        update_fields = []
+        for field_name in self._SCALAR_FIELDS:
+            if field_name in self.validated_data:
+                setattr(instance, field_name, self.validated_data[field_name])
+                update_fields.append(field_name)
+        if update_fields:
+            instance.save(update_fields=update_fields)
+        return instance
+
+
+# ---------------------------------------------------------------------------
+# Contact messages
+# ---------------------------------------------------------------------------
+
+class ContactMessageSerializer(serializers.ModelSerializer):
+    """Read serializer for the admin inbox. Carries the customer's PII, so it is
+    only ever served behind IsSystemAdmin - never a public endpoint."""
+
+    class Meta:
+        model = ContactMessage
+        fields = [
+            "id", "created", "modified", "system",
+            "name", "email", "subject", "message",
+            "related_kind", "related_id", "related_name",
+            "is_read",
+        ]
+
+
+class ContactMessageCreateSerializer(serializers.Serializer):
+    """Public create serializer for a customer's contact-form submission.
+
+    `name`/`email` are required only for an anonymous sender; the view fills them
+    from the account for a signed-in one and ignores whatever the body claimed
+    (so a logged-in user can't spoof another address). The related-item fields are
+    optional and only present when the form was embedded on a detail page.
+    """
+
+    name    = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    email   = serializers.EmailField(max_length=254, required=False, allow_blank=True)
+    subject = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    message = serializers.CharField(max_length=5000)
+
+    related_kind = serializers.ChoiceField(
+        choices=[c[0] for c in ContactMessage.RELATED_KIND_CHOICES],
+        required=False, allow_null=True, allow_blank=True,
+    )
+    related_id   = serializers.IntegerField(required=False, allow_null=True, min_value=1)
+    related_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
 
 
 # ---------------------------------------------------------------------------

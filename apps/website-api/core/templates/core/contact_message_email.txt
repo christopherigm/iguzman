@@ -1,0 +1,16 @@
+Nuevo mensaje de contacto / New contact message
+{{ site_name }}
+
+Nombre / Name: {{ sender_name }}
+Correo / Email: {{ sender_email }}
+{% if subject %}Asunto / Subject: {{ subject }}
+{% endif %}{% if related_name %}Sobre / About: {{ related_name }}{% if related_label %} ({{ related_label }}){% endif %}
+{% endif %}
+Mensaje / Message:
+{{ body }}
+
+Ver en el panel / Open in dashboard:
+{{ action_url }}
+
+Puedes responder directamente a este correo para contestarle al cliente.
+You can reply directly to this email to answer the customer.

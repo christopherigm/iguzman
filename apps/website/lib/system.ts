@@ -7,6 +7,7 @@ import type {
 import { getTenantHost } from "./resolve-site";
 import { API_URL } from "./config";
 import logger from "./logger";
+import type { SocialLink } from "./contact";
 
 /**
  * A reference to one hand-picked catalog item in the Spotlight section. Same
@@ -43,6 +44,10 @@ export interface System {
   slogan: string | null;
   primary_color: string;
   secondary_color: string;
+  /** Site-wide contact email shown on the contact page (business info, not PII). */
+  contact_email: string | null;
+  /** Ordered social links; the frontend maps each platform to its icon. */
+  social_links: SocialLink[];
   highlights_bg: string | null;
   highlights_title: string | null;
   en_highlights_title: string | null;
@@ -139,6 +144,8 @@ export interface System {
   product_count: number;
   service_count: number;
   menu_item_count: number;
+  /** Number of enabled physical locations; drives the Contact link alongside `contact_email`. */
+  branch_count: number;
 }
 
 /**

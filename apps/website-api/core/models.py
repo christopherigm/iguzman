@@ -345,6 +345,27 @@ class System(Common):
     primary_color = models.CharField(max_length=16, null=False, blank=False, default="#2196f3")
     secondary_color = models.CharField(max_length=16, null=False, blank=False, default="#e040fb")
 
+    # ── Contact ───────────────────────────────────────────────────────────────
+    # Site-wide contact details, rendered on the public contact page (and reused
+    # on other pages later - footer, item pages). Unlike a `Branch`, these belong
+    # to the business as a whole, not to any one physical location: a pure-online
+    # business has an email and social links but no address. This is *business*
+    # contact info meant to be published (the contact page is its whole point),
+    # not user PII - it appears on the AllowAny GET /api/system/.
+    contact_email = models.EmailField(max_length=254, null=True, blank=True)
+    # An ordered list of {"platform": "instagram", "url": "https://..."} refs.
+    # A JSON list rather than one column per network so a tenant can add, drop or
+    # reorder platforms without a migration; the frontend maps each platform to
+    # its icon and falls back to a generic globe for an unknown one.
+    social_links = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            'Ordered social links, e.g. '
+            '[{"platform": "instagram", "url": "https://instagram.com/acme"}].'
+        ),
+    )
+
     about = models.TextField(null=True, blank=True)
     en_about = models.TextField(null=True, blank=True)
     mission = models.TextField(null=True, blank=True)
@@ -722,3 +743,123 @@ class System(Common):
             and self.stripe_secret_key_encrypted
             and self.stripe_webhook_secret_encrypted
         )
+
+
+class Branch(Common):
+    """A physical location for a System.
+
+    One System has one *or more* branches. A single-location business has exactly
+    one, flagged ``is_main``; the contact page then renders a single-location view
+    rather than a grid of cards. A pure-online business may have none at all - its
+    contact details then live only on `System` (email, social links).
+
+    The location fields live here, never duplicated on `System`: the "main"
+    location is simply the branch with ``is_main=True``. Products, services and
+    menu items will link to branches in a later task.
+    """
+
+    system = models.ForeignKey(
+        "core.System",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="branches",
+    )
+    # Exactly one branch per system should carry this; it decides which location
+    # the single-location view shows and sorts first in the grid. Not a DB
+    # constraint because enforcing "at most one true per system" is noisy to
+    # migrate and the CMS owns the invariant.
+    is_main = models.BooleanField(default=False)
+
+    name = models.CharField(max_length=255, null=True, blank=True)
+    en_name = models.CharField(max_length=255, null=True, blank=True)
+    # Optional: a pure-online branch (e.g. a pickup-by-appointment number) may
+    # have a phone but no street address.
+    address = models.TextField(null=True, blank=True)
+    phone = models.CharField(max_length=32, null=True, blank=True)
+    # Digits (with country code) for the wa.me link the frontend builds.
+    whatsapp = models.CharField(max_length=32, null=True, blank=True)
+    email = models.EmailField(max_length=254, null=True, blank=True)
+
+    # Coordinates for the map pointer. Stored as decimals (not a single "lat,lng"
+    # string) so they validate and the frontend needn't parse. Latitude spans
+    # -90..90 (2 whole digits), longitude -180..180 (3), hence the wider longitude
+    # precision. 8 decimal places (~1mm) comfortably holds any pasted coordinate -
+    # Google Maps' "copy coordinates" gives 7, which the old 6 places rejected.
+    latitude = models.DecimalField(max_digits=10, decimal_places=8, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=11, decimal_places=8, null=True, blank=True)
+
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Branch"
+        verbose_name_plural = "Branches"
+        # Main location first, then manual order, then newest.
+        ordering = ["-is_main", "sort_order", "-created"]
+
+    def __str__(self):
+        return self.name or f"Branch #{self.pk}"
+
+
+class ContactMessage(Common):
+    """A question a customer sent through a contact form.
+
+    Sent either from the site's contact page or from a product/service/menu-item
+    detail page - the latter records which item it was about, so an admin reading
+    the inbox knows the context without the customer having to spell it out.
+
+    Stores customer PII (name/email), so it is exposed only to a tenant's own
+    admins (the inbox), never on any public endpoint. A logged-in sender is linked
+    via `user`, and their account name/email are used rather than trusting the body.
+    """
+
+    # The three catalog families a message may be about (the frontend's kind
+    # names, matching the guest-cart / spotlight refs). Blank = a general enquiry.
+    KIND_PRODUCT = "product"
+    KIND_SERVICE = "service"
+    KIND_FOOD = "food"
+    RELATED_KIND_CHOICES = (
+        (KIND_PRODUCT, "Product"),
+        (KIND_SERVICE, "Service"),
+        (KIND_FOOD, "Menu item"),
+    )
+
+    system = models.ForeignKey(
+        "core.System",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="contact_messages",
+    )
+    # Set when the sender was signed in; the account is the source of name/email.
+    user = models.ForeignKey(
+        "auth.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    name = models.CharField(max_length=255)
+    email = models.EmailField(max_length=254)
+    subject = models.CharField(max_length=255, null=True, blank=True)
+    message = models.TextField()
+
+    # What the message is about, if it came from an item detail page. `related_id`
+    # is a plain int, not an FK, because it can point at any of three models; the
+    # name is snapshotted so the inbox reads correctly even after the item is
+    # renamed or deleted.
+    related_kind = models.CharField(
+        max_length=16, choices=RELATED_KIND_CHOICES, null=True, blank=True
+    )
+    related_id = models.PositiveIntegerField(null=True, blank=True)
+    related_name = models.CharField(max_length=255, null=True, blank=True)
+
+    is_read = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Contact Message"
+        verbose_name_plural = "Contact Messages"
+        ordering = ["-created"]
+
+    def __str__(self):
+        return f"Message from {self.name} ({self.email})"

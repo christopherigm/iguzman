@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import { type NewImage } from "@/components/admin-image-uploader/admin-image-uploader";
 import { SystemImages, type SystemImageState } from "./system-images";
+import { ContactSection } from "./contact-section";
 import { PaymentsSection } from "./payments-section";
 import { SpotlightSection } from "./spotlight-section";
 import { WatermarkSection } from "./watermark-section";
@@ -15,6 +16,7 @@ import {
   SYSTEM_IMAGE_FIELDS,
 } from "./system-image-fields";
 import { getSystem, updateSystem } from "@/lib/admin-api";
+import type { SocialLink } from "@/lib/contact";
 import { useSession } from "@repo/auth/session-provider";
 import { GradientBuilder } from "@repo/ui/core-elements/gradient-builder";
 import { Box } from "@repo/ui/core-elements/box";
@@ -46,6 +48,8 @@ export default function AdminSystemPage() {
     video_link: "",
     primary_color: "#2196f3",
     secondary_color: "#e040fb",
+    contact_email: "",
+    social_links: [],
     highlights_bg: "",
     highlights_title: "",
     en_highlights_title: "",
@@ -161,6 +165,8 @@ export default function AdminSystemPage() {
           video_link: data.video_link ?? "",
           primary_color: data.primary_color ?? "#2196f3",
           secondary_color: data.secondary_color ?? "#e040fb",
+          contact_email: data.contact_email ?? "",
+          social_links: data.social_links ?? [],
           highlights_bg: data.highlights_bg ?? "",
           highlights_title: data.highlights_title ?? "",
           en_highlights_title: data.en_highlights_title ?? "",
@@ -306,11 +312,22 @@ export default function AdminSystemPage() {
     setSuccess(null);
     try {
       const payload: Record<string, unknown> = { ...values };
-      ["video_link", "slogan", "highlights_bg", "catalog_items_bg"].forEach(
-        (k) => {
-          if (payload[k] === "") payload[k] = null;
-        },
-      );
+      [
+        "video_link",
+        "slogan",
+        "highlights_bg",
+        "catalog_items_bg",
+        "contact_email",
+      ].forEach((k) => {
+        if (payload[k] === "") payload[k] = null;
+      });
+      // Drop incomplete social-link rows (no URL) so the API validator, which
+      // requires a URL on every entry, doesn't reject the whole save.
+      if (Array.isArray(payload.social_links)) {
+        payload.social_links = (payload.social_links as SocialLink[]).filter(
+          (l) => l && l.url && l.url.trim() !== "",
+        );
+      }
       // A blank secret means "leave it alone", not "clear it" - the API never
       // sends these back, so the fields load blank on every visit, and
       // submitting "" would wipe the tenant's Stripe keys the first time anyone
@@ -582,6 +599,12 @@ export default function AdminSystemPage() {
                     setValues((prev) => ({ ...prev, [k]: v }))
                   }
                   systemId={systemId}
+                />
+                <ContactSection
+                  values={values}
+                  onChange={(k, v) =>
+                    setValues((prev) => ({ ...prev, [k]: v }))
+                  }
                 />
                 <Box paddingTop={32}>
                   <PaymentsSection

@@ -241,6 +241,10 @@ export default async function LocaleLayout({ children, params }: Props) {
                     productCount={system?.product_count ?? 0}
                     serviceCount={system?.service_count ?? 0}
                     foodCount={system?.menu_item_count ?? 0}
+                    showContact={
+                      !!system?.contact_email ||
+                      (system?.branch_count ?? 0) > 0
+                    }
                     cartCount={cartCount}
                   />
                   {/* Renders nothing; folds a guest's localStorage cart and

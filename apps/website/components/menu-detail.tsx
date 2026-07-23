@@ -15,6 +15,7 @@ import { FavoriteButton } from "./favorite-button";
 import { NutritionLabel } from "./nutrition-label";
 import { AdminEditButton } from "./admin-edit-button";
 import { VariantThumbs } from "./variant-thumbs";
+import { ContactFormClient } from "./contact/contact-form-client";
 
 interface MenuDetailProps {
   item: MenuItemDetail;
@@ -299,6 +300,31 @@ export async function MenuDetailSections({ item, locale }: MenuDetailProps) {
       >
         {description}
       </Typography>
+    </Card>
+  );
+}
+
+/**
+ * "Ask a question about this item" - the shared contact form, embedded on the
+ * menu-item detail page and pre-tagged with this dish so the message reaches the
+ * inbox with its context. Rendered full-width below the description.
+ */
+export async function MenuDetailQuestion({ item, locale }: MenuDetailProps) {
+  const t = await getTranslations("Contact");
+
+  const name =
+    (locale === "en" ? item.en_name : item.name) ??
+    item.name ??
+    item.en_name ??
+    "";
+
+  return (
+    <Card width="100%">
+      <ContactFormClient
+        heading={t("askAboutHeading")}
+        description={t("askAboutDescription")}
+        related={{ kind: "food", id: item.id, name }}
+      />
     </Card>
   );
 }

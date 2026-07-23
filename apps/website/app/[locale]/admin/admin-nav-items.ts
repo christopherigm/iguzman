@@ -1,6 +1,18 @@
 export const ADMIN_NAV_ITEMS = [
   { key: "system", href: "/admin/system", icon: "⚙️", descKey: "systemDesc" },
   { key: "orders", href: "/admin/orders", icon: "📋", descKey: "ordersDesc" },
+  {
+    key: "messages",
+    href: "/admin/messages",
+    icon: "✉️",
+    descKey: "messagesDesc",
+  },
+  {
+    key: "branches",
+    href: "/admin/branches",
+    icon: "📍",
+    descKey: "branchesDesc",
+  },
   { key: "users", href: "/admin/users", icon: "👥", descKey: "usersDesc" },
   { key: "brands", href: "/admin/brands", icon: "🎯", descKey: "brandsDesc" },
   {

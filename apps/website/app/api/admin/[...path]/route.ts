@@ -9,6 +9,10 @@ const ALLOWED_PREFIXES = [
   "system/",
   "catalog/",
   "brands/",
+  "branches/",
+  // Only the admin inbox is proxied - the public create endpoint
+  // (`contact-messages/`) is not, so the CMS surface stays admin-only.
+  "contact-messages/admin/",
   "success-stories/",
   "highlights/",
   "check-slug/",

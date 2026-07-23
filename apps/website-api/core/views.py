@@ -13,15 +13,19 @@ from rest_framework.views import APIView
 
 from core.permissions import IsSystemAdmin, show_disabled
 from .cache import invalidate_pattern as _invalidate_pattern
-from .models import Brand, CompanyHighlight, CompanyHighlightItem, SuccessStory, SuccessStoryImage, System
+from .models import Branch, Brand, CompanyHighlight, CompanyHighlightItem, ContactMessage, SuccessStory, SuccessStoryImage, System
 from .serializers import (
     AiChatSerializer,
+    BranchSerializer,
+    BranchWriteSerializer,
     BrandSerializer,
     BrandWriteSerializer,
     CompanyHighlightItemSerializer,
     CompanyHighlightItemWriteSerializer,
     CompanyHighlightSerializer,
     CompanyHighlightWriteSerializer,
+    ContactMessageCreateSerializer,
+    ContactMessageSerializer,
     SuccessStoryImageSerializer,
     SuccessStoryImageWriteSerializer,
     SuccessStorySerializer,
@@ -29,6 +33,7 @@ from .serializers import (
     SystemSerializer,
     SystemWriteSerializer,
 )
+from core.services.contact import send_contact_message_notification
 from core.services.llm import stream_chat
 from core.site_payload import apply_payload
 
@@ -777,6 +782,246 @@ class BrandDetailView(APIView):
         cache.delete(f"core:brand:{pk}")
         _invalidate_pattern("core:brands:*")
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class BranchListCreateView(APIView):
+    """
+    GET  /api/branches/   - list branches for the current system (by ?system= or host).
+    POST /api/branches/   - create a branch (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def get(self, request):
+        disabled_visible = show_disabled(request)
+        suffix = _disabled_suffix(disabled_visible)
+        system_id = request.query_params.get("system")
+        if system_id:
+            cache_key = f"core:branches:system:{system_id}{suffix}"
+        else:
+            host = (request.META.get("HTTP_X_WEBSITE_HOST") or request.get_host()).split(":")[0]
+            system = System.objects.filter(host=host, enabled=True).first()
+            if system is None:
+                return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
+            system_id = system.id
+            cache_key = f"core:branches:{system.host}{suffix}"
+
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        qs = Branch.objects.filter(system_id=system_id)
+        if not disabled_visible:
+            qs = qs.filter(enabled=True)
+        data = BranchSerializer(qs, many=True, context={"request": request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
+
+    def post(self, request):
+        system_id = _get_admin_system_id(request)
+        serializer = BranchWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = Branch()
+        if system_id and "system" not in serializer.validated_data:
+            instance.system_id = system_id
+        instance.save()
+        instance = serializer.save(instance)
+        _invalidate_pattern("core:branches:*")
+        return Response(
+            BranchSerializer(instance, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class BranchDetailView(APIView):
+    """
+    GET    /api/branches/<pk>/   - retrieve a branch (public).
+    PATCH  /api/branches/<pk>/   - partial update (admin only).
+    DELETE /api/branches/<pk>/   - delete (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def _get_object(self, pk):
+        try:
+            return Branch.objects.get(pk=pk)
+        except Branch.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        cache_key = f"core:branch:{pk}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        instance = self._get_object(pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        data = BranchSerializer(instance, context={"request": request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
+
+    def patch(self, request, pk):
+        instance = self._get_object(pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        admin_system_id = _get_admin_system_id(request)
+        if admin_system_id and instance.system_id and instance.system_id != admin_system_id:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = BranchWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save(instance)
+        cache.delete(f"core:branch:{pk}")
+        _invalidate_pattern("core:branches:*")
+        return Response(BranchSerializer(instance, context={"request": request}).data)
+
+    def delete(self, request, pk):
+        instance = self._get_object(pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        admin_system_id = _get_admin_system_id(request)
+        if admin_system_id and instance.system_id and instance.system_id != admin_system_id:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        instance.delete()
+        cache.delete(f"core:branch:{pk}")
+        _invalidate_pattern("core:branches:*")
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ContactMessageCreateView(APIView):
+    """POST /api/contact-messages/ - a customer sends a question (public).
+
+    Anonymous by design (a visitor need not have an account to ask something),
+    but a signed-in sender is linked and their account name/email are used rather
+    than whatever the body claims. Scoped to the tenant by request host for a
+    guest, by the account's own system for a signed-in user - never let a header
+    pick a logged-in user's tenant. On success the tenant's admins are emailed.
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = ContactMessageCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        user = request.user if request.user.is_authenticated else None
+        if user is not None:
+            system = _signed_in_system(user)
+            name = (f"{user.first_name} {user.last_name}".strip() or user.username)
+            email = user.email
+        else:
+            host = (request.META.get("HTTP_X_WEBSITE_HOST") or request.get_host()).split(":")[0]
+            system = System.objects.filter(host=host, enabled=True).first()
+            name = (data.get("name") or "").strip()
+            email = (data.get("email") or "").strip()
+
+        if system is None:
+            return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
+        if not name or not email:
+            # A guest must supply both; a signed-in account always has them.
+            return Response(
+                {"detail": "Name and email are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        message = ContactMessage.objects.create(
+            system=system,
+            user=user,
+            name=name[:255],
+            email=email,
+            subject=(data.get("subject") or None),
+            message=data["message"],
+            related_kind=(data.get("related_kind") or None),
+            related_id=data.get("related_id"),
+            related_name=(data.get("related_name") or None),
+        )
+        _invalidate_pattern("core:contact_messages:*")
+
+        # Never let a mail failure lose the customer's message - it is already
+        # saved and visible in the inbox; the email is a best-effort nudge.
+        try:
+            send_contact_message_notification(message)
+        except Exception:
+            logger.exception("Failed to send contact-message notification for #%s", message.pk)
+
+        return Response(
+            {"detail": "Message sent.", "id": message.pk},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class AdminContactMessageListView(APIView):
+    """GET /api/contact-messages/admin/ - the tenant's inbox (admin only)."""
+
+    permission_classes = [IsSystemAdmin]
+
+    def get(self, request):
+        system_id = _get_admin_system_id(request)
+        cache_key = f"core:contact_messages:system:{system_id}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        qs = ContactMessage.objects.filter(system_id=system_id)
+        data = ContactMessageSerializer(qs, many=True, context={"request": request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
+
+
+class AdminContactMessageDetailView(APIView):
+    """
+    GET    /api/contact-messages/admin/<pk>/  - one message (admin only).
+    PATCH  /api/contact-messages/admin/<pk>/  - mark read/unread (admin only).
+    DELETE /api/contact-messages/admin/<pk>/  - delete (admin only).
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    def _get_object(self, request, pk):
+        system_id = _get_admin_system_id(request)
+        try:
+            return ContactMessage.objects.get(pk=pk, system_id=system_id)
+        except ContactMessage.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        instance = self._get_object(request, pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        # Opening a message marks it read, so the inbox unread count is truthful.
+        if not instance.is_read:
+            instance.is_read = True
+            instance.save(update_fields=["is_read"])
+            _invalidate_pattern("core:contact_messages:*")
+        return Response(ContactMessageSerializer(instance, context={"request": request}).data)
+
+    def patch(self, request, pk):
+        instance = self._get_object(request, pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        if "is_read" in request.data:
+            instance.is_read = bool(request.data["is_read"])
+            instance.save(update_fields=["is_read"])
+            _invalidate_pattern("core:contact_messages:*")
+        return Response(ContactMessageSerializer(instance, context={"request": request}).data)
+
+    def delete(self, request, pk):
+        instance = self._get_object(request, pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        instance.delete()
+        _invalidate_pattern("core:contact_messages:*")
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def _signed_in_system(user):
+    """The tenant a signed-in sender belongs to (its profile System), or None."""
+    from core.tenancy import profile_system
+    return profile_system(user)
 
 
 class SlugCheckView(APIView):

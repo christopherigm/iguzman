@@ -44,6 +44,11 @@ export async function Footer({ logo, system }: Props) {
     // Both work logged-out - a guest's cart and hearts live in their browser.
     { label: t("favorites"), href: "/favorites" },
     { label: t("cart"), href: "/cart" },
+    // A Contact link once the tenant has something to show there: a contact
+    // email or at least one physical location. Same rule as the navbar.
+    ...(system?.contact_email || (system?.branch_count ?? 0) > 0
+      ? [{ label: t("contact"), href: "/contact" }]
+      : []),
   ];
 
   // "About" is not a platform route: each site declares its own /about in its

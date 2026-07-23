@@ -66,6 +66,10 @@ SYSTEM_TEXT_FIELDS = (
     "en_mission",
     "vision",
     "en_vision",
+    # Site-wide contact details - portable (no per-environment ids). Physical
+    # `Branch` locations are NOT published here; they are per-environment content.
+    "contact_email",
+    "social_links",
     "highlights_bg",
     "highlights_title",
     "en_highlights_title",

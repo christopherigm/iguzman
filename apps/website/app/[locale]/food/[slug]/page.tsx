@@ -17,6 +17,7 @@ import {
   MenuDetailSections,
   MenuDetailAllergens,
   MenuDetailNutrition,
+  MenuDetailQuestion,
   menuItemShowsNutrition,
   enabledIngredients,
 } from "@/components/menu-detail";
@@ -189,6 +190,13 @@ export default async function MenuItemPage({ params }: Props) {
               </Grid>
             </Grid>
           )}
+
+          {/* Row 6: "ask a question about this item" contact form. */}
+          <Grid container spacing={2} marginTop={18}>
+            <Grid size={{ xs: 12 }}>
+              <MenuDetailQuestion item={item} locale={locale} />
+            </Grid>
+          </Grid>
         </MenuCustomizationProvider>
       </Container>
     </>

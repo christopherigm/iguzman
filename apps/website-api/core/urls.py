@@ -1,7 +1,11 @@
 from django.urls import path
 
 from .views import (
+    AdminContactMessageDetailView,
+    AdminContactMessageListView,
     AiChatView,
+    BranchDetailView,
+    BranchListCreateView,
     BrandDetailView,
     BrandListCreateView,
     CompanyHighlightBySlugView,
@@ -9,6 +13,7 @@ from .views import (
     CompanyHighlightItemDetailView,
     CompanyHighlightItemsView,
     CompanyHighlightListView,
+    ContactMessageCreateView,
     PublishSiteView,
     SlugCheckView,
     SuccessStoryBySlugView,
@@ -40,6 +45,15 @@ urlpatterns = [
 
     path("brands/", BrandListCreateView.as_view(), name="brand-list"),
     path("brands/<int:pk>/", BrandDetailView.as_view(), name="brand-detail"),
+
+    path("branches/", BranchListCreateView.as_view(), name="branch-list"),
+    path("branches/<int:pk>/", BranchDetailView.as_view(), name="branch-detail"),
+
+    # Public create; admin inbox is under /admin/ so the allowlist can tell them
+    # apart (only the admin paths carry customer PII).
+    path("contact-messages/", ContactMessageCreateView.as_view(), name="contact-message-create"),
+    path("contact-messages/admin/", AdminContactMessageListView.as_view(), name="contact-message-admin-list"),
+    path("contact-messages/admin/<int:pk>/", AdminContactMessageDetailView.as_view(), name="contact-message-admin-detail"),
 
     path("check-slug/", SlugCheckView.as_view(), name="check-slug"),
 

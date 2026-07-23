@@ -687,6 +687,78 @@ export async function deleteHighlight(pk: number) {
   return parseResponse<void>(res);
 }
 
+// ---- Branches (physical locations) ----
+export async function listBranches(systemId: number) {
+  const res = await adminFetch(
+    `/api/branches/?system=${systemId}&include_disabled=true`,
+  );
+  return parseResponse<Record<string, unknown>[]>(res);
+}
+export async function getBranch(pk: number) {
+  const res = await adminFetch(`/api/branches/${pk}/`);
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function createBranch(data: Record<string, unknown>) {
+  const res = await adminFetch(`/api/branches/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function updateBranch(pk: number, data: Record<string, unknown>) {
+  const res = await adminFetch(`/api/branches/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function deleteBranch(pk: number) {
+  const res = await adminFetch(`/api/branches/${pk}/`, { method: "DELETE" });
+  return parseResponse<void>(res);
+}
+
+// ---- Contact messages (inbox) ----
+
+/** One message in the admin inbox (see the API's ContactMessageSerializer). */
+export interface AdminContactMessage {
+  id: number;
+  created: string;
+  modified: string;
+  name: string;
+  email: string;
+  subject: string | null;
+  message: string;
+  related_kind: "product" | "service" | "food" | null;
+  related_id: number | null;
+  related_name: string | null;
+  is_read: boolean;
+}
+
+export async function listContactMessages() {
+  const res = await adminFetch(`/api/contact-messages/admin/`);
+  return parseResponse<AdminContactMessage[]>(res);
+}
+export async function getContactMessage(pk: number) {
+  const res = await adminFetch(`/api/contact-messages/admin/${pk}/`);
+  return parseResponse<AdminContactMessage>(res);
+}
+export async function updateContactMessage(
+  pk: number,
+  data: { is_read?: boolean },
+) {
+  const res = await adminFetch(`/api/contact-messages/admin/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<AdminContactMessage>(res);
+}
+export async function deleteContactMessage(pk: number) {
+  const res = await adminFetch(`/api/contact-messages/admin/${pk}/`, {
+    method: "DELETE",
+  });
+  return parseResponse<void>(res);
+}
+
 // ---- Slug check ----
 export async function checkSlug(
   model: string,

@@ -15,6 +15,7 @@ import { BuyNowButton } from "./buy-now-button";
 import { FavoriteButton } from "./favorite-button";
 import { AdminEditButton } from "./admin-edit-button";
 import { VariantThumbs } from "./variant-thumbs";
+import { ContactFormClient } from "./contact/contact-form-client";
 
 interface ProductDetailProps {
   product: ProductDetail;
@@ -337,6 +338,34 @@ export async function ProductDetailSections({
       >
         {description}
       </Typography>
+    </Card>
+  );
+}
+
+/**
+ * "Ask a question about this product" - the shared contact form, embedded on the
+ * detail page and pre-tagged with this product so the message lands in the inbox
+ * with its context. Rendered full-width below the description.
+ */
+export async function ProductDetailQuestion({
+  product,
+  locale,
+}: ProductDetailProps) {
+  const t = await getTranslations("Contact");
+
+  const name =
+    (locale === "en" ? product.en_name : product.name) ??
+    product.name ??
+    product.en_name ??
+    "";
+
+  return (
+    <Card width="100%">
+      <ContactFormClient
+        heading={t("askAboutHeading")}
+        description={t("askAboutDescription")}
+        related={{ kind: "product", id: product.id, name }}
+      />
     </Card>
   );
 }
