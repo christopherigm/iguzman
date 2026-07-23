@@ -486,9 +486,60 @@ export default function AdminSocialPostFormPage({ params }: Props) {
           { label: isNew ? t("newItem") : t("edit") },
         ]}
       />
-      <Typography as="h1" variant="h3" marginBottom={24}>
-        {isNew ? t("socialPostNew") : t("socialPostEdit")}
-      </Typography>
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        gap={16}
+        marginBottom={24}
+      >
+        <Typography as="h1" variant="h3" margin={0}>
+          {isNew ? t("socialPostNew") : t("socialPostEdit")}
+        </Typography>
+        <Box display="flex" alignItems="center" gap={8}>
+          <Button
+            text={tCommon("cancel")}
+            size="md"
+            href="/admin/social-posts"
+          />
+          <Button
+            text={saving ? t("saving") : t("save")}
+            kind="primary"
+            size="md"
+            onClick={() => void handleSubmit()}
+            disabled={saving}
+          />
+        </Box>
+      </Box>
+
+      {/* Enabled status toggle, above the form — matches the CMS inner pages. */}
+      <Box
+        display="flex"
+        alignItems="center"
+        flexWrap="wrap"
+        gap={24}
+        marginBottom={24}
+        paddingBottom={16}
+        styles={{
+          borderBottom:
+            "1px solid color-mix(in srgb, var(--foreground) 20%, transparent)",
+        }}
+      >
+        <Box display="flex" alignItems="center" gap={10}>
+          <Switch
+            checked={Boolean(values.enabled)}
+            onChange={(v) => set("enabled", v)}
+          />
+          <Typography
+            as="span"
+            variant="body"
+            fontWeight={500}
+            color="var(--foreground)"
+          >
+            {t("enabled")}
+          </Typography>
+        </Box>
+      </Box>
 
       <Grid container spacing={3}>
         {/* ── Controls ── */}
@@ -592,26 +643,6 @@ export default function AdminSocialPostFormPage({ params }: Props) {
                 checked={Boolean(values.include_hashtags)}
                 onChange={(v) => set("include_hashtags", v)}
               />
-              <ToggleRow
-                label={t("enabled")}
-                checked={Boolean(values.enabled)}
-                onChange={(v) => set("enabled", v)}
-              />
-            </Box>
-
-            <Box display="flex" gap={12} marginTop={8}>
-              <Button
-                text={saving ? t("saving") : t("save")}
-                kind="success"
-                size="md"
-                onClick={() => void handleSubmit()}
-                disabled={saving}
-              />
-              <Button
-                text={tCommon("cancel")}
-                size="md"
-                href="/admin/social-posts"
-              />
             </Box>
           </Box>
         </Grid>
@@ -687,6 +718,37 @@ export default function AdminSocialPostFormPage({ params }: Props) {
           </Box>
         </Grid>
       </Grid>
+
+      {/* Clears the fixed Save bar so trailing content is never hidden under it. */}
+      <Box styles={{ height: 96 }} />
+
+      {/* Fixed action bar, centered at the bottom of the viewport. */}
+      <Box
+        display="flex"
+        alignItems="center"
+        gap={12}
+        padding={10}
+        borderRadius={12}
+        border="1px solid color-mix(in srgb, var(--foreground) 12%, transparent)"
+        backgroundColor="var(--background)"
+        styles={{
+          position: "fixed",
+          bottom: 24,
+          left: "50%",
+          transform: "translateX(-50%)",
+          boxShadow:
+            "0 4px 16px color-mix(in srgb, var(--foreground) 12%, transparent)",
+          zIndex: 100,
+        }}
+      >
+        <Button
+          text={saving ? t("saving") : t("save")}
+          kind="primary"
+          size="lg"
+          onClick={() => void handleSubmit()}
+          disabled={saving}
+        />
+      </Box>
 
       {error && <Toast message={error} variant="error" />}
       {success && <Toast message={success} variant="success" />}
