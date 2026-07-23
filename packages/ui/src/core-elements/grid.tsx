@@ -18,6 +18,19 @@ export type GridSize = Partial<Record<Breakpoint, number>>;
  */
 export type GridHidden = Partial<Record<Breakpoint, boolean>>;
 
+/** A grid item's flow position within a breakpoint band. */
+export type GridOrder = "first" | "last";
+
+/**
+ * Per-breakpoint flow order. Each entry pushes the item to the **start**
+ * (`"first"`) or **end** (`"last"`) of the flex container **within that
+ * breakpoint's own band only** (range-scoped, like `hidden`, not cascading like
+ * `size`): `{ xs: "last" }` sends it last below `sm` and restores its authored
+ * position from `sm` up. Compose bands to span a wider range. No effect in
+ * masonry mode (multi-column layout ignores `order`).
+ */
+export type GridReorder = Partial<Record<Breakpoint, GridOrder>>;
+
 /**
  * Responsive masonry column count per breakpoint.
  * Mobile-first: xs is the base; larger breakpoints override at their min-width.
@@ -52,6 +65,11 @@ export interface GridProps extends UIComponentProps {
    * thresholds live once in `grid.css`, so no consumer writes a media query.
    */
   hidden?: GridHidden;
+  /**
+   * Per-breakpoint flow order (`"first"` | `"last"`), range-scoped per band -
+   * see {@link GridReorder}. Only affects a flex grid item; ignored in masonry.
+   */
+  reorder?: GridReorder;
   /** Uniform gap between items in base-unit multiples (8px * n). Applies to container. */
   spacing?: number;
   /** Horizontal gap in base-unit multiples. Overrides `spacing` for the x-axis. */
@@ -83,6 +101,7 @@ function buildGridClasses(
   isItem: boolean,
   size: GridSize | undefined,
   hidden: GridHidden | undefined,
+  reorder: GridReorder | undefined,
   masonryColumns: MasonryColumns | undefined,
   className: string | undefined,
 ): string {
@@ -126,6 +145,18 @@ function buildGridClasses(
     }
   }
 
+  // Per-breakpoint flow order - each band's media query lives in grid.css.
+  // No-op in masonry, where multi-column layout ignores `order`.
+  if (reorder && !masonryColumns) {
+    const breakpoints = Object.keys(reorder) as Breakpoint[];
+    for (const bp of breakpoints) {
+      const value = reorder[bp];
+      if (value === "first" || value === "last") {
+        classes.push(`ui-grid-order-${value}-${bp}`);
+      }
+    }
+  }
+
   if (className) {
     classes.push(className);
   }
@@ -162,6 +193,7 @@ export const Grid: React.FC<GridProps> = (props) => {
     item,
     size,
     hidden,
+    reorder,
     spacing,
     spacingX,
     spacingY,
@@ -179,6 +211,7 @@ export const Grid: React.FC<GridProps> = (props) => {
     isItem,
     size,
     hidden,
+    reorder,
     masonryColumns,
     className,
   );

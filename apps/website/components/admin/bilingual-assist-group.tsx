@@ -365,10 +365,10 @@ export function BilingualAssistGroup({ pairs, values, onChange }: Props) {
               {pair.groupLabel}
             </Typography>
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 {renderField(pair, pair.esKey, false)}
               </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 {renderField(pair, pair.enKey, true)}
               </Grid>
             </Grid>

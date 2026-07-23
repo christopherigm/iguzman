@@ -191,7 +191,7 @@ export function HeroVideoSection({
       {/* spacing is in 8px base units, not px - 3 is the 24px gutter. */}
       <Grid container spacing={3}>
         {/* ── Column 1: the control ── */}
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Box flexDirection="column" gap={12}>
             {/* Slogan lives here rather than in the main field list: it is part
                 of the hero composition, and the preview beside it shows it live. */}
@@ -288,7 +288,7 @@ export function HeroVideoSection({
         </Grid>
 
         {/* ── Column 2: the live preview ── */}
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Box flexDirection="column" gap={8}>
             <Typography
               as="span"

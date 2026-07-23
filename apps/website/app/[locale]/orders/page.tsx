@@ -62,7 +62,7 @@ export default async function OrdersPage({ params }: Props) {
       {orders.length > 0 ? (
         <Grid container spacing={2}>
           {orders.map((order) => (
-            <Grid key={order.public_id} size={{ xs: 12, md: 6, lg: 4 }}>
+            <Grid key={order.public_id} size={{ xs: 12, sm: 6, md: 4 }}>
               <OrderCard order={order} locale={locale} />
             </Grid>
           ))}

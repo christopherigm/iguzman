@@ -14,6 +14,7 @@ import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import {
   ServiceDetailHeader,
+  ServiceDetailVariantsMobile,
   ServiceDetailPanel,
   ServiceDetailSections,
 } from "@/components/service-detail";
@@ -170,18 +171,22 @@ export default async function ServicePage({ params }: Props) {
       >
         <Breadcrumbs items={breadcrumbs} />
         <ServiceDetailHeader service={service} locale={locale} />
-        <Grid container spacing={2} marginBottom={18}>
-          <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
+        {/* One grid holds every detail card so they flow together - no
+            per-section margin tricks. Each sub-component returns its own grid
+            cell (or null), so absent cards leave no gap. */}
+        <Grid container spacing={2}>
+          {/* xs: variants above the gallery. sm+: variants move into the buy-box
+              column, so this cell hides and the gallery leads. */}
+          <ServiceDetailVariantsMobile service={service} locale={locale} />
+          <Grid size={{ xs: 12, sm: 6 }}>
             <ItemGalleryClient
               images={galleryImages}
               placeholderColor={service.background_color ?? undefined}
             />
           </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
-            <ServiceDetailPanel service={service} locale={locale} />
-          </Grid>
+          <ServiceDetailPanel service={service} locale={locale} />
+          <ServiceDetailSections service={service} locale={locale} />
         </Grid>
-        <ServiceDetailSections service={service} locale={locale} />
       </Container>
     </>
   );

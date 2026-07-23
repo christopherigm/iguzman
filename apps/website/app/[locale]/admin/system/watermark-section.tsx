@@ -200,7 +200,7 @@ export function WatermarkSection({ values, onChange, logo, brandmark }: Props) {
       {/* spacing is in 8px base units, not px - 3 is the 24px gutter. */}
       <Grid container spacing={3}>
         {/* ── Column 1: the controls ── */}
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Box flexDirection="column" gap={16}>
             {enabled && (
               <>
@@ -259,7 +259,7 @@ export function WatermarkSection({ values, onChange, logo, brandmark }: Props) {
         </Grid>
 
         {/* ── Column 2: the live preview ── */}
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Box flexDirection="column" gap={8}>
             <Typography
               as="span"

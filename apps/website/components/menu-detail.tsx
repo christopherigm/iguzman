@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
+import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { ShareButton } from "@repo/ui/core-elements/share-button";
@@ -142,6 +143,58 @@ export async function MenuDetailHeader({ item, locale }: MenuDetailProps) {
   );
 }
 
+/**
+ * The sibling-variants card body (no grid wrapper) - each variant is its own
+ * menu-item page. Reused in the two responsive placements below: a full-width
+ * cell above the gallery on xs, and stacked above the customize card from sm up.
+ */
+async function MenuVariantsCard({ item, locale }: MenuDetailProps) {
+  const tMenu = await getTranslations("Menu");
+
+  const name =
+    (locale === "en" ? item.en_name : item.name) ??
+    item.name ??
+    item.en_name ??
+    "";
+
+  return (
+    <Card width="100%">
+      <Typography as="h2" variant="none" className="item-section-heading">
+        {tMenu("variants")}
+      </Typography>
+      <VariantThumbs
+        basePath="/food"
+        current={{ slug: item.slug, name, image: item.image }}
+        variants={item.variants}
+        locale={locale}
+      />
+    </Card>
+  );
+}
+
+/**
+ * Mobile placement of the variants card: a full-width grid cell rendered above
+ * the gallery, visible in the xs band only. From sm up the variants instead sit
+ * inside the customize column (see MenuDetailPanel), so this cell hides there.
+ * Renders nothing when the item has no siblings.
+ */
+export async function MenuDetailVariantsMobile({
+  item,
+  locale,
+}: MenuDetailProps) {
+  if (item.variants.length === 0) return null;
+
+  return (
+    <Grid size={{ xs: 12 }} hidden={{ sm: true, md: true, lg: true, xl: true }}>
+      <MenuVariantsCard item={item} locale={locale} />
+    </Grid>
+  );
+}
+
+/**
+ * The "customize this item" cell: the ingredient customiser (which owns the
+ * live price + add-to-cart) plus the food-details spec table stacked beneath it.
+ */
 export async function MenuDetailPanel({ item, locale }: MenuDetailProps) {
   const [tMenu, session] = await Promise.all([
     getTranslations("Menu"),
@@ -165,84 +218,80 @@ export async function MenuDetailPanel({ item, locale }: MenuDetailProps) {
     item.cook_time_minutes != null;
 
   return (
-    <Box flexDirection="column" gap={18}>
-      {item.variants.length > 0 && (
-        <Card>
-          <Typography as="h2" variant="none" className="item-section-heading">
-            {tMenu("variants")}
-          </Typography>
-          <VariantThumbs
-            basePath="/food"
-            current={{ slug: item.slug, name, image: item.image }}
-            variants={item.variants}
+    <Grid size={{ xs: 12, sm: 6 }}>
+      <Box flexDirection="column" gap={18}>
+        {/* Variants above the customize card - from sm up only; on xs they
+            render above the gallery instead (MenuDetailVariantsMobile). The
+            bare `hidden` wrapper (no size/item) stays a plain full-width block
+            in this column flex - it only toggles display per breakpoint. */}
+        {item.variants.length > 0 && (
+          <Grid hidden={{ xs: true }}>
+            <MenuVariantsCard item={item} locale={locale} />
+          </Grid>
+        )}
+        <Card gap={18}>
+          <MenuItemCustomizer
+            menuItemId={item.id}
+            menuItemName={name}
+            basePrice={item.price}
+            comparePrice={item.compare_price}
+            discount={discount}
+            currency={item.currency}
+            ingredients={enabledIngredients(item)}
+            isAvailable={item.is_available}
+            isLoggedIn={session !== null}
             locale={locale}
           />
         </Card>
-      )}
 
-      <Card gap={18}>
-        <MenuItemCustomizer
-          menuItemId={item.id}
-          menuItemName={name}
-          basePrice={item.price}
-          comparePrice={item.compare_price}
-          discount={discount}
-          currency={item.currency}
-          ingredients={enabledIngredients(item)}
-          isAvailable={item.is_available}
-          isLoggedIn={session !== null}
-          locale={locale}
-        />
-      </Card>
-
-      {/* Food details spec table */}
-      {hasFoodDetails && (
-        <Card>
-          <Typography as="h2" variant="none" className="item-section-heading">
-            {tMenu("foodDetails")}
-          </Typography>
-          <table className="item-specs-table">
-            <tbody>
-              {item.spice_level != null && item.spice_level > 0 && (
-                <tr>
-                  <td>{tMenu("spiceLevel")}</td>
-                  <td>{"🌶️".repeat(Math.min(item.spice_level, 5))}</td>
-                </tr>
-              )}
-              {item.servings != null && (
-                <tr>
-                  <td>{tMenu("servings")}</td>
-                  <td>{item.servings}</td>
-                </tr>
-              )}
-              {item.prep_time_minutes != null && (
-                <tr>
-                  <td>{tMenu("prepTime")}</td>
-                  <td>
-                    {tMenu("minutesValue", { value: item.prep_time_minutes })}
-                  </td>
-                </tr>
-              )}
-              {item.cook_time_minutes != null && (
-                <tr>
-                  <td>{tMenu("cookTime")}</td>
-                  <td>
-                    {tMenu("minutesValue", { value: item.cook_time_minutes })}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </Card>
-      )}
-    </Box>
+        {/* Food details spec table */}
+        {hasFoodDetails && (
+          <Card>
+            <Typography as="h2" variant="none" className="item-section-heading">
+              {tMenu("foodDetails")}
+            </Typography>
+            <table className="item-specs-table">
+              <tbody>
+                {item.spice_level != null && item.spice_level > 0 && (
+                  <tr>
+                    <td>{tMenu("spiceLevel")}</td>
+                    <td>{"🌶️".repeat(Math.min(item.spice_level, 5))}</td>
+                  </tr>
+                )}
+                {item.servings != null && (
+                  <tr>
+                    <td>{tMenu("servings")}</td>
+                    <td>{item.servings}</td>
+                  </tr>
+                )}
+                {item.prep_time_minutes != null && (
+                  <tr>
+                    <td>{tMenu("prepTime")}</td>
+                    <td>
+                      {tMenu("minutesValue", { value: item.prep_time_minutes })}
+                    </td>
+                  </tr>
+                )}
+                {item.cook_time_minutes != null && (
+                  <tr>
+                    <td>{tMenu("cookTime")}</td>
+                    <td>
+                      {tMenu("minutesValue", { value: item.cook_time_minutes })}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </Card>
+        )}
+      </Box>
+    </Grid>
   );
 }
 
 /**
- * Allergen notice, rendered full-width in its own grid row below "About this
- * item" rather than inside the buy-box column - the text reads as a page-level
- * warning and wraps badly in a narrow column.
+ * Allergen notice, a small grid card in the bottom info row (sm:6, md:4)
+ * alongside the contact form and nutrition label.
  */
 export async function MenuDetailAllergens({ item }: MenuDetailProps) {
   if (!item.allergens) return null;
@@ -250,33 +299,40 @@ export async function MenuDetailAllergens({ item }: MenuDetailProps) {
   const tMenu = await getTranslations("Menu");
 
   return (
-    <Card width="100%">
-      <Typography as="h2" variant="none" className="item-section-heading">
-        {tMenu("allergens")}
-      </Typography>
-      <Typography variant="body" color="var(--foreground)">
-        {item.allergens}
-      </Typography>
-    </Card>
+    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+      <Card width="100%">
+        <Typography as="h2" variant="none" className="item-section-heading">
+          {tMenu("allergens")}
+        </Typography>
+        <Typography variant="body" color="var(--foreground)">
+          {item.allergens}
+        </Typography>
+      </Card>
+    </Grid>
   );
 }
 
 /**
  * Nutrition-label card, gated by the item's admin toggle and the presence of
- * chartable ingredients. Rendered in its own grid row below "About this item".
+ * chartable ingredients. A small grid card in the bottom info row (sm:6, md:4).
  */
 export async function MenuDetailNutrition({ item, locale }: MenuDetailProps) {
   if (!menuItemShowsNutrition(item)) return null;
   return (
-    <NutritionLabel
-      ingredients={enabledIngredients(item)}
-      locale={locale}
-      portions={item.portions}
-    />
+    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+      <NutritionLabel
+        ingredients={enabledIngredients(item)}
+        locale={locale}
+        portions={item.portions}
+      />
+    </Grid>
   );
 }
 
-/** Full-width long-form description below the buy box. */
+/**
+ * Full-width "About this item" description - its own size-12 cell spanning the
+ * whole detail grid.
+ */
 export async function MenuDetailSections({ item, locale }: MenuDetailProps) {
   const t = await getTranslations("ItemDetail");
 
@@ -289,25 +345,27 @@ export async function MenuDetailSections({ item, locale }: MenuDetailProps) {
   if (!description) return null;
 
   return (
-    <Card width="100%">
-      <Typography as="h2" variant="none" className="item-section-heading">
-        {t("description")}
-      </Typography>
-      <Typography
-        variant="body"
-        color="var(--foreground)"
-        styles={{ lineHeight: 1.7, whiteSpace: "pre-line" }}
-      >
-        {description}
-      </Typography>
-    </Card>
+    <Grid size={{ xs: 12 }}>
+      <Card width="100%">
+        <Typography as="h2" variant="none" className="item-section-heading">
+          {t("description")}
+        </Typography>
+        <Typography
+          variant="body"
+          color="var(--foreground)"
+          styles={{ lineHeight: 1.7, whiteSpace: "pre-line" }}
+        >
+          {description}
+        </Typography>
+      </Card>
+    </Grid>
   );
 }
 
 /**
- * "Ask a question about this item" - the shared contact form, embedded on the
- * menu-item detail page and pre-tagged with this dish so the message reaches the
- * inbox with its context. Rendered full-width below the description.
+ * "Ask a question about this item" - the shared contact form, pre-tagged with
+ * this dish. A small grid card in the bottom info row (sm:6, md:4) alongside
+ * the allergens and nutrition cards.
  */
 export async function MenuDetailQuestion({ item, locale }: MenuDetailProps) {
   const t = await getTranslations("Contact");
@@ -319,12 +377,14 @@ export async function MenuDetailQuestion({ item, locale }: MenuDetailProps) {
     "";
 
   return (
-    <Card width="100%">
-      <ContactFormClient
-        heading={t("askAboutHeading")}
-        description={t("askAboutDescription")}
-        related={{ kind: "food", id: item.id, name }}
-      />
-    </Card>
+    <Grid size={{ xs: 12, sm: 6, md: 4 }} reorder={{ xs: "last" }}>
+      <Card width="100%">
+        <ContactFormClient
+          heading={t("askAboutHeading")}
+          description={t("askAboutDescription")}
+          related={{ kind: "food", id: item.id, name }}
+        />
+      </Card>
+    </Grid>
   );
 }

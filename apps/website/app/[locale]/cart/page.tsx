@@ -76,7 +76,7 @@ export default async function CartPage({ params }: Props) {
         />
       ) : cart.items.length > 0 ? (
         <Grid container spacing={3}>
-          <Grid size={{ xs: 12, sm: 8 }}>
+          <Grid size={{ xs: 12, sm: 7 }}>
             <CartLines
               lines={cart.items}
               locale={locale}
@@ -85,7 +85,7 @@ export default async function CartPage({ params }: Props) {
               menuLabel={itemT("menuLabel")}
             />
           </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
+          <Grid size={{ xs: 12, sm: 5 }}>
             <CartSummary totals={cart.totals} count={cart.count} />
           </Grid>
         </Grid>

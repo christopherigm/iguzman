@@ -13,12 +13,12 @@ import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import {
   MenuDetailHeader,
+  MenuDetailVariantsMobile,
   MenuDetailPanel,
   MenuDetailSections,
   MenuDetailAllergens,
   MenuDetailNutrition,
   MenuDetailQuestion,
-  menuItemShowsNutrition,
   enabledIngredients,
 } from "@/components/menu-detail";
 import { MenuCustomizationProvider } from "@/components/menu-customization-context";
@@ -110,11 +110,11 @@ export default async function MenuItemPage({ params }: Props) {
     { label: tMenu("menu"), href: "/categories/food" },
     ...(item.category_name && item.category_slug
       ? [
-          {
-            label: item.category_name,
-            href: `/categories/food/${item.category_slug}`,
-          },
-        ]
+        {
+          label: item.category_name,
+          href: `/categories/food/${item.category_slug}`,
+        },
+      ]
       : []),
     { label: displayName },
   ];
@@ -150,52 +150,30 @@ export default async function MenuItemPage({ params }: Props) {
       >
         <Breadcrumbs items={breadcrumbs} />
 
-        {/* Row 1: title, badges, category (spans both columns). */}
+        {/* Title, badges, category (spans the full grid width). */}
         <MenuDetailHeader item={item} locale={locale} />
 
-        {/* The customiser (row 2) and the nutrition label (row 4) share the
-            selected-quantity state so the label mirrors the customiser live. */}
+        {/* One grid holds every detail card so they flow together - no
+            per-section margin tricks. Each sub-component returns its own grid
+            cell (or null), so absent cards leave no gap. The customiser and the
+            nutrition label both read the shared customization context, so both
+            sit inside the provider. */}
         <MenuCustomizationProvider ingredients={enabledIngredients(item)}>
-          {/* Row 2: gallery + customize/buy/allergens, side by side on desktop. */}
-          <Grid container spacing={2} marginBottom={18}>
-            <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
+          <Grid container spacing={2}>
+            {/* xs: variants above the gallery. sm+: variants move into the
+                customize column, so this cell hides and the gallery leads. */}
+            <MenuDetailVariantsMobile item={item} locale={locale} />
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ItemGalleryClient
                 images={galleryImages}
                 placeholderColor={item.background_color ?? undefined}
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6, lg: 6 }}>
-              <MenuDetailPanel item={item} locale={locale} />
-            </Grid>
-          </Grid>
-
-          {/* Row 3: "About this item" long-form description. */}
-          <MenuDetailSections item={item} locale={locale} />
-
-          {/* Row 4: allergens - full width below the description. */}
-          {item.allergens && (
-            <Grid container spacing={2} marginTop={18}>
-              <Grid size={{ xs: 12 }}>
-                <MenuDetailAllergens item={item} locale={locale} />
-              </Grid>
-            </Grid>
-          )}
-
-          {/* Row 5: nutrition label - a narrow column on desktop, full-width on
-              mobile. Only rendered when the item opts in and has chartable data. */}
-          {menuItemShowsNutrition(item) && (
-            <Grid container spacing={2} marginTop={18}>
-              <Grid size={{ xs: 12, md: 4, lg: 3 }}>
-                <MenuDetailNutrition item={item} locale={locale} />
-              </Grid>
-            </Grid>
-          )}
-
-          {/* Row 6: "ask a question about this item" contact form. */}
-          <Grid container spacing={2} marginTop={18}>
-            <Grid size={{ xs: 12 }}>
-              <MenuDetailQuestion item={item} locale={locale} />
-            </Grid>
+            <MenuDetailPanel item={item} locale={locale} />
+            <MenuDetailSections item={item} locale={locale} />
+            <MenuDetailQuestion item={item} locale={locale} />
+            <MenuDetailAllergens item={item} locale={locale} />
+            <MenuDetailNutrition item={item} locale={locale} />
           </Grid>
         </MenuCustomizationProvider>
       </Container>

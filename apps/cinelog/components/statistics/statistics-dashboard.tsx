@@ -188,7 +188,7 @@ export function StatisticsDashboard({ initialStats }: Props) {
             {STAT_DIMENSIONS.map((dimension: StatDimension) => {
               const buckets = stats[dimension];
               return (
-                <Grid key={dimension} size={{ xs: 12, md: 6 }}>
+                <Grid key={dimension} size={{ xs: 12, sm: 6 }}>
                   <StatCard
                     title={t(`${dimension}.title`)}
                     description={t(`${dimension}.description`)}

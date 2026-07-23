@@ -572,7 +572,7 @@ export default function AdminSystemPage() {
                   }
                 />
                 <Grid container spacing={2} paddingTop={32}>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <GradientBuilder
                       label={t("catalogBg")}
                       value={String(values.catalog_items_bg ?? "")}
@@ -582,7 +582,7 @@ export default function AdminSystemPage() {
                       labels={gradientLabels}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <GradientBuilder
                       label={t("highlightsBg")}
                       value={String(values.highlights_bg ?? "")}

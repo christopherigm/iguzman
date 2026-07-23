@@ -355,6 +355,13 @@ the tablet band by stacking content that comfortably fits side by side.
   description column should span full width if its media sibling is absent, keep
   the conditional on the same breakpoint:
   `size={{ xs: 12, sm: hasMedia ? 6 : 12 }}`.
+- **An asymmetric main-content + sidebar split (a wide primary column beside a
+  narrower summary/aside) uses `sm: 7` / `sm: 5`, not `md: 8` / `md: 4`.** Same
+  reasoning as the even split: at `md` the sidebar drops below the content on the
+  whole tablet band, wasting the width; `sm: 7` / `sm: 5` keeps the primary column
+  dominant while the aside stays comfortably readable from `sm` up. Established
+  users (**follow them**): the order detail page (`app/[locale]/orders/[id]/page.tsx`)
+  and both carts (`app/[locale]/cart/page.tsx`, `cart/guest-cart-view.tsx`).
 - Only drop to `md: 6` when the two columns genuinely can't share a tablet width
   (very wide fixed content, a table that would overflow) - and say why in a
   comment, since `sm` is the default this repo now expects.

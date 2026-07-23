@@ -405,6 +405,59 @@
   }
 }
 
+/* ===== Per-breakpoint flow order (range-scoped) =====
+ * `ui-grid-order-<first|last>-<bp>` pushes the item to the start (order:-1) or
+ * end (order:1) of the flex container within that breakpoint's own band only,
+ * mirroring the range-scoped `hidden` prop: `reorder={{ xs: 'last' }}` sends the
+ * item last below sm and restores its authored position (order:0) from sm up.
+ * Bands mirror the BREAKPOINTS scale in utils.ts. Only affects a flex grid
+ * container - multi-column masonry ignores `order`. */
+@media (max-width: 599.98px) {
+  /* below sm */
+  .ui-grid-order-first-xs {
+    order: -1;
+  }
+  .ui-grid-order-last-xs {
+    order: 1;
+  }
+}
+@media (min-width: 600px) and (max-width: 899.98px) {
+  /* sm only */
+  .ui-grid-order-first-sm {
+    order: -1;
+  }
+  .ui-grid-order-last-sm {
+    order: 1;
+  }
+}
+@media (min-width: 900px) and (max-width: 1199.98px) {
+  /* md only */
+  .ui-grid-order-first-md {
+    order: -1;
+  }
+  .ui-grid-order-last-md {
+    order: 1;
+  }
+}
+@media (min-width: 1200px) and (max-width: 1535.98px) {
+  /* lg only */
+  .ui-grid-order-first-lg {
+    order: -1;
+  }
+  .ui-grid-order-last-lg {
+    order: 1;
+  }
+}
+@media (min-width: 1536px) {
+  /* xl and up */
+  .ui-grid-order-first-xl {
+    order: -1;
+  }
+  .ui-grid-order-last-xl {
+    order: 1;
+  }
+}
+
 /* ===== xl (min-width: 1536px) ===== */
 @media (min-width: 1536px) {
   .ui-grid-xl-1 {

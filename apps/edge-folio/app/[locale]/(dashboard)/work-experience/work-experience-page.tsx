@@ -1225,7 +1225,7 @@ export function WorkExperiencePage() {
       ) : (
         <Grid container spacing={2} marginBottom={48}>
           {entries.map((entry) => (
-            <Grid key={entry.id} size={{ xs: 12, md: 6 }}>
+            <Grid key={entry.id} size={{ xs: 12, sm: 6 }}>
               <WorkExperienceCard
                 entry={entry}
                 onEdit={openEdit}

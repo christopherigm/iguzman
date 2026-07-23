@@ -505,7 +505,7 @@ export function ReviewTailorSection({ profile, exportCtl, workflow }: Props) {
                   const roleTitle = we ? `${we.title} - ${we.company}` : "";
                   const cardKey = `we:${twe.id}`;
                   return (
-                    <Grid key={twe.id} size={{ xs: 12, md: 6 }}>
+                    <Grid key={twe.id} size={{ xs: 12, sm: 6 }}>
                       <TailoredEditableCard
                         title={roleTitle}
                         included={includedWorkExpIds.has(twe.id)}
@@ -552,7 +552,7 @@ export function ReviewTailorSection({ profile, exportCtl, workflow }: Props) {
                   const projName = proj ? proj.name : "";
                   const cardKey = `project:${tp.id}`;
                   return (
-                    <Grid key={tp.id} size={{ xs: 12, md: 6 }}>
+                    <Grid key={tp.id} size={{ xs: 12, sm: 6 }}>
                       <TailoredEditableCard
                         title={projName}
                         included={includedProjectIds.has(tp.id)}

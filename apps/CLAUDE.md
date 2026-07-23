@@ -229,6 +229,15 @@ declare module "swiper/css/*";
 
 **Rule:** If you add a new CSS side-effect import from a third-party package and TypeScript raises TS2882, add a `declare module` entry to the app's `css.d.ts`. Never create a separate per-package `.d.ts` file - `css.d.ts` is the single place for these declarations.
 
+## Two-column layouts - split at `sm`, not `md`
+
+**A two-column `Grid` layout should go two-up from the `sm` breakpoint, not `md`** - stacking a pairing across the whole tablet band wastes the horizontal space. Use the `Grid` `size` prop (props-first; it reads the shared `BREAKPOINTS` scale):
+
+- **Even split** (media/text, sibling card pairs): `size={{ xs: 12, sm: 6 }}`.
+- **Asymmetric split** (wide main column + narrower sidebar/summary): `size={{ xs: 12, sm: 7 }}` / `size={{ xs: 12, sm: 5 }}` - never `md: 8` / `md: 4`.
+
+Only drop to a `md` split when the columns genuinely can't share a tablet width (very wide fixed content, a table that would overflow) - and say why in a comment. `apps/website/CLAUDE.md` → "Two-column media/text layouts" carries the full rationale and the reference files to copy.
+
 ## Responsive breakpoints in CSS (`@custom-media`)
 
 **Never hardcode a breakpoint pixel value in a `@media` query.** The scale lives once
@@ -264,6 +273,12 @@ generated **once, in `@repo/ui`** (not per-app), and every app points at that on
   (`--below-md`) rather than staying a literal - the scale is the single source of truth.
 
 For `@repo/ui` **components** (`Grid`, etc.), still prefer props over CSS - e.g.
-`Grid`'s `hidden={{ xs: true }}` hides at a breakpoint with no media query at all.
-`@custom-media` is for the CSS that genuinely needs a media query. `apps/website`'s
-`CLAUDE.md` carries a longer version of this note; the mechanism is identical everywhere.
+`Grid`'s `hidden={{ xs: true }}` hides at a breakpoint with no media query at all,
+and `Grid`'s `reorder={{ xs: "last" }}` pushes a grid item to the end (`"last"`,
+`order:1`) or start (`"first"`, `order:-1`) of the flex container **within that
+breakpoint's band only** - so a cell can lead the layout on desktop yet drop below
+its siblings on mobile without a hand-written `order` media query (it's the
+range-scoped ordering counterpart to `hidden`, and resets to the authored order
+outside the named bands). `@custom-media` is for the CSS that genuinely needs a
+media query. `apps/website`'s `CLAUDE.md` carries a longer version of this note;
+the mechanism is identical everywhere.

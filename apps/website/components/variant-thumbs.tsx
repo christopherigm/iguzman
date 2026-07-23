@@ -31,10 +31,10 @@ function VariantThumb({
   current: boolean;
 }) {
   const inner = (
-    <Box flexDirection="column" alignItems="center" gap={8} width={96}>
+    <Box flexDirection="column" alignItems="center" gap={8} width={64}>
       <Box
-        width={96}
-        height={96}
+        width={64}
+        height={64}
         borderRadius={8}
         border={
           current
@@ -51,7 +51,7 @@ function VariantThumb({
             fill
             src={image}
             alt={name}
-            sizes="96px"
+            sizes="64px"
             style={{ objectFit: "cover" }}
           />
         ) : (
@@ -61,7 +61,7 @@ function VariantThumb({
         )}
       </Box>
       <Typography
-        variant="body"
+        variant="caption"
         color={current ? "var(--primary, #16a34a)" : "var(--foreground)"}
         styles={{ textAlign: "center", lineHeight: 1.2 }}
       >

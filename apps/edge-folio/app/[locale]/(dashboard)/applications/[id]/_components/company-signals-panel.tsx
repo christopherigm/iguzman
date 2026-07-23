@@ -44,7 +44,7 @@ export function CompanySignalsPanel({ analysis, intel }: Props) {
       </Typography>
       <Grid container spacing={2}>
         {/* Left: selectable signal list, stacked. */}
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Box display="flex" flexDirection="column" gap={8}>
             {SIGNAL_KEYS.map(({ key, tKey }) => {
               const signal = analysis[key];
@@ -101,7 +101,7 @@ export function CompanySignalsPanel({ analysis, intel }: Props) {
         </Grid>
 
         {/* Right: source swipers for the selected signal, stacked. */}
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           {sources.length > 0 ? (
             <Box display="flex" flexDirection="column" gap={16}>
               {sources.map((key) => (

@@ -325,33 +325,35 @@ export function CheckoutSection({
                 required
                 width="100%"
               />
-              <TextInput
-                label={t("addressLine2")}
-                value={line2}
-                onChange={setLine2}
-                width="100%"
-              />
-              <Box gap={8} flexWrap="wrap">
+              <Box gap={8}>
+                <TextInput
+                  label={t("addressLine2")}
+                  value={line2}
+                  onChange={setLine2}
+                  width="50%"
+                />
+                <TextInput
+                  label={t("addressPostal")}
+                  value={postal}
+                  onChange={setPostal}
+                  width="50%"
+                />
+              </Box>
+              <Box gap={8}>
                 <TextInput
                   label={t("addressCity")}
                   value={city}
                   onChange={setCity}
                   required
-                  styles={{ flex: "1 1 140px" }}
+                  width="50%"
                 />
                 <TextInput
                   label={t("addressState")}
                   value={region}
                   onChange={setRegion}
-                  styles={{ flex: "1 1 100px" }}
+                  width="50%"
                 />
               </Box>
-              <TextInput
-                label={t("addressPostal")}
-                value={postal}
-                onChange={setPostal}
-                width="100%"
-              />
             </>
           ) : null}
         </Box>

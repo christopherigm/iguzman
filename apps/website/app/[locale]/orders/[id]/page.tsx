@@ -91,8 +91,8 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
         })}
       </Typography>
 
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 8 }}>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 7 }}>
           <Box flexDirection="column" gap={12}>
             <OrderStatusBanner
               status={order.status}
@@ -106,7 +106,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
           </Box>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 5 }}>
           <Card
             gap={14}
             styles={{

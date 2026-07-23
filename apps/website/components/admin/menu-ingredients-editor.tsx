@@ -554,7 +554,7 @@ export function MenuIngredientsEditor({ value, onChange, catalog }: Props) {
               ? "3px solid var(--success, #16a34a)"
               : baseBorder;
           return (
-            <Grid key={row.key} size={{ xs: 12, md: 6 }}>
+            <Grid key={row.key} size={{ xs: 12, sm: 6 }}>
               <Card
                 gap="10px"
                 border={baseBorder}

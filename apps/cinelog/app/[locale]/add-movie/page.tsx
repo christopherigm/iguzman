@@ -29,10 +29,10 @@ export default async function AddMoviePage({ params }: Props) {
         <Typography variant="body">{t("pageSubtitle")}</Typography>
       </Box>
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <BarcodeScanner />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <ManualMovieForm />
         </Grid>
       </Grid>

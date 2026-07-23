@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
+import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { ShareButton } from "@repo/ui/core-elements/share-button";
@@ -140,23 +141,67 @@ export async function ServiceDetailHeader({
   );
 }
 
-export async function ServiceDetailPanel({
-  service,
-  locale,
-}: ServiceDetailProps) {
-  // A sibling variant is its own Service with its own page - see the note in
-  // ProductDetailPanel.
-  const [t, session, cartLineId] = await Promise.all([
-    getTranslations("ItemDetail"),
-    getSession(),
-    findCartLineId("service", service.id),
-  ]);
+/**
+ * The sibling-variants card body (no grid wrapper) - each variant is its own
+ * service page. Reused in the two responsive placements below: a full-width
+ * cell above the gallery on xs, and stacked above the buy box from sm up.
+ */
+async function ServiceVariantsCard({ service, locale }: ServiceDetailProps) {
+  const t = await getTranslations("ItemDetail");
 
   const displayName =
     (locale === "en" ? service.en_name : service.name) ??
     service.name ??
     service.en_name ??
     service.slug;
+
+  return (
+    <Card width="100%">
+      <Typography as="h2" variant="none" className="item-section-heading">
+        {t("variants")}
+      </Typography>
+      <VariantThumbs
+        basePath="/services"
+        current={{
+          slug: service.slug,
+          name: displayName,
+          image: service.image,
+        }}
+        variants={service.variants}
+        locale={locale}
+      />
+    </Card>
+  );
+}
+
+/**
+ * Mobile placement of the variants card: a full-width grid cell rendered above
+ * the gallery, visible in the xs band only. From sm up the variants instead sit
+ * inside the buy-box column (see ServiceDetailPanel), so this cell hides there.
+ * Renders nothing when the service has no siblings.
+ */
+export async function ServiceDetailVariantsMobile({
+  service,
+  locale,
+}: ServiceDetailProps) {
+  if (service.variants.length === 0) return null;
+
+  return (
+    <Grid size={{ xs: 12 }} hidden={{ sm: true, md: true, lg: true, xl: true }}>
+      <ServiceVariantsCard service={service} locale={locale} />
+    </Grid>
+  );
+}
+
+export async function ServiceDetailPanel({
+  service,
+  locale,
+}: ServiceDetailProps) {
+  const [t, session, cartLineId] = await Promise.all([
+    getTranslations("ItemDetail"),
+    getSession(),
+    findCartLineId("service", service.id),
+  ]);
 
   const discount = service.compare_price
     ? discountPercent(service.price, service.compare_price)
@@ -172,133 +217,130 @@ export async function ServiceDetailPanel({
   };
 
   return (
-    <Box flexDirection="column" gap={18}>
-      {/* Buy box: price, variants and CTAs grouped as one unit */}
-      <Card gap={18}>
-        {/* Pricing */}
-        <Box alignItems="baseline" flexWrap="wrap" gap="8px 12px">
-          <Typography as="span" variant="none" className="item-price">
-            {formatPrice(service.price, service.currency)}
-          </Typography>
-          {service.compare_price &&
-            parseFloat(service.compare_price) > parseFloat(service.price) && (
-              <Typography
-                as="span"
-                variant="none"
-                className="item-compare-price"
-              >
-                {formatPrice(service.compare_price, service.currency)}
-              </Typography>
-            )}
-          {discount > 0 && (
-            <Badge variant="filled" color="#ef4444" textColor="#fff">
-              -{discount}%
-            </Badge>
-          )}
-        </Box>
-
-        {/* SKU */}
-        {service.sku && (
-          <Typography as="span" variant="caption" color="var(--foreground)">
-            {t("sku")}: {service.sku}
-          </Typography>
-        )}
-
-        {/* Sibling variants - each its own service page. */}
+    <Grid size={{ xs: 12, sm: 6 }}>
+      <Box flexDirection="column" gap={18}>
+        {/* Variants above the buy box - from sm up only; on xs they render
+            above the gallery instead (ServiceDetailVariantsMobile). The bare
+            `hidden` wrapper (no size/item) stays a plain full-width block in
+            this column flex - it only toggles display per breakpoint. */}
         {service.variants.length > 0 && (
-          <VariantThumbs
-            basePath="/services"
-            current={{
-              slug: service.slug,
-              name: displayName,
-              image: service.image,
-            }}
-            variants={service.variants}
-            locale={locale}
-          />
+          <Grid hidden={{ xs: true }}>
+            <ServiceVariantsCard service={service} locale={locale} />
+          </Grid>
         )}
+        {/* Buy box: price and CTAs grouped as one unit */}
+        <Card gap={18}>
+          {/* Pricing */}
+          <Box alignItems="baseline" flexWrap="wrap" gap="8px 12px">
+            <Typography as="span" variant="none" className="item-price">
+              {formatPrice(service.price, service.currency)}
+            </Typography>
+            {service.compare_price &&
+              parseFloat(service.compare_price) > parseFloat(service.price) && (
+                <Typography
+                  as="span"
+                  variant="none"
+                  className="item-compare-price"
+                >
+                  {formatPrice(service.compare_price, service.currency)}
+                </Typography>
+              )}
+            {discount > 0 && (
+              <Badge variant="filled" color="#ef4444" textColor="#fff">
+                -{discount}%
+              </Badge>
+            )}
+          </Box>
 
-        {/* Actions: secondary + primary CTAs share the width, wrapping on very
+          {/* SKU */}
+          {service.sku && (
+            <Typography as="span" variant="caption" color="var(--foreground)">
+              {t("sku")}: {service.sku}
+            </Typography>
+          )}
+
+          {/* Actions: secondary + primary CTAs share the width, wrapping on very
             narrow widths so the buttons never get crushed. */}
-        <Box alignItems="center" gap={10} width="100%" flexWrap="wrap">
-          <AddToCartButton
-            kind="service"
-            id={service.id}
-            cartLineId={cartLineId}
-            isLoggedIn={session !== null}
-            display="button"
-            buttonKind="warning"
-            size="lg"
-            flex="1"
-            minWidth={140}
-          />
-          <BuyNowButton
-            kind="service"
-            id={service.id}
-            isLoggedIn={session !== null}
-            text={t("buyNow")}
-            size="lg"
-            flex="1"
-            minWidth={140}
-          />
-        </Box>
-      </Card>
+          <Box alignItems="center" gap={10} width="100%" flexWrap="wrap">
+            <AddToCartButton
+              kind="service"
+              id={service.id}
+              cartLineId={cartLineId}
+              isLoggedIn={session !== null}
+              display="button"
+              buttonKind="warning"
+              size="lg"
+              flex="1"
+              minWidth={140}
+            />
+            <BuyNowButton
+              kind="service"
+              id={service.id}
+              isLoggedIn={session !== null}
+              text={t("buyNow")}
+              size="lg"
+              flex="1"
+              minWidth={140}
+            />
+          </Box>
+        </Card>
 
-      {/* Service details spec table */}
-      <Card>
-        <Typography as="h2" variant="none" className="item-section-heading">
-          {t("serviceDetails")}
-        </Typography>
-        <table className="item-specs-table">
-          <tbody>
-            {service.brand_name && (
-              <tr>
-                <td>{t("brand")}</td>
-                <td>{service.brand_name}</td>
-              </tr>
-            )}
-            {service.category_name && (
-              <tr>
-                <td>{t("category")}</td>
-                <td>{service.category_name}</td>
-              </tr>
-            )}
-            {effectiveModality && (
-              <tr>
-                <td>{t("modality")}</td>
-                <td>
-                  {modalityLabels[effectiveModality] ?? effectiveModality}
-                </td>
-              </tr>
-            )}
-            {effectiveDuration && (
-              <tr>
-                <td>{t("duration")}</td>
-                <td>{formatDuration(effectiveDuration)}</td>
-              </tr>
-            )}
-            {service.sku && (
-              <tr>
-                <td>{t("sku")}</td>
-                <td>{service.sku}</td>
-              </tr>
-            )}
-            {service.currency && (
-              <tr>
-                <td>{t("currency")}</td>
-                <td>{service.currency}</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </Card>
-    </Box>
+        {/* Service details spec table */}
+        <Card>
+          <Typography as="h2" variant="none" className="item-section-heading">
+            {t("serviceDetails")}
+          </Typography>
+          <table className="item-specs-table">
+            <tbody>
+              {service.brand_name && (
+                <tr>
+                  <td>{t("brand")}</td>
+                  <td>{service.brand_name}</td>
+                </tr>
+              )}
+              {service.category_name && (
+                <tr>
+                  <td>{t("category")}</td>
+                  <td>{service.category_name}</td>
+                </tr>
+              )}
+              {effectiveModality && (
+                <tr>
+                  <td>{t("modality")}</td>
+                  <td>
+                    {modalityLabels[effectiveModality] ?? effectiveModality}
+                  </td>
+                </tr>
+              )}
+              {effectiveDuration && (
+                <tr>
+                  <td>{t("duration")}</td>
+                  <td>{formatDuration(effectiveDuration)}</td>
+                </tr>
+              )}
+              {service.sku && (
+                <tr>
+                  <td>{t("sku")}</td>
+                  <td>{service.sku}</td>
+                </tr>
+              )}
+              {service.currency && (
+                <tr>
+                  <td>{t("currency")}</td>
+                  <td>{service.currency}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </Card>
+      </Box>
+    </Grid>
   );
 }
 
 /**
- * Full-width long-form content for the service detail page: the description,
- * shown below the buy box across the whole page width.
+ * Full-width long-form content for the service detail page: the "About this
+ * item" description, its own size-12 cell spanning the whole detail grid.
  */
 export async function ServiceDetailSections({
   service,
@@ -315,17 +357,19 @@ export async function ServiceDetailSections({
   if (!description) return null;
 
   return (
-    <Card width="100%">
-      <Typography as="h2" variant="none" className="item-section-heading">
-        {t("description")}
-      </Typography>
-      <Typography
-        variant="body"
-        color="var(--foreground)"
-        styles={{ lineHeight: 1.7, whiteSpace: "pre-line" }}
-      >
-        {description}
-      </Typography>
-    </Card>
+    <Grid size={{ xs: 12 }}>
+      <Card width="100%">
+        <Typography as="h2" variant="none" className="item-section-heading">
+          {t("description")}
+        </Typography>
+        <Typography
+          variant="body"
+          color="var(--foreground)"
+          styles={{ lineHeight: 1.7, whiteSpace: "pre-line" }}
+        >
+          {description}
+        </Typography>
+      </Card>
+    </Grid>
   );
 }
