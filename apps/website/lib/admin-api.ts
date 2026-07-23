@@ -859,3 +859,85 @@ export async function adminOrderAction(
   });
   return parseResponse<AdminOrder>(res);
 }
+
+// ---- Social Posts ----
+// Admin-authored social-media flyers. The endpoint is system-scoped from the
+// admin's token (like the contact inbox), so no `system` param is sent.
+
+/** The catalog family a social post features - the frontend's `kind` names. */
+export type SocialItemKind = "product" | "service" | "food";
+
+/** Aspect-ratio token the template maps to a pixel canvas. */
+export type SocialFormat = "1x1" | "4x5";
+
+/** The live item snapshot the API resolves for the flyer preview. */
+export interface SocialPostItem {
+  kind: SocialItemKind;
+  id: number;
+  name: string | null;
+  en_name: string | null;
+  image: string | null;
+  price: string | null;
+  compare_price: string | null;
+  currency: string | null;
+}
+
+/** The tenant's brand kit, resolved from its System for the flyer. */
+export interface SocialPostBrand {
+  name: string | null;
+  slogan: string | null;
+  logo: string | null;
+  primary_color: string | null;
+  secondary_color: string | null;
+}
+
+export interface SocialPost {
+  id: number;
+  created: string;
+  modified: string;
+  enabled: boolean;
+  sort_order: number;
+  name: string;
+  related_kind: SocialItemKind;
+  related_id: number | null;
+  template_id: string;
+  format: SocialFormat;
+  prompt: string | null;
+  image_text: string | null;
+  caption: string | null;
+  hashtags: string | null;
+  include_item_data: boolean;
+  include_brand: boolean;
+  include_hashtags: boolean;
+  item: SocialPostItem | null;
+  brand: SocialPostBrand | null;
+}
+
+export async function listSocialPosts() {
+  const res = await adminFetch(`/api/social-posts/`);
+  return parseResponse<SocialPost[]>(res);
+}
+export async function getSocialPost(pk: number) {
+  const res = await adminFetch(`/api/social-posts/${pk}/`);
+  return parseResponse<SocialPost>(res);
+}
+export async function createSocialPost(data: Record<string, unknown>) {
+  const res = await adminFetch(`/api/social-posts/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<SocialPost>(res);
+}
+export async function updateSocialPost(pk: number, data: Record<string, unknown>) {
+  const res = await adminFetch(`/api/social-posts/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<SocialPost>(res);
+}
+export async function deleteSocialPost(pk: number) {
+  const res = await adminFetch(`/api/social-posts/${pk}/`, {
+    method: "DELETE",
+  });
+  return parseResponse<void>(res);
+}

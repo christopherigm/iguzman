@@ -58,6 +58,12 @@ export const ADMIN_NAV_ITEMS = [
     descKey: "menuItemsDesc",
   },
   {
+    key: "socialPosts",
+    href: "/admin/social-posts",
+    icon: "🖼️",
+    descKey: "socialPostsDesc",
+  },
+  {
     key: "successStories",
     href: "/admin/success-stories",
     icon: "⭐",

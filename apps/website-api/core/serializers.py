@@ -13,6 +13,7 @@ from .models import (
     CompanyHighlight,
     CompanyHighlightItem,
     ContactMessage,
+    SocialPost,
     SuccessStory,
     SuccessStoryImage,
     System,
@@ -1036,6 +1037,121 @@ class ContactMessageCreateSerializer(serializers.Serializer):
     )
     related_id   = serializers.IntegerField(required=False, allow_null=True, min_value=1)
     related_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+
+
+# ---------------------------------------------------------------------------
+# Social posts
+# ---------------------------------------------------------------------------
+
+# Which catalog model backs each `related_kind`. Resolved lazily inside the
+# serializer method (not at import time) so `core` never imports `catalog`.
+_SOCIAL_ITEM_MODELS = {
+    SocialPost.KIND_PRODUCT: ("catalog", "Product"),
+    SocialPost.KIND_SERVICE: ("catalog", "Service"),
+    SocialPost.KIND_FOOD: ("catalog", "MenuItem"),
+}
+
+
+def _resolve_social_item(kind, item_id, request):
+    """Resolve a `{kind, id}` catalog reference to a flyer item snapshot.
+
+    Returns ``None`` when the reference is empty or the item no longer exists, so
+    a post whose item was deleted still loads (the form shows an empty preview
+    rather than 500ing). Kept to the fields the flyer templates draw: identity,
+    image, and pricing/discount.
+    """
+    ref = _SOCIAL_ITEM_MODELS.get(kind)
+    if ref is None or not item_id:
+        return None
+    from django.apps import apps as django_apps
+
+    model = django_apps.get_model(*ref)
+    obj = model.objects.filter(pk=item_id).first()
+    if obj is None:
+        return None
+
+    image = obj.image
+    # Fall back to the first gallery image when the primary slot is empty, the
+    # same precedence the public catalog serializers use.
+    if not image:
+        gallery = sorted(obj.images.all(), key=lambda i: i.sort_order)
+        image = gallery[0].image if gallery else None
+    image_url = request.build_absolute_uri(image.url) if image and request else (
+        image.url if image else None
+    )
+
+    return {
+        "kind": kind,
+        "id": obj.id,
+        "name": obj.name,
+        "en_name": obj.en_name,
+        "image": image_url,
+        "price": obj.price,
+        "compare_price": obj.compare_price,
+        "currency": obj.currency,
+    }
+
+
+class SocialPostSerializer(serializers.ModelSerializer):
+    """Read serializer for the admin social-post CMS.
+
+    Resolves the referenced item to a live snapshot (`item`) and the tenant's
+    brand kit (`brand`, from its `System`) so the flyer preview renders from one
+    payload without a second round-trip. Admin-only, like the whole feature.
+    """
+
+    item = serializers.SerializerMethodField()
+    brand = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SocialPost
+        fields = [
+            "id", "created", "modified", "enabled", "sort_order",
+            "name",
+            "related_kind", "related_id",
+            "template_id", "format",
+            "prompt", "image_text", "caption", "hashtags",
+            "include_item_data", "include_brand", "include_hashtags",
+            "item", "brand",
+        ]
+
+    def get_item(self, obj):
+        return _resolve_social_item(
+            obj.related_kind, obj.related_id, self.context.get("request")
+        )
+
+    def get_brand(self, obj):
+        system = obj.system
+        if system is None:
+            return None
+        request = self.context.get("request")
+        logo = system.img_logo
+        logo_url = request.build_absolute_uri(logo.url) if logo and request else (
+            logo.url if logo else None
+        )
+        return {
+            "name": system.site_name,
+            "slogan": system.slogan,
+            "logo": logo_url,
+            "primary_color": system.primary_color,
+            "secondary_color": system.secondary_color,
+        }
+
+
+class SocialPostWriteSerializer(serializers.ModelSerializer):
+    """Create/update serializer. `system` is set by the view from the admin's
+    token, never trusted from the body."""
+
+    class Meta:
+        model = SocialPost
+        fields = [
+            "name",
+            "related_kind", "related_id",
+            "template_id", "format",
+            "prompt", "image_text", "caption", "hashtags",
+            "include_item_data", "include_brand", "include_hashtags",
+            "enabled", "sort_order",
+        ]
 
 
 # ---------------------------------------------------------------------------

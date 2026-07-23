@@ -17,6 +17,8 @@ from .views import (
     ContactMessageCreateView,
     PublishSiteView,
     SlugCheckView,
+    SocialPostDetailView,
+    SocialPostListCreateView,
     SuccessStoryBySlugView,
     SuccessStoryDetailView,
     SuccessStoryImageDetailView,
@@ -56,6 +58,9 @@ urlpatterns = [
     path("contact-messages/admin/", AdminContactMessageListView.as_view(), name="contact-message-admin-list"),
     path("contact-messages/admin/<int:pk>/", AdminContactMessageDetailView.as_view(), name="contact-message-admin-detail"),
     path("contact-messages/admin/<int:pk>/reply/", AdminContactMessageReplyView.as_view(), name="contact-message-admin-reply"),
+
+    path("social-posts/", SocialPostListCreateView.as_view(), name="social-post-list"),
+    path("social-posts/<int:pk>/", SocialPostDetailView.as_view(), name="social-post-detail"),
 
     path("check-slug/", SlugCheckView.as_view(), name="check-slug"),
 

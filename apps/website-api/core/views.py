@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 
 from core.permissions import IsSystemAdmin, show_disabled
 from .cache import invalidate_pattern as _invalidate_pattern
-from .models import Branch, Brand, CompanyHighlight, CompanyHighlightItem, ContactMessage, SuccessStory, SuccessStoryImage, System
+from .models import Branch, Brand, CompanyHighlight, CompanyHighlightItem, ContactMessage, SocialPost, SuccessStory, SuccessStoryImage, System
 from .serializers import (
     AiChatSerializer,
     BranchSerializer,
@@ -27,6 +27,8 @@ from .serializers import (
     CompanyHighlightWriteSerializer,
     ContactMessageCreateSerializer,
     ContactMessageSerializer,
+    SocialPostSerializer,
+    SocialPostWriteSerializer,
     SuccessStoryImageSerializer,
     SuccessStoryImageWriteSerializer,
     SuccessStorySerializer,
@@ -1070,6 +1072,82 @@ class AdminContactMessageReplyView(APIView):
         return Response(
             ContactMessageSerializer(message, context={"request": request}).data
         )
+
+
+class SocialPostListCreateView(APIView):
+    """
+    GET  /api/social-posts/   - list the tenant's social posts (admin only).
+    POST /api/social-posts/   - create a social post (admin only).
+
+    Entirely admin + system-scoped, like the contact inbox: the system is taken
+    from the admin's token, never the body, so a browser cannot author into
+    another tenant.
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    def get(self, request):
+        system_id = _get_admin_system_id(request)
+        cache_key = f"core:social_posts:system:{system_id}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        qs = SocialPost.objects.filter(system_id=system_id)
+        data = SocialPostSerializer(qs, many=True, context={"request": request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
+
+    def post(self, request):
+        system_id = _get_admin_system_id(request)
+        serializer = SocialPostWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save(system_id=system_id)
+        _invalidate_pattern("core:social_posts:*")
+        return Response(
+            SocialPostSerializer(instance, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class SocialPostDetailView(APIView):
+    """
+    GET    /api/social-posts/<pk>/  - one social post (admin only).
+    PATCH  /api/social-posts/<pk>/  - partial update (admin only).
+    DELETE /api/social-posts/<pk>/  - delete (admin only).
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    def _get_object(self, request, pk):
+        system_id = _get_admin_system_id(request)
+        try:
+            return SocialPost.objects.get(pk=pk, system_id=system_id)
+        except SocialPost.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        instance = self._get_object(request, pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(SocialPostSerializer(instance, context={"request": request}).data)
+
+    def patch(self, request, pk):
+        instance = self._get_object(request, pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = SocialPostWriteSerializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+        _invalidate_pattern("core:social_posts:*")
+        return Response(SocialPostSerializer(instance, context={"request": request}).data)
+
+    def delete(self, request, pk):
+        instance = self._get_object(request, pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        instance.delete()
+        _invalidate_pattern("core:social_posts:*")
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 def _signed_in_system(user):

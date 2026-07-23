@@ -877,3 +877,99 @@ class ContactMessage(Common):
 
     def __str__(self):
         return f"Message from {self.name} ({self.email})"
+
+
+class SocialPost(Common):
+    """An admin-authored social-media flyer/post for a catalog item.
+
+    A marketing artifact, not customer data: the admin picks one catalog item
+    (a product, service or menu item), a code-defined *template* (the layout,
+    which lives in the frontend registry - only its key is stored here), a
+    *format* (aspect ratio), writes a prompt, and lets the LLM draft the on-image
+    text plus the post caption and hashtags. The rendered JPG is built and
+    downloaded client-side from the template preview; nothing image-like is stored
+    here - only the configuration and the generated copy, so a saved post can be
+    reopened and re-downloaded without re-generating.
+
+    The item is referenced by ``related_kind`` + ``related_id`` (the same
+    ``{kind, id}`` shape ``ContactMessage`` and ``System.spotlight_items`` use),
+    not a hard FK, so this model needs no import of the catalog app and one model
+    can point at any of the three buyable families. The serializer resolves the
+    reference to a live item snapshot (name, image, price) for the preview.
+    """
+
+    # The three catalog families a post may feature - the frontend's kind names,
+    # matching the guest-cart / spotlight / contact refs.
+    KIND_PRODUCT = "product"
+    KIND_SERVICE = "service"
+    KIND_FOOD = "food"
+    RELATED_KIND_CHOICES = (
+        (KIND_PRODUCT, "Product"),
+        (KIND_SERVICE, "Service"),
+        (KIND_FOOD, "Menu item"),
+    )
+
+    # Aspect ratios the flyer can be rendered at. Stored as a compact token the
+    # frontend template maps to a pixel canvas (1x1 -> 1080x1080, 4x5 -> 1080x1350).
+    FORMAT_SQUARE = "1x1"
+    FORMAT_PORTRAIT = "4x5"
+    FORMAT_CHOICES = (
+        (FORMAT_SQUARE, "Square 1:1"),
+        (FORMAT_PORTRAIT, "Portrait 4:5"),
+    )
+
+    system = models.ForeignKey(
+        "core.System",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="social_posts",
+    )
+
+    # Internal label shown in the admin list; not part of the rendered flyer.
+    name = models.CharField(max_length=255)
+
+    # The featured catalog item. `related_id` is a plain int, not an FK, because it
+    # can point at any of three models; see the class docstring.
+    related_kind = models.CharField(max_length=16, choices=RELATED_KIND_CHOICES)
+    related_id = models.PositiveIntegerField(null=True, blank=True)
+
+    # The key of a code-defined template in the frontend registry
+    # (`components/admin/social-templates/registry.ts`). Stored as a string so the
+    # collection can grow in the frontend without a migration here.
+    template_id = models.CharField(max_length=64)
+    format = models.CharField(max_length=8, choices=FORMAT_CHOICES, default=FORMAT_SQUARE)
+
+    # The admin's free-text brief; the seed the LLM turns into the copy below.
+    prompt = models.TextField(null=True, blank=True)
+
+    # LLM-drafted copy, persisted and editable so a saved post re-downloads without
+    # re-generating. `image_text` is overlaid on the flyer; `caption` is the post
+    # body; `hashtags` is a space-separated list of `#tags`.
+    image_text = models.TextField(null=True, blank=True)
+    caption = models.TextField(null=True, blank=True)
+    hashtags = models.TextField(null=True, blank=True)
+
+    # Which optional elements the template composes onto the flyer.
+    include_item_data = models.BooleanField(
+        default=True,
+        help_text="Overlay the item's price (and discount, if any) on the flyer.",
+    )
+    include_brand = models.BooleanField(
+        default=True,
+        help_text="Overlay the brand logo and slogan on the flyer.",
+    )
+    include_hashtags = models.BooleanField(
+        default=True,
+        help_text="Show the LLM-suggested hashtags beneath the post caption.",
+    )
+
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Social Post"
+        verbose_name_plural = "Social Posts"
+        ordering = ["sort_order", "-created"]
+
+    def __str__(self):
+        return self.name or f"Social Post #{self.pk}"

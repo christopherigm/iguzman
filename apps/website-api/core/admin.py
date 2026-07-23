@@ -8,6 +8,7 @@ from .models import (
     CompanyHighlight,
     CompanyHighlightItem,
     ContactMessage,
+    SocialPost,
     SuccessStory,
     SuccessStoryImage,
     System,
@@ -179,6 +180,22 @@ class ContactMessageAdmin(admin.ModelAdmin):
 
     def delete_model(self, request, obj):
         _invalidate_pattern("core:contact_messages:*")
+        super().delete_model(request, obj)
+
+
+@admin.register(SocialPost)
+class SocialPostAdmin(admin.ModelAdmin):
+    list_display = ("name", "system", "related_kind", "related_id", "template_id", "format", "sort_order", "enabled", "modified")
+    list_filter = ("enabled", "system", "related_kind", "format")
+    search_fields = ("name", "prompt", "caption")
+    readonly_fields = ("created", "modified", "version")
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        _invalidate_pattern("core:social_posts:*")
+
+    def delete_model(self, request, obj):
+        _invalidate_pattern("core:social_posts:*")
         super().delete_model(request, obj)
 
 
