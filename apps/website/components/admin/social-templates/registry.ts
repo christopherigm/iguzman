@@ -4,6 +4,7 @@ import { BoldTemplate } from "./bold-template";
 import { MinimalTemplate } from "./minimal-template";
 import { EditorialTemplate } from "./editorial-template";
 import { SaleTemplate } from "./sale-template";
+import { ProfileTemplate } from "./profile-template";
 
 /**
  * The code-defined social-flyer template collection. Each entry is a self-styled
@@ -20,13 +21,17 @@ export const SOCIAL_TEMPLATES: readonly SocialTemplate[] = [
   { id: "minimal", name: "Minimal", Component: MinimalTemplate },
   { id: "editorial", name: "Editorial", Component: EditorialTemplate },
   { id: "sale", name: "Sale", Component: SaleTemplate },
+  {
+    id: "profile",
+    name: "Image centered",
+    Component: ProfileTemplate,
+    supportsBackground: true,
+    supportsBadge: true,
+  },
 ] as const;
 
 export const DEFAULT_TEMPLATE_ID = "classic";
 
 export function getTemplate(id: string): SocialTemplate {
-  return (
-    SOCIAL_TEMPLATES.find((t) => t.id === id) ??
-    SOCIAL_TEMPLATES[0]!
-  );
+  return SOCIAL_TEMPLATES.find((t) => t.id === id) ?? SOCIAL_TEMPLATES[0]!;
 }

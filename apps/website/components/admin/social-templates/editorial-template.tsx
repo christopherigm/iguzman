@@ -1,6 +1,6 @@
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { FlyerImage, BrandLogo } from "./flyer-parts";
+import { FlyerImage, BrandLogo, brandLogoSlotHeight } from "./flyer-parts";
 import {
   FORMAT_DIMENSIONS,
   contrastText,
@@ -19,6 +19,9 @@ export function EditorialTemplate({ data }: { data: FlyerData }) {
   const panelText = contrastText(panel);
   const showDiscount =
     data.includeItemData && (data.discountPercent ?? 0) > 0;
+  // The brand row sits at the top of a space-between column, so it has to declare
+  // the height its plate needs - otherwise the plate overlaps the headline below.
+  const brandRowH = Math.max(90, brandLogoSlotHeight(data, 62));
 
   return (
     <Box
@@ -65,9 +68,14 @@ export function EditorialTemplate({ data }: { data: FlyerData }) {
         flexDirection="column"
         justifyContent="space-between"
       >
-        <Box height={90} display="flex" alignItems="center">
+        <Box
+          height={brandRowH}
+          display="flex"
+          alignItems="center"
+          styles={{ flexShrink: 0 }}
+        >
           {data.includeBrand && data.brandLogo ? (
-            <BrandLogo src={data.brandLogo} height={62} />
+            <BrandLogo data={data} height={62} />
           ) : (
             data.includeBrand &&
             data.brandName && (

@@ -1,7 +1,16 @@
 import type { ComponentType } from "react";
+import type { HeroLogoBackground } from "@repo/ui/hero";
 import type { SocialFormat } from "@/lib/admin-api";
 
 export type { SocialFormat };
+
+/**
+ * The shapes a template may frame the centred item photo with. Deliberately the
+ * hero's own vocabulary: the CMS offers one set of shapes everywhere, and both
+ * consumers clip with the same exported `heroLogoBackgroundStyle`, so a shape
+ * cannot come out different on a flyer than it does on the hero.
+ */
+export type BadgeShape = HeroLogoBackground;
 
 /**
  * The pixel canvas each format renders at. The flyer node is laid out at these
@@ -21,9 +30,18 @@ export const FORMAT_DIMENSIONS: Record<SocialFormat, { w: number; h: number }> =
  */
 export interface FlyerData {
   format: SocialFormat;
-  /** Item photo as a data URL (the flyer subject). */
+  /**
+   * Item photo as a data URL (the flyer subject). Already resolved upstream: the
+   * post's own uploaded override when it has one, else the catalog item's photo.
+   */
   itemImage?: string;
   itemName?: string;
+  /**
+   * Full-bleed backdrop as a data URL, painted by templates that declare
+   * `supportsBackground`. Undefined when none is uploaded - a template must
+   * still render (on its own brand-coloured ground) without one.
+   */
+  backgroundImage?: string;
   /** LLM-drafted text overlaid on the flyer (headline/caption on the image). */
   imageText?: string;
   price?: string | null;
@@ -35,10 +53,26 @@ export interface FlyerData {
   brandLogo?: string;
   brandName?: string;
   brandSlogan?: string;
+  /**
+   * Shape of the plate behind the brand logo, in **every** template (unlike
+   * `badgeShape`, which frames the item photo in the templates that centre one).
+   * `"none"` - the default - draws the logo bare, exactly as before.
+   */
+  brandLogoBackground: BadgeShape;
+  /** Whole-percent size of the logo *with* its background (50-100). */
+  brandLogoBackgroundScale: number;
+  /** Whole-percent size of the logo *inside* its background (50-100). */
+  brandLogoScale: number;
   primaryColor: string;
   secondaryColor: string;
   includeItemData: boolean;
   includeBrand: boolean;
+  /** Shape framing the centred photo, in templates that badge it. */
+  badgeShape: BadgeShape;
+  /** Whole-percent size of the badge itself (50-100). */
+  badgeScale: number;
+  /** Whole-percent size of the photo inside the badge (50-100). */
+  badgeImageScale: number;
 }
 
 export interface SocialTemplate {
@@ -48,6 +82,18 @@ export interface SocialTemplate {
   name: string;
   /** Renders the flyer at `FORMAT_DIMENSIONS[data.format]`. */
   Component: ComponentType<{ data: FlyerData }>;
+  /**
+   * Paints `backgroundImage` as a full-bleed backdrop. The form uses this to
+   * hint which templates the uploaded background actually reaches.
+   */
+  supportsBackground?: boolean;
+  /**
+   * Frames the centred photo in a shaped badge, so `badgeShape` and the two
+   * scales apply. The form hides those controls for templates without one
+   * rather than leaving sliders that do nothing - the stored values are kept,
+   * so switching back restores what the admin had picked.
+   */
+  supportsBadge?: boolean;
 }
 
 /** Format a decimal price string for display, e.g. "199.00" + "MXN". */

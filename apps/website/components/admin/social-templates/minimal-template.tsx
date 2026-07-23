@@ -1,6 +1,6 @@
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { FlyerImage, BrandLogo } from "./flyer-parts";
+import { FlyerImage, BrandLogo, brandLogoSlotHeight } from "./flyer-parts";
 import {
   FORMAT_DIMENSIONS,
   formatMoney,
@@ -16,6 +16,9 @@ export function MinimalTemplate({ data }: { data: FlyerData }) {
   const ink = "#161616";
   const showDiscount =
     data.includeItemData && (data.discountPercent ?? 0) > 0;
+  // The 110px logo row grows only when the logo's plate outgrows it; the framed
+  // photo panel below has flexGrow, so it yields the height rather than overflow.
+  const logoRowH = Math.max(110, brandLogoSlotHeight(data, 68));
 
   return (
     <Box
@@ -32,10 +35,11 @@ export function MinimalTemplate({ data }: { data: FlyerData }) {
         display="flex"
         alignItems="center"
         justifyContent="center"
-        height={110}
+        height={logoRowH}
+        styles={{ flexShrink: 0 }}
       >
         {data.includeBrand && data.brandLogo ? (
-          <BrandLogo src={data.brandLogo} height={68} />
+          <BrandLogo data={data} height={68} />
         ) : (
           data.includeBrand &&
           data.brandName && (

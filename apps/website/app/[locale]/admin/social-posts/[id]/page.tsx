@@ -12,10 +12,21 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { Button } from "@repo/ui/core-elements/button";
 import { Select } from "@repo/ui/core-elements/select";
+import { Slider } from "@repo/ui/core-elements/slider";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Spinner } from "@repo/ui/core-elements/spinner";
 import { Toast } from "@repo/ui/core-elements/toast";
+import type { HeroLogoBackground } from "@repo/ui/hero";
+import {
+  AdminImageUploader,
+  type NewImage,
+} from "@/components/admin-image-uploader/admin-image-uploader";
+import {
+  LOGO_BACKGROUND_SHAPES,
+  LOGO_BACKGROUND_LABEL_KEY,
+  SCALE_STEPS,
+} from "@/components/admin/logo-background-options";
 import {
   getSocialPost,
   createSocialPost,
@@ -54,6 +65,24 @@ const KIND_ICON: Record<SocialItemKind, string> = {
   product: "📦",
   service: "🛠️",
   food: "🍽️",
+};
+
+/**
+ * The post's own artwork fields. Tracked outside `values` because each is an
+ * uploader with its own existing/pending pair, exactly as the system page tracks
+ * its images; `handleSubmit` folds the pending base64 back into the payload.
+ */
+const IMAGE_FIELDS = ["img_item", "img_background"] as const;
+type ImageField = (typeof IMAGE_FIELDS)[number];
+
+interface ImageState {
+  existing: { id: number; url: string }[];
+  pending: NewImage[];
+}
+
+const EMPTY_IMAGES: Record<ImageField, ImageState> = {
+  img_item: { existing: [], pending: [] },
+  img_background: { existing: [], pending: [] },
 };
 
 /** On-screen preview width in CSS px; the flyer is drawn at 1080 and scaled to fit. */
@@ -136,9 +165,17 @@ export default function AdminSocialPostFormPage({ params }: Props) {
     hashtags: "",
     include_item_data: true,
     include_brand: true,
-    include_hashtags: true,
+    badge_shape: "circle",
+    badge_scale: 100,
+    badge_image_scale: 100,
+    brand_logo_background: "none",
+    brand_logo_background_scale: 70,
+    brand_logo_scale: 100,
     enabled: true,
   });
+
+  const [images, setImages] =
+    useState<Record<ImageField, ImageState>>(EMPTY_IMAGES);
 
   const [itemOptions, setItemOptions] = useState<ItemOption[]>([]);
   const [selectedItem, setSelectedItem] = useState<ItemOption | null>(null);
@@ -148,11 +185,19 @@ export default function AdminSocialPostFormPage({ params }: Props) {
     slogan: string | null;
     primary: string;
     secondary: string;
-  }>({ logo: null, name: null, slogan: null, primary: "#2196f3", secondary: "#e040fb" });
+  }>({
+    logo: null,
+    name: null,
+    slogan: null,
+    primary: "#2196f3",
+    secondary: "#e040fb",
+  });
 
   // Same-origin data URLs used by both the preview and the export.
   const [itemImageData, setItemImageData] = useState<string | undefined>();
   const [brandLogoData, setBrandLogoData] = useState<string | undefined>();
+  const [overrideImageData, setOverrideImageData] = useState<string>();
+  const [backgroundImageData, setBackgroundImageData] = useState<string>();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -200,6 +245,19 @@ export default function AdminSocialPostFormPage({ params }: Props) {
         ];
         if (cancelled) return;
         setItemOptions(options);
+        // A native <select> with no matching option still *shows* its first
+        // entry, so a new post looked like it had that item picked while the
+        // preview (and the Generate/Download buttons) had nothing selected.
+        // Adopt the first option so the state matches what the control says.
+        const first = options[0];
+        if (isNew && first) {
+          setSelectedItem(first);
+          setValues((prev) => ({
+            ...prev,
+            related_kind: first.kind,
+            related_id: first.id,
+          }));
+        }
         setBrand({
           logo: (system.img_logo as string | null) ?? null,
           name: (system.site_name as string | null) ?? null,
@@ -223,8 +281,28 @@ export default function AdminSocialPostFormPage({ params }: Props) {
             hashtags: post.hashtags ?? "",
             include_item_data: post.include_item_data ?? true,
             include_brand: post.include_brand ?? true,
-            include_hashtags: post.include_hashtags ?? true,
+            badge_shape: post.badge_shape ?? "circle",
+            badge_scale: post.badge_scale ?? 100,
+            badge_image_scale: post.badge_image_scale ?? 100,
+            brand_logo_background: post.brand_logo_background ?? "none",
+            brand_logo_background_scale:
+              post.brand_logo_background_scale ?? 100,
+            brand_logo_scale: post.brand_logo_scale ?? 100,
             enabled: post.enabled ?? true,
+          });
+          setImages({
+            img_item: {
+              existing: post.img_item
+                ? [{ id: post.id, url: post.img_item }]
+                : [],
+              pending: [],
+            },
+            img_background: {
+              existing: post.img_background
+                ? [{ id: post.id, url: post.img_background }]
+                : [],
+              pending: [],
+            },
           });
           const match =
             options.find(
@@ -232,14 +310,14 @@ export default function AdminSocialPostFormPage({ params }: Props) {
             ) ??
             (post.item
               ? {
-                  kind: post.item.kind,
-                  id: post.item.id,
-                  name: post.item.name ?? "",
-                  image: post.item.image,
-                  comparePrice: post.item.compare_price,
-                  price: post.item.price,
-                  currency: post.item.currency,
-                }
+                kind: post.item.kind,
+                id: post.item.id,
+                name: post.item.name ?? "",
+                image: post.item.image,
+                comparePrice: post.item.compare_price,
+                price: post.item.price,
+                currency: post.item.currency,
+              }
               : null);
           setSelectedItem(match);
         }
@@ -281,17 +359,86 @@ export default function AdminSocialPostFormPage({ params }: Props) {
     };
   }, [brand.logo]);
 
+  // The post's own artwork. A pending upload is already a data URL, so it needs
+  // no round-trip; a stored one comes back as an API URL and goes through the
+  // optimizer like every other image the export touches.
+  const overrideSrc =
+    images.img_item.pending[0]?.preview ?? images.img_item.existing[0]?.url;
+  const backgroundSrc =
+    images.img_background.pending[0]?.preview ??
+    images.img_background.existing[0]?.url;
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const resolved = overrideSrc
+        ? await toSameOriginDataUrl(overrideSrc)
+        : undefined;
+      if (!cancelled) setOverrideImageData(resolved);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [overrideSrc]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const resolved = backgroundSrc
+        ? await toSameOriginDataUrl(backgroundSrc)
+        : undefined;
+      if (!cancelled) setBackgroundImageData(resolved);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [backgroundSrc]);
+
   const set = useCallback(
     (k: string, v: unknown) => setValues((prev) => ({ ...prev, [k]: v })),
     [],
   );
 
+  const onImageChange = useCallback(
+    (field: ImageField, newImages: NewImage[], orderedExistingIds: number[]) =>
+      setImages((prev) => ({
+        ...prev,
+        [field]: {
+          existing: prev[field].existing.filter((img) =>
+            orderedExistingIds.includes(img.id),
+          ),
+          pending: newImages,
+        },
+      })),
+    [],
+  );
+
   // ── Derived flyer data ──────────────────────────────────────────────────────
   const format = values.format as SocialFormat;
+  // Guarded like the hero's: an unknown shape (a legacy row, a hand-written
+  // payload) would otherwise leave the badge unclipped with nothing to say why.
+  const badgeShape = (
+    LOGO_BACKGROUND_SHAPES.includes(values.badge_shape as HeroLogoBackground)
+      ? values.badge_shape
+      : "circle"
+  ) as HeroLogoBackground;
+  // Same guard for the brand logo's own plate; its neutral value is "none" (no
+  // plate), which is how every post rendered before this control existed.
+  const brandLogoBackground = (
+    LOGO_BACKGROUND_SHAPES.includes(
+      values.brand_logo_background as HeroLogoBackground,
+    )
+      ? values.brand_logo_background
+      : "none"
+  ) as HeroLogoBackground;
   const flyerData: FlyerData = useMemo(
     () => ({
       format,
-      itemImage: itemImageData ?? selectedItem?.image ?? undefined,
+      // The uploaded override wins over the catalog photo in every template -
+      // that is the whole point of the field.
+      itemImage:
+        overrideImageData ?? itemImageData ?? selectedItem?.image ?? undefined,
+      backgroundImage: backgroundImageData,
       itemName: selectedItem?.name,
       imageText: String(values.image_text ?? ""),
       price: selectedItem?.price ?? null,
@@ -308,8 +455,27 @@ export default function AdminSocialPostFormPage({ params }: Props) {
       secondaryColor: brand.secondary,
       includeItemData: Boolean(values.include_item_data),
       includeBrand: Boolean(values.include_brand),
+      badgeShape: badgeShape,
+      badgeScale: Number(values.badge_scale ?? 100),
+      badgeImageScale: Number(values.badge_image_scale ?? 100),
+      brandLogoBackground,
+      brandLogoBackgroundScale: Number(
+        values.brand_logo_background_scale ?? 100,
+      ),
+      brandLogoScale: Number(values.brand_logo_scale ?? 100),
     }),
-    [format, itemImageData, brandLogoData, brand, selectedItem, values],
+    [
+      format,
+      itemImageData,
+      overrideImageData,
+      backgroundImageData,
+      brandLogoData,
+      brand,
+      selectedItem,
+      values,
+      badgeShape,
+      brandLogoBackground,
+    ],
   );
 
   const template = getTemplate(String(values.template_id));
@@ -333,7 +499,8 @@ export default function AdminSocialPostFormPage({ params }: Props) {
   const onSelectItem = (value: string) => {
     const [kind, rawId] = value.split(":");
     const match =
-      itemOptions.find((o) => o.kind === kind && o.id === Number(rawId)) ?? null;
+      itemOptions.find((o) => o.kind === kind && o.id === Number(rawId)) ??
+      null;
     setSelectedItem(match);
     set("related_kind", kind);
     set("related_id", match?.id ?? null);
@@ -344,13 +511,12 @@ export default function AdminSocialPostFormPage({ params }: Props) {
     if (!selectedItem) return;
     resetLlm();
     setError(null);
-    const disc = discountPercent(
-      selectedItem.price,
-      selectedItem.comparePrice,
-    );
+    const disc = discountPercent(selectedItem.price, selectedItem.comparePrice);
     const facts = [
       `Item: ${selectedItem.name}`,
-      selectedItem.price ? `Price: ${selectedItem.price} ${selectedItem.currency ?? ""}` : "",
+      selectedItem.price
+        ? `Price: ${selectedItem.price} ${selectedItem.currency ?? ""}`
+        : "",
       disc ? `Discount: ${disc}% off (was ${selectedItem.comparePrice})` : "",
       brand.name ? `Brand: ${brand.name}` : "",
       brand.slogan ? `Slogan: ${brand.slogan}` : "",
@@ -402,7 +568,7 @@ export default function AdminSocialPostFormPage({ params }: Props) {
     setError(null);
     setSuccess(null);
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         name: values.name,
         related_kind: values.related_kind,
         related_id: values.related_id,
@@ -414,9 +580,25 @@ export default function AdminSocialPostFormPage({ params }: Props) {
         hashtags: values.hashtags || null,
         include_item_data: values.include_item_data,
         include_brand: values.include_brand,
-        include_hashtags: values.include_hashtags,
+        badge_shape: values.badge_shape,
+        badge_scale: values.badge_scale,
+        badge_image_scale: values.badge_image_scale,
+        brand_logo_background: values.brand_logo_background,
+        brand_logo_background_scale: values.brand_logo_background_scale,
+        brand_logo_scale: values.brand_logo_scale,
         enabled: values.enabled,
       };
+      // Artwork travels as base64 (what the uploader produces). A field is only
+      // named when it changed: a pending upload replaces it, an emptied uploader
+      // clears it, and an untouched one is left out so the API keeps what it has.
+      IMAGE_FIELDS.forEach((field) => {
+        const state = images[field];
+        if (state.pending.length > 0) {
+          payload[field] = state.pending[0]?.base64;
+        } else if (state.existing.length === 0) {
+          payload[field] = null;
+        }
+      });
       if (isNew) {
         await createSocialPost(payload);
       } else {
@@ -465,9 +647,7 @@ export default function AdminSocialPostFormPage({ params }: Props) {
 
   const hashtags = String(values.hashtags ?? "").trim();
   const captionText = String(values.caption ?? "");
-  const includeHashtags = Boolean(values.include_hashtags);
-  const showCaptionBlock =
-    captionText !== "" || (includeHashtags && hashtags !== "");
+  const showCaptionBlock = captionText !== "" || hashtags !== "";
 
   if (loading)
     return (
@@ -581,6 +761,140 @@ export default function AdminSocialPostFormPage({ params }: Props) {
               </Box>
             </Box>
 
+            {/* ── Artwork ──
+                The item's own photo and no backdrop is the default; both fields
+                are overrides, so an untouched post renders exactly as before. */}
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Box flexDirection="column" gap={8}>
+                  <Typography variant="label">
+                    {t("socialImageOverride")}
+                  </Typography>
+                  <AdminImageUploader
+                    existingImages={images.img_item.existing}
+                    onChange={(newImages, _deleted, orderedExistingIds) =>
+                      onImageChange("img_item", newImages, orderedExistingIds)
+                    }
+                    maxImages={1}
+                    compact
+                  />
+                  <Typography variant="caption">
+                    {t("socialImageOverrideHint")}
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Box flexDirection="column" gap={8}>
+                  <Typography variant="label">
+                    {t("socialBackgroundImage")}
+                  </Typography>
+                  <AdminImageUploader
+                    existingImages={images.img_background.existing}
+                    onChange={(newImages, _deleted, orderedExistingIds) =>
+                      onImageChange(
+                        "img_background",
+                        newImages,
+                        orderedExistingIds,
+                      )
+                    }
+                    maxImages={1}
+                    compact
+                  />
+                  <Typography variant="caption">
+                    {template.supportsBackground
+                      ? t("socialBackgroundImageHint")
+                      : t("socialBackgroundImageUnused")}
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+
+            {/* The badge controls only exist for templates that frame the photo;
+                elsewhere they would be controls with no effect. Hiding them keeps
+                the stored values, so switching back restores what was picked. */}
+            {template.supportsBadge && (
+              <>
+                <Select
+                  label={t("socialBadgeShape")}
+                  value={badgeShape}
+                  onChange={(v) => set("badge_shape", v)}
+                  options={LOGO_BACKGROUND_SHAPES.map((value) => ({
+                    value,
+                    label: t(LOGO_BACKGROUND_LABEL_KEY[value]),
+                  }))}
+                />
+                {badgeShape !== "none" && (
+                  <Slider
+                    label={t("socialBadgeSize")}
+                    steps={SCALE_STEPS}
+                    value={Number(values.badge_scale ?? 100)}
+                    onChange={(v) => set("badge_scale", Number(v))}
+                  />
+                )}
+                <Slider
+                  label={t("socialBadgeImageSize")}
+                  steps={SCALE_STEPS}
+                  value={Number(values.badge_image_scale ?? 100)}
+                  onChange={(v) => set("badge_image_scale", Number(v))}
+                />
+              </>
+            )}
+
+            {/* Between the artwork and the copy: these two decide what else the
+                flyer image carries, so they belong with the image, not with the
+                post text below. */}
+            <Box flexDirection="column" gap={12}>
+              <ToggleRow
+                label={t("socialIncludeItemData")}
+                checked={Boolean(values.include_item_data)}
+                onChange={(v) => set("include_item_data", v)}
+              />
+              <ToggleRow
+                label={t("socialIncludeBrand")}
+                checked={Boolean(values.include_brand)}
+                onChange={(v) => set("include_brand", v)}
+              />
+
+              {/* The brand logo's own plate - every template draws the logo, so
+                  unlike the item badge above these are not template-specific.
+                  They hang off the toggle: with the brand off there is no logo
+                  to put a plate behind. Only the *plate* slider is shape-gated
+                  (with no plate there is nothing to size); the logo slider is
+                  always offered, because the logo is drawn either way and the
+                  bare one needs sizing just as much. Hiding the plate slider
+                  keeps its stored value, so turning a shape back on restores
+                  what was picked. */}
+              {Boolean(values.include_brand) && (
+                <Box flexDirection="column" gap={12} paddingTop={4}>
+                  <Select
+                    label={t("socialBrandLogoBackground")}
+                    value={brandLogoBackground}
+                    onChange={(v) => set("brand_logo_background", v)}
+                    options={LOGO_BACKGROUND_SHAPES.map((value) => ({
+                      value,
+                      label: t(LOGO_BACKGROUND_LABEL_KEY[value]),
+                    }))}
+                  />
+                  {brandLogoBackground !== "none" && (
+                    <Slider
+                      label={t("socialBrandLogoBgSize")}
+                      steps={SCALE_STEPS}
+                      value={Number(values.brand_logo_background_scale ?? 100)}
+                      onChange={(v) =>
+                        set("brand_logo_background_scale", Number(v))
+                      }
+                    />
+                  )}
+                  <Slider
+                    label={t("socialBrandLogoSize")}
+                    steps={SCALE_STEPS}
+                    value={Number(values.brand_logo_scale ?? 100)}
+                    onChange={(v) => set("brand_logo_scale", Number(v))}
+                  />
+                </Box>
+              )}
+            </Box>
+
             <TextInput
               label={t("socialPostPrompt")}
               value={String(values.prompt ?? "")}
@@ -599,7 +913,9 @@ export default function AdminSocialPostFormPage({ params }: Props) {
                 onClick={() => void handleGenerate()}
                 disabled={!selectedItem || isGenerating}
               />
-              {isGenerating && <Spinner size={18} label={t("socialGenerating")} />}
+              {isGenerating && (
+                <Spinner size={18} label={t("socialGenerating")} />
+              )}
             </Box>
             {llmError && (
               <Typography variant="body" color="var(--error, #c62828)">
@@ -625,25 +941,6 @@ export default function AdminSocialPostFormPage({ params }: Props) {
               value={String(values.hashtags ?? "")}
               onChange={(v) => set("hashtags", v)}
             />
-
-            {/* Toggles */}
-            <Box flexDirection="column" gap={12}>
-              <ToggleRow
-                label={t("socialIncludeItemData")}
-                checked={Boolean(values.include_item_data)}
-                onChange={(v) => set("include_item_data", v)}
-              />
-              <ToggleRow
-                label={t("socialIncludeBrand")}
-                checked={Boolean(values.include_brand)}
-                onChange={(v) => set("include_brand", v)}
-              />
-              <ToggleRow
-                label={t("socialIncludeHashtags")}
-                checked={Boolean(values.include_hashtags)}
-                onChange={(v) => set("include_hashtags", v)}
-              />
-            </Box>
           </Box>
         </Grid>
 
@@ -697,7 +994,7 @@ export default function AdminSocialPostFormPage({ params }: Props) {
                     {captionText}
                   </Typography>
                 ) : null}
-                {includeHashtags && hashtags ? (
+                {hashtags ? (
                   <Typography variant="body" color="var(--accent, #06b6d4)">
                     {hashtags}
                   </Typography>

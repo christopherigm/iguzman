@@ -690,13 +690,14 @@ class SystemWriteSerializer(serializers.Serializer):
     hero_logo_background = serializers.ChoiceField(
         choices=[c[0] for c in System.HERO_LOGO_BACKGROUND_CHOICES], required=False
     )
-    # The same bounds the CMS slider offers; enforced here because the CMS is not
-    # the only possible caller. Below 50 the logo would all but vanish inside the
-    # disc; above 100 there is nothing more to fill.
-    hero_logo_scale = serializers.IntegerField(required=False, min_value=50, max_value=100)
-    # Same bounds and rationale as hero_logo_scale; below 50 the badge is too
+    # The same bounds the CMS slider offers (SCALE_STEPS in the website's
+    # logo-background-options.ts); enforced here because the CMS is not the only
+    # possible caller. Below 30 the logo would all but vanish inside the disc;
+    # above 100 there is nothing more to fill.
+    hero_logo_scale = serializers.IntegerField(required=False, min_value=30, max_value=100)
+    # Same bounds and rationale as hero_logo_scale; below 30 the badge is too
     # small to read as a backing, above 100 there is nothing bigger to draw.
-    hero_logo_background_scale = serializers.IntegerField(required=False, min_value=50, max_value=100)
+    hero_logo_background_scale = serializers.IntegerField(required=False, min_value=30, max_value=100)
     # Constrained to the overlay shapes the frontend can render - an unknown
     # value would fall back to the default gradient, which reads as the setting
     # having been ignored. 0 opacity is allowed: it is how a tenant turns the
@@ -1092,6 +1093,15 @@ def _resolve_social_item(kind, item_id, request):
     }
 
 
+_SOCIAL_POST_IMAGE_CFG = {
+    # The flyer canvas is 1080 wide and at most 1350 tall, so anything larger is
+    # detail the export throws away. Quality is high because these are the
+    # artwork of the piece, not a thumbnail.
+    "img_item": {"max_size": (1350, 1350), "quality": 90},
+    "img_background": {"max_size": (1350, 1350), "quality": 90},
+}
+
+
 class SocialPostSerializer(serializers.ModelSerializer):
     """Read serializer for the admin social-post CMS.
 
@@ -1102,6 +1112,8 @@ class SocialPostSerializer(serializers.ModelSerializer):
 
     item = serializers.SerializerMethodField()
     brand = serializers.SerializerMethodField()
+    img_item = serializers.SerializerMethodField()
+    img_background = serializers.SerializerMethodField()
 
     class Meta:
         model = SocialPost
@@ -1112,8 +1124,24 @@ class SocialPostSerializer(serializers.ModelSerializer):
             "template_id", "format",
             "prompt", "image_text", "caption", "hashtags",
             "include_item_data", "include_brand", "include_hashtags",
+            "img_item", "img_background",
+            "badge_shape", "badge_scale", "badge_image_scale",
+            "brand_logo_background", "brand_logo_background_scale", "brand_logo_scale",
             "item", "brand",
         ]
+
+    def _image_url(self, field):
+        """Absolute URL for an image field, matching how `brand.logo` is built."""
+        if not field:
+            return None
+        request = self.context.get("request")
+        return request.build_absolute_uri(field.url) if request else field.url
+
+    def get_img_item(self, obj):
+        return self._image_url(obj.img_item)
+
+    def get_img_background(self, obj):
+        return self._image_url(obj.img_background)
 
     def get_item(self, obj):
         return _resolve_social_item(
@@ -1140,7 +1168,22 @@ class SocialPostSerializer(serializers.ModelSerializer):
 
 class SocialPostWriteSerializer(serializers.ModelSerializer):
     """Create/update serializer. `system` is set by the view from the admin's
-    token, never trusted from the body."""
+    token, never trusted from the body.
+
+    The two artwork fields arrive as base64 data URLs (what the CMS uploader
+    produces) rather than multipart, like every other image in this API, so they
+    are declared as write-only text and processed in `create`/`update` - after
+    the row exists, since the stored filename embeds its pk. Sending an explicit
+    null (or "") clears the image; omitting the key leaves it untouched, which is
+    what keeps a PATCH of an unrelated field from wiping the artwork.
+    """
+
+    img_item = serializers.CharField(
+        write_only=True, required=False, allow_null=True, allow_blank=True
+    )
+    img_background = serializers.CharField(
+        write_only=True, required=False, allow_null=True, allow_blank=True
+    )
 
     class Meta:
         model = SocialPost
@@ -1150,8 +1193,71 @@ class SocialPostWriteSerializer(serializers.ModelSerializer):
             "template_id", "format",
             "prompt", "image_text", "caption", "hashtags",
             "include_item_data", "include_brand", "include_hashtags",
+            "img_item", "img_background",
+            "badge_shape", "badge_scale", "badge_image_scale",
+            "brand_logo_background", "brand_logo_background_scale", "brand_logo_scale",
             "enabled", "sort_order",
         ]
+        extra_kwargs = {
+            # The same bounds the CMS sliders offer (SCALE_STEPS in the website's
+            # logo-background-options.ts), enforced here because the CMS is not
+            # the only possible caller: below 30 the badge/photo all but
+            # vanishes, above 100 there is nothing bigger to draw.
+            "badge_scale": {"min_value": 30, "max_value": 100},
+            "badge_image_scale": {"min_value": 30, "max_value": 100},
+            "brand_logo_background_scale": {"min_value": 30, "max_value": 100},
+            "brand_logo_scale": {"min_value": 30, "max_value": 100},
+        }
+
+    def validate(self, attrs):
+        for field_name, cfg in _SOCIAL_POST_IMAGE_CFG.items():
+            value = attrs.get(field_name)
+            if value:
+                sub = ImageProcessingSerializer(data={"base64_image": value}, **cfg)
+                if not sub.is_valid():
+                    raise serializers.ValidationError(
+                        {field_name: sub.errors["base64_image"]}
+                    )
+        return attrs
+
+    def _save_images(self, instance, image_data):
+        """Write the popped base64 artwork onto an instance that already has a pk."""
+        update_fields = []
+        for field_name, cfg in _SOCIAL_POST_IMAGE_CFG.items():
+            if field_name not in image_data:
+                continue
+            value = image_data[field_name]
+            if value:
+                proc = ImageProcessingSerializer(data={"base64_image": value}, **cfg)
+                proc.is_valid()  # already validated above
+                # No extension: save_to_field appends the one matching what it wrote.
+                proc.save_to_field(
+                    getattr(instance, field_name), f"{field_name}_{instance.pk}"
+                )
+            else:
+                setattr(instance, field_name, None)
+            update_fields.append(field_name)
+        if update_fields:
+            instance.save(update_fields=update_fields)
+        return instance
+
+    def create(self, validated_data):
+        image_data = {
+            k: validated_data.pop(k)
+            for k in list(_SOCIAL_POST_IMAGE_CFG)
+            if k in validated_data
+        }
+        instance = super().create(validated_data)
+        return self._save_images(instance, image_data)
+
+    def update(self, instance, validated_data):
+        image_data = {
+            k: validated_data.pop(k)
+            for k in list(_SOCIAL_POST_IMAGE_CFG)
+            if k in validated_data
+        }
+        instance = super().update(instance, validated_data)
+        return self._save_images(instance, image_data)
 
 
 # ---------------------------------------------------------------------------

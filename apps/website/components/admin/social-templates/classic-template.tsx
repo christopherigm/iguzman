@@ -36,14 +36,12 @@ export function ClassicTemplate({ data }: { data: FlyerData }) {
           alt={data.itemName}
           brandColor={data.primaryColor}
         />
+        {/* No plate of its own: the tenant's "Logo Background" shape is the one
+            backing the logo gets, in every template. A hard-coded white card
+            here would sit under - and fight - whatever shape they picked. */}
         {data.includeBrand && data.brandLogo && (
-          <Box
-            styles={{ position: "absolute", top: 44, left: 44 }}
-            padding="18px 26px"
-            borderRadius={16}
-            backgroundColor="rgba(255,255,255,0.92)"
-          >
-            <BrandLogo src={data.brandLogo} height={64} />
+          <Box styles={{ position: "absolute", top: 44, left: 44 }}>
+            <BrandLogo data={data} height={64} />
           </Box>
         )}
         {showDiscount && (

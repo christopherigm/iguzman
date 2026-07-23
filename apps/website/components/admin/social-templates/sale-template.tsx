@@ -1,6 +1,6 @@
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { FlyerImage, BrandLogo } from "./flyer-parts";
+import { FlyerImage, BrandLogo, brandLogoSlotHeight } from "./flyer-parts";
 import {
   FORMAT_DIMENSIONS,
   contrastText,
@@ -19,6 +19,9 @@ export function SaleTemplate({ data }: { data: FlyerData }) {
   const onBg = contrastText(bg);
   const showDiscount =
     data.includeItemData && (data.discountPercent ?? 0) > 0;
+  // The header keeps its 90px rhythm until the logo's plate outgrows it; a fixed
+  // row would let a scaled-up plate spill into the photo card below.
+  const headerH = Math.max(90, brandLogoSlotHeight(data, 70));
 
   return (
     <Box
@@ -36,10 +39,11 @@ export function SaleTemplate({ data }: { data: FlyerData }) {
         display="flex"
         alignItems="center"
         justifyContent="space-between"
-        height={90}
+        height={headerH}
+        styles={{ flexShrink: 0 }}
       >
         {data.includeBrand && data.brandLogo ? (
-          <BrandLogo src={data.brandLogo} height={70} />
+          <BrandLogo data={data} height={70} />
         ) : (
           <span />
         )}

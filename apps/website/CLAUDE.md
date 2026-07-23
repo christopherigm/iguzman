@@ -410,6 +410,7 @@ Before defining a constant, type, or pure utility function in a component file, 
 | File                                                 | Contents                                                                                                                                      |
 | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `apps/website/components/admin/paragraph-options.ts` | `PARAGRAPH_WORD_COUNTS`, `PARAGRAPH_LENGTH_STEPS`, `PARAGRAPH_COUNT_STEPS` - used by `admin-form.tsx` and `ai-interviewer/ai-interviewer.tsx` |
+| `apps/website/components/admin/logo-background-options.ts` | `LOGO_BACKGROUND_SHAPES`, `LOGO_BACKGROUND_LABEL_KEY`, `SCALE_STEPS` - the badge shapes and size stops, used by `admin/system/hero-video-section.tsx` and `admin/social-posts/[id]/page.tsx` |
 
 **How to apply:**
 

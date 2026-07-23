@@ -5,6 +5,11 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Select } from "@repo/ui/core-elements/select";
 import { Slider, type SliderStep } from "@repo/ui/core-elements/slider";
+import {
+  LOGO_BACKGROUND_SHAPES,
+  LOGO_BACKGROUND_LABEL_KEY,
+  SCALE_STEPS,
+} from "@/components/admin/logo-background-options";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -26,19 +31,6 @@ const LAYOUT_LABEL_KEY: Record<HeroLayout, string> = {
   profile: "heroLayoutProfile",
 };
 
-/** The logo-background shapes the site can render - the same set the API accepts. */
-const HERO_LOGO_BACKGROUNDS: HeroLogoBackground[] = [
-  "none",
-  "circle",
-  "square",
-  "rounded",
-  "triangle",
-  "pentagon",
-  "hexagon",
-  "octagon",
-  "logo",
-];
-
 /** The dark-overlay styles the site can render - the same set the API accepts. */
 const HERO_OVERLAY_STYLES: HeroOverlayStyle[] = [
   "none",
@@ -58,30 +50,6 @@ const OVERLAY_STYLE_LABEL_KEY: Record<HeroOverlayStyle, string> = {
   both: "heroOverlayBoth",
   vignette: "heroOverlayVignette",
 };
-
-/** Admin-namespace message key for each shape's option label. */
-const LOGO_BACKGROUND_LABEL_KEY: Record<HeroLogoBackground, string> = {
-  none: "heroLogoBgNone",
-  circle: "heroLogoBgCircle",
-  square: "heroLogoBgSquare",
-  rounded: "heroLogoBgRounded",
-  triangle: "heroLogoBgTriangle",
-  pentagon: "heroLogoBgPentagon",
-  hexagon: "heroLogoBgHexagon",
-  octagon: "heroLogoBgOctagon",
-  logo: "heroLogoBgLogo",
-};
-
-/**
- * Whole-percent stops shared by both size sliders (the badge size and the logo
- * size within it). 100 is the current full size; below that the target shrinks.
- * The range matches the bounds the API validates, so the CMS cannot compose a
- * value the backend then rejects.
- */
-const SCALE_STEPS: SliderStep[] = [50, 60, 70, 80, 90, 100].map((v) => ({
-  value: v,
-  label: `${v}%`,
-}));
 
 /**
  * Overlay strength, in the whole percents the API stores. Coarser than the size
@@ -143,7 +111,7 @@ export function HeroVideoSection({
   ) as HeroLayout;
 
   const logoBackground = (
-    HERO_LOGO_BACKGROUNDS.includes(
+    LOGO_BACKGROUND_SHAPES.includes(
       values.hero_logo_background as HeroLogoBackground,
     )
       ? values.hero_logo_background
@@ -222,7 +190,7 @@ export function HeroVideoSection({
                   label={t("heroLogoBackground")}
                   value={logoBackground}
                   onChange={(v) => onChange("hero_logo_background", v)}
-                  options={HERO_LOGO_BACKGROUNDS.map((value) => ({
+                  options={LOGO_BACKGROUND_SHAPES.map((value) => ({
                     value,
                     label: t(LOGO_BACKGROUND_LABEL_KEY[value]),
                   }))}

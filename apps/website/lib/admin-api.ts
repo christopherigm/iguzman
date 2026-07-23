@@ -909,6 +909,29 @@ export interface SocialPost {
   include_item_data: boolean;
   include_brand: boolean;
   include_hashtags: boolean;
+  /**
+   * Post-specific artwork, uploaded in the CMS. `img_item` overrides the
+   * catalog item's photo on the flyer; `img_background` is the full-bleed
+   * backdrop the templates that declare `supportsBackground` paint. Both are
+   * read back as URLs and written as base64 data URLs.
+   */
+  img_item: string | null;
+  img_background: string | null;
+  /** Shape framing the centred photo - the hero's logo-background vocabulary. */
+  badge_shape: string;
+  /** Whole-percent size of the badge (50-100). */
+  badge_scale: number;
+  /** Whole-percent size of the photo inside the badge (50-100). */
+  badge_image_scale: number;
+  /**
+   * The plate behind the brand logo, in every template - the same shape
+   * vocabulary again. "none" draws the logo bare.
+   */
+  brand_logo_background: string;
+  /** Whole-percent size of the logo with its background (50-100). */
+  brand_logo_background_scale: number;
+  /** Whole-percent size of the logo inside its background (50-100). */
+  brand_logo_scale: number;
   item: SocialPostItem | null;
   brand: SocialPostBrand | null;
 }
@@ -928,7 +951,10 @@ export async function createSocialPost(data: Record<string, unknown>) {
   });
   return parseResponse<SocialPost>(res);
 }
-export async function updateSocialPost(pk: number, data: Record<string, unknown>) {
+export async function updateSocialPost(
+  pk: number,
+  data: Record<string, unknown>,
+) {
   const res = await adminFetch(`/api/social-posts/${pk}/`, {
     method: "PATCH",
     body: JSON.stringify(data),

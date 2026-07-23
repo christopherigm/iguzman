@@ -173,6 +173,48 @@ export function AdminImageUploader({
 
   const canAdd = entries.length < maxImages;
 
+  const dropzone = (
+    <div
+      className={`aiu__dropzone${compact ? " aiu__dropzone--compact" : ""}${isDragOver ? " aiu__dropzone--active" : ""}`}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setIsDragOver(true);
+      }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={handleDrop}
+      onClick={() => inputRef.current?.click()}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === "Enter" && inputRef.current?.click()}
+      aria-label={t("dropzoneLabel")}
+    >
+      <span className="aiu__dropzone-icon">🖼️</span>
+      <Typography
+        as="span"
+        variant={compact ? "caption" : "body"}
+        fontWeight={600}
+        color="var(--foreground)"
+      >
+        {compact ? t("dropzoneTextCompact") : t("dropzoneText")}
+      </Typography>
+      {!compact && (
+        <Typography as="span" variant="caption" color="var(--foreground)">
+          {t("dropzoneHint")}
+        </Typography>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        multiple
+        className="aiu__input"
+        onChange={(e) => e.target.files && addFiles(e.target.files)}
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+    </div>
+  );
+
   return (
     <Box flexDirection="column" gap={12}>
       {label && (
@@ -186,48 +228,12 @@ export function AdminImageUploader({
         </Typography>
       )}
 
-      {/* Drop zone */}
-      {canAdd && (
-        <div
-          className={`aiu__dropzone${compact ? " aiu__dropzone--compact" : ""}${isDragOver ? " aiu__dropzone--active" : ""}`}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDragOver(true);
-          }}
-          onDragLeave={() => setIsDragOver(false)}
-          onDrop={handleDrop}
-          onClick={() => inputRef.current?.click()}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === "Enter" && inputRef.current?.click()}
-          aria-label={t("dropzoneLabel")}
-        >
-          <span className="aiu__dropzone-icon">🖼️</span>
-          <Typography
-            as="span"
-            variant={compact ? "caption" : "body"}
-            fontWeight={600}
-            color="var(--foreground)"
-          >
-            {compact ? t("dropzoneTextCompact") : t("dropzoneText")}
-          </Typography>
-          {!compact && (
-            <Typography as="span" variant="caption" color="var(--foreground)">
-              {t("dropzoneHint")}
-            </Typography>
-          )}
-          <input
-            ref={inputRef}
-            type="file"
-            accept={accept}
-            multiple
-            className="aiu__input"
-            onChange={(e) => e.target.files && addFiles(e.target.files)}
-            tabIndex={-1}
-            aria-hidden="true"
-          />
-        </div>
-      )}
+      {/* Drop zone. In compact mode it goes through the same grid the thumbnails
+          use, so an empty field is one square cell rather than a full-width one:
+          the field keeps the size it will have once an image is in it, instead of
+          collapsing from a large empty square to a small thumbnail. */}
+      {canAdd &&
+        (compact ? <Box className="aiu__grid">{dropzone}</Box> : dropzone)}
 
       {/* Thumbnail grid */}
       {entries.length > 0 && (

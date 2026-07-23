@@ -461,7 +461,7 @@ class System(Common):
     # (not a float) because that is what the CMS slider emits and the frontend consumes.
     hero_logo_scale = models.PositiveSmallIntegerField(
         default=100,
-        help_text="Logo size inside the background shape, as a whole percent (50-100).",
+        help_text="Logo size inside the background shape, as a whole percent (30-100).",
     )
     # The drawn size of the badge itself, as a whole percent of its default
     # diameter; below 100 the whole badge (shape and logo) shrinks about its
@@ -469,7 +469,7 @@ class System(Common):
     # badge. Only meaningful when hero_logo_background is not "none".
     hero_logo_background_scale = models.PositiveSmallIntegerField(
         default=100,
-        help_text="Background badge size, as a whole percent of its default diameter (50-100).",
+        help_text="Background badge size, as a whole percent of its default diameter (30-100).",
     )
     # ── Hero dark overlay ─────────────────────────────────────────────────────
     # The dark layer between the hero background and the text over it - what
@@ -962,6 +962,70 @@ class SocialPost(Common):
     include_hashtags = models.BooleanField(
         default=True,
         help_text="Show the LLM-suggested hashtags beneath the post caption.",
+    )
+
+    # ── Flyer artwork ─────────────────────────────────────────────────────────
+    # A flyer is a marketing artifact, not a storefront listing: the shot that
+    # sells the post is often not the catalog photo (a plated version, a seasonal
+    # styling, a group shot). `img_item` overrides the resolved item image in
+    # *every* template; `img_background` is a full-bleed backdrop, painted by the
+    # templates that declare support for one (currently "profile"). Both are
+    # optional - with neither set a post renders exactly as it did before.
+    img_item = models.ImageField(null=True, blank=True, upload_to=picture)
+    img_background = models.ImageField(null=True, blank=True, upload_to=picture)
+
+    # ── Centred-image badge ───────────────────────────────────────────────────
+    # How the centred item photo is framed in the templates that badge it. The
+    # shape vocabulary is deliberately System.HERO_LOGO_BACKGROUND_CHOICES: the
+    # CMS offers one set of shapes everywhere, and the frontend shapes both with
+    # the same exported `heroLogoBackgroundStyle`, so they cannot drift apart.
+    badge_shape = models.CharField(
+        max_length=16,
+        choices=System.HERO_LOGO_BACKGROUND_CHOICES,
+        default=System.HERO_LOGO_BG_CIRCLE,
+        help_text="Shape framing the centred item photo. 'None' draws the photo unframed.",
+    )
+    # The drawn size of the badge itself, as a whole percent of its default
+    # diameter; below 100 the whole badge (frame and photo) shrinks about its
+    # centre. Whole percents, not floats, because that is what the CMS slider
+    # emits and the template consumes - the same contract as hero_logo_*_scale.
+    badge_scale = models.PositiveSmallIntegerField(
+        default=100,
+        help_text="Badge size as a whole percent of its default size (30-100).",
+    )
+    # The drawn size of the photo inside the badge, as a whole percent of it. 100
+    # is edge-to-edge "cover" fill; below that the photo shrinks, centred, leaving
+    # a ring of the badge's frame colour around it. Independent of badge_scale.
+    badge_image_scale = models.PositiveSmallIntegerField(
+        default=100,
+        help_text="Photo size inside the badge, as a whole percent (30-100).",
+    )
+
+    # ── Brand-logo badge ──────────────────────────────────────────────────────
+    # A plate behind the brand logo, in *every* template (unlike the badge above,
+    # which frames the item photo in the templates that centre one). A logo drawn
+    # bare over a busy backdrop often stops reading; a plate is what a real logo
+    # lockup uses. Same shape vocabulary and the same two-scale relationship as
+    # the hero's own logo badge (System.hero_logo_background*), so the tenant
+    # tunes it with the controls they already know. Defaults to "none" - no
+    # plate - so every existing post renders exactly as it did before.
+    brand_logo_background = models.CharField(
+        max_length=16,
+        choices=System.HERO_LOGO_BACKGROUND_CHOICES,
+        default=System.HERO_LOGO_BG_NONE,
+        help_text="Shape of the plate behind the brand logo. 'None' draws the logo bare.",
+    )
+    # The drawn size of the plate (shape and logo together), as a whole percent
+    # of the template's default logo height.
+    brand_logo_background_scale = models.PositiveSmallIntegerField(
+        default=100,
+        help_text="Logo-with-background size as a whole percent (30-100).",
+    )
+    # The drawn size of the logo inside the plate, as a whole percent of it;
+    # below 100 the logo shrinks about the centre and a ring of plate shows.
+    brand_logo_scale = models.PositiveSmallIntegerField(
+        default=100,
+        help_text="Logo size inside its background, as a whole percent (30-100).",
     )
 
     sort_order = models.PositiveIntegerField(default=0)

@@ -51,7 +51,7 @@ export function BoldTemplate({ data }: { data: FlyerData }) {
         justifyContent="space-between"
       >
         {data.includeBrand && data.brandLogo ? (
-          <BrandLogo src={data.brandLogo} height={72} />
+          <BrandLogo data={data} height={72} />
         ) : (
           <span />
         )}
