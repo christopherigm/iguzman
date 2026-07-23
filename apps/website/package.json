@@ -1,10 +1,10 @@
 {
   "name": "website",
-  "version": "0.1.147",
+  "version": "0.1.148",
   "type": "module",
   "private": true,
   "scripts": {
-    "gen:breakpoints": "tsx scripts/gen-breakpoints-css.ts",
+    "gen:breakpoints": "pnpm --filter @repo/ui gen:breakpoints",
     "predev": "pnpm gen:breakpoints",
     "dev": "next dev --port 3000",
     "prebuild": "pnpm gen:breakpoints",

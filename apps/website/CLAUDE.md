@@ -366,14 +366,17 @@ scale lives once in `@repo/ui`'s `BREAKPOINTS` (`packages/ui/src/core-elements/b
 - a deliberately React-free module so build scripts can import it), and CSS
 consumes it through PostCSS `@custom-media` tokens.
 
-- `scripts/gen-breakpoints-css.ts` reads `BREAKPOINTS` and writes
-  `app/breakpoints.generated.css` (committed; **never edit by hand**). It runs on
-  `predev`/`prebuild` via `pnpm gen:breakpoints`, so a changed scale flows into
-  CSS automatically. Regenerate and re-commit if you touch `BREAKPOINTS`.
-- `postcss.config.mjs` wires two plugins: `@csstools/postcss-global-data` injects
-  those `@custom-media` rules into every CSS file, then `postcss-custom-media`
-  resolves them. Defining this config opts the app out of Next's built-in PostCSS,
-  so `autoprefixer` is listed explicitly - keep it.
+- The tokens are generated **once, in `@repo/ui`** (not per-app):
+  `packages/ui/scripts/gen-breakpoints-css.ts` reads `BREAKPOINTS` and writes
+  `packages/ui/src/core-elements/breakpoints.generated.css` (committed; **never edit
+  by hand**). This app's `predev`/`prebuild` delegates to it via `pnpm gen:breakpoints`
+  (an alias for `pnpm --filter @repo/ui gen:breakpoints`), so a changed scale flows into
+  CSS automatically. Regenerate and re-commit that file if you touch `BREAKPOINTS`.
+- `postcss.config.mjs` wires two plugins: `@csstools/postcss-global-data` - pointed at
+  `../../packages/ui/src/core-elements/breakpoints.generated.css` - injects those shared
+  `@custom-media` rules into every CSS file (including CSS from `@repo/ui`), then
+  `postcss-custom-media` resolves them. Defining this config opts the app out of Next's
+  built-in PostCSS, so `autoprefixer` is listed explicitly - keep it.
 - In any `.css` file, write the token, not the pixels:
 
   ```css

@@ -195,7 +195,15 @@ xl: 1536 px
 ```
 
 - **In TypeScript/TSX** - use the `Breakpoint` type and `BREAKPOINTS` record directly; never hardcode pixel values for breakpoint logic.
-- **In CSS** - **every** Next.js app in `apps/` generates `@custom-media` tokens from this scale at build time (PostCSS `@custom-media` fed by a committed generated file - see `apps/CLAUDE.md` → "Responsive breakpoints in CSS (`@custom-media`)"). Write the token, never a pixel literal:
+- **In CSS** - the scale is compiled to `@custom-media` tokens by
+  `scripts/gen-breakpoints-css.ts` → `src/core-elements/breakpoints.generated.css`
+  (committed; **never edit by hand** - regenerate with `pnpm --filter @repo/ui gen:breakpoints`).
+  This is the **one** generated tokens file for the whole monorepo: every Next.js app's
+  `postcss.config.mjs` points `@csstools/postcss-global-data` at it, so the tokens are
+  injected (and `postcss-custom-media` resolves them) into **every** CSS file each app
+  bundles - **including this package's own `.css` files**. So a `@repo/ui` component's CSS
+  may use the tokens directly (e.g. `navbar.css`); they resolve through the consuming
+  app's PostCSS. Write the token, never a pixel literal:
 
 ```css
 @media (--below-sm) { … }   /* below the sm breakpoint (mobile only) */
@@ -203,6 +211,11 @@ xl: 1536 px
 @media (--md)       { … }   /* from md up */
 @media (--only-lg)  { … }   /* within the lg band only */
 ```
+
+  `@repo/ui` also ships a reference `postcss.config.mjs` so the package is self-describing;
+  note it does **not** run during an app build (Next resolves a single config from the app
+  root), so a `@repo/ui` CSS file's tokens are only guaranteed to resolve in consumers that
+  run the `postcss-global-data` + `postcss-custom-media` pair - which every app in `apps/` does.
 
 ## Styling Conventions
 

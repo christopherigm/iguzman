@@ -3,7 +3,8 @@
    (gallery beside description). On xs/sm the grid stacks to a single column, so
    the border is applied from the md breakpoint up only — matching @repo/ui's
    grid. The `--md` custom-media resolves to the shared BREAKPOINTS scale at
-   build time (see app/breakpoints.generated.css). Media-query-only class. */
+   build time (see packages/ui/src/core-elements/breakpoints.generated.css).
+   Media-query-only class. */
 @media (--md) {
   .item-detail__description {
     border-right: 3px solid var(--accent);

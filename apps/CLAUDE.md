@@ -234,20 +234,22 @@ declare module "swiper/css/*";
 **Never hardcode a breakpoint pixel value in a `@media` query.** The scale lives once
 in `@repo/ui`'s `BREAKPOINTS` (`packages/ui/src/core-elements/breakpoints.ts` - a
 deliberately React-free module so build scripts can import it), and **every** Next.js
-app in `apps/` consumes it through PostCSS `@custom-media` tokens. This is standardised
-across all apps - the moving parts are identical in each:
+app in `apps/` consumes it through PostCSS `@custom-media` tokens. The tokens are
+generated **once, in `@repo/ui`** (not per-app), and every app points at that one file:
 
-- `scripts/gen-breakpoints-css.ts` reads `BREAKPOINTS` and writes
-  `app/breakpoints.generated.css` (committed; **never edit by hand**). It runs on
-  `predev`/`prebuild` via `pnpm gen:breakpoints`, so a changed scale flows into CSS
-  automatically. If you change `BREAKPOINTS`, regenerate and re-commit the file in
-  every app (`pnpm -r gen:breakpoints`).
-- `postcss.config.mjs` wires two plugins: `@csstools/postcss-global-data` injects the
-  generated `@custom-media` rules into every CSS file, then `postcss-custom-media`
-  resolves them. Defining this config opts the app out of Next's built-in PostCSS, so
-  `autoprefixer` is listed explicitly - keep it. The four devDeps
-  (`@csstools/postcss-global-data`, `postcss-custom-media`, `autoprefixer`, `tsx`) and
-  the `gen:breakpoints`/`predev`/`prebuild` scripts are the same in every app.
+- `packages/ui/scripts/gen-breakpoints-css.ts` reads `BREAKPOINTS` and writes
+  `packages/ui/src/core-elements/breakpoints.generated.css` (committed; **never edit by
+  hand**) - the ONE generated tokens file for the whole monorepo. Regenerate with
+  `pnpm --filter @repo/ui gen:breakpoints`; each app's `predev`/`prebuild` delegates to
+  it via a `gen:breakpoints` alias, so a changed scale flows into every app's CSS
+  automatically. If you change `BREAKPOINTS`, regenerate and re-commit that single file.
+- Each app's `postcss.config.mjs` wires two plugins: `@csstools/postcss-global-data`
+  (pointed at `../../packages/ui/src/core-elements/breakpoints.generated.css`) injects
+  the shared `@custom-media` rules into every CSS file the app bundles - including CSS
+  from `@repo/ui` - then `postcss-custom-media` resolves them. Defining this config opts
+  the app out of Next's built-in PostCSS, so `autoprefixer` is listed explicitly - keep
+  it. `@repo/ui` also carries a reference `postcss.config.mjs` (for standalone tooling;
+  it does not run during app builds, which use the app-root config).
 - In any `.css` file, write the token, not the pixels:
 
   ```css

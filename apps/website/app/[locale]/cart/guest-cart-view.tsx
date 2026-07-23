@@ -102,7 +102,7 @@ export function GuestCartView({
 
   return (
     <Grid container spacing={3}>
-      <Grid size={{ xs: 12, md: 8 }}>
+      <Grid size={{ xs: 12, sm: 8 }}>
         <Box flexDirection="column" gap={12}>
           {cart.items.map((line) => (
             <CartLine
@@ -127,7 +127,7 @@ export function GuestCartView({
           ))}
         </Box>
       </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
+      <Grid size={{ xs: 12, sm: 4 }}>
         <GuestCartSummary
           totals={cart.totals}
           count={cart.count}
