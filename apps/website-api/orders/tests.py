@@ -979,3 +979,205 @@ class AdminOrderManagementTests(TestCase):
         self.order.refresh_from_db()
         self.assertFalse(self.order.fulfilled)
         self.assertIsNone(self.order.fulfilled_at)
+
+
+class PosCheckoutTests(TestCase):
+    """The counter sale: an order rung up by a store associate, not a customer.
+
+    The parts worth pinning down are the ones that separate this from every
+    other checkout path - it is the only one whose caller is signed in but is
+    *not* the buyer, and the only one that may settle both order axes in a
+    single action.
+    """
+
+    def setUp(self):
+        cache.clear()
+        # No Stripe and no offline switches: a counter sale is the tenant taking
+        # money in their own shop, so it must not depend on any of them.
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.other_system = System.objects.create(site_name="Beta", host="beta.test")
+        self.product = Product.objects.create(
+            system=self.system, name="Loaf", slug="loaf",
+            price=Decimal("10.00"), currency="USD", stock_count=5,
+        )
+        self.admin = self._make_user("admin@acme.test", self.system, is_admin=True)
+        self.client.force_login(self.admin)
+
+    def _make_user(self, email, system, is_admin=False):
+        user = User.objects.create_user(f"{system.id}_{email}", password="x", email=email)
+        user.profile.system = system
+        user.profile.is_admin = is_admin
+        user.profile.save()
+        return user
+
+    def _sell(self, body):
+        return self.client.post(
+            "/api/orders/admin/pos/", body, content_type="application/json",
+        )
+
+    def _action(self, public_id, action):
+        return self.client.post(
+            f"/api/orders/admin/{public_id}/",
+            {"action": action}, content_type="application/json",
+        )
+
+    def test_a_non_admin_may_not_ring_up_a_sale(self):
+        self.client.force_login(self._make_user("u@acme.test", self.system))
+        response = self._sell({
+            "cart": [{"kind": "product", "id": self.product.pk, "quantity": 1}],
+            "payment_method": "cash",
+        })
+        self.assertEqual(response.status_code, 403)
+
+    def test_a_sale_is_placed_and_priced_from_the_catalog(self):
+        response = self._sell({
+            "cart": [{"kind": "product", "id": self.product.pk, "quantity": 2}],
+            "payment_method": "terminal",
+        })
+
+        self.assertEqual(response.status_code, 201)
+        order = Order.objects.get(public_id=response.json()["public_id"])
+        self.assertEqual(order.status, Order.STATUS_PLACED)
+        self.assertEqual(order.payment_method, Order.PAYMENT_TERMINAL)
+        self.assertEqual(order.total, Decimal("20.00"))
+        self.assertFalse(order.fulfilled)
+
+    def test_the_sale_belongs_to_no_user(self):
+        """The associate is the seller, not the buyer - a counter sale must not
+        land in whoever happened to be logged into the till."""
+        self._sell({
+            "cart": [{"kind": "product", "id": self.product.pk, "quantity": 1}],
+            "payment_method": "cash",
+        })
+        self.assertIsNone(Order.objects.get().user)
+
+    def test_the_associates_own_cart_is_neither_read_nor_cleared(self):
+        """The bug this endpoint exists to prevent: `CheckoutView` would have
+        sold the associate their own saved items."""
+        CartItem.objects.create(
+            user=self.admin, system=self.system, product=self.product, quantity=7,
+        )
+
+        response = self._sell({
+            "cart": [{"kind": "product", "id": self.product.pk, "quantity": 1}],
+            "payment_method": "cash",
+        })
+
+        self.assertEqual(response.status_code, 201)
+        order = Order.objects.get()
+        self.assertEqual(order.lines.get().quantity, 1)
+        self.assertTrue(
+            CartItem.objects.filter(user=self.admin, quantity=7).exists()
+        )
+
+    def test_the_body_cannot_name_a_price(self):
+        response = self._sell({
+            "cart": [{
+                "kind": "product", "id": self.product.pk,
+                "quantity": 1, "unit_price": "0.01", "price": "0.01",
+            }],
+            "payment_method": "cash",
+        })
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Order.objects.get().total, Decimal("10.00"))
+
+    def test_stock_is_drawn_down_at_placement(self):
+        self._sell({
+            "cart": [{"kind": "product", "id": self.product.pk, "quantity": 2}],
+            "payment_method": "terminal",
+        })
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_count, 3)
+
+    def test_another_tenants_item_cannot_be_sold(self):
+        theirs = Product.objects.create(
+            system=self.other_system, name="Theirs", slug="theirs",
+            price=Decimal("99.00"), currency="USD",
+        )
+        response = self._sell({
+            "cart": [{"kind": "product", "id": theirs.pk, "quantity": 1}],
+            "payment_method": "cash",
+        })
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "CART_EMPTY")
+
+    def test_an_unavailable_item_is_refused(self):
+        self.product.in_stock = False
+        self.product.save()
+        response = self._sell({
+            "cart": [{"kind": "product", "id": self.product.pk, "quantity": 1}],
+            "payment_method": "cash",
+        })
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "OUT_OF_STOCK")
+
+    def test_an_empty_basket_is_refused(self):
+        response = self._sell({"cart": [], "payment_method": "cash"})
+        self.assertEqual(response.status_code, 400)
+
+    def test_a_customer_payment_method_is_refused(self):
+        """The POS rings up counter sales only - it may not mint an order that
+        claims to have been paid through Stripe."""
+        response = self._sell({
+            "cart": [{"kind": "product", "id": self.product.pk, "quantity": 1}],
+            "payment_method": "online",
+        })
+        self.assertEqual(response.status_code, 400)
+
+    def test_an_optional_email_is_recorded_for_the_receipt(self):
+        self._sell({
+            "cart": [{"kind": "product", "id": self.product.pk, "quantity": 1}],
+            "payment_method": "cash",
+            "contact": {"email": "walkin@example.test", "name": "Jo"},
+        })
+        order = Order.objects.get()
+        self.assertEqual(order.email, "walkin@example.test")
+        self.assertEqual(order.shipping_name, "Jo")
+
+    def test_complete_settles_both_axes_at_once(self):
+        sale = self._sell({
+            "cart": [{"kind": "product", "id": self.product.pk, "quantity": 1}],
+            "payment_method": "terminal",
+        }).json()
+
+        response = self._action(sale["public_id"], "complete")
+
+        self.assertEqual(response.status_code, 200)
+        order = Order.objects.get()
+        self.assertEqual(order.status, Order.STATUS_PAID)
+        self.assertIsNotNone(order.paid_at)
+        self.assertTrue(order.fulfilled)
+        self.assertIsNotNone(order.fulfilled_at)
+
+    def test_complete_is_refused_on_a_non_counter_order(self):
+        """It must not become a way to skip fulfillment tracking on an order
+        that still has to be delivered."""
+        delivery = Order.objects.create(
+            system=self.system, status=Order.STATUS_PLACED,
+            payment_method=Order.PAYMENT_ON_DELIVERY, currency="USD",
+        )
+        response = self._action(delivery.public_id, "complete")
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "NOT_POS_ORDER")
+
+    def test_complete_is_not_repeatable(self):
+        sale = self._sell({
+            "cart": [{"kind": "product", "id": self.product.pk, "quantity": 1}],
+            "payment_method": "cash",
+        }).json()
+        self._action(sale["public_id"], "complete")
+
+        response = self._action(sale["public_id"], "complete")
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "BAD_TRANSITION")
+
+    def test_a_counter_sale_appears_in_the_tenants_order_list(self):
+        self._sell({
+            "cart": [{"kind": "product", "id": self.product.pk, "quantity": 1}],
+            "payment_method": "terminal",
+        })
+        response = self.client.get("/api/orders/admin/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()[0]["payment_method"], "terminal")

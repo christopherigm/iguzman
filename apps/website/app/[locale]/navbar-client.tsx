@@ -91,6 +91,10 @@ export function NavbarClient({
     },
     ...(isLoggedIn ? [{ label: t("orders"), href: "/orders" }] : []),
     ...(showContact ? [{ label: t("contact"), href: "/contact" }] : []),
+    // Admin-only, exactly like the CMS link. Both only drive what is rendered -
+    // `/pos` is in `proxy.ts`'s protected prefixes, the page re-checks `isAdmin`,
+    // and Django re-derives it from the token on every call.
+    ...(isAdmin ? [{ label: t("pos"), href: "/pos" }] : []),
     ...(isAdmin ? [{ label: t("admin"), href: "/admin" }] : []),
   ];
 

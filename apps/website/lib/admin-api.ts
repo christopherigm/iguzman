@@ -832,12 +832,15 @@ export interface AdminOrderSummary {
   item_count: number;
 }
 
-/** The management actions the CMS can take on one order. */
+/** The management actions the CMS can take on one order. `complete` settles
+ *  payment and fulfillment together and is accepted on counter sales only - see
+ *  `AdminOrderActionSerializer` in website-api. */
 export type AdminOrderAction =
   | "mark_paid"
   | "mark_fulfilled"
   | "unmark_fulfilled"
-  | "cancel";
+  | "cancel"
+  | "complete";
 
 export async function listAdminOrders() {
   const res = await adminFetch(`/api/orders/admin/`);
@@ -856,6 +859,46 @@ export async function adminOrderAction(
   const res = await adminFetch(`/api/orders/admin/${publicId}/`, {
     method: "POST",
     body: JSON.stringify({ action }),
+  });
+  return parseResponse<AdminOrder>(res);
+}
+
+// ---- POS (counter sales) ----
+
+/** How a counter sale is settled. Both are `Order.POS_METHODS` in website-api;
+ *  neither goes near Stripe. */
+export type PosPaymentMethod = "terminal" | "cash";
+
+/** One rung-up line, as references only - the API re-prices every one of them
+ *  from the tenant's catalog, so no amount travels in this body. */
+export interface PosCartLine {
+  kind: "product" | "service" | "menu_item";
+  id: number;
+  quantity: number;
+  customization?: { ingredient: number; quantity: number; option?: number }[];
+}
+
+/** Optional details for a receipt. Every field may be omitted: at a counter
+ *  there is usually nobody to record. */
+export interface PosContact {
+  name?: string;
+  email?: string;
+  phone?: string;
+}
+
+/**
+ * Ring up a counter sale. Returns the created order, `placed` and awaiting
+ * payment - `adminOrderAction(publicId, "complete")` is what settles it once the
+ * associate confirms the customer paid.
+ */
+export async function posCheckout(payload: {
+  cart: PosCartLine[];
+  payment_method: PosPaymentMethod;
+  contact?: PosContact;
+}) {
+  const res = await adminFetch(`/api/orders/admin/pos/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
   });
   return parseResponse<AdminOrder>(res);
 }

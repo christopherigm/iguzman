@@ -22,7 +22,7 @@ import { SessionProvider } from "@repo/auth/session-provider";
 import { NavbarClient } from "./navbar-client";
 import { DevSiteSwitcher } from "./dev-site-switcher";
 import { Footer } from "@/components/footer";
-import { HideOnAdmin } from "@/components/hide-on-admin";
+import { HideOnAdmin, HideOnPos } from "@/components/hide-on-admin";
 import { GuestMerge } from "@/components/guest-merge";
 import { LogoWatermark } from "@/components/logo-watermark";
 import packageJson from "@/package.json";
@@ -223,51 +223,63 @@ export default async function LocaleLayout({ children, params }: Props) {
                       if (!primary) return null;
                       return (
                         <HideOnAdmin>
-                          <LogoWatermark
-                            logo={primary}
-                            secondaryLogo={secondary}
-                            size={system.watermark_size}
-                            spacing={system.watermark_spacing}
-                            rotation={system.watermark_rotation}
-                            intercalated={system.watermark_intercalated}
-                            opacity={system.watermark_opacity}
-                          />
+                          <HideOnPos>
+                            <LogoWatermark
+                              logo={primary}
+                              secondaryLogo={secondary}
+                              size={system.watermark_size}
+                              spacing={system.watermark_spacing}
+                              rotation={system.watermark_rotation}
+                              intercalated={system.watermark_intercalated}
+                              opacity={system.watermark_opacity}
+                            />
+                          </HideOnPos>
                         </HideOnAdmin>
                       );
                     })()}
-                  <NavbarClient
-                    logo={system?.img_logo ?? "/logo.png"}
-                    version={`v${packageJson.version}`}
-                    productCount={system?.product_count ?? 0}
-                    serviceCount={system?.service_count ?? 0}
-                    foodCount={system?.menu_item_count ?? 0}
-                    showContact={
-                      !!system?.contact_email ||
-                      (system?.branch_count ?? 0) > 0
-                    }
-                    cartCount={cartCount}
-                  />
+                  {/* The till renders its own slim bar instead - a full-screen
+                      single-purpose tool has no use for a Favorites link
+                      mid-sale. The CMS keeps the navbar (its layout reserves
+                      the height), which is why this is not `HideOnAdmin`. */}
+                  <HideOnPos>
+                    <NavbarClient
+                      logo={system?.img_logo ?? "/logo.png"}
+                      version={`v${packageJson.version}`}
+                      productCount={system?.product_count ?? 0}
+                      serviceCount={system?.service_count ?? 0}
+                      foodCount={system?.menu_item_count ?? 0}
+                      showContact={
+                        !!system?.contact_email ||
+                        (system?.branch_count ?? 0) > 0
+                      }
+                      cartCount={cartCount}
+                    />
+                  </HideOnPos>
                   {/* Renders nothing; folds a guest's localStorage cart and
                       favorites into their account as soon as a session exists. */}
                   <GuestMerge />
                   {children}
                   {isDev && (
                     <HideOnAdmin>
-                      <DevSiteSwitcher
-                        sites={SITE_CONFIGS.map((c) => ({
-                          slug: c.slug,
-                          name: c.name,
-                        }))}
-                        current={devSite}
-                        cookieName={DEV_SITE_COOKIE}
-                      />
+                      <HideOnPos>
+                        <DevSiteSwitcher
+                          sites={SITE_CONFIGS.map((c) => ({
+                            slug: c.slug,
+                            name: c.name,
+                          }))}
+                          current={devSite}
+                          cookieName={DEV_SITE_COOKIE}
+                        />
+                      </HideOnPos>
                     </HideOnAdmin>
                   )}
                   <HideOnAdmin>
-                    <Footer
-                      logo={system?.img_logo ?? "/logo.png"}
-                      system={system}
-                    />
+                    <HideOnPos>
+                      <Footer
+                        logo={system?.img_logo ?? "/logo.png"}
+                        system={system}
+                      />
+                    </HideOnPos>
                   </HideOnAdmin>
                 </PaletteProvider>
               </ThemeProvider>

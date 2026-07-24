@@ -6,6 +6,7 @@ from .views import (
     CheckoutView,
     OrderDetailView,
     OrderListView,
+    PosCheckoutView,
     StripeWebhookView,
 )
 
@@ -14,6 +15,9 @@ urlpatterns = [
     # Tenant order management. Ahead of the customer routes below, though the
     # `<uuid>` converter would not match "admin" anyway.
     path("orders/admin/", AdminOrderListView.as_view(), name="admin-order-list"),
+    # Ahead of `admin/<uuid:public_id>/` - "pos" is not a UUID so the converter
+    # would reject it anyway, but the ordering makes the intent explicit.
+    path("orders/admin/pos/", PosCheckoutView.as_view(), name="pos-checkout"),
     path("orders/admin/<uuid:public_id>/", AdminOrderDetailView.as_view(), name="admin-order-detail"),
     path("orders/", OrderListView.as_view(), name="order-list"),
     path("orders/<uuid:public_id>/", OrderDetailView.as_view(), name="order-detail"),

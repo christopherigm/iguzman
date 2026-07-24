@@ -178,9 +178,18 @@ class AdminOrderActionSerializer(serializers.Serializer):
     MARK_FULFILLED = "mark_fulfilled"
     UNMARK_FULFILLED = "unmark_fulfilled"
     CANCEL = "cancel"
+    # Paid *and* handed over, in one transition. The two axes stay separate
+    # everywhere else because they genuinely come apart - an online order ships
+    # long after it is paid, a pay-in-store order may be picked up before the
+    # money is recorded. At a counter they do not: the customer pays and walks
+    # out with the bread in the same movement, and making the associate tap
+    # twice would only produce half-completed sales when the queue is moving.
+    # Restricted to `Order.POS_METHODS` so it cannot be used to shortcut the
+    # fulfillment tracking on a delivery order.
+    COMPLETE = "complete"
 
     action = serializers.ChoiceField(
-        choices=[MARK_PAID, MARK_FULFILLED, UNMARK_FULFILLED, CANCEL],
+        choices=[MARK_PAID, MARK_FULFILLED, UNMARK_FULFILLED, CANCEL, COMPLETE],
     )
 
 
@@ -212,6 +221,55 @@ class CheckoutShippingSerializer(serializers.Serializer):
     state = serializers.CharField(max_length=128, required=False, allow_blank=True, default="")
     postal_code = serializers.CharField(max_length=32, required=False, allow_blank=True, default="")
     country = serializers.CharField(max_length=2, required=False, allow_blank=True, default="")
+
+
+class PosContactSerializer(serializers.Serializer):
+    """Optional contact details for a counter sale.
+
+    Every field is optional, unlike `CheckoutContactSerializer`. At a counter
+    there is nobody to reach: the customer is standing there and leaves with the
+    goods, so demanding a name and an email for a loaf of bread would buy us
+    nothing and cost the associate the queue. An email, when the customer does
+    want a receipt, is worth taking - it is also what later lets them claim the
+    order by registering (`orders/claims.py`), exactly as a guest order is
+    claimed.
+    """
+
+    name = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+    email = serializers.EmailField(required=False, allow_blank=True, default="")
+    phone = serializers.CharField(max_length=32, required=False, allow_blank=True, default="")
+
+
+class PosCheckoutSerializer(serializers.Serializer):
+    """A counter sale rung up by a store associate on the POS screen.
+
+    The basket arrives as **references** in exactly the shape a guest cart uses
+    (`CartItemWriteSerializer`), and is priced by `resolve_guest_cart` against
+    the tenant's own catalog. That is not incidental reuse: the associate's
+    browser is as untrusted as a customer's about money, and routing both
+    through one pricing path is what stops a POS total from ever disagreeing
+    with what the site would have charged for the same basket.
+
+    Note there is no `locale` and no `shipping`. Nothing redirects - the POS
+    stays on its own screen - and a counter sale is handed over across the
+    counter, so there is no address to collect.
+    """
+
+    TERMINAL = "terminal"
+    CASH = "cash"
+
+    # Required, unlike `CheckoutSerializer.cart`: the POS never reads a stored
+    # cart. The associate is signed in, but their *own* cart is their own - it
+    # has nothing to do with the customer in front of them, which is exactly why
+    # this cannot reuse `CheckoutView`.
+    cart = CartItemWriteSerializer(many=True)
+    payment_method = serializers.ChoiceField(choices=[TERMINAL, CASH])
+    contact = PosContactSerializer(required=False)
+
+    def validate_cart(self, value):
+        if not value:
+            raise serializers.ValidationError("A sale needs at least one item.")
+        return value
 
 
 class CheckoutSerializer(serializers.Serializer):

@@ -29,6 +29,7 @@ from .serializers import (
     CheckoutSerializer,
     OrderSerializer,
     OrderSummarySerializer,
+    PosCheckoutSerializer,
 )
 from .services.stripe_gateway import (
     StripeGatewayError,
@@ -227,79 +228,26 @@ class CheckoutView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # A Checkout Session is single-currency and Buyable.currency is per item,
-        # so a mixed cart has no correct total to charge. Refused rather than
-        # converted: we have no rate, and inventing one would be charging a price
-        # nobody agreed to.
-        currencies = {item.target.currency for item in items}
-        if len(currencies) > 1:
-            return Response(
-                {
-                    "detail": "Your cart has items in more than one currency.",
-                    "code": "MIXED_CURRENCY",
-                    "currencies": sorted(currencies),
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        currency = currencies.pop()
-
-        # Re-checked at checkout rather than trusted from when the line was added:
-        # the cart holds a row for as long as the user leaves it there, and the
-        # item may have sold out in the meantime.
-        out_of_stock = [item for item in items if not _in_stock(item)]
-        if out_of_stock:
-            return Response(
-                {
-                    "detail": "Some items are no longer available.",
-                    "code": "OUT_OF_STOCK",
-                    "line_ids": [item.pk for item in out_of_stock],
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
-
-        with transaction.atomic():
-            order = Order.objects.create(
-                system=system,
-                user=user,
-                # An offline order is born `placed` (no Stripe session will ever
-                # move it off `pending`); an online one waits on the webhook.
-                status=Order.STATUS_PLACED if is_offline else Order.STATUS_PENDING,
-                payment_method=method,
-                currency=currency,
-                # Online: blank for a guest until the webhook copies what Stripe
-                # collected - which is also what makes the order claimable later.
-                # Offline: taken from the contact form (or the account), since no
-                # Stripe page will ever fill it in.
-                email=(
-                    (contact.get("email") or (user.email if user else "") or "").strip()
-                    if is_offline
-                    else ((user.email or "") if user else "")
-                ),
-            )
-            lines = [
-                OrderLine.objects.create(
-                    order=order,
-                    kind=item.kind,
-                    product=item.product,
-                    service=item.service,
-                    menu_item=item.menu_item,
-                    name=item.target.name or "",
-                    sku=getattr(item.target, "sku", "") or "",
-                    customization=_customization_snapshot(item),
-                    unit_price=item.unit_price,
-                    quantity=item.quantity,
-                    line_total=item.line_total,
-                    currency=currency,
-                )
-                for item in items
-            ]
-            subtotal = sum((line.line_total for line in lines), Decimal("0.00"))
-            order.subtotal = subtotal
-            # No tax or shipping is modelled yet, so the total is the subtotal.
-            # They get their own columns when they exist rather than being folded
-            # in here, where they would be indistinguishable after the fact.
-            order.total = subtotal
-            order.save(update_fields=["subtotal", "total"])
+        order, lines, error = _open_order(
+            system,
+            user,
+            items,
+            # An offline order is born `placed` (no Stripe session will ever move
+            # it off `pending`); an online one waits on the webhook.
+            order_status=Order.STATUS_PLACED if is_offline else Order.STATUS_PENDING,
+            payment_method=method,
+            # Online: blank for a guest until the webhook copies what Stripe
+            # collected - which is also what makes the order claimable later.
+            # Offline: taken from the contact form (or the account), since no
+            # Stripe page will ever fill it in.
+            email=(
+                (contact.get("email") or (user.email if user else "") or "").strip()
+                if is_offline
+                else ((user.email or "") if user else "")
+            ),
+        )
+        if error is not None:
+            return error
 
         if is_offline:
             return self._finalize_offline(
@@ -387,6 +335,91 @@ class CheckoutView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+def _open_order(system, user, items, *, order_status, payment_method, email):
+    """Validate a priced basket and write it as an Order plus snapshotted lines.
+
+    Returns ``(order, lines, None)``, or ``(None, None, Response)`` carrying the
+    4xx that explains the refusal.
+
+    Shared by the customer checkout and the POS, which is the point: every rule
+    that decides what an order *is* - one currency, nothing sold that the tenant
+    has marked unavailable, every price read off the catalog rather than the
+    request - lives here once. Two copies would eventually disagree, and the
+    first symptom would be a till total that does not match what the site would
+    have charged for the same basket.
+
+    `items` are `CartItem` instances, saved or not; only the pricing properties
+    are read, so a guest's or a POS basket's unsaved rows work unchanged.
+    """
+    # A Stripe Checkout Session is single-currency and Buyable.currency is per
+    # item, so a mixed basket has no correct total to charge. Refused rather than
+    # converted: we have no rate, and inventing one would be charging a price
+    # nobody agreed to. The POS inherits the rule even though it never opens a
+    # Session - an order still carries exactly one currency.
+    currencies = {item.target.currency for item in items}
+    if len(currencies) > 1:
+        return None, None, Response(
+            {
+                "detail": "Your cart has items in more than one currency.",
+                "code": "MIXED_CURRENCY",
+                "currencies": sorted(currencies),
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    currency = currencies.pop()
+
+    # Re-checked here rather than trusted from when the line was added: a cart
+    # row sits for as long as the customer leaves it there, and the item may have
+    # sold out meanwhile. This reads the tenant's availability *flag*, not the
+    # unit count, so a stale `stock_count` never blocks a real sale at the till.
+    out_of_stock = [item for item in items if not _in_stock(item)]
+    if out_of_stock:
+        return None, None, Response(
+            {
+                "detail": "Some items are no longer available.",
+                "code": "OUT_OF_STOCK",
+                "line_ids": [item.pk for item in out_of_stock],
+            },
+            status=status.HTTP_409_CONFLICT,
+        )
+
+    with transaction.atomic():
+        order = Order.objects.create(
+            system=system,
+            user=user,
+            status=order_status,
+            payment_method=payment_method,
+            currency=currency,
+            email=email,
+        )
+        lines = [
+            OrderLine.objects.create(
+                order=order,
+                kind=item.kind,
+                product=item.product,
+                service=item.service,
+                menu_item=item.menu_item,
+                name=item.target.name or "",
+                sku=getattr(item.target, "sku", "") or "",
+                customization=_customization_snapshot(item),
+                unit_price=item.unit_price,
+                quantity=item.quantity,
+                line_total=item.line_total,
+                currency=currency,
+            )
+            for item in items
+        ]
+        subtotal = sum((line.line_total for line in lines), Decimal("0.00"))
+        order.subtotal = subtotal
+        # No tax or shipping is modelled yet, so the total is the subtotal. They
+        # get their own columns when they exist rather than being folded in here,
+        # where they would be indistinguishable after the fact.
+        order.total = subtotal
+        order.save(update_fields=["subtotal", "total"])
+
+    return order, lines, None
 
 
 def _decrement_order_stock(order):
@@ -622,11 +655,37 @@ class AdminOrderDetailView(APIView):
 
         Payment and fulfillment are the two independent axes the tenant tracks:
         `mark_paid`/`cancel` move `status`, `mark_fulfilled`/`unmark_fulfilled`
-        toggle the `fulfilled` flag, and neither touches the other.
+        toggle the `fulfilled` flag, and neither touches the other. `complete` is
+        the one action that moves both, and only for a counter sale - see below.
         """
         Action = AdminOrderActionSerializer
 
-        if action == Action.MARK_PAID:
+        if action == Action.COMPLETE:
+            # A counter sale settles both axes at once: the customer paid and
+            # walked out with the goods. Restricted to POS methods so this stays
+            # a description of what happened at a till rather than a way to skip
+            # fulfillment tracking on an order that still has to be shipped.
+            if order.payment_method not in Order.POS_METHODS:
+                return Response(
+                    {"detail": "Only a counter sale can be completed in one step.",
+                     "code": "NOT_POS_ORDER"},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            if order.status != Order.STATUS_PLACED:
+                return Response(
+                    {"detail": "Only a placed order can be completed.", "code": "BAD_TRANSITION"},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            now = timezone.now()
+            order.status = Order.STATUS_PAID
+            order.paid_at = now
+            order.fulfilled = True
+            order.fulfilled_at = now
+            order.save(update_fields=[
+                "status", "paid_at", "fulfilled", "fulfilled_at", "updated_at",
+            ])
+
+        elif action == Action.MARK_PAID:
             # Only an offline order is marked paid by hand. An online order's money
             # is Stripe's to confirm - the signed webhook is the single source of
             # truth there, and a manual flip would let the CMS assert a payment
@@ -666,6 +725,88 @@ class AdminOrderDetailView(APIView):
             order.save(update_fields=["fulfilled", "fulfilled_at", "updated_at"])
 
         return None
+
+
+class PosCheckoutView(APIView):
+    """POST /api/orders/admin/pos/ - ring up a counter sale on the POS screen.
+
+    Separate from `CheckoutView` for one blunt reason: the caller here is a
+    signed-in store associate, and `CheckoutView`'s authenticated branch reads
+    *the caller's own cart*. Pointing the POS at it would have the associate
+    selling themselves their own saved items. The basket instead arrives in the
+    body as references and is priced by `resolve_guest_cart`, so the associate's
+    browser is trusted with exactly as much as a customer's: which items, never
+    what they cost.
+
+    The order is created `placed`, not `paid`. It exists the moment the associate
+    rings it up, before the customer has tapped anything - so a sale that is
+    abandoned at the terminal still leaves a record instead of vanishing. The
+    `complete` action is what settles it once payment is confirmed (by hand
+    today; by a provider webhook once one is wired in).
+
+    Stock is drawn down here, at placement, exactly as the offline branch does
+    it - not at completion. The bread leaves the shelf when it is rung up.
+    """
+
+    permission_classes = (IsSystemAdmin,)
+
+    def post(self, request):
+        system = user_system(request)
+        if system is None:
+            return Response(
+                {"detail": "No system for this user.", "code": "NO_SYSTEM"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = PosCheckoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        contact = data.get("contact") or {}
+
+        items = resolve_guest_cart(system, data["cart"])
+        if not items:
+            # Every reference was dropped, which `resolve_guest_cart` does
+            # silently for anything disabled or deleted. On the storefront that
+            # is a stale localStorage cart; here it means the associate is
+            # looking at a screen whose catalog has moved on, so say so rather
+            # than writing an empty sale.
+            return Response(
+                {"detail": "None of these items are still on sale.", "code": "CART_EMPTY"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        order, _lines, error = _open_order(
+            system,
+            # No `user`: the customer at the counter has no account here, and the
+            # associate is the seller, not the buyer. Attributing the sale to the
+            # associate would put every counter order in their order history.
+            None,
+            items,
+            order_status=Order.STATUS_PLACED,
+            payment_method=data["payment_method"],
+            # Optional, and the only reason to take it: a receipt, and the handle
+            # that later lets the customer claim the order by registering on the
+            # same address (`orders/claims.py`).
+            email=(contact.get("email") or "").strip(),
+        )
+        if error is not None:
+            return error
+
+        order.phone = (contact.get("phone") or "").strip()
+        order.shipping_name = (contact.get("name") or "").strip()
+
+        with transaction.atomic():
+            order.save(update_fields=["phone", "shipping_name", "updated_at"])
+            _decrement_order_stock(order)
+
+        logger.info(
+            "POS order %s rung up on %s for system %s",
+            order.pk, data["payment_method"], system.pk,
+        )
+        return Response(
+            AdminOrderSerializer(order, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class StripeWebhookView(APIView):

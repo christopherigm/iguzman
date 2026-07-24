@@ -55,10 +55,31 @@ class Order(models.Model):
     PAYMENT_IN_STORE = "in_store"
     PAYMENT_ON_DELIVERY = "on_delivery"
 
+    # The two counter methods, taken by a store associate on the POS screen
+    # rather than by a customer on the site. They are **not** variants of
+    # `in_store`, which is a promise to pay at pickup: these are sales that
+    # happen at the counter with the customer standing there, so the order is
+    # born and settled within a minute of itself.
+    #
+    # `terminal` is the tenant's own card reader. Nothing here talks to it yet -
+    # the associate confirms the payment by hand - but the method is recorded
+    # from day one so that wiring a provider (Mercado Pago Point and friends)
+    # later is a matter of filling in a reference, not migrating every counter
+    # sale out of a bucket it never belonged in.
+    PAYMENT_TERMINAL = "terminal"
+    PAYMENT_CASH = "cash"
+
+    # Every counter sale, whatever it settles with. The POS may only create
+    # orders in this set, and `AdminOrderActionSerializer.COMPLETE` may only be
+    # applied to one - see `orders/views.py`.
+    POS_METHODS = frozenset({PAYMENT_TERMINAL, PAYMENT_CASH})
+
     PAYMENT_METHOD_CHOICES = [
         (PAYMENT_ONLINE, "Online (Stripe)"),
         (PAYMENT_IN_STORE, "Pay in store"),
         (PAYMENT_ON_DELIVERY, "Pay on delivery"),
+        (PAYMENT_TERMINAL, "Card terminal (POS)"),
+        (PAYMENT_CASH, "Cash (POS)"),
     ]
 
     # The order's public handle: what the confirmation URL, the order-history

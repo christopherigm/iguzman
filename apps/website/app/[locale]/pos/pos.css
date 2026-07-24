@@ -1,0 +1,120 @@
+/**
+ * POS layout.
+ *
+ * Only what component props cannot express lives here: the viewport-locked
+ * shell, the responsive two-pane/sheet switch, the tile grid template, and the
+ * touch/hover affordances. Every static colour, spacing and border on a
+ * `@repo/ui` component is a prop - see packages/ui/CLAUDE.md.
+ */
+
+/* The till owns the viewport. `100dvh` rather than `100vh` so an iOS Safari
+   address bar sliding in cannot push the charge button off-screen mid-sale. */
+.pos-shell {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.pos-top-bar {
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.pos-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.pos-catalog-pane {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Below sm the basket is a full-screen sheet over the grid, hidden until the
+   associate opens it. The same node is the second column from sm up, so the two
+   layouts cannot render different baskets. */
+.pos-basket-pane {
+  display: none;
+  background: var(--background, #fff);
+}
+
+.pos-basket-pane--open {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+@media (--sm) {
+  .pos-basket-pane,
+  .pos-basket-pane--open {
+    display: block;
+    position: static;
+    z-index: auto;
+    flex: 0 0 clamp(300px, 34%, 420px);
+    border-left: 1px solid var(--border, #e5e7eb);
+  }
+
+  /* Both are xs-only affordances: from sm up the basket is always on screen. */
+  .pos-basket__close,
+  .pos-top-bar__basket,
+  .pos-mobile-bar {
+    display: none;
+  }
+}
+
+.pos-mobile-bar {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--border, #e5e7eb);
+}
+
+/* Tiles size themselves: as many ~150px columns as fit, so the same grid works
+   on a phone held one-handed and on a counter tablet. */
+.pos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+@media (--md) {
+  .pos-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+}
+
+.pos-tile {
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease;
+}
+
+.pos-tile:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* Touch feedback rather than a hover lift: on a till the finger is already on
+   the glass, so the press is the only moment worth acknowledging. */
+.pos-tile:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+.pos-tile:not(:disabled):hover {
+  border-color: var(--accent);
+}
+
+.pos-tile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* A fixed aspect box for the image: `aspect-ratio` is safe here (this is a
+   modern-browser app, unlike the Tizen TV package). */
+.pos-tile__media {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+}

@@ -12,7 +12,14 @@ import { Toast } from "@repo/ui/core-elements/toast";
 import type { MenuItemIngredient } from "@/lib/catalog";
 import { formatPrice } from "@/lib/price";
 import { formatPortion } from "@/lib/nutrition";
-import { ingredientChoices, resolveChoice } from "@/lib/menu-selection";
+import {
+  buildCustomization,
+  customizableIngredients,
+  ingredientChoices,
+  minQuantity,
+  resolveChoice,
+  selectionUpcharge,
+} from "@/lib/menu-selection";
 import { addGuestCartLine } from "@/lib/guest-cart";
 import { useMenuCustomization } from "./menu-customization-context";
 
@@ -66,69 +73,28 @@ export function MenuItemCustomizer({
   const { quantities, setQuantity, options, setOption } =
     useMenuCustomization();
 
-  // Internal ingredients are kitchen-only recipe components: hidden from the
-  // customiser and excluded from the price (the server does the same in
-  // `price_for_selection`). They still reach the nutrition label - which reads
-  // the full ingredient list separately - because they are really in the food.
   const visibleIngredients = useMemo(
-    () => ingredients.filter((ing) => !ing.is_internal),
+    () => customizableIngredients(ingredients),
     [ingredients],
   );
 
-  // Included (non-removable) ingredients are locked at 1; removable add-ons can
-  // go down to 0.
-  const minFor = (ing: MenuItemIngredient) => (ing.is_removable ? 0 : 1);
-
   const setQty = (ing: MenuItemIngredient, next: number) => {
-    const clamped = Math.max(minFor(ing), Math.min(next, ing.max_quantity));
+    const clamped = Math.max(minQuantity(ing), Math.min(next, ing.max_quantity));
     setQuantity(ing.id, clamped);
   };
 
-  // Mirrors the server's `upcharge_for_quantity`: the base already paid for the
-  // default option's included units, so only the value the customer's *chosen*
-  // option x quantity exceeds that baseline is charged (never negative).
-  const total = useMemo(() => {
-    let sum = parseFloat(basePrice);
-    for (const ing of visibleIngredients) {
-      const qty = quantities[ing.id] ?? ing.default_units;
-      const choice = resolveChoice(ing, options[ing.id]);
-      const includedValue = parseFloat(ing.price) * ing.included_units;
-      const selectedValue = parseFloat(choice.price) * qty;
-      sum += Math.max(0, selectedValue - includedValue);
-    }
-    return sum;
-  }, [basePrice, visibleIngredients, quantities, options]);
+  // Base plus the selection's up-charge. Both this and the POS read the figure
+  // from `selectionUpcharge`, which mirrors the server's own rule - the server
+  // still recomputes and stores it, so this is display only.
+  const total = useMemo(
+    () =>
+      parseFloat(basePrice) +
+      selectionUpcharge(ingredients, quantities, options),
+    [basePrice, ingredients, quantities, options],
+  );
 
   const showToast = (kind: ToastKind) =>
     setToast((prev) => ({ kind, id: (prev?.id ?? 0) + 1 }));
-
-  // Only the deltas from what the base already includes travel to the server;
-  // it recomputes and stores the price, so nothing here is trusted about money.
-  const buildCustomization = () =>
-    visibleIngredients
-      .map((ing) => {
-        const chosen = options[ing.id] ?? ing.ingredient;
-        const isDefaultOption = chosen === ing.ingredient;
-        const quantity = quantities[ing.id] ?? ing.default_units;
-        return {
-          ingredient: ing.id,
-          quantity,
-          // Only carry `option` when the customer swapped in an alternative; the
-          // server normalises anyway, this just keeps the payload lean.
-          ...(isDefaultOption ? {} : { option: chosen }),
-          _isDefaultOption: isDefaultOption,
-        };
-      })
-      // A row travels when the quantity changed OR a non-default option was picked.
-      .filter((row) => {
-        const ing = visibleIngredients.find((i) => i.id === row.ingredient);
-        if (!ing) return false;
-        return row.quantity !== ing.default_units || !row._isDefaultOption;
-      })
-      .map(({ _isDefaultOption, ...row }) => {
-        void _isDefaultOption;
-        return row;
-      });
 
   const addToCart = () =>
     fetch("/api/auth/cart", {
@@ -137,7 +103,7 @@ export function MenuItemCustomizer({
       body: JSON.stringify({
         kind: "menu_item",
         id: menuItemId,
-        customization: buildCustomization(),
+        customization: buildCustomization(ingredients, quantities, options),
         quantity: 1,
       }),
     });
@@ -148,7 +114,7 @@ export function MenuItemCustomizer({
     addGuestCartLine({
       kind: "menu_item",
       id: menuItemId,
-      customization: buildCustomization(),
+      customization: buildCustomization(ingredients, quantities, options),
       quantity: 1,
     });
 
@@ -208,7 +174,7 @@ export function MenuItemCustomizer({
               them in - ordering is owned by the admin ingredients editor. */}
           {visibleIngredients.map((ing) => {
             const qty = quantities[ing.id] ?? ing.default_units;
-            const min = minFor(ing);
+            const min = minQuantity(ing);
             // A single-select choice group offers alternatives; the customer's
             // pick drives the name, image, portion nutrition and price shown.
             const choices = ingredientChoices(ing);

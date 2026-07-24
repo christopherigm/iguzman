@@ -1,5 +1,8 @@
 export const ADMIN_NAV_ITEMS = [
   { key: "system", href: "/admin/system", icon: "⚙️", descKey: "systemDesc" },
+  // Not under /admin: the till is its own full-screen route with no CMS chrome.
+  // Listed here anyway because this menu is where an admin looks for their tools.
+  { key: "pos", href: "/pos", icon: "🧾", descKey: "posDesc" },
   { key: "orders", href: "/admin/orders", icon: "📋", descKey: "ordersDesc" },
   {
     key: "messages",
