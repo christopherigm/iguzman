@@ -69,6 +69,33 @@ def validate_google_font_url(value: str) -> None:
         )
 
 
+# ── Shape dividers ────────────────────────────────────────────────────────────
+# The named shapes a transparent "notch" can be cut in along one edge of a box -
+# a hero's bottom edge, a section band's top and bottom edges - so whatever is
+# painted behind (the page background and its watermark) shows through and the
+# box dissolves into the page instead of ending at a hard line.
+#
+# Module-level rather than a class attribute because two unrelated groups of
+# System fields share the set (the hero divider and the section-band dividers),
+# and a Django class body cannot reference an attribute defined further down it.
+# The set must match the frontend's ShapeDividerMask
+# (packages/ui/src/shape-divider.tsx) - an unknown value falls back to "none" on
+# the site, so a typo here reads as the setting having been ignored. Its
+# `brandmark` shape is deliberately absent: it needs a same-origin brandmark URL
+# that neither the hero nor the section bands plumb through.
+DIVIDER_NONE = "none"
+DIVIDER_CHOICES = (
+    (DIVIDER_NONE, "None - hard edge"),
+    ("wave", "Wave - organic wave"),
+    ("scallop", "Half-circles - scalloped edge"),
+    ("zigzag", "Zigzag - triangular bunting"),
+    ("spikes", "Spikes - fine sawtooth"),
+    ("arches", "Arches - smooth wide humps"),
+    ("slant", "Slant - straight diagonal"),
+    ("inverted-slant", "Inverted slant - the same diagonal, mirrored"),
+)
+
+
 class BasePicture(Common):
     """
     Abstract base for all picture models.
@@ -400,6 +427,39 @@ class System(Common):
         ),
     )
 
+    # ── Section band dividers ─────────────────────────────────────────────────
+    # The shape cut as a transparent notch out of each background band's top and
+    # bottom edge, so the page (and its watermark) shows through and the band
+    # dissolves into the sections around it rather than meeting them at a hard
+    # horizontal line. Both edges are offered per band because a band has a
+    # section above it *and* one below it - unlike the hero, which only ever
+    # dissolves downward. "none" (the default) keeps the straight edge, so every
+    # existing tenant is unchanged. See DIVIDER_CHOICES for the shape set.
+    highlights_top_divider = models.CharField(
+        max_length=16,
+        choices=DIVIDER_CHOICES,
+        default=DIVIDER_NONE,
+        help_text="Shape of the notch cut into the top edge of the Company Highlights band.",
+    )
+    highlights_bottom_divider = models.CharField(
+        max_length=16,
+        choices=DIVIDER_CHOICES,
+        default=DIVIDER_NONE,
+        help_text="Shape of the notch cut into the bottom edge of the Company Highlights band.",
+    )
+    catalog_top_divider = models.CharField(
+        max_length=16,
+        choices=DIVIDER_CHOICES,
+        default=DIVIDER_NONE,
+        help_text="Shape of the notch cut into the top edge of the Catalog Items band.",
+    )
+    catalog_bottom_divider = models.CharField(
+        max_length=16,
+        choices=DIVIDER_CHOICES,
+        default=DIVIDER_NONE,
+        help_text="Shape of the notch cut into the bottom edge of the Catalog Items band.",
+    )
+
     # ── Hero video layout ─────────────────────────────────────────────────────
     # How the logo and text are composed over the hero video, on the landing
     # page and on every item detail page that has one. "profile" places the logo
@@ -526,25 +586,12 @@ class System(Common):
     # An optional shape cut as a transparent notch out of the hero's bottom edge,
     # so the page (and its watermark) shows through it and the hero dissolves into
     # the page rather than ending at a hard line. "none" (the default) keeps the
-    # hard edge, so every existing tenant is unchanged. The named shapes must
-    # match the frontend's ShapeDividerMask set (packages/ui/src/shape-divider.tsx)
-    # - an unknown value would fall back to "none" on the site, reading as ignored.
-    HERO_DIVIDER_NONE = "none"
-    HERO_DIVIDER_WAVE = "wave"
-    HERO_DIVIDER_SCALLOP = "scallop"
-    HERO_DIVIDER_ZIGZAG = "zigzag"
-    HERO_DIVIDER_SPIKES = "spikes"
-    HERO_DIVIDER_ARCHES = "arches"
-    HERO_DIVIDER_SLANT = "slant"
-    HERO_DIVIDER_CHOICES = (
-        (HERO_DIVIDER_NONE, "None - hard edge"),
-        (HERO_DIVIDER_WAVE, "Wave - organic wave"),
-        (HERO_DIVIDER_SCALLOP, "Half-circles - scalloped edge"),
-        (HERO_DIVIDER_ZIGZAG, "Zigzag - triangular bunting"),
-        (HERO_DIVIDER_SPIKES, "Spikes - fine sawtooth"),
-        (HERO_DIVIDER_ARCHES, "Arches - smooth wide humps"),
-        (HERO_DIVIDER_SLANT, "Slant - straight diagonal"),
-    )
+    # hard edge, so every existing tenant is unchanged. The shape set is the
+    # module-level DIVIDER_CHOICES, shared with the section-band dividers above;
+    # these two names are kept because the serializer and the admin already
+    # reference them.
+    HERO_DIVIDER_NONE = DIVIDER_NONE
+    HERO_DIVIDER_CHOICES = DIVIDER_CHOICES
     hero_bottom_divider = models.CharField(
         max_length=16,
         choices=HERO_DIVIDER_CHOICES,

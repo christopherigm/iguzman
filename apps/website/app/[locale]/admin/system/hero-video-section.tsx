@@ -21,9 +21,10 @@ import {
   type HeroOverlayStyle,
 } from "@repo/ui/hero";
 import {
-  SHAPE_DIVIDER_MASKS,
-  type ShapeDividerMask,
-} from "@repo/ui/shape-divider";
+  DIVIDER_OPTIONS,
+  DIVIDER_LABEL_KEY,
+  toDividerOption,
+} from "@/components/admin/divider-options";
 import { HERO_DIVIDER_ELEVATION } from "@/components/hero";
 
 /** The layouts the site can render - the same set the API accepts. */
@@ -56,32 +57,6 @@ const OVERLAY_STYLE_LABEL_KEY: Record<HeroOverlayStyle, string> = {
   vignette: "heroOverlayVignette",
 };
 
-/** A divider shape the hero can offer: the self-contained SVG shapes only. */
-type HeroDivider = Exclude<ShapeDividerMask, "brandmark">;
-
-/**
- * The bottom-divider options: "none" (a hard edge, the default) plus each named
- * shape the site can cut. Only the bottom edge is exposed here - the component
- * supports "top" too, but the hero only ever dissolves into the page below it.
- * `brandmark` is excluded: it needs a same-origin brandmark URL the landing hero
- * doesn't plumb, so it isn't offered as a hero divider here.
- */
-const HERO_DIVIDERS: (HeroDivider | "none")[] = [
-  "none",
-  ...SHAPE_DIVIDER_MASKS.filter((m): m is HeroDivider => m !== "brandmark"),
-];
-
-/** Admin-namespace message key for each divider option's label. */
-const DIVIDER_LABEL_KEY: Record<HeroDivider | "none", string> = {
-  none: "heroDividerNone",
-  wave: "heroDividerWave",
-  scallop: "heroDividerScallop",
-  zigzag: "heroDividerZigzag",
-  spikes: "heroDividerSpikes",
-  arches: "heroDividerArches",
-  slant: "heroDividerSlant",
-};
-
 /**
  * Overlay strength, in the whole percents the API stores. Coarser than the size
  * sliders because the eye reads darkness in broad steps; 0 is "no overlay",
@@ -107,7 +82,9 @@ const OVERLAY_EXTENT_STEPS: SliderStep[] = [
  * depth on web and native). 0 is a flat edge; the default 10 must be one of the
  * steps, since the `Slider` can only sit on a value it's given.
  */
-const DIVIDER_ELEVATION_STEPS: SliderStep[] = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24].map((v) => ({
+const DIVIDER_ELEVATION_STEPS: SliderStep[] = [
+  0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24,
+].map((v) => ({
   value: v,
   label: String(v),
 }));
@@ -171,11 +148,10 @@ export function HeroVideoSection({
   ) as HeroOverlayStyle;
   const overlayOpacity = Number(values.hero_overlay_opacity ?? 75);
   const overlayExtent = Number(values.hero_overlay_extent ?? 50);
-  const bottomDivider = (
-    HERO_DIVIDERS.includes(values.hero_bottom_divider as HeroDivider)
-      ? values.hero_bottom_divider
-      : "none"
-  ) as HeroDivider | "none";
+  // Only the hero's bottom edge is exposed: the shared component supports a top
+  // divider too, but the hero only ever dissolves into the page below it (the
+  // section bands, which have a section on either side, offer both edges).
+  const bottomDivider = toDividerOption(values.hero_bottom_divider);
   const dividerElevation = Number(
     values.hero_bottom_divider_elevation ?? HERO_DIVIDER_ELEVATION,
   );
@@ -352,7 +328,7 @@ export function HeroVideoSection({
               label={t("heroDivider")}
               value={bottomDivider}
               onChange={(v) => onChange("hero_bottom_divider", v)}
-              options={HERO_DIVIDERS.map((value) => ({
+              options={DIVIDER_OPTIONS.map((value) => ({
                 value,
                 label: t(DIVIDER_LABEL_KEY[value]),
               }))}

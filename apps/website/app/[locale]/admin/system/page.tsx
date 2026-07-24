@@ -9,6 +9,7 @@ import { ContactSection } from "./contact-section";
 import { PaymentsSection } from "./payments-section";
 import { SpotlightSection } from "./spotlight-section";
 import { WatermarkSection } from "./watermark-section";
+import { SectionBackgroundsSection } from "./section-backgrounds-section";
 import { HeroVideoSection } from "./hero-video-section";
 import { TypographySection } from "./typography-section";
 import {
@@ -18,9 +19,7 @@ import {
 import { getSystem, updateSystem } from "@/lib/admin-api";
 import type { SocialLink } from "@/lib/contact";
 import { useSession } from "@repo/auth/session-provider";
-import { GradientBuilder } from "@repo/ui/core-elements/gradient-builder";
 import { Box } from "@repo/ui/core-elements/box";
-import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
@@ -37,7 +36,6 @@ async function dataUrlToFile(dataUrl: string, filename: string): Promise<File> {
 export default function AdminSystemPage() {
   const t = useTranslations("Admin");
   const tCommon = useTranslations("Common");
-  const tGb = useTranslations("GradientBuilder");
 
   const [values, setValues] = useState<Record<string, unknown>>({
     site_name: "",
@@ -56,6 +54,10 @@ export default function AdminSystemPage() {
     highlights_subtitle: "",
     en_highlights_subtitle: "",
     catalog_items_bg: "",
+    highlights_top_divider: "none",
+    highlights_bottom_divider: "none",
+    catalog_top_divider: "none",
+    catalog_bottom_divider: "none",
     hero_video_layout: "default",
     hero_logo_background: "none",
     hero_logo_scale: 100,
@@ -175,6 +177,10 @@ export default function AdminSystemPage() {
           highlights_subtitle: data.highlights_subtitle ?? "",
           en_highlights_subtitle: data.en_highlights_subtitle ?? "",
           catalog_items_bg: data.catalog_items_bg ?? "",
+          highlights_top_divider: data.highlights_top_divider ?? "none",
+          highlights_bottom_divider: data.highlights_bottom_divider ?? "none",
+          catalog_top_divider: data.catalog_top_divider ?? "none",
+          catalog_bottom_divider: data.catalog_bottom_divider ?? "none",
           hero_video_layout: data.hero_video_layout ?? "default",
           hero_logo_background: data.hero_logo_background ?? "none",
           hero_logo_scale: data.hero_logo_scale ?? 100,
@@ -452,21 +458,6 @@ export default function AdminSystemPage() {
     // thing. They are still keys in `values`, so handleSubmit is unaffected.
   ];
 
-  /** Shared by both background builders - same strings, same namespace. */
-  const gradientLabels = {
-    linear: tGb("linear"),
-    radial: tGb("radial"),
-    solid: tGb("solid"),
-    angle: tGb("angle"),
-    color: tGb("color"),
-    stops: tGb("stops"),
-    addStop: tGb("addStop"),
-    removeStop: tGb("removeStop"),
-    pickColor: tGb("pickColor"),
-    opacity: tGb("opacity"),
-    rawCss: tGb("rawCss"),
-  };
-
   const handleImageChange = (
     field: string,
     newImages: NewImage[],
@@ -576,28 +567,12 @@ export default function AdminSystemPage() {
                     images.img_brandmark?.existing[0]?.url
                   }
                 />
-                <Grid container spacing={2} paddingTop={32}>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <GradientBuilder
-                      label={t("catalogBg")}
-                      value={String(values.catalog_items_bg ?? "")}
-                      onChange={(v) =>
-                        setValues((prev) => ({ ...prev, catalog_items_bg: v }))
-                      }
-                      labels={gradientLabels}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <GradientBuilder
-                      label={t("highlightsBg")}
-                      value={String(values.highlights_bg ?? "")}
-                      onChange={(v) =>
-                        setValues((prev) => ({ ...prev, highlights_bg: v }))
-                      }
-                      labels={gradientLabels}
-                    />
-                  </Grid>
-                </Grid>
+                <SectionBackgroundsSection
+                  values={values}
+                  onChange={(k, v) =>
+                    setValues((prev) => ({ ...prev, [k]: v }))
+                  }
+                />
                 <SpotlightSection
                   values={values}
                   onChange={(k, v) =>

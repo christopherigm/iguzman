@@ -200,7 +200,7 @@ landing, which is exactly what the preview shows.
 - **The dark overlay over the hero is three tenant fields**, applying to
   both heroes: `hero_overlay_style` (`none` | `full` | `bottom` | `top` |
   `both` | `vignette`), `hero_overlay_opacity` (a whole percent, 0-100 - how
-  *dark* it gets) and `hero_overlay_extent` (a whole percent, 0-100 - how *far*
+  _dark_ it gets) and `hero_overlay_extent` (a whole percent, 0-100 - how _far_
   the gradient reaches across the frame, a taller/shorter dark band). Their
   defaults (`bottom`, 75, 50) are exactly the gradient both heroes used to
   hard-code, so nothing moved when they landed - `hero_overlay_extent`'s 50 is
@@ -244,6 +244,36 @@ the brief.
   into the DB) would otherwise pull a stylesheet from an arbitrary origin.
   `cssFontFamily` likewise rejects, rather than escapes, a family name that
   isn't plausibly a family name - it ends up in an inline `style` attribute.
+
+## Section background bands (`SectionBand`)
+
+The two full-width colour bands a landing paints behind its Catalog Items and
+Company Highlights sections are **one component**,
+`components/section-band.tsx`, used by every site (`sites/*/landing.tsx`) —
+never a bare `<Box styles={{ width: "100%", background }}>` any more. It carries
+the tenant's band background (`System.catalog_items_bg` / `highlights_bg`, still
+passed through `fitSectionBackground`) plus the shape cut as a transparent notch
+out of the band's **top and bottom** edges (`System.catalog_top_divider` /
+`catalog_bottom_divider` and the `highlights_*` pair). The CMS section is
+`admin/system/section-backgrounds-section.tsx`, which previews the **real**
+`SectionBand` over the tenant's own page background, so it cannot drift from the
+site.
+
+- **Both edges, unlike the hero.** A band has a section above it _and_ one
+  below, so each edge is its own setting; `Hero`'s divider stays bottom-only
+  because a hero only ever dissolves into the page beneath it. The shape set is
+  shared — `components/admin/divider-options.ts` on the frontend,
+  `DIVIDER_CHOICES` in `core/models.py` on the API — so a shape added in one
+  place is offered everywhere. `brandmark` is excluded from both: it needs a
+  same-origin brandmark URL neither the hero nor the bands plumb through.
+- **The two edges are nested, not one mask.** A divider masks the element it is
+  on _and everything painted inside it_, so `SectionBand` puts the background on
+  the innermost box, cuts the bottom notch from that, and cuts the top notch from
+  a wrapper around the result. Don't "simplify" it into a single element — a
+  second `mask` declaration would replace the first, not add to it.
+- **A notch is a real hole**, so the band's `elevation` is `0` (the shared
+  `ShapeDivider` defaults to 24, which is the hero lifting off the page) and
+  anything that must escape the band has to live outside it.
 
 ## Logo watermark & page background
 
@@ -376,8 +406,9 @@ the tablet band by stacking content that comfortably fits side by side.
 
 **Never hardcode a breakpoint pixel value in a `@media` query in this app.** The
 scale lives once in `@repo/ui`'s `BREAKPOINTS` (`packages/ui/src/core-elements/breakpoints.ts`
+
 - a deliberately React-free module so build scripts can import it), and CSS
-consumes it through PostCSS `@custom-media` tokens.
+  consumes it through PostCSS `@custom-media` tokens.
 
 - The tokens are generated **once, in `@repo/ui`** (not per-app):
   `packages/ui/scripts/gen-breakpoints-css.ts` reads `BREAKPOINTS` and writes
@@ -413,10 +444,11 @@ Before defining a constant, type, or pure utility function in a component file, 
 
 **Current shared files to check first:**
 
-| File                                                 | Contents                                                                                                                                      |
-| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/website/components/admin/paragraph-options.ts` | `PARAGRAPH_WORD_COUNTS`, `PARAGRAPH_LENGTH_STEPS`, `PARAGRAPH_COUNT_STEPS` - used by `admin-form.tsx` and `ai-interviewer/ai-interviewer.tsx` |
-| `apps/website/components/admin/logo-background-options.ts` | `LOGO_BACKGROUND_SHAPES`, `LOGO_BACKGROUND_LABEL_KEY`, `SCALE_STEPS` - the badge shapes and size stops, used by `admin/system/hero-video-section.tsx` and `admin/social-posts/[id]/page.tsx` |
+| File                                                       | Contents                                                                                                                                                                                                                                                                                               |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apps/website/components/admin/paragraph-options.ts`       | `PARAGRAPH_WORD_COUNTS`, `PARAGRAPH_LENGTH_STEPS`, `PARAGRAPH_COUNT_STEPS` - used by `admin-form.tsx` and `ai-interviewer/ai-interviewer.tsx`                                                                                                                                                          |
+| `apps/website/components/admin/logo-background-options.ts` | `LOGO_BACKGROUND_SHAPES`, `LOGO_BACKGROUND_LABEL_KEY`, `SCALE_STEPS` - the badge shapes and size stops, used by `admin/system/hero-video-section.tsx` and `admin/social-posts/[id]/page.tsx`                                                                                                           |
+| `apps/website/components/admin/divider-options.ts`         | `DIVIDER_OPTIONS`, `DIVIDER_LABEL_KEY`, `toDividerOption`, `DividerOption` - the shape-divider shapes every CMS divider picker offers (the hero's bottom edge, both section bands' top/bottom edges), used by `admin/system/hero-video-section.tsx` and `admin/system/section-backgrounds-section.tsx` |
 
 **How to apply:**
 
@@ -459,3 +491,13 @@ for everything that follows.
 `GROQ_API_KEY` in `website-secrets` is **obsolete** - LLM calls moved to
 website-api. It can be dropped once nothing else reads it (`pnpm secrets` cannot
 delete keys; that needs a manual `kubectl patch` with a null value).
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+
+**Keep this block, including in commits.** It is part of the project's agent setup, maintained by `next dev` for every agent that works here. If it appears as an uncommitted change, that is intentional — commit it as-is. Do not remove it to clean up a diff; it will be regenerated.
+
+<!-- END:nextjs-agent-rules -->

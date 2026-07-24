@@ -8,6 +8,7 @@ from rest_framework import serializers
 from . import image_sizes
 from .image_sizes import REGULAR, SMALL, MEDIUM, STANDARD, image_cfg
 from .models import (
+    DIVIDER_CHOICES,
     Branch,
     Brand,
     CompanyHighlight,
@@ -530,6 +531,8 @@ class SystemSerializer(serializers.ModelSerializer):
             "highlights_title", "en_highlights_title",
             "highlights_subtitle", "en_highlights_subtitle",
             "catalog_items_bg",
+            "highlights_top_divider", "highlights_bottom_divider",
+            "catalog_top_divider", "catalog_bottom_divider",
             "hero_video_layout", "hero_logo_background", "hero_logo_scale",
             "hero_logo_background_scale",
             "hero_overlay_style", "hero_overlay_opacity", "hero_overlay_extent",
@@ -626,6 +629,8 @@ _TEXT_FIELDS = [
     "highlights_title", "en_highlights_title",
     "highlights_subtitle", "en_highlights_subtitle",
     "catalog_items_bg",
+    "highlights_top_divider", "highlights_bottom_divider",
+    "catalog_top_divider", "catalog_bottom_divider",
     "hero_video_layout", "hero_logo_background", "hero_logo_scale",
     "hero_logo_background_scale",
     "hero_overlay_style", "hero_overlay_opacity", "hero_overlay_extent",
@@ -681,6 +686,23 @@ class SystemWriteSerializer(serializers.Serializer):
     highlights_subtitle    = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     en_highlights_subtitle = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     catalog_items_bg = serializers.CharField(max_length=512, required=False, allow_null=True, allow_blank=True)
+    # The notch cut into each background band's top and bottom edge. Constrained
+    # to the shapes the frontend can cut, for the same reason as the hero divider
+    # below: an unknown value falls back to "none" on the site, which reads as
+    # the setting having been ignored. "none" is a valid choice - it is how a
+    # tenant turns an edge's divider back off.
+    highlights_top_divider = serializers.ChoiceField(
+        choices=[c[0] for c in DIVIDER_CHOICES], required=False
+    )
+    highlights_bottom_divider = serializers.ChoiceField(
+        choices=[c[0] for c in DIVIDER_CHOICES], required=False
+    )
+    catalog_top_divider = serializers.ChoiceField(
+        choices=[c[0] for c in DIVIDER_CHOICES], required=False
+    )
+    catalog_bottom_divider = serializers.ChoiceField(
+        choices=[c[0] for c in DIVIDER_CHOICES], required=False
+    )
     # Constrained to the layouts the frontend can actually render - an unknown
     # value would silently fall back to "default" on the site, which reads as
     # the setting having been ignored.

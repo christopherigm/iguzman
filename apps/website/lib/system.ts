@@ -55,6 +55,16 @@ export interface System {
   highlights_subtitle: string | null;
   en_highlights_subtitle: string | null;
   catalog_items_bg: string | null;
+  /**
+   * The shape of the transparent notch cut into each background band's top and
+   * bottom edge, so the page (and its watermark) shows through and the band
+   * dissolves into the sections around it. "none" = a straight edge. Both edges
+   * are settable per band, unlike the hero, which only dissolves downward.
+   */
+  highlights_top_divider: ShapeDividerMask | "none";
+  highlights_bottom_divider: ShapeDividerMask | "none";
+  catalog_top_divider: ShapeDividerMask | "none";
+  catalog_bottom_divider: ShapeDividerMask | "none";
   /** How the logo and text are composed over the hero video. */
   hero_video_layout: HeroLayout;
   /** Shape drawn behind the hero logo, in either layout ("none" = no badge). */

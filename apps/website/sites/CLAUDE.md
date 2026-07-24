@@ -171,6 +171,14 @@ Build a site by composing the shared, already-tenant-aware components in
 | `catalog-items` (`CatalogItems`)                                                     | Featured product/service/food cards | `getFeaturedProducts()` / `getFeaturedServices()` / `getFeaturedMenuItems()` |
 | `buyable-card`, `product-detail`, `service-detail`, `menu-detail`, `category-detail` | Item/detail rendering               | catalog helpers                                                              |
 | `menu-item-customizer`                                                               | Priced-ingredient picker on a dish  | `getMenuItem()` (its `ingredients`)                                          |
+| `section-band` (`SectionBand`)                                                       | Full-width band behind a section    | `System.*_bg` + `System.*_top_divider` / `*_bottom_divider`                  |
+
+**Wrap a banded section in `SectionBand`, never a bare `<Box styles={{ width:
+"100%", background }}>`.** It carries the tenant's band background _and_ the
+shape-divider notch they picked for the band's top and bottom edges (so the page
+and its watermark show through instead of a hard line). Pass the site's own
+fallback band colour as `background` exactly as before — see any
+`sites/*/landing.tsx` and `apps/website/CLAUDE.md` → "Section background bands".
 
 **The two catalog blocks auto-fold all three [Buyable](#the-three-buyable-families--pick-the-right-one) families.** `CatalogCategories` and `CatalogItems` each fetch products, services **and** menu items in one pass, tag every card with its `kind` (`"product" | "service" | "food"`), and render whatever exists — a food-only business gets a menu-only landing from the same block, and a family with zero rows is simply omitted (never a blank section). You do **not** compose a separate "menu" block; put `<CatalogItems />` / `<CatalogCategories />` in the landing and the food shows up when the backend has it.
 

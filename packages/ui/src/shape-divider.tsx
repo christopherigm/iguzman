@@ -20,7 +20,8 @@ export type ShapeDividerEdge = "top" | "bottom";
  * - `zigzag`    - bold triangular bunting.
  * - `spikes`    - a fine, sharp sawtooth comb.
  * - `arches`    - smooth, regular wide humps.
- * - `slant`     - a single straight diagonal.
+ * - `slant`     - a single straight diagonal, rising left to right.
+ * - `inverted-slant` - the same diagonal mirrored, falling left to right.
  * - `brandmark` - a caller-supplied brandmark image tiled along the edge as a
  *   stamped lace border. Unlike every other shape (self-contained SVGs), this
  *   one needs a `brandmarkUrl` - and it must be **same-origin**, or the mask
@@ -33,6 +34,7 @@ export type ShapeDividerMask =
   | "spikes"
   | "arches"
   | "slant"
+  | "inverted-slant"
   | "brandmark";
 
 /**
@@ -46,6 +48,7 @@ export const SHAPE_DIVIDER_MASKS: readonly ShapeDividerMask[] = [
   "spikes",
   "arches",
   "slant",
+  "inverted-slant",
   "brandmark",
 ] as const;
 
@@ -63,8 +66,8 @@ const W = 1440; // full-width viewBox for the non-repeating slant
  * across the edge at a FIXED pixel width (`tilePx`), so every lobe/tooth/hump
  * keeps the same on-screen size no matter how wide the screen is - instead of
  * one instance stretched to 100% width, which grew and shrank the shapes with
- * the viewport. `wave` and `slant` (below) stay single, non-repeating drawings
- * that still stretch to span the whole edge.
+ * the viewport. `wave` and the two slants (below) stay single, non-repeating
+ * drawings that still stretch to span the whole edge.
  *
  * Each tile's `d` is drawn for the **bottom** edge (filled area on top, shaped
  * boundary near the bottom); the `top` edge is derived by vertically mirroring
@@ -113,7 +116,20 @@ function archesTile(): MaskDef {
   };
 }
 
+/**
+ * A single straight diagonal, drawn (like the tiles) for the **bottom** edge:
+ * the kept area reaches `y=100` on the left and only `y=35` on the right, so the
+ * boundary RISES from left to right.
+ */
 const SLANT_PATH = `M0 0 H${W} V35 L0 ${H} Z`;
+
+/**
+ * The same diagonal mirrored horizontally - deep on the right, shallow on the
+ * left - so the boundary FALLS from left to right. A separate shape rather than
+ * a flag because the mask set is a flat list of named shapes everywhere it is
+ * offered (the CMS pickers, the API's `DIVIDER_CHOICES`).
+ */
+const INVERTED_SLANT_PATH = `M0 0 H${W} V${H} L0 35 Z`;
 
 /**
  * The original organic wave (kept exactly), on its own 1280x140 viewBox. Filled
@@ -137,6 +153,7 @@ const MASKS: Record<ShapeMask, MaskDef> = {
   spikes: spikesTile(),
   arches: archesTile(),
   slant: { w: W, h: H, d: SLANT_PATH },
+  "inverted-slant": { w: W, h: H, d: INVERTED_SLANT_PATH },
 };
 
 /**
@@ -197,7 +214,8 @@ export function shapeDividerMaskStyle(
   const keep = `100% calc(100% - ${size} + 1px)`;
   // The periodic shapes (and the brandmark) tile across the edge at a FIXED
   // width, so each shape keeps the same size regardless of screen width; only
-  // wave/slant - single, non-repeating drawings - stretch to fill the edge once.
+  // wave and the slants - single, non-repeating drawings - stretch to fill the
+  // edge once.
   const tilePx = isBrandmark ? undefined : MASKS[mask].tilePx;
   const tiles = isBrandmark || tilePx != null;
   const band = isBrandmark
@@ -238,7 +256,8 @@ export function shapeDividerMaskStyle(
  * cutting almost nothing) and only bites deep out towards the ends, so its
  * whole-edge mean (~0.45) would lift a centred disc about three times too far;
  * the value here is integrated across the middle fifth of the drawing instead.
- * `slant` is linear, so its centre and its mean coincide.
+ * The slants are linear, so their centre and their mean coincide - and since
+ * `inverted-slant` is `slant` mirrored, the two share a value.
  *
  * `brandmark` is a caller-supplied image whose alpha we cannot know, so it takes
  * a middling value - a stamped lace border tends to be mostly gaps.
@@ -250,6 +269,7 @@ const NOTCH_MEAN_DEPTH: Record<ShapeDividerMask, number> = {
   spikes: 0.4,
   arches: 0.24,
   slant: 0.33,
+  "inverted-slant": 0.33,
   brandmark: 0.5,
 };
 

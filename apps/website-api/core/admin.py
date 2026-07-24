@@ -240,12 +240,22 @@ class SystemAdmin(admin.ModelAdmin):
         ("Company Highlights Section", {
             "fields": (
                 "highlights_bg",
+                "highlights_top_divider", "highlights_bottom_divider",
                 "highlights_title", "en_highlights_title",
                 "highlights_subtitle", "en_highlights_subtitle",
             ),
+            "description": (
+                "The background band behind the Company Highlights, and the shape "
+                "cut as a transparent notch out of its top and bottom edges so the "
+                "page shows through. Normally set from the site's CMS, which "
+                "previews the result live."
+            ),
         }),
         ("Catalog Items Section", {
-            "fields": ("catalog_items_bg",),
+            "fields": (
+                "catalog_items_bg",
+                "catalog_top_divider", "catalog_bottom_divider",
+            ),
         }),
         ("Spotlight Section", {
             "fields": (

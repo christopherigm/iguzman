@@ -1,9 +1,9 @@
 import { getTranslations } from "next-intl/server";
-import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Container } from "@repo/ui/core-elements/container";
 import { getSystem } from "@/lib/system";
 import { fitSectionBackground } from "@/lib/section-background";
+import { SectionBand } from "@/components/section-band";
 import { Hero } from "@/components/hero";
 import { SuccessStories } from "@/components/success-stories";
 import { CompanyHighlights } from "@/components/company-highlights";
@@ -68,21 +68,29 @@ export async function Landing() {
 
       <Intro />
 
-      <Box styles={{ width: "100%", background: highlightsBg }}>
+      <SectionBand
+        background={highlightsBg}
+        topDivider={system?.highlights_top_divider}
+        bottomDivider={system?.highlights_bottom_divider}
+      >
         <Container paddingX={10}>
           <CompanyHighlights />
         </Container>
-      </Box>
+      </SectionBand>
 
       <Container paddingX={10}>
         <CatalogCategories />
       </Container>
 
-      <Box styles={{ width: "100%", background: itemsBg }}>
+      <SectionBand
+        background={itemsBg}
+        topDivider={system?.catalog_top_divider}
+        bottomDivider={system?.catalog_bottom_divider}
+      >
         <Container paddingX={10}>
           <CatalogItems />
         </Container>
-      </Box>
+      </SectionBand>
 
       <Container paddingX={10}>
         <SuccessStories />
