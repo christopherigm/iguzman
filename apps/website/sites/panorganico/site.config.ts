@@ -5,8 +5,8 @@ import type { SiteConfig } from "../types";
 const config: SiteConfig = {
   slug: "panorganico",
   name: "Pan que hace bien",
-  hosts: ["panbueno.iguzman.com.mx"],
-  systemHost: "panbueno.iguzman.com.mx",
+  hosts: ["elpanbueno.com"],
+  systemHost: "elpanbueno.com",
 };
 
 export default config;

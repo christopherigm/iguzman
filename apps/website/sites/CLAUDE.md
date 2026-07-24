@@ -144,7 +144,7 @@ double patty, hold the cheese) and carries an _internal kitchen recipe_, neither
 of which a `Product` can express. A `MenuItem`'s `price` is the **base**; the
 customer's ingredient picks add up-charges on top, and that selection travels
 through the cart into the order snapshot. See the reference brief
-**`apps/website-api/seed_assets/briefs/panbueno.iguzman.com.mx.json`** (an
+**`apps/website-api/seed_assets/briefs/elpanbueno.com.json`** (an
 organic bread maker whose loaves and muffins are MenuItems with priced add-ins)
 and the built site **`sites/panorganico/`**.
 
@@ -233,7 +233,7 @@ python manage.py seed_site --brief seed_assets/briefs/<host>.json --reset
   Featured items (`is_featured=True`) surface in `CatalogItems`. Pick the family
   that fits the business (see "The three Buyable families" above) — a **food**
   business's brief uses `menu_categories`, not `product_categories`. The reference
-  brief `seed_assets/briefs/panbueno.iguzman.com.mx.json` shows the menu shape end
+  brief `seed_assets/briefs/elpanbueno.com.json` shows the menu shape end
   to end (`brief.example.json` only illustrates the product/service families).
 - `--reset` wipes that System's prior seeded content for clean, idempotent
   re-runs. Slugs are auto host-namespaced to avoid global collisions.

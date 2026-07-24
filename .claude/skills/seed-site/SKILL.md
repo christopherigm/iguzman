@@ -41,7 +41,7 @@ interview.
 - **`apps/website-api/seed_assets/brief.example.json`** — a complete filled
   brief. Copy its shape. **Note:** it illustrates only the product/service
   families. For a **food** business, copy the menu shape from
-  **`apps/website-api/seed_assets/briefs/panbueno.iguzman.com.mx.json`** (an
+  **`apps/website-api/seed_assets/briefs/elpanbueno.com.json`** (an
   organic bread maker whose loaves/muffins are `menu_items` with priced
   `ingredients`).
 - **`apps/website/sites/CLAUDE.md`** → "Seeding initial content" — how the data

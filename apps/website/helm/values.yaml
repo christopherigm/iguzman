@@ -43,7 +43,7 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-    - host: panbueno.iguzman.com.mx
+    - host: elpanbueno.com
       paths:
         - path: /
           pathType: Prefix
@@ -60,7 +60,7 @@ ingress:
       hosts:
         - website.iguzman.com.mx
         - bdrone.com.mx
-        - panbueno.iguzman.com.mx
+        - elpanbueno.com
         - cafedealtura.iguzman.com.mx
         - supertortaselchino.iguzman.com.mx
 
