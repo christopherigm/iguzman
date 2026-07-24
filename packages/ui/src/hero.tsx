@@ -2,6 +2,7 @@ import React, { CSSProperties } from "react";
 import { HeroVideo } from "./hero-video";
 import { ParallaxLayer } from "./parallax-layer";
 import {
+  shapeDividerEdgeInset,
   shapeDividerElevationFilter,
   shapeDividerMaskStyle,
   type ShapeDividerEdge,
@@ -21,7 +22,9 @@ import "./hero.css";
  * - `profile` - the logo sits in a circle straddling the hero's bottom edge
  *   (half in, half out) the way a profile picture sits on a cover photo, with
  *   the text centred in the space left above it. With no logo background the
- *   bare logo straddles the edge instead of a badge.
+ *   bare logo straddles the edge instead of a badge. A `bottomDivider` lifts the
+ *   circle by the notch's depth at mid-edge, since the shape has made the very
+ *   edge it straddles partly transparent (see `shapeDividerEdgeInset`).
  */
 export type HeroLayout = "default" | "none" | "profile";
 
@@ -478,7 +481,12 @@ export type HeroProps = {
    * sits behind the hero shows through it continuously (the page background and
    * its fixed logo watermark), so the video appears to dissolve into the page
    * instead of ending at a solid line. `"none"`/`null`/omitted keeps the
-   * historical hard edge. @default null
+   * historical hard edge.
+   *
+   * In the `profile` layout a bottom notch also lifts the logo disc (and the
+   * text clearing it) by the shape's depth at mid-edge, so the mark keeps
+   * straddling the edge rather than hanging over the hole the notch opened.
+   * @default null
    */
   bottomDivider?: ShapeDividerMask | "none" | null;
   /**
@@ -798,6 +806,27 @@ export function Hero({
     </>
   );
 
+  // How far the `profile` disc (and the text that clears it) has to rise so it
+  // still straddles the hero's edge once a divider has cut that edge open.
+  // Several shapes make the bottom border largely transparent, so a disc pinned
+  // to the nominal edge hangs its inner half over a hole and reads as having
+  // slipped below the hero instead of sitting in it. `shapeDividerEdgeInset`
+  // resolves where that shape's boundary really runs under the (centred) disc,
+  // which is where the disc's own centre belongs.
+  // Only a `bottom` divider matters here - a `top` notch is nowhere near the disc.
+  const profileDividerLift =
+    isProfile &&
+    bottomDivider &&
+    bottomDivider !== "none" &&
+    bottomDividerEdge === "bottom"
+      ? shapeDividerEdgeInset(bottomDivider, bottomDividerHeight)
+      : null;
+  // The disc's own overhang below the hero, and the offsets built on it: its
+  // centre sits `profileDividerLift` above the nominal bottom edge.
+  const profileMarkBottom = profileDividerLift
+    ? `calc(${profileLogoSize} / -2 + ${profileDividerLift})`
+    : `calc(${profileLogoSize} / -2)`;
+
   // The bottom shape divider is a real hole cut out of the hero, not a painted
   // band: masking the whole hero (video + black backing + overlay) lets the page
   // and its fixed watermark show through the notch. Resolved by the shared
@@ -885,7 +914,12 @@ export function Hero({
             top: isProfile ? "50%" : "var(--ui-navbar-height, 57px)",
             left: 0,
             right: 0,
-            bottom: isProfile ? `calc(${profileLogoSize} / 2 + 24px)` : 0,
+            bottom: isProfile
+              ? // Follows the disc: a lifted disc lifts its 24px clearance too.
+                profileDividerLift
+                ? `calc(${profileLogoSize} / 2 + 24px + ${profileDividerLift})`
+                : `calc(${profileLogoSize} / 2 + 24px)`
+              : 0,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -959,11 +993,17 @@ export function Hero({
   // The badge bleeds half its height below the hero, so it cannot live inside
   // the `overflow: hidden` box that crops the video. It hangs off this wrapper
   // instead, which reserves the overhang as bottom margin so the page content
-  // underneath starts below the badge rather than behind it.
+  // underneath starts below the badge rather than behind it. A divider lift
+  // shortens that overhang by exactly the lift, so the 16px breathing room
+  // below the disc stays 16px instead of growing into a gap.
   return (
     <Box
       width="100%"
-      marginBottom={`calc(${profileLogoSize} / 2 + 16px)`}
+      marginBottom={
+        profileDividerLift
+          ? `calc(${profileLogoSize} / 2 + 16px - ${profileDividerLift})`
+          : `calc(${profileLogoSize} / 2 + 16px)`
+      }
       styles={{ position: "relative" }}
     >
       {elevatedHero}
@@ -971,7 +1011,7 @@ export function Hero({
         styles={{
           position: "absolute",
           left: "50%",
-          bottom: `calc(${profileLogoSize} / -2)`,
+          bottom: profileMarkBottom,
           transform: "translateX(-50%)",
           zIndex: 3,
         }}

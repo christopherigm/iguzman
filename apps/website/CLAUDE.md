@@ -191,6 +191,12 @@ landing, which is exactly what the preview shows.
   wrap themselves in an extra `Box` and hang the disc off it - the video's own
   box keeps `overflow: hidden`. That wrapper's `marginBottom` reserves the
   overhang; without it the page's first block would sit behind the circle.
+  **With `hero_bottom_divider` set, the shared `Hero` lifts that disc** by the
+  shape's notch depth at the middle of the edge (`shapeDividerEdgeInset`), because the notch makes the
+  edge the disc straddles partly transparent - unlifted, the mark's inner half
+  hangs over the hole and looks like it slipped out of the hero. It is derived
+  from the two tenant fields, so the CMS preview shows the same lift; don't
+  compensate again per-site.
 - **The dark overlay over the hero is three tenant fields**, applying to
   both heroes: `hero_overlay_style` (`none` | `full` | `bottom` | `top` |
   `both` | `vignette`), `hero_overlay_opacity` (a whole percent, 0-100 - how

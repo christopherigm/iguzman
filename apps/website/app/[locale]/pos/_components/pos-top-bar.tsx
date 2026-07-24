@@ -1,9 +1,13 @@
 "use client";
 
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@repo/i18n/navigation";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 
 interface Props {
   title: string;
@@ -21,6 +25,9 @@ interface Props {
  * `components/hide-on-admin.tsx`). A till is a full-screen single-purpose tool
  * and the last thing an associate needs mid-sale is a Favorites link; the one
  * affordance kept is the way back to the site.
+ *
+ * Leaving mid-sale drops the in-memory basket, so exit is guarded by a
+ * confirmation modal rather than a bare link - a stray tap can't discard a sale.
  */
 export function PosTopBar({
   title,
@@ -29,6 +36,11 @@ export function PosTopBar({
   basketLabel,
   onOpenBasket,
 }: Props) {
+  const t = useTranslations("Pos");
+  const tCommon = useTranslations("Common");
+  const router = useRouter();
+  const [confirmingExit, setConfirmingExit] = useState(false);
+
   return (
     <Box
       className="pos-top-bar"
@@ -44,6 +56,12 @@ export function PosTopBar({
       </Typography>
 
       <Box alignItems="center" gap={8}>
+        <Button
+          text={exitLabel}
+          size="md"
+          kind="error"
+          onClick={() => setConfirmingExit(true)}
+        />
         {count > 0 && (
           <Box className="pos-top-bar__basket">
             <Button
@@ -51,6 +69,7 @@ export function PosTopBar({
               size="md"
               onClick={onOpenBasket}
               aria-label={basketLabel}
+              kind="primary"
             />
           </Box>
         )}
@@ -61,8 +80,18 @@ export function PosTopBar({
             </Badge>
           </Box>
         )}
-        <Button text={exitLabel} href="/" size="md" />
       </Box>
+
+      {confirmingExit && (
+        <ConfirmationModal
+          title={t("exitConfirmTitle")}
+          text={t("exitConfirmText")}
+          okLabel={exitLabel}
+          cancelLabel={tCommon("cancel")}
+          okCallback={() => router.push("/")}
+          cancelCallback={() => setConfirmingExit(false)}
+        />
+      )}
     </Box>
   );
 }

@@ -64,6 +64,7 @@ export default function AdminSystemPage() {
     hero_overlay_opacity: 75,
     hero_overlay_extent: 50,
     hero_bottom_divider: "none",
+    hero_bottom_divider_elevation: 10,
     hero_text_frame: false,
     about: "",
     en_about: "",
@@ -182,6 +183,8 @@ export default function AdminSystemPage() {
           hero_overlay_opacity: data.hero_overlay_opacity ?? 75,
           hero_overlay_extent: data.hero_overlay_extent ?? 50,
           hero_bottom_divider: data.hero_bottom_divider ?? "none",
+          hero_bottom_divider_elevation:
+            data.hero_bottom_divider_elevation ?? 10,
           hero_text_frame: data.hero_text_frame ?? false,
           about: data.about ?? "",
           en_about: data.en_about ?? "",

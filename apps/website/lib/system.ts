@@ -75,6 +75,11 @@ export interface System {
    */
   hero_bottom_divider: ShapeDividerMask | "none";
   /**
+   * Depth of the bottom divider edge's drop-shadow, on the 0-24 elevation scale
+   * (mirrors `@repo/ui-native`'s `Box`). 0 is a flat edge; 10 is the default.
+   */
+  hero_bottom_divider_elevation: number;
+  /**
    * Wrap the section/page heading over a hero (category, highlight and item
    * detail pages - not the landing hero) in an outline frame, with the
    * brandmark in a circle on top when `img_brandmark` is set.

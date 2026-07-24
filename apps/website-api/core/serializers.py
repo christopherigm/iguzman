@@ -533,7 +533,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "hero_video_layout", "hero_logo_background", "hero_logo_scale",
             "hero_logo_background_scale",
             "hero_overlay_style", "hero_overlay_opacity", "hero_overlay_extent",
-            "hero_bottom_divider",
+            "hero_bottom_divider", "hero_bottom_divider_elevation",
             "hero_text_frame",
             "watermark_enabled", "watermark_rotation", "watermark_intercalated",
             "watermark_show_logo", "watermark_show_brandmark",
@@ -629,7 +629,7 @@ _TEXT_FIELDS = [
     "hero_video_layout", "hero_logo_background", "hero_logo_scale",
     "hero_logo_background_scale",
     "hero_overlay_style", "hero_overlay_opacity", "hero_overlay_extent",
-    "hero_bottom_divider",
+    "hero_bottom_divider", "hero_bottom_divider_elevation",
     "hero_text_frame",
     "watermark_enabled", "watermark_rotation", "watermark_intercalated",
     "watermark_show_logo", "watermark_show_brandmark",
@@ -717,6 +717,12 @@ class SystemWriteSerializer(serializers.Serializer):
     # ignored. "none" is a valid choice: it is how a tenant turns the divider off.
     hero_bottom_divider = serializers.ChoiceField(
         choices=[c[0] for c in System.HERO_DIVIDER_CHOICES], required=False
+    )
+    # Depth of the divider edge's drop-shadow, on the 0-24 elevation scale the
+    # frontend mirrors from @repo/ui-native (see the model). Bounded here because
+    # the CMS is not the only caller; above 24 the shared formula clamps anyway.
+    hero_bottom_divider_elevation = serializers.IntegerField(
+        required=False, min_value=0, max_value=24
     )
     hero_text_frame = serializers.BooleanField(required=False)
     enabled         = serializers.BooleanField(required=False)

@@ -14,7 +14,7 @@ import "./button.css";
 export type ButtonType = "button" | "submit" | "reset";
 
 /** Standardized button size tokens. */
-export type ButtonSize = "sm" | "md" | "lg";
+export type ButtonSize = "sm" | "md" | "lg" | "xl";
 
 /** Semantic color intent for a button. */
 export type ButtonKind = "primary" | "success" | "error" | "warning";
@@ -26,6 +26,9 @@ const SIZE_STYLES: Record<
   sm: { padding: "6px", fontSize: 13, borderRadius: 6 },
   md: { padding: "8px", fontSize: 13, borderRadius: 6 },
   lg: { padding: "10px", fontSize: 14, borderRadius: 8 },
+  // Extra-large: sized for touch targets (e.g. the POS till), where a finger,
+  // not a cursor, is doing the tapping.
+  xl: { padding: "14px", fontSize: 16, borderRadius: 10 },
 };
 
 const KIND_STYLES: Record<
@@ -61,18 +64,21 @@ const ICON_SIZES: Record<ButtonSize, string> = {
   sm: "13px",
   md: "15px",
   lg: "17px",
+  xl: "19px",
 };
 
 const ICON_GAPS: Record<ButtonSize, string> = {
   sm: "5px",
   md: "6px",
   lg: "8px",
+  xl: "10px",
 };
 
 const SPINNER_SIZES: Record<ButtonSize, number> = {
   sm: 13,
   md: 15,
   lg: 17,
+  xl: 19,
 };
 
 /**
@@ -110,7 +116,8 @@ export interface ButtonProps extends UIComponentProps {
   disabled?: boolean;
   /** HTML `title` attribute (tooltip shown on hover). */
   title?: string;
-  /** Controls padding, font-size, and border-radius. Defaults to `'sm'`. */
+  /** Controls padding, font-size, and border-radius. Defaults to `'sm'`. `'xl'`
+   * is a touch-target size for finger-driven UIs such as the POS till. */
   size?: ButtonSize;
   /** Semantic color intent. Omit for a neutral surface-2 button. */
   kind?: ButtonKind;

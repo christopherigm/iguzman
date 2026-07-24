@@ -101,6 +101,17 @@ const OVERLAY_EXTENT_STEPS: SliderStep[] = [
   0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100,
 ].map((v) => ({ value: v, label: `${v}%` }));
 
+/**
+ * Divider-edge elevation, on the 0-24 scale the shared `shapeDividerElevationFilter`
+ * mirrors from `@repo/ui-native`'s `Box` (so the same number reads as the same
+ * depth on web and native). 0 is a flat edge; the default 10 must be one of the
+ * steps, since the `Slider` can only sit on a value it's given.
+ */
+const DIVIDER_ELEVATION_STEPS: SliderStep[] = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24].map((v) => ({
+  value: v,
+  label: String(v),
+}));
+
 type Props = {
   values: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
@@ -165,6 +176,9 @@ export function HeroVideoSection({
       ? values.hero_bottom_divider
       : "none"
   ) as HeroDivider | "none";
+  const dividerElevation = Number(
+    values.hero_bottom_divider_elevation ?? HERO_DIVIDER_ELEVATION,
+  );
   const textFrame = Boolean(values.hero_text_frame);
 
   return (
@@ -303,21 +317,6 @@ export function HeroVideoSection({
               {t("heroVideoPreview")}
             </Typography>
 
-            {/* Bottom divider: the transparent notch cut into the hero's bottom
-                edge so the page (and its watermark) shows through, softening the
-                seam. Sits under the Preview header so its effect shows live in
-                the hero below - though the notch reveals the plain admin
-                background here, not the tenant's watermark. */}
-            <Select
-              label={t("heroDivider")}
-              value={bottomDivider}
-              onChange={(v) => onChange("hero_bottom_divider", v)}
-              options={HERO_DIVIDERS.map((value) => ({
-                value,
-                label: t(DIVIDER_LABEL_KEY[value]),
-              }))}
-            />
-
             {/* No frame around the hero: the profile circle hangs *below* it,
                 outside any wrapper's padding box, so a clipping frame would cut
                 the disc in half. The rounding goes on the hero itself, which
@@ -338,11 +337,41 @@ export function HeroVideoSection({
                 overlayOpacity={overlayOpacity / 100}
                 overlayExtent={overlayExtent}
                 bottomDivider={bottomDivider}
-                bottomDividerElevation={HERO_DIVIDER_ELEVATION}
+                bottomDividerElevation={dividerElevation}
                 contentScale={0.5}
                 style={{ height: 240, borderRadius: 10 }}
               />
             </Box>
+
+            {/* Bottom divider: the transparent notch cut into the hero's bottom
+                edge so the page (and its watermark) shows through, softening the
+                seam. Sits under the preview so its effect shows live in the hero
+                above - though the notch reveals the plain admin background here,
+                not the tenant's watermark. */}
+            <Select
+              label={t("heroDivider")}
+              value={bottomDivider}
+              onChange={(v) => onChange("hero_bottom_divider", v)}
+              options={HERO_DIVIDERS.map((value) => ({
+                value,
+                label: t(DIVIDER_LABEL_KEY[value]),
+              }))}
+            />
+
+            {/* Elevation only lifts a shaped edge, so it shows only once a
+                divider is chosen; with a hard edge there is nothing to raise.
+                Hiding it keeps the stored value, so re-picking a shape restores
+                the depth the tenant had set. */}
+            {bottomDivider !== "none" && (
+              <Slider
+                label={t("heroDividerElevation")}
+                steps={DIVIDER_ELEVATION_STEPS}
+                value={dividerElevation}
+                onChange={(v) =>
+                  onChange("hero_bottom_divider_elevation", Number(v))
+                }
+              />
+            )}
           </Box>
         </Grid>
       </Grid>

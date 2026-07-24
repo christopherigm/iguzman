@@ -154,14 +154,22 @@ export function PosChargePanel({
               {t("paymentMethod")}
             </Typography>
             <Box gap={10} flexWrap="wrap">
-              <MethodButton
-                label={t("methodTerminal")}
-                active={method === "terminal"}
+              <Button
+                text={t("methodTerminal")}
+                size="xl"
+                flex="1"
+                minWidth={130}
+                kind={method === "terminal" ? "primary" : undefined}
+                aria-pressed={method === "terminal"}
                 onClick={() => setMethod("terminal")}
               />
-              <MethodButton
-                label={t("methodCash")}
-                active={method === "cash"}
+              <Button
+                text={t("methodCash")}
+                size="xl"
+                flex="1"
+                minWidth={130}
+                kind={method === "cash" ? "primary" : undefined}
+                aria-pressed={method === "cash"}
                 onClick={() => setMethod("cash")}
               />
             </Box>
@@ -192,7 +200,7 @@ export function PosChargePanel({
           <Button
             text={t("confirmPaid")}
             kind="success"
-            size="lg"
+            size="xl"
             width="100%"
             disabled={isPending}
             onClick={handleComplete}
@@ -201,7 +209,7 @@ export function PosChargePanel({
           <Button
             text={t("placeOrder")}
             kind="primary"
-            size="lg"
+            size="xl"
             width="100%"
             disabled={isPending || lines.length === 0}
             onClick={handlePlace}
@@ -209,35 +217,5 @@ export function PosChargePanel({
         )}
       </Box>
     </Box>
-  );
-}
-
-function MethodButton({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <Button
-      unstyled
-      text={label}
-      onClick={onClick}
-      aria-pressed={active}
-      flex="1"
-      minWidth={130}
-      paddingX={16}
-      paddingY={14}
-      borderRadius={10}
-      backgroundColor={active ? "var(--accent)" : "var(--surface-2)"}
-      color={active ? "#fff" : "var(--foreground)"}
-      border={
-        active ? "1px solid var(--accent)" : "1px solid var(--border, #e5e7eb)"
-      }
-      styles={{ fontWeight: 700, fontSize: "1rem" }}
-    />
   );
 }

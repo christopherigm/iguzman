@@ -3,10 +3,13 @@ import { Hero as HeroUI } from "@repo/ui/hero";
 import { type System } from "@/lib/system";
 
 /**
- * Lift the hero's bottom shape divider off the page with a shadow that traces
- * the notch (see `@repo/ui/hero`'s `bottomDividerElevation`). A design decision
- * the site makes, not a CMS field - kept here as one constant so the landing
- * and the "Hero video configuration" preview (which imports it) can't drift.
+ * Fallback elevation for the hero's bottom shape divider - how far its shaped
+ * edge lifts off the page with a shadow that traces the notch (see
+ * `@repo/ui/hero`'s `bottomDividerElevation`). The tenant now sets this per site
+ * (`System.hero_bottom_divider_elevation`), so this is only the default when the
+ * field is absent - kept as one constant the landing and the CMS preview share,
+ * so an unset value reads the same in both. `10` is the value the landing used
+ * to hard-code, so existing sites are unchanged.
  */
 export const HERO_DIVIDER_ELEVATION = 10;
 
@@ -59,7 +62,9 @@ export function Hero({
       overlayOpacity={(system?.hero_overlay_opacity ?? 75) / 100}
       overlayExtent={system?.hero_overlay_extent ?? 50}
       bottomDivider={system?.hero_bottom_divider ?? "none"}
-      bottomDividerElevation={HERO_DIVIDER_ELEVATION}
+      bottomDividerElevation={
+        system?.hero_bottom_divider_elevation ?? HERO_DIVIDER_ELEVATION
+      }
       parallax={false}
     />
   );

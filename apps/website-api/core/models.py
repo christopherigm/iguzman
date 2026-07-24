@@ -551,6 +551,19 @@ class System(Common):
         default=HERO_DIVIDER_NONE,
         help_text="Shape of the transparent notch cut into the hero's bottom edge (page shows through).",
     )
+    # How far the divider's shaped edge lifts off the page, as a drop-shadow that
+    # traces the notch silhouette (see shapeDividerElevationFilter in
+    # packages/ui/src/shape-divider.tsx, which mirrors @repo/ui-native's Box
+    # elevation scale so the same number reads as the same depth on web and
+    # native). 0 is a flat edge; the default 10 reproduces the value the landing
+    # hero used to hard-code (HERO_DIVIDER_ELEVATION), so existing sites are
+    # unchanged. A whole number, like the scale fields above, for the same
+    # slider/consumer reason. Only meaningful when hero_bottom_divider is not
+    # "none".
+    hero_bottom_divider_elevation = models.PositiveSmallIntegerField(
+        default=10,
+        help_text="Depth of the divider edge's drop-shadow, on the 0-24 elevation scale.",
+    )
 
     # ── Watermark & page background ───────────────────────────────────────────
     # The logo tiled faintly behind every public page, plus the page background

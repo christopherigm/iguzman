@@ -49,74 +49,93 @@ export const SHAPE_DIVIDER_MASKS: readonly ShapeDividerMask[] = [
   "brandmark",
 ] as const;
 
-/** Width/height of the periodic shapes' viewBox (wave keeps its own, below). */
-const W = 1440;
+/**
+ * A shape's mask geometry: its viewBox (`w x h`), the "keep" polygon `d`, and -
+ * for the periodic shapes - the fixed on-screen width `tilePx` of one repeat.
+ */
+type MaskDef = { w: number; h: number; d: string; tilePx?: number };
+
 const H = 100;
+const W = 1440; // full-width viewBox for the non-repeating slant
 
 /**
- * The `d` of each shape's "keep" polygon, drawn for the **bottom** edge (filled
- * area on top, shaped boundary near the bottom). The `top` edge is derived by
- * vertically mirroring this same path, so each shape is authored once. Every
- * shape stretches to the band via `preserveAspectRatio="none"`, so the raw
- * numbers are proportions, not pixels.
+ * The periodic shapes are each authored as a SINGLE repeating tile and tiled
+ * across the edge at a FIXED pixel width (`tilePx`), so every lobe/tooth/hump
+ * keeps the same on-screen size no matter how wide the screen is - instead of
+ * one instance stretched to 100% width, which grew and shrank the shapes with
+ * the viewport. `wave` and `slant` (below) stay single, non-repeating drawings
+ * that still stretch to span the whole edge.
+ *
+ * Each tile's `d` is drawn for the **bottom** edge (filled area on top, shaped
+ * boundary near the bottom); the `top` edge is derived by vertically mirroring
+ * it. A tile's viewBox is `w x H` and is stretched only VERTICALLY to the band
+ * via `preserveAspectRatio="none"` (so the band thickness follows `size`) - it
+ * is never scaled horizontally, since the fixed `tilePx` owns that dimension.
  */
-function scallopPath(): string {
-  const r = 20; // half-chord: 24 lobes of chord 2r across the width
-  const depth = r / 1.2; // 50% shorter than a full semicircle - shallow half-ellipse lobes
-  // Baseline sits `depth` up from the band's far edge (V${H - depth}); each arc
-  // bulges a half-ellipse lobe *down* to the far edge (sweep 1), so the material
-  // hangs down in half-circles with concave gaps between them - the vertical
-  // inverse of upward-cut bites.
-  let d = `M0 0 H${W} V${H - depth}`;
-  for (let i = 0; i < W / (2 * r); i++) d += ` a${r} ${depth} 0 0 1 ${-2 * r} 0`;
-  return `${d} Z`;
+
+// A single half-circle lobe; `tilePx` is one lobe's on-screen width.
+function scallopTile(): MaskDef {
+  const r = 50; // half-chord
+  const depth = r / 1.5; // 50% shorter than a full semicircle - a shallow half-ellipse
+  const w = 2 * r;
+  // Baseline sits `depth` up from the far edge; the lobe bulges a half-ellipse
+  // *down* to the far edge (sweep 1), leaving a concave gap between tiles.
+  return {
+    w,
+    h: H,
+    d: `M0 0 H${w} V${H - depth} a${r} ${depth} 0 0 1 ${-w} 0 Z`,
+    tilePx: 40,
+  };
 }
 
-function zigzagPath(): string {
-  const s = 60; // 12 bold triangles (half-width s) pointing to the bottom edge
-  let d = `M0 0 H${W} V25`;
-  for (let i = 0; i < W / (2 * s); i++) d += ` l${-s} 75 l${-s} -75`;
-  return `${d} Z`;
+// One bold, down-pointing triangle (bunting).
+function zigzagTile(): MaskDef {
+  const s = 60;
+  const w = 2 * s;
+  return { w, h: H, d: `M0 0 H${w} V25 l${-s} 75 l${-s} -75 Z`, tilePx: 120 };
 }
 
-function spikesPath(): string {
-  const s = 20; // 36 fine teeth - a sharp comb, distinct from the bold zigzag
-  let d = `M0 0 H${W} V20`;
-  for (let i = 0; i < W / (2 * s); i++) d += ` l${-s} 80 l${-s} -80`;
-  return `${d} Z`;
+// One fine, sharp sawtooth tooth.
+function spikesTile(): MaskDef {
+  const s = 20;
+  const w = 2 * s;
+  return { w, h: H, d: `M0 0 H${w} V20 l${-s} 80 l${-s} -80 Z`, tilePx: 40 };
 }
 
-function archesPath(): string {
-  const seg = W / 4; // 4 smooth humps via quadratics dipping to ~the bottom edge
-  let d = `M0 0 H${W} V55`;
-  for (let i = 0; i < 4; i++) d += ` q${-seg / 2} 90 ${-seg} 0`;
-  return `${d} Z`;
+// One smooth, wide hump.
+function archesTile(): MaskDef {
+  const seg = 360;
+  return {
+    w: seg,
+    h: H,
+    d: `M0 0 H${seg} V55 q${-seg / 2} 64 ${-seg} 0 Z`,
+    tilePx: 180,
+  };
 }
 
 const SLANT_PATH = `M0 0 H${W} V35 L0 ${H} Z`;
 
 /**
  * The original organic wave (kept exactly), on its own 1280x140 viewBox. Filled
- * area on top, wavy boundary near the bottom - the same convention as the
- * generated shapes above.
+ * area on top, wavy boundary near the bottom - the same convention as the tiles
+ * above. A single, non-repeating drawing (no `tilePx`), so it stretches to fill
+ * the edge once.
  */
-const WAVE = {
+const WAVE: MaskDef = {
   w: 1280,
   h: 140,
   d: "M156 35.51l95.46 34.84 120.04.24 71.5 33.35 90.09-3.91L640 137.65l102.39-37.17 85.55 10.65 88.11-7.19L992 65.28l73.21 5.31 66.79-22.1 77-.42L1280 0H0l64.8 38.69 91.2-3.18z",
-} as const;
-
-type MaskDef = { w: number; h: number; d: string };
+};
 
 /** Every shape except `brandmark`, which is an external image, not an SVG path. */
 type ShapeMask = Exclude<ShapeDividerMask, "brandmark">;
 
 const MASKS: Record<ShapeMask, MaskDef> = {
   wave: WAVE,
-  scallop: { w: W, h: H, d: scallopPath() },
-  zigzag: { w: W, h: H, d: zigzagPath() },
-  spikes: { w: W, h: H, d: spikesPath() },
-  arches: { w: W, h: H, d: archesPath() },
+  scallop: scallopTile(),
+  zigzag: zigzagTile(),
+  spikes: spikesTile(),
+  arches: archesTile(),
   slant: { w: W, h: H, d: SLANT_PATH },
 };
 
@@ -168,10 +187,25 @@ export function shapeDividerMaskStyle(
   const isBrandmark = mask === "brandmark";
   if (isBrandmark && !brandmarkUrl) return {};
   const url = isBrandmark ? brandmarkUrl! : maskDataUri(mask, edge);
-  const keep = `100% calc(100% - ${size})`;
-  // A brandmark tiles across the edge; the SVG shapes stretch to fill it once.
-  const band = isBrandmark ? `auto ${size}` : `100% ${size}`;
-  const bandRepeat = isBrandmark ? "repeat-x" : "no-repeat";
+  // The flat-fill layer is grown 1px past the band boundary so it OVERLAPS the
+  // shape layer's full-width opaque top edge. The two layers are anchored from
+  // opposite edges and meet exactly at `100% - size`; without the overlap,
+  // sub-pixel rounding at some viewport sizes leaves a 1px band where neither
+  // layer is fully opaque - a faint horizontal line over the media that flickers
+  // in and out as the rounding shifts on resize. The overlap lands on opaque
+  // pixels, so it closes the seam without changing the notch silhouette.
+  const keep = `100% calc(100% - ${size} + 1px)`;
+  // The periodic shapes (and the brandmark) tile across the edge at a FIXED
+  // width, so each shape keeps the same size regardless of screen width; only
+  // wave/slant - single, non-repeating drawings - stretch to fill the edge once.
+  const tilePx = isBrandmark ? undefined : MASKS[mask].tilePx;
+  const tiles = isBrandmark || tilePx != null;
+  const band = isBrandmark
+    ? `auto ${size}`
+    : tilePx != null
+      ? `${tilePx}px ${size}`
+      : `100% ${size}`;
+  const bandRepeat = tiles ? "repeat-x" : "no-repeat";
   // The flat fill covers the side away from the notch; the shape sits on the
   // notch side. `add` (the default multi-layer compositing) unions their alpha.
   const notchPos = edge;
@@ -189,6 +223,59 @@ export function shapeDividerMaskStyle(
 }
 
 /**
+ * The fraction of the divider band each shape cuts AWAY around the MIDDLE of the
+ * edge - i.e. how far the box's *visible* boundary sits inside the band there
+ * instead of on its nominal edge. Measured off each shape's own path above by
+ * integrating its "keep" boundary, so the numbers are properties of the geometry
+ * and not taste: `scallop`'s shallow half-ellipses barely bite (~7%), while
+ * `spikes` and `zigzag` remove nearly half the band.
+ *
+ * Why the middle rather than the whole edge: the consumer is something *centred*
+ * on the edge (`Hero`'s `profile` disc). For the tiled shapes that distinction
+ * is moot - a tile is 40-180px wide, so any centred object spans several and
+ * sees the tile's own mean. It matters for the two single, stretched drawings:
+ * `wave` is at its SHALLOWEST dead centre (its path dips to `y=137.65` of 140,
+ * cutting almost nothing) and only bites deep out towards the ends, so its
+ * whole-edge mean (~0.45) would lift a centred disc about three times too far;
+ * the value here is integrated across the middle fifth of the drawing instead.
+ * `slant` is linear, so its centre and its mean coincide.
+ *
+ * `brandmark` is a caller-supplied image whose alpha we cannot know, so it takes
+ * a middling value - a stamped lace border tends to be mostly gaps.
+ */
+const NOTCH_MEAN_DEPTH: Record<ShapeDividerMask, number> = {
+  wave: 0.16,
+  scallop: 0.07,
+  zigzag: 0.38,
+  spikes: 0.4,
+  arches: 0.24,
+  slant: 0.33,
+  brandmark: 0.5,
+};
+
+/**
+ * How far a divider notch pulls the box's *effective* edge inward around the
+ * middle of that edge, as a CSS length derived from the band `size` - the amount
+ * anything centred on the edge has to move to stay visually attached to it, now
+ * that the notch has made the nominal edge partly transparent.
+ *
+ * `Hero`'s `profile` layout is the motivating case: its logo disc straddles the
+ * hero's bottom edge (half in, half out), and with a divider cut into that edge
+ * the disc's "in" half hangs over a hole and the mark reads as having slipped
+ * below the hero. Lifting it by this inset puts its centre back on the shape's
+ * mean boundary, restoring the half-in/half-out read for every shape.
+ *
+ * Edge-agnostic: the value is a distance into the band, so a `top` divider
+ * inset applies downward from the top edge in the same way.
+ */
+export function shapeDividerEdgeInset(
+  mask: ShapeDividerMask,
+  size: string,
+): string {
+  return `calc((${size}) * ${NOTCH_MEAN_DEPTH[mask]})`;
+}
+
+/**
  * A CSS `drop-shadow` filter that lends the divider's notched edge a sense of
  * elevation - the shaped edge lifts off the page below and casts a soft shadow
  * that traces the **masked silhouette** (the notch contour itself), not the
@@ -198,19 +285,35 @@ export function shapeDividerMaskStyle(
  * a `box-shadow` would be clipped flat by the notch. It is the same trick
  * `Hero`'s badge shadow (`HERO_BADGE_SHADOW`) uses.
  *
- * `elevation` mirrors `@repo/ui-native`'s `Box`/`getShadowStyle` scale (clamped
- * to 1-24), so the same number reads as the same depth on web and native.
- * Returns `undefined` for a non-positive elevation (no filter at all).
+ * `elevation` follows `@repo/ui-native`'s `Box` scale (clamped to 1-24), so the
+ * same number reads as roughly the same depth on web and native. Returns
+ * `undefined` for a non-positive elevation (no filter at all).
+ *
+ * A convincing "lifted edge" shadow is DIRECTIONAL and LAYERED, not a single
+ * even blur: a defined **key** shadow that falls clearly *below* the shaped edge
+ * (larger vertical offset than blur), plus a wider, fainter **ambient** shadow
+ * that grounds it. The earlier single-layer formula used a small offset with a
+ * dark, even blur, which hugged the contour on every side and read as a dark
+ * *glow* rather than an edge casting a shadow. `drop-shadow` filters stack, and
+ * both layers trace the same masked notch silhouette, composing into real depth.
  */
 export function shapeDividerElevationFilter(
   elevation?: number,
 ): string | undefined {
   if (!elevation || elevation <= 0) return undefined;
   const e = Math.min(24, Math.round(elevation));
-  const offsetY = Math.max(1, Math.round(e * 0.5));
-  const blur = Math.min(5, Math.round(e * 1) + 1);
-  const alpha = Math.min(0.4, 0.1 + e * 0.1);
-  return `drop-shadow(0 ${offsetY}px ${blur}px rgba(0,0,0,${Number(alpha.toFixed(3))}))`;
+  // Key: offset well above blur so the shadow reads as a crisp, directional
+  // cast (a tight blur keeps a defined edge instead of a soft haze).
+  const keyOffset = Math.max(2, Math.round(e * 1));
+  const keyBlur = Math.max(1, Math.round(e * 0.5));
+  const keyAlpha = Math.min(0.42, 0.16 + e * 0.014);
+  // Ambient: little offset, wider blur, low alpha - the soft ground contact.
+  const ambientOffset = Math.max(1, Math.round(e * 0.5));
+  const ambientBlur = Math.min(48, Math.round(e * 1.2) + 4);
+  const ambientAlpha = Math.min(0.2, 0.05 + e * 0.008);
+  const key = `drop-shadow(0 ${keyOffset}px ${keyBlur}px rgba(0,0,0,${Number(keyAlpha.toFixed(3))}))`;
+  const ambient = `drop-shadow(0 ${ambientOffset}px ${ambientBlur}px rgba(0,0,0,${Number(ambientAlpha.toFixed(3))}))`;
+  return `${key} ${ambient}`;
 }
 
 export type ShapeDividerProps = {

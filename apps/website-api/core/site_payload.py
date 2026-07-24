@@ -84,6 +84,7 @@ SYSTEM_TEXT_FIELDS = (
     "hero_overlay_opacity",
     "hero_overlay_extent",
     "hero_bottom_divider",
+    "hero_bottom_divider_elevation",
     "hero_text_frame",
     "watermark_enabled",
     "watermark_rotation",

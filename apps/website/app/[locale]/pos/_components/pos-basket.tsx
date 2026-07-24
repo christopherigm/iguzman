@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { formatPrice } from "@/lib/price";
 import { lineTotal, type PosLine } from "@/lib/pos";
 
@@ -39,6 +41,8 @@ export function PosBasket({
   onClose,
 }: Props) {
   const t = useTranslations("Pos");
+  const tCommon = useTranslations("Common");
+  const [confirmingClear, setConfirmingClear] = useState(false);
 
   return (
     <Box flexDirection="column" height="100%" styles={{ minHeight: 0 }}>
@@ -54,16 +58,22 @@ export function PosBasket({
         </Typography>
         <Box alignItems="center" gap={8}>
           {lines.length > 0 && (
-            <Button text={t("clear")} size="md" onClick={onClear} />
+            <Button
+              text={t("clear")}
+              size="md"
+              onClick={() => setConfirmingClear(true)}
+              kind="error"
+            />
           )}
           {/* xs only - from sm up the basket is a permanent column with
               nothing to close. */}
           <Box className="pos-basket__close">
             <Button
-              text={t("close")}
+              text={t("back")}
               size="md"
               onClick={onClose}
-              aria-label={t("close")}
+              aria-label={t("back")}
+              kind="primary"
             />
           </Box>
         </Box>
@@ -106,9 +116,9 @@ export function PosBasket({
 
               <Box alignItems="center" gap={6}>
                 <Button
-                  text="−"
-                  size="md"
-                  minWidth={44}
+                  text="-"
+                  size="lg"
+                  minWidth={42}
                   aria-label={t("decrease")}
                   onClick={() =>
                     onQuantityChange(line.key, line.quantity - 1)
@@ -126,8 +136,8 @@ export function PosBasket({
                 </Typography>
                 <Button
                   text="+"
-                  size="md"
-                  minWidth={44}
+                  size="lg"
+                  minWidth={42}
                   aria-label={t("increase")}
                   onClick={() =>
                     onQuantityChange(line.key, line.quantity + 1)
@@ -161,12 +171,26 @@ export function PosBasket({
         <Button
           text={t("charge")}
           kind="success"
-          size="lg"
+          size="xl"
           width="100%"
           disabled={lines.length === 0 || mixedCurrency}
           onClick={onCharge}
         />
       </Box>
+
+      {confirmingClear && (
+        <ConfirmationModal
+          title={t("clearConfirmTitle")}
+          text={t("clearConfirmText")}
+          okLabel={t("clear")}
+          cancelLabel={tCommon("cancel")}
+          okCallback={() => {
+            onClear();
+            setConfirmingClear(false);
+          }}
+          cancelCallback={() => setConfirmingClear(false)}
+        />
+      )}
     </Box>
   );
 }

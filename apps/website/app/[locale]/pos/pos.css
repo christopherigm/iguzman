@@ -60,9 +60,15 @@
 
   /* Both are xs-only affordances: from sm up the basket is always on screen. */
   .pos-basket__close,
-  .pos-top-bar__basket,
-  .pos-mobile-bar {
+  .pos-top-bar__basket {
     display: none;
+  }
+
+  /* `!important` because `PosMobileSummary`'s Box takes flex props, so Box
+     writes an inline `display: flex` that a plain class rule can't override -
+     an author `!important` beats the inline style, keeping the bar xs-only. */
+  .pos-mobile-bar {
+    display: none !important;
   }
 }
 
