@@ -4,7 +4,12 @@
  * HTTP-only cookie and transparently refreshes it on 401 - so there is no token
  * for this module (or any other browser code) to hold.
  */
-import type { Order, OrderStatus, PaymentMethod } from "./orders-shared";
+import type {
+  Order,
+  OrderStatus,
+  PaymentMethod,
+  PosPaymentMethod,
+} from "./orders-shared";
 
 async function adminFetch(
   path: string,
@@ -866,8 +871,9 @@ export async function adminOrderAction(
 // ---- POS (counter sales) ----
 
 /** How a counter sale is settled. Both are `Order.POS_METHODS` in website-api;
- *  neither goes near Stripe. */
-export type PosPaymentMethod = "terminal" | "cash";
+ *  neither goes near Stripe. Defined next to the other payment methods so the
+ *  two lists cannot drift - re-exported here for the POS screen's convenience. */
+export type { PosPaymentMethod };
 
 /** One rung-up line, as references only - the API re-prices every one of them
  *  from the tenant's catalog, so no amount travels in this body. */

@@ -410,6 +410,8 @@
     "status_placed": "Commande passée",
     "placedNote_in_store": "Veuillez payer au retrait de votre commande.",
     "placedNote_on_delivery": "Veuillez payer à la livraison de votre commande.",
+    "placedNote_terminal": "Cette vente a été enregistrée au comptoir et attend la confirmation du paiement.",
+    "placedNote_cash": "Cette vente a été enregistrée au comptoir et attend la confirmation du paiement.",
     "fulfilledNote": "Votre commande a été traitée.",
     "completed": "Terminée"
   },
@@ -1019,6 +1021,8 @@
     "status_canceled": "Annulée",
     "status_refunded": "Remboursée",
     "method_online": "En ligne",
+    "method_terminal": "Terminal de carte",
+    "method_cash": "Espèces",
     "method_in_store": "En magasin",
     "method_on_delivery": "À la livraison",
     "fulfilledYes": "Traitée",

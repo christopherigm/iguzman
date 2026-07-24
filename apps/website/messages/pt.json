@@ -410,6 +410,8 @@
     "status_placed": "Pedido realizado",
     "placedNote_in_store": "Pague ao retirar o seu pedido.",
     "placedNote_on_delivery": "Pague ao receber o seu pedido.",
+    "placedNote_terminal": "Esta venda foi registrada no balcão e aguarda a confirmação do pagamento.",
+    "placedNote_cash": "Esta venda foi registrada no balcão e aguarda a confirmação do pagamento.",
     "fulfilledNote": "O seu pedido foi concluído.",
     "completed": "Concluído"
   },
@@ -1019,6 +1021,8 @@
     "status_canceled": "Cancelado",
     "status_refunded": "Reembolsado",
     "method_online": "Online",
+    "method_terminal": "Maquininha de cartão",
+    "method_cash": "Dinheiro",
     "method_in_store": "Na loja",
     "method_on_delivery": "Na entrega",
     "fulfilledYes": "Concluído",

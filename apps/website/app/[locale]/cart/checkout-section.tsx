@@ -10,7 +10,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { useGuestState } from "@/hooks/use-guest-cart";
 import { clearGuestCart } from "@/lib/guest-cart";
-import type { PaymentMethod } from "@/lib/orders-shared";
+import type { CustomerPaymentMethod } from "@/lib/orders-shared";
 import "./checkout-section.css";
 
 /** Which payment methods this tenant offers, each on its own switch. */
@@ -48,7 +48,10 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 /** The methods in the order they are offered, with the flag that gates each. */
-const METHOD_ORDER: { key: PaymentMethod; flag: keyof AvailableMethods }[] = [
+const METHOD_ORDER: {
+  key: CustomerPaymentMethod;
+  flag: keyof AvailableMethods;
+}[] = [
   { key: "online", flag: "online" },
   { key: "in_store", flag: "inStore" },
   { key: "on_delivery", flag: "onDelivery" },
@@ -59,7 +62,7 @@ const METHOD_ORDER: { key: PaymentMethod; flag: keyof AvailableMethods }[] = [
  * SVGs; the card masks them to `currentColor` (see `.checkout-method__glyph`) so
  * they tint with the theme and the selected state.
  */
-const METHOD_ICONS: Record<PaymentMethod, string> = {
+const METHOD_ICONS: Record<CustomerPaymentMethod, string> = {
   online: "/icons/card-payment.svg",
   in_store: "/icons/store.svg",
   on_delivery: "/icons/delivery.svg",
@@ -96,7 +99,7 @@ export function CheckoutSection({
     [methods],
   );
 
-  const [selected, setSelected] = useState<PaymentMethod>(
+  const [selected, setSelected] = useState<CustomerPaymentMethod>(
     available[0] ?? "online",
   );
   const [name, setName] = useState(session?.displayName ?? "");
@@ -267,7 +270,9 @@ export function CheckoutSection({
                     <span
                       className="checkout-method__icon"
                       style={
-                        { "--icon": `url(${METHOD_ICONS[method]})` } as CSSProperties
+                        {
+                          "--icon": `url(${METHOD_ICONS[method]})`,
+                        } as CSSProperties
                       }
                     >
                       <span

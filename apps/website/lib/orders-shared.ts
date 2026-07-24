@@ -24,8 +24,19 @@ export type OrderStatus =
   | "canceled"
   | "refunded";
 
-/** Mirrors `Order.PAYMENT_METHOD_CHOICES` in website-api. */
-export type PaymentMethod = "online" | "in_store" | "on_delivery";
+/** The methods a customer can pick for themselves at checkout. */
+export type CustomerPaymentMethod = "online" | "in_store" | "on_delivery";
+
+/** The two counter methods, rung up by an associate on the POS screen. They are
+ *  not variants of `in_store` (a promise to pay at pickup): the customer is at
+ *  the till, so the order is born and settled within a minute of itself. */
+export type PosPaymentMethod = "terminal" | "cash";
+
+/** Mirrors `Order.PAYMENT_METHOD_CHOICES` in website-api - every method an order
+ *  can carry, whether it came from the storefront or the POS. Anything that
+ *  renders one (a `method_*` / `placedNote_*` message, an icon map) must cover
+ *  the counter methods too, or a POS order shows a raw key. */
+export type PaymentMethod = CustomerPaymentMethod | PosPaymentMethod;
 
 /**
  * One purchased line, served from the order's own snapshot rather than the

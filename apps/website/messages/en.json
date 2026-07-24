@@ -410,6 +410,8 @@
     "status_placed": "Order placed",
     "placedNote_in_store": "Please pay when you pick up your order.",
     "placedNote_on_delivery": "Please pay when your order is delivered.",
+    "placedNote_terminal": "This sale was rung up at the counter and is awaiting payment confirmation.",
+    "placedNote_cash": "This sale was rung up at the counter and is awaiting payment confirmation.",
     "fulfilledNote": "Your order has been fulfilled.",
     "completed": "Completed"
   },
@@ -1019,6 +1021,8 @@
     "status_canceled": "Canceled",
     "status_refunded": "Refunded",
     "method_online": "Online",
+    "method_terminal": "Card terminal",
+    "method_cash": "Cash",
     "method_in_store": "In store",
     "method_on_delivery": "On delivery",
     "fulfilledYes": "Fulfilled",

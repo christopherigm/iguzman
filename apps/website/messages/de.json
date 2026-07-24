@@ -410,6 +410,8 @@
     "status_placed": "Bestellung aufgegeben",
     "placedNote_in_store": "Bitte zahlen Sie beim Abholen Ihrer Bestellung.",
     "placedNote_on_delivery": "Bitte zahlen Sie bei Lieferung Ihrer Bestellung.",
+    "placedNote_terminal": "Dieser Verkauf wurde an der Kasse erfasst und wartet auf die Zahlungsbestätigung.",
+    "placedNote_cash": "Dieser Verkauf wurde an der Kasse erfasst und wartet auf die Zahlungsbestätigung.",
     "fulfilledNote": "Ihre Bestellung wurde ausgeführt.",
     "completed": "Abgeschlossen"
   },
@@ -1019,6 +1021,8 @@
     "status_canceled": "Storniert",
     "status_refunded": "Erstattet",
     "method_online": "Online",
+    "method_terminal": "Kartenterminal",
+    "method_cash": "Bar",
     "method_in_store": "Im Geschäft",
     "method_on_delivery": "Bei Lieferung",
     "fulfilledYes": "Ausgeführt",
