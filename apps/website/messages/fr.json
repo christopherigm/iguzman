@@ -936,6 +936,7 @@
     "dropzoneTextCompact": "Téléverser",
     "dropzoneHint": "PNG, JPG, WEBP pris en charge",
     "deleteImage": "Supprimer l'image",
+    "downloadImage": "Télécharger l'image originale",
     "main": "Principal",
     "maxReached": "Nombre maximum d'images atteint."
   },

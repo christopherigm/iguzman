@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, DragEvent } from "react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { Box } from "@repo/ui/core-elements/box";
-import { Button } from "@repo/ui/core-elements/button";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import "./admin-image-uploader.css";
@@ -144,6 +144,33 @@ export function AdminImageUploader({
     notify(next, nextDeleted);
   };
 
+  /**
+   * Downloads the file the API stores, not the `next/image` derivative the
+   * thumbnail renders - `url` is the API's own media URL, so the bytes are the
+   * original upload at full size and in its original format.
+   */
+  const handleDownload = useCallback(async (url: string) => {
+    const filename = url.split("/").pop()?.split("?")[0] || "image";
+    try {
+      // The API is a different origin, so the browser ignores a plain
+      // `download` attribute on an anchor pointing at it; read the bytes and
+      // hand the anchor a same-origin blob URL instead.
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(String(res.status));
+      const objectUrl = URL.createObjectURL(await res.blob());
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch {
+      // Media served without CORS headers can't be read as a blob (the admin
+      // routes also run under COEP `require-corp`) - fall back to opening the
+      // original in a new tab so the file stays reachable.
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  }, []);
+
   // Drag-to-reorder
   const handleItemDragStart = (index: number) => setDragIndex(index);
   const handleItemDragOver = (e: DragEvent, index: number) => {
@@ -265,33 +292,45 @@ export function AdminImageUploader({
                 </Box>
                 <Box
                   className="aiu__thumb-overlay"
+                  flexDirection="column"
                   justifyContent="space-between"
-                  alignItems="flex-start"
                   padding={4}
                 >
-                  <span className="aiu__thumb-drag-handle" aria-hidden="true">
-                    ⠿
-                  </span>
-                  <Button
-                    unstyled
-                    type="button"
-                    className="aiu__thumb-delete"
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    width={22}
-                    height={22}
-                    borderRadius="50%"
-                    color="white"
-                    styles={{ fontSize: 11, lineHeight: 1 }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(index);
-                    }}
-                    aria-label={t("deleteImage")}
-                  >
-                    ✕
-                  </Button>
+                  <Box justifyContent="space-between" alignItems="flex-start">
+                    <span className="aiu__thumb-drag-handle" aria-hidden="true">
+                      ⠿
+                    </span>
+                    <IconButton
+                      size="sm"
+                      kind="error"
+                      solid
+                      icon="/icons/delete-trash-icon.svg"
+                      aria-label={t("deleteImage")}
+                      title={t("deleteImage")}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(index);
+                      }}
+                    />
+                  </Box>
+                  {/* Only a saved image has an API file to fetch; a pending
+                      upload is still just a local base64 preview. */}
+                  {entry.kind === "existing" && (
+                    <Box justifyContent="flex-end" alignItems="flex-end">
+                      <IconButton
+                        size="sm"
+                        kind="default"
+                        solid
+                        icon="/icons/download.svg"
+                        aria-label={t("downloadImage")}
+                        title={t("downloadImage")}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownload(entry.url);
+                        }}
+                      />
+                    </Box>
+                  )}
                 </Box>
                 {index === 0 && (
                   <Badge

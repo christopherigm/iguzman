@@ -85,8 +85,12 @@ const EMPTY_IMAGES: Record<ImageField, ImageState> = {
   img_background: { existing: [], pending: [] },
 };
 
-/** On-screen preview width in CSS px; the flyer is drawn at 1080 and scaled to fit. */
-const PREVIEW_W = 440;
+/**
+ * Largest on-screen preview width in CSS px; the flyer is drawn at 1080 and
+ * scaled to fit. On a narrow grid item the measured column width wins, so the
+ * preview shrinks instead of bleeding out of its cell.
+ */
+const PREVIEW_MAX_W = 440;
 
 /**
  * Route an API image URL through the same-origin Next optimizer and read it back
@@ -206,6 +210,23 @@ export default function AdminSocialPostFormPage({ params }: Props) {
   const [success, setSuccess] = useState<string | null>(null);
 
   const flyerRef = useRef<HTMLDivElement>(null);
+
+  // The preview column is half a Grid at `sm` and up but full width at `xs`,
+  // where it can be far narrower than PREVIEW_MAX_W. Measure the column and
+  // scale the flyer to whichever is smaller, so it always fits its cell.
+  const [previewWidth, setPreviewWidth] = useState(PREVIEW_MAX_W);
+  const previewColumnRef = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    // Fires once on observe, so there is no synchronous measure (and no
+    // set-state-in-effect) to pair with it.
+    const observer = new ResizeObserver(([entry]) => {
+      const available = entry?.contentRect.width ?? 0;
+      if (available > 0) setPreviewWidth(Math.min(PREVIEW_MAX_W, available));
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   const {
     isGenerating,
     error: llmError,
@@ -310,14 +331,14 @@ export default function AdminSocialPostFormPage({ params }: Props) {
             ) ??
             (post.item
               ? {
-                kind: post.item.kind,
-                id: post.item.id,
-                name: post.item.name ?? "",
-                image: post.item.image,
-                comparePrice: post.item.compare_price,
-                price: post.item.price,
-                currency: post.item.currency,
-              }
+                  kind: post.item.kind,
+                  id: post.item.id,
+                  name: post.item.name ?? "",
+                  image: post.item.image,
+                  comparePrice: post.item.compare_price,
+                  price: post.item.price,
+                  currency: post.item.currency,
+                }
               : null);
           setSelectedItem(match);
         }
@@ -481,7 +502,7 @@ export default function AdminSocialPostFormPage({ params }: Props) {
   const template = getTemplate(String(values.template_id));
   const TemplateComponent = template.Component;
   const dims = FORMAT_DIMENSIONS[format];
-  const previewScale = PREVIEW_W / dims.w;
+  const previewScale = previewWidth / dims.w;
 
   const templateOptions = SOCIAL_TEMPLATES.map((tpl) => ({
     value: tpl.id,
@@ -763,11 +784,23 @@ export default function AdminSocialPostFormPage({ params }: Props) {
 
             {/* ── Artwork ──
                 The item's own photo and no backdrop is the default; both fields
-                are overrides, so an untouched post renders exactly as before. */}
+                are overrides, so an untouched post renders exactly as before.
+
+                Deliberately `xs: 6` (no `sm` override): the two uploaders are a
+                pair - a photo and the backdrop behind it - and only read as a
+                pair side by side, so they stay two-up down to the narrowest
+                phone rather than stacking below `sm` like the rest of the page.
+                The dropzone is square and scales with its cell, so a half-width
+                column is still a usable target; only the caption under it wraps
+                onto more lines, which is why each caption breaks long words
+                instead of pushing its column wider. */}
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid size={{ xs: 6 }}>
                 <Box flexDirection="column" gap={8}>
-                  <Typography variant="label">
+                  <Typography
+                    variant="label"
+                    styles={{ overflowWrap: "anywhere" }}
+                  >
                     {t("socialImageOverride")}
                   </Typography>
                   <AdminImageUploader
@@ -778,14 +811,20 @@ export default function AdminSocialPostFormPage({ params }: Props) {
                     maxImages={1}
                     compact
                   />
-                  <Typography variant="caption">
+                  <Typography
+                    variant="caption"
+                    styles={{ overflowWrap: "anywhere" }}
+                  >
                     {t("socialImageOverrideHint")}
                   </Typography>
                 </Box>
               </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
+              <Grid size={{ xs: 6 }}>
                 <Box flexDirection="column" gap={8}>
-                  <Typography variant="label">
+                  <Typography
+                    variant="label"
+                    styles={{ overflowWrap: "anywhere" }}
+                  >
                     {t("socialBackgroundImage")}
                   </Typography>
                   <AdminImageUploader
@@ -800,7 +839,10 @@ export default function AdminSocialPostFormPage({ params }: Props) {
                     maxImages={1}
                     compact
                   />
-                  <Typography variant="caption">
+                  <Typography
+                    variant="caption"
+                    styles={{ overflowWrap: "anywhere" }}
+                  >
                     {template.supportsBackground
                       ? t("socialBackgroundImageHint")
                       : t("socialBackgroundImageUnused")}
@@ -946,7 +988,7 @@ export default function AdminSocialPostFormPage({ params }: Props) {
 
         {/* ── Preview ── */}
         <Grid size={{ xs: 12, sm: 6 }}>
-          <Box flexDirection="column" gap={12}>
+          <Box ref={previewColumnRef} flexDirection="column" gap={12}>
             <Typography
               as="span"
               variant="label"
@@ -958,11 +1000,11 @@ export default function AdminSocialPostFormPage({ params }: Props) {
 
             {/* Scaled preview window; the flyer inside is drawn at 1080. */}
             <Box
-              width={PREVIEW_W}
+              width={previewWidth}
               height={dims.h * previewScale}
               borderRadius={10}
               elevation={5}
-              styles={{ overflow: "hidden", maxWidth: "100%" }}
+              styles={{ overflow: "hidden" }}
             >
               <div
                 style={{
@@ -985,9 +1027,8 @@ export default function AdminSocialPostFormPage({ params }: Props) {
                 gap={8}
                 padding={16}
                 borderRadius={10}
-                width={PREVIEW_W}
+                width={previewWidth}
                 border="1px solid color-mix(in srgb, var(--foreground) 12%, transparent)"
-                styles={{ maxWidth: "100%" }}
               >
                 {captionText ? (
                   <Typography variant="body" color="var(--foreground)">
@@ -1002,7 +1043,7 @@ export default function AdminSocialPostFormPage({ params }: Props) {
               </Box>
             )}
 
-            <Box width={PREVIEW_W} styles={{ maxWidth: "100%" }}>
+            <Box width={previewWidth}>
               <Button
                 text={exporting ? t("socialExporting") : t("socialDownload")}
                 kind="primary"

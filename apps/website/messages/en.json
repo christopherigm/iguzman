@@ -936,6 +936,7 @@
     "dropzoneTextCompact": "Upload",
     "dropzoneHint": "PNG, JPG, WEBP supported",
     "deleteImage": "Delete image",
+    "downloadImage": "Download original image",
     "main": "Main",
     "maxReached": "Maximum number of images reached."
   },

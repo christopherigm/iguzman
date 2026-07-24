@@ -936,6 +936,7 @@
     "dropzoneTextCompact": "Hochladen",
     "dropzoneHint": "PNG, JPG, WEBP werden unterstützt",
     "deleteImage": "Bild löschen",
+    "downloadImage": "Originalbild herunterladen",
     "main": "Haupt",
     "maxReached": "Maximale Anzahl an Bildern erreicht."
   },

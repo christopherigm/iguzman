@@ -116,18 +116,6 @@
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-/* Delete button - `Button unstyled`; hover-swapped background stays in CSS,
-   layout is passed as props. */
-.aiu__thumb-delete {
-  background: rgba(0, 0, 0, 0.6);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.aiu__thumb-delete:hover {
-  background: #e53935;
-}
-
 @media (--sm) {
   /* sm */
   .aiu__grid {
