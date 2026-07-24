@@ -24,6 +24,7 @@ import {
   SHAPE_DIVIDER_MASKS,
   type ShapeDividerMask,
 } from "@repo/ui/shape-divider";
+import { HERO_DIVIDER_ELEVATION } from "@/components/hero";
 
 /** The layouts the site can render - the same set the API accepts. */
 const HERO_LAYOUTS: HeroLayout[] = ["default", "none", "profile"];
@@ -337,6 +338,7 @@ export function HeroVideoSection({
                 overlayOpacity={overlayOpacity / 100}
                 overlayExtent={overlayExtent}
                 bottomDivider={bottomDivider}
+                bottomDividerElevation={HERO_DIVIDER_ELEVATION}
                 contentScale={0.5}
                 style={{ height: 240, borderRadius: 10 }}
               />

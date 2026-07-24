@@ -2,6 +2,7 @@ import React, { CSSProperties } from "react";
 import { HeroVideo } from "./hero-video";
 import { ParallaxLayer } from "./parallax-layer";
 import {
+  shapeDividerElevationFilter,
   shapeDividerMaskStyle,
   type ShapeDividerEdge,
   type ShapeDividerMask,
@@ -490,6 +491,14 @@ export type HeroProps = {
    */
   bottomDividerHeight?: string;
   /**
+   * Lifts the divider edge off the page with a `drop-shadow` that traces the
+   * notch's real silhouette (not the hero rectangle), so the shaped edge casts
+   * a soft shadow onto the page below. Mirrors `@repo/ui-native`'s `Box`
+   * elevation scale (1-24). `0`/omitted keeps the flat historical edge.
+   * @default 0
+   */
+  bottomDividerElevation?: number;
+  /**
    * Wrap the slogan/subline in an outline frame (see `HeroTextFrame`). Used for
    * section/page headings over a hero - not the landing hero. @default false
    */
@@ -576,6 +585,7 @@ export function Hero({
   bottomDivider = null,
   bottomDividerEdge = "bottom",
   bottomDividerHeight = "clamp(30px, 5vw, 64px)",
+  bottomDividerElevation = 0,
   frame = false,
   frameImage = null,
   frameImageAlt = "",
@@ -928,7 +938,23 @@ export function Hero({
     </div>
   );
 
-  if (!isProfile) return hero;
+  // The divider elevation shadow must sit on an element OUTSIDE the masked hero
+  // box - CSS applies `filter` before `mask`, so a `drop-shadow` on the hero
+  // itself would be cut away exactly in the notch it should trace. Wrapped in a
+  // parent, the filter instead rasterises the already-notched hero and casts the
+  // shadow off its real silhouette onto the page below. `drop-shadow` (not an
+  // `elevation`/`box-shadow`) so it follows the shape, not the rectangle.
+  const dividerShadow =
+    bottomDivider && bottomDivider !== "none"
+      ? shapeDividerElevationFilter(bottomDividerElevation)
+      : undefined;
+  const elevatedHero = dividerShadow ? (
+    <div style={{ filter: dividerShadow }}>{hero}</div>
+  ) : (
+    hero
+  );
+
+  if (!isProfile) return elevatedHero;
 
   // The badge bleeds half its height below the hero, so it cannot live inside
   // the `overflow: hidden` box that crops the video. It hangs off this wrapper
@@ -940,7 +966,7 @@ export function Hero({
       marginBottom={`calc(${profileLogoSize} / 2 + 16px)`}
       styles={{ position: "relative" }}
     >
-      {hero}
+      {elevatedHero}
       <Box
         styles={{
           position: "absolute",

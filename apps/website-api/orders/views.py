@@ -31,6 +31,12 @@ from .serializers import (
     OrderSummarySerializer,
     PosCheckoutSerializer,
 )
+from .services.order_emails import (
+    CONFIRMATION,
+    FULFILLED,
+    STATUS,
+    send_order_email,
+)
 from .services.stripe_gateway import (
     StripeGatewayError,
     StripeNotConfigured,
@@ -323,6 +329,11 @@ class CheckoutView(APIView):
         if user is not None:
             invalidate_cart(user.id, system.id)
             invalidate_orders(user.id, system.id)
+
+        # After the order is committed, so a rollback never leaves a customer
+        # holding a confirmation for an order that does not exist. Best-effort and
+        # a no-op when no email was given (see send_order_email).
+        send_order_email(order, kind=CONFIRMATION)
 
         logger.info("Offline order %s placed via %s", order.pk, method)
         return Response(
@@ -643,11 +654,25 @@ class AdminOrderDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         action = serializer.validated_data["action"]
 
+        # Captured before the action so we can tell which axis moved: `status`
+        # (a payment transition the customer is emailed about) versus `fulfilled`
+        # (a separate axis - being handed over - emailed with its own wording).
+        status_before = order.status
+        fulfilled_before = order.fulfilled
         error = self._apply_action(order, action)
         if error is not None:
             return error
 
         invalidate_orders(order.user_id, order.system_id or 0)
+        # One email per action at most. A status move wins (a `complete` moves
+        # both axes at once, and its email should read as the payment update);
+        # otherwise a fresh fulfillment - ready for pickup / on its way - is the
+        # notification. Un-marking fulfilled is a correction, not news to the
+        # customer, so only False -> True sends.
+        if order.status != status_before:
+            send_order_email(order, kind=STATUS)
+        elif order.fulfilled and not fulfilled_before:
+            send_order_email(order, kind=FULFILLED)
         return Response(AdminOrderSerializer(order, context={"request": request}).data)
 
     def _apply_action(self, order, action):
@@ -799,6 +824,10 @@ class PosCheckoutView(APIView):
             order.save(update_fields=["phone", "shipping_name", "updated_at"])
             _decrement_order_stock(order)
 
+        # A receipt to the counter customer, only when they gave an address for
+        # one. Best-effort - a mail hiccup must not fail a sale at the till.
+        send_order_email(order, kind=CONFIRMATION)
+
         logger.info(
             "POS order %s rung up on %s for system %s",
             order.pk, data["payment_method"], system.pk,
@@ -936,12 +965,22 @@ class StripeWebhookView(APIView):
         invalidate_orders(order.user_id, order.system_id or 0)
         logger.info("Order %s paid (payment_intent %s)", order.pk, order.stripe_payment_intent_id)
 
+        # The customer's first email about this order: an online order is
+        # `pending` with no address until now (the webhook just copied what
+        # Stripe collected), so payment is the earliest point we can confirm it.
+        # Sent after commit and best-effort, so a mail failure can never make the
+        # handler return non-2xx and have Stripe retry a payment already recorded.
+        send_order_email(order, kind=CONFIRMATION)
+
     def _handle_expired(self, order, session):
         if order.status != Order.STATUS_PENDING:
             return
         order.status = Order.STATUS_CANCELED
         order.save(update_fields=["status", "updated_at"])
         invalidate_orders(order.user_id, order.system_id or 0)
+        # A no-op for the usual abandoned checkout (no email was ever collected);
+        # sends only if Stripe had already supplied an address.
+        send_order_email(order, kind=STATUS)
 
     def _handle_failed(self, order, session):
         if order.status != Order.STATUS_PENDING:
@@ -949,6 +988,7 @@ class StripeWebhookView(APIView):
         order.status = Order.STATUS_FAILED
         order.save(update_fields=["status", "updated_at"])
         invalidate_orders(order.user_id, order.system_id or 0)
+        send_order_email(order, kind=STATUS)
 
     def _apply_shipping(self, order, session):
         details = session.get("collected_information", {}).get("shipping_details") or {}

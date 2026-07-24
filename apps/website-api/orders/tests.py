@@ -4,6 +4,7 @@ from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
+from django.core import mail
 from django.core.cache import cache
 from django.test import TestCase
 
@@ -1181,3 +1182,208 @@ class PosCheckoutTests(TestCase):
         response = self.client.get("/api/orders/admin/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()[0]["payment_method"], "terminal")
+
+
+class OrderEmailTests(TestCase):
+    """The customer-facing order emails: a confirmation when the order is placed
+    (or first paid, for an online one) and a fresh copy every time its status
+    moves - for guest checkout as much as for a signed-in one, keyed on the
+    address the order carries rather than on an account."""
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(
+            site_name="Acme", host="acme.test", stripe_enabled=True,
+        )
+        self.system.set_stripe_secret_key("sk_test_123")
+        self.system.set_stripe_webhook_secret("whsec_123")
+        self.system.save()
+        self.product = Product.objects.create(
+            system=self.system, name="Bag", slug="bag",
+            price=Decimal("10.00"), currency="USD", stock_count=5,
+        )
+
+    def _make_order(self, *, lines=1, customization=None, **kwargs):
+        defaults = dict(
+            system=self.system, currency="USD",
+            subtotal=Decimal("10.00"), total=Decimal("10.00"),
+        )
+        defaults.update(kwargs)
+        order = Order.objects.create(**defaults)
+        OrderLine.objects.create(
+            order=order, kind="product", product=self.product, name="Bag",
+            unit_price=Decimal("10.00"), quantity=1, line_total=Decimal("10.00"),
+            currency="USD", customization=customization or [],
+        )
+        return order
+
+    def _admin(self):
+        admin = User.objects.create_user(
+            "admin", password="x", email="admin@acme.test",
+        )
+        admin.profile.system = self.system
+        admin.profile.is_admin = True
+        admin.profile.save()
+        return admin
+
+    def _complete_webhook(self, order, email="buyer@acme.test", payment_status="paid"):
+        event = {"type": "checkout.session.completed", "data": {"object": {
+            "id": order.stripe_session_id,
+            "payment_status": payment_status,
+            "payment_intent": "pi_1",
+            "customer_details": {"email": email},
+        }}}
+        with patch("orders.views.verify_webhook", return_value=event):
+            return self.client.post(
+                f"/api/orders/stripe/webhook/{self.system.stripe_webhook_token}/",
+                data="{}", content_type="application/json",
+                HTTP_STRIPE_SIGNATURE="t=1,v1=stub",
+            )
+
+    def test_payment_emails_the_customer_a_full_confirmation(self):
+        order = self._make_order(
+            stripe_session_id="cs_1",
+            customization=[{"name": "Extra cheese", "quantity": 2, "removed": False}],
+        )
+        self._complete_webhook(order)
+
+        self.assertEqual(len(mail.outbox), 1)
+        msg = mail.outbox[0]
+        self.assertEqual(msg.to, ["buyer@acme.test"])
+        ref = str(order.public_id)[:8].upper()
+        self.assertIn(ref, msg.subject)
+        # The body carries the detail link, the item, and the add-on.
+        self.assertIn(f"/orders/{order.public_id}", msg.body)
+        self.assertIn("Bag", msg.body)
+        self.assertIn("Extra cheese", msg.body)
+        # An HTML alternative is attached alongside the plain-text part.
+        html = dict((mime, content) for content, mime in msg.alternatives)["text/html"]
+        self.assertIn("Bag", html)
+
+    def test_the_confirmation_reply_goes_to_the_store(self):
+        self._admin()
+        order = self._make_order(stripe_session_id="cs_1")
+        self._complete_webhook(order)
+        self.assertEqual(mail.outbox[0].reply_to, ["admin@acme.test"])
+
+    def test_a_status_change_emails_the_customer(self):
+        self.client.force_login(self._admin())
+        order = self._make_order(
+            status=Order.STATUS_PLACED, payment_method=Order.PAYMENT_IN_STORE,
+            email="guest@acme.test",
+        )
+        mail.outbox.clear()
+
+        response = self.client.post(
+            f"/api/orders/admin/{order.public_id}/",
+            {"action": "cancel"}, content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["guest@acme.test"])
+        self.assertIn("Cancelado", mail.outbox[0].subject)
+
+    def test_marking_a_pickup_order_fulfilled_emails_that_it_is_ready(self):
+        self.client.force_login(self._admin())
+        order = self._make_order(
+            status=Order.STATUS_PLACED, payment_method=Order.PAYMENT_IN_STORE,
+            email="guest@acme.test",  # no shipping address -> pickup
+        )
+        mail.outbox.clear()
+
+        self.client.post(
+            f"/api/orders/admin/{order.public_id}/",
+            {"action": "mark_fulfilled"}, content_type="application/json",
+        )
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["guest@acme.test"])
+        self.assertIn("listo", mail.outbox[0].subject)
+        self.assertIn("ready for pickup", mail.outbox[0].body)
+
+    def test_marking_a_delivery_order_fulfilled_emails_that_it_is_on_its_way(self):
+        self.client.force_login(self._admin())
+        order = self._make_order(
+            status=Order.STATUS_PAID, payment_method=Order.PAYMENT_ON_DELIVERY,
+            email="buyer@acme.test", shipping_line1="1 Analytical Way",
+        )
+        mail.outbox.clear()
+
+        self.client.post(
+            f"/api/orders/admin/{order.public_id}/",
+            {"action": "mark_fulfilled"}, content_type="application/json",
+        )
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("en camino", mail.outbox[0].subject)
+        self.assertIn("on its way", mail.outbox[0].body)
+
+    def test_un_marking_fulfilled_sends_nothing(self):
+        """Reversing the flag is an admin correction, not news to the customer."""
+        self.client.force_login(self._admin())
+        order = self._make_order(
+            status=Order.STATUS_PLACED, payment_method=Order.PAYMENT_IN_STORE,
+            email="guest@acme.test", fulfilled=True,
+        )
+        mail.outbox.clear()
+
+        self.client.post(
+            f"/api/orders/admin/{order.public_id}/",
+            {"action": "unmark_fulfilled"}, content_type="application/json",
+        )
+
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_completing_a_counter_sale_emails_once(self):
+        """`complete` moves both axes at once; the customer should get a single
+        email, and it should read as the payment update rather than fulfillment."""
+        self.client.force_login(self._admin())
+        order = self._make_order(
+            status=Order.STATUS_PLACED, payment_method=Order.PAYMENT_CASH,
+            email="walkin@acme.test",
+        )
+        mail.outbox.clear()
+
+        self.client.post(
+            f"/api/orders/admin/{order.public_id}/",
+            {"action": "complete"}, content_type="application/json",
+        )
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("Pagado", mail.outbox[0].subject)
+
+    def test_an_order_with_no_address_is_not_emailed(self):
+        """An abandoned online checkout never had an address collected, so the
+        expiry has no one to notify - and must not raise trying."""
+        order = self._make_order(stripe_session_id="cs_2")  # no email
+        event = {"type": "checkout.session.expired", "data": {"object": {"id": "cs_2"}}}
+        with patch("orders.views.verify_webhook", return_value=event):
+            self.client.post(
+                f"/api/orders/stripe/webhook/{self.system.stripe_webhook_token}/",
+                data="{}", content_type="application/json",
+                HTTP_STRIPE_SIGNATURE="t=1,v1=stub",
+            )
+
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.STATUS_CANCELED)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_a_guest_offline_checkout_is_confirmed_by_email(self):
+        self.system.pay_in_store_enabled = True
+        self.system.save()
+
+        response = self.client.post(
+            "/api/orders/checkout/",
+            {
+                "payment_method": "in_store",
+                "cart": [{"kind": "product", "id": self.product.pk, "quantity": 1}],
+                "contact": {"name": "Jo", "email": "jo@guest.test"},
+            },
+            content_type="application/json",
+            HTTP_X_WEBSITE_HOST="acme.test",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["jo@guest.test"])

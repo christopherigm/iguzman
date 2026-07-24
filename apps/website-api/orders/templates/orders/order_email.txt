@@ -1,0 +1,24 @@
+{% if kind == "confirmation" %}¡Gracias por tu pedido! / Thanks for your order!{% elif kind == "fulfilled" %}{% if is_delivery %}¡Tu pedido va en camino! / Your order is on its way!{% else %}¡Tu pedido está listo! / Your order is ready!{% endif %}{% else %}Actualización de tu pedido / Your order was updated{% endif %}
+{% if customer_name %}
+Hola / Hi {{ customer_name }},
+{% endif %}
+{% if kind == "confirmation" %}Hemos recibido tu pedido #{{ order_ref }} en {{ site_name }}. / We've received your order #{{ order_ref }} at {{ site_name }}.{% elif kind == "fulfilled" %}{% if is_delivery %}Tu pedido #{{ order_ref }} ya va en camino. / Your order #{{ order_ref }} is on its way.{% else %}Tu pedido #{{ order_ref }} está listo para recoger. / Your order #{{ order_ref }} is ready for pickup.{% endif %}{% else %}El estado de tu pedido #{{ order_ref }} ahora es {{ status_label_es }}. / Your order #{{ order_ref }} is now {{ status_label_en }}.{% endif %}
+
+Pedido / Order: #{{ order_ref }}
+Fecha / Date: {{ created_at|date:"d M Y, H:i" }}
+Estado / Status: {{ status_label_es }} / {{ status_label_en }}
+
+------------------------------------------------------------
+{% for item in items %}
+{{ item.quantity }} x {{ item.name }} - {{ item.line_total }}{% for a in item.addons %}
+   {% if a.removed %}Sin / No {{ a.name }}{% else %}+ {{ a.name }}{% if a.quantity > 1 %} x{{ a.quantity }}{% endif %}{% endif %}{% endfor %}
+{% endfor %}
+------------------------------------------------------------
+Subtotal ({{ item_count }}): {{ subtotal_display }}
+Total: {{ total_display }}
+
+Ver mi pedido / View my order:
+{{ action_url }}
+
+{{ site_name }}{% if slogan %} - {{ slogan }}{% endif %}
+{{ base_url }}

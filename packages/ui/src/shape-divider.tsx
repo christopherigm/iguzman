@@ -61,8 +61,8 @@ const H = 100;
  * numbers are proportions, not pixels.
  */
 function scallopPath(): string {
-  const r = 60; // half-chord: 12 lobes of chord 2r across the width
-  const depth = r / 2.5; // 50% shorter than a full semicircle - shallow half-ellipse lobes
+  const r = 20; // half-chord: 24 lobes of chord 2r across the width
+  const depth = r / 1.2; // 50% shorter than a full semicircle - shallow half-ellipse lobes
   // Baseline sits `depth` up from the band's far edge (V${H - depth}); each arc
   // bulges a half-ellipse lobe *down* to the far edge (sweep 1), so the material
   // hangs down in half-circles with concave gaps between them - the vertical
@@ -188,6 +188,31 @@ export function shapeDividerMaskStyle(
   };
 }
 
+/**
+ * A CSS `drop-shadow` filter that lends the divider's notched edge a sense of
+ * elevation - the shaped edge lifts off the page below and casts a soft shadow
+ * that traces the **masked silhouette** (the notch contour itself), not the
+ * box's rectangle. `drop-shadow` is used rather than a `box-shadow` (the CSS
+ * equivalent of `@repo/ui-native`'s `elevation`) for exactly this reason: the
+ * mask cuts a *real* hole, and only `drop-shadow` follows that hole's outline -
+ * a `box-shadow` would be clipped flat by the notch. It is the same trick
+ * `Hero`'s badge shadow (`HERO_BADGE_SHADOW`) uses.
+ *
+ * `elevation` mirrors `@repo/ui-native`'s `Box`/`getShadowStyle` scale (clamped
+ * to 1-24), so the same number reads as the same depth on web and native.
+ * Returns `undefined` for a non-positive elevation (no filter at all).
+ */
+export function shapeDividerElevationFilter(
+  elevation?: number,
+): string | undefined {
+  if (!elevation || elevation <= 0) return undefined;
+  const e = Math.min(24, Math.round(elevation));
+  const offsetY = Math.max(1, Math.round(e * 0.5));
+  const blur = Math.min(5, Math.round(e * 1) + 1);
+  const alpha = Math.min(0.4, 0.1 + e * 0.1);
+  return `drop-shadow(0 ${offsetY}px ${blur}px rgba(0,0,0,${Number(alpha.toFixed(3))}))`;
+}
+
 export type ShapeDividerProps = {
   /** The masked content (a media layer, a hero, a coloured section…). */
   children: React.ReactNode;
@@ -208,6 +233,13 @@ export type ShapeDividerProps = {
   /** Thickness of the divider band (the notch depth grows with it).
    * @default "clamp(30px, 5vw, 64px)" */
   size?: string;
+  /**
+   * Lifts the shaped edge off the page with a `drop-shadow` that traces the
+   * notch contour (not a rectangle), giving a sense of elevation. Mirrors
+   * `@repo/ui-native`'s `Box` elevation scale (1-24), so the same number reads
+   * as the same depth on web and native. Omit or `0` for a flat edge.
+   */
+  elevation?: number;
   className?: string;
   /** Extra styles merged onto the wrapper (after the mask). */
   style?: CSSProperties;
@@ -231,12 +263,14 @@ export function ShapeDivider({
   brandmarkUrl,
   edge = "bottom",
   size = "clamp(30px, 5vw, 64px)",
+  elevation = 24,
   className,
   style,
 }: ShapeDividerProps) {
-  return (
+  const elevationFilter = shapeDividerElevationFilter(elevation);
+  const masked = (
     <div
-      className={className}
+      className={elevationFilter ? undefined : className}
       style={{
         position: "relative",
         overflow: "hidden",
@@ -245,6 +279,19 @@ export function ShapeDivider({
       }}
     >
       {children}
+    </div>
+  );
+  // The elevation shadow must live on an OUTER, unmasked wrapper - never on the
+  // masked box itself. CSS applies `filter` before `mask`, so a `drop-shadow`
+  // sharing the masked box would be cut away exactly where it should show (in
+  // the notch and below the shaped edge). Put on a parent instead, the filter
+  // rasterises the already-masked child and traces its real notched silhouette,
+  // casting the shadow freely below the edge. `drop-shadow` (not `box-shadow`)
+  // so it follows that silhouette rather than the box rectangle.
+  if (!elevationFilter) return masked;
+  return (
+    <div className={className} style={{ filter: elevationFilter }}>
+      {masked}
     </div>
   );
 }

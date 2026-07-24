@@ -2,6 +2,14 @@ import type { ReactNode } from "react";
 import { Hero as HeroUI } from "@repo/ui/hero";
 import { type System } from "@/lib/system";
 
+/**
+ * Lift the hero's bottom shape divider off the page with a shadow that traces
+ * the notch (see `@repo/ui/hero`'s `bottomDividerElevation`). A design decision
+ * the site makes, not a CMS field - kept here as one constant so the landing
+ * and the "Hero video configuration" preview (which imports it) can't drift.
+ */
+export const HERO_DIVIDER_ELEVATION = 10;
+
 type Props = {
   system: System | null;
   /** CTA row under the hero text - the site's own Button/LinkButton. */
@@ -51,6 +59,7 @@ export function Hero({
       overlayOpacity={(system?.hero_overlay_opacity ?? 75) / 100}
       overlayExtent={system?.hero_overlay_extent ?? 50}
       bottomDivider={system?.hero_bottom_divider ?? "none"}
+      bottomDividerElevation={HERO_DIVIDER_ELEVATION}
       parallax={false}
     />
   );

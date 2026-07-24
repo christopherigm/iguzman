@@ -1,0 +1,101 @@
+{% extends "users/email_base.html" %}
+{% comment %}
+Customer order email. Renders both a placement confirmation (`placed`) and a
+status update from one template - only the headline and lead sentence differ, so
+the full receipt (items, add-ons, summary, link) is written once. Bilingual
+(es then en) like every other transactional email.
+{% endcomment %}
+{% block body %}
+  {% comment %}================= Spanish ================={% endcomment %}
+  <h1 style="margin:0 0 8px 0; font-size:22px; font-weight:700; color:#1f2933;">
+    {% if kind == "confirmation" %}¡Gracias por tu pedido!{% elif kind == "fulfilled" %}{% if is_delivery %}¡Tu pedido va en camino!{% else %}¡Tu pedido está listo!{% endif %}{% else %}Actualización de tu pedido{% endif %}
+  </h1>
+  {% if customer_name %}<p style="margin:0 0 16px 0;">Hola {{ customer_name }},</p>{% endif %}
+  <p style="margin:0 0 20px 0;">
+    {% if kind == "confirmation" %}
+      Hemos recibido tu pedido <strong>#{{ order_ref }}</strong> en <strong>{{ site_name }}</strong>. Aquí están los detalles:
+    {% elif kind == "fulfilled" %}
+      {% if is_delivery %}Tu pedido <strong>#{{ order_ref }}</strong> ya va en camino.{% else %}Tu pedido <strong>#{{ order_ref }}</strong> está listo para recoger.{% endif %}
+    {% else %}
+      El estado de tu pedido <strong>#{{ order_ref }}</strong> en <strong>{{ site_name }}</strong> ahora es <strong>{{ status_label_es }}</strong>.
+    {% endif %}
+  </p>
+
+  {% comment %}--- Order meta (shared, language-neutral) ---{% endcomment %}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px 0; background-color:#f7f9fc; border-radius:10px;">
+    <tr>
+      <td style="padding:16px 20px; font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#52606d; line-height:1.7;">
+        <strong style="color:#1f2933;">Pedido / Order:</strong> #{{ order_ref }}<br>
+        <strong style="color:#1f2933;">Fecha / Date:</strong> {{ created_at|date:"d M Y, H:i" }}<br>
+        <strong style="color:#1f2933;">Estado / Status:</strong> {{ status_label_es }} / {{ status_label_en }}
+      </td>
+    </tr>
+  </table>
+
+  {% comment %}--- Items (shared) ---{% endcomment %}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px 0;">
+    {% for item in items %}
+    <tr>
+      <td width="64" valign="top" style="padding:12px 12px 12px 0;">
+        {% if item.image %}
+          <img src="{{ item.image }}" alt="{{ item.name }}" width="56" height="56" style="width:56px; height:56px; border-radius:8px; object-fit:cover; border:1px solid #edf0f5; display:block;">
+        {% else %}
+          <div style="width:56px; height:56px; border-radius:8px; background-color:#edf0f5;"></div>
+        {% endif %}
+      </td>
+      <td valign="top" style="padding:12px 0; font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#1f2933; line-height:1.5;">
+        <strong>{{ item.name }}</strong><br>
+        <span style="color:#8a94a6; font-size:13px;">Cant. / Qty: {{ item.quantity }} · {{ item.unit_price }}</span>
+        {% if item.addons %}
+          <div style="margin-top:4px; font-size:12px; color:#8a94a6; line-height:1.5;">
+            {% for a in item.addons %}
+              {% if a.removed %}Sin / No {{ a.name }}{% else %}+ {{ a.name }}{% if a.quantity > 1 %} ×{{ a.quantity }}{% endif %}{% endif %}{% if not forloop.last %}<br>{% endif %}
+            {% endfor %}
+          </div>
+        {% endif %}
+      </td>
+      <td valign="top" align="right" style="padding:12px 0 12px 12px; font-family:Arial,Helvetica,sans-serif; font-size:14px; font-weight:700; color:#1f2933; white-space:nowrap;">
+        {{ item.line_total }}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  {% comment %}--- Summary (shared) ---{% endcomment %}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 4px 0; border-top:1px solid #edf0f5;">
+    <tr>
+      <td style="padding:14px 0 4px 0; font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#52606d;">Subtotal ({{ item_count }})</td>
+      <td align="right" style="padding:14px 0 4px 0; font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#52606d;">{{ subtotal_display }}</td>
+    </tr>
+    <tr>
+      <td style="padding:4px 0 0 0; font-family:Arial,Helvetica,sans-serif; font-size:16px; font-weight:700; color:#1f2933;">Total</td>
+      <td align="right" style="padding:4px 0 0 0; font-family:Arial,Helvetica,sans-serif; font-size:16px; font-weight:700; color:#1f2933;">{{ total_display }}</td>
+    </tr>
+  </table>
+
+  {% include "users/_email_button.html" with url=action_url label="Ver mi pedido" primary_color=primary_color %}
+
+  <hr style="border:0; border-top:1px solid #edf0f5; margin:28px 0;">
+
+  {% comment %}================= English ================={% endcomment %}
+  <h2 style="margin:0 0 8px 0; font-size:18px; font-weight:700; color:#52606d;">
+    {% if kind == "confirmation" %}Thanks for your order!{% elif kind == "fulfilled" %}{% if is_delivery %}Your order is on its way!{% else %}Your order is ready!{% endif %}{% else %}Your order was updated{% endif %}
+  </h2>
+  {% if customer_name %}<p style="margin:0 0 16px 0; color:#52606d;">Hi {{ customer_name }},</p>{% endif %}
+  <p style="margin:0 0 20px 0; color:#52606d;">
+    {% if kind == "confirmation" %}
+      We've received your order <strong>#{{ order_ref }}</strong> at <strong>{{ site_name }}</strong>. The details are above.
+    {% elif kind == "fulfilled" %}
+      {% if is_delivery %}Your order <strong>#{{ order_ref }}</strong> is on its way.{% else %}Your order <strong>#{{ order_ref }}</strong> is ready for pickup.{% endif %} The full details are above.
+    {% else %}
+      Your order <strong>#{{ order_ref }}</strong> at <strong>{{ site_name }}</strong> is now <strong>{{ status_label_en }}</strong>. The full details are above.
+    {% endif %}
+  </p>
+
+  {% include "users/_email_button.html" with url=action_url label="View my order" primary_color=primary_color %}
+
+  <p style="margin:24px 0 0 0; font-size:12px; color:#8a94a6; word-break:break-all;">
+    <span style="color:#52606d;">Enlace directo / Direct link:</span><br>
+    <a href="{{ action_url }}" target="_blank" style="color:{{ primary_color|default:'#2196f3' }};">{{ action_url }}</a>
+  </p>
+{% endblock %}
