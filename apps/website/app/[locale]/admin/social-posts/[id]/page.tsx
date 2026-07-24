@@ -16,6 +16,7 @@ import { Slider } from "@repo/ui/core-elements/slider";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Spinner } from "@repo/ui/core-elements/spinner";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { Toast } from "@repo/ui/core-elements/toast";
 import type { HeroLogoBackground } from "@repo/ui/hero";
 import {
@@ -620,13 +621,19 @@ export default function AdminSocialPostFormPage({ params }: Props) {
           payload[field] = null;
         }
       });
+      let postId: number;
       if (isNew) {
-        await createSocialPost(payload);
+        const created = await createSocialPost(payload);
+        postId = created.id as number;
       } else {
         await updateSocialPost(Number(id), payload);
+        postId = Number(id);
       }
+      // Stay on the form and show the success toast rather than bouncing to the
+      // list, matching the other admin edit pages. A new record swaps its URL
+      // segment to its own id so a second save updates instead of re-creating.
       setSuccess(t("saved"));
-      router.push("/admin/social-posts");
+      if (isNew) router.replace(`/admin/social-posts/${postId}`);
     } catch {
       setError(t("errorSave"));
     } finally {
@@ -699,7 +706,7 @@ export default function AdminSocialPostFormPage({ params }: Props) {
         </Typography>
         <Box display="flex" alignItems="center" gap={8}>
           <Button
-            text={tCommon("cancel")}
+            text={isNew ? tCommon("cancel") : t("back")}
             size="md"
             href="/admin/social-posts"
           />
@@ -712,6 +719,10 @@ export default function AdminSocialPostFormPage({ params }: Props) {
           />
         </Box>
       </Box>
+
+      {/* Save progress, directly under the header action row — mirrors the
+          standard AdminForm so a save shows the same feedback everywhere. */}
+      {saving && <ProgressBar />}
 
       {/* Enabled status toggle, above the form — matches the CMS inner pages. */}
       <Box
@@ -1089,7 +1100,9 @@ export default function AdminSocialPostFormPage({ params }: Props) {
       </Box>
 
       {error && <Toast message={error} variant="error" />}
-      {success && <Toast message={success} variant="success" />}
+      {success && (
+        <Toast message={success} variant="success" position="top-center" />
+      )}
     </>
   );
 }

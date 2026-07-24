@@ -533,6 +533,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "hero_video_layout", "hero_logo_background", "hero_logo_scale",
             "hero_logo_background_scale",
             "hero_overlay_style", "hero_overlay_opacity", "hero_overlay_extent",
+            "hero_bottom_divider",
             "hero_text_frame",
             "watermark_enabled", "watermark_rotation", "watermark_intercalated",
             "watermark_show_logo", "watermark_show_brandmark",
@@ -628,6 +629,7 @@ _TEXT_FIELDS = [
     "hero_video_layout", "hero_logo_background", "hero_logo_scale",
     "hero_logo_background_scale",
     "hero_overlay_style", "hero_overlay_opacity", "hero_overlay_extent",
+    "hero_bottom_divider",
     "hero_text_frame",
     "watermark_enabled", "watermark_rotation", "watermark_intercalated",
     "watermark_show_logo", "watermark_show_brandmark",
@@ -710,6 +712,12 @@ class SystemWriteSerializer(serializers.Serializer):
     # slider emits; 50 is the neutral default reach. Independent of the strength
     # above.
     hero_overlay_extent = serializers.IntegerField(required=False, min_value=0, max_value=100)
+    # Constrained to the divider shapes the frontend can cut - an unknown value
+    # would fall back to "none" (a hard edge), reading as the setting being
+    # ignored. "none" is a valid choice: it is how a tenant turns the divider off.
+    hero_bottom_divider = serializers.ChoiceField(
+        choices=[c[0] for c in System.HERO_DIVIDER_CHOICES], required=False
+    )
     hero_text_frame = serializers.BooleanField(required=False)
     enabled         = serializers.BooleanField(required=False)
 

@@ -20,6 +20,10 @@ import {
   type HeroLogoBackground,
   type HeroOverlayStyle,
 } from "@repo/ui/hero";
+import {
+  SHAPE_DIVIDER_MASKS,
+  type ShapeDividerMask,
+} from "@repo/ui/shape-divider";
 
 /** The layouts the site can render - the same set the API accepts. */
 const HERO_LAYOUTS: HeroLayout[] = ["default", "none", "profile"];
@@ -49,6 +53,32 @@ const OVERLAY_STYLE_LABEL_KEY: Record<HeroOverlayStyle, string> = {
   top: "heroOverlayTop",
   both: "heroOverlayBoth",
   vignette: "heroOverlayVignette",
+};
+
+/** A divider shape the hero can offer: the self-contained SVG shapes only. */
+type HeroDivider = Exclude<ShapeDividerMask, "brandmark">;
+
+/**
+ * The bottom-divider options: "none" (a hard edge, the default) plus each named
+ * shape the site can cut. Only the bottom edge is exposed here - the component
+ * supports "top" too, but the hero only ever dissolves into the page below it.
+ * `brandmark` is excluded: it needs a same-origin brandmark URL the landing hero
+ * doesn't plumb, so it isn't offered as a hero divider here.
+ */
+const HERO_DIVIDERS: (HeroDivider | "none")[] = [
+  "none",
+  ...SHAPE_DIVIDER_MASKS.filter((m): m is HeroDivider => m !== "brandmark"),
+];
+
+/** Admin-namespace message key for each divider option's label. */
+const DIVIDER_LABEL_KEY: Record<HeroDivider | "none", string> = {
+  none: "heroDividerNone",
+  wave: "heroDividerWave",
+  scallop: "heroDividerScallop",
+  zigzag: "heroDividerZigzag",
+  spikes: "heroDividerSpikes",
+  arches: "heroDividerArches",
+  slant: "heroDividerSlant",
 };
 
 /**
@@ -129,6 +159,11 @@ export function HeroVideoSection({
   ) as HeroOverlayStyle;
   const overlayOpacity = Number(values.hero_overlay_opacity ?? 75);
   const overlayExtent = Number(values.hero_overlay_extent ?? 50);
+  const bottomDivider = (
+    HERO_DIVIDERS.includes(values.hero_bottom_divider as HeroDivider)
+      ? values.hero_bottom_divider
+      : "none"
+  ) as HeroDivider | "none";
   const textFrame = Boolean(values.hero_text_frame);
 
   return (
@@ -267,6 +302,21 @@ export function HeroVideoSection({
               {t("heroVideoPreview")}
             </Typography>
 
+            {/* Bottom divider: the transparent notch cut into the hero's bottom
+                edge so the page (and its watermark) shows through, softening the
+                seam. Sits under the Preview header so its effect shows live in
+                the hero below - though the notch reveals the plain admin
+                background here, not the tenant's watermark. */}
+            <Select
+              label={t("heroDivider")}
+              value={bottomDivider}
+              onChange={(v) => onChange("hero_bottom_divider", v)}
+              options={HERO_DIVIDERS.map((value) => ({
+                value,
+                label: t(DIVIDER_LABEL_KEY[value]),
+              }))}
+            />
+
             {/* No frame around the hero: the profile circle hangs *below* it,
                 outside any wrapper's padding box, so a clipping frame would cut
                 the disc in half. The rounding goes on the hero itself, which
@@ -286,6 +336,7 @@ export function HeroVideoSection({
                 overlayStyle={overlayStyle}
                 overlayOpacity={overlayOpacity / 100}
                 overlayExtent={overlayExtent}
+                bottomDivider={bottomDivider}
                 contentScale={0.5}
                 style={{ height: 240, borderRadius: 10 }}
               />

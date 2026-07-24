@@ -1,6 +1,11 @@
 import React, { CSSProperties } from "react";
 import { HeroVideo } from "./hero-video";
 import { ParallaxLayer } from "./parallax-layer";
+import {
+  shapeDividerMaskStyle,
+  type ShapeDividerEdge,
+  type ShapeDividerMask,
+} from "./shape-divider";
 import { Box } from "./core-elements/box";
 import { Container } from "./core-elements/container";
 import "./hero.css";
@@ -465,6 +470,26 @@ export type HeroProps = {
   /** Drift the background against the page as it scrolls. Pass false for a static background. */
   parallax?: boolean;
   /**
+   * An opt-in "shape divider" that softens the hard horizontal seam where the
+   * hero meets the page by cutting a **genuine transparent notch** out of the
+   * hero's edge - rather than painting a band over the video. Pass one of the
+   * named {@link ShapeDividerMask} shapes; because it's a real hole, whatever
+   * sits behind the hero shows through it continuously (the page background and
+   * its fixed logo watermark), so the video appears to dissolve into the page
+   * instead of ending at a solid line. `"none"`/`null`/omitted keeps the
+   * historical hard edge. @default null
+   */
+  bottomDivider?: ShapeDividerMask | "none" | null;
+  /**
+   * Which edge the divider notch is cut into. @default "bottom"
+   */
+  bottomDividerEdge?: ShapeDividerEdge;
+  /**
+   * Height of the band the divider shape is drawn into at the hero's edge (the
+   * notch's depth grows with it). @default "clamp(30px, 5vw, 64px)"
+   */
+  bottomDividerHeight?: string;
+  /**
    * Wrap the slogan/subline in an outline frame (see `HeroTextFrame`). Used for
    * section/page headings over a hero - not the landing hero. @default false
    */
@@ -548,6 +573,9 @@ export function Hero({
   overlayOpacity = 0.75,
   overlayExtent = DEFAULT_HERO_OVERLAY_EXTENT,
   parallax = true,
+  bottomDivider = null,
+  bottomDividerEdge = "bottom",
+  bottomDividerHeight = "clamp(30px, 5vw, 64px)",
   frame = false,
   frameImage = null,
   frameImageAlt = "",
@@ -760,6 +788,16 @@ export function Hero({
     </>
   );
 
+  // The bottom shape divider is a real hole cut out of the hero, not a painted
+  // band: masking the whole hero (video + black backing + overlay) lets the page
+  // and its fixed watermark show through the notch. Resolved by the shared
+  // `shapeDividerMaskStyle` so the hero and any standalone `ShapeDivider` cut the
+  // same shape. `"none"` (the CMS default) draws nothing.
+  const dividerMask: CSSProperties =
+    bottomDivider && bottomDivider !== "none"
+      ? shapeDividerMaskStyle(bottomDivider, bottomDividerEdge, bottomDividerHeight)
+      : {};
+
   const hero = (
     <div
       className={[!hasVideo ? "hero--image" : "", className]
@@ -773,6 +811,7 @@ export function Hero({
           : "clamp(500px, 65vw, 800px)",
         overflow: "hidden",
         backgroundColor: "#000",
+        ...dividerMask,
         ...style,
       }}
     >

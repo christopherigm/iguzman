@@ -522,6 +522,35 @@ class System(Common):
         default=False,
         help_text="Wrap the hero section/page heading in an outline frame (with the brandmark badge if set).",
     )
+    # ── Hero bottom divider ───────────────────────────────────────────────────
+    # An optional shape cut as a transparent notch out of the hero's bottom edge,
+    # so the page (and its watermark) shows through it and the hero dissolves into
+    # the page rather than ending at a hard line. "none" (the default) keeps the
+    # hard edge, so every existing tenant is unchanged. The named shapes must
+    # match the frontend's ShapeDividerMask set (packages/ui/src/shape-divider.tsx)
+    # - an unknown value would fall back to "none" on the site, reading as ignored.
+    HERO_DIVIDER_NONE = "none"
+    HERO_DIVIDER_WAVE = "wave"
+    HERO_DIVIDER_SCALLOP = "scallop"
+    HERO_DIVIDER_ZIGZAG = "zigzag"
+    HERO_DIVIDER_SPIKES = "spikes"
+    HERO_DIVIDER_ARCHES = "arches"
+    HERO_DIVIDER_SLANT = "slant"
+    HERO_DIVIDER_CHOICES = (
+        (HERO_DIVIDER_NONE, "None - hard edge"),
+        (HERO_DIVIDER_WAVE, "Wave - organic wave"),
+        (HERO_DIVIDER_SCALLOP, "Half-circles - scalloped edge"),
+        (HERO_DIVIDER_ZIGZAG, "Zigzag - triangular bunting"),
+        (HERO_DIVIDER_SPIKES, "Spikes - fine sawtooth"),
+        (HERO_DIVIDER_ARCHES, "Arches - smooth wide humps"),
+        (HERO_DIVIDER_SLANT, "Slant - straight diagonal"),
+    )
+    hero_bottom_divider = models.CharField(
+        max_length=16,
+        choices=HERO_DIVIDER_CHOICES,
+        default=HERO_DIVIDER_NONE,
+        help_text="Shape of the transparent notch cut into the hero's bottom edge (page shows through).",
+    )
 
     # ── Watermark & page background ───────────────────────────────────────────
     # The logo tiled faintly behind every public page, plus the page background

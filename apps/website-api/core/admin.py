@@ -271,6 +271,7 @@ class SystemAdmin(admin.ModelAdmin):
                 "hero_overlay_style",
                 "hero_overlay_opacity",
                 "hero_overlay_extent",
+                "hero_bottom_divider",
                 "hero_text_frame",
             ),
             "description": (

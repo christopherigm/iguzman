@@ -50,6 +50,7 @@ export function Hero({
       overlayStyle={system?.hero_overlay_style ?? "bottom"}
       overlayOpacity={(system?.hero_overlay_opacity ?? 75) / 100}
       overlayExtent={system?.hero_overlay_extent ?? 50}
+      bottomDivider={system?.hero_bottom_divider ?? "none"}
       parallax={false}
     />
   );

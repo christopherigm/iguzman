@@ -4,6 +4,7 @@ import type {
   HeroLogoBackground,
   HeroOverlayStyle,
 } from "@repo/ui/hero";
+import type { ShapeDividerMask } from "@repo/ui/shape-divider";
 import { getTenantHost } from "./resolve-site";
 import { API_URL } from "./config";
 import logger from "./logger";
@@ -68,6 +69,11 @@ export interface System {
   hero_overlay_opacity: number;
   /** How far the gradient overlay reaches, as a whole percent (0-100); 50 = default reach. */
   hero_overlay_extent: number;
+  /**
+   * Shape of the transparent notch cut into the hero's bottom edge so the page
+   * (and its watermark) shows through, softening the seam. "none" = hard edge.
+   */
+  hero_bottom_divider: ShapeDividerMask | "none";
   /**
    * Wrap the section/page heading over a hero (category, highlight and item
    * detail pages - not the landing hero) in an outline frame, with the
