@@ -89,26 +89,10 @@ export function PaymentsSection({
   const enabled = Boolean(values.stripe_enabled);
 
   return (
-    <Box flexDirection="column" gap={16} paddingTop={32}>
-      {/* Matches the pair-group headers AdminForm renders, so this reads as a
-          section of the same form rather than a panel bolted onto it. */}
-      <Box
-        paddingBottom={2}
-        styles={{
-          borderBottom:
-            "1px solid color-mix(in srgb, var(--foreground) 20%, transparent)",
-        }}
-      >
-        <Typography
-          variant="label"
-          fontWeight={800}
-          color="var(--foreground)"
-          styles={{ letterSpacing: "0.06em", textTransform: "uppercase" }}
-        >
-          {t("paymentsTitle")}
-        </Typography>
-      </Box>
-
+    // No "Payments" section header: this is the whole of /admin/payments, and
+    // the page's own <h1> already carries the title. The "Offline payments"
+    // header below stays - it separates the two halves of this page.
+    <Box flexDirection="column" gap={16}>
       <Typography variant="body" margin={0}>
         {t("paymentsIntro")}
       </Typography>

@@ -187,8 +187,16 @@ export function HeroVideoSection({
         {/* ── Column 1: the control ── */}
         <Grid size={{ xs: 12, sm: 6 }}>
           <Box flexDirection="column" gap={12}>
-            {/* Slogan lives here rather than in the main field list: it is part
-                of the hero composition, and the preview beside it shows it live. */}
+            {/* The video URL and the slogan live here rather than in the main
+                field list: both are part of the hero composition, and the
+                preview beside them shows each one live as it is typed. */}
+            <TextInput
+              label={t("videoLink")}
+              value={videoLink}
+              onChange={(v) => onChange("video_link", v)}
+              type="url"
+            />
+
             <TextInput
               label={t("slogan")}
               value={String(values.slogan ?? "")}

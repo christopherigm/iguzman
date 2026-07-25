@@ -54,6 +54,21 @@ interface AdminEntityListProps {
    * is edit-only, so a "new" link would route to a non-existent record.
    */
   hideCreate?: boolean;
+  /**
+   * Extra controls for the header row, rendered immediately before "+ New".
+   * For a page whose list is only part of what it edits: /admin/highlights puts
+   * the Save button for the section's settings here, so every action on the page
+   * sits in the one header row - sort, save, new - as on every other CMS list.
+   */
+  headerActions?: React.ReactNode;
+  /**
+   * A block rendered **below** the table. For a page that edits the section
+   * itself as well as its records: /admin/highlights puts the section's heading
+   * pair and colour band here, so the records - the reason the page is open -
+   * are the first thing under the header row, and the section-wide settings sit
+   * after them.
+   */
+  children?: React.ReactNode;
 }
 
 export function AdminEntityList({
@@ -67,6 +82,8 @@ export function AdminEntityList({
   loading,
   error,
   hideCreate,
+  headerActions,
+  children,
 }: AdminEntityListProps) {
   const t = useTranslations("Admin");
   const tCommon = useTranslations("Common");
@@ -159,6 +176,7 @@ export function AdminEntityList({
               <Typography variant="caption">{t("sortRows")}</Typography>
             </Box>
           )}
+          {headerActions}
           {!hideCreate && (
             <Link href={`${basePath}/new`} prefetch>
               <Button text={`+ ${t("newItem")}`} kind="primary" size="md" />
@@ -316,6 +334,10 @@ export function AdminEntityList({
           </table>
         </Box>
       )}
+
+      {/* The page's own block (e.g. the section settings a list belongs to),
+          after the records so the list leads the page. */}
+      {children}
 
       {onDelete && pendingDelete !== null && (
         <ConfirmationModal

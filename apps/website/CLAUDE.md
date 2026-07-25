@@ -77,9 +77,11 @@ customization?, quantity}`) - Django re-prices every one of them
   the customer sees.
 - **In the admin CMS, a blank Stripe secret field means "leave unchanged".** The
   API never returns those keys, so the inputs always load blank - submitting `""`
-  would wipe a tenant's credentials the first time anyone edited the slogan.
-  `admin/system/page.tsx` deletes empty secret keys from the payload; keep that if
-  you touch the form.
+  would wipe a tenant's credentials the first time anyone toggled a switch.
+  The whole Stripe connection (plus the two offline payment methods) lives on
+  **`admin/payments/`** - its own CMS page, not `/admin/system` - and
+  `admin/payments/page.tsx` deletes empty secret keys from the payload; keep that
+  if you touch the form.
 
 ## Anonymous cart, favorites and guest checkout
 
@@ -165,8 +167,8 @@ keeps only the text/CTA), and applies in two places: the landing
 `Hero` (`components/hero.tsx` → `@repo/ui/hero`) and the item detail hero
 (`components/item-hero-video.tsx`, on product/service/food pages). The tenant
 picks it in the CMS's "Hero video configuration" section
-(`admin/system/hero-video-section.tsx`), whose preview renders the **real**
-`Hero`, so it cannot drift from the site.
+(`admin/logos-and-styles/hero-video-section.tsx`), whose preview renders the
+**real** `Hero`, so it cannot drift from the site.
 
 The shared `Hero` takes several optional composition props, all defaulting to
 the historical behaviour: `align` (`"start"` left-aligns the text and caps its
@@ -224,7 +226,7 @@ landing, which is exactly what the preview shows.
 A tenant can ship its own typefaces: `System.google_font_url` (one Google Fonts
 stylesheet URL, which can carry both families) plus `font_display` (headings)
 and `font_body` (body text). The CMS section is
-`admin/system/typography-section.tsx`, whose preview loads the **real**
+`admin/logos-and-styles/typography-section.tsx`, whose preview loads the **real**
 stylesheet so it cannot drift from the site. `/seed-site` sets all three from
 the brief.
 
@@ -255,9 +257,14 @@ the tenant's band background (`System.catalog_items_bg` / `highlights_bg`, still
 passed through `fitSectionBackground`) plus the shape cut as a transparent notch
 out of the band's **top and bottom** edges (`System.catalog_top_divider` /
 `catalog_bottom_divider` and the `highlights_*` pair). The CMS section is
-`admin/system/section-backgrounds-section.tsx`, which previews the **real**
+`components/admin/section-band-section.tsx`, which previews the **real**
 `SectionBand` over the tenant's own page background, so it cannot drift from the
-site.
+site. It is rendered **once per band, on the page that owns that section**: the
+catalog band on `admin/featured-spotlight` (below the three featured-item
+pickers), the highlights band on `admin/highlights` (below the highlight items,
+together with the section's heading/subtitle pair). Keep a band on its section's
+page — both bands were once on `/admin/system`, nowhere near the items they
+frame.
 
 - **Both edges, unlike the hero.** A band has a section above it _and_ one
   below, so each edge is its own setting; `Hero`'s divider stays bottom-only
@@ -281,8 +288,9 @@ The tenant's logo can be tiled faintly behind every **public** page
 (`components/logo-watermark.tsx`, rendered by the locale layout inside
 `<HideOnAdmin>` when `System.watermark_enabled`). The tenant tunes rotation,
 size, spacing and opacity - plus the light/dark page background - in the CMS's
-"Watermark & Background" section (`admin/system/watermark-section.tsx`), whose
-preview renders the **same** component so it cannot drift from the site.
+"Watermark & Background" section
+(`admin/logos-and-styles/watermark-section.tsx`), whose preview renders the
+**same** component so it cannot drift from the site.
 
 Two things to keep if you touch it:
 
@@ -444,11 +452,11 @@ Before defining a constant, type, or pure utility function in a component file, 
 
 **Current shared files to check first:**
 
-| File                                                       | Contents                                                                                                                                                                                                                                                                                               |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `apps/website/components/admin/paragraph-options.ts`       | `PARAGRAPH_WORD_COUNTS`, `PARAGRAPH_LENGTH_STEPS`, `PARAGRAPH_COUNT_STEPS` - used by `admin-form.tsx` and `ai-interviewer/ai-interviewer.tsx`                                                                                                                                                          |
-| `apps/website/components/admin/logo-background-options.ts` | `LOGO_BACKGROUND_SHAPES`, `LOGO_BACKGROUND_LABEL_KEY`, `SCALE_STEPS` - the badge shapes and size stops, used by `admin/system/hero-video-section.tsx` and `admin/social-posts/[id]/page.tsx`                                                                                                           |
-| `apps/website/components/admin/divider-options.ts`         | `DIVIDER_OPTIONS`, `DIVIDER_LABEL_KEY`, `toDividerOption`, `DividerOption` - the shape-divider shapes every CMS divider picker offers (the hero's bottom edge, both section bands' top/bottom edges), used by `admin/system/hero-video-section.tsx` and `admin/system/section-backgrounds-section.tsx` |
+| File                                                       | Contents                                                                                                                                                                                                                                                                                                      |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/website/components/admin/paragraph-options.ts`       | `PARAGRAPH_WORD_COUNTS`, `PARAGRAPH_LENGTH_STEPS`, `PARAGRAPH_COUNT_STEPS` - used by `admin-form.tsx` and `ai-interviewer/ai-interviewer.tsx`                                                                                                                                                                 |
+| `apps/website/components/admin/logo-background-options.ts` | `LOGO_BACKGROUND_SHAPES`, `LOGO_BACKGROUND_LABEL_KEY`, `SCALE_STEPS` - the badge shapes and size stops, used by `admin/logos-and-styles/hero-video-section.tsx` and `admin/social-posts/[id]/page.tsx`                                                                                                        |
+| `apps/website/components/admin/divider-options.ts`         | `DIVIDER_OPTIONS`, `DIVIDER_LABEL_KEY`, `toDividerOption`, `DividerOption` - the shape-divider shapes every CMS divider picker offers (the hero's bottom edge, both section bands' top/bottom edges), used by `admin/logos-and-styles/hero-video-section.tsx` and `components/admin/section-band-section.tsx` |
 
 **How to apply:**
 

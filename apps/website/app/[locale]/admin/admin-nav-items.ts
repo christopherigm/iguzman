@@ -1,5 +1,33 @@
 export const ADMIN_NAV_ITEMS = [
   { key: "system", href: "/admin/system", icon: "⚙️", descKey: "systemDesc" },
+  {
+    key: "logosAndStyles",
+    href: "/admin/logos-and-styles",
+    icon: "🎨",
+    descKey: "logosAndStylesDesc",
+  },
+  {
+    // `spotlightTitle` is the section's existing label ("Featured Spotlight"),
+    // reused here rather than translated a second time under a nav-only key.
+    key: "spotlightTitle",
+    href: "/admin/featured-spotlight",
+    icon: "🌟",
+    descKey: "spotlightPageDesc",
+  },
+  {
+    key: "aboutPage",
+    href: "/admin/about",
+    icon: "📖",
+    descKey: "aboutPageDesc",
+  },
+  {
+    // `paymentsTitle` is the section's existing label ("Payments"), reused here
+    // rather than translated a second time under a nav-only key.
+    key: "paymentsTitle",
+    href: "/admin/payments",
+    icon: "💳",
+    descKey: "paymentsPageDesc",
+  },
   // Not under /admin: the till is its own full-screen route with no CMS chrome.
   // Listed here anyway because this menu is where an admin looks for their tools.
   { key: "pos", href: "/pos", icon: "🧾", descKey: "posDesc" },

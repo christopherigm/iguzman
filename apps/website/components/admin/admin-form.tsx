@@ -94,6 +94,15 @@ interface AdminFormProps {
   onCancel?: () => void;
   hideCancel?: boolean;
   /**
+   * Renders the form as a block inside a page that owns its chrome: no header
+   * row (neither `title` nor any button) and no fixed bottom action bar, leaving
+   * just the progress bar, the toasts and the fields. For a form that is only
+   * part of its page - /admin/highlights embeds one in its list, whose header
+   * carries the title and the Save button beside "+ New". The caller then owns
+   * the only entry point to `onSubmit`.
+   */
+  embedded?: boolean;
+  /**
    * True when the form edits an existing record rather than creating one. It
    * only changes the top-left escape hatch's wording - "Cancel" abandons a new
    * record, but on a saved one there is nothing to cancel, so it reads "Back".
@@ -148,6 +157,7 @@ export function AdminForm({
   onSubmit,
   onCancel,
   hideCancel,
+  embedded,
   isEditing,
   onClone,
   saving,
@@ -437,45 +447,53 @@ export function AdminForm({
   return (
     <>
       {/* paddingBottom clears the fixed Save button so trailing content
-          (e.g. the recipe editor's "Add Step" button) is never hidden under it. */}
-      <Box flexDirection="column" gap={20} marginBottom={40} paddingBottom={96}>
-        <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="space-between"
-          gap={16}
-        >
-          <Typography as="h1" variant="h3" margin={0}>
-            {editingName?.trim()
-              ? t("editingItem", { name: editingName.trim() })
-              : title}
-          </Typography>
-          <Box display="flex" alignItems="center" gap={8}>
-            {!hideCancel && (
+          (e.g. the recipe editor's "Add Step" button) is never hidden under it -
+          there is no bar to clear when the page owns the actions itself. */}
+      <Box
+        flexDirection="column"
+        gap={20}
+        marginBottom={embedded ? 0 : 40}
+        paddingBottom={embedded ? 0 : 96}
+      >
+        {!embedded && (
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            gap={16}
+          >
+            <Typography as="h1" variant="h3" margin={0}>
+              {editingName?.trim()
+                ? t("editingItem", { name: editingName.trim() })
+                : title}
+            </Typography>
+            <Box display="flex" alignItems="center" gap={8}>
+              {!hideCancel && (
+                <Button
+                  text={isEditing ? t("back") : t("cancel")}
+                  onClick={onCancel ?? (() => router.back())}
+                  size="md"
+                />
+              )}
+              {isEditing && onClone && (
+                <Button
+                  text={t("clone")}
+                  icon="/icons/copy.svg"
+                  onClick={openClone}
+                  size="md"
+                  kind="warning"
+                />
+              )}
               <Button
-                text={isEditing ? t("back") : t("cancel")}
-                onClick={onCancel ?? (() => router.back())}
+                text={saving ? t("saving") : t("save")}
+                onClick={onSubmit}
+                disabled={saving}
+                kind="primary"
                 size="md"
               />
-            )}
-            {isEditing && onClone && (
-              <Button
-                text={t("clone")}
-                icon="/icons/copy.svg"
-                onClick={openClone}
-                size="md"
-                kind="warning"
-              />
-            )}
-            <Button
-              text={saving ? t("saving") : t("save")}
-              onClick={onSubmit}
-              disabled={saving}
-              kind="primary"
-              size="md"
-            />
+            </Box>
           </Box>
-        </Box>
+        )}
 
         {/* Save progress, directly under the header action row. */}
         {saving && <ProgressBar />}
@@ -859,45 +877,47 @@ export function AdminForm({
           {/* Fixed action bar, centered at the bottom of the viewport: the
               production-view shortcut (when the record has a public page) sits
               beside the primary Save button. */}
-          <Box
-            display="flex"
-            alignItems="center"
-            gap={12}
-            padding={10}
-            borderRadius={12}
-            border="1px solid color-mix(in srgb, var(--foreground) 12%, transparent)"
-            backgroundColor="var(--background)"
-            styles={{
-              position: "fixed",
-              bottom: 24,
-              left: "50%",
-              transform: "translateX(-50%)",
-              boxShadow:
-                "0 4px 16px color-mix(in srgb, var(--foreground) 12%, transparent)",
-              zIndex: 100,
-            }}
-          >
-            {productionHref && (
-              // Same-tab navigation on purpose: Button's link mode wraps a
-              // type-less <button> (which would submit this form), but for a
-              // same-tab link next/Link calls preventDefault and suppresses
-              // that submit. A `target="_blank"` here would skip the
-              // preventDefault and save the record on every click.
+          {!embedded && (
+            <Box
+              display="flex"
+              alignItems="center"
+              gap={12}
+              padding={10}
+              borderRadius={12}
+              border="1px solid color-mix(in srgb, var(--foreground) 12%, transparent)"
+              backgroundColor="var(--background)"
+              styles={{
+                position: "fixed",
+                bottom: 24,
+                left: "50%",
+                transform: "translateX(-50%)",
+                boxShadow:
+                  "0 4px 16px color-mix(in srgb, var(--foreground) 12%, transparent)",
+                zIndex: 100,
+              }}
+            >
+              {productionHref && (
+                // Same-tab navigation on purpose: Button's link mode wraps a
+                // type-less <button> (which would submit this form), but for a
+                // same-tab link next/Link calls preventDefault and suppresses
+                // that submit. A `target="_blank"` here would skip the
+                // preventDefault and save the record on every click.
+                <Button
+                  text={t("viewInProduction")}
+                  href={`/${locale}${productionHref}`}
+                  icon="/icons/fullscreen.svg"
+                  size="lg"
+                />
+              )}
               <Button
-                text={t("viewInProduction")}
-                href={`/${locale}${productionHref}`}
-                icon="/icons/fullscreen.svg"
+                type="submit"
+                text={saving ? t("saving") : t("save")}
+                disabled={saving}
+                kind="primary"
                 size="lg"
               />
-            )}
-            <Button
-              type="submit"
-              text={saving ? t("saving") : t("save")}
-              disabled={saving}
-              kind="primary"
-              size="lg"
-            />
-          </Box>
+            </Box>
+          )}
         </form>
       </Box>
 

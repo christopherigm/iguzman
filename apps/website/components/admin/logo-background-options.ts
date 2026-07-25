@@ -4,8 +4,9 @@ import type { HeroLogoBackground } from "@repo/ui/hero";
 /**
  * The badge shapes the frontend can render, and the whole-percent stops the two
  * size sliders offer. Shared by every CMS control that frames an image in a
- * shape: the hero's logo badge (`admin/system/hero-video-section.tsx`) and the
- * social flyer's centred photo (`admin/social-posts/[id]/page.tsx`). One list,
+ * shape: the hero's logo badge
+ * (`admin/logos-and-styles/hero-video-section.tsx`) and the social flyer's
+ * centred photo (`admin/social-posts/[id]/page.tsx`). One list,
  * so the CMS cannot offer a shape on one screen that the other can't draw, and
  * so neither can compose a value the API then rejects.
  */

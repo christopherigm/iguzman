@@ -101,7 +101,9 @@ function toOptions(
  * catalog; the frontend `Spotlight` block resolves them to live cards.
  *
  * One component rather than plain `FieldDef`s because the item pickers need the
- * catalog fetched by tenant, which the flat admin form has no place for.
+ * catalog fetched by tenant, which the flat admin form has no place for. It is
+ * the entire body of /admin/featured-spotlight - it used to be one section of
+ * the (much longer) /admin/system form.
  */
 export function SpotlightSection({ values, onChange, systemId }: Props) {
   const t = useTranslations("Admin");
@@ -156,26 +158,9 @@ export function SpotlightSection({ values, onChange, systemId }: Props) {
   const enabled = values.spotlight_enabled !== false;
 
   return (
-    <Box flexDirection="column" gap={16} paddingTop={32}>
-      {/* Matches the pair-group headers AdminForm renders, so this reads as a
-          section of the same form rather than a panel bolted onto it. */}
-      <Box
-        paddingBottom={2}
-        styles={{
-          borderBottom:
-            "1px solid color-mix(in srgb, var(--foreground) 20%, transparent)",
-        }}
-      >
-        <Typography
-          variant="label"
-          fontWeight={800}
-          color="var(--foreground)"
-          styles={{ letterSpacing: "0.06em", textTransform: "uppercase" }}
-        >
-          {t("spotlightTitle")}
-        </Typography>
-      </Box>
-
+    // No section header: this is the whole of /admin/featured-spotlight, and the
+    // page's own <h1> already carries the title.
+    <Box flexDirection="column" gap={16}>
       <Typography variant="body" margin={0}>
         {t("spotlightIntro")}
       </Typography>
