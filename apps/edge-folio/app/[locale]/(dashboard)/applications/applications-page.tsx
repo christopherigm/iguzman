@@ -29,7 +29,6 @@ import {
   type CreateApplicationPayload,
   type SignalLevel,
 } from "@/lib/applications";
-import { SpeechButton } from "@repo/ui/core-elements/speech-button";
 import { MatchMetrics } from "@/components/match-metrics";
 import "./applications-page.css";
 
@@ -410,24 +409,13 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
       </Box>
 
       <Box>
-        <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="space-between"
+        <Typography
+          variant="body"
+          color="var(--muted-foreground, #6b7280)"
           marginBottom={6}
         >
-          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-            {t("notesLabel")}
-          </Typography>
-          <SpeechButton
-            mode="batch"
-            language="en"
-            micIcon="/icons/mic.svg"
-            onTranscript={(text) =>
-              setNotes((prev) => (prev ? `${prev} ${text}` : text))
-            }
-          />
-        </Box>
+          {t("notesLabel")}
+        </Typography>
         <TextInput
           multirow
           rows={3}

@@ -67,7 +67,7 @@ export interface NavbarProps extends UIComponentProps {
   searchValue?: string;
   /**
    * Optional node rendered to the right of the search box and to the left
-   * of the hamburger icon (e.g. a `SpeechButton`).
+   * of the hamburger icon (e.g. an action button).
    */
   rightSlot?: React.ReactNode;
   /**
@@ -509,7 +509,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
         />
       )}
 
-      {/* Right slot (e.g. SpeechButton) */}
+      {/* Right slot (caller-supplied action) */}
       {rightSlot}
 
       {/* Hamburger (visible xs/sm) */}

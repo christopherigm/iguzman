@@ -7,7 +7,6 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Button } from "@repo/ui/core-elements/button";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { TextInput } from "@repo/ui/core-elements/text-input";
-import { SpeechButton } from "@repo/ui/core-elements/speech-button";
 import {
   StreamingEnhancePanel,
   type StreamingEnhanceHandle,
@@ -25,7 +24,6 @@ export type EnhanceMessage = {
 };
 
 export interface TailoredEditableCardLabels {
-  mic: string;
   enhance: string;
   stop: string;
   discard: string;
@@ -56,7 +54,6 @@ interface Props {
   rows?: number;
   placeholder?: string;
   ariaLabel?: string;
-  micLanguage?: "en" | "es";
   buildEnhanceMessages?: (
     currentText: string,
     opts?: EnhanceOptions,
@@ -75,8 +72,8 @@ interface Props {
 }
 
 /**
- * A tailored-results card with an "Include in resume" switch (plus optional
- * voice-dictation + AI-enhance controls) aligned to the right of the title, a
+ * A tailored-results card with an "Include in resume" switch (plus an optional
+ * AI-enhance control) aligned to the right of the title, a
  * divider, and — when `editable` — an editable body with a "Save Changes"
  * button that mirrors the Professional Summary editing pattern.
  */
@@ -92,7 +89,6 @@ export function TailoredEditableCard({
   rows = 5,
   placeholder,
   ariaLabel,
-  micLanguage = "en",
   buildEnhanceMessages,
   enhanceWithOptions = false,
   enhanceOptionsLabels,
@@ -105,11 +101,6 @@ export function TailoredEditableCard({
   const [enhancing, setEnhancing] = useState(false);
   const [previewActive, setPreviewActive] = useState(false);
   const [showEnhanceOptions, setShowEnhanceOptions] = useState(false);
-
-  const handleMic = (text: string) => {
-    if (!onChange) return;
-    onChange(value ? `${value} ${text}` : text);
-  };
 
   const handleEnhance = () => {
     if (!buildEnhanceMessages) return;
@@ -176,13 +167,6 @@ export function TailoredEditableCard({
         >
           {editable && (
             <>
-              <SpeechButton
-                mode="batch"
-                language={micLanguage}
-                micIcon="/icons/mic.svg"
-                onTranscript={handleMic}
-                aria-label={labels.mic}
-              />
               <Button
                 unstyled
                 type="button"

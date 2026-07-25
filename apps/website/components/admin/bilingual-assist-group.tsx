@@ -16,11 +16,7 @@ import {
   PARAGRAPH_LENGTH_STEPS,
   PARAGRAPH_COUNT_STEPS,
 } from "./paragraph-options";
-import {
-  SpeechFieldButton,
-  buildEnhanceMessages,
-  buildTranslateMessages,
-} from "./field-assist";
+import { buildEnhanceMessages, buildTranslateMessages } from "./field-assist";
 
 /**
  * One ES/EN field pair. `esKey`/`enKey` are the `values` keys; the EN key is the
@@ -217,13 +213,6 @@ export function BilingualAssistGroup({ pairs, values, onChange }: Props) {
             {isEnglish ? t("langEnglish") : t("langSpanish")}
           </label>
           <Box display="flex" alignItems="center" gap={12}>
-            {isTextarea && (
-              <SpeechFieldButton
-                fieldKey={fieldKey}
-                getFieldValue={() => String(values[fieldKey] ?? "")}
-                onChange={onChange}
-              />
-            )}
             {isTextarea && (
               <Button
                 unstyled

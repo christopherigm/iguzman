@@ -10,11 +10,11 @@
     "./*": "./src/*.ts"
   },
   "dependencies": {
-    "next-intl": "^4.13.0"
+    "next-intl": "^4.13.4"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
-    "next": "16.3.0-canary.66",
+    "next": "16.2.11",
     "typescript": "6.0.3"
   }
 }

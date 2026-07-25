@@ -9,7 +9,6 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Select } from "@repo/ui/core-elements/select";
 import { Switch } from "@repo/ui/core-elements/switch";
-import { SpeechButton } from "@repo/ui/core-elements/speech-button";
 import {
   updateApplication,
   ApplicationError,
@@ -236,27 +235,13 @@ export function ApplicationEditForm({ app, onSaved, onCancel }: Props) {
             />
           </Box>
           <Box>
-            <Box
-              display="flex"
-              alignItems="center"
-              justifyContent="space-between"
+            <Typography
+              variant="body"
+              color="var(--muted-foreground, #6b7280)"
               marginBottom={6}
             >
-              <Typography
-                variant="body"
-                color="var(--muted-foreground, #6b7280)"
-              >
-                {t("notesLabel")}
-              </Typography>
-              <SpeechButton
-                mode="batch"
-                language="en"
-                micIcon="/icons/mic.svg"
-                onTranscript={(text) =>
-                  setNotes((prev) => (prev ? `${prev} ${text}` : text))
-                }
-              />
-            </Box>
+              {t("notesLabel")}
+            </Typography>
             <TextInput
               multirow
               rows={3}

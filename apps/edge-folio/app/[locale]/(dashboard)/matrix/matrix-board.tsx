@@ -12,7 +12,6 @@ import { Badge } from "@repo/ui/core-elements/badge";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Toast } from "@repo/ui/core-elements/toast";
 import { Select } from "@repo/ui/core-elements/select";
-import { SpeechButton } from "@repo/ui/core-elements/speech-button";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Card } from "@repo/ui/core-elements/card";
 import {
@@ -138,10 +137,6 @@ function BulletForm({
   };
 
   // ── Voice input ──────────────────────────────────────────────────────────────
-  const handleTranscript = useCallback((transcript: string) => {
-    setText((current) => (current ? `${current} ${transcript}` : transcript));
-  }, []);
-
   // ── Form submit ──────────────────────────────────────────────────────────────
   function toggleSkill(id: number) {
     setSelectedSkillIds((prev) =>
@@ -189,17 +184,12 @@ function BulletForm({
         />
       )}
       <form ref={formRef} onSubmit={handleSubmit} className="matrix__add-form">
-        {/* Label row with voice + enhance buttons */}
+        {/* Label row with enhance button */}
         <Box className="matrix__field-label-row">
           <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {t("textLabel")}
           </Typography>
           <Box display="flex" alignItems="center" gap={6}>
-            <SpeechButton
-              language={locale === "es" ? "es" : "en"}
-              onTranscript={handleTranscript}
-              micIcon="/icons/mic.svg"
-            />
             <Button
               unstyled
               type="button"

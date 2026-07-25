@@ -97,9 +97,38 @@ See `apps/help/CLAUDE.md` for the full inventory: which scripts map to which con
 ## Key Conventions
 
 - **Workspace dependencies** use `workspace:*` protocol: `"@repo/ui": "workspace:*"`
-- **Next.js apps** use standalone output (`output: "standalone"`) for containerization, are PWA-enabled via `@ducanh2912/next-pwa`, and use `next-intl` for i18n (locale routing in `@repo/i18n`). Smart TV apps (Tizen) are the exception - Vite SPAs with their own lightweight i18n provider; see below.
+- **Next.js apps** use standalone output (`output: "standalone"`) for containerization, are PWA-enabled via `serwist` / `@serwist/next`, and use `next-intl` for i18n (locale routing in `@repo/i18n`). Smart TV apps (Tizen) are the exception - Vite SPAs with their own lightweight i18n provider; see below.
+- **Next.js is pinned to an exact stable version** (currently `16.2.11`) in every app and in `@repo/auth` / `@repo/i18n`. Do not move it to a `canary` build: only stable releases are supported for production traffic, and a canary pin in the root overrides forces every app onto it at once.
 - **ESLint is zero-tolerance**: `--max-warnings 0` - all warnings are treated as errors
 - **Node.js >= 18** required
+
+### Dependency security pins - keep the two override lists in sync
+
+Transitive-dependency CVEs are pinned with pnpm `overrides`, which are deliberately
+duplicated in **two** places:
+
+| File                 | Read by                                          |
+| -------------------- | ------------------------------------------------ |
+| `package.json` → `pnpm.overrides` | pnpm 9 (what `packageManager` pins) |
+| `pnpm-workspace.yaml` → `overrides` | pnpm 10 and 11                    |
+
+**Do not delete either copy.** pnpm 9 ignores the YAML file, and pnpm 10+ ignores the
+`pnpm` field in `package.json` (warning on every command, without failing the install) -
+so dropping one silently un-pins every CVE for whoever runs the other version. When you
+add, change, or remove a pin, edit **both** lists and re-run `pnpm audit`.
+
+Two rules for writing a pin:
+
+- **Scope it to the vulnerable range** (`fast-uri@<3.1.4`), so it stops applying by
+  itself once every dependent has moved past it.
+- **Cap the replacement at the current major** (`">=3.1.4 <4"`). An open-ended `">="`
+  resolves to the newest release and will drag consumers across a major they don't
+  support - which is how `fast-uri` 4.x, `js-yaml` 5.x and `@babel/core` 8.x got pulled
+  in the first time these were written.
+
+Note that `next` bundles its own `postcss` and loads `sharp` as an optional dependency
+for `next/image`, so those two can **only** be patched from the override lists - adding
+them to an app's own `dependencies` does not affect what Next itself resolves.
 
 ## Smart TV Apps (Tizen)
 

@@ -16,7 +16,7 @@
     "react-dom": ">=19"
   },
   "dependencies": {
-    "@noriginmedia/norigin-spatial-navigation": "^3.2.0"
+    "@noriginmedia/norigin-spatial-navigation": "^3.2.1"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

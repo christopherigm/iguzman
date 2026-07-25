@@ -1,3 +1,44 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Security pins for transitive dependencies, from the GitHub Advisory DB.
+#
+# These live here rather than in package.json's "pnpm" field: pnpm 11 no longer
+# reads that field and silently ignores it (it warns on every command), which
+# would drop every pin below without failing the install. See
+# https://pnpm.io/settings.
+#
+# Each entry is scoped to the vulnerable range, so it stops applying on its own
+# once every dependent has moved past it. Re-check with `pnpm audit` before
+# removing any entry.
+overrides:
+  # Bounds are capped to the current major on purpose: an open-ended ">=" pin
+  # resolves to the newest release and would drag consumers across a major
+  # (fast-uri 4.x, js-yaml 5.x, @babel/core 8.x) that they do not support.
+  #
+  # GHSA-4x5r-pxfx-6jf8 - arbitrary file read via sourceMappingURL (via @vitejs/plugin-react)
+  "@babel/core@<7.29.6": ">=7.29.6 <8"
+  # Deprecated 1.3.0: "Potential CWE-502 - Update to 1.3.1 or higher" (via react-markdown)
+  "@ungap/structured-clone@<1.3.1": ">=1.3.1"
+  # Kept from the original pin set; matches what every app declares.
+  "@swc/helpers": ">=0.5.23"
+  "ajv@<6.14.0": "^6.14.0"
+  # GHSA-mh99-v99m-4gvg / GHSA-3jxr-9vmj-r5cp - DoS via unbounded brace expansion (via eslint)
+  "brace-expansion@<5.0.8": ">=5.0.8"
+  # GHSA-v2hh-gcrm-f6hx + 3 others - path traversal / host confusion (via ajv, fastify)
+  "fast-uri@<3.1.4": ">=3.1.4 <4"
+  # GHSA-c96f-x56v-gq3h - HTTP/2 DDoS (via fastify, in the scraper request path)
+  "find-my-way@<9.7.0": ">=9.7.0"
+  # GHSA-52cp-r559-cp3m - quadratic CPU via YAML merge keys (via eslint)
+  "js-yaml@<4.3.0": ">=4.3.0 <5"
+  "minimatch@<10.2.3": ">=10.2.3"
+  "picomatch@<2.3.2": "2.3.2"
+  "picomatch@>=4.0.0 <4.0.4": "4.0.4"
+  # GHSA-r28c-9q8g-f849 / GHSA-6g55-p6wh-862q - arbitrary .map file disclosure.
+  # next bundles its own postcss, so this is the only way to patch it.
+  "postcss@<8.5.18": ">=8.5.18"
+  # GHSA-f88m-g3jw-g9cj - inherited libvips CVEs. next declares sharp ^0.34.5 as an
+  # optional dep and loads it for next/image optimization in every app, so the fix
+  # has to come from here rather than from each app's own dependency.
+  "sharp@<0.35.3": ">=0.35.3"

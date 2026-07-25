@@ -3,10 +3,9 @@
 import { useCallback, useState } from "react";
 import { usePathname } from "@repo/i18n/navigation";
 import Link from "next/link";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Navbar } from "@repo/ui/core-elements/navbar";
 import type { NavbarProps } from "@repo/ui/core-elements/navbar";
-import { SpeechButton } from "@repo/ui/core-elements/speech-button";
 import { Button } from "@repo/ui/core-elements/button";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Box } from "@repo/ui/core-elements/box";
@@ -34,8 +33,6 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
   const showCredits = !creditsHiddenPaths?.includes(pathname);
   const t = useTranslations("Navbar");
   const tCommon = useTranslations("Common");
-  const locale = useLocale();
-  const whisperLang = locale.slice(0, 2);
   const searchQuery = useSearchQuery();
   const creditsBalance = useCreditsBalance();
   const [modalOpen, setModalOpen] = useState(false);
@@ -61,12 +58,6 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
   const handleQueryChange = useCallback((value: string) => {
     setModalQuery(value);
     setSearchQuery(value);
-  }, []);
-
-  const handleTranscript = useCallback((text: string) => {
-    const cleaned = text.replace(/[.,!?]+$/, "");
-    setModalQuery(cleaned);
-    setSearchQuery(cleaned);
   }, []);
 
   // These handlers call the external search-store setter, which the React
@@ -138,21 +129,11 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
           okLabel={tCommon("ok")}
           cancelLabel={tCommon("cancel")}
         >
-          <Box display="flex" flexDirection="column" gap={12}>
-            <TextInput
-              label={t("searchModal.inputLabel")}
-              value={modalQuery}
-              onChange={handleQueryChange}
-            />
-            <Box display="flex" justifyContent="center">
-              <SpeechButton
-                mode="batch"
-                language={whisperLang}
-                onTranscript={handleTranscript}
-                micIcon="/icons/mic.svg"
-              />
-            </Box>
-          </Box>
+          <TextInput
+            label={t("searchModal.inputLabel")}
+            value={modalQuery}
+            onChange={handleQueryChange}
+          />
         </ConfirmationModal>
       )}
     </>

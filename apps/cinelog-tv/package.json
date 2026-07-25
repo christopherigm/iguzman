@@ -12,9 +12,9 @@
   },
   "dependencies": {
     "@repo/ui-tv": "workspace:*",
-    "@noriginmedia/norigin-spatial-navigation": "^3.2.0",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
+    "@noriginmedia/norigin-spatial-navigation": "^3.2.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "react-router-dom": "^6.28.0"
   },
   "devDependencies": {

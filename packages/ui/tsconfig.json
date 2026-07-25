@@ -4,7 +4,13 @@
     "outDir": "dist",
     "rootDir": "src",
     "module": "ESNext",
-    "moduleResolution": "Bundler"
+    "moduleResolution": "Bundler",
+    // Declared explicitly: `palette-provider.tsx` reads `process.env.NODE_ENV`,
+    // and the global `process` type used to reach this program only as a side
+    // effect of a type reference inside @huggingface/transformers. That package
+    // is gone, so the dependency on @types/node is now stated outright rather
+    // than inherited by accident.
+    "types": ["node", "react", "react-dom"]
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]

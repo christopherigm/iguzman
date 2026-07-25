@@ -24,14 +24,14 @@
     "@repo/i18n": "workspace:*",
     "@repo/ui": "workspace:*",
     "@simplewebauthn/browser": "^13.3.0",
-    "next-intl": "^4.13.0"
+    "next-intl": "^4.13.4"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^26.0.0",
+    "@types/node": "^26.1.1",
     "@types/react": "19.2.17",
-    "next": "16.3.0-canary.66",
-    "react": "^19.2.7",
+    "next": "16.2.11",
+    "react": "^19.2.8",
     "typescript": "6.0.3"
   }
 }

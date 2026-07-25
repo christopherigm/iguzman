@@ -1,57 +1,13 @@
 "use client";
 
-import { useRef, useCallback, useEffect } from "react";
-import { SpeechButton } from "@repo/ui/core-elements/speech-button";
 import { type LlmMessage } from "@repo/ui/use-llm";
 import { PARAGRAPH_WORD_COUNTS } from "./paragraph-options";
 
-// Shared field-assist helpers (speech dictation + LLM enhance/translate prompts).
+// Shared field-assist helpers (LLM enhance/translate prompts).
 //
 // Extracted from `admin-form.tsx` so the flat admin form and the standalone
 // bilingual groups (e.g. the System page's Spotlight section) build identical
-// prompts and dictate the same way, rather than each carrying its own copy.
-
-// ── SpeechFieldButton ──────────────────────────────────────────────────────
-//
-// Stable mic button for a single text field. Uses refs so `onTranscript`
-// identity never changes across renders, preventing SpeechButton's effect from
-// re-firing after the parent updates values in response to a transcript (which
-// would cause an infinite append loop). The dictation language follows the
-// field key: an `en_`-prefixed field dictates in English, everything else in
-// Spanish.
-
-export function SpeechFieldButton({
-  fieldKey,
-  getFieldValue,
-  onChange,
-}: {
-  fieldKey: string;
-  getFieldValue: () => string;
-  onChange: (key: string, value: unknown) => void;
-}) {
-  const onChangeRef = useRef(onChange);
-  const getValueRef = useRef(getFieldValue);
-  useEffect(() => {
-    onChangeRef.current = onChange;
-    getValueRef.current = getFieldValue;
-  });
-
-  const handleTranscript = useCallback(
-    (text: string) => {
-      const current = getValueRef.current();
-      onChangeRef.current(fieldKey, current ? `${current} ${text}` : text);
-    },
-    [fieldKey], // fieldKey is stable per mounted instance
-  );
-
-  return (
-    <SpeechButton
-      language={fieldKey.startsWith("en_") ? "en" : "es"}
-      onTranscript={handleTranscript}
-      micIcon="/icons/mic.svg"
-    />
-  );
-}
+// prompts, rather than each carrying its own copy.
 
 // ── LLM enhance helpers ────────────────────────────────────────────────────
 

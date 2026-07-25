@@ -20,11 +20,7 @@ import {
   PARAGRAPH_LENGTH_STEPS,
   PARAGRAPH_COUNT_STEPS,
 } from "./paragraph-options";
-import {
-  SpeechFieldButton,
-  buildEnhanceMessages,
-  buildTranslateMessages,
-} from "./field-assist";
+import { buildEnhanceMessages, buildTranslateMessages } from "./field-assist";
 
 // ── Pair group label ───────────────────────────────────────────────────────
 
@@ -657,19 +653,10 @@ export function AdminForm({
                           )}
                         </label>
 
-                        {/* ── Action buttons (mic, enhance, translate) ── */}
+                        {/* ── Action buttons (enhance, translate) ── */}
                         {(field.type === "textarea" ||
                           isTranslatable(field)) && (
                           <Box display="flex" alignItems="center" gap={12}>
-                            {field.type === "textarea" && (
-                              <SpeechFieldButton
-                                fieldKey={field.key}
-                                getFieldValue={() =>
-                                  String(values[field.key] ?? "")
-                                }
-                                onChange={onChange}
-                              />
-                            )}
                             {field.type === "textarea" && (
                               <Button
                                 unstyled

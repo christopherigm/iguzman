@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { Button } from "@repo/ui/core-elements/button";
@@ -39,11 +39,7 @@ function toggleId(
 export function ReviewTailorSection({ profile, exportCtl, workflow }: Props) {
   const t = useTranslations("ApplicationDetailPage");
   const tCommon = useTranslations("Common");
-  const locale = useLocale();
-  const micLang: "en" | "es" = locale === "es" ? "es" : "en";
-
   const editCardLabels = {
-    mic: t("tailoredMicLabel"),
     enhance: t("tailoredEnhanceLabel"),
     stop: t("tailoredEnhanceStop"),
     discard: t("tailoredEnhanceDiscard"),
@@ -390,7 +386,6 @@ export function ReviewTailorSection({ profile, exportCtl, workflow }: Props) {
               onChange={setProfessionalSummary}
               rows={8}
               ariaLabel={t("professionalSummaryLabel")}
-              micLanguage={micLang}
               buildEnhanceMessages={buildSummaryEnhance}
               enhanceWithOptions
               enhanceOptionsLabels={enhanceOptionsLabels}
@@ -478,7 +473,6 @@ export function ReviewTailorSection({ profile, exportCtl, workflow }: Props) {
                 }
                 rows={5}
                 ariaLabel={t(`categories.${cat}`)}
-                micLanguage={micLang}
                 buildEnhanceMessages={buildBulletEnhance}
                 enhanceWithOptions
                 enhanceOptionsLabels={enhanceOptionsLabels}
@@ -521,7 +515,6 @@ export function ReviewTailorSection({ profile, exportCtl, workflow }: Props) {
                         }
                         rows={6}
                         ariaLabel={roleTitle || t("tailoredWorkExpTitle")}
-                        micLanguage={micLang}
                         buildEnhanceMessages={buildDescriptionEnhance}
                         enhanceWithOptions
                         enhanceOptionsLabels={enhanceOptionsLabels}
@@ -571,7 +564,6 @@ export function ReviewTailorSection({ profile, exportCtl, workflow }: Props) {
                         }
                         rows={6}
                         ariaLabel={projName || t("tailoredProjectsTitle")}
-                        micLanguage={micLang}
                         buildEnhanceMessages={buildDescriptionEnhance}
                         enhanceWithOptions
                         enhanceOptionsLabels={enhanceOptionsLabels}

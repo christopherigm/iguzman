@@ -15,7 +15,6 @@ import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Select } from "@repo/ui/core-elements/select";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { Toast } from "@repo/ui/core-elements/toast";
-import { SpeechButton } from "@repo/ui/core-elements/speech-button";
 import {
   StreamingEnhancePanel,
   type StreamingEnhanceHandle,
@@ -168,12 +167,6 @@ function WorkExperienceForm({
   };
 
   // ── Voice input ──────────────────────────────────────────────────────────────
-  const handleTranscript = useCallback((transcript: string) => {
-    setDescription((current) =>
-      current ? `${current} ${transcript}` : transcript,
-    );
-  }, []);
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!isValid) return;
@@ -290,17 +283,12 @@ function WorkExperienceForm({
           <Typography variant="body">{t("isCurrentLabel")}</Typography>
         </Box>
 
-        {/* Description label row with voice + enhance buttons */}
+        {/* Description label row with enhance button */}
         <Box className="work-exp__field-label-row">
           <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {t("descriptionLabel")}
           </Typography>
           <Box display="flex" alignItems="center" gap={6}>
-            <SpeechButton
-              language={locale === "es" ? "es" : "en"}
-              onTranscript={handleTranscript}
-              micIcon="/icons/mic.svg"
-            />
             <Button
               unstyled
               type="button"
@@ -603,12 +591,6 @@ function ProjectForm({
   };
 
   // ── Voice input ──────────────────────────────────────────────────────────────
-  const handleTranscript = useCallback((transcript: string) => {
-    setDescription((current) =>
-      current ? `${current} ${transcript}` : transcript,
-    );
-  }, []);
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!isValid) return;
@@ -764,17 +746,12 @@ function ProjectForm({
           )}
         </Box>
 
-        {/* Description label row with voice + enhance buttons */}
+        {/* Description label row with enhance button */}
         <Box className="work-exp__field-label-row">
           <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {t("projectDescriptionLabel")}
           </Typography>
           <Box display="flex" alignItems="center" gap={6}>
-            <SpeechButton
-              language={locale === "es" ? "es" : "en"}
-              onTranscript={handleTranscript}
-              micIcon="/icons/mic.svg"
-            />
             <Button
               unstyled
               type="button"

@@ -14,7 +14,6 @@ import { Badge } from "@repo/ui/core-elements/badge";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Select } from "@repo/ui/core-elements/select";
 import { Switch } from "@repo/ui/core-elements/switch";
-import { SpeechButton } from "@repo/ui/core-elements/speech-button";
 import { Toast } from "@repo/ui/core-elements/toast";
 import {
   StreamingEnhancePanel,
@@ -250,14 +249,6 @@ function EducationForm({
             {t("descriptionLabel")}
           </Typography>
           <Box display="flex" alignItems="center" gap={6}>
-            <SpeechButton
-              mode="batch"
-              language="en"
-              onTranscript={(text) =>
-                setDescription((prev) => (prev ? `${prev} ${text}` : text))
-              }
-              micIcon="/icons/mic.svg"
-            />
             <Button
               unstyled
               type="button"

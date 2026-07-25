@@ -10,7 +10,6 @@ import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { Slider } from "@repo/ui/core-elements/slider";
 import type { SliderStep } from "@repo/ui/core-elements/slider";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
-import { SpeechButton } from "@repo/ui/core-elements/speech-button";
 import { Select } from "@repo/ui/core-elements/select";
 import { Toast } from "@repo/ui/core-elements/toast";
 import {
@@ -82,13 +81,6 @@ export function ProfessionalInfoPanel() {
   }, []);
 
   // Voice input for summary
-  const handleSummaryTranscript = useCallback((transcript: string) => {
-    setContactSummary((current) =>
-      current ? `${current} ${transcript}` : transcript,
-    );
-    setInfoSuccess(false);
-  }, []);
-
   useEffect(() => {
     getProfile()
       .then((p) => {
@@ -291,11 +283,6 @@ export function ProfessionalInfoPanel() {
               {t("summaryLabel")}
             </Typography>
             <Box display="flex" alignItems="center" gap={6}>
-              <SpeechButton
-                language={locale === "es" ? "es" : "en"}
-                onTranscript={handleSummaryTranscript}
-                micIcon="/icons/mic.svg"
-              />
               <Button
                 unstyled
                 type="button"
