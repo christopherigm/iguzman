@@ -13,13 +13,6 @@
       "placeholder": "Nous préparons notre histoire. Revenez bientôt pour en savoir plus sur notre équipe et notre travail.",
       "missionHeading": "Notre mission",
       "visionHeading": "Notre vision"
-    },
-    "contact": {
-      "eyebrow": "Contact",
-      "heading": "Contactez-nous",
-      "subtitle": "Prêt à mettre les drones au service de votre prochain projet ? Découvrez notre offre et lançons-nous.",
-      "servicesCta": "Voir les services",
-      "productsCta": "Voir les produits"
     }
   },
   "SuperTortasSite": {
@@ -27,12 +20,6 @@
       "eyebrow": "Préparées minute",
       "viewMenu": "Voir le menu",
       "contact": "Comment commander"
-    },
-    "contact": {
-      "eyebrow": "Passez commande",
-      "heading": "Commandez vos tortas",
-      "subtitle": "Envie d'une torta bien garnie ? Passez commande et nous la préparons minute, avec livraison à Papalotla et alentours.",
-      "menuCta": "Voir le menu"
     }
   },
   "PanOrganicoSite": {
@@ -48,12 +35,6 @@
       "placeholder": "Nous préparons notre histoire. Revenez bientôt pour découvrir comment nous préparons chaque pain à la maison.",
       "missionHeading": "Notre mission",
       "visionHeading": "Notre vision"
-    },
-    "contact": {
-      "eyebrow": "Commandez votre pain",
-      "heading": "Contactez-nous",
-      "subtitle": "Envie d'un pain fraîchement cuit ? Découvrez nos pains bio et lançons votre commande.",
-      "productsCta": "Voir nos pains"
     }
   },
   "CafeAlturaSite": {

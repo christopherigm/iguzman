@@ -101,11 +101,31 @@ exist. The switcher is wired in `app/[locale]/layout.tsx` from `SITE_CONFIGS`
   resolves to. This is what keeps a single deploy cheap at N tenants — never
   defeat it by importing one site's components from another module.
 - `Landing` is required (`/`). `pages` is an optional map of extra top-level
-  routes (`{ "/about": About, "/contact": Contact }`) served by the
+  routes (`{ "/about": About, "/wholesale": Wholesale }`) served by the
   `[locale]/[...sitePath]` catch-all. Paths that collide with a platform route
-  (`auth`, `admin`, `account`, `products`, `services`, `categories`, `blog`,
-  `highlights`) never reach a site — those explicit routes always win, so don't
-  name a site page after one.
+  never reach a site — those explicit routes always win, so don't name a site
+  page after one.
+
+**The reserved platform routes** (everything under `app/[locale]/`, all of which
+a site gets for free and must not re-implement):
+
+| Route                                        | What it already is                                                          |
+| -------------------------------------------- | --------------------------------------------------------------------------- |
+| `auth`, `account`, `admin`                   | Sign-in/up, the customer's profile, the CMS                                 |
+| `products`, `services`, `food`, `categories` | Catalog listing + detail for all three Buyable families                     |
+| `blog`, `highlights`                         | Editorial + highlight detail pages                                          |
+| `cart`, `favorites`, `orders`                | Guest + signed-in cart, hearts, checkout confirmation & history             |
+| **`contact`**                                | The tenant's branches/map, contact email, social links, and a contact form  |
+| **`pos`**                                    | The admin-only point-of-sale till (see "Capabilities a site gets for free") |
+
+**Do not build a site-local `/contact` page.** `app/[locale]/contact/page.tsx` is
+a platform route: it renders the tenant's `Branch` locations (single-location
+view or a grid, with a `LocationMap`), `System.contact_email`, `social_links`
+via `@repo/ui`'s `SocialLinks`, and the shared `ContactForm` — all resolved by
+request host and all self-editable in the CMS (`/admin/branches`,
+`/admin/system`). A `"/contact"` entry in a `pages` map is silently
+unreachable; three sites carried one as dead code until it was removed. Link to
+`/contact` from the landing instead.
 
 ## Registering a site (`registry.ts`)
 
@@ -162,16 +182,20 @@ Build a site by composing the shared, already-tenant-aware components in
 `apps/website/components/` — each resolves the current tenant on its own via the
 `lib/` data helpers, so you rarely fetch data by hand. Core blocks:
 
-| Block (`@/components/…`)                                                             | Renders                             | Backend source                                                               |
-| ------------------------------------------------------------------------------------ | ----------------------------------- | ---------------------------------------------------------------------------- |
-| `hero` (`Hero`)                                                                      | Hero with logo/slogan/video/bg      | `System`                                                                     |
-| `success-stories` (`SuccessStories`)                                                 | Stories slider                      | `getSuccessStories()`                                                        |
-| `company-highlights` (`CompanyHighlights`)                                           | Highlights grid                     | `getHighlights()`                                                            |
-| `catalog-categories` (`CatalogCategories`)                                           | Product/service/menu category tiles | `getProductCategories()` / `getServiceCategories()` / `getMenuCategories()`  |
-| `catalog-items` (`CatalogItems`)                                                     | Featured product/service/food cards | `getFeaturedProducts()` / `getFeaturedServices()` / `getFeaturedMenuItems()` |
-| `buyable-card`, `product-detail`, `service-detail`, `menu-detail`, `category-detail` | Item/detail rendering               | catalog helpers                                                              |
-| `menu-item-customizer`                                                               | Priced-ingredient picker on a dish  | `getMenuItem()` (its `ingredients`)                                          |
-| `section-band` (`SectionBand`)                                                       | Full-width band behind a section    | `System.*_bg` + `System.*_top_divider` / `*_bottom_divider`                  |
+| Block (`@/components/…`)                                                             | Renders                                             | Backend source                                                               |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `hero` (`Hero`)                                                                      | Landing hero, logo/slogan/video/bg                  | `System` (see "The hero is a tenant composition")                            |
+| `section-hero` (`SectionHero`)                                                       | Section/page hero for a **non**-landing page        | `System.hero_text_frame` + `img_brandmark`                                   |
+| `about-intro` (`AboutIntro`)                                                         | "Story + photo" two-column intro                    | passed in resolved (`System.about` / `img_about`) + your own CTAs            |
+| `success-stories` (`SuccessStories`)                                                 | Stories slider                                      | `getSuccessStories()`                                                        |
+| `company-highlights` (`CompanyHighlights`)                                           | Highlights grid                                     | `getHighlights()`                                                            |
+| `catalog-categories` (`CatalogCategories`)                                           | Product/service/menu category tiles                 | `getProductCategories()` / `getServiceCategories()` / `getMenuCategories()`  |
+| `catalog-items` (`CatalogItems`)                                                     | Featured product/service/food cards                 | `getFeaturedProducts()` / `getFeaturedServices()` / `getFeaturedMenuItems()` |
+| `spotlight` (`Spotlight`)                                                            | Editorial promo panel + a hand-picked trio of items | `System.spotlight_*` + `spotlight_items` refs                                |
+| `buyable-card`, `product-detail`, `service-detail`, `menu-detail`, `category-detail` | Item/detail rendering                               | catalog helpers                                                              |
+| `menu-item-customizer`, `nutrition-label`                                            | Priced-ingredient picker + FDA panel                | `getMenuItem()` (its `ingredients`, `portions`)                              |
+| `section-band` (`SectionBand`)                                                       | Full-width band behind a section                    | `System.*_bg` + `System.*_top_divider` / `*_bottom_divider`                  |
+| `empty-catalog-state` (`EmptyCatalogState`)                                          | "Nothing here" + browse CTAs + categories           | `System.*_count`                                                             |
 
 **Wrap a banded section in `SectionBand`, never a bare `<Box styles={{ width:
 "100%", background }}>`.** It carries the tenant's band background _and_ the
@@ -179,6 +203,30 @@ shape-divider notch they picked for the band's top and bottom edges (so the page
 and its watermark show through instead of a hard line). Pass the site's own
 fallback band colour as `background` exactly as before — see any
 `sites/*/landing.tsx` and `apps/website/CLAUDE.md` → "Section background bands".
+
+**`Spotlight` is the block that breaks a landing's card-grid monotony.** It is a
+single bordered panel — label → title → text → CTA on one side, three
+hand-picked catalog cards on the other — so it reads as a different _shape_ from
+the grids around it (see the "variety" point in the quality bar). It is entirely
+DB-driven: the tenant fills the copy and picks the trio in
+`/admin/featured-spotlight`, and the block **renders nothing** until it has both
+a title and at least one still-live item. So `<Spotlight />` is safe to compose
+into any landing before the content exists — it simply stays invisible.
+`cafedealtura` uses it as a wholesale invitation, `panorganico` as a vegan-bread
+showcase; one component, two completely different sections.
+
+**`AboutIntro` is a shared block, not a per-site section.** If a site needs the
+"short story beside a photo" intro, compose `@/components/about-intro` and pass
+the resolved copy/image plus the site's own `Button`/`LinkButton` children —
+don't re-write the two-column split in `sections/`. `bdrone`, `panorganico`,
+`supertortaselchino` (`sections/intro.tsx`) and `cafedealtura`
+(`sections/origin.tsx`) are all thin wrappers around it.
+
+**A non-landing page's hero is `SectionHero`, not `Hero`.** It is the shared
+`@repo/ui` `Hero` plus the tenant's opt-in outline **text frame**
+(`System.hero_text_frame` + `img_brandmark`). The landing hero deliberately does
+**not** go through it — that one is `@/components/hero` — so the frame only ever
+lands on secondary section/detail headings the tenant asked for.
 
 **The two catalog blocks auto-fold all three [Buyable](#the-three-buyable-families--pick-the-right-one) families.** `CatalogCategories` and `CatalogItems` each fetch products, services **and** menu items in one pass, tag every card with its `kind` (`"product" | "service" | "food"`), and render whatever exists — a food-only business gets a menu-only landing from the same block, and a family with zero rows is simply omitted (never a blank section). You do **not** compose a separate "menu" block; put `<CatalogItems />` / `<CatalogCategories />` in the landing and the food shows up when the backend has it.
 
@@ -189,8 +237,9 @@ Data helpers (all in `apps/website/lib/`, all host-resolved + `React.cache`d):
 `getService`, `getProductsByCategory`, `getServicesByCategory`, and — for the
 food family — `getMenuCategories`/`getMenuCategory`, `getFeaturedMenuItems`,
 `getAllMenuItems`, `getMenuItemsByCategory`, `getMenuItem` (all in
-`lib/catalog.ts`). **Prefer these over calling the API directly** — they carry the
-`X-Website-Host` forwarding and caching.
+`lib/catalog.ts`), plus `getBranches` (`lib/branches.ts` — the tenant's physical
+locations, main one first). **Prefer these over calling the API directly** — they
+carry the `X-Website-Host` forwarding and caching.
 
 A site-specific section that has no shared equivalent goes in
 `sites/<slug>/sections/` and may call the same `lib/` helpers. If a section
@@ -200,6 +249,95 @@ Future capabilities (calendar, booking…) will arrive as new blocks + `lib/`
 helpers here; a site opts in by composing them — the site structure does not
 change. (The **menu/food** family already landed this way — see "The three
 Buyable families" above.)
+
+## The hero is a tenant composition — you pick the hierarchy, not the pixels
+
+`@/components/hero` reads **every** visual knob off `System`: the video/image,
+the logo badge (`hero_video_layout`, `hero_logo_background`, `hero_logo_scale`,
+`hero_logo_background_scale`), the darkening (`hero_overlay_style` /
+`hero_overlay_opacity` / `hero_overlay_extent`) and the bottom shape divider
+(`hero_bottom_divider`, `hero_bottom_divider_elevation`). The tenant tunes all of
+it in `/admin/logos-and-styles`, whose preview renders the **real** `Hero` — so
+whatever they see there is what ships.
+
+A site therefore passes only the three **composition** props, which are design
+decisions rather than settings:
+
+```tsx
+<Hero
+  system={system}
+  splitSlogan          // first slogan line = headline, the rest = quieter subline
+  align="start"        // left-align the text, cap its measure (logo stays centred)
+  actions={hasFood && <Button text={…} href="/categories/food" kind="primary" size="lg" />}
+/>
+```
+
+**Never add a `scrim`.** The website wrapper deliberately does not expose the
+shared `Hero`'s `scrim` prop: the CMS preview knows only about the tenant's
+overlay, so any per-site scrim makes the live hero darker than the preview and
+reads to the customer as "the overlay setting is ignored." If a hero needs more
+darkening, that is `hero_overlay_opacity`/`hero_overlay_style` in the CMS (or the
+seed brief), not code. Three sites once carried a scrim; it was removed for
+exactly this reason.
+
+**Gate `actions` on a real count.** `system.product_count` / `service_count` /
+`menu_item_count` decide whether a CTA has anywhere to go — a food site's button
+points at `/categories/food`, and an ungated one lands on an empty listing before
+the catalog is seeded.
+
+## Shape dividers — the seam treatment, and who owns it
+
+`@repo/ui/shape-divider` cuts a **real transparent notch** out of one edge of a
+box (`wave`, `scallop`, `zigzag`, `spikes`, `arches`, `slant`, `inverted-slant`),
+so the page background and its logo watermark show through instead of the section
+meeting its neighbour at a hard horizontal line. Two things follow from "real
+hole": the mask clips **every** descendant, and elevation is a `drop-shadow`
+tracing the notch (a `box-shadow` would be clipped flat).
+
+**In a site you never call it directly.** Both places a landing has a seam are
+already wired to tenant fields:
+
+- the **hero's bottom edge** → `System.hero_bottom_divider` (+ its elevation),
+  applied by `@/components/hero`;
+- each **band's top and bottom edge** → `System.catalog_*_divider` /
+  `highlights_*_divider`, applied by `SectionBand` (bands get both edges because
+  a band has a section above _and_ below; the hero only ever dissolves downward).
+
+So pass the tenant's values straight through — `topDivider={system?.catalog_top_divider}`
+— and let an unset field mean a straight edge. Do **not** hand-write a
+`mask-image`, and do not wrap a section in your own `ShapeDivider` to "add a
+wave": the CMS previews would no longer match the site, which is the same failure
+mode as the hero scrim above.
+
+If the hero uses the `profile` layout, its logo disc is already lifted by the
+notch depth (`shapeDividerEdgeInset`) so it keeps straddling the visible edge —
+never compensate for that again per-site.
+
+## Capabilities a site gets for free (don't rebuild these)
+
+Composing a landing is the whole frontend job. These platform features arrive
+with the app and are already tenant-scoped; a new site inherits them the moment
+its `System` exists:
+
+| Capability                      | Where                                                        | What the site does                                                                                                                   |
+| ------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **Contact & branches**          | `/contact`, `/admin/branches`                                | Link to `/contact`. Never build one (see the reserved-routes table).                                                                 |
+| **Cart & checkout**             | `/cart`, `/orders/[id]`, Stripe                              | Nothing — `BuyableCard` already carries add-to-cart/buy-now. Stripe keys are per-tenant and live in Django.                          |
+| **Guest cart & favorites**      | `localStorage` + `/api/guest/resolve`                        | Nothing. A visitor needs no account to save or buy.                                                                                  |
+| **POS till**                    | `/pos` (admin-only)                                          | Nothing. A counter-sale screen over the same catalog, guarded by `proxy.ts` **and** an `isAdmin` check. Just don't shadow the route. |
+| **Social flyers**               | `/admin/social-posts`                                        | Nothing. The tenant generates Instagram/story flyers for a catalog item from a code-defined template registry.                       |
+| **Per-tenant fonts**            | `System.google_font_url` + `font_display`/`font_body`        | Nothing — the locale layout publishes `--font-display`/`--font-body`. **Never hardcode a `font-family` in a site.**                  |
+| **Watermark & page background** | `System.watermark_*`, `background_light`/`_dark`             | Keep it visible: don't paint an opaque full-width background outside a `SectionBand`.                                                |
+| **Legal pages**                 | `System.privacy_policy`, `terms_and_conditions`, `user_data` | Nothing — the footer links them. Seed the copy, don't write a site page.                                                             |
+
+**The social-flyer templates are shared, not per-site.** `components/admin/social-templates/registry.ts`
+lists six code-defined templates (`classic`, `bold`, `minimal`, `editorial`,
+`sale`, `profile`); the DB stores only the `id`, so adding one is a component
+plus a registry entry with no migration. If a customer wants a new flyer look,
+**add a template to that shared registry** — never fork it into `sites/<slug>/`,
+which the CMS would never see. The `profile` template reuses the same badge
+shapes as the hero (`components/admin/logo-background-options.ts`), so a flyer
+and the hero stay recognisably one brand.
 
 ## Seeding initial content (the data layer)
 
@@ -232,9 +370,25 @@ python manage.py seed_site --brief seed_assets/briefs/<host>.json --reset
   `ingredients` list of priced add-ins/defaults, plus optional `recipe` steps).
   Featured items (`is_featured=True`) surface in `CatalogItems`. Pick the family
   that fits the business (see "The three Buyable families" above) — a **food**
-  business's brief uses `menu_categories`, not `product_categories`. The reference
-  brief `seed_assets/briefs/elpanbueno.com.json` shows the menu shape end
-  to end (`brief.example.json` only illustrates the product/service families).
+  business's brief uses `menu_categories`, not `product_categories`. Its shape is
+  in `seed_assets/README.md`'s schema block (`brief.example.json` illustrates only
+  the product/service families). Note that `briefs/` is git-ignored, so a brief
+  another session wrote is not in the repo — read the README, not a sibling brief.
+- **The brief also carries the brand kit and the design settings**, not just
+  copy. `brief["system"]` copies **any** field in `core/site_payload.SYSTEM_TEXT_FIELDS`
+  verbatim, which now includes the hero composition (`hero_video_layout`,
+  `hero_logo_background`, `hero_logo_scale`, `hero_logo_background_scale`,
+  `hero_text_frame`), the hero overlay trio (`hero_overlay_style` /
+  `_opacity` / `_extent`), every divider (`hero_bottom_divider` + its elevation,
+  `catalog_top_divider` / `catalog_bottom_divider`, `highlights_top_divider` /
+  `highlights_bottom_divider`), the watermark + page background
+  (`watermark_*`, `background_light`, `background_dark`), typography
+  (`google_font_url`, `font_display`, `font_body`), contact details
+  (`contact_email`, `social_links`), the `spotlight_*` promo copy, and the legal
+  pages. **That is why a landing needs no per-site design constants** — seed the
+  tenant's look once and every block, and every CMS preview, agrees with it.
+  Two things the brief cannot seed: `spotlight_items` (item ids are picked in the
+  CMS) and physical `Branch` locations.
 - `--reset` wipes that System's prior seeded content for clean, idempotent
   re-runs. Slugs are auto host-namespaced to avoid global collisions.
 - **Frontend seeding vs. backend seeding:** this skill/command is the _only_
@@ -270,6 +424,14 @@ which **upserts** it by host + slug. Key properties:
   real images in the prod CMS. A re-publish **never clobbers** an image already
   set on an existing record (image fields are left untouched on update); `--reset`
   wipes the System's prior content first for a clean replace.
+- **The design settings travel with the content.** The same
+  `SYSTEM_TEXT_FIELDS` the brief fills are what `export_site` serializes, so the
+  hero composition/overlay/dividers, band dividers, watermark, page backgrounds,
+  fonts, contact details and legal copy all land in prod — the site does not need
+  a second round of CMS tuning to look like the local one.
+- **Two things deliberately stay per-environment:** `spotlight_items` (item ids
+  differ between databases, so the tenant re-picks the trio in the prod CMS — the
+  spotlight _copy_ does publish) and physical `Branch` locations.
 - **It writes to prod, so it confirms first** (skip with `-y`).
 - **Deploy ordering:** the `/api/publish-site/` endpoint ships in the
   **website-api image**, so redeploy website-api _before_ publishing. Then, per
@@ -297,6 +459,17 @@ admin CMS; a later re-publish only refreshes text content, preserving CMS images
   `System.primary_color`** (`app/[locale]/layout.tsx`), so brand color flows into
   every core component automatically — a `<Button kind="primary">` is _already_
   the customer's brand color. Never re-pass the brand color to a core Button.
+- **Never hardcode a `font-family`.** Type is a tenant setting
+  (`System.google_font_url` + `font_display`/`font_body`); the locale layout
+  publishes `--font-display` (headings) and `--font-body` (body), and an unset
+  tenant falls back to the platform Roboto. A site picks the _hierarchy_
+  (`Typography` `variant`), never the typeface.
+- **Never re-derive a tenant setting the CMS previews.** The hero overlay, the
+  hero/band shape dividers, the watermark and the page backgrounds each have a
+  CMS section that renders the **real** component. A site-local reimplementation
+  (a hand-written scrim, a hand-written mask, an opaque page background) makes
+  the live site and the preview disagree, and the customer reports it as "my
+  setting does nothing." Pass the field through; change the field, not the code.
 - **Core-element purity — never restyle `@repo/ui`, extend it in the site.** Use
   core elements with their own props first: `<Button kind="primary" size="lg" />`
   for the brand CTA, `<Button size="lg" />` for a neutral secondary,
@@ -354,9 +527,11 @@ even if it compiles and lints clean. Check every landing against this rubric
 5. **Deliberate structure & variety.** Section order tells the customer's story
    (pick the archetype for their business type — services, restaurant, product,
    portfolio, local); adjacent sections differ in shape and background — not five
-   identical card grids stacked. **Hide sections the customer has no data for**
-   (zero products ⇒ no product section/nav, as the navbar already does) and never
-   invent content to fill a template.
+   identical card grids stacked. Reach for `Spotlight` (a bordered panel, not a
+   grid) and an `AboutIntro` split to break the rhythm, and let the tenant's
+   `SectionBand` dividers soften the seams. **Hide sections the customer has no
+   data for** (zero products ⇒ no product section/nav, as the navbar already
+   does) and never invent content to fill a template.
 6. **Core-element purity & no AI tells.** CTAs are core `Button`/`LinkButton`
    with `kind`/`size` (no `unstyled` hacks); a needed variant is a site-local
    component, never restyled shared code. No `translateY`/`scale` hover lifts, no
@@ -383,14 +558,21 @@ Build & verify locally, then publish to prod:
 1. `sites/<slug>/` scaffolded (`pnpm new-site <domain>`), `hosts`/`systemHost`
    set in `site.config.ts` (`systemHost` = the customer's primary domain).
 2. `registry.ts` entry present (CLI-inserted), `_default` still last.
-3. `landing.tsx` composed from the block library + any `sections/`, props-first.
-4. Extra `pages/` wired into the `SiteModule.pages` map if the customer needs them.
+3. `landing.tsx` composed from the block library + any `sections/`, props-first —
+   including `SectionBand` for banded sections (with the tenant's divider fields
+   passed through) and `<Spotlight />` where the landing needs a non-grid beat.
+4. Extra `pages/` wired into the `SiteModule.pages` map if the customer needs
+   them — and **not** named after a reserved platform route (no site `/contact`;
+   link to the shared one).
 5. Initial content seeded **locally** with **`/seed-site <host>`** (separate
    session) so the landing renders full — hero, stories, highlights, catalog —
-   instead of blank. See "Seeding initial content" above.
+   instead of blank, **and** so the brand kit (fonts, overlay, dividers,
+   watermark, page backgrounds) is set on the `System` rather than in code. See
+   "Seeding initial content" above.
 6. `pnpm check-types --filter=website` and `pnpm lint --filter=website` clean.
 7. Verified by eye in `pnpm dev` via the dev site switcher (select the slug on
-   `127.0.0.1:3000`).
+   `127.0.0.1:3000`) — the landing **and** the free `/contact` page, in light and
+   dark.
 8. **Publish content to prod:** redeploy `website-api`, then
    `pnpm publish-site <host>` (creates the prod `System` + content; images
    skipped). See "Publishing to production" above.

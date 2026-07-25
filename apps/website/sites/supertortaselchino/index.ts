@@ -1,14 +1,14 @@
 import type { SiteModule } from "../types";
 import config from "./site.config";
 import { Landing } from "./landing";
-import { Contact } from "./pages/contact";
 
+// This site has no bespoke extra pages: `/contact` is a platform route
+// (app/[locale]/contact/page.tsx) and always wins over a site's `pages` map. It
+// already renders this tenant's branches, contact email, social links and the
+// shared contact form, all resolved by request host.
 const site: SiteModule = {
   config,
   Landing,
-  pages: {
-    "/contact": Contact,
-  },
   // NOTE: Landing + any pages/ are Server Components — never import from
   // @repo/ui/core-elements/navbar (NavbarSpacer/PageBottomSpacer). To clear the
   // fixed navbar / add bottom spacing, use props-first padding with the shared

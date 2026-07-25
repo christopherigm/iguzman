@@ -36,7 +36,11 @@ the bilingual `en_*` seed fields are decided separately in `/seed-site`.
   and the checklist. Follow it verbatim; **if it conflicts with this skill,
   CLAUDE.md wins.**
 - **`apps/website/sites/_default/`** — the reference implementation (a valid
-  `site.config.ts` + `landing.tsx` + `index.ts`); mirror its structure.
+  `site.config.ts` + `landing.tsx` + `index.ts`); mirror its structure. For a
+  **built** site to copy the shape of, read `sites/supertortaselchino/` (food) or
+  `sites/bdrone/` (services) — both are current: `SectionBand` with the tenant's
+  dividers, `Hero` with `splitSlogan`/`align`/`actions`, `Spotlight`, and an
+  `AboutIntro`-based `sections/intro.tsx`.
 - Root **`CLAUDE.md`** styling rule (props-first, CSS-last) and
   `apps/website/CLAUDE.md` shared utility classes.
 - **`/site-design`** skill — the design playbook (visual quality bar, the
@@ -51,6 +55,35 @@ the bilingual `en_*` seed fields are decided separately in `/seed-site`.
   render via the DB-driven blocks once the System exists, and falls back to
   `_default` until then.
 - You are building **frontend only**; do not add backend models/endpoints here.
+
+## What the site already has — build the landing, not the platform
+
+A `sites/<slug>/` folder is **a landing composition and (rarely) an extra page.**
+Everything else in the customer's site ships with the app, already tenant-scoped
+by request host. Do not rebuild any of it, and do not name a site page after one:
+
+| Reserved route                               | Already there                                                         |
+| -------------------------------------------- | --------------------------------------------------------------------- |
+| `auth`, `account`, `admin`                   | Sign-in/up, customer profile, the CMS                                 |
+| `products`, `services`, `food`, `categories` | Catalog listing + detail for all three Buyable families               |
+| `blog`, `highlights`                         | Editorial + highlight detail pages                                    |
+| `cart`, `favorites`, `orders`                | Guest **and** signed-in cart, hearts, Stripe checkout + order history |
+| **`contact`**                                | Branches/map, contact email, social links, shared contact form        |
+| **`pos`**                                    | Admin-only point-of-sale till over the same catalog                   |
+
+> ⚠ **Never add a `"/contact"` entry to a site's `pages` map.** `/contact` is a
+> platform route and always wins, so the file is silently unreachable — three
+> sites carried one as dead code before it was removed. The shared page already
+> renders this tenant's `Branch` locations, `contact_email`, `social_links` and a
+> working contact form. **Link to `/contact`** from the landing instead.
+
+Two more capabilities worth mentioning to the operator at hand-off, since they
+need no site code at all: **`/pos`** (an admin-only till for counter sales) and
+**`/admin/social-posts`** (a flyer generator that renders a catalog item into one
+of six shared templates for Instagram/stories). If a customer wants a new flyer
+look, that is a component + one entry in the **shared**
+`components/admin/social-templates/registry.ts` — never a fork inside a site,
+which the CMS would never see.
 
 ## The food family — recognise a menu business
 
@@ -102,10 +135,57 @@ caterer is a **menu** business — its catalog is `MenuItem`s (base price + pric
    layout already drives `--accent` from the tenant brand — no `unstyled` hacks).
    Keep it responsive, theme-aware, no purple defaults, no `translateY` hovers,
    no gradient soup.
+
+   **Four things the current block library gives you — use them:**
+
+   - **`SectionBand`, never a bare `<Box styles={{ width: "100%", background }}>`.**
+     It carries the tenant's band colour _and_ the shape-divider notch cut into
+     the band's top and bottom edges, so the page and its watermark show through
+     instead of a hard line. Pass the fields straight through:
+
+     ```tsx
+     <SectionBand
+       background={fitSectionBackground(system?.catalog_items_bg || band)}
+       topDivider={system?.catalog_top_divider}
+       bottomDivider={system?.catalog_bottom_divider}
+     >
+       <Container paddingX={10}>
+         <CatalogItems />
+       </Container>
+     </SectionBand>
+     ```
+
+   - **`<Spotlight />`** — a bordered promo panel (label → title → text → CTA)
+     beside a hand-picked trio of catalog cards. It is the block that stops a
+     landing reading as five stacked grids, it is entirely DB-driven, and it
+     **renders nothing** until the tenant fills the copy and picks items in
+     `/admin/featured-spotlight` — so composing it early costs nothing.
+   - **`AboutIntro`** (`@/components/about-intro`) for the "short story beside a
+     photo" beat: wrap it in a thin `sections/intro.tsx` that resolves `System` +
+     translations and passes your own CTA children. Don't re-write the split.
+   - **The hero's composition props.** `@/components/hero` reads every visual
+     knob (logo badge, overlay, bottom divider) off `System`; a site passes only
+     `splitSlogan` (first slogan line = headline, rest = quieter subline),
+     `align="start"`, and `actions` — **gated on a real count**
+     (`system.menu_item_count` / `product_count` / `service_count`) so the CTA
+     never lands on an empty listing.
+
+   **Two hard don'ts, same reason:** never pass a `scrim`, and never hand-write a
+   `mask-image` or wrap a section in your own `ShapeDivider`. The CMS previews
+   render the _real_ `Hero`/`SectionBand` from the tenant's fields, so any
+   site-local darkening or notch makes the live site disagree with the preview and
+   reads to the customer as "my setting does nothing." Change the field (in the
+   CMS or the seed brief), not the code. Likewise never hardcode a `font-family` —
+   type is `System.google_font_url` + `font_display`/`font_body`.
+
 5. **Extra pages (if briefed).** Add components under `sites/<slug>/pages/` and
    wire them into the `SiteModule.pages` map (`{ "/about": About }`). Never name
-   one after a platform route (auth, admin, account, products, services,
-   categories, blog, highlights). **These pages are Server Components: never
+   one after a reserved platform route — see the table above; **`/contact` in
+   particular is already a platform page**, so a site `pages/contact.tsx` is dead
+   code. In practice `/about` and a genuinely bespoke page (e.g.
+   `cafedealtura`'s `/wholesale`) are all a site needs. A page's own heading hero
+   is **`SectionHero`** (it carries the tenant's opt-in outline text frame), not
+   the landing `Hero`. **These pages are Server Components: never
    import from `@repo/ui/core-elements/navbar` (no `NavbarSpacer`/
    `PageBottomSpacer`).** To clear the fixed navbar / add bottom spacing, use
    props-first padding with the shared CSS vars —
@@ -121,17 +201,30 @@ caterer is a **menu** business — its catalog is `MenuItem`s (base price + pric
    dev-only **site switcher** (bottom-left dropdown, development only) to select
    this site — it sets the `__dev_site` cookie so the local host resolves to the
    new folder instead of `_default`. (Production still resolves purely by host.)
-7. **Populate initial content (separate call).** This skill builds the
-   **frontend only** — the landing renders blank until the backend `System` +
-   stories/highlights/catalog exist. Hand off to the **`/seed-site`** skill **in a
-   fresh Claude session** to run the business-strategy interview and seed that
-   content (it writes a brief and runs `website-api`'s `seed_site` command, using
-   the `seed_assets/` placeholder pool). Keeping it a separate call stops the long
-   interview transcript from eating this build's context. Tell the operator:
+7. **Populate initial content _and the brand kit_ (separate call).** This skill
+   builds the **frontend only** — the landing renders blank until the backend
+   `System` + stories/highlights/catalog exist. Hand off to the **`/seed-site`**
+   skill **in a fresh Claude session** to run the business-strategy interview and
+   seed that content (it writes a brief and runs `website-api`'s `seed_site`
+   command, using the `seed_assets/` placeholder pool). Keeping it a separate call
+   stops the long interview transcript from eating this build's context.
+
+   Note this is where the site's **look** gets set too, not just its words: the
+   brief fills the typography, hero overlay + bottom divider, the two bands'
+   dividers, the watermark and the page backgrounds on the `System`. So if the
+   landing you just built looks flat (hard section seams, default Roboto, an
+   unreadable hero), that is a seeding step, not a code change. Note anything
+   specific you want for this business and pass it along with:
    _"run `/seed-site <domain>` in a new session to populate the landing."_
+
 8. **Hand off the domain step.** Remind the operator that a real public domain
    also needs its `System.host` created and `pnpm sync-website-hosts` run so the
    ingress routes it to this app.
+9. **Hand off the free capabilities.** Tell the operator what the customer now
+   has without asking: the shared **`/contact`** page (fill it by adding branches
+   in `/admin/branches` + contact email/social links in the CMS), **`/pos`** for
+   counter sales, and **`/admin/social-posts`** for Instagram/story flyers. These
+   are frequently assumed to be missing because they are not on the landing.
 
 ## Notes
 

@@ -13,13 +13,6 @@
       "placeholder": "Estamos preparando nuestra historia. Vuelve pronto para conocer a nuestro equipo y lo que hacemos.",
       "missionHeading": "Nuestra misión",
       "visionHeading": "Nuestra visión"
-    },
-    "contact": {
-      "eyebrow": "Contacto",
-      "heading": "Ponte en contacto",
-      "subtitle": "¿Listo para poner los drones a trabajar en tu próximo proyecto? Explora lo que ofrecemos y comencemos.",
-      "servicesCta": "Ver servicios",
-      "productsCta": "Ver productos"
     }
   },
   "SuperTortasSite": {
@@ -27,12 +20,6 @@
       "eyebrow": "Hechas al momento",
       "viewMenu": "Ver el menú",
       "contact": "Cómo pedir"
-    },
-    "contact": {
-      "eyebrow": "Haz tu pedido",
-      "heading": "Pide tus tortas",
-      "subtitle": "¿Se te antoja una torta bien servida? Haz tu pedido y te la preparamos al momento, con entrega en Papalotla y alrededores.",
-      "menuCta": "Ver el menú"
     }
   },
   "PanOrganicoSite": {
@@ -48,12 +35,6 @@
       "placeholder": "Estamos preparando nuestra historia. Vuelve pronto para conocer cómo horneamos cada pan en casa.",
       "missionHeading": "Nuestra misión",
       "visionHeading": "Nuestra visión"
-    },
-    "contact": {
-      "eyebrow": "Pide tu pan",
-      "heading": "Ponte en contacto",
-      "subtitle": "¿Se te antoja un pan recién horneado? Descubre nuestros panes orgánicos y hagamos tu pedido.",
-      "productsCta": "Ver nuestros panes"
     }
   },
   "CafeAlturaSite": {

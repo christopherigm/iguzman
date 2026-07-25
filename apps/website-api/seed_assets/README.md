@@ -41,7 +41,45 @@ fields at any new file you drop in here.
     "google_font_url": "https://fonts.googleapis.com/css2?family=A&family=B&display=swap",
     "font_display": "A", "font_body": "B",   // headings / body; both must be in the URL above
     "video_link": "https://youtube...",     // optional; falls back to links.json
-    // Any `en_*` mirror field (en_about, en_site_description, …) is copied when present.
+
+    // --- contact details (feed the shared /contact page + the footer) ---
+    "contact_email": "hola@acme.com",
+    "social_links": [ { "platform": "instagram", "url": "https://..." } ],
+    // NOTE: physical `Branch` locations are NOT seedable — add them in /admin/branches.
+
+    // --- hero composition & darkening (all optional; CMS-tunable) ---
+    "hero_video_layout": "default",          // default | none | profile
+    "hero_logo_background": "none",          // badge shape behind the hero logo
+    "hero_logo_scale": 100, "hero_logo_background_scale": 100,   // whole percent, 30-100
+    "hero_overlay_style": "bottom",          // none | full | bottom | top | both | vignette
+    "hero_overlay_opacity": 75,              // whole percent — how DARK it gets
+    "hero_overlay_extent": 50,               // whole percent — how FAR it reaches (no effect on `full`)
+    "hero_text_frame": false,                // outline frame on SECTION heroes, not the landing
+
+    // --- shape dividers: wave|scallop|zigzag|spikes|arches|slant|inverted-slant|none ---
+    "hero_bottom_divider": "none", "hero_bottom_divider_elevation": 10,
+    "catalog_top_divider": "none", "catalog_bottom_divider": "none",
+    "highlights_top_divider": "none", "highlights_bottom_divider": "none",
+
+    // --- watermark + page background (values below are the model defaults) ---
+    "watermark_enabled": false, "watermark_rotation": -12,   // degrees, -45..45
+    "watermark_size": 120,          // drawn width of one logo, px
+    "watermark_spacing": 70,        // empty space between logos, px
+    "watermark_opacity": 4,         // whole percent, 1-25
+    "watermark_intercalated": false,   // neighbours lean opposite ways
+    "watermark_show_logo": true,       // tiles img_logo
+    "watermark_show_brandmark": false, // tiles img_brandmark (needs one uploaded)
+    "background_light": "#e5e5e5", "background_dark": "#3c3c3c",
+
+    // --- spotlight promo panel (the trio of ITEMS is picked in the CMS, not seeded) ---
+    "spotlight_enabled": true, "spotlight_label": "...", "spotlight_title": "...",
+    "spotlight_text": "...", "spotlight_button_label": "...", "spotlight_button_link": "/...",
+
+    // --- legal copy the footer links ---
+    "privacy_policy": "...", "terms_and_conditions": "...", "user_data": "...",
+
+    // Any `en_*` mirror field (en_about, en_site_description, en_spotlight_title, …)
+    // is copied when present.
     "assets": {                              // filenames in this folder; all optional
       "img_logo": "logo.png", "img_logo_hero": "logo-hero.png",
       "img_favicon": "favicon.png", "img_manifest": "manifest.png",
@@ -59,6 +97,14 @@ fields at any new file you drop in here.
 
 Notes:
 
+- **`core/site_payload.SYSTEM_TEXT_FIELDS` is the authoritative list** of what
+  `brief["system"]` may carry — `seed_site` copies **every** field in that tuple
+  verbatim when present, and `export_site`/`publish-site` serialize the same set.
+  The block above is its prose summary; if the two ever disagree, the tuple wins.
+- **Three things the brief deliberately cannot create:** `spotlight_items` (the
+  Spotlight's three picks — item ids are per-database, so they're chosen in
+  `/admin/featured-spotlight`), physical `Branch` locations (`/admin/branches`),
+  and `MenuItem.recipe_steps` (kitchen IP, maintained in the CMS).
 - Products/services/menu items default to `is_featured: true` so they show in
   the `CatalogItems` block (which requests `?featured=true`).
 - `menu_categories` seed the food (MenuItem) family — priced-ingredient

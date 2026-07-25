@@ -119,6 +119,59 @@ quantity}` and nothing else. Everything displayable comes back
   there is no profile to take the tenant from, so Django falls back to the host.
   An _owned_ order stays 404 to anyone but its owner.
 
+## POS - the counter-sale till (`/pos`)
+
+`app/[locale]/pos/` is an **admin-only** point-of-sale screen: a store associate
+rings up a walk-in customer against the same tenant catalog the public site
+sells. It needs no per-site code and no new backend models - it is a platform
+route, like `/cart`.
+
+- **Guarded twice, on purpose.** `proxy.ts` keeps an anonymous visitor off the
+  route; the `session?.isAdmin !== true → notFound()` in `page.tsx` covers what a
+  prefix guard cannot - a _signed-in but ordinary_ customer, who sails past it
+  with a valid session. Neither is what protects the money: Django re-derives
+  both from the token on every call. They decide what is worth rendering.
+- **The whole catalog is loaded once, server-side**, and handed down as one flat
+  `PosCatalogItem[]` (all three Buyable families flattened, names already
+  resolved to the operator's locale). A till runs over a shop's wifi with a queue
+  waiting: it should paint once and then be pure client-side state, not fetch a
+  category per tap.
+- **The basket holds references and display copies, never an authoritative
+  price** - the same rule as `lib/guest-cart.ts`, for the same reason.
+  `POST /api/orders/admin/pos/` re-reads every line out of the catalog and prices
+  it there; if the screen and the server ever disagreed, the server's answer is
+  what is charged.
+- **It is deliberately not persisted.** A counter sale lives for the ninety
+  seconds between ringing it up and taking the money; writing it to
+  `localStorage` would mostly resurrect yesterday's half-finished shift onto
+  today's screen. Don't "improve" this by adding persistence.
+- Use `Button size="xl"` for till controls - that size exists for finger-driven
+  UIs.
+
+## Social posts - the flyer generator (`/admin/social-posts`)
+
+The CMS can render a catalog item into a shareable Instagram/story flyer.
+`SocialPost` (in `core`) stores the item reference, a `template_id` and a
+`format`; **the templates themselves are code, not data.**
+
+- **The template registry is shared and code-defined.**
+  `components/admin/social-templates/registry.ts` lists six self-styled React
+  components (`classic`, `bold`, `minimal`, `editorial`, `sale`, `profile`). The
+  DB stores only the `id`, so **adding a template is a component plus one registry
+  entry - no migration**. Never fork the registry into a `sites/<slug>/` folder;
+  the CMS would never see it, and templates are meant to serve every tenant.
+- **Export is `html-to-image` → JPG, and it is same-origin-sensitive.** Any
+  remote image must be routed through `/_next/image` before it lands in a
+  template, or the canvas is tainted and the export fails. This is the same
+  same-origin constraint as the hero's `logo`-shape mask and the shape divider's
+  `brandmarkUrl`.
+- **The badge shapes come from the shared
+  `components/admin/logo-background-options.ts`**, which the hero's logo-badge
+  picker also reads - so a flyer and the hero stay recognisably one brand. Extend
+  that shared file, not a copy (see "Shared Constants" below).
+- Copy assistance goes through `/api/ai/chat` like the rest of the CMS; there is
+  no provider key in this app.
+
 ## Per-Customer Sites (domain-driven frontend)
 
 This app is **one Next.js app, many customer sites**. Each customer gets a

@@ -13,13 +13,6 @@
       "placeholder": "Wir bereiten unsere Geschichte vor. Schauen Sie bald wieder vorbei, um mehr über unser Team und unsere Arbeit zu erfahren.",
       "missionHeading": "Unsere Mission",
       "visionHeading": "Unsere Vision"
-    },
-    "contact": {
-      "eyebrow": "Kontakt",
-      "heading": "Kontaktieren Sie uns",
-      "subtitle": "Bereit, Drohnen für Ihr nächstes Projekt einzusetzen? Entdecken Sie unser Angebot und lassen Sie uns starten.",
-      "servicesCta": "Leistungen ansehen",
-      "productsCta": "Produkte ansehen"
     }
   },
   "SuperTortasSite": {
@@ -27,12 +20,6 @@
       "eyebrow": "Frisch zubereitet",
       "viewMenu": "Zur Speisekarte",
       "contact": "So bestellst du"
-    },
-    "contact": {
-      "eyebrow": "Jetzt bestellen",
-      "heading": "Bestelle deine Tortas",
-      "subtitle": "Lust auf eine üppige Torta? Bestelle jetzt und wir bereiten sie frisch zu – mit Lieferung in Papalotla und Umgebung.",
-      "menuCta": "Zur Speisekarte"
     }
   },
   "PanOrganicoSite": {
@@ -48,12 +35,6 @@
       "placeholder": "Wir bereiten unsere Geschichte vor. Schauen Sie bald wieder vorbei, um zu erfahren, wie wir jedes Brot zu Hause backen.",
       "missionHeading": "Unsere Mission",
       "visionHeading": "Unsere Vision"
-    },
-    "contact": {
-      "eyebrow": "Brot bestellen",
-      "heading": "Kontaktieren Sie uns",
-      "subtitle": "Lust auf ein frisch gebackenes Brot? Entdecken Sie unsere Bio-Brote und starten wir Ihre Bestellung.",
-      "productsCta": "Unsere Brote ansehen"
     }
   },
   "CafeAlturaSite": {

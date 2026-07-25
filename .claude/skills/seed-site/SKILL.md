@@ -40,10 +40,18 @@ interview.
   records. **This is the source of truth for field names; do not invent fields.**
 - **`apps/website-api/seed_assets/brief.example.json`** — a complete filled
   brief. Copy its shape. **Note:** it illustrates only the product/service
-  families. For a **food** business, copy the menu shape from
-  **`apps/website-api/seed_assets/briefs/elpanbueno.com.json`** (an
-  organic bread maker whose loaves/muffins are `menu_items` with priced
-  `ingredients`).
+  families and only the core copy fields. For a **food** business, take the
+  `menu_categories` shape from the README's schema block. For the design/brand-kit
+  fields, see "Set the look, not just the copy" in Part 2 below.
+- **`apps/website-api/core/site_payload.py` → `SYSTEM_TEXT_FIELDS`** — the
+  definitive list of what `brief["system"]` may contain. `seed_site` copies
+  **every** field in that tuple verbatim when present, so it is the real schema;
+  the README is its prose summary.
+
+> `seed_assets/briefs/` is **git-ignored** — a brief written by another session
+> is not in the repo. Don't go looking for a sibling brief to copy; read the
+> README and `brief.example.json`.
+
 - **`apps/website/sites/CLAUDE.md`** → "Seeding initial content" — how the data
   layer relates to the frontend blocks you are feeding.
 
@@ -86,6 +94,15 @@ to sell.** A landing page seeded from mushy positioning is worthless.
      prices + currency** (CFO: challenge margins/price points that don't add up).
      **First decide which of the three Buyable families this catalog is** (see
      the food rule below) — it changes which brief section you write.
+   - **Promo beat (the Spotlight)** — is there one thing they'd push right now: a
+     wholesale invitation, a seasonal line, the vegan range, a bundle? If so you
+     have a `spotlight_*` panel to fill (label, title, text, button label + link);
+     the three items themselves are picked in the CMS, not seeded. If there isn't
+     one, say so and leave the fields out — the block hides itself.
+   - **Where and how to reach them** — a contact email and their real social
+     handles (`contact_email`, `social_links`) fill the shared `/contact` page and
+     the footer. Physical **branches** are seeded separately by the operator in
+     `/admin/branches`; flag that as a to-do rather than inventing addresses.
    - **Voice & brand** — tone, primary/secondary colors, **typeface**, bilingual?
      (fill `en_*` mirror fields if the site serves English + Spanish). On the
      typeface: ask what the brand should _sound_ like in type (editorial and
@@ -153,6 +170,20 @@ a product and you silently throw away ingredient customisation.
      label. Leave the internal recipe out — the seed doesn't populate
      `recipe_steps`.
    - Fill `en_*` fields only when the site is bilingual.
+   - **Fill the promo panel** when the interview found one: `spotlight_enabled`,
+     `spotlight_label`, `spotlight_title`, `spotlight_text`,
+     `spotlight_button_label`, `spotlight_button_link` (+ their `en_*` mirrors).
+     **Do not try to seed `spotlight_items`** — item ids are per-database, so the
+     trio is picked in `/admin/featured-spotlight`; tell the operator to pick it.
+     With no title and no picked items the block renders nothing, which is the
+     right outcome for a business with nothing to push.
+   - **Fill the contact details** — `contact_email` and `social_links` (the
+     tenant's real handles). They feed the shared `/contact` page and the footer.
+     Physical locations are **`Branch` records the brief cannot create**; leave
+     them to `/admin/branches` and say so at hand-off.
+   - **Seed the legal copy** if the operator has it: `privacy_policy`,
+     `terms_and_conditions`, `user_data` (+ `en_*`). The footer links these, so an
+     unseeded site has three dead links.
    - **Set the typography** — `google_font_url` plus `font_display` (headings)
      and `font_body` (body text). One `css2?family=A&family=B&display=swap` URL
      loads both families; the two name fields say which is which, so both names
@@ -170,6 +201,39 @@ a product and you silently throw away ingredient customisation.
        artisan reads well in a soft serif (Fraunces, Bitter) over a quiet
        grotesque (Karla, Source Sans 3); a technical B2B product usually wants
        one neutral sans in two weights.
+
+### Set the look, not just the copy
+
+**The brief is where a site's visual settings live** — `/new-site` deliberately
+hardcodes none of them, because each has a CMS section whose preview renders the
+_real_ component, and a site-local override would make the live page disagree
+with what the customer sees while editing. So a landing that looks flat, hard-
+edged or unreadable is almost always an **unfilled brief**, not a code problem.
+
+Fill these in `brief["system"]` alongside the copy. All of them are optional and
+all have sane defaults — set the ones the business actually calls for, and say
+why in your summary rather than sprinkling them at random.
+
+| Field(s)                                                                                                                                                                           | Decides                                                                                                                                                                                                                         |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hero_overlay_style` (`none`/`full`/`bottom`/`top`/`both`/`vignette`), `hero_overlay_opacity` (0-100), `hero_overlay_extent` (0-100)                                               | How far and how dark the hero photo/video is dimmed. **This is the only hero darkening there is** — raise it when a busy food or landscape photo swallows the slogan. Defaults `bottom`/75/50. `extent` does nothing to `full`. |
+| `hero_video_layout` (`default`/`none`/`profile`), `hero_logo_background`, `hero_logo_scale`, `hero_logo_background_scale`                                                          | How the logo sits over the hero — centred badge, dropped entirely (for a video that already carries the branding), or a profile disc straddling the bottom edge.                                                                |
+| `hero_bottom_divider` (a shape name or `none`), `hero_bottom_divider_elevation` (0-24)                                                                                             | The notch that dissolves the hero into the page below instead of a hard horizontal line.                                                                                                                                        |
+| `catalog_top_divider` / `catalog_bottom_divider`, `highlights_top_divider` / `highlights_bottom_divider`                                                                           | The same notch on each band's **top and bottom** edge (a band has a section above _and_ below).                                                                                                                                 |
+| `catalog_items_bg`, `highlights_bg`                                                                                                                                                | The two bands' background. Keep them neutral — a tinted `--surface-2`, not a brand gradient (see `/site-design`).                                                                                                               |
+| `watermark_enabled`, `watermark_rotation`, `watermark_size`, `watermark_spacing`, `watermark_opacity`, `watermark_intercalated`, `watermark_show_logo`, `watermark_show_brandmark` | The tenant's logo tiled faintly behind every public page. It shows _through_ the band notches, so it pairs with the dividers.                                                                                                   |
+| `background_light`, `background_dark`                                                                                                                                              | The page background per theme (the hero's profile disc is painted with it, so it reads as a hole through the video).                                                                                                            |
+| `hero_text_frame`                                                                                                                                                                  | The outline frame around section/detail page headings (`SectionHero`) — never the landing hero.                                                                                                                                 |
+
+The divider shapes are `wave`, `scallop`, `zigzag`, `spikes`, `arches`, `slant`,
+`inverted-slant` (and `none`). Pick **one** shape and reuse it across the hero
+and both bands — a different notch on every edge is the seam equivalent of
+gradient soup. Match it to the brand: `wave`/`arches` read soft and organic
+(bakery, café, wellness), `slant`/`inverted-slant` read modern and editorial
+(agency, B2B), `scallop` reads hand-made, `spikes`/`zigzag` are loud and rarely
+right. **A straight edge is a legitimate answer** — leave the fields out for a
+site whose calm is the point.
+
 6. **Run the seeder** from `apps/website-api`:
    ```bash
    python manage.py seed_site --brief seed_assets/briefs/<host>.json --reset
@@ -179,8 +243,11 @@ a product and you silently throw away ingredient customisation.
 7. **Verify by eye.** Start the app (`pnpm dev --filter=website`), open
    `http://127.0.0.1:3000/`, and use the **dev-only site switcher** (bottom-left)
    to select this site's slug so the local host resolves to it. Confirm the hero,
-   stories, highlights, and catalog all render populated. Iterate: refine the
-   brief, re-run with `--reset`.
+   stories, highlights, and catalog all render populated, **in both light and
+   dark** — the watermark, page backgrounds and band tints are per-theme and a
+   value that reads well in one can be invisible in the other. Check `/contact`
+   too (it renders the `contact_email`/`social_links` you just seeded). Iterate:
+   refine the brief, re-run with `--reset`.
 
 ## Notes
 
@@ -192,5 +259,19 @@ a product and you silently throw away ingredient customisation.
   of this skill; just point the operator to it when the seed looks good.
 - If the operator later drops real images into `seed_assets/`, point the relevant
   brief `image` fields at them and re-run with `--reset` — no code change.
+- **The design settings publish with the content.** `publish-site` serializes the
+  same `SYSTEM_TEXT_FIELDS`, so the fonts, hero overlay/divider, band dividers,
+  watermark, page backgrounds, contact details and legal copy all reach prod —
+  the customer does not re-tune them by hand. Two exceptions to warn about:
+  `spotlight_items` (per-database ids — re-pick the trio in the prod CMS) and
+  `Branch` locations (per-environment; re-enter in `/admin/branches`).
+- **Three things the brief cannot do**, so hand them to the operator as to-dos
+  when you finish: pick the Spotlight's three items, add the physical branches,
+  and upload real images (the seed uses the placeholder pool, and both a
+  re-publish and the CMS preserve whatever they upload).
 - Do not create Django models/endpoints or edit the frontend here. Content only.
+  If the composition itself needs to change to show this content well, that is a
+  `/new-site` task — but check first whether a **brief field** does it (a hard
+  hero/band seam, a default-Roboto page and an unreadable hero over a photo are
+  all settings, not code).
 - Slugs are auto host-namespaced by the command; never hand-write global slugs.

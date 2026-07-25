@@ -120,6 +120,50 @@ Any hit needs a justification or a fix.
 
 ---
 
+## 2b. The tenant owns the look — you own the composition
+
+The most consequential rule for how a site is built today: **a site's visual
+settings live on the `System` record, not in its code.** The hero's darkening and
+its logo badge, the shape-divider notches on the hero and on both section bands,
+the two bands' background colours, the tiled logo watermark, the per-theme page
+background and the typefaces are all tenant fields, each with a CMS section whose
+preview renders the **real** component.
+
+That gives you two design levers, and you must not confuse them:
+
+| You decide (in code)                                                                                         | The tenant decides (a field)                                                                                               |
+| ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Section **order** and which blocks appear                                                                    | Band **colours** (`catalog_items_bg`, `highlights_bg`)                                                                     |
+| Hero **hierarchy**: `splitSlogan` (headline + quieter subline), `align="start"`, and which CTA sits under it | Hero **darkening** (`hero_overlay_style`/`_opacity`/`_extent`) and the **logo badge** (`hero_video_layout`, `hero_logo_*`) |
+| Whether a section sits in a `SectionBand` at all                                                             | Which **notch shape** each band edge and the hero's bottom edge gets                                                       |
+| Type **hierarchy** (`Typography` `variant`)                                                                  | The **typefaces** (`google_font_url`, `font_display`, `font_body`)                                                         |
+
+**Two hard don'ts follow, and they're the same mistake:**
+
+- **Never pass a `scrim` to the hero** to "help legibility." The website wrapper
+  deliberately doesn't expose that prop. The CMS preview knows only about the
+  tenant's overlay, so a site scrim makes the live hero darker than the preview
+  and reads as "the overlay setting is ignored." Three sites carried one; it was
+  removed. Raise `hero_overlay_opacity` or pick a stronger style instead.
+- **Never hand-write a `mask-image`** or wrap a section in your own
+  `ShapeDivider` to add a wave. Pass the tenant's `*_divider` fields through
+  `SectionBand` and let an unset field mean a straight edge.
+
+So when a landing looks flat — hard seams between sections, default Roboto, an
+unreadable slogan over a busy photo — **the fix is usually a seed/CMS field, not
+code.** Say that out loud to the operator and route it to `/seed-site`, rather
+than compensating in the site folder where the customer can never edit it.
+
+**The dividers are a real design decision, though — advise on them.** Pick _one_
+shape and reuse it across the hero and both bands; a different notch per edge is
+the seam equivalent of gradient soup. `wave`/`arches` read soft and organic
+(bakery, café, wellness); `slant`/`inverted-slant` read modern and editorial
+(agency, B2B); `scallop` reads hand-made; `spikes`/`zigzag` are loud and rarely
+right. **A straight edge is a legitimate answer** for a brand whose calm is the
+point — restraint is the house style.
+
+---
+
 ## 3. The craft rubric — what "well-designed" means here
 
 Score a landing against these. A site should clear all six.
@@ -140,7 +184,13 @@ Score a landing against these. A site should clear all six.
    sections generously.
 5. **Deliberate section order & variety.** The order should tell the customer's
    story (see archetypes), and adjacent sections should differ in shape and
-   background so the eye has rhythm. Alternate plain / `--surface-2` bands.
+   background so the eye has rhythm. Alternate plain / `--surface-2` bands (via
+   `SectionBand`, which also carries the tenant's edge notches). **Two blocks
+   exist specifically to break a run of card grids — use them rather than
+   stacking a fifth grid:** `<Spotlight />` (a bordered promo panel beside a
+   hand-picked trio; DB-driven, invisible until configured, so it costs nothing
+   to compose early) and an `AboutIntro`-based `sections/intro.tsx` (a
+   story-beside-photo split).
 6. **Responsive, theme-aware, accessible.** No horizontal body scroll at any
    width; verify light _and_ dark; every image has real `alt`; headings nest
    correctly; interactive targets are ≥40px.
@@ -183,7 +233,15 @@ customer and compose from the block library (`@/components/*`) + site-local
   **Highlights** (results/amenities) → **Success stories** → prominent booking CTA.
 
 Whatever the type: **hide sections the customer has no data for** (zero products
-⇒ no product nav/section), and never invent content to fill a template.
+⇒ no product nav/section), and never invent content to fill a template. Gate a
+hero CTA on the matching count (`menu_item_count` / `product_count` /
+`service_count`) so it never points at an empty listing.
+
+**Every archetype gets the platform pages for free** — `/contact` (branches, map,
+social links, contact form), `/cart`, `/orders`, `/favorites`, the catalog
+listings, plus `/pos` and `/admin/social-posts` on the admin side. Don't design a
+contact section that duplicates `/contact`; link to it. And don't add a
+`pages/contact.tsx` — the platform route wins and yours would be dead code.
 
 ---
 
@@ -199,6 +257,14 @@ Whatever the type: **hide sections the customer has no data for** (zero products
    dark**, at mobile and desktop widths. Confirm no horizontal scroll and that the
    primary CTA is the tenant's brand color.
 
-The reference exemplar in-repo is **`sites/bdrone/`** (post-refactor): core
-`Button`/`LinkButton` CTAs, neutral `--surface-2` bands for rhythm, no purple, no
-`translateY`. Mirror its restraint.
+The reference exemplars in-repo:
+
+- **`sites/bdrone/`** (services) — core `Button`/`LinkButton` CTAs, neutral
+  `--surface-2` bands for rhythm, no purple, no `translateY`. Mirror its restraint.
+- **`sites/supertortaselchino/`** and **`sites/panorganico/`** (food) — the
+  current shape of a landing: `Hero` with `splitSlogan`/`align="start"` and a
+  count-gated CTA, `SectionBand` fed the tenant's divider fields, `<Spotlight />`
+  breaking the grid run, and an `AboutIntro`-based `sections/intro.tsx`. Their
+  band is `color-mix(in srgb, var(--accent) 6%, var(--surface-2))` — a neutral
+  carrying a few percent of the brand, which resolves per theme and reads warm
+  without becoming a coloured area. Copy that trick, not a gradient.
