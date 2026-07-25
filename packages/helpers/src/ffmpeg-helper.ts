@@ -609,6 +609,40 @@ export interface ScaleDownOptions {
   onProgress?: (pct: number) => void;
 }
 
+export interface CropVideoOptions {
+  /** Absolute path to the input video file. */
+  inputPath: string;
+  /** Absolute path where the output file will be written. */
+  outputPath: string;
+  /** Crop width in source pixels. */
+  cropWidth: number;
+  /** Crop height in source pixels. */
+  cropHeight: number;
+  /** Horizontal offset of the crop rectangle from the left edge, in pixels. */
+  cropX: number;
+  /** Vertical offset of the crop rectangle from the top edge, in pixels. */
+  cropY: number;
+  /** Path to the ffmpeg binary. Defaults to `'ffmpeg'`. */
+  ffmpegBinary?: string;
+  /** Called with a value 0-100 as encoding progresses. */
+  onProgress?: (pct: number) => void;
+}
+
+export interface TrimVideoOptions {
+  /** Absolute path to the input video file. */
+  inputPath: string;
+  /** Absolute path where the output file will be written. */
+  outputPath: string;
+  /** Selection start in seconds, measured from the start of the source. */
+  startSec: number;
+  /** Selection end in seconds, measured from the start of the source. */
+  endSec: number;
+  /** Path to the ffmpeg binary. Defaults to `'ffmpeg'`. */
+  ffmpegBinary?: string;
+  /** Called with a value 0-100 as encoding progresses. */
+  onProgress?: (pct: number) => void;
+}
+
 export interface BurnSubtitlesOptions {
   /** Absolute path to the input video file. */
   inputPath: string;
@@ -1113,6 +1147,139 @@ export async function burnSubtitles(
       }
     }
   }
+
+  return outputPath;
+}
+
+/**
+ * Crops a video to an arbitrary rectangle.
+ *
+ * The rectangle is clamped to the source frame and every side is rounded down
+ * to an even number, since yuv420p cannot encode odd dimensions.
+ *
+ * @returns The resolved `outputPath`.
+ * @throws When ffmpeg exits with a non-zero code.
+ */
+export async function cropVideo(options: CropVideoOptions): Promise<string> {
+  const {
+    inputPath,
+    outputPath,
+    cropWidth,
+    cropHeight,
+    cropX,
+    cropY,
+    ffmpegBinary = DEFAULT_FFMPEG,
+    onProgress,
+  } = options;
+
+  const {
+    width: origW,
+    height: origH,
+    durationSec,
+    fps,
+  } = await probeVideo(inputPath, ffmpegBinary);
+  const estimatedFrames = durationSec > 0 ? durationSec * fps : 0;
+
+  // A non-finite value from an untrusted caller would otherwise reach ffmpeg as
+  // `crop=NaN:…`; fall back to the full frame instead.
+  const num = (v: number, fallback: number) =>
+    Number.isFinite(v) ? Math.max(0, v) : fallback;
+  const even = (v: number) => Math.max(2, Math.floor(v / 2) * 2);
+
+  const frameW = origW > 0 ? origW : num(cropX, 0) + num(cropWidth, 2);
+  const frameH = origH > 0 ? origH : num(cropY, 0) + num(cropHeight, 2);
+
+  const x = Math.max(0, Math.min(even(num(cropX, 0)), frameW - 2));
+  const y = Math.max(0, Math.min(even(num(cropY, 0)), frameH - 2));
+  const w = Math.max(2, Math.min(even(num(cropWidth, frameW)), frameW - x));
+  const h = Math.max(2, Math.min(even(num(cropHeight, frameH)), frameH - y));
+
+  await runFFmpeg(
+    [
+      "-i",
+      inputPath,
+      "-vf",
+      `crop=${w}:${h}:${x}:${y}`,
+      "-c:v",
+      "libx264",
+      "-preset",
+      "fast",
+      "-crf",
+      "23",
+      "-c:a",
+      "copy",
+      "-movflags",
+      "+faststart",
+      outputPath,
+    ],
+    ffmpegBinary,
+    onProgress,
+    estimatedFrames,
+  );
+
+  return outputPath;
+}
+
+/**
+ * Trims a video to the `[startSec, endSec]` window.
+ *
+ * Both streams are re-encoded so the cut lands exactly on the requested
+ * timestamps rather than snapping to the nearest keyframe. `-ss`/`-to` are
+ * placed *after* `-i` for that reason - input seeking would be faster but only
+ * keyframe-accurate.
+ *
+ * @returns The resolved `outputPath`.
+ * @throws When the range is empty or ffmpeg exits with a non-zero code.
+ */
+export async function trimVideo(options: TrimVideoOptions): Promise<string> {
+  const {
+    inputPath,
+    outputPath,
+    startSec,
+    endSec,
+    ffmpegBinary = DEFAULT_FFMPEG,
+    onProgress,
+  } = options;
+
+  const { durationSec, fps } = await probeVideo(inputPath, ffmpegBinary);
+
+  const start = Math.max(0, startSec);
+  const end = durationSec > 0 ? Math.min(endSec, durationSec) : endSec;
+  if (!(end > start)) {
+    throw new Error(
+      `trimVideo: empty range (start=${start}, end=${end}, duration=${durationSec})`,
+    );
+  }
+
+  // Progress is reported against the *output* length, not the source.
+  const estimatedFrames = (end - start) * fps;
+
+  await runFFmpeg(
+    [
+      "-i",
+      inputPath,
+      "-ss",
+      start.toFixed(3),
+      "-to",
+      end.toFixed(3),
+      "-c:v",
+      "libx264",
+      "-preset",
+      "fast",
+      "-crf",
+      "23",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "192k",
+      "-movflags",
+      "+faststart",
+      outputPath,
+    ],
+    ffmpegBinary,
+    onProgress,
+    estimatedFrames,
+  );
 
   return outputPath;
 }

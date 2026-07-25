@@ -7,11 +7,15 @@ import { Button } from "@repo/ui/core-elements/button";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
 import type { Platform } from "@repo/helpers/checkers";
-import type { BurnCaptionsConfig } from "@/lib/types";
+import type { BurnCaptionsConfig, CropRect, TrimRange } from "@/lib/types";
 import { PinnedVideoItemDownloading } from "./pinned-video-item-downloading";
 import { PinnedVideoItemClient } from "./pinned-video-item-client";
 import { PinnedVideoItemServer } from "./pinned-video-item-server";
-import { ReadOnlyVideoItem, type ReprocessAction } from "./readonly-video-item";
+import {
+  ReadOnlyVideoItem,
+  type ReprocessAction,
+  type ReprocessExtra,
+} from "./readonly-video-item";
 import { VideoToolbar } from "./video-toolbar";
 import type { StoredVideo, VideoStatus } from "./use-video-store";
 import { useSearchQuery, setSearchQuery } from "./use-search-store";
@@ -174,7 +178,7 @@ export function VideoGrid({
     (
       uuid: string,
       action: ReprocessAction,
-      extra?: number,
+      extra?: ReprocessExtra,
       config?: BurnCaptionsConfig,
     ) => {
       switch (action) {
@@ -212,6 +216,18 @@ export function VideoGrid({
           onReprocessCompleted(uuid, {
             status: "processing" as VideoStatus,
             scaleDownTargetHeight: extra as number,
+          });
+          break;
+        case "crop":
+          onReprocessCompleted(uuid, {
+            status: "processing" as VideoStatus,
+            pendingCrop: (extra as CropRect) ?? null,
+          });
+          break;
+        case "trim":
+          onReprocessCompleted(uuid, {
+            status: "processing" as VideoStatus,
+            pendingTrim: (extra as TrimRange) ?? null,
           });
           break;
         case "diarize":

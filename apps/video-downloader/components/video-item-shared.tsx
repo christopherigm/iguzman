@@ -776,8 +776,12 @@ export function VideoExtraActions({
   h265Error,
   blackBarsError,
   scaleDownError,
+  cropError,
+  trimError,
   metadataError,
   onRemoveBlackBars,
+  onCropVideo,
+  onTrimVideo,
   onInterpolateFps,
   onConvert,
   onConvertH265,
@@ -799,8 +803,14 @@ export function VideoExtraActions({
   h265Error: boolean;
   blackBarsError: boolean;
   scaleDownError?: boolean;
+  cropError?: boolean;
+  trimError?: boolean;
   metadataError?: boolean;
   onRemoveBlackBars: () => void;
+  /** Opens the crop modal. Omit to hide the action. */
+  onCropVideo?: () => void;
+  /** Opens the trim modal. Omit to hide the action. */
+  onTrimVideo?: () => void;
   onInterpolateFps: (fps: number) => void;
   onConvert: () => void;
   onConvertH265: () => void;
@@ -1105,6 +1115,52 @@ export function VideoExtraActions({
                 {t("removeBlackBars")}
                 {serverSelected && oc ? (
                   <CreditBadge amount={oc.removeBlackBars} />
+                ) : null}
+              </Button>
+            </Grid>
+          ) : null}
+
+          {!video.justAudio && onCropVideo ? (
+            <Grid size={{ xs: 6 }} display="flex" justifyContent="center">
+              <Button
+                unstyled
+                className="vi-fps-btn"
+                onClick={onCropVideo}
+                disabled={
+                  !canProcess || cropError || !canAffordOp(oc?.cropVideo)
+                }
+                aria-label={t("cropVideo")}
+                title={t("cropVideo")}
+                icon="/icons/crop.svg"
+                iconSize="14px"
+                iconColor="var(--accent, #8b5cf6)"
+              >
+                {t("cropVideo")}
+                {serverSelected && oc ? (
+                  <CreditBadge amount={oc.cropVideo} />
+                ) : null}
+              </Button>
+            </Grid>
+          ) : null}
+
+          {!video.justAudio && onTrimVideo ? (
+            <Grid size={{ xs: 6 }} display="flex" justifyContent="center">
+              <Button
+                unstyled
+                className="vi-fps-btn"
+                onClick={onTrimVideo}
+                disabled={
+                  !canProcess || trimError || !canAffordOp(oc?.trimVideo)
+                }
+                aria-label={t("trimVideo")}
+                title={t("trimVideo")}
+                icon="/icons/trim.svg"
+                iconSize="14px"
+                iconColor="var(--accent, #8b5cf6)"
+              >
+                {t("trimVideo")}
+                {serverSelected && oc ? (
+                  <CreditBadge amount={oc.trimVideo} />
                 ) : null}
               </Button>
             </Grid>

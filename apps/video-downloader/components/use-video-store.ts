@@ -4,7 +4,9 @@ import { useState, useCallback, useEffect } from "react";
 import type { Platform } from "@repo/helpers/checkers";
 import type {
   BurnCaptionsConfig,
+  CropRect,
   OperationCredits,
+  TrimRange,
   VideoResultFields,
   VideoStatus,
 } from "@/lib/types";
@@ -88,6 +90,10 @@ export interface StoredVideo extends Omit<VideoResultFields, "isH265"> {
   fileSize: number | null;
   /** Target height for a pending scale-down operation. Null when not pending. */
   scaleDownTargetHeight: number | null;
+  /** Crop rectangle for a pending crop operation. Null when not pending. */
+  pendingCrop: CropRect | null;
+  /** Range for a pending trim operation. Null when not pending. */
+  pendingTrim: TrimRange | null;
   /** Max words per subtitle row for a pending diarization. Null when not pending. */
   diarizeMaxWords: number | null;
   /** Per-operation server credit costs computed after download. Null until download completes. */
@@ -169,6 +175,8 @@ function applyDefaults(v: StoredVideo): StoredVideo {
     serverFileDeleted: v.serverFileDeleted ?? false,
     fileSize: v.fileSize ?? null,
     scaleDownTargetHeight: v.scaleDownTargetHeight ?? null,
+    pendingCrop: v.pendingCrop ?? null,
+    pendingTrim: v.pendingTrim ?? null,
     diarizeMaxWords: v.diarizeMaxWords ?? null,
     operationCredits: v.operationCredits ?? null,
   };
@@ -422,6 +430,8 @@ export function useVideoStore() {
         serverFileDeleted: false,
         fileSize: null,
         scaleDownTargetHeight: null,
+        pendingCrop: null,
+        pendingTrim: null,
         diarizeMaxWords: null,
         operationCredits: null,
       };

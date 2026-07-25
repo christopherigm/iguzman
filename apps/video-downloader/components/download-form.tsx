@@ -854,6 +854,8 @@ export function DownloadForm({
           serverFileDeleted: true,
           fileSize: file.size,
           scaleDownTargetHeight: null,
+          pendingCrop: null,
+          pendingTrim: null,
           diarizeMaxWords: null,
           operationCredits: null,
         };

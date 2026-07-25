@@ -15,6 +15,10 @@ export interface VideoMeta {
 const BASE: Record<keyof OperationCredits, number> = {
   scaleDown: 3,
   removeBlackBars: 2,
+  // Crop and trim re-encode the whole stream like removeBlackBars does, but
+  // both are user-directed edits rather than a cleanup pass - priced at 1.5×.
+  cropVideo: 3,
+  trimVideo: 3,
   convertToH264: 3,
   convertToH265: 4,
   burnSubtitles: 3,
@@ -53,6 +57,8 @@ export function calculateOperationCredits(meta: VideoMeta): OperationCredits {
   return {
     scaleDown: calc(BASE.scaleDown),
     removeBlackBars: calc(BASE.removeBlackBars),
+    cropVideo: calc(BASE.cropVideo),
+    trimVideo: calc(BASE.trimVideo),
     convertToH264: calc(BASE.convertToH264),
     convertToH265: calc(BASE.convertToH265),
     burnSubtitles: calc(BASE.burnSubtitles),

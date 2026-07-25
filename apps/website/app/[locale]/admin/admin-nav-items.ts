@@ -7,6 +7,13 @@ export const ADMIN_NAV_ITEMS = [
     descKey: "logosAndStylesDesc",
   },
   {
+    key: "messages",
+    href: "/admin/messages",
+    icon: "✉️",
+    descKey: "messagesDesc",
+  },
+  { key: "orders", href: "/admin/orders", icon: "📋", descKey: "ordersDesc" },
+  {
     // `spotlightTitle` is the section's existing label ("Featured Spotlight"),
     // reused here rather than translated a second time under a nav-only key.
     key: "spotlightTitle",
@@ -14,38 +21,6 @@ export const ADMIN_NAV_ITEMS = [
     icon: "🌟",
     descKey: "spotlightPageDesc",
   },
-  {
-    key: "aboutPage",
-    href: "/admin/about",
-    icon: "📖",
-    descKey: "aboutPageDesc",
-  },
-  {
-    // `paymentsTitle` is the section's existing label ("Payments"), reused here
-    // rather than translated a second time under a nav-only key.
-    key: "paymentsTitle",
-    href: "/admin/payments",
-    icon: "💳",
-    descKey: "paymentsPageDesc",
-  },
-  // Not under /admin: the till is its own full-screen route with no CMS chrome.
-  // Listed here anyway because this menu is where an admin looks for their tools.
-  { key: "pos", href: "/pos", icon: "🧾", descKey: "posDesc" },
-  { key: "orders", href: "/admin/orders", icon: "📋", descKey: "ordersDesc" },
-  {
-    key: "messages",
-    href: "/admin/messages",
-    icon: "✉️",
-    descKey: "messagesDesc",
-  },
-  {
-    key: "branches",
-    href: "/admin/branches",
-    icon: "📍",
-    descKey: "branchesDesc",
-  },
-  { key: "users", href: "/admin/users", icon: "👥", descKey: "usersDesc" },
-  { key: "brands", href: "/admin/brands", icon: "🎯", descKey: "brandsDesc" },
   {
     key: "productCategories",
     href: "/admin/product-categories",
@@ -105,5 +80,30 @@ export const ADMIN_NAV_ITEMS = [
     href: "/admin/highlights",
     icon: "✨",
     descKey: "highlightsDesc",
+  },
+  { key: "brands", href: "/admin/brands", icon: "🎯", descKey: "brandsDesc" },
+  // Not under /admin: the till is its own full-screen route with no CMS chrome.
+  // Listed here anyway because this menu is where an admin looks for their tools.
+  { key: "pos", href: "/pos", icon: "🧾", descKey: "posDesc" },
+  {
+    // `paymentsTitle` is the section's existing label ("Payments"), reused here
+    // rather than translated a second time under a nav-only key.
+    key: "paymentsTitle",
+    href: "/admin/payments",
+    icon: "💳",
+    descKey: "paymentsPageDesc",
+  },
+  {
+    key: "branches",
+    href: "/admin/branches",
+    icon: "📍",
+    descKey: "branchesDesc",
+  },
+  { key: "users", href: "/admin/users", icon: "👥", descKey: "usersDesc" },
+  {
+    key: "aboutPage",
+    href: "/admin/about",
+    icon: "📖",
+    descKey: "aboutPageDesc",
   },
 ] as const;

@@ -29,6 +29,8 @@
  *       }
  *   } }
  *   { id, type: 'scaleDown', payload: { videoData: Uint8Array, targetHeight: number } }
+ *   { id, type: 'cropVideo', payload: { videoData: Uint8Array, cropWidth: number, cropHeight: number, cropX: number, cropY: number } }
+ *   { id, type: 'trimVideo', payload: { videoData: Uint8Array, startSec: number, endSec: number } }
  *
  * Outgoing (worker → main):
  *   { id, type: 'progress',  payload: { progress: number } }
@@ -1138,6 +1140,213 @@ self.onmessage = async (
             "23",
             "-c:a",
             "copy",
+            "-movflags",
+            "+faststart",
+            output,
+          ]);
+          ff.off("log", frameLogHandler);
+
+          if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
+          const result = (await ff.readFile(output)) as Uint8Array;
+          await ff.deleteFile(input);
+          await ff.deleteFile(output);
+          sendProgress(100);
+          self.postMessage(
+            { id, type: "result", payload: { data: result } },
+            { transfer: [result.buffer as ArrayBuffer] },
+          );
+          break;
+        }
+
+        case "cropVideo": {
+          /* Unregister the global progress handler - this case uses
+             frame-based progress parsing from log output. */
+          ff.off("progress", progressHandler);
+
+          const { videoData, cropWidth, cropHeight, cropX, cropY } =
+            payload as {
+              videoData: Uint8Array;
+              cropWidth: number;
+              cropHeight: number;
+              cropX: number;
+              cropY: number;
+            };
+          const input = "input_crop.mp4";
+          const output = "output_cropped.mp4";
+          await ff.writeFile(input, videoData);
+
+          /* Probe input dimensions and duration for clamping + progress. */
+          let probeLog = "";
+          const probeHandler = ({ message }: { message: string }) => {
+            probeLog += message + "\n";
+          };
+          ff.on("log", probeHandler);
+          await ff.exec(["-i", input]);
+          ff.off("log", probeHandler);
+
+          const dimMatch = probeLog.match(/(\d{2,5})x(\d{2,5})/);
+          const origW = dimMatch ? Number(dimMatch[1]) : 0;
+          const origH = dimMatch ? Number(dimMatch[2]) : 0;
+
+          const durMatch = probeLog.match(
+            /Duration:\s+(\d+):(\d+):(\d+(?:\.\d+)?)/,
+          );
+          const durationSec = durMatch
+            ? Number(durMatch[1]) * 3600 +
+              Number(durMatch[2]) * 60 +
+              Number(durMatch[3])
+            : 0;
+          const fpsMatch = probeLog.match(/(\d+(?:\.\d+)?)\s*(?:fps|tbr)/);
+          const srcFps = fpsMatch ? Number(fpsMatch[1]) : 30;
+          const estimatedFrames = durationSec > 0 ? durationSec * srcFps : 0;
+
+          /* Clamp to the frame and force even sides - yuv420p cannot encode
+             odd dimensions. A non-finite value (e.g. a corrupt persisted crop)
+             falls back to the full frame rather than reaching ffmpeg as NaN. */
+          const num = (v: number, fallback: number) =>
+            Number.isFinite(v) ? Math.max(0, v) : fallback;
+          const even = (v: number) => Math.max(2, Math.floor(v / 2) * 2);
+          const frameW = origW > 0 ? origW : num(cropX, 0) + num(cropWidth, 2);
+          const frameH = origH > 0 ? origH : num(cropY, 0) + num(cropHeight, 2);
+          const x = Math.max(0, Math.min(even(num(cropX, 0)), frameW - 2));
+          const y = Math.max(0, Math.min(even(num(cropY, 0)), frameH - 2));
+          const w = Math.max(
+            2,
+            Math.min(even(num(cropWidth, frameW)), frameW - x),
+          );
+          const h = Math.max(
+            2,
+            Math.min(even(num(cropHeight, frameH)), frameH - y),
+          );
+
+          let lastFrame = 0;
+          const frameLogHandler = ({ message }: { message: string }) => {
+            if (estimatedFrames > 0) {
+              const m = message.match(/frame=\s*(\d+)/);
+              if (m) {
+                const frame = Number(m[1]);
+                if (frame > lastFrame) {
+                  lastFrame = frame;
+                  sendProgress(
+                    Math.min(99, Math.round((frame / estimatedFrames) * 100)),
+                  );
+                }
+              }
+            }
+          };
+          ff.on("log", frameLogHandler);
+
+          const code = await ff.exec([
+            "-i",
+            input,
+            "-vf",
+            `crop=${w}:${h}:${x}:${y}`,
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-c:a",
+            "copy",
+            "-movflags",
+            "+faststart",
+            output,
+          ]);
+          ff.off("log", frameLogHandler);
+
+          if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
+          const result = (await ff.readFile(output)) as Uint8Array;
+          await ff.deleteFile(input);
+          await ff.deleteFile(output);
+          sendProgress(100);
+          self.postMessage(
+            { id, type: "result", payload: { data: result } },
+            { transfer: [result.buffer as ArrayBuffer] },
+          );
+          break;
+        }
+
+        case "trimVideo": {
+          /* Unregister the global progress handler - this case uses
+             frame-based progress parsing from log output. */
+          ff.off("progress", progressHandler);
+
+          const { videoData, startSec, endSec } = payload as {
+            videoData: Uint8Array;
+            startSec: number;
+            endSec: number;
+          };
+          const input = "input_trim.mp4";
+          const output = "output_trimmed.mp4";
+          await ff.writeFile(input, videoData);
+
+          /* Probe duration + fps to clamp the range and size the progress bar. */
+          let probeLog = "";
+          const probeHandler = ({ message }: { message: string }) => {
+            probeLog += message + "\n";
+          };
+          ff.on("log", probeHandler);
+          await ff.exec(["-i", input]);
+          ff.off("log", probeHandler);
+
+          const durMatch = probeLog.match(
+            /Duration:\s+(\d+):(\d+):(\d+(?:\.\d+)?)/,
+          );
+          const durationSec = durMatch
+            ? Number(durMatch[1]) * 3600 +
+              Number(durMatch[2]) * 60 +
+              Number(durMatch[3])
+            : 0;
+          const fpsMatch = probeLog.match(/(\d+(?:\.\d+)?)\s*(?:fps|tbr)/);
+          const srcFps = fpsMatch ? Number(fpsMatch[1]) : 30;
+
+          const start = Math.max(0, startSec);
+          const end = durationSec > 0 ? Math.min(endSec, durationSec) : endSec;
+          if (!(end > start)) {
+            throw new Error(
+              `Empty trim range (start=${start}, end=${end}, duration=${durationSec})`,
+            );
+          }
+          /* Progress is reported against the output length, not the source. */
+          const estimatedFrames = (end - start) * srcFps;
+
+          let lastFrame = 0;
+          const frameLogHandler = ({ message }: { message: string }) => {
+            if (estimatedFrames > 0) {
+              const m = message.match(/frame=\s*(\d+)/);
+              if (m) {
+                const frame = Number(m[1]);
+                if (frame > lastFrame) {
+                  lastFrame = frame;
+                  sendProgress(
+                    Math.min(99, Math.round((frame / estimatedFrames) * 100)),
+                  );
+                }
+              }
+            }
+          };
+          ff.on("log", frameLogHandler);
+
+          /* `-ss`/`-to` after `-i` = output seeking: slower than input seeking
+             but frame-exact instead of keyframe-snapped. */
+          const code = await ff.exec([
+            "-i",
+            input,
+            "-ss",
+            start.toFixed(3),
+            "-to",
+            end.toFixed(3),
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
             "-movflags",
             "+faststart",
             output,

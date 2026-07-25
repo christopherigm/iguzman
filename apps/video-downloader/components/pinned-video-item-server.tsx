@@ -7,7 +7,7 @@ import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Button } from "@repo/ui/core-elements/button";
-import type { VideoStatus } from "@/lib/types";
+import type { CropRect, TrimRange, VideoStatus } from "@/lib/types";
 import { TRANSLATE_LANGUAGES } from "./burn-captions-modal";
 import { usePollTask, type TaskData } from "./use-poll-task";
 import type { StoredVideo } from "./use-video-store";
@@ -176,6 +176,8 @@ export function PinnedVideoItemServer({
   const blackBarsResumeChecked = useRef(false);
   const burnResumeChecked = useRef(false);
   const scaleDownResumeChecked = useRef(false);
+  const cropResumeChecked = useRef(false);
+  const trimResumeChecked = useRef(false);
   const diarizeResumeChecked = useRef(false);
   // Tracks the server input file so handleServerTaskDone can delete it after
   // the result is saved to OPFS (both the uploaded-from-OPFS case and the
@@ -229,7 +231,9 @@ export function PinnedVideoItemServer({
         | "convertToH264"
         | "convertToH265"
         | "burnSubtitles"
-        | "scaleDown";
+        | "scaleDown"
+        | "cropVideo"
+        | "trimVideo";
       extraParams?: Record<string, unknown>;
       donePatch: Partial<StoredVideo>;
       errorKey: string;
@@ -463,6 +467,46 @@ export function PinnedVideoItemServer({
       });
     },
     [runServerProcessing, video.height, video.width],
+  );
+
+  /* ── Crop ───────────────────────────────────────────── */
+  const handleCropVideo = useCallback(
+    (rect: CropRect) =>
+      runServerProcessing({
+        activeStatus: "processing",
+        op: "cropVideo",
+        extraParams: {
+          cropWidth: rect.width,
+          cropHeight: rect.height,
+          cropX: rect.x,
+          cropY: rect.y,
+        },
+        donePatch: {
+          pendingCrop: null,
+          width: rect.width,
+          height: rect.height,
+        },
+        errorKey: "errorCropFailed",
+        completeAfter: true,
+      }),
+    [runServerProcessing],
+  );
+
+  /* ── Trim ───────────────────────────────────────────── */
+  const handleTrimVideo = useCallback(
+    (range: TrimRange) =>
+      runServerProcessing({
+        activeStatus: "processing",
+        op: "trimVideo",
+        extraParams: { startSec: range.start, endSec: range.end },
+        donePatch: {
+          pendingTrim: null,
+          duration: Math.max(0, range.end - range.start),
+        },
+        errorKey: "errorTrimFailed",
+        completeAfter: true,
+      }),
+    [runServerProcessing],
   );
 
   /* ── Burn captions ──────────────────────────────────── */
@@ -1004,11 +1048,15 @@ export function PinnedVideoItemServer({
     if (blackBarsResumeChecked.current) return;
     blackBarsResumeChecked.current = true;
 
+    // scaleDown/crop/trim also park the card in 'processing'; their own resume
+    // effects own those, so bail out when one of them is pending.
     const needsResume =
       video.file &&
       !video.justAudio &&
       !video.blackBarsRemoved &&
       video.scaleDownTargetHeight == null &&
+      video.pendingCrop == null &&
+      video.pendingTrim == null &&
       video.status === "processing" &&
       (video.fps === "original" || !!video.fpsApplied);
 
@@ -1018,6 +1066,8 @@ export function PinnedVideoItemServer({
     video.justAudio,
     video.blackBarsRemoved,
     video.scaleDownTargetHeight,
+    video.pendingCrop,
+    video.pendingTrim,
     video.status,
     video.fps,
     video.fpsApplied,
@@ -1065,6 +1115,46 @@ export function PinnedVideoItemServer({
     video.scaleDownTargetHeight,
     video.status,
     handleScaleDown,
+  ]);
+
+  /* ── Resume interrupted crop ─────────────────────────── */
+  useEffect(() => {
+    if (cropResumeChecked.current) return;
+    cropResumeChecked.current = true;
+
+    const needsResume =
+      video.file &&
+      !video.justAudio &&
+      video.pendingCrop != null &&
+      video.status === "processing";
+
+    if (needsResume) queueMicrotask(() => handleCropVideo(video.pendingCrop!));
+  }, [
+    video.file,
+    video.justAudio,
+    video.pendingCrop,
+    video.status,
+    handleCropVideo,
+  ]);
+
+  /* ── Resume interrupted trim ─────────────────────────── */
+  useEffect(() => {
+    if (trimResumeChecked.current) return;
+    trimResumeChecked.current = true;
+
+    const needsResume =
+      video.file &&
+      !video.justAudio &&
+      video.pendingTrim != null &&
+      video.status === "processing";
+
+    if (needsResume) queueMicrotask(() => handleTrimVideo(video.pendingTrim!));
+  }, [
+    video.file,
+    video.justAudio,
+    video.pendingTrim,
+    video.status,
+    handleTrimVideo,
   ]);
 
   /* ── Resume interrupted diarization ─────────────────── */

@@ -433,7 +433,7 @@
   "Admin": {
     "title": "Admin-Bereich",
     "menu": "Menü",
-    "adminMenu": "Admin-Menü",
+    "adminMenu": "Menü",
     "toggleSidebar": "Seitenleiste umschalten",
     "navigation": "Admin-Navigation",
     "system": "System",

@@ -28,12 +28,30 @@ export type VideoDownloadInput = Pick<
 export interface OperationCredits {
   scaleDown: number;
   removeBlackBars: number;
+  cropVideo: number;
+  trimVideo: number;
   convertToH264: number;
   convertToH265: number;
   burnSubtitles: number;
   interpolateFps2x: number;
   interpolateFps4x: number;
   interpolateFps8x: number;
+}
+
+/* ── Crop / trim edits ─────────────────────────────── */
+
+/** A crop rectangle in source-video pixels, origin at the top-left. */
+export interface CropRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** A trim selection in seconds, measured from the start of the source video. */
+export interface TrimRange {
+  start: number;
+  end: number;
 }
 
 /* ── Result metadata ───────────────────────────────── */

@@ -373,6 +373,72 @@ export function useFFmpeg() {
     [sendVideoOp],
   );
 
+  /**
+   * Crop a video to an arbitrary rectangle.
+   *
+   * Coordinates are in **source-video pixels** with the origin at the top-left
+   * (the shape `VideoCropper` emits). The rectangle is clamped to the frame and
+   * rounded to even sides inside the worker.
+   *
+   * @param videoUrl  URL (or object-URL) of the source video.
+   * @param rect      `{ x, y, width, height }` in source pixels.
+   * @returns         `{ objectUrl, blob }` - object-URL for immediate use
+   *                  and the raw Blob for uploading back to the server.
+   */
+  const cropVideo = useCallback(
+    async (
+      videoUrl: string,
+      rect: { x: number; y: number; width: number; height: number },
+      onProgress?: (p: number) => void,
+    ): Promise<{ objectUrl: string; blob: Blob }> => {
+      const data = await sendVideoOp(
+        "cropVideo",
+        videoUrl,
+        {
+          cropWidth: rect.width,
+          cropHeight: rect.height,
+          cropX: rect.x,
+          cropY: rect.y,
+        },
+        onProgress,
+      );
+      const blob = new Blob([new Uint8Array(data)], { type: "video/mp4" });
+      return { objectUrl: URL.createObjectURL(blob), blob };
+    },
+    [sendVideoOp],
+  );
+
+  /**
+   * Trim a video to the `[startSec, endSec]` window.
+   *
+   * Both streams are re-encoded so the cut is frame-exact rather than snapped
+   * to the nearest keyframe.
+   *
+   * @param videoUrl  URL (or object-URL) of the source video.
+   * @param startSec  Selection start, in seconds from the start of the source.
+   * @param endSec    Selection end, in seconds from the start of the source.
+   * @returns         `{ objectUrl, blob }` - object-URL for immediate use
+   *                  and the raw Blob for uploading back to the server.
+   */
+  const trimVideo = useCallback(
+    async (
+      videoUrl: string,
+      startSec: number,
+      endSec: number,
+      onProgress?: (p: number) => void,
+    ): Promise<{ objectUrl: string; blob: Blob }> => {
+      const data = await sendVideoOp(
+        "trimVideo",
+        videoUrl,
+        { startSec, endSec },
+        onProgress,
+      );
+      const blob = new Blob([new Uint8Array(data)], { type: "video/mp4" });
+      return { objectUrl: URL.createObjectURL(blob), blob };
+    },
+    [sendVideoOp],
+  );
+
   return {
     status,
     progress,
@@ -386,5 +452,7 @@ export function useFFmpeg() {
     extractAudio,
     burnSubtitles,
     scaleDown,
+    cropVideo,
+    trimVideo,
   } as const;
 }

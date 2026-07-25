@@ -53,15 +53,6 @@ export function AdminSidebar() {
         className={`admin-sidebar ${open ? "admin-sidebar--open" : ""}`}
         aria-label={t("navigation")}
       >
-        <Box className="admin-sidebar__header">
-          <Typography
-            as="span"
-            variant="label"
-            className="admin-sidebar__title"
-          >
-            {t("title")}
-          </Typography>
-        </Box>
         <ul className="admin-sidebar__list">
           {ADMIN_NAV_ITEMS.map((item) => {
             const active = pathname.startsWith(item.href);
@@ -88,6 +79,32 @@ export function AdminSidebar() {
             );
           })}
         </ul>
+
+        {/* `marginTop: auto` pins the title to the bottom of the flex column,
+            so it reads as a footer whether the list is short or long. */}
+        <Box
+          marginTop="auto"
+          padding="12px 16px 20px"
+          styles={{
+            borderTop:
+              "1px solid color-mix(in srgb, var(--foreground) 10%, transparent)",
+          }}
+        >
+          <Typography
+            as="span"
+            variant="label"
+            fontWeight={700}
+            color="var(--foreground)"
+            /* 11px: below the `label` variant's 12px, no matching variant */
+            styles={{
+              fontSize: 11,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+            }}
+          >
+            {t("title")}
+          </Typography>
+        </Box>
       </nav>
 
       {open && (

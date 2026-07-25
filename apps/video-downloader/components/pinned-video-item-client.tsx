@@ -9,7 +9,7 @@ import { Button } from "@repo/ui/core-elements/button";
 import { useFFmpeg } from "@repo/ui/use-ffmpeg";
 import { useGroq } from "@repo/ui/use-groq";
 import type { LlmMessage } from "@repo/ui/use-groq";
-import type { VideoStatus } from "@/lib/types";
+import type { CropRect, TrimRange, VideoStatus } from "@/lib/types";
 import { TRANSLATE_LANGUAGES } from "./burn-captions-modal";
 import type { StoredVideo } from "./use-video-store";
 import {
@@ -96,6 +96,8 @@ export function PinnedVideoItemClient({
   const blackBarsResumeChecked = useRef(false);
   const burnResumeChecked = useRef(false);
   const scaleDownResumeChecked = useRef(false);
+  const cropResumeChecked = useRef(false);
+  const trimResumeChecked = useRef(false);
 
   const { generate } = useGroq({
     proxyBase: "/api/groq",
@@ -119,6 +121,8 @@ export function PinnedVideoItemClient({
     removeBlackBars,
     burnSubtitles,
     scaleDown,
+    cropVideo,
+    trimVideo,
   } = useFFmpeg();
 
   const displayFFmpegStatus = localProgress?.status ?? ffmpegStatus;
@@ -357,6 +361,47 @@ export function PinnedVideoItemClient({
     [runProcessing, scaleDown, video.height, video.width],
   );
 
+  /* ── Crop ───────────────────────────────────────────── */
+  const handleCropVideo = useCallback(
+    (rect: CropRect) => {
+      const donePatch: Partial<StoredVideo> = {
+        pendingCrop: null,
+        width: rect.width,
+        height: rect.height,
+      };
+      return runProcessing({
+        activeStatus: "processing",
+        process: (url, onProgress) => cropVideo(url, rect, onProgress),
+        donePatch,
+        taskUpdate: { width: rect.width, height: rect.height },
+        errorKey: "errorCropFailed",
+        completeAfter: true,
+      });
+    },
+    [runProcessing, cropVideo],
+  );
+
+  /* ── Trim ───────────────────────────────────────────── */
+  const handleTrimVideo = useCallback(
+    (range: TrimRange) => {
+      const newDuration = Math.max(0, range.end - range.start);
+      const donePatch: Partial<StoredVideo> = {
+        pendingTrim: null,
+        duration: newDuration,
+      };
+      return runProcessing({
+        activeStatus: "processing",
+        process: (url, onProgress) =>
+          trimVideo(url, range.start, range.end, onProgress),
+        donePatch,
+        taskUpdate: { duration: newDuration },
+        errorKey: "errorTrimFailed",
+        completeAfter: true,
+      });
+    },
+    [runProcessing, trimVideo],
+  );
+
   /* ── Burn captions ──────────────────────────────────── */
   const handleBurnCaptions = useCallback(async () => {
     const config = video.burnCaptionsConfig;
@@ -511,11 +556,15 @@ export function PinnedVideoItemClient({
     if (blackBarsResumeChecked.current) return;
     blackBarsResumeChecked.current = true;
 
+    // scaleDown/crop/trim also park the card in 'processing'; their own resume
+    // effects own those, so bail out when one of them is pending.
     const needsResume =
       video.file &&
       !video.justAudio &&
       !video.blackBarsRemoved &&
       video.scaleDownTargetHeight == null &&
+      video.pendingCrop == null &&
+      video.pendingTrim == null &&
       video.status === "processing" &&
       (video.fps === "original" || !!video.fpsApplied);
 
@@ -525,6 +574,8 @@ export function PinnedVideoItemClient({
     video.justAudio,
     video.blackBarsRemoved,
     video.scaleDownTargetHeight,
+    video.pendingCrop,
+    video.pendingTrim,
     video.status,
     video.fps,
     video.fpsApplied,
@@ -572,6 +623,46 @@ export function PinnedVideoItemClient({
     video.scaleDownTargetHeight,
     video.status,
     handleScaleDown,
+  ]);
+
+  /* ── Resume interrupted crop ─────────────────────────── */
+  useEffect(() => {
+    if (cropResumeChecked.current) return;
+    cropResumeChecked.current = true;
+
+    const needsResume =
+      video.file &&
+      !video.justAudio &&
+      video.pendingCrop != null &&
+      video.status === "processing";
+
+    if (needsResume) queueMicrotask(() => handleCropVideo(video.pendingCrop!));
+  }, [
+    video.file,
+    video.justAudio,
+    video.pendingCrop,
+    video.status,
+    handleCropVideo,
+  ]);
+
+  /* ── Resume interrupted trim ─────────────────────────── */
+  useEffect(() => {
+    if (trimResumeChecked.current) return;
+    trimResumeChecked.current = true;
+
+    const needsResume =
+      video.file &&
+      !video.justAudio &&
+      video.pendingTrim != null &&
+      video.status === "processing";
+
+    if (needsResume) queueMicrotask(() => handleTrimVideo(video.pendingTrim!));
+  }, [
+    video.file,
+    video.justAudio,
+    video.pendingTrim,
+    video.status,
+    handleTrimVideo,
   ]);
 
   /* ── Warn before closing during active processing ────── */

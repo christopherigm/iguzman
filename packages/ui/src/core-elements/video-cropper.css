@@ -1,0 +1,145 @@
+/* ── Preset buttons ─────────────────────────────────── */
+
+.uvc-preset {
+  padding: 5px 10px;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+  border-radius: 999px;
+  background: var(--surface-2, rgba(0, 0, 0, 0.04));
+  color: var(--foreground, #171717);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    color 0.15s;
+}
+
+.uvc-preset:hover {
+  border-color: var(--accent, #06b6d4);
+}
+
+.uvc-preset--active {
+  border-color: var(--accent, #06b6d4);
+  background: var(--accent, #06b6d4);
+  color: #ffffff;
+}
+
+/* ── Preview stage ──────────────────────────────────── */
+
+.uvc-frame {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  background: #000000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Shrink-wraps the video so the drag surface matches its rendered box exactly,
+   whatever letterboxing the max-height constraint introduces. */
+.uvc-stage {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  max-width: 100%;
+}
+
+.uvc-media {
+  display: block;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+}
+
+.uvc-surface {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  touch-action: none;
+}
+
+/* The 9999px spread dims everything outside the selection in one paint. */
+.uvc-selection {
+  position: absolute;
+  border: 2px solid var(--accent, #06b6d4);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+  cursor: move;
+  box-sizing: border-box;
+}
+
+.uvc-selection::before,
+.uvc-selection::after {
+  content: "";
+  position: absolute;
+  background: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+}
+
+/* Rule-of-thirds guides */
+.uvc-selection::before {
+  top: 33.333%;
+  bottom: 33.333%;
+  left: 0;
+  right: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.35);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+  background: none;
+}
+
+.uvc-selection::after {
+  top: 0;
+  bottom: 0;
+  left: 33.333%;
+  right: 33.333%;
+  border-left: 1px solid rgba(255, 255, 255, 0.35);
+  border-right: 1px solid rgba(255, 255, 255, 0.35);
+  background: none;
+}
+
+.uvc-handle {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: var(--accent, #06b6d4);
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.uvc-handle--nw {
+  top: -9px;
+  left: -9px;
+  cursor: nwse-resize;
+}
+
+.uvc-handle--ne {
+  top: -9px;
+  right: -9px;
+  cursor: nesw-resize;
+}
+
+.uvc-handle--sw {
+  bottom: -9px;
+  left: -9px;
+  cursor: nesw-resize;
+}
+
+.uvc-handle--se {
+  bottom: -9px;
+  right: -9px;
+  cursor: nwse-resize;
+}
+
+/* ── Frame scrub ────────────────────────────────────── */
+
+.uvc-scrub {
+  width: 100%;
+  accent-color: var(--accent, #06b6d4);
+  background: var(--surface-2, rgba(0, 0, 0, 0.04));
+  color: var(--foreground, #171717);
+  color-scheme: light dark;
+  cursor: pointer;
+}

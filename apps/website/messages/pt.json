@@ -433,7 +433,7 @@
   "Admin": {
     "title": "Painel de Administração",
     "menu": "Menu",
-    "adminMenu": "Menu de Administração",
+    "adminMenu": "Menu",
     "toggleSidebar": "Alternar barra lateral",
     "navigation": "Navegação de administração",
     "system": "Sistema",

@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
-import type { BurnCaptionsConfig } from "@/lib/types";
+import type { BurnCaptionsConfig, CropRect, TrimRange } from "@/lib/types";
 import type { StoredVideo, VideoStatus } from "./use-video-store";
 import {
   STATUS_COLORS,
@@ -29,6 +29,8 @@ import {
   isOPFSSupported,
 } from "@/lib/opfs";
 import { BurnCaptionsModal } from "./burn-captions-modal";
+import { CropVideoModal } from "./crop-video-modal";
+import { TrimVideoModal } from "./trim-video-modal";
 import "./video-item.css";
 
 /* ── Props ──────────────────────────────────────────── */
@@ -40,14 +42,19 @@ export type ReprocessAction =
   | "bars"
   | "burnCaptions"
   | "scaleDown"
+  | "crop"
+  | "trim"
   | "diarize";
+
+/** Per-action payload: a number for fps/scaleDown, a rectangle or range for the edits. */
+export type ReprocessExtra = number | CropRect | TrimRange;
 
 export interface ReadOnlyVideoItemProps {
   video: StoredVideo;
   onReprocess: (
     uuid: string,
     action: ReprocessAction,
-    extra?: number,
+    extra?: ReprocessExtra,
     config?: BurnCaptionsConfig,
   ) => void;
   onRemove: (uuid: string) => void;
@@ -75,7 +82,17 @@ export function ReadOnlyVideoItem({
   const [copying, setCopying] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [showBurnModal, setShowBurnModal] = useState(false);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [showTrimModal, setShowTrimModal] = useState(false);
   const [metadataError, setMetadataError] = useState(false);
+
+  /* Source used by the crop/trim previews - the OPFS blob URL when the file
+     lives on the device, otherwise the server media URL. An `opfs://` URL is
+     not navigable, so it counts as "no preview" until the blob URL registers. */
+  const rawPreviewUrl = opfsUrls?.videoUrl ?? video.downloadURL;
+  const previewUrl = rawPreviewUrl?.startsWith("opfs://")
+    ? null
+    : rawPreviewUrl;
 
   const displayName =
     video.fulltitle ??
@@ -315,6 +332,23 @@ export function ReadOnlyVideoItem({
     [onReprocess, video.uuid],
   );
 
+  /* ── Crop / trim: collect the edit then hand off to PinnedVideoItem ── */
+  const handleCropVideo = useCallback(
+    (rect: CropRect) => {
+      setShowCropModal(false);
+      onReprocess(video.uuid, "crop", rect);
+    },
+    [onReprocess, video.uuid],
+  );
+
+  const handleTrimVideo = useCallback(
+    (range: TrimRange) => {
+      setShowTrimModal(false);
+      onReprocess(video.uuid, "trim", range);
+    },
+    [onReprocess, video.uuid],
+  );
+
   /* ── Fetch metadata from ScrapeCreators ─────────────── */
   const handleGetMetadata = useCallback(async () => {
     setMetadataError(false);
@@ -457,6 +491,8 @@ export function ReadOnlyVideoItem({
           onConvertH265={() => onReprocess(video.uuid, "h265")}
           onDownloadCaptions={handleDownloadCaptions}
           onBurnCaptions={() => setShowBurnModal(true)}
+          onCropVideo={() => setShowCropModal(true)}
+          onTrimVideo={() => setShowTrimModal(true)}
           onScaleDown={(height) => onReprocess(video.uuid, "scaleDown", height)}
           onMakeOffline={handleMakeOffline}
           onDuplicate={handleDuplicate}
@@ -475,6 +511,21 @@ export function ReadOnlyVideoItem({
           videoUrl={opfsUrls?.videoUrl ?? video.downloadURL ?? null}
           videoWidth={video.width}
           videoHeight={video.height}
+        />
+      ) : null}
+      {showCropModal ? (
+        <CropVideoModal
+          videoUrl={previewUrl}
+          onConfirm={handleCropVideo}
+          onCancel={() => setShowCropModal(false)}
+        />
+      ) : null}
+      {showTrimModal ? (
+        <TrimVideoModal
+          videoUrl={previewUrl}
+          duration={video.duration}
+          onConfirm={handleTrimVideo}
+          onCancel={() => setShowTrimModal(false)}
         />
       ) : null}
       {confirmRemove ? (

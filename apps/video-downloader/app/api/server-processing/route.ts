@@ -17,6 +17,8 @@ import {
   removeBlackBars,
   burnSubtitles,
   scaleDown,
+  cropVideo,
+  trimVideo,
   type AnimationOptions,
 } from "@repo/helpers/ffmpeg-helper";
 import {
@@ -48,6 +50,8 @@ const VALID_OPS = [
   "convertToH265",
   "burnSubtitles",
   "scaleDown",
+  "cropVideo",
+  "trimVideo",
 ] as const;
 
 type ProcessingOp = (typeof VALID_OPS)[number];
@@ -59,6 +63,8 @@ const STATUS_BY_OP: Record<ProcessingOp, TaskStatus> = {
   convertToH265: "converting",
   burnSubtitles: "burning",
   scaleDown: "processing",
+  cropVideo: "processing",
+  trimVideo: "processing",
 };
 
 async function runFfmpegJob(
@@ -184,6 +190,30 @@ async function runFfmpegJob(
           inputPath,
           outputPath,
           targetHeight: Number(params.targetHeight ?? 720),
+          ffmpegBinary: FFMPEG_BINARY,
+          onProgress,
+        });
+        break;
+
+      case "cropVideo":
+        await cropVideo({
+          inputPath,
+          outputPath,
+          cropWidth: Number(params.cropWidth ?? 0),
+          cropHeight: Number(params.cropHeight ?? 0),
+          cropX: Number(params.cropX ?? 0),
+          cropY: Number(params.cropY ?? 0),
+          ffmpegBinary: FFMPEG_BINARY,
+          onProgress,
+        });
+        break;
+
+      case "trimVideo":
+        await trimVideo({
+          inputPath,
+          outputPath,
+          startSec: Number(params.startSec ?? 0),
+          endSec: Number(params.endSec ?? 0),
           ffmpegBinary: FFMPEG_BINARY,
           onProgress,
         });
@@ -379,6 +409,8 @@ export async function POST(request: NextRequest) {
       convertToH265: "convertToH265",
       burnSubtitles: "burnSubtitles",
       scaleDown: "scaleDown",
+      cropVideo: "cropVideo",
+      trimVideo: "trimVideo",
     };
 
   let opCost: number;
