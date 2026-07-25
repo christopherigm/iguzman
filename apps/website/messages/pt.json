@@ -62,6 +62,29 @@
       "commitmentHeading": "Nosso compromisso"
     }
   },
+  "SantoFishSite": {
+    "hero": {
+      "viewMenu": "Ver o cardápio"
+    },
+    "intro": {
+      "eyebrow": "Do Pacífico mexicano",
+      "story": "Nossa história",
+      "visit": "Como chegar"
+    },
+    "bar": {
+      "eyebrow": "Grill & bar",
+      "cta": "Ver o bar completo"
+    },
+    "about": {
+      "home": "Início",
+      "eyebrow": "Nossa história",
+      "title": "Sobre nós",
+      "titleNamed": "Sobre {name}",
+      "placeholder": "Estamos preparando nossa história. Volte em breve para conhecer como nasceu esta cozinha do litoral.",
+      "missionHeading": "Nossa missão",
+      "visionHeading": "Nossa visão"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

@@ -55,6 +55,10 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
+    - host: santofishrestaurant.iguzman.com.mx
+      paths:
+        - path: /
+          pathType: Prefix
   tls:
     - secretName: website-tls
       hosts:
@@ -63,6 +67,7 @@ ingress:
         - elpanbueno.com
         - cafedealtura.iguzman.com.mx
         - supertortaselchino.iguzman.com.mx
+        - santofishrestaurant.iguzman.com.mx
 
 # ─── Environment variables ──────────────────────────────────
 # Plain environment variables injected into the container.

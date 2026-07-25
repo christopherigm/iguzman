@@ -62,6 +62,29 @@
       "commitmentHeading": "Notre engagement"
     }
   },
+  "SantoFishSite": {
+    "hero": {
+      "viewMenu": "Voir la carte"
+    },
+    "intro": {
+      "eyebrow": "De la côte Pacifique",
+      "story": "Notre histoire",
+      "visit": "Nous trouver"
+    },
+    "bar": {
+      "eyebrow": "Grill & bar",
+      "cta": "Voir tout le bar"
+    },
+    "about": {
+      "home": "Accueil",
+      "eyebrow": "Notre histoire",
+      "title": "À propos",
+      "titleNamed": "À propos de {name}",
+      "placeholder": "Notre histoire arrive bientôt. Revenez vite pour découvrir la naissance de cette cuisine du littoral.",
+      "missionHeading": "Notre mission",
+      "visionHeading": "Notre vision"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

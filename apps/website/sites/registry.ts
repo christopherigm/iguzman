@@ -17,6 +17,7 @@ import bdroneConfig from "./bdrone/site.config";
 import panorganicoConfig from "./panorganico/site.config";
 import cafedealturaConfig from "./cafedealtura/site.config";
 import supertortaselchinoConfig from "./supertortaselchino/site.config";
+import santofishrestaurantConfig from "./santofishrestaurant/site.config";
 // <new-site:import> - the CLI inserts new `import <slug>Config from ...` lines above this marker.
 
 /**
@@ -37,6 +38,7 @@ const SITES: SiteEntry[] = [
   { config: panorganicoConfig, load: () => import("./panorganico") },
   { config: cafedealturaConfig, load: () => import("./cafedealtura") },
   { config: supertortaselchinoConfig, load: () => import("./supertortaselchino") },
+  { config: santofishrestaurantConfig, load: () => import("./santofishrestaurant") },
   // <new-site:entry> - the CLI inserts new `{ config, load }` entries above this marker.
   { config: defaultConfig, load: () => import("./_default") },
 ];

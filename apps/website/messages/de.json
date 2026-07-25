@@ -62,6 +62,29 @@
       "commitmentHeading": "Unser Versprechen"
     }
   },
+  "SantoFishSite": {
+    "hero": {
+      "viewMenu": "Zur Speisekarte"
+    },
+    "intro": {
+      "eyebrow": "Von der Pazifikküste",
+      "story": "Unsere Geschichte",
+      "visit": "So finden Sie uns"
+    },
+    "bar": {
+      "eyebrow": "Grill & Bar",
+      "cta": "Ganze Bar ansehen"
+    },
+    "about": {
+      "home": "Startseite",
+      "eyebrow": "Unsere Geschichte",
+      "title": "Über uns",
+      "titleNamed": "Über {name}",
+      "placeholder": "Unsere Geschichte ist in Arbeit. Schauen Sie bald wieder vorbei und erfahren Sie, wie diese Küste-Küche entstand.",
+      "missionHeading": "Unsere Mission",
+      "visionHeading": "Unsere Vision"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

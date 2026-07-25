@@ -62,6 +62,29 @@
       "commitmentHeading": "Our commitment"
     }
   },
+  "SantoFishSite": {
+    "hero": {
+      "viewMenu": "See the menu"
+    },
+    "intro": {
+      "eyebrow": "From the Pacific coast",
+      "story": "Our story",
+      "visit": "Find us"
+    },
+    "bar": {
+      "eyebrow": "Grill & bar",
+      "cta": "See the full bar"
+    },
+    "about": {
+      "home": "Home",
+      "eyebrow": "Our story",
+      "title": "About us",
+      "titleNamed": "About {name}",
+      "placeholder": "We're getting our story ready. Come back soon to read how our coastal kitchen came to be.",
+      "missionHeading": "Our mission",
+      "visionHeading": "Our vision"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""
