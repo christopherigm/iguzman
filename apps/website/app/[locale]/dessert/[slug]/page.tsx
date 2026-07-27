@@ -6,7 +6,7 @@ import {
 } from "@/components/menu-item-detail-page";
 
 /**
- * One food item. Like every kind route it serves only its own kind - an item of
+ * One dessert item. Like every kind route it serves only its own kind - an item of
  * another kind has its own path and 404s here. See
  * `components/menu-item-detail-page.tsx`.
  */
@@ -17,12 +17,12 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
-  return generateMenuItemMetadata({ locale, slug, routeKind: "food" });
+  return generateMenuItemMetadata({ locale, slug, routeKind: "dessert" });
 }
 
-export default async function FoodItemPage({ params }: Props) {
+export default async function DessertItemPage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  return <MenuItemDetailPage locale={locale} slug={slug} routeKind="food" />;
+  return <MenuItemDetailPage locale={locale} slug={slug} routeKind="dessert" />;
 }

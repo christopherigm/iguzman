@@ -8,7 +8,7 @@ from django.core import mail
 from django.core.cache import cache
 from django.test import TestCase
 
-from catalog.models import Product, Service
+from catalog.models import MenuItem, Product, Service
 from core.crypto import decrypt, encrypt
 from core.models import System
 from users.models import CartItem
@@ -517,6 +517,50 @@ class OrderReadTests(TestCase):
         response = self.client.get(f"/api/orders/{self.order.public_id}/")
 
         self.assertEqual(response.status_code, 404)
+
+    def test_menu_line_carries_the_items_kind_for_the_detail_link(self):
+        """`item_menu_kind` is what lets the order page link to /drink/<slug>
+        instead of /food/<slug>. Read live through the FK, so it follows a kind
+        change in the CMS - the link has to address the page that exists now, not
+        the one that existed at checkout."""
+        item = MenuItem.objects.create(
+            system=self.system, name="Michelada", slug="o-michelada",
+            price=Decimal("6.00"), kind="drink",
+        )
+        OrderLine.objects.create(
+            order=self.order, kind="menu_item", menu_item=item, name="Michelada",
+            unit_price=Decimal("6.00"), quantity=1, line_total=Decimal("6.00"),
+            currency="USD",
+        )
+
+        lines = self.client.get(f"/api/orders/{self.order.public_id}/").json()["lines"]
+        by_name = {line["name"]: line for line in lines}
+
+        self.assertEqual(by_name["Michelada"]["item_menu_kind"], "drink")
+        # A product line has no menu kind rather than a defaulted "food", so the
+        # frontend cannot mistake one for a menu item.
+        self.assertIsNone(by_name["Bag"]["item_menu_kind"])
+
+    def test_menu_kind_is_null_once_the_item_is_deleted(self):
+        item = MenuItem.objects.create(
+            system=self.system, name="Flan", slug="o-flan",
+            price=Decimal("4.00"), kind="dessert",
+        )
+        line = OrderLine.objects.create(
+            order=self.order, kind="menu_item", menu_item=item, name="Flan",
+            unit_price=Decimal("4.00"), quantity=1, line_total=Decimal("4.00"),
+            currency="USD",
+        )
+
+        item.delete()
+
+        lines = self.client.get(f"/api/orders/{self.order.public_id}/").json()["lines"]
+        row = next(r for r in lines if r["id"] == line.pk)
+        # The line still renders in full - only the link to a page that no longer
+        # exists goes away, exactly like `item_slug`.
+        self.assertEqual(row["name"], "Flan")
+        self.assertIsNone(row["item_slug"])
+        self.assertIsNone(row["item_menu_kind"])
 
     def test_a_line_outlives_its_deleted_product(self):
         """SET_NULL, not CASCADE: deleting a product must not delete the record

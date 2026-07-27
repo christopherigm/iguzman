@@ -101,18 +101,24 @@ function VariantThumb({
  * all model variants the same way - each sibling is a standalone buyable of the
  * same kind, linked by a symmetrical `variants` relation.
  *
- * `basePath` is the detail route for that kind ("/products", "/services",
- * "/food"); the caller renders nothing when `variants` is empty.
+ * `hrefFor` builds one sibling's detail URL. It is a function rather than a base
+ * path because a menu item's route follows its own `kind` (`/drink/<slug>`, not
+ * `/food/<slug>`) and each of those routes serves only that kind - so a variant
+ * of a different kind, which the CMS does not prevent, would otherwise be linked
+ * to a 404. Product and service callers just ignore the argument and return
+ * their one fixed prefix.
+ *
+ * The caller renders nothing when `variants` is empty.
  */
-export function VariantThumbs({
-  basePath,
+export function VariantThumbs<T extends VariantRef>({
+  hrefFor,
   current,
   variants,
   locale,
 }: {
-  basePath: string;
-  current: { slug: string; name: string; image: string | null };
-  variants: VariantRef[];
+  hrefFor: (variant: T) => string;
+  current: { slug: string; name: string; image: string | null; href: string };
+  variants: T[];
   locale: string;
 }) {
   const variantName = (v: VariantRef) =>
@@ -121,7 +127,7 @@ export function VariantThumbs({
   return (
     <Box flexWrap="wrap" gap={12}>
       <VariantThumb
-        href={`${basePath}/${current.slug}`}
+        href={current.href}
         name={current.name}
         image={current.image}
         current
@@ -129,7 +135,7 @@ export function VariantThumbs({
       {variants.map((v) => (
         <VariantThumb
           key={v.id}
-          href={`${basePath}/${v.slug}`}
+          href={hrefFor(v)}
           name={variantName(v)}
           image={v.image}
           current={false}

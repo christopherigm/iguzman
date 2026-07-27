@@ -13,6 +13,10 @@
  * these from `@/lib/orders` unchanged.
  */
 
+// `lib/menu-kinds.ts` is deliberately plain data with no server imports, so it
+// is safe to pull a runtime-free type from it here (see its module docstring).
+import type { MenuItemKind } from "./menu-kinds";
+
 /** Mirrors `Order.STATUS_CHOICES` in website-api. `placed` is an offline order
  *  (pay-in-store / pay-on-delivery) awaiting the tenant to take payment - it
  *  never has a Stripe session, which is what keeps it apart from `pending`. */
@@ -43,9 +47,9 @@ export type PaymentMethod = CustomerPaymentMethod | PosPaymentMethod;
  * catalog - `name` and `unit_price` are what was actually charged, so they stay
  * correct after the item is re-priced or renamed.
  *
- * `image`, `item_id` and `item_slug` are the exception: they are read through
- * the catalog FK and go null once the item is deleted, which is why the order
- * page must render a line without them.
+ * `image`, `item_id`, `item_slug` and `item_menu_kind` are the exception: they
+ * are read through the catalog FK and go null once the item is deleted, which is
+ * why the order page must render a line without them.
  */
 /** One snapshotted customisation on a purchased menu line (see the API's
  *  OrderLine.customization). Frozen at checkout so it survives catalog edits. */
@@ -70,6 +74,12 @@ export interface OrderLine {
   image: string | null;
   item_id: number | null;
   item_slug: string | null;
+  /** A menu line's current `kind`, which its detail route is named after. Null
+   *  for a product or service line, and null once the item is deleted - like
+   *  `item_slug`, it addresses a page rather than recording what was bought, so
+   *  it is read live, not snapshotted. Both are needed to build the link, so a
+   *  null here means the row renders without one. */
+  item_menu_kind: MenuItemKind | null;
 }
 
 export interface Order {

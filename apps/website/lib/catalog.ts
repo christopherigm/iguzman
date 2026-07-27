@@ -483,6 +483,10 @@ export interface MenuItemVariant {
   slug: string;
   name: string | null;
   en_name: string | null;
+  /** The sibling's own kind, which is what its detail route is - a variant is
+   *  normally the same kind as the item it hangs off, but the CMS does not
+   *  enforce that, so the link is built from this rather than from the page. */
+  kind: MenuItemKind;
   image: string | null;
 }
 

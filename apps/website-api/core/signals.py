@@ -13,8 +13,8 @@ route uniformly: admin single + bulk delete, the API view, and any cascade.
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from .cache import invalidate_pattern
-from .models import Brand
+from .cache import invalidate_pattern, invalidate_system_payload
+from .models import Branch, Brand
 
 
 def _invalidate_catalog_for_brand():
@@ -29,3 +29,13 @@ def _invalidate_catalog_for_brand():
 @receiver(post_delete, sender=Brand)
 def invalidate_catalog_on_brand_change(sender, instance, **kwargs):
     _invalidate_catalog_for_brand()
+
+
+@receiver(post_save, sender=Branch)
+@receiver(post_delete, sender=Branch)
+def invalidate_system_on_branch_change(sender, instance, **kwargs):
+    """``branch_count`` rides along in the cached System payload, and it is what
+    decides whether the public Contact link is rendered at all. Same reasoning as
+    the catalog counts in ``catalog/signals.py`` - the count changes while the
+    System row itself does not, so nothing else would clear it."""
+    invalidate_system_payload()

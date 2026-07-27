@@ -7,6 +7,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import type { OrderLine } from "@/lib/orders";
 import { formatPrice } from "@/lib/price";
+import { menuItemHref } from "@/lib/menu-kinds";
 import { BuyNowButton } from "@/components/buy-now-button";
 
 interface OrderLineRowProps {
@@ -45,6 +46,9 @@ export async function OrderLineRow({ line }: OrderLineRowProps) {
         ? "rgba(99,102,241,0.8)"
         : "rgba(234,88,12,0.85)";
 
+  // A menu line needs the kind as well as the slug to address a page, and both
+  // go null together when the item is deleted - so no kind means no link, the
+  // same as no slug.
   const href =
     line.item_slug === null
       ? null
@@ -52,7 +56,9 @@ export async function OrderLineRow({ line }: OrderLineRowProps) {
         ? `/products/${line.item_slug}`
         : line.kind === "service"
           ? `/services/${line.item_slug}`
-          : `/food/${line.item_slug}`;
+          : line.item_menu_kind
+            ? menuItemHref(line.item_menu_kind, line.item_slug)
+            : null;
 
   const image = line.image ? (
     <Box

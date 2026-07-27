@@ -1270,13 +1270,18 @@ class MenuItemVariantSerializer(serializers.ModelSerializer):
     """A sibling variant reference on a MenuItem - only enough to render a
     linkable thumbnail on the detail page. Deliberately shallow: it does NOT
     nest ``variants``/``ingredients``, so the public payload can never recurse
-    through the symmetrical relation."""
+    through the symmetrical relation.
+
+    ``kind`` is here for the link, not for display: a menu item's detail route
+    follows its kind (``/drink/<slug>``, not ``/food/<slug>``), and nothing stops
+    the CMS from linking a variant of a different kind, so a thumbnail cannot
+    assume its sibling shares the current page's route."""
 
     image = serializers.SerializerMethodField()
 
     class Meta:
         model = MenuItem
-        fields = ['id', 'slug', 'name', 'en_name', 'image']
+        fields = ['id', 'slug', 'name', 'en_name', 'kind', 'image']
 
     def get_image(self, obj):
         return _buyable_image_url(obj, self.context.get('request'))

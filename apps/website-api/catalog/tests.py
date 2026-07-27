@@ -7,11 +7,12 @@ from django.test import TestCase
 
 from decimal import Decimal
 
-from core.models import Brand, System
+from core.models import Branch, Brand, System
 
 from .models import (
     Product, ProductImage, MenuItem, MenuItemIngredient,
-    MenuItemIngredientOption, Ingredient, RecipeStep, normalize_selection,
+    MenuItemIngredientOption, Ingredient, RecipeStep, Service,
+    normalize_selection,
 )
 
 
@@ -193,6 +194,18 @@ class MenuItemKindTests(TestCase):
             self._names(self.client.get(self.url)), ["Flan", "Michelada", "Taco"]
         )
 
+    def test_variant_reference_carries_its_own_kind(self):
+        """A variant thumbnail links to the sibling's own route, and each route
+        serves only its own kind - so the reference has to say what the sibling
+        is rather than let the page assume its own kind. Nothing stops the CMS
+        from pairing across kinds, which is exactly when assuming would 404."""
+        self.dish.variants.add(self.drink)
+
+        rows = {r["name"]: r for r in self.client.get(self.url).json()}
+        variants = {v["slug"]: v["kind"] for v in rows["Taco"]["variants"]}
+
+        self.assertEqual(variants, {"k-michelada": "drink"})
+
     def test_system_payload_counts_every_kind(self):
         # The navbar decides which per-kind links to render from this one field,
         # so every choice must be present - a kind the tenant has none of has to
@@ -208,11 +221,86 @@ class MenuItemKindTests(TestCase):
     def test_system_payload_ignores_disabled_items(self):
         self.drink.enabled = False
         self.drink.save()
-        cache.clear()
         counts = self.client.get(
             "/api/system/", HTTP_X_WEBSITE_HOST="bar.test"
         ).json()["menu_item_kind_counts"]
         self.assertEqual(counts["drink"], 0)
+
+
+class SystemPayloadInvalidationTests(TestCase):
+    """The System payload is cached for an hour and carries counts of *other*
+    models, so a catalog or branch write has to clear it (see
+    `core.cache.invalidate_system_payload`).
+
+    Every test here reads the endpoint once *before* writing, so the assertion is
+    against a populated cache - that is the whole failure mode. Without the
+    signals these all pass on a cold cache and fail in production, which is how
+    an item moved from Food to Drinks left the navbar without a Drinks link for
+    up to an hour.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Bar", host="inv.test")
+        self.url = "/api/system/"
+        self.host = {"HTTP_X_WEBSITE_HOST": "inv.test"}
+
+    def _payload(self):
+        return self.client.get(self.url, **self.host).json()
+
+    def test_changing_a_menu_items_kind_updates_the_counts(self):
+        item = MenuItem.objects.create(
+            system=self.system, name="Michelada", slug="inv-michelada",
+            price=Decimal("6.00"), kind="food",
+        )
+        self.assertEqual(self._payload()["menu_item_kind_counts"]["food"], 1)
+
+        # The edit the bug report was about: only `kind` moves, so nothing else
+        # in the write path would notice the payload had gone stale.
+        item.kind = "drink"
+        item.save()
+
+        counts = self._payload()["menu_item_kind_counts"]
+        self.assertEqual(counts["drink"], 1)
+        self.assertEqual(counts["food"], 0)
+
+    def test_creating_the_first_drink_updates_the_counts(self):
+        self.assertEqual(self._payload()["menu_item_kind_counts"]["drink"], 0)
+        MenuItem.objects.create(
+            system=self.system, name="Agua", slug="inv-agua",
+            price=Decimal("2.00"), kind="drink",
+        )
+        self.assertEqual(self._payload()["menu_item_kind_counts"]["drink"], 1)
+
+    def test_deleting_a_menu_item_updates_the_counts(self):
+        item = MenuItem.objects.create(
+            system=self.system, name="Flan", slug="inv-flan",
+            price=Decimal("4.00"), kind="dessert",
+        )
+        self.assertEqual(self._payload()["menu_item_kind_counts"]["dessert"], 1)
+        item.delete()
+        self.assertEqual(self._payload()["menu_item_kind_counts"]["dessert"], 0)
+
+    def test_product_and_service_counts_are_invalidated_too(self):
+        # Same class of bug, same fix: these drive the Products/Services links.
+        self.assertEqual(self._payload()["product_count"], 0)
+        Product.objects.create(
+            system=self.system, name="Mug", slug="inv-mug", price=Decimal("9.00"),
+        )
+        self.assertEqual(self._payload()["product_count"], 1)
+
+        self.assertEqual(self._payload()["service_count"], 0)
+        Service.objects.create(
+            system=self.system, name="Catering", slug="inv-catering",
+            price=Decimal("99.00"),
+        )
+        self.assertEqual(self._payload()["service_count"], 1)
+
+    def test_branch_count_is_invalidated(self):
+        # `branch_count` is what decides whether the Contact link renders at all.
+        self.assertEqual(self._payload()["branch_count"], 0)
+        Branch.objects.create(system=self.system, name="Centro")
+        self.assertEqual(self._payload()["branch_count"], 1)
 
 
 class MenuItemPricingTests(TestCase):

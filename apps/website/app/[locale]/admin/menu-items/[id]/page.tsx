@@ -8,7 +8,11 @@ import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 // One list of kinds for the whole app - the CMS dropdown offers exactly what
 // the storefront has pages for. `lib/menu-kinds.ts` is server-free, so a
 // client form may read it.
-import { MENU_ITEM_KINDS, type MenuItemKind } from "@/lib/menu-kinds";
+import {
+  MENU_ITEM_KINDS,
+  menuItemHref,
+  type MenuItemKind,
+} from "@/lib/menu-kinds";
 import { PricingSection } from "@/components/admin/pricing-section";
 import {
   AdminImageUploader,
@@ -629,7 +633,16 @@ export default function AdminMenuItemFormPage({ params }: Props) {
         error={error}
         success={success}
         productionHref={
-          !isNew && values.slug ? `/food/${String(values.slug)}` : undefined
+          !isNew && values.slug
+            ? menuItemHref(
+                // The kind currently selected in the form, so "view live" follows
+                // the dropdown. It only reaches a real page once saved - each
+                // route serves only its own kind - which is the same caveat the
+                // slug field already has.
+                (values.kind as MenuItemKind | undefined) ?? "food",
+                String(values.slug),
+              )
+            : undefined
         }
         imagesSlot={
           <Box display="flex" flexDirection="column" gap="8px">

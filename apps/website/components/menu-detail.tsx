@@ -11,6 +11,7 @@ import { isFavorite } from "@/lib/favorites";
 import { toShareDescription } from "@/lib/metadata";
 import { discountPercent } from "@/lib/price";
 import { nutritionRows } from "@/lib/nutrition";
+import { menuItemHref } from "@/lib/menu-kinds";
 import { MenuItemCustomizer } from "./menu-item-customizer";
 import { FavoriteButton } from "./favorite-button";
 import { NutritionLabel } from "./nutrition-label";
@@ -163,8 +164,17 @@ async function MenuVariantsCard({ item, locale }: MenuDetailProps) {
         {tMenu("variants")}
       </Typography>
       <VariantThumbs
-        basePath="/food"
-        current={{ slug: item.slug, name, image: item.image }}
+        // Each sibling's *own* kind: the relation means "an alternative version
+        // of this dish", so siblings normally share a kind - but nothing in the
+        // CMS enforces it, and a route serves only its own kind, so assuming
+        // this page's kind would link a cross-kind variant to a 404.
+        hrefFor={(v) => menuItemHref(v.kind, v.slug)}
+        current={{
+          slug: item.slug,
+          name,
+          image: item.image,
+          href: menuItemHref(item.kind, item.slug),
+        }}
         variants={item.variants}
         locale={locale}
       />

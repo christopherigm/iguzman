@@ -68,6 +68,33 @@ def delete_model(self, request, obj):
 
 **Note:** Call `super().save_model(...)` _before_ invalidating; call `super().delete_model(...)` _after_ invalidating.
 
+### Cross-model invalidation - a signal, not a line in each write path
+
+The rules above only cover a model's *own* namespace, and that is not enough when
+a cached payload embeds a **different** model's data. Writing model A then makes
+the cached payload of model B wrong, and nothing in A's write path knows it.
+
+Those cases live in `core/signals.py` and `catalog/signals.py` as
+`post_save`/`post_delete` receivers, so one receiver covers the API view, the
+Django admin (single *and* bulk delete), any cascade, and a shell script alike.
+Current pairings, each documented at its receiver:
+
+| Writing this            | Also invalidates                                        |
+| ----------------------- | ------------------------------------------------------- |
+| `Brand`                 | `catalog:*` (items embed `brand_name`)                  |
+| `*Category`             | `catalog:<family>*` (items embed `category_name/slug`)  |
+| `Product`/`Service`/`MenuItem` | `catalog:<kind>_categor*` (`item_count`) **and** the System payload |
+| `Branch`                | the System payload (`branch_count`)                     |
+
+**The System payload is the one that bites.** `GET /api/system/` is cached for an
+hour (`SYSTEM_CACHE_TTL`), and `SystemSerializer` carries `product_count`,
+`service_count`, `menu_item_count`, `menu_item_kind_counts` and `branch_count` -
+counts of models it does not own. The storefront navbar builds its links from
+exactly those numbers, so any write that changes one must call
+`core.cache.invalidate_system_payload()`. **If you add another derived field to
+`SystemSerializer`, add a receiver for whatever it counts in the same task**, or
+the navbar will be up to an hour stale and look like a lost write.
+
 ## Models - Full-Stack Coverage Rule
 
 When adding a **new model** or a **new field to an existing model**, automatically do all of this in the same task:

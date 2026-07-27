@@ -161,11 +161,12 @@ async function ServiceVariantsCard({ service, locale }: ServiceDetailProps) {
         {t("variants")}
       </Typography>
       <VariantThumbs
-        basePath="/services"
+        hrefFor={(v) => `/services/${v.slug}`}
         current={{
           slug: service.slug,
           name: displayName,
           image: service.image,
+          href: `/services/${service.slug}`,
         }}
         variants={service.variants}
         locale={locale}

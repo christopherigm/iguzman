@@ -130,11 +130,12 @@ async function ProductVariantsCard({ product, locale }: ProductDetailProps) {
         {t("variants")}
       </Typography>
       <VariantThumbs
-        basePath="/products"
+        hrefFor={(v) => `/products/${v.slug}`}
         current={{
           slug: product.slug,
           name: displayName,
           image: product.image,
+          href: `/products/${product.slug}`,
         }}
         variants={product.variants}
         locale={locale}

@@ -16,12 +16,20 @@ admin single + bulk delete, the API views, and any cascade uniformly:
    re-categorising an item changes that count, so the category caches go stale.
    ``post_save`` fires on create *and* update (covering an ``enabled`` toggle or
    a ``category`` reassignment); ``post_delete`` covers removals.
+
+3. **Items -> the System payload.** ``SystemSerializer`` embeds
+   ``product_count``, ``service_count``, ``menu_item_count`` and
+   ``menu_item_kind_counts``, and that payload is cached for a whole hour. The
+   storefront navbar builds its links from those numbers, so an item write -
+   creating the tenant's first drink, disabling the last one, or moving one from
+   ``kind='food'`` to ``kind='drink'`` - has to clear it too, or the Drinks link
+   stays missing (or stays after the drinks are gone) until the TTL lapses.
 """
 
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from core.cache import invalidate_pattern
+from core.cache import invalidate_pattern, invalidate_system_payload
 
 from .models import (
     MenuCategory, MenuItem, Product, ProductCategory, Service, ServiceCategory,
@@ -64,15 +72,20 @@ def invalidate_menu_items_on_category_change(sender, instance, **kwargs):
 @receiver(post_delete, sender=Product)
 def invalidate_product_categories_on_item_change(sender, instance, **kwargs):
     _invalidate_categories("product")
+    invalidate_system_payload()
 
 
 @receiver(post_save, sender=Service)
 @receiver(post_delete, sender=Service)
 def invalidate_service_categories_on_item_change(sender, instance, **kwargs):
     _invalidate_categories("service")
+    invalidate_system_payload()
 
 
 @receiver(post_save, sender=MenuItem)
 @receiver(post_delete, sender=MenuItem)
 def invalidate_menu_categories_on_item_change(sender, instance, **kwargs):
     _invalidate_categories("menu")
+    # Also the per-kind counts: `kind` is a plain field, so an edit that only
+    # moves an item from Food to Drinks fires nothing else that would notice.
+    invalidate_system_payload()

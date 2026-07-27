@@ -12,6 +12,7 @@ import { Badge } from "@repo/ui/core-elements/badge";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
 import type { CartItem } from "@/lib/cart";
 import { formatPrice } from "@/lib/price";
+import { menuItemHref } from "@/lib/menu-kinds";
 import "./cart-line.css";
 
 interface CartLineProps {
@@ -67,11 +68,11 @@ export function CartLine({
     "";
 
   const href =
-    kind === "product"
-      ? `/products/${item.slug}`
-      : kind === "service"
-        ? `/services/${item.slug}`
-        : `/food/${item.slug}`;
+    line.kind === "product"
+      ? `/products/${line.item.slug}`
+      : line.kind === "service"
+        ? `/services/${line.item.slug}`
+        : menuItemHref(line.item.kind, line.item.slug);
 
   const kindLabel =
     kind === "product"

@@ -29,3 +29,23 @@ def invalidate_pattern(pattern):
     for key in [k for k in list(store) if fnmatchcase(k, full_pattern)]:
         store.pop(key, None)
         getattr(cache, "_expire_info", {}).pop(key, None)
+
+
+def invalidate_system_payload():
+    """Drop every cached ``GET /api/system/`` response.
+
+    That payload is not just the System row: it also carries derived counts of
+    *other* models - ``product_count``, ``service_count``, ``menu_item_count``,
+    ``menu_item_kind_counts`` and ``branch_count`` (see ``SystemSerializer``).
+    Those are what the storefront navbar renders its links from, so a catalog or
+    branch write makes the cached payload wrong even though the System row never
+    changed.
+
+    It matters more here than anywhere else because ``SYSTEM_CACHE_TTL`` is an
+    hour, not the five minutes the list endpoints use: without this the navbar
+    keeps its old links for up to an hour after an admin adds the tenant's first
+    drink or flips an item's ``kind``. Both key shapes are cleared - ``host:`` is
+    what the public site reads, ``pk:`` what the CMS does.
+    """
+    invalidate_pattern("system:host:*")
+    invalidate_pattern("system:pk:*")

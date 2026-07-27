@@ -405,7 +405,7 @@ export function HeroTextFrame({
           <img
             src={image}
             alt={imageAlt}
-            style={{ width: "72%", height: "72%", objectFit: "contain" }}
+            style={{ width: "85%", height: "85%", objectFit: "contain" }}
           />
         </div>
         {children}
@@ -816,9 +816,9 @@ export function Hero({
   // Only a `bottom` divider matters here - a `top` notch is nowhere near the disc.
   const profileDividerLift =
     isProfile &&
-    bottomDivider &&
-    bottomDivider !== "none" &&
-    bottomDividerEdge === "bottom"
+      bottomDivider &&
+      bottomDivider !== "none" &&
+      bottomDividerEdge === "bottom"
       ? shapeDividerEdgeInset(bottomDivider, bottomDividerHeight)
       : null;
   // The disc's own overhang below the hero, and the offsets built on it: its
@@ -916,7 +916,7 @@ export function Hero({
             right: 0,
             bottom: isProfile
               ? // Follows the disc: a lifted disc lifts its 24px clearance too.
-                profileDividerLift
+              profileDividerLift
                 ? `calc(${profileLogoSize} / 2 + 24px + ${profileDividerLift})`
                 : `calc(${profileLogoSize} / 2 + 24px)`
               : 0,
