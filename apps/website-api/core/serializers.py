@@ -506,6 +506,7 @@ class SystemSerializer(serializers.ModelSerializer):
     product_count = serializers.SerializerMethodField()
     service_count = serializers.SerializerMethodField()
     menu_item_count = serializers.SerializerMethodField()
+    menu_item_kind_counts = serializers.SerializerMethodField()
     branch_count = serializers.SerializerMethodField()
     stripe_configured = serializers.BooleanField(read_only=True)
     stripe_webhook_url = serializers.SerializerMethodField()
@@ -559,6 +560,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "spotlight_button_label", "en_spotlight_button_label",
             "spotlight_button_link", "spotlight_items",
             "product_count", "service_count", "menu_item_count",
+            "menu_item_kind_counts",
             "branch_count",
         ]
 
@@ -615,6 +617,29 @@ class SystemSerializer(serializers.ModelSerializer):
     def get_menu_item_count(self, obj):
         from catalog.models import MenuItem
         return MenuItem.objects.filter(system=obj, enabled=True).count()
+
+    def get_menu_item_kind_counts(self, obj):
+        """How many enabled menu items this tenant has of each `kind`.
+
+        One aggregate rather than five `?kind=` list calls: the navbar has to
+        decide which per-kind links to render on *every* page, and the System
+        payload is already fetched there. Every choice is present, zero
+        included, so a consumer can read a count without guarding the key.
+        """
+        from django.db.models import Count
+
+        from catalog.models import MENU_ITEM_KIND_CHOICES, MenuItem
+
+        counts = dict.fromkeys((c[0] for c in MENU_ITEM_KIND_CHOICES), 0)
+        rows = (
+            MenuItem.objects.filter(system=obj, enabled=True)
+            .values('kind')
+            .annotate(total=Count('id'))
+        )
+        for row in rows:
+            if row['kind'] in counts:
+                counts[row['kind']] = row['total']
+        return counts
 
     def get_branch_count(self, obj):
         # Drives whether the public Contact link appears (a Contact page is worth

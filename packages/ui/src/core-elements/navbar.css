@@ -99,6 +99,7 @@
 
 /* ── Navbar item (shared button style) ────────────── */
 .ui-navbar-item {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -118,11 +119,26 @@
   background-color: var(--surface-1, rgba(0, 0, 0, 0.04));
 }
 
-/* Subtle underline for the active page's menu item */
-.ui-navbar-item--active {
-  position: relative;
+/* Icon-only item: no text to sit beside, so tighten the box around the icon
+   and give the badge a corner to hang off. */
+.ui-navbar-item--icon-only {
+  padding: 6px 10px;
 }
 
+/* Count badge. Inline after the label by default; over the icon's top-right
+   corner when the item is icon-only. `pointer-events: none` keeps the click
+   on the item underneath. */
+.ui-navbar-item-badge {
+  pointer-events: none;
+}
+
+.ui-navbar-item--icon-only .ui-navbar-item-badge {
+  position: absolute;
+  top: 0;
+  right: 2px;
+}
+
+/* Subtle underline for the active page's menu item */
 .ui-navbar-item--active::after {
   content: "";
   position: absolute;

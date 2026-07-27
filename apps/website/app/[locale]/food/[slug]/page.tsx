@@ -4,6 +4,7 @@ import { setRequestLocale, getTranslations } from "next-intl/server";
 import { Container } from "@repo/ui/core-elements/container";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { getMenuItem } from "@/lib/catalog";
+import { MENU_ALL_PATH } from "@/lib/menu-kinds";
 import { getRequestOrigin, toShareDescription } from "@/lib/metadata";
 import type { GalleryImage } from "@/components/item-gallery-client";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
@@ -107,7 +108,7 @@ export default async function MenuItemPage({ params }: Props) {
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },
-    { label: tMenu("menu"), href: "/categories/food" },
+    { label: tMenu("menu"), href: MENU_ALL_PATH },
     ...(item.category_name && item.category_slug
       ? [
         {

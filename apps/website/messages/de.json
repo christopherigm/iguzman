@@ -100,7 +100,6 @@
     "admin": "Administrator",
     "products": "Produkte",
     "services": "Dienstleistungen",
-    "food": "Essen",
     "contact": "Kontakt",
     "favorites": "Favoriten",
     "cart": "Warenkorb",
@@ -793,6 +792,12 @@
     "instruction": "Anweisung",
     "basePrice": "Grundpreis",
     "calories": "Kalorien",
+    "menuItemKind": "Art",
+    "kindFood": "Speise",
+    "kindDrink": "Getränk",
+    "kindDessert": "Dessert",
+    "kindSide": "Beilage",
+    "kindAppetizer": "Vorspeise",
     "spiceLevel": "Schärfegrad (0-5)",
     "allergens": "Allergene",
     "organic": "Bio",
@@ -1032,6 +1037,15 @@
     "calcium": "Kalzium",
     "iron": "Eisen",
     "potassium": "Kalium"
+  },
+  "MenuKinds": {
+    "menu": "Speisekarte",
+    "all": "Gesamte Speisekarte",
+    "food": "Speisen",
+    "drink": "Getränke",
+    "dessert": "Desserts",
+    "side": "Beilagen",
+    "appetizer": "Vorspeisen"
   },
   "AdminOrders": {
     "home": "Startseite",

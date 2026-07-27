@@ -268,7 +268,7 @@ decisions rather than settings:
   system={system}
   splitSlogan          // first slogan line = headline, the rest = quieter subline
   align="start"        // left-align the text, cap its measure (logo stays centred)
-  actions={hasFood && <Button text={…} href="/categories/food" kind="primary" size="lg" />}
+  actions={hasFood && <Button text={…} href={MENU_ALL_PATH} kind="primary" size="lg" />}
 />
 ```
 
@@ -281,9 +281,19 @@ seed brief), not code. Three sites once carried a scrim; it was removed for
 exactly this reason.
 
 **Gate `actions` on a real count.** `system.product_count` / `service_count` /
-`menu_item_count` decide whether a CTA has anywhere to go — a food site's button
-points at `/categories/food`, and an ungated one lands on an empty listing before
-the catalog is seeded.
+`menu_item_count` decide whether a CTA has anywhere to go — an ungated CTA lands
+on an empty listing before the catalog is seeded.
+
+**A food CTA points at `MENU_ALL_PATH` (`/categories/menu`), never a path
+literal.** The menu is six pages: `/categories/menu` is the whole thing, and
+`/categories/{food,drinks,desserts,sides,appetizers}` each list one
+`MenuItem.kind` (`MENU_KIND_PATHS` in `lib/catalog.ts` maps kind → path — the
+enum value is singular and the path plural, so never build one by
+concatenation). `/categories/food` is now the **dishes**, not the menu: a "see
+our menu" button sent there would silently hide a bar's drinks. To link one
+kind — a drinks CTA on a cantina's landing — use `MENU_KIND_PATHS.drink` and
+gate it on `system.menu_item_kind_counts.drink`, the per-kind counterpart to
+`menu_item_count`.
 
 ## Shape dividers — the seam treatment, and who owns it
 

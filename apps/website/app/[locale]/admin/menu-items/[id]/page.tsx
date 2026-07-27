@@ -5,6 +5,10 @@ import { useTranslations } from "next-intl";
 import { use } from "react";
 import { useRouter } from "@repo/i18n/navigation";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
+// One list of kinds for the whole app - the CMS dropdown offers exactly what
+// the storefront has pages for. `lib/menu-kinds.ts` is server-free, so a
+// client form may read it.
+import { MENU_ITEM_KINDS, type MenuItemKind } from "@/lib/menu-kinds";
 import { PricingSection } from "@/components/admin/pricing-section";
 import {
   AdminImageUploader,
@@ -95,6 +99,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     compare_price: "",
     cost_price: "",
     currency: "USD",
+    kind: "food",
     category: "",
     brand: "",
     is_available: true,
@@ -242,6 +247,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
             compare_price: item.compare_price ?? "",
             cost_price: item.cost_price ?? "",
             currency: item.currency ?? "USD",
+            kind: item.kind ?? "food",
             category: item.category ?? "",
             brand: item.brand ?? "",
             is_available: item.is_available ?? true,
@@ -444,6 +450,11 @@ export default function AdminMenuItemFormPage({ params }: Props) {
       ].forEach((k) => {
         if (payload[k] === "") payload[k] = null;
       });
+      // AdminForm prepends a blank option to every select, but `kind` is a
+      // required enum with no "none" - picking that option would POST "" and
+      // the serializer's ChoiceField would reject it. Fall back to the model
+      // default instead of surfacing a 400.
+      if (!payload.kind) payload.kind = "food";
       // Symmetrical sibling variants, sent as a list of MenuItem ids. The write
       // serializer strips any self-reference; an empty list clears them all.
       payload.variants = variantIds;
@@ -496,6 +507,16 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     router.push(`/admin/menu-items/${created.id as number}`);
   };
 
+  // Declared above `fields` because the Kind select reads it (a `const` is not
+  // hoisted, unlike `toggleLabels` below, which only the JSX uses).
+  const kindLabels: Record<MenuItemKind, string> = {
+    food: t("kindFood"),
+    drink: t("kindDrink"),
+    dessert: t("kindDessert"),
+    side: t("kindSide"),
+    appetizer: t("kindAppetizer"),
+  };
+
   const fields: FieldDef[] = [
     { key: "name", label: t("name"), required: true, onBlur: handleNameBlur },
     { key: "en_name", label: "Name (EN)" },
@@ -507,6 +528,15 @@ export default function AdminMenuItemFormPage({ params }: Props) {
       fieldError: slugError,
     },
     { key: "sku", label: "SKU" },
+    // What the item is (drink, dessert, side...). Sits above Category on
+    // purpose: the category is the tenant's own free-form menu section, while
+    // this is the structural field the storefront filters on.
+    {
+      key: "kind",
+      label: t("menuItemKind"),
+      type: "select",
+      options: MENU_ITEM_KINDS.map((k) => ({ value: k, label: kindLabels[k] })),
+    },
     {
       key: "category",
       label: t("category") ?? "Category",

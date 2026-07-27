@@ -7,8 +7,7 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
 import {
   getMenuCategories,
-  getMenuItemsByCategory,
-  type MenuCategory,
+  getMenuItemsByKind,
   type MenuItemDetail,
 } from "@/lib/catalog";
 import { formatPrice } from "@/lib/price";
@@ -24,65 +23,29 @@ import { formatPrice } from "@/lib/price";
  * reading as four stacked card grids.
  *
  * Everything visible is DB-driven: the panel is one of the tenant's own
- * `MenuCategory` rows (its image, name and description) plus that category's
- * menu items and their live prices. The category is found by name, not by a
- * hardcoded id or slug - `seed_site` host-namespaces every slug, so a slug
- * literal would break the moment the site were re-seeded on another host. If the
- * tenant has no bar category (or it is empty), the section renders nothing,
- * exactly like the shared blocks.
+ * `MenuCategory` rows (its image, name and description) plus its drinks and
+ * their live prices.
+ *
+ * **What counts as a drink is `MenuItem.kind`, not the category's name.** The
+ * section asks the API for `?kind=drink` and then dresses the panel with the
+ * first of the tenant's categories that actually holds one. This used to be a
+ * 24-word keyword list matched against category names, which needed
+ * accent-stripping and whole-word-only matching to keep "barbacoa" and
+ * "cocteles y caldos" (shrimp cocktails - food) from matching, and still broke
+ * silently the moment the tenant renamed the category in the CMS. A slug or id
+ * literal is no better: `seed_site` host-namespaces every slug, so one would
+ * break as soon as the site were re-seeded on another host. `kind` is set per
+ * item and survives all of it.
+ *
+ * Because the list is now keyed on the items rather than the category, a bar
+ * snack filed under the same category no longer appears in the price list -
+ * only drinks do. If no category holds an available drink, the section renders
+ * nothing, exactly like the shared blocks.
  *
  * Deliberately contained rather than full-bleed: a full-width opaque band
  * outside `SectionBand` would paint over the tenant's logo watermark and page
  * background. Here the page shows through on both sides of the panel.
  */
-
-/** Words that mark a menu category as the bar/drinks list, accent-insensitive. */
-const BAR_WORDS = new Set([
-  "bar",
-  "barra",
-  "bebida",
-  "bebidas",
-  "drink",
-  "drinks",
-  "cantina",
-  "cocteleria",
-  "mixologia",
-  "trago",
-  "tragos",
-  "copa",
-  "copas",
-  "cerveza",
-  "cervezas",
-  "michelada",
-  "micheladas",
-  "margarita",
-  "margaritas",
-  "tequila",
-  "tequilas",
-  "mezcal",
-  "mezcaleria",
-]);
-
-/** Split a label into lowercase, accent-stripped words. */
-function words(value: string | null | undefined): string[] {
-  if (!value) return [];
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .split(/[^a-z0-9]+/)
-    .filter(Boolean);
-}
-
-/**
- * Whole-word matching, never substring: "cocteles y caldos" (shrimp cocktails -
- * food) and "barbacoa" both contain a bar/coctel fragment and must not match,
- * while "La Barra" and "Bebidas" must.
- */
-function isBarCategory(cat: MenuCategory): boolean {
-  const labels = [cat.name, cat.en_name, cat.slug];
-  return labels.some((label) => words(label).some((w) => BAR_WORDS.has(w)));
-}
 
 function pick(
   locale: string,
@@ -123,19 +86,28 @@ function BarLine({
 }
 
 export async function Bar() {
-  const [categories, locale, t] = await Promise.all([
+  const [categories, drinks, locale, t] = await Promise.all([
     getMenuCategories(),
+    getMenuItemsByKind("drink"),
     getLocale(),
     getTranslations("SantoFishSite"),
   ]);
 
-  const category = categories.find(isBarCategory);
+  const available = drinks.filter((item) => item.is_available);
+
+  // The panel's photo, heading, copy and CTA are a real MenuCategory, so pick
+  // the first of the tenant's own categories (their CMS order) that holds a
+  // drink. Keying the choice on the items is what makes a rename harmless.
+  const category = categories.find((cat) =>
+    available.some((item) => item.category === cat.id),
+  );
   if (!category) return null;
 
-  const items = (await getMenuItemsByCategory(category.id))
-    .filter((item) => item.is_available)
+  // Scoped to that category so the CTA below leads to exactly this list; a
+  // drink filed elsewhere belongs to that category's own page.
+  const items = available
+    .filter((item) => item.category === category.id)
     .slice(0, 8);
-  if (items.length === 0) return null;
 
   const name = pick(locale, category.name, category.en_name);
   const description = pick(

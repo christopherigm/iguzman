@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { Button } from "@repo/ui/core-elements/button";
 import { Container } from "@repo/ui/core-elements/container";
 import { getSystem } from "@/lib/system";
+import { MENU_ALL_PATH } from "@/lib/menu-kinds";
 import { fitSectionBackground } from "@/lib/section-background";
 import { SectionBand } from "@/components/section-band";
 import { Hero } from "@/components/hero";
@@ -43,7 +44,7 @@ import { Bar } from "./sections/bar";
  * setting rather than site code.
  *
  * The dishes are MenuItems (the "food" Buyable family), not products, so the
- * hero CTA points at `/categories/food` and is gated on `menu_item_count` -
+ * hero CTA points at `/categories/menu` (the whole menu) and is gated on `menu_item_count` -
  * before the catalog is seeded the button simply isn't there rather than landing
  * on an empty listing. The hero's darkening is the tenant's own `hero_overlay_*`
  * (tuned in the CMS); this site adds no scrim, so the CMS preview and the live
@@ -76,7 +77,7 @@ export async function Landing() {
           hasMenu && (
             <Button
               text={t("hero.viewMenu")}
-              href="/categories/food"
+              href={MENU_ALL_PATH}
               kind="primary"
               size="lg"
             />

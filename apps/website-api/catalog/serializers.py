@@ -13,7 +13,7 @@ from .models import (
     MenuItemIngredientOption, RecipeStep,
     Ingredient, IngredientProvider,
     DIMENSION_UNIT_CHOICES, WEIGHT_UNIT_CHOICES, MODALITY_CHOICES,
-    QUANTITY_UNIT_CHOICES,
+    QUANTITY_UNIT_CHOICES, MENU_ITEM_KIND_CHOICES,
 )
 
 
@@ -1303,7 +1303,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
             'brand', 'brand_name',
             'name', 'en_name', 'description', 'en_description',
             'short_description', 'en_short_description',
-            'slug', 'sku',
+            'slug', 'sku', 'kind',
             'image', 'images', 'ingredients', 'variants',
             'href', 'video_link', 'fit', 'background_color',
             'price', 'compare_price', 'cost_price', 'currency',
@@ -1356,6 +1356,9 @@ class MenuItemWriteSerializer(serializers.Serializer):
     # Menu-item-specific fields
     slug = serializers.SlugField(max_length=255)
     sku = serializers.CharField(max_length=100, required=False, allow_null=True, allow_blank=True)
+    kind = serializers.ChoiceField(
+        choices=[c[0] for c in MENU_ITEM_KIND_CHOICES], required=False, default='food',
+    )
 
     price = serializers.DecimalField(max_digits=12, decimal_places=2)
     compare_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)

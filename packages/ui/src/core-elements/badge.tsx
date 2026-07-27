@@ -31,6 +31,13 @@ export interface BadgeProps {
   /** Renders the label in uppercase. @default false */
   uppercase?: boolean;
   /**
+   * Pads the badge out to at least its own height, so a one- or two-character
+   * label (a count, a step number) reads as a disc instead of a narrow sliver.
+   * Longer content simply grows into the usual pill.
+   * @default false
+   */
+  circular?: boolean;
+  /**
    * When `true`, applies `backdrop-filter: blur(8px)` so the badge blends into a
    * translucent surface (e.g. floating over an image). Off by default -
    * backdrop-filter is expensive to composite, so it is opt-in.
@@ -52,6 +59,9 @@ export interface BadgeProps {
  * <Badge variant="outlined" color="#ef4444">H265</Badge>
  * @example
  * <Badge variant="subtle" size="sm" color="#8b5cf6">Beta</Badge>
+ * @example
+ * // A count chip - `circular` keeps a single digit from rendering as a sliver
+ * <Badge size="sm" circular>3</Badge>
  */
 export const Badge: React.FC<BadgeProps> = ({
   children,
@@ -60,6 +70,7 @@ export const Badge: React.FC<BadgeProps> = ({
   color,
   textColor,
   uppercase = false,
+  circular = false,
   translucent = false,
   className,
   style,
@@ -73,6 +84,7 @@ export const Badge: React.FC<BadgeProps> = ({
     `ui-badge--${variant}`,
     `ui-badge--${size}`,
     uppercase && "ui-badge--uppercase",
+    circular && "ui-badge--circular",
     translucent && "ui-badge--translucent",
     className,
   ]

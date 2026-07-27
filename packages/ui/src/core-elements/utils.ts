@@ -147,6 +147,18 @@ export interface MenuItem {
   href?: string;
   onClick?: () => void;
   icon?: string;
+  /**
+   * Accessible name for the item. Required when `label` is empty - an
+   * icon-only item renders no text, and the `Icon` itself is `aria-hidden`,
+   * so without this the control reaches a screen reader unnamed.
+   */
+  ariaLabel?: string;
+  /**
+   * Small count shown on the item (a cart quantity, unread messages, …).
+   * `0`, `""` and `undefined` all render nothing, so a consumer can pass a
+   * raw count without guarding it.
+   */
+  badge?: number | string;
   children?: MenuItem[];
 }
 

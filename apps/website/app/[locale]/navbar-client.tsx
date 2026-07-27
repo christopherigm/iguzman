@@ -6,14 +6,23 @@ import { useSession } from "@repo/auth/session-provider";
 import { useAuthActions } from "@repo/auth/use-auth-actions";
 import { useGuestState } from "@/hooks/use-guest-cart";
 import { guestCartCount } from "@/lib/guest-cart";
+import {
+  MENU_ALL_PATH,
+  MENU_ITEM_KINDS,
+  MENU_KIND_PATHS,
+  type MenuItemKind,
+} from "@/lib/menu-kinds";
 
 interface NavbarClientProps {
   logo: string;
   version: string;
   productCount: number;
   serviceCount: number;
-  /** Number of enabled menu items; drives the Food link, 0 hides it. */
-  foodCount: number;
+  /**
+   * Enabled menu items per `kind`. Drives the whole Menu entry: a kind with no
+   * items gets no link, and a tenant with no menu at all gets nothing.
+   */
+  menuKindCounts: Record<MenuItemKind, number>;
   /**
    * Whether to show the Contact link: true when the tenant has a contact email
    * or at least one branch, i.e. when the public contact page has something to
@@ -32,11 +41,12 @@ export function NavbarClient({
   version,
   productCount,
   serviceCount,
-  foodCount,
+  menuKindCounts,
   showContact,
   cartCount,
 }: NavbarClientProps) {
   const t = useTranslations("Navbar");
+  const kindT = useTranslations("MenuKinds");
   // Comes from the server via SessionProvider, decoded from the access-token
   // cookie - so the admin link and the account menu are already right in the
   // first HTML instead of popping in after hydration.
@@ -54,10 +64,32 @@ export function NavbarClient({
 
   const handleSignOut = () => void signOut("/");
 
+  // Favorites and the cart are shown to everyone: a guest has both, kept in
+  // their browser and merged into their account when they sign in. They live in
+  // `fixedItems` rather than `items` so they stay reachable at every width -
+  // they are actions on the current visit, not places to navigate to, and a
+  // customer mid-purchase should never have to open the drawer to find them.
+  const favoritesItem = {
+    label: "",
+    href: "/favorites",
+    icon: "/icons/favorite.svg",
+    ariaLabel: t("favorites"),
+  };
+
+  const cartItem = {
+    label: "",
+    href: "/cart",
+    icon: "/icons/add-to-cart.svg",
+    ariaLabel: t("cart"),
+    // 0 renders no badge at all, so an empty cart is just the icon.
+    badge: count,
+  };
+
   const authItem = isLoggedIn
     ? {
         label: "",
         icon: "/icons/user.svg",
+        ariaLabel: t("myAccount"),
         children: [
           { label: t("myAccount"), href: "/account" },
           // Order history lives here rather than in the top-level bar: it is a
@@ -66,7 +98,47 @@ export function NavbarClient({
           { label: t("signOut"), onClick: handleSignOut },
         ],
       }
-    : { label: "", href: "/auth", icon: "/icons/user.svg" };
+    : {
+        label: "",
+        href: "/auth",
+        icon: "/icons/user.svg",
+        ariaLabel: t("accessAccount"),
+      };
+
+  // The menu is one entry with a dropdown, not one top-level link per kind: a
+  // restaurant carrying dishes, drinks, desserts and sides would otherwise push
+  // Orders and Contact into the hamburger on a laptop. Only kinds the tenant
+  // actually has are offered, so a taquería with no dessert never shows an
+  // empty Desserts page.
+  const stockedKinds = MENU_ITEM_KINDS.filter(
+    (kind) => (menuKindCounts[kind] ?? 0) > 0,
+  );
+  const kindItems = stockedKinds.map((kind) => ({
+    label: kindT(kind),
+    href: MENU_KIND_PATHS[kind],
+  }));
+  // With a single kind there is nothing to choose between: the dropdown would
+  // hold "Full menu" and one link to the same items, so it collapses to a plain
+  // link straight to that kind's page.
+  const menuItems =
+    stockedKinds.length === 0
+      ? []
+      : stockedKinds.length === 1
+        ? kindItems
+        : [
+            {
+              label: kindT("menu"),
+              // A parent with children renders as a button, but the shared
+              // Navbar still reads `href` to decide the active underline - and
+              // it also marks a parent active when any child is, so this is
+              // only what the "Full menu" page itself matches.
+              href: MENU_ALL_PATH,
+              children: [
+                { label: kindT("all"), href: MENU_ALL_PATH },
+                ...kindItems,
+              ],
+            },
+          ];
 
   // Every applicable item stays in the bar on every page - including Home and
   // the current page. The shared Navbar marks the active item with a bottom
@@ -79,16 +151,10 @@ export function NavbarClient({
     ...(serviceCount > 0
       ? [{ label: t("services"), href: "/categories/services" }]
       : []),
-    ...(foodCount > 0 ? [{ label: t("food"), href: "/categories/food" }] : []),
-    // Favorites and the cart are shown to everyone: a guest has both, kept in
-    // their browser and merged into their account when they sign in. Order
-    // history stays signed-in only - a guest reaches their order by its link,
-    // and there is no list of "their" orders to show.
-    { label: t("favorites"), href: "/favorites" },
-    {
-      label: count > 0 ? `${t("cart")} (${count})` : t("cart"),
-      href: "/cart",
-    },
+    ...menuItems,
+    // Order history stays signed-in only - a guest reaches their order by its
+    // link, and there is no list of "their" orders to show. (Favorites and the
+    // cart are in `fixedItems` below.)
     ...(isLoggedIn ? [{ label: t("orders"), href: "/orders" }] : []),
     ...(showContact ? [{ label: t("contact"), href: "/contact" }] : []),
     // Admin-only, exactly like the CMS link. Both only drive what is rendered -
@@ -102,7 +168,7 @@ export function NavbarClient({
     <Navbar
       logo={logo}
       items={navItems}
-      fixedItems={[authItem]}
+      fixedItems={[favoritesItem, cartItem, authItem]}
       version={version}
       translucent
     />

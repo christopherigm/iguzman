@@ -100,7 +100,6 @@
     "admin": "Administração",
     "products": "Produtos",
     "services": "Serviços",
-    "food": "Comida",
     "contact": "Contato",
     "favorites": "Favoritos",
     "cart": "Carrinho",
@@ -793,6 +792,12 @@
     "instruction": "Instrução",
     "basePrice": "Preço base",
     "calories": "Calorias",
+    "menuItemKind": "Tipo",
+    "kindFood": "Comida",
+    "kindDrink": "Bebida",
+    "kindDessert": "Sobremesa",
+    "kindSide": "Acompanhamento",
+    "kindAppetizer": "Entrada",
     "spiceLevel": "Nível de picância (0-5)",
     "allergens": "Alérgenos",
     "organic": "Orgânico",
@@ -1032,6 +1037,15 @@
     "calcium": "Cálcio",
     "iron": "Ferro",
     "potassium": "Potássio"
+  },
+  "MenuKinds": {
+    "menu": "Cardápio",
+    "all": "Cardápio completo",
+    "food": "Comida",
+    "drink": "Bebidas",
+    "dessert": "Sobremesas",
+    "side": "Acompanhamentos",
+    "appetizer": "Entradas"
   },
   "AdminOrders": {
     "home": "Início",

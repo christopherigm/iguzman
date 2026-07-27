@@ -3,11 +3,8 @@ import { setRequestLocale, getTranslations } from "next-intl/server";
 import { MenuListing } from "@/components/menu-listing";
 
 /**
- * The dishes - menu items whose `kind` is `food`. One of the five per-kind
- * listings; `/categories/menu` is the whole menu.
- *
- * This URL used to be the whole menu, which is why links meaning "see our menu"
- * were repointed at `/categories/menu` when the kinds landed.
+ * Menu items whose `kind` is `dessert`, across every category. One of the five
+ * per-kind listings; `/categories/menu` is the whole menu.
  */
 
 type Props = {
@@ -19,12 +16,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = (await getTranslations({ locale, namespace: "MenuKinds" })) as (
     key: string,
   ) => string;
-  return { title: t("food") };
+  return { title: t("dessert") };
 }
 
-export default async function FoodPage({ params }: Props) {
+export default async function DessertsPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  return <MenuListing locale={locale} kind="food" />;
+  return <MenuListing locale={locale} kind="dessert" />;
 }

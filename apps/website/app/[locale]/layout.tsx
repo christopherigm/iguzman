@@ -27,6 +27,7 @@ import { GuestMerge } from "@/components/guest-merge";
 import { LogoWatermark } from "@/components/logo-watermark";
 import packageJson from "@/package.json";
 import { getCartCount } from "@/lib/cart";
+import { EMPTY_MENU_KIND_COUNTS } from "@/lib/menu-kinds";
 import { getSystem } from "@/lib/system";
 import { isGoogleFontUrl, cssFontFamily } from "@/lib/fonts";
 import { DEV_SITE_COOKIE, SITE_CONFIGS } from "@/sites/registry";
@@ -247,7 +248,9 @@ export default async function LocaleLayout({ children, params }: Props) {
                       version={`v${packageJson.version}`}
                       productCount={system?.product_count ?? 0}
                       serviceCount={system?.service_count ?? 0}
-                      foodCount={system?.menu_item_count ?? 0}
+                      menuKindCounts={
+                        system?.menu_item_kind_counts ?? EMPTY_MENU_KIND_COUNTS
+                      }
                       showContact={
                         !!system?.contact_email ||
                         (system?.branch_count ?? 0) > 0

@@ -5,6 +5,7 @@ import type {
   HeroOverlayStyle,
 } from "@repo/ui/hero";
 import type { ShapeDividerMask } from "@repo/ui/shape-divider";
+import type { MenuItemKind } from "./catalog";
 import { getTenantHost } from "./resolve-site";
 import { API_URL } from "./config";
 import logger from "./logger";
@@ -165,6 +166,13 @@ export interface System {
   product_count: number;
   service_count: number;
   menu_item_count: number;
+  /**
+   * Enabled menu items per `kind`, every choice present (zero included). Drives
+   * which per-kind links the navbar's Menu dropdown renders, which is why it
+   * rides along on the System payload the layout already fetches rather than
+   * costing one catalog call per kind.
+   */
+  menu_item_kind_counts: Record<MenuItemKind, number>;
   /** Number of enabled physical locations; drives the Contact link alongside `contact_email`. */
   branch_count: number;
 }

@@ -63,6 +63,32 @@
   text-transform: uppercase;
 }
 
+/* Count shape: trim the side padding and floor the width at the badge's own
+   height, so "3" is a disc and "99+" stretches back into a pill. The
+   min-widths are each size's rendered height (font-size x 1.4 line-height +
+   vertical padding) - keep them in step if either changes. */
+.ui-badge--circular {
+  justify-content: center;
+}
+
+.ui-badge--sm.ui-badge--circular {
+  padding-left: 4px;
+  padding-right: 4px;
+  min-width: 16px;
+}
+
+.ui-badge--md.ui-badge--circular {
+  padding-left: 5px;
+  padding-right: 5px;
+  min-width: 20px;
+}
+
+.ui-badge--lg.ui-badge--circular {
+  padding-left: 6px;
+  padding-right: 6px;
+  min-width: 24px;
+}
+
 /* Opt-in backdrop blur for badges floating over translucent surfaces
    (e.g. over an image). Off by default - backdrop-filter re-samples the
    backdrop every frame and is a major scroll-jank source. */

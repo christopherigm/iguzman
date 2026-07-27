@@ -9,6 +9,7 @@ import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { SectionHero } from "@/components/section-hero";
 import { getSession } from "@repo/auth/session";
 import { getMenuCategory, getMenuItemsByCategory } from "@/lib/catalog";
+import { MENU_ALL_PATH } from "@/lib/menu-kinds";
 import { CategoryDetail } from "@/components/category-detail";
 import { AdminEditButton } from "@/components/admin-edit-button";
 
@@ -77,7 +78,7 @@ export default async function MenuCategoryPage({ params }: Props) {
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },
-    { label: t("food"), href: "/categories/food" },
+    { label: t("food"), href: MENU_ALL_PATH },
     { label: name },
   ];
 

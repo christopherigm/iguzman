@@ -100,7 +100,6 @@
     "admin": "Administration",
     "products": "Produits",
     "services": "Services",
-    "food": "Nourriture",
     "contact": "Contact",
     "favorites": "Favoris",
     "cart": "Panier",
@@ -793,6 +792,12 @@
     "instruction": "Instruction",
     "basePrice": "Prix de base",
     "calories": "Calories",
+    "menuItemKind": "Type",
+    "kindFood": "Plat",
+    "kindDrink": "Boisson",
+    "kindDessert": "Dessert",
+    "kindSide": "Accompagnement",
+    "kindAppetizer": "Entrée",
     "spiceLevel": "Niveau de piquant (0-5)",
     "allergens": "Allergènes",
     "organic": "Biologique",
@@ -1032,6 +1037,15 @@
     "calcium": "Calcium",
     "iron": "Fer",
     "potassium": "Potassium"
+  },
+  "MenuKinds": {
+    "menu": "Menu",
+    "all": "Menu complet",
+    "food": "Plats",
+    "drink": "Boissons",
+    "dessert": "Desserts",
+    "side": "Accompagnements",
+    "appetizer": "Entrées"
   },
   "AdminOrders": {
     "home": "Accueil",

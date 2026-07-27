@@ -133,6 +133,88 @@ class ListCacheInvalidationTests(TestCase):
         )
 
 
+class MenuItemKindTests(TestCase):
+    """`kind` is what separates a drink from a dish without a second model, and
+    what the storefront filters a bar/drinks list on - so the default, the
+    round-trip and the ?kind= filter are pinned here.
+
+    The filter is deliberately single-valued: `_list_key` builds the cache key
+    from `query_params.items()`, which yields only the LAST value of a repeated
+    key, so a repeatable ?kind= would let two different filter combinations
+    share one cache entry.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Bar", host="bar.test")
+        self.dish = MenuItem.objects.create(
+            system=self.system, name="Taco", slug="k-taco", price=Decimal("8.00"),
+        )
+        self.drink = MenuItem.objects.create(
+            system=self.system, name="Michelada", slug="k-michelada",
+            price=Decimal("6.00"), kind="drink",
+        )
+        self.dessert = MenuItem.objects.create(
+            system=self.system, name="Flan", slug="k-flan",
+            price=Decimal("4.00"), kind="dessert",
+        )
+        self.url = f"/api/catalog/menu-items/?system={self.system.id}"
+
+    def _names(self, response):
+        return sorted(row["name"] for row in response.json())
+
+    def test_default_is_food(self):
+        self.assertEqual(self.dish.kind, "food")
+
+    def test_public_read_exposes_kind(self):
+        rows = {r["name"]: r["kind"] for r in self.client.get(self.url).json()}
+        self.assertEqual(rows["Michelada"], "drink")
+        self.assertEqual(rows["Taco"], "food")
+
+    def test_filter_returns_only_that_kind(self):
+        response = self.client.get(f"{self.url}&kind=drink")
+        self.assertEqual(self._names(response), ["Michelada"])
+
+    def test_unfiltered_list_returns_every_kind(self):
+        self.assertEqual(
+            self._names(self.client.get(self.url)), ["Flan", "Michelada", "Taco"]
+        )
+
+    def test_bogus_kind_is_ignored_rather_than_emptying_the_menu(self):
+        # An unknown value must not silently filter the whole menu away, which
+        # is what `qs.filter(kind=<junk>)` would do.
+        response = self.client.get(f"{self.url}&kind=beverage")
+        self.assertEqual(self._names(response), ["Flan", "Michelada", "Taco"])
+
+    def test_filtered_and_unfiltered_lists_do_not_share_a_cache_entry(self):
+        self.assertEqual(self._names(self.client.get(f"{self.url}&kind=drink")),
+                         ["Michelada"])
+        self.assertEqual(
+            self._names(self.client.get(self.url)), ["Flan", "Michelada", "Taco"]
+        )
+
+    def test_system_payload_counts_every_kind(self):
+        # The navbar decides which per-kind links to render from this one field,
+        # so every choice must be present - a kind the tenant has none of has to
+        # come back as 0 rather than be missing.
+        counts = self.client.get(
+            "/api/system/", HTTP_X_WEBSITE_HOST="bar.test"
+        ).json()["menu_item_kind_counts"]
+        self.assertEqual(
+            counts,
+            {"food": 1, "drink": 1, "dessert": 1, "side": 0, "appetizer": 0},
+        )
+
+    def test_system_payload_ignores_disabled_items(self):
+        self.drink.enabled = False
+        self.drink.save()
+        cache.clear()
+        counts = self.client.get(
+            "/api/system/", HTTP_X_WEBSITE_HOST="bar.test"
+        ).json()["menu_item_kind_counts"]
+        self.assertEqual(counts["drink"], 0)
+
+
 class MenuItemPricingTests(TestCase):
     """The base-price + add-on-delta arithmetic is the money path for menu items,
     so it is pinned here: it is what the cart, checkout and storefront all call."""

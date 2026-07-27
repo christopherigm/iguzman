@@ -9,6 +9,7 @@ import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { SectionHero } from "@/components/section-hero";
 import { getSystem } from "@/lib/system";
+import { MENU_ALL_PATH } from "@/lib/menu-kinds";
 
 /**
  * "/about" for Santo Fish - the long version of the story the landing's Intro
@@ -183,7 +184,7 @@ export async function About() {
           {hasMenu && (
             <Button
               text={t("hero.viewMenu")}
-              href="/categories/food"
+              href={MENU_ALL_PATH}
               kind="primary"
               size="lg"
             />

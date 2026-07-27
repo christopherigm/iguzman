@@ -3,6 +3,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { getSystem } from "@/lib/system";
+import { MENU_ALL_PATH } from "@/lib/menu-kinds";
 import { CatalogCategories } from "./catalog-categories";
 
 interface EmptyCatalogStateProps {
@@ -39,7 +40,7 @@ export async function EmptyCatalogState({ message }: EmptyCatalogStateProps) {
       ? [{ label: t("browseServices"), href: "/categories/services" }]
       : []),
     ...(system?.menu_item_count
-      ? [{ label: t("browseFood"), href: "/categories/food" }]
+      ? [{ label: t("browseFood"), href: MENU_ALL_PATH }]
       : []),
   ];
 

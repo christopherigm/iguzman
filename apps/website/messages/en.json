@@ -100,7 +100,6 @@
     "admin": "Admin",
     "products": "Products",
     "services": "Services",
-    "food": "Food",
     "contact": "Contact",
     "favorites": "Favorites",
     "cart": "Cart",
@@ -793,6 +792,12 @@
     "instruction": "Instruction",
     "basePrice": "Base price",
     "calories": "Calories",
+    "menuItemKind": "Kind",
+    "kindFood": "Food",
+    "kindDrink": "Drink",
+    "kindDessert": "Dessert",
+    "kindSide": "Side",
+    "kindAppetizer": "Appetizer",
     "spiceLevel": "Spice level (0-5)",
     "allergens": "Allergens",
     "organic": "Organic",
@@ -1032,6 +1037,15 @@
     "calcium": "Calcium",
     "iron": "Iron",
     "potassium": "Potassium"
+  },
+  "MenuKinds": {
+    "menu": "Menu",
+    "all": "Full menu",
+    "food": "Food",
+    "drink": "Drinks",
+    "dessert": "Desserts",
+    "side": "Sides",
+    "appetizer": "Appetizers"
   },
   "AdminOrders": {
     "home": "Home",

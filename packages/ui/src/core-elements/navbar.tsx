@@ -10,6 +10,7 @@ import {
   MenuItem,
   BREAKPOINTS,
 } from "./utils";
+import { Badge } from "./badge";
 import { Container } from "./container";
 import { Icon } from "./icon";
 import { TextInput } from "./text-input";
@@ -116,11 +117,32 @@ function useScrollDirection(threshold = 5): "up" | "down" | null {
   return direction;
 }
 
+// ── Item helpers ─────────────────────────────────────────────────────
+
+/**
+ * Identity for React keys and for matching the open dropdown.
+ *
+ * An icon-only item's label is `""`, so several of them in the same list are
+ * neither unique nor truthy - keying on the label alone collides, and an empty
+ * key would read as "no dropdown open".
+ */
+function menuItemKey(item: MenuItem, index: number): string {
+  return item.label || item.href || `item-${index}`;
+}
+
+/** What the item's badge shows, or `null` for nothing. A count of `0` is not
+ *  worth a chip, and anything past 99 is capped so the badge stays small. */
+function badgeLabel(badge: MenuItem["badge"]): string | null {
+  if (badge === undefined || badge === 0 || badge === "") return null;
+  if (typeof badge === "number") return badge > 99 ? "99+" : String(badge);
+  return badge;
+}
+
 // ── NavbarItem ───────────────────────────────────────────────────────
 
 const NavbarItem: React.FC<{
   item: MenuItem;
-  onToggleDropdown?: (label: string | null) => void;
+  onToggleDropdown?: () => void;
   isDropdownOpen?: boolean;
   isActive?: boolean;
   chevronIcon?: string;
@@ -129,7 +151,7 @@ const NavbarItem: React.FC<{
 
   const handleClick = () => {
     if (hasChildren && onToggleDropdown) {
-      onToggleDropdown(isDropdownOpen ? null : item.label);
+      onToggleDropdown();
     } else if (item.onClick) {
       item.onClick();
     }
@@ -139,8 +161,14 @@ const NavbarItem: React.FC<{
   const linkProps =
     Tag === "a" ? { href: item.href } : { type: "button" as const };
 
+  // An item with an icon and no label carries its badge over the icon's corner
+  // instead of after the text - there is no text for it to follow.
+  const iconOnly = !item.label && !!item.icon;
+  const badge = badgeLabel(item.badge);
+
   const itemClassName = [
     "ui-navbar-item",
+    iconOnly ? "ui-navbar-item--icon-only" : "",
     isActive ? "ui-navbar-item--active" : "",
   ]
     .filter(Boolean)
@@ -151,12 +179,19 @@ const NavbarItem: React.FC<{
       className={itemClassName}
       onClick={handleClick}
       aria-current={isActive ? "page" : undefined}
+      aria-label={item.ariaLabel}
+      title={item.ariaLabel}
       {...linkProps}
     >
       {item.icon && (
         <Icon icon={item.icon} size="18px" className="ui-navbar-item-icon" />
       )}
       {item.label}
+      {badge !== null && (
+        <Badge size="sm" circular className="ui-navbar-item-badge">
+          {badge}
+        </Badge>
+      )}
       {hasChildren && (
         <Icon
           icon={chevronIcon || "/icons/chevron-down.svg"}
@@ -374,7 +409,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
 
   // Close dropdown when clicking outside the active dropdown wrapper
   useEffect(() => {
-    if (!activeDropdown) return;
+    if (activeDropdown === null) return;
     const handler = (e: MouseEvent) => {
       if (
         activeDropdownWrapperRef.current &&
@@ -394,8 +429,13 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
   if (hiddenPaths?.includes(pathnameWithoutLocale)) return null;
 
   // An item is active when its href matches the current path. The home item
-  // ("/") only matches exactly; other items also match nested sub-paths.
+  // ("/") only matches exactly; other items also match nested sub-paths. A
+  // dropdown parent is active whenever any of its children is - its own href is
+  // often a landing page beside the children rather than above them (or absent
+  // entirely, since a parent renders as a button), so matching on the parent
+  // alone would leave the bar unmarked on the very pages it groups.
   const isItemActive = (item: MenuItem): boolean => {
+    if (item.children?.some(isItemActive)) return true;
     if (!item.href) return false;
     if (item.href === "/") return pathnameWithoutLocale === "/";
     return (
@@ -440,18 +480,23 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
 
       {/* Regular menu items (hidden xs/sm) */}
       <div className="ui-navbar-menu">
-        {items.map((item) => {
+        {items.map((item, index) => {
           const hasChildren = item.children && item.children.length > 0;
-          const isOpen = activeDropdown === item.label;
+          const key = menuItemKey(item, index);
+          const isOpen = activeDropdown === key;
           return (
             <div
-              key={item.label}
+              key={key}
               className="ui-navbar-menu-item-wrapper"
               ref={isOpen ? activeDropdownWrapperRef : undefined}
             >
               <NavbarItem
                 item={item}
-                onToggleDropdown={hasChildren ? setActiveDropdown : undefined}
+                onToggleDropdown={
+                  hasChildren
+                    ? () => setActiveDropdown(isOpen ? null : key)
+                    : undefined
+                }
                 isDropdownOpen={isOpen}
                 isActive={isItemActive(item)}
                 chevronIcon={chevronIcon}
@@ -470,18 +515,23 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
       {/* Fixed menu items (always visible) */}
       {fixedItems.length > 0 && (
         <div className="ui-navbar-fixed">
-          {fixedItems.map((item) => {
+          {fixedItems.map((item, index) => {
             const hasChildren = item.children && item.children.length > 0;
-            const isOpen = activeDropdown === item.label;
+            const key = menuItemKey(item, index);
+            const isOpen = activeDropdown === key;
             return (
               <div
-                key={item.label}
+                key={key}
                 className="ui-navbar-menu-item-wrapper"
                 ref={isOpen ? activeDropdownWrapperRef : undefined}
               >
                 <NavbarItem
                   item={item}
-                  onToggleDropdown={hasChildren ? setActiveDropdown : undefined}
+                  onToggleDropdown={
+                    hasChildren
+                      ? () => setActiveDropdown(isOpen ? null : key)
+                      : undefined
+                  }
                   isDropdownOpen={isOpen}
                   isActive={isItemActive(item)}
                   chevronIcon={chevronIcon}

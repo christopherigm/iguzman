@@ -90,7 +90,7 @@ fields at any new file you drop in here.
   "highlights":      [ { "name", "category", "description", "icon?", "size?", "image?", "items?": [ { "name","description","icon?","image?" } ] } ],
   "product_categories": [ { "name", "image?", "products":  [ { "name","description","price","currency?","is_featured?","image?","gallery?":[] } ] } ],
   "service_categories": [ { "name", "image?", "services":  [ { "name","description","price","currency?","modality?","duration?","is_featured?","image?" } ] } ],
-  "menu_categories":    [ { "name", "image?", "menu_items": [ { "name","description","price","currency?","is_featured?","is_organic?","is_vegetarian?","is_vegan?","is_gluten_free?","allergens?","portions?","image?","gallery?":[],
+  "menu_categories":    [ { "name", "image?", "menu_items": [ { "name","description","price","currency?","kind?","is_featured?","is_organic?","is_vegetarian?","is_vegan?","is_gluten_free?","allergens?","portions?","image?","gallery?":[],
                             "ingredients": [ { "name","price","calories?","is_removable?","max_quantity?","quantity?","unit?","sort_order?" } ] } ] } ]
 }
 ```
@@ -116,6 +116,12 @@ Notes:
   only) and never affect price. A `menu_item`'s optional `portions` (servings the
   dish yields) drives the per-serving figures on the nutrition label. See
   `catalog/models.py` → MenuItem / MenuItemIngredient.
+- **`menu_items[].kind`** says what the item *is* — `"food"` (the default),
+  `"drink"`, `"dessert"`, `"side"` or `"appetizer"`. Set it rather than relying on
+  the category's name: it is the structural field the storefront filters on (a
+  bar/drinks list asks the API for `?kind=drink`), and category names are
+  free-form tenant copy that a customer may rename at any time. It travels with
+  `publish-site`, so a seeded menu keeps its kinds in production.
 - Slugs are auto-generated and **host-namespaced** (`<host-token>-<slug>`) so two
   seeded sites never collide on the globally-unique slug fields.
 - `price` is a string/number → `Decimal`; `currency` is a 3-letter code (USD default).

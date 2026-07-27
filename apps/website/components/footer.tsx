@@ -9,6 +9,7 @@ import { ThemeSwitch } from "@repo/ui/theme-switch";
 import { LocaleSwitcher } from "@repo/ui/core-elements/locale-switcher";
 import { routing } from "@repo/i18n/routing";
 import { type System } from "@/lib/system";
+import { MENU_ALL_PATH } from "@/lib/menu-kinds";
 import { getSite } from "@/lib/resolve-site";
 import "./footer.css";
 
@@ -37,7 +38,7 @@ export async function Footer({ logo, system }: Props) {
       ? [{ label: t("services"), href: "/categories/services" }]
       : []),
     ...((system?.menu_item_count ?? 0) > 0
-      ? [{ label: t("food"), href: "/categories/food" }]
+      ? [{ label: t("food"), href: MENU_ALL_PATH }]
       : []),
     { label: t("highlights"), href: "/highlights" },
     { label: t("blog"), href: "/blog" },
