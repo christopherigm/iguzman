@@ -47,6 +47,13 @@ perfectly good refresh token. The proxy is also the only place during a page ren
 that may _write_ cookies, which is why the refresh has to happen there and not in
 `getSession()`.
 
+**`isAdmin` and `isStaff` are different things.** `is_admin` is the *customer's*
+CMS administrator (a flag on `UserProfile`); `is_staff` is Django staff - us, the
+platform operators - and gates operator-only controls such as the media migration
+on website's `/admin/system`. Both are optional claims: an API that does not mint
+them yields `false`, so an app that never asks is unaffected. Both are
+presentation only, and the API re-derives them from the token on every call.
+
 **Identity claims are frozen for the life of the refresh token.** SimpleJWT copies
 custom claims from the _refresh_ token onto each new access token, so a renamed
 user would keep the old name in the navbar for the full 7 days. Any route that

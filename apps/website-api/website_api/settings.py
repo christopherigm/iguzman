@@ -164,24 +164,69 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STORAGES = {
-    'default': {
-        'BACKEND': 'django.core.files.storage.FileSystemStorage',
-    },
-    'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
-    },
-}
 
-# Media files (uploaded by users)
-MEDIA_URL = '/media/'
-MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', str(BASE_DIR / 'media')))
+# ── Media files (uploaded by users) ──────────────────────────────────────────
+# One switch, `R2_ACCOUNT_ID`, decides the whole media stack:
+#
+#   set   -> production. Every upload goes to Cloudflare R2 and is served from
+#            the CDN; `core.storage.TenantMediaStorage` picks the bucket per
+#            tenant (a customer on its own domain can connect its own R2 in the
+#            CMS - see core/storage.py).
+#   unset -> development. Files land in `media/` exactly as they always have,
+#            with no Cloudflare account, no credentials and no network calls.
+#
+# Static files stay on whitenoise either way: they ship inside the image, are
+# already hashed and compressed at build time, and are served by the same process
+# that renders the Django admin - putting them behind a bucket would add a
+# round-trip and a failure mode for no gain.
+R2_ACCOUNT_ID = os.environ.get('R2_ACCOUNT_ID', '')
+R2_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID', '')
+R2_SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY', '')
+R2_BUCKET_NAME = os.environ.get('R2_BUCKET_NAME', '')
+R2_PUBLIC_DOMAIN = os.environ.get('R2_PUBLIC_DOMAIN', '').strip().rstrip('/')
 
-# Public origin the API serves its media from, used to build absolute image URLs
-# in contexts that have no request to resolve them against (e.g. branded emails,
-# whose tenant logo must load from an email client). This is the API's own host,
-# not a per-tenant domain: uploaded media lives on the API and every frontend
-# already loads System images straight from here.
+# Hosts under this suffix are *our* sites and belong on the platform bucket
+# above; anything else is a customer on its own domain, which is expected to
+# connect its own R2 account in the CMS. `SystemMediaMigrationView` reads this to
+# decide which bucket a tenant's media migration targets, and therefore which
+# configuration has to be present before the CMS will let it run.
+PLATFORM_HOST_SUFFIX = os.environ.get('PLATFORM_HOST_SUFFIX', '.iguzman.com.mx').strip().lower()
+
+if R2_ACCOUNT_ID:
+    STORAGES = {
+        'default': {
+            'BACKEND': 'core.storage.TenantMediaStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+        },
+    }
+    # The platform bucket's public hostname. `FileField.url` returns an absolute
+    # URL from here on, which is what lets the frontend fetch straight from the
+    # edge - see `core.media.absolute_media_url` for the callers that used to
+    # assume a relative one.
+    MEDIA_URL = f'https://{R2_PUBLIC_DOMAIN}/' if R2_PUBLIC_DOMAIN else '/media/'
+    # Still read by `sync_media_to_r2` as the source to copy *from*, and by any
+    # local tooling; nothing writes here once R2 is on.
+    MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', str(BASE_DIR / 'media')))
+else:
+    STORAGES = {
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+        },
+    }
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', str(BASE_DIR / 'media')))
+
+# Origin for media URLs that are *relative* - i.e. the local-filesystem branch
+# above - in contexts with no request to resolve them against (e.g. branded
+# emails, whose tenant logo must load inside an email client). On R2 the storage
+# backend already returns absolute URLs and this is not consulted; always go
+# through `core.media.absolute_media_url`, never concatenate it yourself, or an
+# R2 URL comes out as `https://website-api…https://cdn…`.
 MEDIA_BASE_URL = os.environ.get('MEDIA_BASE_URL', 'https://website-api.iguzman.com.mx').rstrip('/')
 
 # Default primary key field type

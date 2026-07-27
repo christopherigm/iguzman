@@ -511,6 +511,7 @@ class SystemSerializer(serializers.ModelSerializer):
     branch_count = serializers.SerializerMethodField()
     stripe_configured = serializers.BooleanField(read_only=True)
     stripe_webhook_url = serializers.SerializerMethodField()
+    storage_configured = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = System
@@ -520,7 +521,11 @@ class SystemSerializer(serializers.ModelSerializer):
         # button announces anyway - while the keys themselves have no read path
         # at all. Never add stripe_secret_key_encrypted or
         # stripe_webhook_secret_encrypted to this list; a public endpoint would
-        # hand every tenant's ciphertext to anyone who asked.
+        # hand every tenant's ciphertext to anyone who asked. The same holds for
+        # `storage_secret_access_key_encrypted`: `storage_configured` is a
+        # boolean about where this site's images live, which every image URL on
+        # the site announces anyway - the R2 account id, key and bucket are read
+        # back only from the admin-only `GET /api/system/<pk>/storage/`.
         fields = [
             "id", "enabled", "created", "modified", "version",
             "site_name", "site_description", "en_site_description", "host",
@@ -553,6 +558,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "terms_and_conditions", "en_terms_and_conditions",
             "user_data", "en_user_data",
             "stripe_enabled", "stripe_configured", "stripe_webhook_url",
+            "storage_configured",
             "pay_in_store_enabled", "pay_on_delivery_enabled",
             "spotlight_enabled",
             "spotlight_label", "en_spotlight_label",
@@ -673,6 +679,8 @@ _TEXT_FIELDS = [
     "user_data", "en_user_data",
     "enabled",
     "stripe_enabled", "stripe_publishable_key",
+    "storage_enabled", "storage_account_id", "storage_access_key_id",
+    "storage_bucket_name", "storage_public_domain",
     "pay_in_store_enabled", "pay_on_delivery_enabled",
     "spotlight_enabled",
     "spotlight_label", "en_spotlight_label",
@@ -682,12 +690,15 @@ _TEXT_FIELDS = [
     "spotlight_button_link", "spotlight_items",
 ]
 
-# Written through System.set_stripe_*() rather than setattr, because the column
-# they land in holds ciphertext. Kept out of _TEXT_FIELDS so a future edit to
-# that list cannot accidentally start writing a plaintext secret to the DB.
-_STRIPE_SECRET_FIELDS = {
+# Written through a System.set_*() method rather than setattr, because the column
+# they land in holds Fernet ciphertext. Kept out of _TEXT_FIELDS so a future edit
+# to that list cannot accidentally start writing a plaintext secret to the DB.
+# All three are write-only with no read path anywhere: submitting "" clears one,
+# and the CMS omits the key entirely to leave it unchanged.
+_ENCRYPTED_SECRET_FIELDS = {
     "stripe_secret_key": "set_stripe_secret_key",
     "stripe_webhook_secret": "set_stripe_webhook_secret",
+    "storage_secret_access_key": "set_storage_secret_access_key",
 }
 
 
@@ -827,6 +838,34 @@ class SystemWriteSerializer(serializers.Serializer):
     pay_in_store_enabled    = serializers.BooleanField(required=False)
     pay_on_delivery_enabled = serializers.BooleanField(required=False)
 
+    # Storage - this tenant's own Cloudflare R2 bucket. The secret follows the
+    # same rule as the Stripe pair: write_only, no read path, "" clears it, and
+    # the CMS omits the key entirely to leave it unchanged (the form always loads
+    # blank, so submitting "" would wipe a working bucket the first time anyone
+    # toggled a switch). The other four *are* readable, but only through the
+    # admin-only `GET /api/system/<pk>/storage/` - never the public System payload.
+    storage_enabled            = serializers.BooleanField(required=False)
+    storage_account_id         = serializers.CharField(max_length=64, required=False, allow_blank=True)
+    storage_access_key_id      = serializers.CharField(max_length=128, required=False, allow_blank=True)
+    storage_secret_access_key  = serializers.CharField(max_length=255, required=False, allow_blank=True, write_only=True)
+    storage_bucket_name        = serializers.CharField(max_length=128, required=False, allow_blank=True)
+    storage_public_domain      = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+    def validate_storage_public_domain(self, value):
+        """A bare hostname, not a URL.
+
+        It is concatenated into every image URL this tenant serves
+        (`https://<domain>/<key>`), so a pasted "https://cdn.example.com/" would
+        produce `https://https://cdn.example.com//…` on every page. Accept what
+        the operator is likely to paste and normalise it rather than rejecting.
+        """
+        value = (value or "").strip()
+        if not value:
+            return ""
+        value = value.split("://", 1)[-1].strip("/")
+        # Whatever follows the host is a path, and a custom domain has none.
+        return value.split("/", 1)[0]
+
     # Spotlight section - a promo panel + up to three hand-picked catalog items.
     spotlight_enabled          = serializers.BooleanField(required=False)
     spotlight_label            = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
@@ -909,9 +948,10 @@ class SystemWriteSerializer(serializers.Serializer):
                 setattr(instance, field_name, self.validated_data[field_name])
                 update_fields.append(field_name)
 
-        # Stripe secrets - encrypted on the way in, so they set the *_encrypted
-        # column rather than the name the API accepts.
-        for field_name, setter in _STRIPE_SECRET_FIELDS.items():
+        # Encrypted secrets (Stripe keys, the tenant's R2 secret) - encrypted on
+        # the way in, so they set the *_encrypted column rather than the name the
+        # API accepts.
+        for field_name, setter in _ENCRYPTED_SECRET_FIELDS.items():
             if field_name in self.validated_data:
                 getattr(instance, setter)(self.validated_data[field_name])
                 update_fields.append(f"{field_name}_encrypted")

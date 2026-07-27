@@ -5,6 +5,11 @@ Pillow==11.1.0
 whitenoise==6.9.0
 gunicorn==23.0.0
 psycopg2-binary==2.9.10
+# Cloudflare R2 media storage (production only - dev writes to MEDIA_ROOT).
+# boto3 is pulled in transitively but pinned explicitly: core/storage.py imports
+# botocore directly to classify credential errors for the CMS test button.
+django-storages[s3]==1.14.4
+boto3==1.43.34
 django-redis==5.4.0
 django-colorfield==0.11.0
 django-cors-headers==4.9.0

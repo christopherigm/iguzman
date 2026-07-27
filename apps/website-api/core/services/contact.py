@@ -14,6 +14,8 @@ from django.contrib.auth.models import User
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 
+from core.media import absolute_media_url
+
 
 # The customer-facing label for each related-item kind, so the email reads
 # "about the menu item …" rather than exposing the internal "food" key.
@@ -33,7 +35,7 @@ def _tenant_brand(system):
 
     logo_url = None
     if system and getattr(system, "img_logo", None):
-        logo_url = f"{settings.MEDIA_BASE_URL}{system.img_logo.url}"
+        logo_url = absolute_media_url(system.img_logo)
 
     site_name = (system.site_name if system else None) or "iGuzman"
     return {

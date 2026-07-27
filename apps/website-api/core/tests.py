@@ -4,11 +4,13 @@ import shutil
 import tempfile
 import zipfile
 from datetime import timedelta
+from unittest import mock
 from decimal import Decimal
 from io import BytesIO
 
 from django.contrib.auth.models import User
 from django.core.files.base import ContentFile
+from django.core.files.storage import FileSystemStorage, default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.utils import timezone
@@ -21,8 +23,18 @@ from catalog.models import (
     Product,
     ProductCategory,
 )
+from core import media_sync
+from core import storage as storage_module
 from core.backup import BackupError, restore_archive, write_archive
-from core.models import SiteBackup, System
+from core.models import (
+    SiteBackup,
+    SuccessStory,
+    SuccessStoryImage,
+    System,
+    backup_upload_path,
+    picture,
+)
+from core.tenant_paths import system_id_for, system_id_from_name
 from core.site_payload import serialize_system, apply_payload
 from orders.models import Order
 
@@ -108,6 +120,23 @@ class IsolatedMediaTestCase(TestCase):
         super().tearDownClass()
         cls._media_override.disable()
         shutil.rmtree(cls._media_root, ignore_errors=True)
+
+
+class _FakeRouter:
+    """A `TenantMediaStorage` stand-in that sends every name to one directory.
+
+    `MediaSyncTests` substitutes this for the real router because R2 is off in
+    tests: the genuine article would build an `S3Boto3Storage` from empty
+    credentials and reach for the network on the first `exists()`. Routing itself
+    is covered by `TenantStorageRoutingTests`; what the sync tests need is a
+    destination they can read back.
+    """
+
+    def __init__(self, backend):
+        self._backend = backend
+
+    def backend_for(self, name):
+        return self._backend
 
 
 class SiteBackupRoundTripTests(IsolatedMediaTestCase):
@@ -432,3 +461,432 @@ class SiteBackupApiTests(IsolatedMediaTestCase):
             self.client.delete(f"/api/backups/{created['id']}/").status_code, 204
         )
         self.assertFalse(os.path.exists(path))
+
+
+class TenantPathTests(TestCase):
+    """The upload path is the routing key, so its shape is load-bearing.
+
+    `core.storage` decides which R2 bucket a file belongs to by reading the
+    system id back out of the file's own name. If `picture()` and
+    `system_id_from_name()` ever disagree about that shape, files are written to
+    one bucket and looked for in another - which shows up as every image on a
+    site 404ing, with nothing in the logs.
+    """
+
+    def setUp(self):
+        self.system = System.objects.create(site_name="Pan", host="pan.test")
+        self.other = System.objects.create(site_name="Cafe", host="cafe.test")
+
+    def test_a_picture_path_names_its_tenant_and_parses_back(self):
+        product = Product.objects.create(name="Loaf", slug="loaf", system=self.system)
+        name = picture(product, "photo.png")
+        self.assertTrue(name.startswith(f"t/{self.system.pk}/pictures/product/"))
+        self.assertEqual(system_id_from_name(name), self.system.pk)
+
+    def test_a_child_row_resolves_its_tenant_through_its_parent(self):
+        """SuccessStoryImage has no `system` of its own - it reaches one via
+        `story__system`, which is exactly what MODEL_SPECS already states."""
+        story = SuccessStory.objects.create(name="S", slug="s", system=self.system)
+        image = SuccessStoryImage(story=story)
+        self.assertEqual(system_id_for(image), self.system.pk)
+        self.assertEqual(system_id_from_name(picture(image, "x.jpg")), self.system.pk)
+
+    def test_the_system_itself_is_its_own_tenant(self):
+        self.assertEqual(system_id_for(self.system), self.system.pk)
+        self.assertTrue(picture(self.system, "logo.png").startswith(f"t/{self.system.pk}/"))
+
+    def test_a_legacy_path_belongs_to_no_tenant(self):
+        """Every file written before this landed has no prefix, and must keep
+        resolving to the platform bucket rather than being mis-read as a tenant's."""
+        self.assertIsNone(system_id_from_name("pictures/product/ab12.jpg"))
+        self.assertIsNone(system_id_from_name("profile_pictures/user_3/me.jpg"))
+        self.assertIsNone(system_id_from_name("backups/7/deadbeef.zip"))
+        self.assertIsNone(system_id_from_name(""))
+
+    def test_a_backup_archive_is_tenant_scoped_too(self):
+        backup = SiteBackup(system=self.system, name="nightly")
+        name = backup_upload_path(backup, "nightly.zip")
+        self.assertTrue(name.startswith(f"t/{self.system.pk}/backups/"))
+        self.assertTrue(name.endswith(".zip"))
+        self.assertEqual(system_id_from_name(name), self.system.pk)
+
+    def test_an_unresolvable_instance_falls_back_to_the_platform(self):
+        """A row whose System is not set yet must still get a usable path - the
+        file lands on the platform bucket rather than the write failing."""
+        orphan = Product(name="No home", slug="no-home")
+        self.assertIsNone(system_id_for(orphan))
+        self.assertIsNone(system_id_from_name(picture(orphan, "x.jpg")))
+
+
+class TenantStorageRoutingTests(TestCase):
+    """`TenantMediaStorage` must send each file to the bucket its name names.
+
+    Exercised with stub backends rather than real R2: what is worth testing here
+    is the routing decision, and it is the part that has no visible failure mode
+    in production - a wrong answer writes a real file to the wrong real bucket.
+    """
+
+    def setUp(self):
+        self.system = System.objects.create(
+            site_name="Pan",
+            host="pan.test",
+            storage_enabled=True,
+            storage_account_id="acct",
+            storage_access_key_id="key",
+            storage_bucket_name="pan-media",
+            storage_public_domain="cdn.pan.test",
+        )
+        self.system.set_storage_secret_access_key("s3cret")
+        self.system.save()
+        storage_module.forget_system()
+
+    def tearDown(self):
+        storage_module.forget_system()
+
+    def test_a_configured_tenant_gets_its_own_backend(self):
+        backend = storage_module.tenant_storage(self.system.pk)
+        self.assertIsNotNone(backend)
+        self.assertEqual(backend.bucket_name, "pan-media")
+        # A public domain means plain unsigned URLs - the whole point of the CDN.
+        self.assertEqual(backend.custom_domain, "cdn.pan.test")
+        self.assertFalse(backend.querystring_auth)
+
+    def test_an_incomplete_config_is_no_config(self):
+        """A half-filled form must not start writing to an unusable bucket - the
+        tenant stays on the platform until every part is present."""
+        self.system.storage_bucket_name = ""
+        self.system.save()
+        storage_module.forget_system()
+        self.assertIsNone(storage_module.tenant_storage(self.system.pk))
+        self.assertFalse(self.system.storage_configured)
+
+    def test_a_disabled_config_is_no_config(self):
+        self.system.storage_enabled = False
+        self.system.save()
+        storage_module.forget_system()
+        self.assertIsNone(storage_module.tenant_storage(self.system.pk))
+
+    def test_a_tenant_without_a_public_domain_falls_back_to_signed_urls(self):
+        self.system.storage_public_domain = ""
+        self.system.save()
+        storage_module.forget_system()
+        backend = storage_module.tenant_storage(self.system.pk)
+        self.assertIsNone(backend.custom_domain)
+        self.assertTrue(backend.querystring_auth)
+
+    def test_saving_a_system_clears_the_memo(self):
+        """Without this a worker keeps writing to the old bucket for up to a
+        minute after the operator changes the credentials."""
+        self.assertIsNotNone(storage_module.tenant_storage(self.system.pk))
+        self.system.storage_bucket_name = "renamed"
+        self.system.save()  # the post_save receiver clears it
+        self.assertEqual(
+            storage_module.tenant_storage(self.system.pk).bucket_name, "renamed"
+        )
+
+    def test_undecryptable_credentials_serve_from_the_platform(self):
+        """A ciphertext from another environment must degrade to the platform
+        bucket, not 500 every page that renders an image."""
+        self.system.storage_secret_access_key_encrypted = "not-a-fernet-token"
+        self.system.save()
+        storage_module.forget_system()
+        with self.assertLogs("core.storage", level="ERROR"):
+            self.assertIsNone(storage_module.tenant_storage(self.system.pk))
+
+    def test_the_router_reads_the_bucket_off_the_path(self):
+        """The whole design in one assertion: no request, no thread-local - the
+        file's own name decides, so `url()` is right from a management command
+        and from a cross-tenant admin page alike."""
+        router = storage_module.TenantMediaStorage()
+        mine = router.backend_for(f"t/{self.system.pk}/pictures/product/a.jpg")
+        self.assertEqual(mine.bucket_name, "pan-media")
+
+        # A legacy path and another tenant's path both fall to the platform.
+        platform = storage_module.platform_storage()
+        self.assertIs(router.backend_for("pictures/product/a.jpg"), platform)
+        self.assertIs(router.backend_for("t/9999/pictures/a.jpg"), platform)
+
+    def test_a_database_error_serves_from_the_platform(self):
+        """`url()` runs once per image per page render, so a database hiccup here
+        would 500 every page that shows a picture - most realistically in the
+        window between a deploy and its migration."""
+        from django.db import DatabaseError
+
+        storage_module.forget_system()
+        with mock.patch.object(
+            System.objects.__class__,
+            "filter",
+            side_effect=DatabaseError("no such column"),
+        ):
+            with self.assertLogs("core.storage", level="ERROR"):
+                self.assertIsNone(storage_module.tenant_storage(self.system.pk))
+
+
+class MediaSyncTests(IsolatedMediaTestCase):
+    """The one-off migration behind /admin/system -> "Migrate stored media".
+
+    What makes this worth testing rather than eyeballing is that it is the only
+    operation in the project that **rewrites stored file paths in the database**.
+    Every file uploaded before `core.tenant_paths` landed is unprefixed, and an
+    unprefixed name routes to the *platform* bucket - so without re-pathing, a
+    customer on its own domain would have all of its existing media copied into
+    the platform's bucket and only its future uploads into its own. Copying alone
+    can never move a tenant onto its own bucket.
+
+    The destination is a plain `FileSystemStorage` in a temp directory standing
+    in for a bucket: R2 is off in tests, and `platform_storage()` would otherwise
+    build a real S3 backend and reach for the network on the first `exists()`.
+    Substituting it keeps every assertion about *this* module's logic - the plan,
+    the re-pathing, the repoint, the batching - rather than about django-storages.
+    """
+
+    def setUp(self):
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.other = System.objects.create(site_name="Other", host="other.test")
+
+        self.bucket_dir = tempfile.mkdtemp(prefix="website-api-bucket-")
+        self.addCleanup(shutil.rmtree, self.bucket_dir, ignore_errors=True)
+        self.bucket = FileSystemStorage(location=self.bucket_dir)
+
+        patcher = mock.patch.object(
+            media_sync, "TenantMediaStorage", lambda: _FakeRouter(self.bucket)
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _legacy_story(self, name="hero.jpg", body=b"image-bytes"):
+        """A story whose image sits at a pre-tenancy path, as production's do."""
+        # Slug is globally unique, so it is derived from the file name to let a
+        # test seed several stories without colliding.
+        story = SuccessStory.objects.create(
+            system=self.system, name="A story", slug=f"story-{name.split('.')[0]}",
+        )
+        path = f"pictures/successstory/{name}"
+        default_storage.save(path, ContentFile(body))
+        SuccessStory.objects.filter(pk=story.pk).update(image=path)
+        story.refresh_from_db()
+        return story, path
+
+    # -- the plan --------------------------------------------------------- #
+
+    def test_plan_repaths_legacy_paths_into_the_tenant_namespace(self):
+        _, path = self._legacy_story()
+        plan = media_sync.build_plan(self.system)
+
+        item = next(i for i in plan if i.current == path)
+        self.assertEqual(item.target, f"t/{self.system.pk}/{path}")
+        self.assertTrue(item.repath)
+        self.assertFalse(item.foreign)
+
+    def test_plan_leaves_an_already_prefixed_path_alone(self):
+        story = SuccessStory.objects.create(
+            system=self.system, name="B", slug="b",
+        )
+        path = f"t/{self.system.pk}/pictures/successstory/new.jpg"
+        SuccessStory.objects.filter(pk=story.pk).update(image=path)
+
+        item = next(i for i in media_sync.build_plan(self.system) if i.current == path)
+        self.assertEqual(item.target, path)
+        self.assertFalse(item.repath)
+
+    def test_plan_excludes_another_tenants_rows(self):
+        self._legacy_story()
+        self.assertEqual(media_sync.build_plan(self.other), [])
+
+    # -- running ---------------------------------------------------------- #
+
+    def test_copies_the_file_and_repoints_the_row(self):
+        story, path = self._legacy_story()
+        target = f"t/{self.system.pk}/{path}"
+
+        result = media_sync.run_batch(self.system, source=media_sync.SOURCE_LOCAL)
+
+        self.assertEqual(result["counts"][media_sync.COPIED], 1)
+        self.assertEqual(result["repathed"], 1)
+        self.assertTrue(result["done"])
+
+        # The bytes arrived under the *new* key, unsuffixed - `_save` is used
+        # precisely so `get_available_name` cannot rename it to `hero_a1b2.jpg`.
+        self.assertTrue(self.bucket.exists(target))
+        with self.bucket.open(target) as fh:
+            self.assertEqual(fh.read(), b"image-bytes")
+
+        story.refresh_from_db()
+        self.assertEqual(story.image.name, target)
+
+        # Nothing is ever deleted from the source: that is what makes the whole
+        # operation re-runnable and reversible.
+        self.assertTrue(default_storage.exists(path))
+
+    def test_dry_run_writes_nothing_at_all(self):
+        story, path = self._legacy_story()
+
+        result = media_sync.run_batch(self.system, dry_run=True)
+
+        self.assertEqual(result["counts"][media_sync.COPIED], 1)
+        self.assertFalse(self.bucket.exists(f"t/{self.system.pk}/{path}"))
+        story.refresh_from_db()
+        self.assertEqual(story.image.name, path)
+
+    def test_rerunning_skips_what_is_already_there(self):
+        self._legacy_story(name="first.jpg")
+        media_sync.run_batch(self.system)
+        self._legacy_story(name="second.jpg")
+
+        again = media_sync.run_batch(self.system)
+
+        # The first file is already at its destination and its row already
+        # points there; only the newly added one is work.
+        self.assertEqual(again["counts"][media_sync.COPIED], 1)
+        self.assertEqual(again["counts"][media_sync.SKIPPED], 1)
+
+    def test_an_interrupted_run_repoints_on_the_next_pass(self):
+        """A crash between the write and the repoint must be recoverable.
+
+        This is the exact state the ordering in `_process` is designed to leave
+        behind: the file is safely at its new name, but the row still points at
+        the old one. The next run has to finish the job rather than call it
+        "already present" and move on - otherwise the site keeps serving from a
+        path that a later cleanup would remove.
+        """
+        story, path = self._legacy_story()
+        target = f"t/{self.system.pk}/{path}"
+        self.bucket.save(target, ContentFile(b"image-bytes"))
+
+        result = media_sync.run_batch(self.system)
+
+        self.assertEqual(result["counts"][media_sync.SKIPPED], 1)
+        story.refresh_from_db()
+        self.assertEqual(story.image.name, target)
+
+    def test_refuses_a_path_belonging_to_another_tenant(self):
+        story = SuccessStory.objects.create(system=self.system, name="C", slug="c")
+        foreign = f"t/{self.other.pk}/pictures/successstory/theirs.jpg"
+        SuccessStory.objects.filter(pk=story.pk).update(image=foreign)
+
+        result = media_sync.run_batch(self.system)
+
+        self.assertEqual(result["counts"][media_sync.FOREIGN], 1)
+        self.assertEqual(result["counts"][media_sync.COPIED], 0)
+        self.assertFalse(self.bucket.exists(foreign))
+        story.refresh_from_db()
+        self.assertEqual(story.image.name, foreign)
+
+    def test_a_row_pointing_at_a_deleted_file_is_reported_not_cleared(self):
+        story = SuccessStory.objects.create(system=self.system, name="D", slug="d")
+        path = "pictures/successstory/gone.jpg"
+        SuccessStory.objects.filter(pk=story.pk).update(image=path)
+
+        result = media_sync.run_batch(self.system)
+
+        self.assertEqual(result["counts"][media_sync.MISSING], 1)
+        story.refresh_from_db()
+        self.assertEqual(story.image.name, path)
+
+    # -- batching --------------------------------------------------------- #
+
+    def test_batches_cover_every_file_exactly_once(self):
+        """`offset` is only a valid cursor if the plan order never shifts."""
+        for i in range(5):
+            self._legacy_story(name=f"file{i}.jpg", body=f"bytes-{i}".encode())
+
+        copied = 0
+        offset = 0
+        batches = 0
+        while True:
+            result = media_sync.run_batch(self.system, offset=offset, limit=2)
+            copied += result["counts"][media_sync.COPIED]
+            offset = result["next_offset"]
+            batches += 1
+            if result["done"]:
+                break
+
+        self.assertEqual(batches, 3)          # 2 + 2 + 1
+        self.assertEqual(copied, 5)
+        for story in SuccessStory.objects.filter(system=self.system):
+            self.assertTrue(story.image.name.startswith(f"t/{self.system.pk}/"))
+            self.assertTrue(self.bucket.exists(story.image.name))
+
+    def test_rejects_an_unknown_source(self):
+        with self.assertRaises(ValueError):
+            media_sync.run_batch(self.system, source="somewhere-else")
+
+
+class MediaMigrationApiTests(IsolatedMediaTestCase):
+    """The staff gate and the destination rule, at the view layer.
+
+    Both are the kind of thing a disabled button appears to handle and does not:
+    a customer admin is one crafted request away from the endpoint, and a wrongly
+    chosen destination writes real files into a bucket nobody can serve them from.
+    """
+
+    URL = "/api/system/{}/media-migration/"
+
+    def setUp(self):
+        self.system = System.objects.create(site_name="Acme", host="acme.iguzman.com.mx")
+
+    @staticmethod
+    def _user(username, system, *, is_admin=True, is_staff=False):
+        # Written through the cached instance for the reason SiteBackupApiTests
+        # documents: `save_user_profile` writes `instance.profile` back on every
+        # User.save(), so a QuerySet.update() here would be silently undone.
+        user = User.objects.create_user(username, password="pw")
+        user.is_staff = is_staff
+        user.save()
+        user.profile.system = system
+        user.profile.is_admin = is_admin
+        user.profile.save()
+        return user
+
+    def test_a_customer_admin_cannot_reach_it(self):
+        self.client.force_login(self._user("tenant", self.system))
+        res = self.client.get(self.URL.format(self.system.pk))
+        self.assertEqual(res.status_code, 403)
+
+    def test_staff_cannot_reach_another_tenants_system(self):
+        theirs = System.objects.create(site_name="Other", host="other.test")
+        self.client.force_login(self._user("staff", self.system, is_staff=True))
+        res = self.client.get(self.URL.format(theirs.pk))
+        self.assertEqual(res.status_code, 404)
+
+    @override_settings(R2_ACCOUNT_ID="acct", R2_PUBLIC_DOMAIN="cdn.example")
+    def test_a_platform_host_targets_the_platform_bucket(self):
+        self.client.force_login(self._user("staff", self.system, is_staff=True))
+        data = self.client.get(self.URL.format(self.system.pk)).json()
+
+        self.assertEqual(data["destination"], "platform")
+        self.assertTrue(data["can_migrate"])
+        self.assertEqual(data["destination_label"], "cdn.example")
+
+    @override_settings(R2_ACCOUNT_ID="")
+    def test_a_platform_host_is_blocked_without_platform_storage(self):
+        self.client.force_login(self._user("staff", self.system, is_staff=True))
+        data = self.client.get(self.URL.format(self.system.pk)).json()
+
+        self.assertFalse(data["can_migrate"])
+        self.assertEqual(data["blocked_reason"], "platform_unconfigured")
+
+    @override_settings(R2_ACCOUNT_ID="acct")
+    def test_an_own_domain_host_needs_its_own_bucket(self):
+        """A customer's own domain must not fall back to the platform bucket.
+
+        The platform bucket being configured is not permission to put someone
+        else's media in it - the whole point of an own-domain site is that its
+        assets and its bandwidth bill are theirs.
+        """
+        own = System.objects.create(site_name="Pan", host="elpanbueno.com")
+        self.client.force_login(self._user("staff2", own, is_staff=True))
+
+        data = self.client.get(self.URL.format(own.pk)).json()
+        self.assertEqual(data["destination"], "tenant")
+        self.assertFalse(data["can_migrate"])
+        self.assertEqual(data["blocked_reason"], "tenant_unconfigured")
+
+        # And the POST refuses too - the disabled button is a courtesy, not the
+        # control.
+        res = self.client.post(
+            self.URL.format(own.pk),
+            data=json.dumps({"offset": 0}),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 400)

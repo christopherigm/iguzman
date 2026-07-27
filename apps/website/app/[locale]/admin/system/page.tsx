@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import { ContactSection } from "./contact-section";
+import { StorageSection } from "./storage-section";
+import { MediaMigrationSection } from "./media-migration-section";
 import { BackupSection } from "./backup-section";
 import { RestoreSection } from "./restore-section";
 import { getSystem, updateSystem } from "@/lib/admin-api";
@@ -31,7 +33,12 @@ export default function AdminSystemPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const systemId = useSession()?.systemId ?? 0;
+  const session = useSession();
+  const systemId = session?.systemId ?? 0;
+  // Django staff - us, not the customer's own CMS administrator. It gates the
+  // media migration below and nothing else on this page. Presentation only: the
+  // API is `IsAdminUser` and re-derives it from the token on every call.
+  const isStaff = session?.isStaff === true;
 
   useEffect(() => {
     if (!systemId) return;
@@ -150,11 +157,21 @@ export default function AdminSystemPage() {
         />
       </AdminForm>
 
-      {/* Backup and Restore sit OUTSIDE the AdminForm, not as `children` of it
-          like ContactSection. They own their own requests and their own buttons;
-          nesting them would put a "Create backup" button inside a form whose
-          submit saves the System fields, and the Enter key in the backup-name
-          input would then save the page rather than start the backup. */}
+      {/* Storage, Backup and Restore sit OUTSIDE the AdminForm, not as
+          `children` of it like ContactSection. They own their own requests and
+          their own buttons; nesting them would put a "Create backup" button
+          inside a form whose submit saves the System fields, and the Enter key
+          in the backup-name input would then save the page rather than start the
+          backup. Storage goes first of the three: it decides *where* a backup is
+          written, so an operator who changes it should see that before the
+          buttons that use it. */}
+      <StorageSection />
+      {/* Directly under Storage, which decides the bucket this migration copies
+          *into* - and staff-only, unlike every other section here: it rewrites
+          where each of the site's files is stored and repoints the database at
+          them, which is an operator action, not a customer one. The API enforces
+          the same rule; this only decides what is worth rendering. */}
+      {isStaff && <MediaMigrationSection />}
       <BackupSection />
       <RestoreSection />
     </>

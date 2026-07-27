@@ -28,6 +28,8 @@ from .backup import (
     write_archive,
 )
 from .cache import invalidate_pattern as _invalidate_pattern
+from .media_sync import DEFAULT_LIMIT, SOURCE_LOCAL, build_plan, run_batch
+from .storage import test_credentials
 from .models import Branch, Brand, CompanyHighlight, CompanyHighlightItem, ContactMessage, SiteBackup, SocialPost, SuccessStory, SuccessStoryImage, System
 from .serializers import (
     AiChatSerializer,
@@ -195,6 +197,208 @@ class SystemView(APIView):
         cache.delete(f"system:pk:{pk}")
 
         return Response(SystemSerializer(instance, context={"request": request}).data)
+
+
+class SystemStorageView(APIView):
+    """
+    GET  /api/system/<pk>/storage/  - this tenant's R2 config, secret omitted.
+    POST /api/system/<pk>/storage/  - test credentials against R2 (writes nothing
+                                      but a scratch object it deletes again).
+
+    Split out of the System payload rather than added to it, because
+    `GET /api/system/` is `AllowAny` and feeds every public page: the bucket name
+    and access key id are not the kind of thing to publish alongside a site's
+    colours. The secret has no read path here either - the response says only
+    whether one is stored.
+
+    Both are scoped to the **caller's own** System, taken from their profile, so
+    a tenant admin cannot read or probe another customer's storage by changing
+    the pk in the URL.
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    def _own_system(self, request, pk):
+        system = user_system(request)
+        if system is None or system.pk != int(pk):
+            return None
+        return system
+
+    def get(self, request, pk):
+        system = self._own_system(request, pk)
+        if system is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(self._payload(system))
+
+    def post(self, request, pk):
+        """Test a credential set before it is trusted with a customer's uploads.
+
+        Credentials come from the **body**, so the operator can verify what they
+        just typed without saving it first - a wrong key saved is a wrong key
+        every upload then fails against. A blank `storage_secret_access_key`
+        means "use the stored one", which is what makes it possible to re-test an
+        existing connection (the form never has the secret to send back).
+        """
+        system = self._own_system(request, pk)
+        if system is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data or {}
+        secret = (data.get("storage_secret_access_key") or "").strip()
+        if not secret:
+            secret = system.storage_secret_access_key
+
+        result = test_credentials(
+            account_id=(data.get("storage_account_id") or system.storage_account_id).strip(),
+            access_key_id=(data.get("storage_access_key_id") or system.storage_access_key_id).strip(),
+            secret_access_key=secret,
+            bucket_name=(data.get("storage_bucket_name") or system.storage_bucket_name).strip(),
+            public_domain=(data.get("storage_public_domain") or system.storage_public_domain).strip(),
+        )
+        return Response(result)
+
+    @staticmethod
+    def _payload(system):
+        return {
+            "storage_enabled": system.storage_enabled,
+            "storage_account_id": system.storage_account_id,
+            "storage_access_key_id": system.storage_access_key_id,
+            "storage_bucket_name": system.storage_bucket_name,
+            "storage_public_domain": system.storage_public_domain,
+            # Never the key itself - only whether one is on file, which is what
+            # lets the CMS render "leave blank to keep the current key".
+            "storage_secret_set": bool(system.storage_secret_access_key_encrypted),
+            "storage_configured": system.storage_configured,
+        }
+
+
+class SystemMediaMigrationView(APIView):
+    """
+    GET  /api/system/<pk>/media-migration/  - what a migration would target, and
+                                              whether it can run at all.
+    POST /api/system/<pk>/media-migration/  - migrate one batch of files.
+
+    The CMS button behind `core.media_sync`, for the one-off flip of a site whose
+    media still lives on the hostPath volume. `core/media_sync.py` carries the
+    reasoning; three things are decided *here*.
+
+    **Django staff only**, not `IsSystemAdmin` like every other endpoint on this
+    page. A customer admin owns their content; this rewrites where every file in
+    their site is stored and repoints the database at it, which is an operator
+    action with no undo button in the UI. `IsAdminUser` is DRF's `is_staff` check.
+
+    **Still scoped to the caller's own System.** Staff is not a licence to reach
+    across tenants: the pk must match the profile's System, exactly as
+    `SystemStorageView` requires. One staff account per site is the intended
+    shape.
+
+    **The destination follows the domain.** A host under `PLATFORM_HOST_SUFFIX`
+    is ours and belongs on the platform bucket; anything else is a customer on
+    its own domain and belongs in the R2 account it connected in the CMS. Either
+    way the gate is the same question - is that destination actually configured?
+    - and a POST re-checks it rather than trusting the disabled button.
+    """
+
+    permission_classes = [IsAdminUser]
+
+    def _own_system(self, request, pk):
+        system = user_system(request)
+        if system is None or system.pk != int(pk):
+            return None
+        return system
+
+    def get(self, request, pk):
+        system = self._own_system(request, pk)
+        if system is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        plan = build_plan(system)
+        return Response(
+            {
+                **self._destination(system),
+                "total_files": len(plan),
+                # How many rows still carry a pre-tenancy path. This is the
+                # number that actually shrinks as a migration runs, so it is what
+                # tells an operator whether there is anything left to do.
+                "pending_repath": sum(1 for i in plan if i.repath),
+                "foreign_files": sum(1 for i in plan if i.foreign),
+                "batch_size": DEFAULT_LIMIT,
+            }
+        )
+
+    def post(self, request, pk):
+        system = self._own_system(request, pk)
+        if system is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        destination = self._destination(system)
+        if not destination["can_migrate"]:
+            # The button is disabled for this too, but a disabled button is a
+            # courtesy, not a control - and the failure it prevents is files
+            # written into a bucket nobody can serve them from.
+            return Response(
+                {"detail": destination["blocked_reason"]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = request.data or {}
+        try:
+            result = run_batch(
+                system,
+                source=(data.get("source") or SOURCE_LOCAL),
+                offset=int(data.get("offset") or 0),
+                limit=int(data.get("limit") or DEFAULT_LIMIT),
+                overwrite=bool(data.get("overwrite")),
+                dry_run=bool(data.get("dry_run")),
+            )
+        except (TypeError, ValueError) as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception("media migration failed for system %s", system.pk)
+            return Response(
+                {"detail": "The migration batch failed. Nothing was deleted; re-run to resume."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        # Repointing uses `QuerySet.update()` (see `_repoint`), which fires no
+        # post_save receiver, so nothing else clears the payloads that embed an
+        # image URL. Only on a batch that actually moved a path: a stale entry is
+        # harmless in the meantime - the source file is never deleted, so the old
+        # URL still resolves - but it must not outlive the run.
+        if result["repathed"]:
+            invalidate_after_restore(system.host)
+
+        return Response(result)
+
+    @staticmethod
+    def _destination(system):
+        """Which bucket this tenant's media belongs in, and whether it exists."""
+        suffix = getattr(settings, "PLATFORM_HOST_SUFFIX", ".iguzman.com.mx")
+        host = (system.host or "").strip().lower()
+        is_platform_host = host.endswith(suffix)
+
+        platform_configured = bool(getattr(settings, "R2_ACCOUNT_ID", ""))
+        tenant_configured = bool(system.storage_configured)
+
+        if is_platform_host:
+            configured = platform_configured
+            label = getattr(settings, "R2_PUBLIC_DOMAIN", "") or getattr(settings, "R2_BUCKET_NAME", "")
+            reason = "" if configured else "platform_unconfigured"
+        else:
+            configured = tenant_configured
+            label = system.storage_public_domain or system.storage_bucket_name
+            reason = "" if configured else "tenant_unconfigured"
+
+        return {
+            "host": system.host,
+            "destination": "platform" if is_platform_host else "tenant",
+            "destination_label": label,
+            "destination_configured": configured,
+            "platform_configured": platform_configured,
+            "tenant_configured": tenant_configured,
+            "can_migrate": configured,
+            "blocked_reason": reason,
+        }
 
 
 def _disabled_suffix(disabled_visible):
@@ -1404,12 +1608,15 @@ class SiteBackupDetailView(APIView):
 class SiteBackupDownloadView(APIView):
     """GET /api/backups/<pk>/download/ - stream one archive to its owner.
 
-    This is the ONLY sanctioned way to read a backup. The file physically sits
-    under MEDIA_ROOT (so it shares the persistent volume with the media it
-    contains), and an nginx sidecar serves /media/* with no authentication at
-    all - so `/media/backups/` is explicitly refused there, the stored filename
-    carries a random token, and every real download comes through here, where
-    the row is matched against the caller's own System first.
+    This is the ONLY sanctioned way to read a backup, and in production it is
+    close to the only lock. The archive sits in the same media namespace as the
+    images it contains: on disk behind an unauthenticated nginx sidecar in
+    development, in a Cloudflare-published R2 bucket in production - which has no
+    per-object ACLs, so the sidecar's `/media/backups/` deny rule has no
+    equivalent there. What stands between an archive and the internet is the
+    uuid4 in its stored name, `SiteBackupSerializer` never exposing `file`, and
+    this view matching the row against the caller's own System. See
+    `core/storage.py` for the Cloudflare WAF rule that restores a second lock.
     """
 
     permission_classes = [IsSystemAdmin]

@@ -14,7 +14,8 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
 from .cache import invalidate_pattern, invalidate_system_payload
-from .models import Branch, Brand, SiteBackup
+from .models import Branch, Brand, SiteBackup, System
+from .storage import forget_system
 
 
 def _invalidate_catalog_for_brand():
@@ -39,6 +40,20 @@ def invalidate_system_on_branch_change(sender, instance, **kwargs):
     the catalog counts in ``catalog/signals.py`` - the count changes while the
     System row itself does not, so nothing else would clear it."""
     invalidate_system_payload()
+
+
+@receiver(post_save, sender=System)
+def forget_storage_config(sender, instance, **kwargs):
+    """Drop this worker's memoised R2 config so the next upload re-reads it.
+
+    ``core.storage`` memoises a tenant's storage settings per process to keep
+    ``url()`` - called once per image per page render - off the database. The
+    memo expires on its own within ``CONFIG_TTL_SECONDS``; this only shortens the
+    wait to zero on the worker that handled the save, which is the one whose
+    operator is about to press "Test connection" and expect their edit to count.
+    The other workers catch up on the TTL.
+    """
+    forget_system(instance.pk)
 
 
 @receiver(post_delete, sender=SiteBackup)

@@ -32,6 +32,7 @@ from webauthn.helpers.structs import (
 from catalog.models import (
     Product, Service, MenuItem, normalize_selection,
 )
+from core.media import absolute_media_url
 from core.models import System
 from core.permissions import IsSystemAdmin
 from core.tenancy import host_system, profile_system, user_system
@@ -105,7 +106,7 @@ def _email_brand(user):
 
     logo_url = None
     if system and system.img_logo:
-        logo_url = f"{settings.MEDIA_BASE_URL}{system.img_logo.url}"
+        logo_url = absolute_media_url(system.img_logo)
 
     site_name = (system.site_name if system else None) or "iGuzman"
     return {

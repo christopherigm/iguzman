@@ -28,6 +28,7 @@ from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 
+from core.media import absolute_media_url
 from core.services.contact import _admin_emails, _tenant_brand
 
 from ..serializers import resolve_line_image
@@ -74,16 +75,12 @@ def _money(amount, currency):
 def _line_image(line):
     """Absolute image URL for one order line, or None.
 
-    `resolve_line_image` without a request returns the stored (relative) media
-    path; an email client has no request to resolve it against, so it is made
-    absolute with `MEDIA_BASE_URL` exactly as the branded logo is.
+    `resolve_line_image` without a request returns whatever the storage backend
+    gives: a relative media path on the local filesystem, an absolute CDN URL on
+    R2. An email client has no request to resolve the first against, so it is
+    made absolute exactly as the branded logo is.
     """
-    url = resolve_line_image(line)
-    if not url:
-        return None
-    if url.startswith("http://") or url.startswith("https://"):
-        return url
-    return f"{settings.MEDIA_BASE_URL}{url}"
+    return absolute_media_url(resolve_line_image(line)) or None
 
 
 def _order_items(order):

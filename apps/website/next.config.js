@@ -47,10 +47,33 @@ const nextConfig = {
   images: {
     qualities: [75, 80, 85, 90],
     dangerouslyAllowLocalIP: true,
+    // Stored media lives in Cloudflare R2 in production, so it is fetched
+    // straight from the edge instead of being proxied through this pod. See
+    // ./image-loader.ts for what the loader does and what it costs.
+    loader: 'custom',
+    loaderFile: './image-loader.ts',
+    // `remotePatterns` still matters even with a custom loader: it gates
+    // `/_next/image`, which two features use *on purpose* to obtain a
+    // same-origin copy of a remote image - the social-post flyer export (canvas
+    // taint) and the hero `logo`-shape CSS mask (an empty mask otherwise).
+    //
+    // ⚠ A customer that connects its own R2 account with its own CDN hostname
+    // (e.g. cdn.elpanbueno.com) must have that hostname added here, or those two
+    // features fall back to the un-proxied URL for that tenant. It cannot be
+    // read from the database: `next.config.js` is evaluated at build time and
+    // baked into `.next/required-server-files.json` for the standalone server.
+    // Adding a customer is already a code change in this app (sites/registry.ts),
+    // so this is one more line in the same commit.
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'website-api.iguzman.com.mx',
+      },
+      // The platform R2 bucket's public hostname, and any other media host on
+      // the company domain. Covers every tenant that has not brought its own.
+      {
+        protocol: 'https',
+        hostname: '**.iguzman.com.mx',
       },
       {
         protocol: 'http',

@@ -96,6 +96,13 @@ SYSTEM_EXCLUDE = (
     "stripe_secret_key_encrypted",
     "stripe_webhook_secret_encrypted",
     "stripe_webhook_token",
+    # The tenant's own R2 secret key, same rule as the Stripe pair: Fernet
+    # ciphertext keyed to this environment, and a live cloud-storage credential
+    # in a file customers download. The other storage fields *do* travel, so a
+    # restored site shows its bucket in the CMS and needs only the secret pasted
+    # back; until then `storage_configured` is false and uploads go to the
+    # platform bucket, which serves rather than fails.
+    "storage_secret_access_key_encrypted",
 )
 # A password hash in a downloadable zip is a credential, not PII. Staff/superuser
 # flags are dropped too: they grant the *Django* admin, which is not a tenant's to

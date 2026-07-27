@@ -47,6 +47,12 @@ export interface TokenClaims {
   is_admin?: boolean;
   /** website-api only; absent (→ null) elsewhere. */
   system_id?: number | null;
+  /**
+   * Django's `is_staff` - us, the platform operators, not the customer's own
+   * CMS administrator (that is `is_admin`). Absent (→ false) on any API that
+   * does not mint it, so an app that never asks is unaffected.
+   */
+  is_staff?: boolean;
   exp?: number;
 }
 
@@ -60,6 +66,15 @@ export interface Session {
   displayName: string;
   isAdmin: boolean;
   systemId: number | null;
+  /**
+   * Platform staff, for operator-only controls. Presentation only, like
+   * `isAdmin`: the API re-derives it from the token on every call.
+   *
+   * ⚠ Claims freeze for the life of the refresh token, so an account promoted to
+   * staff keeps `false` here until it signs in again (or something calls
+   * `reissueTokens()`).
+   */
+  isStaff: boolean;
 }
 
 /**
@@ -108,6 +123,7 @@ export function sessionFromClaims(claims: TokenClaims): Session {
     displayName,
     isAdmin: claims.is_admin === true,
     systemId: claims.system_id ?? null,
+    isStaff: claims.is_staff === true,
   };
 }
 

@@ -9,6 +9,7 @@ from django.db import models
 
 from core import image_sizes as sizes
 from core.fields import ResizedImageField
+from core.tenant_paths import system_id_for, tenant_path
 
 
 class Common(models.Model):
@@ -22,8 +23,22 @@ class Common(models.Model):
 
 
 def picture(instance, filename):
+    """Where an uploaded image is stored, namespaced by tenant.
+
+    The `t/<system_id>/` prefix is what lets a customer on its own domain serve
+    its images from its own Cloudflare R2 account: `core.storage` resolves the
+    bucket by reading the tenant back out of the path, because Django resolves
+    `FileField.storage` once at class-load time and can never do it per row. See
+    `core.tenant_paths` for the full reasoning.
+
+    An instance whose System cannot be resolved (unsaved parent, a fixture) gets
+    the bare path and lands on the platform bucket - reachable, just not
+    followable to a tenant bucket. Every file written before this landed has that
+    shape, which is why the prefix must stay an unambiguous `t/<digits>/`.
+    """
     ext = os.path.splitext(filename)[1].lstrip(".") or "jpg"
-    return f"pictures/{instance.__class__.__name__.lower()}/{uuid.uuid4().hex}.{ext}"
+    base = f"pictures/{instance.__class__.__name__.lower()}/{uuid.uuid4().hex}.{ext}"
+    return tenant_path(system_id_for(instance), base)
 
 
 FIT_CHOICES = [
@@ -753,6 +768,35 @@ class System(Common):
         help_text="Let customers place an order to pay on delivery (collects a delivery address).",
     )
 
+    # ── Storage (Cloudflare R2) ───────────────────────────────────────────────
+    # Optional, and only worth filling in for a tenant on its own domain: with
+    # these set, this site's uploads go to *its* R2 bucket and serve from *its*
+    # CDN hostname, so the customer owns their assets and their bandwidth bill.
+    # Left blank - the normal case - the tenant uses the platform bucket
+    # (`R2_*` in settings) and nothing here is consulted.
+    #
+    # Same shape as the Stripe pair above and for the same reasons: per-tenant
+    # because each customer has their own Cloudflare account, and the secret is
+    # Fernet ciphertext (core.crypto) because it must be read back to sign
+    # requests. Switching this on does **not** move files that already exist -
+    # `sync_media_to_r2 --system <host>` copies them, and the old ones keep
+    # serving from the platform bucket until it has run.
+    storage_enabled = models.BooleanField(
+        default=False,
+        help_text="Store this site's images and backups in its own Cloudflare R2 bucket instead of the platform's.",
+    )
+    storage_account_id = models.CharField(max_length=64, blank=True, default="")
+    storage_access_key_id = models.CharField(max_length=128, blank=True, default="")
+    # Fernet ciphertext - decrypted server-side to sign S3 requests, never
+    # serialized back out. Same rule as stripe_secret_key_encrypted.
+    storage_secret_access_key_encrypted = models.TextField(blank=True, default="")
+    storage_bucket_name = models.CharField(max_length=128, blank=True, default="")
+    # The custom hostname mapped to the bucket in Cloudflare (e.g.
+    # "cdn.elpanbueno.com"). Without one there is no public route to an object,
+    # so URLs fall back to expiring signed links: functional, but uncacheable and
+    # therefore slower than the platform bucket it replaced.
+    storage_public_domain = models.CharField(max_length=255, blank=True, default="")
+
     # ── Spotlight section ─────────────────────────────────────────────────────
     # An editorial promo panel paired with up to three hand-picked catalog items,
     # rendered by the shared `Spotlight` block on a site's landing (café de altura
@@ -831,6 +875,37 @@ class System(Common):
             self.stripe_enabled
             and self.stripe_secret_key_encrypted
             and self.stripe_webhook_secret_encrypted
+        )
+
+    def set_storage_secret_access_key(self, raw_secret: str) -> None:
+        """Encrypt and store the plaintext R2 secret access key ('' clears it)."""
+        from core.crypto import encrypt
+        self.storage_secret_access_key_encrypted = encrypt(raw_secret) if raw_secret else ""
+
+    @property
+    def storage_secret_access_key(self) -> str:
+        """Decrypt and return the plaintext R2 secret access key (server-side only)."""
+        from core.crypto import decrypt
+        if not self.storage_secret_access_key_encrypted:
+            return ""
+        return decrypt(self.storage_secret_access_key_encrypted)
+
+    @property
+    def storage_configured(self) -> bool:
+        """Whether this tenant's uploads go to its own bucket.
+
+        Every part must be present. A half-filled form is *not* a configuration:
+        it would send the next upload to a bucket that cannot be written or read,
+        and the customer would only find out when an image failed to appear.
+        `storage_public_domain` is deliberately not required - without it the
+        bucket still works, just with slower signed URLs.
+        """
+        return bool(
+            self.storage_enabled
+            and self.storage_account_id
+            and self.storage_access_key_id
+            and self.storage_secret_access_key_encrypted
+            and self.storage_bucket_name
         )
 
 
@@ -1131,20 +1206,25 @@ class SocialPost(Common):
 def backup_upload_path(instance, filename):
     """Where a tenant's backup archive is stored.
 
-    Under MEDIA_ROOT so it lands on the same persistent volume as the media it
-    contains (a hostPath in the cluster - see helm/values.yaml), which is what
-    lets a backup outlive a pod restart.
+    In the same media namespace as the images it contains, and tenant-prefixed
+    like everything else, so a customer's archives follow it to its own R2
+    account when it connects one.
 
-    **The filename carries an unguessable token on purpose.** An nginx sidecar
-    serves /media/* directly, so anything under MEDIA_ROOT is one path guess away
-    from the public internet - and this file is the tenant's entire database. The
-    sidecar is configured to refuse /media/backups/ (helm/templates/nginx-configmap.yaml)
-    and `SiteBackupDownloadView` is the only sanctioned way to read one; the token
-    is the third lock, so a misconfigured or bypassed proxy still does not hand a
-    whole site's data to whoever tries `/media/backups/backup-2026-07-27.zip`.
+    ⚠ **The filename carries an unguessable token, and in production it is the
+    main lock.** In development an nginx sidecar serves /media/* directly; in
+    production the bucket is served by a Cloudflare custom domain, which has no
+    notion of an ACL and publishes every object in it. Either way this file is
+    the tenant's entire database - customer accounts and order history included -
+    and a path guess away from anyone who tries. What stands between them:
+    uuid4 in the name, `SiteBackupSerializer` never exposing `file`, and
+    `SiteBackupDownloadView` (which matches the row against the caller's own
+    System) being the only code that ever produces a URL for one. A Cloudflare
+    WAF rule blocking `/t/*/backups/*` on the public hostname restores a real
+    second lock without affecting this code, which only ever uses the S3
+    endpoint; see the note in `core/storage.py`.
     """
     ext = os.path.splitext(filename)[1].lstrip(".") or "zip"
-    return f"backups/{instance.system_id or 'x'}/{uuid.uuid4().hex}.{ext}"
+    return tenant_path(instance.system_id, f"backups/{uuid.uuid4().hex}.{ext}")
 
 
 class SiteBackup(Common):

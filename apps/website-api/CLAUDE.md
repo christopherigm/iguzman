@@ -177,6 +177,131 @@ Driven by `pnpm publish-site <host>` (`cli/website/website.sh publish`). `seed_s
 imports `SYSTEM_TEXT_FIELDS` from `site_payload` so seeding and publishing agree
 on which System fields are copyable content.
 
+## Media storage - Cloudflare R2, routed per tenant (`core/storage.py`)
+
+**One switch decides the whole media stack: `R2_ACCOUNT_ID`.** Unset -> files go
+to `MEDIA_ROOT` exactly as they always have, with no Cloudflare account and no
+network calls; that is development and it must stay that way. Set -> every
+upload, image and backup archive alike, goes to Cloudflare R2 and is served from
+the CDN. `settings.py` picks the `STORAGES['default']` backend from it and
+nothing else in the codebase branches on the environment.
+
+There are **two levels of bucket**. The platform bucket (`R2_*` env vars) is the
+default for every tenant. A customer on its own domain can connect **its own R2
+account** in the CMS (`/admin/system` -> Storage), and then its files live in its
+bucket and serve from its CDN hostname.
+
+- **A file finds its bucket by its own name.** Every upload path is
+  `t/<system_id>/…` (`core/tenant_paths.py`), and `TenantMediaStorage` reads the
+  tenant back out of the path on every operation. It cannot come from anywhere
+  else: `FileField.storage` is resolved **once at model-class load**, so a
+  `storage=` callable can never be per-row, and `url()` is called from
+  serializers, management commands, email builders and the Django admin - most
+  with no request, some rendering *another* tenant's rows, so a thread-local
+  "current tenant" would be right most of the time and silently wrong exactly
+  where a wrong answer writes a real file into someone else's bucket. A path
+  with no prefix is legacy and resolves to the platform bucket.
+- **`system_id_for()` reads `MODEL_SPECS`**, which already states every model's
+  ORM path to its `System` and is kept honest by the backup engine. Adding a
+  model there gives it tenant-scoped storage with no edit in `tenant_paths.py`.
+- **The per-tenant config is memoised per process for `CONFIG_TTL_SECONDS` (60).**
+  `url()` runs once per image per page render and must not be a query. A
+  credential change therefore reaches other gunicorn workers within a minute; the
+  worker that handled the save is cleared immediately by the `post_save` receiver
+  in `core/signals.py`. **The memo holds the secret still encrypted** - it
+  outlives the request, and a plaintext R2 key in a long-lived process dict buys
+  nothing over decrypting once per backend build.
+- **An incomplete config is *no* config.** All of enabled + account + key +
+  secret + bucket must be present or the tenant stays on the platform bucket; a
+  half-filled form must not start writing somewhere unreachable. Undecryptable
+  ciphertext (another environment's, or after a key rotation) also falls back
+  rather than raising - the alternative is a 500 on every page with an image.
+- **The credential follows the Stripe rules exactly** (`core/crypto.py` Fernet,
+  `write_only`, no read path, `""` clears, the CMS omits it to leave unchanged).
+  It is excluded from backups (`SYSTEM_EXCLUDE`) and from `SystemAdmin`. The
+  other four storage fields are readable, but only through the admin-only
+  `GET /api/system/<pk>/storage/` - **never** add them to `SystemSerializer`,
+  which is `AllowAny` and feeds every public page. `POST` to the same URL
+  round-trips the credentials (write, read back, delete) so a typo fails in the
+  CMS instead of on a customer's next upload.
+
+⚠ **Turning R2 on moves nothing.** Every path is a string in the database, so the
+moment `R2_ACCOUNT_ID` is set those strings resolve against a bucket the files
+are not in, and every image 404s. `core/media_sync.py` closes the gap - see the
+next section; it is idempotent, copies only what is missing, and never deletes
+from the source.
+
+## Migrating stored media (`core/media_sync.py`)
+
+The engine behind both `python manage.py sync_media_to_r2` and the **staff-only**
+"Migrate stored media" section on the CMS's `/admin/system`. One module, so the
+CLI and the button cannot drift.
+
+It closes the gap in **two** dimensions, and the second is the one that is easy
+to miss:
+
+- **The bucket.** Destination is always `TenantMediaStorage.backend_for(name)` -
+  the same router serving requests - so "where should this file be" has exactly
+  one answer.
+- **The path, which is why this writes to the database.** Every file uploaded
+  before `core/tenant_paths.py` landed is **unprefixed** (`pictures/product/ab12.jpg`),
+  and an unprefixed name routes to the **platform** bucket by design so legacy
+  files keep working. Copying alone therefore can *never* move an own-domain
+  customer onto its own bucket - it would put all their existing media in the
+  platform's and only their future uploads in theirs. So a file that does not
+  already name its tenant is copied to `t/<system_id>/<old path>` **and the
+  column repointed**.
+
+Four invariants hold that together:
+
+- **The row is repointed only after the destination write succeeds**, never
+  before. A crash in between leaves a row pointing at the old file - which still
+  exists and still serves - and the next run copies it (a no-op) and repoints it.
+  The reverse order would produce a broken image on every failure. `_process`
+  therefore also repoints on the `skipped` branch: "already at the destination"
+  does not mean "already repointed".
+- **Nothing is ever deleted from the source**, which is what makes the operation
+  re-runnable, interruptible and reversible.
+- **Repointing uses `QuerySet.update()`**, not `save()`, or every `auto_now`
+  column would claim the row was edited during the migration. That fires no
+  `post_save`, so the caller invalidates the cache namespaces itself -
+  `SystemMediaMigrationView` calls `invalidate_after_restore` on any batch that
+  actually moved a path.
+- **A path naming a *different* tenant is reported (`foreign`) and never
+  copied.** Only a bug or a hand-edited row can produce one, and moving it would
+  spread the mistake.
+
+Work is handed out in **batches** (`offset`/`limit`): a full catalog is thousands
+of files and one request would run past the ingress timeout, which the browser
+reports as a bare network failure with the migration in an unknown state. The
+plan is deterministic - models by label, rows by pk - so `offset` is a valid
+cursor across requests and the CMS gets a real percentage instead of Backup's
+indeterminate bar.
+
+`GET/POST /api/system/<pk>/media-migration/` is **`IsAdminUser` (Django staff)**,
+not `IsSystemAdmin` like everything else on that page - it rewrites where every
+file in a site is stored - and is still scoped to the caller's own System, so
+staff is not a licence to reach across tenants. The destination follows the
+domain: a host under `PLATFORM_HOST_SUFFIX` (default `.iguzman.com.mx`) belongs
+on the platform bucket, anything else in the R2 account that customer connected
+in the CMS. A POST re-checks that the destination is configured rather than
+trusting the disabled button. Tests: `MediaSyncTests`, `MediaMigrationApiTests`.
+
+⚠ **The bucket is public, and that includes backup archives.** A Cloudflare
+custom domain serves every object in its bucket and has no notion of an ACL -
+which is what makes images fast, and what removes the nginx `^~ /media/backups/`
+deny rule that used to be a backup's second lock. What remains: the uuid4 in
+`backup_upload_path`, `SiteBackupSerializer` never exposing `file`, and
+`SiteBackupDownloadView` being the only code that produces a URL for one. **To
+restore a real second lock, add a Cloudflare WAF rule on the public hostname
+blocking `/t/*/backups/*`** - this code only ever uses the S3 endpoint, so the
+rule costs nothing.
+
+`MEDIA_URL` is now absolute in production, which broke every
+`f"{MEDIA_BASE_URL}{file.url}"`. Use **`core.media.absolute_media_url()`** in any
+context with no request (branded emails); `request.build_absolute_uri(file.url)`
+needs no change - it returns an already-absolute URL untouched.
+
 ## Tenant backup & restore (`core/backup.py`)
 
 `core/backup.py` is the **tenant-facing** backup layer behind `/admin/system` in
@@ -218,13 +343,21 @@ Archive layout: `manifest.json` (format version, host, sections, counts),
   site as it was. `mode` is `replace` (wipe the selected sections and rebuild) or
   `merge` (upsert, leaving unmentioned rows alone); the CMS lets the operator pick.
 
-⚠ **The archives sit under `MEDIA_ROOT`, which an nginx sidecar serves with no
-authentication.** Three things keep them private and all three must stay:
-`backup_upload_path` gives each file a random token, the sidecar refuses
-`^~ /media/backups/` (`helm/templates/nginx-configmap.yaml`), and
+⚠ **An archive is served with no authentication in front of it, in either
+environment**, and it is the tenant's whole database — customer accounts and
+order history included. In development an nginx sidecar serves `/media/*`; in
+production the R2 bucket is published by a Cloudflare custom domain. What keeps
+them private: `backup_upload_path` gives each file a uuid4 name,
 `SiteBackupDownloadView` — which matches the row against the caller's own System —
-is the only sanctioned read path. `SiteBackupSerializer` deliberately does not
-expose `file`; publishing that URL would route around all of it.
+is the only sanctioned read path, and `SiteBackupSerializer` deliberately does
+not expose `file` (publishing that URL would route around all of it).
+
+The sidecar's `^~ /media/backups/` deny rule
+(`helm/templates/nginx-configmap.yaml`) was the second lock and **has no
+equivalent on R2** — a custom domain serves every object in its bucket and R2 has
+no per-object ACLs. Add a Cloudflare WAF rule blocking `/t/*/backups/*` on the
+public hostname to get one back; this code only ever reads through the S3
+endpoint, so the rule costs nothing. See the storage section above.
 
 Endpoints (all `IsSystemAdmin`, all scoped to the caller's own `System`):
 `GET/POST /api/backups/`, `DELETE /api/backups/<pk>/`,
@@ -368,6 +501,18 @@ production `DEBUG=True`, `ALLOWED_HOSTS=*` and a rotated `SECRET_KEY`. The real 
 is to prune the stale SCREAMING_SNAKE keys from the Secret (keep only
 `GROQ_API_KEY`, `OPENROUTER_API_KEY`, and the kebab-case ones); do that before
 simplifying the chart.
+
+⚠ **That same precedence cuts the other way, and it silently disabled R2.** The
+chart renders **every** key of `env:` including empty-valued ones
+(`helm/templates/deployment.yaml`, `range $key, $value := .Values.env`), so a
+placeholder like `R2_ACCOUNT_ID: ''` reaches the pod as a real empty string and
+**shadows the Secret's value**. `R2_ACCOUNT_ID` is the single switch for the
+whole media stack, so an empty one turns R2 off entirely no matter what
+`pnpm secrets` wrote. All five `R2_*` variables are therefore deliberately
+**absent** from `env:` and come from the bundle alone. Do not re-add them "for
+documentation" - a commented example is fine, a key with a placeholder value is
+not. The general rule: a variable that is supplied by the Secret must not also
+appear in `env:` unless `env:` is meant to be authoritative for it.
 
 ### Updating the Secret: `pnpm secrets`
 

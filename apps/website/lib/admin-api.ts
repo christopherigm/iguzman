@@ -1101,3 +1101,144 @@ export async function restoreBackup(options: {
   });
   return parseResponse<RestoreResult>(res);
 }
+
+// ---- Storage (per-tenant Cloudflare R2) ----
+/**
+ * A tenant's own R2 configuration, as the API is willing to report it back.
+ *
+ * The secret access key is **not** here and has no read path anywhere:
+ * `storage_secret_set` is all the CMS is told, which is enough to render "leave
+ * blank to keep the current key". Same stance as the Stripe secrets.
+ */
+export interface StorageConfig {
+  storage_enabled: boolean;
+  storage_account_id: string;
+  storage_access_key_id: string;
+  storage_bucket_name: string;
+  storage_public_domain: string;
+  /** Whether a secret key is on file - never the key itself. */
+  storage_secret_set: boolean;
+  /** Whether all of it is present, i.e. whether uploads actually go there. */
+  storage_configured: boolean;
+}
+
+export interface StorageTestResult {
+  ok: boolean;
+  detail: string;
+}
+
+/**
+ * Read this tenant's storage config.
+ *
+ * A separate endpoint from `getSystem`, deliberately: `GET /api/system/` is
+ * public and feeds every page, so the bucket name and access key id are not on
+ * it. This one is admin-only and scoped to the caller's own System.
+ */
+export async function getStorageConfig(systemId: number) {
+  const res = await adminFetch(`/api/system/${systemId}/storage/`);
+  return parseResponse<StorageConfig>(res);
+}
+
+/**
+ * Round-trip a credential set against R2 without saving it.
+ *
+ * The values come from the form, so a typo is caught before it becomes the
+ * destination for a customer's uploads. Omit `storage_secret_access_key` to test
+ * against the stored one - which is the only way to re-test an existing
+ * connection, since the form never receives the secret back.
+ */
+export async function testStorageConnection(
+  systemId: number,
+  config: Partial<Record<string, string>>,
+) {
+  const res = await adminFetch(`/api/system/${systemId}/storage/`, {
+    method: "POST",
+    body: JSON.stringify(config),
+  });
+  return parseResponse<StorageTestResult>(res);
+}
+
+// ---- Media migration (Django staff only) ----
+/** Where the files are now - the copy's source, never its destination. */
+export type MigrationSource = "local" | "platform";
+
+/**
+ * What a media migration would target, and whether it can run at all.
+ *
+ * `destination` follows the tenant's domain: a site under the platform suffix
+ * belongs on the platform bucket, a customer on its own domain belongs in the R2
+ * account it connected. `can_migrate` is that destination being configured -
+ * the API re-checks it on every POST, so this only decides what the CMS renders.
+ */
+export interface MediaMigrationStatus {
+  host: string;
+  destination: "platform" | "tenant";
+  destination_label: string;
+  destination_configured: boolean;
+  platform_configured: boolean;
+  tenant_configured: boolean;
+  can_migrate: boolean;
+  blocked_reason: "" | "platform_unconfigured" | "tenant_unconfigured";
+  total_files: number;
+  /** Rows still carrying a pre-tenancy path - what actually shrinks as it runs. */
+  pending_repath: number;
+  foreign_files: number;
+  batch_size: number;
+}
+
+export interface MediaMigrationEntry {
+  model: string;
+  field: string;
+  name: string;
+  target: string;
+  status: "copied" | "skipped" | "missing" | "failed" | "foreign";
+  detail: string;
+}
+
+export interface MediaMigrationBatch {
+  total: number;
+  offset: number;
+  processed: number;
+  next_offset: number;
+  done: boolean;
+  repathed: number;
+  counts: Record<MediaMigrationEntry["status"], number>;
+  entries: MediaMigrationEntry[];
+}
+
+export async function getMediaMigrationStatus(systemId: number) {
+  const res = await adminFetch(`/api/system/${systemId}/media-migration/`);
+  return parseResponse<MediaMigrationStatus>(res);
+}
+
+/**
+ * Migrate one batch of files, starting at `offset`.
+ *
+ * Deliberately one batch per call rather than one request for the whole site:
+ * copying every file of a full catalog runs well past the ingress timeout, and
+ * the browser reports that as a bare network failure with the migration in an
+ * unknown state. The caller loops on `next_offset` until `done`, which also
+ * gives it a real percentage instead of an indeterminate bar.
+ */
+export async function runMediaMigrationBatch(
+  systemId: number,
+  options: {
+    source: MigrationSource;
+    offset: number;
+    limit?: number;
+    dryRun?: boolean;
+    overwrite?: boolean;
+  },
+) {
+  const res = await adminFetch(`/api/system/${systemId}/media-migration/`, {
+    method: "POST",
+    body: JSON.stringify({
+      source: options.source,
+      offset: options.offset,
+      limit: options.limit,
+      dry_run: options.dryRun ?? false,
+      overwrite: options.overwrite ?? false,
+    }),
+  });
+  return parseResponse<MediaMigrationBatch>(res);
+}

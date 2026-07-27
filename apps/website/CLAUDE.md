@@ -148,6 +148,88 @@ route, like `/cart`.
 - Use `Button size="xl"` for till controls - that size exists for finger-driven
   UIs.
 
+## Media comes from a CDN, not from this pod (`image-loader.ts`)
+
+In production every uploaded file lives in Cloudflare R2 and the API returns an
+**absolute** URL on the bucket's hostname. `next.config.js` sets
+`images.loader: 'custom'` + `loaderFile: './image-loader.ts'`, and that loader
+returns an absolute URL **untouched** so the browser fetches it straight from the
+edge. Anything relative (`/public` assets) still goes through `/_next/image` with
+the default URL shape, so local images keep their resizing and modern formats.
+
+- **Stored media gets no per-viewport resizing**, by design: website-api already
+  caps every upload at its tier (`core/image_sizes.py`, 256–3840 px), so what is
+  stored is what is served. Give large images an explicit `sizes` rather than
+  reaching for the optimizer.
+- **`/_next/image` still exists and two features still depend on it** — the
+  social-post flyer export (`html-to-image` taints the canvas on a cross-origin
+  fetch) and the hero `logo`-shape CSS mask (a cross-origin mask resolves to an
+  *empty* mask and clips the badge away). Both route a remote URL through the
+  optimizer precisely to get a same-origin copy. That keeps working: the route is
+  only disabled by `output: 'export'`, not by a custom loader.
+- ⚠ **Those two features are gated by `images.remotePatterns`.** The platform
+  bucket is covered by the `**.iguzman.com.mx` entry. **A customer that connects
+  its own R2 account with its own CDN hostname must have that hostname added to
+  `remotePatterns`**, or the flyer export and the logo mask fall back to the
+  un-proxied URL for that tenant. It cannot be read from the database —
+  `next.config.js` is evaluated at build time and baked into
+  `.next/required-server-files.json` for the standalone server. Onboarding a
+  customer is already a code change here (`sites/registry.ts`), so this is one
+  more line in the same commit.
+
+## Storage (`/admin/system`)
+
+`storage-section.tsx` is where a tenant connects **its own Cloudflare R2
+account**, so its images and backups live in its bucket and serve from its CDN
+hostname instead of the platform's. It sits above Backup & Restore because it
+decides *where* a backup is written. Like them it is outside the page's
+`AdminForm` and owns its own requests. The engine is `core/storage.py` in
+website-api — read that CLAUDE.md section before changing either side.
+
+- **The secret key field always loads blank and a blank value is dropped from the
+  payload**, never sent as `""`. The API has no read path for it, so submitting
+  the empty field verbatim would wipe a working bucket the first time anyone
+  toggled the switch. Exactly the Stripe rule on `/admin/payments`.
+- **Reads come from `GET /api/system/<pk>/storage/`, not `getSystem`.**
+  `GET /api/system/` is `AllowAny` and feeds every public page; the bucket name
+  and access key id are not on it.
+- **"Test connection" sends what is in the form**, so a typo fails in the CMS
+  rather than on a customer's next upload, and any edit clears the previous
+  verdict — a green "connected" beside a field that has since changed is worse
+  than none.
+- **The section says out loud that connecting a bucket moves nothing.** Existing
+  files keep serving from the old bucket until someone runs
+  `sync_media_to_r2 --system <host> --source platform`; an operator who assumes
+  otherwise sees broken images and no error anywhere.
+
+## Migrate stored media (`/admin/system`, staff only)
+
+`media-migration-section.tsx` is the one-off move of a site's already-uploaded
+files onto the bucket they now resolve to. It sits directly under Storage - which
+decides the bucket it copies *into* - and is the only section of the CMS that is
+**not** a customer control. The engine, the re-pathing and the tenancy rules live
+in website-api (`core/media_sync.py`); read that CLAUDE.md section first.
+
+- **Rendered only for `session.isStaff`**, a new claim on the access token
+  (`is_staff` - Django staff, i.e. us, as distinct from `is_admin`, the
+  customer's own CMS administrator). The API is `IsAdminUser` and re-derives it
+  from the token on every call, so this only decides what is worth rendering.
+  ⚠ Claims freeze for the life of the refresh token, so an account promoted to
+  staff must sign in again before the section appears.
+- **The batching loop lives in the component**, not in one long request. Copying
+  a full catalog runs past the ingress timeout, and the browser reports that as a
+  bare network failure with the migration in an unknown state. Each POST returns
+  `next_offset`/`done` and the component loops - which is also why this progress
+  bar is a real percentage where Backup's is honestly indeterminate. Keep the
+  `alive` ref: without it a navigation mid-migration keeps firing requests into a
+  dead page.
+- **"Preview" is a first-class button, not a hidden flag.** The migration
+  repoints database rows, so the operator gets to see the file count and the plan
+  before anything moves; the destructive-looking one is behind a confirmation.
+- **The source is a choice; the destination never is.** Only the operator knows
+  whether the files are still on the server's disk or already on the platform
+  bucket. The destination follows the tenant's domain and is decided by the API.
+
 ## Backup & restore (`/admin/system`)
 
 The bottom of `/admin/system` carries two sections a tenant runs against its own

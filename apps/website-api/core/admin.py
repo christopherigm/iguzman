@@ -205,12 +205,16 @@ class SystemAdmin(admin.ModelAdmin):
     list_display = ("site_name", "host", "primary_color", "secondary_color", "enabled", "stripe_configured", "modified")
     list_filter = ("enabled", "stripe_enabled")
     search_fields = ("site_name", "host")
-    readonly_fields = ("created", "modified", "version", "stripe_configured")
-    # The Stripe secrets are never editable or viewable here - the ciphertext
+    readonly_fields = ("created", "modified", "version", "stripe_configured", "storage_configured")
+    # Encrypted secrets are never editable or viewable here - the ciphertext
     # columns are excluded outright, and the plaintext only ever enters through
     # the CMS's write-only serializer fields. Same stance as cinelog-api's
     # S3BucketAdmin.
-    exclude = ("stripe_secret_key_encrypted", "stripe_webhook_secret_encrypted")
+    exclude = (
+        "stripe_secret_key_encrypted",
+        "stripe_webhook_secret_encrypted",
+        "storage_secret_access_key_encrypted",
+    )
 
     fieldsets = (
         ("Identity", {
@@ -330,6 +334,23 @@ class SystemAdmin(admin.ModelAdmin):
                 "whether both are present; checkout stays off until they are. The "
                 "site's own webhook endpoint - the one it pastes into its Stripe "
                 "dashboard - is shown to it in the CMS."
+            ),
+            "classes": ("collapse",),
+        }),
+        ("Storage (Cloudflare R2)", {
+            "fields": (
+                "storage_enabled", "storage_account_id", "storage_access_key_id",
+                "storage_bucket_name", "storage_public_domain", "storage_configured",
+            ),
+            "description": (
+                "This site's own Cloudflare R2 bucket, for sites on their own "
+                "domain that want to host their images and backups themselves. "
+                "The secret access key is set from the site's CMS and is "
+                "encrypted at rest - it cannot be read back here or anywhere "
+                "else. 'Storage configured' shows whether all of it is present; "
+                "until it is, this site's uploads go to the platform bucket. "
+                "Switching it on does not move files that already exist - run "
+                "`sync_media_to_r2 --system <host>` for that."
             ),
             "classes": ("collapse",),
         }),

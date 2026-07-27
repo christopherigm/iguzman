@@ -188,6 +188,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             token["system_id"] = user.profile.system_id
         except Exception:
             token["system_id"] = None
+        # Django staff, which is a different thing from `is_admin` above:
+        # `is_admin` is the customer's own CMS administrator, `is_staff` is us.
+        # It gates the operator-only controls in the CMS (the media migration on
+        # /admin/system), and like every other claim here it only decides what is
+        # worth rendering - Django re-derives it from the token on every call.
+        token["is_staff"] = bool(user.is_staff)
         return token
 
     def validate(self, attrs):

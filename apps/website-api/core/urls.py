@@ -29,6 +29,8 @@ from .views import (
     SuccessStoryImagesView,
     SuccessStoryListView,
     SystemListView,
+    SystemMediaMigrationView,
+    SystemStorageView,
     SystemView,
 )
 
@@ -37,6 +39,13 @@ urlpatterns = [
     path("publish-site/", PublishSiteView.as_view(), name="publish-site"),
     path("system/", SystemView.as_view(), name="system-detail"),
     path("system/<int:pk>/", SystemView.as_view(), name="system-update"),
+    # Read-and-test only; the config is *written* through the System PATCH
+    # above like every other CMS field. Separate from the System payload because
+    # that one is AllowAny and this is not.
+    path("system/<int:pk>/storage/", SystemStorageView.as_view(), name="system-storage"),
+    # Django-staff only (not IsSystemAdmin like the rest): a one-off operator
+    # action that rewrites where every file in the site is stored.
+    path("system/<int:pk>/media-migration/", SystemMediaMigrationView.as_view(), name="system-media-migration"),
 
     path("success-stories/", SuccessStoryListView.as_view(), name="success-story-list"),
     path("success-stories/slug/<slug:slug>/", SuccessStoryBySlugView.as_view(), name="success-story-by-slug"),

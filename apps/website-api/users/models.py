@@ -5,9 +5,18 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
 
+from core.tenant_paths import system_id_for, tenant_path
+
 
 def profile_picture_upload_path(instance, filename):
-    return f"profile_pictures/user_{instance.user.id}/{filename}"
+    """Tenant-prefixed like every other upload - see `core.picture`.
+
+    A customer's avatar belongs to the tenant they signed up with, so it follows
+    that tenant to its own R2 bucket. `UserProfile` carries the `system` FK
+    directly, so this costs no extra query.
+    """
+    base = f"profile_pictures/user_{instance.user.id}/{filename}"
+    return tenant_path(system_id_for(instance), base)
 
 
 class UserProfile(models.Model):
