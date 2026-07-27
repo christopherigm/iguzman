@@ -14,7 +14,7 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
 from .cache import invalidate_pattern, invalidate_system_payload
-from .models import Branch, Brand
+from .models import Branch, Brand, SiteBackup
 
 
 def _invalidate_catalog_for_brand():
@@ -39,3 +39,17 @@ def invalidate_system_on_branch_change(sender, instance, **kwargs):
     the catalog counts in ``catalog/signals.py`` - the count changes while the
     System row itself does not, so nothing else would clear it."""
     invalidate_system_payload()
+
+
+@receiver(post_delete, sender=SiteBackup)
+def delete_backup_file(sender, instance, **kwargs):
+    """Remove the archive from disk when its history row goes.
+
+    Django stopped deleting FileField files on row delete in 1.3, so without this
+    every deleted restore point would leave its zip - by far the largest file this
+    app writes - orphaned on the media volume forever. A signal rather than a line
+    in the delete view so the Django admin and any cascade (deleting a System
+    takes its backups with it) are covered by the same code.
+    """
+    if instance.file:
+        instance.file.delete(save=False)

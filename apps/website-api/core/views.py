@@ -1,20 +1,34 @@
 import json
 import logging
+import os
+import tempfile
 
 from django.conf import settings
 from django.core.cache import cache
-from django.http import StreamingHttpResponse
+from django.core.files import File
+from django.http import FileResponse, StreamingHttpResponse
 from django.utils import timezone
+from django.utils.text import slugify
 
 from rest_framework import status
 from rest_framework.authentication import BasicAuthentication
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.permissions import IsSystemAdmin, show_disabled
+from core.tenancy import user_system
+from .backup import (
+    MODE_REPLACE,
+    SECTION_IMAGES,
+    BackupError,
+    normalize_sections,
+    restore_archive,
+    write_archive,
+)
 from .cache import invalidate_pattern as _invalidate_pattern
-from .models import Branch, Brand, CompanyHighlight, CompanyHighlightItem, ContactMessage, SocialPost, SuccessStory, SuccessStoryImage, System
+from .models import Branch, Brand, CompanyHighlight, CompanyHighlightItem, ContactMessage, SiteBackup, SocialPost, SuccessStory, SuccessStoryImage, System
 from .serializers import (
     AiChatSerializer,
     BranchSerializer,
@@ -27,6 +41,7 @@ from .serializers import (
     CompanyHighlightWriteSerializer,
     ContactMessageCreateSerializer,
     ContactMessageSerializer,
+    SiteBackupSerializer,
     SocialPostSerializer,
     SocialPostWriteSerializer,
     SuccessStoryImageSerializer,
@@ -1256,3 +1271,240 @@ class AiChatView(APIView):
             logger.exception("AI chat stream failed")
             yield _sse_data({"error": {"message": "The AI provider is unavailable. Please try again."}})
         yield "data: [DONE]\n\n"
+
+
+# --------------------------------------------------------------------------- #
+# Backup & restore
+# --------------------------------------------------------------------------- #
+
+BACKUPS_CACHE_TTL = 300  # 5 minutes
+
+
+def _backups_key(system_id):
+    return f"core:backups:system:{system_id}"
+
+
+def invalidate_after_restore(host):
+    """Clear every cache namespace a restore can invalidate.
+
+    A restore rewrites more than publishing does - it can touch the System row,
+    the whole catalog, stories, highlights, brands, branches, the contact inbox,
+    social posts, and per-user carts/favorites/orders - so this is deliberately
+    the widest invalidation in the project. The per-user keys are wildcarded
+    because a restore does not know which accounts it moved.
+    """
+    cache.delete(f"system:host:{host}")
+    for pattern in (
+        "system:pk:*",
+        "core:success_stories:*", "core:success_story:*",
+        "core:highlights:*", "core:highlight:*", "core:highlight_item*",
+        "core:brands:*", "core:brand:*",
+        "core:branches:*", "core:branch:*",
+        "core:contact_messages:*",
+        "core:social_posts:*",
+        "catalog:*",
+        "orders:list:*",
+        "users:favorites*", "users:cart*",
+    ):
+        _invalidate_pattern(pattern)
+
+
+class SiteBackupListCreateView(APIView):
+    """
+    GET  /api/backups/   - this tenant's restore points, newest first.
+    POST /api/backups/   - build a new archive from the selected sections.
+
+    Both are scoped to the caller's own System, taken from their profile and
+    never from the request body: a backup is the most concentrated form a
+    tenant's data takes, so the tenant boundary is enforced on every path.
+
+    The POST is synchronous - it serialises the database and copies every media
+    file into a zip before responding, which is why the CMS shows an
+    indeterminate progress bar rather than a percentage.
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    def get(self, request):
+        system = user_system(request)
+        if system is None:
+            return Response({"detail": "No system for this user."}, status=status.HTTP_400_BAD_REQUEST)
+
+        cache_key = _backups_key(system.pk)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        backups = SiteBackup.objects.filter(system=system).select_related("created_by")
+        data = SiteBackupSerializer(backups, many=True, context={"request": request}).data
+        cache.set(cache_key, data, BACKUPS_CACHE_TTL)
+        return Response(data)
+
+    def post(self, request):
+        system = user_system(request)
+        if system is None:
+            return Response({"detail": "No system for this user."}, status=status.HTTP_400_BAD_REQUEST)
+
+        sections = request.data.get("sections") or []
+        if isinstance(sections, str):
+            sections = [s.strip() for s in sections.split(",") if s.strip()]
+        try:
+            sections = normalize_sections(sections)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        name = (request.data.get("name") or "").strip()[:255]
+        if not name:
+            name = timezone.localtime().strftime("%Y-%m-%d %H:%M")
+
+        path, manifest = write_archive(
+            system, sections, include_images=SECTION_IMAGES in sections
+        )
+        try:
+            backup = SiteBackup(
+                system=system,
+                name=name,
+                sections=manifest["sections"],
+                include_images=manifest["include_images"],
+                size_bytes=os.path.getsize(path),
+                media_files=manifest["media_files"],
+                record_counts=manifest["counts"],
+                created_by=request.user if request.user.is_authenticated else None,
+            )
+            with open(path, "rb") as fh:
+                backup.file.save(f"{slugify(name) or 'backup'}.zip", File(fh), save=False)
+            backup.save()
+        finally:
+            # The archive now lives in storage; the working copy must not linger
+            # in /tmp, where a few full-catalog backups would fill the disk.
+            os.unlink(path)
+
+        cache.delete(_backups_key(system.pk))
+        return Response(
+            SiteBackupSerializer(backup, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class SiteBackupDetailView(APIView):
+    """DELETE /api/backups/<pk>/ - drop a restore point (and its archive)."""
+
+    permission_classes = [IsSystemAdmin]
+
+    def delete(self, request, pk):
+        system = user_system(request)
+        backup = SiteBackup.objects.filter(pk=pk, system=system).first()
+        if backup is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        backup.delete()  # post_delete removes the file - see core/signals.py
+        cache.delete(_backups_key(system.pk))
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SiteBackupDownloadView(APIView):
+    """GET /api/backups/<pk>/download/ - stream one archive to its owner.
+
+    This is the ONLY sanctioned way to read a backup. The file physically sits
+    under MEDIA_ROOT (so it shares the persistent volume with the media it
+    contains), and an nginx sidecar serves /media/* with no authentication at
+    all - so `/media/backups/` is explicitly refused there, the stored filename
+    carries a random token, and every real download comes through here, where
+    the row is matched against the caller's own System first.
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    def get(self, request, pk):
+        system = user_system(request)
+        backup = SiteBackup.objects.filter(pk=pk, system=system).first()
+        if backup is None or not backup.file:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        filename = f"{slugify(backup.name) or 'backup'}.zip"
+        return FileResponse(
+            backup.file.open("rb"),
+            as_attachment=True,
+            filename=filename,
+            content_type="application/zip",
+        )
+
+
+class SiteRestoreView(APIView):
+    """POST /api/backups/restore/ - apply an archive to the caller's own site.
+
+    Takes either an uploaded `file` (multipart) or the `backup_id` of a stored
+    restore point, plus `sections` and a `mode` (`replace` wipes the selected
+    sections and rebuilds; `merge` upserts and leaves untouched rows alone).
+
+    Two guards worth keeping. The archive must name this tenant's host, so a
+    mis-picked file cannot overwrite one customer's site with another's; and the
+    whole apply runs in a single transaction, so a restore that fails part-way
+    leaves the site as it was rather than half-replaced.
+    """
+
+    permission_classes = [IsSystemAdmin]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def post(self, request):
+        system = user_system(request)
+        if system is None:
+            return Response({"detail": "No system for this user."}, status=status.HTTP_400_BAD_REQUEST)
+
+        sections = request.data.get("sections") or []
+        if isinstance(sections, str):
+            sections = [s.strip() for s in sections.split(",") if s.strip()]
+        mode = (request.data.get("mode") or MODE_REPLACE).strip()
+
+        upload = request.FILES.get("file")
+        backup_id = request.data.get("backup_id")
+
+        if upload is not None:
+            path = self._spool(upload)
+            cleanup = True
+        elif backup_id:
+            backup = SiteBackup.objects.filter(pk=backup_id, system=system).first()
+            if backup is None or not backup.file:
+                return Response({"detail": "Backup not found."}, status=status.HTTP_404_NOT_FOUND)
+            path = backup.file.path
+            cleanup = False
+        else:
+            return Response(
+                {"detail": "Upload a `file` or name a `backup_id`."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            result = restore_archive(system, path, sections, mode=mode)
+        except BackupError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            # The restore is atomic, so the site is untouched - but the operator
+            # must not be shown a stack trace, and the detail belongs in the log.
+            logger.exception("restore failed for system %s", system.pk)
+            return Response(
+                {"detail": "The restore failed and nothing was changed."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        finally:
+            if cleanup:
+                os.unlink(path)
+
+        invalidate_after_restore(system.host)
+        return Response(result, status=status.HTTP_200_OK)
+
+    @staticmethod
+    def _spool(upload):
+        """Write the upload to a temp file.
+
+        `zipfile` needs a seekable file and a large multipart upload arrives as a
+        chunked TemporaryUploadedFile, so it is copied out in chunks rather than
+        read into memory - a tenant's archive can be hundreds of megabytes.
+        """
+        handle = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
+        try:
+            for chunk in upload.chunks():
+                handle.write(chunk)
+        finally:
+            handle.close()
+        return handle.name

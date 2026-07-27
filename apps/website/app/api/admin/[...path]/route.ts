@@ -19,6 +19,11 @@ const ALLOWED_PREFIXES = [
   "check-slug/",
   "auth/admin/users/",
   "orders/admin/",
+  // Listing, creating and deleting restore points only. Downloading an archive
+  // and uploading one to restore are binary/multipart and cannot come through
+  // here (this proxy re-encodes every body and response as JSON) - they have
+  // dedicated handlers under /api/backups/.
+  "backups/",
 ];
 
 function isAllowed(path: string): boolean {

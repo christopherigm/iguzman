@@ -11,6 +11,18 @@ data:
         listen {{ .Values.nginx.port }};
         server_name _;
 
+        # ── Tenant backup archives are NOT public ─────────────────────────
+        # A backup zip lives under MEDIA_ROOT so it shares the persistent
+        # volume with the media it contains, but it is one customer's entire
+        # database - catalog, orders, contact messages, accounts. This location
+        # serves no authentication, so the archives must never be reachable
+        # through it; `^~` makes this prefix win outright over /media/ below.
+        # The only sanctioned read path is the authenticated
+        # /api/backups/<id>/download/ endpoint on the Django app.
+        location ^~ /media/backups/ {
+            return 404;
+        }
+
         # ── Serve Django media files ──────────────────────────────────────
         location /media/ {
             # Write operations → forward to the Django app so uploads

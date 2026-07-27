@@ -148,6 +148,40 @@ route, like `/cart`.
 - Use `Button size="xl"` for till controls - that size exists for finger-driven
   UIs.
 
+## Backup & restore (`/admin/system`)
+
+The bottom of `/admin/system` carries two sections a tenant runs against its own
+data: **Backup** (`backup-section.tsx`) downloads the site as a zip and keeps a
+history of restore points, and **Restore** (`restore-section.tsx`) uploads one
+back. Both pick their scope with the shared `backup-sections.tsx` switch row.
+The engine, the archive format and the tenancy rules live in `website-api`
+(`core/backup.py`) — read that CLAUDE.md section before changing either side.
+
+- **Both sections sit _outside_ the page's `AdminForm`, not inside it as
+  `children` like `ContactSection`.** They own their own requests and buttons;
+  nested, the backup-name field's Enter key would submit the System form instead.
+- **Download and restore do NOT go through `/api/admin/[...path]`.** That proxy
+  re-encodes every body and response as JSON, which corrupts a zip on the way out
+  and destroys the multipart boundary on the way in. They have dedicated handlers
+  at `app/api/backups/[id]/download/` (streamed passthrough) and
+  `app/api/backups/restore/`. Only the JSON list/create/delete calls use the
+  proxy, which is why `backups/` is in its `ALLOWED_PREFIXES`.
+- **The restore upload is buffered, not streamed, on purpose.** `apiFetch`
+  retries once on a 401 and a `ReadableStream` body cannot be replayed — streaming
+  would turn every expired-token restore into an unexplained failure _after_ the
+  whole archive had been sent.
+- **The progress bar is indeterminate and should stay that way.** Building or
+  applying an archive is one synchronous request with no way to report a
+  percentage back mid-flight; a fake percentage would be worse than an honest
+  animation. A real one needs a job-state model and polling, not a UI change.
+- **`restore-section.tsx` surfaces the API's own `detail` on a 400.** The two
+  failures operators actually hit — an archive from another site, and a section
+  the archive lacks — are both explained precisely by the server, and collapsing
+  them into a generic "restore failed" leaves nothing to act on.
+- **"All" is derived from the selection, never its own state**, so the row cannot
+  show All-on beside a half-empty selection; it locks the individual switches
+  while on.
+
 ## Social posts - the flyer generator (`/admin/social-posts`)
 
 The CMS can render a catalog item into a shareable Instagram/story flyer.

@@ -1126,3 +1126,78 @@ class SocialPost(Common):
 
     def __str__(self):
         return self.name or f"Social Post #{self.pk}"
+
+
+def backup_upload_path(instance, filename):
+    """Where a tenant's backup archive is stored.
+
+    Under MEDIA_ROOT so it lands on the same persistent volume as the media it
+    contains (a hostPath in the cluster - see helm/values.yaml), which is what
+    lets a backup outlive a pod restart.
+
+    **The filename carries an unguessable token on purpose.** An nginx sidecar
+    serves /media/* directly, so anything under MEDIA_ROOT is one path guess away
+    from the public internet - and this file is the tenant's entire database. The
+    sidecar is configured to refuse /media/backups/ (helm/templates/nginx-configmap.yaml)
+    and `SiteBackupDownloadView` is the only sanctioned way to read one; the token
+    is the third lock, so a misconfigured or bypassed proxy still does not hand a
+    whole site's data to whoever tries `/media/backups/backup-2026-07-27.zip`.
+    """
+    ext = os.path.splitext(filename)[1].lstrip(".") or "zip"
+    return f"backups/{instance.system_id or 'x'}/{uuid.uuid4().hex}.{ext}"
+
+
+class SiteBackup(Common):
+    """A downloadable archive of one tenant's data, kept as a restore point.
+
+    The row is the *history entry* the CMS lists; the zip it points at is what
+    `core.backup` wrote (manifest + data.json + the media files). Everything here
+    besides `file` is a denormalised copy of that archive's manifest, so the list
+    renders without opening a single zip.
+
+    Rows are scoped to a `System` and every endpoint filters on it - a backup is
+    the most concentrated form a tenant's data takes, so it must never be
+    listable, downloadable or restorable across the tenant boundary.
+    """
+
+    system = models.ForeignKey(
+        "core.System",
+        on_delete=models.CASCADE,
+        related_name="backups",
+    )
+    # Operator-supplied label; the CMS defaults it to the current date-time.
+    name = models.CharField(max_length=255)
+    file = models.FileField(upload_to=backup_upload_path, max_length=255)
+
+    # Which sections the archive holds, as stored by core.backup.normalize_sections
+    # (e.g. ["system", "products", "images"]). A restore may select a subset.
+    sections = models.JSONField(default=list, blank=True)
+    include_images = models.BooleanField(default=True)
+
+    # Denormalised from the manifest so the history list needs no zip reads.
+    size_bytes = models.PositiveBigIntegerField(default=0)
+    media_files = models.PositiveIntegerField(default=0)
+    record_counts = models.JSONField(default=dict, blank=True)
+
+    # Who pressed the button. SET_NULL so removing a staff account never takes
+    # the restore point with it.
+    created_by = models.ForeignKey(
+        "auth.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="site_backups",
+    )
+
+    class Meta:
+        verbose_name = "Site Backup"
+        verbose_name_plural = "Site Backups"
+        ordering = ["-created"]
+
+    def __str__(self):
+        return f"{self.name} ({self.system_id})"
+
+    @property
+    def total_records(self) -> int:
+        counts = self.record_counts or {}
+        return sum(v for v in counts.values() if isinstance(v, int))

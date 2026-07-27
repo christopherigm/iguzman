@@ -8,6 +8,7 @@ from .models import (
     CompanyHighlight,
     CompanyHighlightItem,
     ContactMessage,
+    SiteBackup,
     SocialPost,
     SuccessStory,
     SuccessStoryImage,
@@ -357,3 +358,29 @@ class SystemAdmin(admin.ModelAdmin):
     def delete_model(self, request, obj):
         cache.delete(f"system:host:{obj.host}")
         super().delete_model(request, obj)
+
+
+@admin.register(SiteBackup)
+class SiteBackupAdmin(admin.ModelAdmin):
+    """Restore points, read-mostly.
+
+    Everything here except the label is written by `core.backup` when the archive
+    is built, so the whole manifest side is read-only: editing `sections` or
+    `record_counts` by hand would make the history lie about what a zip contains
+    without changing the zip. Adding a row here is disallowed for the same reason
+    - a SiteBackup with no archive behind it is not a restore point. Deleting one
+    IS allowed, and the `post_delete` receiver in `core/signals.py` takes the file
+    with it.
+    """
+
+    list_display = ("name", "system", "size_bytes", "media_files", "created_by", "created")
+    list_filter = ("system", "include_images")
+    search_fields = ("name",)
+    readonly_fields = (
+        "system", "file", "sections", "include_images",
+        "size_bytes", "media_files", "record_counts",
+        "created_by", "created", "modified", "version",
+    )
+
+    def has_add_permission(self, request):
+        return False

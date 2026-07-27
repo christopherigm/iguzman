@@ -16,6 +16,10 @@ from .views import (
     CompanyHighlightListView,
     ContactMessageCreateView,
     PublishSiteView,
+    SiteBackupDetailView,
+    SiteBackupDownloadView,
+    SiteBackupListCreateView,
+    SiteRestoreView,
     SlugCheckView,
     SocialPostDetailView,
     SocialPostListCreateView,
@@ -61,6 +65,13 @@ urlpatterns = [
 
     path("social-posts/", SocialPostListCreateView.as_view(), name="social-post-list"),
     path("social-posts/<int:pk>/", SocialPostDetailView.as_view(), name="social-post-detail"),
+
+    # Backup & restore. `restore/` is declared before `<int:pk>/` so the literal
+    # segment is not swallowed by the detail route.
+    path("backups/", SiteBackupListCreateView.as_view(), name="backup-list"),
+    path("backups/restore/", SiteRestoreView.as_view(), name="backup-restore"),
+    path("backups/<int:pk>/", SiteBackupDetailView.as_view(), name="backup-detail"),
+    path("backups/<int:pk>/download/", SiteBackupDownloadView.as_view(), name="backup-download"),
 
     path("check-slug/", SlugCheckView.as_view(), name="check-slug"),
 

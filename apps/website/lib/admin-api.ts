@@ -841,11 +841,7 @@ export interface AdminOrderSummary {
  *  payment and fulfillment together and is accepted on counter sales only - see
  *  `AdminOrderActionSerializer` in website-api. */
 export type AdminOrderAction =
-  | "mark_paid"
-  | "mark_fulfilled"
-  | "unmark_fulfilled"
-  | "cancel"
-  | "complete";
+  "mark_paid" | "mark_fulfilled" | "unmark_fulfilled" | "cancel" | "complete";
 
 export async function listAdminOrders() {
   const res = await adminFetch(`/api/orders/admin/`);
@@ -1015,4 +1011,93 @@ export async function deleteSocialPost(pk: number) {
     method: "DELETE",
   });
   return parseResponse<void>(res);
+}
+
+// ---- Backups ----
+// The four data sections a backup can carry, plus the cross-cutting `images`
+// toggle (not a section of its own: it decides whether the media files of the
+// selected sections travel with them). Mirrors core/backup.py's ALL_SECTIONS.
+export const BACKUP_SECTIONS = [
+  "products",
+  "services",
+  "menu",
+  "system",
+  "images",
+] as const;
+export type BackupSection = (typeof BACKUP_SECTIONS)[number];
+
+export type RestoreMode = "replace" | "merge";
+
+export interface SiteBackup {
+  id: number;
+  created: string;
+  modified: string;
+  name: string;
+  sections: BackupSection[];
+  include_images: boolean;
+  size_bytes: number;
+  media_files: number;
+  /** Row counts keyed by "<app>.<model>", straight from the archive manifest. */
+  record_counts: Record<string, number>;
+  total_records: number;
+  created_by_username: string | null;
+  download_url: string;
+}
+
+export interface RestoreResult {
+  manifest: { host: string; created_at: string; sections: BackupSection[] };
+  mode: RestoreMode;
+  sections: BackupSection[];
+  results: Record<
+    string,
+    { created: number; updated: number; skipped: number }
+  >;
+}
+
+export async function listBackups() {
+  const res = await adminFetch(`/api/backups/`);
+  return parseResponse<SiteBackup[]>(res);
+}
+
+export async function createBackup(name: string, sections: BackupSection[]) {
+  const res = await adminFetch(`/api/backups/`, {
+    method: "POST",
+    body: JSON.stringify({ name, sections }),
+  });
+  return parseResponse<SiteBackup>(res);
+}
+
+export async function deleteBackup(pk: number) {
+  const res = await adminFetch(`/api/backups/${pk}/`, { method: "DELETE" });
+  return parseResponse<void>(res);
+}
+
+/**
+ * Restore from an uploaded archive, or from a stored restore point.
+ *
+ * Posts straight to `/api/backups/restore/` rather than through `adminFetch`'s
+ * `/api/admin/*` proxy: that proxy is JSON-only and would strip the multipart
+ * boundary the file depends on. The route handler there attaches the bearer
+ * token exactly the same way.
+ */
+export async function restoreBackup(options: {
+  file?: File;
+  backupId?: number;
+  sections: BackupSection[];
+  mode: RestoreMode;
+}) {
+  const form = new FormData();
+  if (options.file) form.append("file", options.file);
+  if (options.backupId != null)
+    form.append("backup_id", String(options.backupId));
+  form.append("mode", options.mode);
+  // Sent as a comma list, not repeated fields: Django's QueryDict would hand the
+  // view only the LAST value of a repeated key, silently restoring one section.
+  form.append("sections", options.sections.join(","));
+
+  const res = await fetch(`/api/backups/restore/`, {
+    method: "POST",
+    body: form,
+  });
+  return parseResponse<RestoreResult>(res);
 }

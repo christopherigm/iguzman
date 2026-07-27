@@ -33,6 +33,17 @@ ingress:
   className: 'nginx'
   annotations:
     cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+    # Restoring a site uploads a whole backup archive (data + every media file)
+    # in one multipart request. ingress-nginx defaults to a 1m body limit, which
+    # would 413 anything but the smallest site - and the browser reports that as
+    # a bare network failure, with nothing in the API logs to explain it.
+    # `0` disables the limit; the upload is admin-only and spooled to disk.
+    nginx.ingress.kubernetes.io/proxy-body-size: '0'
+    # A full-catalog backup or restore can run well past the 60s default while
+    # it copies media, and a timeout mid-restore is exactly when the operator
+    # most needs the request to finish.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '600'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '600'
   hosts:
     - host: website-api.iguzman.com.mx
       paths:

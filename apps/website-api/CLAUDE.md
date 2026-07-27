@@ -70,21 +70,21 @@ def delete_model(self, request, obj):
 
 ### Cross-model invalidation - a signal, not a line in each write path
 
-The rules above only cover a model's *own* namespace, and that is not enough when
+The rules above only cover a model's _own_ namespace, and that is not enough when
 a cached payload embeds a **different** model's data. Writing model A then makes
 the cached payload of model B wrong, and nothing in A's write path knows it.
 
 Those cases live in `core/signals.py` and `catalog/signals.py` as
 `post_save`/`post_delete` receivers, so one receiver covers the API view, the
-Django admin (single *and* bulk delete), any cascade, and a shell script alike.
+Django admin (single _and_ bulk delete), any cascade, and a shell script alike.
 Current pairings, each documented at its receiver:
 
-| Writing this            | Also invalidates                                        |
-| ----------------------- | ------------------------------------------------------- |
-| `Brand`                 | `catalog:*` (items embed `brand_name`)                  |
-| `*Category`             | `catalog:<family>*` (items embed `category_name/slug`)  |
+| Writing this                   | Also invalidates                                                    |
+| ------------------------------ | ------------------------------------------------------------------- |
+| `Brand`                        | `catalog:*` (items embed `brand_name`)                              |
+| `*Category`                    | `catalog:<family>*` (items embed `category_name/slug`)              |
 | `Product`/`Service`/`MenuItem` | `catalog:<kind>_categor*` (`item_count`) **and** the System payload |
-| `Branch`                | the System payload (`branch_count`)                     |
+| `Branch`                       | the System payload (`branch_count`)                                 |
 
 **The System payload is the one that bites.** `GET /api/system/` is cached for an
 hour (`SYSTEM_CACHE_TTL`), and `SystemSerializer` carries `product_count`,
@@ -143,7 +143,7 @@ _THING_IMAGE_CFG = image_cfg(REGULAR)
 Two more things `image_cfg` encodes:
 
 - **`max_size` is a bounding box on both axes**, while the model tier is a max
-  *width*. A portrait image is capped by its height, so a REGULAR portrait comes
+  _width_. A portrait image is capped by its height, so a REGULAR portrait comes
   out ~800 px wide, not 1200. Size the tier for the taller dimension.
 - **`force_format` defaults to None**, which keeps PNG/WEBP uploads in their own
   format and converts everything else to JPEG - a PNG is usually a logo or
@@ -176,6 +176,64 @@ flow that moves a locally-seeded, tested site into production:
 Driven by `pnpm publish-site <host>` (`cli/website/website.sh publish`). `seed_site`
 imports `SYSTEM_TEXT_FIELDS` from `site_payload` so seeding and publishing agree
 on which System fields are copyable content.
+
+## Tenant backup & restore (`core/backup.py`)
+
+`core/backup.py` is the **tenant-facing** backup layer behind `/admin/system` in
+the CMS: a tenant downloads its own data and images as a zip, and can upload one
+to write it back. It is **not** `site_payload.py` and the two must not be merged —
+they have opposite contracts. `site_payload` is the dev→prod _publish_ layer and
+is lossy on purpose (truthy fields only, no images, never touches image fields on
+update) so re-publishing cannot clobber what a customer edited. A backup must
+reconstruct the tenant exactly, so it carries **every** concrete field of every
+row plus the media files.
+
+Archive layout: `manifest.json` (format version, host, sections, counts),
+`data.json` (`{"<app>.<model>": [rows]}`), and `media/` at storage-relative paths.
+
+- **Rows are built by introspecting `_meta.concrete_fields`, not by hand-listed
+  field tuples.** `site_payload` and `import_site` both list fields explicitly and
+  both have drifted from the models. What `MODEL_SPECS` states is only what
+  introspection cannot know: a model's section, its ORM path to `System`, and
+  what identifies a row across databases. **Adding a field to a model needs no
+  edit here** — but adding a whole _model_ does.
+- **Secrets never travel.** `System.stripe_*` (Fernet ciphertext, useless in
+  another environment and a credential leak in a downloadable file) and
+  `User.password` are excluded; a restored account gets an unusable password and
+  must reset. Never add either to the exported field set.
+- **Slugs are globally unique; tenants are not.** `update_or_create(slug=...)`
+  would hand one tenant another's row, so every lookup is scoped to the target
+  System first and a key owned by a different System is skipped, never taken over.
+  Same rule for `auth.User`, which is global while tenancy lives on
+  `UserProfile.system`.
+- **`auto_now` / `auto_now_add` are re-applied with a follow-up `QuerySet.update()`.**
+  Django overwrites them on `save()`, so without this every restored order would
+  claim it was placed at the moment of the restore.
+- **Each row is its own savepoint, and the `try` sits _outside_ the `atomic()`
+  block.** Catching a database error inside one leaves the savepoint to be
+  released on a connection Postgres has already aborted, and every later row then
+  fails with "current transaction is aborted".
+- **Restore refuses an archive whose manifest host is not the target tenant's**,
+  and the whole apply runs in one transaction — a failure part-way leaves the
+  site as it was. `mode` is `replace` (wipe the selected sections and rebuild) or
+  `merge` (upsert, leaving unmentioned rows alone); the CMS lets the operator pick.
+
+⚠ **The archives sit under `MEDIA_ROOT`, which an nginx sidecar serves with no
+authentication.** Three things keep them private and all three must stay:
+`backup_upload_path` gives each file a random token, the sidecar refuses
+`^~ /media/backups/` (`helm/templates/nginx-configmap.yaml`), and
+`SiteBackupDownloadView` — which matches the row against the caller's own System —
+is the only sanctioned read path. `SiteBackupSerializer` deliberately does not
+expose `file`; publishing that URL would route around all of it.
+
+Endpoints (all `IsSystemAdmin`, all scoped to the caller's own `System`):
+`GET/POST /api/backups/`, `DELETE /api/backups/<pk>/`,
+`GET /api/backups/<pk>/download/`, `POST /api/backups/restore/` (multipart).
+Building and restoring are synchronous, which is why the ingress carries
+`proxy-body-size: 0` and 600s read/send timeouts and gunicorn's `--timeout` is 600. Tests are in `core/tests.py` (`SiteBackupRoundTripTests`,
+`SiteBackupApiTests`) — they inherit `IsolatedMediaTestCase`, which redirects
+`MEDIA_ROOT` to a temp dir so test fixtures and archives do not scatter through
+the developer's own `media/`.
 
 ## Payments - per-tenant Stripe, and the rules around it
 

@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import { ContactSection } from "./contact-section";
+import { BackupSection } from "./backup-section";
+import { RestoreSection } from "./restore-section";
 import { getSystem, updateSystem } from "@/lib/admin-api";
 import type { SocialLink } from "@/lib/contact";
 import { useSession } from "@repo/auth/session-provider";
@@ -147,6 +149,14 @@ export default function AdminSystemPage() {
           onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
         />
       </AdminForm>
+
+      {/* Backup and Restore sit OUTSIDE the AdminForm, not as `children` of it
+          like ContactSection. They own their own requests and their own buttons;
+          nesting them would put a "Create backup" button inside a form whose
+          submit saves the System fields, and the Enter key in the backup-name
+          input would then save the page rather than start the backup. */}
+      <BackupSection />
+      <RestoreSection />
     </>
   );
 }

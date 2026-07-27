@@ -14,6 +14,7 @@ from .models import (
     CompanyHighlight,
     CompanyHighlightItem,
     ContactMessage,
+    SiteBackup,
     SocialPost,
     SuccessStory,
     SuccessStoryImage,
@@ -1343,3 +1344,35 @@ class AiChatSerializer(serializers.Serializer):
 
     messages = AiChatMessageSerializer(many=True, allow_empty=False, max_length=50)
     temperature = serializers.FloatField(min_value=0, max_value=2, default=0.7)
+
+
+class SiteBackupSerializer(serializers.ModelSerializer):
+    """Read serializer for the CMS's backup history list.
+
+    Deliberately does **not** expose `file` (its URL). The archive is a whole
+    tenant's database and the media volume is served publicly by an nginx
+    sidecar, so handing out a direct /media/ URL would route around the
+    authenticated download view - see `backup_upload_path`. `download_url` points
+    at that view instead.
+    """
+
+    download_url = serializers.SerializerMethodField()
+    created_by_username = serializers.CharField(
+        source="created_by.username", read_only=True, default=None
+    )
+    total_records = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = SiteBackup
+        fields = [
+            "id", "created", "modified",
+            "name", "sections", "include_images",
+            "size_bytes", "media_files", "record_counts", "total_records",
+            "created_by_username", "download_url",
+        ]
+        read_only_fields = fields
+
+    def get_download_url(self, obj):
+        request = self.context.get("request")
+        path = f"/api/backups/{obj.pk}/download/"
+        return request.build_absolute_uri(path) if request else path

@@ -72,10 +72,15 @@ EXPOSE 8000
 # completion, which holds its worker for the whole generation. With 2 sync workers
 # a pair of concurrent enhance requests would block every other API call until they
 # finished; threads keep those waits off the request path.
+#
+# The 600s timeout matches the ingress's proxy read/send timeouts: a tenant
+# backup or restore (/api/backups/) is one synchronous request that zips or
+# unpacks the whole media volume, and being killed part-way through is the worst
+# possible moment for either. It bounds a genuinely wedged worker, nothing more.
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["gunicorn", "website_api.wsgi:application", \
      "--bind", "0.0.0.0:8000", \
      "--worker-class", "gthread", \
      "--workers", "2", \
      "--threads", "8", \
-     "--timeout", "120"]
+     "--timeout", "600"]
