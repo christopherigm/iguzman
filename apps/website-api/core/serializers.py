@@ -1390,10 +1390,9 @@ class SiteBackupSerializer(serializers.ModelSerializer):
     """Read serializer for the CMS's backup history list.
 
     Deliberately does **not** expose `file` (its URL). The archive is a whole
-    tenant's database and the media volume is served publicly by an nginx
-    sidecar, so handing out a direct /media/ URL would route around the
-    authenticated download view - see `backup_upload_path`. `download_url` points
-    at that view instead.
+    tenant's database and its bucket is published by a Cloudflare custom domain,
+    so handing out the storage URL would route around the authenticated download
+    view - see `backup_upload_path`. `download_url` points at that view instead.
     """
 
     download_url = serializers.SerializerMethodField()

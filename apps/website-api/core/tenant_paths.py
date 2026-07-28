@@ -16,14 +16,14 @@ which R2 bucket a file belongs to by reading the system id back out of its
   builders and the Django admin alike - most of which have no request, and some
   of which render *another* tenant's rows. A thread-local "current tenant" would
   therefore be right most of the time and silently wrong in exactly the places
-  (cross-tenant admin, a `sync_media_to_r2` run) where a wrong answer means a
-  broken image or a file written into someone else's bucket.
+  (cross-tenant admin, a management command) where a wrong answer means a broken
+  image or a file written into someone else's bucket.
 
 Reading the tenant off the name makes every storage operation stateless and
 correct without a request, which is the whole point.
 
 A name with **no** prefix is legacy - every file written before this landed - and
-routes to the platform bucket, which is where `sync_media_to_r2` copies it. That
+routes to the platform bucket, where those files still are. That
 is why the prefix has to be an unambiguous shape (``t/<digits>/``) rather than
 just a leading number: `pictures/…` and `profile_pictures/…` must keep resolving
 to the platform, forever.

@@ -29,4 +29,9 @@ urlpatterns = [
     path('api/', include('core.urls')),
     path('api/', include('catalog.urls')),
     path('api/', include('orders.urls')),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
+
+# Development only, and `static()` enforces that itself: it returns [] unless
+# DEBUG. Production media lives in Cloudflare R2 and is served by the CDN, so
+# Django never has a media file to hand out - see the media block in settings.py.
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

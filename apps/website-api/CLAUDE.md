@@ -179,12 +179,15 @@ on which System fields are copyable content.
 
 ## Media storage - Cloudflare R2, routed per tenant (`core/storage.py`)
 
-**One switch decides the whole media stack: `R2_ACCOUNT_ID`.** Unset -> files go
-to `MEDIA_ROOT` exactly as they always have, with no Cloudflare account and no
-network calls; that is development and it must stay that way. Set -> every
-upload, image and backup archive alike, goes to Cloudflare R2 and is served from
-the CDN. `settings.py` picks the `STORAGES['default']` backend from it and
+**Production stores media in Cloudflare R2, and only there.** Every upload,
+image and backup archive alike, goes to a bucket and is served from the CDN.
+`settings.py` picks the `STORAGES['default']` backend off `R2_ACCOUNT_ID` and
 nothing else in the codebase branches on the environment.
+
+With `R2_ACCOUNT_ID` unset, files go to `MEDIA_ROOT` on local disk with no
+Cloudflare account and no network calls — that is **development and tests only**,
+so `runserver` and `manage.py test` need no credentials, and it must stay that
+way. It is **not** a production fallback: see the warning below.
 
 There are **two levels of bucket**. The platform bucket (`R2_*` env vars) is the
 default for every tenant. A customer on its own domain can connect **its own R2
@@ -225,67 +228,23 @@ bucket and serve from its CDN hostname.
   round-trips the credentials (write, read back, delete) so a typo fails in the
   CMS instead of on a customer's next upload.
 
-⚠ **Turning R2 on moves nothing.** Every path is a string in the database, so the
-moment `R2_ACCOUNT_ID` is set those strings resolve against a bucket the files
-are not in, and every image 404s. `core/media_sync.py` closes the gap - see the
-next section; it is idempotent, copies only what is missing, and never deletes
-from the source.
+⚠ **The hostPath volume is gone, and so is the way back.** Media used to live on
+a `/shared-master` volume on a cluster node, published by an nginx sidecar under
+`/media/`. Every site has been migrated into R2 and all of that - the volume, the
+sidecar, its `^~ /media/backups/` deny rule, the `/media/` ingress path, and the
+`core/media_sync.py` copier that did the migration - has been removed from the
+chart and the codebase. The pod is stateless now: **an empty `R2_ACCOUNT_ID` in
+the cluster does not fall back to disk, it silently throws uploads away** on the
+next rollout. All five `R2_*` variables come from the Secret and are deliberately
+absent from `env:` in `values.yaml` (see "Production env & secrets" below).
 
-## Migrating stored media (`core/media_sync.py`)
-
-The engine behind both `python manage.py sync_media_to_r2` and the **staff-only**
-"Migrate stored media" section on the CMS's `/admin/system`. One module, so the
-CLI and the button cannot drift.
-
-It closes the gap in **two** dimensions, and the second is the one that is easy
-to miss:
-
-- **The bucket.** Destination is always `TenantMediaStorage.backend_for(name)` -
-  the same router serving requests - so "where should this file be" has exactly
-  one answer.
-- **The path, which is why this writes to the database.** Every file uploaded
-  before `core/tenant_paths.py` landed is **unprefixed** (`pictures/product/ab12.jpg`),
-  and an unprefixed name routes to the **platform** bucket by design so legacy
-  files keep working. Copying alone therefore can *never* move an own-domain
-  customer onto its own bucket - it would put all their existing media in the
-  platform's and only their future uploads in theirs. So a file that does not
-  already name its tenant is copied to `t/<system_id>/<old path>` **and the
-  column repointed**.
-
-Four invariants hold that together:
-
-- **The row is repointed only after the destination write succeeds**, never
-  before. A crash in between leaves a row pointing at the old file - which still
-  exists and still serves - and the next run copies it (a no-op) and repoints it.
-  The reverse order would produce a broken image on every failure. `_process`
-  therefore also repoints on the `skipped` branch: "already at the destination"
-  does not mean "already repointed".
-- **Nothing is ever deleted from the source**, which is what makes the operation
-  re-runnable, interruptible and reversible.
-- **Repointing uses `QuerySet.update()`**, not `save()`, or every `auto_now`
-  column would claim the row was edited during the migration. That fires no
-  `post_save`, so the caller invalidates the cache namespaces itself -
-  `SystemMediaMigrationView` calls `invalidate_after_restore` on any batch that
-  actually moved a path.
-- **A path naming a *different* tenant is reported (`foreign`) and never
-  copied.** Only a bug or a hand-edited row can produce one, and moving it would
-  spread the mistake.
-
-Work is handed out in **batches** (`offset`/`limit`): a full catalog is thousands
-of files and one request would run past the ingress timeout, which the browser
-reports as a bare network failure with the migration in an unknown state. The
-plan is deterministic - models by label, rows by pk - so `offset` is a valid
-cursor across requests and the CMS gets a real percentage instead of Backup's
-indeterminate bar.
-
-`GET/POST /api/system/<pk>/media-migration/` is **`IsAdminUser` (Django staff)**,
-not `IsSystemAdmin` like everything else on that page - it rewrites where every
-file in a site is stored - and is still scoped to the caller's own System, so
-staff is not a licence to reach across tenants. The destination follows the
-domain: a host under `PLATFORM_HOST_SUFFIX` (default `.iguzman.com.mx`) belongs
-on the platform bucket, anything else in the R2 account that customer connected
-in the CMS. A POST re-checks that the destination is configured rather than
-trusting the disabled button. Tests: `MediaSyncTests`, `MediaMigrationApiTests`.
+**Connecting a tenant's own bucket still moves nothing**, and there is no longer
+a tool that would. Stored paths are strings: an unprefixed legacy name resolves
+to the platform bucket forever, and a `t/<system_id>/…` name written before the
+switch stays in whichever bucket it was written to. Only *future* uploads land in
+the newly connected bucket, so a tenant that switches has its media split across
+two buckets - both serving, nothing broken. Moving them is a manual `rclone`
+job plus a database repoint, not a CMS button.
 
 ⚠ **The bucket is public, and that includes backup archives.** A Cloudflare
 custom domain serves every object in its bucket and has no notion of an ACL -
@@ -343,19 +302,18 @@ Archive layout: `manifest.json` (format version, host, sections, counts),
   site as it was. `mode` is `replace` (wipe the selected sections and rebuild) or
   `merge` (upsert, leaving unmentioned rows alone); the CMS lets the operator pick.
 
-⚠ **An archive is served with no authentication in front of it, in either
-environment**, and it is the tenant's whole database — customer accounts and
-order history included. In development an nginx sidecar serves `/media/*`; in
-production the R2 bucket is published by a Cloudflare custom domain. What keeps
-them private: `backup_upload_path` gives each file a uuid4 name,
+⚠ **An archive is served with no authentication in front of it**, and it is the
+tenant's whole database — customer accounts and order history included. The R2
+bucket it sits in is published by a Cloudflare custom domain. What keeps them
+private: `backup_upload_path` gives each file a uuid4 name,
 `SiteBackupDownloadView` — which matches the row against the caller's own System —
 is the only sanctioned read path, and `SiteBackupSerializer` deliberately does
 not expose `file` (publishing that URL would route around all of it).
 
-The sidecar's `^~ /media/backups/` deny rule
-(`helm/templates/nginx-configmap.yaml`) was the second lock and **has no
-equivalent on R2** — a custom domain serves every object in its bucket and R2 has
-no per-object ACLs. Add a Cloudflare WAF rule blocking `/t/*/backups/*` on the
+The `^~ /media/backups/` deny rule the old nginx sidecar carried was the second
+lock, and it went with the sidecar; it **has no equivalent on R2** — a custom
+domain serves every object in its bucket and R2 has no per-object ACLs. Add a
+Cloudflare WAF rule blocking `/t/*/backups/*` on the
 public hostname to get one back; this code only ever reads through the S3
 endpoint, so the rule costs nothing. See the storage section above.
 

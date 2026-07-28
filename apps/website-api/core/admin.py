@@ -349,8 +349,9 @@ class SystemAdmin(admin.ModelAdmin):
                 "encrypted at rest - it cannot be read back here or anywhere "
                 "else. 'Storage configured' shows whether all of it is present; "
                 "until it is, this site's uploads go to the platform bucket. "
-                "Switching it on does not move files that already exist - run "
-                "`sync_media_to_r2 --system <host>` for that."
+                "Switching it on does not move files that already exist - only "
+                "future uploads land in this bucket, and the existing files keep "
+                "serving from the platform's."
             ),
             "classes": ("collapse",),
         }),

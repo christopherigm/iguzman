@@ -166,14 +166,19 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # ── Media files (uploaded by users) ──────────────────────────────────────────
-# One switch, `R2_ACCOUNT_ID`, decides the whole media stack:
+# **Production stores media in Cloudflare R2, and only there.** Every upload goes
+# to a bucket and is served from the CDN; `core.storage.TenantMediaStorage` picks
+# the bucket per tenant (a customer on its own domain can connect its own R2 in
+# the CMS - see core/storage.py). The hostPath volume that used to hold media on
+# a cluster node is gone, along with the nginx sidecar that served it: a node
+# failure took the files with it, and nothing rebuilt them.
 #
-#   set   -> production. Every upload goes to Cloudflare R2 and is served from
-#            the CDN; `core.storage.TenantMediaStorage` picks the bucket per
-#            tenant (a customer on its own domain can connect its own R2 in the
-#            CMS - see core/storage.py).
-#   unset -> development. Files land in `media/` exactly as they always have,
-#            with no Cloudflare account, no credentials and no network calls.
+# `R2_ACCOUNT_ID` unset is now a **development-only** mode: files land in
+# `media/` on local disk so `manage.py runserver` and the test suite need no
+# Cloudflare account, no credentials and no network calls. It is not a production
+# fallback - a pod is ephemeral and its disk is not backed up, so an unset
+# `R2_ACCOUNT_ID` in the cluster means uploads are silently thrown away on the
+# next rollout. The chart therefore does not define it; it comes from the Secret.
 #
 # Static files stay on whitenoise either way: they ship inside the image, are
 # already hashed and compressed at build time, and are served by the same process
@@ -184,13 +189,6 @@ R2_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID', '')
 R2_SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY', '')
 R2_BUCKET_NAME = os.environ.get('R2_BUCKET_NAME', '')
 R2_PUBLIC_DOMAIN = os.environ.get('R2_PUBLIC_DOMAIN', '').strip().rstrip('/')
-
-# Hosts under this suffix are *our* sites and belong on the platform bucket
-# above; anything else is a customer on its own domain, which is expected to
-# connect its own R2 account in the CMS. `SystemMediaMigrationView` reads this to
-# decide which bucket a tenant's media migration targets, and therefore which
-# configuration has to be present before the CMS will let it run.
-PLATFORM_HOST_SUFFIX = os.environ.get('PLATFORM_HOST_SUFFIX', '.iguzman.com.mx').strip().lower()
 
 if R2_ACCOUNT_ID:
     STORAGES = {
@@ -206,8 +204,9 @@ if R2_ACCOUNT_ID:
     # edge - see `core.media.absolute_media_url` for the callers that used to
     # assume a relative one.
     MEDIA_URL = f'https://{R2_PUBLIC_DOMAIN}/' if R2_PUBLIC_DOMAIN else '/media/'
-    # Still read by `sync_media_to_r2` as the source to copy *from*, and by any
-    # local tooling; nothing writes here once R2 is on.
+    # Nothing reads or writes here with R2 on; kept defined only because Django
+    # and third-party code (ImageField validation, test helpers) expect the
+    # setting to exist.
     MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', str(BASE_DIR / 'media')))
 else:
     STORAGES = {
@@ -221,10 +220,11 @@ else:
     MEDIA_URL = '/media/'
     MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', str(BASE_DIR / 'media')))
 
-# Origin for media URLs that are *relative* - i.e. the local-filesystem branch
-# above - in contexts with no request to resolve them against (e.g. branded
-# emails, whose tenant logo must load inside an email client). On R2 the storage
-# backend already returns absolute URLs and this is not consulted; always go
+# Origin for media URLs that are *relative* - i.e. the development-only
+# local-filesystem branch above - in contexts with no request to resolve them
+# against (e.g. branded emails, whose tenant logo must load inside an email
+# client). In production the storage backend already returns absolute URLs and
+# this is never consulted; always go
 # through `core.media.absolute_media_url`, never concatenate it yourself, or an
 # R2 URL comes out as `https://website-api…https://cdn…`.
 MEDIA_BASE_URL = os.environ.get('MEDIA_BASE_URL', 'https://website-api.iguzman.com.mx').rstrip('/')

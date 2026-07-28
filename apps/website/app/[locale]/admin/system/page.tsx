@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import { ContactSection } from "./contact-section";
 import { StorageSection } from "./storage-section";
-import { MediaMigrationSection } from "./media-migration-section";
 import { BackupSection } from "./backup-section";
 import { RestoreSection } from "./restore-section";
 import { getSystem, updateSystem } from "@/lib/admin-api";
@@ -36,8 +35,8 @@ export default function AdminSystemPage() {
   const session = useSession();
   const systemId = session?.systemId ?? 0;
   // Django staff - us, not the customer's own CMS administrator. It gates the
-  // media migration below and nothing else on this page. Presentation only: the
-  // API is `IsAdminUser` and re-derives it from the token on every call.
+  // Storage section below and nothing else on this page. Presentation only: the
+  // API re-derives it from the token on every call.
   const isStaff = session?.isStaff === true;
 
   useEffect(() => {
@@ -164,14 +163,14 @@ export default function AdminSystemPage() {
           in the backup-name input would then save the page rather than start the
           backup. Storage goes first of the three: it decides *where* a backup is
           written, so an operator who changes it should see that before the
-          buttons that use it. */}
-      <StorageSection />
-      {/* Directly under Storage, which decides the bucket this migration copies
-          *into* - and staff-only, unlike every other section here: it rewrites
-          where each of the site's files is stored and repoints the database at
-          them, which is an operator action, not a customer one. The API enforces
-          the same rule; this only decides what is worth rendering. */}
-      {isStaff && <MediaMigrationSection />}
+          buttons that use it.
+
+          Storage is staff-only, unlike the rest of the page: connecting a
+          bucket repoints where every one of the site's files is read from and
+          written to, which is an operator action, not a customer one.
+          Presentation only - the API re-derives staff from the token; this just
+          decides what is worth rendering. */}
+      {isStaff && <StorageSection />}
       <BackupSection />
       <RestoreSection />
     </>

@@ -54,10 +54,10 @@ const EMPTY: StorageForm = {
  *   secrets on `/admin/payments`.
  * * **"Test connection" round-trips the values in the form**, not the saved
  *   ones, so a typo is caught before it becomes the destination for uploads.
- * * **Turning this on does not move files that already exist.** They keep
- *   serving from the platform bucket, and an operator runs
- *   `sync_media_to_r2 --system <host> --source platform` to copy them across.
- *   The section says so rather than leaving it to be discovered.
+ * * **Turning this on does not move files that already exist.** Only future
+ *   uploads land in the new bucket; the existing files keep serving from the
+ *   platform's, where their stored paths resolve. The section says so rather
+ *   than leaving it to be discovered.
  *
  * Sits outside the page's `AdminForm` (like Backup and Restore) because it owns
  * its own request and its own buttons.

@@ -72,7 +72,6 @@ envFromSecretBundle: website-api-secrets
 # These deliberately override their stale namesakes in the Secret (see above).
 env:
   DJANGO_SETTINGS_MODULE: 'website_api.settings'
-  MEDIA_ROOT: '/app/media'
   # ── Database ──────────────────────────────────────────────
   DB_HOST: 'postgres.website.svc.cluster.local'
   DB_PORT: '5432'
@@ -109,11 +108,8 @@ env:
   # placeholder `R2_ACCOUNT_ID: ''` reaches the pod as a real empty string and
   # SHADOWS the Secret. That is not a subtle degradation: R2_ACCOUNT_ID is the
   # single switch for the whole media stack (settings.py), so an empty one
-  # silently turns R2 off entirely, no matter what the Secret holds.
-  #
-  # PLATFORM_HOST_SUFFIX (default '.iguzman.com.mx') decides which hosts belong
-  # on the platform bucket rather than their own; override it only if the
-  # platform's own domain changes.
+  # silently turns R2 off entirely, no matter what the Secret holds - and with
+  # the hostPath volume gone there is nowhere durable for the uploads to land.
 
 # Sensitive values whose Secret key is kebab-case, and so cannot come from the
 # bundle above (the kubelet skips keys that are not valid env var names). These are
@@ -138,16 +134,6 @@ envFromSecret:
     secretKey: email-host-password
   # GROQ_API_KEY / OPENROUTER_API_KEY are not listed here: they are keyed by their
   # real env var names in the Secret, so the bundle above delivers them.
-
-# ─── Host-path volume (media storage) ───────────────────────
-# Still mounted with R2 on, and deliberately so: it is the *source* the one-off
-# `sync_media_to_r2` copies from, and the safety net if R2 has to be switched back
-# off. Once every file is confirmed in the bucket it can be disabled - along with
-# the nginx sidecar below, whose only job is serving /media/* off this volume.
-hostPathVolume:
-  enabled: true
-  volumeMountPath: /shared-master # base path on the host node
-  mountPath: /app/media # path inside each container
 
 # ─── Health probes ──────────────────────────────────────────
 probes:
@@ -181,23 +167,13 @@ nodeAffinity:
   # - node-1
   # - node-2
 
-# ─── Nginx sidecar (serves media files) ─────────────────────
-# High-performance static-file server that shares the same volume.
-nginx:
-  enabled: true
-  image:
-    repository: nginx
-    tag: 'alpine'
-    pullPolicy: IfNotPresent
-  port: 8080 # port the nginx container listens on
-  servicePort: 8080 # port exposed by the Service for nginx
-  resources:
-    requests:
-      cpu: 50m
-      memory: 64Mi
-    limits:
-      cpu: 200m
-      memory: 128Mi
+# ─── Media storage ──────────────────────────────────────────
+# There is no volume and no static-file sidecar here on purpose. Media lives in
+# Cloudflare R2 (the R2_* keys of the Secret) and is served straight from the
+# CDN, so the pod is stateless: it never holds a file a rollout could lose, and
+# it never serves one. The hostPath volume on /shared-master and the nginx
+# sidecar that published it under /media/ were removed once every site's files
+# were confirmed in the bucket.
 
 # ─── Resources ──────────────────────────────────────────────
 resources:

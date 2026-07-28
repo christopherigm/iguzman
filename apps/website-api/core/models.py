@@ -778,9 +778,9 @@ class System(Common):
     # Same shape as the Stripe pair above and for the same reasons: per-tenant
     # because each customer has their own Cloudflare account, and the secret is
     # Fernet ciphertext (core.crypto) because it must be read back to sign
-    # requests. Switching this on does **not** move files that already exist -
-    # `sync_media_to_r2 --system <host>` copies them, and the old ones keep
-    # serving from the platform bucket until it has run.
+    # requests. Switching this on does **not** move files that already exist:
+    # only *future* uploads land in the tenant's bucket, and the existing ones
+    # keep serving from the platform bucket, where their unprefixed names route.
     storage_enabled = models.BooleanField(
         default=False,
         help_text="Store this site's images and backups in its own Cloudflare R2 bucket instead of the platform's.",
@@ -1211,11 +1211,10 @@ def backup_upload_path(instance, filename):
     account when it connects one.
 
     ⚠ **The filename carries an unguessable token, and in production it is the
-    main lock.** In development an nginx sidecar serves /media/* directly; in
-    production the bucket is served by a Cloudflare custom domain, which has no
-    notion of an ACL and publishes every object in it. Either way this file is
-    the tenant's entire database - customer accounts and order history included -
-    and a path guess away from anyone who tries. What stands between them:
+    main lock.** The bucket is served by a Cloudflare custom domain, which has no
+    notion of an ACL and publishes every object in it. This file is the tenant's
+    entire database - customer accounts and order history included - and a path
+    guess away from anyone who tries. What stands between them:
     uuid4 in the name, `SiteBackupSerializer` never exposing `file`, and
     `SiteBackupDownloadView` (which matches the row against the caller's own
     System) being the only code that ever produces a URL for one. A Cloudflare

@@ -541,7 +541,7 @@ Configure production values as a Kubernetes Secret and reference them in `helm/v
 | `DB_PASSWORD`            | `envFromSecret` | Database password - stored in K8s Secret                                                                                                                         |
 | `REDIS_URL`              | `env`           | Redis connection URL (default: `redis://redis.website.svc.cluster.local:6379/0`)                                                                                 |
 | `REDIS_PASSWORD`         | `envFromSecret` | Redis password - required only when Redis auth is enabled                                                                                                        |
-| `MEDIA_ROOT`             | `env`           | Override media path (default: `/app/media`)                                                                                                                      |
+| `MEDIA_ROOT`             | -               | Local media path. **Development only** - production stores media in Cloudflare R2 (`R2_*`), and the chart sets no volume, so nothing durable lives here.          |
 | `SECRET_KEY`             | `envFromSecret` | Django secret key (required in production)                                                                                                                       |
 | `DEBUG`                  | `env`           | Set to `False` in production                                                                                                                                     |
 | `ALLOWED_HOSTS`          | `env`           | Comma-separated list of allowed hostnames                                                                                                                        |
@@ -673,9 +673,6 @@ Key values to override in `helm/values.yaml` or via `--set`:
 | `replicaCount`             | `1`                                              | Number of pod replicas               |
 | `ingress.hosts[0].host`    | `website-api.iguzman.com.mx`                     | Public hostname                      |
 | `env.REDIS_URL`            | `redis://redis.website.svc.cluster.local:6379/0` | Redis connection URL                 |
-| `hostPathVolume.enabled`   | `true`                                           | Mount shared media volume            |
-| `hostPathVolume.mountPath` | `/app/media`                                     | Container path for media files       |
-| `nginx.enabled`            | `true`                                           | Nginx sidecar for `/media/`          |
 | `resources.limits.cpu`     | `500m`                                           | CPU limit for Django container       |
 | `resources.limits.memory`  | `512Mi`                                          | Memory limit for Django container    |
 | `env.CORS_ALLOWED_ORIGINS` | `https://website.iguzman.com.mx`                 | Allowed cross-origin request origins |
@@ -691,7 +688,6 @@ helm status website-api -n website
 
 # Pod logs
 kubectl logs deploy/website-api -n website
-kubectl logs deploy/website-api -n website -c nginx   # nginx sidecar
 
 # Live resource status
 kubectl get pods,svc,ingress -n website -l app.kubernetes.io/name=website-api

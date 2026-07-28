@@ -41,7 +41,6 @@ setup_strings() {
     REDIS_PROMPT="¿Incluir caché Redis?"
     EMAIL_PROMPT="¿Incluir email (verificación + reset de contraseña)?"
     PASSKEY_PROMPT="¿Incluir passkeys (WebAuthn)?"
-    R2_PROMPT="¿Incluir almacenamiento Cloudflare R2?"
     REGISTRY_PROMPT="Usuario del registro Docker"
     STEP_CONFIG="[1/3] Configuración"
     STEP_FILES="[2/3] Generando archivos"
@@ -54,7 +53,7 @@ setup_strings() {
     LBL_REDIS="Redis"
     LBL_EMAIL="Email"
     LBL_PASSKEYS="Passkeys"
-    LBL_R2="R2"
+    LBL_STORAGE="Almacenamiento"
     LBL_REGISTRY="Registro"
     CREATING="Creando"
     YES_STR="sí"
@@ -86,7 +85,6 @@ setup_strings() {
     REDIS_PROMPT="Include Redis cache?"
     EMAIL_PROMPT="Include email (signup verification + password reset)?"
     PASSKEY_PROMPT="Include passkeys (WebAuthn)?"
-    R2_PROMPT="Include Cloudflare R2 object storage?"
     REGISTRY_PROMPT="Docker registry user"
     STEP_CONFIG="[1/3] Configuration"
     STEP_FILES="[2/3] Generating files"
@@ -99,7 +97,7 @@ setup_strings() {
     LBL_REDIS="Redis"
     LBL_EMAIL="Email"
     LBL_PASSKEYS="Passkeys"
-    LBL_R2="R2"
+    LBL_STORAGE="Storage"
     LBL_REGISTRY="Registry"
     CREATING="Creating"
     YES_STR="yes"
@@ -219,7 +217,7 @@ check_prerequisites() {
 
 # ── File Generators ───────────────────────────────────────────────────────────
 # All generators use globals: name, module_name, host, frontend_url,
-# include_redis, include_email, include_passkey, include_r2, registry_user
+# include_redis, include_email, include_passkey, registry_user
 
 gen_package_json() {
   local out="$1"
@@ -254,6 +252,7 @@ gunicorn==23.0.0
 psycopg[binary]==3.2.4
 django-colorfield==0.11.0
 django-cors-headers==4.9.0
+django-storages[s3]==1.14.4
 PYEOF
   echo "python-dotenv==1.1.1" >> "$out"
   [[ "${include_redis}"   == "y" ]] && echo "django-redis==5.4.0"         >> "$out" || true
@@ -261,7 +260,6 @@ PYEOF
     echo "webauthn==2.7.1" >> "$out"
     echo "cbor2==5.9.0"    >> "$out"
   fi
-  [[ "${include_r2}"      == "y" ]] && echo "django-storages[s3]==1.14.4" >> "$out" || true
 }
 
 gen_manage_py() {
@@ -535,11 +533,40 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB
 
 EOF
 
-  if [[ "${include_r2}" == "y" ]]; then
-    cat >> "$out" << 'PYEOF'
-_R2_ACCOUNT_ID = os.environ.get('R2_ACCOUNT_ID', '')
+  cat >> "$out" << 'PYEOF'
+# ── Media files (uploaded by users) ──────────────────────────────────────────
+# **Production stores media in Cloudflare R2, and only there.** There is no
+# second backend and the chart gives the pod no storage of its own - no PVC, no
+# hostPath volume, nothing to serve `/media/` from. The pod is stateless and the
+# browser fetches every upload from Cloudflare's edge rather than from this
+# process. Don't add a volume to get local media back; connect a bucket.
+#
+# `R2_ACCOUNT_ID` unset is a **development-only** mode: files land in `media/`
+# on local disk, so `manage.py runserver` and the test suite need no Cloudflare
+# account, no credentials and no network calls. It is NOT a production
+# fallback - a pod's filesystem is ephemeral and is not backed up, so an unset
+# `R2_ACCOUNT_ID` in the cluster silently throws every upload away on the next
+# rollout.
+#
+# ⚠ Never put the R2_* variables in helm/values.yaml `env:`, not even as empty
+# placeholders: `env` beats `envFrom`, so an empty value there shadows the
+# Secret's real one and turns R2 off cluster-wide. They come from the Secret.
+#
+# Static files stay on whitenoise either way - they ship inside the image,
+# already hashed and compressed at build time, so putting them behind a bucket
+# would add a round-trip and a failure mode for no gain.
+R2_ACCOUNT_ID = os.environ.get('R2_ACCOUNT_ID', '')
+R2_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID', '')
+R2_SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY', '')
+R2_BUCKET_NAME = os.environ.get('R2_BUCKET_NAME', '')
+# The Cloudflare custom hostname mapped to the bucket. With one, URLs are plain
+# unsigned https://<domain>/<key> - cacheable, CDN-served, stable. Without one
+# there is no public route to the object, so django-storages falls back to
+# *presigned* S3-endpoint links: they work, but they expire, change on every
+# render, and defeat both the CDN and the browser cache.
+R2_PUBLIC_DOMAIN = os.environ.get('R2_PUBLIC_DOMAIN', 'r2.iguzman.com.mx').strip().strip('/')
 
-if _R2_ACCOUNT_ID:
+if R2_ACCOUNT_ID:
     STORAGES = {
         'default': {
             'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
@@ -548,16 +575,27 @@ if _R2_ACCOUNT_ID:
             'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
         },
     }
-    AWS_S3_ENDPOINT_URL = f'https://{_R2_ACCOUNT_ID}.r2.cloudflarestorage.com'
-    AWS_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID', '')
-    AWS_SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY', '')
-    AWS_STORAGE_BUCKET_NAME = os.environ.get('R2_BUCKET_NAME', '')
-    AWS_S3_CUSTOM_DOMAIN = os.environ.get('R2_PUBLIC_DOMAIN', '')
+    AWS_S3_ENDPOINT_URL = f'https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com'
+    AWS_ACCESS_KEY_ID = R2_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY = R2_SECRET_ACCESS_KEY
+    AWS_STORAGE_BUCKET_NAME = R2_BUCKET_NAME
+    AWS_S3_CUSTOM_DOMAIN = R2_PUBLIC_DOMAIN or None
+    # R2 has no regions; the SDK still requires the field in order to sign.
     AWS_S3_REGION_NAME = 'auto'
-    AWS_QUERYSTRING_AUTH = False
+    AWS_QUERYSTRING_AUTH = not R2_PUBLIC_DOMAIN
+    # R2 rejects ACL headers outright - it has no per-object ACLs.
     AWS_DEFAULT_ACL = None
-    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
+    # Suffix rather than silently overwrite whatever already sits at that key.
+    AWS_S3_FILE_OVERWRITE = False
+    # `FileField.url` returns an absolute URL from here on, which is what lets
+    # the frontend fetch straight from the edge.
+    MEDIA_URL = f'https://{R2_PUBLIC_DOMAIN}/' if R2_PUBLIC_DOMAIN else '/media/'
+    # Nothing reads or writes here with R2 on; kept defined only because Django
+    # and third-party code (ImageField validation, test helpers) expect the
+    # setting to exist.
+    MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', str(BASE_DIR / 'media')))
 else:
+    # Development only - see the note above.
     STORAGES = {
         'default': {
             'BACKEND': 'django.core.files.storage.FileSystemStorage',
@@ -569,21 +607,6 @@ else:
     MEDIA_URL = '/media/'
     MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', str(BASE_DIR / 'media')))
 PYEOF
-  else
-    cat >> "$out" << 'PYEOF'
-STORAGES = {
-    'default': {
-        'BACKEND': 'django.core.files.storage.FileSystemStorage',
-    },
-    'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
-    },
-}
-
-MEDIA_URL = '/media/'
-MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', str(BASE_DIR / 'media')))
-PYEOF
-  fi
 
   cat >> "$out" << 'PYEOF'
 
@@ -736,7 +759,12 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api-auth/', include('rest_framework.urls')),
     path('api/auth/', include('users.urls')),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
+
+# Development only, and `static()` enforces that itself: it returns [] unless
+# DEBUG. Production media lives in Cloudflare R2 and is served by the CDN, so
+# Django never has a media file to hand out - see the media block in settings.py.
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 PYEOF
 }
 
@@ -2301,8 +2329,6 @@ EOF
 
 gen_env_example() {
   local out="$1"
-  local media_comment
-  [[ "${include_r2}" == "y" ]] && media_comment="# Media (local dev - ignored when R2_ACCOUNT_ID is set)" || media_comment="# Media"
   mkdir -p "$(dirname "$out")"
 
   cat > "$out" << EOF
@@ -2328,24 +2354,32 @@ DB_NAME=postgres
 DB_USER=postgres
 DB_PASSWORD=
 
-${media_comment}
+# Media (uploaded files, DEVELOPMENT ONLY - see R2 below)
 MEDIA_ROOT=/app/media
 EOF
 
-  if [[ "${include_r2}" == "y" ]]; then
-    cat >> "$out" << 'EOF'
+  cat >> "$out" << 'EOF'
 
-# Cloudflare R2 storage (leave R2_ACCOUNT_ID empty to use local filesystem)
+# Cloudflare R2 - the ONLY media store in production. Every uploaded file goes
+# to the bucket and is served from the CDN; R2_PUBLIC_DOMAIN is the custom
+# hostname mapped to it in Cloudflare (without one, URLs fall back to expiring
+# signed links, which defeats the CDN).
+#
+# Leave R2_ACCOUNT_ID EMPTY in development: with it unset, uploads go to
+# MEDIA_ROOT above and none of the rest is read. NEVER leave it empty in the
+# cluster - the pod has no persistent volume, so uploads would land on the
+# container filesystem and be lost on the next rollout.
 R2_ACCOUNT_ID=
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
 R2_BUCKET_NAME=
-R2_PUBLIC_DOMAIN=
+R2_PUBLIC_DOMAIN=r2.iguzman.com.mx
 EOF
-  fi
 
   if [[ "${include_redis}" == "y" ]]; then
     cat >> "$out" << EOF
+
+# Cache (leave REDIS_URL empty to use the local-memory cache)
 REDIS_URL=redis://redis.${name}.svc.cluster.local:6379/0
 REDIS_PASSWORD=
 EOF
@@ -2353,6 +2387,8 @@ EOF
 
   if [[ "${include_email}" == "y" ]]; then
     cat >> "$out" << 'EOF'
+
+# Email (leave EMAIL_HOST_USER empty to use the console backend)
 EMAIL_HOST_USER=
 EMAIL_HOST_PASSWORD=
 EMAIL_HOST=smtp.ionos.com
@@ -2452,14 +2488,18 @@ YAMLEOF
 
 # Load all env.example variables from the pre-existing secret.
 # Keys in the secret match env.example names exactly.
+#
+# Media storage is Cloudflare R2 and nothing else - the pod has no volume. All
+# five vars must be in the secret before the first deploy:
+#   R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME,
+#   R2_PUBLIC_DOMAIN (default: r2.iguzman.com.mx)
+# Set them with `pnpm secrets`.
+#
+# ⚠ Do NOT add any R2_* key to `env:` above, not even as an empty placeholder.
+# `env` beats `envFrom`, and the template renders every key of `env:` including
+# empty-valued ones - so `R2_ACCOUNT_ID: ''` would reach the pod as a real empty
+# string, shadow the secret and silently turn R2 off, throwing uploads away.
 YAMLEOF
-
-  if [[ "${include_r2}" == "y" ]]; then
-    cat >> "$out" << 'YAMLEOF'
-# R2 vars to add to the secret when enabling R2 storage:
-#   R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_DOMAIN
-YAMLEOF
-  fi
 
   cat >> "$out" << EOF
 envFrom:
@@ -2836,7 +2876,7 @@ main() {
   echo ""
 
   # Feature flags
-  local include_redis="n" include_email="n" include_passkey="n" include_r2="n"
+  local include_redis="n" include_email="n" include_passkey="n"
 
   echo ""
   if confirm_yn "${REDIS_PROMPT}" "y"; then include_redis="y"; fi
@@ -2849,9 +2889,6 @@ main() {
     if confirm_yn "${PASSKEY_PROMPT}" "y"; then include_passkey="y"; fi
     echo ""
   fi
-
-  if confirm_yn "${R2_PROMPT}" "y"; then include_r2="y"; fi
-  echo ""
 
   # Docker registry
   local registry_user
@@ -2963,7 +3000,7 @@ main() {
   printf "  %-22s %s\n" "$(clr_dim "${LBL_REDIS}:")"    "$([[ "${include_redis}"   == 'y' ]] && echo "${YES_STR}" || echo "${NO_STR}")"
   printf "  %-22s %s\n" "$(clr_dim "${LBL_EMAIL}:")"    "$([[ "${include_email}"   == 'y' ]] && echo "${YES_STR}" || echo "${NO_STR}")"
   printf "  %-22s %s\n" "$(clr_dim "${LBL_PASSKEYS}:")" "$([[ "${include_passkey}" == 'y' ]] && echo "${YES_STR} (WebAuthn)" || echo "${NO_STR}")"
-  printf "  %-22s %s\n" "$(clr_dim "${LBL_R2}:")"       "$([[ "${include_r2}"      == 'y' ]] && echo "${YES_STR} (Cloudflare R2)" || echo "${NO_STR}")"
+  printf "  %-22s %s\n" "$(clr_dim "${LBL_STORAGE}:")"  "Cloudflare R2 (r2.iguzman.com.mx)"
   printf "  %-22s %s\n" "$(clr_dim "${LBL_REGISTRY}:")" "${registry_user}/${name}"
   echo ""
 

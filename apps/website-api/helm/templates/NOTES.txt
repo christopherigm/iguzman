@@ -17,8 +17,3 @@ Then open http://localhost:{{ .Values.service.port }} in your browser.
 {{- end }}
 
 Replicas: {{ .Values.replicaCount }}
-
-{{- if .Values.nginx.enabled }}
-
-Nginx sidecar: ENABLED (serving /media/* on port {{ .Values.nginx.port }})
-{{- end }}

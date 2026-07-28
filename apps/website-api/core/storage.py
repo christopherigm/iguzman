@@ -1,10 +1,16 @@
 """Cloudflare R2 media storage, routed per tenant.
 
 Production stores every uploaded file - images and backup archives alike - in
-Cloudflare R2, so the browser fetches media from Cloudflare's edge instead of the
-API pod, and nothing lives on a hostPath volume that a node failure takes with
-it. Development is unchanged: with ``R2_ACCOUNT_ID`` unset, ``settings.py`` never
-installs any of this and files go to ``MEDIA_ROOT`` exactly as before.
+Cloudflare R2, and **only** there. The browser fetches media from Cloudflare's
+edge instead of the API pod, and the pod is stateless: the hostPath volume that
+a node failure used to take with it, and the nginx sidecar that published it
+under ``/media/``, are gone.
+
+With ``R2_ACCOUNT_ID`` unset, ``settings.py`` never installs any of this and
+files go to ``MEDIA_ROOT`` on local disk - that is **development only**, so
+``runserver`` and the test suite need no Cloudflare account. It is not a
+production fallback: there is no durable path under a pod any more, so uploads
+would survive only until the next rollout.
 
 Two levels of bucket
 --------------------
@@ -14,8 +20,9 @@ Two levels of bucket
 * A tenant on its own domain can connect **its own R2 account** in the CMS
   (``/admin/system`` → Storage). Its uploads then go to its bucket and serve from
   its own CDN hostname, so the customer owns their assets and their bandwidth
-  bill. Files already on the platform bucket stay there and keep working;
-  ``sync_media_to_r2 --system <host>`` copies them across.
+  bill. Files already on the platform bucket stay there and keep working - a
+  legacy, unprefixed name always resolves to the platform bucket, so switching
+  a tenant over splits its media across two buckets rather than breaking it.
 
 How a file finds its bucket
 ---------------------------
@@ -31,7 +38,8 @@ in it, with no notion of an ACL. That is what makes images fast, and it also
 means a **backup archive is one correct URL away from anonymous download** - and
 a backup is the tenant's whole database, customer accounts and order history
 included. The nginx ``^~ /media/backups/`` deny rule that used to be the second
-lock does not exist here. What still protects it: ``backup_upload_path`` gives
+lock went with the sidecar and has no equivalent on a bucket - R2 has no
+per-object ACLs. What still protects it: ``backup_upload_path`` gives
 every archive a uuid4 name, ``SiteBackupSerializer`` never exposes ``file``, and
 ``SiteBackupDownloadView`` (which matches the row against the caller's System) is
 the only path that ever produces a URL for one. To restore a real second lock,
