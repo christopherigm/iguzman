@@ -59,7 +59,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   const cookieStore = await cookies();
   const themeModeCookie = cookieStore.get('theme-mode')?.value as ThemeMode | undefined;
   const themeResolvedCookie = cookieStore.get(RESOLVED_COOKIE_NAME)?.value as ResolvedTheme | undefined;
-  const initialMode: ThemeMode = themeModeCookie ?? 'system';
+  const initialMode: ThemeMode = themeModeCookie ?? 'light';
   const initialResolved: ResolvedTheme =
     initialMode === 'system' ? (themeResolvedCookie ?? 'light') : (initialMode as ResolvedTheme);
 
@@ -70,30 +70,30 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <html lang={locale} data-theme={initialResolved} style={{ colorScheme: initialResolved }} suppressHydrationWarning>
       <head>
-        <ThemeScript />
+        <ThemeScript defaultMode="light" />
         {/* iOS PWA splash screens */}
         <link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/icons/splash/splash-1170x2532.jpg" />
         <link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/icons/splash/splash-1179x2556.jpg" />
         <link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/icons/splash/splash-1290x2796.jpg" />
       </head>
       <body style={bodyStyle}>
-      <SerwistProvider swUrl="/sw.js">
-      <NextIntlClientProvider messages={messages}>
-        <SessionProvider session={session}>
-          <ThemeProvider initialMode={initialMode} initialResolved={initialResolved}>
-            <PaletteProvider palette="cyan" accent="#06b6d4">
-            <NavbarWrapper
-              logo="/logo-navbar.png"
-              version={`v${packageJson.version}`}
-              labels={{ home: tNav('home'), account: tNav('account'), signOut: tNav('signOut') }}
-            />
-            {children}
-            <Footer logo="/logo-navbar.png" />
-            </PaletteProvider>
-          </ThemeProvider>
-        </SessionProvider>
-      </NextIntlClientProvider>
-      </SerwistProvider>
+        <SerwistProvider swUrl="/sw.js">
+          <NextIntlClientProvider messages={messages}>
+            <SessionProvider session={session}>
+              <ThemeProvider initialMode={initialMode} initialResolved={initialResolved}>
+                <PaletteProvider palette="cyan" accent="#356ddc">
+                  <NavbarWrapper
+                    logo="/logo.png"
+                    version={`v${packageJson.version}`}
+                    labels={{ home: tNav('home'), account: tNav('account'), signOut: tNav('signOut') }}
+                  />
+                  {children}
+                  <Footer logo="/logo.png" />
+                </PaletteProvider>
+              </ThemeProvider>
+            </SessionProvider>
+          </NextIntlClientProvider>
+        </SerwistProvider>
       </body>
     </html>
   );

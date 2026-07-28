@@ -22,6 +22,16 @@ def picture(instance, filename):
     return f"pictures/{instance.__class__.__name__.lower()}/{uuid.uuid4().hex}.{ext}"
 
 
+def video(instance, filename):
+    """Upload path for uploaded video files (see ``journal.SightingMedia``).
+
+    Kept separate from ``picture`` so a bucket lifecycle rule or a CDN cache
+    policy can address the (much larger, much rarer) video objects on their own.
+    """
+    ext = os.path.splitext(filename)[1].lstrip(".").lower() or "mp4"
+    return f"videos/{instance.__class__.__name__.lower()}/{uuid.uuid4().hex}.{ext}"
+
+
 FIT_CHOICES = [
     ("cover", "Cover"),
     ("contain", "Contain"),
@@ -42,6 +52,10 @@ class BasePicture(Common):
 
     name = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
+    # The one-or-two-line version used on cards and list rows, where the full
+    # `description` would not fit. Lives here rather than on each concrete model
+    # because every catalog record in this project needs both lengths.
+    short_description = models.TextField(null=True, blank=True)
     href = models.URLField(max_length=255, null=True, blank=True)
     fit = models.CharField(
         max_length=16,

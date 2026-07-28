@@ -7,6 +7,11 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api-auth/', include('rest_framework.urls')),
     path('api/auth/', include('users.urls')),
+    # The reference catalog (categories, species, seasons, weather, locations)
+    # and the journal feed (sightings and their media). Both are public on GET
+    # and staff-only on write - see core/permissions.py.
+    path('api/', include('catalog.urls')),
+    path('api/', include('journal.urls')),
 ]
 
 # Development only, and `static()` enforces that itself: it returns [] unless

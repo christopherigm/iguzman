@@ -31,8 +31,16 @@ const nextConfig = {
     // they come off the edge instead of through this pod. See image-loader.ts.
     loader: 'custom',
     loaderFile: './image-loader.ts',
-    // Still needed: /_next/image remains the way to get a *same-origin* copy of
-    // a remote image (canvas exports, CSS mask-image), and it checks this list.
+    // ⚠ Inert while `loader` is 'custom'. Next 404s /_next/image outright unless
+    // `images.loader === 'default'` (next/dist/server/next-server.js), so the
+    // route that reads this list no longer answers, and next/image skips the
+    // allowlist check entirely - an un-listed host renders just as well as a
+    // listed one. In particular this is NOT a way to get a *same-origin* copy of
+    // a remote image: anything that needs one (an html-to-image/canvas export,
+    // which taints cross-origin; a CSS mask-image, which resolves empty) needs
+    // its own route handler in this app. Kept only so the allowlist is already
+    // right if `loader` ever goes back to 'default'. `qualities` and
+    // `dangerouslyAllowLocalIP` above are dead for the same reason.
     remotePatterns: [
       { protocol: 'http', hostname: '127.0.0.1' },
       { protocol: 'http', hostname: 'localhost' },

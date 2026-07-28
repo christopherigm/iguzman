@@ -826,7 +826,7 @@ ${tNav_decl}
   const cookieStore = await cookies();
   const themeModeCookie = cookieStore.get('theme-mode')?.value as ThemeMode | undefined;
   const themeResolvedCookie = cookieStore.get(RESOLVED_COOKIE_NAME)?.value as ResolvedTheme | undefined;
-  const initialMode: ThemeMode = themeModeCookie ?? 'system';
+  const initialMode: ThemeMode = themeModeCookie ?? 'light';
   const initialResolved: ResolvedTheme =
     initialMode === 'system' ? (themeResolvedCookie ?? 'light') : (initialMode as ResolvedTheme);
 
@@ -837,7 +837,7 @@ ${tNav_decl}
   return (
     <html lang={locale} data-theme={initialResolved} style={{ colorScheme: initialResolved }} suppressHydrationWarning>
       <head>
-        <ThemeScript />${splash_links}
+        <ThemeScript defaultMode="light" />${splash_links}
       </head>
       <body style={bodyStyle}>
 ${serwist_open}

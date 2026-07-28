@@ -493,15 +493,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = '${module_name}.wsgi.application'
 
+# The cluster Postgres is used only when BOTH the host and a password are set:
+# the .env ships the cluster hostname so it doubles as the deploy reference, and
+# an empty DB_PASSWORD is what keeps development on the local SQLite file.
 _DB_HOST = os.environ.get('DB_HOST', '')
+_DB_PASSWORD = os.environ.get('DB_PASSWORD', '')
 
-if _DB_HOST:
+if _DB_HOST and _DB_PASSWORD:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.environ.get('DB_NAME', 'postgres'),
             'USER': os.environ.get('DB_USER', 'postgres'),
-            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'PASSWORD': _DB_PASSWORD,
             'HOST': _DB_HOST,
             'PORT': os.environ.get('DB_PORT', '5432'),
         }
@@ -616,15 +620,17 @@ PYEOF
   if [[ "${include_redis}" == "y" ]]; then
     cat >> "$out" << 'PYEOF'
 
+# Same rule as the database: the cluster Redis is used only when BOTH the URL
+# and a password are set, so an empty REDIS_PASSWORD keeps development on the
+# local-memory cache without having to blank the URL.
 _REDIS_URL = os.environ.get('REDIS_URL', '')
+_REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', '')
 
-if _REDIS_URL:
+if _REDIS_URL and _REDIS_PASSWORD:
     _redis_options: dict = {
         'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        'PASSWORD': _REDIS_PASSWORD,
     }
-    _redis_password = os.environ.get('REDIS_PASSWORD', '')
-    if _redis_password:
-        _redis_options['PASSWORD'] = _redis_password
 
     CACHES = {
         'default': {
@@ -2329,26 +2335,25 @@ EOF
 
 gen_env_example() {
   local out="$1"
-  # "local" → the developer's own .env: every cluster-only hostname is blanked
-  # so `manage.py migrate`/`runserver` work on the laptop (SQLite + local-memory
-  # cache). "example" → the deploy reference committed as env.example, whose
-  # values are what `pnpm secrets` loads into the k8s secret.
-  local mode="${2:-example}"
+  # Writes both the developer's own .env and the env.example committed as the
+  # deploy reference (whose values are what `pnpm secrets` loads into the k8s
+  # secret) - the two are identical. The cluster hostnames are safe to ship in
+  # the local .env because settings.py only talks to Postgres/Redis when the
+  # matching password is set, so a laptop with empty passwords stays on SQLite
+  # + the local-memory cache.
   mkdir -p "$(dirname "$out")"
 
-  local db_host="postgres.${name}.svc.cluster.local"
-  local redis_url="redis://redis.${name}.svc.cluster.local:6379/0"
-  local media_root="/app/media"
-  if [[ "${mode}" == "local" ]]; then
-    db_host=""
-    redis_url=""
-    media_root="$(cd "$(dirname "$out")" && pwd)/media"
-  fi
+  # The namespace is the app's name without the "-api" suffix, so an API and
+  # the frontend it serves share one namespace - which is also where the
+  # Postgres and Redis services of that namespace live.
+  local namespace="${name%-api}"
+  local db_host="postgres.${namespace}.svc.cluster.local"
+  local redis_url="redis://redis.${namespace}.svc.cluster.local:6379/0"
 
   cat > "$out" << EOF
 # Docker / Helm
 DOCKER_REGISTRY=${registry_user}
-NAMESPACE=${name}
+NAMESPACE=${namespace}
 
 # Django
 SECRET_KEY=django-insecure-change-me
@@ -2361,7 +2366,8 @@ CORS_ALLOWED_ORIGINS=${frontend_url}
 CSRF_TRUSTED_ORIGINS=https://${host},${frontend_url}
 FRONTEND_URL=${frontend_url}
 
-# Database (leave DB_HOST empty to use SQLite locally)
+# Database (leave DB_PASSWORD empty to use SQLite locally - the host below is
+# only dialed when a password is set, so this file works as-is on a laptop)
 DB_HOST=${db_host}
 DB_PORT=5432
 DB_NAME=postgres
@@ -2369,7 +2375,12 @@ DB_USER=postgres
 DB_PASSWORD=
 
 # Media (uploaded files, DEVELOPMENT ONLY - see R2 below)
-MEDIA_ROOT=${media_root}
+# Leave this unset. Django defaults MEDIA_ROOT to BASE_DIR/media, which is
+# apps/${name}/media locally (gitignored) and /app/media in the container -
+# the right answer in both places, with no CWD sensitivity. Set it only to send
+# uploads somewhere else, and never to an empty string: os.environ.get returns
+# '' rather than the default, and Path('') is the current directory.
+# MEDIA_ROOT=
 EOF
 
   cat >> "$out" << 'EOF'
@@ -2393,7 +2404,8 @@ EOF
   if [[ "${include_redis}" == "y" ]]; then
     cat >> "$out" << EOF
 
-# Cache (leave REDIS_URL empty to use the local-memory cache)
+# Cache (leave REDIS_PASSWORD empty to use the local-memory cache - the URL
+# below is only dialed when a password is set)
 REDIS_URL=${redis_url}
 REDIS_PASSWORD=
 EOF
@@ -2924,7 +2936,7 @@ main() {
   gen_entrypoint_sh  "${app_dir}/entrypoint.sh"
   gen_gunicorn_conf_py "${app_dir}/gunicorn.conf.py"
   gen_dockerfile     "${app_dir}/Dockerfile"
-  gen_env_example    "${app_dir}/.env" local
+  gen_env_example    "${app_dir}/.env"
   gen_env_example    "${app_dir}/env.example"
 
   # Django project package

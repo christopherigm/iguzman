@@ -30,6 +30,15 @@ ingress:
   className: 'nginx'
   annotations:
     cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+    # Video uploads (POST /api/journal/sightings/<pk>/media/video/) arrive as
+    # multipart and go straight through nginx. Its default 1 MB body cap would
+    # 413 them long before Django's own MAX_VIDEO_UPLOAD_MB check ever ran, and
+    # the default 60s read timeout would cut a large one off on a slow uplink.
+    # Keep this comfortably above MAX_VIDEO_UPLOAD_MB (200 MB) - multipart adds
+    # framing on top of the file itself.
+    nginx.ingress.kubernetes.io/proxy-body-size: '256m'
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '600'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '600'
   hosts:
     - host: animals-api.iguzman.com.mx
       paths:
@@ -45,6 +54,12 @@ ingress:
 env:
   EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: '24'
   GUNICORN_WORKERS: '3'
+  # Largest video a sighting may carry. Must stay under the ingress
+  # proxy-body-size above, which refuses a request before Django sees it.
+  MAX_VIDEO_UPLOAD_MB: '200'
+  # A 200 MB upload on a slow connection outlasts the 120s default and would be
+  # killed mid-write, leaving a partial object in the bucket.
+  GUNICORN_TIMEOUT: '600'
 
 # Load all env.example variables from the pre-existing secret.
 # Keys in the secret match env.example names exactly.

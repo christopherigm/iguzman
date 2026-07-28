@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     'colorfield',
     'core',
     'users',
+    'catalog',
+    'journal',
 ]
 
 MIDDLEWARE = [
@@ -81,15 +83,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'animals_api.wsgi.application'
 
+# The cluster Postgres is used only when BOTH the host and a password are set:
+# the .env ships the cluster hostname so it doubles as the deploy reference, and
+# an empty DB_PASSWORD is what keeps development on the local SQLite file.
 _DB_HOST = os.environ.get('DB_HOST', '')
+_DB_PASSWORD = os.environ.get('DB_PASSWORD', '')
 
-if _DB_HOST:
+if _DB_HOST and _DB_PASSWORD:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.environ.get('DB_NAME', 'postgres'),
             'USER': os.environ.get('DB_USER', 'postgres'),
-            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'PASSWORD': _DB_PASSWORD,
             'HOST': _DB_HOST,
             'PORT': os.environ.get('DB_PORT', '5432'),
         }
@@ -117,7 +123,20 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# Caps a non-file request body - which is what a base64 image upload is. Every
+# image in this project arrives that way, at most 3840 px, so 10 MB is generous.
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB
+
+# Video is the one upload that does NOT ride in a JSON body: it goes to
+# `/api/journal/sightings/<pk>/media/video/` as multipart, which Django streams
+# to a temp file instead of holding in memory, so the limit above does not apply
+# to it. This is the ceiling that does - enforced in
+# `journal.serializers.SightingVideoUploadSerializer`, not by Django.
+#
+# ⚠ nginx has its own limit in front of this one. The ingress must carry
+# `nginx.ingress.kubernetes.io/proxy-body-size` at least this large, or a big
+# upload is refused with a 413 that never reaches Django.
+MAX_VIDEO_UPLOAD_MB = int(os.environ.get('MAX_VIDEO_UPLOAD_MB', '200'))
 
 # ── Media files (uploaded by users) ──────────────────────────────────────────
 # **Production stores media in Cloudflare R2, and only there.** There is no
@@ -194,15 +213,17 @@ else:
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Same rule as the database: the cluster Redis is used only when BOTH the URL
+# and a password are set, so an empty REDIS_PASSWORD keeps development on the
+# local-memory cache without having to blank the URL.
 _REDIS_URL = os.environ.get('REDIS_URL', '')
+_REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', '')
 
-if _REDIS_URL:
+if _REDIS_URL and _REDIS_PASSWORD:
     _redis_options: dict = {
         'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        'PASSWORD': _REDIS_PASSWORD,
     }
-    _redis_password = os.environ.get('REDIS_PASSWORD', '')
-    if _redis_password:
-        _redis_options['PASSWORD'] = _redis_password
 
     CACHES = {
         'default': {
