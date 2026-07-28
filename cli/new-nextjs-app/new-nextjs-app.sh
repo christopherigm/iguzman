@@ -202,7 +202,10 @@ gen_package_json() {
   "type": "module",
   "private": true,
   "scripts": {
+    "gen:breakpoints": "pnpm --filter @repo/ui gen:breakpoints",
+    "predev": "pnpm gen:breakpoints",
     "dev": "next dev --port ${port}",
+    "prebuild": "pnpm gen:breakpoints",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
@@ -219,19 +222,67 @@ gen_package_json() {
     "pino": "^10.3.1",
     "@repo/i18n": "workspace:^",
     "next-intl": "^4",
-    "next": "16.3.0-canary.66"${deps_tail}
+    "next": "16.2.11"${deps_tail}
   },
   "devDependencies": {
+    "@csstools/postcss-global-data": "^4.0.0",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^26.0.0",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
+    "autoprefixer": "^10.5.4",
     "eslint": "^9.39.4",
+    "postcss-custom-media": "^12.0.1",
+    "tsx": "^4.23.1",
     "typescript": "6.0.3"${ts_comma}${pwa_devdep}
   }
 }
 EOF
+}
+
+gen_postcss_config_mjs() {
+  local out="$1"; mkdir -p "$(dirname "$out")"
+  cat > "$out" << 'JSEOF'
+/**
+ * Custom PostCSS pipeline for this app.
+ *
+ * Defining this file opts the app out of Next.js's built-in PostCSS defaults, so
+ * every transform we rely on is listed explicitly (including `autoprefixer`,
+ * which Next would otherwise apply for us).
+ *
+ * `@csstools/postcss-global-data` injects the generated `@custom-media` rules
+ * into every CSS file *before* `postcss-custom-media` resolves them - custom
+ * media are otherwise only visible within the file that declares them. Together
+ * they let any CSS in this app (and any CSS `@repo/ui` contributes to the
+ * bundle) write `@media (--below-sm)` instead of a hardcoded pixel threshold.
+ *
+ * This file is REQUIRED, not optional: `@repo/ui`'s own stylesheets (badge.css,
+ * navbar.css, ...) use `@media (--below-sm)` and are compiled by *this* app's
+ * config, so without it the build fails on the first `@repo/ui` CSS import.
+ *
+ * The tokens are generated ONCE, in `@repo/ui`
+ * (`packages/ui/scripts/gen-breakpoints-css.ts` →
+ * `packages/ui/src/core-elements/breakpoints.generated.css`), from the
+ * single-source-of-truth `BREAKPOINTS` scale. This app points at that shared
+ * file rather than keeping its own copy; regenerate with
+ * `pnpm --filter @repo/ui gen:breakpoints` (wired into predev/prebuild here).
+ *
+ * Plugins are declared by name (object form) so this config works under both
+ * dev (Turbopack) and `next build --webpack`, which read the same file.
+ */
+const config = {
+  plugins: {
+    "@csstools/postcss-global-data": {
+      files: ["../../packages/ui/src/core-elements/breakpoints.generated.css"],
+    },
+    "postcss-custom-media": {},
+    autoprefixer: {},
+  },
+};
+
+export default config;
+JSEOF
 }
 
 gen_next_config_js() {
@@ -863,7 +914,7 @@ import { Typography } from '@repo/ui/core-elements/typography';
 import { ThemeSwitch } from '@repo/ui/theme-switch';
 import { LocaleSwitcher } from '@repo/ui/core-elements/locale-switcher';
 import { routing } from '@repo/i18n/routing';
-import { version } from '../../package.json';
+import packageJson from '../../package.json';
 import './footer.css';
 
 export async function Footer({ logo }: { logo: string }) {
@@ -916,7 +967,7 @@ export async function Footer({ logo }: { logo: string }) {
         </Grid>
         <Box className="footer__bottom">
           <Typography as="p" variant="body" textAlign="center" className="footer__description">
-            {t('copyright', { year: new Date().getFullYear(), version })}
+            {t('copyright', { year: new Date().getFullYear(), version: packageJson.version })}
           </Typography>
         </Box>
       </Container>
@@ -2232,6 +2283,7 @@ main() {
   gen_package_json                   "${app_dir}/package.json"
   gen_turbo_json                     "${app_dir}/turbo.json"
   gen_next_config_js                 "${app_dir}/next.config.js"
+  gen_postcss_config_mjs             "${app_dir}/postcss.config.mjs"
   gen_tsconfig_json                  "${app_dir}/tsconfig.json"
   gen_eslint_config_js               "${app_dir}/eslint.config.js"
   gen_gitignore                      "${app_dir}/.gitignore"

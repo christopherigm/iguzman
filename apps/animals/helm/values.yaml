@@ -1,0 +1,67 @@
+revisionHistoryLimit: 2
+replicaCount: 1
+
+image:
+  # Overridden at deploy time from DOCKER_REGISTRY (.env) → ${DOCKER_REGISTRY}/animals
+  repository: animals
+  tag: 'latest'
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ''
+fullnameOverride: ''
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+ingress:
+  enabled: true
+  className: 'nginx'
+  annotations:
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+  hosts:
+    - host: animals.iguzman.com.mx
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: animals-tls
+      hosts:
+        - animals.iguzman.com.mx
+
+env:
+  NODE_ENV: 'production'
+  NEXT_TELEMETRY_DISABLED: '1'
+
+envFromSecret:
+  - name: API_URL
+    secretName: animals-secrets
+    secretKey: API_URL
+
+probes:
+  startupProbe:
+    httpGet:
+      path: /
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 30
+  livenessProbe:
+    httpGet:
+      path: /
+    initialDelaySeconds: 0
+    periodSeconds: 10
+    failureThreshold: 3
+
+nodeAffinity:
+  enabled: false
+  nodeNames: []
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

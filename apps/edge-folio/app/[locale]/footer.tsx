@@ -8,7 +8,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { ThemeSwitch } from "@repo/ui/theme-switch";
 import { LocaleSwitcher } from "@repo/ui/core-elements/locale-switcher";
 import { routing } from "@repo/i18n/routing";
-import { version } from "../../package.json";
+import packageJson from "../../package.json";
 import "./footer.css";
 
 export async function Footer({ logo }: { logo: string }) {
@@ -113,7 +113,10 @@ export async function Footer({ logo }: { logo: string }) {
             textAlign="center"
             className="footer__description"
           >
-            {t("copyright", { year: currentYear, version })}
+            {t("copyright", {
+              year: currentYear,
+              version: packageJson.version,
+            })}
           </Typography>
         </Box>
       </Container>

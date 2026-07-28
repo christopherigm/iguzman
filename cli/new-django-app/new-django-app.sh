@@ -2329,7 +2329,21 @@ EOF
 
 gen_env_example() {
   local out="$1"
+  # "local" → the developer's own .env: every cluster-only hostname is blanked
+  # so `manage.py migrate`/`runserver` work on the laptop (SQLite + local-memory
+  # cache). "example" → the deploy reference committed as env.example, whose
+  # values are what `pnpm secrets` loads into the k8s secret.
+  local mode="${2:-example}"
   mkdir -p "$(dirname "$out")"
+
+  local db_host="postgres.${name}.svc.cluster.local"
+  local redis_url="redis://redis.${name}.svc.cluster.local:6379/0"
+  local media_root="/app/media"
+  if [[ "${mode}" == "local" ]]; then
+    db_host=""
+    redis_url=""
+    media_root="$(cd "$(dirname "$out")" && pwd)/media"
+  fi
 
   cat > "$out" << EOF
 # Docker / Helm
@@ -2348,14 +2362,14 @@ CSRF_TRUSTED_ORIGINS=https://${host},${frontend_url}
 FRONTEND_URL=${frontend_url}
 
 # Database (leave DB_HOST empty to use SQLite locally)
-DB_HOST=postgres.${name}.svc.cluster.local
+DB_HOST=${db_host}
 DB_PORT=5432
 DB_NAME=postgres
 DB_USER=postgres
 DB_PASSWORD=
 
 # Media (uploaded files, DEVELOPMENT ONLY - see R2 below)
-MEDIA_ROOT=/app/media
+MEDIA_ROOT=${media_root}
 EOF
 
   cat >> "$out" << 'EOF'
@@ -2380,7 +2394,7 @@ EOF
     cat >> "$out" << EOF
 
 # Cache (leave REDIS_URL empty to use the local-memory cache)
-REDIS_URL=redis://redis.${name}.svc.cluster.local:6379/0
+REDIS_URL=${redis_url}
 REDIS_PASSWORD=
 EOF
   fi
@@ -2910,7 +2924,7 @@ main() {
   gen_entrypoint_sh  "${app_dir}/entrypoint.sh"
   gen_gunicorn_conf_py "${app_dir}/gunicorn.conf.py"
   gen_dockerfile     "${app_dir}/Dockerfile"
-  gen_env_example    "${app_dir}/.env"
+  gen_env_example    "${app_dir}/.env" local
   gen_env_example    "${app_dir}/env.example"
 
   # Django project package

@@ -1,0 +1,12 @@
+{
+  "extends": "@repo/typescript-config/nextjs.json",
+  "compilerOptions": {
+    "plugins": [{ "name": "next" }],
+    "allowArbitraryExtensions": true,
+    "lib": ["es2022", "DOM", "DOM.Iterable", "webworker"],
+    "types": ["@serwist/next/typings"],
+    "paths": { "@/*": ["./*"] }
+  },
+  "include": ["**/*.ts", "**/*.tsx", "next-env.d.ts", "next.config.js", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", "public/sw.js"]
+}
