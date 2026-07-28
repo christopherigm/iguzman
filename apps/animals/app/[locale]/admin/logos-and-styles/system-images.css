@@ -1,0 +1,21 @@
+/* Row of image uploaders. grid-template-columns and its breakpoint overrides
+   have no component-prop equivalent, so the grid stays in CSS. */
+.si__grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+@media (--below-md) {
+  /* below md */
+  .si__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (--below-sm) {
+  /* xs */
+  .si__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

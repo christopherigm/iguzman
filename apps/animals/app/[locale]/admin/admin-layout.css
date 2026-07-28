@@ -1,0 +1,85 @@
+.admin-shell {
+  /* Geometry of the mobile (xs/sm) bar: the "☰ Menu" toggle and the page's
+     breadcrumbs sit side by side in one strip fixed under the global navbar.
+     Both pieces read these vars - the toggle (admin-sidebar.css) is overlaid on
+     the right of the strip, and the breadcrumbs reserve that width as padding. */
+  --admin-bar-h: 44px;
+  --admin-menu-w: 160px;
+
+  display: flex;
+  min-height: calc(100dvh - 60px); /* subtract navbar height */
+  background: var(--background);
+}
+
+@media (--below-md) {
+  /* md */
+  .admin-shell {
+    flex-direction: column;
+    /* The toggle + breadcrumb strip is fixed, so it no longer takes flow space. */
+    padding-top: var(--admin-bar-h);
+  }
+
+  /* The page's own breadcrumbs (first element every admin page renders) become
+     the fixed strip itself; the toggle button overlays its right. Long trails
+     scroll horizontally inside the strip rather than wrapping to a second row. */
+  .admin-content > .breadcrumbs {
+    position: fixed;
+    top: var(--ui-navbar-height, 57px);
+    left: 0;
+    right: 0;
+    z-index: 150;
+    display: flex;
+    align-items: center;
+    height: var(--admin-bar-h);
+    margin: 0;
+    padding-left: 10px;
+    padding-right: var(--admin-menu-w);
+    background: var(--background);
+    border-bottom: 1px solid
+      color-mix(in srgb, var(--foreground) 12%, transparent);
+    overflow-x: auto;
+    overflow-y: hidden;
+    /* The strip spans the whole bar (it paints the background and border), so
+       it would otherwise sit over the toggle's tap target. Only the crumbs
+       themselves take clicks; the strip lets everything else through. */
+    pointer-events: none;
+  }
+
+  /* Kept at the start of the strip; margin-right: auto stops a short trail from
+     stretching, without justify-content, which with overflow-x can make the
+     start of an overflowing trail unreachable by scrolling. */
+  .admin-content > .breadcrumbs .breadcrumbs__list {
+    flex-wrap: nowrap;
+    margin-right: auto;
+    pointer-events: auto;
+  }
+
+  .admin-content > .breadcrumbs .breadcrumbs__item {
+    white-space: nowrap;
+  }
+
+  /* The global navbar hides on scroll-down below sm (see navbar.tsx's
+     useScrollDirection). Rather than following it off-screen - which would
+     leave the admin bar floating under a navbar-sized gap - the bar slides up
+     to the top of the viewport and takes its place. The navbar and the bar are
+     siblings under <body> (NavbarClient renders the <nav>, then {children}),
+     so its `--hidden` state is readable in pure CSS - no second scroll
+     listener, and the two always move together.
+
+     `top` is animated with the navbar's own transform timing. */
+  .admin-content > .breadcrumbs,
+  .admin-shell .admin-sidebar__toggle {
+    transition: top 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .ui-navbar--hidden ~ .admin-shell .admin-sidebar__toggle,
+  .ui-navbar--hidden ~ .admin-shell .admin-content > .breadcrumbs {
+    top: 0;
+  }
+
+  /* Same reason: the drawer reserves navbar height at its top, which would be
+     a blank band while the navbar is off-screen. */
+  .ui-navbar--hidden ~ .admin-shell .admin-sidebar {
+    padding-top: 0;
+  }
+}

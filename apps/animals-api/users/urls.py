@@ -2,6 +2,9 @@ from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
 from .views import (
+    AdminUserDetailView,
+    AdminUserListView,
+    TokenReissueView,
     SignUpView,
     LoginView,
     ProfileView,
@@ -24,6 +27,10 @@ urlpatterns = [
     path('login/', LoginView.as_view(), name='auth-login'),
     path('token/refresh/', TokenRefreshView.as_view(), name='auth-token-refresh'),
     path('token/verify/', TokenVerifyView.as_view(), name='auth-token-verify'),
+    # Re-mints both tokens from the live user, so a claim that changed (a name
+    # edit, an is_admin grant) reaches the frontend without waiting out the
+    # refresh token's 7 days. See TokenReissueView.
+    path('token/reissue/', TokenReissueView.as_view(), name='auth-token-reissue'),
     path('profile/', ProfileView.as_view(), name='auth-profile'),
     path('profile/picture/', ProfilePictureView.as_view(), name='auth-profile-picture'),
     path('change-password/', ChangePasswordView.as_view(), name='auth-change-password'),
@@ -31,6 +38,9 @@ urlpatterns = [
     path('resend-verification/', ResendVerificationView.as_view(), name='auth-resend-verification'),
     path('password-reset/', PasswordResetRequestView.as_view(), name='auth-password-reset'),
     path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='auth-password-reset-confirm'),
+    # CMS user management - administrators only (core.permissions.IsSiteAdmin).
+    path('admin/users/', AdminUserListView.as_view(), name='admin-user-list'),
+    path('admin/users/<int:pk>/', AdminUserDetailView.as_view(), name='admin-user-detail'),
     # Passkey
     path('passkey/register/options/', PasskeyRegistrationOptionsView.as_view(), name='passkey-register-options'),
     path('passkey/register/verify/', PasskeyRegistrationVerifyView.as_view(), name='passkey-register-verify'),

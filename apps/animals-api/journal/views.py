@@ -1,4 +1,3 @@
-from django.core.cache import cache
 from django.db.models import Count, Max, Min, Q
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -7,10 +6,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from catalog.models import KIND_CHOICES, Location, Species
-from core.cache import invalidate_pattern
-from core.permissions import IsStaffUser
-from core.views import CACHE_TTL, CachedDetailView, CachedListCreateView
+from core.cache import cached_get, cached_set, invalidate
+from core.permissions import IsSiteAdmin
+from core.views import CachedDetailView, CachedListCreateView
 
+from . import cache_keys as keys
 from .models import Sighting, SightingMedia
 from .serializers import (
     SightingMediaSerializer,
@@ -42,8 +42,8 @@ class SightingListCreateView(CachedListCreateView):
     model = Sighting
     serializer_class = SightingSerializer
     write_serializer_class = SightingWriteSerializer
-    list_cache_prefix = 'journal:sightings'
-    detail_cache_prefix = 'journal:sighting'
+    list_cache_prefix = keys.SIGHTINGS
+    detail_cache_prefix = keys.SIGHTING
     select_related = _SIGHTING_SELECT
     prefetch_related = _SIGHTING_PREFETCH
     paginate = True
@@ -129,17 +129,19 @@ class SightingDetailView(CachedDetailView):
     model = Sighting
     serializer_class = SightingSerializer
     write_serializer_class = SightingWriteSerializer
-    list_cache_prefix = 'journal:sightings'
-    detail_cache_prefix = 'journal:sighting'
+    list_cache_prefix = keys.SIGHTINGS
+    detail_cache_prefix = keys.SIGHTING
     select_related = _SIGHTING_SELECT
     prefetch_related = _SIGHTING_PREFETCH
 
 
 def _invalidate_sighting(sighting):
-    """Clear the caches that embed a sighting's gallery."""
-    cache.delete(f'journal:sighting:{sighting.pk}')
-    cache.delete(f'journal:sighting:slug:{sighting.slug}')
-    invalidate_pattern('journal:sightings:*')
+    """Clear the caches that embed a sighting's gallery.
+
+    Redundant with ``journal.signals.invalidate_on_media_change``, which covers
+    the same writes plus the admin's inline gallery editor.
+    """
+    invalidate(keys.SIGHTINGS, keys.SIGHTING, keys.STATS)
 
 
 class SightingMediaListCreateView(APIView):
@@ -153,7 +155,7 @@ class SightingMediaListCreateView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsStaffUser()]
+        return [IsSiteAdmin()]
 
     def _get_sighting(self, pk):
         return Sighting.objects.filter(pk=pk).first()
@@ -188,7 +190,7 @@ class SightingVideoUploadView(APIView):
     Multipart only. ``file`` is the video; ``poster`` is an optional still frame.
     """
 
-    permission_classes = [IsStaffUser]
+    permission_classes = [IsSiteAdmin]
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, pk):
@@ -211,7 +213,7 @@ class SightingMediaDetailView(APIView):
     DELETE /api/journal/sightings/<pk>/media/<media_pk>/ - remove it (staff).
     """
 
-    permission_classes = [IsStaffUser]
+    permission_classes = [IsSiteAdmin]
 
     def _get_media(self, pk, media_pk):
         return SightingMedia.objects.filter(pk=media_pk, sighting_id=pk).first()
@@ -247,8 +249,7 @@ class JournalStatsView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        cache_key = 'journal:stats'
-        cached = cache.get(cache_key)
+        cached = cached_get(keys.STATS)
         if cached is not None:
             return Response(cached)
 
@@ -269,5 +270,5 @@ class JournalStatsView(APIView):
                 for value, label in KIND_CHOICES
             ],
         }
-        cache.set(cache_key, data, CACHE_TTL)
+        cached_set(keys.STATS, data)
         return Response(data)

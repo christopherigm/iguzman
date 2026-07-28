@@ -1,0 +1,105 @@
+/* ── Logo watermark ─────────────────────────────────────────────────────────
+   A fixed, non-interactive layer that tiles the tenant's logo behind every
+   public page. It sits above the page background color (which stays visible
+   through it) and below all content, so sections that paint their own
+   background simply cover it.
+
+   The grid is drawn on an oversized inner layer that is rotated: rotating the
+   whole tiled layer instead of each logo keeps the pattern regular while
+   breaking up the grid, so it reads as texture rather than a checkerboard.
+   150% + a -25% offset is enough overscan for any rotation up to ±45°.
+   ────────────────────────────────────────────────────────────────────────── */
+.logo-watermark {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Preview variant: fills its positioned parent (the CMS preview box) instead of
+   the viewport, and stays inside that box's own stacking context. */
+.logo-watermark--inline {
+  position: absolute;
+  z-index: 0;
+}
+
+.logo-watermark__grid {
+  position: absolute;
+  top: -25%;
+  left: -25%;
+  width: 150%;
+  height: 150%;
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    var(--logo-watermark-tile, 190px)
+  );
+  grid-auto-rows: var(--logo-watermark-tile, 190px);
+  place-items: center;
+  transform: rotate(var(--logo-watermark-rotation, -12deg));
+  opacity: var(--logo-watermark-opacity, 0.04);
+}
+
+.logo-watermark__tile {
+  width: var(--logo-watermark-size, 120px);
+  height: var(--logo-watermark-size, 120px);
+  background-image: var(--logo-watermark-image);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* ── Intercalated variant ────────────────────────────────────────────────────
+   Instead of tilting the whole layer as one block, alternate each logo so
+   neighbours lean opposite ways. `:nth-child` walks the flat tile list, so on
+   the grid the ± rotation lands as a diagonal checkerboard. The layer keeps its
+   150% / -25% overscan (tiles simply clip at the edges under `overflow: hidden`)
+   but drops its own rotation, so `--logo-watermark-rotation` now reads as the
+   alternation amplitude rather than a uniform angle. */
+.logo-watermark--intercalated .logo-watermark__grid {
+  transform: none;
+}
+
+.logo-watermark--intercalated .logo-watermark__tile:nth-child(odd) {
+  transform: rotate(var(--logo-watermark-rotation, -12deg));
+}
+
+.logo-watermark--intercalated .logo-watermark__tile:nth-child(even) {
+  transform: rotate(calc(-1 * var(--logo-watermark-rotation, -12deg)));
+}
+
+/* ── Two-image variant ───────────────────────────────────────────────────────
+   When a second image is supplied (logo + brandmark), alternate the tile image
+   so neighbours show different marks. Odd tiles keep the default image; even
+   tiles draw the second one. `:nth-child` walks the flat tile list, so the two
+   images land as a diagonal checkerboard - independent of the rotation
+   alternation above, which the two variants compose with cleanly. */
+.logo-watermark--two-images .logo-watermark__tile:nth-child(even) {
+  background-image: var(--logo-watermark-image-2);
+}
+
+@media (--below-sm) {
+  /* sm - a desktop-scaled pattern reads as giant blobs on a phone. */
+  .logo-watermark__grid {
+    grid-template-columns: repeat(
+      auto-fill,
+      calc(var(--logo-watermark-tile, 190px) * 0.7)
+    );
+    grid-auto-rows: calc(var(--logo-watermark-tile, 190px) * 0.7);
+  }
+
+  .logo-watermark__tile {
+    width: calc(var(--logo-watermark-size, 120px) * 0.7);
+    height: calc(var(--logo-watermark-size, 120px) * 0.7);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .logo-watermark {
+    display: none;
+  }
+}

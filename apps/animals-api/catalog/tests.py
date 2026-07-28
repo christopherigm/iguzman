@@ -1,4 +1,7 @@
+from base64 import b64decode
 from datetime import date
+
+from django.core.files.base import ContentFile
 
 from core.tests import IsolatedMediaTestCase, base64_image, data_url
 
@@ -346,6 +349,81 @@ class CacheInvalidationTests(CatalogFixtureMixin, IsolatedMediaTestCase):
         )
         self.assertEqual(self.client.get('/api/catalog/species/slug/white-tailed-deer/').status_code, 404)
         self.assertEqual(self.client.get('/api/catalog/species/slug/whitetail-deer/').status_code, 200)
+
+
+class AdminPathCacheInvalidationTests(CatalogFixtureMixin, IsolatedMediaTestCase):
+    """Writes that never touch an API view - which is how this project is authored.
+
+    The Django admin is the CMS here, so a real edit is a plain ``Model.save()``.
+    Every test above writes through the API, where ``CachedViewMixin`` clears the
+    namespace on the way out; that is precisely why a category saved in the admin
+    could leave ``catalog:categories`` - the key the unfiltered list caches under,
+    and the one the landing page asks for - stale for the whole TTL, so a newly
+    uploaded icon did not appear. These pin the receiver path instead.
+
+    Note every assertion uses the **unfiltered** list URL on purpose: a request
+    with query params caches under ``prefix:...`` and is swept by a pattern
+    delete, while the bare key is only cleared by an explicit ``cache.delete``.
+    A filtered URL here would still pass with the bug present.
+    """
+
+    def _categories(self):
+        return self.client.get('/api/catalog/categories/').json()
+
+    def _species(self):
+        return self.client.get('/api/catalog/species/').json()
+
+    def test_uploading_a_category_icon_in_the_admin_appears_immediately(self):
+        """The reported bug, end to end."""
+        category = self.make_category()
+        self.assertIsNone(self._categories()[0]['icon'])
+
+        category.icon.save('deer.jpg', ContentFile(b64decode(base64_image())), save=True)
+
+        self.assertIsNotNone(self._categories()[0]['icon'])
+
+    def test_renaming_a_category_in_the_admin_appears_immediately(self):
+        category = self.make_category()
+        self.assertEqual(self._categories()[0]['name'], 'Deer')
+
+        category.name = 'Deer & Elk'
+        category.save()
+
+        self.assertEqual(self._categories()[0]['name'], 'Deer & Elk')
+
+    def test_a_category_saved_in_the_admin_refreshes_the_kinds_nav(self):
+        self.assertEqual(self._kind('animal')['category_count'], 0)
+        self.make_category()
+        self.assertEqual(self._kind('animal')['category_count'], 1)
+
+    def test_a_species_saved_in_the_admin_appears_in_the_unfiltered_list(self):
+        category = self.make_category()
+        self.assertEqual(self._species(), [])
+
+        Species.objects.create(category=category, name='Mule Deer', slug='mule-deer')
+
+        self.assertEqual(len(self._species()), 1)
+
+    def test_disabling_a_species_in_the_admin_drops_it_from_the_public_list(self):
+        species = self.make_species()
+        self.assertEqual(len(self._species()), 1)
+
+        species.enabled = False
+        species.save()
+
+        self.assertEqual(self._species(), [])
+
+    def test_a_location_saved_in_the_admin_appears_in_the_unfiltered_list(self):
+        """The three reference models had no self-invalidating receiver at all."""
+        self.assertEqual(self.client.get('/api/catalog/locations/').json(), [])
+
+        Location.objects.create(name='Oak Ridge', slug='oak-ridge')
+
+        self.assertEqual(len(self.client.get('/api/catalog/locations/').json()), 1)
+
+    def _kind(self, value):
+        payload = self.client.get('/api/catalog/kinds/').json()
+        return next(row for row in payload if row['value'] == value)
 
 
 class SlugUniquenessTests(CatalogFixtureMixin, IsolatedMediaTestCase):

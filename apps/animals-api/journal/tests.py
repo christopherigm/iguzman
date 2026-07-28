@@ -301,6 +301,44 @@ class ProtectedDeleteTests(JournalFixtureMixin, IsolatedMediaTestCase):
         self.assertIsNone(sighting.location)
 
 
+class AdminPathCacheInvalidationTests(JournalFixtureMixin, IsolatedMediaTestCase):
+    """The journal half of ``catalog.tests.AdminPathCacheInvalidationTests``.
+
+    An outing is typed up in the Django admin, so the write that has to reach the
+    feed's cache is a plain ``Sighting.save()`` - no view involved. The feed is
+    the one list here that always carries query params in practice, so the two
+    URLs below check the paginated shape *and* the bare key.
+    """
+
+    def _feed(self):
+        return self.client.get('/api/journal/sightings/').json()['results']
+
+    def test_a_sighting_saved_in_the_admin_appears_in_the_feed(self):
+        species = self.make_species()
+        self.assertEqual(self._feed(), [])
+
+        Sighting.objects.create(species=species, slug='first-fawn', date=date(2026, 10, 14))
+
+        self.assertEqual(len(self._feed()), 1)
+
+    def test_a_sighting_saved_in_the_admin_refreshes_the_stats(self):
+        self.assertEqual(self.client.get('/api/journal/stats/').json()['sighting_count'], 0)
+        self.make_sighting()
+        self.assertEqual(self.client.get('/api/journal/stats/').json()['sighting_count'], 1)
+
+    def test_media_added_in_the_admin_refreshes_the_sighting_payload(self):
+        """The admin edits a gallery through an inline, which saves the row directly."""
+        sighting = self.make_sighting()
+        detail = f'/api/journal/sightings/{sighting.pk}/'
+        self.assertEqual(self.client.get(detail).json()['media'], [])
+
+        SightingMedia.objects.create(
+            sighting=sighting, kind='link', url='https://youtu.be/abc123'
+        )
+
+        self.assertEqual(len(self.client.get(detail).json()['media']), 1)
+
+
 class ReferenceCountTests(JournalFixtureMixin, IsolatedMediaTestCase):
     def test_a_new_sighting_updates_the_cached_species_and_season_counts(self):
         self.sign_in_staff()

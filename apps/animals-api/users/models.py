@@ -16,6 +16,17 @@ class UserProfile(models.Model):
         null=True,
         blank=True,
     )
+    # Opens the CMS at /admin in the Next.js app, and permits every write through
+    # the API (see core.permissions.IsSiteAdmin). Deliberately *not* the same
+    # thing as Django's `is_staff`, which opens the Django admin at /admin/ on
+    # this backend: this flag can be granted to an author who has no business
+    # inside Django itself. Staff keep every permission this grants, so nothing
+    # that worked before this field existed needs it.
+    is_admin = models.BooleanField(
+        default=False,
+        help_text='Can edit the site through the Next.js CMS and the write API. '
+                  'Django staff already have this implicitly.',
+    )
 
     def __str__(self):
         return f'Profile of {self.user.username}'

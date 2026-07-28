@@ -1,0 +1,20 @@
+/* `.latest-sightings__swiper` is a Swiper root, not a `@repo/ui` component, so
+   it can only be reached through this selector. The horizontal padding keeps the
+   slide content clear of the prev/next buttons, which are pinned to the wrapper's
+   edges; `autoHeight` needs the transition or every slide change snaps. */
+.latest-sightings__swiper {
+  width: 100%;
+  padding: 0 44px;
+}
+
+.latest-sightings__swiper .swiper-wrapper {
+  transition-property: transform, height;
+}
+
+@media (--below-sm) {
+  /* On a phone the buttons overlay the media column instead of sitting beside
+     it, so the slide reclaims the width the gutters were holding. */
+  .latest-sightings__swiper {
+    padding: 0;
+  }
+}

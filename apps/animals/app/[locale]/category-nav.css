@@ -1,0 +1,14 @@
+/* Hover/focus affordance for the category tiles. Only interaction state and its
+   transition live here - every static value on the `@repo/ui` components inside
+   is a prop (see the props-first rule in packages/ui/CLAUDE.md). */
+.category-nav__tile > * {
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.category-nav__tile:hover > *,
+.category-nav__tile:focus-visible > * {
+  border-color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+}

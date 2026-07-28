@@ -30,12 +30,24 @@ ingress:
   className: 'nginx'
   annotations:
     cert-manager.io/cluster-issuer: 'letsencrypt-prod'
-    # Video uploads (POST /api/journal/sightings/<pk>/media/video/) arrive as
-    # multipart and go straight through nginx. Its default 1 MB body cap would
-    # 413 them long before Django's own MAX_VIDEO_UPLOAD_MB check ever ran, and
-    # the default 60s read timeout would cut a large one off on a slow uplink.
-    # Keep this comfortably above MAX_VIDEO_UPLOAD_MB (200 MB) - multipart adds
-    # framing on top of the file itself.
+    # Two endpoints send a large multipart body straight through nginx, and its
+    # default 1 MB cap would 413 both long before Django saw them:
+    #
+    #   * a sighting video (POST /api/journal/sightings/<pk>/media/video/) -
+    #     keep this comfortably above MAX_VIDEO_UPLOAD_MB (200 MB), since
+    #     multipart adds framing on top of the file itself;
+    #   * a backup restore (POST /api/backups/restore/) - the whole site as a
+    #     zip, media included.
+    #
+    # ⚠ The restore is the one with no ceiling of its own: nothing in Django
+    # caps an archive's size, so this annotation IS the limit, and a journal
+    # whose photographs outgrow it fails with an opaque 413 rather than a
+    # readable message. Raise it (or set '0' for unlimited, as website-api does)
+    # before the archive gets there - `pnpm helm` and a rollout, no code change.
+    #
+    # The default 60s read timeout would also cut either one off on a slow
+    # uplink; both build and restore are synchronous, hence 600 to match
+    # GUNICORN_TIMEOUT below.
     nginx.ingress.kubernetes.io/proxy-body-size: '256m'
     nginx.ingress.kubernetes.io/proxy-read-timeout: '600'
     nginx.ingress.kubernetes.io/proxy-send-timeout: '600'
@@ -60,6 +72,12 @@ env:
   # A 200 MB upload on a slow connection outlasts the 120s default and would be
   # killed mid-write, leaving a partial object in the bucket.
   GUNICORN_TIMEOUT: '600'
+  # Cache API responses in Redis. Stated explicitly rather than left to its
+  # default (which is derived from DEBUG, a key that comes from the secret) so
+  # the public journal cannot end up serving every request uncached because of
+  # how one secret was filled in. Invalidation is signal-driven - see
+  # core/cache.py and each app's signals.py.
+  API_CACHE_ENABLED: 'True'
 
 # Load all env.example variables from the pre-existing secret.
 # Keys in the secret match env.example names exactly.

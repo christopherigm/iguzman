@@ -661,6 +661,23 @@ PYEOF
 
   cat >> "$out" << 'PYEOF'
 
+# Whether API responses are cached at all. **Off in development**: if the Django
+# admin is your authoring surface, a five-minute stale list after uploading an
+# image reads exactly like a lost write. On everywhere else.
+#
+# This is a switch on the *response* layer (see core/cache.py's cached_get /
+# cached_set), not on CACHES itself, deliberately: the cache also holds WebAuthn
+# challenges mid-ceremony and (on Redis) sessions, so a DummyCache backend would
+# break passkeys on a laptop.
+#
+# Set API_CACHE_ENABLED=True locally to exercise the production path.
+API_CACHE_ENABLED = os.environ.get(
+    'API_CACHE_ENABLED', 'False' if DEBUG else 'True'
+) == 'True'
+PYEOF
+
+  cat >> "$out" << 'PYEOF'
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -1115,15 +1132,129 @@ gen_core_cache_py() {
   local out="$1"
   mkdir -p "$(dirname "$out")"
   cat > "$out" << 'PYEOF'
+"""The API response cache: how a view reads it, and how a write clears it.
+
+**Reading.** ``cached_get`` / ``cached_set`` are the only way a view should touch
+the response cache. They are no-ops when ``settings.API_CACHE_ENABLED`` is false
+- the development default - so a change made in the Django admin shows up on the
+next page load instead of up to ``CACHE_TTL`` later.
+
+Why a flag rather than pointing ``CACHES`` at ``DummyCache`` in development: the
+cache holds more than response payloads. ``users/views.py`` parks a WebAuthn
+challenge in it between the two halves of a passkey ceremony, and the Redis
+branch of ``settings.py`` puts sessions there too. A dummy backend would silently
+break passkey registration on a laptop. The flag switches off exactly the layer
+that hides a write, and nothing else.
+
+**Invalidating.** ``invalidate`` clears every key under one or more namespace
+prefixes. Use it rather than a hand-written ``cache.delete``, and call it from a
+``post_save``/``post_delete`` receiver rather than only from the view that wrote
+the row - an edit made in the Django admin never reaches your view.
+"""
+
+from django.conf import settings
 from django.core.cache import cache
+
+# How long a cached payload lives when nothing invalidates it first. Every write
+# path should clear its namespace, so this is a backstop against a missed
+# receiver, not the mechanism.
+CACHE_TTL = 300  # 5 minutes
+
+
+def cache_enabled():
+    """Whether the response cache is switched on for this process.
+
+    Read from settings on every call rather than captured at import, so a test
+    can flip it with ``override_settings``.
+    """
+    return getattr(settings, 'API_CACHE_ENABLED', True)
+
+
+def cached_get(key):
+    """The cached payload for ``key``, or None - always None when disabled."""
+    if not cache_enabled():
+        return None
+    return cache.get(key)
+
+
+def cached_set(key, value, ttl=CACHE_TTL):
+    """Store a payload, unless the response cache is switched off."""
+    if not cache_enabled():
+        return
+    cache.set(key, value, ttl)
 
 
 def invalidate_pattern(pattern):
-    """Delete all keys matching a glob pattern (Redis only; silently skipped on LocMemCache)."""
+    """Delete every key matching a glob pattern.
+
+    Redis (via django-redis) implements ``delete_pattern`` natively. LocMemCache
+    does not, and silently skipping there would leave an edit invisible for the
+    whole TTL, which reads as a lost write. The fallback clears this process's
+    cache instead: blunt, but a LocMem cache is per-process and never shared.
+    """
     try:
         cache.delete_pattern(pattern)
     except AttributeError:
-        pass
+        cache.clear()
+
+
+def invalidate(*prefixes):
+    """Clear every cached payload under each namespace prefix.
+
+    Two deletes per prefix, and **both** are needed:
+
+    * ``prefix:*`` catches every parameterised variant and every detail key.
+    * ``prefix`` alone catches the bare key, which a list endpoint uses for a
+      request that carried no query params at all - and which ``prefix:*`` does
+      **not** match.
+
+    Missing that bare key is invisible in a test that always passes a filter, and
+    immediately visible on a landing page, which asks for the unfiltered list.
+    """
+    for prefix in prefixes:
+        cache.delete(prefix)
+        invalidate_pattern(f'{prefix}:*')
+PYEOF
+}
+
+gen_core_testing_py() {
+  local out="$1"
+  mkdir -p "$(dirname "$out")"
+  cat > "$out" << 'PYEOF'
+"""Test-support cache backend. Not a test module - imported by settings overrides.
+
+``PatternLocMemCache`` is LocMemCache plus a real ``delete_pattern``, and any
+test asserting that a write is visible afterwards depends on it.
+
+**Why it has to exist.** ``core.cache.invalidate_pattern`` calls
+``cache.delete_pattern`` and falls back to ``cache.clear()`` when the backend has
+none. Plain LocMemCache has none - so on the test backend *every* invalidation,
+however wrong or incomplete, wipes the entire cache and the next read is correct
+by accident. A receiver that forgets a namespace passes; the same code on Redis,
+where ``delete_pattern`` deletes only what it was asked to, serves a stale
+payload for the full TTL.
+
+Point the test suite's ``CACHES`` at this backend (see the ``override_settings``
+in your base TestCase) or the cache tests are vacuous.
+
+The glob semantics match django-redis: ``prefix:*`` matches keys under that
+namespace and nothing else - in particular **not** the bare ``prefix`` key.
+"""
+
+from fnmatch import fnmatch
+
+from django.core.cache.backends.locmem import LocMemCache
+
+
+class PatternLocMemCache(LocMemCache):
+    def delete_pattern(self, pattern, version=None):
+        # Match against the *prefixed, versioned* key, since that is what is
+        # actually stored (`:1:my:namespace:key`); `make_key` applies the same
+        # transformation to the pattern so the glob lines up.
+        match = self.make_key(pattern, version=version)
+        with self._lock:
+            for key in [key for key in self._cache if fnmatch(key, match)]:
+                self._delete(key)
 PYEOF
 }
 
@@ -2399,6 +2530,11 @@ R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
 R2_BUCKET_NAME=
 R2_PUBLIC_DOMAIN=r2.iguzman.com.mx
+
+# API response caching. Defaults to off while DEBUG=True, so an edit made in the
+# Django admin is on the next page load instead of up to 5 minutes later; on
+# otherwise. Set it to True to reproduce the production caching path locally.
+# API_CACHE_ENABLED=True
 EOF
 
   if [[ "${include_redis}" == "y" ]]; then
@@ -2511,6 +2647,10 @@ YAMLEOF
 
   cat >> "$out" << 'YAMLEOF'
   GUNICORN_WORKERS: '3'
+  # Cache API responses. Stated explicitly rather than left to its default (which
+  # is derived from DEBUG, a key that comes from the secret) so the API cannot end
+  # up serving every request uncached because of how one secret was filled in.
+  API_CACHE_ENABLED: 'True'
 
 # Load all env.example variables from the pre-existing secret.
 # Keys in the secret match env.example names exactly.
@@ -2954,7 +3094,11 @@ main() {
   gen_core_models_py     "${app_dir}/core/models.py"
   gen_core_serializers_py "${app_dir}/core/serializers.py"
   gen_init_py            "${app_dir}/core/migrations/__init__.py"
-  [[ "${include_redis}" == "y" ]] && gen_core_cache_py "${app_dir}/core/cache.py" || true
+  # Both are generated whether or not Redis was chosen: the response cache exists
+  # on LocMemCache too, so the read helpers and the API_CACHE_ENABLED switch apply
+  # either way, and PatternLocMemCache is what keeps the cache tests honest.
+  gen_core_cache_py      "${app_dir}/core/cache.py"
+  gen_core_testing_py    "${app_dir}/core/testing.py"
 
   # Users app
   gen_init_py            "${app_dir}/users/__init__.py"

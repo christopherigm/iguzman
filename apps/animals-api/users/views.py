@@ -49,7 +49,11 @@ WEBAUTHN_CHALLENGE_TTL = 300  # 5 minutes
 def _get_rp_id_and_origin():
     return settings.WEBAUTHN_RP_ID, settings.WEBAUTHN_RP_ORIGIN
 
+from core.permissions import IsSiteAdmin
+
 from .serializers import (
+    AdminUserSerializer,
+    AdminUserUpdateSerializer,
     ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
     ProfilePictureSerializer,
@@ -467,3 +471,68 @@ class PasskeyCredentialDetailView(APIView):
 
         cred.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class TokenReissueView(APIView):
+    """Mint a fresh token pair for the already-authenticated user.
+
+    The frontend renders identity - the display name, and whether the Admin link
+    appears - straight from the access token's claims, and SimpleJWT copies those
+    from the **refresh** token, so they are frozen for its whole 7-day life.
+    Without this, an account granted `is_admin` would not see the CMS until it
+    expired, and a renamed user would keep the old name in the navbar.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        token = CustomTokenObtainPairSerializer.get_token(request.user)
+        return Response({'access': str(token.access_token), 'refresh': str(token)})
+
+
+# ── CMS user management ───────────────────────────────────────────────────────
+
+class AdminUserListView(APIView):
+    """GET /api/auth/admin/users/ - every account on this site.
+
+    Single-tenant, so there is no system to scope by: an administrator sees the
+    whole user table. See `AdminUserSerializer` for how narrow that view is.
+    """
+
+    permission_classes = [IsSiteAdmin]
+
+    def get(self, request):
+        qs = User.objects.select_related('profile').order_by('email')
+        return Response(AdminUserSerializer(qs, many=True, context={'request': request}).data)
+
+
+class AdminUserDetailView(APIView):
+    """GET/PATCH one account: read it, or toggle its `is_admin` / `is_active`."""
+
+    permission_classes = [IsSiteAdmin]
+
+    def _get(self, pk):
+        return User.objects.select_related('profile').filter(pk=pk).first()
+
+    def get(self, request, pk):
+        user = self._get(pk)
+        if user is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(AdminUserSerializer(user, context={'request': request}).data)
+
+    def patch(self, request, pk):
+        user = self._get(pk)
+        if user is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        # Locking yourself out is one click away otherwise, and there is no
+        # second administrator to undo it from the CMS - only Django.
+        if user.pk == request.user.pk and request.data.get('is_admin') is False:
+            return Response(
+                {'detail': 'You cannot remove your own administrator access.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer = AdminUserUpdateSerializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        user.refresh_from_db()
+        return Response(AdminUserSerializer(user, context={'request': request}).data)

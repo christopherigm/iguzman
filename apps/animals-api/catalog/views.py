@@ -1,13 +1,14 @@
-from django.core.cache import cache
 from django.db.models import Count, Q
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.views import CACHE_TTL, CachedDetailView, CachedListCreateView
-from core.permissions import IsStaffUser
+from core.cache import cached_get, cached_set, invalidate
+from core.views import CachedDetailView, CachedListCreateView
+from core.permissions import IsSiteAdmin
 
+from . import cache_keys as keys
 from .models import (
     KIND_CHOICES,
     Category,
@@ -54,8 +55,7 @@ class KindListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        cache_key = 'catalog:kinds'
-        cached = cache.get(cache_key)
+        cached = cached_get(keys.KINDS)
         if cached is not None:
             return Response(cached)
 
@@ -79,7 +79,7 @@ class KindListView(APIView):
             }
             for value, label in KIND_CHOICES
         ]
-        cache.set(cache_key, data, CACHE_TTL)
+        cached_set(keys.KINDS, data)
         return Response(data)
 
 
@@ -98,8 +98,8 @@ class CategoryListCreateView(CachedListCreateView):
     model = Category
     serializer_class = CategorySerializer
     write_serializer_class = CategoryWriteSerializer
-    list_cache_prefix = 'catalog:categories'
-    detail_cache_prefix = 'catalog:category'
+    list_cache_prefix = keys.CATEGORIES
+    detail_cache_prefix = keys.CATEGORY
 
     def filter_queryset(self, qs, request):
         kind = request.query_params.get('kind')
@@ -128,8 +128,8 @@ class CategoryDetailView(CachedDetailView):
     model = Category
     serializer_class = CategorySerializer
     write_serializer_class = CategoryWriteSerializer
-    list_cache_prefix = 'catalog:categories'
-    detail_cache_prefix = 'catalog:category'
+    list_cache_prefix = keys.CATEGORIES
+    detail_cache_prefix = keys.CATEGORY
 
 
 # ---------------------------------------------------------------------------
@@ -148,8 +148,8 @@ class SpeciesListCreateView(CachedListCreateView):
     model = Species
     serializer_class = SpeciesSerializer
     write_serializer_class = SpeciesWriteSerializer
-    list_cache_prefix = 'catalog:species_list'
-    detail_cache_prefix = 'catalog:species'
+    list_cache_prefix = keys.SPECIES_LIST
+    detail_cache_prefix = keys.SPECIES
     select_related = ('category',)
     prefetch_related = ('images', 'sightings')
 
@@ -187,8 +187,8 @@ class SpeciesDetailView(CachedDetailView):
     model = Species
     serializer_class = SpeciesSerializer
     write_serializer_class = SpeciesWriteSerializer
-    list_cache_prefix = 'catalog:species_list'
-    detail_cache_prefix = 'catalog:species'
+    list_cache_prefix = keys.SPECIES_LIST
+    detail_cache_prefix = keys.SPECIES
     select_related = ('category',)
     prefetch_related = ('images', 'sightings')
 
@@ -202,7 +202,7 @@ class SpeciesImageListCreateView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsStaffUser()]
+        return [IsSiteAdmin()]
 
     def _get_species(self, pk):
         return Species.objects.filter(pk=pk).first()
@@ -237,7 +237,7 @@ class SpeciesImageDetailView(APIView):
     DELETE /api/catalog/species/<pk>/images/<img_pk>/ - remove it (staff).
     """
 
-    permission_classes = [IsStaffUser]
+    permission_classes = [IsSiteAdmin]
 
     def _get_image(self, pk, img_pk):
         return SpeciesImage.objects.filter(pk=img_pk, species_id=pk).first()
@@ -265,12 +265,13 @@ class SpeciesImageDetailView(APIView):
 
 
 def _invalidate_species(species):
-    """Clear the caches that embed a species' gallery."""
-    from core.cache import invalidate_pattern
+    """Clear the caches that embed a species' gallery.
 
-    cache.delete(f'catalog:species:{species.pk}')
-    cache.delete(f'catalog:species:slug:{species.slug}')
-    invalidate_pattern('catalog:species_list:*')
+    Redundant with ``catalog.signals.invalidate_on_species_image_change`` for the
+    two paths that save a ``SpeciesImage`` row; kept because the PATCH here also
+    writes fields through ``setattr`` + ``save()`` and a future branch might not.
+    """
+    invalidate(keys.SPECIES_LIST, keys.SPECIES)
 
 
 # ---------------------------------------------------------------------------
@@ -283,8 +284,8 @@ class SeasonListCreateView(CachedListCreateView):
     model = Season
     serializer_class = SeasonSerializer
     write_serializer_class = SeasonWriteSerializer
-    list_cache_prefix = 'catalog:seasons'
-    detail_cache_prefix = 'catalog:season'
+    list_cache_prefix = keys.SEASONS
+    detail_cache_prefix = keys.SEASON
     prefetch_related = ('sightings',)
 
     def filter_queryset(self, qs, request):
@@ -296,8 +297,8 @@ class SeasonDetailView(CachedDetailView):
     model = Season
     serializer_class = SeasonSerializer
     write_serializer_class = SeasonWriteSerializer
-    list_cache_prefix = 'catalog:seasons'
-    detail_cache_prefix = 'catalog:season'
+    list_cache_prefix = keys.SEASONS
+    detail_cache_prefix = keys.SEASON
     prefetch_related = ('sightings',)
 
 
@@ -311,8 +312,8 @@ class WeatherConditionListCreateView(CachedListCreateView):
     model = WeatherCondition
     serializer_class = WeatherConditionSerializer
     write_serializer_class = WeatherConditionWriteSerializer
-    list_cache_prefix = 'catalog:weather_conditions'
-    detail_cache_prefix = 'catalog:weather_condition'
+    list_cache_prefix = keys.WEATHER_CONDITIONS
+    detail_cache_prefix = keys.WEATHER_CONDITION
     prefetch_related = ('sightings',)
 
     def filter_queryset(self, qs, request):
@@ -324,8 +325,8 @@ class WeatherConditionDetailView(CachedDetailView):
     model = WeatherCondition
     serializer_class = WeatherConditionSerializer
     write_serializer_class = WeatherConditionWriteSerializer
-    list_cache_prefix = 'catalog:weather_conditions'
-    detail_cache_prefix = 'catalog:weather_condition'
+    list_cache_prefix = keys.WEATHER_CONDITIONS
+    detail_cache_prefix = keys.WEATHER_CONDITION
     prefetch_related = ('sightings',)
 
 
@@ -345,8 +346,8 @@ class LocationListCreateView(CachedListCreateView):
     model = Location
     serializer_class = LocationSerializer
     write_serializer_class = LocationWriteSerializer
-    list_cache_prefix = 'catalog:locations'
-    detail_cache_prefix = 'catalog:location'
+    list_cache_prefix = keys.LOCATIONS
+    detail_cache_prefix = keys.LOCATION
     select_related = ('parent',)
     prefetch_related = ('sightings',)
 
@@ -383,7 +384,7 @@ class LocationDetailView(CachedDetailView):
     model = Location
     serializer_class = LocationSerializer
     write_serializer_class = LocationWriteSerializer
-    list_cache_prefix = 'catalog:locations'
-    detail_cache_prefix = 'catalog:location'
+    list_cache_prefix = keys.LOCATIONS
+    detail_cache_prefix = keys.LOCATION
     select_related = ('parent',)
     prefetch_related = ('sightings',)

@@ -15,7 +15,7 @@ POST /api/ai/research/   draft a whole catalog record from live web sources
 
 Three rules that apply to all of them:
 
-* **Staff only** (`IsStaffUser`), unlike every read endpoint in this project.
+* **Admins only** (`IsSiteAdmin`), unlike every read endpoint in this project.
   These spend money on a provider and write copy that will be published under
   the journal's name.
 * **A missing provider key is a 503**, checked *before* any response is opened -
@@ -42,7 +42,7 @@ from .ai_serializers import (
     AiResearchSerializer,
     AiTranslateSerializer,
 )
-from .permissions import IsStaffUser
+from .permissions import IsSiteAdmin
 from .services import llm
 from .services.authoring import generate_copy, translate_fields
 
@@ -58,7 +58,7 @@ def _sse_data(payload: dict) -> str:
 class _AiView(APIView):
     """Shared permission and the not-configured guard."""
 
-    permission_classes = [IsStaffUser]
+    permission_classes = [IsSiteAdmin]
 
     def unconfigured(self):
         """A 503 when no provider key is set, else None."""

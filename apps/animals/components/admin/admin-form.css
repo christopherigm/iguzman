@@ -1,0 +1,118 @@
+/* <form> element - not a @repo/ui component. */
+.af__form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Two-column responsive field grid. Kept in CSS because the column count
+   collapses to one at the xs breakpoint via @media, and grid-template-columns /
+   grid-column placement have no component-prop equivalent. */
+.af__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+/* Grid items default to min-width: auto, which refuses to shrink below their
+   content's intrinsic width - a single nowrap child (e.g. the payments webhook
+   URL) then forces the whole grid past the viewport and bleeds out on mobile.
+   min-width: 0 lets items shrink so inner overflow-x boxes scroll instead. */
+.af__grid > * {
+  min-width: 0;
+}
+
+.af__field--full {
+  grid-column: 1 / -1;
+}
+
+/* Paired ES/EN textarea: full width until md, then one column each so the two
+   languages sit side by side. */
+.af__field--pair {
+  grid-column: 1 / -1;
+}
+
+@media (--md) {
+  /* md */
+  .af__field--pair {
+    grid-column: auto;
+  }
+}
+
+/* ── Enhance / translate icon button ─────────────────────────────────────────
+   `Button unstyled` icon toggle; the hover tint, active tint and busy opacity
+   are state-driven and must be reachable by CSS selectors. */
+.af__enhance-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    opacity 150ms ease;
+}
+
+.af__enhance-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--foreground, #171717) 8%, transparent);
+}
+
+.af__enhance-btn--active {
+  background: color-mix(in srgb, var(--accent, #06b6d4) 12%, transparent);
+}
+
+.af__enhance-btn--busy {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Native <label> - not a @repo/ui component. */
+.af__label {
+  font-size: 0.875rem; /* h6 / 14px */
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* Native <input type="color"> - not a @repo/ui component. */
+.af__color-input {
+  width: 40px;
+  height: 38px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  border-radius: 8px;
+  padding: 2px;
+  cursor: pointer;
+  background: none;
+  flex-shrink: 0;
+}
+
+/* Enhance-options modal body - a plain <div> inside ConfirmationModal. */
+.af__enhance-options {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0;
+}
+
+/* Disabled slug field - dims the TextInput's own rendered DOM (component
+   internals), so these must be global selectors, not component props. */
+.ui-text-input-wrapper:has(.ui-text-input:disabled) {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+.ui-text-input:disabled {
+  cursor: not-allowed;
+}
+
+@media (--below-sm) {
+  /* xs */
+  .af__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .af__field--full {
+    grid-column: 1;
+  }
+}

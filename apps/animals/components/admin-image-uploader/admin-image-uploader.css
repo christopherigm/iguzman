@@ -1,0 +1,124 @@
+/* Drop zone - a native <div> (role="button"); the hover/active border+background
+   swap must live in CSS. */
+.aiu__dropzone {
+  border: 2px dashed color-mix(in srgb, var(--foreground) 20%, transparent);
+  border-radius: 8px;
+  padding: 32px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+  position: relative;
+  text-align: center;
+}
+
+.aiu__dropzone:hover,
+.aiu__dropzone--active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+/* Square variant for uploaders laid out side by side in a grid, so an empty
+   cell matches the aspect of the thumbnail that replaces it once filled. */
+.aiu__dropzone--compact {
+  aspect-ratio: 1;
+  justify-content: center;
+  padding: 8px;
+  gap: 4px;
+}
+
+.aiu__dropzone-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.aiu__dropzone--compact .aiu__dropzone-icon {
+  font-size: 24px;
+}
+
+/* Native file <input> - visually hidden, covers the dropzone. */
+.aiu__input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  pointer-events: none;
+}
+
+/* Responsive thumbnail grid - auto-fill minmax + a breakpoint override have no
+   component-prop equivalent, so the grid stays in CSS. */
+.aiu__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+}
+
+/* Draggable thumbnail - a native <div>; the drag/over/active visual states are
+   toggled by runtime classes and :active. */
+.aiu__thumb {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: grab;
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  transition:
+    transform 0.15s,
+    opacity 0.15s,
+    box-shadow 0.15s;
+  border: 2px solid transparent;
+}
+
+.aiu__thumb:active {
+  cursor: grabbing;
+}
+
+.aiu__thumb--dragging {
+  opacity: 0.4;
+  transform: scale(0.95);
+}
+
+.aiu__thumb--over {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* Overlay revealed on thumbnail hover - opacity/transition + the parent-hover
+   selector require CSS; its flex layout is passed as Box props. */
+.aiu__thumb-overlay {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.4) 0%,
+    transparent 50%
+  );
+}
+
+.aiu__thumb:hover .aiu__thumb-overlay {
+  opacity: 1;
+}
+
+.aiu__thumb-drag-handle {
+  color: white;
+  font-size: 16px;
+  cursor: grab;
+  padding: 2px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+@media (--sm) {
+  /* sm */
+  .aiu__grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+}

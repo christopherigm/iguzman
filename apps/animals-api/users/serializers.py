@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from core.permissions import is_site_admin
 from core.serializers import ImageProcessingSerializer
 from .models import UserProfile
 
@@ -154,6 +155,20 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def get_token(cls, user):
         token = super().get_token(user)
         token['email'] = user.email
+        # What `@repo/auth`'s `sessionFromClaims` reads to render identity in the
+        # first HTML - the navbar's display name and the Admin link. Without the
+        # name pair the navbar would fall back to the email address; without the
+        # two flags `useSession()?.isAdmin` is always false and the CMS is
+        # unreachable even for an author who has the flag in the database.
+        token['first_name'] = user.first_name
+        token['last_name'] = user.last_name
+        # Django staff are implicitly site admins (see core.permissions), so the
+        # claim the frontend gates on says the same thing the API enforces.
+        token['is_admin'] = is_site_admin(user)
+        # Kept separate because they are different things: `is_staff` opens the
+        # Django admin on this backend and gates operator-only CMS controls,
+        # `is_admin` only opens the CMS.
+        token['is_staff'] = bool(user.is_staff)
         return token
 
 
@@ -171,10 +186,14 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
     profile_picture = serializers.SerializerMethodField()
+    is_admin = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'first_name', 'last_name', 'profile_picture')
+        fields = ('id', 'email', 'first_name', 'last_name', 'profile_picture', 'is_admin')
+
+    def get_is_admin(self, obj):
+        return is_site_admin(obj)
 
     def get_profile_picture(self, obj):
         try:
@@ -197,6 +216,53 @@ class ProfilePictureSerializer(ImageProcessingSerializer):
         self.save_to_field(profile.profile_picture, f'{uuid.uuid4().hex}.jpg')
         profile.save(update_fields=['profile_picture'])
         return profile
+
+
+# ── CMS user management ───────────────────────────────────────────────────────
+#
+# What `/admin/users` in the Next.js CMS reads and writes. Deliberately narrow:
+# an administrator may see who has an account and grant or revoke the CMS flag,
+# and nothing else. Passwords are never readable or writable here (an account's
+# owner resets their own), and `is_staff` is not exposed at all - handing out a
+# Django admin login is an operator action, done in Django.
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    is_admin = serializers.SerializerMethodField()
+    is_staff = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = (
+            'id', 'email', 'first_name', 'last_name',
+            'is_active', 'date_joined', 'last_login',
+            'is_admin', 'is_staff',
+        )
+        read_only_fields = fields
+
+    def get_is_admin(self, obj):
+        return is_site_admin(obj)
+
+
+class AdminUserUpdateSerializer(serializers.Serializer):
+    """Toggle the two flags the CMS is allowed to change.
+
+    `is_admin` writes ``UserProfile.is_admin``, never ``User.is_staff`` - a staff
+    account reads as an admin through `is_site_admin` but the CMS must not be
+    able to mint one.
+    """
+
+    is_admin = serializers.BooleanField(required=False)
+    is_active = serializers.BooleanField(required=False)
+
+    def update(self, instance, validated_data):
+        if 'is_active' in validated_data:
+            instance.is_active = validated_data['is_active']
+            instance.save(update_fields=['is_active'])
+        if 'is_admin' in validated_data:
+            profile, _ = UserProfile.objects.get_or_create(user=instance)
+            profile.is_admin = validated_data['is_admin']
+            profile.save(update_fields=['is_admin'])
+        return instance
 
 
 # ── Passkey serializers ───────────────────────────────────────────────────────

@@ -10,28 +10,40 @@ overrides ``filter_queryset`` when it has query params of its own.
 The contract every subclass inherits (see also website-api's CLAUDE.md
 "Caching Rule", which these implement):
 
-* **GET is public, writes are staff-only.** Nothing here is per-user, which is
+* **GET is public, writes are admin-only.** Nothing here is per-user, which is
   what makes a single shared cache entry per key correct.
 * **A list response is cached under a key derived from its query params plus the
   resolved disabled-visibility** - never the raw ``include_disabled`` param, or a
   staff response containing unpublished drafts would be replayed to the public.
-* **A write invalidates its own list namespace and its own detail keys**, by pk
-  and by slug (both the old and the new one, since a write may change it).
-  Cross-model staleness is not this file's job - that lives in each app's
-  ``signals.py``.
+* **A write invalidates its own list namespace and its own detail keys.**
+  Note this covers only writes that came through *this view*; the authoring
+  surface here is the Django admin, whose saves never reach it. The receivers in
+  each app's ``signals.py`` are what actually keep the cache honest - they cover
+  the admin, cascades and the shell as well - and they clear the same namespaces,
+  so what happens here is deliberate belt-and-braces for a model that has no
+  receivers yet.
+* **Nothing is cached at all when ``API_CACHE_ENABLED`` is off** (the development
+  default) - every read goes through ``core.cache.cached_get``/``cached_set``,
+  never ``cache`` directly, which is what makes that switch total.
 """
 
-from django.core.cache import cache
 from django.db.models import ProtectedError
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .cache import invalidate_pattern
-from .permissions import IsStaffUser, show_disabled
+from .cache import CACHE_TTL, cached_get, cached_set, invalidate
+from .permissions import IsSiteAdmin, show_disabled
 
-CACHE_TTL = 300  # 5 minutes
+__all__ = [
+    'CACHE_TTL',
+    'CachedDetailView',
+    'CachedListCreateView',
+    'CachedViewMixin',
+    'MAX_PAGE_SIZE',
+    'list_key',
+]
 
 # Cap on how many rows one paginated request may ask for, so a `?limit=100000`
 # cannot turn a feed endpoint into a full-table serialize.
@@ -58,7 +70,7 @@ class CachedViewMixin:
     def get_permissions(self):
         if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
             return [AllowAny()]
-        return [IsStaffUser()]
+        return [IsSiteAdmin()]
 
     def base_queryset(self):
         qs = self.model.objects.all()
@@ -69,23 +81,15 @@ class CachedViewMixin:
         return qs
 
     def invalidate_detail(self, instance=None, pk=None, slug=None):
-        prefix = self.detail_cache_prefix
-        if not prefix:
-            return
-        pk = pk if pk is not None else getattr(instance, 'pk', None)
-        slug = slug if slug is not None else getattr(instance, 'slug', None)
-        if pk is not None:
-            cache.delete(f'{prefix}:{pk}')
-        if slug:
-            cache.delete(f'{prefix}:slug:{slug}')
-        # Catches any key the two explicit deletes missed - most importantly the
-        # entry under a *previous* slug when this write renamed the row.
-        invalidate_pattern(f'{prefix}:*')
+        # The whole namespace, not the one pk/slug this write touched: a PATCH
+        # can *rename* a row, and the entry under its previous slug would
+        # otherwise outlive it. The arguments are kept for call-site clarity.
+        if self.detail_cache_prefix:
+            invalidate(self.detail_cache_prefix)
 
     def invalidate_list(self):
         if self.list_cache_prefix:
-            invalidate_pattern(f'{self.list_cache_prefix}:*')
-            cache.delete(self.list_cache_prefix)  # the no-query-params key
+            invalidate(self.list_cache_prefix)
 
 
 class CachedListCreateView(CachedViewMixin, APIView):
@@ -109,7 +113,7 @@ class CachedListCreateView(CachedViewMixin, APIView):
             params['include_disabled'] = '1'
         cache_key = list_key(self.list_cache_prefix, params)
 
-        cached = cache.get(cache_key)
+        cached = cached_get(cache_key)
         if cached is not None:
             return Response(cached)
 
@@ -123,7 +127,7 @@ class CachedListCreateView(CachedViewMixin, APIView):
         else:
             data = self.serializer_class(qs, many=True, context={'request': request}).data
 
-        cache.set(cache_key, data, CACHE_TTL)
+        cached_set(cache_key, data)
         return Response(data)
 
     def _paginated(self, qs, request):
@@ -183,7 +187,7 @@ class CachedDetailView(CachedViewMixin, APIView):
 
     def get(self, request, pk=None, slug=None):
         cache_key = self._cache_key(pk, slug)
-        cached = cache.get(cache_key)
+        cached = cached_get(cache_key)
         if cached is not None:
             return Response(cached)
 
@@ -197,7 +201,7 @@ class CachedDetailView(CachedViewMixin, APIView):
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         data = self.serializer_class(instance, context={'request': request}).data
-        cache.set(cache_key, data, CACHE_TTL)
+        cached_set(cache_key, data)
         return Response(data)
 
     def patch(self, request, pk=None, slug=None):

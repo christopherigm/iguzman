@@ -1,18 +1,48 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
 
-html, body {
+/* The two font variables are set on <body> by the locale layout, from the
+   site's own `font_display` / `font_body`. Both are unset until someone fills
+   them in, so the Roboto import above remains the default and nothing changed
+   appearance when these landed. */
+html,
+body {
   max-width: 100vw;
   overflow-x: hidden;
-  font-family: 'Roboto', sans-serif;
+  font-family: var(--font-body, 'Roboto'), sans-serif;
   font-optical-sizing: auto;
   font-style: normal;
 }
 
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display, var(--font-body, 'Roboto')), sans-serif;
+}
+
+/* The page background is published as **two** variables and picked per theme
+   here, never resolved to one colour on the server: an inline `background`
+   would be whatever the server chose and would go stale the moment the visitor
+   toggles the theme. `--surface-2` is the palette default, so a site that has
+   not set either keeps exactly the background it had. */
 body {
   color: var(--foreground);
-  background: var(--surface-2);
+  background: var(--page-background-light, var(--surface-2));
   touch-action: pan-x pan-y;
 }
 
-* { box-sizing: border-box; padding: 0; margin: 0; }
-a { color: inherit; text-decoration: none; }
+[data-theme='dark'] body {
+  background: var(--page-background-dark, var(--surface-2));
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}

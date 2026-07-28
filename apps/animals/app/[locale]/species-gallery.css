@@ -1,0 +1,9 @@
+/* `.species-gallery__swiper` is a Swiper root, not a `@repo/ui` component, so
+   its box can only be reached through this selector - the props-first rule does
+   not apply to it. Swiper sizes its slides from the root, so the root and every
+   slide have to be told to fill the hero-height wrapper explicitly. */
+.species-gallery__swiper,
+.species-gallery__swiper .swiper-slide {
+  width: 100%;
+  height: 100%;
+}

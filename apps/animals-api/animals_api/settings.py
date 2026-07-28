@@ -241,6 +241,20 @@ else:
         }
     }
 
+# Whether API responses are cached at all. **Off in development**: the Django
+# admin is this project's CMS, and a five-minute stale list after uploading an
+# image reads exactly like a lost write. On everywhere else - production serves a
+# public journal from Redis, where the cache is the point.
+#
+# This is a switch on the *response* layer (see core/cache.py), not on CACHES
+# itself, deliberately: the cache also holds WebAuthn challenges mid-ceremony and
+# (on Redis) sessions, so a DummyCache backend would break passkeys on a laptop.
+#
+# Set API_CACHE_ENABLED=True locally to exercise the production path.
+API_CACHE_ENABLED = os.environ.get(
+    'API_CACHE_ENABLED', 'False' if DEBUG else 'True'
+) == 'True'
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
