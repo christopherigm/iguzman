@@ -12,23 +12,35 @@ from . import cache_keys as keys
 from .models import (
     KIND_CHOICES,
     Category,
+    CategoryImage,
     Location,
+    LocationImage,
     Season,
+    SeasonImage,
     Species,
     SpeciesImage,
     WeatherCondition,
+    WeatherConditionImage,
 )
 from .serializers import (
+    CategoryImageSerializer,
+    CategoryImageWriteSerializer,
     CategorySerializer,
     CategoryWriteSerializer,
+    LocationImageSerializer,
+    LocationImageWriteSerializer,
     LocationSerializer,
     LocationWriteSerializer,
+    SeasonImageSerializer,
+    SeasonImageWriteSerializer,
     SeasonSerializer,
     SeasonWriteSerializer,
     SpeciesImageSerializer,
     SpeciesImageWriteSerializer,
     SpeciesSerializer,
     SpeciesWriteSerializer,
+    WeatherConditionImageSerializer,
+    WeatherConditionImageWriteSerializer,
     WeatherConditionSerializer,
     WeatherConditionWriteSerializer,
 )
@@ -100,6 +112,7 @@ class CategoryListCreateView(CachedListCreateView):
     write_serializer_class = CategoryWriteSerializer
     list_cache_prefix = keys.CATEGORIES
     detail_cache_prefix = keys.CATEGORY
+    prefetch_related = ('images', 'species')
 
     def filter_queryset(self, qs, request):
         kind = request.query_params.get('kind')
@@ -130,6 +143,7 @@ class CategoryDetailView(CachedDetailView):
     write_serializer_class = CategoryWriteSerializer
     list_cache_prefix = keys.CATEGORIES
     detail_cache_prefix = keys.CATEGORY
+    prefetch_related = ('images', 'species')
 
 
 # ---------------------------------------------------------------------------
@@ -193,85 +207,189 @@ class SpeciesDetailView(CachedDetailView):
     prefetch_related = ('images', 'sightings')
 
 
-class SpeciesImageListCreateView(APIView):
+# ---------------------------------------------------------------------------
+# Galleries - one pair of views, four parents
+# ---------------------------------------------------------------------------
+#
+# Category, Species, Season, WeatherCondition and Location each own a photo table
+# with the same columns and the same two endpoints (see
+# ``catalog.models.GalleryImage``). A subclass names its parent model, its two
+# serializers and the cache namespaces its parent's payload lives in; nothing
+# else differs, so spelling these out five times would only be five places for
+# the permission rule to drift.
+#
+# The order of the rows is load-bearing here, not cosmetic: **the first one is the
+# record's main image** (``core.serializers.gallery_image_url``), which is why the
+# CMS PATCHes `sort_order` on every row after a re-arrange.
+
+class GalleryImageListCreateView(APIView):
     """
-    GET  /api/catalog/species/<pk>/images/ - list a species' reference photos.
-    POST /api/catalog/species/<pk>/images/ - add one (staff only, base64).
+    GET  /api/catalog/<parent>/<pk>/images/ - list a record's photos (public).
+    POST /api/catalog/<parent>/<pk>/images/ - add one (admin only, base64).
     """
+
+    parent_model = None
+    parent_field = ''
+    serializer_class = None
+    write_serializer_class = None
+    # The namespaces whose payloads embed this gallery: its own list and detail.
+    cache_prefixes = ()
 
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
         return [IsSiteAdmin()]
 
-    def _get_species(self, pk):
-        return Species.objects.filter(pk=pk).first()
+    def _get_parent(self, pk):
+        return self.parent_model.objects.filter(pk=pk).first()
 
     def get(self, request, pk):
-        species = self._get_species(pk)
-        if species is None:
+        parent = self._get_parent(pk)
+        if parent is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        serializer = SpeciesImageSerializer(
-            species.images.all(), many=True, context={'request': request}
+        serializer = self.serializer_class(
+            parent.images.all(), many=True, context={'request': request}
         )
         return Response(serializer.data)
 
     def post(self, request, pk):
-        species = self._get_species(pk)
-        if species is None:
+        parent = self._get_parent(pk)
+        if parent is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        serializer = SpeciesImageWriteSerializer(data=request.data)
+        serializer = self.write_serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        image = serializer.save(species)
-        # The species payload embeds its gallery, so its caches are now stale.
-        _invalidate_species(species)
+        image = serializer.save(parent)
+        # The parent's payload embeds its gallery *and* takes its cover from the
+        # first row, so both of its namespaces are now stale.
+        invalidate(*self.cache_prefixes)
         return Response(
-            SpeciesImageSerializer(image, context={'request': request}).data,
+            self.serializer_class(image, context={'request': request}).data,
             status=status.HTTP_201_CREATED,
         )
 
 
-class SpeciesImageDetailView(APIView):
+class GalleryImageDetailView(APIView):
     """
-    PATCH  /api/catalog/species/<pk>/images/<img_pk>/ - caption/order (staff).
-    DELETE /api/catalog/species/<pk>/images/<img_pk>/ - remove it (staff).
+    PATCH  .../images/<img_pk>/ - caption / order / fit (admin only).
+    DELETE .../images/<img_pk>/ - remove it (admin only).
+
+    The binary is deliberately not replaceable: swapping the file behind a row
+    would orphan the previous object in the bucket. Delete the row and add one.
     """
 
     permission_classes = [IsSiteAdmin]
 
+    model = None
+    parent_field = ''
+    serializer_class = None
+    cache_prefixes = ()
+
+    # Everything a row carries except its image. `sort_order` is here because it
+    # is what the CMS writes to re-arrange a gallery - and therefore what decides
+    # which photo is the record's cover.
+    EDITABLE_FIELDS = (
+        'name', 'en_name', 'description', 'en_description',
+        'sort_order', 'enabled', 'fit', 'background_color',
+    )
+
     def _get_image(self, pk, img_pk):
-        return SpeciesImage.objects.filter(pk=img_pk, species_id=pk).first()
+        return self.model.objects.filter(
+            pk=img_pk, **{f'{self.parent_field}_id': pk}
+        ).first()
 
     def patch(self, request, pk, img_pk):
         image = self._get_image(pk, img_pk)
         if image is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        for field in ('name', 'en_name', 'description', 'en_description',
-                      'sort_order', 'enabled', 'fit', 'background_color'):
+        for field in self.EDITABLE_FIELDS:
             if field in request.data:
                 setattr(image, field, request.data[field])
         image.save()
-        _invalidate_species(image.species)
-        return Response(SpeciesImageSerializer(image, context={'request': request}).data)
+        invalidate(*self.cache_prefixes)
+        return Response(self.serializer_class(image, context={'request': request}).data)
 
     def delete(self, request, pk, img_pk):
         image = self._get_image(pk, img_pk)
         if image is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        species = image.species
         image.delete()
-        _invalidate_species(species)
+        invalidate(*self.cache_prefixes)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-def _invalidate_species(species):
-    """Clear the caches that embed a species' gallery.
+class CategoryImageListCreateView(GalleryImageListCreateView):
+    parent_model = Category
+    parent_field = 'category'
+    serializer_class = CategoryImageSerializer
+    write_serializer_class = CategoryImageWriteSerializer
+    cache_prefixes = (keys.CATEGORIES, keys.CATEGORY)
 
-    Redundant with ``catalog.signals.invalidate_on_species_image_change`` for the
-    two paths that save a ``SpeciesImage`` row; kept because the PATCH here also
-    writes fields through ``setattr`` + ``save()`` and a future branch might not.
-    """
-    invalidate(keys.SPECIES_LIST, keys.SPECIES)
+
+class CategoryImageDetailView(GalleryImageDetailView):
+    model = CategoryImage
+    parent_field = 'category'
+    serializer_class = CategoryImageSerializer
+    cache_prefixes = (keys.CATEGORIES, keys.CATEGORY)
+
+
+class SpeciesImageListCreateView(GalleryImageListCreateView):
+    parent_model = Species
+    parent_field = 'species'
+    serializer_class = SpeciesImageSerializer
+    write_serializer_class = SpeciesImageWriteSerializer
+    cache_prefixes = (keys.SPECIES_LIST, keys.SPECIES)
+
+
+class SpeciesImageDetailView(GalleryImageDetailView):
+    model = SpeciesImage
+    parent_field = 'species'
+    serializer_class = SpeciesImageSerializer
+    cache_prefixes = (keys.SPECIES_LIST, keys.SPECIES)
+
+
+class SeasonImageListCreateView(GalleryImageListCreateView):
+    parent_model = Season
+    parent_field = 'season'
+    serializer_class = SeasonImageSerializer
+    write_serializer_class = SeasonImageWriteSerializer
+    cache_prefixes = (keys.SEASONS, keys.SEASON)
+
+
+class SeasonImageDetailView(GalleryImageDetailView):
+    model = SeasonImage
+    parent_field = 'season'
+    serializer_class = SeasonImageSerializer
+    cache_prefixes = (keys.SEASONS, keys.SEASON)
+
+
+class WeatherConditionImageListCreateView(GalleryImageListCreateView):
+    parent_model = WeatherCondition
+    parent_field = 'weather_condition'
+    serializer_class = WeatherConditionImageSerializer
+    write_serializer_class = WeatherConditionImageWriteSerializer
+    cache_prefixes = (keys.WEATHER_CONDITIONS, keys.WEATHER_CONDITION)
+
+
+class WeatherConditionImageDetailView(GalleryImageDetailView):
+    model = WeatherConditionImage
+    parent_field = 'weather_condition'
+    serializer_class = WeatherConditionImageSerializer
+    cache_prefixes = (keys.WEATHER_CONDITIONS, keys.WEATHER_CONDITION)
+
+
+class LocationImageListCreateView(GalleryImageListCreateView):
+    parent_model = Location
+    parent_field = 'location'
+    serializer_class = LocationImageSerializer
+    write_serializer_class = LocationImageWriteSerializer
+    cache_prefixes = (keys.LOCATIONS, keys.LOCATION)
+
+
+class LocationImageDetailView(GalleryImageDetailView):
+    model = LocationImage
+    parent_field = 'location'
+    serializer_class = LocationImageSerializer
+    cache_prefixes = (keys.LOCATIONS, keys.LOCATION)
 
 
 # ---------------------------------------------------------------------------
@@ -286,7 +404,7 @@ class SeasonListCreateView(CachedListCreateView):
     write_serializer_class = SeasonWriteSerializer
     list_cache_prefix = keys.SEASONS
     detail_cache_prefix = keys.SEASON
-    prefetch_related = ('sightings',)
+    prefetch_related = ('sightings', 'images')
 
     def filter_queryset(self, qs, request):
         slug = request.query_params.get('slug')
@@ -299,7 +417,7 @@ class SeasonDetailView(CachedDetailView):
     write_serializer_class = SeasonWriteSerializer
     list_cache_prefix = keys.SEASONS
     detail_cache_prefix = keys.SEASON
-    prefetch_related = ('sightings',)
+    prefetch_related = ('sightings', 'images')
 
 
 # ---------------------------------------------------------------------------
@@ -314,7 +432,7 @@ class WeatherConditionListCreateView(CachedListCreateView):
     write_serializer_class = WeatherConditionWriteSerializer
     list_cache_prefix = keys.WEATHER_CONDITIONS
     detail_cache_prefix = keys.WEATHER_CONDITION
-    prefetch_related = ('sightings',)
+    prefetch_related = ('sightings', 'images')
 
     def filter_queryset(self, qs, request):
         slug = request.query_params.get('slug')
@@ -327,7 +445,7 @@ class WeatherConditionDetailView(CachedDetailView):
     write_serializer_class = WeatherConditionWriteSerializer
     list_cache_prefix = keys.WEATHER_CONDITIONS
     detail_cache_prefix = keys.WEATHER_CONDITION
-    prefetch_related = ('sightings',)
+    prefetch_related = ('sightings', 'images')
 
 
 # ---------------------------------------------------------------------------
@@ -349,7 +467,7 @@ class LocationListCreateView(CachedListCreateView):
     list_cache_prefix = keys.LOCATIONS
     detail_cache_prefix = keys.LOCATION
     select_related = ('parent',)
-    prefetch_related = ('sightings',)
+    prefetch_related = ('sightings', 'images')
 
     def filter_queryset(self, qs, request):
         parent = request.query_params.get('parent')
@@ -387,4 +505,4 @@ class LocationDetailView(CachedDetailView):
     list_cache_prefix = keys.LOCATIONS
     detail_cache_prefix = keys.LOCATION
     select_related = ('parent',)
-    prefetch_related = ('sightings',)
+    prefetch_related = ('sightings', 'images')

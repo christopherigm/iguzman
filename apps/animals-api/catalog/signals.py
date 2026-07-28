@@ -23,11 +23,22 @@ Two rules, in order:
 |                      | payload (``category_count``), sightings (same, flattened)       |
 | ``Species``          | categories (``species_count``), the kinds payload, sightings    |
 |                      | (embed ``species_name``/``species_image``)                      |
-| ``SpeciesImage``     | that species (its payload embeds the gallery)                   |
+| ``CategoryImage``    | that category (gallery + cover). Nothing else - no other        |
+|                      | payload carries a category's photo                             |
+| ``SpeciesImage``     | that species (payload embeds the gallery **and** takes its      |
+|                      | cover from the first row), sightings (``species_image``)        |
 | ``Season``           | sightings (embed ``season_name``/``slug``)                      |
+| ``SeasonImage``      | that season (gallery + cover)                                   |
 | ``WeatherCondition`` | sightings (embed ``weather_name``/``slug``)                     |
+| ``WeatherConditionImage`` | that weather condition (gallery + cover)                   |
 | ``Location``         | sightings (embed ``location_name``/``slug`` **and** fall back   |
 |                      | to its coordinates)                                             |
+| ``LocationImage``    | that location (gallery + cover)                                 |
+
+⚠ A ``*Image`` receiver is **not** only about the gallery list. Since the read
+serializers resolve a record's ``image`` to its first photo
+(``core.serializers.gallery_image_url``), adding, deleting or re-ordering one row
+can change the record's *cover* - so every card of it anywhere is stale too.
 
 ⚠ If you add a derived or flattened field to a serializer, add its receiver in
 the same task - otherwise the value is up to ``CACHE_TTL`` stale, which looks
@@ -41,7 +52,18 @@ from core.cache import invalidate
 from journal import cache_keys as journal_keys
 
 from . import cache_keys as keys
-from .models import Category, Location, Season, Species, SpeciesImage, WeatherCondition
+from .models import (
+    Category,
+    CategoryImage,
+    Location,
+    LocationImage,
+    Season,
+    SeasonImage,
+    Species,
+    SpeciesImage,
+    WeatherCondition,
+    WeatherConditionImage,
+)
 
 
 def _invalidate_sightings():
@@ -77,10 +99,39 @@ def invalidate_on_species_change(sender, instance, **kwargs):
     invalidate(keys.KINDS)
 
 
+@receiver(post_save, sender=CategoryImage)
+@receiver(post_delete, sender=CategoryImage)
+def invalidate_on_category_image_change(sender, instance, **kwargs):
+    # Only the category namespaces: no other payload carries a category's image
+    # (species and sightings flatten its name, slug and kind, but not its photo).
+    _invalidate_categories()
+
+
 @receiver(post_save, sender=SpeciesImage)
 @receiver(post_delete, sender=SpeciesImage)
 def invalidate_on_species_image_change(sender, instance, **kwargs):
     _invalidate_species()
+    # A gallery write can change the species' *cover* (the first row), and every
+    # sighting payload carries `species_image`.
+    _invalidate_sightings()
+
+
+@receiver(post_save, sender=SeasonImage)
+@receiver(post_delete, sender=SeasonImage)
+def invalidate_on_season_image_change(sender, instance, **kwargs):
+    invalidate(keys.SEASONS, keys.SEASON)
+
+
+@receiver(post_save, sender=WeatherConditionImage)
+@receiver(post_delete, sender=WeatherConditionImage)
+def invalidate_on_weather_image_change(sender, instance, **kwargs):
+    invalidate(keys.WEATHER_CONDITIONS, keys.WEATHER_CONDITION)
+
+
+@receiver(post_save, sender=LocationImage)
+@receiver(post_delete, sender=LocationImage)
+def invalidate_on_location_image_change(sender, instance, **kwargs):
+    invalidate(keys.LOCATIONS, keys.LOCATION)
 
 
 @receiver(post_save, sender=Season)

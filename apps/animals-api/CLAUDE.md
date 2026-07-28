@@ -42,8 +42,11 @@ There are now **two** authoring surfaces, and both are real product:
   processing + `Base64ImagesMixin`), `system_serializers.py`, `system_views.py`,
   `views.py` (the generic cached views), `backup.py` + `backup_views.py`, `cache.py`,
   `cache_keys.py`, `signals.py`, `fields.py`.
-- **`catalog`** - the reference data: `Category`, `Species`, `SpeciesImage`,
-  `Season`, `WeatherCondition`, `Location`.
+- **`catalog`** - the reference data: `Category`, `Species`, `Season`,
+  `WeatherCondition`, `Location`, plus a photo gallery per record
+  (`CategoryImage`, `SpeciesImage`, `SeasonImage`, `WeatherConditionImage`,
+  `LocationImage`, all from the abstract `GalleryImage` - see "The first photo is
+  the record's cover").
 - **`journal`** - the entries: `Sighting`, `SightingMedia`.
 - **`users`** - unchanged from the scaffold (JWT, passkeys, email verification).
 
@@ -149,6 +152,52 @@ translate what already exists.
   (temperature) keep the string form. A sighting with no coordinates of its own
   falls back to its location's, so `latitude`/`longitude` on a sighting payload
   are the *effective* values, not the stored column.
+
+## The first photo is the record's cover
+
+Every catalog record and every journal entry keeps its photographs in a **gallery
+table** - `CategoryImage`, `SpeciesImage`, `SeasonImage`, `WeatherConditionImage`,
+`LocationImage` (all five from the abstract `catalog.GalleryImage`) and
+`journal.SightingMedia` - ordered by `sort_order`, and **the first row is the
+record's main image**.
+
+`core.serializers.gallery_image_url` is the single place that resolves it: a
+record's own `image` column when it has one, and otherwise the first gallery row.
+Both halves matter.
+
+- **The CMS never writes the `image` column.** `apps/animals`' forms upload into
+  the gallery and PATCH `sort_order` on every row after a drag, so for anything
+  authored there the cover *is* `images[0]` - which is what "upload several at
+  once, the first is the main one" means. A record's `icon` stays a separate
+  single field: it is a 128 px glyph for a map pin or a filter chip, not a
+  photograph, and must never join the gallery.
+- **The column still wins when it is set**, because the Django admin and
+  `seed_reference` can set it and a cover chosen deliberately must not be
+  overruled by whatever happened to be uploaded first.
+- **`catalog.Location` has no `image` column at all** (it is not a picture
+  model), so there the first gallery row is the only cover there is. It did gain
+  an `icon`, which is the one image field it owns.
+
+Three consequences that are easy to miss:
+
+- **A `*Image` write can change the record's *cover*, not just its gallery.** So
+  its receiver in `signals.py` must clear the record's own list **and** detail
+  namespaces, plus anything that embeds a thumbnail of it - which is why a
+  `SpeciesImage` write also invalidates sightings (`species_image`).
+- **Every flattened thumbnail must go through the same helper.**
+  `SightingSerializer.species_image` does; a new one that reads `obj.x.image`
+  directly would render blank for every record authored in the CMS.
+- **A gallery table belongs in `MODEL_SPECS`.** Backup introspects fields but not
+  models, and an archive that skipped these would restore a catalog with no
+  pictures at all rather than merely fewer.
+
+`GalleryImageListCreateView` / `GalleryImageDetailView` in `catalog/views.py` are
+one pair of views subclassed per parent (model + serializers + cache prefixes);
+`GalleryImageSerializer` / `GalleryImageWriteSerializer` are the matching pair in
+`catalog/serializers.py` (declared above every record serializer, since each
+record embeds its own gallery). Adding a gallery to a sixth record is a model, two
+serializer subclasses, two view subclasses, two URLs, a receiver, a `MODEL_SPECS`
+line and an admin inline - and no new logic.
 
 ## Images ride in JSON, video does not
 
@@ -261,6 +310,7 @@ and `journal/signals.py` with a table at the top of each. The pairings that bite
 | `Species` | every category payload (`species_count`), the `/kinds/` nav, sightings |
 | `Sighting` | that species (`sighting_count`, `last_seen`), the season / weather / location lists (each carries `sighting_count`), and `/journal/stats/` |
 | `SightingMedia` | that sighting - its payload embeds the gallery, **and** its cover image falls back to the first photo |
+| `SeasonImage` / `WeatherConditionImage` / `LocationImage` | that record - same reason: the gallery *and* the cover |
 
 ⚠ **Add a derived or flattened field to a serializer and you must add its
 receiver in the same task.** A stale count looks exactly like a lost write.
@@ -445,7 +495,15 @@ GET    /api/journal/stats/                          landing-page headline number
 GET/PATCH/DELETE  .../<pk>/
 GET               .../slug/<slug>/
 
-POST/PATCH/DELETE /api/catalog/species/<pk>/images/[<img_pk>/]
+# Photo galleries. GET is public like every other read; the first row is the
+# record's cover, so `sort_order` on the PATCH is what picks it.
+GET/POST          /api/catalog/categories/<pk>/images/[<img_pk>/]
+GET/POST          /api/catalog/species/<pk>/images/[<img_pk>/]
+GET/POST          /api/catalog/seasons/<pk>/images/[<img_pk>/]
+GET/POST          /api/catalog/weather-conditions/<pk>/images/[<img_pk>/]
+GET/POST          /api/catalog/locations/<pk>/images/[<img_pk>/]
+PATCH/DELETE      ...the same URLs with an <img_pk>                   admin only
+
 POST/PATCH/DELETE /api/journal/sightings/<pk>/media/[<media_pk>/]     JSON, image or link
 POST              /api/journal/sightings/<pk>/media/video/            multipart, video file
 

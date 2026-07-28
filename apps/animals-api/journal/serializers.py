@@ -9,6 +9,7 @@ from core.serializers import (
     Base64ImagesMixin,
     ImageProcessingSerializer,
     file_url,
+    gallery_image_url,
 )
 
 from .models import Sighting, SightingMedia, round_coordinate
@@ -275,9 +276,12 @@ class SightingSerializer(serializers.ModelSerializer):
         return file_url(photo.image, request) if photo else None
 
     def get_species_image(self, obj):
+        # Through the same fallback the species' own payload uses, or a species
+        # whose photos were all uploaded to its gallery would show a blank
+        # thumbnail on every entry that references it.
         if not obj.species_id:
             return None
-        return file_url(obj.species.image, self.context.get('request'))
+        return gallery_image_url(obj.species, self.context.get('request'))
 
     def get_media_count(self, obj):
         return len(obj.media.all())

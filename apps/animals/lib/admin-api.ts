@@ -123,53 +123,59 @@ export const sightings = {
 };
 
 // ---- Child collections ------------------------------------------------------
-// A species' extra reference photos, and a sighting's gallery. Both hang off
-// their parent's URL rather than having a collection of their own.
+// A record's photos and a sighting's media. Both hang off their parent's URL
+// rather than having a collection of their own.
 
-export const speciesImages = {
-  list: async (speciesId: number): Promise<Row[]> =>
-    parseResponse<Row[]>(await adminFetch(`/api/catalog/species/${speciesId}/images/`)),
-  create: async (speciesId: number, data: Row): Promise<Row> =>
-    parseResponse<Row>(
-      await adminFetch(`/api/catalog/species/${speciesId}/images/`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-    ),
-  update: async (speciesId: number, pk: number, data: Row): Promise<Row> =>
-    parseResponse<Row>(
-      await adminFetch(`/api/catalog/species/${speciesId}/images/${pk}/`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      }),
-    ),
-  remove: async (speciesId: number, pk: number): Promise<void> =>
-    parseResponse<void>(
-      await adminFetch(`/api/catalog/species/${speciesId}/images/${pk}/`, { method: 'DELETE' }),
-    ),
-};
+/**
+ * The four CRUD calls a child collection at `/api/<parent>/<pk>/<name>/` shares.
+ *
+ * Every gallery in this API has the same shape, so the same reason the parent
+ * resources go through `resource()` applies here - six hand-written copies of
+ * these bodies is six places for a path to drift.
+ */
+function childResource(parentPath: string, name = 'images') {
+  const base = (parentId: number) => `/api/${parentPath}/${parentId}/${name}/`;
+  return {
+    list: async (parentId: number): Promise<Row[]> =>
+      parseResponse<Row[]>(await adminFetch(base(parentId))),
+    create: async (parentId: number, data: Row): Promise<Row> =>
+      parseResponse<Row>(
+        await adminFetch(base(parentId), { method: 'POST', body: JSON.stringify(data) }),
+      ),
+    update: async (parentId: number, pk: number, data: Row): Promise<Row> =>
+      parseResponse<Row>(
+        await adminFetch(`${base(parentId)}${pk}/`, {
+          method: 'PATCH',
+          body: JSON.stringify(data),
+        }),
+      ),
+    remove: async (parentId: number, pk: number): Promise<void> =>
+      parseResponse<void>(await adminFetch(`${base(parentId)}${pk}/`, { method: 'DELETE' })),
+  };
+}
 
+export type ChildResource = ReturnType<typeof childResource>;
+
+/**
+ * The photo galleries. **Row order decides the record's main image** - the API
+ * publishes a record's `image` as its own column if set and otherwise the first
+ * of these, and the CMS never writes that column. So a re-arrange here is a
+ * cover change, which is why `EntityGallery` PATCHes `sort_order` on every row.
+ */
+export const categoryImages = childResource('catalog/categories');
+export const speciesImages = childResource('catalog/species');
+export const seasonImages = childResource('catalog/seasons');
+export const weatherImages = childResource('catalog/weather-conditions');
+export const locationImages = childResource('catalog/locations');
+
+/**
+ * A sighting's gallery: photos, uploaded clips and video links in one ordered
+ * list (a `SightingMedia` row carries a `kind`). The photo half is edited by the
+ * same `EntityGallery` every catalog record uses - `kind: 'image'` is the create
+ * default - and the first photo is the entry's cover.
+ */
 export const sightingMedia = {
-  list: async (sightingId: number): Promise<Row[]> =>
-    parseResponse<Row[]>(await adminFetch(`/api/journal/sightings/${sightingId}/media/`)),
-  create: async (sightingId: number, data: Row): Promise<Row> =>
-    parseResponse<Row>(
-      await adminFetch(`/api/journal/sightings/${sightingId}/media/`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-    ),
-  update: async (sightingId: number, pk: number, data: Row): Promise<Row> =>
-    parseResponse<Row>(
-      await adminFetch(`/api/journal/sightings/${sightingId}/media/${pk}/`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      }),
-    ),
-  remove: async (sightingId: number, pk: number): Promise<void> =>
-    parseResponse<void>(
-      await adminFetch(`/api/journal/sightings/${sightingId}/media/${pk}/`, { method: 'DELETE' }),
-    ),
+  ...childResource('journal/sightings', 'media'),
   /**
    * Upload a video file. **Not** through `adminFetch`: a video is far past the
    * API's 10 MB JSON-body limit, so it goes as multipart to its own endpoint,

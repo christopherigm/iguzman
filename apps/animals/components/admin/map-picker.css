@@ -1,0 +1,19 @@
+/* Only the states props cannot express: the rest of the picker is styled with
+   UIComponentProps on its Box / Button / Typography. */
+
+.mp__pin:active {
+  cursor: grabbing;
+}
+
+.mp__result {
+  transition: background-color 0.15s ease;
+}
+
+.mp__result:hover,
+.mp__result:focus-visible {
+  background-color: color-mix(in srgb, var(--accent, #06b6d4) 12%, transparent);
+}
+
+.mp__result + .mp__result {
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+}

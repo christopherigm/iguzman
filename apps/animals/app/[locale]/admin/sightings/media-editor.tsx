@@ -11,20 +11,16 @@ import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import { GalleryEditor } from '@/components/admin/gallery-editor';
 import { sightingMedia } from '@/lib/admin-api';
 
-type Kind = 'image' | 'link' | 'video';
+type Kind = 'link' | 'video';
 
 /**
- * A sighting's gallery: photos, video links, and uploaded clips, in one ordered
- * list.
+ * A sighting's **clips**: uploaded video files and video links.
  *
- * One list rather than three, because that is what the API stores - a
- * `SightingMedia` row carries a `kind`, so a clip can sit between two photos and
- * share the gallery's single `sort_order` sequence.
+ * The entry's photographs are not here - they are the multi-select uploader at
+ * the top of the form (`EntityGalleryField`), where the first one is the entry's
+ * cover. The two video kinds stay behind because neither can be handled the way
+ * a photo is:
  *
- * **The three kinds do not travel the same way**, which is the whole reason this
- * wraps `GalleryEditor` rather than using it directly:
- *
- * - an **image** is base64 in a JSON body, like every other image here;
  * - a **link** is just a URL, so there is no file to upload at all;
  * - a **video file** is far past the API's 10 MB JSON-body limit, so it goes as
  *   multipart to its own endpoint, which Django streams to a temp file. Three
@@ -32,10 +28,18 @@ type Kind = 'image' | 'link' | 'video';
  *   `MAX_VIDEO_UPLOAD_MB`, nginx's `proxy-body-size` and gunicorn's timeout) -
  *   nginx refuses an oversized body *before* Django sees it, so a file over the
  *   ceiling fails with an opaque 413 rather than a readable message.
+ *
+ * Both are still written **immediately**, one row at a time, rather than on Save
+ * like the photos - a streamed multipart upload has nowhere to wait in form
+ * state. Adding a clip and then abandoning the form leaves the clip attached.
+ *
+ * All three kinds share one table and one `sort_order` sequence, but the public
+ * entry page renders photos and clips as two separate sections, so the photo
+ * uploader renumbering its own rows cannot disturb what is listed here.
  */
 export function MediaEditor({ sightingId }: { sightingId: number }) {
   const t = useTranslations('Admin');
-  const [kind, setKind] = useState<Kind>('image');
+  const [kind, setKind] = useState<Kind>('link');
   const [url, setUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
@@ -64,17 +68,22 @@ export function MediaEditor({ sightingId }: { sightingId: number }) {
   return (
     <GalleryEditor
       key={reloadKey}
-      titleKey="mediaGallery"
-      introKey="mediaGalleryIntro"
-      list={() => sightingMedia.list(sightingId)}
+      titleKey="mediaClips"
+      introKey="mediaClipsIntro"
+      // The photos of this entry are edited by the uploader above, so they are
+      // filtered out here - listing them twice would invite an author to delete
+      // a row in one place and still see it in the other.
+      list={() =>
+        sightingMedia.list(sightingId).then((rows) => rows.filter((row) => row.kind !== 'image'))
+      }
       create={(data) => sightingMedia.create(sightingId, data)}
       update={(pk, data) => sightingMedia.update(sightingId, pk, data)}
       remove={(pk) => sightingMedia.remove(sightingId, pk)}
-      // A link row carries no image, so the shared uploader is hidden and the
-      // add button gates on the URL instead.
-      imageless={kind !== 'image'}
-      addDisabled={kind === 'video' || (kind === 'link' && url.trim() === '')}
-      createExtras={kind === 'link' ? { kind: 'link', url: url.trim() } : { kind: 'image' }}
+      // Neither kind carries a base64 image, so the shared uploader is hidden
+      // and the add button gates on the URL (a video has its own upload path).
+      imageless
+      addDisabled={kind === 'video' || url.trim() === ''}
+      createExtras={{ kind: 'link', url: url.trim() }}
     >
       <Box flexDirection="column" gap={12}>
         <Box maxWidth={260}>
@@ -87,7 +96,6 @@ export function MediaEditor({ sightingId }: { sightingId: number }) {
               setVideoError(null);
             }}
             options={[
-              { value: 'image', label: t('mediaKindImage') },
               { value: 'link', label: t('mediaKindLink') },
               { value: 'video', label: t('mediaKindVideo') },
             ]}

@@ -63,6 +63,8 @@ export interface Category extends CatalogRecord {
   kind: Kind;
   kind_display: string;
   scientific_name: string | null;
+  /** The category's own photographs - `catalog.CategoryImage`. */
+  images: CatalogImage[];
   is_featured: boolean;
   species_count: number;
 }
@@ -78,18 +80,26 @@ export interface Species extends CatalogRecord {
   family: string | null;
   video_link: string | null;
   /** The species' reference photos, embedded by the serializer. */
-  images: SpeciesImage[];
+  images: CatalogImage[];
   is_featured: boolean;
   sighting_count: number;
   last_seen: string | null;
 }
 
 /**
- * One additional reference photo of a species (a plumage variant, the underside
- * of a leaf) - `catalog.SpeciesImage`. Photos of one particular *encounter*
- * belong to that sighting instead, and live in `lib/journal.ts`.
+ * One photograph in a record's gallery - a `catalog.GalleryImage` row
+ * (`CategoryImage`, `SpeciesImage`, and the three the public site does not read
+ * yet). One shape for all of them, because the API declares one.
+ *
+ * ⚠ **The first row is the record's main image.** The API publishes `image` as
+ * the record's own column if it has one and otherwise `images[0]`, so a strip
+ * built from this list normally *contains the cover* and has to drop it - see
+ * `toGalleryPhotos` in the category and species pages.
+ *
+ * Photos of one particular *encounter* belong to that sighting instead, and live
+ * in `lib/journal.ts`.
  */
-export interface SpeciesImage {
+export interface CatalogImage {
   id: number;
   image: string | null;
   name: string | null;

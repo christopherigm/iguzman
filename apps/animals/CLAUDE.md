@@ -24,16 +24,25 @@ the category badge opens the branch, and the "See detail" button opens the entry
 Both hrefs are built in `sightings-section.tsx` - the server component that knows
 the locale - never in the client slider.
 
-Six things that will bite:
+Seven things that will bite:
 
-- **A category's gallery is aggregated, not stored.** `Category` owns exactly one
-  photograph (`image`, already the hero) plus its `icon` - there is no
-  `CategoryImage` table. The strip on a category page is therefore the union of
-  its species' photos (each cover shot, then that species' `SpeciesImage` rows),
-  built in the page's own `toGalleryPhotos` from the species list it already
-  fetched, so the gallery costs no extra request. **A species page's gallery is
-  the opposite** - real stored rows, and it deliberately *excludes* the cover,
-  which is the hero directly above it.
+- **A category's strip is its own photos *and then* its species'.** `Category`
+  owns a real gallery now (`CategoryImage`), and `toOwnPhotos` puts those first -
+  they are the shots an author chose for the group. `toGalleryPhotos` then
+  appends the union of its species' photos (each cover, then that species'
+  `SpeciesImage` rows), which is what makes the page a contact sheet of the whole
+  branch and a second, denser route into the records the grid below lists; it is
+  built from the species list the page already fetched, so it costs no extra
+  request. **A species page's gallery is only its own rows** - and it too drops
+  the cover, which is the hero directly above it.
+- ⚠ **All three strips drop the cover by URL equality, and they have to.** Every
+  record's photos live in a gallery whose *first row* the API publishes as
+  `image` (animals-api's CLAUDE.md → "The first photo is the record's cover"), so
+  the cover is normally one of the rows being iterated - and without
+  `photo.image === record.image` the strip would open with the hero repeated. A
+  cover set separately in the Django admin matches nothing and the whole strip is
+  kept, which is correct. The sighting page has always worked this way; the
+  species and category pages now do too.
 - **A sighting's gallery is one table with a `kind`, so the page splits it.**
   `SightingMedia` holds photos, uploaded clips and video links in one ordered
   list (they share a `sort_order` an author arranges). The page sends the photos
@@ -105,17 +114,53 @@ read as one system. Where it diverges, it is because this backend is different:
 - **No clone.** animals-api has no clone endpoint, so `AdminForm`'s clone dialog
   was removed on the way in rather than left as unreachable code.
 
-Three rules that will bite:
+Six rules that will bite:
 
 - **Every list read sends `?include_disabled=true`.** The CMS is where an author
   finds the draft they have not published yet. The API ignores the param for
   anyone who is not an administrator, so it cannot leak - but it does mean the
   list you see here is not the list the public site sees.
-- **A child collection saves immediately, not on Save.** The species gallery and
-  the sighting media list write one row at a time to the parent's own URL, so
-  adding a photo and then abandoning the form still leaves the photo attached.
-  `GalleryEditor` says so; don't "fix" it into form state without also giving
-  those rows somewhere to live before the parent exists.
+- **Photos are the gallery, and the first one is the record's main image.**
+  Categories, species, sightings, locations, seasons and weather conditions have
+  no single-cover uploader any more: `EntityGalleryField`
+  (`components/admin/entity-gallery.tsx`) takes several files at once, and the
+  API publishes the first row as that record's `image` (see animals-api's
+  CLAUDE.md → "The first photo is the record's cover"). A drag to re-order is
+  therefore a **cover change**, not housekeeping - which is why `persist()`
+  PATCHes `sort_order` on every surviving row. `icon` stays its own field
+  (`PairedImageFields`); it is a 128 px glyph and must never join the gallery, or
+  the cover would sometimes be a map pin.
+- **The gallery is written on Save - and only the gallery.** `useEntityGallery`
+  holds adds, deletes and re-ordering in form state and writes them from the
+  form's `handleSubmit`, **after** the parent row exists (a record being created
+  has no URL to POST a photo to until then). That is what lets a new record be
+  saved with its photos in one go, and what makes abandoning a form leave nothing
+  behind. Two things follow: a form that adds a gallery must call
+  `gallery.persist(id)` in *both* branches of its submit, and `persist` bumps a
+  reload token afterwards - without it the uploader would still be holding those
+  photos as *pending* and the next Save would upload every one of them again.
+- **A sighting's clips still save immediately, one row at a time.**
+  `MediaEditor` keeps the video-file and video-link controls on the old
+  `GalleryEditor` path, because a video is far past the API's JSON-body limit and
+  goes multipart to its own endpoint - a streamed upload has nowhere to wait in
+  form state. All three kinds share one `SightingMedia` table, so the editor
+  filters `kind !== 'image'` out of its list; the photos are the uploader above.
+- **The sighting map is OpenStreetMap, and it cannot be Google.**
+  `MapPicker` (`components/admin/map-picker.tsx`) sits above the Latitude field
+  via `AdminForm`'s `slots` and writes *both* coordinates at once. It draws OSM
+  raster tiles into its own DOM and does the Web Mercator arithmetic by hand -
+  no `leaflet`, no API key, ~200 lines. It is not the keyless Google embed
+  `@repo/ui`'s `LocationMap` uses on the public page, and it can't be: that is a
+  cross-origin iframe, so nothing on the page can ever read a click inside it.
+  Two consequences. The picker makes **third-party calls straight from the
+  author's browser** - `tile.openstreetmap.org` for tiles and
+  `nominatim.openstreetmap.org` for the place search, which is why the search
+  runs on an explicit submit (Nominatim allows roughly one call a second) and
+  why its Enter key is swallowed - an un-prevented Enter inside `AdminForm`'s
+  `<form>` would save the record instead. And the camera is **adjusted during
+  render**, not in an effect: the parent re-renders on every keystroke anywhere
+  in the form, so an effect keyed on an object would re-centre the map - undoing
+  the author's panning - each time they typed.
 - **Two pages write `System`, and each PATCHes only the keys it owns**
   (`OWNED_FIELDS` in both). `/admin/system` owns the identity and contact half,
   `/admin/logos-and-styles` the brand kit. Move a field between them and move it

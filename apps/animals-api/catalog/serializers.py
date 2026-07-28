@@ -6,15 +6,20 @@ from core.serializers import (
     Base64ImagesMixin,
     ImageProcessingSerializer,
     file_url,
+    gallery_image_url,
 )
 
 from .models import (
     Category,
+    CategoryImage,
     Location,
+    LocationImage,
     Season,
+    SeasonImage,
     Species,
     SpeciesImage,
     WeatherCondition,
+    WeatherConditionImage,
 )
 
 # Every catalog record takes the same two images, at the same two tiers.
@@ -24,6 +29,134 @@ _IMAGE_FIELDS = {'image': image_cfg(REGULAR), 'icon': image_cfg(ICON)}
 # CharField, not the model's ImageField, because the payload is a data URL.
 def _base64_field():
     return serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
+
+# ---------------------------------------------------------------------------
+# Gallery images - one shape, five parents
+# ---------------------------------------------------------------------------
+#
+# Category, Species, Season, WeatherCondition and Location each own a `*Image`
+# table with the same columns (see ``catalog.models.GalleryImage``), so the read
+# and write serializers are declared once and subclassed with a model. A
+# per-parent copy of these would be five places for the field list to drift.
+#
+# They are declared here, above every record serializer, because each record
+# embeds its own gallery - `CategorySerializer` is the first reader.
+
+class GalleryImageSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        fields = [
+            'id', 'image', 'name', 'en_name', 'description', 'en_description',
+            'fit', 'background_color', 'sort_order',
+        ]
+
+    def get_image(self, obj):
+        return file_url(obj.image, self.context.get('request'))
+
+
+class GalleryImageWriteSerializer(serializers.Serializer):
+    """Create one gallery row from a base64 payload.
+
+    A plain ``Serializer`` rather than a ``ModelSerializer`` because the image
+    arrives as a data URL and is written **after** the row exists - the stored
+    filename embeds the pk, which does not exist until then.
+
+    Subclasses set ``model`` and ``parent_field``; ``save(parent)`` does the rest.
+    """
+
+    model = None
+    parent_field = ''
+
+    image = serializers.CharField()
+    name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    en_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
+
+    def validate_image(self, value):
+        sub = ImageProcessingSerializer(data={'base64_image': value}, **image_cfg(REGULAR))
+        if not sub.is_valid():
+            raise serializers.ValidationError(sub.errors['base64_image'])
+        return value
+
+    def save(self, parent):
+        # Atomic so a failed image write (an unwritable MEDIA_ROOT, an R2 outage)
+        # rolls the row back instead of leaving a gallery entry with no picture.
+        with transaction.atomic():
+            instance = self.model(
+                **{self.parent_field: parent},
+                name=self.validated_data.get('name'),
+                en_name=self.validated_data.get('en_name'),
+                description=self.validated_data.get('description'),
+                en_description=self.validated_data.get('en_description'),
+                sort_order=self.validated_data.get('sort_order', 0),
+            )
+            instance.save()
+
+            proc = ImageProcessingSerializer(
+                data={'base64_image': self.validated_data['image']},
+                **image_cfg(REGULAR),
+            )
+            proc.is_valid()
+            proc.save_to_field(
+                instance.image,
+                f'{self.parent_field}_{parent.pk}_img_{instance.pk}',
+            )
+            instance.save(update_fields=['image'])
+        return instance
+
+
+class CategoryImageSerializer(GalleryImageSerializer):
+    class Meta(GalleryImageSerializer.Meta):
+        model = CategoryImage
+
+
+class CategoryImageWriteSerializer(GalleryImageWriteSerializer):
+    model = CategoryImage
+    parent_field = 'category'
+
+
+class SpeciesImageSerializer(GalleryImageSerializer):
+    class Meta(GalleryImageSerializer.Meta):
+        model = SpeciesImage
+
+
+class SpeciesImageWriteSerializer(GalleryImageWriteSerializer):
+    model = SpeciesImage
+    parent_field = 'species'
+
+
+class SeasonImageSerializer(GalleryImageSerializer):
+    class Meta(GalleryImageSerializer.Meta):
+        model = SeasonImage
+
+
+class SeasonImageWriteSerializer(GalleryImageWriteSerializer):
+    model = SeasonImage
+    parent_field = 'season'
+
+
+class WeatherConditionImageSerializer(GalleryImageSerializer):
+    class Meta(GalleryImageSerializer.Meta):
+        model = WeatherConditionImage
+
+
+class WeatherConditionImageWriteSerializer(GalleryImageWriteSerializer):
+    model = WeatherConditionImage
+    parent_field = 'weather_condition'
+
+
+class LocationImageSerializer(GalleryImageSerializer):
+    class Meta(GalleryImageSerializer.Meta):
+        model = LocationImage
+
+
+class LocationImageWriteSerializer(GalleryImageWriteSerializer):
+    model = LocationImage
+    parent_field = 'location'
 
 
 class _SlugUniqueMixin:
@@ -52,6 +185,7 @@ class _SlugUniqueMixin:
 class CategorySerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
     icon = serializers.SerializerMethodField()
+    images = CategoryImageSerializer(many=True, read_only=True)
     kind_display = serializers.CharField(source='get_kind_display', read_only=True)
     species_count = serializers.SerializerMethodField()
 
@@ -62,13 +196,13 @@ class CategorySerializer(serializers.ModelSerializer):
             'kind', 'kind_display', 'name', 'en_name', 'slug', 'scientific_name',
             'description', 'en_description',
             'short_description', 'en_short_description', 'href',
-            'image', 'icon', 'fit', 'background_color',
+            'image', 'icon', 'images', 'fit', 'background_color',
             'is_featured', 'sort_order', 'species_count',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
 
     def get_image(self, obj):
-        return file_url(obj.image, self.context.get('request'))
+        return gallery_image_url(obj, self.context.get('request'))
 
     def get_icon(self, obj):
         return file_url(obj.icon, self.context.get('request'))
@@ -91,62 +225,6 @@ class CategoryWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.M
             'image', 'icon', 'fit', 'background_color',
             'is_featured', 'sort_order', 'enabled',
         ]
-
-
-# ---------------------------------------------------------------------------
-# Species images
-# ---------------------------------------------------------------------------
-
-class SpeciesImageSerializer(serializers.ModelSerializer):
-    image = serializers.SerializerMethodField()
-
-    class Meta:
-        model = SpeciesImage
-        fields = [
-            'id', 'image', 'name', 'en_name', 'description', 'en_description',
-            'fit', 'background_color', 'sort_order',
-        ]
-
-    def get_image(self, obj):
-        return file_url(obj.image, self.context.get('request'))
-
-
-class SpeciesImageWriteSerializer(serializers.Serializer):
-    image = serializers.CharField()
-    name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
-    en_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
-    description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    en_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
-
-    def validate_image(self, value):
-        sub = ImageProcessingSerializer(data={'base64_image': value}, **image_cfg(REGULAR))
-        if not sub.is_valid():
-            raise serializers.ValidationError(sub.errors['base64_image'])
-        return value
-
-    def save(self, species):
-        # Atomic so a failed image write (an unwritable MEDIA_ROOT, an R2 outage)
-        # rolls the row back instead of leaving a gallery entry with no picture.
-        with transaction.atomic():
-            instance = SpeciesImage(
-                species=species,
-                name=self.validated_data.get('name'),
-                en_name=self.validated_data.get('en_name'),
-                description=self.validated_data.get('description'),
-                en_description=self.validated_data.get('en_description'),
-                sort_order=self.validated_data.get('sort_order', 0),
-            )
-            instance.save()
-
-            proc = ImageProcessingSerializer(
-                data={'base64_image': self.validated_data['image']},
-                **image_cfg(REGULAR),
-            )
-            proc.is_valid()
-            proc.save_to_field(instance.image, f'species_{species.pk}_img_{instance.pk}')
-            instance.save(update_fields=['image'])
-        return instance
 
 
 # ---------------------------------------------------------------------------
@@ -184,7 +262,10 @@ class SpeciesSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created', 'modified', 'version']
 
     def get_image(self, obj):
-        return file_url(obj.image, self.context.get('request'))
+        # Its own cover if it has one, else its first gallery photo. The CMS only
+        # writes the gallery, so this is what makes the first uploaded photo the
+        # species' main image - see gallery_image_url.
+        return gallery_image_url(obj, self.context.get('request'))
 
     def get_icon(self, obj):
         return file_url(obj.icon, self.context.get('request'))
@@ -220,6 +301,7 @@ class SpeciesWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.Mo
 class SeasonSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
     icon = serializers.SerializerMethodField()
+    images = SeasonImageSerializer(many=True, read_only=True)
     sighting_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -229,13 +311,13 @@ class SeasonSerializer(serializers.ModelSerializer):
             'name', 'en_name', 'slug', 'months',
             'description', 'en_description',
             'short_description', 'en_short_description', 'href',
-            'image', 'icon', 'fit', 'background_color',
+            'image', 'icon', 'images', 'fit', 'background_color',
             'sort_order', 'sighting_count',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
 
     def get_image(self, obj):
-        return file_url(obj.image, self.context.get('request'))
+        return gallery_image_url(obj, self.context.get('request'))
 
     def get_icon(self, obj):
         return file_url(obj.icon, self.context.get('request'))
@@ -278,6 +360,7 @@ class SeasonWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.Mod
 class WeatherConditionSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
     icon = serializers.SerializerMethodField()
+    images = WeatherConditionImageSerializer(many=True, read_only=True)
     sighting_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -287,13 +370,13 @@ class WeatherConditionSerializer(serializers.ModelSerializer):
             'name', 'en_name', 'slug',
             'description', 'en_description',
             'short_description', 'en_short_description', 'href',
-            'image', 'icon', 'fit', 'background_color',
+            'image', 'icon', 'images', 'fit', 'background_color',
             'sort_order', 'sighting_count',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
 
     def get_image(self, obj):
-        return file_url(obj.image, self.context.get('request'))
+        return gallery_image_url(obj, self.context.get('request'))
 
     def get_icon(self, obj):
         return file_url(obj.icon, self.context.get('request'))
@@ -323,6 +406,13 @@ class WeatherConditionWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, seria
 # ---------------------------------------------------------------------------
 
 class LocationSerializer(serializers.ModelSerializer):
+    # Location has no `image` column, so this is purely the first gallery row -
+    # there is nothing for it to fall back *from*. Published under the same name
+    # as on the other four records so a card renders a place exactly like a
+    # species.
+    image = serializers.SerializerMethodField()
+    icon = serializers.SerializerMethodField()
+    images = LocationImageSerializer(many=True, read_only=True)
     place_type_display = serializers.CharField(source='get_place_type_display', read_only=True)
     parent_name = serializers.CharField(source='parent.name', read_only=True, default=None)
     parent_en_name = serializers.CharField(source='parent.en_name', read_only=True, default=None)
@@ -340,10 +430,17 @@ class LocationSerializer(serializers.ModelSerializer):
             'short_description', 'en_short_description',
             'parent', 'parent_name', 'parent_en_name', 'parent_slug',
             'place_type', 'place_type_display',
+            'image', 'icon', 'images',
             'latitude', 'longitude', 'region', 'country', 'map_link',
             'hide_precise_location', 'is_featured', 'sort_order', 'sighting_count',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
+
+    def get_image(self, obj):
+        return gallery_image_url(obj, self.context.get('request'))
+
+    def get_icon(self, obj):
+        return file_url(obj.icon, self.context.get('request'))
 
     # Coordinates are blurred for **every** caller, staff included, when the
     # place is flagged sensitive. Not because staff shouldn't see them - they can,
@@ -377,14 +474,19 @@ class LocationSerializer(serializers.ModelSerializer):
         return obj.sightings.filter(enabled=True).count()
 
 
-class LocationWriteSerializer(_SlugUniqueMixin, serializers.ModelSerializer):
+class LocationWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.ModelSerializer):
+    # Only the glyph: a place's photographs are LocationImage rows, posted to
+    # this location's own `/images/` URL.
+    icon = _base64_field()
+    image_fields = {'icon': image_cfg(ICON)}
+
     class Meta:
         model = Location
         fields = [
             'name', 'en_name', 'slug',
             'description', 'en_description',
             'short_description', 'en_short_description',
-            'parent', 'place_type',
+            'parent', 'place_type', 'icon',
             'latitude', 'longitude', 'region', 'country', 'map_link',
             'hide_precise_location', 'is_featured', 'sort_order', 'enabled',
         ]

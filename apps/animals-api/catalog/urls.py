@@ -2,17 +2,25 @@ from django.urls import path
 
 from .views import (
     CategoryDetailView,
+    CategoryImageDetailView,
+    CategoryImageListCreateView,
     CategoryListCreateView,
     KindListView,
     LocationDetailView,
+    LocationImageDetailView,
+    LocationImageListCreateView,
     LocationListCreateView,
     SeasonDetailView,
+    SeasonImageDetailView,
+    SeasonImageListCreateView,
     SeasonListCreateView,
     SpeciesDetailView,
     SpeciesImageDetailView,
     SpeciesImageListCreateView,
     SpeciesListCreateView,
     WeatherConditionDetailView,
+    WeatherConditionImageDetailView,
+    WeatherConditionImageListCreateView,
     WeatherConditionListCreateView,
 )
 
@@ -28,13 +36,17 @@ urlpatterns = [
     path('catalog/categories/', CategoryListCreateView.as_view(), name='category-list'),
     path('catalog/categories/<int:pk>/', CategoryDetailView.as_view(), name='category-detail'),
     path('catalog/categories/slug/<slug:slug>/', CategoryDetailView.as_view(), name='category-detail-slug'),
+    path('catalog/categories/<int:pk>/images/', CategoryImageListCreateView.as_view(), name='category-image-list'),
+    path('catalog/categories/<int:pk>/images/<int:img_pk>/', CategoryImageDetailView.as_view(), name='category-image-detail'),
 
     # Species
     path('catalog/species/', SpeciesListCreateView.as_view(), name='species-list'),
     path('catalog/species/<int:pk>/', SpeciesDetailView.as_view(), name='species-detail'),
     path('catalog/species/slug/<slug:slug>/', SpeciesDetailView.as_view(), name='species-detail-slug'),
 
-    # Species reference photos
+    # Species photos. Every record's gallery hangs off its own URL the same way -
+    # the first row is that record's main image, so the order these are POSTed
+    # and re-ordered in is what picks the cover.
     path('catalog/species/<int:pk>/images/', SpeciesImageListCreateView.as_view(), name='species-image-list'),
     path('catalog/species/<int:pk>/images/<int:img_pk>/', SpeciesImageDetailView.as_view(), name='species-image-detail'),
 
@@ -42,14 +54,20 @@ urlpatterns = [
     path('catalog/seasons/', SeasonListCreateView.as_view(), name='season-list'),
     path('catalog/seasons/<int:pk>/', SeasonDetailView.as_view(), name='season-detail'),
     path('catalog/seasons/slug/<slug:slug>/', SeasonDetailView.as_view(), name='season-detail-slug'),
+    path('catalog/seasons/<int:pk>/images/', SeasonImageListCreateView.as_view(), name='season-image-list'),
+    path('catalog/seasons/<int:pk>/images/<int:img_pk>/', SeasonImageDetailView.as_view(), name='season-image-detail'),
 
     # Weather conditions
     path('catalog/weather-conditions/', WeatherConditionListCreateView.as_view(), name='weather-condition-list'),
     path('catalog/weather-conditions/<int:pk>/', WeatherConditionDetailView.as_view(), name='weather-condition-detail'),
     path('catalog/weather-conditions/slug/<slug:slug>/', WeatherConditionDetailView.as_view(), name='weather-condition-detail-slug'),
+    path('catalog/weather-conditions/<int:pk>/images/', WeatherConditionImageListCreateView.as_view(), name='weather-condition-image-list'),
+    path('catalog/weather-conditions/<int:pk>/images/<int:img_pk>/', WeatherConditionImageDetailView.as_view(), name='weather-condition-image-detail'),
 
     # Locations
     path('catalog/locations/', LocationListCreateView.as_view(), name='location-list'),
     path('catalog/locations/<int:pk>/', LocationDetailView.as_view(), name='location-detail'),
     path('catalog/locations/slug/<slug:slug>/', LocationDetailView.as_view(), name='location-detail-slug'),
+    path('catalog/locations/<int:pk>/images/', LocationImageListCreateView.as_view(), name='location-image-list'),
+    path('catalog/locations/<int:pk>/images/<int:img_pk>/', LocationImageDetailView.as_view(), name='location-image-detail'),
 ]

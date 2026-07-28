@@ -133,6 +133,37 @@ def file_url(file_field, request=None):
     return request.build_absolute_uri(url) if request is not None else url
 
 
+def gallery_image_url(obj, request=None):
+    """A record's main image: its own ``image`` column, else its first photo.
+
+    Every catalog record and every journal entry keeps its photographs in a
+    gallery table ordered by ``sort_order`` (``catalog.GalleryImage``,
+    ``journal.SightingMedia``), and **the first row is the record's main image**.
+    The CMS uploads into the gallery and never writes the ``image`` column, so in
+    practice this resolves to ``images[0]`` - which is what makes "the first one
+    is the main one" true from an author's point of view.
+
+    The column is still honoured *first*, because the Django admin and
+    ``seed_reference`` can set it, and a cover somebody chose explicitly must win
+    over an upload order. ``catalog.Location`` has no ``image`` column at all -
+    the ``getattr`` below is what covers that - so for a place the first gallery
+    row is the only cover there is.
+
+    Sorted in Python rather than with an ``order_by``: the views prefetch these
+    lists, and a queryset call here would re-query once per row in a list
+    response.
+    """
+    image = getattr(obj, 'image', None)
+    if not image:
+        first = next(
+            (row for row in sorted(obj.images.all(), key=lambda r: (r.sort_order, r.id))
+             if row.image),
+            None,
+        )
+        image = first.image if first else None
+    return file_url(image, request)
+
+
 class Base64ImagesMixin:
     """Accept image fields as base64 strings on a write serializer.
 

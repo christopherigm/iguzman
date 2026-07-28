@@ -4,11 +4,13 @@ import { use, useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@repo/i18n/navigation';
 import { AdminForm, type FieldDef } from '@/components/admin/admin-form';
-import { PairedImageFields, useEntityImages } from '@/components/admin/entity-images';
+import { EntityGalleryField, useEntityGallery } from '@/components/admin/entity-gallery';
+import { MapPicker } from '@/components/admin/map-picker';
 import { MediaEditor } from '../media-editor';
 import {
   locations,
   seasons,
+  sightingMedia,
   sightings,
   species,
   weatherConditions,
@@ -20,6 +22,7 @@ import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
 
 type Props = { params: Promise<{ locale: string; id: string }> };
 type Option = { value: string | number; label: string };
+type Coordinates = { latitude: number; longitude: number };
 
 /** Today as `YYYY-MM-DD`, from the local clock rather than `toISOString()`. */
 function today(): string {
@@ -58,9 +61,21 @@ export default function AdminSightingFormPage({ params }: Props) {
     enabled: true,
   });
 
-  const images = useEntityImages(['image']);
+  // The entry has no separate cover uploader any more: its photos are this
+  // gallery and the first of them is what the API publishes as `image`.
+  // `SightingMedia` is one list carrying photos, uploaded clips and video links,
+  // so the photo half is filtered out of it here and the two video kinds stay in
+  // `MediaEditor` below - they cannot ride in a JSON body the way an image does.
+  const gallery = useEntityGallery(sightingMedia, isNew ? null : Number(id), {
+    filter: (row) => row.kind === 'image',
+    createExtras: { kind: 'image' },
+  });
   const [speciesOptions, setSpeciesOptions] = useState<Option[]>([]);
   const [locationOptions, setLocationOptions] = useState<Option[]>([]);
+  // Each location's own coordinates, keyed by id. They are what the API falls
+  // back to when the entry carries none, so they are also where the map should
+  // open before a pin is dropped.
+  const [locationCoords, setLocationCoords] = useState<Record<string, Coordinates>>({});
   const [seasonOptions, setSeasonOptions] = useState<Option[]>([]);
   const [weatherOptions, setWeatherOptions] = useState<Option[]>([]);
   const [loading, setLoading] = useState(!isNew);
@@ -79,7 +94,10 @@ export default function AdminSightingFormPage({ params }: Props) {
     // sequence would take four round-trips to become usable.
     void Promise.all([
       species.list().then((rows) => setSpeciesOptions(toOptions(rows))),
-      locations.list().then((rows) => setLocationOptions(toOptions(rows))),
+      locations.list().then((rows) => {
+        setLocationOptions(toOptions(rows));
+        setLocationCoords(toCoordinates(rows));
+      }),
       seasons.list().then((rows) => setSeasonOptions(toOptions(rows))),
       weatherConditions.list().then((rows) => setWeatherOptions(toOptions(rows))),
     ]).catch(() => {
@@ -113,11 +131,9 @@ export default function AdminSightingFormPage({ params }: Props) {
           is_featured: data.is_featured ?? false,
           enabled: data.enabled ?? true,
         });
-        images.hydrate(data);
       })
       .catch(() => setError(t('errorLoad')))
       .finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isNew, t]);
 
   const handleSubmit = async () => {
@@ -125,7 +141,7 @@ export default function AdminSightingFormPage({ params }: Props) {
     setError(null);
     setSuccess(null);
     try {
-      const payload: Record<string, unknown> = { ...values, ...images.payload() };
+      const payload: Record<string, unknown> = { ...values };
       // Updates are PATCH, so clearing an optional relation or number needs an
       // explicit null - an omitted key means "leave unchanged", and "" is not a
       // value any of these columns accepts.
@@ -143,12 +159,16 @@ export default function AdminSightingFormPage({ params }: Props) {
       ).forEach((k) => {
         if (payload[k] === '') payload[k] = null;
       });
+      // The photos are written after the row exists: each is POSTed to this
+      // entry's own URL, which one being created does not have until now.
       if (isNew) {
         const created = await sightings.create(payload);
+        await gallery.persist(created.id as number);
         setSuccess(t('saved'));
         router.replace(`/admin/sightings/${created.id}`);
       } else {
         await sightings.update(Number(id), payload);
+        await gallery.persist(Number(id));
         setSuccess(t('saved'));
       }
     } catch {
@@ -181,7 +201,8 @@ export default function AdminSightingFormPage({ params }: Props) {
       placeholder: t('none'),
     },
     // Left blank, the API falls back to the location's own coordinates - so
-    // these are the *exact spot*, not the place.
+    // these are the *exact spot*, not the place. The map above the pair writes
+    // both at once; typing into either still works and moves the pin.
     { key: 'latitude', label: t('latitude'), type: 'number' },
     { key: 'longitude', label: t('longitude'), type: 'number' },
     {
@@ -240,11 +261,27 @@ export default function AdminSightingFormPage({ params }: Props) {
         error={error}
         success={success}
         productionHref={!isNew && values.slug ? `/journal/${String(values.slug)}` : undefined}
-        imagesSlot={<PairedImageFields images={images} />}
+        imagesSlot={<EntityGalleryField gallery={gallery} />}
+        slots={[
+          {
+            beforeKey: 'latitude',
+            node: (
+              <MapPicker
+                latitude={String(values.latitude ?? '')}
+                longitude={String(values.longitude ?? '')}
+                onChange={(latitude, longitude) =>
+                  setValues((prev) => ({ ...prev, latitude, longitude }))
+                }
+                fallbackCenter={locationCoords[String(values.location ?? '')] ?? null}
+              />
+            ),
+          },
+        ]}
       >
-        {/* The gallery: photos, uploaded clips and video links, in one ordered
-            list. Only once the row exists - every media row is POSTed to the
-            sighting's own URL, which a record with no pk does not have yet. */}
+        {/* The clips: uploaded video files and video links. Still one row at a
+            time, and still only once the entry exists - a video file is far past
+            the API's JSON-body limit and goes multipart to its own endpoint, so
+            it cannot be held in form state the way a photo is. */}
         {!isNew && <MediaEditor sightingId={Number(id)} />}
       </AdminForm>
     </>
@@ -253,6 +290,24 @@ export default function AdminSightingFormPage({ params }: Props) {
 
 function toOptions(rows: Record<string, unknown>[]): Option[] {
   return rows.map((row) => ({ value: row.id as number, label: String(row.name ?? row.id) }));
+}
+
+/**
+ * The coordinates of every location that has a pair, keyed by id. A place is
+ * only rough guidance for the map - the API rounds a sensitive one to about a
+ * kilometre for every caller - so a location without coordinates is simply
+ * absent here and the map opens on its default view instead.
+ */
+function toCoordinates(rows: Record<string, unknown>[]): Record<string, Coordinates> {
+  const out: Record<string, Coordinates> = {};
+  rows.forEach((row) => {
+    const latitude = Number(row.latitude);
+    const longitude = Number(row.longitude);
+    if (row.latitude == null || row.longitude == null) return;
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+    out[String(row.id)] = { latitude, longitude };
+  });
+  return out;
 }
 
 /** The chosen species' name, for the derived slug. Empty until one is picked. */

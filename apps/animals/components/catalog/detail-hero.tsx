@@ -184,25 +184,31 @@ function FlatHeader({
   );
 }
 
-/** The record's icon in a rounded square - the landing tile's art, enlarged. */
+/**
+ * The record's icon in a rounded square - the landing tile's art, enlarged.
+ *
+ * The mark **fills** its square (`cover`, not `contain`): these are 128 px
+ * glyphs authored for this exact frame, so letterboxing them left a band of the
+ * translucent backing on whichever axis was short and made the mark read as
+ * smaller than the box around it. A non-square icon is centre-cropped, which is
+ * the same 1:1 crop the landing tiles already apply.
+ */
 function HeroMark({ icon, onImage }: { icon: string; onImage: boolean }) {
   return (
     <Box
       width={ICON_SIZE}
       height={ICON_SIZE}
-      alignItems="center"
-      justifyContent="center"
       borderRadius={14}
       border={onImage ? '1px solid rgba(255,255,255,0.5)' : '1px solid var(--border)'}
       backgroundColor={onImage ? 'rgba(255,255,255,0.15)' : 'var(--surface-1, var(--background))'}
-      styles={{ overflow: 'hidden' }}
+      styles={{ overflow: 'hidden', flexShrink: 0 }}
     >
       <Image
         src={icon}
         alt=""
         width={ICON_SIZE}
         height={ICON_SIZE}
-        style={{ objectFit: 'contain', height: '100%', width: '100%' }}
+        style={{ objectFit: 'cover', display: 'block', height: '100%', width: '100%' }}
       />
     </Box>
   );

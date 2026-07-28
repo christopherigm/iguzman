@@ -243,6 +243,164 @@ class ImageUploadTests(CatalogFixtureMixin, IsolatedMediaTestCase):
         self.assertEqual(payload['images'][0]['name'], 'Winter coat')
 
 
+class GalleryTests(CatalogFixtureMixin, IsolatedMediaTestCase):
+    """The four galleries, and the rule that the first photo is the cover.
+
+    Category, Species, Season, WeatherCondition and Location each own a ``*Image``
+    table with the same two endpoints, and the read serializers publish ``image`` as the
+    record's own column if it has one and **otherwise the first gallery row**
+    (``core.serializers.gallery_image_url``). The CMS only ever writes the
+    gallery, so that resolution is what makes "the first one is the main one"
+    true - it is the behaviour, not an implementation detail, and every parent is
+    exercised because each wires the shared views up separately.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.make_admin()
+        self.client.login(username='author', password='fieldnotes-2026')
+
+    def parents(self):
+        """One of each record, with the URL prefix its gallery hangs off."""
+        return [
+            (
+                'category',
+                f'/api/catalog/categories/'
+                f'{self.make_category(name="Oaks", slug="oaks", kind="plant").pk}/',
+            ),
+            ('species', f'/api/catalog/species/{self.make_species().pk}/'),
+            (
+                'season',
+                f'/api/catalog/seasons/'
+                f'{Season.objects.create(name="Autumn", slug="autumn", months=[9]).pk}/',
+            ),
+            (
+                'weather',
+                f'/api/catalog/weather-conditions/'
+                f'{WeatherCondition.objects.create(name="Fog", slug="fog").pk}/',
+            ),
+            (
+                'location',
+                f'/api/catalog/locations/'
+                f'{Location.objects.create(name="The Park", slug="the-park").pk}/',
+            ),
+        ]
+
+    def test_every_record_takes_its_cover_from_its_first_photo(self):
+        for label, url in self.parents():
+            with self.subTest(record=label):
+                self.assertIsNone(self.client.get(url).json()['image'])
+
+                for order in (1, 0):
+                    response = self.client.post(
+                        f'{url}images/',
+                        {'image': base64_image(), 'sort_order': order},
+                        content_type='application/json',
+                    )
+                    self.assertEqual(response.status_code, 201, response.content)
+
+                payload = self.client.get(url).json()
+                self.assertEqual(len(payload['images']), 2)
+                # Ordered by sort_order, so the row posted second (sort_order 0)
+                # leads the list - and is therefore the cover.
+                self.assertEqual(payload['image'], payload['images'][0]['image'])
+                self.assertNotEqual(payload['image'], payload['images'][1]['image'])
+
+    def test_reordering_the_gallery_changes_the_cover(self):
+        """The CMS re-numbers every row after a drag; that has to move the cover."""
+        url = f'/api/catalog/species/{self.make_species().pk}/'
+        for _ in range(2):
+            self.client.post(
+                f'{url}images/',
+                {'image': base64_image(), 'sort_order': 0},
+                content_type='application/json',
+            )
+        first, second = self.client.get(url).json()['images']
+
+        for image, order in ((second, 0), (first, 1)):
+            response = self.client.patch(
+                f'{url}images/{image["id"]}/',
+                {'sort_order': order},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 200, response.content)
+
+        self.assertEqual(self.client.get(url).json()['image'], second['image'])
+
+    def test_a_records_own_image_still_wins_over_the_gallery(self):
+        """A cover set deliberately - in the Django admin, or by seed_reference -
+        is not overruled by whatever happens to have been uploaded first."""
+        species = self.make_species()
+        url = f'/api/catalog/species/{species.pk}/'
+        self.client.patch(url, {'image': base64_image()}, content_type='application/json')
+        self.client.post(
+            f'{url}images/', {'image': base64_image()}, content_type='application/json'
+        )
+
+        payload = self.client.get(url).json()
+        species.refresh_from_db()
+        self.assertIn(species.image.url, payload['image'])
+        self.assertNotEqual(payload['image'], payload['images'][0]['image'])
+
+    def test_deleting_the_first_photo_promotes_the_next_one(self):
+        url = f'/api/catalog/species/{self.make_species().pk}/'
+        for order in (0, 1):
+            self.client.post(
+                f'{url}images/',
+                {'image': base64_image(), 'sort_order': order},
+                content_type='application/json',
+            )
+        first, second = self.client.get(url).json()['images']
+
+        response = self.client.delete(f'{url}images/{first["id"]}/')
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(self.client.get(url).json()['image'], second['image'])
+
+    def test_a_gallery_is_public_to_read_and_admin_to_write(self):
+        url = f'/api/catalog/locations/{Location.objects.create(name="P", slug="p").pk}/images/'
+        self.client.logout()
+        self.assertEqual(self.client.get(url).status_code, 200)
+        response = self.client.post(
+            url, {'image': base64_image()}, content_type='application/json'
+        )
+        self.assertIn(response.status_code, (401, 403))
+
+    def test_a_gallery_row_cannot_be_reached_through_another_parent(self):
+        """The row is looked up by pk *and* parent, so a mismatched pair 404s
+        rather than letting one record edit another's photo."""
+        category = self.make_category()
+        mine = self.make_species(category=category)
+        theirs = self.make_species(category=category, name='Elk', slug='elk')
+        image = self.client.post(
+            f'/api/catalog/species/{mine.pk}/images/',
+            {'image': base64_image()},
+            content_type='application/json',
+        ).json()
+
+        self.assertEqual(
+            self.client.delete(
+                f'/api/catalog/species/{theirs.pk}/images/{image["id"]}/'
+            ).status_code,
+            404,
+        )
+
+    def test_a_sightings_species_thumbnail_uses_the_same_fallback(self):
+        """`species_image` is flattened onto every entry, so it has to resolve a
+        gallery-only species exactly as the species' own payload does."""
+        from journal.models import Sighting
+
+        species = self.make_species()
+        Sighting.objects.create(species=species, slug='deer-2026-07-01', date=date(2026, 7, 1))
+        self.client.post(
+            f'/api/catalog/species/{species.pk}/images/',
+            {'image': base64_image()},
+            content_type='application/json',
+        )
+
+        entry = self.client.get('/api/journal/sightings/').json()['results'][0]
+        self.assertIsNotNone(entry['species_image'])
+
+
 class SeasonTests(IsolatedMediaTestCase):
     def test_for_date_matches_on_months(self):
         autumn = Season.objects.create(name='Autumn', slug='autumn', months=[9, 10, 11])

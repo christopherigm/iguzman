@@ -8,7 +8,7 @@ import { Typography } from '@repo/ui/core-elements/typography';
 import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
 import { RichText } from '@repo/ui/core-elements/rich-text';
 import { PageBottomSpacer } from '@repo/ui/core-elements/navbar';
-import { getCategory, getSpeciesByCategory, type Species } from '@/lib/catalog';
+import { getCategory, getSpeciesByCategory, type Category, type Species } from '@/lib/catalog';
 import { getSightingsByCategory } from '@/lib/journal';
 import { localized } from '@/lib/i18n-field';
 import { DetailHero, type DetailHeroChip } from '@/components/catalog/detail-hero';
@@ -22,13 +22,14 @@ import { SightingsSection } from '@/components/journal/sightings-section';
  * holds of it, the species filed under it, and the journal entries that record
  * them. The destination of every tile in the landing's `CategoryNav`.
  *
- * **The photo gallery is aggregated, not stored.** A `Category` owns exactly one
- * photograph (`image`, which is already the hero) plus its `icon`, so there is
- * no category gallery in the database to render. What a reader wants here is a
- * contact sheet of the *category*, which is precisely the union of its species'
- * photographs - each species' cover shot and its reference photos. That union is
- * built in `toGalleryPhotos` below, from the species list the page already had
- * to fetch, so the gallery costs no extra request.
+ * **The photo gallery is the category's own photographs followed by its
+ * species'.** A `Category` now owns a real gallery (`catalog.CategoryImage`), and
+ * those lead the strip - they are the shots an author chose for the *group*.
+ * After them comes the union of its species' photographs, each species' cover
+ * then its reference photos, which is what makes this a contact sheet of the
+ * whole branch and a second, denser route into the records the grid below lists.
+ * That union costs no extra request: it is built in `toGalleryPhotos` from the
+ * species list the page already had to fetch.
  */
 
 type Props = { params: Promise<{ locale: string; slug: string }> };
@@ -82,7 +83,10 @@ export default async function CategoryPage({ params }: Props) {
   const description = localized(category, 'description', locale);
   const kindLabel = tKinds(category.kind);
 
-  const photos = toGalleryPhotos(species, locale);
+  const photos = [
+    ...toOwnPhotos(category, locale),
+    ...toGalleryPhotos(species, locale),
+  ];
 
   // `species_count` counts what is *enabled*, which is what the public list
   // returns - but the list is the thing actually on screen, so it is what the
@@ -213,12 +217,39 @@ export default async function CategoryPage({ params }: Props) {
 }
 
 /**
- * Every photograph the category can show, gathered from its species.
+ * The category's **own** photographs, which lead the strip.
  *
- * A species' own cover shot comes first, then its reference photos in their
- * authored order, so the strip reads species by species rather than interleaving
- * them. Each tile links to the species it belongs to - the gallery doubles as a
- * second, denser route into the same records the grid below lists.
+ * The cover is dropped: it is the hero directly above, and since the CMS uploads
+ * every photo into this gallery and the API publishes the first as `image`, the
+ * cover is normally this list's first row - so it is matched by URL, exactly as
+ * the species and sighting pages do it. No `href`: these belong to the page the
+ * reader is already on.
+ */
+function toOwnPhotos(category: Category, locale: string): GalleryPhoto[] {
+  return category.images.flatMap((photo) => {
+    if (!photo.image) return [];
+    if (photo.image === category.image) return [];
+    return [
+      {
+        key: `category-image-${photo.id}`,
+        image: photo.image,
+        title: localized(photo, 'name', locale) ?? localized(category, 'name', locale),
+        caption: localized(photo, 'description', locale),
+        fit: photo.fit ?? 'cover',
+        backgroundColor: photo.background_color,
+        href: null,
+      },
+    ];
+  });
+}
+
+/**
+ * The photographs of the category's *species*, after its own.
+ *
+ * A species' cover shot comes first, then its reference photos in their authored
+ * order, so the strip reads species by species rather than interleaving them.
+ * Each tile links to the species it belongs to - this half is what makes the
+ * gallery a second, denser route into the same records the grid below lists.
  */
 function toGalleryPhotos(species: Species[], locale: string): GalleryPhoto[] {
   return species.flatMap((item) => {
@@ -240,6 +271,10 @@ function toGalleryPhotos(species: Species[], locale: string): GalleryPhoto[] {
 
     for (const photo of item.images) {
       if (!photo.image) continue;
+      // The cover pushed above is normally *this* gallery's first row - the CMS
+      // uploads every photo here and the API publishes the first as `image` - so
+      // it is matched by URL and skipped rather than shown twice in a row.
+      if (photo.image === item.image) continue;
       photos.push({
         // Prefixed by source: a species' id and one of its photos' ids are
         // independent sequences and would otherwise collide on the same key.

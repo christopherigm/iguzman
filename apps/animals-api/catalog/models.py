@@ -60,6 +60,37 @@ def icon_field():
     )
 
 
+class GalleryImage(RegularPicture):
+    """One photo in a record's gallery. The shared shape of every ``*Image`` table.
+
+    A catalog record's photographs live in a table of their own rather than in a
+    single ``image`` column, so an author can upload a whole outing's worth at
+    once and arrange them. **The first row is the record's main image**: the read
+    serializers publish ``image`` as the record's own column if it has one and
+    otherwise the first row here, so the CMS - which only ever writes the gallery -
+    makes position 1 the cover. See ``catalog.serializers.gallery_image_url``.
+
+    Inherits ``RegularPicture``, so each row carries its own caption pair
+    (``name``/``en_name``), ``description`` pair, ``fit`` and ``background_color``.
+    The CMS deliberately edits none of those today - it uploads the photos and
+    nothing else - but the Django admin's inlines still expose them, and the
+    public gallery renders a caption when one is there.
+
+    Abstract: the FK back to the parent is what each concrete table adds, and it
+    has to be named for its parent so ``related_name='images'`` reads the same on
+    all four.
+    """
+
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        abstract = True
+        # `id` is the tiebreak, so a batch upload that lands with the same
+        # sort_order still comes back in the order it was created - without it
+        # the "first row is the cover" rule would pick an arbitrary photo.
+        ordering = ['sort_order', 'id']
+
+
 class Category(RegularPicture):
     """A sub-category within one of the five branches: 'Deer', 'Squirrels', 'Oaks'.
 
@@ -99,6 +130,29 @@ class Category(RegularPicture):
 
     def __str__(self):
         return f'{self.name} ({self.get_kind_display()})'
+
+
+class CategoryImage(GalleryImage):
+    """A photo of a category. The first is its cover - see ``GalleryImage``.
+
+    These belong to the *group* ('Deer', 'Oaks'), not to any one species filed
+    under it. The category page still also gathers its species' photographs into
+    the same strip - these lead it.
+    """
+
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name='images',
+    )
+
+    class Meta(GalleryImage.Meta):
+        abstract = False
+        verbose_name = 'Category Image'
+        verbose_name_plural = 'Category Images'
+
+    def __str__(self):
+        return f'Image for {self.category} (#{self.sort_order})'
 
 
 class Species(RegularPicture):
@@ -155,8 +209,8 @@ class Species(RegularPicture):
         return self.category.kind if self.category_id else None
 
 
-class SpeciesImage(RegularPicture):
-    """An additional reference photo of a species, beyond its main `image`.
+class SpeciesImage(GalleryImage):
+    """A photo of a species - the first is its cover, the rest reference shots.
 
     These are the identification shots that belong to the *species* (a plumage
     variant, the underside of a leaf). Photos of one particular encounter belong
@@ -168,12 +222,11 @@ class SpeciesImage(RegularPicture):
         on_delete=models.CASCADE,
         related_name='images',
     )
-    sort_order = models.PositiveSmallIntegerField(default=0)
 
-    class Meta:
+    class Meta(GalleryImage.Meta):
+        abstract = False
         verbose_name = 'Species Image'
         verbose_name_plural = 'Species Images'
-        ordering = ['sort_order']
 
     def __str__(self):
         return f'Image for {self.species} (#{self.sort_order})'
@@ -233,6 +286,24 @@ class Season(RegularPicture):
         return None
 
 
+class SeasonImage(GalleryImage):
+    """A photo of a season. The first is the season's cover - see ``GalleryImage``."""
+
+    season = models.ForeignKey(
+        Season,
+        on_delete=models.CASCADE,
+        related_name='images',
+    )
+
+    class Meta(GalleryImage.Meta):
+        abstract = False
+        verbose_name = 'Season Image'
+        verbose_name_plural = 'Season Images'
+
+    def __str__(self):
+        return f'Image for {self.season} (#{self.sort_order})'
+
+
 class WeatherCondition(RegularPicture):
     """The weather during a sighting - fog, overcast, snow - and its own section."""
 
@@ -248,6 +319,24 @@ class WeatherCondition(RegularPicture):
 
     def __str__(self):
         return self.name
+
+
+class WeatherConditionImage(GalleryImage):
+    """A photo of a weather condition. The first is its cover - see ``GalleryImage``."""
+
+    weather_condition = models.ForeignKey(
+        WeatherCondition,
+        on_delete=models.CASCADE,
+        related_name='images',
+    )
+
+    class Meta(GalleryImage.Meta):
+        abstract = False
+        verbose_name = 'Weather Condition Image'
+        verbose_name_plural = 'Weather Condition Images'
+
+    def __str__(self):
+        return f'Image for {self.weather_condition} (#{self.sort_order})'
 
 
 PLACE_TYPE_CHOICES = [
@@ -271,10 +360,11 @@ PLACE_TYPE_CHOICES = [
 class Location(Common):
     """A place things were seen: a park, a trail inside it, a backyard.
 
-    Not a picture model - a location's own photo is whichever sighting best
-    shows it, and duplicating one here would just go stale. It carries the
-    place's *default* coordinates; a sighting may override them with the exact
-    spot (see ``journal.Sighting.coordinates``).
+    Still not a picture model - its photographs live in ``LocationImage``, and
+    unlike the other four records here it has no ``image`` column of its own, so
+    the first gallery row simply *is* its cover. It carries the place's *default*
+    coordinates; a sighting may override them with the exact spot (see
+    ``journal.Sighting.coordinates``).
     """
 
     # Location is the one content model that is not a picture model, so it
@@ -287,6 +377,11 @@ class Location(Common):
     en_description = models.TextField(null=True, blank=True)
     short_description = models.TextField(null=True, blank=True)
     en_short_description = models.TextField(null=True, blank=True)
+
+    # The map pin / filter chip glyph, exactly as on the other four records. The
+    # photographs are LocationImage rows; this is the mark, and it has to stay
+    # legible at 24 px.
+    icon = icon_field()
 
     # A trail inside a park, a pond inside a reserve. One level is the intent;
     # nothing enforces a depth limit, so keep it shallow.
@@ -336,3 +431,25 @@ class Location(Common):
 
     def __str__(self):
         return self.name
+
+
+class LocationImage(GalleryImage):
+    """A photo of a place. The first is its cover - see ``GalleryImage``.
+
+    Location is the one record with no ``image`` column to fall back from, so
+    here the first row is not merely the default cover: it is the only one.
+    """
+
+    location = models.ForeignKey(
+        Location,
+        on_delete=models.CASCADE,
+        related_name='images',
+    )
+
+    class Meta(GalleryImage.Meta):
+        abstract = False
+        verbose_name = 'Location Image'
+        verbose_name_plural = 'Location Images'
+
+    def __str__(self):
+        return f'Image for {self.location} (#{self.sort_order})'

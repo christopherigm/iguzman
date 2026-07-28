@@ -4,7 +4,9 @@ import { use, useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@repo/i18n/navigation';
 import { AdminForm, type FieldDef } from '@/components/admin/admin-form';
-import { locations } from '@/lib/admin-api';
+import { PairedImageFields, useEntityImages } from '@/components/admin/entity-images';
+import { EntityGalleryField, useEntityGallery } from '@/components/admin/entity-gallery';
+import { locationImages, locations } from '@/lib/admin-api';
 import { useDerivedSlug } from '@/hooks/use-derived-slug';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
@@ -57,6 +59,11 @@ export default function AdminLocationFormPage({ params }: Props) {
     enabled: true,
   });
 
+  // A place has no `image` column at all, so unlike the other four records its
+  // first gallery photo is not merely the default cover - it is the only one.
+  // `icon` is the map-pin glyph and stays a field of its own.
+  const images = useEntityImages(['icon']);
+  const gallery = useEntityGallery(locationImages, isNew ? null : Number(id));
   const [parentOptions, setParentOptions] = useState<
     { value: string | number; label: string }[]
   >([]);
@@ -108,9 +115,11 @@ export default function AdminLocationFormPage({ params }: Props) {
           is_featured: data.is_featured ?? false,
           enabled: data.enabled ?? true,
         });
+        images.hydrate(data);
       })
       .catch(() => setError(t('errorLoad')))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isNew, t]);
 
   const handleSubmit = async () => {
@@ -118,7 +127,7 @@ export default function AdminLocationFormPage({ params }: Props) {
     setError(null);
     setSuccess(null);
     try {
-      const payload: Record<string, unknown> = { ...values };
+      const payload: Record<string, unknown> = { ...values, ...images.payload() };
       // Updates are PATCH, so an omitted key means "leave unchanged" - clearing
       // a value needs an explicit null.
       if (payload.parent === '') payload.parent = null;
@@ -128,12 +137,16 @@ export default function AdminLocationFormPage({ params }: Props) {
       (['latitude', 'longitude'] as const).forEach((k) => {
         if (payload[k] === '') payload[k] = null;
       });
+      // The gallery is written after the row exists: a photo is POSTed to this
+      // place's own URL, which one being created does not have until now.
       if (isNew) {
         const created = await locations.create(payload);
+        await gallery.persist(created.id as number);
         setSuccess(t('saved'));
         router.replace(`/admin/locations/${created.id}`);
       } else {
         await locations.update(Number(id), payload);
+        await gallery.persist(Number(id));
         setSuccess(t('saved'));
       }
     } catch {
@@ -209,6 +222,12 @@ export default function AdminLocationFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
+        imagesSlot={
+          <EntityGalleryField
+            gallery={gallery}
+            iconSlot={<PairedImageFields images={images} />}
+          />
+        }
       />
     </>
   );

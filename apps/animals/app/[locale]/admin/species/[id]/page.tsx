@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from '@repo/i18n/navigation';
 import { AdminForm, type FieldDef } from '@/components/admin/admin-form';
 import { PairedImageFields, useEntityImages } from '@/components/admin/entity-images';
-import { GalleryEditor } from '@/components/admin/gallery-editor';
+import { EntityGalleryField, useEntityGallery } from '@/components/admin/entity-gallery';
 import { categories, species, speciesImages } from '@/lib/admin-api';
 import { useDerivedSlug } from '@/hooks/use-derived-slug';
 import { Box } from '@repo/ui/core-elements/box';
@@ -36,7 +36,10 @@ export default function AdminSpeciesFormPage({ params }: Props) {
     enabled: true,
   });
 
-  const images = useEntityImages(['image', 'icon']);
+  // Only the glyph is a single field now - the photographs are the gallery
+  // below, whose first row is what the API publishes as this species' cover.
+  const images = useEntityImages(['icon']);
+  const gallery = useEntityGallery(speciesImages, isNew ? null : Number(id));
   const [categoryOptions, setCategoryOptions] = useState<
     { value: string | number; label: string }[]
   >([]);
@@ -102,12 +105,16 @@ export default function AdminSpeciesFormPage({ params }: Props) {
       // Nullable on the model, and the API's URL validator rejects "" outright -
       // an emptied field means "no video", not an empty string.
       if (payload.video_link === '') payload.video_link = null;
+      // The gallery is written after the row exists: a photo is POSTed to this
+      // species' own URL, which a record being created does not have until now.
       if (isNew) {
         const created = await species.create(payload);
+        await gallery.persist(created.id as number);
         setSuccess(t('saved'));
         router.replace(`/admin/species/${created.id}`);
       } else {
         await species.update(Number(id), payload);
+        await gallery.persist(Number(id));
         setSuccess(t('saved'));
       }
     } catch {
@@ -171,22 +178,13 @@ export default function AdminSpeciesFormPage({ params }: Props) {
         error={error}
         success={success}
         productionHref={!isNew && values.slug ? `/species/${String(values.slug)}` : undefined}
-        imagesSlot={<PairedImageFields images={images} />}
-      >
-        {/* The extra identification shots - a plumage variant, the underside of
-            a leaf. Only once the row exists: each image is POSTed to the
-            species' own URL, which a record with no pk does not have yet. */}
-        {!isNew && (
-          <GalleryEditor
-            titleKey="referenceImages"
-            introKey="referenceImagesIntro"
-            list={() => speciesImages.list(Number(id))}
-            create={(data) => speciesImages.create(Number(id), data)}
-            update={(pk, data) => speciesImages.update(Number(id), pk, data)}
-            remove={(pk) => speciesImages.remove(Number(id), pk)}
+        imagesSlot={
+          <EntityGalleryField
+            gallery={gallery}
+            iconSlot={<PairedImageFields images={images} />}
           />
-        )}
-      </AdminForm>
+        }
+      />
     </>
   );
 }

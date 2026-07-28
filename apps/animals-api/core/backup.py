@@ -143,14 +143,22 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
     ),
     # ---- catalog: the reference data --------------------------------------- #
     ModelSpec("catalog.Category", SECTION_CATALOG, natural_key=("slug",)),
+    ModelSpec("catalog.CategoryImage", SECTION_CATALOG, parent="category"),
     ModelSpec("catalog.Species", SECTION_CATALOG, natural_key=("slug",)),
+    # Every `*Image` row follows its parent. These are not merely extra photos:
+    # a record with no `image` column of its own takes its **cover** from the
+    # first of them (see core.serializers.gallery_image_url), so an archive that
+    # skipped them would restore a catalog with no pictures at all.
     ModelSpec("catalog.SpeciesImage", SECTION_CATALOG, parent="species"),
     ModelSpec("catalog.Season", SECTION_CATALOG, natural_key=("slug",)),
+    ModelSpec("catalog.SeasonImage", SECTION_CATALOG, parent="season"),
     ModelSpec("catalog.WeatherCondition", SECTION_CATALOG, natural_key=("slug",)),
+    ModelSpec("catalog.WeatherConditionImage", SECTION_CATALOG, parent="weather_condition"),
     # Locations self-reference through `parent`, so a child restored before its
     # parent would find no target. Ordering by pk puts them back in the order
     # they were created, which is the order they were linked in.
     ModelSpec("catalog.Location", SECTION_CATALOG, natural_key=("slug",)),
+    ModelSpec("catalog.LocationImage", SECTION_CATALOG, parent="location"),
     # ---- journal: the entries ---------------------------------------------- #
     ModelSpec("journal.Sighting", SECTION_JOURNAL, natural_key=("slug",)),
     ModelSpec("journal.SightingMedia", SECTION_JOURNAL, parent="sighting"),

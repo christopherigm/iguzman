@@ -216,14 +216,20 @@ export default async function SpeciesPage({ params }: Props) {
 /**
  * The species' reference photos, in their authored order.
  *
- * The cover shot (`image`) is deliberately **not** included: it is already the
- * page's hero directly above, and repeating it as the strip's first tile reads
- * as a duplicate rather than as an extra view. No `href` either - every tile
- * here belongs to the page the reader is already on.
+ * The cover shot is deliberately **not** included: it is already the page's hero
+ * directly above, and repeating it as the strip's first tile reads as a
+ * duplicate rather than as an extra view. Since the CMS uploads every photo into
+ * this gallery and the API publishes the first of them as `image`, the cover is
+ * normally one of these rows - so it is matched by URL and dropped, exactly as
+ * the sighting page drops its own cover. A cover set separately (in the Django
+ * admin) matches nothing here and the whole strip is kept.
+ *
+ * No `href` either - every tile here belongs to the page the reader is already on.
  */
 function toGalleryPhotos(species: Species, locale: string): GalleryPhoto[] {
   return species.images.flatMap((photo) => {
     if (!photo.image) return [];
+    if (photo.image === species.image) return [];
     return [
       {
         key: `image-${photo.id}`,

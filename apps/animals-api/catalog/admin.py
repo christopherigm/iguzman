@@ -13,7 +13,18 @@ bulk-action deletes alike - no ``save_model``/``delete_model`` overrides needed.
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import Category, Location, Season, Species, SpeciesImage, WeatherCondition
+from .models import (
+    Category,
+    CategoryImage,
+    Location,
+    LocationImage,
+    Season,
+    SeasonImage,
+    Species,
+    SpeciesImage,
+    WeatherCondition,
+    WeatherConditionImage,
+)
 
 
 # Every content form pairs each authored text field with its English twin, laid
@@ -33,6 +44,21 @@ TRANSLATION_HELP = (
 )
 
 
+def _cover(obj):
+    """The record's cover file - its own ``image``, else its first gallery photo.
+
+    The list columns have to resolve it the same way the API does
+    (``core.serializers.gallery_image_url``), or every row authored through the
+    CMS - which uploads into the gallery and never writes ``image`` - would show
+    an empty thumbnail here while the public site shows a photo.
+    """
+    image = getattr(obj, 'image', None)
+    if image:
+        return image
+    first = next((row for row in obj.images.all() if row.image), None)
+    return first.image if first else None
+
+
 def _thumb(image, size=48):
     if not image:
         return '-'
@@ -42,21 +68,46 @@ def _thumb(image, size=48):
     )
 
 
-class SpeciesImageInline(admin.TabularInline):
-    model = SpeciesImage
+# Every record's photographs live in a gallery table with the same columns, so
+# one inline base covers all five. ⚠ `sort_order` is not cosmetic here: the API
+# publishes the record's `image` as its own column if set and **otherwise the
+# first gallery row**, so re-ordering these picks the cover for a record with no
+# image of its own - which is every record authored through the CMS.
+class GalleryImageInline(admin.TabularInline):
     extra = 0
     fields = ('image', 'name', 'en_name', 'description', 'en_description', 'sort_order', 'enabled')
 
 
+class CategoryImageInline(GalleryImageInline):
+    model = CategoryImage
+
+
+class SpeciesImageInline(GalleryImageInline):
+    model = SpeciesImage
+
+
+class SeasonImageInline(GalleryImageInline):
+    model = SeasonImage
+
+
+class WeatherConditionImageInline(GalleryImageInline):
+    model = WeatherConditionImage
+
+
+class LocationImageInline(GalleryImageInline):
+    model = LocationImage
+
+
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'en_name', 'kind', 'slug', 'species_count', 'is_featured', 'enabled', 'modified')
+    list_display = ('name', 'en_name', 'thumb', 'kind', 'slug', 'species_count', 'is_featured', 'enabled', 'modified')
     list_filter = ('kind', 'enabled', 'is_featured')
     search_fields = ('name', 'en_name', 'slug', 'scientific_name')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
     list_editable = ('is_featured',)
     ordering = ('kind', 'sort_order', 'name')
+    inlines = [CategoryImageInline]
 
     fieldsets = (
         ('Identity', {
@@ -77,6 +128,10 @@ class CategoryAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
         }),
     )
+
+    @admin.display(description='')
+    def thumb(self, obj):
+        return _thumb(_cover(obj))
 
     @admin.display(description='Species')
     def species_count(self, obj):
@@ -120,7 +175,7 @@ class SpeciesAdmin(admin.ModelAdmin):
 
     @admin.display(description='')
     def thumb(self, obj):
-        return _thumb(obj.image)
+        return _thumb(_cover(obj))
 
     @admin.display(description='Branch')
     def branch(self, obj):
@@ -137,6 +192,7 @@ class SeasonAdmin(admin.ModelAdmin):
     search_fields = ('name', 'en_name', 'slug')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
+    inlines = [SeasonImageInline]
 
     fieldsets = (
         ('Identity', {
@@ -152,7 +208,7 @@ class SeasonAdmin(admin.ModelAdmin):
 
     @admin.display(description='')
     def thumb(self, obj):
-        return _thumb(obj.image)
+        return _thumb(_cover(obj))
 
 
 @admin.register(WeatherCondition)
@@ -161,6 +217,7 @@ class WeatherConditionAdmin(admin.ModelAdmin):
     search_fields = ('name', 'en_name', 'slug')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
+    inlines = [WeatherConditionImageInline]
 
     fieldsets = (
         ('Identity', {'fields': ('name', 'en_name', 'slug')}),
@@ -172,17 +229,18 @@ class WeatherConditionAdmin(admin.ModelAdmin):
 
     @admin.display(description='')
     def thumb(self, obj):
-        return _thumb(obj.image)
+        return _thumb(_cover(obj))
 
 
 @admin.register(Location)
 class LocationAdmin(admin.ModelAdmin):
-    list_display = ('name', 'en_name', 'place_type', 'parent', 'region', 'country', 'sighting_count', 'hide_precise_location', 'enabled')
+    list_display = ('name', 'en_name', 'thumb', 'place_type', 'parent', 'region', 'country', 'sighting_count', 'hide_precise_location', 'enabled')
     list_filter = ('place_type', 'country', 'enabled', 'is_featured', 'hide_precise_location')
     search_fields = ('name', 'en_name', 'slug', 'region', 'country')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
     autocomplete_fields = ('parent',)
+    inlines = [LocationImageInline]
 
     fieldsets = (
         ('Identity', {
@@ -193,6 +251,9 @@ class LocationAdmin(admin.ModelAdmin):
                            'Chapultepec" / "Chapultepec Forest").',
         }),
         ('Content', {'fields': CONTENT_FIELDS, 'description': TRANSLATION_HELP}),
+        # A place has no `image` column - its photographs are the inline below,
+        # and the first of them is its cover. This is only the map-pin glyph.
+        ('Media', {'fields': ('icon',)}),
         ('Geography', {
             'fields': ('latitude', 'longitude', 'region', 'country', 'map_link'),
         }),
@@ -205,6 +266,10 @@ class LocationAdmin(admin.ModelAdmin):
         ('Display', {'fields': ('is_featured', 'sort_order', 'enabled')}),
         ('Metadata', {'fields': ('version', 'created', 'modified'), 'classes': ('collapse',)}),
     )
+
+    @admin.display(description='')
+    def thumb(self, obj):
+        return _thumb(_cover(obj))
 
     @admin.display(description='Sightings')
     def sighting_count(self, obj):

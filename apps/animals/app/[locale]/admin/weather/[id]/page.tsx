@@ -5,7 +5,8 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from '@repo/i18n/navigation';
 import { AdminForm, type FieldDef } from '@/components/admin/admin-form';
 import { PairedImageFields, useEntityImages } from '@/components/admin/entity-images';
-import { weatherConditions } from '@/lib/admin-api';
+import { EntityGalleryField, useEntityGallery } from '@/components/admin/entity-gallery';
+import { weatherConditions, weatherImages } from '@/lib/admin-api';
 import { useDerivedSlug } from '@/hooks/use-derived-slug';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
@@ -30,7 +31,10 @@ export default function AdminWeatherFormPage({ params }: Props) {
     enabled: true,
   });
 
-  const images = useEntityImages(['image', 'icon']);
+  // Only the glyph is a single field now - the photographs are the gallery
+  // below, whose first row is what the API publishes as this record's cover.
+  const images = useEntityImages(['icon']);
+  const gallery = useEntityGallery(weatherImages, isNew ? null : Number(id));
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,12 +70,16 @@ export default function AdminWeatherFormPage({ params }: Props) {
     setSuccess(null);
     try {
       const payload = { ...values, ...images.payload() };
+      // The gallery is written after the row exists: a photo is POSTed to this
+      // record's own URL, which one being created does not have until now.
       if (isNew) {
         const created = await weatherConditions.create(payload);
+        await gallery.persist(created.id as number);
         setSuccess(t('saved'));
         router.replace(`/admin/weather/${created.id}`);
       } else {
         await weatherConditions.update(Number(id), payload);
+        await gallery.persist(Number(id));
         setSuccess(t('saved'));
       }
     } catch {
@@ -120,7 +128,12 @@ export default function AdminWeatherFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
-        imagesSlot={<PairedImageFields images={images} />}
+        imagesSlot={
+          <EntityGalleryField
+            gallery={gallery}
+            iconSlot={<PairedImageFields images={images} />}
+          />
+        }
       />
     </>
   );
