@@ -112,7 +112,13 @@ class CategoryListCreateView(CachedListCreateView):
             qs = qs.filter(is_featured=True)
         search = request.query_params.get('search')
         if search:
-            qs = qs.filter(Q(name__icontains=search) | Q(scientific_name__icontains=search))
+            # Both members of the name pair: a reader searching in English must
+            # find a row whose Spanish `name` does not contain their term.
+            qs = qs.filter(
+                Q(name__icontains=search)
+                | Q(en_name__icontains=search)
+                | Q(scientific_name__icontains=search)
+            )
         return qs
 
 
@@ -168,6 +174,7 @@ class SpeciesListCreateView(CachedListCreateView):
         if search:
             qs = qs.filter(
                 Q(name__icontains=search)
+                | Q(en_name__icontains=search)
                 | Q(scientific_name__icontains=search)
                 | Q(family__icontains=search)
             )
@@ -239,7 +246,8 @@ class SpeciesImageDetailView(APIView):
         image = self._get_image(pk, img_pk)
         if image is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        for field in ('name', 'description', 'sort_order', 'enabled', 'fit', 'background_color'):
+        for field in ('name', 'en_name', 'description', 'en_description',
+                      'sort_order', 'enabled', 'fit', 'background_color'):
             if field in request.data:
                 setattr(image, field, request.data[field])
         image.save()
@@ -361,7 +369,11 @@ class LocationListCreateView(CachedListCreateView):
             qs = qs.filter(is_featured=True)
         search = request.query_params.get('search')
         if search:
-            qs = qs.filter(Q(name__icontains=search) | Q(region__icontains=search))
+            qs = qs.filter(
+                Q(name__icontains=search)
+                | Q(en_name__icontains=search)
+                | Q(region__icontains=search)
+            )
         return qs
 
 

@@ -59,8 +59,9 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = [
             'id', 'enabled', 'created', 'modified', 'version',
-            'kind', 'kind_display', 'name', 'slug', 'scientific_name',
-            'description', 'short_description', 'href',
+            'kind', 'kind_display', 'name', 'en_name', 'slug', 'scientific_name',
+            'description', 'en_description',
+            'short_description', 'en_short_description', 'href',
             'image', 'icon', 'fit', 'background_color',
             'is_featured', 'sort_order', 'species_count',
         ]
@@ -84,8 +85,9 @@ class CategoryWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.M
     class Meta:
         model = Category
         fields = [
-            'kind', 'name', 'slug', 'scientific_name',
-            'description', 'short_description', 'href',
+            'kind', 'name', 'en_name', 'slug', 'scientific_name',
+            'description', 'en_description',
+            'short_description', 'en_short_description', 'href',
             'image', 'icon', 'fit', 'background_color',
             'is_featured', 'sort_order', 'enabled',
         ]
@@ -100,7 +102,10 @@ class SpeciesImageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SpeciesImage
-        fields = ['id', 'image', 'name', 'description', 'fit', 'background_color', 'sort_order']
+        fields = [
+            'id', 'image', 'name', 'en_name', 'description', 'en_description',
+            'fit', 'background_color', 'sort_order',
+        ]
 
     def get_image(self, obj):
         return file_url(obj.image, self.context.get('request'))
@@ -109,7 +114,9 @@ class SpeciesImageSerializer(serializers.ModelSerializer):
 class SpeciesImageWriteSerializer(serializers.Serializer):
     image = serializers.CharField()
     name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    en_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
 
     def validate_image(self, value):
@@ -125,7 +132,9 @@ class SpeciesImageWriteSerializer(serializers.Serializer):
             instance = SpeciesImage(
                 species=species,
                 name=self.validated_data.get('name'),
+                en_name=self.validated_data.get('en_name'),
                 description=self.validated_data.get('description'),
+                en_description=self.validated_data.get('en_description'),
                 sort_order=self.validated_data.get('sort_order', 0),
             )
             instance.save()
@@ -153,6 +162,9 @@ class SpeciesSerializer(serializers.ModelSerializer):
     # routes on it, so it is flattened onto the payload here.
     kind = serializers.CharField(source='category.kind', read_only=True, default=None)
     category_name = serializers.CharField(source='category.name', read_only=True, default=None)
+    # The flattened category label needs its English twin too, or a species card
+    # rendered in English would carry a Spanish breadcrumb.
+    category_en_name = serializers.CharField(source='category.en_name', read_only=True, default=None)
     category_slug = serializers.SlugRelatedField(source='category', slug_field='slug', read_only=True)
     sighting_count = serializers.SerializerMethodField()
     last_seen = serializers.SerializerMethodField()
@@ -161,9 +173,10 @@ class SpeciesSerializer(serializers.ModelSerializer):
         model = Species
         fields = [
             'id', 'enabled', 'created', 'modified', 'version',
-            'category', 'category_name', 'category_slug', 'kind',
-            'name', 'slug', 'scientific_name', 'family',
-            'description', 'short_description', 'href', 'video_link',
+            'category', 'category_name', 'category_en_name', 'category_slug', 'kind',
+            'name', 'en_name', 'slug', 'scientific_name', 'family',
+            'description', 'en_description',
+            'short_description', 'en_short_description', 'href', 'video_link',
             'image', 'icon', 'images', 'fit', 'background_color',
             'is_featured', 'sort_order',
             'sighting_count', 'last_seen',
@@ -192,8 +205,9 @@ class SpeciesWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.Mo
     class Meta:
         model = Species
         fields = [
-            'category', 'name', 'slug', 'scientific_name', 'family',
-            'description', 'short_description', 'href', 'video_link',
+            'category', 'name', 'en_name', 'slug', 'scientific_name', 'family',
+            'description', 'en_description',
+            'short_description', 'en_short_description', 'href', 'video_link',
             'image', 'icon', 'fit', 'background_color',
             'is_featured', 'sort_order', 'enabled',
         ]
@@ -212,8 +226,9 @@ class SeasonSerializer(serializers.ModelSerializer):
         model = Season
         fields = [
             'id', 'enabled', 'created', 'modified', 'version',
-            'name', 'slug', 'months',
-            'description', 'short_description', 'href',
+            'name', 'en_name', 'slug', 'months',
+            'description', 'en_description',
+            'short_description', 'en_short_description', 'href',
             'image', 'icon', 'fit', 'background_color',
             'sort_order', 'sighting_count',
         ]
@@ -237,8 +252,9 @@ class SeasonWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.Mod
     class Meta:
         model = Season
         fields = [
-            'name', 'slug', 'months',
-            'description', 'short_description', 'href',
+            'name', 'en_name', 'slug', 'months',
+            'description', 'en_description',
+            'short_description', 'en_short_description', 'href',
             'image', 'icon', 'fit', 'background_color',
             'sort_order', 'enabled',
         ]
@@ -268,8 +284,9 @@ class WeatherConditionSerializer(serializers.ModelSerializer):
         model = WeatherCondition
         fields = [
             'id', 'enabled', 'created', 'modified', 'version',
-            'name', 'slug',
-            'description', 'short_description', 'href',
+            'name', 'en_name', 'slug',
+            'description', 'en_description',
+            'short_description', 'en_short_description', 'href',
             'image', 'icon', 'fit', 'background_color',
             'sort_order', 'sighting_count',
         ]
@@ -293,8 +310,9 @@ class WeatherConditionWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, seria
     class Meta:
         model = WeatherCondition
         fields = [
-            'name', 'slug',
-            'description', 'short_description', 'href',
+            'name', 'en_name', 'slug',
+            'description', 'en_description',
+            'short_description', 'en_short_description', 'href',
             'image', 'icon', 'fit', 'background_color',
             'sort_order', 'enabled',
         ]
@@ -307,6 +325,7 @@ class WeatherConditionWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, seria
 class LocationSerializer(serializers.ModelSerializer):
     place_type_display = serializers.CharField(source='get_place_type_display', read_only=True)
     parent_name = serializers.CharField(source='parent.name', read_only=True, default=None)
+    parent_en_name = serializers.CharField(source='parent.en_name', read_only=True, default=None)
     parent_slug = serializers.SlugRelatedField(source='parent', slug_field='slug', read_only=True)
     latitude = serializers.SerializerMethodField()
     longitude = serializers.SerializerMethodField()
@@ -316,8 +335,10 @@ class LocationSerializer(serializers.ModelSerializer):
         model = Location
         fields = [
             'id', 'enabled', 'created', 'modified', 'version',
-            'name', 'slug', 'description', 'short_description',
-            'parent', 'parent_name', 'parent_slug',
+            'name', 'en_name', 'slug',
+            'description', 'en_description',
+            'short_description', 'en_short_description',
+            'parent', 'parent_name', 'parent_en_name', 'parent_slug',
             'place_type', 'place_type_display',
             'latitude', 'longitude', 'region', 'country', 'map_link',
             'hide_precise_location', 'is_featured', 'sort_order', 'sighting_count',
@@ -360,7 +381,9 @@ class LocationWriteSerializer(_SlugUniqueMixin, serializers.ModelSerializer):
     class Meta:
         model = Location
         fields = [
-            'name', 'slug', 'description', 'short_description',
+            'name', 'en_name', 'slug',
+            'description', 'en_description',
+            'short_description', 'en_short_description',
             'parent', 'place_type',
             'latitude', 'longitude', 'region', 'country', 'map_link',
             'hide_precise_location', 'is_featured', 'sort_order', 'enabled',

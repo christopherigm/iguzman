@@ -8,13 +8,16 @@ than by ``save_model``/``delete_model`` overrides.
 from django.contrib import admin
 from django.utils.html import format_html
 
+from catalog.admin import CONTENT_FIELDS, TRANSLATION_HELP
+
 from .models import Sighting, SightingMedia
 
 
 class SightingMediaInline(admin.TabularInline):
     model = SightingMedia
     extra = 0
-    fields = ('kind', 'image', 'file', 'url', 'poster', 'name', 'duration_seconds', 'sort_order', 'enabled')
+    fields = ('kind', 'image', 'file', 'url', 'poster', 'name', 'en_name',
+              'duration_seconds', 'sort_order', 'enabled')
     # A gallery is arranged by hand; newest-first would fight the sort_order the
     # author is setting.
     ordering = ('sort_order', 'id')
@@ -24,7 +27,8 @@ class SightingMediaInline(admin.TabularInline):
 class SightingAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'thumb', 'date', 'location', 'season', 'weather', 'media_count', 'is_featured', 'enabled')
     list_filter = ('enabled', 'is_featured', 'season', 'weather', 'species__category__kind', 'location')
-    search_fields = ('name', 'slug', 'description', 'species__name', 'species__scientific_name')
+    search_fields = ('name', 'en_name', 'slug', 'description', 'en_description',
+                     'species__name', 'species__en_name', 'species__scientific_name')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
     autocomplete_fields = ('species', 'location')
@@ -33,7 +37,7 @@ class SightingAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Subject', {
-            'fields': ('species', 'name', 'slug'),
+            'fields': ('species', 'name', 'en_name', 'slug'),
             'description': 'The title is optional - left blank, the site shows the species name.',
         }),
         ('When', {
@@ -47,7 +51,7 @@ class SightingAdmin(admin.ModelAdmin):
                            'back to the location\'s own coordinates.',
         }),
         ('Conditions', {'fields': ('weather', 'temperature_c', 'individuals')}),
-        ('Story', {'fields': ('short_description', 'description', 'href')}),
+        ('Story', {'fields': CONTENT_FIELDS + ('href',), 'description': TRANSLATION_HELP}),
         ('Cover image', {'fields': ('image', 'fit', 'background_color')}),
         ('Display', {'fields': ('is_featured', 'enabled')}),
         ('Metadata', {'fields': ('version', 'created', 'modified'), 'classes': ('collapse',)}),
@@ -74,6 +78,7 @@ class SightingMediaAdmin(admin.ModelAdmin):
 
     list_display = ('__str__', 'sighting', 'kind', 'sort_order', 'enabled')
     list_filter = ('kind', 'enabled')
-    search_fields = ('name', 'description', 'sighting__slug', 'sighting__species__name')
+    search_fields = ('name', 'en_name', 'description', 'en_description',
+                     'sighting__slug', 'sighting__species__name')
     readonly_fields = ('created', 'modified', 'version')
     autocomplete_fields = ('sighting',)

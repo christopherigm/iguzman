@@ -361,3 +361,90 @@ class SlugUniquenessTests(CatalogFixtureMixin, IsolatedMediaTestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn('slug', response.json())
+
+
+class TranslationFieldTests(CatalogFixtureMixin, IsolatedMediaTestCase):
+    """The Spanish/English pairs: stored, served raw, writable, and searchable.
+
+    The API deliberately publishes **both** members of every pair rather than
+    resolving a locale itself - see core.models.TRANSLATED_FIELDS. These tests
+    pin that contract down, because a well-meaning "just return the right one"
+    change would be cached under the same key and served to the next reader in
+    the wrong language.
+    """
+
+    def test_both_languages_are_published_raw(self):
+        self.make_species(
+            name='Venado cola blanca',
+            en_name='White-tailed Deer',
+            short_description='Un venado común.',
+            en_short_description='A common deer.',
+        )
+        payload = self.client.get('/api/catalog/species/').json()[0]
+
+        self.assertEqual(payload['name'], 'Venado cola blanca')
+        self.assertEqual(payload['en_name'], 'White-tailed Deer')
+        self.assertEqual(payload['short_description'], 'Un venado común.')
+        self.assertEqual(payload['en_short_description'], 'A common deer.')
+
+    def test_a_blank_translation_is_null_not_a_fallback(self):
+        # The fallback to the Spanish is the *frontend's* job. Doing it here
+        # would hide from the CMS which rows still need translating.
+        self.make_species(name='Venado cola blanca', en_name='')
+        payload = self.client.get('/api/catalog/species/').json()[0]
+        self.assertEqual(payload['en_name'], '')
+
+    def test_en_fields_are_writable_through_the_api(self):
+        self.make_staff()
+        self.client.login(username='ranger', password='fieldnotes-2026')
+        category = self.make_category()
+
+        response = self.client.post(
+            '/api/catalog/species/',
+            {
+                'category': category.pk,
+                'name': 'Ardilla gris',
+                'en_name': 'Grey Squirrel',
+                'slug': 'ardilla-gris',
+                'description': 'Vive en los robles.',
+                'en_description': 'Lives in the oaks.',
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+
+        created = Species.objects.get(slug='ardilla-gris')
+        self.assertEqual(created.en_name, 'Grey Squirrel')
+        self.assertEqual(created.en_description, 'Lives in the oaks.')
+
+    def test_search_matches_either_language(self):
+        self.make_species(name='Venado cola blanca', en_name='White-tailed Deer')
+
+        for term in ('Venado', 'White-tailed'):
+            with self.subTest(term=term):
+                results = self.client.get(f'/api/catalog/species/?search={term}').json()
+                self.assertEqual(len(results), 1, f'{term!r} found nothing')
+
+    def test_flattened_relation_labels_carry_their_english_twin(self):
+        # A feed/detail card renders entirely from one payload, so an English
+        # reader given only `category_name` would get a Spanish breadcrumb.
+        category = self.make_category(name='Venados', en_name='Deer')
+        self.make_species(category=category)
+
+        payload = self.client.get('/api/catalog/species/').json()[0]
+        self.assertEqual(payload['category_name'], 'Venados')
+        self.assertEqual(payload['category_en_name'], 'Deer')
+
+    def test_location_carries_the_pairs_too(self):
+        # Location is the one content model that is not a picture model, so it
+        # repeats the pairs by hand and can silently miss one.
+        Location.objects.create(
+            name='Bosque de Chapultepec',
+            en_name='Chapultepec Forest',
+            slug='chapultepec',
+            description='Un bosque urbano.',
+            en_description='An urban forest.',
+        )
+        payload = self.client.get('/api/catalog/locations/').json()[0]
+        self.assertEqual(payload['en_name'], 'Chapultepec Forest')
+        self.assertEqual(payload['en_description'], 'An urban forest.')

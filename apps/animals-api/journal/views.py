@@ -105,10 +105,15 @@ class SightingListCreateView(CachedListCreateView):
 
         search = params.get('search')
         if search:
+            # Both members of every text pair, so a search typed in either
+            # language reaches an entry authored in the other.
             qs = qs.filter(
                 Q(name__icontains=search)
+                | Q(en_name__icontains=search)
                 | Q(description__icontains=search)
+                | Q(en_description__icontains=search)
                 | Q(species__name__icontains=search)
+                | Q(species__en_name__icontains=search)
                 | Q(species__scientific_name__icontains=search)
             )
 

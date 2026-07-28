@@ -34,7 +34,7 @@ class SightingMediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = SightingMedia
         fields = [
-            'id', 'kind', 'name', 'description',
+            'id', 'kind', 'name', 'en_name', 'description', 'en_description',
             'image', 'file', 'poster', 'url', 'source_url',
             'duration_seconds', 'fit', 'background_color', 'sort_order',
         ]
@@ -70,7 +70,9 @@ class SightingMediaWriteSerializer(serializers.Serializer):
     poster = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     url = serializers.URLField(max_length=500, required=False, allow_null=True, allow_blank=True)
     name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    en_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     duration_seconds = serializers.IntegerField(min_value=0, required=False, allow_null=True)
     sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
 
@@ -100,7 +102,9 @@ class SightingMediaWriteSerializer(serializers.Serializer):
                 kind=data.get('kind', 'image'),
                 url=data.get('url') or None,
                 name=data.get('name'),
+                en_name=data.get('en_name'),
                 description=data.get('description'),
+                en_description=data.get('en_description'),
                 duration_seconds=data.get('duration_seconds'),
                 sort_order=data.get('sort_order', 0),
             )
@@ -135,7 +139,9 @@ class SightingVideoUploadSerializer(serializers.Serializer):
     file = serializers.FileField()
     poster = serializers.ImageField(required=False, allow_null=True)
     name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    en_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     duration_seconds = serializers.IntegerField(min_value=0, required=False, allow_null=True)
     sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
 
@@ -160,7 +166,9 @@ class SightingVideoUploadSerializer(serializers.Serializer):
                 sighting=sighting,
                 kind='video',
                 name=data.get('name'),
+                en_name=data.get('en_name'),
                 description=data.get('description'),
+                en_description=data.get('en_description'),
                 duration_seconds=data.get('duration_seconds'),
                 sort_order=data.get('sort_order', 0),
             )
@@ -186,7 +194,10 @@ class SightingMediaUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SightingMedia
-        fields = ['name', 'description', 'url', 'duration_seconds', 'sort_order', 'enabled', 'fit', 'background_color']
+        fields = [
+            'name', 'en_name', 'description', 'en_description', 'url',
+            'duration_seconds', 'sort_order', 'enabled', 'fit', 'background_color',
+        ]
 
 
 # ---------------------------------------------------------------------------
@@ -197,7 +208,13 @@ class SightingSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
     media = SightingMediaSerializer(many=True, read_only=True)
 
+    # Every flattened relation label travels as a Spanish/English pair, for the
+    # same reason the row's own fields do: a feed card renders entirely from this
+    # payload, so an English reader given only `species_name` would get a Spanish
+    # species beside an English story. The frontend picks per locale, falling
+    # back to the bare field when the `en_` twin is blank.
     species_name = serializers.CharField(source='species.name', read_only=True, default=None)
+    species_en_name = serializers.CharField(source='species.en_name', read_only=True, default=None)
     species_slug = serializers.SlugRelatedField(source='species', slug_field='slug', read_only=True)
     species_image = serializers.SerializerMethodField()
     # Flattened from species.category so a feed card can show its branch and
@@ -205,13 +222,17 @@ class SightingSerializer(serializers.ModelSerializer):
     kind = serializers.CharField(source='species.category.kind', read_only=True, default=None)
     category = serializers.IntegerField(source='species.category_id', read_only=True, default=None)
     category_name = serializers.CharField(source='species.category.name', read_only=True, default=None)
+    category_en_name = serializers.CharField(source='species.category.en_name', read_only=True, default=None)
     category_slug = serializers.CharField(source='species.category.slug', read_only=True, default=None)
 
     location_name = serializers.CharField(source='location.name', read_only=True, default=None)
+    location_en_name = serializers.CharField(source='location.en_name', read_only=True, default=None)
     location_slug = serializers.CharField(source='location.slug', read_only=True, default=None)
     season_name = serializers.CharField(source='season.name', read_only=True, default=None)
+    season_en_name = serializers.CharField(source='season.en_name', read_only=True, default=None)
     season_slug = serializers.CharField(source='season.slug', read_only=True, default=None)
     weather_name = serializers.CharField(source='weather.name', read_only=True, default=None)
+    weather_en_name = serializers.CharField(source='weather.en_name', read_only=True, default=None)
     weather_slug = serializers.CharField(source='weather.slug', read_only=True, default=None)
 
     latitude = serializers.SerializerMethodField()
@@ -225,14 +246,16 @@ class SightingSerializer(serializers.ModelSerializer):
         model = Sighting
         fields = [
             'id', 'enabled', 'created', 'modified', 'version',
-            'species', 'species_name', 'species_slug', 'species_image',
-            'kind', 'category', 'category_name', 'category_slug',
-            'name', 'slug', 'description', 'short_description', 'href',
+            'species', 'species_name', 'species_en_name', 'species_slug', 'species_image',
+            'kind', 'category', 'category_name', 'category_en_name', 'category_slug',
+            'name', 'en_name', 'slug',
+            'description', 'en_description',
+            'short_description', 'en_short_description', 'href',
             'date', 'time',
-            'location', 'location_name', 'location_slug',
+            'location', 'location_name', 'location_en_name', 'location_slug',
             'latitude', 'longitude', 'coordinates_are_approximate',
-            'season', 'season_name', 'season_slug',
-            'weather', 'weather_name', 'weather_slug',
+            'season', 'season_name', 'season_en_name', 'season_slug',
+            'weather', 'weather_name', 'weather_en_name', 'weather_slug',
             'temperature_c', 'individuals',
             'image', 'media', 'media_count', 'fit', 'background_color',
             'is_featured',
@@ -290,7 +313,9 @@ class SightingWriteSerializer(Base64ImagesMixin, serializers.ModelSerializer):
     class Meta:
         model = Sighting
         fields = [
-            'species', 'name', 'slug', 'description', 'short_description', 'href',
+            'species', 'name', 'en_name', 'slug',
+            'description', 'en_description',
+            'short_description', 'en_short_description', 'href',
             'date', 'time', 'location', 'latitude', 'longitude',
             'season', 'weather', 'temperature_c', 'individuals',
             'image', 'fit', 'background_color', 'is_featured', 'enabled',

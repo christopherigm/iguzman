@@ -59,6 +59,53 @@ Sighting(date=..., location=..., media=[...])
   `Season` and `Weather` are `SET_NULL` instead, because a place can be merged
   away without taking the entries filed there with it.
 
+## Bilingual content: `name` is Spanish, `en_name` is English
+
+Every authored text field is a **pair** - `name`/`en_name`,
+`description`/`en_description`, `short_description`/`en_short_description` - the
+same shape as website-api's `BasePicture`. The bare field is **Spanish**; the
+`en_` twin is **English**. `core.models.TRANSLATED_FIELDS` names the three so
+serializers, the admin and the AI translate endpoint iterate them instead of
+repeating the list.
+
+They live on `BasePicture`, so every picture model gets them for free.
+**`Location` is the exception** - it is not a picture model and repeats the three
+pairs by hand, which is the one place a new translated field can silently be
+missed.
+
+Three rules that are easy to get wrong:
+
+- **The API publishes both members raw and resolves nothing.** There is no
+  `?locale=`, and there must not be: these payloads are cached under one key per
+  resource, so a locale-resolved variant would be written into that same key and
+  then served to the next reader in the wrong language. Exactly the reasoning
+  behind `Location.hide_precise_location` below. The **frontend** picks - `es`
+  reads the bare field, every other locale reads `en_*` and falls back to the
+  bare field when the translation is blank.
+- **Five locales, two languages, on purpose.** `apps/animals` ships en, es, de,
+  fr and pt; de/fr/pt readers get the English. Storing five would triple the
+  columns and the translation cost for three locales nobody has asked for.
+- **A flattened relation label needs its `en_` twin too.** `SightingSerializer`
+  carries `species_name`, `category_name`, `location_name`, `season_name` and
+  `weather_name`; each now has a `*_en_name` beside it, and `SpeciesSerializer`
+  has `category_en_name`. A feed card renders entirely from one payload, so
+  without them an English reader gets a Spanish species beside an English story.
+  **Add a flattened label and you must add its twin in the same task.**
+
+What is deliberately *not* translated: `slug` (a URL and a stable key - the seed
+command matches on it, so renaming one creates duplicate rows), `scientific_name`
+and `family` (Latin, identical in every locale), and the `KIND_CHOICES` /
+`PLACE_TYPE_CHOICES` labels (a fixed enum the frontend translates through
+next-intl).
+
+⚠ **Every row written before this landed is English sitting in the Spanish
+column.** `catalog/migrations/0003_copy_existing_copy_to_english` (and the
+journal's twin) copied that text into `en_*` so re-authoring `name` in Spanish
+cannot destroy it. Nothing was blanked, so those rows still read English on
+`/es` until someone rewrites them. The same applies to a database seeded before
+the change: `seed_reference` is idempotent by slug, so re-running it will not
+translate what already exists.
+
 ## Seasons fill themselves from the date
 
 `Sighting.save()` fills a **blank** `season` by matching the date's month against
@@ -162,6 +209,59 @@ development and tests). website-api silently skips there, which leaves an edit
 invisible for the whole 5-minute TTL on a laptop. Redis has `delete_pattern`, so
 the fallback never runs in production.
 
+## LLM calls - always through `core/services/llm.py`
+
+Every AI call runs in this backend, never in the Next.js app. `core/services/llm.py`
+is a straight port of website-api's module - **Groq primary, OpenRouter fallback** -
+and the two should be kept in step rather than allowed to drift. Never call a
+provider SDK from a view, and never move a key into the frontend.
+
+- **The stream fallback only covers failures before the first token.** Once Groq
+  has emitted content the user is reading it, so restarting on OpenRouter would
+  duplicate output; a mid-stream failure propagates. An empty Groq stream counts
+  as a failure and does fall back. `chat_json` falls back on anything, including
+  a reply that will not parse - nothing has been shown yet.
+- Config: `GROQ_API_KEY`, `GROQ_MODEL`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`,
+  `LLM_REQUEST_TIMEOUT`, plus `SCRAPER_BASE_URL` / `SCRAPER_API_KEY` for web
+  research. In the cluster they arrive through the `animals-api-secrets` bundle;
+  locally from `.env`. With neither LLM key set the `/api/ai/*` endpoints answer
+  **503**, so a 503 from one means the key never reached the process.
+- **gunicorn runs `gthread` workers** (`gunicorn.conf.py`) because streaming
+  holds a worker for the whole generation. With plain sync workers two concurrent
+  authoring requests would block the public journal feed.
+
+### The four authoring endpoints (`core/ai_views.py`, all `IsStaffUser`)
+
+```
+POST /api/ai/chat/       stream an arbitrary completion as OpenAI-shaped SSE
+POST /api/ai/translate/  fill the other half of a Spanish/English field pair
+POST /api/ai/copy/       write or polish a description in one language
+POST /api/ai/research/   draft a whole catalog record from live web sources
+```
+
+- **They are drafting tools: none of them writes to the database.** Each returns
+  a patch for the author to review and apply through the normal endpoints (or to
+  retype in the Django admin). A journal's whole value is that a person vouched
+  for what it says - do not "streamline" one of these into a direct write.
+- **Staff-only, unlike every read endpoint here.** They spend money at a provider
+  and produce copy published under the journal's name.
+- **`/api/ai/research/` filters the model's answer against a per-subject
+  allowlist** (`catalog/services/research.py` → `_SUBJECTS`), so a hallucinated
+  *field* lands nowhere - `slug`, ids, FKs and images are absent by design. It
+  cannot filter a hallucinated *fact*: `sources` and `used_web_search` come back
+  alongside so the author can check. The scraper is optional; unconfigured or
+  down, it answers from the model's own knowledge with no sources rather than
+  failing.
+- **Errors in the streaming endpoint must be reported inside the stream**
+  (`data: {"error": …}`) - `StreamingHttpResponse` commits the 200 before the
+  generator runs, so validate anything that could 4xx/5xx *before* returning the
+  response. `X-Accel-Buffering: no` is required or nginx delivers the whole
+  completion in one lump. Provider errors are logged in full and reported
+  generically; an upstream body can carry prompt text.
+
+Adding a translated field means adding it to `TRANSLATED_FIELDS`, which is what
+`/api/ai/translate/`'s allowlist is derived from - no edit needed in the AI layer.
+
 ## Endpoints
 
 All public on GET, staff-only on write.
@@ -184,14 +284,23 @@ GET               .../slug/<slug>/
 POST/PATCH/DELETE /api/catalog/species/<pk>/images/[<img_pk>/]
 POST/PATCH/DELETE /api/journal/sightings/<pk>/media/[<media_pk>/]     JSON, image or link
 POST              /api/journal/sightings/<pk>/media/video/            multipart, video file
+
+# AI authoring - staff only, drafting only (see the LLM section above)
+POST   /api/ai/chat/        /api/ai/translate/   /api/ai/copy/   /api/ai/research/
 ```
+
+Every catalog and journal payload carries **both** languages of each text field
+(`name` + `en_name`, …) - see "Bilingual content" above. `?search=` matches
+either language.
 
 `?include_disabled=true` is honoured for staff on every list, ignored for
 everyone else.
 
 ## Tests
 
-`python manage.py test catalog journal` (56 tests). Inherit
+`python manage.py test` (74 tests: `catalog`, `journal`, and `core` for the AI
+endpoints - those always mock the provider, so the suite spends nothing and needs
+no network). Inherit
 **`core.tests.IsolatedMediaTestCase`** for anything that writes: it redirects
 `MEDIA_ROOT` to a temp directory and clears the cache between tests. Without the
 first, test uploads scatter through the developer's own `media/`; without the
@@ -204,9 +313,14 @@ Locally the `.env` points Redis and Postgres at the cluster, so run with
 
 Deliberately out of scope so far - decide before adding, do not assume:
 
-- **No translations.** `apps/animals` ships five locales, but the catalog has no
-  `en_*` field pairs (website-api's two-language shape does not scale to five).
-  Content is single-language until a strategy is picked.
+- **No CMS translate buttons.** The `/api/ai/*` endpoints exist and are the whole
+  backend half of the feature, but nothing calls them yet: the Django admin
+  renders the `en_*` fields as plain inputs, with no per-field "Translate" or
+  "Generate" control. Wiring those up (admin JS, or a future Next.js CMS) is the
+  intended next step - the endpoints were built REST-first for exactly that.
+- **No translations beyond Spanish and English.** de/fr/pt readers get the
+  English; see "Bilingual content" above for why five stored languages was
+  rejected.
 - **No comments, likes or follows.** It is a journal, not a network.
 - **No trip/outing grouping.** A day out is currently N separate sightings that
   share a date and a location.

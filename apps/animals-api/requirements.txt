@@ -12,3 +12,11 @@ python-dotenv==1.1.1
 django-redis==5.4.0
 webauthn==2.7.1
 cbor2==5.9.0
+# AI providers for core/services/llm.py - Groq primary, OpenRouter (an
+# OpenAI-compatible endpoint, hence the openai SDK) as the fallback.
+# Pinned to match website-api: core/services/llm.py is a straight port of its
+# module, so the two must stay on the same client API.
+groq==1.4.0
+openai>=1.0.0
+# Web research via the shared `scraper` microservice.
+requests==2.32.3

@@ -319,3 +319,27 @@ PASSWORD_RESET_TOKEN_EXPIRY_HOURS = int(
 WEBAUTHN_RP_ID = os.environ.get('WEBAUTHN_RP_ID', 'localhost')
 WEBAUTHN_RP_NAME = os.environ.get('WEBAUTHN_RP_NAME', 'Animals_api')
 WEBAUTHN_RP_ORIGIN = os.environ.get('WEBAUTHN_RP_ORIGIN', 'http://localhost:3000')
+
+# ── AI providers ─────────────────────────────────────────────────────────────
+# Every LLM call goes through `core/services/llm.py`: Groq first, OpenRouter as
+# the fallback. The frontend is a public journal that holds no keys, so these
+# live here and nowhere else. With neither key set the `/api/ai/*` endpoints
+# return 503 rather than failing halfway - so a 503 from one of them means the
+# key never reached the process, not that a provider is down.
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+GROQ_MODEL = os.environ.get('GROQ_MODEL', 'openai/gpt-oss-120b')
+
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
+OPENROUTER_MODEL = os.environ.get(
+    'OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-instruct'
+)
+
+LLM_REQUEST_TIMEOUT = float(os.environ.get('LLM_REQUEST_TIMEOUT', '20'))
+
+# ── Web research (the `scraper` microservice) ────────────────────────────────
+# Backs `POST /api/ai/research/`, which reads live pages about a species before
+# the LLM maps what it found onto model fields. Optional: with SCRAPER_API_KEY
+# unset the endpoint still answers, from the model's own knowledge and with no
+# sources - see core/services/scraper.py.
+SCRAPER_BASE_URL = os.environ.get('SCRAPER_BASE_URL', 'https://scraper.iguzman.com.mx')
+SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')

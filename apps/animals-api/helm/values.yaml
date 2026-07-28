@@ -70,6 +70,13 @@ env:
 #   R2_PUBLIC_DOMAIN (default: r2.iguzman.com.mx)
 # Set them with `pnpm secrets`.
 #
+# The AI authoring endpoints (/api/ai/*) read GROQ_API_KEY, OPENROUTER_API_KEY
+# and SCRAPER_API_KEY from this same bundle. They are optional: with no LLM key
+# those four staff-only endpoints answer 503 and nothing else in the API is
+# affected, and with no SCRAPER_API_KEY research falls back to the model's own
+# knowledge. Same rule as the R2 vars - do NOT add them to `env:` above, even as
+# empty placeholders, or the empty string shadows the secret.
+#
 # ⚠ Do NOT add any R2_* key to `env:` above, not even as an empty placeholder.
 # `env` beats `envFrom`, and the template renders every key of `env:` including
 # empty-valued ones - so `R2_ACCOUNT_ID: ''` would reach the pod as a real empty

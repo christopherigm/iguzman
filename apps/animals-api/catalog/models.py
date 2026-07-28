@@ -277,10 +277,16 @@ class Location(Common):
     spot (see ``journal.Sighting.coordinates``).
     """
 
+    # Location is the one content model that is not a picture model, so it
+    # repeats BasePicture's Spanish/English pairs rather than inheriting them.
+    # See core.models.TRANSLATED_FIELDS for how the pair is read.
     name = models.CharField(max_length=255)
+    en_name = models.CharField(max_length=255, null=True, blank=True)
     slug = models.SlugField(max_length=255, unique=True)
     description = models.TextField(null=True, blank=True)
+    en_description = models.TextField(null=True, blank=True)
     short_description = models.TextField(null=True, blank=True)
+    en_short_description = models.TextField(null=True, blank=True)
 
     # A trail inside a park, a pond inside a reserve. One level is the intent;
     # nothing enforces a depth limit, so keep it shallow.

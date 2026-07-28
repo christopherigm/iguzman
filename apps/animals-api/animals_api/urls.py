@@ -12,6 +12,9 @@ urlpatterns = [
     # and staff-only on write - see core/permissions.py.
     path('api/', include('catalog.urls')),
     path('api/', include('journal.urls')),
+    # Staff-only LLM authoring tools (translate, write copy, research a record
+    # from the web). Drafting only - none of them writes to the database.
+    path('api/', include('core.urls')),
 ]
 
 # Development only, and `static()` enforces that itself: it returns [] unless
