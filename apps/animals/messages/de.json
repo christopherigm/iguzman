@@ -10,6 +10,47 @@
     "latestSightingsTitle": "Neueste Sichtungen",
     "latestSightingsSubtitle": "Die jüngsten Einträge aus dem Feldtagebuch."
   },
+  "CategoryPage": {
+    "breadcrumbHome": "Startseite",
+    "speciesCount": "Arten",
+    "photosCount": "Fotos",
+    "sightingsCount": "Sichtungen",
+    "lastSeen": "Zuletzt gesehen",
+    "featured": "Hervorgehoben",
+    "noSpecies": "In dieser Kategorie ist noch nichts abgelegt.",
+    "noDescription": "Für diesen Eintrag wurde noch keine Beschreibung verfasst.",
+    "factKind": "Zweig",
+    "factScientificName": "Wissenschaftlicher Name",
+    "factCategory": "Kategorie",
+    "factSpecies": "Arten",
+    "factSightings": "Sichtungen",
+    "externalReference": "Externe Quelle",
+    "galleryTitle": "Galerie",
+    "gallerySubtitle": "Alle Fotografien im Katalog, die unter {category} abgelegt sind.",
+    "speciesTitle": "Arten",
+    "speciesSubtitle": "Alles, was unter {category} katalogisiert ist.",
+    "sightingsTitle": "Neueste Sichtungen",
+    "sightingsSubtitle": "Feldtagebuch-Einträge, die {category} festhalten."
+  },
+  "SpeciesPage": {
+    "factFamily": "Familie",
+    "videoTitle": "Video",
+    "galleryTitle": "Referenzfotos",
+    "gallerySubtitle": "Bestimmungsaufnahmen von {species}.",
+    "sightingsTitle": "Sichtungen",
+    "sightingsSubtitle": "Alle Feldtagebuch-Einträge, die {species} festhalten."
+  },
+  "SightingPage": {
+    "breadcrumbHome": "Startseite",
+    "galleryTitle": "Fotos",
+    "gallerySubtitle": "Aufgenommen am {date}.",
+    "videoTitle": "Video",
+    "mapTitle": "Wo es gesehen wurde",
+    "mapSubtitle": "Der Ort, an dem dieser Eintrag erfasst wurde.",
+    "mapApproximate": "Dieser Ort ist geschützt, daher ist die Markierung ungefähr - sie ist auf etwa einen Kilometer genau.",
+    "relatedTitle": "Weitere Sichtungen",
+    "relatedSubtitle": "Andere Feldtagebuch-Einträge, die {species} festhalten."
+  },
   "Kinds": {
     "animal": "Tiere",
     "plant": "Pflanzen",
@@ -19,7 +60,8 @@
   },
   "Gallery": {
     "previous": "Zurück",
-    "next": "Weiter"
+    "next": "Weiter",
+    "pagination": "Eintrag auswählen"
   },
   "Sighting": {
     "species": "Art",
@@ -28,7 +70,10 @@
     "season": "Jahreszeit",
     "weather": "Wetter",
     "temperature": "Temperatur",
-    "individuals": "Individuen"
+    "individuals": "Individuen",
+    "category": "Kategorie",
+    "time": "Uhrzeit",
+    "seeDetail": "Details ansehen"
   },
   "Navbar": {
     "home": "Startseite",
@@ -198,6 +243,7 @@
     "brandImages": "Markenbilder",
     "brandmark": "Bildmarke",
     "breadcrumbAdmin": "Verwaltung",
+    "cancel": "Abbrechen",
     "captionEn": "Bildunterschrift (Englisch)",
     "captionEs": "Bildunterschrift (Spanisch)",
     "categories": "Kategorien",

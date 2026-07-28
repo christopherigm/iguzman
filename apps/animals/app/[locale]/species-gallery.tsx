@@ -9,6 +9,7 @@ import { Box } from '@repo/ui/core-elements/box';
 import { Container } from '@repo/ui/core-elements/container';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { IconButton } from '@repo/ui/core-elements/icon-button';
+import { HERO_HEIGHT } from '@/lib/hero-height';
 import 'swiper/css';
 import './species-gallery.css';
 
@@ -24,28 +25,25 @@ import './species-gallery.css';
 
 export interface SpeciesSlide {
   id: number;
+  slug: string;
   /** Already resolved for the current locale by the server component. */
   name: string;
   shortDescription: string | null;
   scientificName: string | null;
   categoryName: string | null;
+  categorySlug: string | null;
   image: string;
 }
 
 interface Props {
   slides: SpeciesSlide[];
+  /** Both captions link into the catalog, so the slide needs the locale prefix. */
+  locale: string;
   /** Supplied by the caller - `@repo/ui` is i18n-agnostic. */
   labels: { previous: string; next: string };
 }
 
-/**
- * Matches `@repo/ui`'s `.hero--image` height, so the gallery occupies exactly
- * the band a hero would. Expressed as a prop rather than a CSS class because a
- * class carrying nothing but `height` is what the props-first rule forbids.
- */
-const HERO_HEIGHT = 'clamp(500px, 65vw, 800px)';
-
-export function SpeciesGallery({ slides, labels }: Props) {
+export function SpeciesGallery({ slides, locale, labels }: Props) {
   const [swiper, setSwiper] = useState<SwiperType | null>(null);
 
   if (slides.length === 0) return null;
@@ -97,21 +95,45 @@ export function SpeciesGallery({ slides, labels }: Props) {
               />
 
               <Container size="lg" paddingX={10} styles={{ position: 'relative', zIndex: 1 }}>
-                <Box flexDirection="column" gap={8} paddingBottom={56} maxWidth={720}>
-                  {slide.categoryName && (
-                    <Typography
-                      variant="label"
-                      color="#ffffff"
-                      fontWeight={700}
-                      styles={{ letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.85 }}
+                {/* Same inset as `DetailHero`'s caption - the band is short
+                    enough now that the old 56px left the description tight
+                    against the bottom edge at the clamp's floor. */}
+                <Box flexDirection="column" gap={8} paddingBottom={40} maxWidth={720}>
+                  {/* Both captions are links into the catalog. The slide is not
+                      itself clickable: it autoplays, so a whole-slide target
+                      would change destination under the pointer. */}
+                  {slide.categoryName && slide.categorySlug && (
+                    <Box
+                      href={`/${locale}/categories/${slide.categorySlug}`}
+                      prefetch
+                      className="species-gallery__link"
+                      alignSelf="flex-start"
+                      color="inherit"
+                      styles={{ textDecoration: 'none' }}
                     >
-                      {slide.categoryName}
-                    </Typography>
+                      <Typography
+                        variant="label"
+                        color="#ffffff"
+                        fontWeight={700}
+                        styles={{ letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.85 }}
+                      >
+                        {slide.categoryName}
+                      </Typography>
+                    </Box>
                   )}
 
-                  <Typography as="h2" variant="h1" color="#ffffff" fontWeight={700}>
-                    {slide.name}
-                  </Typography>
+                  <Box
+                    href={`/${locale}/species/${slide.slug}`}
+                    prefetch
+                    className="species-gallery__link"
+                    alignSelf="flex-start"
+                    color="inherit"
+                    styles={{ textDecoration: 'none' }}
+                  >
+                    <Typography as="h2" variant="h1" color="#ffffff" fontWeight={700}>
+                      {slide.name}
+                    </Typography>
+                  </Box>
 
                   {slide.scientificName && (
                     <Typography variant="caption" color="#ffffff" styles={{ fontStyle: 'italic', opacity: 0.85 }}>

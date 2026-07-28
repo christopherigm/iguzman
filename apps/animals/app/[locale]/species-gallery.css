@@ -7,3 +7,19 @@
   width: 100%;
   height: 100%;
 }
+
+/* The caption's two links. Only pseudo-selectors and their transitions live
+   here; everything static on the components inside is a prop. */
+.species-gallery__link {
+  transition: opacity 0.18s ease;
+}
+
+.species-gallery__link:hover,
+.species-gallery__link:focus-visible {
+  opacity: 0.8;
+}
+
+.species-gallery__link:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}

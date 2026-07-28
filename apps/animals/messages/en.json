@@ -10,6 +10,47 @@
     "latestSightingsTitle": "Latest sightings",
     "latestSightingsSubtitle": "The most recent entries from the field journal."
   },
+  "CategoryPage": {
+    "breadcrumbHome": "Home",
+    "speciesCount": "species",
+    "photosCount": "photos",
+    "sightingsCount": "sightings",
+    "lastSeen": "Last seen",
+    "featured": "Featured",
+    "noSpecies": "Nothing has been filed under this category yet.",
+    "noDescription": "No description has been written for this entry yet.",
+    "factKind": "Branch",
+    "factScientificName": "Scientific name",
+    "factCategory": "Category",
+    "factSpecies": "Species",
+    "factSightings": "Sightings",
+    "externalReference": "External reference",
+    "galleryTitle": "Gallery",
+    "gallerySubtitle": "Every photograph in the catalog filed under {category}.",
+    "speciesTitle": "Species",
+    "speciesSubtitle": "Everything catalogued under {category}.",
+    "sightingsTitle": "Recent sightings",
+    "sightingsSubtitle": "Field journal entries recording {category}."
+  },
+  "SpeciesPage": {
+    "factFamily": "Family",
+    "videoTitle": "Video",
+    "galleryTitle": "Reference photos",
+    "gallerySubtitle": "Identification shots of {species}.",
+    "sightingsTitle": "Sightings",
+    "sightingsSubtitle": "Every field journal entry recording {species}."
+  },
+  "SightingPage": {
+    "breadcrumbHome": "Home",
+    "galleryTitle": "Photos",
+    "gallerySubtitle": "Taken on {date}.",
+    "videoTitle": "Video",
+    "mapTitle": "Where it was seen",
+    "mapSubtitle": "The spot this entry was filed at.",
+    "mapApproximate": "This place is protected, so the pin is approximate - it is accurate to about a kilometre.",
+    "relatedTitle": "More sightings",
+    "relatedSubtitle": "Other field journal entries recording {species}."
+  },
   "Kinds": {
     "animal": "Animals",
     "plant": "Plants",
@@ -19,7 +60,8 @@
   },
   "Gallery": {
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "pagination": "Choose an entry"
   },
   "Sighting": {
     "species": "Species",
@@ -28,7 +70,10 @@
     "season": "Season",
     "weather": "Weather",
     "temperature": "Temperature",
-    "individuals": "Individuals"
+    "individuals": "Individuals",
+    "category": "Category",
+    "time": "Time",
+    "seeDetail": "See detail"
   },
   "Navbar": {
     "home": "Home",
@@ -198,6 +243,7 @@
     "brandImages": "Brand images",
     "brandmark": "Brandmark",
     "breadcrumbAdmin": "Admin",
+    "cancel": "Cancel",
     "captionEn": "Caption (English)",
     "captionEs": "Caption (Spanish)",
     "categories": "Categories",

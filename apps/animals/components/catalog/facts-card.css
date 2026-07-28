@@ -1,0 +1,18 @@
+/* Interaction state for a linked fact value. Only pseudo-selectors and their
+   transition live here - every static value on the `@repo/ui` components inside
+   is a prop (see the props-first rule in packages/ui/CLAUDE.md). */
+
+.facts-card__link {
+  transition: opacity 0.18s ease;
+}
+
+.facts-card__link:hover,
+.facts-card__link:focus-visible {
+  opacity: 0.75;
+  text-decoration: underline;
+}
+
+.facts-card__link:focus-visible {
+  outline: 2px solid var(--accent, #06b6d4);
+  outline-offset: 3px;
+}

@@ -10,6 +10,47 @@
     "latestSightingsTitle": "Últimos avistamientos",
     "latestSightingsSubtitle": "Las entradas más recientes del diario de campo."
   },
+  "CategoryPage": {
+    "breadcrumbHome": "Inicio",
+    "speciesCount": "especies",
+    "photosCount": "fotos",
+    "sightingsCount": "avistamientos",
+    "lastSeen": "Visto por última vez",
+    "featured": "Destacado",
+    "noSpecies": "Todavía no hay nada archivado en esta categoría.",
+    "noDescription": "Todavía no se ha escrito una descripción para esta entrada.",
+    "factKind": "Rama",
+    "factScientificName": "Nombre científico",
+    "factCategory": "Categoría",
+    "factSpecies": "Especies",
+    "factSightings": "Avistamientos",
+    "externalReference": "Referencia externa",
+    "galleryTitle": "Galería",
+    "gallerySubtitle": "Todas las fotografías del catálogo archivadas en {category}.",
+    "speciesTitle": "Especies",
+    "speciesSubtitle": "Todo lo catalogado en {category}.",
+    "sightingsTitle": "Avistamientos recientes",
+    "sightingsSubtitle": "Entradas del diario de campo que registran {category}."
+  },
+  "SpeciesPage": {
+    "factFamily": "Familia",
+    "videoTitle": "Video",
+    "galleryTitle": "Fotos de referencia",
+    "gallerySubtitle": "Imágenes de identificación de {species}.",
+    "sightingsTitle": "Avistamientos",
+    "sightingsSubtitle": "Todas las entradas del diario de campo que registran {species}."
+  },
+  "SightingPage": {
+    "breadcrumbHome": "Inicio",
+    "galleryTitle": "Fotos",
+    "gallerySubtitle": "Tomadas el {date}.",
+    "videoTitle": "Video",
+    "mapTitle": "Dónde se vio",
+    "mapSubtitle": "El punto donde se registró esta entrada.",
+    "mapApproximate": "Este lugar está protegido, así que el punto es aproximado: tiene una precisión de alrededor de un kilómetro.",
+    "relatedTitle": "Más avistamientos",
+    "relatedSubtitle": "Otras entradas del diario de campo que registran {species}."
+  },
   "Kinds": {
     "animal": "Animales",
     "plant": "Plantas",
@@ -19,7 +60,8 @@
   },
   "Gallery": {
     "previous": "Anterior",
-    "next": "Siguiente"
+    "next": "Siguiente",
+    "pagination": "Elegir una entrada"
   },
   "Sighting": {
     "species": "Especie",
@@ -28,7 +70,10 @@
     "season": "Estación",
     "weather": "Clima",
     "temperature": "Temperatura",
-    "individuals": "Individuos"
+    "individuals": "Individuos",
+    "category": "Categoría",
+    "time": "Hora",
+    "seeDetail": "Ver detalle"
   },
   "Navbar": {
     "home": "Inicio",
@@ -198,6 +243,7 @@
     "brandImages": "Imágenes de marca",
     "brandmark": "Isotipo",
     "breadcrumbAdmin": "Administración",
+    "cancel": "Cancelar",
     "captionEn": "Pie de foto (inglés)",
     "captionEs": "Pie de foto (español)",
     "categories": "Categorías",

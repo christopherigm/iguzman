@@ -1,0 +1,17 @@
+/* Interaction state for the hero's eyebrow link. Only pseudo-selectors and
+   their transitions live here - every static value on the `@repo/ui` components
+   inside is a prop (see the props-first rule in packages/ui/CLAUDE.md). */
+
+.detail-hero__eyebrow {
+  transition: opacity 0.18s ease;
+}
+
+.detail-hero__eyebrow:hover,
+.detail-hero__eyebrow:focus-visible {
+  opacity: 0.75;
+}
+
+.detail-hero__eyebrow:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}

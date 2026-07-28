@@ -1,7 +1,6 @@
 import { cache } from 'react';
 import { unstable_rethrow } from 'next/navigation';
 import { API_URL } from './config';
-import { cacheOptions } from './fetch-cache';
 import logger from './logger';
 
 /**
@@ -9,10 +8,12 @@ import logger from './logger';
  *
  * Read on **every** page - the locale layout paints the fonts, the page
  * backgrounds and the watermark from it - so it is the one payload in this app
- * that is always fetched. Two caches sit in front of it (`cacheOptions` here,
- * and the API's own response cache, cleared by `core/signals.py` on every
- * write); `cache()` on top collapses the repeated asks within one render into a
- * single fetch.
+ * that is always fetched. The cache that serves it is animals-api's (Redis in
+ * production), which `core/signals.py` clears on every write; `cache()` here
+ * collapses the repeated asks within one render into a single fetch.
+ *
+ * `no-store`, like every other read in this app - see `lib/catalog.ts` for why
+ * Next's data cache is deliberately not used.
  *
  * `GET /api/system/` is public, so this is a plain `fetch` - there is no token
  * to attach and no 401 to refresh past.
@@ -107,7 +108,7 @@ export const SYSTEM_FALLBACK: System = {
 
 export const getSystem = cache(async (): Promise<System> => {
   try {
-    const res = await fetch(`${API_URL}/api/system/`, cacheOptions());
+    const res = await fetch(`${API_URL}/api/system/`, { cache: 'no-store' });
     if (!res.ok) {
       logger.warn({ status: res.status }, 'system API returned non-OK status');
       return SYSTEM_FALLBACK;

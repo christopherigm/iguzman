@@ -1,0 +1,37 @@
+/* Interaction state for the species cards. Only pseudo-selectors, transitions
+   and the zoom they drive live here - every static value on the `@repo/ui`
+   components inside is a prop (see the props-first rule in packages/ui/CLAUDE.md). */
+
+.species-card {
+  transition: border-color 0.18s ease;
+}
+
+.species-card__image {
+  transition: transform 0.35s ease;
+}
+
+.species-card:hover,
+.species-card:focus-visible {
+  border-color: var(--accent);
+}
+
+.species-card:hover .species-card__image,
+.species-card:focus-visible .species-card__image {
+  transform: scale(1.06);
+}
+
+.species-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .species-card__image {
+    transition: none;
+  }
+
+  .species-card:hover .species-card__image,
+  .species-card:focus-visible .species-card__image {
+    transform: none;
+  }
+}

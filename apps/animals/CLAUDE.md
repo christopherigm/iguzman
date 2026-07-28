@@ -4,6 +4,67 @@ A public nature field journal, **plus its own CMS at `/admin`**. Read
 `apps/CLAUDE.md` first for the Next.js conventions every app here follows; this
 file covers only what is specific, and why.
 
+## The public catalog pages
+
+Three detail routes sit under the landing, and the landing's `CategoryNav` tiles,
+gallery captions and journal slider link into them:
+
+| Route | Renders |
+| --- | --- |
+| `/[locale]/categories/[slug]` | One category: hero, description, photo gallery, its species grid, its recent sightings |
+| `/[locale]/species/[slug]` | One species: hero, taxonomy, `video_link`, its reference photos, its sightings |
+| `/[locale]/sightings/[slug]` | One journal entry: hero, story, field conditions, its photos and clips, its map, more of the same species |
+
+All three are composed from `components/catalog/` (`DetailHero`, `FactsCard`,
+`PhotoGallery`, `SpeciesGrid`) and `components/journal/sightings-section.tsx`, so
+they stay one design rather than three.
+
+`SightingsSection`'s slider is a *summary* and carries two ways out of each card:
+the category badge opens the branch, and the "See detail" button opens the entry.
+Both hrefs are built in `sightings-section.tsx` - the server component that knows
+the locale - never in the client slider.
+
+Six things that will bite:
+
+- **A category's gallery is aggregated, not stored.** `Category` owns exactly one
+  photograph (`image`, already the hero) plus its `icon` - there is no
+  `CategoryImage` table. The strip on a category page is therefore the union of
+  its species' photos (each cover shot, then that species' `SpeciesImage` rows),
+  built in the page's own `toGalleryPhotos` from the species list it already
+  fetched, so the gallery costs no extra request. **A species page's gallery is
+  the opposite** - real stored rows, and it deliberately *excludes* the cover,
+  which is the hero directly above it.
+- **A sighting's gallery is one table with a `kind`, so the page splits it.**
+  `SightingMedia` holds photos, uploaded clips and video links in one ordered
+  list (they share a `sort_order` an author arranges). The page sends the photos
+  to `PhotoGallery` and the two video kinds to its own `SightingVideos`, both
+  keyed off the API's already-resolved `source_url`. It also **drops the cover
+  from the strip when the cover came from `media`** - an entry with no image of
+  its own is published with its first gallery photo as `image`, which is the hero
+  directly above.
+- **A sighting's map pin is not always exact.** `latitude`/`longitude` are the
+  *effective* coordinates - the entry's own, else its location's centre - and the
+  API rounds them to ~1 km for **every** caller when the place is flagged
+  sensitive. `coordinates_are_approximate` says so; it is a caption, not a gate,
+  so don't write a branch that "reveals" the precise pair to an administrator.
+- **A detail fetcher does not share the list fetchers' contract.** The list
+  helpers swallow every failure and answer `[]`, because a list feeds a section
+  that a page survives without. A detail page **is** its subject, so `fetchOne`
+  (`lib/catalog.ts`) and `getSighting` (`lib/journal.ts`) answer `null` on a real
+  404 and **throw on anything else** - a 500 or a refused connection collapsed
+  into `null` would render "no such species" for a record that exists.
+  `notFound()` in the three pages is therefore trustworthy; keep it that way if
+  you add a fourth detail route.
+- **`localized()` still applies, and the fallback is one-way.** A non-Spanish
+  locale reads `en_name` and falls back to the bare Spanish column, which is why
+  the German page for `Venados` says "Deer" rather than translating it.
+- **A decorative initial must pass `as="span"`.** `Typography`'s `variant`
+  defaults the rendered *element* too, so the no-photo fallback letter in a
+  species card or a category tile would otherwise emit a bare `<h2>`/`<h4>` into
+  the page's heading outline beside the real section headings. `aria-hidden`
+  hides it from a screen reader but does not take it out of the document
+  structure.
+
 ## Auth - shared via `@repo/auth`
 
 Read `packages/auth/CLAUDE.md` for the session model. Only two things are
@@ -82,6 +143,28 @@ body and response as JSON:
 once on a 401 and a `ReadableStream` body cannot be replayed - streaming would
 turn every expired-token restore into an unexplained failure *after* the whole
 archive had been sent.
+
+## Reads are `no-store` - the only cache is animals-api's
+
+Every `fetch` in `lib/system.ts`, `lib/catalog.ts` and `lib/journal.ts` passes
+`{ cache: 'no-store' }`, and none of them may set `next: { revalidate }`. There is
+already exactly one cache in front of this API - animals-api's own response cache,
+Redis in production - and each Django app's `signals.py` clears its namespace on
+every write, so an author's edit is live on the next request.
+
+This app used to carry a `lib/fetch-cache.ts` that returned
+`{ next: { revalidate: 300 } }` in production. Next's data cache sits *above*
+animals-api's and knows nothing about the write, so it kept replaying the payload
+it already had: a primary colour changed in `/admin` took up to five minutes to
+appear, on the CMS's own chrome as well as the public site (both hang off the same
+`[locale]/layout.tsx`). A browser hard-reload did not help - the cache is
+server-side, on disk in `.next/cache/fetch-cache/`, and shared by every visitor
+hitting that pod. The helper is gone; don't reintroduce it. See `apps/CLAUDE.md` →
+"Caching - cache in Django, never in Next".
+
+`getSystem()` is still wrapped in React's `cache()`, which is a different thing: it
+dedupes the repeated asks **within one render** (layout + `generateMetadata` +
+`manifest.ts`) and holds nothing between requests.
 
 ## The site's branding comes from the API
 

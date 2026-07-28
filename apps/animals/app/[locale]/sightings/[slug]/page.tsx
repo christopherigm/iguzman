@@ -1,0 +1,395 @@
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { getFormatter, getTranslations, setRequestLocale } from 'next-intl/server';
+import { Box } from '@repo/ui/core-elements/box';
+import { Grid } from '@repo/ui/core-elements/grid';
+import { Container } from '@repo/ui/core-elements/container';
+import { Typography } from '@repo/ui/core-elements/typography';
+import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
+import { RichText } from '@repo/ui/core-elements/rich-text';
+import { LocationMap } from '@repo/ui/core-elements/location-map';
+import { PageBottomSpacer } from '@repo/ui/core-elements/navbar';
+import { getSighting, getSightingsBySpecies, type Sighting } from '@/lib/journal';
+import { localized } from '@/lib/i18n-field';
+import { DetailHero, type DetailHeroChip } from '@/components/catalog/detail-hero';
+import { FactsCard, type Fact } from '@/components/catalog/facts-card';
+import { PhotoGallery, type GalleryPhoto } from '@/components/catalog/photo-gallery';
+import { SightingsSection } from '@/components/journal/sightings-section';
+import { SightingVideos, type SightingVideo } from './sighting-videos';
+
+/**
+ * One journal entry's page: what was seen, the story of the encounter, the
+ * photographs and clips taken of it, where it happened, and the other entries
+ * recording the same species. The destination of the "See detail" button on
+ * every card in a `SightingsSection` slider.
+ *
+ * The third route composed from `components/catalog/` (`DetailHero`,
+ * `FactsCard`, `PhotoGallery`), so an entry reads as the same object as the
+ * category and species pages it hangs under rather than as a separate design.
+ *
+ * Two things specific to a sighting:
+ *
+ * - **Its gallery is stored *and* may hold video.** `SightingMedia` is one table
+ *   with a `kind`, so the media list is split here: photos go to `PhotoGallery`
+ *   as a contact sheet, videos and video links to `SightingVideos` as players.
+ * - **The cover photo is not always the entry's own.** When an author uploaded
+ *   no cover, the API publishes the first gallery photo as `image` - so that row
+ *   is dropped from the strip below, which would otherwise repeat the hero
+ *   directly above it.
+ */
+
+type Props = { params: Promise<{ locale: string; slug: string }> };
+
+/** How many other entries for the same species the page's related band carries. */
+const RELATED_LIMIT = 6;
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale, slug } = await params;
+  const sighting = await getSighting(slug);
+  if (!sighting) return {};
+
+  const title = sightingTitle(sighting, locale);
+  const description = localized(sighting, 'short_description', locale);
+
+  return {
+    title,
+    ...(description ? { description } : {}),
+    openGraph: {
+      title,
+      ...(description ? { description } : {}),
+      ...(sighting.image ? { images: [{ url: sighting.image }] } : {}),
+    },
+  };
+}
+
+export default async function SightingPage({ params }: Props) {
+  const { locale, slug } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations('SightingPage');
+  const tSighting = await getTranslations('Sighting');
+  const tCategory = await getTranslations('CategoryPage');
+  const tGallery = await getTranslations('Gallery');
+  const format = await getFormatter({ locale });
+
+  const sighting = await getSighting(slug);
+
+  // Null only on a real 404 - see the note in `lib/journal.ts` → `getSighting`.
+  if (!sighting) notFound();
+
+  // Sequential rather than parallel, unlike the catalog pages: the related band
+  // keys off the species this entry records, which is only known once the entry
+  // itself has answered.
+  const related = sighting.species_slug
+    ? (await getSightingsBySpecies(sighting.species_slug, RELATED_LIMIT + 1)).filter(
+        // The entry the reader is already on is not a related one.
+        (item) => item.id !== sighting.id,
+      )
+    : [];
+
+  const title = sightingTitle(sighting, locale);
+  const speciesName = localized(
+    { name: sighting.species_name, en_name: sighting.species_en_name },
+    'name',
+    locale,
+  );
+  const categoryName = localized(
+    { name: sighting.category_name, en_name: sighting.category_en_name },
+    'name',
+    locale,
+  );
+  const shortDescription = localized(sighting, 'short_description', locale);
+  const description = localized(sighting, 'description', locale);
+  const locationName = localized(
+    { name: sighting.location_name, en_name: sighting.location_en_name },
+    'name',
+    locale,
+  );
+
+  const dateLabel = formatDay(sighting.date, format);
+  const timeLabel = formatTime(sighting.date, sighting.time, format);
+
+  const speciesHref = sighting.species_slug
+    ? `/${locale}/species/${sighting.species_slug}`
+    : null;
+  const categoryHref = sighting.category_slug
+    ? `/${locale}/categories/${sighting.category_slug}`
+    : null;
+
+  const photos = toGalleryPhotos(sighting, locale);
+  const videos = toVideos(sighting, locale);
+
+  const chips: DetailHeroChip[] = [{ key: 'date', label: dateLabel }];
+  if (locationName) chips.push({ key: 'location', label: locationName });
+  if (sighting.individuals !== null) {
+    chips.push({
+      key: 'individuals',
+      label: `${format.number(sighting.individuals)} ${tSighting('individuals')}`,
+    });
+  }
+
+  const breadcrumbs = [
+    { label: t('breadcrumbHome'), href: `/${locale}` },
+    ...(categoryName && categoryHref ? [{ label: categoryName, href: categoryHref }] : []),
+    ...(speciesName && speciesHref ? [{ label: speciesName, href: speciesHref }] : []),
+    { label: title },
+  ];
+
+  const seasonName = localized(
+    { name: sighting.season_name, en_name: sighting.season_en_name },
+    'name',
+    locale,
+  );
+  const weatherName = localized(
+    { name: sighting.weather_name, en_name: sighting.weather_en_name },
+    'name',
+    locale,
+  );
+  const temperature = formatTemperature(sighting.temperature_c, format);
+
+  // Only the conditions this entry actually recorded - an outing with no
+  // weather noted should show no weather row rather than an empty one.
+  const facts: (Fact | null)[] = [
+    speciesName
+      ? { label: tSighting('species'), value: speciesName, href: speciesHref }
+      : null,
+    categoryName
+      ? { label: tSighting('category'), value: categoryName, href: categoryHref }
+      : null,
+    { label: tSighting('date'), value: dateLabel },
+    timeLabel ? { label: tSighting('time'), value: timeLabel } : null,
+    locationName ? { label: tSighting('location'), value: locationName } : null,
+    seasonName ? { label: tSighting('season'), value: seasonName } : null,
+    weatherName ? { label: tSighting('weather'), value: weatherName } : null,
+    temperature ? { label: tSighting('temperature'), value: temperature } : null,
+    sighting.individuals !== null
+      ? { label: tSighting('individuals'), value: format.number(sighting.individuals) }
+      : null,
+  ];
+
+  // Paired rather than checked twice: the two are only meaningful together, and
+  // this is what narrows them out of `number | null` for the map below.
+  const coordinates =
+    sighting.latitude !== null && sighting.longitude !== null
+      ? { latitude: sighting.latitude, longitude: sighting.longitude }
+      : null;
+
+  return (
+    <Box flexDirection="column" width="100%">
+      <DetailHero
+        image={sighting.image}
+        // A journal entry has no mark of its own - the icon belongs to the
+        // category it hangs under, and repeating it here would label the
+        // encounter as the branch rather than as itself.
+        icon={null}
+        fit={sighting.fit ?? 'cover'}
+        backgroundColor={sighting.background_color}
+        eyebrow={categoryName}
+        eyebrowHref={categoryHref}
+        title={title}
+        // The species is the entry's subject rather than its binomial, so it
+        // takes the hero's secondary line - and the facts card links it.
+        scientificName={speciesName}
+        chips={chips}
+      />
+
+      <Container size="lg" paddingX={10} marginTop={16}>
+        <Breadcrumbs items={breadcrumbs} />
+
+        {/* Asymmetric split at `sm`, not `md` - see apps/CLAUDE.md. The story is
+            the page's substance and the field conditions are its aside. */}
+        <Grid container spacing={4}>
+          <Grid size={{ xs: 12, sm: 7 }}>
+            <Box flexDirection="column" gap={16}>
+              {shortDescription && (
+                <Typography variant="body" fontWeight={600}>
+                  {shortDescription}
+                </Typography>
+              )}
+
+              {description ? (
+                // Authored in the CMS as free text, which may or may not carry
+                // markdown; `RichText` renders both without the author opting in.
+                <RichText>{description}</RichText>
+              ) : (
+                !shortDescription && (
+                  <Typography variant="body" color="var(--foreground-muted, #6b7280)">
+                    {tCategory('noDescription')}
+                  </Typography>
+                )
+              )}
+            </Box>
+          </Grid>
+
+          <Grid size={{ xs: 12, sm: 5 }}>
+            <FactsCard
+              facts={facts}
+              href={sighting.href}
+              hrefLabel={tCategory('externalReference')}
+            />
+          </Grid>
+        </Grid>
+
+        {photos.length > 0 && (
+          <Box flexDirection="column" gap={24} marginTop={56}>
+            <Box flexDirection="column" gap={8}>
+              <Typography as="h2" variant="h2" fontWeight={700}>
+                {t('galleryTitle')}
+              </Typography>
+              <Typography variant="body" color="var(--foreground-muted, #6b7280)">
+                {t('gallerySubtitle', { date: dateLabel })}
+              </Typography>
+            </Box>
+
+            <PhotoGallery
+              photos={photos}
+              labels={{ previous: tGallery('previous'), next: tGallery('next') }}
+            />
+          </Box>
+        )}
+
+        {videos.length > 0 && (
+          <Box flexDirection="column" gap={24} marginTop={56}>
+            <Typography as="h2" variant="h2" fontWeight={700}>
+              {t('videoTitle')}
+            </Typography>
+            <SightingVideos videos={videos} />
+          </Box>
+        )}
+
+        {coordinates && (
+          <Box flexDirection="column" gap={16} marginTop={56}>
+            <Box flexDirection="column" gap={8}>
+              <Typography as="h2" variant="h2" fontWeight={700}>
+                {t('mapTitle')}
+              </Typography>
+              {/* The API blurs the pair to ~1 km for *every* caller when the
+                  place is flagged sensitive, so this says so rather than
+                  pretending the pin is exact. */}
+              <Typography variant="body" color="var(--foreground-muted, #6b7280)">
+                {sighting.coordinates_are_approximate
+                  ? t('mapApproximate')
+                  : (locationName ?? t('mapSubtitle'))}
+              </Typography>
+            </Box>
+
+            <LocationMap
+              latitude={coordinates.latitude}
+              longitude={coordinates.longitude}
+              title={locationName ?? title}
+              // Backed off from the component's building-level default: the
+              // subject is a place in a landscape, and a sensitive one has been
+              // rounded to about this much anyway.
+              zoom={sighting.coordinates_are_approximate ? 12 : 14}
+            />
+          </Box>
+        )}
+
+        {related.length > 0 && speciesName && (
+          <Box marginTop={56}>
+            <SightingsSection
+              sightings={related}
+              locale={locale}
+              title={t('relatedTitle')}
+              subtitle={t('relatedSubtitle', { species: speciesName })}
+            />
+          </Box>
+        )}
+      </Container>
+
+      <PageBottomSpacer />
+    </Box>
+  );
+}
+
+/**
+ * The entry's own title, falling back to the species it records and then to its
+ * slug - `name` is optional in the CMS, and an untitled entry is normal.
+ */
+function sightingTitle(sighting: Sighting, locale: string): string {
+  return (
+    localized(sighting, 'name', locale) ??
+    localized(
+      { name: sighting.species_name, en_name: sighting.species_en_name },
+      'name',
+      locale,
+    ) ??
+    sighting.slug
+  );
+}
+
+/**
+ * The entry's photographs, in their authored order.
+ *
+ * The cover is dropped when it *is* one of these rows: with no cover of its own
+ * the API publishes the first gallery photo as `image`, and the strip would then
+ * open with the hero directly above it. A cover the author uploaded separately
+ * lives on the `Sighting` rather than in `media`, so it never matches here and
+ * nothing is lost.
+ */
+function toGalleryPhotos(sighting: Sighting, locale: string): GalleryPhoto[] {
+  return sighting.media.flatMap((item) => {
+    if (item.kind !== 'image' || !item.image) return [];
+    if (item.image === sighting.image) return [];
+    return [
+      {
+        key: `media-${item.id}`,
+        image: item.image,
+        title: localized(item, 'name', locale),
+        caption: localized(item, 'description', locale),
+        fit: item.fit ?? 'cover',
+        backgroundColor: item.background_color,
+        // Every tile here belongs to the page the reader is already on.
+        href: null,
+      },
+    ];
+  });
+}
+
+/** The entry's clips - uploaded files and video links alike, via `source_url`. */
+function toVideos(sighting: Sighting, locale: string): SightingVideo[] {
+  return sighting.media.flatMap((item) => {
+    if (item.kind === 'image' || !item.source_url) return [];
+    return [
+      {
+        key: `media-${item.id}`,
+        url: item.source_url,
+        title: localized(item, 'name', locale),
+        caption: localized(item, 'description', locale),
+      },
+    ];
+  });
+}
+
+type Formatter = Awaited<ReturnType<typeof getFormatter>>;
+
+/**
+ * The API publishes a bare calendar day (`YYYY-MM-DD`). Parsed as-is that is UTC
+ * midnight, which renders as the *previous* day for any visitor west of
+ * Greenwich - so it is anchored at local noon, which no timezone can push across
+ * a date boundary.
+ */
+function formatDay(day: string, format: Formatter): string {
+  const parsed = new Date(`${day}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return day;
+  return format.dateTime(parsed, { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+/**
+ * The time of day, when it was noted. Built on the entry's own date so the
+ * formatter gets a real instant, and rendered without a timezone conversion
+ * because the API stores a wall-clock time, not a UTC one.
+ */
+function formatTime(day: string, time: string | null, format: Formatter): string | null {
+  if (!time) return null;
+  const parsed = new Date(`${day}T${time}`);
+  if (Number.isNaN(parsed.getTime())) return time;
+  return format.dateTime(parsed, { hour: 'numeric', minute: '2-digit' });
+}
+
+function formatTemperature(value: string | null, format: Formatter): string | null {
+  if (value === null) return null;
+  const parsed = Number(value);
+  if (Number.isNaN(parsed)) return null;
+  return `${format.number(parsed, { maximumFractionDigits: 1 })} °C`;
+}

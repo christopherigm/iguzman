@@ -10,6 +10,47 @@
     "latestSightingsTitle": "Últimos avistamentos",
     "latestSightingsSubtitle": "As entradas mais recentes do diário de campo."
   },
+  "CategoryPage": {
+    "breadcrumbHome": "Início",
+    "speciesCount": "espécies",
+    "photosCount": "fotos",
+    "sightingsCount": "avistamentos",
+    "lastSeen": "Visto pela última vez",
+    "featured": "Destaque",
+    "noSpecies": "Ainda não há nada arquivado nesta categoria.",
+    "noDescription": "Ainda não foi escrita uma descrição para esta entrada.",
+    "factKind": "Ramo",
+    "factScientificName": "Nome científico",
+    "factCategory": "Categoria",
+    "factSpecies": "Espécies",
+    "factSightings": "Avistamentos",
+    "externalReference": "Referência externa",
+    "galleryTitle": "Galeria",
+    "gallerySubtitle": "Todas as fotografias do catálogo arquivadas em {category}.",
+    "speciesTitle": "Espécies",
+    "speciesSubtitle": "Tudo o que está catalogado em {category}.",
+    "sightingsTitle": "Avistamentos recentes",
+    "sightingsSubtitle": "Entradas do diário de campo que registram {category}."
+  },
+  "SpeciesPage": {
+    "factFamily": "Família",
+    "videoTitle": "Vídeo",
+    "galleryTitle": "Fotos de referência",
+    "gallerySubtitle": "Imagens de identificação de {species}.",
+    "sightingsTitle": "Avistamentos",
+    "sightingsSubtitle": "Todas as entradas do diário de campo que registram {species}."
+  },
+  "SightingPage": {
+    "breadcrumbHome": "Início",
+    "galleryTitle": "Fotos",
+    "gallerySubtitle": "Tiradas em {date}.",
+    "videoTitle": "Vídeo",
+    "mapTitle": "Onde foi visto",
+    "mapSubtitle": "O ponto onde este registo foi feito.",
+    "mapApproximate": "Este local é protegido, por isso o ponto é aproximado - tem uma precisão de cerca de um quilómetro.",
+    "relatedTitle": "Mais avistamentos",
+    "relatedSubtitle": "Outras entradas do diário de campo que registram {species}."
+  },
   "Kinds": {
     "animal": "Animais",
     "plant": "Plantas",
@@ -19,7 +60,8 @@
   },
   "Gallery": {
     "previous": "Anterior",
-    "next": "Próximo"
+    "next": "Próximo",
+    "pagination": "Escolher um registo"
   },
   "Sighting": {
     "species": "Espécie",
@@ -28,7 +70,10 @@
     "season": "Estação",
     "weather": "Clima",
     "temperature": "Temperatura",
-    "individuals": "Indivíduos"
+    "individuals": "Indivíduos",
+    "category": "Categoria",
+    "time": "Hora",
+    "seeDetail": "Ver detalhe"
   },
   "Navbar": {
     "home": "Início",
@@ -198,6 +243,7 @@
     "brandImages": "Imagens da marca",
     "brandmark": "Símbolo da marca",
     "breadcrumbAdmin": "Administração",
+    "cancel": "Cancelar",
     "captionEn": "Legenda (inglês)",
     "captionEs": "Legenda (espanhol)",
     "categories": "Categorias",

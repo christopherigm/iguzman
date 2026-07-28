@@ -689,6 +689,16 @@ gen_lib_api_fetch_ts() {
  * The API fetcher lives in `@repo/auth` so all the frontends share one
  * refresh-and-retry implementation. Re-exported here because every route handler
  * imports it from `@/lib/api-fetch` (see apps/CLAUDE.md).
+ *
+ * **Pass `{ cache: 'no-store' }` on every read, here and in any plain `fetch` to
+ * the API. Never `next: { revalidate: N }`, and never add a per-app cache-options
+ * helper.** This app is generated without a Next data cache on purpose: the
+ * Django API already has a response cache (Redis in production) that its
+ * `signals.py` receivers clear on write. Next's data cache sits above that one
+ * and knows nothing about the write, so it replays a stale payload for the whole
+ * revalidate window - which reads as a lost save in the CMS. It is also per-pod
+ * and on disk, so a browser hard-reload does not clear it. Cache in Django, never
+ * here; see apps/CLAUDE.md -> "Caching - cache in Django, never in Next".
  */
 export {
   apiFetch,

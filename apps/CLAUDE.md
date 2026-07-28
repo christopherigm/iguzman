@@ -218,6 +218,28 @@ if (!refreshed)
 
 **Exception - login, signup, logout, verify-email, password-reset, passkey authentication:** these don't need a valid access token to begin with, so direct `fetch` to Django is fine.
 
+## Caching - cache in Django, never in Next
+
+**Every `fetch` to a Django API must be `{ cache: 'no-store' }`. Never write `next: { revalidate: N }`, `cache: 'force-cache'`, or an `unstable_cache` wrapper around an API read, and never add a per-app "cache options" helper.**
+
+The caching for this monorepo lives in **one** place: each Django API's own response cache (Redis in production), whose `signals.py` receivers clear the right namespace the moment a row is written. That cache is correct because it _knows about the write_.
+
+Next's data cache sits above it and does not. It keys on the request and holds the payload for the full revalidate window no matter what the CMS just saved, so a second cache buys nothing a warm Redis wasn't already giving you and costs an author up to `N` seconds of "did my save work?". It is also **per pod** and **on disk** (`.next/cache/fetch-cache/`), so it survives a browser hard-reload, differs between replicas, and cannot be cleared from the CMS.
+
+This is not hypothetical: `apps/animals` shipped a `lib/fetch-cache.ts` returning `{ next: { revalidate: 300 } }`, which made a primary colour changed in `/admin` take five minutes to appear, while `apps/website` - which never cached in Next - applied the same edit on the next request.
+
+```ts
+// ✓ correct - one cache, in Django, invalidated on write
+const res = await fetch(`${API_URL}/api/system/`, { cache: "no-store" });
+
+// ✗ wrong - a second cache that no write can reach
+const res = await fetch(`${API_URL}/api/system/`, {
+  next: { revalidate: 300 },
+});
+```
+
+Wrap a read in React's `cache()` freely - that only dedupes repeated calls **within a single render** and holds nothing between requests, which is the deduplication you want. If a payload ever genuinely needs caching in Next, it needs a `tags:` entry _and_ a `revalidateTag` call on the write path in the same task - otherwise don't.
+
 ## TypeScript - CSS Module Declarations
 
 Each app includes a `css.d.ts` file at its root for ambient module declarations for CSS subpath imports that TypeScript cannot resolve (e.g. `swiper/css`):

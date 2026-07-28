@@ -1,0 +1,78 @@
+/* `.latest-sightings__swiper` is a Swiper root, not a `@repo/ui` component, so
+   it can only be reached through this selector. The gutters keep the slide
+   content clear of the prev/next buttons, which are pinned to the wrapper's
+   edges; `autoHeight` needs the transition or every slide change snaps.
+
+   ⚠ The gutters must be MARGIN, never padding. A Swiper root is `overflow:
+   hidden`, which clips at the *padding* box - with padding the neighbouring
+   slide stayed visible inside both gutters, so the previous entry's photograph
+   bled into the current slide. Margin shrinks the clipped box itself, and
+   Swiper measures the slide width from that box, so one slide is exactly 100%
+   of what is on screen. */
+.latest-sightings__swiper {
+  width: auto;
+  margin: 0 44px;
+}
+
+.latest-sightings__swiper .swiper-wrapper {
+  transition-property: transform, height;
+}
+
+@media (--below-sm) {
+  /* On a phone the buttons overlay the media column instead of sitting beside
+     it, so the slide reclaims the width the gutters were holding. */
+  .latest-sightings__swiper {
+    margin: 0;
+  }
+}
+
+/* The category badge's link wrapper. `Badge` carries its own look, so only the
+   interaction state belongs here (see the props-first rule in
+   packages/ui/CLAUDE.md). */
+.latest-sightings__badge-link {
+  transition: opacity 0.18s ease;
+}
+
+.latest-sightings__badge-link:hover,
+.latest-sightings__badge-link:focus-visible {
+  opacity: 0.75;
+}
+
+.latest-sightings__badge-link:focus-visible {
+  outline: 2px solid var(--accent, #06b6d4);
+  outline-offset: 3px;
+  border-radius: 999px;
+}
+
+/* The pagination dots. They are plain `<button>`s - not `@repo/ui` components -
+   so the props-first rule does not reach them, and their whole look (including
+   the active pill) belongs here beside the slider it drives. */
+.latest-sightings__dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--accent, #06b6d4) 28%, transparent);
+  transition:
+    width 0.24s ease,
+    background-color 0.24s ease;
+}
+
+.latest-sightings__dot:hover {
+  background: color-mix(in srgb, var(--accent, #06b6d4) 55%, transparent);
+}
+
+.latest-sightings__dot:focus-visible {
+  outline: 2px solid var(--accent, #06b6d4);
+  outline-offset: 3px;
+}
+
+/* The current entry reads as a pill rather than a bigger dot, so the row keeps
+   its height and nothing below it shifts on a slide change. */
+.latest-sightings__dot--active,
+.latest-sightings__dot--active:hover {
+  width: 26px;
+  background: var(--accent, #06b6d4);
+}
