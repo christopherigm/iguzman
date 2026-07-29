@@ -1,0 +1,26 @@
+{% extends "email/base.html" %}
+{% block body %}
+  <!-- Spanish -->
+  <h1 style="margin:0 0 16px 0; font-size:22px; font-weight:700; color:#1f2933;">Hola {{ first_name }},</h1>
+  <p style="margin:0 0 16px 0;">Gracias por crear tu cuenta en <strong>{{ site_name }}</strong>. Confirma tu correo electrónico para activarla.</p>
+
+  {% include "email/_button.html" with url=action_url label="Verificar mi correo" primary_color=primary_color %}
+
+  <p style="margin:0 0 8px 0; font-size:14px; color:#52606d;">Este enlace expira en {{ expiry_hours }} horas. Si no creaste esta cuenta, puedes ignorar este mensaje.</p>
+
+  <hr style="border:0; border-top:1px solid #edf0f5; margin:28px 0;">
+
+  <!-- English -->
+  <h2 style="margin:0 0 16px 0; font-size:18px; font-weight:700; color:#52606d;">Hi {{ first_name }},</h2>
+  <p style="margin:0 0 16px 0; color:#52606d;">Thanks for creating your account at <strong>{{ site_name }}</strong>. Confirm your email address to activate it.</p>
+
+  {% include "email/_button.html" with url=action_url label="Verify my email" primary_color=primary_color %}
+
+  <p style="margin:0 0 16px 0; font-size:14px; color:#52606d;">This link expires in {{ expiry_hours }} hours. If you did not create this account, you can ignore this message.</p>
+
+  <p style="margin:24px 0 0 0; font-size:12px; color:#8a94a6; word-break:break-all;">
+    {% comment %}Plain-URL fallback for clients that strip buttons.{% endcomment %}
+    <span style="color:#52606d;">Enlace directo / Direct link:</span><br>
+    <a href="{{ action_url }}" target="_blank" style="color:{{ primary_color|default:'#06b6d4' }};">{{ action_url }}</a>
+  </p>
+{% endblock %}

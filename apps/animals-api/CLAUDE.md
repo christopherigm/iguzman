@@ -448,6 +448,45 @@ between their `OWNED_FIELDS` lists in the same edit.
 primary path, not a backstop - the Django admin is still an authoring surface
 here, and an edit made there never reaches the view.
 
+## Branded email - always through `core/email.py`
+
+Every email this backend sends is composed in **one** place:
+`core.email.send_branded_email(subject, template, recipients, context)`. It is a
+port of website-api's `_send_branded_email` with the tenancy taken out - there,
+the branding depends on which tenant the recipient belongs to, which is why that
+project repeats the brand dict in `users/views.py` **and**
+`core/services/contact.py`; here there is one `System`, so one module serves
+every sender. That is why it lives in `core` and not in `users`, which is its
+only caller today (verification + password reset).
+
+- **Two parts, always.** `send_branded_email` renders `<template>.txt` *and*
+  `<template>.html` and attaches the second as an alternative. The templates are
+  bilingual - Spanish first, English below - matching website-api and this
+  project's Spanish-bare/`en_`-twin content rule. A client that refuses HTML
+  still gets a readable message with a working link.
+- **The chrome is the CMS's brand kit.** `core/templates/email/base.html` (plus
+  `_button.html`) draws the header disc from `System.img_logo`, the header from
+  `primary_color`, the accent rule from `secondary_color` and the canvas from
+  `background_light`. A message template extends it and fills `{% block body %}`,
+  so an author who re-brands at `/admin/logos-and-styles` re-brands the email
+  with no template change. Tables and inline styles only - `<style>` blocks and
+  flexbox do not survive an email client.
+- **The logo must be an absolute URL.** An email has no request to resolve
+  `/media/…` against, so `core/media.py`'s `absolute_media_url` prefixes
+  `MEDIA_BASE_URL` - and leaves an R2 URL alone, since `FileField.url` is already
+  absolute there. Never write `f"{MEDIA_BASE_URL}{file.url}"` by hand: in
+  production that glues two absolute URLs together and the image silently breaks.
+- **Links point at `FRONTEND_URL`**, locale-less (`/verify-email/<token>`) - the
+  app's proxy adds the reader's locale prefix.
+- **`users/views.py` swallows a send failure and returns a bool.** Sign-up and
+  password-reset answer 200 either way (sign-up surfaces `email_sent`), so an
+  SMTP outage must not lose the account just created, nor leak by its error
+  whether an address is registered. The exception is logged.
+
+With no `EMAIL_HOST_USER` set, `settings.py` uses the console backend - so
+locally the whole rendered message prints to the runserver output and nothing is
+sent.
+
 ## Backup & restore (`core/backup.py`)
 
 A port of website-api's engine with the multi-tenancy taken out: one site, so no
@@ -610,10 +649,10 @@ sees a draft they have not published yet.
 
 ## Tests
 
-`python manage.py test` (108 tests: `catalog`, `journal`, and `core` for the AI
-endpoints, the permission model, the site-settings endpoint and the backup
-round-trip - the AI tests always mock the provider, so the suite spends nothing
-and needs no network). Inherit
+`python manage.py test` (138 tests: `catalog`, `journal`, and `core` for the AI
+endpoints, the permission model, the site-settings endpoint, the branded emails
+and the backup round-trip - the AI tests always mock the provider, so the suite
+spends nothing and needs no network). Inherit
 **`core.tests.IsolatedMediaTestCase`** for anything that writes: it redirects
 `MEDIA_ROOT` to a temp directory and clears the cache between tests. Without the
 first, test uploads scatter through the developer's own `media/`; without the

@@ -13,6 +13,7 @@ from datetime import date, timedelta
 from io import BytesIO
 from unittest import mock
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.files.base import ContentFile
 from django.test import TestCase, override_settings
@@ -728,3 +729,120 @@ class AdminUserApiTests(IsolatedMediaTestCase):
         self.client.login(username='author', password='fieldnotes-2026')
         for row in self.client.get('/api/auth/admin/users/').json():
             self.assertNotIn('password', row)
+
+
+class BrandedEmailTests(IsolatedMediaTestCase):
+    """Account email carries the site's brand kit, in both body parts.
+
+    The chrome is rendered from `core.System`, so these assert the two things a
+    template change can silently break: that the CMS's logo and palette actually
+    reach the HTML, and that the plain-text alternative still carries a working
+    link for a client that refuses HTML.
+    """
+
+    def setUp(self):
+        super().setUp()
+        from core.models import System
+
+        system = System.load()
+        system.site_name = 'Cuaderno de Campo'
+        system.site_description = 'Un diario de lo que se ve en el monte.'
+        system.primary_color = '#2f6f4e'
+        system.secondary_color = '#d9a441'
+        system.img_logo.save('logo.png', ContentFile(base64.b64decode(
+            base64_image(size=(32, 32), fmt='PNG')
+        )), save=True)
+
+    @staticmethod
+    def _parts(message):
+        """The text body and the HTML alternative of a sent message."""
+        html = next(
+            content for content, mimetype in message.alternatives
+            if mimetype == 'text/html'
+        )
+        return message.body, html
+
+    def test_signup_sends_a_branded_two_part_email(self):
+        from django.core import mail
+
+        response = self.client.post(
+            '/api/auth/signup/',
+            data=json.dumps({
+                'email': 'naturalist@example.com',
+                'first_name': 'Ana',
+                'password': 'field-notes-2026!',
+                'password2': 'field-notes-2026!',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.json()['email_sent'])
+
+        self.assertEqual(len(mail.outbox), 1)
+        message = mail.outbox[0]
+        text, html = self._parts(message)
+
+        # The sender is named after the site, not the SMTP mailbox.
+        self.assertTrue(message.from_email.startswith('Cuaderno de Campo <'))
+        self.assertIn('Cuaderno de Campo', html)
+        self.assertIn('#2f6f4e', html)   # primary - header and button
+        self.assertIn('#d9a441', html)   # secondary - accent rule
+        self.assertIn('Un diario de lo que se ve en el monte.', html)
+
+        # The logo is embedded absolutely: an email client has no request to
+        # resolve `/media/...` against.
+        self.assertIn('<img src="https://', html)
+
+        # Both parts carry the same working link, on the frontend's own domain.
+        from users.models import EmailVerificationToken
+
+        token = EmailVerificationToken.objects.get()
+        action_url = f'{settings.FRONTEND_URL.rstrip("/")}/verify-email/{token.token}'
+        self.assertIn(action_url, html)
+        self.assertIn(action_url, text)
+
+    def test_password_reset_sends_the_reset_link(self):
+        from django.core import mail
+        from users.models import PasswordResetToken
+
+        User.objects.create_user(
+            username='ana', email='ana@example.com', password='field-notes-2026!'
+        )
+        response = self.client.post(
+            '/api/auth/password-reset/',
+            data=json.dumps({'email': 'ana@example.com'}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(len(mail.outbox), 1)
+        text, html = self._parts(mail.outbox[0])
+        token = PasswordResetToken.objects.get()
+        action_url = f'{settings.FRONTEND_URL.rstrip("/")}/reset-password/{token.token}'
+        self.assertIn(action_url, html)
+        self.assertIn(action_url, text)
+
+    def test_an_unbranded_site_still_sends(self):
+        """A fresh database has no logo and no description - and must not 500."""
+        from django.core import mail
+        from core.models import System
+
+        system = System.load()
+        system.img_logo.delete(save=False)
+        system.site_description = ''
+        system.save()
+
+        User.objects.create_user(
+            username='ana', email='ana@example.com', password='field-notes-2026!'
+        )
+        self.client.post(
+            '/api/auth/password-reset/',
+            data=json.dumps({'email': 'ana@example.com'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(len(mail.outbox), 1)
+        _, html = self._parts(mail.outbox[0])
+        # With no logo the header falls back to the site's name as text.
+        self.assertNotIn('<img', html)
+        self.assertIn('Cuaderno de Campo', html)

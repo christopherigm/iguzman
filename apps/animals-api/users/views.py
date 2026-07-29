@@ -5,9 +5,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.conf import settings
-from django.conf import settings
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
+
+from core.email import send_branded_email
 
 from .models import EmailVerificationToken, PasswordResetToken
 from .serializers import (
@@ -17,6 +16,7 @@ from .serializers import (
     run_password_validators,
 )
 import json
+import logging
 import uuid
 
 from django.core.cache import cache
@@ -43,6 +43,8 @@ from .serializers import (
     PasskeyRegistrationVerifySerializer,
 )
 
+logger = logging.getLogger(__name__)
+
 WEBAUTHN_CHALLENGE_TTL = 300  # 5 minutes
 
 
@@ -62,36 +64,53 @@ from .serializers import (
     UserProfileUpdateSerializer,
 )
 
-def _send_verification_email(user, token):
+def _send_account_email(user, subject, template, path, expiry_hours):
+    """Send one branded account email, reporting success rather than raising.
+
+    The branding, both body parts and the sender come from `core.email`; this
+    only supplies what is specific to the recipient. `path` is appended to the
+    site's own frontend URL to form the action link.
+
+    Swallowing the failure is deliberate: sign-up and password-reset both
+    answer success whether or not the mail went out (sign-up surfaces
+    `email_sent`), so an SMTP outage must not lose the account that was just
+    created, nor leak by its error whether an address is registered.
+    """
     try:
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-        verification_url = f'{frontend_url}/verify-email/{token.token}'
-        subject = 'Verify your email address'
-        message = render_to_string('users/verification_email.txt', {
-            'first_name': user.first_name or user.username,
-            'verification_url': verification_url,
-            'expiry_hours': settings.EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS,
-        })
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+        send_branded_email(
+            subject,
+            f'users/{template}',
+            [user.email],
+            {
+                'first_name': user.first_name or user.username,
+                'action_url': f"{settings.FRONTEND_URL.rstrip('/')}{path}",
+                'expiry_hours': expiry_hours,
+            },
+        )
         return True
     except Exception:
+        logger.exception('Failed to send %s to user %s', template, user.pk)
         return False
+
+
+def _send_verification_email(user, token):
+    return _send_account_email(
+        user,
+        'Verifica tu correo / Verify your email address',
+        'verification_email',
+        f'/verify-email/{token.token}',
+        settings.EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS,
+    )
 
 
 def _send_password_reset_email(user, token):
-    try:
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-        reset_url = f'{frontend_url}/reset-password/{token.token}'
-        subject = 'Reset your password'
-        message = render_to_string('users/password_reset_email.txt', {
-            'first_name': user.first_name or user.username,
-            'reset_url': reset_url,
-            'expiry_hours': settings.PASSWORD_RESET_TOKEN_EXPIRY_HOURS,
-        })
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
-        return True
-    except Exception:
-        return False
+    return _send_account_email(
+        user,
+        'Restablecer contraseña / Reset your password',
+        'password_reset_email',
+        f'/reset-password/{token.token}',
+        settings.PASSWORD_RESET_TOKEN_EXPIRY_HOURS,
+    )
 
 class SignUpView(APIView):
     permission_classes = [AllowAny]

@@ -1,0 +1,64 @@
+{% comment %}
+Shared chrome for every email this site sends. Table-based and inline-styled on
+purpose: an email client is not a browser - no <style> block survives Gmail's
+sanitiser reliably, and flexbox/grid are not available at all.
+
+Context comes from `core.email.email_brand()`: site_name, logo_url,
+primary_color, secondary_color, background_color, slogan, base_url. A message
+template extends this and fills {% block body %}.
+{% endcomment %}<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>{{ site_name }}</title>
+</head>
+<body style="margin:0; padding:0; width:100%; background-color:{{ background_color|default:'#f4f5f7' }}; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
+  {% if preheader %}
+  {% comment %}The line an inbox shows beside the subject. Hidden in the body itself.{% endcomment %}
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent; height:0; width:0;">{{ preheader }}</div>
+  {% endif %}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:{{ background_color|default:'#f4f5f7' }};">
+    <tr>
+      <td align="center" style="padding:32px 12px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px; max-width:600px; background-color:#ffffff; border-radius:14px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background-color:{{ primary_color|default:'#06b6d4' }}; padding:32px;">
+              {% if logo_url %}
+                {% comment %}The logo sits in a white disc with a ring of padding, so an oversized or dark logo never touches the coloured edge. Capped smaller than the disc to leave that ring.{% endcomment %}
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+                  <tr>
+                    <td align="center" valign="middle" width="96" height="96" style="width:96px; height:96px; background-color:#ffffff; border-radius:50%; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.18);">
+                      <img src="{{ logo_url }}" alt="{{ site_name }}" style="display:inline-block; max-height:56px; max-width:72px; width:auto; height:auto; border:0; outline:none; text-decoration:none; vertical-align:middle;">
+                    </td>
+                  </tr>
+                </table>
+              {% else %}
+                <span style="font-family:Arial,Helvetica,sans-serif; font-size:24px; font-weight:700; color:#ffffff; letter-spacing:0.5px;">{{ site_name }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          <!-- Accent line (secondary color) -->
+          <tr><td style="height:4px; line-height:4px; font-size:0; background-color:{{ secondary_color|default:'#7c9a3f' }};">&nbsp;</td></tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:36px 36px 8px 36px; font-family:Arial,Helvetica,sans-serif; color:#1f2933; font-size:16px; line-height:1.6;">
+              {% block body %}{% endblock %}
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 36px 32px 36px; font-family:Arial,Helvetica,sans-serif; color:#8a94a6; font-size:12px; line-height:1.5; text-align:center; border-top:1px solid #edf0f5;">
+              <strong style="color:#52606d;">{{ site_name }}</strong>{% if slogan %} &nbsp;·&nbsp; {{ slogan }}{% endif %}
+              <br>
+              <a href="{{ base_url }}" target="_blank" style="color:{{ primary_color|default:'#06b6d4' }}; text-decoration:none;">{{ base_url }}</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

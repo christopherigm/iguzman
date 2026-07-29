@@ -211,6 +211,16 @@ else:
     MEDIA_URL = '/media/'
     MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', str(BASE_DIR / 'media')))
 
+# What a *relative* `FileField.url` is resolved against when there is no request
+# to build an absolute URL from - the branded emails (`core/email.py`), which are
+# rendered outside the request cycle and read by a client that cannot resolve a
+# path. Only the development branch above produces such a URL; with R2 on,
+# `FileField.url` is already absolute and `core.media.absolute_media_url` leaves
+# it alone. See `core/media.py`.
+MEDIA_BASE_URL = os.environ.get(
+    'MEDIA_BASE_URL', 'https://animals-api.iguzman.com.mx'
+).rstrip('/')
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Same rule as the database: the cluster Redis is used only when BOTH the URL
