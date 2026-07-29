@@ -1,0 +1,14 @@
+/* MoveHandle - only the cursor pair and the transition live here. Every static
+   box style (size, radius, border, background, flex) is a component prop.
+   `cursor` is not a UIComponentProps prop and its `:active` counterpart has to
+   be CSS anyway, so the two stay together. */
+
+.ui-move-handle {
+  cursor: grab;
+  user-select: none;
+  transition: opacity 180ms ease;
+}
+
+.ui-move-handle:active {
+  cursor: grabbing;
+}

@@ -10,6 +10,7 @@ import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Button } from "@repo/ui/core-elements/button";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
+import { MoveHandle } from "@repo/ui/core-elements/move-handle";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Select } from "@repo/ui/core-elements/select";
 import { Switch } from "@repo/ui/core-elements/switch";
@@ -673,30 +674,15 @@ export function MenuIngredientsEditor({ value, onChange, catalog }: Props) {
                     {/* The move handle sits inline with the picker; it doubles
                     as the drag source and is only shown in sort mode. */}
                     {sortMode && (
-                      <span
-                        draggable
+                      // 40px tall rather than the size token's 36, so it lines
+                      // up with the Select it sits beside.
+                      <MoveHandle
+                        height={40}
                         onDragStart={() => handleDragStart(index)}
                         onDragEnd={handleDragEnd}
                         aria-label={t("dragToReorder")}
                         title={t("dragToReorder")}
-                        style={{
-                          cursor: "grab",
-                          userSelect: "none",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flex: "0 0 auto",
-                          padding: "6px 10px",
-                          height: 40,
-                          fontSize: 16,
-                          lineHeight: 1,
-                          borderRadius: 8,
-                          border: "1px solid var(--border, #e5e7eb)",
-                          color: "var(--muted, #6b7280)",
-                        }}
-                      >
-                        ⠿
-                      </span>
+                      />
                     )}
                   </Box>
                 </Box>

@@ -22,8 +22,8 @@ export type FabKind = "primary" | "default" | "error" | "success" | "warning";
 
 /** Circle diameter and icon size per size token. */
 const BOX_SIZES: Record<FabSize, { box: number; icon: number }> = {
-  md: { box: 48, icon: 20 },
-  lg: { box: 56, icon: 24 },
+  md: { box: 36, icon: 16 },
+  lg: { box: 42, icon: 22 },
 };
 
 /** Opaque fill per semantic kind - a FAB is always high-emphasis. */
@@ -80,7 +80,7 @@ export interface FloatingActionButtonProps extends UIComponentProps {
    * so an app can move every FAB at once from its `globals.css`.
    */
   offset?: number | string;
-  /** Overrides the auto-derived icon size (md→20px, lg→24px). */
+  /** Overrides the auto-derived icon size (md→16px, lg→22px). */
   iconSize?: string | number;
   /** Overrides the icon color. Defaults to white, for contrast on the fill. */
   iconColor?: string;
@@ -219,7 +219,7 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = (
     // two read as the same control at different lengths.
     height: box,
     ...(extended
-      ? { minWidth: box, paddingLeft: 20, paddingRight: 22, gap: 10 }
+      ? { minWidth: box, paddingLeft: 10, paddingRight: 11, gap: 10 }
       : { width: box }),
     borderRadius: box / 2,
     border: "none",

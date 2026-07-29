@@ -7,6 +7,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { Button } from "@repo/ui/core-elements/button";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
+import { MoveHandle } from "@repo/ui/core-elements/move-handle";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { MAX_PHOTOS, MAX_PHOTO_BYTES } from "@/lib/contribute";
 import "./photo-picker.css";
@@ -29,9 +30,17 @@ import "./photo-picker.css";
  *
  * **Order is meaning, not arrangement.** The API publishes a record's first
  * gallery row as its cover, so photo 1 is the cover - which is why the tiles are
- * numbered and carry a "make cover" control rather than a drag handle. Dragging
- * works on a mouse and is miserable on a touchscreen, and this is a phone-first
- * surface.
+ * numbered.
+ *
+ * Re-ordering therefore has **two** controls, and both are needed. The move
+ * handle (`@repo/ui`'s `MoveHandle`) is the CMS uploader's, behaviour for
+ * behaviour: the whole tile is the HTML5 drag source, the handle is the
+ * affordance that says so - hence `decorative` - and a drop splices the dragged
+ * photo in at the target's index. But HTML5 drag-and-drop
+ * does not exist under a finger - `dragstart` never fires for a touch - and this
+ * is a phone-first surface, so the "use as cover" button stays as the one-tap
+ * way to make the choice that actually carries meaning. Don't remove it in
+ * favour of the handle.
  */
 
 /** The longest edge a submitted photo is scaled to before encoding. */
@@ -59,6 +68,8 @@ export function PhotoPicker({ photos, onChange }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const addFiles = useCallback(
     async (files: FileList) => {
@@ -117,6 +128,31 @@ export function PhotoPicker({ photos, onChange }: Props) {
     onChange([picked, ...photos.filter((photo) => photo.key !== key)]);
   };
 
+  const endDrag = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const dropOn = (dropIndex: number) => {
+    if (dragIndex === null || dragIndex === dropIndex) {
+      endDrag();
+      return;
+    }
+    const next = [...photos];
+    const [moved] = next.splice(dragIndex, 1);
+    if (!moved) {
+      endDrag();
+      return;
+    }
+    next.splice(dropIndex, 0, moved);
+    endDrag();
+    onChange(next);
+  };
+
+  // One photo is already in the only order it can be in, so the tile neither
+  // shows a handle nor becomes a drag source.
+  const canReorder = photos.length > 1;
+
   return (
     <Box flexDirection="column" gap={12} width="100%">
       {photos.length > 0 && (
@@ -128,73 +164,114 @@ export function PhotoPicker({ photos, onChange }: Props) {
             gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
           }}
         >
-          {photos.map((photo, index) => (
-            <Box
-              key={photo.key}
-              className="contribute-photo"
-              width="100%"
-              height={120}
-              borderRadius={10}
-              border="1px solid var(--border, rgba(0,0,0,0.08))"
-              backgroundColor="var(--surface-2, #f3f4f6)"
-              styles={{ position: "relative", overflow: "hidden" }}
-            >
-              <Image
-                src={photo.dataUrl}
-                alt={photo.name}
-                fill
-                sizes="160px"
-                style={{ objectFit: "cover" }}
-                // A data URL never goes through the image optimiser, and this app
-                // runs a custom loader anyway (`images.loader: 'custom'`), so
-                // `/_next/image` does not answer here at all.
-                unoptimized
-              />
-
+          {photos.map((photo, index) => {
+            const isDragging = dragIndex === index;
+            const isOver = dragOverIndex === index && dragIndex !== index;
+            return (
               <Box
-                styles={{ position: "absolute", top: 6, left: 6 }}
-                alignItems="center"
-                gap={6}
+                key={photo.key}
+                className={`contribute-photo${canReorder ? " contribute-photo--draggable" : ""}${isDragging ? " contribute-photo--dragging" : ""}`}
+                width="100%"
+                height={120}
+                borderRadius={10}
+                // The border is an inline style (it is a Box prop), so the
+                // drag-over highlight has to be a prop ternary too - a CSS class
+                // could not win against it.
+                border={
+                  isOver
+                    ? "2px solid var(--accent, #06b6d4)"
+                    : "1px solid var(--border, rgba(0,0,0,0.08))"
+                }
+                backgroundColor="var(--surface-2, #f3f4f6)"
+                styles={{
+                  position: "relative",
+                  overflow: "hidden",
+                  ...(isDragging ? { opacity: 0.4 } : {}),
+                }}
+                draggable={canReorder}
+                onDragStart={() => setDragIndex(index)}
+                onDragOver={(event) => {
+                  // Without preventDefault the browser refuses the drop outright.
+                  event.preventDefault();
+                  setDragOverIndex(index);
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  dropOn(index);
+                }}
+                onDragEnd={endDrag}
               >
-                {index === 0 ? (
-                  <Badge variant="filled" size="sm" translucent>
-                    {t("photoCover")}
-                  </Badge>
-                ) : (
-                  <Badge variant="subtle" size="sm" circular translucent>
-                    {index + 1}
-                  </Badge>
-                )}
-              </Box>
+                <Image
+                  src={photo.dataUrl}
+                  alt={photo.name}
+                  fill
+                  sizes="160px"
+                  style={{ objectFit: "cover" }}
+                  // A data URL never goes through the image optimiser, and this app
+                  // runs a custom loader anyway (`images.loader: 'custom'`), so
+                  // `/_next/image` does not answer here at all.
+                  unoptimized
+                />
 
-              <Box
-                styles={{ position: "absolute", top: 4, right: 4 }}
-                gap={2}
-                alignItems="center"
-              >
-                {index !== 0 && (
+                <Box
+                  styles={{ position: "absolute", top: 6, left: 6 }}
+                  alignItems="center"
+                  gap={6}
+                >
+                  {index === 0 ? (
+                    <Badge variant="filled" size="sm" translucent>
+                      {t("photoCover")}
+                    </Badge>
+                  ) : (
+                    <Badge variant="subtle" size="sm" circular translucent>
+                      {index + 1}
+                    </Badge>
+                  )}
+                </Box>
+
+                <Box
+                  styles={{ position: "absolute", top: 4, right: 4 }}
+                  gap={2}
+                  alignItems="center"
+                >
+                  {index !== 0 && (
+                    <IconButton
+                      icon="/icons/star.svg"
+                      aria-label={t("photoMakeCover")}
+                      title={t("photoMakeCover")}
+                      size="sm"
+                      kind="warning"
+                      solid
+                      onClick={() => makeCover(photo.key)}
+                    />
+                  )}
                   <IconButton
-                    icon="/icons/star.svg"
-                    aria-label={t("photoMakeCover")}
-                    title={t("photoMakeCover")}
+                    icon="/icons/delete.svg"
+                    aria-label={t("photoRemove")}
+                    title={t("photoRemove")}
                     size="sm"
-                    kind="warning"
+                    kind="error"
                     solid
-                    onClick={() => makeCover(photo.key)}
+                    onClick={() => remove(photo.key)}
+                  />
+                </Box>
+
+                {/* The move handle. Decorative, exactly as in the CMS uploader:
+                  the drag source is the whole tile, so this is the affordance
+                  that says the tile can be dragged, not a control of its own -
+                  a screen reader is offered the "use as cover" button instead,
+                  which is the part of the order that carries meaning. */}
+                {canReorder && (
+                  <MoveHandle
+                    decorative
+                    variant="overlay"
+                    size="sm"
+                    styles={{ position: "absolute", bottom: 4, left: 4 }}
                   />
                 )}
-                <IconButton
-                  icon="/icons/delete.svg"
-                  aria-label={t("photoRemove")}
-                  title={t("photoRemove")}
-                  size="sm"
-                  kind="error"
-                  solid
-                  onClick={() => remove(photo.key)}
-                />
               </Box>
-            </Box>
-          ))}
+            );
+          })}
         </Box>
       )}
 

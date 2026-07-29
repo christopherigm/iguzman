@@ -191,18 +191,25 @@ Twelve things that will bite:
 ## Public contributions - the FAB, the staged flow, the credit line
 
 A signed-in reader can add to the site without the CMS. A
-`FloatingActionButton` (`@repo/ui`) sits on two public pages and opens a staged,
-Instagram-shaped form: **a category page proposes a species**, **a sighting page
-files a journal entry**. Everything filed this way lands **pending review**.
+`FloatingActionButton` (`@repo/ui`) sits on three public pages and opens a staged,
+Instagram-shaped form: **a category page proposes a species**, **a species page
+and a sighting page file a journal entry**. Everything filed this way lands
+**pending review**.
 
-| Piece                       | Where                                                             |
-| --------------------------- | ----------------------------------------------------------------- |
-| The two FABs                | the category and sighting detail pages, after `PageBottomSpacer`  |
-| The routes                  | `app/[locale]/contribute/{species,sightings}/`                    |
-| The wizards (one per route) | `…/species-contribute-form.tsx`, `…/sighting-contribute-form.tsx` |
-| Shared stage chrome         | `components/contribute/` (stage shell, photo picker, review row)  |
-| Browser client              | `lib/contribute.ts`                                               |
-| Token-attaching proxy       | `app/api/contribute/[...path]/route.ts`                           |
+The species and sighting FABs are the same action at two depths - the subject is
+what differs, not the form: a species page names it in its own route slug (so the
+button needs no guard), a sighting page borrows it from the entry (so the button
+is only rendered when `species_slug` is non-null, or it would lead to a
+`notFound()`).
+
+| Piece                       | Where                                                              |
+| --------------------------- | ------------------------------------------------------------------ |
+| The three FABs              | the category, species and sighting pages, after `PageBottomSpacer` |
+| The routes                  | `app/[locale]/contribute/{species,sightings}/`                     |
+| The wizards (one per route) | `…/species-contribute-form.tsx`, `…/sighting-contribute-form.tsx`  |
+| Shared stage chrome         | `components/contribute/` (stage shell, photo picker, review row)   |
+| Browser client              | `lib/contribute.ts`                                                |
+| Token-attaching proxy       | `app/api/contribute/[...path]/route.ts`                            |
 
 Nine things that will bite:
 
@@ -251,9 +258,12 @@ Nine things that will bite:
   Every file goes through a canvas at 1600 px first, via `createImageBitmap` with
   `imageOrientation: 'from-image'` - without which every portrait phone photo
   arrives on its side. **Photo 1 is the cover** (the API publishes the first
-  gallery row as `image`), so the tiles are numbered with a "use as cover" button
-  rather than a drag handle: dragging is miserable on the touchscreen this is
-  mostly used from.
+  gallery row as `image`), so the tiles are numbered and re-ordering has _two_
+  controls: the tile is an HTML5 drag source wearing `@repo/ui`'s `MoveHandle`
+  (`decorative` - the tile is the source, the handle only says so), and the "use
+  as cover" button is the one-tap way to the same result. Keep both. `dragstart`
+  never fires for a finger, and this is a phone-first surface - the handle alone
+  would leave the choice that actually carries meaning unreachable there.
 - **Only the base half of each text pair is written** - `name`, never `en_name`.
   A contributor writes in one language and `localized()` falls back to the base
   column for every locale whose twin is blank, so the entry reads correctly in all
@@ -266,11 +276,7 @@ Nine things that will bite:
   rather than disabling Continue silently. The **season** is not asked for either -
   `Sighting.save()` derives it from the date.
 
-The FAB on a sighting page is **bottom-left**, and that is not a style choice:
-that page is the only public one carrying a map, and `OsmMap` puts its
-locate/fullscreen pair and its zoom control in the right-hand corners, so a
-right-hand FAB would sit over the zoom buttons and over the close button in
-fullscreen.
+All three FABs sit in the default corner, **bottom-right**.
 
 **Not built:** a contributor cannot see their own pending records. The flow
 confirms the submission and says it is awaiting review, but there is no "my

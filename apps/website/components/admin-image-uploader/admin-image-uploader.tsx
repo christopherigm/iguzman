@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { Box } from "@repo/ui/core-elements/box";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
+import { MoveHandle } from "@repo/ui/core-elements/move-handle";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import "./admin-image-uploader.css";
@@ -297,9 +298,9 @@ export function AdminImageUploader({
                   padding={4}
                 >
                   <Box justifyContent="space-between" alignItems="flex-start">
-                    <span className="aiu__thumb-drag-handle" aria-hidden="true">
-                      ⠿
-                    </span>
+                    {/* The whole thumbnail is the drag source, so the handle is
+                        only the affordance that says so - hence `decorative`. */}
+                    <MoveHandle decorative variant="overlay" size="sm" />
                     <IconButton
                       size="sm"
                       kind="error"

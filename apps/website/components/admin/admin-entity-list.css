@@ -57,27 +57,8 @@
   white-space: nowrap;
 }
 
-/* Sort mode. The handle is a native <span> drag source (not a @repo/ui
-   component), and the row states are driven by drag events, so both live here. */
-.ael__handle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 10px;
-  height: 28px;
-  font-size: 1rem; /* body / 16px */
-  line-height: 1;
-  border-radius: 6px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
-  color: var(--foreground);
-  cursor: grab;
-  user-select: none;
-}
-
-.ael__handle:active {
-  cursor: grabbing;
-}
-
+/* Sort mode. The handle itself is @repo/ui's MoveHandle; only the row states,
+   which are driven by drag events, live here. */
 .ael__row--dragging {
   opacity: 0.5;
 }

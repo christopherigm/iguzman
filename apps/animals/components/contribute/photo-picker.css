@@ -17,9 +17,22 @@
 }
 
 .contribute-photo {
-  transition: border-color 160ms ease;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
 }
 
-.contribute-photo:hover {
-  border-color: var(--accent, #06b6d4);
+/* The whole tile is the drag source (the `MoveHandle` is only the affordance),
+   so the grab cursor belongs to the tile - and only while there is more than one
+   photo to re-order, which is what the class is conditional on. */
+.contribute-photo--draggable {
+  cursor: grab;
+}
+
+.contribute-photo--draggable:active {
+  cursor: grabbing;
+}
+
+.contribute-photo--dragging {
+  transform: scale(0.95);
 }

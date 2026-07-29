@@ -108,11 +108,11 @@ export default async function SightingPage({ params }: Props) {
   // itself has answered.
   const related = sighting.species_slug
     ? (
-        await getSightingsBySpecies(sighting.species_slug, RELATED_LIMIT + 1)
-      ).filter(
-        // The entry the reader is already on is not a related one.
-        (item) => item.id !== sighting.id,
-      )
+      await getSightingsBySpecies(sighting.species_slug, RELATED_LIMIT + 1)
+    ).filter(
+      // The entry the reader is already on is not a related one.
+      (item) => item.id !== sighting.id,
+    )
     : [];
 
   const title = sightingTitle(sighting, locale);
@@ -197,10 +197,10 @@ export default async function SightingPage({ params }: Props) {
       : null,
     categoryName
       ? {
-          label: tSighting("category"),
-          value: categoryName,
-          href: categoryHref,
-        }
+        label: tSighting("category"),
+        value: categoryName,
+        href: categoryHref,
+      }
       : null,
     { label: tSighting("date"), value: dateLabel },
     timeLabel ? { label: tSighting("time"), value: timeLabel } : null,
@@ -212,9 +212,9 @@ export default async function SightingPage({ params }: Props) {
       : null,
     sighting.individuals !== null
       ? {
-          label: tSighting("individuals"),
-          value: format.number(sighting.individuals),
-        }
+        label: tSighting("individuals"),
+        value: format.number(sighting.individuals),
+      }
       : null,
     // The credit line, last: it is who filed the entry rather than something the
     // entry records. Empty for a CMS entry nobody named *and* for a contribution
@@ -365,19 +365,13 @@ export default async function SightingPage({ params }: Props) {
           the record the reader is standing on. Rendered only when the entry names a
           species: `species_slug` is null exactly when it records none, and the
           contribute route requires one (it 404s without it), so a FAB here would be
-          a button that leads to a dead page.
-
-          Bottom-**left**, unlike the category page's. A sighting page is the only
-          public page carrying a map, and `OsmMap` puts its locate/fullscreen pair
-          and its zoom control in the right-hand corners - a FAB on the right would
-          sit over the zoom buttons once the map scrolled under it, and inside
-          fullscreen it would overlap the close button. */}
+          a button that leads to a dead page. */}
       {sighting.species_slug && (
         <FloatingActionButton
           icon="/icons/add.svg"
           aria-label={tContribute("addSighting")}
           label={tContribute("addSighting")}
-          position="bottom-left"
+          position="bottom-right"
           href={`/contribute/sightings?species=${sighting.species_slug}`}
         />
       )}

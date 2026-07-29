@@ -255,11 +255,18 @@ function MarkerCard({
 }) {
   return (
     <Card padding={0} gap={0} styles={{ overflow: "hidden" }}>
+      {/* Rectangle 5:4, always: the popup is a fixed width (`OsmMap`'s `popupWidth`),
+          so a 5:4 box gives every cover the same crop regardless of the
+          photograph's own ratio - a portrait shot and a panorama read as one
+          strip of pins rather than two card shapes. */}
       {marker.image && (
         <Box
-          height={104}
           width="100%"
-          styles={{ position: "relative", overflow: "hidden" }}
+          styles={{
+            position: "relative",
+            overflow: "hidden",
+            aspectRatio: "5 / 4",
+          }}
         >
           <Image
             src={marker.image}

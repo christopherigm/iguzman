@@ -1,12 +1,12 @@
 {
   "name": "animals",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "type": "module",
   "private": true,
   "scripts": {
     "gen:breakpoints": "pnpm --filter @repo/ui gen:breakpoints",
     "predev": "pnpm gen:breakpoints",
-    "dev": "next dev --port 3000",
+    "dev": "next dev --webpack --port 3000",
     "prebuild": "pnpm gen:breakpoints",
     "build": "next build --webpack",
     "start": "next start",

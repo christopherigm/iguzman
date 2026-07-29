@@ -54,6 +54,13 @@ export interface BoxProps extends UIComponentProps {
   /** Drag-end handler. */
   onDragEnd?: React.DragEventHandler<HTMLDivElement>;
   /**
+   * Makes the Box a native HTML5 drag *source*, so `onDragStart` fires on it.
+   * Without it the drag handlers above can only ever receive a drag that some
+   * other element (or the OS) started - which is why a drag-to-reorder grid had
+   * to drop to a bare `<div>` before this existed. @default false
+   */
+  draggable?: boolean;
+  /**
    * Applies a frosted-glass backdrop blur (same effect as `Badge`/translucent
    * `Navbar`). Pair with a translucent/tinted `backgroundColor` so the blur
    * reads through. @default false
@@ -112,6 +119,7 @@ export const Box = React.forwardRef<HTMLDivElement, BoxProps>(
       onDrop,
       onDragStart,
       onDragEnd,
+      draggable,
       tabIndex,
       translucent = false,
       href,
@@ -194,6 +202,7 @@ export const Box = React.forwardRef<HTMLDivElement, BoxProps>(
         onDrop={onDrop}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
+        {...(draggable !== undefined ? { draggable } : {})}
         {...(role !== undefined ? { role } : {})}
         {...(props["aria-hidden"] !== undefined
           ? { "aria-hidden": props["aria-hidden"] }

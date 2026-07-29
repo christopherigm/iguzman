@@ -10,6 +10,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Button } from "@repo/ui/core-elements/button";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
+import { MoveHandle } from "@repo/ui/core-elements/move-handle";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
@@ -299,16 +300,13 @@ export function AdminEntityList({
                   <td className="ael__td ael__td--actions">
                     <Box display="flex" gap={8} justifyContent="flex-end">
                       {sortMode ? (
-                        <span
-                          draggable
+                        <MoveHandle
+                          size="sm"
                           onDragStart={() => setDragIndex(index)}
                           onDragEnd={handleDragEnd}
-                          className="ael__handle"
                           aria-label={t("dragToReorder")}
                           title={t("dragToReorder")}
-                        >
-                          ⠿
-                        </span>
+                        />
                       ) : (
                         <>
                           {!hideEdit && (

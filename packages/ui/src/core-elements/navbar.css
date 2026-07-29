@@ -113,6 +113,13 @@
   transition: background 150ms ease;
   white-space: nowrap;
   font-family: inherit;
+  /* An item WITH children is a `<button>`, not a `Link` - and Safari on
+     iOS/iPadOS paints a bare button's text in the system blue, so the Catalog
+     dropdown came out blue beside its black neighbours. `inherit` is what the
+     anchors already get (`a { color: inherit }` in every app's globals.css),
+     so both kinds of item now take the page foreground. Keep it here, not per
+     app: the `<button>` branch is this component's own. */
+  color: inherit;
 }
 
 .ui-navbar-item:hover {
@@ -225,6 +232,9 @@
   text-align: left;
   font-family: inherit;
   transition: background 150ms ease;
+  /* Same Safari blue as `.ui-navbar-item`: a child with an `onClick` and no
+     `href` (Sign out) renders as a `<button>` beside `Link` siblings. */
+  color: inherit;
 }
 
 .ui-navbar-dropdown-item:hover {

@@ -13,6 +13,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { RichText } from "@repo/ui/core-elements/rich-text";
 import { PageBottomSpacer } from "@repo/ui/core-elements/navbar";
+import { FloatingActionButton } from "@repo/ui/core-elements/floating-action-button";
 import { getSpecies, kindHref, type Species } from "@/lib/catalog";
 import { getSightingsBySpecies } from "@/lib/journal";
 import { localized } from "@/lib/i18n-field";
@@ -81,6 +82,7 @@ export default async function SpeciesPage({ params }: Props) {
   const t = await getTranslations("SpeciesPage");
   const tCategory = await getTranslations("CategoryPage");
   const tKinds = await getTranslations("Kinds");
+  const tContribute = await getTranslations("Contribute");
   const format = await getFormatter({ locale });
 
   const [species, sightings] = await Promise.all([
@@ -256,6 +258,19 @@ export default async function SpeciesPage({ params }: Props) {
       </Container>
 
       <PageBottomSpacer />
+
+      {/* File an entry for *this* species - the same action the sighting page
+          carries, one level up: a reader who has just read what the animal is is
+          the reader most likely to have seen one. It needs no guard here, unlike
+          on a sighting page (where `species_slug` may be null): this route's own
+          slug *is* the species the contribute form requires, and a slug that
+          names nothing already went to `notFound()` above. */}
+      <FloatingActionButton
+        icon="/icons/add.svg"
+        aria-label={tContribute("addSighting")}
+        label={tContribute("addSighting")}
+        href={`/contribute/sightings?species=${slug}`}
+      />
     </Box>
   );
 }
