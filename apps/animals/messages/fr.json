@@ -8,7 +8,9 @@
     "categoriesTitle": "Parcourir le catalogue",
     "categoriesSubtitle": "Choisissez une catégorie pour voir tout ce qu'elle contient.",
     "latestSightingsTitle": "Dernières observations",
-    "latestSightingsSubtitle": "Les entrées les plus récentes du carnet de terrain."
+    "latestSightingsSubtitle": "Les entrées les plus récentes du carnet de terrain.",
+    "mapTitle": "Où les observations ont eu lieu",
+    "mapSubtitle": "Les {count} dernières entrées de chaque catégorie, sur la carte."
   },
   "CategoryPage": {
     "breadcrumbHome": "Accueil",
@@ -25,25 +27,21 @@
     "factSpecies": "Espèces",
     "factSightings": "Observations",
     "externalReference": "Référence externe",
-    "galleryTitle": "Galerie",
-    "gallerySubtitle": "Toutes les photographies du catalogue classées dans {category}.",
     "speciesTitle": "Espèces",
     "speciesSubtitle": "Tout ce qui est catalogué dans {category}.",
     "sightingsTitle": "Observations récentes",
-    "sightingsSubtitle": "Entrées du carnet de terrain qui documentent {category}."
+    "sightingsSubtitle": "Entrées du carnet de terrain qui documentent {category}.",
+    "mapTitle": "Où cela a été observé",
+    "mapSubtitle": "Tous les lieux où {category} a été consigné dans le carnet de terrain."
   },
   "SpeciesPage": {
     "factFamily": "Famille",
     "videoTitle": "Vidéo",
-    "galleryTitle": "Photos de référence",
-    "gallerySubtitle": "Clichés d'identification de {species}.",
     "sightingsTitle": "Observations",
     "sightingsSubtitle": "Toutes les entrées du carnet de terrain qui documentent {species}."
   },
   "SightingPage": {
     "breadcrumbHome": "Accueil",
-    "galleryTitle": "Photos",
-    "gallerySubtitle": "Prises le {date}.",
     "videoTitle": "Vidéo",
     "mapTitle": "Où cela a été observé",
     "mapSubtitle": "L'endroit où cette entrée a été enregistrée.",
@@ -61,7 +59,9 @@
   "Gallery": {
     "previous": "Précédent",
     "next": "Suivant",
-    "pagination": "Choisir une entrée"
+    "pagination": "Choisir une entrée",
+    "expand": "Agrandir l'image",
+    "close": "Quitter le plein écran"
   },
   "Sighting": {
     "species": "Espèce",
@@ -74,6 +74,18 @@
     "category": "Catégorie",
     "time": "Heure",
     "seeDetail": "Voir le détail"
+  },
+  "Map": {
+    "label": "Carte des observations",
+    "zoomIn": "Zoom avant",
+    "zoomOut": "Zoom arrière",
+    "attribution": "© les contributeurs d’OpenStreetMap",
+    "close": "Fermer",
+    "filterAll": "Toutes",
+    "filterYear": "Année",
+    "empty": "Aucune observation ne correspond à ces filtres.",
+    "zoomHint": "Utilisez Ctrl + défilement pour zoomer sur la carte",
+    "zoomHintMac": "Utilisez ⌘ + défilement pour zoomer sur la carte"
   },
   "Navbar": {
     "home": "Accueil",

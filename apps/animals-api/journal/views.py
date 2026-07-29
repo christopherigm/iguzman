@@ -1,18 +1,19 @@
-from django.db.models import Count, Max, Min, Q
+from django.db.models import Count, Max, Min, Prefetch, Q
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from catalog.models import KIND_CHOICES, Location, Species
+from catalog.models import KIND_CHOICES, Category, Location, Species
 from core.cache import cached_get, cached_set, invalidate
-from core.permissions import IsSiteAdmin
-from core.views import CachedDetailView, CachedListCreateView
+from core.permissions import IsSiteAdmin, show_disabled
+from core.views import CachedDetailView, CachedListCreateView, list_key
 
 from . import cache_keys as keys
 from .models import Sighting, SightingMedia
 from .serializers import (
+    SightingMapSerializer,
     SightingMediaSerializer,
     SightingMediaUpdateSerializer,
     SightingMediaWriteSerializer,
@@ -135,13 +136,155 @@ class SightingDetailView(CachedDetailView):
     prefetch_related = _SIGHTING_PREFETCH
 
 
+# Safety ceiling on one map response. A pin is a small row, but a map that
+# silently grew with the journal would eventually ship the whole table to a
+# phone - and no reader can tell 500 overlapping markers from 5,000.
+MAX_MAP_PINS = 500
+# How far down the feed `per_category` may look. A bounded slice rather than a
+# scan-until-every-category-is-full loop: a category with no located sightings
+# would never fill, and the loop would read the whole table looking for it.
+MAX_MAP_SCAN = 5000
+DEFAULT_PER_CATEGORY = 10
+MAX_PER_CATEGORY = 50
+
+
+class SightingMapView(APIView):
+    """
+    GET /api/journal/sightings/map/ - the pins for a map (public).
+
+    Query params: ``category_slug``, ``kind``, ``species_slug``,
+    ``location_slug``, ``per_category``, ``limit``, ``include_disabled``.
+
+    Its own endpoint rather than a flag on the feed, for two reasons. **The
+    payload is a different shape**: `SightingMapSerializer` drops the prose, the
+    gallery and the field conditions and adds the species *icon*, which is what
+    a marker is drawn as - a category map through the feed would ship every
+    photo caption of every entry it pins. And **it answers a bare list, not a
+    page**: a map has no "next page", it has a bounding box, so pagination would
+    only ever be a way to draw an incomplete one.
+
+    ``per_category`` is what the landing page's map asks for - the latest N
+    entries of *each* branch, so one prolific category cannot crowd every other
+    off the map. Without it the endpoint answers the plain newest-first feed,
+    which is what a single category's page wants: every place that category has
+    been recorded, up to ``MAX_MAP_PINS``.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        params = request.query_params
+        disabled_visible = show_disabled(request)
+
+        per_category = _int_param(params, 'per_category', None)
+        if per_category is not None:
+            per_category = max(1, min(MAX_PER_CATEGORY, per_category))
+        limit = _int_param(params, 'limit', MAX_MAP_PINS)
+        limit = max(1, min(MAX_MAP_PINS, limit))
+
+        # The resolved values, not the raw params, so `?limit=99999` and
+        # `?limit=500` share one cache entry - and `include_disabled` is keyed on
+        # what it *resolved to*, or an administrator's response carrying unpublished
+        # drafts would be replayed to the next anonymous visitor (see core/views.py).
+        cache_key = list_key(
+            keys.MAP,
+            {
+                'category_slug': params.get('category_slug', ''),
+                'kind': params.get('kind', ''),
+                'species_slug': params.get('species_slug', ''),
+                'location_slug': params.get('location_slug', ''),
+                'per_category': per_category or '',
+                'limit': limit,
+                'include_disabled': '1' if disabled_visible else '',
+            },
+        )
+        cached = cached_get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        qs = Sighting.objects.select_related(
+            'species', 'species__category', 'location'
+        ).prefetch_related(
+            # Only the photos: the popup card shows a cover, and pulling the
+            # clips and video links of every pinned entry would undo the point of
+            # a stripped-down payload.
+            Prefetch(
+                'media',
+                queryset=SightingMedia.objects.filter(kind='image').order_by('sort_order', 'id'),
+            )
+        )
+        if not disabled_visible:
+            qs = qs.filter(enabled=True)
+
+        # Only what can actually be pinned. The effective pair is the entry's own
+        # else its location's (`Sighting.coordinates`), so both halves of that
+        # fallback have to be expressed here or the endpoint would return rows the
+        # serializer then publishes as `null` islands.
+        qs = qs.filter(
+            Q(latitude__isnull=False, longitude__isnull=False)
+            | Q(location__latitude__isnull=False, location__longitude__isnull=False)
+        )
+
+        category_slug = params.get('category_slug')
+        if category_slug:
+            qs = qs.filter(species__category__slug=category_slug)
+        kind = params.get('kind')
+        if kind:
+            qs = qs.filter(species__category__kind=kind)
+        species_slug = params.get('species_slug')
+        if species_slug:
+            qs = qs.filter(species__slug=species_slug)
+        location_slug = params.get('location_slug')
+        if location_slug:
+            # A place's pins include the places inside it, exactly as its feed
+            # does - see SightingListCreateView.
+            qs = qs.filter(
+                Q(location__slug=location_slug) | Q(location__parent__slug=location_slug)
+            )
+
+        rows = self._rows(qs, per_category, limit)
+        data = SightingMapSerializer(rows, many=True, context={'request': request}).data
+        cached_set(cache_key, data)
+        return Response(data)
+
+    @staticmethod
+    def _rows(qs, per_category, limit):
+        """The entries to pin, newest first."""
+        if per_category is None:
+            return list(qs[:limit])
+
+        # The whole point of `per_category`: a landing map mixes every branch, and
+        # taking the newest N overall would show eight bird sightings and nothing
+        # else the week someone spent birdwatching.
+        ceiling = min(limit, per_category * max(Category.objects.count(), 1))
+        taken = {}
+        rows = []
+        for row in qs[:MAX_MAP_SCAN]:
+            key = row.species.category_id
+            if taken.get(key, 0) >= per_category:
+                continue
+            taken[key] = taken.get(key, 0) + 1
+            rows.append(row)
+            if len(rows) >= ceiling:
+                break
+        return rows
+
+
+def _int_param(params, name, default):
+    """A query param as an int, or ``default`` when it is absent or unparseable."""
+    try:
+        return int(params[name])
+    except (KeyError, TypeError, ValueError):
+        return default
+
+
 def _invalidate_sighting(sighting):
     """Clear the caches that embed a sighting's gallery.
 
     Redundant with ``journal.signals.invalidate_on_media_change``, which covers
     the same writes plus the admin's inline gallery editor.
     """
-    invalidate(keys.SIGHTINGS, keys.SIGHTING, keys.STATS)
+    invalidate(keys.SIGHTINGS, keys.SIGHTING, keys.STATS, keys.MAP)
 
 
 class SightingMediaListCreateView(APIView):

@@ -9,50 +9,94 @@ file covers only what is specific, and why.
 Three detail routes sit under the landing, and the landing's `CategoryNav` tiles,
 gallery captions and journal slider link into them:
 
-| Route | Renders |
-| --- | --- |
-| `/[locale]/categories/[slug]` | One category: hero, description, photo gallery, its species grid, its recent sightings |
-| `/[locale]/species/[slug]` | One species: hero, taxonomy, `video_link`, its reference photos, its sightings |
-| `/[locale]/sightings/[slug]` | One journal entry: hero, story, field conditions, its photos and clips, its map, more of the same species |
+| Route                         | Renders                                                                          |
+| ----------------------------- | -------------------------------------------------------------------------------- |
+| `/[locale]/categories/[slug]` | One category: hero, first row, its recent sightings, its species grid            |
+| `/[locale]/species/[slug]`    | One species: hero, first row, `video_link`, its sightings                        |
+| `/[locale]/sightings/[slug]`  | One journal entry: hero, first row, its clips, its map, more of the same species |
 
 All three are composed from `components/catalog/` (`DetailHero`, `FactsCard`,
-`PhotoGallery`, `SpeciesGrid`) and `components/journal/sightings-section.tsx`, so
+`DetailGallery`, `SpeciesGrid`) and `components/journal/sightings-section.tsx`, so
 they stay one design rather than three.
 
-`SightingsSection`'s slider is a *summary* and carries two ways out of each card:
+**Two pages also carry a map of many entries** - the landing (the latest ten of
+_each_ category) and a category (every located sighting of it). Both render
+`components/journal/sightings-map-section.tsx`, the server half, which resolves
+every bilingual pair, href and date and hands them to the `SightingsMap` client
+component - the same split `SightingsSection` uses for the slider, and for the
+same reason.
+
+**"First row" is literally the same row on all three**: the description and the
+`FactsCard` as two stacked cards in one column, the record's photographs beside
+them as a `DetailGallery` slideshow. It splits at `sm` (`size={{ xs: 12, sm: 6 }}`,
+see `apps/CLAUDE.md`), and below `sm` the _text_ column carries
+`reorder={{ xs: 'last' }}` so the photographs lead once the two stack - a reader
+on a phone meets the subject before reading about it. A record with no
+photographs at all gets no second column: the text column widens to `sm: 12`
+rather than leaving a placeholder square beside it.
+
+`SightingsSection`'s slider is a _summary_ and carries two ways out of each card:
 the category badge opens the branch, and the "See detail" button opens the entry.
 Both hrefs are built in `sightings-section.tsx` - the server component that knows
 the locale - never in the client slider.
 
-Seven things that will bite:
+Nine things that will bite:
 
-- **A category's strip is its own photos *and then* its species'.** `Category`
-  owns a real gallery now (`CategoryImage`), and `toOwnPhotos` puts those first -
-  they are the shots an author chose for the group. `toGalleryPhotos` then
+- ⚠ **There are two map components, and neither replaces the other.**
+  `@repo/ui`'s `LocationMap` is Google's keyless embed - a cross-origin iframe
+  showing exactly **one** pin, and still the right thing for a sighting's "where
+  it was seen". `SightingsMap` (`components/journal/sightings-map.tsx`) draws
+  OpenStreetMap raster tiles into its own DOM so it can put a marker per entry on
+  top of them, wearing that entry's **species icon**. It cannot be the iframe:
+  nothing on a page can draw over a cross-origin frame or read a click inside it.
+  It shares its Web Mercator with the CMS's `MapPicker` through
+  `lib/mercator.ts` - one projection, so a pin cannot land a pixel off the tile
+  beneath it in one of them. Three consequences: the **public** site now makes
+  third-party requests to `tile.openstreetmap.org` from the visitor's browser
+  (the CMS already did; a public page doing it is new); the map's **filters
+  narrow the pins that were loaded and never re-query**, so a species dropdown
+  shows that species _among these pins_, not its full history; and markers
+  sharing a coordinate are **fanned out in screen pixels**, because an entry with
+  no coordinates of its own inherits its location's centre and a season at one
+  pond would otherwise stack into what looks like a single sighting.
+- ⚠ **`SightingsMap` does not take a bare wheel, on purpose.** A map that
+  swallows every wheel event traps a reader scrolling past it - the page stops
+  and the map zooms out to the Atlantic instead. Zooming needs `Ctrl`/`⌘` +
+  wheel (the same event a **trackpad pinch** produces, so both work through one
+  branch), a two-finger pinch on a touchscreen, the `+`/`-` buttons, or the
+  keyboard; a bare wheel raises a scrim saying so and lets the page scroll. Don't
+  "fix" it back to plain wheel zoom. The tiles are also **colour-graded** by a
+  CSS filter on their own layer (`.sm__tiles`), light and dark, because OSM's
+  cartography is far louder than the rest of the page - the tiles themselves
+  cannot be restyled, they arrive as finished PNGs. The CMS's `MapPicker` still
+  zooms on a bare wheel: it sits in a form the author is working _in_, not a page
+  they are reading past.
+- **A category's slideshow is its own photos _and then_ its species'.**
+  `Category` owns a real gallery now (`CategoryImage`), and `toGalleryImages`
+  puts those first - they are the shots an author chose for the group - then
   appends the union of its species' photos (each cover, then that species'
-  `SpeciesImage` rows), which is what makes the page a contact sheet of the whole
-  branch and a second, denser route into the records the grid below lists; it is
+  `SpeciesImage` rows), which makes it a contact sheet of the whole branch. It is
   built from the species list the page already fetched, so it costs no extra
-  request. **A species page's gallery is only its own rows** - and it too drops
-  the cover, which is the hero directly above it.
-- ⚠ **All three strips drop the cover by URL equality, and they have to.** Every
-  record's photos live in a gallery whose *first row* the API publishes as
-  `image` (animals-api's CLAUDE.md → "The first photo is the record's cover"), so
-  the cover is normally one of the rows being iterated - and without
-  `photo.image === record.image` the strip would open with the hero repeated. A
-  cover set separately in the Django admin matches nothing and the whole strip is
-  kept, which is correct. The sighting page has always worked this way; the
-  species and category pages now do too.
+  request. **A species page's gallery is only its own rows**, and a sighting's
+  only its own `media`.
+- ⚠ **All three `toGalleryImages` helpers dedupe by URL through a `seen` set, and
+  they have to.** Every record's photos live in a gallery whose _first row_ the
+  API publishes as `image` (animals-api's CLAUDE.md → "The first photo is the
+  record's cover"), so the cover is normally also one of the rows being iterated.
+  The **cover is deliberately kept** and leads the strip - this is a numbered
+  slideshow with its own thumbnails, where the cover is simply slide 1, not the
+  contact sheet under a hero that these pages used to carry (that one _dropped_
+  the cover, because repeating it read as a duplicate). Without the `seen` set it
+  would appear twice in a row instead. A cover uploaded separately in the Django
+  admin matches nothing and simply leads the strip on its own.
 - **A sighting's gallery is one table with a `kind`, so the page splits it.**
   `SightingMedia` holds photos, uploaded clips and video links in one ordered
   list (they share a `sort_order` an author arranges). The page sends the photos
-  to `PhotoGallery` and the two video kinds to its own `SightingVideos`, both
-  keyed off the API's already-resolved `source_url`. It also **drops the cover
-  from the strip when the cover came from `media`** - an entry with no image of
-  its own is published with its first gallery photo as `image`, which is the hero
-  directly above.
+  to the first row's `DetailGallery` and the two video kinds to its own
+  `SightingVideos` below it, both keyed off the API's already-resolved
+  `source_url`.
 - **A sighting's map pin is not always exact.** `latitude`/`longitude` are the
-  *effective* coordinates - the entry's own, else its location's centre - and the
+  _effective_ coordinates - the entry's own, else its location's centre - and the
   API rounds them to ~1 km for **every** caller when the place is flagged
   sensitive. `coordinates_are_approximate` says so; it is a caption, not a gate,
   so don't write a branch that "reveals" the precise pair to an administrator.
@@ -68,7 +112,7 @@ Seven things that will bite:
   locale reads `en_name` and falls back to the bare Spanish column, which is why
   the German page for `Venados` says "Deer" rather than translating it.
 - **A decorative initial must pass `as="span"`.** `Typography`'s `variant`
-  defaults the rendered *element* too, so the no-photo fallback letter in a
+  defaults the rendered _element_ too, so the no-photo fallback letter in a
   species card or a category tile would otherwise emit a bare `<h2>`/`<h4>` into
   the page's heading outline beside the real section headings. `aria-hidden`
   hides it from a screen reader but does not take it out of the document
@@ -81,7 +125,7 @@ specific to this app:
 
 - **`isAdmin` gates the CMS, and it comes from a token claim.** animals-api mints
   `is_admin` (see its `users/serializers.py`) as `UserProfile.is_admin` **or**
-  Django's `is_staff`. It only drives what is *rendered* - `proxy.ts` guards
+  Django's `is_staff`. It only drives what is _rendered_ - `proxy.ts` guards
   `/admin`, `AdminSidebar` re-checks it, and Django re-derives it from the token
   on every call.
 - ⚠ **Claims freeze for the life of the refresh token.** An account just granted
@@ -136,9 +180,9 @@ Seven rules that will bite:
   has no URL to POST a photo to until then). That is what lets a new record be
   saved with its photos in one go, and what makes abandoning a form leave nothing
   behind. Two things follow: a form that adds a gallery must call
-  `gallery.persist(id)` in *both* branches of its submit, and `persist` bumps a
+  `gallery.persist(id)` in _both_ branches of its submit, and `persist` bumps a
   reload token afterwards - without it the uploader would still be holding those
-  photos as *pending* and the next Save would upload every one of them again.
+  photos as _pending_ and the next Save would upload every one of them again.
 - **A sighting's clips still save immediately, one row at a time.**
   `MediaEditor` keeps the video-file and video-link controls on the old
   `GalleryEditor` path, because a video is far past the API's JSON-body limit and
@@ -153,16 +197,16 @@ Seven rules that will bite:
   options names its state, which is what tells two counties of the same name
   apart. `GeographyPanel` (`admin/locations/geography-panel.tsx`) adds and
   deletes both tables under the locations list, because a missing county is
-  discovered *mid-way through filing a place*; `/admin/states` and
+  discovered _mid-way through filing a place_; `/admin/states` and
   `/admin/counties` are the full lists for a bulk rename. Deleting a state that
   still has counties is a 409, and the panel says so rather than reporting a
   generic failure.
 - **The map picker is OpenStreetMap, and it cannot be Google.**
   `MapPicker` (`components/admin/map-picker.tsx`) sits above the Latitude field
-  via `AdminForm`'s `slots` and writes *both* coordinates at once. **Both** the
+  via `AdminForm`'s `slots` and writes _both_ coordinates at once. **Both** the
   sighting form and the location form mount it: an entry's pin is the exact spot
   and falls back to its location's coordinates, a place's pin is the place
-  itself and falls back to its *parent* place (a trail opens over its park). It draws OSM
+  itself and falls back to its _parent_ place (a trail opens over its park). It draws OSM
   raster tiles into its own DOM and does the Web Mercator arithmetic by hand -
   no `leaflet`, no API key, ~200 lines. It is not the keyless Google embed
   `@repo/ui`'s `LocationMap` uses on the public page, and it can't be: that is a
@@ -192,16 +236,16 @@ token. A new admin endpoint under a new top-level prefix needs a line in
 **Three things deliberately do not go through it**, because it re-encodes every
 body and response as JSON:
 
-| What | Why | Where |
-| --- | --- | --- |
-| Backup download | JSON re-encoding corrupts a zip | `app/api/backups/[id]/download/` (streamed passthrough) |
-| Backup restore | destroys the multipart boundary | `app/api/backups/restore/` (buffered, see below) |
-| Sighting video upload | same, and it is far past the API's 10 MB JSON-body limit | posted straight to Django from `lib/admin-api.ts` |
-| AI streaming | `res.json()` would turn the live preview into one lump at the end | `app/api/ai/chat/` (pipes `res.body`) |
+| What                  | Why                                                               | Where                                                   |
+| --------------------- | ----------------------------------------------------------------- | ------------------------------------------------------- |
+| Backup download       | JSON re-encoding corrupts a zip                                   | `app/api/backups/[id]/download/` (streamed passthrough) |
+| Backup restore        | destroys the multipart boundary                                   | `app/api/backups/restore/` (buffered, see below)        |
+| Sighting video upload | same, and it is far past the API's 10 MB JSON-body limit          | posted straight to Django from `lib/admin-api.ts`       |
+| AI streaming          | `res.json()` would turn the live preview into one lump at the end | `app/api/ai/chat/` (pipes `res.body`)                   |
 
 ⚠ **The restore upload is buffered, not streamed, on purpose.** `apiFetch` retries
 once on a 401 and a `ReadableStream` body cannot be replayed - streaming would
-turn every expired-token restore into an unexplained failure *after* the whole
+turn every expired-token restore into an unexplained failure _after_ the whole
 archive had been sent.
 
 ## Reads are `no-store` - the only cache is animals-api's
@@ -213,7 +257,7 @@ Redis in production - and each Django app's `signals.py` clears its namespace on
 every write, so an author's edit is live on the next request.
 
 This app used to carry a `lib/fetch-cache.ts` that returned
-`{ next: { revalidate: 300 } }` in production. Next's data cache sits *above*
+`{ next: { revalidate: 300 } }` in production. Next's data cache sits _above_
 animals-api's and knows nothing about the write, so it kept replaying the payload
 it already had: a primary colour changed in `/admin` took up to five minutes to
 appear, on the CMS's own chrome as well as the public site (both hang off the same
@@ -250,7 +294,7 @@ watermark, the navbar logo, and the title/description in `generateMetadata`.
   page. `cssFontFamily` **rejects** rather than escapes anything that is not
   plausibly a family name.
 - **`SYSTEM_FALLBACK` is not an optional payload.** This is on the critical path
-  of every page, so a backend that is down must cost the *branding*, not the
+  of every page, so a backend that is down must cost the _branding_, not the
   site. Its values match the model's own defaults, so a fresh database and a dead
   one look the same.
 - **`HideOnAdmin` keeps the watermark and the footer off `/admin`.** The CMS is a
@@ -258,7 +302,7 @@ watermark, the navbar logo, and the title/description in `generateMetadata`.
 
 ⚠ **`images.loader` is `'custom'` here**, so `/_next/image` does not answer at all
 and `images.remotePatterns` is inert - see the note in `next.config.js`. Anything
-that needs a *same-origin* copy of a remote image (a canvas export, a CSS mask)
+that needs a _same-origin_ copy of a remote image (a canvas export, a CSS mask)
 needs its own route handler in this app. Nothing in the CMS needs one today.
 
 ## i18n
@@ -269,7 +313,7 @@ pair raw (`name` + `en_name`) and resolves nothing; `lib/i18n-field.ts` →
 every other locale reads the `en_` twin and falls back to the bare field when the
 translation is blank.
 
-**The CMS is the exception, and deliberately so**: it edits *both* halves of every
+**The CMS is the exception, and deliberately so**: it edits _both_ halves of every
 pair side by side, so it never calls `localized()`. Its own chrome is translated
 like everything else - the `Admin` namespace, plus `AdminImageUploader`, `Months`
 and `PlaceTypes`. A new admin string needs its key in all five `messages/*.json`

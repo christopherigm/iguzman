@@ -10,10 +10,10 @@ unchanged. This file covers only what is **different**, and the reasons.
 
 ## The two differences from website-api
 
-| | website-api | animals-api |
-| --- | --- | --- |
-| Tenancy | multi-tenant; every model FKs to `System` and every query is scoped by host | **single site.** `core.System` exists but is a **singleton** holding this one site's name and brand kit - no `host`, no host resolution, no `X-Website-Host`, and nothing FKs to it. Fetched only through `System.load()`. Do not turn it back into a tenant. |
-| Write permission | `IsSystemAdmin` (a `UserProfile.is_admin` flag) | **`IsSiteAdmin`** (`core/permissions.py`) - `UserProfile.is_admin` **or** Django's `is_staff`. |
+|                  | website-api                                                                 | animals-api                                                                                                                                                                                                                                                   |
+| ---------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tenancy          | multi-tenant; every model FKs to `System` and every query is scoped by host | **single site.** `core.System` exists but is a **singleton** holding this one site's name and brand kit - no `host`, no host resolution, no `X-Website-Host`, and nothing FKs to it. Fetched only through `System.load()`. Do not turn it back into a tenant. |
+| Write permission | `IsSystemAdmin` (a `UserProfile.is_admin` flag)                             | **`IsSiteAdmin`** (`core/permissions.py`) - `UserProfile.is_admin` **or** Django's `is_staff`.                                                                                                                                                                |
 
 ⚠ **`is_admin` and `is_staff` are different things, and `core.permissions.is_site_admin`
 is the one place that decides.** `is_admin` opens the CMS in `apps/animals` and the
@@ -110,7 +110,7 @@ Three rules that are easy to get wrong:
   without them an English reader gets a Spanish species beside an English story.
   **Add a flattened label and you must add its twin in the same task.**
 
-What is deliberately *not* translated: `slug` (a URL and a stable key - the seed
+What is deliberately _not_ translated: `slug` (a URL and a stable key - the seed
 command matches on it, so renaming one creates duplicate rows), `scientific_name`
 and `family` (Latin, identical in every locale), and the `KIND_CHOICES` /
 `PLACE_TYPE_CHOICES` labels (a fixed enum the frontend translates through
@@ -159,7 +159,7 @@ Four things to know:
 - **They are lookup tables, not content.** `Common` + a name pair + a slug + a
   sort order. No `image`, no `icon`, no description pair, no gallery, no
   `/images/` endpoints, no public page. They exist so "Jalisco" is typed once
-  and then *chosen*. If one ever needs a photograph it should become a
+  and then _chosen_. If one ever needs a photograph it should become a
   `RegularPicture` like the other four records, not grow the fields in place.
 - **`Location` stores only its county; the state is derived.** `Location.state`
   is a read-only property over `county.state`, flattened onto the payload as
@@ -177,7 +177,7 @@ Four things to know:
 
 ⚠ `/api/ai/research/`'s `location` subject **must not** offer these.
 `catalog/services/research.py` dropped `region`/`country` rather than renaming
-them: a model that answers "Jalisco" cannot say *which row* that is, and FKs are
+them: a model that answers "Jalisco" cannot say _which row_ that is, and FKs are
 absent from every subject's allowlist for exactly this reason.
 
 ## Coordinates: two rules that are easy to get wrong
@@ -194,7 +194,39 @@ absent from every subject's allowlist for exactly this reason.
   every map library takes numbers. They are the one exception; other decimals
   (temperature) keep the string form. A sighting with no coordinates of its own
   falls back to its location's, so `latitude`/`longitude` on a sighting payload
-  are the *effective* values, not the stored column.
+  are the _effective_ values, not the stored column.
+
+⚠ **Both rules are re-implemented nowhere.** `journal/serializers.py` →
+`effective_coordinate` is the single function behind the feed's pair _and_ the
+map endpoint's; a second copy would eventually disagree with a sighting's own
+page about where it happened - or, worse, publish the precise nest on the one
+surface that forgot to blur.
+
+### `/api/journal/sightings/map/` - pins, not entries
+
+Its own endpoint rather than a flag on the feed, because it is a different
+**shape** and a different **contract**:
+
+- `SightingMapSerializer` drops the prose, the gallery and the field conditions,
+  and adds `species_icon` / `category_icon` - the glyph a marker is _drawn as_,
+  which the feed has no use for. Pinning a category through the feed would ship
+  every photo caption of every entry on the map.
+- It answers a **bare list**, not a page. A map has no "next page", it has a
+  bounding box; pagination would only ever be a way to draw an incomplete one.
+  `MAX_MAP_PINS` (500) is the ceiling instead.
+- **Only rows that can actually be pinned** come back, so the queryset expresses
+  _both_ halves of the coordinate fallback (`Q(latitude…) | Q(location__latitude…)`).
+  Filter on the sighting's own columns alone and every entry that inherits its
+  place's centre - the common case - silently vanishes from the map.
+- `?per_category=N` takes the latest N of **each** branch, which is what the
+  landing asks for: newest-N-overall would show nothing but birds the week
+  somebody spent birdwatching. Without it the endpoint is the plain newest-first
+  feed, which is what one category's page wants.
+
+Its cache namespace is `journal:map`, and it is cleared by the _catalog's_
+receivers as well as the journal's - a pin carries a species' icon, so an author
+uploading a glyph changes every marker of that branch without touching a single
+`Sighting` row.
 
 ## The first photo is the record's cover
 
@@ -210,7 +242,7 @@ Both halves matter.
 
 - **The CMS never writes the `image` column.** `apps/animals`' forms upload into
   the gallery and PATCH `sort_order` on every row after a drag, so for anything
-  authored there the cover *is* `images[0]` - which is what "upload several at
+  authored there the cover _is_ `images[0]` - which is what "upload several at
   once, the first is the main one" means. A record's `icon` stays a separate
   single field: it is a 128 px glyph for a map pin or a filter chip, not a
   photograph, and must never join the gallery.
@@ -223,7 +255,7 @@ Both halves matter.
 
 Three consequences that are easy to miss:
 
-- **A `*Image` write can change the record's *cover*, not just its gallery.** So
+- **A `*Image` write can change the record's _cover_, not just its gallery.** So
   its receiver in `signals.py` must clear the record's own list **and** detail
   namespaces, plus anything that embeds a thumbnail of it - which is why a
   `SpeciesImage` write also invalidates sightings (`species_image`).
@@ -247,7 +279,7 @@ line and an admin inline - and no new logic.
 Every image is a **base64 string in a JSON body**, processed by
 `ImageProcessingSerializer` and capped by `DATA_UPLOAD_MAX_MEMORY_SIZE` (10 MB) -
 the same pattern as website-api. Write serializers declare their images through
-`Base64ImagesMixin`, which validates them up front, writes them *after* the row
+`Base64ImagesMixin`, which validates them up front, writes them _after_ the row
 exists (the filename embeds the pk), and treats an explicitly empty value as
 "clear it" while an omitted one leaves the stored file alone.
 
@@ -257,11 +289,11 @@ its own multipart endpoint, `POST /api/journal/sightings/<pk>/media/video/`,
 which Django streams to a temp file. Three limits have to agree, and they are in
 three different places:
 
-| Limit | Where | Value |
-| --- | --- | --- |
+| Limit       | Where                                     | Value  |
+| ----------- | ----------------------------------------- | ------ |
 | Application | `MAX_VIDEO_UPLOAD_MB` (settings / secret) | 200 MB |
-| nginx | `proxy-body-size` in `helm/values.yaml` | 256m |
-| gunicorn | `GUNICORN_TIMEOUT` in `helm/values.yaml` | 600 |
+| nginx       | `proxy-body-size` in `helm/values.yaml`   | 256m   |
+| gunicorn    | `GUNICORN_TIMEOUT` in `helm/values.yaml`  | 600    |
 
 ⚠ nginx refuses an oversized body **before Django sees it**, so raising
 `MAX_VIDEO_UPLOAD_MB` alone just turns a readable 400 into an opaque 413.
@@ -288,7 +320,7 @@ params. What a subclass gets, and must not undo:
   replayed to the next anonymous caller. There is a test for exactly that.
   ⚠ The CMS asks for `?include_disabled=true` on **every** list, so this is not
   a corner case any more - it is the path every authoring page takes.
-- **Every resource is addressable by pk *and* by slug** (`/slug/<slug>/`, spelled
+- **Every resource is addressable by pk _and_ by slug** (`/slug/<slug>/`, spelled
   with the literal so a numeric slug can never be read as a pk). The public site
   uses slugs; both are cached, under distinct keys, and a write clears the old
   slug's key as well as the new one's.
@@ -304,7 +336,7 @@ Two switches and one rule.
 `core/cache.py`'s `cached_get`/`cached_set` - the only way a view may touch the
 response cache - are no-ops when it is off. So an edit made in the Django admin
 is visible on the next page load. Set `API_CACHE_ENABLED=True` in `.env` to
-reproduce the production path locally. It is a switch on the *response* layer,
+reproduce the production path locally. It is a switch on the _response_ layer,
 not on `CACHES`: the cache also holds WebAuthn challenges mid-ceremony and (on
 Redis) sessions, so a `DummyCache` backend would break passkeys on a laptop. In
 the cluster it is set explicitly in `helm/values.yaml` rather than left to
@@ -325,7 +357,7 @@ landing page for the full TTL.
 
 Two traps worth knowing before you touch this:
 
-- **The bare key.** `core/views.py`'s `list_key` returns the *unprefixed*
+- **The bare key.** `core/views.py`'s `list_key` returns the _unprefixed_
   namespace for a request with no query params - `/api/catalog/categories/`
   caches under exactly `catalog:categories`, which `catalog:categories:*` does
   **not** match. Always invalidate through `core.cache.invalidate()`, which
@@ -333,7 +365,7 @@ Two traps worth knowing before you touch this:
   landing page actually reads.
 - **Tests need a Redis-faithful cache.** `invalidate_pattern` falls back to
   `cache.clear()` when the backend has no `delete_pattern`, so on plain
-  LocMemCache *any* invalidation wipes everything and an incomplete receiver
+  LocMemCache _any_ invalidation wipes everything and an incomplete receiver
   passes. `IsolatedMediaTestCase` therefore pins
   `core.testing.PatternLocMemCache` (LocMem + a real glob `delete_pattern`) and
   forces `API_CACHE_ENABLED=True` - without both, every "the write is visible
@@ -344,18 +376,18 @@ Cache-key namespaces are constants in `catalog/cache_keys.py` and
 `journal/cache_keys.py`, imported by both the views that write them and the
 signals that clear them - a typo in either place would otherwise be silent.
 
-What is specific here is *what embeds what*, and it lives in `catalog/signals.py`
+What is specific here is _what embeds what_, and it lives in `catalog/signals.py`
 and `journal/signals.py` with a table at the top of each. The pairings that bite:
 
-| Writing this | Also stale |
-| --- | --- |
-| `Category` | every species payload (`category_name`/`slug`/`kind`), the `/kinds/` nav, sightings |
-| `Species` | every category payload (`species_count`), the `/kinds/` nav, sightings |
-| `Sighting` | that species (`sighting_count`, `last_seen`), the season / weather / location lists (each carries `sighting_count`), and `/journal/stats/` |
-| `SightingMedia` | that sighting - its payload embeds the gallery, **and** its cover image falls back to the first photo |
-| `SeasonImage` / `WeatherConditionImage` / `LocationImage` | that record - same reason: the gallery *and* the cover |
-| `State` | counties (`state_name`/`slug`) **and** locations, which flatten the state read *through* the county - two tables away from the row that changed |
-| `County` | locations (`county_name` and the state behind it), and states (`county_count`, `location_count`) |
+| Writing this                                              | Also stale                                                                                                                                      |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Category`                                                | every species payload (`category_name`/`slug`/`kind`), the `/kinds/` nav, sightings                                                             |
+| `Species`                                                 | every category payload (`species_count`), the `/kinds/` nav, sightings                                                                          |
+| `Sighting`                                                | that species (`sighting_count`, `last_seen`), the season / weather / location lists (each carries `sighting_count`), and `/journal/stats/`      |
+| `SightingMedia`                                           | that sighting - its payload embeds the gallery, **and** its cover image falls back to the first photo                                           |
+| `SeasonImage` / `WeatherConditionImage` / `LocationImage` | that record - same reason: the gallery _and_ the cover                                                                                          |
+| `State`                                                   | counties (`state_name`/`slug`) **and** locations, which flatten the state read _through_ the county - two tables away from the row that changed |
+| `County`                                                  | locations (`county_name` and the state behind it), and states (`county_count`, `location_count`)                                                |
 
 ⚠ **Add a derived or flattened field to a serializer and you must add its
 receiver in the same task.** A stale count looks exactly like a lost write.
@@ -375,7 +407,7 @@ hero images, five manifest icons, two colours, three typography fields, the
 framed-heading switch, eight watermark fields and the two page backgrounds).
 
 **It is not website-api's `System`, and the difference is the whole tenancy
-note above.** There, `System` *is* the tenant: every row FKs to one and a request
+note above.** There, `System` _is_ the tenant: every row FKs to one and a request
 resolves which by host. Here nothing points at it, there is no `host` column, and
 `System.load()` - `get_or_create(pk=1)` - is the only way it is ever fetched. Do
 not give a content model a FK to it, and do not add a host.
@@ -384,7 +416,7 @@ Three rules worth knowing:
 
 - **`System.load()` creates the row with its defaults if it is missing**, so a
   fresh database serves the defaults rather than 404ing before anyone has opened
-  the CMS. The frontend has a matching `SYSTEM_FALLBACK`, so a *dead* API costs
+  the CMS. The frontend has a matching `SYSTEM_FALLBACK`, so a _dead_ API costs
   the branding rather than the site.
 - **`GET /api/system/` is `AllowAny` and is read on every page of the public
   site.** Nothing may go on `SystemSerializer` that is not meant to be
@@ -415,7 +447,7 @@ A port of website-api's engine with the multi-tenancy taken out: one site, so no
 no host on the manifest to match an archive against. Read that project's CLAUDE.md
 section too - the four load-bearing rules (secrets never travel, `auto_now` is
 re-applied with a follow-up `UPDATE`, each row is its own savepoint with the `try`
-*outside* the `atomic()` block, PROTECT edges decide the order) are unchanged and
+_outside_ the `atomic()` block, PROTECT edges decide the order) are unchanged and
 each is commented at its site.
 
 - **Rows are built by introspecting `_meta.concrete_fields`.** Adding a field to a
@@ -424,13 +456,13 @@ each is commented at its site.
   of its rows across two databases.
 - **Sections are `settings` / `catalog` / `journal`, plus the cross-cutting
   `images` toggle** - not a section itself: it decides whether the media files of
-  the *selected* sections travel with them. `apps/animals`' `BACKUP_SECTIONS` must
+  the _selected_ sections travel with them. `apps/animals`' `BACKUP_SECTIONS` must
   match `ALL_SECTIONS`; the CMS's section switches and its history badges read one
   shared label map for the same reason.
 - **`auth.User` and `users.UserProfile` are `never_delete`.** On a single-site
   install, a replace-mode wipe of the user table would take the last
   administrator's login with it - and the profile is what carries `is_admin`.
-- **No password hash travels**, so a *newly created* account cannot be signed into
+- **No password hash travels**, so a _newly created_ account cannot be signed into
   until its owner runs a reset. An account that already exists keeps the password
   it has: a restore may not lock a live user out.
 
@@ -485,14 +517,14 @@ POST /api/ai/research/   draft a whole catalog record from live web sources
   and produce copy published under the journal's name.
 - **`/api/ai/research/` filters the model's answer against a per-subject
   allowlist** (`catalog/services/research.py` → `_SUBJECTS`), so a hallucinated
-  *field* lands nowhere - `slug`, ids, FKs and images are absent by design. It
-  cannot filter a hallucinated *fact*: `sources` and `used_web_search` come back
+  _field_ lands nowhere - `slug`, ids, FKs and images are absent by design. It
+  cannot filter a hallucinated _fact_: `sources` and `used_web_search` come back
   alongside so the author can check. The scraper is optional; unconfigured or
   down, it answers from the model's own knowledge with no sources rather than
   failing.
 - **Errors in the streaming endpoint must be reported inside the stream**
   (`data: {"error": …}`) - `StreamingHttpResponse` commits the 200 before the
-  generator runs, so validate anything that could 4xx/5xx *before* returning the
+  generator runs, so validate anything that could 4xx/5xx _before_ returning the
   response. `X-Accel-Buffering: no` is required or nginx delivers the whole
   completion in one lump. Provider errors are logged in full and reported
   generically; an upstream body can carry prompt text.
@@ -536,6 +568,8 @@ GET    /api/catalog/counties/                       ?state= ?state_slug= ?slug= 
 GET    /api/catalog/locations/                      ?parent= ?place_type= ?county= ?state= ?featured=
 GET    /api/journal/sightings/                      ?species_slug= ?kind= ?location_slug= ?season_slug=
                                                     ?year= ?month= ?date_from= ?date_to= ?limit= ?offset=
+GET    /api/journal/sightings/map/                  ?category_slug= ?kind= ?species_slug=
+                                                    ?location_slug= ?per_category= ?limit=
 GET    /api/journal/stats/                          landing-page headline numbers
 
 # each of the above resources also has:
@@ -579,7 +613,7 @@ second, one test's cached list is served to the next.
 
 It carries three factories, and **which one a write test uses is the assertion**:
 `make_staff()` (Django staff, no profile flag - every account that predates
-`is_admin`), `make_admin()` (the flag, *not* staff - the account the CMS exists
+`is_admin`), `make_admin()` (the flag, _not_ staff - the account the CMS exists
 for), and `make_visitor()` (signed in, may read, may not write). A permission
 change that quietly collapsed the two admins into one would still pass a suite
 that only ever used `make_staff`.

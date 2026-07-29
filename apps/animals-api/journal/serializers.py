@@ -264,16 +264,7 @@ class SightingSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created', 'modified', 'version']
 
     def get_image(self, obj):
-        """The entry's cover: its own image, else the first gallery photo."""
-        request = self.context.get('request')
-        if obj.image:
-            return file_url(obj.image, request)
-        photo = next(
-            (m for m in sorted(obj.media.all(), key=lambda m: m.sort_order)
-             if m.kind == 'image' and m.image),
-            None,
-        )
-        return file_url(photo.image, request) if photo else None
+        return sighting_cover_url(obj, self.context.get('request'))
 
     def get_species_image(self, obj):
         # Through the same fallback the species' own payload uses, or a species
@@ -297,17 +288,131 @@ class SightingSerializer(serializers.ModelSerializer):
     def get_longitude(self, obj):
         return self._coordinate(obj, 1)
 
-    # Published as a JSON number, not DRF's decimal-as-string - see the matching
-    # note in catalog.serializers.LocationSerializer.
-    @staticmethod
-    def _coordinate(obj, index):
-        coords = obj.coordinates
-        if coords is None:
+    def get_latitude(self, obj):
+        return effective_coordinate(obj, 0)
+
+    def get_longitude(self, obj):
+        return effective_coordinate(obj, 1)
+
+
+def sighting_cover_url(obj, request=None):
+    """The entry's cover: its own ``image`` column, else its first photo.
+
+    ``core.serializers.gallery_image_url`` is the same rule for every *catalog*
+    record and cannot be reused here: it reads ``obj.images``, and a sighting's
+    gallery is ``media`` - one table holding photos, uploaded clips and video
+    links together, so the fallback has to skip everything whose ``kind`` is not
+    an image.
+
+    Sorted in Python rather than with an ``order_by`` for the reason that helper
+    gives: the views prefetch this list, and a queryset call here would re-query
+    once per row of a list response.
+    """
+    if obj.image:
+        return file_url(obj.image, request)
+    photo = next(
+        (m for m in sorted(obj.media.all(), key=lambda m: (m.sort_order, m.id))
+         if m.kind == 'image' and m.image),
+        None,
+    )
+    return file_url(photo.image, request) if photo else None
+
+
+# Published as a JSON number, not DRF's decimal-as-string - see the matching
+# note in catalog.serializers.LocationSerializer. Module-level rather than a
+# method because two serializers publish the same pair: the feed's, and the map
+# endpoint's stripped-down pin. A pin that resolved coordinates its own way
+# would eventually disagree with the entry's own page about where it happened.
+def effective_coordinate(obj, index):
+    coords = obj.coordinates
+    if coords is None:
+        return None
+    value = coords[index]
+    if obj.coordinates_are_sensitive:
+        value = round_coordinate(value)
+    return float(value)
+
+
+# ---------------------------------------------------------------------------
+# Map pins
+# ---------------------------------------------------------------------------
+
+class SightingMapSerializer(serializers.ModelSerializer):
+    """One marker on a map: where, what, and enough to label it.
+
+    Deliberately **not** ``SightingSerializer``. A map draws hundreds of these at
+    once and needs none of the prose, the gallery or the field conditions - a
+    category page's map would otherwise ship every photo caption of every entry
+    it pins. What it does need that the feed has no use for is the **species
+    icon**, which is what a marker is drawn as.
+    """
+
+    species_name = serializers.CharField(source='species.name', read_only=True, default=None)
+    species_en_name = serializers.CharField(source='species.en_name', read_only=True, default=None)
+    species_slug = serializers.CharField(source='species.slug', read_only=True, default=None)
+    species_icon = serializers.SerializerMethodField()
+
+    kind = serializers.CharField(source='species.category.kind', read_only=True, default=None)
+    category = serializers.IntegerField(source='species.category_id', read_only=True, default=None)
+    category_name = serializers.CharField(source='species.category.name', read_only=True, default=None)
+    category_en_name = serializers.CharField(source='species.category.en_name', read_only=True, default=None)
+    category_slug = serializers.CharField(source='species.category.slug', read_only=True, default=None)
+    category_icon = serializers.SerializerMethodField()
+    # The marker's fallback colour when neither the species nor its category has
+    # an icon: a coloured dot that still groups by branch beats a grey one.
+    category_color = serializers.CharField(
+        source='species.category.background_color', read_only=True, default=None
+    )
+
+    location_name = serializers.CharField(source='location.name', read_only=True, default=None)
+    location_en_name = serializers.CharField(source='location.en_name', read_only=True, default=None)
+    location_slug = serializers.CharField(source='location.slug', read_only=True, default=None)
+
+    image = serializers.SerializerMethodField()
+    latitude = serializers.SerializerMethodField()
+    longitude = serializers.SerializerMethodField()
+    coordinates_are_approximate = serializers.BooleanField(
+        source='coordinates_are_sensitive', read_only=True
+    )
+
+    class Meta:
+        model = Sighting
+        fields = [
+            'id', 'slug', 'name', 'en_name', 'date',
+            'species', 'species_name', 'species_en_name', 'species_slug', 'species_icon',
+            'kind', 'category', 'category_name', 'category_en_name', 'category_slug',
+            'category_icon', 'category_color',
+            'location', 'location_name', 'location_en_name', 'location_slug',
+            'latitude', 'longitude', 'coordinates_are_approximate',
+            'image',
+        ]
+
+    def get_species_icon(self, obj):
+        """The species' glyph - what the marker is drawn as.
+
+        ``icon`` is a single field, never the gallery (see the CLAUDE.md note on
+        covers), so this is ``file_url`` rather than ``gallery_image_url``: a
+        128 px mark is the point here, and falling back to a photograph would put
+        a cropped landscape inside a 28 px circle.
+        """
+        if not obj.species_id:
             return None
-        value = coords[index]
-        if obj.coordinates_are_sensitive:
-            value = round_coordinate(value)
-        return float(value)
+        return file_url(obj.species.icon, self.context.get('request'))
+
+    def get_category_icon(self, obj):
+        if not obj.species_id or not obj.species.category_id:
+            return None
+        return file_url(obj.species.category.icon, self.context.get('request'))
+
+    def get_image(self, obj):
+        """The entry's cover, for the marker's popup card."""
+        return sighting_cover_url(obj, self.context.get('request'))
+
+    def get_latitude(self, obj):
+        return effective_coordinate(obj, 0)
+
+    def get_longitude(self, obj):
+        return effective_coordinate(obj, 1)
 
 
 class SightingWriteSerializer(Base64ImagesMixin, serializers.ModelSerializer):

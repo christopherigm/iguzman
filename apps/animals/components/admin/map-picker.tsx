@@ -7,6 +7,17 @@ import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Button } from '@repo/ui/core-elements/button';
 import { TextInput } from '@repo/ui/core-elements/text-input';
+import {
+  TILE_SIZE,
+  fromWorld,
+  originOf,
+  tilesFor,
+  toWorld,
+  viewportToLatLng,
+  zoomAbout,
+  type LatLng,
+  type Size,
+} from '@/lib/mercator';
 import './map-picker.css';
 
 /**
@@ -21,13 +32,13 @@ import './map-picker.css';
  * than pulled from Leaflet so the app keeps its zero map dependencies and the
  * tiles inherit the CMS's own theming.
  *
- * The whole thing is ~200 lines of Web Mercator: a tile is a 256 px square of a
- * world that is `256 * 2^zoom` pixels wide, so a lat/lng converts to a world
- * pixel and back, and everything else - which tiles to draw, where the pin
- * lands, what a click means - falls out of that pair of functions.
+ * The projection itself lives in `lib/mercator.ts`, shared with the public
+ * `SightingsMap`: a tile is a 256 px square of a world that is `256 * 2^zoom`
+ * pixels wide, so a lat/lng converts to a world pixel and back, and everything
+ * else - which tiles to draw, where the pin lands, what a click means - falls
+ * out of that pair of functions. What is left here is the *picking*.
  */
 
-const TILE_SIZE = 256;
 const MIN_ZOOM = 2;
 const MAX_ZOOM = 18;
 /** Zoom used once a place is known: a village-sized frame, not a continent. */
@@ -39,8 +50,6 @@ const WIDE_ZOOM = 4;
  * the geographic middle of Mexico, which is where this journal is kept.
  */
 const DEFAULT_CENTER = { latitude: 23.6345, longitude: -102.5528 };
-/** Mercator cannot express the poles, so latitude is clamped just short of them. */
-const MAX_LATITUDE = 85.05112878;
 /** Pointer travel (px) below which a press counts as a click rather than a drag. */
 const DRAG_THRESHOLD = 4;
 /** What the API stores: `DecimalField(max_digits=9, decimal_places=6)`. */
@@ -58,64 +67,7 @@ const TILE_HOST = 'https://tile.openstreetmap.org';
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
 const OSM_COPYRIGHT = 'https://www.openstreetmap.org/copyright';
 
-type LatLng = { latitude: number; longitude: number };
-type Point = { x: number; y: number };
-type Size = { width: number; height: number };
-
-// ── Web Mercator ───────────────────────────────────────────────────────────
-
-const worldSize = (zoom: number) => TILE_SIZE * 2 ** zoom;
-
-function toWorld({ latitude, longitude }: LatLng, zoom: number): Point {
-  const size = worldSize(zoom);
-  const lat = Math.min(MAX_LATITUDE, Math.max(-MAX_LATITUDE, latitude));
-  const sin = Math.sin((lat * Math.PI) / 180);
-  return {
-    x: ((longitude + 180) / 360) * size,
-    y: (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * size,
-  };
-}
-
-function fromWorld({ x, y }: Point, zoom: number): LatLng {
-  const size = worldSize(zoom);
-  const n = Math.PI - (2 * Math.PI * y) / size;
-  return {
-    latitude: (180 / Math.PI) * Math.atan(Math.sinh(n)),
-    longitude: (x / size) * 360 - 180,
-  };
-}
-
 const clampZoom = (zoom: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
-
-/** The world pixel sitting at the viewport's top-left corner. */
-function originOf(center: LatLng, zoom: number, size: Size): Point {
-  const world = toWorld(center, zoom);
-  return { x: world.x - size.width / 2, y: world.y - size.height / 2 };
-}
-
-/** The coordinate under a point measured from the viewport's top-left corner. */
-function viewportToLatLng(center: LatLng, zoom: number, size: Size, px: number, py: number): LatLng {
-  const origin = originOf(center, zoom, size);
-  return fromWorld({ x: origin.x + px, y: origin.y + py }, zoom);
-}
-
-/**
- * Re-centres so the coordinate currently under (`px`, `py`) is still under it
- * after the zoom - which is what makes wheel-zoom feel like it is pulling the
- * map towards the cursor rather than towards the middle.
- */
-function zoomAbout(
-  center: LatLng,
-  from: number,
-  to: number,
-  px: number,
-  py: number,
-  size: Size,
-): LatLng {
-  const anchor = viewportToLatLng(center, from, size, px, py);
-  const world = toWorld(anchor, to);
-  return fromWorld({ x: world.x + size.width / 2 - px, y: world.y + size.height / 2 - py }, to);
-}
 
 /** A finite pair, or null - `''`, a half-typed `-` and `NaN` all mean "no pin". */
 function parseCoords(latitude: string, longitude: string): LatLng | null {
@@ -144,7 +96,12 @@ export interface MapPickerProps {
   height?: number;
 }
 
-type SearchResult = { id: string; label: string; latitude: number; longitude: number };
+type SearchResult = {
+  id: string;
+  label: string;
+  latitude: number;
+  longitude: number;
+};
 
 // ── MapPicker ──────────────────────────────────────────────────────────────
 
@@ -160,9 +117,7 @@ export function MapPicker({
   const pin = useMemo(() => parseCoords(latitude, longitude), [latitude, longitude]);
 
   const [center, setCenter] = useState<LatLng>(() => pin ?? fallbackCenter ?? DEFAULT_CENTER);
-  const [zoom, setZoom] = useState<number>(() =>
-    pin || fallbackCenter ? PLACE_ZOOM : WIDE_ZOOM,
-  );
+  const [zoom, setZoom] = useState<number>(() => (pin || fallbackCenter ? PLACE_ZOOM : WIDE_ZOOM));
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
   /** The pin's live position while it is being dragged; the form is written on release. */
   const [draftPin, setDraftPin] = useState<LatLng | null>(null);
@@ -339,9 +294,7 @@ export function MapPicker({
           const dy = e.clientY - finished.startY;
           const base = finished.origin ?? finished.camera.center;
           const world = toWorld(base, finished.camera.zoom);
-          emitRef.current(
-            fromWorld({ x: world.x + dx, y: world.y + dy }, finished.camera.zoom),
-          );
+          emitRef.current(fromWorld({ x: world.x + dx, y: world.y + dy }, finished.camera.zoom));
         }
         setDraftPin(null);
         return;
@@ -362,7 +315,9 @@ export function MapPicker({
       const next = clampZoom(z + (e.deltaY < 0 ? 1 : -1));
       if (next === z) return;
       const rect = el.getBoundingClientRect();
-      setCenter(zoomAbout(c, z, next, e.clientX - rect.left, e.clientY - rect.top, sizeRef.current));
+      setCenter(
+        zoomAbout(c, z, next, e.clientX - rect.left, e.clientY - rect.top, sizeRef.current),
+      );
       setZoom(next);
     };
 
@@ -439,8 +394,12 @@ export function MapPicker({
         signal: controller.signal,
       });
       if (!res.ok) throw new Error(String(res.status));
-      const rows: { place_id?: number; lat?: string; lon?: string; display_name?: string }[] =
-        await res.json();
+      const rows: {
+        place_id?: number;
+        lat?: string;
+        lon?: string;
+        display_name?: string;
+      }[] = await res.json();
       setResults(
         rows
           .map((row, index) => ({
@@ -472,30 +431,7 @@ export function MapPicker({
 
   const origin = useMemo(() => originOf(center, zoom, size), [center, zoom, size]);
 
-  const tiles = useMemo(() => {
-    if (size.width === 0 || size.height === 0) return [];
-    const count = 2 ** zoom;
-    const firstX = Math.floor(origin.x / TILE_SIZE);
-    const lastX = Math.floor((origin.x + size.width) / TILE_SIZE);
-    const firstY = Math.floor(origin.y / TILE_SIZE);
-    const lastY = Math.floor((origin.y + size.height) / TILE_SIZE);
-    const out: { key: string; url: string; left: number; top: number }[] = [];
-    for (let x = firstX; x <= lastX; x += 1) {
-      for (let y = firstY; y <= lastY; y += 1) {
-        // The world repeats east-west but stops at the poles, so x wraps and y
-        // is simply skipped when it falls off the top or bottom of the world.
-        if (y < 0 || y >= count) continue;
-        const wrappedX = ((x % count) + count) % count;
-        out.push({
-          key: `${zoom}/${x}/${y}`,
-          url: `${TILE_HOST}/${zoom}/${wrappedX}/${y}.png`,
-          left: x * TILE_SIZE - origin.x,
-          top: y * TILE_SIZE - origin.y,
-        });
-      }
-    }
-    return out;
-  }, [origin, size, zoom]);
+  const tiles = useMemo(() => tilesFor(origin, size, zoom, TILE_HOST), [origin, size, zoom]);
 
   const shownPin = draftPin ?? pin;
   const pinOffset = shownPin
@@ -509,7 +445,13 @@ export function MapPicker({
 
   return (
     <Box flexDirection="column" gap={10}>
-      <Box display="flex" alignItems="baseline" justifyContent="space-between" gap={12} flexWrap="wrap">
+      <Box
+        display="flex"
+        alignItems="baseline"
+        justifyContent="space-between"
+        gap={12}
+        flexWrap="wrap"
+      >
         <Typography
           as="h3"
           variant="label"
@@ -519,9 +461,7 @@ export function MapPicker({
         >
           {t('mapPickerTitle')}
         </Typography>
-        {shownPin && (
-          <Button text={t('mapClearPin')} size="sm" onClick={() => emit(null)} />
-        )}
+        {shownPin && <Button text={t('mapClearPin')} size="sm" onClick={() => emit(null)} />}
       </Box>
 
       <Typography variant="caption" color="var(--foreground)">

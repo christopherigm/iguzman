@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     JournalStatsView,
     SightingDetailView,
+    SightingMapView,
     SightingListCreateView,
     SightingMediaDetailView,
     SightingMediaListCreateView,
@@ -13,6 +14,9 @@ urlpatterns = [
     path('journal/stats/', JournalStatsView.as_view(), name='journal-stats'),
 
     path('journal/sightings/', SightingListCreateView.as_view(), name='sighting-list'),
+    # Above `<int:pk>/` for the same reason `media/video/` is: a literal segment
+    # must never be read as a pk.
+    path('journal/sightings/map/', SightingMapView.as_view(), name='sighting-map'),
     path('journal/sightings/<int:pk>/', SightingDetailView.as_view(), name='sighting-detail'),
     path('journal/sightings/slug/<slug:slug>/', SightingDetailView.as_view(), name='sighting-detail-slug'),
 

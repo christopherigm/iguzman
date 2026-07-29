@@ -8,7 +8,9 @@
     "categoriesTitle": "Browse the catalog",
     "categoriesSubtitle": "Pick a category to see everything filed under it.",
     "latestSightingsTitle": "Latest sightings",
-    "latestSightingsSubtitle": "The most recent entries from the field journal."
+    "latestSightingsSubtitle": "The most recent entries from the field journal.",
+    "mapTitle": "Where things have been seen",
+    "mapSubtitle": "The latest {count} entries from every category, on the map."
   },
   "CategoryPage": {
     "breadcrumbHome": "Home",
@@ -25,25 +27,21 @@
     "factSpecies": "Species",
     "factSightings": "Sightings",
     "externalReference": "External reference",
-    "galleryTitle": "Gallery",
-    "gallerySubtitle": "Every photograph in the catalog filed under {category}.",
     "speciesTitle": "Species",
     "speciesSubtitle": "Everything catalogued under {category}.",
     "sightingsTitle": "Recent sightings",
-    "sightingsSubtitle": "Field journal entries recording {category}."
+    "sightingsSubtitle": "Field journal entries recording {category}.",
+    "mapTitle": "Where it has been seen",
+    "mapSubtitle": "Every place {category} has been recorded in the field journal."
   },
   "SpeciesPage": {
     "factFamily": "Family",
     "videoTitle": "Video",
-    "galleryTitle": "Reference photos",
-    "gallerySubtitle": "Identification shots of {species}.",
     "sightingsTitle": "Sightings",
     "sightingsSubtitle": "Every field journal entry recording {species}."
   },
   "SightingPage": {
     "breadcrumbHome": "Home",
-    "galleryTitle": "Photos",
-    "gallerySubtitle": "Taken on {date}.",
     "videoTitle": "Video",
     "mapTitle": "Where it was seen",
     "mapSubtitle": "The spot this entry was filed at.",
@@ -61,7 +59,9 @@
   "Gallery": {
     "previous": "Previous",
     "next": "Next",
-    "pagination": "Choose an entry"
+    "pagination": "Choose an entry",
+    "expand": "Expand image",
+    "close": "Close fullscreen"
   },
   "Sighting": {
     "species": "Species",
@@ -74,6 +74,18 @@
     "category": "Category",
     "time": "Time",
     "seeDetail": "See detail"
+  },
+  "Map": {
+    "label": "Sightings map",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "attribution": "© OpenStreetMap contributors",
+    "close": "Close",
+    "filterAll": "All",
+    "filterYear": "Year",
+    "empty": "No sighting matches these filters.",
+    "zoomHint": "Use Ctrl + scroll to zoom the map",
+    "zoomHintMac": "Use ⌘ + scroll to zoom the map"
   },
   "Navbar": {
     "home": "Home",

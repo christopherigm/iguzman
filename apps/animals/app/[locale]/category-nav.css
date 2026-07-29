@@ -32,3 +32,24 @@
   outline: 2px solid var(--kind-accent);
   outline-offset: 4px;
 }
+
+/* Below `sm`, three tiles per row rather than the two a 116 px tile allowed.
+   Both values live on the field and are read by props in category-nav.tsx
+   (`--tile-gap` by the container's column gutter, `--tile-width` by each tile),
+   which is the only reason a stylesheet may set them: an inline width would
+   otherwise outrank any rule written here.
+
+   The width is a *fluid* third, not a smaller constant, so the row fills the
+   viewport edge to edge at every phone size instead of leaving a ragged margin
+   at one width and overflowing at another. The `min()` caps it at the designed
+   116 px on the wide end of the band, where a third of the row is far more than
+   a tile needs - a ~500 px phone then fits four, which is what "at least three"
+   asks for. The 84 px art box still fits the narrowest tile this produces
+   (~95 px inside a 320 px viewport), so the icons are the same size on mobile as
+   everywhere else - only the label column around them tightens. */
+@media (--below-sm) {
+  .category-nav__field {
+    --tile-gap: 8px;
+    --tile-width: min(116px, calc((100% - 2 * var(--tile-gap)) / 3));
+  }
+}

@@ -93,8 +93,8 @@ export interface Species extends CatalogRecord {
  *
  * ⚠ **The first row is the record's main image.** The API publishes `image` as
  * the record's own column if it has one and otherwise `images[0]`, so a strip
- * built from this list normally *contains the cover* and has to drop it - see
- * `toGalleryPhotos` in the category and species pages.
+ * built from this list normally *contains the cover* and must not show it twice -
+ * see the `seen` set in `toGalleryImages` on each detail page.
  *
  * Photos of one particular *encounter* belong to that sighting instead, and live
  * in `lib/journal.ts`.

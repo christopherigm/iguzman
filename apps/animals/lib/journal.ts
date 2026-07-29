@@ -117,6 +117,54 @@ export interface Sighting {
   is_featured: boolean;
 }
 
+/**
+ * One marker on a map - `/api/journal/sightings/map/`.
+ *
+ * Deliberately **not** a `Sighting`. A map draws hundreds at once and needs none
+ * of the prose, the gallery or the field conditions; what it does need, and the
+ * feed has no use for, is `species_icon` - the glyph a marker is drawn as.
+ *
+ * `latitude`/`longitude` carry the same contract as the feed's: the *effective*
+ * pair (the entry's own, else its location's), rounded to ~1 km for every caller
+ * when the place is flagged sensitive. The API only ever returns rows that have
+ * one, so unlike on a `Sighting` these are never null.
+ */
+export interface SightingMapPin {
+  id: number;
+  slug: string;
+  name: string | null;
+  en_name: string | null;
+  date: string;
+
+  species: number;
+  species_name: string | null;
+  species_en_name: string | null;
+  species_slug: string | null;
+  /** The 128 px glyph, never a photograph - see the API's serializer. */
+  species_icon: string | null;
+
+  kind: Kind | null;
+  category: number | null;
+  category_name: string | null;
+  category_en_name: string | null;
+  category_slug: string | null;
+  category_icon: string | null;
+  /** The marker's fallback colour when neither it nor its species has an icon. */
+  category_color: string | null;
+
+  location: number | null;
+  location_name: string | null;
+  location_en_name: string | null;
+  location_slug: string | null;
+
+  latitude: number;
+  longitude: number;
+  coordinates_are_approximate: boolean;
+
+  /** The entry's cover, for the marker's popup card. */
+  image: string | null;
+}
+
 interface Paginated<T> {
   count: number;
   limit: number;
@@ -184,6 +232,52 @@ export async function getSighting(slug: string): Promise<Sighting | null> {
     throw new Error(`Journal request failed: ${path} (${res.status})`);
   }
   return (await res.json()) as Sighting;
+}
+
+/**
+ * Every place one category has been recorded - the pins for its page's map.
+ *
+ * Not the same read as `getSightingsByCategory`, and not a bigger `limit` on it
+ * either: that answers the six *entries* the band above the map summarises,
+ * this answers all of the category's located sightings as stripped-down pins.
+ * The API caps it (`MAX_MAP_PINS`), so a well-documented branch cannot turn one
+ * page into a full-table serialize.
+ */
+export async function getCategoryMapPins(
+  categorySlug: string,
+): Promise<SightingMapPin[]> {
+  return fetchMapPins(
+    `/api/journal/sightings/map/?category_slug=${encodeURIComponent(categorySlug)}`,
+  );
+}
+
+/**
+ * The latest `perCategory` located entries of **each** category - the landing
+ * map's pins.
+ *
+ * Per category rather than the newest N overall, because the landing mixes every
+ * branch: taking the newest twenty outright would show nothing but birds the
+ * week somebody spent birdwatching.
+ */
+export async function getLatestMapPins(perCategory = 10): Promise<SightingMapPin[]> {
+  return fetchMapPins(`/api/journal/sightings/map/?per_category=${perCategory}`);
+}
+
+/** GET a set of map pins, answering `[]` rather than throwing. */
+async function fetchMapPins(path: string): Promise<SightingMapPin[]> {
+  try {
+    const res = await fetch(`${API_URL}${path}`, { cache: 'no-store' });
+    if (!res.ok) {
+      logger.warn({ path, status: res.status }, 'journal API returned non-OK status');
+      return [];
+    }
+    // A bare list, not a page: a map has no "next page", it has a bounding box.
+    return (await res.json()) as SightingMapPin[];
+  } catch (err) {
+    unstable_rethrow(err);
+    logger.error({ path, err }, 'Failed to fetch the map pins');
+    return [];
+  }
 }
 
 /** GET one page of the sighting feed, answering `[]` rather than throwing. */

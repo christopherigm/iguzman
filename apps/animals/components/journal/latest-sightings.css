@@ -1,29 +1,83 @@
 /* `.latest-sightings__swiper` is a Swiper root, not a `@repo/ui` component, so
-   it can only be reached through this selector. The gutters keep the slide
-   content clear of the prev/next buttons, which are pinned to the wrapper's
-   edges; `autoHeight` needs the transition or every slide change snaps.
+   it can only be reached through this selector.
 
-   ⚠ The gutters must be MARGIN, never padding. A Swiper root is `overflow:
-   hidden`, which clips at the *padding* box - with padding the neighbouring
-   slide stayed visible inside both gutters, so the previous entry's photograph
-   bled into the current slide. Margin shrinks the clipped box itself, and
-   Swiper measures the slide width from that box, so one slide is exactly 100%
-   of what is on screen. */
+   ⚠ There is deliberately NO side padding: the band is meant to fill its
+   container's full width, so the entry card's edges line up with every other
+   section on the page rather than sitting inset from them.
+
+   The breathing room the padding used to buy is now `overflow-clip-margin`,
+   which moves the clip edge 10px outside the padding box so the card's hairline
+   border and shadow are not sliced off - without insetting the card itself. It
+   must stay under `spaceBetween` (24px), so the only thing it can reveal is that
+   empty gap; the previous entry's photograph bled in when this was a 44px gutter
+   held open for the arrows, which now sit below the slider instead. `overflow:
+   clip` is what makes the margin apply at all, and a browser that doesn't know
+   it drops both declarations and falls back to Swiper's own `overflow: hidden` -
+   a flush edge, not a broken slider.
+
+   `autoHeight` sets the height on `.swiper-wrapper`, so the root's padding adds
+   to the measured height rather than being clipped by it - and the wrapper needs
+   the height transition or every slide change snaps.
+
+   ⚠ `width: 100%` is load-bearing, not decoration. Swiper's own stylesheet gives
+   `.swiper` `margin-left: auto; margin-right: auto`, and this root is a direct
+   child of a column flex `Box` - an auto cross-axis margin cancels the flex
+   `stretch`, so with `width: auto` the root sizes to its *contents*. Swiper then
+   sets each slide's width from the root's measured width, the root re-measures
+   from those slides, and the two diverge on every resize tick: the slider grew
+   ~1000px in width and height per frame, unbounded, while its parent stayed put.
+   A percentage width resolves against the flex container's definite width, which
+   breaks the cycle (and makes the auto margins compute to 0). */
 .latest-sightings__swiper {
-  width: auto;
-  margin: 0 44px;
+  width: 100%;
+  min-width: 0;
+  padding: 6px 0 16px;
+  overflow: clip;
+  overflow-clip-margin: 10px;
 }
 
 .latest-sightings__swiper .swiper-wrapper {
   transition-property: transform, height;
 }
 
+/* The two grid templates for a field note. Everything else on the entry is a
+   component prop (see the props-first rule in packages/ui/CLAUDE.md); the areas
+   live here because they are the one thing that changes with the viewport - and
+   because an inline `styles` value would win over these media queries.
+
+   Below `sm` the entry reads name → image → data, which is the order someone
+   works through a note on a narrow screen. From `sm` up the photograph moves
+   beside the writing and spans both of its rows. */
 @media (--below-sm) {
-  /* On a phone the buttons overlay the media column instead of sitting beside
-     it, so the slide reclaims the width the gutters were holding. */
-  .latest-sightings__swiper {
-    margin: 0;
+  .latest-sightings__entry {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'header'
+      'media'
+      'body';
   }
+}
+
+@media (--sm) {
+  .latest-sightings__entry {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    grid-template-areas:
+      'header media'
+      'body   media';
+  }
+}
+
+/* The margin rule ruled down the left edge of the leaf, as on a notebook page.
+   The entry's own `paddingLeft` clears it. */
+.latest-sightings__entry::before {
+  content: '';
+  position: absolute;
+  top: 22px;
+  bottom: 22px;
+  left: 16px;
+  width: 2px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent, #06b6d4) 34%, transparent);
 }
 
 /* The category badge's link wrapper. `Badge` carries its own look, so only the
@@ -42,6 +96,21 @@
   outline: 2px solid var(--accent, #06b6d4);
   outline-offset: 3px;
   border-radius: 999px;
+}
+
+/* Names the date for a screen reader without printing the word above the
+   eyebrow, which reads as a date on sight. A plain `<span>`, so the props-first
+   rule does not reach it. */
+.latest-sightings__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* The pagination dots. They are plain `<button>`s - not `@repo/ui` components -

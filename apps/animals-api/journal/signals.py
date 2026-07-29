@@ -24,7 +24,7 @@ from .models import Sighting, SightingMedia
 
 
 def _invalidate_sighting_payloads():
-    invalidate(keys.SIGHTINGS, keys.SIGHTING, keys.STATS)
+    invalidate(keys.SIGHTINGS, keys.SIGHTING, keys.STATS, keys.MAP)
 
 
 @receiver(post_save, sender=Sighting)

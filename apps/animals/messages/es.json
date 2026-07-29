@@ -8,7 +8,9 @@
     "categoriesTitle": "Explora el catálogo",
     "categoriesSubtitle": "Elige una categoría para ver todo lo que contiene.",
     "latestSightingsTitle": "Últimos avistamientos",
-    "latestSightingsSubtitle": "Las entradas más recientes del diario de campo."
+    "latestSightingsSubtitle": "Las entradas más recientes del diario de campo.",
+    "mapTitle": "Dónde se ha visto",
+    "mapSubtitle": "Las últimas {count} entradas de cada categoría, en el mapa."
   },
   "CategoryPage": {
     "breadcrumbHome": "Inicio",
@@ -25,25 +27,21 @@
     "factSpecies": "Especies",
     "factSightings": "Avistamientos",
     "externalReference": "Referencia externa",
-    "galleryTitle": "Galería",
-    "gallerySubtitle": "Todas las fotografías del catálogo archivadas en {category}.",
     "speciesTitle": "Especies",
     "speciesSubtitle": "Todo lo catalogado en {category}.",
     "sightingsTitle": "Avistamientos recientes",
-    "sightingsSubtitle": "Entradas del diario de campo que registran {category}."
+    "sightingsSubtitle": "Entradas del diario de campo que registran {category}.",
+    "mapTitle": "Dónde se ha visto",
+    "mapSubtitle": "Todos los lugares donde se ha registrado {category} en el diario de campo."
   },
   "SpeciesPage": {
     "factFamily": "Familia",
     "videoTitle": "Video",
-    "galleryTitle": "Fotos de referencia",
-    "gallerySubtitle": "Imágenes de identificación de {species}.",
     "sightingsTitle": "Avistamientos",
     "sightingsSubtitle": "Todas las entradas del diario de campo que registran {species}."
   },
   "SightingPage": {
     "breadcrumbHome": "Inicio",
-    "galleryTitle": "Fotos",
-    "gallerySubtitle": "Tomadas el {date}.",
     "videoTitle": "Video",
     "mapTitle": "Dónde se vio",
     "mapSubtitle": "El punto donde se registró esta entrada.",
@@ -61,7 +59,9 @@
   "Gallery": {
     "previous": "Anterior",
     "next": "Siguiente",
-    "pagination": "Elegir una entrada"
+    "pagination": "Elegir una entrada",
+    "expand": "Ampliar imagen",
+    "close": "Cerrar pantalla completa"
   },
   "Sighting": {
     "species": "Especie",
@@ -74,6 +74,18 @@
     "category": "Categoría",
     "time": "Hora",
     "seeDetail": "Ver detalle"
+  },
+  "Map": {
+    "label": "Mapa de avistamientos",
+    "zoomIn": "Acercar",
+    "zoomOut": "Alejar",
+    "attribution": "© colaboradores de OpenStreetMap",
+    "close": "Cerrar",
+    "filterAll": "Todos",
+    "filterYear": "Año",
+    "empty": "Ningún avistamiento coincide con estos filtros.",
+    "zoomHint": "Usa Ctrl + desplazamiento para ampliar el mapa",
+    "zoomHintMac": "Usa ⌘ + desplazamiento para ampliar el mapa"
   },
   "Navbar": {
     "home": "Inicio",

@@ -8,9 +8,9 @@ import { HeroVideo } from '@repo/ui/hero-video';
  *
  * One component for both kinds because `source_url` has already resolved them -
  * an uploaded file and a YouTube URL arrive as the same string, and react-player
- * (behind `HeroVideo`) plays either. Photos take the other path, through
- * `PhotoGallery`, since a contact sheet is the right object for them and a stack
- * of players is the right one here.
+ * (behind `HeroVideo`) plays either. Photos take the other path, into the page's
+ * first row through `DetailGallery`, since a slideshow is the right object for
+ * them and a stack of players is the right one here.
  *
  * **Not playing, not muted**, inverting `HeroVideo`'s defaults for the same
  * reason `SpeciesVideo` does: those defaults are for a background behind text
@@ -37,7 +37,11 @@ export function SightingVideos({ videos }: { videos: SightingVideo[] }) {
             width="100%"
             borderRadius={12}
             backgroundColor="#000000"
-            styles={{ position: 'relative', overflow: 'hidden', aspectRatio: '16 / 9' }}
+            styles={{
+              position: 'relative',
+              overflow: 'hidden',
+              aspectRatio: '16 / 9',
+            }}
           >
             <HeroVideo
               url={video.url}

@@ -1,0 +1,99 @@
+/* Ported from apps/website's `item-gallery-client.css` - keep the two in step.
+   Shared by all three detail routes (category, species, sighting).
+
+   ── Main swiper ─────────────────────────────────────────────────────────────
+   `.detail-gallery__main` is a Swiper root (not a `@repo/ui` component), so its
+   layout can only be reached through this selector. Navigation is driven by
+   `IconButton`s calling slidePrev/slideNext, not Swiper's built-in arrows. */
+.detail-gallery__main {
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-1, #f5f5f5);
+}
+
+/* ── Thumbnails ──────────────────────────────────────────────────────────────
+   `.detail-gallery__thumbs` is a Swiper root; the active-slide state is driven
+   by the Swiper-applied `.swiper-slide-thumb-active` class, so the thumb border
+   must live here (a prop cannot react to that runtime class). */
+.detail-gallery__thumbs {
+  width: 100%;
+}
+
+.detail-gallery__thumbs .swiper-slide {
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+}
+
+.detail-gallery__thumbs .swiper-slide-thumb-active {
+  opacity: 1;
+}
+
+.detail-gallery__thumb {
+  border: 2px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.detail-gallery__thumbs .swiper-slide-thumb-active .detail-gallery__thumb {
+  border-color: var(--accent);
+}
+
+/* ── Fullscreen overlay ──────────────────────────────────────────────────────
+   Enter/leave animations; the `--closing` modifier plays the reverse keyframes.
+   Layout is passed as props/styles. */
+@keyframes detail-gallery-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes detail-gallery-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes detail-gallery-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes detail-gallery-zoom-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+.detail-gallery__overlay {
+  animation: detail-gallery-fade-in 0.25s ease forwards;
+}
+
+.detail-gallery__overlay--closing {
+  animation: detail-gallery-fade-out 0.25s ease forwards;
+}
+
+.detail-gallery__overlay-image-wrap {
+  animation: detail-gallery-zoom-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.detail-gallery__overlay--closing .detail-gallery__overlay-image-wrap {
+  animation: detail-gallery-zoom-out 0.25s ease forwards;
+}

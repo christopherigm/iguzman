@@ -8,7 +8,9 @@
     "categoriesTitle": "Katalog durchsuchen",
     "categoriesSubtitle": "Wähle eine Kategorie, um alles darin zu sehen.",
     "latestSightingsTitle": "Neueste Sichtungen",
-    "latestSightingsSubtitle": "Die jüngsten Einträge aus dem Feldtagebuch."
+    "latestSightingsSubtitle": "Die jüngsten Einträge aus dem Feldtagebuch.",
+    "mapTitle": "Wo etwas gesehen wurde",
+    "mapSubtitle": "Die letzten {count} Einträge jeder Kategorie auf der Karte."
   },
   "CategoryPage": {
     "breadcrumbHome": "Startseite",
@@ -25,25 +27,21 @@
     "factSpecies": "Arten",
     "factSightings": "Sichtungen",
     "externalReference": "Externe Quelle",
-    "galleryTitle": "Galerie",
-    "gallerySubtitle": "Alle Fotografien im Katalog, die unter {category} abgelegt sind.",
     "speciesTitle": "Arten",
     "speciesSubtitle": "Alles, was unter {category} katalogisiert ist.",
     "sightingsTitle": "Neueste Sichtungen",
-    "sightingsSubtitle": "Feldtagebuch-Einträge, die {category} festhalten."
+    "sightingsSubtitle": "Feldtagebuch-Einträge, die {category} festhalten.",
+    "mapTitle": "Wo es gesehen wurde",
+    "mapSubtitle": "Alle Orte, an denen {category} im Feldtagebuch verzeichnet wurde."
   },
   "SpeciesPage": {
     "factFamily": "Familie",
     "videoTitle": "Video",
-    "galleryTitle": "Referenzfotos",
-    "gallerySubtitle": "Bestimmungsaufnahmen von {species}.",
     "sightingsTitle": "Sichtungen",
     "sightingsSubtitle": "Alle Feldtagebuch-Einträge, die {species} festhalten."
   },
   "SightingPage": {
     "breadcrumbHome": "Startseite",
-    "galleryTitle": "Fotos",
-    "gallerySubtitle": "Aufgenommen am {date}.",
     "videoTitle": "Video",
     "mapTitle": "Wo es gesehen wurde",
     "mapSubtitle": "Der Ort, an dem dieser Eintrag erfasst wurde.",
@@ -61,7 +59,9 @@
   "Gallery": {
     "previous": "Zurück",
     "next": "Weiter",
-    "pagination": "Eintrag auswählen"
+    "pagination": "Eintrag auswählen",
+    "expand": "Bild vergrößern",
+    "close": "Vollbild schließen"
   },
   "Sighting": {
     "species": "Art",
@@ -74,6 +74,18 @@
     "category": "Kategorie",
     "time": "Uhrzeit",
     "seeDetail": "Details ansehen"
+  },
+  "Map": {
+    "label": "Sichtungskarte",
+    "zoomIn": "Vergrößern",
+    "zoomOut": "Verkleinern",
+    "attribution": "© OpenStreetMap-Mitwirkende",
+    "close": "Schließen",
+    "filterAll": "Alle",
+    "filterYear": "Jahr",
+    "empty": "Keine Sichtung entspricht diesen Filtern.",
+    "zoomHint": "Zum Zoomen Strg + Scrollen verwenden",
+    "zoomHintMac": "Zum Zoomen ⌘ + Scrollen verwenden"
   },
   "Navbar": {
     "home": "Startseite",

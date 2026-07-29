@@ -8,42 +8,48 @@ import { localized } from '@/lib/i18n-field';
 import './category-nav.css';
 
 /**
- * The catalog's sub-categories as rows of icon tiles, grouped under the five
- * top-level branches (`KIND_CHOICES` in the API - a fixed enum, which is why
- * the branch names are translated here through next-intl rather than read off
- * the payload's `kind_display`).
+ * The catalog's sub-categories as one field of icon tiles.
  *
  * **Fixed-width tiles in a centred wrap container, not a `Grid`.** A 12-column
  * grid forces a fixed *count* per row (`size={{ xs: 4, sm: 3, md: 2 }}`), so
  * tiles stretched to whatever a twelfth of the container happened to be and a
- * branch with seven categories left a half-empty second row. These are small,
- * uniform objects: give each one a constant width and let `flex-wrap` fit as
- * many per row as the viewport allows, then spill the rest onto the next line.
+ * long branch left a half-empty second row. These are small, uniform objects:
+ * give each one a constant width and let `flex-wrap` fit as many per row as the
+ * viewport allows, then spill the rest onto the next line.
  *
- * **The branch is a colour, not a heading.** Five `<h3>`s cost five lines of
- * vertical space to label rows that are already separated by their own wrap
- * container, and they broke the block into five loud sections. Each branch now
- * carries a muted field-guide hue (`KIND_ACCENTS`) shown twice per tile - as
- * the art box's border and as a dashed underline beneath the name - so the
- * grouping still reads while the whole block stays one quiet object. The
- * branch name is not lost: it is the wrap container's `aria-label`, so a screen
- * reader still announces "Animals, group" before its tiles, which is what the
- * heading was doing for assistive tech anyway.
+ * **One container, no per-branch rows.** The five top-level branches
+ * (`KIND_CHOICES` in the API) used to get a wrap container each, which broke a
+ * short catalog into five ragged half-rows. They now share a single wrap, so the
+ * tiles pack tight and the block reads as one object; the branch survives only
+ * as colour - a muted field-guide hue (`KIND_ACCENTS`) shown twice per tile, as
+ * the art box's border and as a dashed underline beneath the name. Tiles are
+ * still emitted in `KINDS` order, so a branch's tiles stay adjacent and the
+ * colours cluster rather than scatter.
  *
  * Each tile links to `/[locale]/categories/[slug]`, which is the category detail
  * page - the destination this component was written ahead of.
  */
 
 /** Art box edge, in px. Square, so the 1:1 crop needs no aspect-ratio. */
-const ICON_SIZE = 64;
+const ICON_SIZE = 84;
 
 /**
- * Tile width. Wider than the icon so a two-word name wraps inside its own tile
- * rather than widening it - a constant width is what keeps the rows aligned.
- * Kept close to `ICON_SIZE` so the icons read as a set rather than as marks
- * marooned in their own columns.
+ * Tile width from `sm` up. Wider than the icon so a two-word name wraps inside
+ * its own tile rather than widening it - a constant width is what keeps the rows
+ * aligned. Kept close to `ICON_SIZE` so the icons read as a set rather than as
+ * marks marooned in their own columns.
+ *
+ * Below `sm` this is *not* the width: 3 x 116 px plus two 12 px gutters is
+ * 372 px, so a 360 px phone fit two tiles per row and the field read as a
+ * column. The tile and the column gutter are therefore published as
+ * `--tile-width` / `--tile-gap` and `category-nav.css` re-points both inside
+ * `@media (--below-sm)`, where the width becomes a fluid third of the row - see
+ * the note there. The values here stay the defaults for every other band.
  */
-const TILE_WIDTH = 92;
+const TILE_WIDTH = 116;
+
+/** Column gutter from `sm` up; `--below-sm` tightens it (see above). */
+const TILE_GAP = 12;
 
 /**
  * One muted hue per branch - tawny, moss, rust, dusk and slate: a naturalist's
@@ -70,16 +76,15 @@ interface Props {
 
 export async function CategoryNav({ categories, locale }: Props) {
   const t = await getTranslations('HomePage');
-  const tKinds = await getTranslations('Kinds');
 
-  // Group in `KINDS` order rather than the payload's, so the five branches
-  // always appear in the same sequence even as categories are added.
-  const grouped = KINDS.map((kind) => ({
-    kind,
-    items: categories.filter((category) => category.kind === kind),
-  })).filter((group) => group.items.length > 0);
+  // One flat list, ordered by `KINDS` rather than by the payload: the branches
+  // no longer get a row each, so this ordering is the only thing keeping a
+  // branch's tiles (and therefore its colour) together as categories are added.
+  const ordered = KINDS.flatMap((kind) =>
+    categories.filter((category) => category.kind === kind),
+  );
 
-  if (grouped.length === 0) return null;
+  if (ordered.length === 0) return null;
 
   return (
     <Box flexDirection="column" alignItems="center" gap={28} width="100%">
@@ -96,33 +101,31 @@ export async function CategoryNav({ categories, locale }: Props) {
         </Typography>
       </Box>
 
-      {/* One wrap container per branch, so a branch always starts its own row -
-          that break, plus the shared tile colour, is what replaced the heading.
-          The row gap inside a branch (14) stays visibly smaller than the gap
-          between branches (28 above), or the grouping would read as one field.
+      {/* One wrap container for the whole catalog: every tile packs into the
+          same field and only the colour says which branch it belongs to.
           `alignItems: flex-start` so a tile whose name wraps to two lines
-          doesn't stretch its whole row to match. */}
-      {grouped.map((group) => (
-        <Box
-          key={group.kind}
-          role="group"
-          aria-label={tKinds(group.kind)}
-          flexWrap="wrap"
-          justifyContent="center"
-          alignItems="flex-start"
-          gap="14px 10px"
-          width="100%"
-        >
-          {group.items.map((category) => (
-            <CategoryTile
-              key={category.id}
-              category={category}
-              locale={locale}
-              accent={KIND_ACCENTS[group.kind]}
-            />
-          ))}
-        </Box>
-      ))}
+          doesn't stretch its whole row to match.
+
+          The column gutter reads `--tile-gap` so the mobile override in the
+          stylesheet moves the gutter and the tile width together - the fluid
+          width there is `(100% - 2 * --tile-gap) / 3`. */}
+      <Box
+        className="category-nav__field"
+        flexWrap="wrap"
+        justifyContent="center"
+        alignItems="flex-start"
+        gap={`18px var(--tile-gap, ${TILE_GAP}px)`}
+        width="100%"
+      >
+        {ordered.map((category) => (
+          <CategoryTile
+            key={category.id}
+            category={category}
+            locale={locale}
+            accent={KIND_ACCENTS[category.kind]}
+          />
+        ))}
+      </Box>
     </Box>
   );
 }
@@ -146,7 +149,10 @@ function CategoryTile({
       href={`/${locale}/categories/${category.slug}`}
       prefetch
       className="category-nav__tile"
-      width={TILE_WIDTH}
+      // Read through a custom property rather than set flat, so the `--below-sm`
+      // rule in the stylesheet can swap in a fluid third of the row without
+      // fighting this inline width (which would otherwise win the cascade).
+      width={`var(--tile-width, ${TILE_WIDTH}px)`}
       flexDirection="column"
       alignItems="center"
       gap={6}
@@ -166,7 +172,7 @@ function CategoryTile({
         height={ICON_SIZE}
         alignItems="center"
         justifyContent="center"
-        borderRadius={16}
+        borderRadius={20}
         border="1px solid color-mix(in srgb, var(--kind-accent) 45%, var(--border))"
         backgroundColor={
           art
@@ -185,8 +191,14 @@ function CategoryTile({
           />
         ) : (
           // `as="span"`: `variant` defaults the element too, so an unqualified
-          // `h4` would put one bare letter per tile into the heading outline.
-          <Typography as="span" variant="h4" fontWeight={700} color="var(--kind-accent)" aria-hidden>
+          // `h3` would put one bare letter per tile into the heading outline.
+          <Typography
+            as="span"
+            variant="h3"
+            fontWeight={700}
+            color="var(--kind-accent)"
+            aria-hidden
+          >
             {name.charAt(0).toUpperCase()}
           </Typography>
         )}
@@ -203,7 +215,8 @@ function CategoryTile({
         paddingBottom={3}
         styles={{
           lineHeight: 1.3,
-          borderBottom: '2px dashed color-mix(in srgb, var(--kind-accent) 60%, transparent)',
+          borderBottom:
+            '2px dashed color-mix(in srgb, var(--kind-accent) 60%, transparent)',
         }}
       >
         {name}

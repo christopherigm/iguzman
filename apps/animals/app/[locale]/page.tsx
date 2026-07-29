@@ -3,9 +3,10 @@ import { Box } from '@repo/ui/core-elements/box';
 import { Container } from '@repo/ui/core-elements/container';
 import { NavbarSpacer, PageBottomSpacer } from '@repo/ui/core-elements/navbar';
 import { getCategories, getFeaturedSpecies } from '@/lib/catalog';
-import { getLatestSightings } from '@/lib/journal';
+import { getLatestMapPins, getLatestSightings } from '@/lib/journal';
 import { localized } from '@/lib/i18n-field';
 import { SightingsSection } from '@/components/journal/sightings-section';
+import { SightingsMapSection } from '@/components/journal/sightings-map-section';
 import { SpeciesGallery, type SpeciesSlide } from './species-gallery';
 import { CategoryNav } from './category-nav';
 
@@ -14,6 +15,13 @@ type Props = { params: Promise<{ locale: string }> };
 /** How many entries the journal slider carries. */
 const LATEST_SIGHTINGS = 8;
 
+/**
+ * How many entries the map pins **per category**, rather than overall: the
+ * landing mixes every branch, and the newest twenty outright would show nothing
+ * but birds the week somebody spent birdwatching.
+ */
+const MAP_PINS_PER_CATEGORY = 10;
+
 export default async function Home({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
@@ -21,13 +29,14 @@ export default async function Home({ params }: Props) {
   const t = await getTranslations('HomePage');
   const tGallery = await getTranslations('Gallery');
 
-  // Three independent sections, so they are fetched together rather than in
+  // Four independent sections, so they are fetched together rather than in
   // series; each fetcher answers an empty list instead of throwing, so a dead
   // backend costs a section, not the page.
-  const [species, categories, sightings] = await Promise.all([
+  const [species, categories, sightings, mapPins] = await Promise.all([
     getFeaturedSpecies(),
     getCategories(),
     getLatestSightings(LATEST_SIGHTINGS),
+    getLatestMapPins(MAP_PINS_PER_CATEGORY),
   ]);
 
   // The gallery is a client component, so every bilingual field pair is resolved
@@ -42,12 +51,7 @@ export default async function Home({ params }: Props) {
         name: localized(item, 'name', locale) ?? item.slug,
         shortDescription: localized(item, 'short_description', locale),
         scientificName: item.scientific_name,
-        categoryName:
-          localized(
-            { name: item.category_name, en_name: item.category_en_name },
-            'name',
-            locale,
-          ),
+        categoryName: localized({ name: item.category_name, en_name: item.category_en_name }, 'name', locale),
         categorySlug: item.category_slug,
         image: item.image,
       },
@@ -85,6 +89,21 @@ export default async function Home({ params }: Props) {
             locale={locale}
             title={t('latestSightingsTitle')}
             subtitle={t('latestSightingsSubtitle')}
+          />
+        </Container>
+      )}
+
+      {/* Directly under the slider it summarises: the band above is *what* was
+          seen lately, this is *where*. It carries the full filter set, unlike a
+          category page's - this map mixes every branch, so choosing one is the
+          first thing a reader wants to do with it. */}
+      {mapPins.length > 0 && (
+        <Container size="lg" paddingX={10} marginTop={64}>
+          <SightingsMapSection
+            pins={mapPins}
+            locale={locale}
+            title={t('mapTitle')}
+            subtitle={t('mapSubtitle', { count: MAP_PINS_PER_CATEGORY })}
           />
         </Container>
       )}

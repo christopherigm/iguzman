@@ -166,6 +166,146 @@ class CoordinateTests(JournalFixtureMixin, IsolatedMediaTestCase):
         self.assertTrue(payload['coordinates_are_approximate'])
 
 
+class MapTests(JournalFixtureMixin, IsolatedMediaTestCase):
+    """`/api/journal/sightings/map/` - the pins a public map draws."""
+
+    def make_located_species(self, category_slug, species_slug, **kwargs):
+        category = Category.objects.create(
+            name=category_slug.title(), slug=category_slug, kind='animal', **kwargs
+        )
+        return Species.objects.create(
+            category=category, name=species_slug.title(), slug=species_slug
+        )
+
+    def test_only_entries_that_can_be_pinned_are_returned(self):
+        """A sighting with no coordinates of its own *and* no located place is not a pin."""
+        species = self.make_species()
+        located = Location.objects.create(
+            name='Oak Hollow', slug='oak-hollow',
+            latitude='37.428193', longitude='-122.143219',
+        )
+        nowhere = Location.objects.create(name='Unknown', slug='unknown')
+
+        Sighting.objects.create(species=species, slug='own-coords', date=date(2026, 10, 1),
+                                latitude='37.5', longitude='-122.2')
+        Sighting.objects.create(species=species, slug='via-location', date=date(2026, 10, 2),
+                                location=located)
+        Sighting.objects.create(species=species, slug='unlocated', date=date(2026, 10, 3),
+                                location=nowhere)
+        Sighting.objects.create(species=species, slug='no-place', date=date(2026, 10, 4))
+
+        pins = self.client.get('/api/journal/sightings/map/').json()
+        self.assertEqual({pin['slug'] for pin in pins}, {'own-coords', 'via-location'})
+        # Newest first, like the feed it is drawn from.
+        self.assertEqual([pin['slug'] for pin in pins], ['via-location', 'own-coords'])
+
+    def test_a_pin_carries_the_species_icon_and_its_categorys(self):
+        """What the marker is drawn as - the reason this is not the feed serializer."""
+        species = self.make_species()
+        species.icon.save('icon.png', SimpleUploadedFile('icon.png', b'not-a-real-png'), save=True)
+        category = species.category
+        category.icon.save('cat.png', SimpleUploadedFile('cat.png', b'not-a-real-png'), save=True)
+
+        Sighting.objects.create(species=species, slug='pinned', date=date(2026, 10, 1),
+                                latitude='37.5', longitude='-122.2')
+
+        pin = self.client.get('/api/journal/sightings/map/').json()[0]
+        # The upload path randomizes the filename, so the *directory* is what
+        # says which record's glyph came back.
+        self.assertIn('/species/', pin['species_icon'])
+        self.assertIn('/category/', pin['category_icon'])
+        self.assertEqual(pin['species_slug'], species.slug)
+        self.assertEqual(pin['category_slug'], category.slug)
+        # Never the gallery: a photograph cropped into a 28 px circle is not a mark.
+        self.assertNotIn('media', pin)
+
+    def test_a_sensitive_location_blurs_a_pin_too(self):
+        """The map may not be the one surface that publishes the precise nest."""
+        location = Location.objects.create(
+            name='Heron Nest', slug='heron-nest',
+            latitude='37.428193', longitude='-122.143219',
+            hide_precise_location=True,
+        )
+        self.make_sighting(location=location, latitude='37.512345', longitude='-122.298765')
+
+        pin = self.client.get('/api/journal/sightings/map/').json()[0]
+        self.assertEqual(pin['latitude'], 37.51)
+        self.assertEqual(pin['longitude'], -122.3)
+        self.assertTrue(pin['coordinates_are_approximate'])
+
+    def test_category_slug_returns_every_pin_of_that_branch(self):
+        """A category page's map is 'all the places', not a page of them."""
+        deer = self.make_located_species('deer', 'white-tailed-deer')
+        hawks = self.make_located_species('hawks', 'red-tailed-hawk')
+        for i in range(12):
+            Sighting.objects.create(species=deer, slug=f'deer-{i}', date=date(2026, 10, 1),
+                                    latitude='37.5', longitude='-122.2')
+        Sighting.objects.create(species=hawks, slug='hawk-0', date=date(2026, 10, 1),
+                                latitude='37.6', longitude='-122.3')
+
+        pins = self.client.get('/api/journal/sightings/map/?category_slug=deer').json()
+        self.assertEqual(len(pins), 12)
+        self.assertTrue(all(pin['category_slug'] == 'deer' for pin in pins))
+
+    def test_per_category_takes_the_latest_n_of_each_branch(self):
+        """One prolific category may not crowd every other off the landing map."""
+        deer = self.make_located_species('deer', 'white-tailed-deer')
+        hawks = self.make_located_species('hawks', 'red-tailed-hawk')
+        for i in range(8):
+            Sighting.objects.create(species=deer, slug=f'deer-{i}', date=date(2026, 10, i + 1),
+                                    latitude='37.5', longitude='-122.2')
+        for i in range(4):
+            Sighting.objects.create(species=hawks, slug=f'hawk-{i}', date=date(2026, 9, i + 1),
+                                    latitude='37.6', longitude='-122.3')
+
+        pins = self.client.get('/api/journal/sightings/map/?per_category=3').json()
+        by_category = {}
+        for pin in pins:
+            by_category.setdefault(pin['category_slug'], []).append(pin['slug'])
+
+        self.assertEqual(len(by_category['deer']), 3)
+        self.assertEqual(len(by_category['hawks']), 3)
+        # The *latest* three, even though every hawk entry is older than every deer one.
+        self.assertEqual(by_category['deer'], ['deer-7', 'deer-6', 'deer-5'])
+
+    def test_a_disabled_entry_is_not_pinned_for_the_public(self):
+        species = self.make_species()
+        Sighting.objects.create(species=species, slug='draft', date=date(2026, 10, 1),
+                                latitude='37.5', longitude='-122.2', enabled=False)
+        Sighting.objects.create(species=species, slug='published', date=date(2026, 10, 2),
+                                latitude='37.6', longitude='-122.3')
+
+        pins = self.client.get('/api/journal/sightings/map/').json()
+        self.assertEqual([pin['slug'] for pin in pins], ['published'])
+
+        # ...and the public response was not what the CMS's own read replayed.
+        self.sign_in_staff()
+        pins = self.client.get('/api/journal/sightings/map/?include_disabled=true').json()
+        self.assertEqual({pin['slug'] for pin in pins}, {'draft', 'published'})
+
+    def test_a_new_sighting_clears_the_cached_pins(self):
+        species = self.make_species()
+        Sighting.objects.create(species=species, slug='first', date=date(2026, 10, 1),
+                                latitude='37.5', longitude='-122.2')
+        self.assertEqual(len(self.client.get('/api/journal/sightings/map/').json()), 1)
+
+        Sighting.objects.create(species=species, slug='second', date=date(2026, 10, 2),
+                                latitude='37.6', longitude='-122.3')
+        self.assertEqual(len(self.client.get('/api/journal/sightings/map/').json()), 2)
+
+    def test_a_species_icon_upload_clears_the_cached_pins(self):
+        """The icon lives two tables away from the row a pin is built from."""
+        species = self.make_species()
+        Sighting.objects.create(species=species, slug='pinned', date=date(2026, 10, 1),
+                                latitude='37.5', longitude='-122.2')
+        self.assertIsNone(self.client.get('/api/journal/sightings/map/').json()[0]['species_icon'])
+
+        species.icon.save('icon.png', SimpleUploadedFile('icon.png', b'not-a-real-png'), save=True)
+        self.assertIsNotNone(
+            self.client.get('/api/journal/sightings/map/').json()[0]['species_icon']
+        )
+
+
 class MediaTests(JournalFixtureMixin, IsolatedMediaTestCase):
     def setUp(self):
         super().setUp()

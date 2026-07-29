@@ -73,7 +73,12 @@ from .models import (
 
 
 def _invalidate_sightings():
-    invalidate(journal_keys.SIGHTINGS, journal_keys.SIGHTING, journal_keys.STATS)
+    # `MAP` alongside the feed: a pin carries the species' *icon* and its
+    # category's, so an author uploading a glyph changes what every marker of
+    # that branch is drawn as without touching a single Sighting row.
+    invalidate(
+        journal_keys.SIGHTINGS, journal_keys.SIGHTING, journal_keys.STATS, journal_keys.MAP
+    )
 
 
 def _invalidate_species():

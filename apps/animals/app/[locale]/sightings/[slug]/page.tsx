@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getFormatter, getTranslations, setRequestLocale } from 'next-intl/server';
 import { Box } from '@repo/ui/core-elements/box';
 import { Grid } from '@repo/ui/core-elements/grid';
+import { Card } from '@repo/ui/core-elements/card';
 import { Container } from '@repo/ui/core-elements/container';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
@@ -13,7 +14,7 @@ import { getSighting, getSightingsBySpecies, type Sighting } from '@/lib/journal
 import { localized } from '@/lib/i18n-field';
 import { DetailHero, type DetailHeroChip } from '@/components/catalog/detail-hero';
 import { FactsCard, type Fact } from '@/components/catalog/facts-card';
-import { PhotoGallery, type GalleryPhoto } from '@/components/catalog/photo-gallery';
+import { DetailGallery, type GalleryImage } from '@/components/catalog/detail-gallery';
 import { SightingsSection } from '@/components/journal/sightings-section';
 import { SightingVideos, type SightingVideo } from './sighting-videos';
 
@@ -24,18 +25,19 @@ import { SightingVideos, type SightingVideo } from './sighting-videos';
  * every card in a `SightingsSection` slider.
  *
  * The third route composed from `components/catalog/` (`DetailHero`,
- * `FactsCard`, `PhotoGallery`), so an entry reads as the same object as the
- * category and species pages it hangs under rather than as a separate design.
+ * `FactsCard`, `DetailGallery`), so an entry reads as the same object as the
+ * category and species pages it hangs under rather than as a separate design -
+ * down to the first row, which is theirs: the story and the field conditions as
+ * two stacked cards, the photographs beside them as a slideshow.
  *
  * Two things specific to a sighting:
  *
  * - **Its gallery is stored *and* may hold video.** `SightingMedia` is one table
- *   with a `kind`, so the media list is split here: photos go to `PhotoGallery`
- *   as a contact sheet, videos and video links to `SightingVideos` as players.
- * - **The cover photo is not always the entry's own.** When an author uploaded
- *   no cover, the API publishes the first gallery photo as `image` - so that row
- *   is dropped from the strip below, which would otherwise repeat the hero
- *   directly above it.
+ *   with a `kind`, so the media list is split here: photos go to `DetailGallery`
+ *   in the first row, videos and video links to `SightingVideos` as players
+ *   below it.
+ * - **The map and the related band stay where they are**, under the row - an
+ *   entry is a place and a date before it is a set of pictures.
  */
 
 type Props = { params: Promise<{ locale: string; slug: string }> };
@@ -69,7 +71,6 @@ export default async function SightingPage({ params }: Props) {
   const t = await getTranslations('SightingPage');
   const tSighting = await getTranslations('Sighting');
   const tCategory = await getTranslations('CategoryPage');
-  const tGallery = await getTranslations('Gallery');
   const format = await getFormatter({ locale });
 
   const sighting = await getSighting(slug);
@@ -116,7 +117,7 @@ export default async function SightingPage({ params }: Props) {
     ? `/${locale}/categories/${sighting.category_slug}`
     : null;
 
-  const photos = toGalleryPhotos(sighting, locale);
+  const photos = toGalleryImages(sighting, locale);
   const videos = toVideos(sighting, locale);
 
   const chips: DetailHeroChip[] = [{ key: 'date', label: dateLabel }];
@@ -130,7 +131,9 @@ export default async function SightingPage({ params }: Props) {
 
   const breadcrumbs = [
     { label: t('breadcrumbHome'), href: `/${locale}` },
-    ...(categoryName && categoryHref ? [{ label: categoryName, href: categoryHref }] : []),
+    ...(categoryName && categoryHref
+      ? [{ label: categoryName, href: categoryHref }]
+      : []),
     ...(speciesName && speciesHref ? [{ label: speciesName, href: speciesHref }] : []),
     { label: title },
   ];
@@ -154,7 +157,11 @@ export default async function SightingPage({ params }: Props) {
       ? { label: tSighting('species'), value: speciesName, href: speciesHref }
       : null,
     categoryName
-      ? { label: tSighting('category'), value: categoryName, href: categoryHref }
+      ? {
+          label: tSighting('category'),
+          value: categoryName,
+          href: categoryHref,
+        }
       : null,
     { label: tSighting('date'), value: dateLabel },
     timeLabel ? { label: tSighting('time'), value: timeLabel } : null,
@@ -163,7 +170,10 @@ export default async function SightingPage({ params }: Props) {
     weatherName ? { label: tSighting('weather'), value: weatherName } : null,
     temperature ? { label: tSighting('temperature'), value: temperature } : null,
     sighting.individuals !== null
-      ? { label: tSighting('individuals'), value: format.number(sighting.individuals) }
+      ? {
+          label: tSighting('individuals'),
+          value: format.number(sighting.individuals),
+        }
       : null,
   ];
 
@@ -196,57 +206,55 @@ export default async function SightingPage({ params }: Props) {
       <Container size="lg" paddingX={10} marginTop={16}>
         <Breadcrumbs items={breadcrumbs} />
 
-        {/* Asymmetric split at `sm`, not `md` - see apps/CLAUDE.md. The story is
-            the page's substance and the field conditions are its aside. */}
-        <Grid container spacing={4}>
-          <Grid size={{ xs: 12, sm: 7 }}>
+        {/* Media/text split at `sm`, not `md` - see apps/CLAUDE.md. The story
+            and the field conditions stack in one column, the photographs sit
+            beside them - and lead them once the two stack, which is what
+            `reorder` says: below `sm` the text column flows last, so a reader
+            meets the encounter before reading it. An entry with no photographs
+            gives the text the full width rather than a placeholder square. */}
+        <Grid container spacing={2}>
+          <Grid
+            size={{ xs: 12, sm: photos.length > 0 ? 6 : 12 }}
+            reorder={{ xs: 'last' }}
+          >
             <Box flexDirection="column" gap={16}>
-              {shortDescription && (
-                <Typography variant="body" fontWeight={600}>
-                  {shortDescription}
-                </Typography>
-              )}
-
-              {description ? (
-                // Authored in the CMS as free text, which may or may not carry
-                // markdown; `RichText` renders both without the author opting in.
-                <RichText>{description}</RichText>
-              ) : (
-                !shortDescription && (
-                  <Typography variant="body" color="var(--foreground-muted, #6b7280)">
-                    {tCategory('noDescription')}
+              <Card gap={12} padding={18}>
+                {shortDescription && (
+                  <Typography variant="body" fontWeight={600}>
+                    {shortDescription}
                   </Typography>
-                )
-              )}
+                )}
+
+                {description ? (
+                  // Authored in the CMS as free text, which may or may not carry
+                  // markdown; `RichText` renders both without the author opting in.
+                  <RichText>{description}</RichText>
+                ) : (
+                  !shortDescription && (
+                    <Typography variant="body" color="var(--foreground-muted, #6b7280)">
+                      {tCategory('noDescription')}
+                    </Typography>
+                  )
+                )}
+              </Card>
+
+              <FactsCard
+                facts={facts}
+                href={sighting.href}
+                hrefLabel={tCategory('externalReference')}
+              />
             </Box>
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 5 }}>
-            <FactsCard
-              facts={facts}
-              href={sighting.href}
-              hrefLabel={tCategory('externalReference')}
-            />
-          </Grid>
+          {photos.length > 0 && (
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <DetailGallery
+                images={photos}
+                placeholderColor={sighting.background_color}
+              />
+            </Grid>
+          )}
         </Grid>
-
-        {photos.length > 0 && (
-          <Box flexDirection="column" gap={24} marginTop={56}>
-            <Box flexDirection="column" gap={8}>
-              <Typography as="h2" variant="h2" fontWeight={700}>
-                {t('galleryTitle')}
-              </Typography>
-              <Typography variant="body" color="var(--foreground-muted, #6b7280)">
-                {t('gallerySubtitle', { date: dateLabel })}
-              </Typography>
-            </Box>
-
-            <PhotoGallery
-              photos={photos}
-              labels={{ previous: tGallery('previous'), next: tGallery('next') }}
-            />
-          </Box>
-        )}
 
         {videos.length > 0 && (
           <Box flexDirection="column" gap={24} marginTop={56}>
@@ -319,31 +327,49 @@ function sightingTitle(sighting: Sighting, locale: string): string {
 }
 
 /**
- * The entry's photographs, in their authored order.
+ * The entry's photographs for the slideshow: the cover first, then its `media`
+ * rows of kind `image` in their authored order.
  *
- * The cover is dropped when it *is* one of these rows: with no cover of its own
- * the API publishes the first gallery photo as `image`, and the strip would then
- * open with the hero directly above it. A cover the author uploaded separately
- * lives on the `Sighting` rather than in `media`, so it never matches here and
- * nothing is lost.
+ * **The cover is kept**, unlike the contact sheet this replaced - that sat under
+ * a hero already showing it, so repeating it read as a duplicate; this is a
+ * numbered slideshow with its own thumbnails, where the cover is simply slide 1.
+ * With no cover of its own the API publishes the first gallery photo as `image`,
+ * so the cover is normally one of the rows below too - hence the `seen` set,
+ * which keeps it from appearing twice. A cover the author uploaded separately
+ * lives on the `Sighting` rather than in `media`, matches nothing, and leads the
+ * strip on its own.
+ *
+ * Each photo carries its own `fit` and `background_color`: one authored as
+ * `contain` must be letterboxed, not cropped.
  */
-function toGalleryPhotos(sighting: Sighting, locale: string): GalleryPhoto[] {
-  return sighting.media.flatMap((item) => {
-    if (item.kind !== 'image' || !item.image) return [];
-    if (item.image === sighting.image) return [];
-    return [
-      {
-        key: `media-${item.id}`,
-        image: item.image,
-        title: localized(item, 'name', locale),
-        caption: localized(item, 'description', locale),
-        fit: item.fit ?? 'cover',
-        backgroundColor: item.background_color,
-        // Every tile here belongs to the page the reader is already on.
-        href: null,
-      },
-    ];
-  });
+function toGalleryImages(sighting: Sighting, locale: string): GalleryImage[] {
+  const title = sightingTitle(sighting, locale);
+  const images: GalleryImage[] = [];
+  const seen = new Set<string>();
+
+  const push = (
+    url: string | null,
+    alt: string,
+    fit: Sighting['fit'],
+    backgroundColor: string | null,
+  ) => {
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    images.push({ url, alt, fit: fit ?? 'cover', backgroundColor });
+  };
+
+  push(sighting.image, title, sighting.fit, sighting.background_color);
+  for (const item of sighting.media) {
+    if (item.kind !== 'image') continue;
+    push(
+      item.image,
+      localized(item, 'name', locale) ?? title,
+      item.fit,
+      item.background_color,
+    );
+  }
+
+  return images;
 }
 
 /** The entry's clips - uploaded files and video links alike, via `source_url`. */
@@ -372,7 +398,11 @@ type Formatter = Awaited<ReturnType<typeof getFormatter>>;
 function formatDay(day: string, format: Formatter): string {
   const parsed = new Date(`${day}T12:00:00`);
   if (Number.isNaN(parsed.getTime())) return day;
-  return format.dateTime(parsed, { year: 'numeric', month: 'long', day: 'numeric' });
+  return format.dateTime(parsed, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
 }
 
 /**
