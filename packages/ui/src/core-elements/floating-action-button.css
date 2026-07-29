@@ -1,0 +1,63 @@
+/* FloatingActionButton - only pseudo-class state, transitions and the elevation
+   shadow live here. Every static box style (size, radius, fill, fixed position)
+   is a component prop. */
+
+.ui-fab {
+  /* A resting shadow well above the page's cards: the whole point of the control
+     is that it floats in front of the content rather than sitting in it. */
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.24),
+    0 2px 6px rgba(0, 0, 0, 0.16);
+  transition:
+    box-shadow 200ms ease,
+    transform 160ms ease,
+    filter 160ms ease,
+    opacity 180ms ease;
+}
+
+.ui-fab:hover:not(:disabled) {
+  /* Lifts and brightens rather than changing colour: the fill is the theme
+     accent, and a second accent would need a token that does not exist. */
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.28),
+    0 4px 10px rgba(0, 0, 0, 0.18);
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.ui-fab:active:not(:disabled) {
+  transform: translateY(0) scale(0.96);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.22),
+    0 1px 4px rgba(0, 0, 0, 0.14);
+}
+
+.ui-fab:focus-visible {
+  outline: 2px solid var(--foreground, #111);
+  outline-offset: 3px;
+}
+
+.ui-fab:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* A thumb reaches less far on a phone, and the screen is narrower - so the
+   button tucks closer to the corner. This sets the property *on the button*, so
+   it beats an app-wide `:root { --ui-fab-offset }` below sm; an app that needs a
+   different mobile offset overrides `.ui-fab` in the same band, and the `offset`
+   prop (a resolved length, not the variable) bypasses this entirely. */
+@media (--below-sm) {
+  .ui-fab {
+    --ui-fab-offset: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-fab,
+  .ui-fab:hover:not(:disabled),
+  .ui-fab:active:not(:disabled) {
+    transition: box-shadow 200ms ease;
+    transform: none;
+  }
+}

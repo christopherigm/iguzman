@@ -9,12 +9,14 @@ file covers only what is specific, and why.
 Three detail routes and one **branch** page sit under the landing, and the
 landing's `CategoryNav` tiles, gallery captions and journal slider link into them:
 
-| Route                         | Renders                                                                          |
-| ----------------------------- | -------------------------------------------------------------------------------- |
-| `/[locale]/[kind]`            | One of the five branches: hero, its categories, its recent sightings, its map    |
-| `/[locale]/categories/[slug]` | One category: hero, first row, its recent sightings, its species grid            |
-| `/[locale]/species/[slug]`    | One species: hero, first row, `video_link`, its sightings                        |
-| `/[locale]/sightings/[slug]`  | One journal entry: hero, first row, its clips, its map, more of the same species |
+| Route                            | Renders                                                                          |
+| -------------------------------- | -------------------------------------------------------------------------------- |
+| `/[locale]/[kind]`               | One of the five branches: hero, its categories, its recent sightings, its map    |
+| `/[locale]/categories/[slug]`    | One category: hero, first row, its recent sightings, its species grid            |
+| `/[locale]/species/[slug]`       | One species: hero, first row, `video_link`, its sightings                        |
+| `/[locale]/sightings/[slug]`     | One journal entry: hero, first row, its clips, its map, more of the same species |
+| `/[locale]/contribute/species`   | The public staged form that **proposes** a species (`?category=<slug>`)          |
+| `/[locale]/contribute/sightings` | The public staged form that **files** a journal entry (`?species=<slug>`)        |
 
 All four are composed from `components/catalog/` (`DetailHero`, `FactsCard`,
 `DetailGallery`, `SpeciesGrid`) and `components/journal/sightings-section.tsx`, so
@@ -185,6 +187,95 @@ Twelve things that will bite:
   the page's heading outline beside the real section headings. `aria-hidden`
   hides it from a screen reader but does not take it out of the document
   structure.
+
+## Public contributions - the FAB, the staged flow, the credit line
+
+A signed-in reader can add to the site without the CMS. A
+`FloatingActionButton` (`@repo/ui`) sits on two public pages and opens a staged,
+Instagram-shaped form: **a category page proposes a species**, **a sighting page
+files a journal entry**. Everything filed this way lands **pending review**.
+
+| Piece                       | Where                                                             |
+| --------------------------- | ----------------------------------------------------------------- |
+| The two FABs                | the category and sighting detail pages, after `PageBottomSpacer`  |
+| The routes                  | `app/[locale]/contribute/{species,sightings}/`                    |
+| The wizards (one per route) | `…/species-contribute-form.tsx`, `…/sighting-contribute-form.tsx` |
+| Shared stage chrome         | `components/contribute/` (stage shell, photo picker, review row)  |
+| Browser client              | `lib/contribute.ts`                                               |
+| Token-attaching proxy       | `app/api/contribute/[...path]/route.ts`                           |
+
+Nine things that will bite:
+
+- ⚠ **Pending means `enabled=false`, and there is no moderation queue.** The API
+  creates a contribution disabled and flagged `is_contribution`; publishing it is
+  an ordinary `enabled: true` PATCH from the CMS, and it shows up there because
+  **every CMS list read already sends `include_disabled=true`**. So a contribution
+  is simply an unpublished row in `/admin/species` or `/admin/sightings`. Do not
+  add a parallel "submissions" surface without deciding it is worth a second
+  place for a reviewer to look.
+- ⚠ **Anonymity clears the name; it does not hide it.** `author_anonymous` is the
+  contributor's _answer_, and the API stores no `author_name` at all when it is
+  set - because these payloads are cached under a key that does **not** vary by
+  who is asking (the same reasoning as `Location.hide_precise_location`), so a
+  name merely withheld at render time would be filled once by an administrator's
+  request and then replayed to everyone. The frontend therefore renders
+  `author_name` whenever it is non-empty and never consults the flag.
+  `created_by` is the audit trail and is never published in any form.
+- **The credit line is one check, not two.** An entry authored in the CMS that
+  nobody named and a contribution filed anonymously both arrive with
+  `author_name: ""`, which is why `sightings-section.tsx` and the sighting page
+  each test that one field. It renders as a **byline under the card's title** (it
+  is whose account of the encounter this is, not a recorded condition) and as the
+  **last row of the detail page's `FactsCard`**.
+- ⚠ **The FAB is shown to everyone, and `/contribute` is deliberately _not_ in
+  `proxy.ts`'s `protectedPrefixes`.** That is how a reader discovers the site
+  takes contributions at all, so an anonymous press is the expected path - the
+  page answers it with `SignInPrompt` rather than a bounce, because
+  `createAuthProxy`'s redirect carries no return path and would drop the reader at
+  `/auth` with no idea what they were about to do. Nothing is protected by
+  rendering the form: the endpoint requires a session, re-derived from the token
+  by Django on every call.
+- **The subject is a query param and it is required** - `?category=<slug>` and
+  `?species=<slug>`. The FAB was pressed on a page that already names it, so a
+  picker would be re-asking a settled question and inviting the wrong answer. A
+  missing or unknown slug is `notFound()`, not a fallback picker.
+- **Each flow is one client component, not a route per stage.** The stages share a
+  draft and a stage boundary is not a navigation: stepping back must find stage 1
+  as it was left, which routes would only give by putting the draft somewhere it
+  can be lost.
+- ⚠ **`components/contribute/photo-picker.tsx` downscales, and that is why it is
+  not `AdminImageUploader`.** That component base64s the file as picked, which is
+  fine for one considered photograph from a machine; a contributor picks four
+  camera-roll shots at 4-6 MB, base64 inflates by a third, and the submission
+  fails _after_ the upload against Django's 10 MB `DATA_UPLOAD_MAX_MEMORY_SIZE`.
+  Every file goes through a canvas at 1600 px first, via `createImageBitmap` with
+  `imageOrientation: 'from-image'` - without which every portrait phone photo
+  arrives on its side. **Photo 1 is the cover** (the API publishes the first
+  gallery row as `image`), so the tiles are numbered with a "use as cover" button
+  rather than a drag handle: dragging is miserable on the touchscreen this is
+  mostly used from.
+- **Only the base half of each text pair is written** - `name`, never `en_name`.
+  A contributor writes in one language and `localized()` falls back to the base
+  column for every locale whose twin is blank, so the entry reads correctly in all
+  five. Filling the twin is an authoring job, and the CMS has a translate button.
+- **A sighting picks a place; it does not drop a pin.** The API takes either and
+  refuses neither, but an entry with no coordinates of its own inherits its
+  place's centre, which is the documented normal case and enough for every map the
+  site draws. `MapPicker` stays a CMS form control. Consequence: with **no**
+  locations catalogued the sighting flow cannot be completed, and stage 1 says so
+  rather than disabling Continue silently. The **season** is not asked for either -
+  `Sighting.save()` derives it from the date.
+
+The FAB on a sighting page is **bottom-left**, and that is not a style choice:
+that page is the only public one carrying a map, and `OsmMap` puts its
+locate/fullscreen pair and its zoom control in the right-hand corners, so a
+right-hand FAB would sit over the zoom buttons and over the close button in
+fullscreen.
+
+**Not built:** a contributor cannot see their own pending records. The flow
+confirms the submission and says it is awaiting review, but there is no "my
+contributions" list in `/account` - that needs a `created_by`-filtered endpoint
+(the column and its index exist) and a page. Decide before adding.
 
 ## Auth - shared via `@repo/auth`
 

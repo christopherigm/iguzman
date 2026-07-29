@@ -34,6 +34,26 @@ class IsSiteAdmin(BasePermission):
         return is_site_admin(getattr(request, 'user', None))
 
 
+class IsContributor(BasePermission):
+    """Allow any signed-in account - the public contribute flow's gate.
+
+    Deliberately **not** wired into ``CachedViewMixin.get_permissions``: that
+    would open every write on every resource to every account. It guards only the
+    dedicated ``.../contribute/`` endpoints, whose serializers create a row with
+    ``enabled=False`` and refuse to set anything an administrator owns
+    (``is_featured``, ``enabled``, ``sort_order``). Publishing stays admin-only,
+    so the widest thing this grants is "may propose a record".
+
+    A verified email is not required. Signup already sends one and nothing here is
+    published without review, so demanding it would only mean a contributor's
+    first outing is lost to a bounced message.
+    """
+
+    def has_permission(self, request, view):
+        user = getattr(request, 'user', None)
+        return bool(user is not None and user.is_authenticated)
+
+
 class IsStaffUser(BasePermission):
     """Allow only Django staff - the platform operator, not the site's authors.
 

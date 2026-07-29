@@ -7,12 +7,14 @@ from rest_framework.views import APIView
 
 from catalog.models import KIND_CHOICES, Category, Location, Species
 from core.cache import cached_get, cached_set, invalidate
+from core.contribute_views import ContributeView
 from core.permissions import IsSiteAdmin, show_disabled
 from core.views import CachedDetailView, CachedListCreateView, list_key
 
 from . import cache_keys as keys
 from .models import Sighting, SightingMedia
 from .serializers import (
+    SightingContributeSerializer,
     SightingMapSerializer,
     SightingMediaSerializer,
     SightingMediaUpdateSerializer,
@@ -415,3 +417,28 @@ class JournalStatsView(APIView):
         }
         cached_set(keys.STATS, data)
         return Response(data)
+
+
+class SightingContributeView(ContributeView):
+    """
+    POST /api/journal/sightings/contribute/ - file an entry (any signed-in user).
+
+    Its own URL rather than a relaxed permission on `SightingListCreateView` -
+    see `core/contribute_views.py` for the whole argument. The entry lands
+    `enabled=False` and `is_contribution=True`, so it is absent from the feed,
+    the map and the stats until an administrator publishes it.
+
+    Both photos and the record itself travel in **one** request, unlike the CMS's
+    path (which creates the row, then POSTs each photo to the gallery endpoint).
+    A contributor has one Submit button: a row that survived while its pictures
+    failed would be a pending entry nobody can tell is broken.
+    """
+
+    serializer_class = SightingContributeSerializer
+    response_serializer_class = SightingSerializer
+    # Everything a `Sighting` write normally makes stale (see journal/signals.py):
+    # its own two namespaces, the map, and the stats. Not strictly required while
+    # the row is disabled - none of those payloads counts it - but a reviewer
+    # enabling it goes through the normal PATCH, and clearing here keeps this path
+    # from being the one exception to the rule in this app's signals table.
+    cache_prefixes = (keys.SIGHTINGS, keys.SIGHTING, keys.MAP, keys.STATS)

@@ -16,6 +16,7 @@ from .views import (
     SeasonImageDetailView,
     SeasonImageListCreateView,
     SeasonListCreateView,
+    SpeciesContributeView,
     SpeciesDetailView,
     SpeciesImageDetailView,
     SpeciesImageListCreateView,
@@ -45,6 +46,9 @@ urlpatterns = [
 
     # Species
     path('catalog/species/', SpeciesListCreateView.as_view(), name='species-list'),
+    # The public contribute flow. Above `<int:pk>/` so the literal is never read
+    # as a pk, exactly like `slug/` below and the journal's `map/`.
+    path('catalog/species/contribute/', SpeciesContributeView.as_view(), name='species-contribute'),
     path('catalog/species/<int:pk>/', SpeciesDetailView.as_view(), name='species-detail'),
     path('catalog/species/slug/<slug:slug>/', SpeciesDetailView.as_view(), name='species-detail-slug'),
 

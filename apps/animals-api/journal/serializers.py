@@ -4,6 +4,11 @@ from django.conf import settings
 from django.db import transaction
 from rest_framework import serializers
 
+from core.contributions import (
+    MAX_TEXT_LENGTH,
+    ContributionSerializer,
+    photos_field,
+)
 from core.image_sizes import MEDIUM, REGULAR, image_cfg
 from core.serializers import (
     Base64ImagesMixin,
@@ -11,6 +16,7 @@ from core.serializers import (
     file_url,
     gallery_image_url,
 )
+from core.slugs import unique_slug
 
 from .models import Sighting, SightingMedia, round_coordinate
 
@@ -253,6 +259,23 @@ class SightingSerializer(serializers.ModelSerializer):
     )
     media_count = serializers.SerializerMethodField()
 
+    # ---- The credit line ----------------------------------------------------
+    # ⚠ `author_name` is published **raw**, and it has to be: this payload is
+    # cached under a key that varies only by the query params and the resolved
+    # disabled-visibility (see core/views.py), so a field that read differently
+    # for an administrator would be filled once by an admin request and then
+    # replayed to every anonymous visitor from the same cache entry.
+    #
+    # That is why an anonymous contribution stores **no name at all** rather than
+    # storing one and hiding it here: `author_anonymous` is the contributor's
+    # answer to "credit me?", and the write path clears `author_name` when it is
+    # true. So there is nothing in this column to leak, and the flag travels only
+    # so the CMS can tell "chose not to be credited" from "nobody asked" - an
+    # administrator must not helpfully fill in a name against the first.
+    #
+    # `created_by` is never published in any form. It is the audit trail, and the
+    # key a contributor's own list is read by; nothing on the public site needs it.
+
     class Meta:
         model = Sighting
         fields = [
@@ -272,6 +295,7 @@ class SightingSerializer(serializers.ModelSerializer):
             'temperature_c', 'individuals',
             'image', 'media', 'media_count', 'fit', 'background_color',
             'is_featured',
+            'author_name', 'author_anonymous', 'is_contribution',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
 
@@ -458,6 +482,12 @@ class SightingWriteSerializer(Base64ImagesMixin, serializers.ModelSerializer):
             'date', 'time', 'location', 'latitude', 'longitude',
             'season', 'weather', 'temperature_c', 'individuals',
             'image', 'fit', 'background_color', 'is_featured', 'enabled',
+            # The credit line is editable in the CMS as well as by a contributor:
+            # an author filing someone else's photograph credits them, and an
+            # administrator reviewing a contribution may need to correct a
+            # misspelt name. `created_by` and `is_contribution` are *not* here -
+            # they record how the row came to exist, which no edit should rewrite.
+            'author_name', 'author_anonymous',
         ]
 
     def validate_slug(self, value):
@@ -480,3 +510,111 @@ class SightingWriteSerializer(Base64ImagesMixin, serializers.ModelSerializer):
                 {'latitude': 'Latitude and longitude must be set together.'}
             )
         return attrs
+
+
+class SightingContributeSerializer(ContributionSerializer):
+    """What a signed-in reader may file as a new journal entry.
+
+    A sibling of ``SightingWriteSerializer``, not a subclass - see
+    ``core/contributions.py`` for why. What it withholds:
+
+    * **``slug``** is derived from the title (or the species name, for the
+      untitled entry the frontend treats as normal).
+    * **``enabled``, ``is_featured``** are the administrator's; ``create``
+      hard-codes both, so a contribution is a pending draft and can never file
+      itself onto the landing page.
+    * **``href``** - an outbound URL on a row anyone may create is link spam with
+      no upside here.
+    * **``season``** is not asked for and not writable: ``Sighting.save()``
+      derives it from the date, which is the right answer for a contributor and
+      one fewer dropdown in the flow.
+    * **``en_*``** twins - a contributor writes in one language, into the base
+      column, and ``localized()`` falls back to it for every locale.
+
+    ``author_name`` and ``author_anonymous`` are the one thing it takes that the
+    catalog's contribute serializer does not: a species is a shared reference
+    record with nobody to credit, an encounter belongs to whoever was standing
+    there. Choosing anonymity **clears the name** rather than hiding it - the read
+    serializer explains why that has to happen here rather than at render time.
+    """
+
+    photos = photos_field()
+    photo_write_serializer_class = SightingMediaWriteSerializer
+
+    description = serializers.CharField(
+        required=False, allow_blank=True, max_length=MAX_TEXT_LENGTH
+    )
+    short_description = serializers.CharField(
+        required=False, allow_blank=True, max_length=500
+    )
+
+    class Meta:
+        model = Sighting
+        fields = [
+            'species', 'name', 'description', 'short_description',
+            'date', 'time', 'location', 'latitude', 'longitude',
+            'weather', 'temperature_c', 'individuals',
+            'author_name', 'author_anonymous', 'photos',
+        ]
+
+    def validate_species(self, value):
+        # A species awaiting review is not yet part of the catalog, so an entry
+        # filed against it would be pending on something that may never exist -
+        # and if the species were rejected, `PROTECT` would leave the sighting
+        # holding a row nobody can delete.
+        if not value.enabled:
+            raise serializers.ValidationError('This species is not available.')
+        return value
+
+    def validate_date(self, value):
+        from django.utils import timezone
+
+        # A field journal records what happened, so tomorrow is not a date an
+        # encounter can have. Checked against the server's own day; a contributor
+        # a timezone ahead can still be a day out, which is why this is a bound
+        # rather than an exact test.
+        if value > timezone.localdate():
+            raise serializers.ValidationError('An encounter cannot be in the future.')
+        return value
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        lat = attrs.get('latitude')
+        lng = attrs.get('longitude')
+        if (lat is None) != (lng is None):
+            raise serializers.ValidationError(
+                {'latitude': 'Latitude and longitude must be set together.'}
+            )
+        if not attrs.get('location') and lat is None:
+            # Neither a place nor a pin: the entry would be unmappable and
+            # unfilterable, which is most of what the journal does with it.
+            raise serializers.ValidationError(
+                {'location': 'Pick a place, or drop a pin on the map.'}
+            )
+        return attrs
+
+    @transaction.atomic
+    def create(self, validated_data):
+        photos = validated_data.pop('photos', [])
+        anonymous = validated_data.pop('author_anonymous', False)
+        author_name = (validated_data.pop('author_name', '') or '').strip()
+
+        species = validated_data['species']
+        instance = Sighting(
+            **validated_data,
+            slug=unique_slug(
+                Sighting,
+                validated_data.get('name') or species.name,
+                fallback='sighting',
+            ),
+            author_anonymous=anonymous,
+            # Cleared, not merely unpublished - see SightingSerializer.
+            author_name='' if anonymous else author_name,
+            created_by=self._request_user(),
+            is_contribution=True,
+            enabled=False,
+            is_featured=False,
+        )
+        instance.save()
+        self._write_photos(instance, photos)
+        return instance

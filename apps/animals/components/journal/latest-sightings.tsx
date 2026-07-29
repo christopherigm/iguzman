@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Image from 'next/image';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Keyboard } from 'swiper/modules';
-import type { Swiper as SwiperType } from 'swiper';
-import { Box } from '@repo/ui/core-elements/box';
-import { Card } from '@repo/ui/core-elements/card';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Badge } from '@repo/ui/core-elements/badge';
-import { Button } from '@repo/ui/core-elements/button';
-import { IconButton } from '@repo/ui/core-elements/icon-button';
-import 'swiper/css';
-import './latest-sightings.css';
+import { useState } from "react";
+import Image from "next/image";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Keyboard } from "swiper/modules";
+import type { Swiper as SwiperType } from "swiper";
+import { Box } from "@repo/ui/core-elements/box";
+import { Card } from "@repo/ui/core-elements/card";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Badge } from "@repo/ui/core-elements/badge";
+import { Button } from "@repo/ui/core-elements/button";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
+import "swiper/css";
+import "./latest-sightings.css";
 
 /**
  * The latest journal entries, one per slide: the encounter's own data (and the
@@ -69,6 +69,16 @@ export interface SightingSlide {
   temperature: string | null;
   individuals: number | null;
   image: string | null;
+  /**
+   * The byline under the title - "Recorded by Elena Ruiz" - or `null`.
+   *
+   * Interpolated on the server like every other string on a slide, so the client
+   * slider holds no translator (see this file's header). `null` covers both "nobody
+   * was named" and "the contributor asked not to be credited": the API stores no
+   * name in either case, so the card has nothing to decide. See
+   * `Sighting.author_name` in `lib/journal.ts`.
+   */
+  authorByline: string | null;
 }
 
 interface Props {
@@ -132,7 +142,12 @@ export function LatestSightings({ slides, labels }: Props) {
             translucent
           />
 
-          <Box role="group" aria-label={labels.pagination} alignItems="center" gap={8}>
+          <Box
+            role="group"
+            aria-label={labels.pagination}
+            alignItems="center"
+            gap={8}
+          >
             {slides.map((slide, i) => (
               <button
                 key={slide.id}
@@ -142,7 +157,7 @@ export function LatestSightings({ slides, labels }: Props) {
                 aria-label={slide.title}
                 aria-current={i === activeIndex}
                 className={`latest-sightings__dot${
-                  i === activeIndex ? ' latest-sightings__dot--active' : ''
+                  i === activeIndex ? " latest-sightings__dot--active" : ""
                 }`}
                 // `slideToLoop` indexes the real slides; it falls through to
                 // `slideTo` when the slider is not looping.
@@ -175,7 +190,7 @@ function SightingEntry({
   priority,
 }: {
   slide: SightingSlide;
-  labels: Props['labels'];
+  labels: Props["labels"];
   priority: boolean;
 }) {
   // Only the facts this entry actually recorded - a journal row with no weather
@@ -183,11 +198,19 @@ function SightingEntry({
   // them: it is the entry's eyebrow above the header rule, and repeating it here
   // would say the same thing twice.
   const facts: { label: string; value: string }[] = [
-    slide.speciesName ? { label: labels.species, value: slide.speciesName } : null,
-    slide.locationName ? { label: labels.location, value: slide.locationName } : null,
+    slide.speciesName
+      ? { label: labels.species, value: slide.speciesName }
+      : null,
+    slide.locationName
+      ? { label: labels.location, value: slide.locationName }
+      : null,
     slide.seasonName ? { label: labels.season, value: slide.seasonName } : null,
-    slide.weatherName ? { label: labels.weather, value: slide.weatherName } : null,
-    slide.temperature ? { label: labels.temperature, value: slide.temperature } : null,
+    slide.weatherName
+      ? { label: labels.weather, value: slide.weatherName }
+      : null,
+    slide.temperature
+      ? { label: labels.temperature, value: slide.temperature }
+      : null,
     slide.individuals !== null
       ? { label: labels.individuals, value: String(slide.individuals) }
       : null,
@@ -206,18 +229,23 @@ function SightingEntry({
       // where this collapses back to the card's own padding - an inline number
       // could not be overridden by that media query.
       paddingLeft="var(--entry-rule-inset, 26px)"
-      styles={{ position: 'relative' }}
+      styles={{ position: "relative" }}
     >
       <Box
         flexDirection="column"
         gap={10}
         paddingBottom={14}
         styles={{
-          gridArea: 'header',
-          borderBottom: '1px solid var(--border, #e5e7eb)',
+          gridArea: "header",
+          borderBottom: "1px solid var(--border, #e5e7eb)",
         }}
       >
-        <Box justifyContent="space-between" alignItems="center" gap={12} flexWrap="wrap">
+        <Box
+          justifyContent="space-between"
+          alignItems="center"
+          gap={12}
+          flexWrap="wrap"
+        >
           {/* `as="span"`: the eyebrow is metadata on the heading below it, not a
               heading of its own, and `variant` would otherwise pick the element
               too and push a stray node into the page's outline. */}
@@ -226,7 +254,7 @@ function SightingEntry({
             variant="label"
             fontWeight={700}
             color="var(--accent, #06b6d4)"
-            styles={{ letterSpacing: '0.14em', textTransform: 'uppercase' }}
+            styles={{ letterSpacing: "0.14em", textTransform: "uppercase" }}
           >
             <span className="latest-sightings__sr-only">{`${labels.date}: `}</span>
             {slide.dateLabel}
@@ -241,7 +269,7 @@ function SightingEntry({
                 prefetch
                 className="latest-sightings__badge-link"
                 color="inherit"
-                styles={{ textDecoration: 'none' }}
+                styles={{ textDecoration: "none" }}
               >
                 <Badge variant="subtle" size="sm" uppercase>
                   {slide.categoryName}
@@ -257,18 +285,33 @@ function SightingEntry({
         <Typography as="h3" variant="h3" fontWeight={700}>
           {slide.title}
         </Typography>
+
+        {/* The byline, under the title and inside the header rule: an entry is
+            somebody's account of something they saw, so who saw it belongs with the
+            heading rather than among the recorded conditions below. Rendered only
+            when there is a name - most entries have none, and a card that said
+            "Recorded by -" on every one of them would honour nobody. */}
+        {slide.authorByline && (
+          <Typography
+            as="span"
+            variant="caption"
+            color="var(--foreground-muted, #6b7280)"
+          >
+            {slide.authorByline}
+          </Typography>
+        )}
       </Box>
 
       <SightingCover slide={slide} priority={priority} />
 
-      <Box flexDirection="column" gap={16} styles={{ gridArea: 'body' }}>
+      <Box flexDirection="column" gap={16} styles={{ gridArea: "body" }}>
         {slide.shortDescription && (
           // Italic prose: the author's own account of the encounter, set apart
           // from the recorded conditions below it.
           <Typography
             variant="body"
             color="var(--foreground-muted, #6b7280)"
-            styles={{ fontStyle: 'italic', lineHeight: 1.65 }}
+            styles={{ fontStyle: "italic", lineHeight: 1.65 }}
           >
             {slide.shortDescription}
           </Typography>
@@ -316,10 +359,10 @@ function FactRow({ label, value }: { label: string; value: string }) {
         fontWeight={700}
         color="var(--foreground-muted, #6b7280)"
         styles={{
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
           flexShrink: 0,
-          whiteSpace: 'nowrap',
+          whiteSpace: "nowrap",
         }}
       >
         {label}
@@ -332,7 +375,7 @@ function FactRow({ label, value }: { label: string; value: string }) {
         marginLeft={8}
         marginRight={8}
         marginBottom={2}
-        styles={{ borderBottom: '1px dotted var(--border, #e5e7eb)' }}
+        styles={{ borderBottom: "1px dotted var(--border, #e5e7eb)" }}
       />
 
       <Typography variant="body" fontWeight={600}>
@@ -348,7 +391,13 @@ function FactRow({ label, value }: { label: string; value: string }) {
  * a card inside a card. `alignSelf` keeps it at the top of that area, which
  * spans both text rows from `sm` up and would otherwise stretch the print.
  */
-function SightingCover({ slide, priority }: { slide: SightingSlide; priority: boolean }) {
+function SightingCover({
+  slide,
+  priority,
+}: {
+  slide: SightingSlide;
+  priority: boolean;
+}) {
   if (!slide.image) {
     return (
       <Box
@@ -356,7 +405,7 @@ function SightingCover({ slide, priority }: { slide: SightingSlide; priority: bo
         alignSelf="flex-start"
         borderRadius={6}
         backgroundColor="var(--surface-2, #e5e7eb)"
-        styles={{ gridArea: 'media', aspectRatio: '4 / 3' }}
+        styles={{ gridArea: "media", aspectRatio: "4 / 3" }}
         aria-hidden
       />
     );
@@ -368,10 +417,10 @@ function SightingCover({ slide, priority }: { slide: SightingSlide; priority: bo
       alignSelf="flex-start"
       borderRadius={6}
       styles={{
-        gridArea: 'media',
-        position: 'relative',
-        overflow: 'hidden',
-        aspectRatio: '4 / 3',
+        gridArea: "media",
+        position: "relative",
+        overflow: "hidden",
+        aspectRatio: "4 / 3",
       }}
     >
       <Image
@@ -380,7 +429,7 @@ function SightingCover({ slide, priority }: { slide: SightingSlide; priority: bo
         alt={slide.title}
         sizes="(min-width: 600px) 45vw, 100vw"
         priority={priority}
-        style={{ objectFit: 'cover' }}
+        style={{ objectFit: "cover" }}
       />
     </Box>
   );

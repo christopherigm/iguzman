@@ -13,6 +13,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { RichText } from "@repo/ui/core-elements/rich-text";
 import { PageBottomSpacer } from "@repo/ui/core-elements/navbar";
+import { FloatingActionButton } from "@repo/ui/core-elements/floating-action-button";
 import {
   getSighting,
   getSightingsBySpecies,
@@ -94,6 +95,7 @@ export default async function SightingPage({ params }: Props) {
   const tSighting = await getTranslations("Sighting");
   const tCategory = await getTranslations("CategoryPage");
   const tKinds = await getTranslations("Kinds");
+  const tContribute = await getTranslations("Contribute");
   const format = await getFormatter({ locale });
 
   const sighting = await getSighting(slug);
@@ -213,6 +215,13 @@ export default async function SightingPage({ params }: Props) {
           label: tSighting("individuals"),
           value: format.number(sighting.individuals),
         }
+      : null,
+    // The credit line, last: it is who filed the entry rather than something the
+    // entry records. Empty for a CMS entry nobody named *and* for a contribution
+    // filed anonymously - the API stores no name in either case, so this is the
+    // one check, not two (see `Sighting.author_name` in lib/journal.ts).
+    sighting.author_name
+      ? { label: tSighting("author"), value: sighting.author_name }
       : null,
   ];
 
@@ -350,6 +359,28 @@ export default async function SightingPage({ params }: Props) {
       </Container>
 
       <PageBottomSpacer />
+
+      {/* File another entry for the *same species* - the FAB on a category page
+          proposes a species, this one records an encounter, and both prefill from
+          the record the reader is standing on. Rendered only when the entry names a
+          species: `species_slug` is null exactly when it records none, and the
+          contribute route requires one (it 404s without it), so a FAB here would be
+          a button that leads to a dead page.
+
+          Bottom-**left**, unlike the category page's. A sighting page is the only
+          public page carrying a map, and `OsmMap` puts its locate/fullscreen pair
+          and its zoom control in the right-hand corners - a FAB on the right would
+          sit over the zoom buttons once the map scrolled under it, and inside
+          fullscreen it would overlap the close button. */}
+      {sighting.species_slug && (
+        <FloatingActionButton
+          icon="/icons/add.svg"
+          aria-label={tContribute("addSighting")}
+          label={tContribute("addSighting")}
+          position="bottom-left"
+          href={`/contribute/sightings?species=${sighting.species_slug}`}
+        />
+      )}
     </Box>
   );
 }

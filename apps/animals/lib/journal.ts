@@ -1,7 +1,7 @@
-import { unstable_rethrow } from 'next/navigation';
-import { API_URL } from './config';
-import logger from './logger';
-import type { ImageFit, Kind } from './catalog';
+import { unstable_rethrow } from "next/navigation";
+import { API_URL } from "./config";
+import logger from "./logger";
+import type { ImageFit, Kind } from "./catalog";
 
 /**
  * Read access to animals-api's `journal` app.
@@ -25,7 +25,7 @@ import type { ImageFit, Kind } from './catalog';
  */
 export interface SightingMedia {
   id: number;
-  kind: 'image' | 'video' | 'link';
+  kind: "image" | "video" | "link";
   name: string | null;
   en_name: string | null;
   description: string | null;
@@ -59,6 +59,28 @@ export interface Sighting {
 
   /** The day of the encounter, `YYYY-MM-DD`. */
   date: string;
+
+  /**
+   * The credit line to render under the entry - who was standing there.
+   *
+   * An **empty string** when there is nobody to credit, which covers both cases
+   * and deliberately does not distinguish them here: an entry authored in the CMS
+   * that nobody put a name on, and a contribution whose author chose anonymity.
+   * The API stores no name at all in the second case rather than storing one and
+   * hiding it, because these payloads are cached under a key that does not vary by
+   * who is asking (see animals-api's `SightingSerializer`) - so there is nothing
+   * in this field to leak, and nothing for the frontend to decide.
+   */
+  author_name: string;
+  /**
+   * Whether the contributor asked not to be credited. Renders nothing on the
+   * public site - `author_name` is already empty when it is true. It travels so
+   * the CMS can tell "chose not to be credited" from "nobody asked", which is what
+   * stops a reviewer helpfully filling in a name against the first.
+   */
+  author_anonymous: boolean;
+  /** Whether the entry arrived through the public contribute flow. */
+  is_contribution: boolean;
   time: string | null;
 
   /** The cover photo: the entry's own image, else its first gallery photo. */
@@ -256,7 +278,10 @@ export async function getSightingsByCategory(
  * this `species__category__kind` and publishes it as `?kind=`. Filtering here
  * instead would mean reading the whole feed to show eight of it.
  */
-export async function getSightingsByKind(kind: Kind, limit = 8): Promise<Sighting[]> {
+export async function getSightingsByKind(
+  kind: Kind,
+  limit = 8,
+): Promise<Sighting[]> {
   return fetchSightings(
     `/api/journal/sightings/?kind=${encodeURIComponent(kind)}&limit=${limit}`,
   );
@@ -288,11 +313,14 @@ export async function getSightingsBySpecies(
  */
 export async function getSighting(slug: string): Promise<Sighting | null> {
   const path = `/api/journal/sightings/slug/${encodeURIComponent(slug)}/`;
-  const res = await fetch(`${API_URL}${path}`, { cache: 'no-store' });
+  const res = await fetch(`${API_URL}${path}`, { cache: "no-store" });
 
   if (res.status === 404) return null;
   if (!res.ok) {
-    logger.error({ path, status: res.status }, 'journal API returned non-OK status');
+    logger.error(
+      { path, status: res.status },
+      "journal API returned non-OK status",
+    );
     throw new Error(`Journal request failed: ${path} (${res.status})`);
   }
   return (await res.json()) as Sighting;
@@ -324,7 +352,9 @@ export async function getCategoryMapPins(
  * the ceiling.
  */
 export async function getKindMapPins(kind: Kind): Promise<SightingMapPin[]> {
-  return fetchMapPins(`/api/journal/sightings/map/?kind=${encodeURIComponent(kind)}`);
+  return fetchMapPins(
+    `/api/journal/sightings/map/?kind=${encodeURIComponent(kind)}`,
+  );
 }
 
 /**
@@ -335,23 +365,30 @@ export async function getKindMapPins(kind: Kind): Promise<SightingMapPin[]> {
  * branch: taking the newest twenty outright would show nothing but birds the
  * week somebody spent birdwatching.
  */
-export async function getLatestMapPins(perCategory = 10): Promise<SightingMapPin[]> {
-  return fetchMapPins(`/api/journal/sightings/map/?per_category=${perCategory}`);
+export async function getLatestMapPins(
+  perCategory = 10,
+): Promise<SightingMapPin[]> {
+  return fetchMapPins(
+    `/api/journal/sightings/map/?per_category=${perCategory}`,
+  );
 }
 
 /** GET a set of map pins, answering `[]` rather than throwing. */
 async function fetchMapPins(path: string): Promise<SightingMapPin[]> {
   try {
-    const res = await fetch(`${API_URL}${path}`, { cache: 'no-store' });
+    const res = await fetch(`${API_URL}${path}`, { cache: "no-store" });
     if (!res.ok) {
-      logger.warn({ path, status: res.status }, 'journal API returned non-OK status');
+      logger.warn(
+        { path, status: res.status },
+        "journal API returned non-OK status",
+      );
       return [];
     }
     // A bare list, not a page: a map has no "next page", it has a bounding box.
     return (await res.json()) as SightingMapPin[];
   } catch (err) {
     unstable_rethrow(err);
-    logger.error({ path, err }, 'Failed to fetch the map pins');
+    logger.error({ path, err }, "Failed to fetch the map pins");
     return [];
   }
 }
@@ -359,9 +396,12 @@ async function fetchMapPins(path: string): Promise<SightingMapPin[]> {
 /** GET one page of the sighting feed, answering `[]` rather than throwing. */
 async function fetchSightings(path: string): Promise<Sighting[]> {
   try {
-    const res = await fetch(`${API_URL}${path}`, { cache: 'no-store' });
+    const res = await fetch(`${API_URL}${path}`, { cache: "no-store" });
     if (!res.ok) {
-      logger.warn({ path, status: res.status }, 'journal API returned non-OK status');
+      logger.warn(
+        { path, status: res.status },
+        "journal API returned non-OK status",
+      );
       return [];
     }
     const page = (await res.json()) as Paginated<Sighting>;
@@ -370,7 +410,7 @@ async function fetchSightings(path: string): Promise<Sighting[]> {
     // See the matching note in lib/catalog.ts - Next's own control-flow errors
     // must not be swallowed by this catch.
     unstable_rethrow(err);
-    logger.error({ path, err }, 'Failed to fetch the journal feed');
+    logger.error({ path, err }, "Failed to fetch the journal feed");
     return [];
   }
 }

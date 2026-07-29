@@ -38,7 +38,9 @@ export async function SightingsSection({
   if (sightings.length === 0) return null;
 
   const slides = sightings.map((sighting) =>
-    toSightingSlide(sighting, locale, format),
+    // `tSighting` as well as the formatter: the byline is an interpolated string,
+    // and the slider is a client component that holds no translator of its own.
+    toSightingSlide(sighting, locale, format, tSighting),
   );
 
   return (
@@ -75,11 +77,13 @@ export async function SightingsSection({
 }
 
 type Formatter = Awaited<ReturnType<typeof getFormatter>>;
+type Translator = Awaited<ReturnType<typeof getTranslations>>;
 
 function toSightingSlide(
   sighting: Sighting,
   locale: string,
   format: Formatter,
+  tSighting: Translator,
 ): SightingSlide {
   const speciesName = localized(
     { name: sighting.species_name, en_name: sighting.species_en_name },
@@ -125,6 +129,12 @@ function toSightingSlide(
     temperature: formatTemperature(sighting.temperature_c, format),
     individuals: sighting.individuals,
     image: sighting.image ?? sighting.species_image,
+    // Empty for a CMS entry nobody named *and* for a contribution filed
+    // anonymously - the API stores no name in either case, so this is one check
+    // rather than two (see `Sighting.author_name` in lib/journal.ts).
+    authorByline: sighting.author_name
+      ? tSighting("recordedBy", { name: sighting.author_name })
+      : null,
   };
 }
 

@@ -78,6 +78,50 @@ class Sighting(RegularPicture):
         null=True, blank=True, help_text='How many were seen, if counted.'
     )
 
+    # ---- Who filed it -------------------------------------------------------
+    # Two separate things, deliberately. `created_by` is the *account*: an audit
+    # trail and the key the contributor's own pending list is read by, and it is
+    # never published. `author_name` is the **credit line** the public site prints
+    # under the entry, which is a free-text field precisely because it may not be
+    # the account's own name - an author filing a friend's photograph credits the
+    # friend. `author_anonymous` suppresses the credit without erasing either.
+    created_by = models.ForeignKey(
+        'auth.User',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='contributed_sightings',
+        help_text='The account that filed this entry. Null for entries authored '
+                  'in the CMS before contributions existed, and for any the '
+                  'author was deleted from. Never published.',
+    )
+    author_name = models.CharField(
+        max_length=120,
+        blank=True,
+        default='',
+        help_text='The credit line rendered under the entry ("Photographed by "). '
+                  'Free text, not the account name: an author may be crediting '
+                  'someone else. Blank means no credit is shown.',
+    )
+    author_anonymous = models.BooleanField(
+        default=False,
+        help_text='Withhold the credit line. The name and account are still '
+                  'stored - this only stops them being published.',
+    )
+
+    # ---- Moderation ---------------------------------------------------------
+    # A contribution is created with `enabled=False`, exactly like an unpublished
+    # draft, so it is invisible to the public list and detail endpoints with no
+    # second visibility rule to keep in step. This flag records *why* it is off:
+    # a contribution awaiting review, rather than an author's own work in
+    # progress, which is what lets the CMS list the queue.
+    is_contribution = models.BooleanField(
+        default=False,
+        help_text='Filed through the public contribute flow rather than the CMS. '
+                  'Such an entry starts disabled and is published by an '
+                  'administrator enabling it.',
+    )
+
     is_featured = models.BooleanField(default=False)
 
     class Meta:
@@ -89,6 +133,9 @@ class Sighting(RegularPicture):
         indexes = [
             models.Index(fields=['-date']),
             models.Index(fields=['species', '-date']),
+            # What a contributor's own list is read by - their entries, newest
+            # first, including the pending ones no public feed will show them.
+            models.Index(fields=['created_by', '-date']),
         ]
 
     def __str__(self):

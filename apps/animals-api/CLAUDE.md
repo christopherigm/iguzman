@@ -459,7 +459,7 @@ project repeats the brand dict in `users/views.py` **and**
 every sender. That is why it lives in `core` and not in `users`, which is its
 only caller today (verification + password reset).
 
-- **Two parts, always.** `send_branded_email` renders `<template>.txt` *and*
+- **Two parts, always.** `send_branded_email` renders `<template>.txt` _and_
   `<template>.html` and attaches the second as an alternative. The templates are
   bilingual - Spanish first, English below - matching website-api and this
   project's Spanish-bare/`en_`-twin content rule. A client that refuses HTML
@@ -579,6 +579,92 @@ POST /api/ai/research/   draft a whole catalog record from live web sources
 Adding a translated field means adding it to `TRANSLATED_FIELDS`, which is what
 `/api/ai/translate/`'s allowlist is derived from - no edit needed in the AI layer.
 
+## Public contributions - two endpoints, and the line they must not cross
+
+A signed-in reader can propose a **species** and file a **sighting** without the
+CMS (`apps/animals`' `/contribute/*` flow). Two POST-only endpoints serve it:
+
+```
+POST /api/catalog/species/contribute/      IsContributor  -> a pending Species
+POST /api/journal/sightings/contribute/    IsContributor  -> a pending Sighting
+```
+
+⚠ **They are separate URLs with separate serializers on purpose, and that is the
+whole safety argument.** `CachedViewMixin.get_permissions` is what makes every
+write on every resource admin-only; relaxing it would open the entire API to
+every account at once. Instead: `core/permissions.py` → `IsContributor` (any
+authenticated user) guards **only** these two views, and there is no path by which
+widening them widens anything else. There is a test asserting exactly that
+(`core/contribution_tests.py` → `test_the_ordinary_write_endpoints_are_still_admin_only`).
+
+The shared machinery is in `core/`: `contributions.py` (the `photos` field, the
+ceiling, `ContributionSerializer`), `contribute_views.py` (`ContributeView`) and
+`slugs.py` (`unique_slug`).
+
+Seven rules:
+
+- **A contribution is created `enabled=False`** and marked `is_contribution=True`,
+  so it is absent from every public read - the feed, the map, the stats, the
+  catalog lists - with no second visibility rule for a list endpoint to forget.
+  Publishing is an ordinary admin PATCH; the CMS lists it because every CMS read
+  sends `include_disabled=true`. **There is no moderation endpoint and none is
+  needed.**
+- ⚠ **A contribute serializer is a _sibling_ of the CMS write serializer, never a
+  subclass.** Inheriting a field list is exactly how `enabled` or `is_featured`
+  would one day become publicly writable. The field lists are separate, and the
+  only way to widen the public one is to type the field into it. `create()`
+  hard-codes `enabled`, `is_featured` and (for a species) `sort_order` regardless
+  of what was sent.
+- **`href` and `video_link` are absent from both**, deliberately: an arbitrary
+  outbound URL on a row anyone may create is link spam with no upside for a field
+  guide. An administrator can add either after review.
+- **Only the base half of each text pair is writable** (`name`, not `en_name`) -
+  see "Bilingual content" above: the frontend falls back to the base column for
+  every locale whose twin is blank, so a contribution typed in one language reads
+  correctly in all five.
+- **The API derives the slug** (`core/slugs.py`), because nobody types one in the
+  public flow. It counts up (`red-fox-2`) rather than appending a token, so the
+  URL stays recognisable, and it falls back to a fixed stem when the name
+  slugifies to nothing - which a name in a non-Latin script does.
+- **Photos and the record travel in one request**, unlike the CMS's
+  create-then-POST-each-photo path: a contributor has one Submit button, and a row
+  that survived while its pictures failed is a pending entry nobody can tell is
+  broken. Every photo is validated **before** the parent row is created, capped at
+  `MAX_CONTRIBUTION_PHOTOS` (10, mirrored in `lib/contribute.ts`), and written
+  through the record's existing gallery writer - so this path shares the image
+  pipeline rather than growing a second one. `photos[0]` becomes the cover.
+- **Cross-checks the CMS does not need.** A contribution may not be filed under a
+  **disabled** category, nor against a **pending** species (that entry would wait
+  on something that may never be approved - and if the species were rejected,
+  `PROTECT` would leave the sighting holding a row nobody can delete); a sighting
+  needs a place **or** a coordinate pair; and its date may not be in the future.
+
+### The credit line: `author_name`, `author_anonymous`, `created_by`
+
+`Sighting` gained three fields, and they are three different things:
+
+| Field              | What it is                                                            | Published |
+| ------------------ | --------------------------------------------------------------------- | --------- |
+| `author_name`      | the **credit line** printed under the entry - free text, not a lookup | yes       |
+| `author_anonymous` | the contributor's answer to "credit me?"                              | yes       |
+| `created_by`       | the **account**, an audit trail and the contributor's own key         | **never** |
+
+⚠ **Choosing anonymity clears `author_name` at write time; it does not hide it at
+render time.** This payload is cached under a key that varies only by the query
+params and the resolved disabled-visibility, so a field that read differently for
+an administrator would be filled once by an admin request and then replayed to
+every anonymous visitor from the same entry - the identical trap as
+`Location.hide_precise_location`. Nothing is stored, so there is nothing to leak.
+`author_anonymous` travels anyway so the CMS can tell "chose not to be credited"
+from "nobody asked": a reviewer must not helpfully fill in a name against the
+first.
+
+`author_name` is free text rather than derived from `created_by` because an author
+filing a friend's photograph credits the friend - and it is editable in the CMS
+too, so a reviewer can fix a misspelling. `Species` carries only `created_by` and
+`is_contribution`: it is the shared reference record, and there is nobody on it to
+credit.
+
 ## Endpoints
 
 All public on GET, admin-only on write (`IsSiteAdmin`).
@@ -623,6 +709,12 @@ GET    /api/journal/stats/                          landing-page headline number
 GET/PATCH/DELETE  .../<pk>/
 GET               .../slug/<slug>/
 
+# The public contribute flow - any signed-in account, POST only. Separate URLs
+# with separate serializers, NOT a relaxed permission on the lists above; the row
+# lands enabled=False and is published by an administrator. See the section above.
+POST   /api/catalog/species/contribute/             IsContributor
+POST   /api/journal/sightings/contribute/           IsContributor
+
 # Photo galleries. GET is public like every other read; the first row is the
 # record's cover, so `sort_order` on the PATCH is what picks it.
 GET/POST          /api/catalog/categories/<pk>/images/[<img_pk>/]
@@ -649,10 +741,13 @@ sees a draft they have not published yet.
 
 ## Tests
 
-`python manage.py test` (138 tests: `catalog`, `journal`, and `core` for the AI
-endpoints, the permission model, the site-settings endpoint, the branded emails
-and the backup round-trip - the AI tests always mock the provider, so the suite
-spends nothing and needs no network). Inherit
+`python manage.py test` (171 tests: `catalog`, `journal`, and `core` for the AI
+endpoints, the permission model, the site-settings endpoint, the branded emails,
+the backup round-trip and the public contribute flow - the AI tests always mock
+the provider, so the suite spends nothing and needs no network). The contribute
+tests live in `core/contribution_tests.py` and are **imported** by `core/tests.py`
+rather than discovered: the runner only collects `test*.py`, and that module is one
+feature's contract spanning `catalog` and `journal`, so it belongs beside neither. Inherit
 **`core.tests.IsolatedMediaTestCase`** for anything that writes: it redirects
 `MEDIA_ROOT` to a temp directory and clears the cache between tests. Without the
 first, test uploads scatter through the developer's own `media/`; without the
@@ -692,5 +787,12 @@ Deliberately out of scope so far - decide before adding, do not assume:
   English; see "Bilingual content" above for why five stored languages was
   rejected.
 - **No comments, likes or follows.** It is a journal, not a network.
+- **A contributor cannot read back their own pending records.** `created_by` and
+  its index exist on both models, but there is no `?mine=true` on either list and
+  no endpoint that answers "what have I submitted?" - so the frontend can only
+  confirm the submission, not track it. Adding one means deciding whether it is a
+  filter on the existing lists (which are cached under keys that do **not** vary
+  by user - so it would need its own namespace, or no caching at all) or a
+  separate uncached view. The second is almost certainly right.
 - **No trip/outing grouping.** A day out is currently N separate sightings that
   share a date and a location.

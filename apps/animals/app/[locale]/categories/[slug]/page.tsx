@@ -13,6 +13,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { RichText } from "@repo/ui/core-elements/rich-text";
 import { PageBottomSpacer } from "@repo/ui/core-elements/navbar";
+import { FloatingActionButton } from "@repo/ui/core-elements/floating-action-button";
 import {
   getCategory,
   getSpeciesByCategory,
@@ -84,6 +85,7 @@ export default async function CategoryPage({ params }: Props) {
 
   const t = await getTranslations("CategoryPage");
   const tKinds = await getTranslations("Kinds");
+  const tContribute = await getTranslations("Contribute");
   const format = await getFormatter({ locale });
 
   // The species, the journal band and the map all key off the slug rather than
@@ -263,6 +265,22 @@ export default async function CategoryPage({ params }: Props) {
       </Container>
 
       <PageBottomSpacer />
+
+      {/* The page's primary action: propose a species for *this* category, which
+          is why the href carries the slug - the flow locks the category to it
+          rather than opening with a picker (see the contribute page's docstring).
+          Shown to every reader, signed in or not: the FAB is how a reader learns
+          the site takes contributions at all, and the destination explains itself
+          and offers the sign-in. Extended rather than a bare circle, because "+"
+          alone over a species grid reads as "add to a list". It is `position:
+          fixed`, so it sits outside the `Container` and after the spacer that
+          keeps the last row clear of it. */}
+      <FloatingActionButton
+        icon="/icons/add.svg"
+        aria-label={tContribute("addSpecies")}
+        label={tContribute("addSpecies")}
+        href={`/contribute/species?category=${category.slug}`}
+      />
     </Box>
   );
 }

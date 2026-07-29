@@ -190,11 +190,37 @@ class Species(RegularPicture):
     is_featured = models.BooleanField(default=False)
     sort_order = models.PositiveIntegerField(default=0)
 
+    # ---- Contributions ------------------------------------------------------
+    # A species is the *shared* reference record, so unlike a sighting it carries
+    # no public credit line - there is nothing here that belongs to one observer.
+    # These two fields are only about moderation: who proposed the entry, and
+    # whether it is still waiting for an administrator. A contribution is created
+    # with `enabled=False`, so it is invisible to every public read until then.
+    created_by = models.ForeignKey(
+        'auth.User',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='contributed_species',
+        help_text='The account that proposed this entry, for entries filed '
+                  'through the public contribute flow. Never published.',
+    )
+    is_contribution = models.BooleanField(
+        default=False,
+        help_text='Proposed through the public contribute flow rather than the '
+                  'CMS. Such an entry starts disabled and joins the catalog when '
+                  'an administrator enables it.',
+    )
+
     class Meta:
         verbose_name = 'Species'
         verbose_name_plural = 'Species'
         ordering = ['sort_order', 'name']
-        indexes = [models.Index(fields=['category', 'sort_order'])]
+        indexes = [
+            models.Index(fields=['category', 'sort_order']),
+            # The contributor's own list - their proposals, pending ones included.
+            models.Index(fields=['created_by']),
+        ]
 
     def __str__(self):
         return self.name

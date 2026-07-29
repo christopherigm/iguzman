@@ -846,3 +846,9 @@ class BrandedEmailTests(IsolatedMediaTestCase):
         # With no logo the header falls back to the site's name as text.
         self.assertNotIn('<img', html)
         self.assertIn('Cuaderno de Campo', html)
+
+# The public contribute flow's tests. Imported rather than left to discovery:
+# `manage.py test` only collects modules matching `test*.py`, and this one is
+# named for what it covers rather than for the runner's glob - it is one feature's
+# contract spanning `catalog` and `journal`, so it belongs beside neither.
+from .contribution_tests import *  # noqa: E402,F401,F403 isort:skip

@@ -309,6 +309,54 @@ export async function getFeaturedSpecies(limit = 10): Promise<Species[]> {
   return shuffle(species.filter((item) => Boolean(item.image))).slice(0, limit);
 }
 
+/**
+ * A place a sighting can be filed at, as the public contribute flow needs it.
+ *
+ * Deliberately far narrower than the CMS's row: the flow renders these in a
+ * dropdown, so it needs the name pair to label an option and the slug for nothing
+ * at all yet. The geography behind a place (its county, and the state read through
+ * that county) is the CMS's business - a contributor picks a place, they do not
+ * file one.
+ */
+export interface ContributeLocation {
+  id: number;
+  name: string;
+  en_name: string | null;
+  slug: string;
+  place_type: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+/** A weather condition, as an option in the contribute flow's optional stage. */
+export interface ContributeLookup {
+  id: number;
+  name: string;
+  en_name: string | null;
+  slug: string;
+}
+
+/**
+ * Every enabled place, for the contribute flow's location picker.
+ *
+ * A list, so it keeps the list contract - and here that degradation is real
+ * product rather than a shrug: with no places to choose from the flow still works,
+ * because a contributor can drop a pin on the map instead (the API accepts either,
+ * and refuses only an entry that has neither).
+ */
+export async function getContributeLocations(): Promise<ContributeLocation[]> {
+  return fetchList<ContributeLocation>("/api/catalog/locations/", {
+    cache: "no-store",
+  });
+}
+
+/** Every enabled weather condition, for the contribute flow's optional stage. */
+export async function getWeatherConditions(): Promise<ContributeLookup[]> {
+  return fetchList<ContributeLookup>("/api/catalog/weather-conditions/", {
+    cache: "no-store",
+  });
+}
+
 /** Fisher-Yates, so every ordering is equally likely (`sort(() => …)` is not). */
 function shuffle<T>(items: T[]): T[] {
   const result = [...items];

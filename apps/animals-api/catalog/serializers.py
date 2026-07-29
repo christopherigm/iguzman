@@ -1,6 +1,11 @@
 from django.db import transaction
 from rest_framework import serializers
 
+from core.contributions import (
+    MAX_TEXT_LENGTH,
+    ContributionSerializer,
+    photos_field,
+)
 from core.image_sizes import ICON, REGULAR, image_cfg
 from core.serializers import (
     Base64ImagesMixin,
@@ -8,6 +13,7 @@ from core.serializers import (
     file_url,
     gallery_image_url,
 )
+from core.slugs import unique_slug
 
 from .models import (
     Category,
@@ -294,6 +300,82 @@ class SpeciesWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.Mo
             'image', 'icon', 'fit', 'background_color',
             'is_featured', 'sort_order', 'enabled',
         ]
+
+
+class SpeciesContributeSerializer(ContributionSerializer):
+    """What a signed-in reader may propose as a new species.
+
+    Nine fields against ``SpeciesWriteSerializer``'s eighteen, and the difference
+    is the point - see ``core/contributions.py`` on why this is a sibling rather
+    than a subclass. Four things it deliberately does not take:
+
+    * **``slug``** - derived from the name here (``core.slugs.unique_slug``).
+      Inventing a URL segment is the CMS's job, not a reader's.
+    * **``enabled``, ``is_featured``, ``sort_order``** - the three fields that
+      decide whether and how prominently a record appears. Publishing is the
+      administrator's act; ``create`` hard-codes all three.
+    * **``href``, ``video_link``** - two outbound URLs on a record anyone may
+      create, which is a link-spam surface with no upside for a field guide.
+      An administrator can add either after review.
+    * **``icon``** - the 128 px glyph a map pin wears. It is a design asset cut
+      to a house style, not a photograph, and the pin falls back to the
+      category's glyph until an author draws one.
+
+    Only the **base** text pair member is writable (``name``, not ``en_name``): a
+    contributor types in one language, and ``localized()`` on the frontend falls
+    back to the base column for every locale whose twin is blank, so the entry
+    reads correctly everywhere without asking a reader to translate themselves.
+    """
+
+    photos = photos_field()
+    photo_write_serializer_class = SpeciesImageWriteSerializer
+
+    description = serializers.CharField(
+        required=False, allow_blank=True, max_length=MAX_TEXT_LENGTH
+    )
+    short_description = serializers.CharField(
+        required=False, allow_blank=True, max_length=500
+    )
+
+    class Meta:
+        model = Species
+        fields = [
+            'category', 'name', 'scientific_name', 'family',
+            'description', 'short_description', 'photos',
+        ]
+
+    def validate_category(self, value):
+        # A disabled category is one an administrator has taken off the site;
+        # filing under it would create a species with nowhere to appear even
+        # after it is approved.
+        if not value.enabled:
+            raise serializers.ValidationError('This category is not available.')
+        return value
+
+    def validate_name(self, value):
+        name = (value or '').strip()
+        if not name:
+            raise serializers.ValidationError('This field may not be blank.')
+        return name
+
+    @transaction.atomic
+    def create(self, validated_data):
+        photos = validated_data.pop('photos', [])
+        instance = Species(
+            **validated_data,
+            slug=unique_slug(Species, validated_data.get('name'), fallback='species'),
+            created_by=self._request_user(),
+            is_contribution=True,
+            # Invisible to every public read until an administrator enables it.
+            # The same flag an unpublished CMS draft uses, so there is no second
+            # visibility rule for a list endpoint to forget.
+            enabled=False,
+            is_featured=False,
+            sort_order=0,
+        )
+        instance.save()
+        self._write_photos(instance, photos)
+        return instance
 
 
 # ---------------------------------------------------------------------------

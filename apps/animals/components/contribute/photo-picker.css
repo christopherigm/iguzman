@@ -1,0 +1,25 @@
+/* The contribute flow's photo picker. Only what props cannot express lives here:
+   the hidden file input, and the hover state on a tile. */
+
+/* Triggered by the Add button beside it, never focused directly. `display: none`
+   would take it out of the form in some older WebKit builds, so it is collapsed
+   instead - the same trick the CMS's uploader uses. */
+.contribute-photo-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.contribute-photo {
+  transition: border-color 160ms ease;
+}
+
+.contribute-photo:hover {
+  border-color: var(--accent, #06b6d4);
+}

@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.cache import cached_get, cached_set, invalidate
+from core.contribute_views import ContributeView
 from core.views import CachedDetailView, CachedListCreateView
 from core.permissions import IsSiteAdmin
 
@@ -41,6 +42,7 @@ from .serializers import (
     SeasonImageWriteSerializer,
     SeasonSerializer,
     SeasonWriteSerializer,
+    SpeciesContributeSerializer,
     SpeciesImageSerializer,
     SpeciesImageWriteSerializer,
     SpeciesSerializer,
@@ -610,3 +612,23 @@ class LocationDetailView(CachedDetailView):
     # through the county, so without it every row costs two extra queries.
     select_related = ('parent', 'county', 'county__state')
     prefetch_related = ('sightings', 'images')
+
+
+class SpeciesContributeView(ContributeView):
+    """
+    POST /api/catalog/species/contribute/ - propose a species (any signed-in user).
+
+    Its own URL rather than a relaxed permission on `SpeciesListCreateView`,
+    because that view's `get_permissions` is what makes every write on every
+    resource administrator-only - see `core/contribute_views.py`. The row lands
+    `enabled=False`, so it joins the catalog when an administrator enables it in
+    the CMS, which lists it because every CMS read sends `include_disabled=true`.
+    """
+
+    serializer_class = SpeciesContributeSerializer
+    response_serializer_class = SpeciesSerializer
+    # A pending species is invisible to the public lists, so the only reader that
+    # can see it is the CMS - whose species list *and* the parent category's
+    # payload (`species_count` counts enabled rows, so it does not move, but the
+    # admin list is read through the same namespace) come from these two.
+    cache_prefixes = (keys.SPECIES_LIST, keys.SPECIES, keys.CATEGORIES, keys.CATEGORY)
