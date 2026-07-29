@@ -1,14 +1,14 @@
-import { getTranslations, setRequestLocale } from 'next-intl/server';
-import { Box } from '@repo/ui/core-elements/box';
-import { Container } from '@repo/ui/core-elements/container';
-import { NavbarSpacer, PageBottomSpacer } from '@repo/ui/core-elements/navbar';
-import { getCategories, getFeaturedSpecies } from '@/lib/catalog';
-import { getLatestMapPins, getLatestSightings } from '@/lib/journal';
-import { localized } from '@/lib/i18n-field';
-import { SightingsSection } from '@/components/journal/sightings-section';
-import { SightingsMapSection } from '@/components/journal/sightings-map-section';
-import { SpeciesGallery, type SpeciesSlide } from './species-gallery';
-import { CategoryNav } from './category-nav';
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { Box } from "@repo/ui/core-elements/box";
+import { Container } from "@repo/ui/core-elements/container";
+import { NavbarSpacer, PageBottomSpacer } from "@repo/ui/core-elements/navbar";
+import { getCategories, getFeaturedSpecies } from "@/lib/catalog";
+import { getLatestMapPins, getLatestSightings } from "@/lib/journal";
+import { localized } from "@/lib/i18n-field";
+import { SightingsSection } from "@/components/journal/sightings-section";
+import { SightingsMapSection } from "@/components/journal/sightings-map-section";
+import { SpeciesGallery, type SpeciesSlide } from "./species-gallery";
+import { CategoryNav } from "./category-nav";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -26,8 +26,8 @@ export default async function Home({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const t = await getTranslations('HomePage');
-  const tGallery = await getTranslations('Gallery');
+  const t = await getTranslations("HomePage");
+  const tGallery = await getTranslations("Gallery");
 
   // Four independent sections, so they are fetched together rather than in
   // series; each fetcher answers an empty list instead of throwing, so a dead
@@ -48,10 +48,14 @@ export default async function Home({ params }: Props) {
       {
         id: item.id,
         slug: item.slug,
-        name: localized(item, 'name', locale) ?? item.slug,
-        shortDescription: localized(item, 'short_description', locale),
+        name: localized(item, "name", locale) ?? item.slug,
+        shortDescription: localized(item, "short_description", locale),
         scientificName: item.scientific_name,
-        categoryName: localized({ name: item.category_name, en_name: item.category_en_name }, 'name', locale),
+        categoryName: localized(
+          { name: item.category_name, en_name: item.category_en_name },
+          "name",
+          locale,
+        ),
         categorySlug: item.category_slug,
         image: item.image,
       },
@@ -68,8 +72,7 @@ export default async function Home({ params }: Props) {
       {hasGallery ? (
         <SpeciesGallery
           slides={speciesSlides}
-          locale={locale}
-          labels={{ previous: tGallery('previous'), next: tGallery('next') }}
+          labels={{ previous: tGallery("previous"), next: tGallery("next") }}
         />
       ) : (
         // With no gallery the page would start underneath the fixed navbar.
@@ -87,8 +90,8 @@ export default async function Home({ params }: Props) {
           <SightingsSection
             sightings={sightings}
             locale={locale}
-            title={t('latestSightingsTitle')}
-            subtitle={t('latestSightingsSubtitle')}
+            title={t("latestSightingsTitle")}
+            subtitle={t("latestSightingsSubtitle")}
           />
         </Container>
       )}
@@ -102,8 +105,8 @@ export default async function Home({ params }: Props) {
           <SightingsMapSection
             pins={mapPins}
             locale={locale}
-            title={t('mapTitle')}
-            subtitle={t('mapSubtitle', { count: MAP_PINS_PER_CATEGORY })}
+            title={t("mapTitle")}
+            subtitle={t("mapSubtitle", { count: MAP_PINS_PER_CATEGORY })}
           />
         </Container>
       )}

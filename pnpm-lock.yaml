@@ -830,6 +830,9 @@ importers:
       '@repo/helpers':
         specifier: workspace:*
         version: link:../helpers
+      '@repo/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       chart.js:
         specifier: ^4.5.1
         version: 4.5.1

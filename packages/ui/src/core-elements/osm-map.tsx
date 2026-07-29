@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import { Box } from "./box";
+import { IconButton } from "./icon-button";
 import { Typography } from "./typography";
 import {
   fitBounds,
@@ -73,14 +74,22 @@ import "./osm-map.css";
  *   (`osm-map.css`), light and dark, because OSM's cartography is far louder
  *   than the pages it sits on. The tiles themselves cannot be restyled - they
  *   arrive as finished PNGs.
- * - **`showUserLocation` asks the browser for a permission**, so it is opt-in
- *   and never frames the camera. See the note on the prop.
+ * - **The reader is never located until they ask.** `locateControl` renders a
+ *   button; nothing here calls `navigator.geolocation` on mount. See the note
+ *   on the prop.
  *
  * This package is i18n-agnostic, so every string arrives through `labels`.
  */
 
 const MIN_ZOOM = 2;
 const MAX_ZOOM = 17;
+/**
+ * The zoom a locate lands on when the map was framed wider than it. Centring on
+ * the reader at a continental zoom answers "where am I?" with a pin in the
+ * middle of a country, so a coarser camera is pulled in - but a reader already
+ * looking at a street keeps their own, closer, framing.
+ */
+const LOCATE_ZOOM = 13;
 /** Deepest zoom `fitBounds` may choose - a single pin should not open on rooftops. */
 const DEFAULT_MAX_FIT_ZOOM = 13;
 /** How far outside the viewport a marker is still rendered, in px. */
@@ -89,6 +98,19 @@ const CULL_MARGIN = 80;
 const FAN_RADIUS = 15;
 /** Width of a marker's card, and how far from an edge it may be drawn. */
 const DEFAULT_POPUP_WIDTH = 228;
+
+/**
+ * What the locate and fullscreen buttons wear. An `IconButton`'s own default is
+ * a faint tint over whatever is behind it, which over a map is a road: these sit
+ * on the same opaque plate as the zoom control, so the two controls read as one
+ * set of chrome rather than two.
+ */
+const CONTROL_STYLE = {
+  iconColor: "var(--foreground)",
+  backgroundColor: "var(--surface-1, #ffffff)",
+  border: "1px solid color-mix(in srgb, var(--foreground) 14%, transparent)",
+  elevation: 2,
+} as const;
 
 /** One pin. Consumers extend this with whatever their own card needs. */
 export interface OsmMapMarker {
@@ -118,9 +140,14 @@ export interface OsmMapLabels {
   empty?: string;
   /**
    * Names the visitor's own pin. Defaults to English, like `ConfirmationModal`'s
-   * buttons - it is only rendered when `showUserLocation` is on.
+   * buttons - it is only rendered when `locateControl` is on.
    */
   yourLocation?: string;
+  /** Names the locate button. English default, like `yourLocation`. */
+  locate?: string;
+  /** Names the fullscreen button, and the close button that replaces it. */
+  enterFullscreen?: string;
+  exitFullscreen?: string;
 }
 
 export interface OsmMapProps<M extends OsmMapMarker = OsmMapMarker> {
@@ -142,19 +169,39 @@ export interface OsmMapProps<M extends OsmMapMarker = OsmMapMarker> {
   /** Width of that card. @default 228 */
   popupWidth?: number;
   /**
-   * Draw a pin where the visitor is. @default false
+   * Offer a button that pins where the visitor is. @default false
    *
-   * ⚠ Opt-in because it **asks the browser for the geolocation permission**, on
-   * mount, which is a prompt the reader did not click anything to get - so a map
-   * only turns it on where knowing "am I near this?" is the point. A refusal, a
-   * device with no fix, or an insecure origin all leave the map exactly as it is:
-   * the pin is an addition to it, never a precondition.
+   * ⚠ **Nothing here asks for the geolocation permission until that button is
+   * pressed.** This map used to locate the reader on mount, which put a browser
+   * permission dialog in front of anyone who merely scrolled onto a page
+   * carrying a map - a prompt they clicked nothing to get, and one a refusal
+   * makes permanent for the origin. The button is the click that asks.
    *
-   * It also **does not move the camera**. The framing belongs to `markers`, and
-   * a reader three countries away would otherwise have the map zoom out to a
-   * continent to hold both them and the pins.
+   * A refusal, a device with no fix, and an insecure origin are all the same
+   * path: no pin, no message, the map exactly as it was - so never write a
+   * branch that reports the failure.
+   *
+   * A *press* does move the camera - centring on the reader is the whole point
+   * of asking, and a pin drawn silently outside the viewport reads as a button
+   * that did nothing. The **initial framing** still belongs to `markers` alone.
    */
-  showUserLocation?: boolean;
+  locateControl?: boolean;
+  /**
+   * Offer a button that blows the map up to fill the viewport. @default false
+   *
+   * A CSS overlay (`position: fixed`), not the Fullscreen API: `requestFullscreen`
+   * on an element is still unsupported on iPhone Safari, where the button would
+   * simply be dead. `Escape` leaves it, and so does the close button that
+   * replaces this one while it is open.
+   */
+  fullscreenControl?: boolean;
+  /**
+   * The three control glyphs. Defaulted to the paths every app in this monorepo
+   * keeps them at, so a consumer only names one it has moved.
+   */
+  locateIcon?: string;
+  fullscreenIcon?: string;
+  closeIcon?: string;
   className?: string;
 }
 
@@ -165,7 +212,11 @@ export function OsmMap<M extends OsmMapMarker = OsmMapMarker>({
   maxFitZoom = DEFAULT_MAX_FIT_ZOOM,
   renderPopup,
   popupWidth = DEFAULT_POPUP_WIDTH,
-  showUserLocation = false,
+  locateControl = false,
+  fullscreenControl = false,
+  locateIcon = "/icons/location-arrow.svg",
+  fullscreenIcon = "/icons/fullscreen.svg",
+  closeIcon = "/icons/close.svg",
   className,
 }: OsmMapProps<M>) {
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
@@ -174,8 +225,12 @@ export function OsmMap<M extends OsmMapMarker = OsmMapMarker>({
   const [selected, setSelected] = useState<string | number | null>(null);
   /** The gesture scrim's text, or `null` when it is down. */
   const [hint, setHint] = useState<string | null>(null);
-  /** Where the visitor is - `null` until the browser says, and if it never does. */
+  /** Where the visitor is - `null` until they ask, and if the browser never says. */
   const [userPoint, setUserPoint] = useState<LatLng | null>(null);
+  /** A fix is being waited on: the locate button spins rather than repeating. */
+  const [locating, setLocating] = useState(false);
+  /** Whether the map is currently blown up over the page. */
+  const [fullscreen, setFullscreen] = useState(false);
 
   const viewportRef = useRef<HTMLDivElement>(null);
 
@@ -213,10 +268,15 @@ export function OsmMap<M extends OsmMapMarker = OsmMapMarker>({
   const cameraRef = useRef({ center, zoom });
   const sizeRef = useRef(size);
   const labelsRef = useRef(labels);
+  /** Both read by `Escape`, which closes a card before it leaves fullscreen. */
+  const fullscreenRef = useRef(fullscreen);
+  const selectedRef = useRef(selected);
   useEffect(() => {
     cameraRef.current = { center, zoom };
     sizeRef.current = size;
     labelsRef.current = labels;
+    fullscreenRef.current = fullscreen;
+    selectedRef.current = selected;
   });
 
   /**
@@ -232,31 +292,36 @@ export function OsmMap<M extends OsmMapMarker = OsmMapMarker>({
   }, []);
 
   /**
-   * The visitor's own position, asked for once per mount.
+   * The visitor's own position, asked for **when they press the button** and
+   * never before - see the note on `locateControl`.
    *
    * Every failure path - the permission refused, no fix, a page served over
    * plain HTTP where the API is not exposed at all - is the same one: leave
    * `userPoint` null and draw the map without it. There is nothing to report,
    * because nothing was promised; the reader either sees their pin or does not.
+   * The spinner stops either way, so a second press can try again.
    */
-  useEffect(() => {
-    if (!showUserLocation || !navigator.geolocation) return;
-    let live = true;
+  const locate = () => {
+    if (locating) return;
+    if (typeof navigator === "undefined" || !navigator.geolocation) return;
+    setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        if (!live) return;
-        setUserPoint({
+        const point = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
-        });
+        };
+        setUserPoint(point);
+        // The press is the reader asking to be shown, so the camera follows -
+        // unlike the initial framing, which belongs to `markers` alone.
+        setCenter(point);
+        setZoom((z) => Math.max(z, LOCATE_ZOOM));
+        setLocating(false);
       },
-      () => {},
+      () => setLocating(false),
       OSM_GEOLOCATION_OPTIONS,
     );
-    return () => {
-      live = false;
-    };
-  }, [showUserLocation]);
+  };
 
   /** Set by a drag that started on a marker, so releasing it does not select. */
   const draggedRef = useRef(false);
@@ -491,7 +556,11 @@ export function OsmMap<M extends OsmMapMarker = OsmMapMarker>({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setSelected(null);
+        // While the map is fullscreen, `Escape` is the window listener's - it
+        // has to answer whether or not the viewport itself holds focus, and two
+        // handlers would otherwise close the card *and* leave fullscreen on one
+        // press.
+        if (!fullscreenRef.current) setSelected(null);
         return;
       }
       const step = e.shiftKey ? 200 : 60;
@@ -543,6 +612,40 @@ export function OsmMap<M extends OsmMapMarker = OsmMapMarker>({
       if (hintTimer) clearTimeout(hintTimer);
     };
   }, []);
+
+  /**
+   * What being fullscreen costs the page underneath: its scroll, and its
+   * `Escape`.
+   *
+   * The listener is on the window rather than on the viewport because the map
+   * covering the whole screen does not mean it holds focus - a reader who got
+   * here with the mouse has focus wherever they left it, and `Escape` still has
+   * to let them out. It closes an open card first, so the key unwinds one layer
+   * per press.
+   *
+   * The scroll lock is what stops the page drifting behind the overlay: without
+   * it a wheel over the map (which this map deliberately gives back to the page)
+   * scrolls the document underneath, and leaving fullscreen lands the reader
+   * somewhere they never went.
+   */
+  useEffect(() => {
+    if (!fullscreen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (selectedRef.current !== null) setSelected(null);
+      else setFullscreen(false);
+    };
+    window.addEventListener("keydown", handleEscape);
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [fullscreen]);
 
   // ── Placement ─────────────────────────────────────────────────────────────
 
@@ -616,19 +719,33 @@ export function OsmMap<M extends OsmMapMarker = OsmMapMarker>({
 
   const popupInset = popupWidth / 2 + 4;
 
+  // English defaults, like `ConfirmationModal`'s buttons: a control this package
+  // renders on its own must still be named when a consumer has not translated it.
+  const locateLabel = labels.locate ?? "Show my location";
+  const enterFullscreenLabel = labels.enterFullscreen ?? "Fullscreen";
+  const exitFullscreenLabel = labels.exitFullscreen ?? "Exit fullscreen";
+
   return (
     <Box
       ref={viewportRef}
       role="application"
       aria-label={labels.map}
       tabIndex={0}
-      height={height}
-      borderRadius={12}
-      border="1px solid color-mix(in srgb, var(--foreground) 18%, transparent)"
+      height={fullscreen ? "100%" : height}
+      borderRadius={fullscreen ? 0 : 12}
+      border={
+        fullscreen
+          ? "none"
+          : "1px solid color-mix(in srgb, var(--foreground) 18%, transparent)"
+      }
       backgroundColor="var(--surface-2)"
       className={`ui-osm-map__viewport${className ? ` ${className}` : ""}`}
       styles={{
-        position: "relative",
+        // Fullscreen is a fixed overlay, not the Fullscreen API - see the note
+        // on `fullscreenControl`. The z-index clears `Toast` (1000) so a
+        // notification cannot land behind a map filling the screen.
+        position: fullscreen ? "fixed" : "relative",
+        ...(fullscreen ? { inset: 0, zIndex: 1100, width: "100%" } : {}),
         overflow: "hidden",
         touchAction: "none",
         userSelect: "none",
@@ -761,6 +878,42 @@ export function OsmMap<M extends OsmMapMarker = OsmMapMarker>({
       )}
 
       {hint && <OsmGestureHint text={hint} />}
+
+      {/* The reader's own controls, opposite the zoom stack. The row keeps its
+          corner and its order across the toggle - the locate button never
+          moves, and the close button simply takes the place the fullscreen one
+          held - so nothing has to be found again after the map opens. */}
+      {(locateControl || fullscreenControl) && (
+        <Box
+          className={OSM_CHROME_CLASS}
+          gap={8}
+          alignItems="center"
+          styles={{ position: "absolute", right: 10, top: 10, zIndex: 4 }}
+        >
+          {locateControl && (
+            <IconButton
+              icon={locateIcon}
+              aria-label={locateLabel}
+              title={locateLabel}
+              onClick={locate}
+              isLoading={locating}
+              {...CONTROL_STYLE}
+            />
+          )}
+          {fullscreenControl && (
+            <IconButton
+              icon={fullscreen ? closeIcon : fullscreenIcon}
+              aria-label={
+                fullscreen ? exitFullscreenLabel : enterFullscreenLabel
+              }
+              title={fullscreen ? exitFullscreenLabel : enterFullscreenLabel}
+              aria-pressed={fullscreen}
+              onClick={() => setFullscreen((on) => !on)}
+              {...CONTROL_STYLE}
+            />
+          )}
+        </Box>
+      )}
 
       <OsmZoomControl
         zoomInLabel={labels.zoomIn}

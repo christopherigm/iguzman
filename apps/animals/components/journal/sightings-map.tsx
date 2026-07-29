@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useCallback, useMemo, useState } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { Box } from '@repo/ui/core-elements/box';
-import { Card } from '@repo/ui/core-elements/card';
-import { Button } from '@repo/ui/core-elements/button';
-import { Select } from '@repo/ui/core-elements/select';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { OsmMap, type OsmMapMarker } from '@repo/ui/core-elements/osm-map';
-import './sightings-map.css';
+import { useCallback, useMemo, useState } from "react";
+import Image from "next/image";
+import { Link } from "@repo/i18n/navigation";
+import { Box } from "@repo/ui/core-elements/box";
+import { Card } from "@repo/ui/core-elements/card";
+import { Button } from "@repo/ui/core-elements/button";
+import { Select } from "@repo/ui/core-elements/select";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { OsmMap, type OsmMapMarker } from "@repo/ui/core-elements/osm-map";
+import "./sightings-map.css";
 
 /**
  * Every pinned journal entry on one map, with each marker wearing its
@@ -32,6 +32,11 @@ import './sightings-map.css';
  * - **A single-pin map still comes through here**, from a sighting's own page,
  *   with `filters={[]}`. It gets the same pin, the same card and the same
  *   gestures as the map of a whole category - one map component, not two.
+ * - **Both map controls are on by default here**, and the icons they wear are
+ *   `OsmMap`'s own defaults - `/icons/location-arrow.svg`, `/icons/fullscreen.svg`
+ *   and `/icons/close.svg`, all of which this app ships. Locating the reader is
+ *   a *button* now: nothing on these pages asks the browser where anyone is
+ *   until it is pressed.
  */
 
 /**
@@ -64,7 +69,7 @@ export interface SightingMarker extends OsmMapMarker {
 }
 
 /** Which dropdowns to offer. A filter with fewer than two values is dropped. */
-export type SightingsMapFilter = 'category' | 'species' | 'location' | 'year';
+export type SightingsMapFilter = "category" | "species" | "location" | "year";
 
 interface Props {
   markers: SightingMarker[];
@@ -78,15 +83,17 @@ interface Props {
    */
   maxFitZoom?: number;
   /**
-   * Pin the reader's own position too. @default true
+   * Offer the button that pins the reader's own position. @default true
    *
    * On by default because "is any of this near me?" is the question a field
    * journal's map is read with - a pin over the next valley means something the
-   * same pin over a country does not. It costs the browser's geolocation prompt
-   * on the pages that carry a map, and nothing when it is refused: the pin
-   * simply never appears, and the map is the one it always was.
+   * same pin over a country does not. It is a **button**, not something the map
+   * does on its own: the permission dialog now costs a click, so arriving on a
+   * page that happens to carry a map costs nothing at all.
    */
-  showUserLocation?: boolean;
+  locateControl?: boolean;
+  /** Offer the button that fills the screen with the map. @default true */
+  fullscreenControl?: boolean;
   labels: {
     map: string;
     zoomIn: string;
@@ -101,8 +108,12 @@ interface Props {
     empty: string;
     approximate: string;
     seeDetail: string;
-    /** Names the visitor's own pin - see `showUserLocation` below. */
+    /** Names the visitor's own pin - see `locateControl` above. */
     yourLocation: string;
+    /** Names the three map controls: locate, and both faces of the fullscreen toggle. */
+    locate: string;
+    fullscreen: string;
+    exitFullscreen: string;
     /** The scrim a bare wheel raises. Both are passed; the client picks one. */
     zoomHint: string;
     zoomHintMac: string;
@@ -112,18 +123,19 @@ interface Props {
 type Selection = Record<SightingsMapFilter, string>;
 
 const NO_SELECTION: Selection = {
-  category: '',
-  species: '',
-  location: '',
-  year: '',
+  category: "",
+  species: "",
+  location: "",
+  year: "",
 };
 
 export function SightingsMap({
   markers,
-  filters = ['category', 'species', 'location', 'year'],
+  filters = ["category", "species", "location", "year"],
   height = 420,
   maxFitZoom,
-  showUserLocation = true,
+  locateControl = true,
+  fullscreenControl = true,
   labels,
 }: Props) {
   const [selection, setSelection] = useState<Selection>(NO_SELECTION);
@@ -131,7 +143,10 @@ export function SightingsMap({
   // Built from the markers themselves: the dropdowns describe what is on the
   // map, so an option that would empty it is never offered in the first place.
   const options = useMemo(() => {
-    const pick: Record<SightingsMapFilter, (m: SightingMarker) => string | null> = {
+    const pick: Record<
+      SightingsMapFilter,
+      (m: SightingMarker) => string | null
+    > = {
       category: (m) => m.categoryName,
       species: (m) => m.speciesName,
       location: (m) => m.locationName,
@@ -147,7 +162,7 @@ export function SightingsMap({
       // Years read newest first, like the feed they came from; the rest read
       // alphabetically in the visitor's own locale.
       out[filter] =
-        filter === 'year'
+        filter === "year"
           ? [...values].sort().reverse()
           : [...values].sort((a, b) => a.localeCompare(b));
     }
@@ -172,7 +187,9 @@ export function SightingsMap({
 
   // Only the filters that have something to choose between: a dropdown offering
   // one species is a control that can only ever be a no-op.
-  const shownFilters = filters.filter((filter) => (options[filter]?.length ?? 0) > 1);
+  const shownFilters = filters.filter(
+    (filter) => (options[filter]?.length ?? 0) > 1,
+  );
 
   return (
     <Box flexDirection="column" gap={12} width="100%">
@@ -185,7 +202,7 @@ export function SightingsMap({
               value={selection[filter]}
               onChange={(value) => setFilter(filter, value)}
               options={[
-                { value: '', label: labels.all },
+                { value: "", label: labels.all },
                 ...(options[filter] ?? []).map((value) => ({
                   value,
                   label: value,
@@ -203,7 +220,8 @@ export function SightingsMap({
         markers={visible}
         height={height}
         {...(maxFitZoom ? { maxFitZoom } : {})}
-        showUserLocation={showUserLocation}
+        locateControl={locateControl}
+        fullscreenControl={fullscreenControl}
         labels={{
           map: labels.map,
           zoomIn: labels.zoomIn,
@@ -213,6 +231,9 @@ export function SightingsMap({
           zoomHintMac: labels.zoomHintMac,
           empty: labels.empty,
           yourLocation: labels.yourLocation,
+          locate: labels.locate,
+          enterFullscreen: labels.fullscreen,
+          exitFullscreen: labels.exitFullscreen,
         }}
         renderPopup={(marker, close) => (
           <MarkerCard marker={marker} labels={labels} onClose={close} />
@@ -229,23 +250,23 @@ function MarkerCard({
   onClose,
 }: {
   marker: SightingMarker;
-  labels: Props['labels'];
+  labels: Props["labels"];
   onClose: () => void;
 }) {
   return (
-    <Card padding={0} gap={0} styles={{ overflow: 'hidden' }}>
+    <Card padding={0} gap={0} styles={{ overflow: "hidden" }}>
       {marker.image && (
         <Box
           height={104}
           width="100%"
-          styles={{ position: 'relative', overflow: 'hidden' }}
+          styles={{ position: "relative", overflow: "hidden" }}
         >
           <Image
             src={marker.image}
             alt=""
             fill
             unoptimized
-            style={{ objectFit: 'cover' }}
+            style={{ objectFit: "cover" }}
           />
         </Box>
       )}
@@ -268,12 +289,15 @@ function MarkerCard({
             onClick={onClose}
             color="var(--foreground)"
             paddingX={4}
-            styles={{ cursor: 'pointer', lineHeight: 1 }}
+            styles={{ cursor: "pointer", lineHeight: 1 }}
           />
         </Box>
 
         {marker.speciesName && (
-          <Typography variant="caption" color="var(--foreground-muted, #6b7280)">
+          <Typography
+            variant="caption"
+            color="var(--foreground-muted, #6b7280)"
+          >
             {marker.speciesName}
           </Typography>
         )}

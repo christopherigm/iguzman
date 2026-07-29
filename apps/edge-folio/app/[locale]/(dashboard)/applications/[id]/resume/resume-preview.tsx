@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
-import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@repo/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { Container } from "@repo/ui/core-elements/container";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -72,7 +72,6 @@ export function ResumePreview({
   profilePictureBase64,
 }: Props) {
   const t = useTranslations("ApplicationDetailPage");
-  const locale = useLocale();
 
   const tailoredBullets = useMemo(
     () => application.tailored_bullets ?? [],
@@ -203,7 +202,7 @@ export function ResumePreview({
           </Typography>
         </Box>
         <Link
-          href={`/${locale}/applications/${application.id}`}
+          href={`/applications/${application.id}`}
           prefetch
           className="resume-preview__back"
         >

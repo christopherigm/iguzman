@@ -68,10 +68,10 @@ This is a **Turborepo monorepo** with Next.js applications and shared packages.
 ### Packages (`packages/`)
 
 - **`@repo/helpers`** - Core utility library (~9k lines). Contains video processing (concat, audio/subtitle/image composition), data validation, and audio manipulation. Each utility is documented with a companion `.md` file
-- **`@repo/ui`** - Shared React components, theme providers, palette system, and the `use-ffmpeg` hook for FFmpeg WASM integration (depends on `next/*`; web apps only)
+- **`@repo/ui`** - Shared React components, theme providers, palette system, and the `use-ffmpeg` hook for FFmpeg WASM integration (depends on `next/*` and on `@repo/i18n` for locale-aware links; web apps only)
 - **`@repo/ui-tv`** - Smart TV (Tizen) React primitives: D-pad spatial navigation, 10-foot components, and the old-Chromium-safe `TvImage`. Bundler-agnostic (no `next/*`) so it runs in the Vite/Tizen SPA. See `packages/ui-tv/CLAUDE.md`
 - **`@repo/ui-native`** - React Native primitives for Expo apps: props-first `Box`/`Typography`/`Button`/`Screen` (the native mirror of `@repo/ui`'s props-first API), a themed palette system, and `ThemeProvider`/`useTheme`. Imports only `react`/`react-native` (no `next/*`, no DOM) so Metro bundles it from source. See `packages/ui-native/CLAUDE.md`
-- **`@repo/i18n`** - `next-intl` routing and config for multi-locale support, plus the shared message namespaces (`Common`, `PasswordPolicy`) every app merges into its own
+- **`@repo/i18n`** - `next-intl` routing and config for multi-locale support, plus the shared message namespaces (`Common`, `PasswordPolicy`) every app merges into its own. It also owns **`navigation.ts`**, the locale-aware `Link`/`useRouter`/`redirect`/`usePathname`/`getPathname` that **every** internal link and navigation in the monorepo goes through - hrefs are written locale-less and the prefix is applied at render time. See `apps/CLAUDE.md` → "Link Convention"
 - **`@repo/auth`** - The auth stack shared by `cinelog`, `edge-folio`, `website` and `tanda`, and by every app `pnpm new-app` scaffolds: server-side session (`getSession`), `apiFetch` with refresh-and-retry, the `createAuthProxy` middleware factory, browser auth calls + passkeys, `SessionProvider`/`useSession`, and the password policy. See "Auth" below and `packages/auth/CLAUDE.md`
 - **`@repo/eslint-config`** - Shared flat ESLint config (Next.js variant)
 - **`@repo/typescript-config`** - Shared `tsconfig` base (ESM, strict, ES2022)
@@ -109,10 +109,10 @@ See `apps/help/CLAUDE.md` for the full inventory: which scripts map to which con
 Transitive-dependency CVEs are pinned with pnpm `overrides`, which are deliberately
 duplicated in **two** places:
 
-| File                 | Read by                                          |
-| -------------------- | ------------------------------------------------ |
-| `package.json` → `pnpm.overrides` | pnpm 9 (what `packageManager` pins) |
-| `pnpm-workspace.yaml` → `overrides` | pnpm 10 and 11                    |
+| File                                | Read by                             |
+| ----------------------------------- | ----------------------------------- |
+| `package.json` → `pnpm.overrides`   | pnpm 9 (what `packageManager` pins) |
+| `pnpm-workspace.yaml` → `overrides` | pnpm 10 and 11                      |
 
 **Do not delete either copy.** pnpm 9 ignores the YAML file, and pnpm 10+ ignores the
 `pnpm` field in `package.json` (warning on every command, without failing the install) -

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "@repo/i18n/navigation";
 import "./locale-switcher.css";
 
 const DEFAULT_FLAGS: Record<string, string> = {
@@ -61,10 +61,25 @@ export function LocaleSwitcher({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  /**
+   * ⚠ **This must go through next-intl's router, not `next/navigation`'s.**
+   *
+   * This used to rewrite path segment 1 by hand and `router.push` the result.
+   * It navigated correctly, but it skipped next-intl's `syncLocaleCookie` -
+   * the client-side write of `NEXT_LOCALE` that only its own `Link`/`useRouter`
+   * perform. The middleware does not cover for it either: `syncCookie` ignores
+   * any request whose `Sec-Fetch-Dest` is not `document`, and a soft navigation
+   * fetches RSC with `Sec-Fetch-Dest: empty`.
+   *
+   * So the URL became `/es` while the cookie stayed `en`, and every locale-less
+   * href on the page then resolved through that stale cookie (`resolveLocale`
+   * prio 2) and redirected the reader back to `/en`. Hence `replace(pathname,
+   * { locale })`: `pathname` here is already locale-less - it comes from
+   * next-intl's `usePathname` - and the router writes both the prefix and the
+   * cookie.
+   */
   const switchLocale = (locale: string) => {
-    const segments = pathname.split("/");
-    segments[1] = locale;
-    router.push(segments.join("/"));
+    router.replace(pathname, { locale });
     setOpen(false);
   };
 

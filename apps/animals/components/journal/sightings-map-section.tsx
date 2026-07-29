@@ -1,13 +1,13 @@
-import { getFormatter, getTranslations } from 'next-intl/server';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import type { SightingMapPin } from '@/lib/journal';
-import { localized } from '@/lib/i18n-field';
+import { getFormatter, getTranslations } from "next-intl/server";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import type { SightingMapPin } from "@/lib/journal";
+import { localized } from "@/lib/i18n-field";
 import {
   SightingsMap,
   type SightingMarker,
   type SightingsMapFilter,
-} from './sightings-map';
+} from "./sightings-map";
 
 /**
  * A titled band holding the map, and the server half of it.
@@ -53,9 +53,9 @@ export async function SightingsMapSection({
   height,
   maxFitZoom,
 }: Props) {
-  const t = await getTranslations('Map');
-  const tSighting = await getTranslations('Sighting');
-  const tSightingPage = await getTranslations('SightingPage');
+  const t = await getTranslations("Map");
+  const tSighting = await getTranslations("Sighting");
+  const tSightingPage = await getTranslations("SightingPage");
   const format = await getFormatter({ locale });
 
   if (pins.length === 0) return null;
@@ -81,24 +81,27 @@ export async function SightingsMapSection({
         {...(height ? { height } : {})}
         {...(maxFitZoom ? { maxFitZoom } : {})}
         labels={{
-          map: t('label'),
-          zoomIn: t('zoomIn'),
-          zoomOut: t('zoomOut'),
-          attribution: t('attribution'),
-          close: t('close'),
-          all: t('filterAll'),
-          category: tSighting('category'),
-          species: tSighting('species'),
-          location: tSighting('location'),
-          year: t('filterYear'),
-          empty: t('empty'),
-          approximate: tSightingPage('mapApproximate'),
-          seeDetail: tSighting('seeDetail'),
-          yourLocation: t('yourLocation'),
+          map: t("label"),
+          zoomIn: t("zoomIn"),
+          zoomOut: t("zoomOut"),
+          attribution: t("attribution"),
+          close: t("close"),
+          all: t("filterAll"),
+          category: tSighting("category"),
+          species: tSighting("species"),
+          location: tSighting("location"),
+          year: t("filterYear"),
+          empty: t("empty"),
+          approximate: tSightingPage("mapApproximate"),
+          seeDetail: tSighting("seeDetail"),
+          yourLocation: t("yourLocation"),
+          locate: t("locate"),
+          fullscreen: t("fullscreen"),
+          exitFullscreen: t("exitFullscreen"),
           // Both spellings of the modifier travel down; the client knows which
           // keyboard the reader has, this component does not.
-          zoomHint: t('zoomHint'),
-          zoomHintMac: t('zoomHintMac'),
+          zoomHint: t("zoomHint"),
+          zoomHintMac: t("zoomHintMac"),
         }}
       />
     </Box>
@@ -114,7 +117,7 @@ function toMarker(
 ): SightingMarker {
   const speciesName = localized(
     { name: pin.species_name, en_name: pin.species_en_name },
-    'name',
+    "name",
     locale,
   );
 
@@ -122,19 +125,19 @@ function toMarker(
     id: pin.id,
     // Built here rather than in the map: the locale prefix is part of every
     // internal path in this app, and the server component is where it lives.
-    href: `/${locale}/sightings/${pin.slug}`,
+    href: `/sightings/${pin.slug}`,
     // `name` is the entry's optional title; the species name is the documented
     // fallback when the author left it blank.
-    title: localized(pin, 'name', locale) ?? speciesName ?? pin.slug,
+    title: localized(pin, "name", locale) ?? speciesName ?? pin.slug,
     speciesName,
     categoryName: localized(
       { name: pin.category_name, en_name: pin.category_en_name },
-      'name',
+      "name",
       locale,
     ),
     locationName: localized(
       { name: pin.location_name, en_name: pin.location_en_name },
-      'name',
+      "name",
       locale,
     ),
     dateLabel: formatSightingDate(pin.date, format),
@@ -163,8 +166,8 @@ function formatSightingDate(date: string, format: Formatter): string {
   const parsed = new Date(`${date}T12:00:00`);
   if (Number.isNaN(parsed.getTime())) return date;
   return format.dateTime(parsed, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 }

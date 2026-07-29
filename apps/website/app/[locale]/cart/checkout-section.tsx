@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState, type CSSProperties } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { getPathname } from "@repo/i18n/navigation";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
@@ -181,7 +182,12 @@ export function CheckoutSection({
       // online checkout leaves for Stripe and may be abandoned, so its cart is
       // cleared only by the webhook, never here.
       if (isGuest && isOffline) clearGuestCart();
-      window.location.href = data.url ?? data.redirect ?? `/${locale}/orders`;
+      // A raw browser navigation, so nothing prefixes the locale for us -
+      // `getPathname` is the one place that knows the routing config, and an
+      // unprefixed path here would make the proxy resolve one from the
+      // `NEXT_LOCALE` cookie instead. (The first two are absolute Stripe URLs.)
+      window.location.href =
+        data.url ?? data.redirect ?? getPathname({ href: "/orders", locale });
       // `loading` stays true: the page is navigating away, and resetting it
       // would flash an enabled button during the redirect.
     } catch {

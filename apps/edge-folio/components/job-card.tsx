@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Card } from "@repo/ui/core-elements/card";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
@@ -47,7 +47,6 @@ export function JobCard({
 }: JobCardProps) {
   const t = useTranslations("JobsPage");
   const tCommon = useTranslations("Common");
-  const locale = useLocale();
   const [explainModal, setExplainModal] = useState<{
     title: string;
     text: string;
@@ -203,7 +202,7 @@ export function JobCard({
         <Box display="flex" gap={8} alignItems="center">
           {savedAppId != null ? (
             <Button
-              href={`/${locale}/applications/${savedAppId}`}
+              href={`/applications/${savedAppId}`}
               text={t("tailor")}
               type="button"
               size="md"

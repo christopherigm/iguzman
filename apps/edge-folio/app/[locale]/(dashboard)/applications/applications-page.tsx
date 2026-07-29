@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import Link from "next/link";
+import { Link } from "@repo/i18n/navigation";
 import Image from "next/image";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Container } from "@repo/ui/core-elements/container";
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
@@ -478,7 +478,6 @@ interface ApplicationCardProps {
 
 function ApplicationCard({ app, onDelete, onExplain }: ApplicationCardProps) {
   const t = useTranslations("ApplicationsPage");
-  const locale = useLocale();
   const date = new Date(app.created).toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
@@ -498,7 +497,7 @@ function ApplicationCard({ app, onDelete, onExplain }: ApplicationCardProps) {
 
   return (
     <Link
-      href={`/${locale}/applications/${app.id}`}
+      href={`/applications/${app.id}`}
       prefetch
       className="applications__card-link"
     >

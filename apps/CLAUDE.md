@@ -93,19 +93,57 @@ images: {
 },
 ```
 
-## Link Convention
+## Link Convention - locale-less hrefs through `@repo/i18n/navigation`
 
-- **Always use `Link` from `next/link` with the `prefetch` attribute** for internal navigation links instead of raw `<a>` tags.
-- Reserve `<a>` for external links (opening in a new tab or pointing to an external domain).
+- **Always use `Link` from `@repo/i18n/navigation` with the `prefetch` attribute** for internal navigation. **Never `next/link`.**
+- **Write the href locale-less** - `/species/deer`, never `` `/${locale}/species/deer` ``. next-intl prefixes the locale being rendered (`useLocale()` on the client, the request locale in a server component).
+- The same module owns `useRouter`, `redirect`, `usePathname` and `getPathname`. Reserve `next/navigation` for the locale-agnostic exports (`notFound`, `useSearchParams`, `unstable_rethrow`).
+- Reserve `<a>` for external links (opening in a new tab or pointing to an external domain). An absolute or external href passed to `Link` is left untouched.
 
 ```tsx
 // Internal
-import Link from 'next/link';
-<Link href="/about" prefetch>About</Link>
+import { Link } from "@repo/i18n/navigation";
+<Link href="/about" prefetch>
+  About
+</Link>;
+
+// Programmatic
+import { useRouter } from "@repo/i18n/navigation";
+router.replace("/orders"); // current locale
+router.replace(pathname, { locale }); // switching locale
+
+// Server component redirect - this one takes an object
+import { redirect } from "@repo/i18n/navigation";
+redirect({ href: "/auth", locale });
 
 // External
-<a href="https://example.com" target="_blank" rel="noopener noreferrer">External</a>
+<a href="https://example.com" target="_blank" rel="noopener noreferrer">
+  External
+</a>;
 ```
+
+⚠ **Why not just `next/link` with a locale-less href, letting the proxy sort it out?**
+Because the proxy resolves an unprefixed path from the **`NEXT_LOCALE` cookie**
+(`resolveLocaleFromPrefix` prio 2), not from the page the reader is on. That costs a
+redirect on every click, wastes the prefetch (the cached payload is the redirect), and
+sends a reader who opened a shared `/fr/…` link with `NEXT_LOCALE=en` to `/en`.
+
+⚠ **And it is why the locale switcher must use _this_ `useRouter`.** Only next-intl's
+own `Link`/`useRouter` run `syncLocaleCookie`, and its middleware deliberately skips
+any request whose `Sec-Fetch-Dest` is not `document` - which a soft navigation's RSC
+fetch never is. `@repo/ui`'s `LocaleSwitcher` used to rewrite path segment 1 by hand
+and `router.push` it, so the URL became `/es` while the cookie stayed `en`, and every
+locale-less link on the page then bounced the reader back to `/en`.
+
+**Two things still keep an explicit locale**, and must not be "fixed":
+
+| What                                          | Why                                                                         |
+| --------------------------------------------- | --------------------------------------------------------------------------- |
+| Canonical / OG / `metadataBase` absolute URLs | They are addresses for crawlers, not in-app navigation                      |
+| A raw `window.open` / `window.location.href`  | Nothing prefixes them - build the path with `getPathname({ href, locale })` |
+
+**Never hand-interpolate the prefix** even in those two cases - `getPathname` is the
+one place that knows the routing config.
 
 ## Typography - Font Size Rule
 

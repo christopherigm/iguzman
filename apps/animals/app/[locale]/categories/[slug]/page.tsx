@@ -1,29 +1,39 @@
-import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { getFormatter, getTranslations, setRequestLocale } from 'next-intl/server';
-import { Box } from '@repo/ui/core-elements/box';
-import { Grid } from '@repo/ui/core-elements/grid';
-import { Card } from '@repo/ui/core-elements/card';
-import { Container } from '@repo/ui/core-elements/container';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
-import { RichText } from '@repo/ui/core-elements/rich-text';
-import { PageBottomSpacer } from '@repo/ui/core-elements/navbar';
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import {
+  getFormatter,
+  getTranslations,
+  setRequestLocale,
+} from "next-intl/server";
+import { Box } from "@repo/ui/core-elements/box";
+import { Grid } from "@repo/ui/core-elements/grid";
+import { Card } from "@repo/ui/core-elements/card";
+import { Container } from "@repo/ui/core-elements/container";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+import { RichText } from "@repo/ui/core-elements/rich-text";
+import { PageBottomSpacer } from "@repo/ui/core-elements/navbar";
 import {
   getCategory,
   getSpeciesByCategory,
   kindHref,
   type Category,
   type Species,
-} from '@/lib/catalog';
-import { getCategoryMapPins, getSightingsByCategory } from '@/lib/journal';
-import { localized } from '@/lib/i18n-field';
-import { DetailHero, type DetailHeroChip } from '@/components/catalog/detail-hero';
-import { FactsCard } from '@/components/catalog/facts-card';
-import { DetailGallery, type GalleryImage } from '@/components/catalog/detail-gallery';
-import { SpeciesGrid } from '@/components/catalog/species-grid';
-import { SightingsSection } from '@/components/journal/sightings-section';
-import { SightingsMapSection } from '@/components/journal/sightings-map-section';
+} from "@/lib/catalog";
+import { getCategoryMapPins, getSightingsByCategory } from "@/lib/journal";
+import { localized } from "@/lib/i18n-field";
+import {
+  DetailHero,
+  type DetailHeroChip,
+} from "@/components/catalog/detail-hero";
+import { FactsCard } from "@/components/catalog/facts-card";
+import {
+  DetailGallery,
+  type GalleryImage,
+} from "@/components/catalog/detail-gallery";
+import { SpeciesGrid } from "@/components/catalog/species-grid";
+import { SightingsSection } from "@/components/journal/sightings-section";
+import { SightingsMapSection } from "@/components/journal/sightings-map-section";
 
 /**
  * One category's page: what this group of things is, every photograph the site
@@ -54,8 +64,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const category = await getCategory(slug);
   if (!category) return {};
 
-  const name = localized(category, 'name', locale) ?? category.slug;
-  const description = localized(category, 'short_description', locale);
+  const name = localized(category, "name", locale) ?? category.slug;
+  const description = localized(category, "short_description", locale);
 
   return {
     title: name,
@@ -72,8 +82,8 @@ export default async function CategoryPage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const t = await getTranslations('CategoryPage');
-  const tKinds = await getTranslations('Kinds');
+  const t = await getTranslations("CategoryPage");
+  const tKinds = await getTranslations("Kinds");
   const format = await getFormatter({ locale });
 
   // The species, the journal band and the map all key off the slug rather than
@@ -90,14 +100,14 @@ export default async function CategoryPage({ params }: Props) {
   // throws instead, so this cannot turn an outage into "no such category".
   if (!category) notFound();
 
-  const name = localized(category, 'name', locale) ?? category.slug;
-  const shortDescription = localized(category, 'short_description', locale);
-  const description = localized(category, 'description', locale);
+  const name = localized(category, "name", locale) ?? category.slug;
+  const shortDescription = localized(category, "short_description", locale);
+  const description = localized(category, "description", locale);
   const kindLabel = tKinds(category.kind);
   // The branch has a page of its own now, so its label is a link in both places
   // this page names it - which is also the only way into `/[locale]/[kind]`
   // from the public site.
-  const branchHref = kindHref(category.kind, locale);
+  const branchHref = kindHref(category.kind);
 
   const photos = toGalleryImages(category, species, locale);
 
@@ -107,19 +117,19 @@ export default async function CategoryPage({ params }: Props) {
   // visibility, and then the honest number is the one the reader can see.
   const chips: DetailHeroChip[] = [
     {
-      key: 'species',
-      label: `${format.number(species.length)} ${t('speciesCount')}`,
+      key: "species",
+      label: `${format.number(species.length)} ${t("speciesCount")}`,
     },
   ];
   if (photos.length > 0) {
     chips.push({
-      key: 'photos',
-      label: `${format.number(photos.length)} ${t('photosCount')}`,
+      key: "photos",
+      label: `${format.number(photos.length)} ${t("photosCount")}`,
     });
   }
 
   const breadcrumbs = [
-    { label: t('breadcrumbHome'), href: `/${locale}` },
+    { label: t("breadcrumbHome"), href: "/" },
     { label: kindLabel, href: branchHref },
     { label: name },
   ];
@@ -129,7 +139,7 @@ export default async function CategoryPage({ params }: Props) {
       <DetailHero
         image={category.image}
         icon={category.icon}
-        fit={category.fit ?? 'cover'}
+        fit={category.fit ?? "cover"}
         backgroundColor={category.background_color}
         eyebrow={kindLabel}
         eyebrowHref={branchHref}
@@ -148,7 +158,10 @@ export default async function CategoryPage({ params }: Props) {
             no second column, so the text takes the full width rather than
             leaving a placeholder square. */}
         <Grid container spacing={2}>
-          <Grid size={{ xs: 12, sm: photos.length > 0 ? 6 : 12 }} reorder={{ xs: 'last' }}>
+          <Grid
+            size={{ xs: 12, sm: photos.length > 0 ? 6 : 12 }}
+            reorder={{ xs: "last" }}
+          >
             <Box flexDirection="column" gap={16}>
               <Card gap={12} padding={18}>
                 {shortDescription && (
@@ -163,8 +176,11 @@ export default async function CategoryPage({ params }: Props) {
                   <RichText>{description}</RichText>
                 ) : (
                   !shortDescription && (
-                    <Typography variant="body" color="var(--foreground-muted, #6b7280)">
-                      {t('noDescription')}
+                    <Typography
+                      variant="body"
+                      color="var(--foreground-muted, #6b7280)"
+                    >
+                      {t("noDescription")}
                     </Typography>
                   )
                 )}
@@ -172,31 +188,34 @@ export default async function CategoryPage({ params }: Props) {
 
               <FactsCard
                 facts={[
-                  { label: t('factKind'), value: kindLabel, href: branchHref },
+                  { label: t("factKind"), value: kindLabel, href: branchHref },
                   category.scientific_name
                     ? {
-                        label: t('factScientificName'),
+                        label: t("factScientificName"),
                         value: category.scientific_name,
                       }
                     : null,
                   {
-                    label: t('factSpecies'),
+                    label: t("factSpecies"),
                     value: format.number(species.length),
                   },
                   {
-                    label: t('factSightings'),
+                    label: t("factSightings"),
                     value: format.number(totalSightings(species)),
                   },
                 ]}
                 href={category.href}
-                hrefLabel={t('externalReference')}
+                hrefLabel={t("externalReference")}
               />
             </Box>
           </Grid>
 
           {photos.length > 0 && (
             <Grid size={{ xs: 12, sm: 6 }}>
-              <DetailGallery images={photos} placeholderColor={category.background_color} />
+              <DetailGallery
+                images={photos}
+                placeholderColor={category.background_color}
+              />
             </Grid>
           )}
         </Grid>
@@ -206,8 +225,8 @@ export default async function CategoryPage({ params }: Props) {
             <SightingsSection
               sightings={sightings}
               locale={locale}
-              title={t('sightingsTitle')}
-              subtitle={t('sightingsSubtitle', { category: name })}
+              title={t("sightingsTitle")}
+              subtitle={t("sightingsSubtitle", { category: name })}
             />
           </Box>
         )}
@@ -222,9 +241,9 @@ export default async function CategoryPage({ params }: Props) {
             <SightingsMapSection
               pins={mapPins}
               locale={locale}
-              title={t('mapTitle')}
-              subtitle={t('mapSubtitle', { category: name })}
-              filters={['species', 'location', 'year']}
+              title={t("mapTitle")}
+              subtitle={t("mapSubtitle", { category: name })}
+              filters={["species", "location", "year"]}
             />
           </Box>
         )}
@@ -232,10 +251,10 @@ export default async function CategoryPage({ params }: Props) {
         <Box flexDirection="column" gap={24} marginTop={56}>
           <Box flexDirection="column" gap={8}>
             <Typography as="h2" variant="h2" fontWeight={700}>
-              {t('speciesTitle')}
+              {t("speciesTitle")}
             </Typography>
             <Typography variant="body" color="var(--foreground-muted, #6b7280)">
-              {t('speciesSubtitle', { category: name })}
+              {t("speciesSubtitle", { category: name })}
             </Typography>
           </Box>
 
@@ -265,41 +284,45 @@ export default async function CategoryPage({ params }: Props) {
  * Each photo carries its own `fit` and `background_color`: a plate authored as
  * `contain` (an illustration, a range map) must be letterboxed, not cropped.
  */
-function toGalleryImages(category: Category, species: Species[], locale: string): GalleryImage[] {
+function toGalleryImages(
+  category: Category,
+  species: Species[],
+  locale: string,
+): GalleryImage[] {
   const images: GalleryImage[] = [];
   const seen = new Set<string>();
 
   const push = (
     url: string | null,
     alt: string,
-    fit: Category['fit'],
+    fit: Category["fit"],
     backgroundColor: string | null,
   ) => {
     if (!url || seen.has(url)) return;
     seen.add(url);
-    images.push({ url, alt, fit: fit ?? 'cover', backgroundColor });
+    images.push({ url, alt, fit: fit ?? "cover", backgroundColor });
   };
 
-  const categoryName = localized(category, 'name', locale) ?? category.slug;
+  const categoryName = localized(category, "name", locale) ?? category.slug;
   push(category.image, categoryName, category.fit, category.background_color);
   for (const photo of category.images) {
     push(
       photo.image,
-      localized(photo, 'name', locale) ?? categoryName,
+      localized(photo, "name", locale) ?? categoryName,
       photo.fit,
       photo.background_color,
     );
   }
 
   for (const item of species) {
-    const name = localized(item, 'name', locale) ?? item.slug;
+    const name = localized(item, "name", locale) ?? item.slug;
     push(item.image, name, item.fit, item.background_color);
     for (const photo of item.images) {
       // The photo's own caption when it has one - that is what distinguishes a
       // reference shot ("winter plumage") from the cover it sits beside.
       push(
         photo.image,
-        localized(photo, 'name', locale) ?? name,
+        localized(photo, "name", locale) ?? name,
         photo.fit,
         photo.background_color,
       );

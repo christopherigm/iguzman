@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useMemo, Fragment } from "react";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@repo/i18n/navigation";
 import "./admin-form.css";
 import { Box } from "@repo/ui/core-elements/box";
@@ -153,7 +153,6 @@ export function AdminForm({
 }: AdminFormProps) {
   const t = useTranslations("Admin");
   const tCommon = useTranslations("Common");
-  const locale = useLocale();
   const router = useRouter();
 
   // ── LLM ───────────────────────────────────────────────────────────────────
@@ -834,7 +833,7 @@ export function AdminForm({
                 // preventDefault and save the record on every click.
                 <Button
                   text={t("viewInProduction")}
-                  href={`/${locale}${productionHref}`}
+                  href={productionHref}
                   icon="/icons/fullscreen.svg"
                   size="lg"
                 />

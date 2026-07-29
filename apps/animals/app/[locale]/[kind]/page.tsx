@@ -1,17 +1,28 @@
-import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { getFormatter, getTranslations, setRequestLocale } from 'next-intl/server';
-import { Box } from '@repo/ui/core-elements/box';
-import { Container } from '@repo/ui/core-elements/container';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
-import { PageBottomSpacer } from '@repo/ui/core-elements/navbar';
-import { getCategoriesByKind, kindFromSlug, type Category } from '@/lib/catalog';
-import { getKindMapPins, getSightingsByKind } from '@/lib/journal';
-import { DetailHero, type DetailHeroChip } from '@/components/catalog/detail-hero';
-import { SightingsSection } from '@/components/journal/sightings-section';
-import { SightingsMapSection } from '@/components/journal/sightings-map-section';
-import { CategoryNav } from '../category-nav';
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import {
+  getFormatter,
+  getTranslations,
+  setRequestLocale,
+} from "next-intl/server";
+import { Box } from "@repo/ui/core-elements/box";
+import { Container } from "@repo/ui/core-elements/container";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+import { PageBottomSpacer } from "@repo/ui/core-elements/navbar";
+import {
+  getCategoriesByKind,
+  kindFromSlug,
+  type Category,
+} from "@/lib/catalog";
+import { getKindMapPins, getSightingsByKind } from "@/lib/journal";
+import {
+  DetailHero,
+  type DetailHeroChip,
+} from "@/components/catalog/detail-hero";
+import { SightingsSection } from "@/components/journal/sightings-section";
+import { SightingsMapSection } from "@/components/journal/sightings-map-section";
+import { CategoryNav } from "../category-nav";
 
 /**
  * One of the five top-level branches: `/[locale]/animals`, `/plants`, `/fungi`,
@@ -51,11 +62,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // wants next-intl's `Locale` union, and a route param is a bare `string`, so
   // the typed-message keys resolve to `never` without it.
   type Translate = (key: string, values?: Record<string, string>) => string;
-  const tKinds = (await getTranslations({ locale, namespace: 'Kinds' })) as Translate;
-  const t = (await getTranslations({ locale, namespace: 'KindPage' })) as Translate;
+  const tKinds = (await getTranslations({
+    locale,
+    namespace: "Kinds",
+  })) as Translate;
+  const t = (await getTranslations({
+    locale,
+    namespace: "KindPage",
+  })) as Translate;
 
   const name = tKinds(kind);
-  const description = t('metaDescription', { kind: name });
+  const description = t("metaDescription", { kind: name });
 
   // The same read the page makes, so the card image is the same photograph the
   // reader lands on. Next memoises a GET within one request, so this is not a
@@ -82,9 +99,9 @@ export default async function KindPage({ params }: Props) {
   // page of any kind. See the note at the top.
   if (!kind) notFound();
 
-  const t = await getTranslations('KindPage');
-  const tCategory = await getTranslations('CategoryPage');
-  const tKinds = await getTranslations('Kinds');
+  const t = await getTranslations("KindPage");
+  const tCategory = await getTranslations("CategoryPage");
+  const tKinds = await getTranslations("Kinds");
   const format = await getFormatter({ locale });
 
   // Three independent bands, so they are fetched together; each fetcher answers
@@ -103,7 +120,10 @@ export default async function KindPage({ params }: Props) {
   // which is the same call the category page makes about its species: the two
   // agree except when the API and this page disagree about what is visible, and
   // then the honest number is the one the reader can actually reach.
-  const speciesCount = categories.reduce((total, item) => total + item.species_count, 0);
+  const speciesCount = categories.reduce(
+    (total, item) => total + item.species_count,
+    0,
+  );
 
   const chips: DetailHeroChip[] = [];
   if (categories.length > 0) {
@@ -112,19 +132,19 @@ export default async function KindPage({ params }: Props) {
     // locale here inflects it - "1 categorías" would be visibly wrong. `#`
     // formats the number itself, so there is no `format.number` to add.
     chips.push({
-      key: 'categories',
-      label: t('categoriesCount', { count: categories.length }),
+      key: "categories",
+      label: t("categoriesCount", { count: categories.length }),
     });
   }
   if (speciesCount > 0) {
     chips.push({
-      key: 'species',
-      label: `${format.number(speciesCount)} ${tCategory('speciesCount')}`,
+      key: "species",
+      label: `${format.number(speciesCount)} ${tCategory("speciesCount")}`,
     });
   }
 
   const breadcrumbs = [
-    { label: tCategory('breadcrumbHome'), href: `/${locale}` },
+    { label: tCategory("breadcrumbHome"), href: "/" },
     { label: name },
   ];
 
@@ -138,9 +158,9 @@ export default async function KindPage({ params }: Props) {
       <DetailHero
         image={hero?.image ?? null}
         icon={null}
-        fit={hero?.fit ?? 'cover'}
+        fit={hero?.fit ?? "cover"}
         backgroundColor={hero?.background_color ?? null}
-        eyebrow={t('eyebrow')}
+        eyebrow={t("eyebrow")}
         title={name}
         scientificName={null}
         chips={chips}
@@ -157,15 +177,15 @@ export default async function KindPage({ params }: Props) {
             <CategoryNav
               categories={categories}
               locale={locale}
-              title={t('categoriesTitle')}
-              subtitle={t('categoriesSubtitle', { kind: name })}
+              title={t("categoriesTitle")}
+              subtitle={t("categoriesSubtitle", { kind: name })}
             />
           ) : (
             // A branch with nothing filed under it yet is a normal state, not an
             // error: the five exist in the schema whether or not anyone has
             // photographed one.
             <Typography variant="body" color="var(--foreground-muted, #6b7280)">
-              {t('noCategories')}
+              {t("noCategories")}
             </Typography>
           )}
         </Box>
@@ -175,8 +195,8 @@ export default async function KindPage({ params }: Props) {
             <SightingsSection
               sightings={sightings}
               locale={locale}
-              title={t('sightingsTitle')}
-              subtitle={t('sightingsSubtitle', { kind: name })}
+              title={t("sightingsTitle")}
+              subtitle={t("sightingsSubtitle", { kind: name })}
             />
           </Box>
         )}
@@ -191,9 +211,9 @@ export default async function KindPage({ params }: Props) {
             <SightingsMapSection
               pins={mapPins}
               locale={locale}
-              title={t('mapTitle')}
-              subtitle={t('mapSubtitle', { kind: name })}
-              filters={['category', 'species', 'location', 'year']}
+              title={t("mapTitle")}
+              subtitle={t("mapSubtitle", { kind: name })}
+              filters={["category", "species", "location", "year"]}
             />
           </Box>
         )}

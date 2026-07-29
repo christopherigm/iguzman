@@ -1,13 +1,13 @@
-import Image from 'next/image';
-import { getFormatter, getTranslations } from 'next-intl/server';
-import { Box } from '@repo/ui/core-elements/box';
-import { Card } from '@repo/ui/core-elements/card';
-import { Grid } from '@repo/ui/core-elements/grid';
-import { Badge } from '@repo/ui/core-elements/badge';
-import { Typography } from '@repo/ui/core-elements/typography';
-import type { Species } from '@/lib/catalog';
-import { localized } from '@/lib/i18n-field';
-import './species-grid.css';
+import Image from "next/image";
+import { getFormatter, getTranslations } from "next-intl/server";
+import { Box } from "@repo/ui/core-elements/box";
+import { Card } from "@repo/ui/core-elements/card";
+import { Grid } from "@repo/ui/core-elements/grid";
+import { Badge } from "@repo/ui/core-elements/badge";
+import { Typography } from "@repo/ui/core-elements/typography";
+import type { Species } from "@/lib/catalog";
+import { localized } from "@/lib/i18n-field";
+import "./species-grid.css";
 
 /**
  * The species filed under a category, as a responsive card grid.
@@ -30,13 +30,13 @@ interface Props {
 }
 
 export async function SpeciesGrid({ species, locale }: Props) {
-  const t = await getTranslations('CategoryPage');
+  const t = await getTranslations("CategoryPage");
   const format = await getFormatter({ locale });
 
   if (species.length === 0) {
     return (
       <Typography variant="body" color="var(--foreground-muted, #6b7280)">
-        {t('noSpecies')}
+        {t("noSpecies")}
       </Typography>
     );
   }
@@ -49,8 +49,8 @@ export async function SpeciesGrid({ species, locale }: Props) {
             species={item}
             locale={locale}
             labels={{
-              sightings: t('sightingsCount'),
-              lastSeen: t('lastSeen'),
+              sightings: t("sightingsCount"),
+              lastSeen: t("lastSeen"),
             }}
             format={format}
           />
@@ -70,12 +70,12 @@ interface CardProps {
 }
 
 function SpeciesCard({ species, locale, labels, format }: CardProps) {
-  const name = localized(species, 'name', locale) ?? species.slug;
-  const shortDescription = localized(species, 'short_description', locale);
+  const name = localized(species, "name", locale) ?? species.slug;
+  const shortDescription = localized(species, "short_description", locale);
 
   return (
     <Card
-      href={`/${locale}/species/${species.slug}`}
+      href={`/species/${species.slug}`}
       prefetch
       className="species-card"
       // A full-bleed image card: the photo reaches the card's own rounded
@@ -83,18 +83,20 @@ function SpeciesCard({ species, locale, labels, format }: CardProps) {
       padding={0}
       height="100%"
       color="inherit"
-      styles={{ textDecoration: 'none' }}
+      styles={{ textDecoration: "none" }}
     >
       <Box
         className="species-card__art"
         width="100%"
         alignItems="center"
         justifyContent="center"
-        backgroundColor={species.background_color ?? 'var(--surface-1, #e5e7eb)'}
+        backgroundColor={
+          species.background_color ?? "var(--surface-1, #e5e7eb)"
+        }
         styles={{
-          position: 'relative',
-          overflow: 'hidden',
-          aspectRatio: '4 / 3',
+          position: "relative",
+          overflow: "hidden",
+          aspectRatio: "4 / 3",
         }}
       >
         {species.image ? (
@@ -104,7 +106,7 @@ function SpeciesCard({ species, locale, labels, format }: CardProps) {
             alt={name}
             sizes="(min-width: 900px) 33vw, 50vw"
             className="species-card__image"
-            style={{ objectFit: species.fit ?? 'cover' }}
+            style={{ objectFit: species.fit ?? "cover" }}
           />
         ) : (
           // A card with no photograph still has to fill its cell, or the row
@@ -112,13 +114,19 @@ function SpeciesCard({ species, locale, labels, format }: CardProps) {
           // category tiles use. `as="span"`: `variant` defaults the *element*
           // too, so an unqualified `h2` here would put a bare letter into the
           // page's heading outline beside the real section headings.
-          <Typography as="span" variant="h2" fontWeight={700} color="var(--accent)" aria-hidden>
+          <Typography
+            as="span"
+            variant="h2"
+            fontWeight={700}
+            color="var(--accent)"
+            aria-hidden
+          >
             {name.charAt(0).toUpperCase()}
           </Typography>
         )}
 
         {species.sighting_count > 0 && (
-          <Box styles={{ position: 'absolute', top: 10, right: 10, zIndex: 1 }}>
+          <Box styles={{ position: "absolute", top: 10, right: 10, zIndex: 1 }}>
             <Badge variant="filled" size="sm" translucent>
               {`${format.number(species.sighting_count)} ${labels.sightings}`}
             </Badge>
@@ -144,7 +152,7 @@ function SpeciesCard({ species, locale, labels, format }: CardProps) {
           <Typography
             variant="caption"
             color="var(--foreground-muted, #6b7280)"
-            styles={{ fontStyle: 'italic' }}
+            styles={{ fontStyle: "italic" }}
           >
             {species.scientific_name}
           </Typography>
@@ -155,7 +163,7 @@ function SpeciesCard({ species, locale, labels, format }: CardProps) {
             variant="label"
             fontWeight={700}
             color="var(--foreground-muted, #6b7280)"
-            styles={{ letterSpacing: '0.06em', textTransform: 'uppercase' }}
+            styles={{ letterSpacing: "0.06em", textTransform: "uppercase" }}
           >
             {species.family}
           </Typography>
@@ -166,10 +174,10 @@ function SpeciesCard({ species, locale, labels, format }: CardProps) {
             variant="body"
             color="var(--foreground-muted, #6b7280)"
             styles={{
-              display: '-webkit-box',
-              WebkitLineClamp: 'var(--species-card-clamp, 3)',
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
+              display: "-webkit-box",
+              WebkitLineClamp: "var(--species-card-clamp, 3)",
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
             }}
           >
             {shortDescription}
@@ -204,8 +212,8 @@ function formatDay(day: string, format: Formatter): string {
   const parsed = new Date(`${day}T12:00:00`);
   if (Number.isNaN(parsed.getTime())) return day;
   return format.dateTime(parsed, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 }

@@ -118,7 +118,7 @@ export default async function Home({ params }: Props) {
                   <HeroJobCards jobs={privateJobs} />
                   <Button
                     text={t("privateJobsViewAll")}
-                    href={`/${locale}/jobs`}
+                    href="/jobs"
                     kind="primary"
                     size="md"
                   />
@@ -126,7 +126,7 @@ export default async function Home({ params }: Props) {
               ) : (
                 <Button
                   text={t("privateJobsBrowse")}
-                  href={`/${locale}/jobs`}
+                  href="/jobs"
                   kind="primary"
                   size="lg"
                 />

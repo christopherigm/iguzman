@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
-import { usePathname, useRouter } from "@repo/i18n/navigation";
-import Link from "next/link";
+import { Link, usePathname, useRouter } from "@repo/i18n/navigation";
 import { useSession } from "@repo/auth/session-provider";
 import { Button } from "@repo/ui/core-elements/button";
 import { Box } from "@repo/ui/core-elements/box";

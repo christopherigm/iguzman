@@ -1,11 +1,11 @@
-import type { CSSProperties } from 'react';
-import Image from 'next/image';
-import { getTranslations } from 'next-intl/server';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { KINDS, type Category, type Kind } from '@/lib/catalog';
-import { localized } from '@/lib/i18n-field';
-import './category-nav.css';
+import type { CSSProperties } from "react";
+import Image from "next/image";
+import { getTranslations } from "next-intl/server";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { KINDS, type Category, type Kind } from "@/lib/catalog";
+import { localized } from "@/lib/i18n-field";
+import "./category-nav.css";
 
 /**
  * The catalog's sub-categories as one field of icon tiles.
@@ -62,11 +62,11 @@ const TILE_GAP = 12;
  * five shades of the same thing.
  */
 const KIND_ACCENTS: Record<Kind, string> = {
-  animal: '#a8722e',
-  plant: '#5f8a4e',
-  fungus: '#9e4a3e',
-  season: '#8c7ba6',
-  weather: '#5c82a8',
+  animal: "#a8722e",
+  plant: "#5f8a4e",
+  fungus: "#9e4a3e",
+  season: "#8c7ba6",
+  weather: "#5c82a8",
 };
 
 interface Props {
@@ -81,12 +81,17 @@ interface Props {
   subtitle?: string | null;
 }
 
-export async function CategoryNav({ categories, locale, title, subtitle }: Props) {
-  const t = await getTranslations('HomePage');
-  const heading = title ?? t('categoriesTitle');
+export async function CategoryNav({
+  categories,
+  locale,
+  title,
+  subtitle,
+}: Props) {
+  const t = await getTranslations("HomePage");
+  const heading = title ?? t("categoriesTitle");
   // `null` is a caller saying "no subtitle"; `undefined` is a caller not saying
   // anything, which is what keeps the landing's default in place.
-  const sub = subtitle === undefined ? t('categoriesSubtitle') : subtitle;
+  const sub = subtitle === undefined ? t("categoriesSubtitle") : subtitle;
 
   // One flat list, ordered by `KINDS` rather than by the payload: the branches
   // no longer get a row each, so this ordering is the only thing keeping a
@@ -152,14 +157,14 @@ function CategoryTile({
   locale: string;
   accent: string;
 }) {
-  const name = localized(category, 'name', locale) ?? category.slug;
+  const name = localized(category, "name", locale) ?? category.slug;
   // The `icon` is the mark drawn to stay legible at this size; `image` is a
   // photograph and only stands in when no icon was uploaded.
   const art = category.icon ?? category.image;
 
   return (
     <Box
-      href={`/${locale}/categories/${category.slug}`}
+      href={`/categories/${category.slug}`}
       prefetch
       className="category-nav__tile"
       // Read through a custom property rather than set flat, so the `--below-sm`
@@ -174,7 +179,9 @@ function CategoryTile({
       // The branch colour is published once here as a custom property and read
       // by every descendant - including the hover rules in the stylesheet,
       // which have no other way to know which of the five this tile belongs to.
-      styles={{ textDecoration: 'none', '--kind-accent': accent } as CSSProperties}
+      styles={
+        { textDecoration: "none", "--kind-accent": accent } as CSSProperties
+      }
     >
       {/* One square box either way, so the icon and the letter fallback crop,
           round and hover identically. `overflow: hidden` is what makes the
@@ -189,10 +196,10 @@ function CategoryTile({
         border="1px solid color-mix(in srgb, var(--kind-accent) 45%, var(--border))"
         backgroundColor={
           art
-            ? 'var(--surface-1, var(--background))'
-            : 'color-mix(in srgb, var(--kind-accent) 15%, transparent)'
+            ? "var(--surface-1, var(--background))"
+            : "color-mix(in srgb, var(--kind-accent) 15%, transparent)"
         }
-        styles={{ overflow: 'hidden' }}
+        styles={{ overflow: "hidden" }}
       >
         {art ? (
           <Image
@@ -200,7 +207,7 @@ function CategoryTile({
             alt=""
             width={ICON_SIZE}
             height={ICON_SIZE}
-            style={{ objectFit: 'cover', height: '100%', width: '100%' }}
+            style={{ objectFit: "cover", height: "100%", width: "100%" }}
           />
         ) : (
           // `as="span"`: `variant` defaults the element too, so an unqualified
@@ -229,7 +236,7 @@ function CategoryTile({
         styles={{
           lineHeight: 1.3,
           borderBottom:
-            '2px dashed color-mix(in srgb, var(--kind-accent) 60%, transparent)',
+            "2px dashed color-mix(in srgb, var(--kind-accent) 60%, transparent)",
         }}
       >
         {name}

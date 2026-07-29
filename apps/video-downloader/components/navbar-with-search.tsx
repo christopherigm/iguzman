@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { usePathname } from "@repo/i18n/navigation";
-import Link from "next/link";
+import { Link, usePathname } from "@repo/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { Navbar } from "@repo/ui/core-elements/navbar";
 import type { NavbarProps } from "@repo/ui/core-elements/navbar";

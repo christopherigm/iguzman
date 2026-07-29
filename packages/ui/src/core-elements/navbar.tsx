@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, useRef, CSSProperties } from "react";
 import Image from "next/image";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Link, usePathname } from "@repo/i18n/navigation";
 import {
   UIComponentProps,
   buildStyleProps,
@@ -157,10 +156,6 @@ const NavbarItem: React.FC<{
     }
   };
 
-  const Tag = item.href && !hasChildren ? "a" : "button";
-  const linkProps =
-    Tag === "a" ? { href: item.href } : { type: "button" as const };
-
   // An item with an icon and no label carries its badge over the icon's corner
   // instead of after the text - there is no text for it to follow.
   const iconOnly = !item.label && !!item.icon;
@@ -174,15 +169,8 @@ const NavbarItem: React.FC<{
     .filter(Boolean)
     .join(" ");
 
-  return (
-    <Tag
-      className={itemClassName}
-      onClick={handleClick}
-      aria-current={isActive ? "page" : undefined}
-      aria-label={item.ariaLabel}
-      title={item.ariaLabel}
-      {...linkProps}
-    >
+  const content = (
+    <>
       {item.icon && (
         <Icon icon={item.icon} size="18px" className="ui-navbar-item-icon" />
       )}
@@ -204,7 +192,34 @@ const NavbarItem: React.FC<{
             .join(" ")}
         />
       )}
-    </Tag>
+    </>
+  );
+
+  const shared = {
+    className: itemClassName,
+    onClick: handleClick,
+    "aria-current": isActive ? ("page" as const) : undefined,
+    "aria-label": item.ariaLabel,
+    title: item.ariaLabel,
+  };
+
+  // A navigating item is a `Link`, never a bare `<a>`. Menu hrefs are written
+  // locale-less (`/animals`, `/account`), so a plain anchor would leave the
+  // prefix to the proxy - which resolves it from the `NEXT_LOCALE` cookie and
+  // lands the reader in whichever locale that cookie last recorded. `Link`
+  // prefixes the locale actually being rendered. See `@repo/i18n/navigation`.
+  if (item.href && !hasChildren) {
+    return (
+      <Link href={item.href} prefetch {...shared}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" {...shared}>
+      {content}
+    </button>
   );
 };
 
@@ -221,20 +236,34 @@ const DropdownPanel: React.FC<{
         onClose();
       };
 
-      const Tag = child.href ? "a" : "button";
-      const linkProps =
-        Tag === "a" ? { href: child.href } : { type: "button" as const };
-
-      return (
-        <Tag
-          key={child.label}
-          className="ui-navbar-dropdown-item"
-          onClick={handleClick}
-          {...linkProps}
-        >
+      const content = (
+        <>
           {child.icon && <Icon icon={child.icon} size="18px" />}
           {child.label}
-        </Tag>
+        </>
+      );
+
+      // Same reasoning as `NavbarItem`: a locale-less href on a bare `<a>`
+      // resolves through the cookie, not through the page being rendered.
+      return child.href ? (
+        <Link
+          key={child.label}
+          href={child.href}
+          prefetch
+          className="ui-navbar-dropdown-item"
+          onClick={handleClick}
+        >
+          {content}
+        </Link>
+      ) : (
+        <button
+          key={child.label}
+          type="button"
+          className="ui-navbar-dropdown-item"
+          onClick={handleClick}
+        >
+          {content}
+        </button>
       );
     })}
   </Box>
@@ -422,11 +451,10 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
     return () => document.removeEventListener("mousedown", handler);
   }, [activeDropdown]);
 
-  const pathnameWithoutLocale = pathname.replace(
-    /^\/[a-z]{2}(-[A-Z]{2})?(\/|$)/,
-    "/",
-  );
-  if (hiddenPaths?.includes(pathnameWithoutLocale)) return null;
+  // Already locale-less: next-intl's `usePathname` strips the prefix for us, so
+  // this no longer chops the first segment off by regex - which mangled any
+  // top-level route that happened to be two letters long.
+  if (hiddenPaths?.includes(pathname)) return null;
 
   // An item is active when its href matches the current path. The home item
   // ("/") only matches exactly; other items also match nested sub-paths. A
@@ -437,11 +465,8 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
   const isItemActive = (item: MenuItem): boolean => {
     if (item.children?.some(isItemActive)) return true;
     if (!item.href) return false;
-    if (item.href === "/") return pathnameWithoutLocale === "/";
-    return (
-      pathnameWithoutLocale === item.href ||
-      pathnameWithoutLocale.startsWith(`${item.href}/`)
-    );
+    if (item.href === "/") return pathname === "/";
+    return pathname === item.href || pathname.startsWith(`${item.href}/`);
   };
 
   const isHidden = scrollDirection === "down";

@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import { Link } from "@repo/i18n/navigation";
 import { getTranslations, getLocale } from "next-intl/server";
 import { Container } from "@repo/ui/core-elements/container";
 import { Grid } from "@repo/ui/core-elements/grid";

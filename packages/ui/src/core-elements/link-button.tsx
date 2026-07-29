@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
+import { Link } from "@repo/i18n/navigation";
 import { CSSProperties } from "react";
 
 export interface LinkButtonProps {

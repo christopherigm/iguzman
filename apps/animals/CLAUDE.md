@@ -94,23 +94,28 @@ Twelve things that will bite:
   screen pixels**, because an entry with no coordinates of its own inherits its
   location's centre and a season at one pond would otherwise stack into what
   looks like a single sighting.
-- ⚠ **Every map in this app pins the reader too, so every map asks for the
-  geolocation permission.** `SightingsMap` passes `showUserLocation` to `OsmMap`
-  **on by default** (a field journal is read with "is any of this near me?" in
-  mind, and a pin over the next valley means something the same pin over a
-  country does not), and the CMS's `MapPicker` draws its own hollow twin so an
-  entry can be filed against the spot the author is standing on. Three things
-  follow. The prompt appears on **any page carrying a map** - the landing, a
-  category, a sighting, and both admin forms - which is a browser dialog the
-  reader clicked nothing to get; pass `showUserLocation={false}` on a map where
-  that trade is not worth it. A refusal, a device with no fix, and an insecure
-  origin are all the **same** path: no pin, no message, the map exactly as it
-  was - so never write a branch that reports the failure. And the reader's pin
-  **takes no part in the framing**: `OsmMap` fits the camera to `markers` alone,
-  because a reader three countries away would otherwise pull the map out to a
-  continent to hold both. In the picker it is likewise inert - it carries no
-  `PIN_CLASS`, takes no pointer, and never writes the form; the coordinate that
-  gets stored is still only the one the author clicks.
+- ⚠ **A public map pins the reader only when they press the button - no page
+  here asks for the geolocation permission on its own any more.** `SightingsMap`
+  passes `locateControl` and `fullscreenControl` to `OsmMap`, **both on by
+  default** (a field journal is read with "is any of this near me?" in mind, and
+  a pin over the next valley means something the same pin over a country does
+  not), so all four public maps carry a two-button row in the **top-right**
+  corner: locate, then fullscreen - and in fullscreen the same row is locate,
+  then close. Four things follow. The permission dialog now costs a **click**,
+  which is the change: it used to appear on any page carrying a map, in front of
+  a reader who had done nothing but scroll onto it. A press **does** centre the
+  camera on the reader (the initial framing is still `markers`' alone, or a
+  reader three countries away would pull the map out to a continent); a refusal,
+  a device with no fix, and an insecure origin are all the **same** path - no
+  pin, no message, the map exactly as it was - so never write a branch that
+  reports the failure. Fullscreen is a **CSS overlay**, not the Fullscreen API,
+  because `requestFullscreen` is still dead on iPhone Safari; `Escape` closes an
+  open marker card first and leaves fullscreen on the next press. And the **CMS's
+  `MapPicker` is unchanged**: it still draws its own hollow twin automatically,
+  because an author standing at the spot they are filing _is_ the reason that map
+  is on the form. It is likewise inert - no `PIN_CLASS`, no pointer, never writes
+  the form; the coordinate that gets stored is still only the one the author
+  clicks.
 - **A sighting's own map costs no extra request.** `sightingMapPin()`
   (`lib/journal.ts`) turns the entry the page already fetched into the one pin it
   draws, because animals-api publishes `species_icon`, `category_icon` and

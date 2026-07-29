@@ -1,27 +1,38 @@
-import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { getFormatter, getTranslations, setRequestLocale } from 'next-intl/server';
-import { Box } from '@repo/ui/core-elements/box';
-import { Grid } from '@repo/ui/core-elements/grid';
-import { Card } from '@repo/ui/core-elements/card';
-import { Container } from '@repo/ui/core-elements/container';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
-import { RichText } from '@repo/ui/core-elements/rich-text';
-import { PageBottomSpacer } from '@repo/ui/core-elements/navbar';
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import {
+  getFormatter,
+  getTranslations,
+  setRequestLocale,
+} from "next-intl/server";
+import { Box } from "@repo/ui/core-elements/box";
+import { Grid } from "@repo/ui/core-elements/grid";
+import { Card } from "@repo/ui/core-elements/card";
+import { Container } from "@repo/ui/core-elements/container";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+import { RichText } from "@repo/ui/core-elements/rich-text";
+import { PageBottomSpacer } from "@repo/ui/core-elements/navbar";
 import {
   getSighting,
   getSightingsBySpecies,
   sightingMapPin,
   type Sighting,
-} from '@/lib/journal';
-import { localized } from '@/lib/i18n-field';
-import { DetailHero, type DetailHeroChip } from '@/components/catalog/detail-hero';
-import { FactsCard, type Fact } from '@/components/catalog/facts-card';
-import { DetailGallery, type GalleryImage } from '@/components/catalog/detail-gallery';
-import { SightingsSection } from '@/components/journal/sightings-section';
-import { SightingsMapSection } from '@/components/journal/sightings-map-section';
-import { SightingVideos, type SightingVideo } from './sighting-videos';
+} from "@/lib/journal";
+import { kindHref } from "@/lib/catalog";
+import { localized } from "@/lib/i18n-field";
+import {
+  DetailHero,
+  type DetailHeroChip,
+} from "@/components/catalog/detail-hero";
+import { FactsCard, type Fact } from "@/components/catalog/facts-card";
+import {
+  DetailGallery,
+  type GalleryImage,
+} from "@/components/catalog/detail-gallery";
+import { SightingsSection } from "@/components/journal/sightings-section";
+import { SightingsMapSection } from "@/components/journal/sightings-map-section";
+import { SightingVideos, type SightingVideo } from "./sighting-videos";
 
 /**
  * One journal entry's page: what was seen, the story of the encounter, the
@@ -62,7 +73,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!sighting) return {};
 
   const title = sightingTitle(sighting, locale);
-  const description = localized(sighting, 'short_description', locale);
+  const description = localized(sighting, "short_description", locale);
 
   return {
     title,
@@ -79,9 +90,10 @@ export default async function SightingPage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const t = await getTranslations('SightingPage');
-  const tSighting = await getTranslations('Sighting');
-  const tCategory = await getTranslations('CategoryPage');
+  const t = await getTranslations("SightingPage");
+  const tSighting = await getTranslations("Sighting");
+  const tCategory = await getTranslations("CategoryPage");
+  const tKinds = await getTranslations("Kinds");
   const format = await getFormatter({ locale });
 
   const sighting = await getSighting(slug);
@@ -93,7 +105,9 @@ export default async function SightingPage({ params }: Props) {
   // keys off the species this entry records, which is only known once the entry
   // itself has answered.
   const related = sighting.species_slug
-    ? (await getSightingsBySpecies(sighting.species_slug, RELATED_LIMIT + 1)).filter(
+    ? (
+        await getSightingsBySpecies(sighting.species_slug, RELATED_LIMIT + 1)
+      ).filter(
         // The entry the reader is already on is not a related one.
         (item) => item.id !== sighting.id,
       )
@@ -102,19 +116,19 @@ export default async function SightingPage({ params }: Props) {
   const title = sightingTitle(sighting, locale);
   const speciesName = localized(
     { name: sighting.species_name, en_name: sighting.species_en_name },
-    'name',
+    "name",
     locale,
   );
   const categoryName = localized(
     { name: sighting.category_name, en_name: sighting.category_en_name },
-    'name',
+    "name",
     locale,
   );
-  const shortDescription = localized(sighting, 'short_description', locale);
-  const description = localized(sighting, 'description', locale);
+  const shortDescription = localized(sighting, "short_description", locale);
+  const description = localized(sighting, "description", locale);
   const locationName = localized(
     { name: sighting.location_name, en_name: sighting.location_en_name },
-    'name',
+    "name",
     locale,
   );
 
@@ -122,41 +136,53 @@ export default async function SightingPage({ params }: Props) {
   const timeLabel = formatTime(sighting.date, sighting.time, format);
 
   const speciesHref = sighting.species_slug
-    ? `/${locale}/species/${sighting.species_slug}`
+    ? `/species/${sighting.species_slug}`
     : null;
   const categoryHref = sighting.category_slug
-    ? `/${locale}/categories/${sighting.category_slug}`
+    ? `/categories/${sighting.category_slug}`
     : null;
+  // The branch reaches an entry through species → category, so the API spells
+  // it `species__category__kind` and publishes it flat as `kind` - null exactly
+  // when the entry records no species.
+  const branchLabel = sighting.kind ? tKinds(sighting.kind) : null;
+  const branchHref = sighting.kind ? kindHref(sighting.kind) : null;
 
   const photos = toGalleryImages(sighting, locale);
   const videos = toVideos(sighting, locale);
 
-  const chips: DetailHeroChip[] = [{ key: 'date', label: dateLabel }];
-  if (locationName) chips.push({ key: 'location', label: locationName });
+  const chips: DetailHeroChip[] = [{ key: "date", label: dateLabel }];
+  if (locationName) chips.push({ key: "location", label: locationName });
   if (sighting.individuals !== null) {
     chips.push({
-      key: 'individuals',
-      label: `${format.number(sighting.individuals)} ${tSighting('individuals')}`,
+      key: "individuals",
+      label: `${format.number(sighting.individuals)} ${tSighting("individuals")}`,
     });
   }
 
+  // The full path down the tree: home → branch → category → species → this
+  // entry, the same chain the category and species pages now carry.
   const breadcrumbs = [
-    { label: t('breadcrumbHome'), href: `/${locale}` },
+    { label: t("breadcrumbHome"), href: "/" },
+    ...(branchLabel && branchHref
+      ? [{ label: branchLabel, href: branchHref }]
+      : []),
     ...(categoryName && categoryHref
       ? [{ label: categoryName, href: categoryHref }]
       : []),
-    ...(speciesName && speciesHref ? [{ label: speciesName, href: speciesHref }] : []),
+    ...(speciesName && speciesHref
+      ? [{ label: speciesName, href: speciesHref }]
+      : []),
     { label: title },
   ];
 
   const seasonName = localized(
     { name: sighting.season_name, en_name: sighting.season_en_name },
-    'name',
+    "name",
     locale,
   );
   const weatherName = localized(
     { name: sighting.weather_name, en_name: sighting.weather_en_name },
-    'name',
+    "name",
     locale,
   );
   const temperature = formatTemperature(sighting.temperature_c, format);
@@ -165,24 +191,26 @@ export default async function SightingPage({ params }: Props) {
   // weather noted should show no weather row rather than an empty one.
   const facts: (Fact | null)[] = [
     speciesName
-      ? { label: tSighting('species'), value: speciesName, href: speciesHref }
+      ? { label: tSighting("species"), value: speciesName, href: speciesHref }
       : null,
     categoryName
       ? {
-          label: tSighting('category'),
+          label: tSighting("category"),
           value: categoryName,
           href: categoryHref,
         }
       : null,
-    { label: tSighting('date'), value: dateLabel },
-    timeLabel ? { label: tSighting('time'), value: timeLabel } : null,
-    locationName ? { label: tSighting('location'), value: locationName } : null,
-    seasonName ? { label: tSighting('season'), value: seasonName } : null,
-    weatherName ? { label: tSighting('weather'), value: weatherName } : null,
-    temperature ? { label: tSighting('temperature'), value: temperature } : null,
+    { label: tSighting("date"), value: dateLabel },
+    timeLabel ? { label: tSighting("time"), value: timeLabel } : null,
+    locationName ? { label: tSighting("location"), value: locationName } : null,
+    seasonName ? { label: tSighting("season"), value: seasonName } : null,
+    weatherName ? { label: tSighting("weather"), value: weatherName } : null,
+    temperature
+      ? { label: tSighting("temperature"), value: temperature }
+      : null,
     sighting.individuals !== null
       ? {
-          label: tSighting('individuals'),
+          label: tSighting("individuals"),
           value: format.number(sighting.individuals),
         }
       : null,
@@ -202,7 +230,7 @@ export default async function SightingPage({ params }: Props) {
         // category it hangs under, and repeating it here would label the
         // encounter as the branch rather than as itself.
         icon={null}
-        fit={sighting.fit ?? 'cover'}
+        fit={sighting.fit ?? "cover"}
         backgroundColor={sighting.background_color}
         eyebrow={categoryName}
         eyebrowHref={categoryHref}
@@ -225,7 +253,7 @@ export default async function SightingPage({ params }: Props) {
         <Grid container spacing={2}>
           <Grid
             size={{ xs: 12, sm: photos.length > 0 ? 6 : 12 }}
-            reorder={{ xs: 'last' }}
+            reorder={{ xs: "last" }}
           >
             <Box flexDirection="column" gap={16}>
               <Card gap={12} padding={18}>
@@ -241,8 +269,11 @@ export default async function SightingPage({ params }: Props) {
                   <RichText>{description}</RichText>
                 ) : (
                   !shortDescription && (
-                    <Typography variant="body" color="var(--foreground-muted, #6b7280)">
-                      {tCategory('noDescription')}
+                    <Typography
+                      variant="body"
+                      color="var(--foreground-muted, #6b7280)"
+                    >
+                      {tCategory("noDescription")}
                     </Typography>
                   )
                 )}
@@ -251,7 +282,7 @@ export default async function SightingPage({ params }: Props) {
               <FactsCard
                 facts={facts}
                 href={sighting.href}
-                hrefLabel={tCategory('externalReference')}
+                hrefLabel={tCategory("externalReference")}
               />
             </Box>
           </Grid>
@@ -269,7 +300,7 @@ export default async function SightingPage({ params }: Props) {
         {videos.length > 0 && (
           <Box flexDirection="column" gap={24} marginTop={56}>
             <Typography as="h2" variant="h2" fontWeight={700}>
-              {t('videoTitle')}
+              {t("videoTitle")}
             </Typography>
             <SightingVideos videos={videos} />
           </Box>
@@ -286,14 +317,14 @@ export default async function SightingPage({ params }: Props) {
             <SightingsMapSection
               pins={[pin]}
               locale={locale}
-              title={t('mapTitle')}
+              title={t("mapTitle")}
               // The API blurs the pair to ~1 km for *every* caller when the
               // place is flagged sensitive, so this says so rather than
               // pretending the pin is exact.
               subtitle={
                 sighting.coordinates_are_approximate
-                  ? t('mapApproximate')
-                  : (locationName ?? t('mapSubtitle'))
+                  ? t("mapApproximate")
+                  : (locationName ?? t("mapSubtitle"))
               }
               filters={[]}
               height={380}
@@ -311,8 +342,8 @@ export default async function SightingPage({ params }: Props) {
             <SightingsSection
               sightings={related}
               locale={locale}
-              title={t('relatedTitle')}
-              subtitle={t('relatedSubtitle', { species: speciesName })}
+              title={t("relatedTitle")}
+              subtitle={t("relatedSubtitle", { species: speciesName })}
             />
           </Box>
         )}
@@ -329,10 +360,10 @@ export default async function SightingPage({ params }: Props) {
  */
 function sightingTitle(sighting: Sighting, locale: string): string {
   return (
-    localized(sighting, 'name', locale) ??
+    localized(sighting, "name", locale) ??
     localized(
       { name: sighting.species_name, en_name: sighting.species_en_name },
-      'name',
+      "name",
       locale,
     ) ??
     sighting.slug
@@ -363,20 +394,20 @@ function toGalleryImages(sighting: Sighting, locale: string): GalleryImage[] {
   const push = (
     url: string | null,
     alt: string,
-    fit: Sighting['fit'],
+    fit: Sighting["fit"],
     backgroundColor: string | null,
   ) => {
     if (!url || seen.has(url)) return;
     seen.add(url);
-    images.push({ url, alt, fit: fit ?? 'cover', backgroundColor });
+    images.push({ url, alt, fit: fit ?? "cover", backgroundColor });
   };
 
   push(sighting.image, title, sighting.fit, sighting.background_color);
   for (const item of sighting.media) {
-    if (item.kind !== 'image') continue;
+    if (item.kind !== "image") continue;
     push(
       item.image,
-      localized(item, 'name', locale) ?? title,
+      localized(item, "name", locale) ?? title,
       item.fit,
       item.background_color,
     );
@@ -388,13 +419,13 @@ function toGalleryImages(sighting: Sighting, locale: string): GalleryImage[] {
 /** The entry's clips - uploaded files and video links alike, via `source_url`. */
 function toVideos(sighting: Sighting, locale: string): SightingVideo[] {
   return sighting.media.flatMap((item) => {
-    if (item.kind === 'image' || !item.source_url) return [];
+    if (item.kind === "image" || !item.source_url) return [];
     return [
       {
         key: `media-${item.id}`,
         url: item.source_url,
-        title: localized(item, 'name', locale),
-        caption: localized(item, 'description', locale),
+        title: localized(item, "name", locale),
+        caption: localized(item, "description", locale),
       },
     ];
   });
@@ -412,9 +443,9 @@ function formatDay(day: string, format: Formatter): string {
   const parsed = new Date(`${day}T12:00:00`);
   if (Number.isNaN(parsed.getTime())) return day;
   return format.dateTime(parsed, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 }
 
@@ -423,14 +454,21 @@ function formatDay(day: string, format: Formatter): string {
  * formatter gets a real instant, and rendered without a timezone conversion
  * because the API stores a wall-clock time, not a UTC one.
  */
-function formatTime(day: string, time: string | null, format: Formatter): string | null {
+function formatTime(
+  day: string,
+  time: string | null,
+  format: Formatter,
+): string | null {
   if (!time) return null;
   const parsed = new Date(`${day}T${time}`);
   if (Number.isNaN(parsed.getTime())) return time;
-  return format.dateTime(parsed, { hour: 'numeric', minute: '2-digit' });
+  return format.dateTime(parsed, { hour: "numeric", minute: "2-digit" });
 }
 
-function formatTemperature(value: string | null, format: Formatter): string | null {
+function formatTemperature(
+  value: string | null,
+  format: Formatter,
+): string | null {
   if (value === null) return null;
   const parsed = Number(value);
   if (Number.isNaN(parsed)) return null;

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
+import { Link } from "@repo/i18n/navigation";
 import { CSSProperties } from "react";
 import { UIComponentProps, buildStyleProps } from "./utils";
 import { Icon } from "./icon";
@@ -16,11 +16,7 @@ export type IconButtonSize = "sm" | "md" | "lg";
 
 /** Semantic color intent for an icon button. */
 export type IconButtonKind =
-  | "default"
-  | "primary"
-  | "error"
-  | "success"
-  | "warning";
+  "default" | "primary" | "error" | "success" | "warning";
 
 /** Square box size and border-radius per size token. */
 const BOX_STYLES: Record<

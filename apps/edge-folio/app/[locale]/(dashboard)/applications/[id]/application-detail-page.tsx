@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Link } from "@repo/i18n/navigation";
+import { useRouter } from "@repo/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Container } from "@repo/ui/core-elements/container";
 import { Box } from "@repo/ui/core-elements/box";
@@ -79,7 +79,7 @@ export function ApplicationDetailPage({
     setDeleting(true);
     try {
       await deleteApplication(app.id);
-      router.push(`/${locale}/applications`);
+      router.push("/applications");
     } catch {
       showToast(t("errorDelete"), "error");
       setDeleting(false);
@@ -131,7 +131,7 @@ export function ApplicationDetailPage({
 
       <Box marginTop={20} />
 
-      <Link href={`/${locale}/applications`} prefetch className="detail__back">
+      <Link href={"/applications"} prefetch className="detail__back">
         ← {t("backToList")}
       </Link>
 

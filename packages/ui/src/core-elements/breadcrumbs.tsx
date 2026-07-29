@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "@repo/i18n/navigation";
 import { Typography } from "@repo/ui/core-elements/typography";
 import "./breadcrumbs.css";
 

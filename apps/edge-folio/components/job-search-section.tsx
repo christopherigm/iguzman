@@ -8,7 +8,7 @@ import {
   forwardRef,
   useImperativeHandle,
 } from "react";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Button } from "@repo/ui/core-elements/button";
@@ -92,7 +92,6 @@ export const JobSearchPanel = forwardRef<
   ref,
 ) {
   const t = useTranslations("ProfilePage");
-  const locale = useLocale();
 
   // Job search prefs state
   const [prefsLoading, setPrefsLoading] = useState(true);
@@ -274,7 +273,7 @@ export const JobSearchPanel = forwardRef<
                   type="button"
                   size="md"
                   kind="primary"
-                  href={`/${locale}/profile`}
+                  href="/profile"
                   icon="/icons/edit.svg"
                   iconPosition="end"
                 />

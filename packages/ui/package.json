@@ -40,6 +40,7 @@
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
     "@repo/helpers": "workspace:*",
+    "@repo/i18n": "workspace:*",
     "chart.js": "^4.5.1",
     "katex": "^0.17.0",
     "react-chartjs-2": "^5.3.0",

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { DragEvent } from "react";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
+import { Link } from "@repo/i18n/navigation";
 import "./admin-entity-list.css";
 import Image from "next/image";
 import { Box } from "@repo/ui/core-elements/box";

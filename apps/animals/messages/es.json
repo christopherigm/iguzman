@@ -97,7 +97,10 @@
     "empty": "Ningún avistamiento coincide con estos filtros.",
     "zoomHint": "Usa Ctrl + desplazamiento para ampliar el mapa",
     "zoomHintMac": "Usa ⌘ + desplazamiento para ampliar el mapa",
-    "yourLocation": "Tu ubicación"
+    "yourLocation": "Tu ubicación",
+    "locate": "Mostrar mi ubicación",
+    "fullscreen": "Pantalla completa",
+    "exitFullscreen": "Salir de pantalla completa"
   },
   "Navbar": {
     "home": "Inicio",

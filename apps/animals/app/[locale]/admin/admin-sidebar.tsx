@@ -1,18 +1,17 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
-import { usePathname, useRouter } from '@repo/i18n/navigation';
-import Link from 'next/link';
-import { useSession } from '@repo/auth/session-provider';
-import { Button } from '@repo/ui/core-elements/button';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import './admin-sidebar.css';
-import { ADMIN_NAV_ITEMS } from './admin-nav-items';
+import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
+import { Link, usePathname, useRouter } from "@repo/i18n/navigation";
+import { useSession } from "@repo/auth/session-provider";
+import { Button } from "@repo/ui/core-elements/button";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import "./admin-sidebar.css";
+import { ADMIN_NAV_ITEMS } from "./admin-nav-items";
 
 export function AdminSidebar() {
-  const t = useTranslations('Admin');
+  const t = useTranslations("Admin");
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -23,13 +22,13 @@ export function AdminSidebar() {
   const authorized = useSession()?.isAdmin === true;
 
   useEffect(() => {
-    if (!authorized) router.replace('/auth');
+    if (!authorized) router.replace("/auth");
   }, [authorized, router]);
 
   if (!authorized) return null;
   // The CMS home page is the card grid; a sidebar beside it would list the same
   // links twice.
-  if (pathname === '/admin') return null;
+  if (pathname === "/admin") return null;
 
   return (
     <>
@@ -39,18 +38,22 @@ export function AdminSidebar() {
         unstyled
         className="admin-sidebar__toggle"
         onClick={() => setOpen((o) => !o)}
-        aria-label={t('toggleSidebar')}
+        aria-label={t("toggleSidebar")}
         aria-expanded={open}
       >
-        <Typography as="span" variant="body" className="admin-sidebar__toggle-label">
-          {t('adminMenu')}
+        <Typography
+          as="span"
+          variant="body"
+          className="admin-sidebar__toggle-label"
+        >
+          {t("adminMenu")}
         </Typography>
-        <span className="admin-sidebar__toggle-icon">{open ? '✕' : '☰'}</span>
+        <span className="admin-sidebar__toggle-icon">{open ? "✕" : "☰"}</span>
       </Button>
 
       <nav
-        className={`admin-sidebar ${open ? 'admin-sidebar--open' : ''}`}
-        aria-label={t('navigation')}
+        className={`admin-sidebar ${open ? "admin-sidebar--open" : ""}`}
+        aria-label={t("navigation")}
       >
         <ul className="admin-sidebar__list">
           {ADMIN_NAV_ITEMS.map((item) => {
@@ -60,13 +63,17 @@ export function AdminSidebar() {
                 <Link
                   href={item.href}
                   prefetch
-                  className={`admin-sidebar__link${active ? ' admin-sidebar__link--active' : ''}`}
+                  className={`admin-sidebar__link${active ? " admin-sidebar__link--active" : ""}`}
                   onClick={() => setOpen(false)}
                 >
                   <span className="admin-sidebar__icon" aria-hidden="true">
                     {item.icon}
                   </span>
-                  <Typography as="span" variant="body" className="admin-sidebar__label">
+                  <Typography
+                    as="span"
+                    variant="body"
+                    className="admin-sidebar__label"
+                  >
                     {t(item.key)}
                   </Typography>
                 </Link>
@@ -81,7 +88,8 @@ export function AdminSidebar() {
           marginTop="auto"
           padding="12px 16px 20px"
           styles={{
-            borderTop: '1px solid color-mix(in srgb, var(--foreground) 10%, transparent)',
+            borderTop:
+              "1px solid color-mix(in srgb, var(--foreground) 10%, transparent)",
           }}
         >
           <Typography
@@ -90,14 +98,23 @@ export function AdminSidebar() {
             fontWeight={700}
             color="var(--foreground)"
             /* 11px: below the `label` variant's 12px, no matching variant */
-            styles={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}
+            styles={{
+              fontSize: 11,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+            }}
           >
-            {t('title')}
+            {t("title")}
           </Typography>
         </Box>
       </nav>
 
-      {open && <Box className="admin-sidebar__overlay" onClick={() => setOpen(false)} />}
+      {open && (
+        <Box
+          className="admin-sidebar__overlay"
+          onClick={() => setOpen(false)}
+        />
+      )}
     </>
   );
 }

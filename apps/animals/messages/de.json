@@ -97,7 +97,10 @@
     "empty": "Keine Sichtung entspricht diesen Filtern.",
     "zoomHint": "Zum Zoomen Strg + Scrollen verwenden",
     "zoomHintMac": "Zum Zoomen ⌘ + Scrollen verwenden",
-    "yourLocation": "Dein Standort"
+    "yourLocation": "Dein Standort",
+    "locate": "Meinen Standort anzeigen",
+    "fullscreen": "Vollbild",
+    "exitFullscreen": "Vollbild beenden"
   },
   "Navbar": {
     "home": "Startseite",

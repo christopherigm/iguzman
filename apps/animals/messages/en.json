@@ -97,7 +97,10 @@
     "empty": "No sighting matches these filters.",
     "zoomHint": "Use Ctrl + scroll to zoom the map",
     "zoomHintMac": "Use ⌘ + scroll to zoom the map",
-    "yourLocation": "Your location"
+    "yourLocation": "Your location",
+    "locate": "Show my location",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit fullscreen"
   },
   "Navbar": {
     "home": "Home",

@@ -1,8 +1,8 @@
-import { connection } from 'next/server';
-import { unstable_rethrow } from 'next/navigation';
-import type { CSSProperties } from 'react';
-import { API_URL } from './config';
-import logger from './logger';
+import { connection } from "next/server";
+import { unstable_rethrow } from "next/navigation";
+import type { CSSProperties } from "react";
+import { API_URL } from "./config";
+import logger from "./logger";
 
 /**
  * Read access to animals-api's `catalog` app.
@@ -25,7 +25,13 @@ import logger from './logger';
  */
 
 /** The five top-level branches. A fixed enum the frontend translates itself. */
-export const KINDS = ['animal', 'plant', 'fungus', 'season', 'weather'] as const;
+export const KINDS = [
+  "animal",
+  "plant",
+  "fungus",
+  "season",
+  "weather",
+] as const;
 
 export type Kind = (typeof KINDS)[number];
 
@@ -42,11 +48,11 @@ export type Kind = (typeof KINDS)[number];
  * break every link to a branch.
  */
 export const KIND_SLUGS: Record<Kind, string> = {
-  animal: 'animals',
-  plant: 'plants',
-  fungus: 'fungi',
-  season: 'seasons',
-  weather: 'weather',
+  animal: "animals",
+  plant: "plants",
+  fungus: "fungi",
+  season: "seasons",
+  weather: "weather",
 };
 
 const KIND_BY_SLUG = new Map<string, Kind>(
@@ -66,16 +72,23 @@ export function kindFromSlug(slug: string): Kind | null {
   return KIND_BY_SLUG.get(slug) ?? null;
 }
 
-/** Where one branch lives - the destination of a category's eyebrow and crumb. */
-export function kindHref(kind: Kind, locale: string): string {
-  return `/${locale}/${KIND_SLUGS[kind]}`;
+/**
+ * Where one branch lives - the destination of a category's eyebrow and crumb.
+ *
+ * Locale-less, like every href in this app: the locale is prefixed at render
+ * time by `@repo/i18n/navigation`'s `Link`, which is what `Box`/`Button`/
+ * `Breadcrumbs` render. Interpolating it here is what let a link keep pointing
+ * at the locale that was current when the page was built.
+ */
+export function kindHref(kind: Kind): string {
+  return `/${KIND_SLUGS[kind]}`;
 }
 
 /**
  * How a record's image should sit in its box - the API's `fit` column, which is
  * `object-fit` by another name (see core.models.FIT_CHOICES).
  */
-export type ImageFit = NonNullable<CSSProperties['objectFit']>;
+export type ImageFit = NonNullable<CSSProperties["objectFit"]>;
 
 /** Fields every catalog picture model publishes (see core.models.BasePicture). */
 interface CatalogRecord {
@@ -163,7 +176,10 @@ async function fetchList<T>(path: string, init: RequestInit): Promise<T[]> {
   try {
     const res = await fetch(`${API_URL}${path}`, init);
     if (!res.ok) {
-      logger.warn({ path, status: res.status }, 'catalog API returned non-OK status');
+      logger.warn(
+        { path, status: res.status },
+        "catalog API returned non-OK status",
+      );
       return [];
     }
     return (await res.json()) as T[];
@@ -173,7 +189,7 @@ async function fetchList<T>(path: string, init: RequestInit): Promise<T[]> {
     // the framework silently does the wrong thing. Put those back on the wire
     // before treating anything as a failed request.
     unstable_rethrow(err);
-    logger.error({ path, err }, 'Failed to fetch from the catalog API');
+    logger.error({ path, err }, "Failed to fetch from the catalog API");
     return [];
   }
 }
@@ -189,11 +205,14 @@ async function fetchList<T>(path: string, init: RequestInit): Promise<T[]> {
  * the error page it deserves.
  */
 async function fetchOne<T>(path: string): Promise<T | null> {
-  const res = await fetch(`${API_URL}${path}`, { cache: 'no-store' });
+  const res = await fetch(`${API_URL}${path}`, { cache: "no-store" });
 
   if (res.status === 404) return null;
   if (!res.ok) {
-    logger.error({ path, status: res.status }, 'catalog API returned non-OK status');
+    logger.error(
+      { path, status: res.status },
+      "catalog API returned non-OK status",
+    );
     throw new Error(`Catalog request failed: ${path} (${res.status})`);
   }
   return (await res.json()) as T;
@@ -204,7 +223,7 @@ async function fetchOne<T>(path: string): Promise<T | null> {
  * name) - which is already the order the landing's grouped icon grid wants.
  */
 export async function getCategories(): Promise<Category[]> {
-  return fetchList<Category>('/api/catalog/categories/', { cache: 'no-store' });
+  return fetchList<Category>("/api/catalog/categories/", { cache: "no-store" });
 }
 
 /**
@@ -215,7 +234,9 @@ export async function getCategories(): Promise<Category[]> {
  * anyone but an administrator, which is exactly what the public page wants.
  */
 export async function getCategory(slug: string): Promise<Category | null> {
-  return fetchOne<Category>(`/api/catalog/categories/slug/${encodeURIComponent(slug)}/`);
+  return fetchOne<Category>(
+    `/api/catalog/categories/slug/${encodeURIComponent(slug)}/`,
+  );
 }
 
 /**
@@ -226,14 +247,19 @@ export async function getCategory(slug: string): Promise<Category | null> {
  * caches this list under its own key anyway.
  */
 export async function getCategoriesByKind(kind: Kind): Promise<Category[]> {
-  return fetchList<Category>(`/api/catalog/categories/?kind=${encodeURIComponent(kind)}`, {
-    cache: 'no-store',
-  });
+  return fetchList<Category>(
+    `/api/catalog/categories/?kind=${encodeURIComponent(kind)}`,
+    {
+      cache: "no-store",
+    },
+  );
 }
 
 /** One species by slug, with its reference photos embedded. */
 export async function getSpecies(slug: string): Promise<Species | null> {
-  return fetchOne<Species>(`/api/catalog/species/slug/${encodeURIComponent(slug)}/`);
+  return fetchOne<Species>(
+    `/api/catalog/species/slug/${encodeURIComponent(slug)}/`,
+  );
 }
 
 /**
@@ -243,10 +269,12 @@ export async function getSpecies(slug: string): Promise<Species | null> {
  * A list again, so it keeps the list contract: a category page with a broken
  * species call is still a category page with its description and its photo.
  */
-export async function getSpeciesByCategory(categorySlug: string): Promise<Species[]> {
+export async function getSpeciesByCategory(
+  categorySlug: string,
+): Promise<Species[]> {
   return fetchList<Species>(
     `/api/catalog/species/?category_slug=${encodeURIComponent(categorySlug)}`,
-    { cache: 'no-store' },
+    { cache: "no-store" },
   );
 }
 
@@ -271,9 +299,12 @@ export async function getSpeciesByCategory(categorySlug: string): Promise<Specie
 export async function getFeaturedSpecies(limit = 10): Promise<Species[]> {
   await connection();
 
-  const species = await fetchList<Species>('/api/catalog/species/?featured=true', {
-    cache: 'no-store',
-  });
+  const species = await fetchList<Species>(
+    "/api/catalog/species/?featured=true",
+    {
+      cache: "no-store",
+    },
+  );
 
   return shuffle(species.filter((item) => Boolean(item.image))).slice(0, limit);
 }

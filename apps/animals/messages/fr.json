@@ -97,7 +97,10 @@
     "empty": "Aucune observation ne correspond à ces filtres.",
     "zoomHint": "Utilisez Ctrl + défilement pour zoomer sur la carte",
     "zoomHintMac": "Utilisez ⌘ + défilement pour zoomer sur la carte",
-    "yourLocation": "Votre position"
+    "yourLocation": "Votre position",
+    "locate": "Afficher ma position",
+    "fullscreen": "Plein écran",
+    "exitFullscreen": "Quitter le plein écran"
   },
   "Navbar": {
     "home": "Accueil",

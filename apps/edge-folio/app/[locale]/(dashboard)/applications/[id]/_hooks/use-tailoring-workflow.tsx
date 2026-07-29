@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { getPathname } from "@repo/i18n/navigation";
 import {
   tailorApplication,
   updateTailoredContent,
@@ -495,8 +496,12 @@ export function useTailoringWorkflow({
     } catch {
       // ignore - preview falls back to defaults
     }
+    // A raw browser navigation, not a `Link`, so nothing prefixes the locale for
+    // us - and an unprefixed path would make the proxy resolve one from the
+    // `NEXT_LOCALE` cookie, costing a redirect. `getPathname` is the sanctioned
+    // way to build a prefixed URL outside a `Link`; never hand-interpolate it.
     window.open(
-      `/${locale}/applications/${app.id}/resume`,
+      getPathname({ href: `/applications/${app.id}/resume`, locale }),
       "_self",
       "noopener,noreferrer",
     );

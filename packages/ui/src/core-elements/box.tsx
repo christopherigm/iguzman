@@ -1,12 +1,17 @@
 import React, { CSSProperties } from "react";
-import Link from "next/link";
+import { Link } from "@repo/i18n/navigation";
 import { UIComponentProps, buildStyleProps } from "./utils";
 
 export interface BoxProps extends UIComponentProps {
   /**
-   * When set, the Box renders as a `next/link` anchor (`<a>`) instead of a
+   * When set, the Box renders as a locale-aware anchor (`<a>`) instead of a
    * `<div>`, keeping every layout prop. Use for a whole card / surface that is
    * itself a navigation target. @default undefined (renders a `<div>`)
+   *
+   * ⚠ **Write it locale-less** - `/species/deer`, never `` `/${locale}/…` ``.
+   * The link is next-intl's, so the current locale is prefixed at render time;
+   * see `@repo/i18n/navigation`. An absolute or external href is passed through
+   * untouched.
    */
   href?: string;
   /**
@@ -14,7 +19,7 @@ export interface BoxProps extends UIComponentProps {
    * `rel="noopener noreferrer"`.
    */
   target?: string;
-  /** `next/link` prefetch behavior when `href` is set. */
+  /** Link prefetch behavior when `href` is set. */
   prefetch?: boolean;
   /** ARIA role for semantic meaning (e.g. `"nav"`, `"main"`, `"article"`). */
   role?: string;
@@ -144,7 +149,7 @@ export const Box = React.forwardRef<HTMLDivElement, BoxProps>(
       ...(role !== undefined ? { role } : {}),
     };
 
-    // Polymorphic branch: render a `next/link` anchor when `href` is set, so a
+    // Polymorphic branch: render a locale-aware anchor when `href` is set, so a
     // whole Box/Card can itself be a navigation target instead of wrapping one.
     if (href !== undefined) {
       return (

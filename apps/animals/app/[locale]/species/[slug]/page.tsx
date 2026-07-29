@@ -1,22 +1,32 @@
-import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { getFormatter, getTranslations, setRequestLocale } from 'next-intl/server';
-import { Box } from '@repo/ui/core-elements/box';
-import { Grid } from '@repo/ui/core-elements/grid';
-import { Card } from '@repo/ui/core-elements/card';
-import { Container } from '@repo/ui/core-elements/container';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
-import { RichText } from '@repo/ui/core-elements/rich-text';
-import { PageBottomSpacer } from '@repo/ui/core-elements/navbar';
-import { getSpecies, type Species } from '@/lib/catalog';
-import { getSightingsBySpecies } from '@/lib/journal';
-import { localized } from '@/lib/i18n-field';
-import { DetailHero, type DetailHeroChip } from '@/components/catalog/detail-hero';
-import { FactsCard } from '@/components/catalog/facts-card';
-import { DetailGallery, type GalleryImage } from '@/components/catalog/detail-gallery';
-import { SightingsSection } from '@/components/journal/sightings-section';
-import { SpeciesVideo } from './species-video';
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import {
+  getFormatter,
+  getTranslations,
+  setRequestLocale,
+} from "next-intl/server";
+import { Box } from "@repo/ui/core-elements/box";
+import { Grid } from "@repo/ui/core-elements/grid";
+import { Card } from "@repo/ui/core-elements/card";
+import { Container } from "@repo/ui/core-elements/container";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+import { RichText } from "@repo/ui/core-elements/rich-text";
+import { PageBottomSpacer } from "@repo/ui/core-elements/navbar";
+import { getSpecies, kindHref, type Species } from "@/lib/catalog";
+import { getSightingsBySpecies } from "@/lib/journal";
+import { localized } from "@/lib/i18n-field";
+import {
+  DetailHero,
+  type DetailHeroChip,
+} from "@/components/catalog/detail-hero";
+import { FactsCard } from "@/components/catalog/facts-card";
+import {
+  DetailGallery,
+  type GalleryImage,
+} from "@/components/catalog/detail-gallery";
+import { SightingsSection } from "@/components/journal/sightings-section";
+import { SpeciesVideo } from "./species-video";
 
 /**
  * One species' page: what it is, its taxonomy, its reference photographs, and
@@ -49,8 +59,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const species = await getSpecies(slug);
   if (!species) return {};
 
-  const name = localized(species, 'name', locale) ?? species.slug;
-  const description = localized(species, 'short_description', locale) ?? species.scientific_name;
+  const name = localized(species, "name", locale) ?? species.slug;
+  const description =
+    localized(species, "short_description", locale) ?? species.scientific_name;
 
   return {
     title: name,
@@ -67,8 +78,9 @@ export default async function SpeciesPage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const t = await getTranslations('SpeciesPage');
-  const tCategory = await getTranslations('CategoryPage');
+  const t = await getTranslations("SpeciesPage");
+  const tCategory = await getTranslations("CategoryPage");
+  const tKinds = await getTranslations("Kinds");
   const format = await getFormatter({ locale });
 
   const [species, sightings] = await Promise.all([
@@ -79,39 +91,53 @@ export default async function SpeciesPage({ params }: Props) {
   // Null only on a real 404 - see the note in `lib/catalog.ts` → `fetchOne`.
   if (!species) notFound();
 
-  const name = localized(species, 'name', locale) ?? species.slug;
-  const shortDescription = localized(species, 'short_description', locale);
-  const description = localized(species, 'description', locale);
+  const name = localized(species, "name", locale) ?? species.slug;
+  const shortDescription = localized(species, "short_description", locale);
+  const description = localized(species, "description", locale);
   const categoryName = localized(
     { name: species.category_name, en_name: species.category_en_name },
-    'name',
+    "name",
     locale,
   );
 
+  // A species has no `kind` column of its own - the API reads it through the
+  // category (see `Species` in lib/catalog.ts), which is also why it is null
+  // exactly when the category is missing.
+  const branchLabel = species.kind ? tKinds(species.kind) : null;
+  const branchHref = species.kind ? kindHref(species.kind) : null;
+
   const photos = toGalleryImages(species, locale);
-  const lastSeen = species.last_seen ? formatDay(species.last_seen, format) : null;
+  const lastSeen = species.last_seen
+    ? formatDay(species.last_seen, format)
+    : null;
 
   const chips: DetailHeroChip[] = [];
   if (species.sighting_count > 0) {
     chips.push({
-      key: 'sightings',
-      label: `${format.number(species.sighting_count)} ${tCategory('sightingsCount')}`,
+      key: "sightings",
+      label: `${format.number(species.sighting_count)} ${tCategory("sightingsCount")}`,
     });
   }
   if (lastSeen) {
     chips.push({
-      key: 'last-seen',
-      label: `${tCategory('lastSeen')}: ${lastSeen}`,
+      key: "last-seen",
+      label: `${tCategory("lastSeen")}: ${lastSeen}`,
     });
   }
 
+  // The full path down the tree: home → branch → category → this species. The
+  // branch was missing here while the category page already carried it, so the
+  // two pages disagreed about where a species sits.
   const breadcrumbs = [
-    { label: tCategory('breadcrumbHome'), href: `/${locale}` },
+    { label: tCategory("breadcrumbHome"), href: "/" },
+    ...(branchLabel && branchHref
+      ? [{ label: branchLabel, href: branchHref }]
+      : []),
     ...(categoryName && species.category_slug
       ? [
           {
             label: categoryName,
-            href: `/${locale}/categories/${species.category_slug}`,
+            href: `/categories/${species.category_slug}`,
           },
         ]
       : []),
@@ -123,11 +149,11 @@ export default async function SpeciesPage({ params }: Props) {
       <DetailHero
         image={species.image}
         icon={species.icon}
-        fit={species.fit ?? 'cover'}
+        fit={species.fit ?? "cover"}
         backgroundColor={species.background_color}
         eyebrow={categoryName}
         eyebrowHref={
-          species.category_slug ? `/${locale}/categories/${species.category_slug}` : null
+          species.category_slug ? `/categories/${species.category_slug}` : null
         }
         title={name}
         scientificName={species.scientific_name}
@@ -143,7 +169,7 @@ export default async function SpeciesPage({ params }: Props) {
             says: below `sm` the text column flows last, so a reader meets the
             animal before its description. */}
         <Grid container spacing={2}>
-          <Grid size={{ xs: 12, sm: 6 }} reorder={{ xs: 'last' }}>
+          <Grid size={{ xs: 12, sm: 6 }} reorder={{ xs: "last" }}>
             <Box flexDirection="column" gap={16}>
               <Card gap={12} padding={18}>
                 {shortDescription && (
@@ -156,8 +182,11 @@ export default async function SpeciesPage({ params }: Props) {
                   <RichText>{description}</RichText>
                 ) : (
                   !shortDescription && (
-                    <Typography variant="body" color="var(--foreground-muted, #6b7280)">
-                      {tCategory('noDescription')}
+                    <Typography
+                      variant="body"
+                      color="var(--foreground-muted, #6b7280)"
+                    >
+                      {tCategory("noDescription")}
                     </Typography>
                   )
                 )}
@@ -167,41 +196,48 @@ export default async function SpeciesPage({ params }: Props) {
                 facts={[
                   species.scientific_name
                     ? {
-                        label: tCategory('factScientificName'),
+                        label: tCategory("factScientificName"),
                         value: species.scientific_name,
                       }
                     : null,
-                  species.family ? { label: t('factFamily'), value: species.family } : null,
+                  species.family
+                    ? { label: t("factFamily"), value: species.family }
+                    : null,
                   categoryName
                     ? {
-                        label: tCategory('factCategory'),
+                        label: tCategory("factCategory"),
                         value: categoryName,
                         href: species.category_slug
-                          ? `/${locale}/categories/${species.category_slug}`
+                          ? `/categories/${species.category_slug}`
                           : null,
                       }
                     : null,
                   {
-                    label: tCategory('factSightings'),
+                    label: tCategory("factSightings"),
                     value: format.number(species.sighting_count),
                   },
-                  lastSeen ? { label: tCategory('lastSeen'), value: lastSeen } : null,
+                  lastSeen
+                    ? { label: tCategory("lastSeen"), value: lastSeen }
+                    : null,
                 ]}
                 href={species.href}
-                hrefLabel={tCategory('externalReference')}
+                hrefLabel={tCategory("externalReference")}
               />
             </Box>
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6 }}>
-            <DetailGallery images={photos} placeholderColor={species.background_color} />
+            <DetailGallery
+              images={photos}
+              placeholderColor={species.background_color}
+            />
           </Grid>
         </Grid>
 
         {species.video_link && (
           <Box flexDirection="column" gap={16} marginTop={56}>
             <Typography as="h2" variant="h2" fontWeight={700}>
-              {t('videoTitle')}
+              {t("videoTitle")}
             </Typography>
             <SpeciesVideo url={species.video_link} title={name} />
           </Box>
@@ -212,8 +248,8 @@ export default async function SpeciesPage({ params }: Props) {
             <SightingsSection
               sightings={sightings}
               locale={locale}
-              title={t('sightingsTitle')}
-              subtitle={t('sightingsSubtitle', { species: name })}
+              title={t("sightingsTitle")}
+              subtitle={t("sightingsSubtitle", { species: name })}
             />
           </Box>
         )}
@@ -241,24 +277,29 @@ export default async function SpeciesPage({ params }: Props) {
  * `contain` (an illustration, a range map) must be letterboxed, not cropped.
  */
 function toGalleryImages(species: Species, locale: string): GalleryImage[] {
-  const name = localized(species, 'name', locale) ?? species.slug;
+  const name = localized(species, "name", locale) ?? species.slug;
   const images: GalleryImage[] = [];
   const seen = new Set<string>();
 
   const push = (
     url: string | null,
     alt: string,
-    fit: Species['fit'],
+    fit: Species["fit"],
     backgroundColor: string | null,
   ) => {
     if (!url || seen.has(url)) return;
     seen.add(url);
-    images.push({ url, alt, fit: fit ?? 'cover', backgroundColor });
+    images.push({ url, alt, fit: fit ?? "cover", backgroundColor });
   };
 
   push(species.image, name, species.fit, species.background_color);
   for (const photo of species.images) {
-    push(photo.image, localized(photo, 'name', locale) ?? name, photo.fit, photo.background_color);
+    push(
+      photo.image,
+      localized(photo, "name", locale) ?? name,
+      photo.fit,
+      photo.background_color,
+    );
   }
 
   return images;
@@ -271,8 +312,8 @@ function formatDay(day: string, format: Formatter): string {
   const parsed = new Date(`${day}T12:00:00`);
   if (Number.isNaN(parsed.getTime())) return day;
   return format.dateTime(parsed, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 }

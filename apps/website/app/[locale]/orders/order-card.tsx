@@ -97,7 +97,7 @@ export function OrderCard({ order, locale }: OrderCardProps) {
     <Card padding={10} gap={8} height="100%" styles={{ position: "relative" }}>
       {/* Full-card navigation target, beneath the trash button. */}
       <Box
-        href={`/${locale}/orders/${order.public_id}`}
+        href={`/orders/${order.public_id}`}
         prefetch
         aria-label={t("breadcrumb", { id: ref })}
         styles={{ position: "absolute", inset: 0, zIndex: 1 }}

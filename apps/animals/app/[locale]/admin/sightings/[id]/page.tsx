@@ -1,12 +1,15 @@
-'use client';
+"use client";
 
-import { use, useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
-import { useRouter } from '@repo/i18n/navigation';
-import { AdminForm, type FieldDef } from '@/components/admin/admin-form';
-import { EntityGalleryField, useEntityGallery } from '@/components/admin/entity-gallery';
-import { MapPicker } from '@/components/admin/map-picker';
-import { MediaEditor } from '../media-editor';
+import { use, useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@repo/i18n/navigation";
+import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
+import {
+  EntityGalleryField,
+  useEntityGallery,
+} from "@/components/admin/entity-gallery";
+import { MapPicker } from "@/components/admin/map-picker";
+import { MediaEditor } from "../media-editor";
 import {
   locations,
   seasons,
@@ -14,11 +17,11 @@ import {
   sightings,
   species,
   weatherConditions,
-} from '@/lib/admin-api';
-import { useDerivedSlug } from '@/hooks/use-derived-slug';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
+} from "@/lib/admin-api";
+import { useDerivedSlug } from "@/hooks/use-derived-slug";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 
 type Props = { params: Promise<{ locale: string; id: string }> };
 type Option = { value: string | number; label: string };
@@ -27,36 +30,36 @@ type Coordinates = { latitude: number; longitude: number };
 /** Today as `YYYY-MM-DD`, from the local clock rather than `toISOString()`. */
 function today(): string {
   const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, '0');
+  const pad = (n: number) => String(n).padStart(2, "0");
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
 export default function AdminSightingFormPage({ params }: Props) {
   const { id } = use(params);
-  const isNew = id === 'new';
-  const t = useTranslations('Admin');
+  const isNew = id === "new";
+  const t = useTranslations("Admin");
   const router = useRouter();
 
   const [values, setValues] = useState<Record<string, unknown>>({
-    species: '',
-    name: '',
-    en_name: '',
-    slug: '',
+    species: "",
+    name: "",
+    en_name: "",
+    slug: "",
     // Most entries are typed up the day of the outing, so today is the useful
     // default; it is also what the season is derived from on save.
     date: today(),
-    time: '',
-    location: '',
-    latitude: '',
-    longitude: '',
-    season: '',
-    weather: '',
-    temperature_c: '',
-    individuals: '',
-    short_description: '',
-    en_short_description: '',
-    description: '',
-    en_description: '',
+    time: "",
+    location: "",
+    latitude: "",
+    longitude: "",
+    season: "",
+    weather: "",
+    temperature_c: "",
+    individuals: "",
+    short_description: "",
+    en_short_description: "",
+    description: "",
+    en_description: "",
     is_featured: false,
     enabled: true,
   });
@@ -67,15 +70,17 @@ export default function AdminSightingFormPage({ params }: Props) {
   // so the photo half is filtered out of it here and the two video kinds stay in
   // `MediaEditor` below - they cannot ride in a JSON body the way an image does.
   const gallery = useEntityGallery(sightingMedia, isNew ? null : Number(id), {
-    filter: (row) => row.kind === 'image',
-    createExtras: { kind: 'image' },
+    filter: (row) => row.kind === "image",
+    createExtras: { kind: "image" },
   });
   const [speciesOptions, setSpeciesOptions] = useState<Option[]>([]);
   const [locationOptions, setLocationOptions] = useState<Option[]>([]);
   // Each location's own coordinates, keyed by id. They are what the API falls
   // back to when the entry carries none, so they are also where the map should
   // open before a pin is dropped.
-  const [locationCoords, setLocationCoords] = useState<Record<string, Coordinates>>({});
+  const [locationCoords, setLocationCoords] = useState<
+    Record<string, Coordinates>
+  >({});
   const [seasonOptions, setSeasonOptions] = useState<Option[]>([]);
   const [weatherOptions, setWeatherOptions] = useState<Option[]>([]);
   const [loading, setLoading] = useState(!isNew);
@@ -86,8 +91,13 @@ export default function AdminSightingFormPage({ params }: Props) {
   // The entry's title is optional, so a slug derived from it would be empty for
   // most entries. `<species>-<date>` is what makes one identifiable *and*
   // unique, which is what the API requires.
-  const derivedSource = String(values.name ?? '') || `${slugSpecies(speciesOptions, values)}`;
-  useDerivedSlug(isNew, { ...values, name: `${derivedSource} ${values.date ?? ''}` }, setValues);
+  const derivedSource =
+    String(values.name ?? "") || `${slugSpecies(speciesOptions, values)}`;
+  useDerivedSlug(
+    isNew,
+    { ...values, name: `${derivedSource} ${values.date ?? ""}` },
+    setValues,
+  );
 
   useEffect(() => {
     // Four independent lookups, fired together: a form that awaited them in
@@ -99,7 +109,9 @@ export default function AdminSightingFormPage({ params }: Props) {
         setLocationCoords(toCoordinates(rows));
       }),
       seasons.list().then((rows) => setSeasonOptions(toOptions(rows))),
-      weatherConditions.list().then((rows) => setWeatherOptions(toOptions(rows))),
+      weatherConditions
+        .list()
+        .then((rows) => setWeatherOptions(toOptions(rows))),
     ]).catch(() => {
       /* non-critical: the form still saves, just without labelled pickers */
     });
@@ -111,28 +123,28 @@ export default function AdminSightingFormPage({ params }: Props) {
       .get(Number(id))
       .then((data) => {
         setValues({
-          species: data.species ?? '',
-          name: data.name ?? '',
-          en_name: data.en_name ?? '',
-          slug: data.slug ?? '',
+          species: data.species ?? "",
+          name: data.name ?? "",
+          en_name: data.en_name ?? "",
+          slug: data.slug ?? "",
           date: data.date ?? today(),
-          time: data.time ?? '',
-          location: data.location ?? '',
-          latitude: data.latitude ?? '',
-          longitude: data.longitude ?? '',
-          season: data.season ?? '',
-          weather: data.weather ?? '',
-          temperature_c: data.temperature_c ?? '',
-          individuals: data.individuals ?? '',
-          short_description: data.short_description ?? '',
-          en_short_description: data.en_short_description ?? '',
-          description: data.description ?? '',
-          en_description: data.en_description ?? '',
+          time: data.time ?? "",
+          location: data.location ?? "",
+          latitude: data.latitude ?? "",
+          longitude: data.longitude ?? "",
+          season: data.season ?? "",
+          weather: data.weather ?? "",
+          temperature_c: data.temperature_c ?? "",
+          individuals: data.individuals ?? "",
+          short_description: data.short_description ?? "",
+          en_short_description: data.en_short_description ?? "",
+          description: data.description ?? "",
+          en_description: data.en_description ?? "",
           is_featured: data.is_featured ?? false,
           enabled: data.enabled ?? true,
         });
       })
-      .catch(() => setError(t('errorLoad')))
+      .catch(() => setError(t("errorLoad")))
       .finally(() => setLoading(false));
   }, [id, isNew, t]);
 
@@ -147,32 +159,32 @@ export default function AdminSightingFormPage({ params }: Props) {
       // value any of these columns accepts.
       (
         [
-          'location',
-          'season',
-          'weather',
-          'time',
-          'latitude',
-          'longitude',
-          'temperature_c',
-          'individuals',
+          "location",
+          "season",
+          "weather",
+          "time",
+          "latitude",
+          "longitude",
+          "temperature_c",
+          "individuals",
         ] as const
       ).forEach((k) => {
-        if (payload[k] === '') payload[k] = null;
+        if (payload[k] === "") payload[k] = null;
       });
       // The photos are written after the row exists: each is POSTed to this
       // entry's own URL, which one being created does not have until now.
       if (isNew) {
         const created = await sightings.create(payload);
         await gallery.persist(created.id as number);
-        setSuccess(t('saved'));
+        setSuccess(t("saved"));
         router.replace(`/admin/sightings/${created.id}`);
       } else {
         await sightings.update(Number(id), payload);
         await gallery.persist(Number(id));
-        setSuccess(t('saved'));
+        setSuccess(t("saved"));
       }
     } catch {
-      setError(t('errorSave'));
+      setError(t("errorSave"));
     } finally {
       setSaving(false);
     }
@@ -180,62 +192,67 @@ export default function AdminSightingFormPage({ params }: Props) {
 
   const fields: FieldDef[] = [
     {
-      key: 'species',
-      label: t('species'),
-      type: 'select',
+      key: "species",
+      label: t("species"),
+      type: "select",
       required: true,
       options: speciesOptions,
-      placeholder: t('selectSpecies'),
+      placeholder: t("selectSpecies"),
     },
-    { key: 'date', label: t('date'), required: true, placeholder: 'YYYY-MM-DD' },
-    { key: 'time', label: t('time'), placeholder: 'HH:MM' },
-    // The entry's own title, optional: the site falls back to the species name.
-    { key: 'name', label: t('title') },
-    { key: 'en_name', label: t('title') },
-    { key: 'slug', label: t('slug'), type: 'slug', disabled: true },
     {
-      key: 'location',
-      label: t('location'),
-      type: 'select',
+      key: "date",
+      label: t("date"),
+      required: true,
+      placeholder: "YYYY-MM-DD",
+    },
+    { key: "time", label: t("time"), placeholder: "HH:MM" },
+    // The entry's own title, optional: the site falls back to the species name.
+    { key: "name", label: t("title") },
+    { key: "en_name", label: t("title") },
+    { key: "slug", label: t("slug"), type: "slug", disabled: true },
+    {
+      key: "location",
+      label: t("location"),
+      type: "select",
       options: locationOptions,
-      placeholder: t('none'),
+      placeholder: t("none"),
     },
     // Left blank, the API falls back to the location's own coordinates - so
     // these are the *exact spot*, not the place. The map above the pair writes
     // both at once; typing into either still works and moves the pin.
-    { key: 'latitude', label: t('latitude'), type: 'number' },
-    { key: 'longitude', label: t('longitude'), type: 'number' },
+    { key: "latitude", label: t("latitude"), type: "number" },
+    { key: "longitude", label: t("longitude"), type: "number" },
     {
-      key: 'season',
-      label: t('season'),
-      type: 'select',
+      key: "season",
+      label: t("season"),
+      type: "select",
       options: seasonOptions,
       // Left blank, the API fills it by matching the date's month against each
       // season's months. An explicit choice is never overwritten, which is what
       // lets an unseasonably warm November day be filed however the author wants.
-      placeholder: t('seasonAuto'),
+      placeholder: t("seasonAuto"),
     },
     {
-      key: 'weather',
-      label: t('weather'),
-      type: 'select',
+      key: "weather",
+      label: t("weather"),
+      type: "select",
       options: weatherOptions,
-      placeholder: t('none'),
+      placeholder: t("none"),
     },
-    { key: 'temperature_c', label: t('temperature'), type: 'number' },
-    { key: 'individuals', label: t('individuals'), type: 'number' },
-    { key: 'short_description', label: t('excerpt'), type: 'textarea' },
-    { key: 'en_short_description', label: t('excerpt'), type: 'textarea' },
-    { key: 'description', label: t('story'), type: 'textarea' },
-    { key: 'en_description', label: t('story'), type: 'textarea' },
-    { key: 'is_featured', label: t('featured'), type: 'boolean' },
-    { key: 'enabled', label: t('enabled'), type: 'boolean' },
+    { key: "temperature_c", label: t("temperature"), type: "number" },
+    { key: "individuals", label: t("individuals"), type: "number" },
+    { key: "short_description", label: t("excerpt"), type: "textarea" },
+    { key: "en_short_description", label: t("excerpt"), type: "textarea" },
+    { key: "description", label: t("story"), type: "textarea" },
+    { key: "en_description", label: t("story"), type: "textarea" },
+    { key: "is_featured", label: t("featured"), type: "boolean" },
+    { key: "enabled", label: t("enabled"), type: "boolean" },
   ];
 
   if (loading)
     return (
       <Box padding="24px">
-        <Typography variant="body">{t('loading')}</Typography>
+        <Typography variant="body">{t("loading")}</Typography>
       </Box>
     );
 
@@ -243,15 +260,19 @@ export default function AdminSightingFormPage({ params }: Props) {
     <>
       <Breadcrumbs
         items={[
-          { label: t('home'), href: '/' },
-          { label: t('breadcrumbAdmin'), href: '/admin' },
-          { label: t('sightings'), href: '/admin/sightings' },
-          { label: isNew ? t('newItem') : t('edit') },
+          { label: t("home"), href: "/" },
+          { label: t("breadcrumbAdmin"), href: "/admin" },
+          { label: t("sightings"), href: "/admin/sightings" },
+          { label: isNew ? t("newItem") : t("edit") },
         ]}
       />
       <AdminForm
-        title={isNew ? `${t('newItem')} - ${t('sightings')}` : `${t('edit')} - ${t('sightings')}`}
-        editingName={isNew ? undefined : String(values.name ?? '')}
+        title={
+          isNew
+            ? `${t("newItem")} - ${t("sightings")}`
+            : `${t("edit")} - ${t("sightings")}`
+        }
+        editingName={isNew ? undefined : String(values.name ?? "")}
         isEditing={!isNew}
         fields={fields}
         values={values}
@@ -260,19 +281,25 @@ export default function AdminSightingFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
-        productionHref={!isNew && values.slug ? `/journal/${String(values.slug)}` : undefined}
+        productionHref={
+          !isNew && values.slug
+            ? `/sightings/${String(values.slug)}`
+            : undefined
+        }
         imagesSlot={<EntityGalleryField gallery={gallery} />}
         slots={[
           {
-            beforeKey: 'latitude',
+            beforeKey: "latitude",
             node: (
               <MapPicker
-                latitude={String(values.latitude ?? '')}
-                longitude={String(values.longitude ?? '')}
+                latitude={String(values.latitude ?? "")}
+                longitude={String(values.longitude ?? "")}
                 onChange={(latitude, longitude) =>
                   setValues((prev) => ({ ...prev, latitude, longitude }))
                 }
-                fallbackCenter={locationCoords[String(values.location ?? '')] ?? null}
+                fallbackCenter={
+                  locationCoords[String(values.location ?? "")] ?? null
+                }
               />
             ),
           },
@@ -289,7 +316,10 @@ export default function AdminSightingFormPage({ params }: Props) {
 }
 
 function toOptions(rows: Record<string, unknown>[]): Option[] {
-  return rows.map((row) => ({ value: row.id as number, label: String(row.name ?? row.id) }));
+  return rows.map((row) => ({
+    value: row.id as number,
+    label: String(row.name ?? row.id),
+  }));
 }
 
 /**
@@ -298,7 +328,9 @@ function toOptions(rows: Record<string, unknown>[]): Option[] {
  * kilometre for every caller - so a location without coordinates is simply
  * absent here and the map opens on its default view instead.
  */
-function toCoordinates(rows: Record<string, unknown>[]): Record<string, Coordinates> {
+function toCoordinates(
+  rows: Record<string, unknown>[],
+): Record<string, Coordinates> {
   const out: Record<string, Coordinates> = {};
   rows.forEach((row) => {
     const latitude = Number(row.latitude);
@@ -311,7 +343,12 @@ function toCoordinates(rows: Record<string, unknown>[]): Record<string, Coordina
 }
 
 /** The chosen species' name, for the derived slug. Empty until one is picked. */
-function slugSpecies(options: Option[], values: Record<string, unknown>): string {
-  const match = options.find((o) => String(o.value) === String(values.species ?? ''));
-  return match?.label ?? '';
+function slugSpecies(
+  options: Option[],
+  values: Record<string, unknown>,
+): string {
+  const match = options.find(
+    (o) => String(o.value) === String(values.species ?? ""),
+  );
+  return match?.label ?? "";
 }
