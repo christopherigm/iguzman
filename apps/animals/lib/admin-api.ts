@@ -103,6 +103,19 @@ export const seasons = resource('catalog/seasons');
 export const weatherConditions = resource('catalog/weather-conditions');
 export const locations = resource('catalog/locations');
 
+/**
+ * The geography lookups a place is filed under. Lightweight by design - a name
+ * pair, a slug and an order, no photographs - so unlike every other catalog
+ * resource these have no `*Images` child collection beside them.
+ *
+ * A county belongs to a state, and a **location stores only its county**: the
+ * state comes back on the payload as `state`/`state_name`, read through that
+ * county, and is not writable on a location. So a form that lets an author pick
+ * a state is picking a filter, not a field.
+ */
+export const states = resource('catalog/states');
+export const counties = resource('catalog/counties');
+
 // ---- Journal ----------------------------------------------------------------
 
 /**

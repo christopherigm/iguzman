@@ -13,12 +13,14 @@ from .models import (
     KIND_CHOICES,
     Category,
     CategoryImage,
+    County,
     Location,
     LocationImage,
     Season,
     SeasonImage,
     Species,
     SpeciesImage,
+    State,
     WeatherCondition,
     WeatherConditionImage,
 )
@@ -27,6 +29,10 @@ from .serializers import (
     CategoryImageWriteSerializer,
     CategorySerializer,
     CategoryWriteSerializer,
+    CountySerializer,
+    CountyWriteSerializer,
+    StateSerializer,
+    StateWriteSerializer,
     LocationImageSerializer,
     LocationImageWriteSerializer,
     LocationSerializer,
@@ -449,6 +455,94 @@ class WeatherConditionDetailView(CachedDetailView):
 
 
 # ---------------------------------------------------------------------------
+# Geography: states and counties
+# ---------------------------------------------------------------------------
+
+class StateListCreateView(CachedListCreateView):
+    """GET (public) / POST (admin) states. Query params: slug, search, include_disabled."""
+
+    model = State
+    serializer_class = StateSerializer
+    write_serializer_class = StateWriteSerializer
+    list_cache_prefix = keys.STATES
+    detail_cache_prefix = keys.STATE
+    prefetch_related = ('counties',)
+
+    def filter_queryset(self, qs, request):
+        slug = request.query_params.get('slug')
+        if slug:
+            qs = qs.filter(slug=slug)
+        search = request.query_params.get('search')
+        if search:
+            qs = qs.filter(Q(name__icontains=search) | Q(en_name__icontains=search))
+        return qs
+
+
+class StateDetailView(CachedDetailView):
+    """GET (public) / PATCH / DELETE (admin) one state, by pk or slug.
+
+    A DELETE of a state that still has counties is refused with a 409 - the FK
+    is PROTECT, and `core/views.py` turns the ProtectedError into a readable
+    message rather than a 500.
+    """
+
+    model = State
+    serializer_class = StateSerializer
+    write_serializer_class = StateWriteSerializer
+    list_cache_prefix = keys.STATES
+    detail_cache_prefix = keys.STATE
+    prefetch_related = ('counties',)
+
+
+class CountyListCreateView(CachedListCreateView):
+    """GET (public) / POST (admin) counties.
+
+    Query params: state (pk), state_slug, slug, search, include_disabled. The
+    `state` filter is what lets the CMS narrow a county picker to the state an
+    author has already chosen.
+    """
+
+    model = County
+    serializer_class = CountySerializer
+    write_serializer_class = CountyWriteSerializer
+    list_cache_prefix = keys.COUNTIES
+    detail_cache_prefix = keys.COUNTY
+    select_related = ('state',)
+    prefetch_related = ('locations',)
+
+    def filter_queryset(self, qs, request):
+        state = request.query_params.get('state')
+        if state:
+            qs = qs.filter(state_id=state)
+        state_slug = request.query_params.get('state_slug')
+        if state_slug:
+            qs = qs.filter(state__slug=state_slug)
+        slug = request.query_params.get('slug')
+        if slug:
+            qs = qs.filter(slug=slug)
+        search = request.query_params.get('search')
+        if search:
+            qs = qs.filter(
+                Q(name__icontains=search)
+                | Q(en_name__icontains=search)
+                | Q(state__name__icontains=search)
+            )
+        return qs
+
+
+class CountyDetailView(CachedDetailView):
+    """GET (public) / PATCH / DELETE (admin) one county, by pk or slug."""
+
+    model = County
+    serializer_class = CountySerializer
+    write_serializer_class = CountyWriteSerializer
+    list_cache_prefix = keys.COUNTIES
+    detail_cache_prefix = keys.COUNTY
+    select_related = ('state',)
+    prefetch_related = ('locations',)
+
+
+# ---------------------------------------------------------------------------
 # Locations
 # ---------------------------------------------------------------------------
 
@@ -457,8 +551,8 @@ class LocationListCreateView(CachedListCreateView):
     GET  /api/catalog/locations/ - list places (public).
     POST /api/catalog/locations/ - create one (staff only).
 
-    Query params: parent ('null' for top-level places), place_type, country,
-    featured, search, slug, include_disabled.
+    Query params: parent ('null' for top-level places), place_type, county,
+    state, featured, search, slug, include_disabled.
     """
 
     model = Location
@@ -466,7 +560,9 @@ class LocationListCreateView(CachedListCreateView):
     write_serializer_class = LocationWriteSerializer
     list_cache_prefix = keys.LOCATIONS
     detail_cache_prefix = keys.LOCATION
-    select_related = ('parent',)
+    # `county__state` is joined too: the payload flattens the state read
+    # through the county, so without it every row costs two extra queries.
+    select_related = ('parent', 'county', 'county__state')
     prefetch_related = ('sightings', 'images')
 
     def filter_queryset(self, qs, request):
@@ -478,9 +574,14 @@ class LocationListCreateView(CachedListCreateView):
         place_type = request.query_params.get('place_type')
         if place_type:
             qs = qs.filter(place_type=place_type)
-        country = request.query_params.get('country')
-        if country:
-            qs = qs.filter(country__iexact=country)
+        county = request.query_params.get('county')
+        if county:
+            qs = qs.filter(county_id=county)
+        # A place stores no state of its own, so filtering by one walks through
+        # the county - the same path `Location.state` reads.
+        state = request.query_params.get('state')
+        if state:
+            qs = qs.filter(county__state_id=state)
         slug = request.query_params.get('slug')
         if slug:
             qs = qs.filter(slug=slug)
@@ -491,7 +592,8 @@ class LocationListCreateView(CachedListCreateView):
             qs = qs.filter(
                 Q(name__icontains=search)
                 | Q(en_name__icontains=search)
-                | Q(region__icontains=search)
+                | Q(county__name__icontains=search)
+                | Q(county__state__name__icontains=search)
             )
         return qs
 
@@ -504,5 +606,7 @@ class LocationDetailView(CachedDetailView):
     write_serializer_class = LocationWriteSerializer
     list_cache_prefix = keys.LOCATIONS
     detail_cache_prefix = keys.LOCATION
-    select_related = ('parent',)
+    # `county__state` is joined too: the payload flattens the state read
+    # through the county, so without it every row costs two extra queries.
+    select_related = ('parent', 'county', 'county__state')
     prefetch_related = ('sightings', 'images')

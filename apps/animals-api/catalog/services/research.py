@@ -75,8 +75,11 @@ _SUBJECTS = {
             'name': 'the place name in Spanish (keep the local proper name)',
             'en_name': 'the place name in English, ONLY if a genuine established English '
                        'form exists; otherwise null',
-            'region': 'the state, province or region it is in',
-            'country': 'the country it is in',
+            # There is no `region`/`country` here any more, and no `county`/`state`
+            # replacing them: those are FKs into the geography catalog now, and a
+            # model that answered "Jalisco" could not say *which row* that is. An
+            # invented one would then be created by an author accepting the draft.
+            # FKs are absent from every subject for exactly this reason.
             'latitude': 'decimal latitude, e.g. 19.412345. Null if not confidently known.',
             'longitude': 'decimal longitude. Null if not confidently known.',
             'short_description': 'a one-sentence summary in Spanish, under 30 words',

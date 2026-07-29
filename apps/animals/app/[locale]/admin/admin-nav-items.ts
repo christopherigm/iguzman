@@ -23,6 +23,11 @@ export const ADMIN_NAV_ITEMS = [
   { key: 'species', href: '/admin/species', icon: '🦌', descKey: 'speciesDesc' },
   { key: 'sightings', href: '/admin/sightings', icon: '📔', descKey: 'sightingsDesc' },
   { key: 'locations', href: '/admin/locations', icon: '📍', descKey: 'locationsDesc' },
+  // The two geography lookups a place is filed under, directly after the places
+  // themselves. Most authoring happens in the panel on /admin/locations - these
+  // are the full lists, for renaming in bulk or unpicking a duplicate.
+  { key: 'states', href: '/admin/states', icon: '🗺️', descKey: 'statesDesc' },
+  { key: 'counties', href: '/admin/counties', icon: '🧭', descKey: 'countiesDesc' },
   { key: 'seasons', href: '/admin/seasons', icon: '🍂', descKey: 'seasonsDesc' },
   { key: 'weather', href: '/admin/weather', icon: '🌦️', descKey: 'weatherDesc' },
   { key: 'users', href: '/admin/users', icon: '👥', descKey: 'usersDesc' },

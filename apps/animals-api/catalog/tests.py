@@ -5,7 +5,7 @@ from django.core.files.base import ContentFile
 
 from core.tests import IsolatedMediaTestCase, base64_image, data_url
 
-from .models import Category, Location, Season, Species, WeatherCondition
+from .models import Category, County, Location, Season, Species, State, WeatherCondition
 
 
 class CatalogFixtureMixin:
@@ -462,6 +462,121 @@ class LocationTests(IsolatedMediaTestCase):
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 400)
+
+
+class GeographyTests(IsolatedMediaTestCase):
+    """The State/County lookup pair, and the state a location derives from it."""
+
+    def setUp(self):
+        super().setUp()
+        self.state = State.objects.create(name='Jalisco', slug='jalisco')
+        self.county = County.objects.create(
+            name='Zapopan', slug='zapopan', state=self.state
+        )
+
+    def test_a_location_publishes_the_state_read_through_its_county(self):
+        # There is no `state` column - the whole point of the pair. If this ever
+        # starts reading a stored field the two can begin to disagree.
+        Location.objects.create(name='Bosque', slug='bosque', county=self.county)
+        payload = self.client.get('/api/catalog/locations/slug/bosque/').json()
+        self.assertEqual(payload['county'], self.county.pk)
+        self.assertEqual(payload['county_name'], 'Zapopan')
+        self.assertEqual(payload['state'], self.state.pk)
+        self.assertEqual(payload['state_name'], 'Jalisco')
+
+    def test_a_location_without_a_county_carries_no_state(self):
+        # The accepted cost of storing only the county: no county, no state.
+        Location.objects.create(name='Patio', slug='patio')
+        payload = self.client.get('/api/catalog/locations/slug/patio/').json()
+        self.assertIsNone(payload['county'])
+        self.assertIsNone(payload['state'])
+        self.assertIsNone(payload['state_name'])
+
+    def test_the_state_is_read_only_on_a_location(self):
+        self.make_staff()
+        self.client.login(username='ranger', password='fieldnotes-2026')
+        other = State.objects.create(name='Colima', slug='colima')
+        location = Location.objects.create(name='Bosque', slug='bosque', county=self.county)
+
+        response = self.client.patch(
+            f'/api/catalog/locations/{location.pk}/',
+            {'state': other.pk},
+            content_type='application/json',
+        )
+        # Accepted and ignored, not applied: `state` is not a writable field, so
+        # the place still answers with the state behind its county.
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['state'], self.state.pk)
+
+    def test_locations_can_be_filtered_by_state_and_county(self):
+        Location.objects.create(name='Bosque', slug='bosque', county=self.county)
+        Location.objects.create(name='Patio', slug='patio')
+
+        by_state = self.client.get(f'/api/catalog/locations/?state={self.state.pk}').json()
+        self.assertEqual([row['slug'] for row in by_state], ['bosque'])
+        by_county = self.client.get(f'/api/catalog/locations/?county={self.county.pk}').json()
+        self.assertEqual([row['slug'] for row in by_county], ['bosque'])
+
+    def test_deleting_a_state_that_still_has_counties_is_a_409(self):
+        # PROTECT, like Category->Species: losing the state would orphan every
+        # county filed under it, and every location behind those.
+        self.make_staff()
+        self.client.login(username='ranger', password='fieldnotes-2026')
+        response = self.client.delete(f'/api/catalog/states/{self.state.pk}/')
+        self.assertEqual(response.status_code, 409)
+
+    def test_deleting_a_county_leaves_its_locations_standing(self):
+        # SET_NULL, like `parent`: merging a county away must not take the
+        # places filed under it.
+        location = Location.objects.create(name='Bosque', slug='bosque', county=self.county)
+        self.county.delete()
+        location.refresh_from_db()
+        self.assertIsNone(location.county)
+
+    def test_a_county_carries_its_states_english_twin(self):
+        self.state.en_name = 'Jalisco State'
+        self.state.save()
+        payload = self.client.get('/api/catalog/counties/').json()[0]
+        self.assertEqual(payload['state_name'], 'Jalisco')
+        self.assertEqual(payload['state_en_name'], 'Jalisco State')
+
+    def test_counties_filter_by_state(self):
+        other = State.objects.create(name='Colima', slug='colima')
+        County.objects.create(name='Comala', slug='comala', state=other)
+        rows = self.client.get(f'/api/catalog/counties/?state={self.state.pk}').json()
+        self.assertEqual([row['slug'] for row in rows], ['zapopan'])
+
+    def test_geography_is_public_to_read_and_admin_to_write(self):
+        self.assertEqual(self.client.get('/api/catalog/states/').status_code, 200)
+        response = self.client.post(
+            '/api/catalog/states/',
+            {'name': 'Colima', 'slug': 'colima'},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_renaming_a_state_reaches_the_cached_location_payload(self):
+        """Two tables away: a location flattens the state read *through* its county.
+
+        Without the receiver in signals.py this is the exact shape of a lost
+        write - the CMS shows the new name, the site keeps serving the old one.
+        """
+        Location.objects.create(name='Bosque', slug='bosque', county=self.county)
+        self.assertEqual(
+            self.client.get('/api/catalog/locations/').json()[0]['state_name'], 'Jalisco'
+        )
+
+        self.state.name = 'Nayarit'
+        self.state.save()
+
+        self.assertEqual(
+            self.client.get('/api/catalog/locations/').json()[0]['state_name'], 'Nayarit'
+        )
+
+    def test_moving_a_location_updates_the_cached_county_count(self):
+        self.assertEqual(self.client.get('/api/catalog/counties/').json()[0]['location_count'], 0)
+        Location.objects.create(name='Bosque', slug='bosque', county=self.county)
+        self.assertEqual(self.client.get('/api/catalog/counties/').json()[0]['location_count'], 1)
 
 
 class CacheInvalidationTests(CatalogFixtureMixin, IsolatedMediaTestCase):

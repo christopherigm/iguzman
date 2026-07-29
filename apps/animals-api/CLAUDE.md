@@ -46,7 +46,7 @@ There are now **two** authoring surfaces, and both are real product:
   `WeatherCondition`, `Location`, plus a photo gallery per record
   (`CategoryImage`, `SpeciesImage`, `SeasonImage`, `WeatherConditionImage`,
   `LocationImage`, all from the abstract `GalleryImage` - see "The first photo is
-  the record's cover").
+  the record's cover"). Also `State` and `County` - see "Geography is a catalog".
 - **`journal`** - the entries: `Sighting`, `SightingMedia`.
 - **`users`** - unchanged from the scaffold (JWT, passkeys, email verification).
 
@@ -136,6 +136,49 @@ translate what already exists.
 - `Season.for_date` scans in Python rather than using a `months__contains`
   lookup - that lookup is unsupported on SQLite, which is what development and
   the tests run on. Four rows; the scan is free.
+
+## Geography is a catalog: `State` → `County` → `Location`
+
+A place used to carry its geography as free text - `region` ("State, province or
+region"), `country` and a `map_link`. All three are **gone** (migration
+`0006_state_county`, which drops them and migrates nothing), replaced by two
+lookup tables and the coordinates the site already had.
+
+```
+State(name, en_name, slug)
+    ^
+    |  FK (required, PROTECT)
+County(name, en_name, slug, state)
+    ^
+    |  FK (optional, SET_NULL)
+Location
+```
+
+Four things to know:
+
+- **They are lookup tables, not content.** `Common` + a name pair + a slug + a
+  sort order. No `image`, no `icon`, no description pair, no gallery, no
+  `/images/` endpoints, no public page. They exist so "Jalisco" is typed once
+  and then *chosen*. If one ever needs a photograph it should become a
+  `RegularPicture` like the other four records, not grow the fields in place.
+- **`Location` stores only its county; the state is derived.** `Location.state`
+  is a read-only property over `county.state`, flattened onto the payload as
+  `state`/`state_name`/`state_en_name`/`state_slug` - the same reasoning as
+  `Species.kind` over `category.kind`. It is **not writable**, and there is no
+  `state` column: two FKs could disagree, one cannot. The accepted cost is that
+  a place whose county is unknown carries no state either.
+- **The two FKs differ on purpose.** `County.state` is required and `PROTECT`
+  (deleting a state still in use is a 409, like a category that still has
+  species); `Location.county` is optional and `SET_NULL` (merging a county away
+  must not take the places filed under it, exactly like `parent`).
+- **There is no `map_link`, and it should not come back.** Every place carries
+  coordinates and the CMS has a map picker for setting them, so the site draws
+  its own map instead of linking out to someone else's.
+
+⚠ `/api/ai/research/`'s `location` subject **must not** offer these.
+`catalog/services/research.py` dropped `region`/`country` rather than renaming
+them: a model that answers "Jalisco" cannot say *which row* that is, and FKs are
+absent from every subject's allowlist for exactly this reason.
 
 ## Coordinates: two rules that are easy to get wrong
 
@@ -311,6 +354,8 @@ and `journal/signals.py` with a table at the top of each. The pairings that bite
 | `Sighting` | that species (`sighting_count`, `last_seen`), the season / weather / location lists (each carries `sighting_count`), and `/journal/stats/` |
 | `SightingMedia` | that sighting - its payload embeds the gallery, **and** its cover image falls back to the first photo |
 | `SeasonImage` / `WeatherConditionImage` / `LocationImage` | that record - same reason: the gallery *and* the cover |
+| `State` | counties (`state_name`/`slug`) **and** locations, which flatten the state read *through* the county - two tables away from the row that changed |
+| `County` | locations (`county_name` and the state behind it), and states (`county_count`, `location_count`) |
 
 ⚠ **Add a derived or flattened field to a serializer and you must add its
 receiver in the same task.** A stale count looks exactly like a lost write.
@@ -486,7 +531,9 @@ GET    /api/catalog/categories/                     ?kind= ?featured= ?search= ?
 GET    /api/catalog/species/                        ?kind= ?category= ?category_slug= ?featured= ?search=
 GET    /api/catalog/seasons/
 GET    /api/catalog/weather-conditions/
-GET    /api/catalog/locations/                      ?parent= ?place_type= ?country= ?featured=
+GET    /api/catalog/states/                         ?slug= ?search=
+GET    /api/catalog/counties/                       ?state= ?state_slug= ?slug= ?search=
+GET    /api/catalog/locations/                      ?parent= ?place_type= ?county= ?state= ?featured=
 GET    /api/journal/sightings/                      ?species_slug= ?kind= ?location_slug= ?season_slug=
                                                     ?year= ?month= ?date_from= ?date_to= ?limit= ?offset=
 GET    /api/journal/stats/                          landing-page headline numbers

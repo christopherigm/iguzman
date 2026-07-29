@@ -1,0 +1,20 @@
+/*
+ * Only what UIComponentProps cannot express: a pseudo-selector and the
+ * transition that goes with it. Every bit of layout, spacing, border and colour
+ * in this panel is a prop on the component - see the repo's styling rule.
+ */
+
+.geo__chip {
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.geo__chip:hover {
+  border-color: color-mix(in srgb, var(--foreground) 38%, transparent);
+  background-color: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+/* A hairline between states, so the tree reads as groups without a box each. */
+.geo__group + .geo__group {
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  padding-top: 12px;
+}

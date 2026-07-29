@@ -339,6 +339,72 @@ class WeatherConditionImage(GalleryImage):
         return f'Image for {self.weather_condition} (#{self.sort_order})'
 
 
+class State(Common):
+    """A state (or province) a place sits in. A lookup table, not a content record.
+
+    Deliberately the lightest model in this app: a name pair, a slug and an
+    order. It exists for exactly one reason - so "Jalisco" is typed once and
+    then *chosen*, instead of being re-typed as free text on every location and
+    drifting into "jalisco", "Jalisco " and "Edo. de Jalisco". It has no
+    description, no photographs and no page of its own; if it ever needs those
+    it should become a picture model like the other four, not grow them here.
+
+    ``Location`` does **not** point at this table. A place reaches its state
+    through its county (``location.county.state``), which is what keeps the two
+    from ever disagreeing - see ``County``.
+    """
+
+    name = models.CharField(max_length=255)
+    en_name = models.CharField(max_length=255, null=True, blank=True)
+    slug = models.SlugField(max_length=255, unique=True)
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'State'
+        verbose_name_plural = 'States'
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
+class County(Common):
+    """A county (or municipality) within a ``State``. The unit a place is filed under.
+
+    The FK is **required and PROTECT**: a county with no state would be the
+    ambiguity this table exists to remove (there is a Los Angeles County in
+    California and a León in both Guanajuato and Nicaragua), and deleting a
+    state still used by one is refused rather than silently orphaning it - the
+    API turns that ``ProtectedError`` into a readable 409, exactly as it does
+    for a category that still has species.
+
+    This is the only geography column ``Location`` stores. The state is read
+    back through ``county.state`` and flattened onto the payload, so the pair
+    cannot drift the way two independent FKs would; the cost is that a place
+    whose county is unknown carries no state either.
+    """
+
+    name = models.CharField(max_length=255)
+    en_name = models.CharField(max_length=255, null=True, blank=True)
+    slug = models.SlugField(max_length=255, unique=True)
+    state = models.ForeignKey(
+        State,
+        on_delete=models.PROTECT,
+        related_name='counties',
+        help_text='The state this county belongs to. A location reaches its '
+                  'state through here.',
+    )
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'County'
+        verbose_name_plural = 'Counties'
+        ordering = ['state__sort_order', 'state__name', 'sort_order', 'name']
+
+    def __str__(self):
+        return f'{self.name}, {self.state.name}'
+
+
 PLACE_TYPE_CHOICES = [
     ('park', 'Park'),
     ('reserve', 'Nature Reserve'),
@@ -401,13 +467,21 @@ class Location(Common):
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
 
-    region = models.CharField(
-        max_length=255, null=True, blank=True, help_text='State, province or region.'
-    )
-    country = models.CharField(max_length=255, null=True, blank=True)
-    map_link = models.URLField(
-        max_length=500, null=True, blank=True,
-        help_text='Google Maps / OpenStreetMap link to the place.',
+    # Where the place is administratively, as a *choice* rather than free text.
+    # This replaced a pair of `region`/`country` CharFields: the same three
+    # states were being re-typed on every location and no two spellings matched,
+    # which made `?region=` filtering and the admin's own list filter useless.
+    #
+    # There is no `state` column beside it on purpose - the state is read
+    # through `county.state`, so the two can never disagree. SET_NULL like
+    # `parent`: merging a county away must not take the places filed under it.
+    county = models.ForeignKey(
+        County,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='locations',
+        help_text='The county this place is in. Its state is read from here.',
     )
 
     # Whether the exact coordinates may be published. A nesting site or a rare
@@ -431,6 +505,16 @@ class Location(Common):
 
     def __str__(self):
         return self.name
+
+    @property
+    def state(self):
+        """The state this place is in, read through its county. Read-only.
+
+        A derivation for the same reason ``Species.kind`` is one: a stored copy
+        would be a second source of truth that editing the county could silently
+        leave behind.
+        """
+        return self.county.state if self.county_id else None
 
 
 class LocationImage(GalleryImage):

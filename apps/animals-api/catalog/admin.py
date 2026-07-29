@@ -16,12 +16,14 @@ from django.utils.html import format_html
 from .models import (
     Category,
     CategoryImage,
+    County,
     Location,
     LocationImage,
     Season,
     SeasonImage,
     Species,
     SpeciesImage,
+    State,
     WeatherCondition,
     WeatherConditionImage,
 )
@@ -232,14 +234,48 @@ class WeatherConditionAdmin(admin.ModelAdmin):
         return _thumb(_cover(obj))
 
 
-@admin.register(Location)
-class LocationAdmin(admin.ModelAdmin):
-    list_display = ('name', 'en_name', 'thumb', 'place_type', 'parent', 'region', 'country', 'sighting_count', 'hide_precise_location', 'enabled')
-    list_filter = ('place_type', 'country', 'enabled', 'is_featured', 'hide_precise_location')
-    search_fields = ('name', 'en_name', 'slug', 'region', 'country')
+@admin.register(State)
+class StateAdmin(admin.ModelAdmin):
+    """A lookup table, so a plain form - no fieldsets, no media, no content tab."""
+
+    list_display = ('name', 'en_name', 'slug', 'county_count', 'sort_order', 'enabled')
+    search_fields = ('name', 'en_name', 'slug')
+    list_filter = ('enabled',)
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
-    autocomplete_fields = ('parent',)
+    fields = ('name', 'en_name', 'slug', 'sort_order', 'enabled', 'version', 'created', 'modified')
+
+    @admin.display(description='Counties')
+    def county_count(self, obj):
+        return obj.counties.count()
+
+
+@admin.register(County)
+class CountyAdmin(admin.ModelAdmin):
+    list_display = ('name', 'en_name', 'state', 'slug', 'location_count', 'sort_order', 'enabled')
+    search_fields = ('name', 'en_name', 'slug', 'state__name')
+    list_filter = ('state', 'enabled')
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ('created', 'modified', 'version')
+    # `state` is required and PROTECT: deleting one still in use is refused
+    # rather than orphaning the counties filed under it.
+    autocomplete_fields = ('state',)
+    fields = ('name', 'en_name', 'slug', 'state', 'sort_order', 'enabled',
+              'version', 'created', 'modified')
+
+    @admin.display(description='Locations')
+    def location_count(self, obj):
+        return obj.locations.count()
+
+
+@admin.register(Location)
+class LocationAdmin(admin.ModelAdmin):
+    list_display = ('name', 'en_name', 'thumb', 'place_type', 'parent', 'county', 'state', 'sighting_count', 'hide_precise_location', 'enabled')
+    list_filter = ('place_type', 'county__state', 'county', 'enabled', 'is_featured', 'hide_precise_location')
+    search_fields = ('name', 'en_name', 'slug', 'county__name', 'county__state__name')
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ('created', 'modified', 'version')
+    autocomplete_fields = ('parent', 'county')
     inlines = [LocationImageInline]
 
     fieldsets = (
@@ -255,7 +291,11 @@ class LocationAdmin(admin.ModelAdmin):
         # and the first of them is its cover. This is only the map-pin glyph.
         ('Media', {'fields': ('icon',)}),
         ('Geography', {
-            'fields': ('latitude', 'longitude', 'region', 'country', 'map_link'),
+            'fields': ('latitude', 'longitude', 'county'),
+            'description': 'The state is not stored here - it is read from the county, so '
+                           'the two can never disagree. A place whose county is unknown '
+                           'carries no state either. There is no map-link field: the '
+                           'coordinates above are what every map on the site is drawn from.',
         }),
         ('Privacy', {
             'fields': ('hide_precise_location',),

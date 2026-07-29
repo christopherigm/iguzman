@@ -114,7 +114,7 @@ read as one system. Where it diverges, it is because this backend is different:
 - **No clone.** animals-api has no clone endpoint, so `AdminForm`'s clone dialog
   was removed on the way in rather than left as unreachable code.
 
-Six rules that will bite:
+Seven rules that will bite:
 
 - **Every list read sends `?include_disabled=true`.** The CMS is where an author
   finds the draft they have not published yet. The API ignores the param for
@@ -145,9 +145,24 @@ Six rules that will bite:
   goes multipart to its own endpoint - a streamed upload has nowhere to wait in
   form state. All three kinds share one `SightingMedia` table, so the editor
   filters `kind !== 'image'` out of its list; the photos are the uploader above.
-- **The sighting map is OpenStreetMap, and it cannot be Google.**
+- **Geography is a catalog, and it is edited where it is used.** A location no
+  longer types its region and country as free text: it picks a **county**, and
+  the state comes back through that county (see animals-api's CLAUDE.md →
+  "Geography is a catalog"). `state` is read-only on a location payload, so the
+  county picker is the only geography control on the form - and each of its
+  options names its state, which is what tells two counties of the same name
+  apart. `GeographyPanel` (`admin/locations/geography-panel.tsx`) adds and
+  deletes both tables under the locations list, because a missing county is
+  discovered *mid-way through filing a place*; `/admin/states` and
+  `/admin/counties` are the full lists for a bulk rename. Deleting a state that
+  still has counties is a 409, and the panel says so rather than reporting a
+  generic failure.
+- **The map picker is OpenStreetMap, and it cannot be Google.**
   `MapPicker` (`components/admin/map-picker.tsx`) sits above the Latitude field
-  via `AdminForm`'s `slots` and writes *both* coordinates at once. It draws OSM
+  via `AdminForm`'s `slots` and writes *both* coordinates at once. **Both** the
+  sighting form and the location form mount it: an entry's pin is the exact spot
+  and falls back to its location's coordinates, a place's pin is the place
+  itself and falls back to its *parent* place (a trail opens over its park). It draws OSM
   raster tiles into its own DOM and does the Web Mercator arithmetic by hand -
   no `leaflet`, no API key, ~200 lines. It is not the keyless Google embed
   `@repo/ui`'s `LocationMap` uses on the public page, and it can't be: that is a

@@ -154,6 +154,10 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
     ModelSpec("catalog.SeasonImage", SECTION_CATALOG, parent="season"),
     ModelSpec("catalog.WeatherCondition", SECTION_CATALOG, natural_key=("slug",)),
     ModelSpec("catalog.WeatherConditionImage", SECTION_CATALOG, parent="weather_condition"),
+    # Geography, parents-first: a County's `state` FK is PROTECT and required,
+    # and a Location's `county` has to exist before the place that points at it.
+    ModelSpec("catalog.State", SECTION_CATALOG, natural_key=("slug",)),
+    ModelSpec("catalog.County", SECTION_CATALOG, natural_key=("slug",)),
     # Locations self-reference through `parent`, so a child restored before its
     # parent would find no target. Ordering by pk puts them back in the order
     # they were created, which is the order they were linked in.

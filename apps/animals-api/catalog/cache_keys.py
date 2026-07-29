@@ -23,6 +23,15 @@ WEATHER_CONDITION = 'catalog:weather_condition'
 LOCATIONS = 'catalog:locations'
 LOCATION = 'catalog:location'
 
+# Geography lookups. A location's payload flattens its county *and* the state
+# read through it, so a write to either is what makes a location payload stale -
+# see the table in signals.py.
+STATES = 'catalog:states'
+STATE = 'catalog:state'
+
+COUNTIES = 'catalog:counties'
+COUNTY = 'catalog:county'
+
 # The five-branch nav (`/api/catalog/kinds/`). A single key, not a namespace -
 # it takes no query params - but it goes through `invalidate()` like the rest so
 # no caller has to remember which is which.

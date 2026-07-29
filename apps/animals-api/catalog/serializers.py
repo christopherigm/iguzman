@@ -12,12 +12,14 @@ from core.serializers import (
 from .models import (
     Category,
     CategoryImage,
+    County,
     Location,
     LocationImage,
     Season,
     SeasonImage,
     Species,
     SpeciesImage,
+    State,
     WeatherCondition,
     WeatherConditionImage,
 )
@@ -402,6 +404,74 @@ class WeatherConditionWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, seria
 
 
 # ---------------------------------------------------------------------------
+# Geography: states and counties
+# ---------------------------------------------------------------------------
+#
+# The two lookup tables a place is filed under. They carry no images and no
+# description pairs - only the name pair every model here has - so their
+# serializers are the shortest in this module, and deliberately so: the moment
+# one grows a photograph it should become a picture model like the other four.
+#
+# Declared above `LocationSerializer` because a location payload flattens both.
+
+class StateSerializer(serializers.ModelSerializer):
+    county_count = serializers.SerializerMethodField()
+    location_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = State
+        fields = [
+            'id', 'enabled', 'created', 'modified', 'version',
+            'name', 'en_name', 'slug', 'sort_order',
+            'county_count', 'location_count',
+        ]
+        read_only_fields = ['id', 'created', 'modified', 'version']
+
+    def get_county_count(self, obj):
+        return obj.counties.filter(enabled=True).count()
+
+    def get_location_count(self, obj):
+        # Two joins deep, because a location points at the county, not at this.
+        return Location.objects.filter(enabled=True, county__state=obj).count()
+
+
+class StateWriteSerializer(_SlugUniqueMixin, serializers.ModelSerializer):
+    class Meta:
+        model = State
+        fields = ['name', 'en_name', 'slug', 'sort_order', 'enabled']
+
+
+class CountySerializer(serializers.ModelSerializer):
+    # The state's name is flattened here for the same reason every other label
+    # is: a CMS row - or a "County, State" option in a picker - renders from one
+    # payload, and its English twin has to travel with it or an English reader
+    # gets a Spanish state beside an English county.
+    state_name = serializers.CharField(source='state.name', read_only=True, default=None)
+    state_en_name = serializers.CharField(source='state.en_name', read_only=True, default=None)
+    state_slug = serializers.SlugRelatedField(source='state', slug_field='slug', read_only=True)
+    location_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = County
+        fields = [
+            'id', 'enabled', 'created', 'modified', 'version',
+            'name', 'en_name', 'slug', 'sort_order',
+            'state', 'state_name', 'state_en_name', 'state_slug',
+            'location_count',
+        ]
+        read_only_fields = ['id', 'created', 'modified', 'version']
+
+    def get_location_count(self, obj):
+        return obj.locations.filter(enabled=True).count()
+
+
+class CountyWriteSerializer(_SlugUniqueMixin, serializers.ModelSerializer):
+    class Meta:
+        model = County
+        fields = ['name', 'en_name', 'slug', 'state', 'sort_order', 'enabled']
+
+
+# ---------------------------------------------------------------------------
 # Locations
 # ---------------------------------------------------------------------------
 
@@ -417,6 +487,17 @@ class LocationSerializer(serializers.ModelSerializer):
     parent_name = serializers.CharField(source='parent.name', read_only=True, default=None)
     parent_en_name = serializers.CharField(source='parent.en_name', read_only=True, default=None)
     parent_slug = serializers.SlugRelatedField(source='parent', slug_field='slug', read_only=True)
+    county_name = serializers.CharField(source='county.name', read_only=True, default=None)
+    county_en_name = serializers.CharField(source='county.en_name', read_only=True, default=None)
+    county_slug = serializers.SlugRelatedField(source='county', slug_field='slug', read_only=True)
+    # The state is **read-only and derived** - there is no column for it (see
+    # `Location.state`). A place stores only its county; publishing the state id
+    # alongside means a card or a filter chip renders without a second request,
+    # while a write still has exactly one field to set.
+    state = serializers.PrimaryKeyRelatedField(source='county.state', read_only=True, default=None)
+    state_name = serializers.CharField(source='county.state.name', read_only=True, default=None)
+    state_en_name = serializers.CharField(source='county.state.en_name', read_only=True, default=None)
+    state_slug = serializers.SlugRelatedField(source='county.state', slug_field='slug', read_only=True)
     latitude = serializers.SerializerMethodField()
     longitude = serializers.SerializerMethodField()
     sighting_count = serializers.SerializerMethodField()
@@ -431,7 +512,9 @@ class LocationSerializer(serializers.ModelSerializer):
             'parent', 'parent_name', 'parent_en_name', 'parent_slug',
             'place_type', 'place_type_display',
             'image', 'icon', 'images',
-            'latitude', 'longitude', 'region', 'country', 'map_link',
+            'latitude', 'longitude',
+            'county', 'county_name', 'county_en_name', 'county_slug',
+            'state', 'state_name', 'state_en_name', 'state_slug',
             'hide_precise_location', 'is_featured', 'sort_order', 'sighting_count',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
@@ -487,7 +570,9 @@ class LocationWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.M
             'description', 'en_description',
             'short_description', 'en_short_description',
             'parent', 'place_type', 'icon',
-            'latitude', 'longitude', 'region', 'country', 'map_link',
+            # `county` is the only geography a place stores; its state comes
+            # back through it on the read serializer and is not writable here.
+            'latitude', 'longitude', 'county',
             'hide_precise_location', 'is_featured', 'sort_order', 'enabled',
         ]
 

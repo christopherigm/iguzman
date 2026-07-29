@@ -5,6 +5,8 @@ from .views import (
     CategoryImageDetailView,
     CategoryImageListCreateView,
     CategoryListCreateView,
+    CountyDetailView,
+    CountyListCreateView,
     KindListView,
     LocationDetailView,
     LocationImageDetailView,
@@ -18,6 +20,8 @@ from .views import (
     SpeciesImageDetailView,
     SpeciesImageListCreateView,
     SpeciesListCreateView,
+    StateDetailView,
+    StateListCreateView,
     WeatherConditionDetailView,
     WeatherConditionImageDetailView,
     WeatherConditionImageListCreateView,
@@ -63,6 +67,16 @@ urlpatterns = [
     path('catalog/weather-conditions/slug/<slug:slug>/', WeatherConditionDetailView.as_view(), name='weather-condition-detail-slug'),
     path('catalog/weather-conditions/<int:pk>/images/', WeatherConditionImageListCreateView.as_view(), name='weather-condition-image-list'),
     path('catalog/weather-conditions/<int:pk>/images/<int:img_pk>/', WeatherConditionImageDetailView.as_view(), name='weather-condition-image-detail'),
+
+    # Geography. No `/images/` pair on either: they are lookup tables, not
+    # picture models - a state has a name and nothing else to show.
+    path('catalog/states/', StateListCreateView.as_view(), name='state-list'),
+    path('catalog/states/<int:pk>/', StateDetailView.as_view(), name='state-detail'),
+    path('catalog/states/slug/<slug:slug>/', StateDetailView.as_view(), name='state-detail-slug'),
+
+    path('catalog/counties/', CountyListCreateView.as_view(), name='county-list'),
+    path('catalog/counties/<int:pk>/', CountyDetailView.as_view(), name='county-detail'),
+    path('catalog/counties/slug/<slug:slug>/', CountyDetailView.as_view(), name='county-detail-slug'),
 
     # Locations
     path('catalog/locations/', LocationListCreateView.as_view(), name='location-list'),

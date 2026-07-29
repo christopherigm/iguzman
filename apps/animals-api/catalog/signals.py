@@ -34,6 +34,10 @@ Two rules, in order:
 | ``Location``         | sightings (embed ``location_name``/``slug`` **and** fall back   |
 |                      | to its coordinates)                                             |
 | ``LocationImage``    | that location (gallery + cover)                                 |
+| ``State``            | counties (embed ``state_name``/``slug``) **and** locations,     |
+|                      | which flatten the state read *through* the county               |
+| ``County``           | locations (embed ``county_name``/``slug`` and the state behind  |
+|                      | it), and states (``county_count``/``location_count``)           |
 
 ⚠ A ``*Image`` receiver is **not** only about the gallery list. Since the read
 serializers resolve a record's ``image`` to its first photo
@@ -55,12 +59,14 @@ from . import cache_keys as keys
 from .models import (
     Category,
     CategoryImage,
+    County,
     Location,
     LocationImage,
     Season,
     SeasonImage,
     Species,
     SpeciesImage,
+    State,
     WeatherCondition,
     WeatherConditionImage,
 )
@@ -76,6 +82,10 @@ def _invalidate_species():
 
 def _invalidate_categories():
     invalidate(keys.CATEGORIES, keys.CATEGORY)
+
+
+def _invalidate_locations():
+    invalidate(keys.LOCATIONS, keys.LOCATION)
 
 
 @receiver(post_save, sender=Category)
@@ -151,5 +161,29 @@ def invalidate_on_weather_change(sender, instance, **kwargs):
 @receiver(post_save, sender=Location)
 @receiver(post_delete, sender=Location)
 def invalidate_on_location_change(sender, instance, **kwargs):
-    invalidate(keys.LOCATIONS, keys.LOCATION)
+    _invalidate_locations()
     _invalidate_sightings()
+    # Both geography payloads carry a `location_count`, and a place moving
+    # between counties changes it on two rows without touching either.
+    invalidate(keys.COUNTIES, keys.COUNTY, keys.STATES, keys.STATE)
+
+
+@receiver(post_save, sender=State)
+@receiver(post_delete, sender=State)
+def invalidate_on_state_change(sender, instance, **kwargs):
+    invalidate(keys.STATES, keys.STATE)
+    # Every county payload flattens `state_name`/`state_slug`...
+    invalidate(keys.COUNTIES, keys.COUNTY)
+    # ...and every *location* payload flattens the state read through its
+    # county, so renaming a state goes stale two tables away from itself.
+    _invalidate_locations()
+
+
+@receiver(post_save, sender=County)
+@receiver(post_delete, sender=County)
+def invalidate_on_county_change(sender, instance, **kwargs):
+    invalidate(keys.COUNTIES, keys.COUNTY)
+    # `county_count` and `location_count` on every state payload change when a
+    # county is added, disabled or moved - none of which touches the State row.
+    invalidate(keys.STATES, keys.STATE)
+    _invalidate_locations()
