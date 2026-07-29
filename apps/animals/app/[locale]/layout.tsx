@@ -27,12 +27,27 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-export const viewport: Viewport = {
-  themeColor: '#06b6d4',
-  userScalable: false,
-  initialScale: 1,
-  maximumScale: 1,
-};
+/**
+ * `themeColor` is what Android Chrome paints the tab strip and the address bar
+ * with, so it has to be the site's own `primary_color` - a static export here
+ * pinned every site to the model's cyan default no matter what the CMS said,
+ * while the manifest (which only styles the *installed* app) was already
+ * correct. Hence `generateViewport` rather than a constant: it is the only
+ * viewport form that may await the settings.
+ *
+ * `getSystem()` is request-cached, so this costs nothing on top of the fetch
+ * `generateMetadata` and the layout already make.
+ */
+export async function generateViewport(): Promise<Viewport> {
+  const system = await getSystem();
+
+  return {
+    themeColor: system.primary_color,
+    userScalable: false,
+    initialScale: 1,
+    maximumScale: 1,
+  };
+}
 
 export async function generateMetadata({
   params,
