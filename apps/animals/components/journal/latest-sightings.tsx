@@ -6,6 +6,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Keyboard } from 'swiper/modules';
 import type { Swiper as SwiperType } from 'swiper';
 import { Box } from '@repo/ui/core-elements/box';
+import { Card } from '@repo/ui/core-elements/card';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Badge } from '@repo/ui/core-elements/badge';
 import { Button } from '@repo/ui/core-elements/button';
@@ -18,9 +19,10 @@ import './latest-sightings.css';
  * species it records) beside its cover photograph.
  *
  * Each slide is laid out as a **field note** rather than a media/text split - a
- * bordered leaf of paper with an accent margin rule down its left edge, the date
- * as the entry's eyebrow above a ruled header, the photograph mounted in a mat
- * like a pasted print, and the conditions set as a dotted-leader list.
+ * bordered leaf of paper with an accent margin rule down its left edge (from
+ * `sm` up - a phone has no width to spend on it), the date as the entry's
+ * eyebrow above a ruled header, the photograph set straight onto the leaf, and
+ * the conditions set as a dotted-leader list.
  *
  * The layout is a three-area CSS grid so the same DOM reads correctly in both
  * bands (see `latest-sightings.css`, which owns the two templates):
@@ -192,18 +194,18 @@ function SightingEntry({
   ].filter((fact): fact is { label: string; value: string } => fact !== null);
 
   return (
-    <Box
+    <Card
       className="latest-sightings__entry"
+      // The leaf is a `Card` on its default border, radius, padding, elevation
+      // and surface - only what makes it a *field note* is set here.
       display="grid"
       alignItems="flex-start"
       gap={24}
-      padding={22}
       // Clears the accent margin rule the stylesheet draws down the left edge.
-      paddingLeft={34}
-      borderRadius={14}
-      border="1px solid var(--border, #e5e7eb)"
-      backgroundColor="var(--surface-1, #f5f5f5)"
-      elevation={1}
+      // The stylesheet owns the value because the rule is not drawn below `sm`,
+      // where this collapses back to the card's own padding - an inline number
+      // could not be overridden by that media query.
+      paddingLeft="var(--entry-rule-inset, 26px)"
       styles={{ position: 'relative' }}
     >
       <Box
@@ -292,7 +294,7 @@ function SightingEntry({
           />
         </Box>
       </Box>
-    </Box>
+    </Card>
   );
 }
 
@@ -341,50 +343,45 @@ function FactRow({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * The photograph, mounted: a pale mat with its own hairline and shadow around a
- * 4:3 print. `alignSelf` keeps it at the top of the media area, which spans both
- * text rows from `sm` up and would otherwise stretch the mat past the print.
+ * The photograph itself - no mat, no frame: the 4:3 print sits directly in the
+ * media area, so the entry reads as a photograph beside the writing rather than
+ * a card inside a card. `alignSelf` keeps it at the top of that area, which
+ * spans both text rows from `sm` up and would otherwise stretch the print.
  */
 function SightingCover({ slide, priority }: { slide: SightingSlide; priority: boolean }) {
+  if (!slide.image) {
+    return (
+      <Box
+        width="100%"
+        alignSelf="flex-start"
+        borderRadius={6}
+        backgroundColor="var(--surface-2, #e5e7eb)"
+        styles={{ gridArea: 'media', aspectRatio: '4 / 3' }}
+        aria-hidden
+      />
+    );
+  }
+
   return (
     <Box
       width="100%"
       alignSelf="flex-start"
-      padding={10}
       borderRadius={6}
-      border="1px solid var(--border, #e5e7eb)"
-      backgroundColor="var(--background, #fff)"
-      elevation={2}
-      styles={{ gridArea: 'media' }}
+      styles={{
+        gridArea: 'media',
+        position: 'relative',
+        overflow: 'hidden',
+        aspectRatio: '4 / 3',
+      }}
     >
-      {slide.image ? (
-        <Box
-          width="100%"
-          borderRadius={3}
-          styles={{
-            position: 'relative',
-            overflow: 'hidden',
-            aspectRatio: '4 / 3',
-          }}
-        >
-          <Image
-            fill
-            src={slide.image}
-            alt={slide.title}
-            sizes="(min-width: 600px) 45vw, 100vw"
-            priority={priority}
-            style={{ objectFit: 'cover' }}
-          />
-        </Box>
-      ) : (
-        <Box
-          width="100%"
-          borderRadius={3}
-          backgroundColor="var(--surface-2, #e5e7eb)"
-          styles={{ aspectRatio: '4 / 3' }}
-          aria-hidden
-        />
-      )}
+      <Image
+        fill
+        src={slide.image}
+        alt={slide.title}
+        sizes="(min-width: 600px) 45vw, 100vw"
+        priority={priority}
+        style={{ objectFit: 'cover' }}
+      />
     </Box>
   );
 }

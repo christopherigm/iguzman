@@ -68,16 +68,34 @@
 }
 
 /* The margin rule ruled down the left edge of the leaf, as on a notebook page.
-   The entry's own `paddingLeft` clears it. */
+   The entry's own `paddingLeft` clears it, through `--entry-rule-inset`. */
 .latest-sightings__entry::before {
   content: '';
   position: absolute;
-  top: 22px;
-  bottom: 22px;
-  left: 16px;
+  top: 14px;
+  bottom: 14px;
+  left: 8px;
   width: 2px;
   border-radius: 2px;
   background: color-mix(in srgb, var(--accent, #06b6d4) 34%, transparent);
+}
+
+/* …but not on a phone: the leaf is barely wider than the screen there, and a
+   rule plus the inset it needs spends that width on decoration. The inset
+   collapses to `Card`'s own padding with it, so the leaf sits square.
+
+   ⚠ This block must stay *after* the rule above. Both selectors have the same
+   specificity, so ordering is what decides - folding `content: none` into the
+   earlier `--below-sm` block (where the grid template lives) leaves the rule
+   visible on a phone, which is exactly how it was missed the first time. */
+@media (--below-sm) {
+  .latest-sightings__entry {
+    --entry-rule-inset: 14px;
+  }
+
+  .latest-sightings__entry::before {
+    content: none;
+  }
 }
 
 /* The category badge's link wrapper. `Badge` carries its own look, so only the
