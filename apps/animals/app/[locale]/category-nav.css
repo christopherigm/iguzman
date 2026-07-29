@@ -1,6 +1,11 @@
 /* Interaction state for the category tiles. Only pseudo-selectors and their
    transitions live here - every static value on the `@repo/ui` components inside
-   is a prop (see the props-first rule in packages/ui/CLAUDE.md). */
+   is a prop (see the props-first rule in packages/ui/CLAUDE.md).
+
+   `--kind-accent` is the branch colour, set per tile in category-nav.tsx: the
+   resting state wears it diluted, and hover simply stops diluting it. That is
+   why these rules can talk about "the tile's colour" without knowing which of
+   the five branches they are painting. */
 .category-nav__art,
 .category-nav__label {
   transition:
@@ -11,18 +16,19 @@
 
 .category-nav__tile:hover .category-nav__art,
 .category-nav__tile:focus-visible .category-nav__art {
-  border-color: var(--accent);
-  background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-color: var(--kind-accent);
+  background-color: color-mix(in srgb, var(--kind-accent) 10%, transparent);
 }
 
 .category-nav__tile:hover .category-nav__label,
 .category-nav__tile:focus-visible .category-nav__label {
-  color: var(--accent);
+  color: var(--kind-accent);
+  border-bottom-color: var(--kind-accent);
 }
 
 /* The tile is an anchor, so it owns its own focus ring rather than borrowing the
    art box's border - which is already the hover affordance. */
 .category-nav__tile:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--kind-accent);
   outline-offset: 4px;
 }
