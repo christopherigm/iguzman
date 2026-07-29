@@ -6,26 +6,28 @@ file covers only what is specific, and why.
 
 ## The public catalog pages
 
-Three detail routes sit under the landing, and the landing's `CategoryNav` tiles,
-gallery captions and journal slider link into them:
+Three detail routes and one **branch** page sit under the landing, and the
+landing's `CategoryNav` tiles, gallery captions and journal slider link into them:
 
 | Route                         | Renders                                                                          |
 | ----------------------------- | -------------------------------------------------------------------------------- |
+| `/[locale]/[kind]`            | One of the five branches: hero, its categories, its recent sightings, its map    |
 | `/[locale]/categories/[slug]` | One category: hero, first row, its recent sightings, its species grid            |
 | `/[locale]/species/[slug]`    | One species: hero, first row, `video_link`, its sightings                        |
 | `/[locale]/sightings/[slug]`  | One journal entry: hero, first row, its clips, its map, more of the same species |
 
-All three are composed from `components/catalog/` (`DetailHero`, `FactsCard`,
+All four are composed from `components/catalog/` (`DetailHero`, `FactsCard`,
 `DetailGallery`, `SpeciesGrid`) and `components/journal/sightings-section.tsx`, so
-they stay one design rather than three.
+they stay one design rather than four.
 
-**Three pages carry a map**, and all three render the same one -
+**Four pages carry a map**, and all four render the same one -
 `components/journal/sightings-map-section.tsx`, the server half, which resolves
 every bilingual pair, href and date and hands them to the `SightingsMap` client
 component (the same split `SightingsSection` uses for the slider, and for the
 same reason). What differs is only the pin set: the landing pins the latest ten
-of _each_ category, a category pins every located sighting of it, and a sighting
-pins **itself** - one marker, no filters.
+of _each_ category, a branch pins every located sighting in it, a category pins
+every located sighting of it, and a sighting pins **itself** - one marker, no
+filters.
 
 **"First row" is literally the same row on all three**: the description and the
 `FactsCard` as two stacked cards in one column, the record's photographs beside
@@ -41,11 +43,38 @@ the category badge opens the branch, and the "See detail" button opens the entry
 Both hrefs are built in `sightings-section.tsx` - the server component that knows
 the locale - never in the client slider.
 
-Eleven things that will bite:
+Twelve things that will bite:
 
+- ⚠ **A branch is an enum value, not a record - so `/[locale]/[kind]` owns
+  nothing and derives everything.** `KIND_CHOICES` is deliberately not a table
+  (animals-api's `catalog/models.py` says why), so there is no row to fetch for
+  a branch and nothing an author can upload to one. The title comes from
+  next-intl's `Kinds` namespace, the chips are counted from the categories on
+  screen, and the hero photograph is **borrowed** from one of them - a featured
+  category with an image, else the first with one (`heroCategory` in the page).
+  An author therefore chooses that photograph by featuring or ordering a
+  category, which is the trade for not adding the table. The hero deliberately
+  passes **no `icon`**: a category's glyph shown there would read as the
+  branch's own mark. Two more consequences. The URL segment is English and
+  plural (`/es/animals`, not `/es/animales`) because a slug is a stable key
+  here, and `KIND_SLUGS` / `kindFromSlug` in `lib/catalog.ts` are the one place
+  that mapping lives - `fungus` → `fungi`, `weather` → `weather`. And `[kind]`
+  is a **top-level dynamic segment**, so it also catches every path under a
+  locale that no static route claimed: Next matches `categories`, `species`,
+  `sightings`, `admin`, `account` and the auth group first, and `kindFromSlug`
+  answering `null` is what turns the rest back into a 404. Adding a static route
+  under `app/[locale]/` still wins over it, with no edit here.
+  The way in is the navbar's **Catalog dropdown** (and a category's eyebrow,
+  breadcrumb and facts row, which all link their branch). The dropdown is built
+  in `layout.tsx` from `KINDS` rather than from a fetch - the five are fixed in
+  the schema, so the navbar on _every_ page in the app must not wait on, or fail
+  with, an API call - and its items carry **locale-less hrefs** like `/account`
+  and `/admin`: `Navbar` strips the locale before matching an item as active, so
+  a prefixed href would never light up, and the intl proxy redirects `/animals`
+  to the reader's own locale on the way through.
 - ⚠ **Every public map is one component now, and there is no Google left.** All
-  three - the landing's, a category's, and a **single sighting's** - go through
-  `SightingsMap` (`components/journal/sightings-map.tsx`), which is a thin
+  four - the landing's, a branch's, a category's, and a **single sighting's** -
+  go through `SightingsMap` (`components/journal/sightings-map.tsx`), a thin
   wrapper (the filter row, the card a pin opens) around `@repo/ui`'s **`OsmMap`**:
   OpenStreetMap raster tiles painted into the page's own DOM, one marker per
   entry, each wearing that entry's **species icon** (its category's as the

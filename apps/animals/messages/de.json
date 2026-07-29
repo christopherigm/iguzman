@@ -33,6 +33,18 @@
     "mapTitle": "Wo es gesehen wurde",
     "mapSubtitle": "Alle Orte, an denen {category} im Feldtagebuch verzeichnet wurde."
   },
+  "KindPage": {
+    "eyebrow": "Katalog",
+    "categoriesTitle": "Kategorien",
+    "categoriesSubtitle": "Alles, was unter {kind} abgelegt ist.",
+    "categoriesCount": "{count, plural, one {# Kategorie} other {# Kategorien}}",
+    "noCategories": "In diesem Zweig ist noch nichts abgelegt.",
+    "sightingsTitle": "Neueste Sichtungen",
+    "sightingsSubtitle": "Die neuesten Feldtagebuch-Einträge, die {kind} festhalten.",
+    "mapTitle": "Wo sie gesehen wurden",
+    "mapSubtitle": "Alle Orte, an denen {kind} im Feldtagebuch verzeichnet wurden.",
+    "metaDescription": "Der Katalog und die Feldtagebuch-Einträge zu {kind}."
+  },
   "SpeciesPage": {
     "factFamily": "Familie",
     "videoTitle": "Video",
@@ -89,6 +101,7 @@
   },
   "Navbar": {
     "home": "Startseite",
+    "catalog": "Katalog",
     "account": "Konto",
     "signOut": "Abmelden",
     "admin": "Verwaltung"

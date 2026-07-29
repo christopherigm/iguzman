@@ -30,6 +30,48 @@ export const KINDS = ['animal', 'plant', 'fungus', 'season', 'weather'] as const
 export type Kind = (typeof KINDS)[number];
 
 /**
+ * The URL segment each branch is published under - `/[locale]/animals`.
+ *
+ * English and plural, like every other slug in this app: a slug is a stable key,
+ * never a translated label (see animals-api's CLAUDE.md → "Bilingual content"),
+ * so `/es/animals` is correct and the *page* is what speaks Spanish.
+ *
+ * A table rather than a `+ 's'` for two reasons: `fungus` pluralises to `fungi`
+ * and `weather` does not pluralise at all - and, more importantly, these five
+ * strings are URLs. Deriving them would make a rename of the enum value silently
+ * break every link to a branch.
+ */
+export const KIND_SLUGS: Record<Kind, string> = {
+  animal: 'animals',
+  plant: 'plants',
+  fungus: 'fungi',
+  season: 'seasons',
+  weather: 'weather',
+};
+
+const KIND_BY_SLUG = new Map<string, Kind>(
+  KINDS.map((kind) => [KIND_SLUGS[kind], kind]),
+);
+
+/**
+ * The branch a `/[locale]/[kind]` segment names, or `null` when it names none.
+ *
+ * `null` is what the branch page turns into a `notFound()`. That matters more
+ * here than on the slug routes: `[kind]` is a **top-level** dynamic segment, so
+ * it is also what catches every mistyped path under a locale. Next matches the
+ * static segments first (`categories`, `species`, `sightings`, `admin`, …), so
+ * this only ever sees what nothing else claimed.
+ */
+export function kindFromSlug(slug: string): Kind | null {
+  return KIND_BY_SLUG.get(slug) ?? null;
+}
+
+/** Where one branch lives - the destination of a category's eyebrow and crumb. */
+export function kindHref(kind: Kind, locale: string): string {
+  return `/${locale}/${KIND_SLUGS[kind]}`;
+}
+
+/**
  * How a record's image should sit in its box - the API's `fit` column, which is
  * `object-fit` by another name (see core.models.FIT_CHOICES).
  */
@@ -174,6 +216,19 @@ export async function getCategories(): Promise<Category[]> {
  */
 export async function getCategory(slug: string): Promise<Category | null> {
   return fetchOne<Category>(`/api/catalog/categories/slug/${encodeURIComponent(slug)}/`);
+}
+
+/**
+ * Every enabled category in one branch, in the API's own order.
+ *
+ * Filtered in the query rather than by narrowing `getCategories()` here: a
+ * branch page has no use for the other four branches' categories, and the API
+ * caches this list under its own key anyway.
+ */
+export async function getCategoriesByKind(kind: Kind): Promise<Category[]> {
+  return fetchList<Category>(`/api/catalog/categories/?kind=${encodeURIComponent(kind)}`, {
+    cache: 'no-store',
+  });
 }
 
 /** One species by slug, with its reference photos embedded. */

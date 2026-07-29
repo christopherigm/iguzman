@@ -72,10 +72,21 @@ const KIND_ACCENTS: Record<Kind, string> = {
 interface Props {
   categories: Category[];
   locale: string;
+  /**
+   * The band's heading pair. Optional so the landing keeps saying "Browse the
+   * catalog" without repeating itself at the call site; a branch page passes its
+   * own, because there the field is one branch rather than the whole catalog.
+   */
+  title?: string;
+  subtitle?: string | null;
 }
 
-export async function CategoryNav({ categories, locale }: Props) {
+export async function CategoryNav({ categories, locale, title, subtitle }: Props) {
   const t = await getTranslations('HomePage');
+  const heading = title ?? t('categoriesTitle');
+  // `null` is a caller saying "no subtitle"; `undefined` is a caller not saying
+  // anything, which is what keeps the landing's default in place.
+  const sub = subtitle === undefined ? t('categoriesSubtitle') : subtitle;
 
   // One flat list, ordered by `KINDS` rather than by the payload: the branches
   // no longer get a row each, so this ordering is the only thing keeping a
@@ -90,15 +101,17 @@ export async function CategoryNav({ categories, locale }: Props) {
     <Box flexDirection="column" alignItems="center" gap={28} width="100%">
       <Box flexDirection="column" alignItems="center" gap={8}>
         <Typography as="h2" variant="h2" fontWeight={700} textAlign="center">
-          {t('categoriesTitle')}
+          {heading}
         </Typography>
-        <Typography
-          variant="body"
-          textAlign="center"
-          color="var(--foreground-muted, #6b7280)"
-        >
-          {t('categoriesSubtitle')}
-        </Typography>
+        {sub && (
+          <Typography
+            variant="body"
+            textAlign="center"
+            color="var(--foreground-muted, #6b7280)"
+          >
+            {sub}
+          </Typography>
+        )}
       </Box>
 
       {/* One wrap container for the whole catalog: every tile packs into the

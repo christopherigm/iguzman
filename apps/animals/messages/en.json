@@ -33,6 +33,18 @@
     "mapTitle": "Where it has been seen",
     "mapSubtitle": "Every place {category} has been recorded in the field journal."
   },
+  "KindPage": {
+    "eyebrow": "Catalog",
+    "categoriesTitle": "Categories",
+    "categoriesSubtitle": "Everything filed under {kind}.",
+    "categoriesCount": "{count, plural, one {# category} other {# categories}}",
+    "noCategories": "Nothing has been filed under this branch yet.",
+    "sightingsTitle": "Recent sightings",
+    "sightingsSubtitle": "The latest field journal entries recording {kind}.",
+    "mapTitle": "Where they have been seen",
+    "mapSubtitle": "Every place {kind} has been recorded in the field journal.",
+    "metaDescription": "The catalog and the field journal entries for {kind}."
+  },
   "SpeciesPage": {
     "factFamily": "Family",
     "videoTitle": "Video",
@@ -89,6 +101,7 @@
   },
   "Navbar": {
     "home": "Home",
+    "catalog": "Catalog",
     "account": "Account",
     "signOut": "Sign out",
     "admin": "Admin"

@@ -33,6 +33,18 @@
     "mapTitle": "Dónde se ha visto",
     "mapSubtitle": "Todos los lugares donde se ha registrado {category} en el diario de campo."
   },
+  "KindPage": {
+    "eyebrow": "Catálogo",
+    "categoriesTitle": "Categorías",
+    "categoriesSubtitle": "Todo lo archivado en {kind}.",
+    "categoriesCount": "{count, plural, one {# categoría} other {# categorías}}",
+    "noCategories": "Todavía no hay nada archivado en esta rama.",
+    "sightingsTitle": "Avistamientos recientes",
+    "sightingsSubtitle": "Las últimas entradas del diario de campo que registran {kind}.",
+    "mapTitle": "Dónde se han visto",
+    "mapSubtitle": "Todos los lugares donde se ha registrado {kind} en el diario de campo.",
+    "metaDescription": "El catálogo y las entradas del diario de campo de {kind}."
+  },
   "SpeciesPage": {
     "factFamily": "Familia",
     "videoTitle": "Video",
@@ -89,6 +101,7 @@
   },
   "Navbar": {
     "home": "Inicio",
+    "catalog": "Catálogo",
     "account": "Cuenta",
     "signOut": "Cerrar sesión",
     "admin": "Administración"

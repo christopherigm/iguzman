@@ -33,6 +33,18 @@
     "mapTitle": "Où cela a été observé",
     "mapSubtitle": "Tous les lieux où {category} a été consigné dans le carnet de terrain."
   },
+  "KindPage": {
+    "eyebrow": "Catalogue",
+    "categoriesTitle": "Catégories",
+    "categoriesSubtitle": "Tout ce qui est classé dans {kind}.",
+    "categoriesCount": "{count, plural, one {# catégorie} other {# catégories}}",
+    "noCategories": "Rien n'est encore classé dans cette branche.",
+    "sightingsTitle": "Observations récentes",
+    "sightingsSubtitle": "Les dernières entrées du carnet de terrain qui documentent {kind}.",
+    "mapTitle": "Où ils ont été observés",
+    "mapSubtitle": "Tous les lieux où {kind} ont été consignés dans le carnet de terrain.",
+    "metaDescription": "Le catalogue et les entrées du carnet de terrain pour {kind}."
+  },
   "SpeciesPage": {
     "factFamily": "Famille",
     "videoTitle": "Vidéo",
@@ -89,6 +101,7 @@
   },
   "Navbar": {
     "home": "Accueil",
+    "catalog": "Catalogue",
     "account": "Mon Compte",
     "signOut": "Se déconnecter",
     "admin": "Administration"

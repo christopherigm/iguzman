@@ -15,6 +15,7 @@ import { Footer } from './footer';
 import { HideOnAdmin } from './hide-on-admin';
 import { LogoWatermark } from '@/components/logo-watermark';
 import { getSystem, logoUrl } from '@/lib/system';
+import { KINDS, KIND_SLUGS } from '@/lib/catalog';
 import { isGoogleFontUrl, cssFontFamily } from '@/lib/fonts';
 import { localized } from '@/lib/i18n-field';
 import { SerwistProvider } from '@serwist/next/react';
@@ -87,6 +88,18 @@ export default async function LocaleLayout({ children, params }: Props) {
   const messages = await getMessages();
 
   const tNav = (await getTranslations({ locale, namespace: 'Navbar' })) as (key: string) => string;
+  const tKinds = (await getTranslations({ locale, namespace: 'Kinds' })) as (
+    key: string,
+  ) => string;
+
+  // The Catalog dropdown. Built from the enum rather than from a fetch: the five
+  // branches are fixed in the schema (`KIND_CHOICES`), so the navbar of every
+  // page in the app must not wait on - or fail with - an API call to render.
+  // The hrefs are locale-less like every other item here; see `NavbarWrapper`.
+  const branches = KINDS.map((kind) => ({
+    label: tKinds(kind),
+    href: `/${KIND_SLUGS[kind]}`,
+  }));
 
   // Decoded from the access-token cookie during this request, so the HTML we
   // send already reflects who the user is - no logged-out flash, no reload.
@@ -197,10 +210,12 @@ export default async function LocaleLayout({ children, params }: Props) {
                     version={`v${packageJson.version}`}
                     labels={{
                       home: tNav('home'),
+                      catalog: tNav('catalog'),
                       account: tNav('account'),
                       signOut: tNav('signOut'),
                       admin: tNav('admin'),
                     }}
+                    branches={branches}
                   />
                   {children}
                   <HideOnAdmin>

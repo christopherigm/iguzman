@@ -9,7 +9,13 @@ import { Typography } from '@repo/ui/core-elements/typography';
 import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
 import { RichText } from '@repo/ui/core-elements/rich-text';
 import { PageBottomSpacer } from '@repo/ui/core-elements/navbar';
-import { getCategory, getSpeciesByCategory, type Category, type Species } from '@/lib/catalog';
+import {
+  getCategory,
+  getSpeciesByCategory,
+  kindHref,
+  type Category,
+  type Species,
+} from '@/lib/catalog';
 import { getCategoryMapPins, getSightingsByCategory } from '@/lib/journal';
 import { localized } from '@/lib/i18n-field';
 import { DetailHero, type DetailHeroChip } from '@/components/catalog/detail-hero';
@@ -88,6 +94,10 @@ export default async function CategoryPage({ params }: Props) {
   const shortDescription = localized(category, 'short_description', locale);
   const description = localized(category, 'description', locale);
   const kindLabel = tKinds(category.kind);
+  // The branch has a page of its own now, so its label is a link in both places
+  // this page names it - which is also the only way into `/[locale]/[kind]`
+  // from the public site.
+  const branchHref = kindHref(category.kind, locale);
 
   const photos = toGalleryImages(category, species, locale);
 
@@ -110,7 +120,7 @@ export default async function CategoryPage({ params }: Props) {
 
   const breadcrumbs = [
     { label: t('breadcrumbHome'), href: `/${locale}` },
-    { label: kindLabel },
+    { label: kindLabel, href: branchHref },
     { label: name },
   ];
 
@@ -122,6 +132,7 @@ export default async function CategoryPage({ params }: Props) {
         fit={category.fit ?? 'cover'}
         backgroundColor={category.background_color}
         eyebrow={kindLabel}
+        eyebrowHref={branchHref}
         title={name}
         scientificName={category.scientific_name}
         chips={chips}
@@ -161,7 +172,7 @@ export default async function CategoryPage({ params }: Props) {
 
               <FactsCard
                 facts={[
-                  { label: t('factKind'), value: kindLabel },
+                  { label: t('factKind'), value: kindLabel, href: branchHref },
                   category.scientific_name
                     ? {
                         label: t('factScientificName'),

@@ -248,6 +248,20 @@ export async function getSightingsByCategory(
   );
 }
 
+/**
+ * The most recent entries in one branch, newest first.
+ *
+ * Two joins away from the entry: a sighting points at a species, a species at a
+ * category, and only the category carries `kind` - which is why the API spells
+ * this `species__category__kind` and publishes it as `?kind=`. Filtering here
+ * instead would mean reading the whole feed to show eight of it.
+ */
+export async function getSightingsByKind(kind: Kind, limit = 8): Promise<Sighting[]> {
+  return fetchSightings(
+    `/api/journal/sightings/?kind=${encodeURIComponent(kind)}&limit=${limit}`,
+  );
+}
+
 /** The most recent entries recording one species, newest first. */
 export async function getSightingsBySpecies(
   speciesSlug: string,
@@ -299,6 +313,18 @@ export async function getCategoryMapPins(
   return fetchMapPins(
     `/api/journal/sightings/map/?category_slug=${encodeURIComponent(categorySlug)}`,
   );
+}
+
+/**
+ * Every place one branch has been recorded - the pins for its page's map.
+ *
+ * No `per_category`, deliberately: that exists so the *landing* mixes its five
+ * branches evenly, and here every pin is already the one branch - capping each
+ * of its categories would only hide entries. The API's `MAX_MAP_PINS` remains
+ * the ceiling.
+ */
+export async function getKindMapPins(kind: Kind): Promise<SightingMapPin[]> {
+  return fetchMapPins(`/api/journal/sightings/map/?kind=${encodeURIComponent(kind)}`);
 }
 
 /**
