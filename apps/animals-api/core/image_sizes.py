@@ -21,7 +21,16 @@ REGULAR tier comes out ~800 px wide, not 1200.
 """
 
 # Tier sizes in px, named to match the mixins in core.models.
-ICON = 128       # category/season/weather glyphs shown beside a label
+#
+# ICON is 192 rather than a value near the ~84 px a glyph is actually drawn at,
+# because `apps/animals` optimizes nothing: its `images.loader` is 'custom' and
+# the loader returns every URL untouched, so `/_next/image` does not exist there
+# and the stored file is what the browser paints. There is no 2x variant to
+# generate - the tier has to carry the retina copy itself. 192 covers the
+# largest render (the 84 px category-nav tile) at 2x and the 64 px detail-hero
+# glyph at 3x. It is also the size the manifest already uses, so it stays a
+# round number an author can recognise.
+ICON = 192       # category/season/weather glyphs shown beside a label
 SMALL = 256      # SmallPicture   - thumbnails, avatars
 MEDIUM = 512     # MediumPicture  - cards, previews, video posters
 REGULAR = 1200   # RegularPicture - species portraits, sighting photos

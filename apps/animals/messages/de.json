@@ -18,7 +18,6 @@
     "photosCount": "Fotos",
     "sightingsCount": "Sichtungen",
     "lastSeen": "Zuletzt gesehen",
-    "featured": "Hervorgehoben",
     "noSpecies": "In dieser Kategorie ist noch nichts abgelegt.",
     "noDescription": "Für diesen Eintrag wurde noch keine Beschreibung verfasst.",
     "factKind": "Zweig",
@@ -85,7 +84,8 @@
     "filterYear": "Jahr",
     "empty": "Keine Sichtung entspricht diesen Filtern.",
     "zoomHint": "Zum Zoomen Strg + Scrollen verwenden",
-    "zoomHintMac": "Zum Zoomen ⌘ + Scrollen verwenden"
+    "zoomHintMac": "Zum Zoomen ⌘ + Scrollen verwenden",
+    "yourLocation": "Dein Standort"
   },
   "Navbar": {
     "home": "Startseite",
@@ -337,7 +337,7 @@
     "logosAndStylesDesc": "Logos, Symbole, Farben, Schriften und Wasserzeichen.",
     "longitude": "Längengrad",
     "mapPickerTitle": "Genauen Ort markieren",
-    "mapPickerHint": "Klicke auf die Karte, um die Markierung zu setzen, oder ziehe sie zum Feinjustieren. Karte ziehen zum Verschieben, scrollen zum Zoomen. Ohne Markierung gelten die Koordinaten des Ortes.",
+    "mapPickerHint": "Klicke auf die Karte, um die Markierung zu setzen, oder ziehe sie zum Feinjustieren. Karte ziehen zum Verschieben, Strg + Scrollen zum Zoomen. Ohne Markierung gelten die Koordinaten des Ortes.",
     "mapSearchLabel": "Ort suchen",
     "mapSearchPlaceholder": "Ort, Park, Weg…",
     "mapSearchAction": "Suchen",
@@ -348,6 +348,9 @@
     "mapZoomIn": "Vergrößern",
     "mapZoomOut": "Verkleinern",
     "mapAttribution": "© OpenStreetMap-Mitwirkende",
+    "mapYourLocation": "Dein Standort",
+    "mapZoomHint": "Zum Zoomen Strg + Scrollen verwenden",
+    "mapZoomHintMac": "Zum Zoomen ⌘ + Scrollen verwenden",
     "manifestBackground": "Symbolhintergrund",
     "manifestIcon": "Symbol {size}",
     "manifestImages": "App-Symbole",

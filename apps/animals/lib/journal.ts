@@ -72,12 +72,18 @@ export interface Sighting {
   species_en_name: string | null;
   species_slug: string | null;
   species_image: string | null;
+  /** The 128 px glyph, never a photograph - what this entry's map pin wears. */
+  species_icon: string | null;
 
   kind: Kind | null;
   category: number | null;
   category_name: string | null;
   category_en_name: string | null;
   category_slug: string | null;
+  /** The branch's glyph - the pin's fallback when the species has none. */
+  category_icon: string | null;
+  /** The pin's fallback colour when neither of the two has an icon. */
+  category_color: string | null;
 
   location: number | null;
   location_name: string | null;
@@ -163,6 +169,50 @@ export interface SightingMapPin {
 
   /** The entry's cover, for the marker's popup card. */
   image: string | null;
+}
+
+/**
+ * One already-fetched entry as its own map pin, or `null` when it has no
+ * coordinates to pin.
+ *
+ * What a sighting's **own page** puts on its map. It costs no request: a
+ * `Sighting` carries every field a pin does - including the two glyphs and the
+ * branch colour, which the API publishes on the detail payload precisely so this
+ * conversion is possible (see animals-api's `SightingSerializer`). The map
+ * endpoint stays what the *many*-entry maps read.
+ *
+ * The narrowing is the point of the return type: `latitude`/`longitude` are
+ * nullable on a `Sighting` and never null on a pin.
+ */
+export function sightingMapPin(sighting: Sighting): SightingMapPin | null {
+  if (sighting.latitude === null || sighting.longitude === null) return null;
+  return {
+    id: sighting.id,
+    slug: sighting.slug,
+    name: sighting.name,
+    en_name: sighting.en_name,
+    date: sighting.date,
+    species: sighting.species,
+    species_name: sighting.species_name,
+    species_en_name: sighting.species_en_name,
+    species_slug: sighting.species_slug,
+    species_icon: sighting.species_icon,
+    kind: sighting.kind,
+    category: sighting.category,
+    category_name: sighting.category_name,
+    category_en_name: sighting.category_en_name,
+    category_slug: sighting.category_slug,
+    category_icon: sighting.category_icon,
+    category_color: sighting.category_color,
+    location: sighting.location,
+    location_name: sighting.location_name,
+    location_en_name: sighting.location_en_name,
+    location_slug: sighting.location_slug,
+    latitude: sighting.latitude,
+    longitude: sighting.longitude,
+    coordinates_are_approximate: sighting.coordinates_are_approximate,
+    image: sighting.image,
+  };
 }
 
 interface Paginated<T> {

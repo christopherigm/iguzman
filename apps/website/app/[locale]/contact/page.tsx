@@ -84,6 +84,7 @@ export default async function ContactPage({ params }: Props) {
             branches={branches}
             locale={locale}
             isAdmin={Boolean(session?.isAdmin)}
+            pinIcon={system?.img_brandmark ?? null}
           />
         </Box>
       )}

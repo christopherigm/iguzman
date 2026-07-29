@@ -9,7 +9,7 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { Button } from "@repo/ui/core-elements/button";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { LocationMap } from "@repo/ui/core-elements/location-map";
+import { OsmMap } from "@repo/ui/core-elements/osm-map";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { deleteBranch } from "@/lib/admin-api";
 import { branchHasCoordinates, type Branch } from "@/lib/contact";
@@ -19,6 +19,13 @@ interface ContactLocationsProps {
   locale: string;
   /** When true, each location gets Edit/Remove controls (an admin viewing the page). */
   isAdmin: boolean;
+  /**
+   * The mark drawn inside each map pin - the tenant's **brandmark**, not its
+   * logo: the pin's head is a 34 px circle that crops what it is given, and a
+   * wide wordmark comes out as three letters from the middle of itself. With no
+   * brandmark the pin is a plain accent-coloured teardrop, which is fine.
+   */
+  pinIcon?: string | null;
 }
 
 function telHref(phone: string): string {
@@ -41,6 +48,7 @@ export function ContactLocations({
   branches,
   locale,
   isAdmin,
+  pinIcon = null,
 }: ContactLocationsProps) {
   const t = useTranslations("Contact");
   const tAdmin = useTranslations("Admin");
@@ -151,12 +159,31 @@ export function ContactLocations({
           )}
         </Box>
 
+        {/* OpenStreetMap tiles drawn into the page, not a Google iframe: the
+            pin is ours, so it wears the tenant's own logo instead of a generic
+            red teardrop. No card on click - the address, the phone and the
+            directions button are already right above it, so there is nothing
+            for a popup to add. */}
         {branchHasCoordinates(branch) && (
-          <LocationMap
-            latitude={Number(branch.latitude)}
-            longitude={Number(branch.longitude)}
-            title={name || t("mapTitle")}
+          <OsmMap
+            markers={[
+              {
+                id: branch.id,
+                latitude: Number(branch.latitude),
+                longitude: Number(branch.longitude),
+                title: name || t("mapTitle"),
+                icon: pinIcon,
+              },
+            ]}
             height={single ? 320 : 220}
+            labels={{
+              map: name ? t("mapOf", { name }) : t("mapTitle"),
+              zoomIn: t("mapZoomIn"),
+              zoomOut: t("mapZoomOut"),
+              attribution: t("mapAttribution"),
+              zoomHint: t("mapZoomHint"),
+              zoomHintMac: t("mapZoomHintMac"),
+            }}
           />
         )}
       </Box>

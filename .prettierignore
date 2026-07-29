@@ -1,2 +1,21 @@
+# Never reformat: Helm chart templates use Go templating that Prettier mangles
 **/*.yaml
 **/*.yml
+
+# Dependencies & tool caches
+**/node_modules/**
+**/.turbo/**
+**/.venv/**
+
+# Build output
+**/.next/**
+**/dist/**
+**/out/**
+**/coverage/**
+apps/mob-forge/build/**
+apps/mob-forge/run/**
+**/staticfiles/**
+
+# Generated / vendored
+**/*.min.js
+**/pnpm-lock.yaml

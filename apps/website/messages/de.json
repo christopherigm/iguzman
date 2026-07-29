@@ -1170,6 +1170,12 @@
     "sendEmail": "E-Mail",
     "getDirections": "Route",
     "mapTitle": "Karte",
+    "mapOf": "Karte von {name}",
+    "mapZoomIn": "Vergrößern",
+    "mapZoomOut": "Verkleinern",
+    "mapAttribution": "© OpenStreetMap-Mitwirkende",
+    "mapZoomHint": "Zum Zoomen Strg + Scrollen verwenden",
+    "mapZoomHintMac": "Zum Zoomen ⌘ + Scrollen verwenden",
     "aboutItem": "Betreff: {name}",
     "askAboutHeading": "Haben Sie eine Frage dazu?",
     "askAboutDescription": "Fragen Sie uns alles und wir antworten per E-Mail."

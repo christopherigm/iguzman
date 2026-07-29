@@ -218,6 +218,12 @@ class SightingSerializer(serializers.ModelSerializer):
     species_en_name = serializers.CharField(source='species.en_name', read_only=True, default=None)
     species_slug = serializers.SlugRelatedField(source='species', slug_field='slug', read_only=True)
     species_image = serializers.SerializerMethodField()
+    # The glyphs a map marker is drawn as, the same three fields (and the same
+    # getters) `SightingMapSerializer` publishes. An entry's own page pins it on
+    # a map too, and that marker wears the species' icon exactly as it does on
+    # the maps of many entries - without these it would have to re-fetch the
+    # whole map endpoint to dress one pin it already has the coordinates for.
+    species_icon = serializers.SerializerMethodField()
     # Flattened from species.category so a feed card can show its branch and
     # sub-category without a second request.
     kind = serializers.CharField(source='species.category.kind', read_only=True, default=None)
@@ -225,6 +231,10 @@ class SightingSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='species.category.name', read_only=True, default=None)
     category_en_name = serializers.CharField(source='species.category.en_name', read_only=True, default=None)
     category_slug = serializers.CharField(source='species.category.slug', read_only=True, default=None)
+    category_icon = serializers.SerializerMethodField()
+    category_color = serializers.CharField(
+        source='species.category.background_color', read_only=True, default=None
+    )
 
     location_name = serializers.CharField(source='location.name', read_only=True, default=None)
     location_en_name = serializers.CharField(source='location.en_name', read_only=True, default=None)
@@ -248,7 +258,9 @@ class SightingSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'enabled', 'created', 'modified', 'version',
             'species', 'species_name', 'species_en_name', 'species_slug', 'species_image',
+            'species_icon',
             'kind', 'category', 'category_name', 'category_en_name', 'category_slug',
+            'category_icon', 'category_color',
             'name', 'en_name', 'slug',
             'description', 'en_description',
             'short_description', 'en_short_description', 'href',
@@ -273,6 +285,24 @@ class SightingSerializer(serializers.ModelSerializer):
         if not obj.species_id:
             return None
         return gallery_image_url(obj.species, self.context.get('request'))
+
+    def get_species_icon(self, obj):
+        """The species' glyph - what a marker for this entry is drawn as.
+
+        ``icon`` is a single field, never the gallery (see the CLAUDE.md note on
+        covers), so this is ``file_url`` rather than ``gallery_image_url``: a
+        128 px mark is the point, and falling back to a photograph would put a
+        cropped landscape inside a 34 px pin.
+        """
+        if not obj.species_id:
+            return None
+        return file_url(obj.species.icon, self.context.get('request'))
+
+    def get_category_icon(self, obj):
+        """The branch's glyph - the fallback for a species with none of its own."""
+        if not obj.species_id or not obj.species.category_id:
+            return None
+        return file_url(obj.species.category.icon, self.context.get('request'))
 
     def get_media_count(self, obj):
         return len(obj.media.all())

@@ -1170,6 +1170,12 @@
     "sendEmail": "E-mail",
     "getDirections": "Itinéraire",
     "mapTitle": "Carte",
+    "mapOf": "Carte de {name}",
+    "mapZoomIn": "Zoom avant",
+    "mapZoomOut": "Zoom arrière",
+    "mapAttribution": "© les contributeurs d’OpenStreetMap",
+    "mapZoomHint": "Utilisez Ctrl + défilement pour zoomer sur la carte",
+    "mapZoomHintMac": "Utilisez ⌘ + défilement pour zoomer sur la carte",
     "aboutItem": "À propos : {name}",
     "askAboutHeading": "Une question à ce sujet ?",
     "askAboutDescription": "Posez-nous vos questions et nous répondrons par e-mail."

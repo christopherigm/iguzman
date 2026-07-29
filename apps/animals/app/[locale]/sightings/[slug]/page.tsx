@@ -8,14 +8,19 @@ import { Container } from '@repo/ui/core-elements/container';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
 import { RichText } from '@repo/ui/core-elements/rich-text';
-import { LocationMap } from '@repo/ui/core-elements/location-map';
 import { PageBottomSpacer } from '@repo/ui/core-elements/navbar';
-import { getSighting, getSightingsBySpecies, type Sighting } from '@/lib/journal';
+import {
+  getSighting,
+  getSightingsBySpecies,
+  sightingMapPin,
+  type Sighting,
+} from '@/lib/journal';
 import { localized } from '@/lib/i18n-field';
 import { DetailHero, type DetailHeroChip } from '@/components/catalog/detail-hero';
 import { FactsCard, type Fact } from '@/components/catalog/facts-card';
 import { DetailGallery, type GalleryImage } from '@/components/catalog/detail-gallery';
 import { SightingsSection } from '@/components/journal/sightings-section';
+import { SightingsMapSection } from '@/components/journal/sightings-map-section';
 import { SightingVideos, type SightingVideo } from './sighting-videos';
 
 /**
@@ -30,7 +35,7 @@ import { SightingVideos, type SightingVideo } from './sighting-videos';
  * down to the first row, which is theirs: the story and the field conditions as
  * two stacked cards, the photographs beside them as a slideshow.
  *
- * Two things specific to a sighting:
+ * Three things specific to a sighting:
  *
  * - **Its gallery is stored *and* may hold video.** `SightingMedia` is one table
  *   with a `kind`, so the media list is split here: photos go to `DetailGallery`
@@ -38,6 +43,12 @@ import { SightingVideos, type SightingVideo } from './sighting-videos';
  *   below it.
  * - **The map and the related band stay where they are**, under the row - an
  *   entry is a place and a date before it is a set of pictures.
+ * - **That map is the same one the landing and a category draw**
+ *   (`SightingsMapSection` → `SightingsMap` → `@repo/ui`'s `OsmMap`), holding
+ *   this entry as its only pin. It is not a second, simpler map component: the
+ *   marker has to wear the species' icon, and only a map drawn into the page can
+ *   put a mark of our own on a pin - which is exactly what the keyless Google
+ *   iframe that used to sit here could not do.
  */
 
 type Props = { params: Promise<{ locale: string; slug: string }> };
@@ -177,12 +188,11 @@ export default async function SightingPage({ params }: Props) {
       : null,
   ];
 
-  // Paired rather than checked twice: the two are only meaningful together, and
-  // this is what narrows them out of `number | null` for the map below.
-  const coordinates =
-    sighting.latitude !== null && sighting.longitude !== null
-      ? { latitude: sighting.latitude, longitude: sighting.longitude }
-      : null;
+  // The entry as its own map pin, or `null` when it has no coordinates - which
+  // is what narrows the pair out of `number | null` for the map below. It costs
+  // no request: the detail payload carries the glyphs and the branch colour a
+  // marker is drawn with, exactly as the map endpoint does.
+  const pin = sightingMapPin(sighting);
 
   return (
     <Box flexDirection="column" width="100%">
@@ -265,30 +275,33 @@ export default async function SightingPage({ params }: Props) {
           </Box>
         )}
 
-        {coordinates && (
-          <Box flexDirection="column" gap={16} marginTop={56}>
-            <Box flexDirection="column" gap={8}>
-              <Typography as="h2" variant="h2" fontWeight={700}>
-                {t('mapTitle')}
-              </Typography>
-              {/* The API blurs the pair to ~1 km for *every* caller when the
-                  place is flagged sensitive, so this says so rather than
-                  pretending the pin is exact. */}
-              <Typography variant="body" color="var(--foreground-muted, #6b7280)">
-                {sighting.coordinates_are_approximate
+        {/* The same map every other page here draws, holding one pin: the
+            OpenStreetMap tiles this app paints itself, with the marker wearing
+            this entry's species icon (its category's when the species has none).
+            It replaced a keyless Google iframe, which could show a pin but never
+            *that* pin - nothing on a page can draw inside a cross-origin frame.
+            No filters: every dropdown over a single entry is a no-op. */}
+        {pin && (
+          <Box marginTop={56}>
+            <SightingsMapSection
+              pins={[pin]}
+              locale={locale}
+              title={t('mapTitle')}
+              // The API blurs the pair to ~1 km for *every* caller when the
+              // place is flagged sensitive, so this says so rather than
+              // pretending the pin is exact.
+              subtitle={
+                sighting.coordinates_are_approximate
                   ? t('mapApproximate')
-                  : (locationName ?? t('mapSubtitle'))}
-              </Typography>
-            </Box>
-
-            <LocationMap
-              latitude={coordinates.latitude}
-              longitude={coordinates.longitude}
-              title={locationName ?? title}
-              // Backed off from the component's building-level default: the
-              // subject is a place in a landscape, and a sensitive one has been
-              // rounded to about this much anyway.
-              zoom={sighting.coordinates_are_approximate ? 12 : 14}
+                  : (locationName ?? t('mapSubtitle'))
+              }
+              filters={[]}
+              height={380}
+              // A single pin frames at whatever ceiling it is given. Backed off
+              // from a building-level zoom: the subject is a place in a
+              // landscape, and a sensitive one has been rounded to about this
+              // much anyway.
+              maxFitZoom={sighting.coordinates_are_approximate ? 12 : 14}
             />
           </Box>
         )}

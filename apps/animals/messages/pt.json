@@ -18,7 +18,6 @@
     "photosCount": "fotos",
     "sightingsCount": "avistamentos",
     "lastSeen": "Visto pela última vez",
-    "featured": "Destaque",
     "noSpecies": "Ainda não há nada arquivado nesta categoria.",
     "noDescription": "Ainda não foi escrita uma descrição para esta entrada.",
     "factKind": "Ramo",
@@ -85,7 +84,8 @@
     "filterYear": "Ano",
     "empty": "Nenhum avistamento corresponde a estes filtros.",
     "zoomHint": "Use Ctrl + rolagem para ampliar o mapa",
-    "zoomHintMac": "Use ⌘ + rolagem para ampliar o mapa"
+    "zoomHintMac": "Use ⌘ + rolagem para ampliar o mapa",
+    "yourLocation": "Sua localização"
   },
   "Navbar": {
     "home": "Início",
@@ -337,7 +337,7 @@
     "logosAndStylesDesc": "Logos, ícones, cores, fontes e marca d'água.",
     "longitude": "Longitude",
     "mapPickerTitle": "Marque o ponto exato",
-    "mapPickerHint": "Clique no mapa para colocar o marcador, ou arraste-o para ajustar. Arraste o mapa para deslocar e use a roda para aproximar. Sem marcador, valem as coordenadas do lugar.",
+    "mapPickerHint": "Clique no mapa para colocar o marcador, ou arraste-o para ajustar. Arraste o mapa para deslocar e use Ctrl + roda para aproximar. Sem marcador, valem as coordenadas do lugar.",
     "mapSearchLabel": "Buscar um lugar",
     "mapSearchPlaceholder": "Cidade, parque, trilha…",
     "mapSearchAction": "Buscar",
@@ -348,6 +348,9 @@
     "mapZoomIn": "Aproximar",
     "mapZoomOut": "Afastar",
     "mapAttribution": "© colaboradores do OpenStreetMap",
+    "mapYourLocation": "Sua localização",
+    "mapZoomHint": "Use Ctrl + rolagem para ampliar o mapa",
+    "mapZoomHintMac": "Use ⌘ + rolagem para ampliar o mapa",
     "manifestBackground": "Fundo do ícone",
     "manifestIcon": "Ícone {size}",
     "manifestImages": "Ícones do app",

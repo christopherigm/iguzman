@@ -1,14 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Button } from '@repo/ui/core-elements/button';
 import { TextInput } from '@repo/ui/core-elements/text-input';
 import {
-  TILE_SIZE,
   fromWorld,
   originOf,
   tilesFor,
@@ -17,26 +15,65 @@ import {
   zoomAbout,
   type LatLng,
   type Size,
-} from '@/lib/mercator';
+} from '@repo/ui/core-elements/mercator';
+import {
+  OSM_CHROME_CLASS,
+  OSM_DRAG_THRESHOLD,
+  OSM_GEOLOCATION_OPTIONS,
+  OSM_HINT_MS,
+  OSM_MARKER_CLASS,
+  OSM_MARKER_SIZE,
+  OSM_TILE_HOST,
+  OSM_ZOOM_WHEEL_STEP,
+  OsmAttribution,
+  OsmGestureHint,
+  OsmTileLayer,
+  OsmUserMarker,
+  OsmZoomControl,
+} from '@repo/ui/core-elements/osm-map-chrome';
 import './map-picker.css';
 
 /**
  * A click-to-pick coordinate map, drawn from OpenStreetMap raster tiles.
  *
  * ⚠ **Why this is not Google.** Google's keyless embed
- * (`maps.google.com/maps?...&output=embed`, which `@repo/ui`'s `LocationMap`
- * uses to *display* a pin) is a cross-origin iframe: nothing on this page can
- * ever read a click inside it. A real picker therefore needs either a Maps
- * JavaScript API key - which this deployment does not have - or a tile source
- * that can be drawn into our own DOM. This is the latter, hand-rolled rather
- * than pulled from Leaflet so the app keeps its zero map dependencies and the
- * tiles inherit the CMS's own theming.
+ * (`maps.google.com/maps?...&output=embed`, which the monorepo used to *display*
+ * a pin with) is a cross-origin iframe: nothing on this page can ever read a
+ * click inside it. A real picker therefore needs either a Maps JavaScript API
+ * key - which this deployment does not have - or a tile source that can be drawn
+ * into our own DOM. This is the latter, hand-rolled rather than pulled from
+ * Leaflet so the app keeps its zero map dependencies and the tiles inherit the
+ * CMS's own theming.
  *
- * The projection itself lives in `lib/mercator.ts`, shared with the public
- * `SightingsMap`: a tile is a 256 px square of a world that is `256 * 2^zoom`
- * pixels wide, so a lat/lng converts to a world pixel and back, and everything
- * else - which tiles to draw, where the pin lands, what a click means - falls
- * out of that pair of functions. What is left here is the *picking*.
+ * ⚠ **It is not `@repo/ui`'s `OsmMap` either, and cannot be.** That one *reads*
+ * - it frames a set of markers and lets a visitor look around; this one is a
+ * form control that writes two fields, so the whole point of it is the click,
+ * the drag of the pin, the place search and the camera being adjusted during
+ * render (see the note further down).
+ *
+ * ⚠ **But everything a reader can see of it is the same component.** The tile
+ * layer, the pin, the "you are here" pin, the zoom control, the data credit and
+ * the gesture scrim all come from `@repo/ui/core-elements/osm-map-chrome`, which
+ * `OsmMap` renders too - so the CMS's map and the public one are one design, and
+ * a change to either reaches both. Kept as two copies they drifted: this picker
+ * ended up with loose zoom pills in the *top* corner, and a pin anchored by a
+ * different corner of its own box, which drew it half a pin west of the
+ * coordinate it was reporting. What stays here is only what this map *does*.
+ *
+ * ⚠ **The wheel is cooperative here too.** This picker sits partway down a form
+ * that is longer than the screen, so a map that swallowed every wheel event
+ * snagged the author on the way past it - the page stopped and the map zoomed.
+ * Zooming takes `Ctrl`/`⌘` + wheel (the same event a trackpad pinch produces),
+ * the `+`/`-` buttons or the keyboard; a bare wheel raises a scrim saying so and
+ * lets the form scroll. Same bargain `OsmMap` strikes on the public pages -
+ * don't "fix" either of them back to plain wheel zoom.
+ *
+ * The projection itself lives in `@repo/ui`'s `core-elements/mercator.ts`,
+ * shared with `OsmMap`: a tile is a 256 px square of a world that is
+ * `256 * 2^zoom` pixels wide, so a lat/lng converts to a world pixel and back,
+ * and everything else - which tiles to draw, where the pin lands, what a click
+ * means - falls out of that pair of functions. What is left here is the
+ * *picking*.
  */
 
 const MIN_ZOOM = 2;
@@ -50,22 +87,18 @@ const WIDE_ZOOM = 4;
  * the geographic middle of Mexico, which is where this journal is kept.
  */
 const DEFAULT_CENTER = { latitude: 23.6345, longitude: -102.5528 };
-/** Pointer travel (px) below which a press counts as a click rather than a drag. */
-const DRAG_THRESHOLD = 4;
 /** What the API stores: `DecimalField(max_digits=9, decimal_places=6)`. */
 const COORD_DECIMALS = 6;
 
 /**
- * Hit-test hooks, not styling: the pointer handlers are attached to the whole
- * viewport, so they ask `closest()` whether a press landed on the pin (drag it)
- * or on the chrome floating over the map (leave it alone).
+ * The coordinate's own pin, which is this picker's alone: the shared marker is
+ * what it *looks* like, this class is how a press is recognised as the start of
+ * a drag rather than as a new click. (The chrome floating over the map answers
+ * to the shared `OSM_CHROME_CLASS`, since both maps float the same things.)
  */
 const PIN_CLASS = 'mp__pin';
-const CHROME_CLASS = 'mp__chrome';
 
-const TILE_HOST = 'https://tile.openstreetmap.org';
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
-const OSM_COPYRIGHT = 'https://www.openstreetmap.org/copyright';
 
 const clampZoom = (zoom: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
 
@@ -121,6 +154,11 @@ export function MapPicker({
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
   /** The pin's live position while it is being dragged; the form is written on release. */
   const [draftPin, setDraftPin] = useState<LatLng | null>(null);
+
+  /** Where the author is - `null` until the browser says, and if it never does. */
+  const [userPoint, setUserPoint] = useState<LatLng | null>(null);
+  /** The gesture scrim's text, or `null` when it is down. */
+  const [hint, setHint] = useState<string | null>(null);
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[] | null>(null);
@@ -199,12 +237,51 @@ export function MapPicker({
   const sizeRef = useRef(size);
   const pinRef = useRef(pin);
   const emitRef = useRef(emit);
+  const tRef = useRef(t);
   useEffect(() => {
     cameraRef.current = { center, zoom };
     sizeRef.current = size;
     pinRef.current = pin;
     emitRef.current = emit;
+    tRef.current = t;
   });
+
+  /**
+   * Which modifier the wheel hint should name. Read from the browser rather than
+   * guessed, and kept in a ref because it is only ever consulted inside a
+   * gesture - long after mount - so it never has to survive hydration.
+   */
+  const isMacRef = useRef(false);
+  useEffect(() => {
+    isMacRef.current = /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);
+  }, []);
+
+  // ── Where the author is ───────────────────────────────────────────────────
+  //
+  // Drawn as a second, hollow pin so an entry can be filed against the spot the
+  // author is standing on - the common case for a journal written in the field.
+  // It never writes the form: the coordinate this control produces is the one
+  // that gets clicked, so a fix arriving mid-edit cannot move a pin already
+  // placed. Every failure - refused, no fix, an insecure origin where the API is
+  // not exposed - leaves it null and the picker exactly as it was.
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    let live = true;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (!live) return;
+        setUserPoint({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      () => {},
+      OSM_GEOLOCATION_OPTIONS,
+    );
+    return () => {
+      live = false;
+    };
+  }, []);
 
   // ── Viewport size ─────────────────────────────────────────────────────────
 
@@ -236,6 +313,22 @@ export function MapPicker({
       moved: boolean;
     } | null = null;
 
+    /** Wheel travel banked since the last zoom step - see `OSM_ZOOM_WHEEL_STEP`. */
+    let wheelTravel = 0;
+    let hintTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const raiseHint = (text: string) => {
+      setHint(text);
+      if (hintTimer) clearTimeout(hintTimer);
+      hintTimer = setTimeout(() => setHint(null), OSM_HINT_MS);
+    };
+
+    const dropHint = () => {
+      if (hintTimer) clearTimeout(hintTimer);
+      hintTimer = null;
+      setHint(null);
+    };
+
     const localPoint = (e: PointerEvent) => {
       const rect = el.getBoundingClientRect();
       return { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -246,7 +339,7 @@ export function MapPicker({
       const target = e.target as HTMLElement | null;
       // The zoom buttons and the attribution link sit inside the viewport; a
       // press on either is theirs, not the start of a pan.
-      if (target?.closest(`.${CHROME_CLASS}`)) return;
+      if (target?.closest(`.${OSM_CHROME_CLASS}`)) return;
       const onPin = Boolean(target?.closest(`.${PIN_CLASS}`));
       drag = {
         pointerId: e.pointerId,
@@ -266,7 +359,7 @@ export function MapPicker({
       if (!drag || e.pointerId !== drag.pointerId) return;
       const dx = e.clientX - drag.startX;
       const dy = e.clientY - drag.startY;
-      if (!drag.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+      if (!drag.moved && Math.hypot(dx, dy) < OSM_DRAG_THRESHOLD) return;
       drag.moved = true;
       const { center: from, zoom: z } = drag.camera;
 
@@ -308,11 +401,28 @@ export function MapPicker({
     };
 
     const handleWheel = (e: WheelEvent) => {
-      // Non-passive on purpose: without preventDefault the page scrolls away
-      // under the cursor while the map zooms.
+      // ⚠ A bare wheel is the page's, not the map's - the same bargain
+      // `@repo/ui`'s `OsmMap` strikes on the public site. This form is long
+      // enough to scroll, and a map that swallowed every wheel event snagged the
+      // author on the way past it: the page stopped and the map zoomed instead.
+      // `ctrlKey` is both "Ctrl held" and how every browser reports a trackpad
+      // pinch, so the one branch serves both.
+      if (!e.ctrlKey && !e.metaKey) {
+        raiseHint(isMacRef.current ? tRef.current('mapZoomHintMac') : tRef.current('mapZoomHint'));
+        return;
+      }
+      // Non-passive on purpose: Ctrl + wheel is the browser's own page-zoom, and
+      // this is where that is taken over.
       e.preventDefault();
+      dropHint();
+
+      wheelTravel += e.deltaY;
+      if (Math.abs(wheelTravel) < OSM_ZOOM_WHEEL_STEP) return;
+      const direction = wheelTravel < 0 ? 1 : -1;
+      wheelTravel = 0;
+
       const { center: c, zoom: z } = cameraRef.current;
-      const next = clampZoom(z + (e.deltaY < 0 ? 1 : -1));
+      const next = clampZoom(z + direction);
       if (next === z) return;
       const rect = el.getBoundingClientRect();
       setCenter(
@@ -368,6 +478,7 @@ export function MapPicker({
       el.removeEventListener('pointercancel', handlePointerUp);
       el.removeEventListener('wheel', handleWheel);
       el.removeEventListener('keydown', handleKeyDown);
+      if (hintTimer) clearTimeout(hintTimer);
     };
   }, []);
 
@@ -431,12 +542,19 @@ export function MapPicker({
 
   const origin = useMemo(() => originOf(center, zoom, size), [center, zoom, size]);
 
-  const tiles = useMemo(() => tilesFor(origin, size, zoom, TILE_HOST), [origin, size, zoom]);
+  const tiles = useMemo(() => tilesFor(origin, size, zoom, OSM_TILE_HOST), [origin, size, zoom]);
 
   const shownPin = draftPin ?? pin;
   const pinOffset = shownPin
     ? (() => {
         const world = toWorld(shownPin, zoom);
+        return { left: world.x - origin.x, top: world.y - origin.y };
+      })()
+    : null;
+
+  const userOffset = userPoint
+    ? (() => {
+        const world = toWorld(userPoint, zoom);
         return { left: world.x - origin.x, top: world.y - origin.y };
       })()
     : null;
@@ -547,91 +665,48 @@ export function MapPicker({
           userSelect: 'none',
         }}
       >
-        {tiles.map((tile) => (
-          <Image
-            key={tile.key}
-            src={tile.url}
-            alt=""
-            width={TILE_SIZE}
-            height={TILE_SIZE}
-            draggable={false}
-            // `images.loader` is 'custom' in this app, so /_next/image does not
-            // answer and the loader hands every URL back untouched; unoptimized
-            // says so outright and keeps a pointless srcset off each tile.
-            unoptimized
-            style={{
-              position: 'absolute',
-              left: tile.left,
-              top: tile.top,
-              width: TILE_SIZE,
-              height: TILE_SIZE,
-              pointerEvents: 'none',
-            }}
-          />
-        ))}
+        <OsmTileLayer tiles={tiles} />
 
+        {/* The author's own position, drawn by the shared marker: the same
+            teardrop the public map gives a reader, so "where I am" reads the
+            same in both. It carries no `PIN_CLASS`, so it is not draggable, and
+            takes no pointer at all - a click that lands on it still drops the
+            real pin underneath. */}
+        {userOffset && (
+          <OsmUserMarker left={userOffset.left} top={userOffset.top} label={t('mapYourLocation')} />
+        )}
+
+        {/* The coordinate itself, in the shared marker's geometry: a square with
+            three round corners, rotated 45° about its **centre** so the sharp one
+            points straight down, and offset by 120.7% of its own height so that
+            corner - not the box - rests on the coordinate. Anchoring it any other
+            way is what used to draw it half a pin west of the pair being saved. */}
         {pinOffset && (
-          // A teardrop: a circle with its bottom-left corner squared off, turned
-          // 45° so that corner becomes the point resting on the coordinate.
-          <Box
-            className={PIN_CLASS}
+          <div
+            className={`${OSM_MARKER_CLASS} ${PIN_CLASS}`}
             aria-hidden
-            width={22}
-            height={22}
-            backgroundColor="var(--accent, #06b6d4)"
-            border="2px solid #ffffff"
-            styles={{
-              position: 'absolute',
+            style={{
               left: pinOffset.left,
               top: pinOffset.top,
-              borderRadius: '50% 50% 50% 0',
-              transform: 'translate(-50%, -100%) rotate(-45deg)',
-              transformOrigin: 'bottom left',
-              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
-              cursor: 'grab',
+              width: OSM_MARKER_SIZE,
+              height: OSM_MARKER_SIZE,
+              background: 'var(--accent, #06b6d4)',
             }}
           />
         )}
 
-        {/* ── Zoom controls ── */}
-        <Box
-          className={CHROME_CLASS}
-          flexDirection="column"
-          gap={6}
-          styles={{ position: 'absolute', top: 10, right: 10, zIndex: 2 }}
-        >
-          <Button
-            text="+"
-            size="md"
-            aria-label={t('mapZoomIn')}
-            title={t('mapZoomIn')}
-            disabled={zoom >= MAX_ZOOM}
-            onClick={() => setZoom((z) => clampZoom(z + 1))}
-          />
-          <Button
-            text="−"
-            size="md"
-            aria-label={t('mapZoomOut')}
-            title={t('mapZoomOut')}
-            disabled={zoom <= MIN_ZOOM}
-            onClick={() => setZoom((z) => clampZoom(z - 1))}
-          />
-        </Box>
+        {hint && <OsmGestureHint text={hint} />}
 
-        {/* ── Attribution (required by the OSM tile usage policy) ── */}
-        <Box
-          className={CHROME_CLASS}
-          paddingX={6}
-          paddingY={2}
-          backgroundColor="color-mix(in srgb, var(--background) 78%, transparent)"
-          styles={{ position: 'absolute', right: 0, bottom: 0, zIndex: 2 }}
-        >
-          <a href={OSM_COPYRIGHT} target="_blank" rel="noopener noreferrer">
-            <Typography as="span" variant="label" color="var(--foreground)">
-              {t('mapAttribution')}
-            </Typography>
-          </a>
-        </Box>
+        <OsmZoomControl
+          zoomInLabel={t('mapZoomIn')}
+          zoomOutLabel={t('mapZoomOut')}
+          zoomInDisabled={zoom >= MAX_ZOOM}
+          zoomOutDisabled={zoom <= MIN_ZOOM}
+          onZoomIn={() => setZoom((z) => clampZoom(z + 1))}
+          onZoomOut={() => setZoom((z) => clampZoom(z - 1))}
+        />
+
+        <OsmAttribution label={t('mapAttribution')} />
       </Box>
     </Box>
   );

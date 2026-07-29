@@ -219,6 +219,27 @@ class MapTests(JournalFixtureMixin, IsolatedMediaTestCase):
         # Never the gallery: a photograph cropped into a 28 px circle is not a mark.
         self.assertNotIn('media', pin)
 
+    def test_a_detail_payload_carries_the_same_marker_glyphs(self):
+        """An entry's own page pins itself, and dresses that pin from this payload.
+
+        Without these three the sighting page would have to re-read the whole map
+        endpoint to draw the one marker it already has the coordinates for.
+        """
+        species = self.make_species()
+        species.icon.save('icon.png', SimpleUploadedFile('icon.png', b'not-a-real-png'), save=True)
+        category = species.category
+        category.icon.save('cat.png', SimpleUploadedFile('cat.png', b'not-a-real-png'), save=True)
+        category.background_color = '#123456'
+        category.save()
+
+        Sighting.objects.create(species=species, slug='pinned', date=date(2026, 10, 1),
+                                latitude='37.5', longitude='-122.2')
+
+        entry = self.client.get('/api/journal/sightings/slug/pinned/').json()
+        self.assertIn('/species/', entry['species_icon'])
+        self.assertIn('/category/', entry['category_icon'])
+        self.assertEqual(entry['category_color'], '#123456')
+
     def test_a_sensitive_location_blurs_a_pin_too(self):
         """The map may not be the one surface that publishes the precise nest."""
         location = Location.objects.create(

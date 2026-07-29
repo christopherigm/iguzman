@@ -18,7 +18,6 @@
     "photosCount": "photos",
     "sightingsCount": "observations",
     "lastSeen": "Vu pour la dernière fois",
-    "featured": "En vedette",
     "noSpecies": "Rien n'est encore classé dans cette catégorie.",
     "noDescription": "Aucune description n'a encore été rédigée pour cette entrée.",
     "factKind": "Branche",
@@ -85,7 +84,8 @@
     "filterYear": "Année",
     "empty": "Aucune observation ne correspond à ces filtres.",
     "zoomHint": "Utilisez Ctrl + défilement pour zoomer sur la carte",
-    "zoomHintMac": "Utilisez ⌘ + défilement pour zoomer sur la carte"
+    "zoomHintMac": "Utilisez ⌘ + défilement pour zoomer sur la carte",
+    "yourLocation": "Votre position"
   },
   "Navbar": {
     "home": "Accueil",
@@ -337,7 +337,7 @@
     "logosAndStylesDesc": "Logos, icônes, couleurs, polices et filigrane.",
     "longitude": "Longitude",
     "mapPickerTitle": "Marquer l’endroit exact",
-    "mapPickerHint": "Cliquez sur la carte pour placer le repère, ou faites-le glisser pour l’ajuster. Faites glisser la carte pour vous déplacer, la molette pour zoomer. Sans repère, les coordonnées du lieu sont utilisées.",
+    "mapPickerHint": "Cliquez sur la carte pour placer le repère, ou faites-le glisser pour l’ajuster. Faites glisser la carte pour vous déplacer, Ctrl + molette pour zoomer. Sans repère, les coordonnées du lieu sont utilisées.",
     "mapSearchLabel": "Rechercher un lieu",
     "mapSearchPlaceholder": "Ville, parc, sentier…",
     "mapSearchAction": "Rechercher",
@@ -348,6 +348,9 @@
     "mapZoomIn": "Zoom avant",
     "mapZoomOut": "Zoom arrière",
     "mapAttribution": "© les contributeurs d’OpenStreetMap",
+    "mapYourLocation": "Votre position",
+    "mapZoomHint": "Utilisez Ctrl + défilement pour zoomer sur la carte",
+    "mapZoomHintMac": "Utilisez ⌘ + défilement pour zoomer sur la carte",
     "manifestBackground": "Fond de l'icône",
     "manifestIcon": "Icône {size}",
     "manifestImages": "Icônes de l'application",

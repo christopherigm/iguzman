@@ -18,7 +18,6 @@
     "photosCount": "photos",
     "sightingsCount": "sightings",
     "lastSeen": "Last seen",
-    "featured": "Featured",
     "noSpecies": "Nothing has been filed under this category yet.",
     "noDescription": "No description has been written for this entry yet.",
     "factKind": "Branch",
@@ -85,7 +84,8 @@
     "filterYear": "Year",
     "empty": "No sighting matches these filters.",
     "zoomHint": "Use Ctrl + scroll to zoom the map",
-    "zoomHintMac": "Use ⌘ + scroll to zoom the map"
+    "zoomHintMac": "Use ⌘ + scroll to zoom the map",
+    "yourLocation": "Your location"
   },
   "Navbar": {
     "home": "Home",
@@ -337,7 +337,7 @@
     "logosAndStylesDesc": "Logos, icons, colours, fonts and the watermark.",
     "longitude": "Longitude",
     "mapPickerTitle": "Pin the exact spot",
-    "mapPickerHint": "Click the map to drop the pin, or drag the pin to adjust it. Drag the map to pan, scroll to zoom. Leave the pin off to use the place’s own coordinates.",
+    "mapPickerHint": "Click the map to drop the pin, or drag the pin to adjust it. Drag the map to pan, Ctrl + scroll to zoom. Leave the pin off to use the place’s own coordinates.",
     "mapSearchLabel": "Search a place",
     "mapSearchPlaceholder": "Town, park, trail…",
     "mapSearchAction": "Search",
@@ -348,6 +348,9 @@
     "mapZoomIn": "Zoom in",
     "mapZoomOut": "Zoom out",
     "mapAttribution": "© OpenStreetMap contributors",
+    "mapYourLocation": "Your location",
+    "mapZoomHint": "Use Ctrl + scroll to zoom the map",
+    "mapZoomHintMac": "Use ⌘ + scroll to zoom the map",
     "manifestBackground": "Icon background",
     "manifestIcon": "{size} icon",
     "manifestImages": "App icons",

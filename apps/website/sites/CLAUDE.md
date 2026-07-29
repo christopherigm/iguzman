@@ -120,7 +120,8 @@ a site gets for free and must not re-implement):
 
 **Do not build a site-local `/contact` page.** `app/[locale]/contact/page.tsx` is
 a platform route: it renders the tenant's `Branch` locations (single-location
-view or a grid, with a `LocationMap`), `System.contact_email`, `social_links`
+view or a grid, each with an `OsmMap` — OpenStreetMap tiles drawn into the page,
+whose pin wears the tenant's `img_brandmark`), `System.contact_email`, `social_links`
 via `@repo/ui`'s `SocialLinks`, and the shared `ContactForm` — all resolved by
 request host and all self-editable in the CMS (`/admin/branches`,
 `/admin/system`). A `"/contact"` entry in a `pages` map is silently

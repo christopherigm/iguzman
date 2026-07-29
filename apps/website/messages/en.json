@@ -1170,6 +1170,12 @@
     "sendEmail": "Email",
     "getDirections": "Directions",
     "mapTitle": "Map",
+    "mapOf": "Map of {name}",
+    "mapZoomIn": "Zoom in",
+    "mapZoomOut": "Zoom out",
+    "mapAttribution": "© OpenStreetMap contributors",
+    "mapZoomHint": "Use Ctrl + scroll to zoom the map",
+    "mapZoomHintMac": "Use ⌘ + scroll to zoom the map",
     "aboutItem": "About: {name}",
     "askAboutHeading": "Have a question about this?",
     "askAboutDescription": "Ask us anything and we'll reply by email."

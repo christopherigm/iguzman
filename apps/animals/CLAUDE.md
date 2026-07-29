@@ -19,12 +19,13 @@ All three are composed from `components/catalog/` (`DetailHero`, `FactsCard`,
 `DetailGallery`, `SpeciesGrid`) and `components/journal/sightings-section.tsx`, so
 they stay one design rather than three.
 
-**Two pages also carry a map of many entries** - the landing (the latest ten of
-_each_ category) and a category (every located sighting of it). Both render
+**Three pages carry a map**, and all three render the same one -
 `components/journal/sightings-map-section.tsx`, the server half, which resolves
 every bilingual pair, href and date and hands them to the `SightingsMap` client
-component - the same split `SightingsSection` uses for the slider, and for the
-same reason.
+component (the same split `SightingsSection` uses for the slider, and for the
+same reason). What differs is only the pin set: the landing pins the latest ten
+of _each_ category, a category pins every located sighting of it, and a sighting
+pins **itself** - one marker, no filters.
 
 **"First row" is literally the same row on all three**: the description and the
 `FactsCard` as two stacked cards in one column, the record's photographs beside
@@ -40,37 +41,70 @@ the category badge opens the branch, and the "See detail" button opens the entry
 Both hrefs are built in `sightings-section.tsx` - the server component that knows
 the locale - never in the client slider.
 
-Nine things that will bite:
+Eleven things that will bite:
 
-- ⚠ **There are two map components, and neither replaces the other.**
-  `@repo/ui`'s `LocationMap` is Google's keyless embed - a cross-origin iframe
-  showing exactly **one** pin, and still the right thing for a sighting's "where
-  it was seen". `SightingsMap` (`components/journal/sightings-map.tsx`) draws
-  OpenStreetMap raster tiles into its own DOM so it can put a marker per entry on
-  top of them, wearing that entry's **species icon**. It cannot be the iframe:
-  nothing on a page can draw over a cross-origin frame or read a click inside it.
-  It shares its Web Mercator with the CMS's `MapPicker` through
-  `lib/mercator.ts` - one projection, so a pin cannot land a pixel off the tile
-  beneath it in one of them. Three consequences: the **public** site now makes
-  third-party requests to `tile.openstreetmap.org` from the visitor's browser
-  (the CMS already did; a public page doing it is new); the map's **filters
-  narrow the pins that were loaded and never re-query**, so a species dropdown
-  shows that species _among these pins_, not its full history; and markers
-  sharing a coordinate are **fanned out in screen pixels**, because an entry with
-  no coordinates of its own inherits its location's centre and a season at one
-  pond would otherwise stack into what looks like a single sighting.
-- ⚠ **`SightingsMap` does not take a bare wheel, on purpose.** A map that
+- ⚠ **Every public map is one component now, and there is no Google left.** All
+  three - the landing's, a category's, and a **single sighting's** - go through
+  `SightingsMap` (`components/journal/sightings-map.tsx`), which is a thin
+  wrapper (the filter row, the card a pin opens) around `@repo/ui`'s **`OsmMap`**:
+  OpenStreetMap raster tiles painted into the page's own DOM, one marker per
+  entry, each wearing that entry's **species icon** (its category's as the
+  fallback). The keyless Google embed a sighting page used to carry is gone, and
+  could not have stayed: it is a cross-origin iframe, so nothing on the page can
+  draw over it or read a click inside it - which means it could show a pin but
+  never _that_ pin. `OsmMap` shares its Web Mercator with the CMS's `MapPicker`
+  through `@repo/ui/core-elements/mercator` - one projection, so a pin cannot
+  land a pixel off the tile beneath it in one of them - and its whole surface
+  (tiles, pins, zoom control, credit, gesture scrim) through
+  `@repo/ui/core-elements/osm-map-chrome`, so the two also _look_ the same.
+  Three consequences: the
+  **public** site makes third-party requests to `tile.openstreetmap.org` from the
+  visitor's browser; the map's **filters narrow the pins that were loaded and
+  never re-query**, so a species dropdown shows that species _among these pins_,
+  not its full history; and markers sharing a coordinate are **fanned out in
+  screen pixels**, because an entry with no coordinates of its own inherits its
+  location's centre and a season at one pond would otherwise stack into what
+  looks like a single sighting.
+- ⚠ **Every map in this app pins the reader too, so every map asks for the
+  geolocation permission.** `SightingsMap` passes `showUserLocation` to `OsmMap`
+  **on by default** (a field journal is read with "is any of this near me?" in
+  mind, and a pin over the next valley means something the same pin over a
+  country does not), and the CMS's `MapPicker` draws its own hollow twin so an
+  entry can be filed against the spot the author is standing on. Three things
+  follow. The prompt appears on **any page carrying a map** - the landing, a
+  category, a sighting, and both admin forms - which is a browser dialog the
+  reader clicked nothing to get; pass `showUserLocation={false}` on a map where
+  that trade is not worth it. A refusal, a device with no fix, and an insecure
+  origin are all the **same** path: no pin, no message, the map exactly as it
+  was - so never write a branch that reports the failure. And the reader's pin
+  **takes no part in the framing**: `OsmMap` fits the camera to `markers` alone,
+  because a reader three countries away would otherwise pull the map out to a
+  continent to hold both. In the picker it is likewise inert - it carries no
+  `PIN_CLASS`, takes no pointer, and never writes the form; the coordinate that
+  gets stored is still only the one the author clicks.
+- **A sighting's own map costs no extra request.** `sightingMapPin()`
+  (`lib/journal.ts`) turns the entry the page already fetched into the one pin it
+  draws, because animals-api publishes `species_icon`, `category_icon` and
+  `category_color` on the **detail** payload as well as on the map endpoint,
+  precisely so a single pin never has to re-read a list of hundreds to dress
+  itself. The section is rendered with `filters={[]}` - every dropdown over one
+  entry is a no-op - and with `maxFitZoom` backed off to 12 when the coordinates
+  are approximate, since a single pin frames at whatever ceiling it is given.
+- ⚠ **No map here takes a bare wheel, on purpose.** A map that
   swallows every wheel event traps a reader scrolling past it - the page stops
   and the map zooms out to the Atlantic instead. Zooming needs `Ctrl`/`⌘` +
   wheel (the same event a **trackpad pinch** produces, so both work through one
   branch), a two-finger pinch on a touchscreen, the `+`/`-` buttons, or the
   keyboard; a bare wheel raises a scrim saying so and lets the page scroll. Don't
   "fix" it back to plain wheel zoom. The tiles are also **colour-graded** by a
-  CSS filter on their own layer (`.sm__tiles`), light and dark, because OSM's
-  cartography is far louder than the rest of the page - the tiles themselves
-  cannot be restyled, they arrive as finished PNGs. The CMS's `MapPicker` still
-  zooms on a bare wheel: it sits in a form the author is working _in_, not a page
-  they are reading past.
+  CSS filter on their own layer (`.ui-osm-map__tiles`), light and dark, because
+  OSM's cartography is far louder than the rest of the page - the tiles
+  themselves cannot be restyled, they arrive as finished PNGs. Both behaviours
+  live in `@repo/ui`'s `OsmMap` now, so a change there reaches `apps/website`
+  too. **The CMS's `MapPicker` strikes the same bargain**, in its own copy of the
+  wheel handler (`mapZoomHint` / `mapZoomHintMac`): it sits partway down a form
+  that is taller than the screen, and it used to snag an author scrolling past it
+  exactly the way the public map snagged a reader.
 - **A category's slideshow is its own photos _and then_ its species'.**
   `Category` owns a real gallery now (`CategoryImage`), and `toGalleryImages`
   puts those first - they are the shots an author chose for the group - then
@@ -207,11 +241,20 @@ Seven rules that will bite:
   sighting form and the location form mount it: an entry's pin is the exact spot
   and falls back to its location's coordinates, a place's pin is the place
   itself and falls back to its _parent_ place (a trail opens over its park). It draws OSM
-  raster tiles into its own DOM and does the Web Mercator arithmetic by hand -
-  no `leaflet`, no API key, ~200 lines. It is not the keyless Google embed
-  `@repo/ui`'s `LocationMap` uses on the public page, and it can't be: that is a
-  cross-origin iframe, so nothing on the page can ever read a click inside it.
-  Two consequences. The picker makes **third-party calls straight from the
+  raster tiles into its own DOM through the shared projection
+  (`@repo/ui/core-elements/mercator`) - no `leaflet`, no API key, ~200 lines. It
+  was never the keyless Google embed the public page used to carry, and could not
+  have been: that is a cross-origin iframe, so nothing on the page can ever read
+  a click inside it. It is **not** `@repo/ui`'s `OsmMap` either - that one
+  _reads_ a set of markers, this one is a form control that writes two fields, so
+  the click, the pin-drag, the place search and the render-time camera below are
+  its whole content. ⚠ **But everything it _shows_ is `OsmMap`'s**: the tile
+  layer, the pin, the "you are here" pin, the zoom control, the credit and the
+  gesture scrim all come from `@repo/ui/core-elements/osm-map-chrome`, so the CMS
+  map and the public one are one design and a change to the chrome reaches both.
+  Don't hand-roll a control or a marker here - the two copies this replaced had
+  already drifted into loose zoom pills in the wrong corner and a pin anchored
+  half a pin west of the coordinate it was writing. Two consequences. The picker makes **third-party calls straight from the
   author's browser** - `tile.openstreetmap.org` for tiles and
   `nominatim.openstreetmap.org` for the place search, which is why the search
   runs on an explicit submit (Nominatim allows roughly one call a second) and

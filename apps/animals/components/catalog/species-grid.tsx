@@ -16,10 +16,12 @@ import './species-grid.css';
  * dates - there is no client state here, and a card that is entirely a link
  * needs none.
  *
- * Three-up from `md`, two-up from `sm`: a species card is a photograph with a
- * short caption, which stays legible at a third of the width, and the
- * alternative (two-up all the way to `lg`) leaves a desktop grid looking sparse
- * for a category with six entries.
+ * Three-up from `md`, two-up below it - including on a phone: a species card is
+ * a photograph with a short caption, which stays legible at a third of the
+ * width, and the alternative (two-up all the way to `lg`) leaves a desktop grid
+ * looking sparse for a category with six entries. Full-width cards on a phone
+ * turned the grid into a column of billboards you had to scroll past one at a
+ * time; two-up shows a whole branch at a glance, which is what a catalog is for.
  */
 
 interface Props {
@@ -42,12 +44,11 @@ export async function SpeciesGrid({ species, locale }: Props) {
   return (
     <Grid container spacing={3}>
       {species.map((item) => (
-        <Grid key={item.id} size={{ xs: 12, sm: 6, md: 4 }}>
+        <Grid key={item.id} size={{ xs: 6, md: 4 }}>
           <SpeciesCard
             species={item}
             locale={locale}
             labels={{
-              featured: t('featured'),
               sightings: t('sightingsCount'),
               lastSeen: t('lastSeen'),
             }}
@@ -64,7 +65,7 @@ type Formatter = Awaited<ReturnType<typeof getFormatter>>;
 interface CardProps {
   species: Species;
   locale: string;
-  labels: { featured: string; sightings: string; lastSeen: string };
+  labels: { sightings: string; lastSeen: string };
   format: Formatter;
 }
 
@@ -90,14 +91,18 @@ function SpeciesCard({ species, locale, labels, format }: CardProps) {
         alignItems="center"
         justifyContent="center"
         backgroundColor={species.background_color ?? 'var(--surface-1, #e5e7eb)'}
-        styles={{ position: 'relative', overflow: 'hidden', aspectRatio: '4 / 3' }}
+        styles={{
+          position: 'relative',
+          overflow: 'hidden',
+          aspectRatio: '4 / 3',
+        }}
       >
         {species.image ? (
           <Image
             fill
             src={species.image}
             alt={name}
-            sizes="(min-width: 900px) 33vw, (min-width: 600px) 50vw, 100vw"
+            sizes="(min-width: 900px) 33vw, 50vw"
             className="species-card__image"
             style={{ objectFit: species.fit ?? 'cover' }}
           />
@@ -112,24 +117,25 @@ function SpeciesCard({ species, locale, labels, format }: CardProps) {
           </Typography>
         )}
 
-        {species.is_featured && (
-          <Box styles={{ position: 'absolute', top: 10, left: 10, zIndex: 1 }}>
-            <Badge variant="filled" size="sm" uppercase translucent>
-              {labels.featured}
-            </Badge>
-          </Box>
-        )}
-
         {species.sighting_count > 0 && (
           <Box styles={{ position: 'absolute', top: 10, right: 10, zIndex: 1 }}>
-            <Badge variant="subtle" size="sm" translucent>
+            <Badge variant="filled" size="sm" translucent>
               {`${format.number(species.sighting_count)} ${labels.sightings}`}
             </Badge>
           </Box>
         )}
       </Box>
 
-      <Box flexDirection="column" gap={6} padding={14} flexGrow={1}>
+      {/* The three tuned-per-breakpoint values below are written as props whose
+          value is a CSS variable, with the desktop figure as the fallback: an
+          inline style beats any class, so a `@media` rule in species-grid.css
+          can only reach them through a variable it sets on `.species-card`. */}
+      <Box
+        flexDirection="column"
+        gap="var(--species-card-gap, 6px)"
+        padding="var(--species-card-padding, 14px)"
+        flexGrow={1}
+      >
         <Typography as="h3" variant="h3" fontWeight={700}>
           {name}
         </Typography>
@@ -161,7 +167,7 @@ function SpeciesCard({ species, locale, labels, format }: CardProps) {
             color="var(--foreground-muted, #6b7280)"
             styles={{
               display: '-webkit-box',
-              WebkitLineClamp: 3,
+              WebkitLineClamp: 'var(--species-card-clamp, 3)',
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
             }}
@@ -197,5 +203,9 @@ function SpeciesCard({ species, locale, labels, format }: CardProps) {
 function formatDay(day: string, format: Formatter): string {
   const parsed = new Date(`${day}T12:00:00`);
   if (Number.isNaN(parsed.getTime())) return day;
-  return format.dateTime(parsed, { year: 'numeric', month: 'long', day: 'numeric' });
+  return format.dateTime(parsed, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
 }

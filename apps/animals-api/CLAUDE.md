@@ -207,10 +207,9 @@ surface that forgot to blur.
 Its own endpoint rather than a flag on the feed, because it is a different
 **shape** and a different **contract**:
 
-- `SightingMapSerializer` drops the prose, the gallery and the field conditions,
-  and adds `species_icon` / `category_icon` - the glyph a marker is _drawn as_,
-  which the feed has no use for. Pinning a category through the feed would ship
-  every photo caption of every entry on the map.
+- `SightingMapSerializer` drops the prose, the gallery and the field conditions.
+  Pinning a category through the feed would ship every photo caption of every
+  entry on the map.
 - It answers a **bare list**, not a page. A map has no "next page", it has a
   bounding box; pagination would only ever be a way to draw an incomplete one.
   `MAX_MAP_PINS` (500) is the ceiling instead.
@@ -227,6 +226,15 @@ Its cache namespace is `journal:map`, and it is cleared by the _catalog's_
 receivers as well as the journal's - a pin carries a species' icon, so an author
 uploading a glyph changes every marker of that branch without touching a single
 `Sighting` row.
+
+⚠ **The three marker glyphs are on `SightingSerializer` too** - `species_icon`,
+`category_icon` and `category_color`, from the same getters. That is not the
+endpoints blurring into each other: a **single entry's page** pins itself, and
+without them the frontend would have to re-read a 500-pin list to dress the one
+marker it already holds the coordinates for. They are three flattened fields on a
+row the payload already `select_related`s, so they cost nothing. The map endpoint
+remains what a map of _many_ entries reads - it is the rest of the feed payload
+(the prose, the gallery, the conditions) that a map cannot afford, not these.
 
 ## The first photo is the record's cover
 

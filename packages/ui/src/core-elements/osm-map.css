@@ -1,0 +1,200 @@
+/**
+ * The chrome of **every** OpenStreetMap surface in the monorepo - `OsmMap` here
+ * and, through `osm-map-chrome.tsx`, `apps/animals`' CMS `MapPicker`. The two
+ * components are deliberately separate (one reads a marker set, the other writes
+ * a coordinate), but what a reader sees of them is this one file: change a pin
+ * here and both maps change.
+ *
+ * What is here and not in props: the cursor states of a draggable surface, the
+ * palette filter the tile layer wears, and the marker, which is a **bare
+ * element** rather than a `@repo/ui` component (a pin has to be a real
+ * `<button>` for keyboard and screen-reader access, and `Box` cannot be one).
+ * The repo's props-first rule governs `@repo/ui` components; a bare element is
+ * styled here. Everything positional about a marker - where it is, how big, what
+ * colour - is still an inline style, because all four are computed per frame
+ * from the camera.
+ */
+
+.ui-osm-map__viewport {
+  cursor: grab;
+}
+
+.ui-osm-map__viewport:active {
+  cursor: grabbing;
+}
+
+/* ── The tile layer ──────────────────────────────────────────────────────────
+ *
+ * OSM's standard cartography is a *louder* map than a reader expects on a
+ * content page: saturated greens, yellow and orange road fills, pink residential
+ * blocks. There is no restyling a raster tile - the cartography is baked into
+ * the PNG - so the whole surface is graded instead, which pulls it towards the
+ * pale, low-chroma grey-beige Google made the norm. The filter is on the layer,
+ * not the tiles, so it composites once and does not seam; markers, cards and
+ * controls are siblings of this box, so none of them are graded.
+ *
+ * Two consequences worth knowing: `filter` makes this box a containing block
+ * (harmless - every tile inside it is positioned against the same box it already
+ * was), and OSM's own label *colours* shift with everything else, so text on the
+ * map goes softer rather than staying black.
+ */
+.ui-osm-map__tiles {
+  filter: saturate(0.62) brightness(1.06) contrast(0.92) hue-rotate(-6deg);
+}
+
+/* The dark palette gets the standard raster-map inversion: flip the lightness,
+   then turn the hues back around so water is still blue and parks still green
+   rather than their opposites. Labels come out light-on-dark, which is the whole
+   point - a bright map is a torch in a dark page. */
+[data-theme="dark"] .ui-osm-map__tiles {
+  filter: invert(0.92) hue-rotate(180deg) saturate(0.5) brightness(0.92) contrast(0.95);
+}
+
+/* ── Markers ─────────────────────────────────────────────────────────────── */
+
+.ui-osm-map__marker {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid #ffffff;
+  /* Three round corners and one sharp one, turned 45° so the sharp one points
+     straight down: the teardrop every web map has used for a pin since Google's.
+     The tip - not the centre - is the coordinate, which is why the vertical
+     offset is 120.7% rather than 100%: rotating a square about its centre puts
+     that corner √2/2 of the square's width below it. */
+  border-radius: 50% 50% 50% 0;
+  transform: translate(-50%, -120.7%) rotate(-45deg);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+
+/* Counter-rotated (the pin is turned, the icon must not be) and inset, so a
+   square glyph stays inside the round head instead of poking out of it. */
+.ui-osm-map__marker img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+/* ── The visitor's own pin ───────────────────────────────────────────────────
+ *
+ * The same teardrop as a record's, which is the point: "you are here" is a place
+ * on this map, not a widget over it. What separates the two is the fill and the
+ * dot in its head - a record's pin carries a glyph or its own colour, so this one
+ * cannot borrow either. It is also the only pin whose colour is not computed per
+ * frame from the data, which is why it is here rather than an inline style.
+ *
+ * It takes no pointer: a press that lands on it belongs to the map underneath
+ * (a pan, or a click the CMS's picker would read as a coordinate), and there is
+ * nothing to click on a pin that opens nothing. */
+.ui-osm-map__marker--me {
+  background: var(--accent, #06b6d4);
+  pointer-events: none;
+}
+
+/* Counter-rotated like the glyph above it - a circle survives the rotation, but
+   the layout the dot is centred in is the rotated box, so it is written the same
+   way for the next reader. */
+.ui-osm-map__marker--me::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  background: #ffffff;
+  border-radius: 50%;
+  transform: rotate(45deg);
+}
+
+/* Only a marker that opens a card is a button; the read-only twin is a `div`
+   with no hover state to promise anything. */
+button.ui-osm-map__marker {
+  cursor: pointer;
+}
+
+button.ui-osm-map__marker:hover {
+  transform: translate(-50%, -120.7%) rotate(-45deg) scale(1.2);
+  box-shadow: 0 4px 9px rgba(0, 0, 0, 0.45);
+}
+
+.ui-osm-map__marker:focus-visible {
+  outline: 2px solid var(--accent, #06b6d4);
+  outline-offset: 2px;
+}
+
+/* The open one sits above its neighbours, so a selected pin in a fan is never
+   the one hidden behind the others. */
+.ui-osm-map__marker--on {
+  z-index: 2;
+  border-color: var(--accent, #06b6d4);
+  transform: translate(-50%, -120.7%) rotate(-45deg) scale(1.18);
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* ── The card a marker opens ─────────────────────────────────────────────── */
+
+/* The stem that ties the card to the pin below it. It tracks the card, not the
+   pin, so it stops pointing exactly at one whose card had to be clamped inside
+   the viewport - the same trade every map's info window makes at an edge. */
+.ui-osm-map__popup::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 13px;
+  height: 13px;
+  margin-left: -7px;
+  background: var(--surface-1, #ffffff);
+  transform: rotate(45deg);
+}
+
+/* ── Controls and the gesture scrim ──────────────────────────────────────── */
+
+.ui-osm-map__zoom {
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.ui-osm-map__zoom:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.ui-osm-map__zoom:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.ui-osm-map__zoom:focus-visible {
+  outline: 2px solid var(--accent, #06b6d4);
+  outline-offset: -3px;
+}
+
+.ui-osm-map__hint {
+  animation: ui-osm-map-hint-in 140ms ease-out;
+}
+
+@keyframes ui-osm-map-hint-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-osm-map__marker,
+  .ui-osm-map__zoom {
+    transition: none;
+  }
+
+  .ui-osm-map__hint {
+    animation: none;
+  }
+}

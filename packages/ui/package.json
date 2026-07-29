@@ -6,6 +6,7 @@
     "./*": "./src/*.tsx",
     "./core-elements/utils": "./src/core-elements/utils.ts",
     "./core-elements/breakpoints": "./src/core-elements/breakpoints.ts",
+    "./core-elements/mercator": "./src/core-elements/mercator.ts",
     "./palettes": "./src/palettes.ts",
     "./use-ffmpeg": "./src/use-ffmpeg.ts",
     "./use-groq": "./src/use-groq.ts",

@@ -36,6 +36,12 @@ interface Props {
    */
   filters?: SightingsMapFilter[];
   height?: number;
+  /**
+   * Deepest zoom the initial framing may choose. Left to the map's own default
+   * unless the caller knows something about its pins - a single entry's page
+   * backs it off for a coordinate the API has already blurred to ~1 km.
+   */
+  maxFitZoom?: number;
 }
 
 export async function SightingsMapSection({
@@ -45,6 +51,7 @@ export async function SightingsMapSection({
   subtitle,
   filters,
   height,
+  maxFitZoom,
 }: Props) {
   const t = await getTranslations('Map');
   const tSighting = await getTranslations('Sighting');
@@ -72,6 +79,7 @@ export async function SightingsMapSection({
         markers={markers}
         {...(filters ? { filters } : {})}
         {...(height ? { height } : {})}
+        {...(maxFitZoom ? { maxFitZoom } : {})}
         labels={{
           map: t('label'),
           zoomIn: t('zoomIn'),
@@ -86,6 +94,7 @@ export async function SightingsMapSection({
           empty: t('empty'),
           approximate: tSightingPage('mapApproximate'),
           seeDetail: tSighting('seeDetail'),
+          yourLocation: t('yourLocation'),
           // Both spellings of the modifier travel down; the client knows which
           // keyboard the reader has, this component does not.
           zoomHint: t('zoomHint'),

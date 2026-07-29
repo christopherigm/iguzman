@@ -1,23 +1,29 @@
 /**
- * Web Mercator: the arithmetic behind every OpenStreetMap raster tile this app
- * draws.
+ * Web Mercator: the arithmetic behind every OpenStreetMap raster tile the
+ * monorepo draws.
  *
- * Two components render tiles into their own DOM - the CMS's `MapPicker`
- * (click to place a coordinate) and the public `SightingsMap` (many markers,
- * read-only) - and both need the same conversions. They live here rather than in
- * either component because a second copy would be a second chance to get the
- * `sinh` wrong, and a pin drawn one pixel off from the tile beneath it is the
- * kind of bug nobody notices until a marker sits in the wrong bay.
+ * Two components render tiles into their own DOM - this package's `OsmMap`
+ * (many markers, read-only) and, in `apps/animals`, the CMS's `MapPicker`
+ * (click to place a coordinate) - and they both need the same conversions. They
+ * live here rather than in either component because a second copy would be a
+ * second chance to get the `sinh` wrong, and a pin drawn one pixel off from the
+ * tile beneath it is the kind of bug nobody notices until a marker sits in the
+ * wrong bay. (`./osm-map-chrome.tsx` is the other half of what those two share:
+ * the projection agrees, and so does everything drawn on top of it.)
  *
- * ⚠ **Why hand-rolled at all.** Google's keyless embed (`@repo/ui`'s
- * `LocationMap`) is a cross-origin iframe: nothing on the page can read a click
- * inside it or draw a marker on top of it. A real interactive map therefore
- * needs a Maps JavaScript API key - which this deployment does not have - or a
- * tile source we can paint ourselves. This is the latter, and it is about 60
- * lines: a tile is a 256 px square of a world `256 * 2^zoom` pixels wide, so a
- * lat/lng converts to a world pixel and back, and *everything* else - which
- * tiles to fetch, where a marker lands, what a drag means - falls out of that
- * one pair of functions.
+ * ⚠ **Why hand-rolled at all.** The keyless Google embed this replaced
+ * (`maps.google.com/maps?...&output=embed`) is a cross-origin iframe: nothing on
+ * the page can read a click inside it or draw a marker on top of it, so every
+ * map was stuck with the one pin Google chose to draw. A real interactive map
+ * therefore needs a Maps JavaScript API key - which these deployments do not
+ * have - or a tile source we can paint ourselves. This is the latter, and it is
+ * about 60 lines: a tile is a 256 px square of a world `256 * 2^zoom` pixels
+ * wide, so a lat/lng converts to a world pixel and back, and *everything* else -
+ * which tiles to fetch, where a marker lands, what a drag means - falls out of
+ * that one pair of functions.
+ *
+ * Deliberately React-free, like `breakpoints.ts`: it is imported by client
+ * components and could be imported by a build script tomorrow.
  */
 
 /** The edge length of an OSM raster tile, in CSS pixels. */
@@ -146,9 +152,10 @@ export function tilesFor(
  *
  * The east-west span is measured the naive way (max minus min longitude), which
  * is wrong for a set straddling the antimeridian - it would frame the whole
- * globe instead of the strait. That is a deliberate trade: this is a field
- * journal, its pins are regional, and handling the wrap correctly costs more
- * than the case is worth. Revisit it if the journal ever spans the Pacific.
+ * globe instead of the strait. That is a deliberate trade: every caller here
+ * pins a regional set (a field journal's outings, a business's branches), and
+ * handling the wrap correctly costs more than the case is worth. Revisit it if
+ * a caller ever spans the Pacific.
  */
 export function fitBounds(
   points: LatLng[],

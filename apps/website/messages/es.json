@@ -1170,6 +1170,12 @@
     "sendEmail": "Correo",
     "getDirections": "Cómo llegar",
     "mapTitle": "Mapa",
+    "mapOf": "Mapa de {name}",
+    "mapZoomIn": "Acercar",
+    "mapZoomOut": "Alejar",
+    "mapAttribution": "© colaboradores de OpenStreetMap",
+    "mapZoomHint": "Usa Ctrl + desplazamiento para ampliar el mapa",
+    "mapZoomHintMac": "Usa ⌘ + desplazamiento para ampliar el mapa",
     "aboutItem": "Sobre: {name}",
     "askAboutHeading": "¿Tienes una pregunta sobre esto?",
     "askAboutDescription": "Pregúntanos lo que quieras y te responderemos por correo."

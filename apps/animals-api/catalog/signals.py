@@ -75,7 +75,9 @@ from .models import (
 def _invalidate_sightings():
     # `MAP` alongside the feed: a pin carries the species' *icon* and its
     # category's, so an author uploading a glyph changes what every marker of
-    # that branch is drawn as without touching a single Sighting row.
+    # that branch is drawn as without touching a single Sighting row. The feed
+    # and detail payloads carry the same two glyphs (an entry's own page pins
+    # itself), which is why they are cleared here too rather than only by `MAP`.
     invalidate(
         journal_keys.SIGHTINGS, journal_keys.SIGHTING, journal_keys.STATS, journal_keys.MAP
     )

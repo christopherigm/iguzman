@@ -6,6 +6,21 @@
   transition: border-color 0.18s ease;
 }
 
+/* Two-up on a phone leaves each card ~160 px wide, where the desktop caption
+   block runs on for half the card's height and every card in a row stretches to
+   the tallest one. Tightening the padding and the gap, and dropping the
+   description to two lines, keeps a pair the height of the photo plus a caption.
+   These are variables, not properties: the values sit on `Box` props in
+   species-grid.tsx (props-first), and an inline style cannot be overridden by a
+   class - only the variable it reads can. */
+@media (--below-sm) {
+  .species-card {
+    --species-card-padding: 10px;
+    --species-card-gap: 4px;
+    --species-card-clamp: 2;
+  }
+}
+
 .species-card__image {
   transition: transform 0.35s ease;
 }
