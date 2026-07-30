@@ -585,7 +585,7 @@
     "description": "Descrição",
     "descriptionHelp": "Como reconhecer, onde vive, o que faz.",
     "sightingName": "Título",
-    "sightingNameHelp": "Em branco, a entrada recebe o título {species}.",
+    "sightingNameHelp": "Preenchido com a data, a hora, a espécie e o local para que duas entradas nunca tenham o mesmo título. Altere-o à vontade.",
     "story": "O que aconteceu",
     "storyHelp": "O encontro com suas próprias palavras.",
     "date": "Data",

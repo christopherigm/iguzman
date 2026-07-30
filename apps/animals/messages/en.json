@@ -585,7 +585,7 @@
     "description": "Description",
     "descriptionHelp": "How to recognise it, where it lives, what it does.",
     "sightingName": "Title",
-    "sightingNameHelp": "Left blank, the entry is titled {species}.",
+    "sightingNameHelp": "Filled in from the date, time, species and place so no two entries share a title. Change it to anything you like.",
     "story": "What happened",
     "storyHelp": "The encounter in your own words.",
     "date": "Date",

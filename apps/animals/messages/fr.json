@@ -585,7 +585,7 @@
     "description": "Description",
     "descriptionHelp": "Comment le reconnaître, où il vit, ce qu'il fait.",
     "sightingName": "Titre",
-    "sightingNameHelp": "Laissé vide, l'entrée prend le titre {species}.",
+    "sightingNameHelp": "Composé à partir de la date, de l'heure, de l'espèce et du lieu pour que deux entrées ne portent jamais le même titre. Modifiez-le librement.",
     "story": "Ce qui s'est passé",
     "storyHelp": "La rencontre avec vos propres mots.",
     "date": "Date",

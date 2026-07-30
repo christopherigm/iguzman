@@ -90,6 +90,14 @@ export function SightingContributeForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  /**
+   * Whether the contributor has typed in the title themselves. Until they have,
+   * the field is the flow's own suggestion and is re-made from the current draft
+   * every time stage 2 is opened - so correcting the date or the place in stage 1
+   * corrects the title too. The first keystroke ends that for good, including a
+   * keystroke that empties it: a title deliberately cleared must stay cleared.
+   */
+  const [nameTouched, setNameTouched] = useState(false);
 
   const set = <K extends keyof typeof EMPTY>(key: K, value: string) =>
     setDraft((current) => ({ ...current, [key]: value }));
@@ -98,6 +106,7 @@ export function SightingContributeForm({
     setDraft(EMPTY);
     setPhotos([]);
     setAnonymous(false);
+    setNameTouched(false);
     setStage(1);
     setDone(false);
     setError(null);
@@ -107,6 +116,44 @@ export function SightingContributeForm({
     locations.find((option) => option.value === draft.location)?.label ?? null;
   const weatherLabel =
     weather.find((option) => option.value === draft.weather)?.label ?? null;
+
+  /**
+   * The title stage 2 opens with: `2026-07-30 14:32 · Deer · Lake Estes (Lake) - Larimer`.
+   *
+   * Left blank, the API titles an entry after its species alone, so a contributor
+   * who files three encounters with the same animal ends up with three rows named
+   * "Deer" - unreadable in the CMS list a reviewer works from and in every
+   * "more of the same species" strip on the public site. The **clock time** is
+   * what actually separates them: two entries can genuinely share a date, a
+   * species and a pond.
+   *
+   * It is the wall clock at the moment stage 2 is opened, not `draft.time` - that
+   * field is optional, is asked for *after* this is generated, and is the time of
+   * the encounter rather than a unique stamp.
+   *
+   * The place is the **picker's own label** (`placeLabel` in the page: name, kind
+   * of place, county), not a second flattening of the same three fields - one
+   * rule, one place it is written, and the title then reads exactly as the option
+   * the contributor chose.
+   */
+  const suggestedName = () => {
+    const now = new Date();
+    const clock = `${String(now.getHours()).padStart(2, "0")}:${String(
+      now.getMinutes(),
+    ).padStart(2, "0")}`;
+
+    // `filter(Boolean)` rather than a branch per part: stage 1 makes the date and
+    // the place mandatory, but this is also reachable from a draft restored with
+    // neither, and a title with a dangling separator is worse than a shorter one.
+    return [`${draft.date} ${clock}`.trim(), speciesName, locationLabel]
+      .filter(Boolean)
+      .join(" · ");
+  };
+
+  const openStage2 = () => {
+    if (!nameTouched) set("name", suggestedName());
+    setStage(2);
+  };
 
   const submit = async () => {
     setBusy(true);
@@ -174,7 +221,7 @@ export function SightingContributeForm({
           description={t("sightingStage1Description")}
           current={1}
           total={3}
-          onNext={() => setStage(2)}
+          onNext={openStage2}
           nextDisabled={
             draft.date === "" || draft.location === "" || photos.length === 0
           }
@@ -233,8 +280,11 @@ export function SightingContributeForm({
           <TextInput
             label={t("sightingName")}
             value={draft.name}
-            onChange={(value) => set("name", value)}
-            helperText={t("sightingNameHelp", { species: speciesName })}
+            onChange={(value) => {
+              setNameTouched(true);
+              set("name", value);
+            }}
+            helperText={t("sightingNameHelp")}
           />
           <TextInput
             label={t("shortDescription")}
@@ -267,35 +317,45 @@ export function SightingContributeForm({
             />
           )}
 
-          <TextInput
-            type="number"
-            step="0.1"
-            label={t("temperature")}
-            value={draft.temperature}
-            onChange={(value) => set("temperature", value)}
-          />
-          <TextInput
-            type="number"
-            min={1}
-            step="1"
-            label={t("individuals")}
-            value={draft.individuals}
-            onChange={(value) => set("individuals", value)}
-            helperText={t("individualsHelp")}
-          />
+          {/* The two numbers share a row at every width, phone included. They are
+              the shortest controls in the flow - a temperature and a count are a
+              few characters each - so a full-width field for either reads as a
+              question far bigger than it is, and the pair is read as one
+              "how many, how warm" line. `flex="1 1 0"` with `minWidth={0}` rather
+              than a `Grid`: equal halves that may shrink below their content
+              instead of pushing the row wider than the card on a narrow phone. */}
+          <Box gap={12} alignItems="flex-start">
+            <TextInput
+              type="number"
+              step="0.1"
+              label={t("temperature")}
+              value={draft.temperature}
+              onChange={(value) => set("temperature", value)}
+              flex="1 1 0"
+              minWidth={0}
+            />
+            <TextInput
+              type="number"
+              min={1}
+              step="1"
+              label={t("individuals")}
+              value={draft.individuals}
+              onChange={(value) => set("individuals", value)}
+              helperText={t("individualsHelp")}
+              flex="1 1 0"
+              minWidth={0}
+            />
+          </Box>
 
-          {/* The credit line. Its own block rather than another row in the run
-              above, because it is not a field: the name comes from the account,
-              so all there is to decide is whether to be named at all. The line
-              above the switch is what makes that legible - without it the switch
-              would be asking about a name the contributor never sees. */}
-          <Box
-            flexDirection="column"
-            gap={12}
-            padding={14}
-            borderRadius={10}
-            border="1px solid var(--border, rgba(0,0,0,0.08))"
-          >
+          {/* The credit line - one more control in this stage's run, not a card
+              of its own: it is the last thing asked before the review, and a
+              boxed panel inside the stage's own card read as a second form. It
+              keeps its heading because it is still not a field - the name comes
+              from the account, so all there is to decide is whether to be named
+              at all - and the line under that heading is what makes the switch
+              legible, which would otherwise be asking about a name the
+              contributor never sees. */}
+          <Box flexDirection="column" gap={12}>
             <Typography variant="label" fontWeight={700}>
               {t("creditTitle")}
             </Typography>
