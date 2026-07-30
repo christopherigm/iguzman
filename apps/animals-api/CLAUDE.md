@@ -137,6 +137,69 @@ translate what already exists.
   lookup - that lookup is unsupported on SQLite, which is what development and
   the tests run on. Four rows; the scan is free.
 
+## The two seed commands
+
+`seed_reference` creates the **containers** - seasons, weather conditions and
+(behind `--with-categories`) the sub-categories. `seed_species` fills those
+sub-categories with **1,038 species**: the common animals, plants, fungi,
+seasons and weather of the six regions this journal covers (Colorado,
+California, New York, Washington, Mexico City, Baja California Sur).
+
+```bash
+python manage.py seed_reference --with-categories   # containers first
+python manage.py seed_species                       # then the contents
+python manage.py seed_species --kind plant --update # refresh one branch
+```
+
+Three things to know before touching it:
+
+- **`catalog/data/species.json` is generated, not hand-written.** The species
+  and their order come from iNaturalist's research-grade observation counts,
+  queried **per region so each region gets an equal vote** - otherwise
+  California, which has far more observers than the other five put together,
+  decides what counts as "common" everywhere. `sort_order` *is* that ranking.
+  Scientific names, families and the Spanish common names come from the same
+  source. Re-deriving it means re-running that query, not editing the file by
+  hand.
+- **The prose is written for this project and is English in both halves of each
+  pair.** Nothing is copied from Wikipedia or any other source, deliberately: a
+  share-alike licence would follow the text into every cached payload. English
+  in the Spanish column is the same state as every row that predates the
+  bilingual fields - it keeps `/es` readable instead of blank and leaves
+  `/api/ai/translate/` a source to translate from. The Spanish *names* are real.
+- ⚠ **`--update` is off by default, and that default is the point.** The CMS
+  exists so a person rewrites this copy; a seed command that overwrote their
+  edits on every deploy would be worse than no seed command. `SEEDED_FIELDS`
+  names exactly what `--update` touches - never `enabled`, `is_featured`,
+  `image`, `icon`, `href` or `video_link`, which are an author's to set.
+
+⚠ **Running either command from a laptop against the cluster database does not
+invalidate the cluster's Redis.** The receivers in `signals.py` fire in the
+process that wrote the row, and a local run caches into a local LocMemCache, so
+the API keeps serving stale `species_count`s and a stale `/kinds/` nav for the
+full TTL. Either run the command inside the pod, or clear the cache there
+afterwards:
+
+```bash
+kubectl -n animals exec deploy/animals-api -- \
+  python manage.py shell -c 'from django.core.cache import cache; cache.clear()'
+```
+
+### The five categories `seed_species` adds
+
+`seed_reference`'s starter set predates them, so the seed file carries its own
+`categories` block and creates them itself - a database seeded before this
+landed would otherwise have nowhere to file a coyote. Four are `animal`
+(`carnivores`, `arachnids`, `marine-mammals`, `fish`) and one is `plant`
+(`cacti-succulents`). They exist because the starter set could not hold the
+most-observed species in these regions at all: Coyote outscores the top species
+of almost every other category, `Insecta` excludes every spider, and Grey Whale
+and Cardón are the signature sightings of Baja California Sur.
+
+Adding a category is **data, not code** - the five `KIND_CHOICES` branches are
+structural and the frontend routes on them, but categories are rows, so a new
+one needs no migration and no frontend change.
+
 ## Geography is a catalog: `State` → `County` → `Location`
 
 A place used to carry its geography as free text - `region` ("State, province or
