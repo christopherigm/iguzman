@@ -46,7 +46,8 @@ There are now **two** authoring surfaces, and both are real product:
   `WeatherCondition`, `Location`, plus a photo gallery per record
   (`CategoryImage`, `SpeciesImage`, `SeasonImage`, `WeatherConditionImage`,
   `LocationImage`, all from the abstract `GalleryImage` - see "The first photo is
-  the record's cover"). Also `State` and `County` - see "Geography is a catalog".
+  the record's cover"). Also `Country`, `State` and `County` - see "Geography is a
+  catalog".
 - **`journal`** - the entries: `Sighting`, `SightingMedia`.
 - **`users`** - unchanged from the scaffold (JWT, passkeys, email verification).
 
@@ -137,21 +138,44 @@ translate what already exists.
   lookup - that lookup is unsupported on SQLite, which is what development and
   the tests run on. Four rows; the scan is free.
 
-## The two seed commands
+## The four seed commands
 
-`seed_reference` creates the **containers** - seasons, weather conditions and
-(behind `--with-categories`) the sub-categories. `seed_species` fills those
-sub-categories with **1,038 species**: the common animals, plants, fungi,
-seasons and weather of the six regions this journal covers (Colorado,
-California, New York, Washington, Mexico City, Baja California Sur).
+Two fill the *what* and two fill the *where*, and each pair is containers-first:
+
+- **`seed_reference`** creates the containers - seasons, weather conditions and
+  (behind `--with-categories`) the sub-categories.
+- **`seed_species`** fills those sub-categories with **1,038 species**: the common
+  animals, plants, fungi, seasons and weather of the six regions this journal
+  covers (Colorado, California, New York, Washington, Mexico City, Baja California
+  Sur).
+- **`seed_geography`** creates the geography lookups - **2 countries, 83 states and
+  244 counties**. Both countries the journal covers, every US state plus the
+  District of Columbia, all 32 Mexican federal entities, and counties for the six
+  regions above and *only* those (Colorado 64, California 58, Washington 39, New
+  York 62, Mexico City's 16 alcaldías, Baja California Sur's 5 municipios). The
+  other 77 states are seeded without counties on purpose: a county list nobody
+  files against is three thousand rows of picker noise, and adding one later is a
+  data change, not a code change.
+- **`seed_locations`** fills two of those states with **149 places** - 117 in
+  Colorado and 32 in Baja California Sur - across parks, reserves, national
+  forests, lakes, peaks, trails and botanical gardens. Colorado's are two layers:
+  the **statewide icons** (`sort_order` 0-61) and the **55 Front Range local
+  places** (62-116) within reach of Longmont, Boulder, Denver, Loveland and Estes
+  Park - municipal reservoirs and greenways, county open space, the Denver mountain
+  parks and the named lakes inside Rocky Mountain National Park. `sort_order` is
+  ranked *per region*, so Colorado's range and Baja's 0-31 deliberately overlap.
 
 ```bash
 python manage.py seed_reference --with-categories   # containers first
 python manage.py seed_species                       # then the contents
+python manage.py seed_geography                     # countries -> states -> counties
+python manage.py seed_locations                     # then the places in them
 python manage.py seed_species --kind plant --update # refresh one branch
+python manage.py seed_geography --country mexico    # or one country's geography
+python manage.py seed_locations --state colorado    # or one state's places
 ```
 
-Three things to know before touching it:
+Six things to know before touching them:
 
 - **`catalog/data/species.json` is generated, not hand-written.** The species
   and their order come from iNaturalist's research-grade observation counts,
@@ -172,13 +196,44 @@ Three things to know before touching it:
   edits on every deploy would be worse than no seed command. `SEEDED_FIELDS`
   names exactly what `--update` touches - never `enabled`, `is_featured`,
   `image`, `icon`, `href` or `video_link`, which are an author's to set.
+- **Every coordinate in `locations.json` is sourced, not estimated.** Each is
+  either the coordinate Wikipedia publishes for that place through the MediaWiki
+  `coordinates` API, or an OpenStreetMap/Nominatim match on the named feature, and
+  each was checked against a bounding box for its region before being written -
+  which is what caught five candidates whose only article coordinate pointed at a
+  namesake elsewhere (Routt National Forest resolves into Wyoming, inside the
+  combined Medicine Bow-Routt unit; "McIntosh Lake" into Washington state; "Mills
+  Lake" into California). A place whose coordinate could not be sourced was
+  **dropped rather than approximated** - Waterton Canyon is absent for exactly this
+  reason, having no coordinate in Wikipedia or Overpass and only a Nominatim match
+  on a road in a different canyon. A field journal that publishes a guessed pin is
+  worse than one with fewer places.
+- ⚠ **A location's `county` comes from the US Census geocoder, not from its
+  coordinate source.** Nominatim contradicted itself on the two places at the east
+  edge of Longmont (forward search said Weld, reverse said Boulder), and `county` is
+  the only geography column a `Location` stores - so a wrong one silently misfiles
+  the place's *state and country* too, since both are derived from it. Resolve a new
+  place's county against the Census county layer rather than trusting a geocoder's
+  address string.
+- **`en_name` is blank wherever no distinct English form exists**, in both
+  geography and locations - "Colorado", "Jalisco", "Isla Danzante" are spelled the
+  same in both languages, and the frontend falls back to the base column for every
+  locale whose twin is empty. It *is* filled where a real English form differs
+  (Nueva York/New York, Laguna Ojo de Liebre/Ojo de Liebre Lagoon). The Spanish
+  names of the US states follow **FundéuRAE**'s adapted list, which is why the data
+  says "Hawái", "Míchigan" and "Pensilvania".
 
-⚠ **Running either command from a laptop against the cluster database does not
+⚠ **No Baja California Sur location has `place_type = 'lake'`, and that is not a
+gap.** The state has no natural lakes: its still water is coastal lagoon and
+estuary (typed `wetland`) and its fresh water is the spring-fed palm oases (typed
+`forest`). Colorado covers the lake type with ten rows.
+
+⚠ **Running any of these from a laptop against the cluster database does not
 invalidate the cluster's Redis.** The receivers in `signals.py` fire in the
 process that wrote the row, and a local run caches into a local LocMemCache, so
-the API keeps serving stale `species_count`s and a stale `/kinds/` nav for the
-full TTL. Either run the command inside the pod, or clear the cache there
-afterwards:
+the API keeps serving stale `species_count`s, a stale `/kinds/` nav and stale
+geography lists for the full TTL. Either run the command inside the pod, or clear
+the cache there afterwards:
 
 ```bash
 kubectl -n animals exec deploy/animals-api -- \
@@ -200,15 +255,19 @@ Adding a category is **data, not code** - the five `KIND_CHOICES` branches are
 structural and the frontend routes on them, but categories are rows, so a new
 one needs no migration and no frontend change.
 
-## Geography is a catalog: `State` → `County` → `Location`
+## Geography is a catalog: `Country` → `State` → `County` → `Location`
 
 A place used to carry its geography as free text - `region` ("State, province or
 region"), `country` and a `map_link`. All three are **gone** (migration
-`0006_state_county`, which drops them and migrates nothing), replaced by two
-lookup tables and the coordinates the site already had.
+`0006_state_county`, which drops them and migrates nothing), replaced by lookup
+tables and the coordinates the site already had. `Country` joined the top of the
+chain later, in `0009_country`.
 
 ```
-State(name, en_name, slug)
+Country(name, en_name, slug, code)
+    ^
+    |  FK (required, PROTECT)
+State(name, en_name, slug, country)
     ^
     |  FK (required, PROTECT)
 County(name, en_name, slug, state)
@@ -217,26 +276,39 @@ County(name, en_name, slug, state)
 Location
 ```
 
-Four things to know:
+Five things to know:
 
 - **They are lookup tables, not content.** `Common` + a name pair + a slug + a
   sort order. No `image`, no `icon`, no description pair, no gallery, no
   `/images/` endpoints, no public page. They exist so "Jalisco" is typed once
   and then _chosen_. If one ever needs a photograph it should become a
   `RegularPicture` like the other four records, not grow the fields in place.
-- **`Location` stores only its county; the state is derived.** `Location.state`
-  is a read-only property over `county.state`, flattened onto the payload as
-  `state`/`state_name`/`state_en_name`/`state_slug` - the same reasoning as
-  `Species.kind` over `category.kind`. It is **not writable**, and there is no
-  `state` column: two FKs could disagree, one cannot. The accepted cost is that
-  a place whose county is unknown carries no state either.
-- **The two FKs differ on purpose.** `County.state` is required and `PROTECT`
-  (deleting a state still in use is a 409, like a category that still has
-  species); `Location.county` is optional and `SET_NULL` (merging a county away
-  must not take the places filed under it, exactly like `parent`).
+  **`Country.code` is the one extra column** among the three - the ISO 3166-1
+  alpha-2 identifier, nullable _and_ unique, which is why a blank is normalised to
+  `NULL` in both `Country.clean()` and `CountryWriteSerializer` (two countries
+  saved with `''` would collide on the second).
+- **`Location` stores only its county; the state and the country are derived.**
+  `Location.state` is a read-only property over `county.state` and
+  `Location.country` one link further up, and both are flattened onto the payload
+  (`state`/`state_name`/`state_en_name`/`state_slug`, and the same four plus
+  `country_code` for the country) - the same reasoning as `Species.kind` over
+  `category.kind`. Neither is **writable**, and there is no `state` or `country`
+  column: two FKs could disagree, one cannot. `County.country` is the same
+  derivation one level up, and is what feeds `CountySerializer`'s flattened
+  country. The accepted cost is that a place whose county is unknown carries no
+  state and no country either.
+- **The three FKs differ on purpose.** `State.country` and `County.state` are
+  required and `PROTECT` (deleting one still in use is a 409, like a category
+  that still has species); `Location.county` is optional and `SET_NULL` (merging
+  a county away must not take the places filed under it, exactly like `parent`).
 - **There is no `map_link`, and it should not come back.** Every place carries
   coordinates and the CMS has a map picker for setting them, so the site draws
   its own map instead of linking out to someone else's.
+- ⚠ **A county slug carries its state's abbreviation** - `jefferson-co`,
+  `jefferson-wa`, `jefferson-ny`. `County.slug` is unique across the whole table
+  and US county names repeat heavily, so an unsuffixed slug silently collapses
+  three counties in three states into one row. `seed_geography` writes them this
+  way; keep to it if you add a state's counties by hand.
 
 ⚠ `/api/ai/research/`'s `location` subject **must not** offer these.
 `catalog/services/research.py` dropped `region`/`country` rather than renaming
@@ -457,8 +529,9 @@ and `journal/signals.py` with a table at the top of each. The pairings that bite
 | `Sighting`                                                | that species (`sighting_count`, `last_seen`), the season / weather / location lists (each carries `sighting_count`), and `/journal/stats/`      |
 | `SightingMedia`                                           | that sighting - its payload embeds the gallery, **and** its cover image falls back to the first photo                                           |
 | `SeasonImage` / `WeatherConditionImage` / `LocationImage` | that record - same reason: the gallery _and_ the cover                                                                                          |
+| `Country`                                                 | states (`country_name`/`slug`/`code`), **and** counties and locations, which flatten the country read _through_ the state - three tables away    |
 | `State`                                                   | counties (`state_name`/`slug`) **and** locations, which flatten the state read _through_ the county - two tables away from the row that changed |
-| `County`                                                  | locations (`county_name` and the state behind it), and states (`county_count`, `location_count`)                                                |
+| `County`                                                  | locations (`county_name`, the state behind it and the country behind that), states (`county_count`, `location_count`) and countries (`location_count`) |
 
 ⚠ **Add a derived or flattened field to a serializer and you must add its
 receiver in the same task.** A stale count looks exactly like a lost write.
@@ -759,9 +832,12 @@ GET    /api/catalog/categories/                     ?kind= ?featured= ?search= ?
 GET    /api/catalog/species/                        ?kind= ?category= ?category_slug= ?featured= ?search=
 GET    /api/catalog/seasons/
 GET    /api/catalog/weather-conditions/
-GET    /api/catalog/states/                         ?slug= ?search=
-GET    /api/catalog/counties/                       ?state= ?state_slug= ?slug= ?search=
-GET    /api/catalog/locations/                      ?parent= ?place_type= ?county= ?state= ?featured=
+GET    /api/catalog/countries/                      ?slug= ?code= ?search=
+GET    /api/catalog/states/                         ?country= ?country_slug= ?slug= ?search=
+GET    /api/catalog/counties/                       ?state= ?state_slug= ?country= ?country_slug=
+                                                    ?slug= ?search=
+GET    /api/catalog/locations/                      ?parent= ?place_type= ?county= ?state=
+                                                    ?country= ?country_slug= ?featured=
 GET    /api/journal/sightings/                      ?species_slug= ?kind= ?location_slug= ?season_slug=
                                                     ?year= ?month= ?date_from= ?date_to= ?limit= ?offset=
 GET    /api/journal/sightings/map/                  ?category_slug= ?kind= ?species_slug=
@@ -804,7 +880,7 @@ sees a draft they have not published yet.
 
 ## Tests
 
-`python manage.py test` (171 tests: `catalog`, `journal`, and `core` for the AI
+`python manage.py test` (185 tests: `catalog`, `journal`, and `core` for the AI
 endpoints, the permission model, the site-settings endpoint, the branded emails,
 the backup round-trip and the public contribute flow - the AI tests always mock
 the provider, so the suite spends nothing and needs no network). The contribute

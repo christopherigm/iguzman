@@ -23,9 +23,12 @@ WEATHER_CONDITION = 'catalog:weather_condition'
 LOCATIONS = 'catalog:locations'
 LOCATION = 'catalog:location'
 
-# Geography lookups. A location's payload flattens its county *and* the state
-# read through it, so a write to either is what makes a location payload stale -
-# see the table in signals.py.
+# Geography lookups. A location's payload flattens its county, the state read
+# through it *and* the country read through that state, so a write to any of the
+# three is what makes a location payload stale - see the table in signals.py.
+COUNTRIES = 'catalog:countries'
+COUNTRY = 'catalog:country'
+
 STATES = 'catalog:states'
 STATE = 'catalog:state'
 

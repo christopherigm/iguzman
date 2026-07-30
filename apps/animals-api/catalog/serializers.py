@@ -18,6 +18,7 @@ from core.slugs import unique_slug
 from .models import (
     Category,
     CategoryImage,
+    Country,
     County,
     Location,
     LocationImage,
@@ -486,17 +487,65 @@ class WeatherConditionWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, seria
 
 
 # ---------------------------------------------------------------------------
-# Geography: states and counties
+# Geography: countries, states and counties
 # ---------------------------------------------------------------------------
 #
-# The two lookup tables a place is filed under. They carry no images and no
+# The three lookup tables a place is filed under. They carry no images and no
 # description pairs - only the name pair every model here has - so their
 # serializers are the shortest in this module, and deliberately so: the moment
 # one grows a photograph it should become a picture model like the other four.
 #
-# Declared above `LocationSerializer` because a location payload flattens both.
+# Declared above `LocationSerializer` because a location payload flattens all
+# three, and each above the one below it for the same reason.
+
+class CountrySerializer(serializers.ModelSerializer):
+    state_count = serializers.SerializerMethodField()
+    location_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Country
+        fields = [
+            'id', 'enabled', 'created', 'modified', 'version',
+            'name', 'en_name', 'slug', 'code', 'sort_order',
+            'state_count', 'location_count',
+        ]
+        read_only_fields = ['id', 'created', 'modified', 'version']
+
+    def get_state_count(self, obj):
+        return obj.states.filter(enabled=True).count()
+
+    def get_location_count(self, obj):
+        # Three joins deep: a place stores only its county, so the country it
+        # sits in is reached the same way `Location.country` reaches it.
+        return Location.objects.filter(enabled=True, county__state__country=obj).count()
+
+
+class CountryWriteSerializer(_SlugUniqueMixin, serializers.ModelSerializer):
+    class Meta:
+        model = Country
+        fields = ['name', 'en_name', 'slug', 'code', 'sort_order', 'enabled']
+
+    def validate_code(self, value):
+        """Upper-case it, and treat a blank as "no code" rather than as a value.
+
+        `code` is nullable *and* unique, so an empty string is not a harmless
+        blank: the first one stored occupies the value, and the second country
+        saved without a code collides with it. Normalised here as well as in
+        `Country.clean()` because a serializer write never calls the model's.
+        """
+        code = (value or '').strip().upper()
+        return code or None
+
 
 class StateSerializer(serializers.ModelSerializer):
+    # The country is flattened for the same reason a county flattens its state:
+    # a CMS row, or a "State, Country" option in a picker, renders from one
+    # payload - and the English twin has to travel with it or an English reader
+    # gets a Spanish country beside an English state.
+    country_name = serializers.CharField(source='country.name', read_only=True, default=None)
+    country_en_name = serializers.CharField(source='country.en_name', read_only=True, default=None)
+    country_slug = serializers.SlugRelatedField(source='country', slug_field='slug', read_only=True)
+    country_code = serializers.CharField(source='country.code', read_only=True, default=None)
     county_count = serializers.SerializerMethodField()
     location_count = serializers.SerializerMethodField()
 
@@ -505,6 +554,7 @@ class StateSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'enabled', 'created', 'modified', 'version',
             'name', 'en_name', 'slug', 'sort_order',
+            'country', 'country_name', 'country_en_name', 'country_slug', 'country_code',
             'county_count', 'location_count',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
@@ -520,7 +570,9 @@ class StateSerializer(serializers.ModelSerializer):
 class StateWriteSerializer(_SlugUniqueMixin, serializers.ModelSerializer):
     class Meta:
         model = State
-        fields = ['name', 'en_name', 'slug', 'sort_order', 'enabled']
+        # `country` is required here, unlike every other relation in this module:
+        # the FK is non-null, so there is no "no country" for a client to send.
+        fields = ['name', 'en_name', 'slug', 'country', 'sort_order', 'enabled']
 
 
 class CountySerializer(serializers.ModelSerializer):
@@ -531,6 +583,15 @@ class CountySerializer(serializers.ModelSerializer):
     state_name = serializers.CharField(source='state.name', read_only=True, default=None)
     state_en_name = serializers.CharField(source='state.en_name', read_only=True, default=None)
     state_slug = serializers.SlugRelatedField(source='state', slug_field='slug', read_only=True)
+    # And the country behind that state, read one link further up. Worth its four
+    # fields here rather than left to a second request: this table holds two
+    # countries' counties now, and "La Paz" is a municipality in Baja California
+    # Sur *and* a department in Bolivia - the country is what a reviewer reads to
+    # be sure which list they are looking at.
+    country = serializers.PrimaryKeyRelatedField(source='state.country', read_only=True, default=None)
+    country_name = serializers.CharField(source='state.country.name', read_only=True, default=None)
+    country_en_name = serializers.CharField(source='state.country.en_name', read_only=True, default=None)
+    country_slug = serializers.SlugRelatedField(source='state.country', slug_field='slug', read_only=True)
     location_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -539,6 +600,7 @@ class CountySerializer(serializers.ModelSerializer):
             'id', 'enabled', 'created', 'modified', 'version',
             'name', 'en_name', 'slug', 'sort_order',
             'state', 'state_name', 'state_en_name', 'state_slug',
+            'country', 'country_name', 'country_en_name', 'country_slug',
             'location_count',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
@@ -580,6 +642,14 @@ class LocationSerializer(serializers.ModelSerializer):
     state_name = serializers.CharField(source='county.state.name', read_only=True, default=None)
     state_en_name = serializers.CharField(source='county.state.en_name', read_only=True, default=None)
     state_slug = serializers.SlugRelatedField(source='county.state', slug_field='slug', read_only=True)
+    # The country, read one link further up again (`Location.country`). Same
+    # argument as the state: derived, never stored, and published so a card or a
+    # filter chip can say "Colorado, United States" from the one payload.
+    country = serializers.PrimaryKeyRelatedField(source='county.state.country', read_only=True, default=None)
+    country_name = serializers.CharField(source='county.state.country.name', read_only=True, default=None)
+    country_en_name = serializers.CharField(source='county.state.country.en_name', read_only=True, default=None)
+    country_slug = serializers.SlugRelatedField(source='county.state.country', slug_field='slug', read_only=True)
+    country_code = serializers.CharField(source='county.state.country.code', read_only=True, default=None)
     latitude = serializers.SerializerMethodField()
     longitude = serializers.SerializerMethodField()
     sighting_count = serializers.SerializerMethodField()
@@ -597,6 +667,7 @@ class LocationSerializer(serializers.ModelSerializer):
             'latitude', 'longitude',
             'county', 'county_name', 'county_en_name', 'county_slug',
             'state', 'state_name', 'state_en_name', 'state_slug',
+            'country', 'country_name', 'country_en_name', 'country_slug', 'country_code',
             'hide_precise_location', 'is_featured', 'sort_order', 'sighting_count',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']

@@ -136,10 +136,15 @@ export default async function ContributeSightingPage({
             // by far - and stays editable, because an author may be filing a
             // friend's photograph.
             defaultAuthorName={session.displayName}
-            locations={locations.map((place) => ({
-              value: String(place.id),
-              label: localized(place, "name", locale) ?? place.slug,
-            }))}
+            // Sorted here rather than in the fetcher: the label is the
+            // *localized* name, so the order only exists once the locale has
+            // picked which half of each pair is shown.
+            locations={locations
+              .map((place) => ({
+                value: String(place.id),
+                label: localized(place, "name", locale) ?? place.slug,
+              }))
+              .sort((a, b) => a.label.localeCompare(b.label, locale))}
             weather={weather.map((condition) => ({
               value: String(condition.id),
               label: localized(condition, "name", locale) ?? condition.slug,

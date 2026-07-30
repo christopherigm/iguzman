@@ -16,6 +16,7 @@ from django.utils.html import format_html
 from .models import (
     Category,
     CategoryImage,
+    Country,
     County,
     Location,
     LocationImage,
@@ -234,16 +235,37 @@ class WeatherConditionAdmin(admin.ModelAdmin):
         return _thumb(_cover(obj))
 
 
+@admin.register(Country)
+class CountryAdmin(admin.ModelAdmin):
+    """A lookup table, so a plain form - no fieldsets, no media, no content tab."""
+
+    list_display = ('name', 'en_name', 'code', 'slug', 'state_count', 'sort_order', 'enabled')
+    search_fields = ('name', 'en_name', 'slug', 'code')
+    list_filter = ('enabled',)
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ('created', 'modified', 'version')
+    fields = ('name', 'en_name', 'slug', 'code', 'sort_order', 'enabled',
+              'version', 'created', 'modified')
+
+    @admin.display(description='States')
+    def state_count(self, obj):
+        return obj.states.count()
+
+
 @admin.register(State)
 class StateAdmin(admin.ModelAdmin):
     """A lookup table, so a plain form - no fieldsets, no media, no content tab."""
 
-    list_display = ('name', 'en_name', 'slug', 'county_count', 'sort_order', 'enabled')
-    search_fields = ('name', 'en_name', 'slug')
-    list_filter = ('enabled',)
+    list_display = ('name', 'en_name', 'country', 'slug', 'county_count', 'sort_order', 'enabled')
+    search_fields = ('name', 'en_name', 'slug', 'country__name')
+    list_filter = ('country', 'enabled')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
-    fields = ('name', 'en_name', 'slug', 'sort_order', 'enabled', 'version', 'created', 'modified')
+    # `country` is required and PROTECT, exactly like a county's `state`: deleting
+    # one still in use is refused rather than orphaning the states under it.
+    autocomplete_fields = ('country',)
+    fields = ('name', 'en_name', 'slug', 'country', 'sort_order', 'enabled',
+              'version', 'created', 'modified')
 
     @admin.display(description='Counties')
     def county_count(self, obj):
@@ -252,9 +274,9 @@ class StateAdmin(admin.ModelAdmin):
 
 @admin.register(County)
 class CountyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'en_name', 'state', 'slug', 'location_count', 'sort_order', 'enabled')
-    search_fields = ('name', 'en_name', 'slug', 'state__name')
-    list_filter = ('state', 'enabled')
+    list_display = ('name', 'en_name', 'state', 'country', 'slug', 'location_count', 'sort_order', 'enabled')
+    search_fields = ('name', 'en_name', 'slug', 'state__name', 'state__country__name')
+    list_filter = ('state__country', 'state', 'enabled')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
     # `state` is required and PROTECT: deleting one still in use is refused
@@ -271,8 +293,8 @@ class CountyAdmin(admin.ModelAdmin):
 @admin.register(Location)
 class LocationAdmin(admin.ModelAdmin):
     list_display = ('name', 'en_name', 'thumb', 'place_type', 'parent', 'county', 'state', 'sighting_count', 'hide_precise_location', 'enabled')
-    list_filter = ('place_type', 'county__state', 'county', 'enabled', 'is_featured', 'hide_precise_location')
-    search_fields = ('name', 'en_name', 'slug', 'county__name', 'county__state__name')
+    list_filter = ('place_type', 'county__state__country', 'county__state', 'county', 'enabled', 'is_featured', 'hide_precise_location')
+    search_fields = ('name', 'en_name', 'slug', 'county__name', 'county__state__name', 'county__state__country__name')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
     autocomplete_fields = ('parent', 'county')

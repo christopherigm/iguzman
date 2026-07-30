@@ -5,7 +5,16 @@ from django.core.files.base import ContentFile
 
 from core.tests import IsolatedMediaTestCase, base64_image, data_url
 
-from .models import Category, County, Location, Season, Species, State, WeatherCondition
+from .models import (
+    Category,
+    Country,
+    County,
+    Location,
+    Season,
+    Species,
+    State,
+    WeatherCondition,
+)
 
 
 class CatalogFixtureMixin:
@@ -465,11 +474,22 @@ class LocationTests(IsolatedMediaTestCase):
 
 
 class GeographyTests(IsolatedMediaTestCase):
-    """The State/County lookup pair, and the state a location derives from it."""
+    """The Country/State/County chain, and what a location derives from it.
+
+    Every assertion here is about the one design rule the three tables share:
+    each level stores only its own parent, and everything above that is *walked
+    up to*. A test that started passing because a level had gained a stored copy
+    would be the failure this class exists to catch.
+    """
 
     def setUp(self):
         super().setUp()
-        self.state = State.objects.create(name='Jalisco', slug='jalisco')
+        self.country = Country.objects.create(
+            name='México', en_name='Mexico', slug='mexico', code='MX'
+        )
+        self.state = State.objects.create(
+            name='Jalisco', slug='jalisco', country=self.country
+        )
         self.county = County.objects.create(
             name='Zapopan', slug='zapopan', state=self.state
         )
@@ -495,7 +515,7 @@ class GeographyTests(IsolatedMediaTestCase):
     def test_the_state_is_read_only_on_a_location(self):
         self.make_staff()
         self.client.login(username='ranger', password='fieldnotes-2026')
-        other = State.objects.create(name='Colima', slug='colima')
+        other = State.objects.create(name='Colima', slug='colima', country=self.country)
         location = Location.objects.create(name='Bosque', slug='bosque', county=self.county)
 
         response = self.client.patch(
@@ -541,7 +561,7 @@ class GeographyTests(IsolatedMediaTestCase):
         self.assertEqual(payload['state_en_name'], 'Jalisco State')
 
     def test_counties_filter_by_state(self):
-        other = State.objects.create(name='Colima', slug='colima')
+        other = State.objects.create(name='Colima', slug='colima', country=self.country)
         County.objects.create(name='Comala', slug='comala', state=other)
         rows = self.client.get(f'/api/catalog/counties/?state={self.state.pk}').json()
         self.assertEqual([row['slug'] for row in rows], ['zapopan'])
@@ -577,6 +597,154 @@ class GeographyTests(IsolatedMediaTestCase):
         self.assertEqual(self.client.get('/api/catalog/counties/').json()[0]['location_count'], 0)
         Location.objects.create(name='Bosque', slug='bosque', county=self.county)
         self.assertEqual(self.client.get('/api/catalog/counties/').json()[0]['location_count'], 1)
+
+    # ---- Country: the level above the state ------------------------------- #
+
+    def test_a_location_publishes_the_country_read_three_tables_up(self):
+        """A place stores a county; the country is `county.state.country`.
+
+        The same argument as the state one link down - if this ever starts
+        reading a stored column, a county moved to another state stops moving the
+        places under it and the two copies begin to disagree.
+        """
+        Location.objects.create(name='Bosque', slug='bosque', county=self.county)
+        payload = self.client.get('/api/catalog/locations/slug/bosque/').json()
+        self.assertEqual(payload['country'], self.country.pk)
+        self.assertEqual(payload['country_name'], 'México')
+        self.assertEqual(payload['country_en_name'], 'Mexico')
+        self.assertEqual(payload['country_slug'], 'mexico')
+        self.assertEqual(payload['country_code'], 'MX')
+
+    def test_a_location_without_a_county_carries_no_country(self):
+        Location.objects.create(name='Patio', slug='patio')
+        payload = self.client.get('/api/catalog/locations/slug/patio/').json()
+        self.assertIsNone(payload['country'])
+        self.assertIsNone(payload['country_name'])
+
+    def test_a_state_carries_its_countrys_english_twin(self):
+        payload = self.client.get('/api/catalog/states/').json()[0]
+        self.assertEqual(payload['country_name'], 'México')
+        self.assertEqual(payload['country_en_name'], 'Mexico')
+        self.assertEqual(payload['country_code'], 'MX')
+
+    def test_a_county_carries_the_country_behind_its_state(self):
+        payload = self.client.get('/api/catalog/counties/').json()[0]
+        self.assertEqual(payload['country'], self.country.pk)
+        self.assertEqual(payload['country_name'], 'México')
+
+    def test_the_country_is_read_only_on_a_state(self):
+        """It is writable - but as the state's own FK, never through a location."""
+        self.make_staff()
+        self.client.login(username='ranger', password='fieldnotes-2026')
+        location = Location.objects.create(name='Bosque', slug='bosque', county=self.county)
+        other = Country.objects.create(name='Estados Unidos', slug='united-states', code='US')
+
+        response = self.client.patch(
+            f'/api/catalog/locations/{location.pk}/',
+            {'country': other.pk},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['country'], self.country.pk)
+
+    def test_deleting_a_country_that_still_has_states_is_a_409(self):
+        # PROTECT one level further up than State->County, and for the same
+        # reason: losing the country would orphan every state under it.
+        self.make_staff()
+        self.client.login(username='ranger', password='fieldnotes-2026')
+        response = self.client.delete(f'/api/catalog/countries/{self.country.pk}/')
+        self.assertEqual(response.status_code, 409)
+
+    def test_a_state_cannot_be_created_without_a_country(self):
+        self.make_staff()
+        self.client.login(username='ranger', password='fieldnotes-2026')
+        response = self.client.post(
+            '/api/catalog/states/',
+            {'name': 'Colima', 'slug': 'colima'},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('country', response.json())
+
+    def test_a_blank_country_code_is_stored_as_null_not_as_a_collision(self):
+        """`code` is nullable *and* unique, so '' must not become a value.
+
+        Two countries saved without a code would otherwise collide on the second
+        one - which is why the write serializer normalises it away.
+        """
+        self.make_staff()
+        self.client.login(username='ranger', password='fieldnotes-2026')
+        for name, slug in (('Canadá', 'canada'), ('Belice', 'belize')):
+            response = self.client.post(
+                '/api/catalog/countries/',
+                {'name': name, 'slug': slug, 'code': ''},
+                content_type='application/json',
+            )
+            self.assertEqual(response.status_code, 201, response.content)
+            self.assertIsNone(response.json()['code'])
+
+    def test_a_country_code_is_stored_upper_case(self):
+        self.make_staff()
+        self.client.login(username='ranger', password='fieldnotes-2026')
+        response = self.client.post(
+            '/api/catalog/countries/',
+            {'name': 'Canadá', 'slug': 'canada', 'code': 'ca'},
+            content_type='application/json',
+        )
+        self.assertEqual(response.json()['code'], 'CA')
+
+    def test_states_and_locations_filter_by_country(self):
+        usa = Country.objects.create(name='Estados Unidos', slug='united-states', code='US')
+        colorado = State.objects.create(name='Colorado', slug='colorado', country=usa)
+        denver = County.objects.create(name='Denver', slug='denver-co', state=colorado)
+        Location.objects.create(name='Bosque', slug='bosque', county=self.county)
+        Location.objects.create(name='City Park', slug='city-park', county=denver)
+
+        states = self.client.get(f'/api/catalog/states/?country={usa.pk}').json()
+        self.assertEqual([row['slug'] for row in states], ['colorado'])
+        by_slug = self.client.get('/api/catalog/locations/?country_slug=united-states').json()
+        self.assertEqual([row['slug'] for row in by_slug], ['city-park'])
+        counties = self.client.get(f'/api/catalog/counties/?country={self.country.pk}').json()
+        self.assertEqual([row['slug'] for row in counties], ['zapopan'])
+
+    def test_a_country_is_public_to_read_and_admin_to_write(self):
+        self.assertEqual(self.client.get('/api/catalog/countries/').status_code, 200)
+        response = self.client.post(
+            '/api/catalog/countries/',
+            {'name': 'Canadá', 'slug': 'canada'},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_renaming_a_country_reaches_the_cached_location_payload(self):
+        """Three tables away - the deepest flattening in this API.
+
+        Without the Country receiver in signals.py this is the exact shape of a
+        lost write: the CMS shows the new name and the public site keeps serving
+        the old one for the whole TTL.
+        """
+        Location.objects.create(name='Bosque', slug='bosque', county=self.county)
+        self.assertEqual(
+            self.client.get('/api/catalog/locations/').json()[0]['country_name'], 'México'
+        )
+
+        self.country.name = 'Estados Unidos Mexicanos'
+        self.country.save()
+
+        self.assertEqual(
+            self.client.get('/api/catalog/locations/').json()[0]['country_name'],
+            'Estados Unidos Mexicanos',
+        )
+
+    def test_adding_a_state_updates_the_cached_country_counts(self):
+        self.assertEqual(self.client.get('/api/catalog/countries/').json()[0]['state_count'], 1)
+        State.objects.create(name='Colima', slug='colima', country=self.country)
+        self.assertEqual(self.client.get('/api/catalog/countries/').json()[0]['state_count'], 2)
+
+    def test_a_location_counts_towards_its_country(self):
+        self.assertEqual(self.client.get('/api/catalog/countries/').json()[0]['location_count'], 0)
+        Location.objects.create(name='Bosque', slug='bosque', county=self.county)
+        self.assertEqual(self.client.get('/api/catalog/countries/').json()[0]['location_count'], 1)
 
 
 class CacheInvalidationTests(CatalogFixtureMixin, IsolatedMediaTestCase):

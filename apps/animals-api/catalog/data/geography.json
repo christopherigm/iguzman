@@ -1,0 +1,2311 @@
+{
+  "countries": [
+    {
+      "name": "Estados Unidos",
+      "en_name": "United States",
+      "slug": "united-states",
+      "code": "US",
+      "sort_order": 0
+    },
+    {
+      "name": "México",
+      "en_name": "Mexico",
+      "slug": "mexico",
+      "code": "MX",
+      "sort_order": 1
+    }
+  ],
+  "states": [
+    {
+      "country": "united-states",
+      "name": "Alabama",
+      "en_name": null,
+      "slug": "alabama",
+      "sort_order": 0
+    },
+    {
+      "country": "united-states",
+      "name": "Alaska",
+      "en_name": null,
+      "slug": "alaska",
+      "sort_order": 1
+    },
+    {
+      "country": "united-states",
+      "name": "Arizona",
+      "en_name": null,
+      "slug": "arizona",
+      "sort_order": 2
+    },
+    {
+      "country": "united-states",
+      "name": "Arkansas",
+      "en_name": null,
+      "slug": "arkansas",
+      "sort_order": 3
+    },
+    {
+      "country": "united-states",
+      "name": "California",
+      "en_name": null,
+      "slug": "california",
+      "sort_order": 4
+    },
+    {
+      "country": "united-states",
+      "name": "Carolina del Norte",
+      "en_name": "North Carolina",
+      "slug": "north-carolina",
+      "sort_order": 5
+    },
+    {
+      "country": "united-states",
+      "name": "Carolina del Sur",
+      "en_name": "South Carolina",
+      "slug": "south-carolina",
+      "sort_order": 6
+    },
+    {
+      "country": "united-states",
+      "name": "Colorado",
+      "en_name": null,
+      "slug": "colorado",
+      "sort_order": 7
+    },
+    {
+      "country": "united-states",
+      "name": "Connecticut",
+      "en_name": null,
+      "slug": "connecticut",
+      "sort_order": 8
+    },
+    {
+      "country": "united-states",
+      "name": "Dakota del Norte",
+      "en_name": "North Dakota",
+      "slug": "north-dakota",
+      "sort_order": 9
+    },
+    {
+      "country": "united-states",
+      "name": "Dakota del Sur",
+      "en_name": "South Dakota",
+      "slug": "south-dakota",
+      "sort_order": 10
+    },
+    {
+      "country": "united-states",
+      "name": "Delaware",
+      "en_name": null,
+      "slug": "delaware",
+      "sort_order": 11
+    },
+    {
+      "country": "united-states",
+      "name": "Distrito de Columbia",
+      "en_name": "District of Columbia",
+      "slug": "district-of-columbia",
+      "sort_order": 12
+    },
+    {
+      "country": "united-states",
+      "name": "Florida",
+      "en_name": null,
+      "slug": "florida",
+      "sort_order": 13
+    },
+    {
+      "country": "united-states",
+      "name": "Georgia",
+      "en_name": null,
+      "slug": "georgia",
+      "sort_order": 14
+    },
+    {
+      "country": "united-states",
+      "name": "Hawái",
+      "en_name": "Hawaii",
+      "slug": "hawaii",
+      "sort_order": 15
+    },
+    {
+      "country": "united-states",
+      "name": "Idaho",
+      "en_name": null,
+      "slug": "idaho",
+      "sort_order": 16
+    },
+    {
+      "country": "united-states",
+      "name": "Illinois",
+      "en_name": null,
+      "slug": "illinois",
+      "sort_order": 17
+    },
+    {
+      "country": "united-states",
+      "name": "Indiana",
+      "en_name": null,
+      "slug": "indiana",
+      "sort_order": 18
+    },
+    {
+      "country": "united-states",
+      "name": "Iowa",
+      "en_name": null,
+      "slug": "iowa",
+      "sort_order": 19
+    },
+    {
+      "country": "united-states",
+      "name": "Kansas",
+      "en_name": null,
+      "slug": "kansas",
+      "sort_order": 20
+    },
+    {
+      "country": "united-states",
+      "name": "Kentucky",
+      "en_name": null,
+      "slug": "kentucky",
+      "sort_order": 21
+    },
+    {
+      "country": "united-states",
+      "name": "Luisiana",
+      "en_name": "Louisiana",
+      "slug": "louisiana",
+      "sort_order": 22
+    },
+    {
+      "country": "united-states",
+      "name": "Maine",
+      "en_name": null,
+      "slug": "maine",
+      "sort_order": 23
+    },
+    {
+      "country": "united-states",
+      "name": "Maryland",
+      "en_name": null,
+      "slug": "maryland",
+      "sort_order": 24
+    },
+    {
+      "country": "united-states",
+      "name": "Massachusetts",
+      "en_name": null,
+      "slug": "massachusetts",
+      "sort_order": 25
+    },
+    {
+      "country": "united-states",
+      "name": "Míchigan",
+      "en_name": "Michigan",
+      "slug": "michigan",
+      "sort_order": 26
+    },
+    {
+      "country": "united-states",
+      "name": "Minesota",
+      "en_name": "Minnesota",
+      "slug": "minnesota",
+      "sort_order": 27
+    },
+    {
+      "country": "united-states",
+      "name": "Misisipi",
+      "en_name": "Mississippi",
+      "slug": "mississippi",
+      "sort_order": 28
+    },
+    {
+      "country": "united-states",
+      "name": "Misuri",
+      "en_name": "Missouri",
+      "slug": "missouri",
+      "sort_order": 29
+    },
+    {
+      "country": "united-states",
+      "name": "Montana",
+      "en_name": null,
+      "slug": "montana",
+      "sort_order": 30
+    },
+    {
+      "country": "united-states",
+      "name": "Nebraska",
+      "en_name": null,
+      "slug": "nebraska",
+      "sort_order": 31
+    },
+    {
+      "country": "united-states",
+      "name": "Nevada",
+      "en_name": null,
+      "slug": "nevada",
+      "sort_order": 32
+    },
+    {
+      "country": "united-states",
+      "name": "Nueva Jersey",
+      "en_name": "New Jersey",
+      "slug": "new-jersey",
+      "sort_order": 33
+    },
+    {
+      "country": "united-states",
+      "name": "Nueva York",
+      "en_name": "New York",
+      "slug": "new-york",
+      "sort_order": 34
+    },
+    {
+      "country": "united-states",
+      "name": "Nuevo Hampshire",
+      "en_name": "New Hampshire",
+      "slug": "new-hampshire",
+      "sort_order": 35
+    },
+    {
+      "country": "united-states",
+      "name": "Nuevo México",
+      "en_name": "New Mexico",
+      "slug": "new-mexico",
+      "sort_order": 36
+    },
+    {
+      "country": "united-states",
+      "name": "Ohio",
+      "en_name": null,
+      "slug": "ohio",
+      "sort_order": 37
+    },
+    {
+      "country": "united-states",
+      "name": "Oklahoma",
+      "en_name": null,
+      "slug": "oklahoma",
+      "sort_order": 38
+    },
+    {
+      "country": "united-states",
+      "name": "Oregón",
+      "en_name": "Oregon",
+      "slug": "oregon",
+      "sort_order": 39
+    },
+    {
+      "country": "united-states",
+      "name": "Pensilvania",
+      "en_name": "Pennsylvania",
+      "slug": "pennsylvania",
+      "sort_order": 40
+    },
+    {
+      "country": "united-states",
+      "name": "Rhode Island",
+      "en_name": null,
+      "slug": "rhode-island",
+      "sort_order": 41
+    },
+    {
+      "country": "united-states",
+      "name": "Tennessee",
+      "en_name": null,
+      "slug": "tennessee",
+      "sort_order": 42
+    },
+    {
+      "country": "united-states",
+      "name": "Texas",
+      "en_name": null,
+      "slug": "texas",
+      "sort_order": 43
+    },
+    {
+      "country": "united-states",
+      "name": "Utah",
+      "en_name": null,
+      "slug": "utah",
+      "sort_order": 44
+    },
+    {
+      "country": "united-states",
+      "name": "Vermont",
+      "en_name": null,
+      "slug": "vermont",
+      "sort_order": 45
+    },
+    {
+      "country": "united-states",
+      "name": "Virginia",
+      "en_name": null,
+      "slug": "virginia",
+      "sort_order": 46
+    },
+    {
+      "country": "united-states",
+      "name": "Virginia Occidental",
+      "en_name": "West Virginia",
+      "slug": "west-virginia",
+      "sort_order": 47
+    },
+    {
+      "country": "united-states",
+      "name": "Washington",
+      "en_name": null,
+      "slug": "washington",
+      "sort_order": 48
+    },
+    {
+      "country": "united-states",
+      "name": "Wisconsin",
+      "en_name": null,
+      "slug": "wisconsin",
+      "sort_order": 49
+    },
+    {
+      "country": "united-states",
+      "name": "Wyoming",
+      "en_name": null,
+      "slug": "wyoming",
+      "sort_order": 50
+    },
+    {
+      "country": "mexico",
+      "name": "Aguascalientes",
+      "en_name": null,
+      "slug": "aguascalientes",
+      "sort_order": 0
+    },
+    {
+      "country": "mexico",
+      "name": "Baja California",
+      "en_name": null,
+      "slug": "baja-california",
+      "sort_order": 1
+    },
+    {
+      "country": "mexico",
+      "name": "Baja California Sur",
+      "en_name": null,
+      "slug": "baja-california-sur",
+      "sort_order": 2
+    },
+    {
+      "country": "mexico",
+      "name": "Campeche",
+      "en_name": null,
+      "slug": "campeche",
+      "sort_order": 3
+    },
+    {
+      "country": "mexico",
+      "name": "Chiapas",
+      "en_name": null,
+      "slug": "chiapas",
+      "sort_order": 4
+    },
+    {
+      "country": "mexico",
+      "name": "Chihuahua",
+      "en_name": null,
+      "slug": "chihuahua",
+      "sort_order": 5
+    },
+    {
+      "country": "mexico",
+      "name": "Ciudad de México",
+      "en_name": "Mexico City",
+      "slug": "ciudad-de-mexico",
+      "sort_order": 6
+    },
+    {
+      "country": "mexico",
+      "name": "Coahuila de Zaragoza",
+      "en_name": "Coahuila",
+      "slug": "coahuila",
+      "sort_order": 7
+    },
+    {
+      "country": "mexico",
+      "name": "Colima",
+      "en_name": null,
+      "slug": "colima",
+      "sort_order": 8
+    },
+    {
+      "country": "mexico",
+      "name": "Durango",
+      "en_name": null,
+      "slug": "durango",
+      "sort_order": 9
+    },
+    {
+      "country": "mexico",
+      "name": "Guanajuato",
+      "en_name": null,
+      "slug": "guanajuato",
+      "sort_order": 10
+    },
+    {
+      "country": "mexico",
+      "name": "Guerrero",
+      "en_name": null,
+      "slug": "guerrero",
+      "sort_order": 11
+    },
+    {
+      "country": "mexico",
+      "name": "Hidalgo",
+      "en_name": null,
+      "slug": "hidalgo",
+      "sort_order": 12
+    },
+    {
+      "country": "mexico",
+      "name": "Jalisco",
+      "en_name": null,
+      "slug": "jalisco",
+      "sort_order": 13
+    },
+    {
+      "country": "mexico",
+      "name": "México",
+      "en_name": "State of Mexico",
+      "slug": "estado-de-mexico",
+      "sort_order": 14
+    },
+    {
+      "country": "mexico",
+      "name": "Michoacán de Ocampo",
+      "en_name": "Michoacán",
+      "slug": "michoacan",
+      "sort_order": 15
+    },
+    {
+      "country": "mexico",
+      "name": "Morelos",
+      "en_name": null,
+      "slug": "morelos",
+      "sort_order": 16
+    },
+    {
+      "country": "mexico",
+      "name": "Nayarit",
+      "en_name": null,
+      "slug": "nayarit",
+      "sort_order": 17
+    },
+    {
+      "country": "mexico",
+      "name": "Nuevo León",
+      "en_name": null,
+      "slug": "nuevo-leon",
+      "sort_order": 18
+    },
+    {
+      "country": "mexico",
+      "name": "Oaxaca",
+      "en_name": null,
+      "slug": "oaxaca",
+      "sort_order": 19
+    },
+    {
+      "country": "mexico",
+      "name": "Puebla",
+      "en_name": null,
+      "slug": "puebla",
+      "sort_order": 20
+    },
+    {
+      "country": "mexico",
+      "name": "Querétaro",
+      "en_name": null,
+      "slug": "queretaro",
+      "sort_order": 21
+    },
+    {
+      "country": "mexico",
+      "name": "Quintana Roo",
+      "en_name": null,
+      "slug": "quintana-roo",
+      "sort_order": 22
+    },
+    {
+      "country": "mexico",
+      "name": "San Luis Potosí",
+      "en_name": null,
+      "slug": "san-luis-potosi",
+      "sort_order": 23
+    },
+    {
+      "country": "mexico",
+      "name": "Sinaloa",
+      "en_name": null,
+      "slug": "sinaloa",
+      "sort_order": 24
+    },
+    {
+      "country": "mexico",
+      "name": "Sonora",
+      "en_name": null,
+      "slug": "sonora",
+      "sort_order": 25
+    },
+    {
+      "country": "mexico",
+      "name": "Tabasco",
+      "en_name": null,
+      "slug": "tabasco",
+      "sort_order": 26
+    },
+    {
+      "country": "mexico",
+      "name": "Tamaulipas",
+      "en_name": null,
+      "slug": "tamaulipas",
+      "sort_order": 27
+    },
+    {
+      "country": "mexico",
+      "name": "Tlaxcala",
+      "en_name": null,
+      "slug": "tlaxcala",
+      "sort_order": 28
+    },
+    {
+      "country": "mexico",
+      "name": "Veracruz de Ignacio de la Llave",
+      "en_name": "Veracruz",
+      "slug": "veracruz",
+      "sort_order": 29
+    },
+    {
+      "country": "mexico",
+      "name": "Yucatán",
+      "en_name": null,
+      "slug": "yucatan",
+      "sort_order": 30
+    },
+    {
+      "country": "mexico",
+      "name": "Zacatecas",
+      "en_name": null,
+      "slug": "zacatecas",
+      "sort_order": 31
+    }
+  ],
+  "counties": [
+    {
+      "state": "colorado",
+      "name": "Adams",
+      "en_name": null,
+      "slug": "adams-co",
+      "sort_order": 0
+    },
+    {
+      "state": "colorado",
+      "name": "Alamosa",
+      "en_name": null,
+      "slug": "alamosa-co",
+      "sort_order": 1
+    },
+    {
+      "state": "colorado",
+      "name": "Arapahoe",
+      "en_name": null,
+      "slug": "arapahoe-co",
+      "sort_order": 2
+    },
+    {
+      "state": "colorado",
+      "name": "Archuleta",
+      "en_name": null,
+      "slug": "archuleta-co",
+      "sort_order": 3
+    },
+    {
+      "state": "colorado",
+      "name": "Baca",
+      "en_name": null,
+      "slug": "baca-co",
+      "sort_order": 4
+    },
+    {
+      "state": "colorado",
+      "name": "Bent",
+      "en_name": null,
+      "slug": "bent-co",
+      "sort_order": 5
+    },
+    {
+      "state": "colorado",
+      "name": "Boulder",
+      "en_name": null,
+      "slug": "boulder-co",
+      "sort_order": 6
+    },
+    {
+      "state": "colorado",
+      "name": "Broomfield",
+      "en_name": null,
+      "slug": "broomfield-co",
+      "sort_order": 7
+    },
+    {
+      "state": "colorado",
+      "name": "Chaffee",
+      "en_name": null,
+      "slug": "chaffee-co",
+      "sort_order": 8
+    },
+    {
+      "state": "colorado",
+      "name": "Cheyenne",
+      "en_name": null,
+      "slug": "cheyenne-co",
+      "sort_order": 9
+    },
+    {
+      "state": "colorado",
+      "name": "Clear Creek",
+      "en_name": null,
+      "slug": "clear-creek-co",
+      "sort_order": 10
+    },
+    {
+      "state": "colorado",
+      "name": "Conejos",
+      "en_name": null,
+      "slug": "conejos-co",
+      "sort_order": 11
+    },
+    {
+      "state": "colorado",
+      "name": "Costilla",
+      "en_name": null,
+      "slug": "costilla-co",
+      "sort_order": 12
+    },
+    {
+      "state": "colorado",
+      "name": "Crowley",
+      "en_name": null,
+      "slug": "crowley-co",
+      "sort_order": 13
+    },
+    {
+      "state": "colorado",
+      "name": "Custer",
+      "en_name": null,
+      "slug": "custer-co",
+      "sort_order": 14
+    },
+    {
+      "state": "colorado",
+      "name": "Delta",
+      "en_name": null,
+      "slug": "delta-co",
+      "sort_order": 15
+    },
+    {
+      "state": "colorado",
+      "name": "Denver",
+      "en_name": null,
+      "slug": "denver-co",
+      "sort_order": 16
+    },
+    {
+      "state": "colorado",
+      "name": "Dolores",
+      "en_name": null,
+      "slug": "dolores-co",
+      "sort_order": 17
+    },
+    {
+      "state": "colorado",
+      "name": "Douglas",
+      "en_name": null,
+      "slug": "douglas-co",
+      "sort_order": 18
+    },
+    {
+      "state": "colorado",
+      "name": "Eagle",
+      "en_name": null,
+      "slug": "eagle-co",
+      "sort_order": 19
+    },
+    {
+      "state": "colorado",
+      "name": "El Paso",
+      "en_name": null,
+      "slug": "el-paso-co",
+      "sort_order": 20
+    },
+    {
+      "state": "colorado",
+      "name": "Elbert",
+      "en_name": null,
+      "slug": "elbert-co",
+      "sort_order": 21
+    },
+    {
+      "state": "colorado",
+      "name": "Fremont",
+      "en_name": null,
+      "slug": "fremont-co",
+      "sort_order": 22
+    },
+    {
+      "state": "colorado",
+      "name": "Garfield",
+      "en_name": null,
+      "slug": "garfield-co",
+      "sort_order": 23
+    },
+    {
+      "state": "colorado",
+      "name": "Gilpin",
+      "en_name": null,
+      "slug": "gilpin-co",
+      "sort_order": 24
+    },
+    {
+      "state": "colorado",
+      "name": "Grand",
+      "en_name": null,
+      "slug": "grand-co",
+      "sort_order": 25
+    },
+    {
+      "state": "colorado",
+      "name": "Gunnison",
+      "en_name": null,
+      "slug": "gunnison-co",
+      "sort_order": 26
+    },
+    {
+      "state": "colorado",
+      "name": "Hinsdale",
+      "en_name": null,
+      "slug": "hinsdale-co",
+      "sort_order": 27
+    },
+    {
+      "state": "colorado",
+      "name": "Huerfano",
+      "en_name": null,
+      "slug": "huerfano-co",
+      "sort_order": 28
+    },
+    {
+      "state": "colorado",
+      "name": "Jackson",
+      "en_name": null,
+      "slug": "jackson-co",
+      "sort_order": 29
+    },
+    {
+      "state": "colorado",
+      "name": "Jefferson",
+      "en_name": null,
+      "slug": "jefferson-co",
+      "sort_order": 30
+    },
+    {
+      "state": "colorado",
+      "name": "Kiowa",
+      "en_name": null,
+      "slug": "kiowa-co",
+      "sort_order": 31
+    },
+    {
+      "state": "colorado",
+      "name": "Kit Carson",
+      "en_name": null,
+      "slug": "kit-carson-co",
+      "sort_order": 32
+    },
+    {
+      "state": "colorado",
+      "name": "La Plata",
+      "en_name": null,
+      "slug": "la-plata-co",
+      "sort_order": 33
+    },
+    {
+      "state": "colorado",
+      "name": "Lake",
+      "en_name": null,
+      "slug": "lake-co",
+      "sort_order": 34
+    },
+    {
+      "state": "colorado",
+      "name": "Larimer",
+      "en_name": null,
+      "slug": "larimer-co",
+      "sort_order": 35
+    },
+    {
+      "state": "colorado",
+      "name": "Las Animas",
+      "en_name": null,
+      "slug": "las-animas-co",
+      "sort_order": 36
+    },
+    {
+      "state": "colorado",
+      "name": "Lincoln",
+      "en_name": null,
+      "slug": "lincoln-co",
+      "sort_order": 37
+    },
+    {
+      "state": "colorado",
+      "name": "Logan",
+      "en_name": null,
+      "slug": "logan-co",
+      "sort_order": 38
+    },
+    {
+      "state": "colorado",
+      "name": "Mesa",
+      "en_name": null,
+      "slug": "mesa-co",
+      "sort_order": 39
+    },
+    {
+      "state": "colorado",
+      "name": "Mineral",
+      "en_name": null,
+      "slug": "mineral-co",
+      "sort_order": 40
+    },
+    {
+      "state": "colorado",
+      "name": "Moffat",
+      "en_name": null,
+      "slug": "moffat-co",
+      "sort_order": 41
+    },
+    {
+      "state": "colorado",
+      "name": "Montezuma",
+      "en_name": null,
+      "slug": "montezuma-co",
+      "sort_order": 42
+    },
+    {
+      "state": "colorado",
+      "name": "Montrose",
+      "en_name": null,
+      "slug": "montrose-co",
+      "sort_order": 43
+    },
+    {
+      "state": "colorado",
+      "name": "Morgan",
+      "en_name": null,
+      "slug": "morgan-co",
+      "sort_order": 44
+    },
+    {
+      "state": "colorado",
+      "name": "Otero",
+      "en_name": null,
+      "slug": "otero-co",
+      "sort_order": 45
+    },
+    {
+      "state": "colorado",
+      "name": "Ouray",
+      "en_name": null,
+      "slug": "ouray-co",
+      "sort_order": 46
+    },
+    {
+      "state": "colorado",
+      "name": "Park",
+      "en_name": null,
+      "slug": "park-co",
+      "sort_order": 47
+    },
+    {
+      "state": "colorado",
+      "name": "Phillips",
+      "en_name": null,
+      "slug": "phillips-co",
+      "sort_order": 48
+    },
+    {
+      "state": "colorado",
+      "name": "Pitkin",
+      "en_name": null,
+      "slug": "pitkin-co",
+      "sort_order": 49
+    },
+    {
+      "state": "colorado",
+      "name": "Prowers",
+      "en_name": null,
+      "slug": "prowers-co",
+      "sort_order": 50
+    },
+    {
+      "state": "colorado",
+      "name": "Pueblo",
+      "en_name": null,
+      "slug": "pueblo-co",
+      "sort_order": 51
+    },
+    {
+      "state": "colorado",
+      "name": "Rio Blanco",
+      "en_name": null,
+      "slug": "rio-blanco-co",
+      "sort_order": 52
+    },
+    {
+      "state": "colorado",
+      "name": "Rio Grande",
+      "en_name": null,
+      "slug": "rio-grande-co",
+      "sort_order": 53
+    },
+    {
+      "state": "colorado",
+      "name": "Routt",
+      "en_name": null,
+      "slug": "routt-co",
+      "sort_order": 54
+    },
+    {
+      "state": "colorado",
+      "name": "Saguache",
+      "en_name": null,
+      "slug": "saguache-co",
+      "sort_order": 55
+    },
+    {
+      "state": "colorado",
+      "name": "San Juan",
+      "en_name": null,
+      "slug": "san-juan-co",
+      "sort_order": 56
+    },
+    {
+      "state": "colorado",
+      "name": "San Miguel",
+      "en_name": null,
+      "slug": "san-miguel-co",
+      "sort_order": 57
+    },
+    {
+      "state": "colorado",
+      "name": "Sedgwick",
+      "en_name": null,
+      "slug": "sedgwick-co",
+      "sort_order": 58
+    },
+    {
+      "state": "colorado",
+      "name": "Summit",
+      "en_name": null,
+      "slug": "summit-co",
+      "sort_order": 59
+    },
+    {
+      "state": "colorado",
+      "name": "Teller",
+      "en_name": null,
+      "slug": "teller-co",
+      "sort_order": 60
+    },
+    {
+      "state": "colorado",
+      "name": "Washington",
+      "en_name": null,
+      "slug": "washington-co",
+      "sort_order": 61
+    },
+    {
+      "state": "colorado",
+      "name": "Weld",
+      "en_name": null,
+      "slug": "weld-co",
+      "sort_order": 62
+    },
+    {
+      "state": "colorado",
+      "name": "Yuma",
+      "en_name": null,
+      "slug": "yuma-co",
+      "sort_order": 63
+    },
+    {
+      "state": "california",
+      "name": "Alameda",
+      "en_name": null,
+      "slug": "alameda-ca",
+      "sort_order": 0
+    },
+    {
+      "state": "california",
+      "name": "Alpine",
+      "en_name": null,
+      "slug": "alpine-ca",
+      "sort_order": 1
+    },
+    {
+      "state": "california",
+      "name": "Amador",
+      "en_name": null,
+      "slug": "amador-ca",
+      "sort_order": 2
+    },
+    {
+      "state": "california",
+      "name": "Butte",
+      "en_name": null,
+      "slug": "butte-ca",
+      "sort_order": 3
+    },
+    {
+      "state": "california",
+      "name": "Calaveras",
+      "en_name": null,
+      "slug": "calaveras-ca",
+      "sort_order": 4
+    },
+    {
+      "state": "california",
+      "name": "Colusa",
+      "en_name": null,
+      "slug": "colusa-ca",
+      "sort_order": 5
+    },
+    {
+      "state": "california",
+      "name": "Contra Costa",
+      "en_name": null,
+      "slug": "contra-costa-ca",
+      "sort_order": 6
+    },
+    {
+      "state": "california",
+      "name": "Del Norte",
+      "en_name": null,
+      "slug": "del-norte-ca",
+      "sort_order": 7
+    },
+    {
+      "state": "california",
+      "name": "El Dorado",
+      "en_name": null,
+      "slug": "el-dorado-ca",
+      "sort_order": 8
+    },
+    {
+      "state": "california",
+      "name": "Fresno",
+      "en_name": null,
+      "slug": "fresno-ca",
+      "sort_order": 9
+    },
+    {
+      "state": "california",
+      "name": "Glenn",
+      "en_name": null,
+      "slug": "glenn-ca",
+      "sort_order": 10
+    },
+    {
+      "state": "california",
+      "name": "Humboldt",
+      "en_name": null,
+      "slug": "humboldt-ca",
+      "sort_order": 11
+    },
+    {
+      "state": "california",
+      "name": "Imperial",
+      "en_name": null,
+      "slug": "imperial-ca",
+      "sort_order": 12
+    },
+    {
+      "state": "california",
+      "name": "Inyo",
+      "en_name": null,
+      "slug": "inyo-ca",
+      "sort_order": 13
+    },
+    {
+      "state": "california",
+      "name": "Kern",
+      "en_name": null,
+      "slug": "kern-ca",
+      "sort_order": 14
+    },
+    {
+      "state": "california",
+      "name": "Kings",
+      "en_name": null,
+      "slug": "kings-ca",
+      "sort_order": 15
+    },
+    {
+      "state": "california",
+      "name": "Lake",
+      "en_name": null,
+      "slug": "lake-ca",
+      "sort_order": 16
+    },
+    {
+      "state": "california",
+      "name": "Lassen",
+      "en_name": null,
+      "slug": "lassen-ca",
+      "sort_order": 17
+    },
+    {
+      "state": "california",
+      "name": "Los Angeles",
+      "en_name": null,
+      "slug": "los-angeles-ca",
+      "sort_order": 18
+    },
+    {
+      "state": "california",
+      "name": "Madera",
+      "en_name": null,
+      "slug": "madera-ca",
+      "sort_order": 19
+    },
+    {
+      "state": "california",
+      "name": "Marin",
+      "en_name": null,
+      "slug": "marin-ca",
+      "sort_order": 20
+    },
+    {
+      "state": "california",
+      "name": "Mariposa",
+      "en_name": null,
+      "slug": "mariposa-ca",
+      "sort_order": 21
+    },
+    {
+      "state": "california",
+      "name": "Mendocino",
+      "en_name": null,
+      "slug": "mendocino-ca",
+      "sort_order": 22
+    },
+    {
+      "state": "california",
+      "name": "Merced",
+      "en_name": null,
+      "slug": "merced-ca",
+      "sort_order": 23
+    },
+    {
+      "state": "california",
+      "name": "Modoc",
+      "en_name": null,
+      "slug": "modoc-ca",
+      "sort_order": 24
+    },
+    {
+      "state": "california",
+      "name": "Mono",
+      "en_name": null,
+      "slug": "mono-ca",
+      "sort_order": 25
+    },
+    {
+      "state": "california",
+      "name": "Monterey",
+      "en_name": null,
+      "slug": "monterey-ca",
+      "sort_order": 26
+    },
+    {
+      "state": "california",
+      "name": "Napa",
+      "en_name": null,
+      "slug": "napa-ca",
+      "sort_order": 27
+    },
+    {
+      "state": "california",
+      "name": "Nevada",
+      "en_name": null,
+      "slug": "nevada-ca",
+      "sort_order": 28
+    },
+    {
+      "state": "california",
+      "name": "Orange",
+      "en_name": null,
+      "slug": "orange-ca",
+      "sort_order": 29
+    },
+    {
+      "state": "california",
+      "name": "Placer",
+      "en_name": null,
+      "slug": "placer-ca",
+      "sort_order": 30
+    },
+    {
+      "state": "california",
+      "name": "Plumas",
+      "en_name": null,
+      "slug": "plumas-ca",
+      "sort_order": 31
+    },
+    {
+      "state": "california",
+      "name": "Riverside",
+      "en_name": null,
+      "slug": "riverside-ca",
+      "sort_order": 32
+    },
+    {
+      "state": "california",
+      "name": "Sacramento",
+      "en_name": null,
+      "slug": "sacramento-ca",
+      "sort_order": 33
+    },
+    {
+      "state": "california",
+      "name": "San Benito",
+      "en_name": null,
+      "slug": "san-benito-ca",
+      "sort_order": 34
+    },
+    {
+      "state": "california",
+      "name": "San Bernardino",
+      "en_name": null,
+      "slug": "san-bernardino-ca",
+      "sort_order": 35
+    },
+    {
+      "state": "california",
+      "name": "San Diego",
+      "en_name": null,
+      "slug": "san-diego-ca",
+      "sort_order": 36
+    },
+    {
+      "state": "california",
+      "name": "San Francisco",
+      "en_name": null,
+      "slug": "san-francisco-ca",
+      "sort_order": 37
+    },
+    {
+      "state": "california",
+      "name": "San Joaquin",
+      "en_name": null,
+      "slug": "san-joaquin-ca",
+      "sort_order": 38
+    },
+    {
+      "state": "california",
+      "name": "San Luis Obispo",
+      "en_name": null,
+      "slug": "san-luis-obispo-ca",
+      "sort_order": 39
+    },
+    {
+      "state": "california",
+      "name": "San Mateo",
+      "en_name": null,
+      "slug": "san-mateo-ca",
+      "sort_order": 40
+    },
+    {
+      "state": "california",
+      "name": "Santa Barbara",
+      "en_name": null,
+      "slug": "santa-barbara-ca",
+      "sort_order": 41
+    },
+    {
+      "state": "california",
+      "name": "Santa Clara",
+      "en_name": null,
+      "slug": "santa-clara-ca",
+      "sort_order": 42
+    },
+    {
+      "state": "california",
+      "name": "Santa Cruz",
+      "en_name": null,
+      "slug": "santa-cruz-ca",
+      "sort_order": 43
+    },
+    {
+      "state": "california",
+      "name": "Shasta",
+      "en_name": null,
+      "slug": "shasta-ca",
+      "sort_order": 44
+    },
+    {
+      "state": "california",
+      "name": "Sierra",
+      "en_name": null,
+      "slug": "sierra-ca",
+      "sort_order": 45
+    },
+    {
+      "state": "california",
+      "name": "Siskiyou",
+      "en_name": null,
+      "slug": "siskiyou-ca",
+      "sort_order": 46
+    },
+    {
+      "state": "california",
+      "name": "Solano",
+      "en_name": null,
+      "slug": "solano-ca",
+      "sort_order": 47
+    },
+    {
+      "state": "california",
+      "name": "Sonoma",
+      "en_name": null,
+      "slug": "sonoma-ca",
+      "sort_order": 48
+    },
+    {
+      "state": "california",
+      "name": "Stanislaus",
+      "en_name": null,
+      "slug": "stanislaus-ca",
+      "sort_order": 49
+    },
+    {
+      "state": "california",
+      "name": "Sutter",
+      "en_name": null,
+      "slug": "sutter-ca",
+      "sort_order": 50
+    },
+    {
+      "state": "california",
+      "name": "Tehama",
+      "en_name": null,
+      "slug": "tehama-ca",
+      "sort_order": 51
+    },
+    {
+      "state": "california",
+      "name": "Trinity",
+      "en_name": null,
+      "slug": "trinity-ca",
+      "sort_order": 52
+    },
+    {
+      "state": "california",
+      "name": "Tulare",
+      "en_name": null,
+      "slug": "tulare-ca",
+      "sort_order": 53
+    },
+    {
+      "state": "california",
+      "name": "Tuolumne",
+      "en_name": null,
+      "slug": "tuolumne-ca",
+      "sort_order": 54
+    },
+    {
+      "state": "california",
+      "name": "Ventura",
+      "en_name": null,
+      "slug": "ventura-ca",
+      "sort_order": 55
+    },
+    {
+      "state": "california",
+      "name": "Yolo",
+      "en_name": null,
+      "slug": "yolo-ca",
+      "sort_order": 56
+    },
+    {
+      "state": "california",
+      "name": "Yuba",
+      "en_name": null,
+      "slug": "yuba-ca",
+      "sort_order": 57
+    },
+    {
+      "state": "washington",
+      "name": "Adams",
+      "en_name": null,
+      "slug": "adams-wa",
+      "sort_order": 0
+    },
+    {
+      "state": "washington",
+      "name": "Asotin",
+      "en_name": null,
+      "slug": "asotin-wa",
+      "sort_order": 1
+    },
+    {
+      "state": "washington",
+      "name": "Benton",
+      "en_name": null,
+      "slug": "benton-wa",
+      "sort_order": 2
+    },
+    {
+      "state": "washington",
+      "name": "Chelan",
+      "en_name": null,
+      "slug": "chelan-wa",
+      "sort_order": 3
+    },
+    {
+      "state": "washington",
+      "name": "Clallam",
+      "en_name": null,
+      "slug": "clallam-wa",
+      "sort_order": 4
+    },
+    {
+      "state": "washington",
+      "name": "Clark",
+      "en_name": null,
+      "slug": "clark-wa",
+      "sort_order": 5
+    },
+    {
+      "state": "washington",
+      "name": "Columbia",
+      "en_name": null,
+      "slug": "columbia-wa",
+      "sort_order": 6
+    },
+    {
+      "state": "washington",
+      "name": "Cowlitz",
+      "en_name": null,
+      "slug": "cowlitz-wa",
+      "sort_order": 7
+    },
+    {
+      "state": "washington",
+      "name": "Douglas",
+      "en_name": null,
+      "slug": "douglas-wa",
+      "sort_order": 8
+    },
+    {
+      "state": "washington",
+      "name": "Ferry",
+      "en_name": null,
+      "slug": "ferry-wa",
+      "sort_order": 9
+    },
+    {
+      "state": "washington",
+      "name": "Franklin",
+      "en_name": null,
+      "slug": "franklin-wa",
+      "sort_order": 10
+    },
+    {
+      "state": "washington",
+      "name": "Garfield",
+      "en_name": null,
+      "slug": "garfield-wa",
+      "sort_order": 11
+    },
+    {
+      "state": "washington",
+      "name": "Grant",
+      "en_name": null,
+      "slug": "grant-wa",
+      "sort_order": 12
+    },
+    {
+      "state": "washington",
+      "name": "Grays Harbor",
+      "en_name": null,
+      "slug": "grays-harbor-wa",
+      "sort_order": 13
+    },
+    {
+      "state": "washington",
+      "name": "Island",
+      "en_name": null,
+      "slug": "island-wa",
+      "sort_order": 14
+    },
+    {
+      "state": "washington",
+      "name": "Jefferson",
+      "en_name": null,
+      "slug": "jefferson-wa",
+      "sort_order": 15
+    },
+    {
+      "state": "washington",
+      "name": "King",
+      "en_name": null,
+      "slug": "king-wa",
+      "sort_order": 16
+    },
+    {
+      "state": "washington",
+      "name": "Kitsap",
+      "en_name": null,
+      "slug": "kitsap-wa",
+      "sort_order": 17
+    },
+    {
+      "state": "washington",
+      "name": "Kittitas",
+      "en_name": null,
+      "slug": "kittitas-wa",
+      "sort_order": 18
+    },
+    {
+      "state": "washington",
+      "name": "Klickitat",
+      "en_name": null,
+      "slug": "klickitat-wa",
+      "sort_order": 19
+    },
+    {
+      "state": "washington",
+      "name": "Lewis",
+      "en_name": null,
+      "slug": "lewis-wa",
+      "sort_order": 20
+    },
+    {
+      "state": "washington",
+      "name": "Lincoln",
+      "en_name": null,
+      "slug": "lincoln-wa",
+      "sort_order": 21
+    },
+    {
+      "state": "washington",
+      "name": "Mason",
+      "en_name": null,
+      "slug": "mason-wa",
+      "sort_order": 22
+    },
+    {
+      "state": "washington",
+      "name": "Okanogan",
+      "en_name": null,
+      "slug": "okanogan-wa",
+      "sort_order": 23
+    },
+    {
+      "state": "washington",
+      "name": "Pacific",
+      "en_name": null,
+      "slug": "pacific-wa",
+      "sort_order": 24
+    },
+    {
+      "state": "washington",
+      "name": "Pend Oreille",
+      "en_name": null,
+      "slug": "pend-oreille-wa",
+      "sort_order": 25
+    },
+    {
+      "state": "washington",
+      "name": "Pierce",
+      "en_name": null,
+      "slug": "pierce-wa",
+      "sort_order": 26
+    },
+    {
+      "state": "washington",
+      "name": "San Juan",
+      "en_name": null,
+      "slug": "san-juan-wa",
+      "sort_order": 27
+    },
+    {
+      "state": "washington",
+      "name": "Skagit",
+      "en_name": null,
+      "slug": "skagit-wa",
+      "sort_order": 28
+    },
+    {
+      "state": "washington",
+      "name": "Skamania",
+      "en_name": null,
+      "slug": "skamania-wa",
+      "sort_order": 29
+    },
+    {
+      "state": "washington",
+      "name": "Snohomish",
+      "en_name": null,
+      "slug": "snohomish-wa",
+      "sort_order": 30
+    },
+    {
+      "state": "washington",
+      "name": "Spokane",
+      "en_name": null,
+      "slug": "spokane-wa",
+      "sort_order": 31
+    },
+    {
+      "state": "washington",
+      "name": "Stevens",
+      "en_name": null,
+      "slug": "stevens-wa",
+      "sort_order": 32
+    },
+    {
+      "state": "washington",
+      "name": "Thurston",
+      "en_name": null,
+      "slug": "thurston-wa",
+      "sort_order": 33
+    },
+    {
+      "state": "washington",
+      "name": "Wahkiakum",
+      "en_name": null,
+      "slug": "wahkiakum-wa",
+      "sort_order": 34
+    },
+    {
+      "state": "washington",
+      "name": "Walla Walla",
+      "en_name": null,
+      "slug": "walla-walla-wa",
+      "sort_order": 35
+    },
+    {
+      "state": "washington",
+      "name": "Whatcom",
+      "en_name": null,
+      "slug": "whatcom-wa",
+      "sort_order": 36
+    },
+    {
+      "state": "washington",
+      "name": "Whitman",
+      "en_name": null,
+      "slug": "whitman-wa",
+      "sort_order": 37
+    },
+    {
+      "state": "washington",
+      "name": "Yakima",
+      "en_name": null,
+      "slug": "yakima-wa",
+      "sort_order": 38
+    },
+    {
+      "state": "new-york",
+      "name": "Albany",
+      "en_name": null,
+      "slug": "albany-ny",
+      "sort_order": 0
+    },
+    {
+      "state": "new-york",
+      "name": "Allegany",
+      "en_name": null,
+      "slug": "allegany-ny",
+      "sort_order": 1
+    },
+    {
+      "state": "new-york",
+      "name": "Bronx",
+      "en_name": null,
+      "slug": "bronx-ny",
+      "sort_order": 2
+    },
+    {
+      "state": "new-york",
+      "name": "Broome",
+      "en_name": null,
+      "slug": "broome-ny",
+      "sort_order": 3
+    },
+    {
+      "state": "new-york",
+      "name": "Cattaraugus",
+      "en_name": null,
+      "slug": "cattaraugus-ny",
+      "sort_order": 4
+    },
+    {
+      "state": "new-york",
+      "name": "Cayuga",
+      "en_name": null,
+      "slug": "cayuga-ny",
+      "sort_order": 5
+    },
+    {
+      "state": "new-york",
+      "name": "Chautauqua",
+      "en_name": null,
+      "slug": "chautauqua-ny",
+      "sort_order": 6
+    },
+    {
+      "state": "new-york",
+      "name": "Chemung",
+      "en_name": null,
+      "slug": "chemung-ny",
+      "sort_order": 7
+    },
+    {
+      "state": "new-york",
+      "name": "Chenango",
+      "en_name": null,
+      "slug": "chenango-ny",
+      "sort_order": 8
+    },
+    {
+      "state": "new-york",
+      "name": "Clinton",
+      "en_name": null,
+      "slug": "clinton-ny",
+      "sort_order": 9
+    },
+    {
+      "state": "new-york",
+      "name": "Columbia",
+      "en_name": null,
+      "slug": "columbia-ny",
+      "sort_order": 10
+    },
+    {
+      "state": "new-york",
+      "name": "Cortland",
+      "en_name": null,
+      "slug": "cortland-ny",
+      "sort_order": 11
+    },
+    {
+      "state": "new-york",
+      "name": "Delaware",
+      "en_name": null,
+      "slug": "delaware-ny",
+      "sort_order": 12
+    },
+    {
+      "state": "new-york",
+      "name": "Dutchess",
+      "en_name": null,
+      "slug": "dutchess-ny",
+      "sort_order": 13
+    },
+    {
+      "state": "new-york",
+      "name": "Erie",
+      "en_name": null,
+      "slug": "erie-ny",
+      "sort_order": 14
+    },
+    {
+      "state": "new-york",
+      "name": "Essex",
+      "en_name": null,
+      "slug": "essex-ny",
+      "sort_order": 15
+    },
+    {
+      "state": "new-york",
+      "name": "Franklin",
+      "en_name": null,
+      "slug": "franklin-ny",
+      "sort_order": 16
+    },
+    {
+      "state": "new-york",
+      "name": "Fulton",
+      "en_name": null,
+      "slug": "fulton-ny",
+      "sort_order": 17
+    },
+    {
+      "state": "new-york",
+      "name": "Genesee",
+      "en_name": null,
+      "slug": "genesee-ny",
+      "sort_order": 18
+    },
+    {
+      "state": "new-york",
+      "name": "Greene",
+      "en_name": null,
+      "slug": "greene-ny",
+      "sort_order": 19
+    },
+    {
+      "state": "new-york",
+      "name": "Hamilton",
+      "en_name": null,
+      "slug": "hamilton-ny",
+      "sort_order": 20
+    },
+    {
+      "state": "new-york",
+      "name": "Herkimer",
+      "en_name": null,
+      "slug": "herkimer-ny",
+      "sort_order": 21
+    },
+    {
+      "state": "new-york",
+      "name": "Jefferson",
+      "en_name": null,
+      "slug": "jefferson-ny",
+      "sort_order": 22
+    },
+    {
+      "state": "new-york",
+      "name": "Kings",
+      "en_name": null,
+      "slug": "kings-ny",
+      "sort_order": 23
+    },
+    {
+      "state": "new-york",
+      "name": "Lewis",
+      "en_name": null,
+      "slug": "lewis-ny",
+      "sort_order": 24
+    },
+    {
+      "state": "new-york",
+      "name": "Livingston",
+      "en_name": null,
+      "slug": "livingston-ny",
+      "sort_order": 25
+    },
+    {
+      "state": "new-york",
+      "name": "Madison",
+      "en_name": null,
+      "slug": "madison-ny",
+      "sort_order": 26
+    },
+    {
+      "state": "new-york",
+      "name": "Monroe",
+      "en_name": null,
+      "slug": "monroe-ny",
+      "sort_order": 27
+    },
+    {
+      "state": "new-york",
+      "name": "Montgomery",
+      "en_name": null,
+      "slug": "montgomery-ny",
+      "sort_order": 28
+    },
+    {
+      "state": "new-york",
+      "name": "Nassau",
+      "en_name": null,
+      "slug": "nassau-ny",
+      "sort_order": 29
+    },
+    {
+      "state": "new-york",
+      "name": "New York",
+      "en_name": null,
+      "slug": "new-york-ny",
+      "sort_order": 30
+    },
+    {
+      "state": "new-york",
+      "name": "Niagara",
+      "en_name": null,
+      "slug": "niagara-ny",
+      "sort_order": 31
+    },
+    {
+      "state": "new-york",
+      "name": "Oneida",
+      "en_name": null,
+      "slug": "oneida-ny",
+      "sort_order": 32
+    },
+    {
+      "state": "new-york",
+      "name": "Onondaga",
+      "en_name": null,
+      "slug": "onondaga-ny",
+      "sort_order": 33
+    },
+    {
+      "state": "new-york",
+      "name": "Ontario",
+      "en_name": null,
+      "slug": "ontario-ny",
+      "sort_order": 34
+    },
+    {
+      "state": "new-york",
+      "name": "Orange",
+      "en_name": null,
+      "slug": "orange-ny",
+      "sort_order": 35
+    },
+    {
+      "state": "new-york",
+      "name": "Orleans",
+      "en_name": null,
+      "slug": "orleans-ny",
+      "sort_order": 36
+    },
+    {
+      "state": "new-york",
+      "name": "Oswego",
+      "en_name": null,
+      "slug": "oswego-ny",
+      "sort_order": 37
+    },
+    {
+      "state": "new-york",
+      "name": "Otsego",
+      "en_name": null,
+      "slug": "otsego-ny",
+      "sort_order": 38
+    },
+    {
+      "state": "new-york",
+      "name": "Putnam",
+      "en_name": null,
+      "slug": "putnam-ny",
+      "sort_order": 39
+    },
+    {
+      "state": "new-york",
+      "name": "Queens",
+      "en_name": null,
+      "slug": "queens-ny",
+      "sort_order": 40
+    },
+    {
+      "state": "new-york",
+      "name": "Rensselaer",
+      "en_name": null,
+      "slug": "rensselaer-ny",
+      "sort_order": 41
+    },
+    {
+      "state": "new-york",
+      "name": "Richmond",
+      "en_name": null,
+      "slug": "richmond-ny",
+      "sort_order": 42
+    },
+    {
+      "state": "new-york",
+      "name": "Rockland",
+      "en_name": null,
+      "slug": "rockland-ny",
+      "sort_order": 43
+    },
+    {
+      "state": "new-york",
+      "name": "St. Lawrence",
+      "en_name": null,
+      "slug": "st-lawrence-ny",
+      "sort_order": 44
+    },
+    {
+      "state": "new-york",
+      "name": "Saratoga",
+      "en_name": null,
+      "slug": "saratoga-ny",
+      "sort_order": 45
+    },
+    {
+      "state": "new-york",
+      "name": "Schenectady",
+      "en_name": null,
+      "slug": "schenectady-ny",
+      "sort_order": 46
+    },
+    {
+      "state": "new-york",
+      "name": "Schoharie",
+      "en_name": null,
+      "slug": "schoharie-ny",
+      "sort_order": 47
+    },
+    {
+      "state": "new-york",
+      "name": "Schuyler",
+      "en_name": null,
+      "slug": "schuyler-ny",
+      "sort_order": 48
+    },
+    {
+      "state": "new-york",
+      "name": "Seneca",
+      "en_name": null,
+      "slug": "seneca-ny",
+      "sort_order": 49
+    },
+    {
+      "state": "new-york",
+      "name": "Steuben",
+      "en_name": null,
+      "slug": "steuben-ny",
+      "sort_order": 50
+    },
+    {
+      "state": "new-york",
+      "name": "Suffolk",
+      "en_name": null,
+      "slug": "suffolk-ny",
+      "sort_order": 51
+    },
+    {
+      "state": "new-york",
+      "name": "Sullivan",
+      "en_name": null,
+      "slug": "sullivan-ny",
+      "sort_order": 52
+    },
+    {
+      "state": "new-york",
+      "name": "Tioga",
+      "en_name": null,
+      "slug": "tioga-ny",
+      "sort_order": 53
+    },
+    {
+      "state": "new-york",
+      "name": "Tompkins",
+      "en_name": null,
+      "slug": "tompkins-ny",
+      "sort_order": 54
+    },
+    {
+      "state": "new-york",
+      "name": "Ulster",
+      "en_name": null,
+      "slug": "ulster-ny",
+      "sort_order": 55
+    },
+    {
+      "state": "new-york",
+      "name": "Warren",
+      "en_name": null,
+      "slug": "warren-ny",
+      "sort_order": 56
+    },
+    {
+      "state": "new-york",
+      "name": "Washington",
+      "en_name": null,
+      "slug": "washington-ny",
+      "sort_order": 57
+    },
+    {
+      "state": "new-york",
+      "name": "Wayne",
+      "en_name": null,
+      "slug": "wayne-ny",
+      "sort_order": 58
+    },
+    {
+      "state": "new-york",
+      "name": "Westchester",
+      "en_name": null,
+      "slug": "westchester-ny",
+      "sort_order": 59
+    },
+    {
+      "state": "new-york",
+      "name": "Wyoming",
+      "en_name": null,
+      "slug": "wyoming-ny",
+      "sort_order": 60
+    },
+    {
+      "state": "new-york",
+      "name": "Yates",
+      "en_name": null,
+      "slug": "yates-ny",
+      "sort_order": 61
+    },
+    {
+      "state": "ciudad-de-mexico",
+      "name": "Álvaro Obregón",
+      "en_name": null,
+      "slug": "alvaro-obregon-cdmx",
+      "sort_order": 0
+    },
+    {
+      "state": "ciudad-de-mexico",
+      "name": "Azcapotzalco",
+      "en_name": null,
+      "slug": "azcapotzalco-cdmx",
+      "sort_order": 1
+    },
+    {
+      "state": "ciudad-de-mexico",
+      "name": "Benito Juárez",
+      "en_name": null,
+      "slug": "benito-juarez-cdmx",
+      "sort_order": 2
+    },
+    {
+      "state": "ciudad-de-mexico",
+      "name": "Coyoacán",
+      "en_name": null,
+      "slug": "coyoacan-cdmx",
+      "sort_order": 3
+    },
+    {
+      "state": "ciudad-de-mexico",
+      "name": "Cuajimalpa de Morelos",
+      "en_name": null,
+      "slug": "cuajimalpa-de-morelos-cdmx",
+      "sort_order": 4
+    },
+    {
+      "state": "ciudad-de-mexico",
+      "name": "Cuauhtémoc",
+      "en_name": null,
+      "slug": "cuauhtemoc-cdmx",
+      "sort_order": 5
+    },
+    {
+      "state": "ciudad-de-mexico",
+      "name": "Gustavo A. Madero",
+      "en_name": null,
+      "slug": "gustavo-a-madero-cdmx",
+      "sort_order": 6
+    },
+    {
+      "state": "ciudad-de-mexico",
+      "name": "Iztacalco",
+      "en_name": null,
+      "slug": "iztacalco-cdmx",
+      "sort_order": 7
+    },
+    {
+      "state": "ciudad-de-mexico",
+      "name": "Iztapalapa",
+      "en_name": null,
+      "slug": "iztapalapa-cdmx",
+      "sort_order": 8
+    },
+    {
+      "state": "ciudad-de-mexico",
+      "name": "La Magdalena Contreras",
+      "en_name": null,
+      "slug": "la-magdalena-contreras-cdmx",
+      "sort_order": 9
+    },
+    {
+      "state": "ciudad-de-mexico",
+      "name": "Miguel Hidalgo",
+      "en_name": null,
+      "slug": "miguel-hidalgo-cdmx",
+      "sort_order": 10
+    },
+    {
+      "state": "ciudad-de-mexico",
+      "name": "Milpa Alta",
+      "en_name": null,
+      "slug": "milpa-alta-cdmx",
+      "sort_order": 11
+    },
+    {
+      "state": "ciudad-de-mexico",
+      "name": "Tláhuac",
+      "en_name": null,
+      "slug": "tlahuac-cdmx",
+      "sort_order": 12
+    },
+    {
+      "state": "ciudad-de-mexico",
+      "name": "Tlalpan",
+      "en_name": null,
+      "slug": "tlalpan-cdmx",
+      "sort_order": 13
+    },
+    {
+      "state": "ciudad-de-mexico",
+      "name": "Venustiano Carranza",
+      "en_name": null,
+      "slug": "venustiano-carranza-cdmx",
+      "sort_order": 14
+    },
+    {
+      "state": "ciudad-de-mexico",
+      "name": "Xochimilco",
+      "en_name": null,
+      "slug": "xochimilco-cdmx",
+      "sort_order": 15
+    },
+    {
+      "state": "baja-california-sur",
+      "name": "Comondú",
+      "en_name": null,
+      "slug": "comondu-bcs",
+      "sort_order": 0
+    },
+    {
+      "state": "baja-california-sur",
+      "name": "La Paz",
+      "en_name": null,
+      "slug": "la-paz-bcs",
+      "sort_order": 1
+    },
+    {
+      "state": "baja-california-sur",
+      "name": "Loreto",
+      "en_name": null,
+      "slug": "loreto-bcs",
+      "sort_order": 2
+    },
+    {
+      "state": "baja-california-sur",
+      "name": "Los Cabos",
+      "en_name": null,
+      "slug": "los-cabos-bcs",
+      "sort_order": 3
+    },
+    {
+      "state": "baja-california-sur",
+      "name": "Mulegé",
+      "en_name": null,
+      "slug": "mulege-bcs",
+      "sort_order": 4
+    }
+  ]
+}

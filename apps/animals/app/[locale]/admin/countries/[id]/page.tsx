@@ -4,7 +4,7 @@ import { use, useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@repo/i18n/navigation';
 import { AdminForm, type FieldDef } from '@/components/admin/admin-form';
-import { countries, states } from '@/lib/admin-api';
+import { countries } from '@/lib/admin-api';
 import { useDerivedSlug } from '@/hooks/use-derived-slug';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
@@ -13,16 +13,18 @@ import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
 type Props = { params: Promise<{ locale: string; id: string }> };
 
 /**
- * One of the two shortest forms in this CMS, and deliberately so: a state is a
- * lookup row, not a content record. No gallery, no icon, no description pair - it
- * exists so that "Jalisco" is typed once and then chosen. Most authors will never
- * open this page; the panel on /admin/locations adds one inline.
+ * The top of the geography chain, and the shortest form in this CMS alongside the
+ * state one: a country is a lookup row, not a content record. No gallery, no
+ * icon, no description pair.
  *
- * The one relation it has is its **country**, and like a county's state that FK is
- * required and PROTECT on the API - so unlike most relation pickers in this CMS it
- * offers no "none" option.
+ * The one field a country has that a state does not is `code`, its ISO 3166-1
+ * alpha-2 identifier. It is **optional but unique**, so an emptied field has to
+ * be sent as a cleared value rather than as `""` - the API normalises a blank to
+ * null for exactly this reason (two countries saved with `""` would collide), but
+ * sending the empty string here would still round-trip through a validator that
+ * did not have to run.
  */
-export default function AdminStateFormPage({ params }: Props) {
+export default function AdminCountryFormPage({ params }: Props) {
   const { id } = use(params);
   const isNew = id === 'new';
   const t = useTranslations('Admin');
@@ -32,13 +34,10 @@ export default function AdminStateFormPage({ params }: Props) {
     name: '',
     en_name: '',
     slug: '',
-    country: '',
+    code: '',
     enabled: true,
   });
 
-  const [countryOptions, setCountryOptions] = useState<
-    { value: string | number; label: string }[]
-  >([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,28 +46,15 @@ export default function AdminStateFormPage({ params }: Props) {
   useDerivedSlug(isNew, values, setValues);
 
   useEffect(() => {
-    countries
-      .list()
-      .then((rows) =>
-        setCountryOptions(
-          rows.map((row) => ({ value: row.id as number, label: String(row.name ?? row.id) })),
-        ),
-      )
-      .catch(() => {
-        /* non-critical: the form still saves, just without a labelled picker */
-      });
-  }, []);
-
-  useEffect(() => {
     if (isNew) return;
-    states
+    countries
       .get(Number(id))
       .then((data) => {
         setValues({
           name: data.name ?? '',
           en_name: data.en_name ?? '',
           slug: data.slug ?? '',
-          country: data.country ?? '',
+          code: data.code ?? '',
           enabled: data.enabled ?? true,
         });
       })
@@ -81,12 +67,19 @@ export default function AdminStateFormPage({ params }: Props) {
     setError(null);
     setSuccess(null);
     try {
+      // `code` is nullable *and* unique on the API, so an emptied field means "no
+      // code", not an empty one - the same treatment `/admin/system` gives
+      // `contact_email`.
+      const payload = {
+        ...values,
+        code: String(values.code ?? '').trim() === '' ? null : values.code,
+      };
       if (isNew) {
-        const created = await states.create(values);
+        const created = await countries.create(payload);
         setSuccess(t('saved'));
-        router.replace(`/admin/states/${created.id}`);
+        router.replace(`/admin/countries/${created.id}`);
       } else {
-        await states.update(Number(id), values);
+        await countries.update(Number(id), payload);
         setSuccess(t('saved'));
       }
     } catch {
@@ -100,15 +93,7 @@ export default function AdminStateFormPage({ params }: Props) {
     { key: 'name', label: t('name'), required: true },
     { key: 'en_name', label: t('name') },
     { key: 'slug', label: t('slug'), type: 'slug', disabled: true },
-    // No `placeholder`, like the county form's state picker: the API refuses a
-    // state with no country, so "none" is not a choice to offer.
-    {
-      key: 'country',
-      label: t('country'),
-      type: 'select',
-      required: true,
-      options: countryOptions,
-    },
+    { key: 'code', label: t('countryCode') },
     { key: 'enabled', label: t('enabled'), type: 'boolean' },
   ];
 
@@ -125,12 +110,12 @@ export default function AdminStateFormPage({ params }: Props) {
         items={[
           { label: t('home'), href: '/' },
           { label: t('breadcrumbAdmin'), href: '/admin' },
-          { label: t('states'), href: '/admin/states' },
+          { label: t('countries'), href: '/admin/countries' },
           { label: isNew ? t('newItem') : t('edit') },
         ]}
       />
       <AdminForm
-        title={isNew ? `${t('newItem')} - ${t('states')}` : `${t('edit')} - ${t('states')}`}
+        title={isNew ? `${t('newItem')} - ${t('countries')}` : `${t('edit')} - ${t('countries')}`}
         editingName={isNew ? undefined : String(values.name ?? '')}
         isEditing={!isNew}
         fields={fields}

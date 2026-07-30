@@ -5,6 +5,8 @@ from .views import (
     CategoryImageDetailView,
     CategoryImageListCreateView,
     CategoryListCreateView,
+    CountryDetailView,
+    CountryListCreateView,
     CountyDetailView,
     CountyListCreateView,
     KindListView,
@@ -72,8 +74,13 @@ urlpatterns = [
     path('catalog/weather-conditions/<int:pk>/images/', WeatherConditionImageListCreateView.as_view(), name='weather-condition-image-list'),
     path('catalog/weather-conditions/<int:pk>/images/<int:img_pk>/', WeatherConditionImageDetailView.as_view(), name='weather-condition-image-detail'),
 
-    # Geography. No `/images/` pair on either: they are lookup tables, not
-    # picture models - a state has a name and nothing else to show.
+    # Geography, top down. No `/images/` pair on any of the three: they are
+    # lookup tables, not picture models - a state has a name and nothing else to
+    # show.
+    path('catalog/countries/', CountryListCreateView.as_view(), name='country-list'),
+    path('catalog/countries/<int:pk>/', CountryDetailView.as_view(), name='country-detail'),
+    path('catalog/countries/slug/<slug:slug>/', CountryDetailView.as_view(), name='country-detail-slug'),
+
     path('catalog/states/', StateListCreateView.as_view(), name='state-list'),
     path('catalog/states/<int:pk>/', StateDetailView.as_view(), name='state-detail'),
     path('catalog/states/slug/<slug:slug>/', StateDetailView.as_view(), name='state-detail-slug'),

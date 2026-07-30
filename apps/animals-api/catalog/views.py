@@ -14,6 +14,7 @@ from .models import (
     KIND_CHOICES,
     Category,
     CategoryImage,
+    Country,
     County,
     Location,
     LocationImage,
@@ -30,6 +31,8 @@ from .serializers import (
     CategoryImageWriteSerializer,
     CategorySerializer,
     CategoryWriteSerializer,
+    CountrySerializer,
+    CountryWriteSerializer,
     CountySerializer,
     CountyWriteSerializer,
     StateSerializer,
@@ -457,26 +460,83 @@ class WeatherConditionDetailView(CachedDetailView):
 
 
 # ---------------------------------------------------------------------------
-# Geography: states and counties
+# Geography: countries, states and counties
 # ---------------------------------------------------------------------------
 
+class CountryListCreateView(CachedListCreateView):
+    """GET (public) / POST (admin) countries. Query params: slug, code, search, include_disabled."""
+
+    model = Country
+    serializer_class = CountrySerializer
+    write_serializer_class = CountryWriteSerializer
+    list_cache_prefix = keys.COUNTRIES
+    detail_cache_prefix = keys.COUNTRY
+    prefetch_related = ('states',)
+
+    def filter_queryset(self, qs, request):
+        slug = request.query_params.get('slug')
+        if slug:
+            qs = qs.filter(slug=slug)
+        # Matched case-insensitively: the column is normalised to upper case on
+        # write, but a caller holding `?code=mx` from a URL should still find it.
+        code = request.query_params.get('code')
+        if code:
+            qs = qs.filter(code__iexact=code)
+        search = request.query_params.get('search')
+        if search:
+            qs = qs.filter(Q(name__icontains=search) | Q(en_name__icontains=search))
+        return qs
+
+
+class CountryDetailView(CachedDetailView):
+    """GET (public) / PATCH / DELETE (admin) one country, by pk or slug.
+
+    A DELETE of a country that still has states is refused with a 409 - the FK is
+    PROTECT, exactly as it is one level down, and `core/views.py` turns the
+    ProtectedError into a readable message rather than a 500.
+    """
+
+    model = Country
+    serializer_class = CountrySerializer
+    write_serializer_class = CountryWriteSerializer
+    list_cache_prefix = keys.COUNTRIES
+    detail_cache_prefix = keys.COUNTRY
+    prefetch_related = ('states',)
+
+
 class StateListCreateView(CachedListCreateView):
-    """GET (public) / POST (admin) states. Query params: slug, search, include_disabled."""
+    """GET (public) / POST (admin) states.
+
+    Query params: country (pk), country_slug, slug, search, include_disabled. The
+    `country` filter is what lets the CMS narrow a state picker to the country an
+    author has already chosen, exactly as `state` does for counties below.
+    """
 
     model = State
     serializer_class = StateSerializer
     write_serializer_class = StateWriteSerializer
     list_cache_prefix = keys.STATES
     detail_cache_prefix = keys.STATE
+    select_related = ('country',)
     prefetch_related = ('counties',)
 
     def filter_queryset(self, qs, request):
+        country = request.query_params.get('country')
+        if country:
+            qs = qs.filter(country_id=country)
+        country_slug = request.query_params.get('country_slug')
+        if country_slug:
+            qs = qs.filter(country__slug=country_slug)
         slug = request.query_params.get('slug')
         if slug:
             qs = qs.filter(slug=slug)
         search = request.query_params.get('search')
         if search:
-            qs = qs.filter(Q(name__icontains=search) | Q(en_name__icontains=search))
+            qs = qs.filter(
+                Q(name__icontains=search)
+                | Q(en_name__icontains=search)
+                | Q(country__name__icontains=search)
+            )
         return qs
 
 
@@ -493,15 +553,18 @@ class StateDetailView(CachedDetailView):
     write_serializer_class = StateWriteSerializer
     list_cache_prefix = keys.STATES
     detail_cache_prefix = keys.STATE
+    select_related = ('country',)
     prefetch_related = ('counties',)
 
 
 class CountyListCreateView(CachedListCreateView):
     """GET (public) / POST (admin) counties.
 
-    Query params: state (pk), state_slug, slug, search, include_disabled. The
-    `state` filter is what lets the CMS narrow a county picker to the state an
-    author has already chosen.
+    Query params: state (pk), state_slug, country (pk), country_slug, slug,
+    search, include_disabled. The `state` filter is what lets the CMS narrow a
+    county picker to the state an author has already chosen; `country` narrows the
+    same picker one level higher, and walks through the state the way the payload
+    reads it.
     """
 
     model = County
@@ -509,7 +572,9 @@ class CountyListCreateView(CachedListCreateView):
     write_serializer_class = CountyWriteSerializer
     list_cache_prefix = keys.COUNTIES
     detail_cache_prefix = keys.COUNTY
-    select_related = ('state',)
+    # `state__country` is joined too: the payload flattens the country read
+    # through the state, so without it every row costs an extra query.
+    select_related = ('state', 'state__country')
     prefetch_related = ('locations',)
 
     def filter_queryset(self, qs, request):
@@ -519,6 +584,12 @@ class CountyListCreateView(CachedListCreateView):
         state_slug = request.query_params.get('state_slug')
         if state_slug:
             qs = qs.filter(state__slug=state_slug)
+        country = request.query_params.get('country')
+        if country:
+            qs = qs.filter(state__country_id=country)
+        country_slug = request.query_params.get('country_slug')
+        if country_slug:
+            qs = qs.filter(state__country__slug=country_slug)
         slug = request.query_params.get('slug')
         if slug:
             qs = qs.filter(slug=slug)
@@ -528,6 +599,7 @@ class CountyListCreateView(CachedListCreateView):
                 Q(name__icontains=search)
                 | Q(en_name__icontains=search)
                 | Q(state__name__icontains=search)
+                | Q(state__country__name__icontains=search)
             )
         return qs
 
@@ -540,7 +612,7 @@ class CountyDetailView(CachedDetailView):
     write_serializer_class = CountyWriteSerializer
     list_cache_prefix = keys.COUNTIES
     detail_cache_prefix = keys.COUNTY
-    select_related = ('state',)
+    select_related = ('state', 'state__country')
     prefetch_related = ('locations',)
 
 
@@ -554,7 +626,7 @@ class LocationListCreateView(CachedListCreateView):
     POST /api/catalog/locations/ - create one (staff only).
 
     Query params: parent ('null' for top-level places), place_type, county,
-    state, featured, search, slug, include_disabled.
+    state, country, featured, search, slug, include_disabled.
     """
 
     model = Location
@@ -562,9 +634,10 @@ class LocationListCreateView(CachedListCreateView):
     write_serializer_class = LocationWriteSerializer
     list_cache_prefix = keys.LOCATIONS
     detail_cache_prefix = keys.LOCATION
-    # `county__state` is joined too: the payload flattens the state read
-    # through the county, so without it every row costs two extra queries.
-    select_related = ('parent', 'county', 'county__state')
+    # `county__state__country` is joined all the way up: the payload flattens the
+    # state read through the county *and* the country read through that state, so
+    # without it every row costs three extra queries.
+    select_related = ('parent', 'county', 'county__state', 'county__state__country')
     prefetch_related = ('sightings', 'images')
 
     def filter_queryset(self, qs, request):
@@ -584,6 +657,14 @@ class LocationListCreateView(CachedListCreateView):
         state = request.query_params.get('state')
         if state:
             qs = qs.filter(county__state_id=state)
+        # Nor a country - one link further up the same walk, so that a public
+        # page can ask for "every place in Mexico" without knowing its states.
+        country = request.query_params.get('country')
+        if country:
+            qs = qs.filter(county__state__country_id=country)
+        country_slug = request.query_params.get('country_slug')
+        if country_slug:
+            qs = qs.filter(county__state__country__slug=country_slug)
         slug = request.query_params.get('slug')
         if slug:
             qs = qs.filter(slug=slug)
@@ -596,6 +677,7 @@ class LocationListCreateView(CachedListCreateView):
                 | Q(en_name__icontains=search)
                 | Q(county__name__icontains=search)
                 | Q(county__state__name__icontains=search)
+                | Q(county__state__country__name__icontains=search)
             )
         return qs
 
@@ -608,9 +690,10 @@ class LocationDetailView(CachedDetailView):
     write_serializer_class = LocationWriteSerializer
     list_cache_prefix = keys.LOCATIONS
     detail_cache_prefix = keys.LOCATION
-    # `county__state` is joined too: the payload flattens the state read
-    # through the county, so without it every row costs two extra queries.
-    select_related = ('parent', 'county', 'county__state')
+    # `county__state__country` is joined all the way up: the payload flattens the
+    # state read through the county *and* the country read through that state, so
+    # without it every row costs three extra queries.
+    select_related = ('parent', 'county', 'county__state', 'county__state__country')
     prefetch_related = ('sightings', 'images')
 
 

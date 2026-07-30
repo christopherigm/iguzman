@@ -22,9 +22,6 @@ export default function AdminLocationsPage() {
           { key: 'county_name', label: t('county') },
           { key: 'state_name', label: t('state') },
           { key: 'sighting_count', label: t('sightings') },
-          // Worth a column of its own: it is the setting that decides whether a
-          // nesting site's exact coordinates are published.
-          { key: 'hide_precise_location', label: t('hidePreciseLocation') },
           { key: 'enabled', label: t('enabled') },
         ]}
       />

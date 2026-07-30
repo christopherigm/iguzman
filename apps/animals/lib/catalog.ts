@@ -314,9 +314,9 @@ export async function getFeaturedSpecies(limit = 10): Promise<Species[]> {
  *
  * Deliberately far narrower than the CMS's row: the flow renders these in a
  * dropdown, so it needs the name pair to label an option and the slug for nothing
- * at all yet. The geography behind a place (its county, and the state read through
- * that county) is the CMS's business - a contributor picks a place, they do not
- * file one.
+ * at all yet. The geography behind a place (its county, the state read through that
+ * county and the country read through that state) is the CMS's business - a
+ * contributor picks a place, they do not file one.
  */
 export interface ContributeLocation {
   id: number;

@@ -13,7 +13,7 @@
   background-color: color-mix(in srgb, var(--foreground) 6%, transparent);
 }
 
-/* A hairline between states, so the tree reads as groups without a box each. */
+/* A hairline between countries, so the tree reads as groups without a box each. */
 .geo__group + .geo__group {
   border-top: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
   padding-top: 12px;

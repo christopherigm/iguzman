@@ -14,6 +14,10 @@ export default function AdminStatesPage() {
       basePath="/admin/states"
       columns={[
         { key: 'name', label: t('name') },
+        // Flattened by the API, so the list reads "Colorado / Estados Unidos"
+        // without a second request - and tells a Durango in Mexico apart from a
+        // Durango in Colorado.
+        { key: 'country_name', label: t('country') },
         { key: 'slug', label: t('slug') },
         { key: 'county_count', label: t('counties') },
         // How many places sit in this state, counted two joins away - a place

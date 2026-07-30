@@ -365,15 +365,62 @@ class WeatherConditionImage(GalleryImage):
         return f'Image for {self.weather_condition} (#{self.sort_order})'
 
 
+class Country(Common):
+    """The country a state belongs to. The top of the geography chain.
+
+    The same kind of row as ``State`` and ``County`` - a name pair, a slug, an
+    order - and it exists for the same reason: so that "México" is typed once
+    and then *chosen*. What it adds over the two below it is ``code``, the ISO
+    3166-1 alpha-2 identifier, which is the one thing a country has that a slug
+    does not express: a stable key an external data set (iNaturalist, GBIF) is
+    already indexed by.
+
+    Neither ``County`` nor ``Location`` points at this table. A place reaches its
+    country the same way it reaches its state - by walking up
+    (``location.county.state.country``) - so the three can never disagree. See
+    ``County`` and ``Location.country``.
+    """
+
+    name = models.CharField(max_length=255)
+    en_name = models.CharField(max_length=255, null=True, blank=True)
+    slug = models.SlugField(max_length=255, unique=True)
+
+    # Nullable *and* unique, which Postgres and SQLite both read as "at most one
+    # row per code, and any number with none" - a country whose code nobody has
+    # filled in must not block the next one. Normalised to upper case in
+    # `clean()`, and an empty string is stored as NULL rather than as a second
+    # row colliding with every other blank.
+    code = models.CharField(
+        max_length=2, null=True, blank=True, unique=True,
+        help_text='ISO 3166-1 alpha-2 code (US, MX). Optional, but unique when set.',
+    )
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Country'
+        verbose_name_plural = 'Countries'
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+    def clean(self):
+        super().clean()
+        # '' would be a value that violates `unique` on the second blank row, so
+        # it is normalised away here rather than defended against at each caller.
+        self.code = (self.code or '').strip().upper() or None
+
+
 class State(Common):
     """A state (or province) a place sits in. A lookup table, not a content record.
 
-    Deliberately the lightest model in this app: a name pair, a slug and an
-    order. It exists for exactly one reason - so "Jalisco" is typed once and
-    then *chosen*, instead of being re-typed as free text on every location and
-    drifting into "jalisco", "Jalisco " and "Edo. de Jalisco". It has no
-    description, no photographs and no page of its own; if it ever needs those
-    it should become a picture model like the other four, not grow them here.
+    Deliberately one of the lightest models in this app: a name pair, a slug, an
+    order and the country it belongs to. It exists for exactly one reason - so
+    "Jalisco" is typed once and then *chosen*, instead of being re-typed as free
+    text on every location and drifting into "jalisco", "Jalisco " and "Edo. de
+    Jalisco". It has no description, no photographs and no page of its own; if it
+    ever needs those it should become a picture model like the other four, not
+    grow them here.
 
     ``Location`` does **not** point at this table. A place reaches its state
     through its county (``location.county.state``), which is what keeps the two
@@ -383,15 +430,30 @@ class State(Common):
     name = models.CharField(max_length=255)
     en_name = models.CharField(max_length=255, null=True, blank=True)
     slug = models.SlugField(max_length=255, unique=True)
+    # Required and PROTECT, for the same reason `County.state` is: a state with
+    # no country is the ambiguity this chain exists to remove (there is a Sonora
+    # in Mexico and a Sonoma in California, a Durango in both countries), and
+    # deleting a country still in use is refused rather than silently orphaning
+    # every state under it. The API turns that ProtectedError into a 409.
+    country = models.ForeignKey(
+        Country,
+        on_delete=models.PROTECT,
+        related_name='states',
+        help_text='The country this state belongs to. A location reaches its '
+                  'country through here, two tables further up.',
+    )
     sort_order = models.PositiveIntegerField(default=0)
 
     class Meta:
         verbose_name = 'State'
         verbose_name_plural = 'States'
-        ordering = ['sort_order', 'name']
+        # Grouped under its country first, exactly as County is grouped under its
+        # state - so a picker reads as the tree it is rather than one long list
+        # mixing two countries' states together.
+        ordering = ['country__sort_order', 'country__name', 'sort_order', 'name']
 
     def __str__(self):
-        return self.name
+        return f'{self.name}, {self.country.name}'
 
 
 class County(Common):
@@ -405,9 +467,10 @@ class County(Common):
     for a category that still has species.
 
     This is the only geography column ``Location`` stores. The state is read
-    back through ``county.state`` and flattened onto the payload, so the pair
-    cannot drift the way two independent FKs would; the cost is that a place
-    whose county is unknown carries no state either.
+    back through ``county.state`` - and the country through ``county.state
+    .country`` - and both are flattened onto the payload, so the three cannot
+    drift the way independent FKs would; the cost is that a place whose county is
+    unknown carries neither a state nor a country.
     """
 
     name = models.CharField(max_length=255)
@@ -425,10 +488,23 @@ class County(Common):
     class Meta:
         verbose_name = 'County'
         verbose_name_plural = 'Counties'
-        ordering = ['state__sort_order', 'state__name', 'sort_order', 'name']
+        ordering = [
+            'state__country__sort_order', 'state__country__name',
+            'state__sort_order', 'state__name', 'sort_order', 'name',
+        ]
 
     def __str__(self):
         return f'{self.name}, {self.state.name}'
+
+    @property
+    def country(self):
+        """The country this county is in, read through its state. Read-only.
+
+        Same derivation as ``Location.state`` and ``Location.country``, and here
+        for the same two callers: the Django admin's column, and the flattened
+        ``country_*`` fields on ``CountySerializer``.
+        """
+        return self.state.country if self.state_id else None
 
 
 PLACE_TYPE_CHOICES = [
@@ -541,6 +617,17 @@ class Location(Common):
         leave behind.
         """
         return self.county.state if self.county_id else None
+
+    @property
+    def country(self):
+        """The country this place is in, read two tables up. Read-only.
+
+        Same argument as ``state``, one link further: a place stores its county
+        and nothing else, so moving that county to another state moves the place's
+        state *and* its country with it and there is no third copy to correct.
+        """
+        state = self.state
+        return state.country if state else None
 
 
 class LocationImage(GalleryImage):

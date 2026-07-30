@@ -356,16 +356,23 @@ Seven rules that will bite:
   filters `kind !== 'image'` out of its list; the photos are the uploader above.
 - **Geography is a catalog, and it is edited where it is used.** A location no
   longer types its region and country as free text: it picks a **county**, and
-  the state comes back through that county (see animals-api's CLAUDE.md →
-  "Geography is a catalog"). `state` is read-only on a location payload, so the
-  county picker is the only geography control on the form - and each of its
-  options names its state, which is what tells two counties of the same name
-  apart. `GeographyPanel` (`admin/locations/geography-panel.tsx`) adds and
-  deletes both tables under the locations list, because a missing county is
-  discovered _mid-way through filing a place_; `/admin/states` and
-  `/admin/counties` are the full lists for a bulk rename. Deleting a state that
-  still has counties is a 409, and the panel says so rather than reporting a
-  generic failure.
+  the state comes back through that county - and the country through that state
+  (see animals-api's CLAUDE.md → "Geography is a catalog"). Both `state` and
+  `country` are read-only on a location payload, so the county picker is the only
+  geography control on the form - and each of its options names its state, which
+  is what tells two counties of the same name apart. `GeographyPanel`
+  (`admin/locations/geography-panel.tsx`) adds and deletes all three tables under
+  the locations list, because a missing county is discovered _mid-way through
+  filing a place_; `/admin/countries`, `/admin/states` and `/admin/counties` are
+  the full lists for a bulk rename. Deleting a country that still has states, or a
+  state that still has counties, is a 409, and the panel says so rather than
+  reporting a generic failure.
+- ⚠ **The panel's tree hides states with no counties behind a per-country
+  toggle**, and its state picker labels every option with its country. Both exist
+  because `seed_geography` seeds **83 states across two countries** and gives
+  counties to only six of them: rendering all 83 buried the handful an author
+  actually files against, and a bare "Durango" cannot say whether it means the one
+  in Mexico or the one in Colorado. Don't "simplify" either back to a flat list.
 - **The map picker is OpenStreetMap, and it cannot be Google.**
   `MapPicker` (`components/admin/map-picker.tsx`) sits above the Latitude field
   via `AdminForm`'s `slots` and writes _both_ coordinates at once. **Both** the

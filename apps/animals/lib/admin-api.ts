@@ -105,14 +105,23 @@ export const locations = resource('catalog/locations');
 
 /**
  * The geography lookups a place is filed under. Lightweight by design - a name
- * pair, a slug and an order, no photographs - so unlike every other catalog
- * resource these have no `*Images` child collection beside them.
+ * pair, a slug and an order, plus a country's ISO code, and no photographs - so
+ * unlike every other catalog resource these have no `*Images` child collection
+ * beside them.
  *
- * A county belongs to a state, and a **location stores only its county**: the
- * state comes back on the payload as `state`/`state_name`, read through that
- * county, and is not writable on a location. So a form that lets an author pick
- * a state is picking a filter, not a field.
+ * The chain is `country -> state -> county -> location`, and each level stores
+ * only its own parent: a **location stores only its county**, so the state comes
+ * back on the payload as `state`/`state_name` read through that county, and the
+ * country as `country`/`country_name` read one link further up. Neither is
+ * writable on a location. So a form that lets an author pick a state or a country
+ * is picking a filter, not a field - the one geography control on the location
+ * form is the county picker.
+ *
+ * Both FKs going up *are* writable and required on their own resource: a state
+ * must name its country and a county its state, and the API answers 400 without
+ * one.
  */
+export const countries = resource('catalog/countries');
 export const states = resource('catalog/states');
 export const counties = resource('catalog/counties');
 
