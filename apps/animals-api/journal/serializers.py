@@ -260,21 +260,25 @@ class SightingSerializer(serializers.ModelSerializer):
     media_count = serializers.SerializerMethodField()
 
     # ---- The credit line ----------------------------------------------------
-    # ⚠ `author_name` is published **raw**, and it has to be: this payload is
-    # cached under a key that varies only by the query params and the resolved
-    # disabled-visibility (see core/views.py), so a field that read differently
-    # for an administrator would be filled once by an admin request and then
-    # replayed to every anonymous visitor from the same cache entry.
+    # Derived from the filing account's first name; there is no stored
+    # `author_name` column any more. Two things make deriving it here safe, where
+    # blurring a sensitive coordinate at render time would not be:
     #
-    # That is why an anonymous contribution stores **no name at all** rather than
-    # storing one and hiding it here: `author_anonymous` is the contributor's
-    # answer to "credit me?", and the write path clears `author_name` when it is
-    # true. So there is nothing in this column to leak, and the flag travels only
-    # so the CMS can tell "chose not to be credited" from "nobody asked" - an
-    # administrator must not helpfully fill in a name against the first.
+    # * It does **not** vary by who is asking. This payload is cached under a key
+    #   that varies only by the query params and the resolved disabled-visibility
+    #   (see core/views.py), so anything reading differently for an administrator
+    #   would be filled once by an admin request and then replayed to every
+    #   anonymous visitor from the same entry. Every caller gets the same string
+    #   here, so there is nothing to replay wrongly.
+    # * It publishes a **first name and nothing else**. The FK itself - the id,
+    #   the email, the username - never leaves this API in any form.
     #
-    # `created_by` is never published in any form. It is the audit trail, and the
-    # key a contributor's own list is read by; nothing on the public site needs it.
+    # `author_anonymous` therefore suppresses the name at render rather than at
+    # write, which is what lets a contributor change their mind afterwards. It
+    # still travels on the payload so the CMS can tell "chose not to be credited"
+    # from "nobody was recorded" - an administrator must not read the first as an
+    # invitation to name them.
+    author_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Sighting
@@ -330,6 +334,19 @@ class SightingSerializer(serializers.ModelSerializer):
 
     def get_media_count(self, obj):
         return len(obj.media.all())
+
+    def get_author_name(self, obj):
+        """The contributor's first name, or ``''`` when there is nobody to credit.
+
+        Three cases collapse into the empty string, and the frontend renders all
+        three the same way - no byline at all: the contributor asked not to be
+        credited, the entry was authored in the CMS (``created_by`` is null), and
+        the account never filled in a first name (it is optional at sign-up).
+        Only the first name is published; never the surname, the email or the id.
+        """
+        if obj.author_anonymous or not obj.created_by_id:
+            return ''
+        return (obj.created_by.first_name or '').strip()
 
     # The *effective* coordinates: this sighting's own if it has them, otherwise
     # the location's centre - which is what a map pin needs and saves the
@@ -482,12 +499,14 @@ class SightingWriteSerializer(Base64ImagesMixin, serializers.ModelSerializer):
             'date', 'time', 'location', 'latitude', 'longitude',
             'season', 'weather', 'temperature_c', 'individuals',
             'image', 'fit', 'background_color', 'is_featured', 'enabled',
-            # The credit line is editable in the CMS as well as by a contributor:
-            # an author filing someone else's photograph credits them, and an
-            # administrator reviewing a contribution may need to correct a
-            # misspelt name. `created_by` and `is_contribution` are *not* here -
-            # they record how the row came to exist, which no edit should rewrite.
-            'author_name', 'author_anonymous',
+            # The credit line itself is not editable here - it is the filing
+            # account's own first name, so a misspelling is fixed on that account
+            # rather than overwritten on each entry it filed. Only the
+            # contributor's *answer* is, so a reviewer can honour a later "please
+            # don't credit me". `created_by` and `is_contribution` stay out
+            # entirely: they record how the row came to exist, which no edit
+            # should rewrite.
+            'author_anonymous',
         ]
 
     def validate_slug(self, value):
@@ -531,11 +550,12 @@ class SightingContributeSerializer(ContributionSerializer):
     * **``en_*``** twins - a contributor writes in one language, into the base
       column, and ``localized()`` falls back to it for every locale.
 
-    ``author_name`` and ``author_anonymous`` are the one thing it takes that the
-    catalog's contribute serializer does not: a species is a shared reference
-    record with nobody to credit, an encounter belongs to whoever was standing
-    there. Choosing anonymity **clears the name** rather than hiding it - the read
-    serializer explains why that has to happen here rather than at render time.
+    ``author_anonymous`` is the one thing it takes that the catalog's contribute
+    serializer does not: a species is a shared reference record with nobody to
+    credit, an encounter belongs to whoever was standing there. The **name** is
+    not asked for at all - it is the filing account's own first name, resolved
+    when the entry is read - so this flag is the whole of the credit question a
+    contributor is put.
     """
 
     photos = photos_field()
@@ -554,7 +574,7 @@ class SightingContributeSerializer(ContributionSerializer):
             'species', 'name', 'description', 'short_description',
             'date', 'time', 'location', 'latitude', 'longitude',
             'weather', 'temperature_c', 'individuals',
-            'author_name', 'author_anonymous', 'photos',
+            'author_anonymous', 'photos',
         ]
 
     def validate_species(self, value):
@@ -597,7 +617,6 @@ class SightingContributeSerializer(ContributionSerializer):
     def create(self, validated_data):
         photos = validated_data.pop('photos', [])
         anonymous = validated_data.pop('author_anonymous', False)
-        author_name = (validated_data.pop('author_name', '') or '').strip()
 
         species = validated_data['species']
         instance = Sighting(
@@ -608,8 +627,8 @@ class SightingContributeSerializer(ContributionSerializer):
                 fallback='sighting',
             ),
             author_anonymous=anonymous,
-            # Cleared, not merely unpublished - see SightingSerializer.
-            author_name='' if anonymous else author_name,
+            # The credit line comes from this account when the entry is read -
+            # there is no name to store here. See SightingSerializer.
             created_by=self._request_user(),
             is_contribution=True,
             enabled=False,

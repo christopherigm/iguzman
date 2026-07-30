@@ -12,7 +12,9 @@ import {
   getSpecies,
   getWeatherConditions,
   kindHref,
+  type ContributeLocation,
 } from "@/lib/catalog";
+import { isPlaceType } from "@/lib/place-types";
 import { localized } from "@/lib/i18n-field";
 import { SignInPrompt } from "@/components/contribute/sign-in-prompt";
 import { SightingContributeForm } from "./sighting-contribute-form";
@@ -74,6 +76,7 @@ export default async function ContributeSightingPage({
 
   const t = await getTranslations("Contribute");
   const tKinds = await getTranslations("Kinds");
+  const tPlaceTypes = await getTranslations("PlaceTypes");
 
   // Four independent reads, so they start together rather than in sequence.
   const [session, species, locations, weather] = await Promise.all([
@@ -93,6 +96,37 @@ export default async function ContributeSightingPage({
     "name",
     locale,
   );
+
+  /**
+   * How one place reads in the picker: `Lake Estes (Lake) - Larimer`.
+   *
+   * The picker is a search field rather than a dropdown, so an option's label is
+   * also the **haystack** it is matched against - a contributor who remembers the
+   * county but not the name of the pond types "Larimer" and finds it. It is what
+   * tells two places of the same name apart, too (this catalog has an "El Salto"
+   * waterfall and an "El Salto" village), the same job the CMS's county picker
+   * does by naming each option's state.
+   *
+   * Both extras are dropped when the place has neither, so a location filed
+   * before the geography catalog existed still reads as its bare name. The kind is
+   * translated rather than taken from the payload's `place_type_display`, which
+   * is English-only.
+   */
+  const placeLabel = (place: ContributeLocation): string => {
+    const name = localized(place, "name", locale) ?? place.slug;
+    const kind = isPlaceType(place.place_type)
+      ? tPlaceTypes(place.place_type)
+      : null;
+    const county = localized(
+      { name: place.county_name, en_name: place.county_en_name },
+      "name",
+      locale,
+    );
+
+    return [kind ? `${name} (${kind})` : name, county]
+      .filter(Boolean)
+      .join(" - ");
+  };
 
   const breadcrumbs = [
     { label: t("breadcrumbHome"), href: "/" },
@@ -132,17 +166,20 @@ export default async function ContributeSightingPage({
             speciesId={species.id}
             speciesName={speciesName}
             speciesHref={speciesHref}
-            // The credit line starts as the account's own name - the common case
-            // by far - and stays editable, because an author may be filing a
-            // friend's photograph.
-            defaultAuthorName={session.displayName}
-            // Sorted here rather than in the fetcher: the label is the
-            // *localized* name, so the order only exists once the locale has
-            // picked which half of each pair is shown.
+            // Display only - the API derives the published credit from this same
+            // account, so nothing here is submitted. `firstName`, not
+            // `displayName`: the latter is the navbar's 10-char label and falls
+            // back to the email, so it would promise a credit that the API,
+            // which publishes the first name or nothing, would not print.
+            creditName={session.firstName}
+            // Sorted here rather than in the fetcher: the label is *localized*,
+            // so the order only exists once the locale has picked which half of
+            // each pair is shown. It leads with the name, so this is still a
+            // by-name sort - the kind and county only break ties.
             locations={locations
               .map((place) => ({
                 value: String(place.id),
-                label: localized(place, "name", locale) ?? place.slug,
+                label: placeLabel(place),
               }))
               .sort((a, b) => a.label.localeCompare(b.label, locale))}
             weather={weather.map((condition) => ({

@@ -144,10 +144,11 @@ Two fill the *what* and two fill the *where*, and each pair is containers-first:
 
 - **`seed_reference`** creates the containers - seasons, weather conditions and
   (behind `--with-categories`) the sub-categories.
-- **`seed_species`** fills those sub-categories with **1,038 species**: the common
+- **`seed_species`** fills those sub-categories with **1,296 species**: the common
   animals, plants, fungi, seasons and weather of the six regions this journal
   covers (Colorado, California, New York, Washington, Mexico City, Baja California
-  Sur).
+  Sur). 1,038 of those are the generated iNaturalist ranking; the remaining **258
+  are a hand-written Colorado pass** - see "The Colorado pass" below.
 - **`seed_geography`** creates the geography lookups - **2 countries, 83 states and
   244 counties**. Both countries the journal covers, every US state plus the
   District of Columbia, all 32 Mexican federal entities, and counties for the six
@@ -177,14 +178,16 @@ python manage.py seed_locations --state colorado    # or one state's places
 
 Six things to know before touching them:
 
-- **`catalog/data/species.json` is generated, not hand-written.** The species
-  and their order come from iNaturalist's research-grade observation counts,
-  queried **per region so each region gets an equal vote** - otherwise
-  California, which has far more observers than the other five put together,
-  decides what counts as "common" everywhere. `sort_order` *is* that ranking.
-  Scientific names, families and the Spanish common names come from the same
-  source. Re-deriving it means re-running that query, not editing the file by
-  hand.
+- **The first 1,038 rows of `catalog/data/species.json` are generated, not
+  hand-written.** The species and their order come from iNaturalist's
+  research-grade observation counts, queried **per region so each region gets an
+  equal vote** - otherwise California, which has far more observers than the
+  other five put together, decides what counts as "common" everywhere.
+  `sort_order` *is* that ranking. Scientific names, families and the Spanish
+  common names come from the same source. Re-deriving that block means re-running
+  the query, not editing the file by hand. ⚠ The 258 Colorado rows appended after
+  it are the exception and **are** hand-written; re-running the query must append
+  to them rather than replace the file.
 - **The prose is written for this project and is English in both halves of each
   pair.** Nothing is copied from Wikipedia or any other source, deliberately: a
   share-alike licence would follow the text into every cached payload. English
@@ -240,20 +243,52 @@ kubectl -n animals exec deploy/animals-api -- \
   python manage.py shell -c 'from django.core.cache import cache; cache.clear()'
 ```
 
-### The five categories `seed_species` adds
+### The six categories `seed_species` adds
 
 `seed_reference`'s starter set predates them, so the seed file carries its own
 `categories` block and creates them itself - a database seeded before this
-landed would otherwise have nowhere to file a coyote. Four are `animal`
-(`carnivores`, `arachnids`, `marine-mammals`, `fish`) and one is `plant`
-(`cacti-succulents`). They exist because the starter set could not hold the
-most-observed species in these regions at all: Coyote outscores the top species
-of almost every other category, `Insecta` excludes every spider, and Grey Whale
-and Cardón are the signature sightings of Baja California Sur.
+landed would otherwise have nowhere to file a coyote. Five are `animal`
+(`carnivores`, `arachnids`, `marine-mammals`, `fish`, `hoofed-mammals`) and one
+is `plant` (`cacti-succulents`). They exist because the starter set could not
+hold the most-observed species in these regions at all: Coyote outscores the top
+species of almost every other category, `Insecta` excludes every spider, Grey
+Whale and Cardón are the signature sightings of Baja California Sur, and `deer`
+is Cervidae - it cannot hold a bighorn sheep, a pronghorn, a mountain goat or a
+bison, which is why `hoofed-mammals` was added with the Colorado pass.
 
 Adding a category is **data, not code** - the five `KIND_CHOICES` branches are
 structural and the frontend routes on them, but categories are rows, so a new
 one needs no migration and no frontend change.
+
+### The Colorado pass (the last 258 species)
+
+The generated ranking gave each of the six regions an equal vote but capped every
+category at 50, and the Rocky Mountain species lost those slots to coastal
+California and Baja ones. The result was a catalog missing the Blue Jay, the
+Mountain Chickadee, big sagebrush, and four of Colorado's six **official state
+species** - the bighorn sheep, the Lark Bunting, the greenback cutthroat trout,
+the Colorado hairstreak and the blue spruce (only blue grama and the blue
+columbine were already in). 258 rows were added by hand to close that gap across
+20 categories, birds most heavily.
+
+Four conventions hold, and a further pass should keep to them:
+
+- **Rows are appended, never re-ranked.** `sort_order` continues from each
+  category's previous maximum, so the iNaturalist ranking still occupies the top
+  of every category and no pre-existing row is touched - which is what keeps
+  `--update` unnecessary for anything that was already there. Several categories
+  are now well past 50 as a result; `birds` holds 138.
+- **A new row must not duplicate an existing `scientific_name`.** Three
+  candidates were already in the file under a different common name (Indian
+  ricegrass as "Sand Ricegrass", *Boletus rubriceps* as "Ruby Porcini",
+  *Gloeophyllum sepiarium* as "Conifer Mazegill"), and only a scientific-name
+  check catches that - the slugs and English names collide with nothing. The 30
+  rows with a `null` scientific name are the season and weather entries.
+- **The prose and the bilingual rule are unchanged** from the generated block:
+  written for this project, English in both halves of each pair, real Spanish
+  common names where one exists and the English name repeated where none does.
+- **Colorado only.** The other five regions were ranked fairly by the original
+  query and were deliberately left alone.
 
 ## Geography is a catalog: `Country` → `State` → `County` → `Location`
 
@@ -470,6 +505,20 @@ params. What a subclass gets, and must not undo:
 - **Sightings paginate** (`{count, limit, offset, results}`, capped at 100); the
   catalog lists return bare arrays. The feed grows without bound - the catalog
   does not.
+- ⚠ **Species is the exception, and it paginates _only when asked_.** It sets
+  `paginate_on_request = True` (`core/views.py`), so `?limit=`/`?offset=` switches
+  that one response to the same envelope while every other caller still gets a bare
+  array. Two reasons it is not simply `paginate = True`. A species row is the
+  most expensive one this API serializes - `sighting_count` and `last_seen` are
+  **per-object** queries, plus its gallery - and the CMS's list asks for every row
+  including the unpublished drafts, which is the read that got slow. But the public
+  grids read a whole category or the featured set in one request and would all have
+  to learn a new payload shape for a problem they do not have. So `/admin/species`
+  sends `?limit=50` and reaches the rest through `?search=` (which matches `name`,
+  `en_name`, `scientific_name` and `family`), and nothing else changed. The
+  consequence to keep in mind: **adding `limit` or `offset` to any species request
+  changes that caller's payload from an array to an envelope**, and the two are
+  separate cache entries (both params are part of the list key).
 
 ## Cache invalidation
 
@@ -775,31 +824,49 @@ Seven rules:
   `PROTECT` would leave the sighting holding a row nobody can delete); a sighting
   needs a place **or** a coordinate pair; and its date may not be in the future.
 
-### The credit line: `author_name`, `author_anonymous`, `created_by`
+### The credit line: derived from `created_by`, never stored
 
-`Sighting` gained three fields, and they are three different things:
+`Sighting` carries **two** author fields, and only one of them is written:
 
-| Field              | What it is                                                            | Published |
-| ------------------ | --------------------------------------------------------------------- | --------- |
-| `author_name`      | the **credit line** printed under the entry - free text, not a lookup | yes       |
-| `author_anonymous` | the contributor's answer to "credit me?"                              | yes       |
-| `created_by`       | the **account**, an audit trail and the contributor's own key         | **never** |
+| Field              | What it is                                                                | Published                    |
+| ------------------ | ------------------------------------------------------------------------- | ---------------------------- |
+| `created_by`       | the **account** - the audit trail, and the source of the credit line      | its `first_name`, nothing else |
+| `author_anonymous` | the contributor's answer to "credit me?"                                  | yes                          |
 
-⚠ **Choosing anonymity clears `author_name` at write time; it does not hide it at
-render time.** This payload is cached under a key that varies only by the query
-params and the resolved disabled-visibility, so a field that read differently for
-an administrator would be filled once by an admin request and then replayed to
-every anonymous visitor from the same entry - the identical trap as
-`Location.hide_precise_location`. Nothing is stored, so there is nothing to leak.
-`author_anonymous` travels anyway so the CMS can tell "chose not to be credited"
-from "nobody asked": a reviewer must not helpfully fill in a name against the
-first.
+There is **no `author_name` column** (migration `journal/0005_remove_sighting_author_name_and_more`
+drops it, and migrates nothing - see the note in the file). `author_name` is still
+on the read payload, but as a `SerializerMethodField` over
+`created_by.first_name`, so a contributor who corrects the name on their account
+corrects every entry they ever filed, and no typed-in name can drift from the
+account that actually filed it.
 
-`author_name` is free text rather than derived from `created_by` because an author
-filing a friend's photograph credits the friend - and it is editable in the CMS
-too, so a reviewer can fix a misspelling. `Species` carries only `created_by` and
-`is_contribution`: it is the shared reference record, and there is nobody on it to
-credit.
+⚠ **Anonymity is applied at render here, and that is only safe because this field
+does not vary by who is asking.** The payload is cached under a key that varies
+only by the query params and the resolved disabled-visibility, so anything reading
+differently for an administrator would be filled once by an admin request and then
+replayed to every anonymous visitor - the `Location.hide_precise_location` trap.
+Every caller gets the same string from `get_author_name`, so there is nothing to
+replay wrongly; and what it publishes is a **first name and nothing else** - the
+id, the email and the username never leave this API. The upside over the old
+clear-it-at-write-time rule is that a contributor can change their mind: flipping
+`author_anonymous` in the CMS now actually un-credits an entry.
+
+**Three different things read as an empty credit line**, and the frontend renders
+all three identically (no byline): the contributor chose anonymity, the entry was
+authored in the CMS (`created_by` is null - nothing sets it there, deliberately),
+and the account never filled in a first name, which is optional at sign-up.
+`author_anonymous` still travels so the CMS can tell the first from the others -
+a reviewer must not read "chose not to be credited" as an invitation to name them.
+
+⚠ **`_SIGHTING_SELECT` in `journal/views.py` joins `created_by` for this**, not for
+the audit trail. Drop it and a 100-entry feed page costs 100 extra queries. The map
+endpoint does not need it - `SightingMapSerializer` carries no credit.
+
+The trade, accepted deliberately: **an author can no longer credit someone else.**
+A CMS entry has nobody to credit at all, and the free-text field that used to cover
+"I am filing my friend's photograph" is gone. `Species` carries only `created_by`
+and `is_contribution` - it is the shared reference record, and there is nobody on
+it to credit.
 
 ## Endpoints
 
@@ -830,6 +897,7 @@ POST              /api/auth/token/reissue/
 GET    /api/catalog/kinds/                          the five branches + counts
 GET    /api/catalog/categories/                     ?kind= ?featured= ?search= ?slug=
 GET    /api/catalog/species/                        ?kind= ?category= ?category_slug= ?featured= ?search=
+                                                    ?limit= ?offset=   (envelope ONLY when either is sent)
 GET    /api/catalog/seasons/
 GET    /api/catalog/weather-conditions/
 GET    /api/catalog/countries/                      ?slug= ?code= ?search=
@@ -880,7 +948,7 @@ sees a draft they have not published yet.
 
 ## Tests
 
-`python manage.py test` (185 tests: `catalog`, `journal`, and `core` for the AI
+`python manage.py test` (194 tests: `catalog`, `journal`, and `core` for the AI
 endpoints, the permission model, the site-settings endpoint, the branded emails,
 the backup round-trip and the public contribute flow - the AI tests always mock
 the provider, so the suite spends nothing and needs no network). The contribute
@@ -898,6 +966,12 @@ It carries three factories, and **which one a write test uses is the assertion**
 for), and `make_visitor()` (signed in, may read, may not write). A permission
 change that quietly collapsed the two admins into one would still pass a suite
 that only ever used `make_staff`.
+
+⚠ `make_visitor()` fills `first_name` by default, because that is what a
+contribution's **credit line** is now derived from - a factory that left it blank
+would make every byline assertion pass against an empty string. Pass
+`first_name=''` for the account that skipped the field at sign-up, where it is
+optional.
 
 ⚠ `make_admin()` ends with `user.refresh_from_db()`, and that line is load-bearing:
 `users.signals` creates the profile during `create_user`, which populates the

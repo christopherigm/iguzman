@@ -9,6 +9,7 @@ resource and forget for the other.
 Imported by ``core/tests.py`` so ``manage.py test`` picks it up.
 """
 
+import json
 from datetime import date, timedelta
 
 from django.utils import timezone
@@ -268,52 +269,86 @@ class ContributeSlugTests(ContributeFixtureMixin, IsolatedMediaTestCase):
 
 
 class ContributeAuthorTests(ContributeFixtureMixin, IsolatedMediaTestCase):
-    """The credit line, and what "anonymous" actually stores."""
+    """The credit line: derived from the filing account, never stored."""
 
-    def test_the_credit_line_is_published_when_given(self):
+    def test_the_credit_line_is_the_contributors_first_name(self):
         self.sign_in_visitor()
-        response = self.post(SIGHTING_URL, self.sighting_body(author_name='Elena Ruiz'))
-        self.assertEqual(response.json()['author_name'], 'Elena Ruiz')
+        response = self.post(SIGHTING_URL, self.sighting_body())
+        self.assertEqual(response.json()['author_name'], 'Elena')
         self.assertFalse(response.json()['author_anonymous'])
 
-    def test_anonymous_clears_the_name_rather_than_hiding_it(self):
-        """Load-bearing: these payloads are cached under a key that does not vary
-        by who is asking, so a name that was merely withheld at render time would
-        be served to everyone from an administrator's cache entry. The name is
-        never stored, so there is nothing to leak."""
+    def test_a_name_sent_by_a_contributor_is_ignored(self):
+        """There is no writable credit line any more. A client that still sends
+        one must not be able to publish a name that is not its account's - which
+        is the whole reason the field was dropped rather than left as free text."""
         self.sign_in_visitor()
-        response = self.post(
-            SIGHTING_URL,
-            self.sighting_body(author_name='Elena Ruiz', author_anonymous=True),
-        )
+        response = self.post(SIGHTING_URL, self.sighting_body(author_name='Someone Else'))
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()['author_name'], 'Elena')
+        self.assertFalse(hasattr(Sighting.objects.get(pk=response.json()['id']), 'author_name'))
+
+    def test_anonymous_publishes_no_name(self):
+        """Suppressed at render, which is safe here where blurring a sensitive
+        coordinate at render time would not be: this does not vary by who is
+        asking, so the one cached payload is right for every caller."""
+        self.sign_in_visitor()
+        response = self.post(SIGHTING_URL, self.sighting_body(author_anonymous=True))
 
         self.assertEqual(response.json()['author_name'], '')
         self.assertTrue(response.json()['author_anonymous'])
-        row = Sighting.objects.get(pk=response.json()['id'])
-        self.assertEqual(row.author_name, '')
         # The account is still recorded - anonymity is about the credit line, not
         # about the audit trail.
-        self.assertEqual(row.created_by.username, 'visitor')
+        self.assertEqual(Sighting.objects.get(pk=response.json()['id']).created_by.username, 'visitor')
+
+    def test_an_account_with_no_first_name_gets_no_credit_line(self):
+        """`first_name` is optional at sign-up, so this is a real account, not a
+        corner case. It reads exactly like an entry nobody was credited on."""
+        self.make_visitor(username='quiet', first_name='')
+        self.client.login(username='quiet', password='just-looking-2026')
+        self.assertEqual(self.post(SIGHTING_URL, self.sighting_body()).json()['author_name'], '')
 
     def test_the_contributing_account_is_never_published(self):
+        """A first name is published; the id, the email and the username are not."""
         self.sign_in_visitor()
         payload = self.post(SIGHTING_URL, self.sighting_body()).json()
         self.assertNotIn('created_by', payload)
+        self.assertNotIn('visitor', json.dumps(payload))
 
-    def test_an_administrator_may_correct_a_credit_line(self):
+    def test_an_administrator_may_honour_a_later_request_for_anonymity(self):
+        """The name itself is not correctable here - it belongs to the account -
+        but the contributor's answer to "credit me?" still is."""
         self.sign_in_visitor()
-        pk = self.post(SIGHTING_URL, self.sighting_body(author_name='Elena Ruis')).json()['id']
+        pk = self.post(SIGHTING_URL, self.sighting_body()).json()['id']
         self.client.logout()
 
         self.make_admin()
         self.client.login(username='author', password='fieldnotes-2026')
         response = self.client.patch(
             f'/api/journal/sightings/{pk}/',
-            {'author_name': 'Elena Ruiz'},
+            {'author_anonymous': True},
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(Sighting.objects.get(pk=pk).author_name, 'Elena Ruiz')
+        self.assertEqual(response.json()['author_name'], '')
+
+    def test_a_cms_authored_entry_carries_no_credit_line(self):
+        """Nothing files it, so `created_by` is null and there is nobody to
+        credit - the deliberate trade for dropping the free-text field."""
+        self.make_admin()
+        self.client.login(username='author', password='fieldnotes-2026')
+        response = self.client.post(
+            '/api/journal/sightings/',
+            {
+                'species': self.species.pk,
+                'name': 'Anotado en el CMS',
+                'slug': 'anotado-en-el-cms',
+                'date': '2026-05-14',
+                'location': self.place.pk,
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()['author_name'], '')
 
 
 class ContributeValidationTests(ContributeFixtureMixin, IsolatedMediaTestCase):

@@ -60,13 +60,13 @@ export default function AdminSightingFormPage({ params }: Props) {
     en_short_description: "",
     description: "",
     en_description: "",
-    // The credit line. Editable here as well as in the public contribute flow:
-    // an author files someone else's photograph, and a reviewer may need to
-    // correct a contributor's spelling of their own name. `author_anonymous` is a
-    // *record* of the contributor's answer, not a display toggle - the API stores
-    // no name when it is on, so an administrator seeing it set must not helpfully
-    // fill one in.
-    author_name: "",
+    // The credit line itself is **not** editable here - and there is no field for
+    // it, because there is no column: the API publishes the first name on the
+    // account that filed the entry. A misspelling is fixed on that account, not
+    // overwritten on each entry it filed. What a reviewer can still change is the
+    // contributor's *answer* to "credit me?", so a later request for anonymity
+    // can be honoured - and seeing it already set is a record of that answer, not
+    // an invitation to name them.
     author_anonymous: false,
     is_featured: false,
     enabled: true,
@@ -148,7 +148,6 @@ export default function AdminSightingFormPage({ params }: Props) {
           en_short_description: data.en_short_description ?? "",
           description: data.description ?? "",
           en_description: data.en_description ?? "",
-          author_name: data.author_name ?? "",
           author_anonymous: data.author_anonymous ?? false,
           is_featured: data.is_featured ?? false,
           enabled: data.enabled ?? true,
@@ -255,7 +254,6 @@ export default function AdminSightingFormPage({ params }: Props) {
     { key: "en_short_description", label: t("excerpt"), type: "textarea" },
     { key: "description", label: t("story"), type: "textarea" },
     { key: "en_description", label: t("story"), type: "textarea" },
-    { key: "author_name", label: t("authorName") },
     { key: "author_anonymous", label: t("authorAnonymous"), type: "boolean" },
     { key: "is_featured", label: t("featured"), type: "boolean" },
     { key: "enabled", label: t("enabled"), type: "boolean" },

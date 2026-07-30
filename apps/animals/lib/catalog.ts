@@ -324,6 +324,12 @@ export interface ContributeLocation {
   en_name: string | null;
   slug: string;
   place_type: string | null;
+  // The county's name pair, which the API flattens onto every location payload
+  // (a place stores only its county; its state and country are read through it).
+  // Two places in this catalog can share a name - "El Salto" is a waterfall and a
+  // village - so the option a contributor picks from names the county as well.
+  county_name: string | null;
+  county_en_name: string | null;
   latitude: number | null;
   longitude: number | null;
 }

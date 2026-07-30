@@ -167,7 +167,17 @@ class SpeciesListCreateView(CachedListCreateView):
     POST /api/catalog/species/ - create one (staff only).
 
     Query params: kind, category (pk), category_slug, featured, search, slug,
-    include_disabled.
+    include_disabled, limit, offset.
+
+    **Paginates only when asked** (``paginate_on_request``): a bare read is still
+    the whole filtered list, as every public grid expects, but a caller that sends
+    ``?limit=`` or ``?offset=`` gets ``{count, limit, offset, results}``. The
+    catalog is not a feed, so it does not paginate the way the journal does - but
+    it has grown past the point where the CMS's one flat table is a cheap request:
+    a species row costs two queries of its own (``sighting_count`` and
+    ``last_seen`` are per-object) plus its gallery, and the admin list asks for
+    every row including the unpublished ones. So the CMS asks for 50 and searches
+    the rest through ``?search=``.
     """
 
     model = Species
@@ -177,6 +187,11 @@ class SpeciesListCreateView(CachedListCreateView):
     detail_cache_prefix = keys.SPECIES
     select_related = ('category',)
     prefetch_related = ('images', 'sightings')
+    paginate_on_request = True
+    # Only reached by a caller that sent `offset` without `limit`; the CMS always
+    # sends both. Matched to the CMS page size rather than left at the shared 20,
+    # so such a request pages the way the one real consumer does.
+    default_page_size = 50
 
     def filter_queryset(self, qs, request):
         # `kind` lives on the category - the one path to a species' branch. See

@@ -34,8 +34,6 @@ export default function AdminSightingsPage() {
         { key: 'species_name', label: t('species') },
         { key: 'name', label: t('title') },
         { key: 'location_name', label: t('location') },
-        { key: 'media_count', label: t('media') },
-        { key: 'is_featured', label: t('featured') },
         { key: 'enabled', label: t('enabled') },
       ]}
     />

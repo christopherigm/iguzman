@@ -79,34 +79,30 @@ class Sighting(RegularPicture):
     )
 
     # ---- Who filed it -------------------------------------------------------
-    # Two separate things, deliberately. `created_by` is the *account*: an audit
-    # trail and the key the contributor's own pending list is read by, and it is
-    # never published. `author_name` is the **credit line** the public site prints
-    # under the entry, which is a free-text field precisely because it may not be
-    # the account's own name - an author filing a friend's photograph credits the
-    # friend. `author_anonymous` suppresses the credit without erasing either.
+    # `created_by` is now *both* things: the audit trail, and the source of the
+    # credit line the public site prints under the entry. There is no stored
+    # `author_name` any more - the read serializer derives the credit from this
+    # account's `first_name`, so an account that corrects its own name corrects
+    # every entry it filed, and no free-text name can drift from the account that
+    # actually filed it.
+    #
+    # The FK itself is still never published: what leaves this API is a first
+    # name, never an id, an email or a username.
     created_by = models.ForeignKey(
         'auth.User',
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
         related_name='contributed_sightings',
-        help_text='The account that filed this entry. Null for entries authored '
-                  'in the CMS before contributions existed, and for any the '
-                  'author was deleted from. Never published.',
-    )
-    author_name = models.CharField(
-        max_length=120,
-        blank=True,
-        default='',
-        help_text='The credit line rendered under the entry ("Photographed by "). '
-                  'Free text, not the account name: an author may be crediting '
-                  'someone else. Blank means no credit is shown.',
+        help_text='The account that filed this entry, and whose first name is '
+                  'published as the credit line. Null for entries authored in '
+                  'the CMS and for any whose author was deleted - those carry no '
+                  'credit line at all.',
     )
     author_anonymous = models.BooleanField(
         default=False,
-        help_text='Withhold the credit line. The name and account are still '
-                  'stored - this only stops them being published.',
+        help_text="Withhold the credit line. The account is still recorded - this "
+                  "only stops the contributor's first name being published.",
     )
 
     # ---- Moderation ---------------------------------------------------------

@@ -4,6 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { AdminEntityList, type Column } from "./admin-entity-list";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+import { Box } from "@repo/ui/core-elements/box";
+import { Button } from "@repo/ui/core-elements/button";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { TextInput } from "@repo/ui/core-elements/text-input";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
+import type { PageRequest, ResourcePage } from "@/lib/admin-api";
 import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
 import { useReorder } from "@/hooks/use-reorder";
 
@@ -11,9 +17,17 @@ type Row = Record<string, unknown>;
 
 interface EntityResource {
   list: (query?: string) => Promise<Row[]>;
+  /**
+   * One page of the list, for a resource whose table has outgrown one request.
+   * Required by `searchable`; without it the page reads the whole list as before.
+   */
+  listPage?: (params: PageRequest) => Promise<ResourcePage>;
   update: (pk: number, data: Row) => Promise<Row>;
   remove: (pk: number) => Promise<void>;
 }
+
+/** How long a keystroke waits before it becomes a request. */
+const SEARCH_DEBOUNCE_MS = 300;
 
 interface EntityListPageProps {
   /** `Admin` message key for this entity's plural name - the page title. */
@@ -29,6 +43,17 @@ interface EntityListPageProps {
    * nowhere to store.
    */
   sortable?: boolean;
+  /**
+   * Read the list a page at a time, with a search box above the table. Needs
+   * `resource.listPage`; ignored without it.
+   *
+   * Only for a list long enough that fetching it whole is the page's cost -
+   * `/admin/species`. A short list is better served by having every row on
+   * screen, where the browser's own Find works on it.
+   */
+  searchable?: boolean;
+  /** Rows per page in `searchable` mode. The API caps a page at 100. */
+  pageSize?: number;
 }
 
 /**
@@ -50,17 +75,35 @@ export function EntityListPage({
   columns,
   basePath,
   sortable = true,
+  searchable = false,
+  pageSize = 50,
 }: EntityListPageProps) {
   const t = useTranslations("Admin");
   const [items, setItems] = useState<Row[]>([]);
+  // How many rows *match*, which in paged mode is not how many are on screen.
+  // A full read is its own count.
+  const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  // A re-query once the table is already up. Kept apart from `loading` so a
+  // settled keystroke draws a progress bar over the rows instead of replacing
+  // them with "Loading…" - the list would flash away on every search.
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // What is in the box, and the term that has actually been sent. They differ
+  // for the length of the debounce.
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
+
+  const listPage = resource.listPage;
+  const paged = searchable && listPage !== undefined;
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      setItems(await resource.list());
+      const rows = await resource.list();
+      setItems(rows);
+      setCount(rows.length);
     } catch {
       setError(t("errorLoad"));
     } finally {
@@ -69,10 +112,70 @@ export function EntityListPage({
   }, [resource, t]);
 
   useEffect(() => {
+    if (paged) return;
     void (async () => {
       await load();
     })();
-  }, [load]);
+  }, [paged, load]);
+
+  useEffect(() => {
+    if (!paged) return;
+    const handle = setTimeout(() => setQuery(search.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [paged, search]);
+
+  // The first page, and a fresh first page on every settled search term.
+  useEffect(() => {
+    if (!paged || !listPage) return;
+    // A term typed faster than the API answers puts two requests in flight; the
+    // flag is what stops the slower one landing on top of the newer results.
+    let cancelled = false;
+    void (async () => {
+      setBusy(true);
+      setError(null);
+      try {
+        const page = await listPage({ search: query, limit: pageSize, offset: 0 });
+        if (cancelled) return;
+        setItems(page.results);
+        setCount(page.count);
+      } catch {
+        if (!cancelled) setError(t("errorLoad"));
+      } finally {
+        if (!cancelled) {
+          setBusy(false);
+          setLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [paged, listPage, query, pageSize, t]);
+
+  const loadMore = async () => {
+    if (!listPage) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const page = await listPage({
+        search: query,
+        limit: pageSize,
+        offset: items.length,
+      });
+      // Merged by id rather than appended blind: a row deleted from an earlier
+      // page between the two requests slides the window back by one, and the
+      // last row already on screen would arrive a second time.
+      setItems((prev) => {
+        const seen = new Set(prev.map((row) => row.id));
+        return [...prev, ...page.results.filter((row) => !seen.has(row.id))];
+      });
+      setCount(page.count);
+    } catch {
+      setError(t("errorLoad"));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleToggleEnabled = useToggleEnabled(resource.update, setItems, setError);
   const handleReorder = useReorder(resource.update, setItems, setError);
@@ -81,6 +184,7 @@ export function EntityListPage({
     try {
       await resource.remove(id);
       setItems((prev) => prev.filter((i) => i.id !== id));
+      setCount((prev) => Math.max(0, prev - 1));
     } catch (err) {
       // A 409 is the API refusing to delete a row something else still points
       // at - a category that still has species, a species that still has
@@ -90,6 +194,14 @@ export function EntityListPage({
       setError(status === 409 ? t("errorDeleteProtected") : t("errorDelete"));
     }
   };
+
+  // Sort mode persists each row's `sort_order` as its index in the list on
+  // screen, so it is only offered when that index is the row's real position:
+  // the loaded rows are the *first* N of the API's own order, which a partial
+  // page is not the whole of and a search result is no part of. Renumbering
+  // either would reorder the catalog by what happened to be visible.
+  const wholeListLoaded = items.length >= count;
+  const canReorder = sortable && !query && wholeListLoaded;
 
   return (
     <>
@@ -107,9 +219,41 @@ export function EntityListPage({
         basePath={basePath}
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
-        onReorder={sortable ? handleReorder : undefined}
+        onReorder={canReorder ? handleReorder : undefined}
         loading={loading}
         error={error}
+        emptyMessage={paged && query ? t("noMatches") : undefined}
+        toolbar={
+          paged ? (
+            <Box flexDirection="column" gap={4} maxWidth={420}>
+              <TextInput
+                type="search"
+                label={t("searchList")}
+                value={search}
+                onChange={setSearch}
+                helperText={t("searchListHint")}
+              />
+              {busy && <ProgressBar />}
+            </Box>
+          ) : undefined
+        }
+        footer={
+          paged && count > 0 ? (
+            <Box alignItems="center" gap={16} flexWrap="wrap">
+              <Typography variant="caption" color="var(--muted, #6b7280)">
+                {t("showingOf", { shown: items.length, total: count })}
+              </Typography>
+              {!wholeListLoaded && (
+                <Button
+                  text={t("loadMore")}
+                  size="md"
+                  disabled={busy}
+                  onClick={() => void loadMore()}
+                />
+              )}
+            </Box>
+          ) : undefined
+        }
       />
     </>
   );

@@ -30,18 +30,20 @@ import {
  *   filed without - and all three are what the API refuses without: a date, a place
  *   or a pin, and at least one photo.
  * 2. **The rest of the outing** - a title, the story, the time, the weather, the
- *   temperature, how many were seen, and the credit line. Every field optional.
+ *   temperature, how many were seen, and whether to be credited. Every field
+ *   optional.
  * 3. **Review** - everything as it will be filed, then submit.
  *
  * Three things worth knowing:
  *
  * - **The season is not asked for.** `Sighting.save()` derives it from the date,
  *   which is the right answer for a contributor and one fewer dropdown.
- * - **The credit line defaults to the account's own name and stays editable**,
- *   because an author may be filing a friend's photograph - and the anonymity switch
- *   is a *decision*, not a display toggle: the API stores no name at all when it is
- *   on (see animals-api's `SightingSerializer` on why that has to happen at write
- *   time rather than at render time).
+ * - **The credit line is not typed here, and cannot be.** It is the first name on
+ *   the account, resolved by the API when the entry is *read* (animals-api's
+ *   `SightingSerializer.get_author_name`), so all this flow asks is the yes/no:
+ *   `author_anonymous`. `creditName` below is that same first name, passed in for
+ *   the review row alone - it is never submitted, and sending it would change
+ *   nothing.
  * - **Only the base half of each text pair is written**, as in the species flow.
  */
 
@@ -49,7 +51,12 @@ interface Props {
   speciesId: number;
   speciesName: string;
   speciesHref: string;
-  defaultAuthorName: string;
+  /**
+   * The account's first name, for display only - what the API will publish as
+   * this entry's credit. Empty for an account that skipped the field at sign-up,
+   * which is a real case and reads as no credit at all.
+   */
+  creditName: string;
   locations: SelectOption[];
   weather: SelectOption[];
 }
@@ -70,7 +77,7 @@ export function SightingContributeForm({
   speciesId,
   speciesName,
   speciesHref,
-  defaultAuthorName,
+  creditName,
   locations,
   weather,
 }: Props) {
@@ -79,7 +86,6 @@ export function SightingContributeForm({
   const [stage, setStage] = useState(1);
   const [draft, setDraft] = useState(EMPTY);
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
-  const [authorName, setAuthorName] = useState(defaultAuthorName);
   const [anonymous, setAnonymous] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +97,6 @@ export function SightingContributeForm({
   const reset = () => {
     setDraft(EMPTY);
     setPhotos([]);
-    setAuthorName(defaultAuthorName);
     setAnonymous(false);
     setStage(1);
     setDone(false);
@@ -134,9 +139,6 @@ export function SightingContributeForm({
         if (Number.isInteger(parsed) && parsed > 0)
           submission.individuals = parsed;
       }
-      // Sent even when anonymous: the API is what clears it, and letting the
-      // browser decide would mean two places deciding what anonymity means.
-      if (authorName.trim()) submission.author_name = authorName.trim();
 
       await contributeSighting(submission);
       setDone(true);
@@ -187,11 +189,19 @@ export function SightingContributeForm({
           />
 
           {locations.length > 0 ? (
-            <Select
+            // A `TextInput` with `options` rather than a `Select`: the place list
+            // is the whole catalog of places, which is the one field here that is
+            // long enough to scroll past what you are looking for. Typing filters
+            // it (name, kind of place or county - see `placeLabel` in the page),
+            // and the value it emits is still the location id a `Select` would
+            // have emitted.
+            <TextInput
               label={t("place")}
               value={draft.location}
               onChange={(value) => set("location", value)}
               options={locations}
+              noOptionsLabel={t("noPlaceMatches")}
+              helperText={t("placeHelp")}
             />
           ) : (
             // A site with no places catalogued yet. The flow cannot be completed -
@@ -274,9 +284,11 @@ export function SightingContributeForm({
             helperText={t("individualsHelp")}
           />
 
-          {/* The credit line. Its own block rather than another field in the run
-              above, because the switch changes what the field *means* - and once
-              anonymity is on there is nothing for the field to say. */}
+          {/* The credit line. Its own block rather than another row in the run
+              above, because it is not a field: the name comes from the account,
+              so all there is to decide is whether to be named at all. The line
+              above the switch is what makes that legible - without it the switch
+              would be asking about a name the contributor never sees. */}
           <Box
             flexDirection="column"
             gap={12}
@@ -289,12 +301,17 @@ export function SightingContributeForm({
             </Typography>
 
             {!anonymous && (
-              <TextInput
-                label={t("authorName")}
-                value={authorName}
-                onChange={setAuthorName}
-                helperText={t("authorNameHelp")}
-              />
+              <Typography
+                variant="caption"
+                color="var(--foreground-muted, #6b7280)"
+              >
+                {/* An account that skipped the optional first name at sign-up
+                    gets no credit line at all, so it is told that rather than
+                    shown an empty one. */}
+                {creditName
+                  ? t("creditFromAccount", { name: creditName })
+                  : t("creditNoAccountName")}
+              </Typography>
             )}
 
             <Box alignItems="center" gap={10}>
@@ -338,7 +355,7 @@ export function SightingContributeForm({
             />
             <ReviewRow
               label={t("credit")}
-              value={anonymous ? t("anonymousValue") : authorName}
+              value={anonymous ? t("anonymousValue") : creditName}
               fallback={t("notGiven")}
             />
             <ReviewRow label={t("sightingName")} value={draft.name} />

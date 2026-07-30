@@ -63,20 +63,22 @@ export interface Sighting {
   /**
    * The credit line to render under the entry - who was standing there.
    *
-   * An **empty string** when there is nobody to credit, which covers both cases
-   * and deliberately does not distinguish them here: an entry authored in the CMS
-   * that nobody put a name on, and a contribution whose author chose anonymity.
-   * The API stores no name at all in the second case rather than storing one and
-   * hiding it, because these payloads are cached under a key that does not vary by
-   * who is asking (see animals-api's `SightingSerializer`) - so there is nothing
-   * in this field to leak, and nothing for the frontend to decide.
+   * **Read-only and derived**, not a stored field: it is the first name on the
+   * account that filed the entry (animals-api's `SightingSerializer`). Nothing in
+   * this app writes it, and the contribute flow does not ask for it.
+   *
+   * An **empty string** when there is nobody to credit, and the three cases are
+   * deliberately not distinguished here - the site renders all of them as no
+   * byline at all: the contributor chose anonymity, the entry was authored in the
+   * CMS (so no account filed it), or that account never filled in a first name,
+   * which is optional at sign-up.
    */
   author_name: string;
   /**
    * Whether the contributor asked not to be credited. Renders nothing on the
    * public site - `author_name` is already empty when it is true. It travels so
-   * the CMS can tell "chose not to be credited" from "nobody asked", which is what
-   * stops a reviewer helpfully filling in a name against the first.
+   * the CMS can tell "chose not to be credited" from "nobody was recorded", which
+   * is what stops a reviewer reading the first as an invitation to name them.
    */
   author_anonymous: boolean;
   /** Whether the entry arrived through the public contribute flow. */

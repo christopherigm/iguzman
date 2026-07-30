@@ -48,8 +48,11 @@ export interface SightingSubmission {
   weather?: number;
   temperature_c?: number;
   individuals?: number;
-  /** The credit line. Cleared by the API when `author_anonymous` is true. */
-  author_name?: string;
+  /**
+   * Whether to withhold the credit line. There is no name to send: the API
+   * publishes the first name on the filing account, so this flag is the whole of
+   * the credit question.
+   */
   author_anonymous?: boolean;
   photos: ContributePhotos;
 }

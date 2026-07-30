@@ -220,20 +220,21 @@ Nine things that will bite:
   is simply an unpublished row in `/admin/species` or `/admin/sightings`. Do not
   add a parallel "submissions" surface without deciding it is worth a second
   place for a reviewer to look.
-- ⚠ **Anonymity clears the name; it does not hide it.** `author_anonymous` is the
-  contributor's _answer_, and the API stores no `author_name` at all when it is
-  set - because these payloads are cached under a key that does **not** vary by
-  who is asking (the same reasoning as `Location.hide_precise_location`), so a
-  name merely withheld at render time would be filled once by an administrator's
-  request and then replayed to everyone. The frontend therefore renders
-  `author_name` whenever it is non-empty and never consults the flag.
-  `created_by` is the audit trail and is never published in any form.
-- **The credit line is one check, not two.** An entry authored in the CMS that
-  nobody named and a contribution filed anonymously both arrive with
-  `author_name: ""`, which is why `sightings-section.tsx` and the sighting page
-  each test that one field. It renders as a **byline under the card's title** (it
-  is whose account of the encounter this is, not a recorded condition) and as the
-  **last row of the detail page's `FactsCard`**.
+- ⚠ **The credit line is not a field anybody types - it is the account's first
+  name.** There is no `author_name` column on the API any more; the payload's
+  `author_name` is derived from `created_by.first_name` when the entry is read, so
+  neither the contribute flow nor the CMS form has an input for it (see
+  animals-api's CLAUDE.md → "The credit line"). `author_anonymous` is the whole of
+  what a contributor is asked, and the API applies it at render - which is safe
+  only because the answer is the same for every caller. The frontend renders
+  `author_name` whenever it is non-empty and **never consults the flag**.
+- **The credit line is one check, not three.** Anonymity, an entry authored in the
+  CMS (nobody filed it), and a contributor whose account has no first name all
+  arrive as `author_name: ""`, and all three render as no byline - which is why
+  `sightings-section.tsx` and the sighting page each test that one field and
+  nothing else. It renders as a **byline under the card's title** (it is whose
+  account of the encounter this is, not a recorded condition) and as the **last
+  row of the detail page's `FactsCard`**.
 - ⚠ **The FAB is shown to everyone, and `/contribute` is deliberately _not_ in
   `proxy.ts`'s `protectedPrefixes`.** That is how a reader discovers the site
   takes contributions at all, so an anonymous press is the expected path - the
@@ -268,6 +269,19 @@ Nine things that will bite:
   A contributor writes in one language and `localized()` falls back to the base
   column for every locale whose twin is blank, so the entry reads correctly in all
   five. Filling the twin is an authoring job, and the CMS has a translate button.
+- **The place picker is a search field, and its option labels are the haystack.**
+  It is `@repo/ui`'s `TextInput` with `options` (a combobox) rather than a
+  `Select`, because this one list is the whole catalog of places - the only field
+  in either flow long enough to scroll past what you are looking for. Each option
+  reads `Lake Estes (Lake) - Larimer`: name, kind of place, county. That is not
+  decoration - the label is what typing is matched against, so "Larimer" finds a
+  pond whose name the contributor has forgotten, and it is what tells this
+  catalog's two "El Salto"s apart (the same job the CMS's county picker does by
+  naming each option's state). The kind is translated through the `PlaceTypes`
+  namespace from `lib/place-types.ts` - the API's `place_type_display` is
+  English-only - and a place with neither kind nor county still reads as its bare
+  name. The **weather** field stays a plain `Select`: fourteen conditions is where
+  a phone's native picker beats a dropdown of ours.
 - **A sighting picks a place; it does not drop a pin.** The API takes either and
   refuses neither, but an entry with no coordinates of its own inherits its
   place's centre, which is the documented normal case and enough for every map the
@@ -323,12 +337,30 @@ read as one system. Where it diverges, it is because this backend is different:
 - **No clone.** animals-api has no clone endpoint, so `AdminForm`'s clone dialog
   was removed on the way in rather than left as unreachable code.
 
-Seven rules that will bite:
+Eight rules that will bite:
 
 - **Every list read sends `?include_disabled=true`.** The CMS is where an author
   finds the draft they have not published yet. The API ignores the param for
   anyone who is not an administrator, so it cannot leak - but it does mean the
   list you see here is not the list the public site sees.
+- ⚠ **`/admin/species` is the one list read a page at a time, and its search box
+  is a _server_ search.** The catalog outgrew one request - a species row costs
+  the API two queries of its own (`sighting_count`, `last_seen`) plus its gallery,
+  and this page asks for the drafts as well - so `EntityListPage` takes
+  `searchable` and reads 50 rows through `species.listPage`, with a "Load more"
+  button for the next 50. Four consequences. The box is **not** a filter on the
+  rows in the table: every settled keystroke (300 ms) is a request, which is the
+  point - a term has to reach the species that is _not_ on screen. It matches
+  `name`, `en_name`, `scientific_name` and `family`, because that is what
+  animals-api's `search` param matches; narrowing it is a change on that side, not
+  here. **Sort mode disappears while a search is active or while the list is
+  partial**, and must stay gone: `useReorder` persists each row's `sort_order` as
+  its index in the list on screen, which is only the row's real position when the
+  loaded rows are the first N of the API's own order - renumbering a search result
+  would reorder the public species grid by whatever happened to match. And
+  `species.list` (the whole catalog, unpaginated) is still what the **sighting
+  form's** species picker uses: that one is a combobox and has nothing to filter
+  against until every row is in it.
 - **Photos are the gallery, and the first one is the record's main image.**
   Categories, species, sightings, locations, seasons and weather conditions have
   no single-cover uploader any more: `EntityGalleryField`

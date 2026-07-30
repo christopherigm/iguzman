@@ -20,14 +20,26 @@ when this file itself has been corrected.
 
 Where the data comes from
 -------------------------
-``catalog/data/species.json`` is generated, not hand-typed. The species in it and
-their order are taken from iNaturalist's research-grade observation counts for
-the six regions above, queried per region so each one gets an equal vote - a
-species common in Colorado *and* Mexico City outranks one that is merely
-abundant in California, which has far more observers than the rest. Scientific
-names, families and the Spanish common names come from the same source;
-``sort_order`` is that popularity ranking, so the top of every category is what
-an author is most likely to file first.
+``catalog/data/species.json`` is in two halves. The **first 1,038 rows are
+generated, not hand-typed**: the species in them and their order are taken from
+iNaturalist's research-grade observation counts for the six regions above,
+queried per region so each one gets an equal vote - a species common in Colorado
+*and* Mexico City outranks one that is merely abundant in California, which has
+far more observers than the rest. Scientific names, families and the Spanish
+common names come from the same source; ``sort_order`` is that popularity
+ranking, so the top of every category is what an author is most likely to file
+first.
+
+That query capped each category at 50, and the Rocky Mountain species lost those
+slots to coastal California and Baja ones - the file had no Blue Jay, no Mountain
+Chickadee, no big sagebrush and four of Colorado's six official state species
+missing. The **remaining 258 rows are a hand-written Colorado pass** closing that
+gap, appended per category so the generated ranking still holds the top of each
+one and no pre-existing row moved. It also adds the sixth category,
+``hoofed-mammals``: ``deer`` is Cervidae and cannot hold a bighorn sheep. Two
+rules for extending it - append rather than re-rank, and check a candidate's
+``scientific_name`` against the whole file, since several species are already
+present under an unexpected common name.
 
 The descriptions are written for this project. Nothing here is copied from
 Wikipedia or any other source, deliberately: the site publishes this text under
@@ -133,9 +145,10 @@ class Command(BaseCommand):
             'updated': 0, 'skipped': 0, 'unknown_categories': set(),
         }
 
-        # The five categories this data set adds. `seed_reference` predates them,
+        # The six categories this data set adds. `seed_reference` predates them,
         # so they are created here rather than there - a database seeded before
-        # this landed would otherwise have nowhere to file a coyote.
+        # this landed would otherwise have nowhere to file a coyote, and one
+        # seeded before the Colorado pass has nowhere to file a bighorn sheep.
         for row in payload.get('categories', []):
             if row['kind'] not in kinds:
                 continue

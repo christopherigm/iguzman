@@ -4,6 +4,8 @@ import {
   useState,
   useRef,
   useId,
+  useEffect,
+  useMemo,
   CSSProperties,
   InputHTMLAttributes,
 } from "react";
@@ -88,6 +90,35 @@ const toDisplayValue = (raw: string, format: TextInputFormat): string => {
 };
 
 /**
+ * One choice in an autocomplete field.
+ *
+ * Structurally identical to `Select`'s `SelectOption` - so an options array
+ * already built for a `Select` can be handed straight to `TextInput` - but
+ * declared here rather than imported, so a plain text field does not pull
+ * `Select` and its stylesheet into every bundle that has one.
+ */
+export interface TextInputOption {
+  value: string;
+  label: string;
+}
+
+/** Nothing to match against. Module-level so the identity is stable. */
+const NO_OPTIONS: TextInputOption[] = [];
+
+/**
+ * Fold a label and a query to the same shape before matching them:
+ * case-insensitive **and** diacritic-insensitive, so `cienaga` finds `Ciénaga`.
+ * The catalogs these lists come from are authored with accents and nobody types
+ * them into a search box.
+ */
+const foldForSearch = (text: string): string =>
+  text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+/**
  * Native HTML input attributes we forward, minus the keys that overlap with
  * `UIComponentProps` or are overridden by `TextInputProps`.
  */
@@ -139,6 +170,26 @@ export interface TextInputProps extends UIComponentProps, NativeInputProps {
   error?: boolean | string;
   /** Hint rendered beneath the field. Superseded by a string `error`. */
   helperText?: string;
+  /**
+   * Turns the field into a **searchable select** (a combobox): the reader types
+   * to filter this list and picks from it, and `value` / `onChange` then speak
+   * in option *values* exactly as `Select`'s do - the field itself displays the
+   * matching option's `label`.
+   *
+   * Matching is case- and accent-insensitive across the whole label. Text that
+   * matches no option is discarded when the field loses focus (the value is an
+   * option value, so free text has nothing to be); emptying the field is how a
+   * selection is cleared, and emits `onChange("")`.
+   *
+   * Mutually exclusive with `format` and `type`, both of which are ignored while
+   * options are present.
+   */
+  options?: TextInputOption[];
+  /**
+   * Row shown when the query matches no option. **Defaults to English** - this
+   * package is i18n-agnostic, so a localised app passes its own.
+   */
+  noOptionsLabel?: string;
   /** React 19 ref - no forwardRef needed. */
   ref?: React.Ref<HTMLInputElement | HTMLTextAreaElement>;
 }
@@ -170,6 +221,12 @@ export interface TextInputProps extends UIComponentProps, NativeInputProps {
  * <TextInput label="Password" type="password" helperText="At least 8 characters" />
  * <TextInput label="Password" type="password" error="This password is too common." />
  * ```
+ *
+ * @example Autocomplete - a `Select` you can type into. `value`/`onChange` are option values.
+ * ```tsx
+ * // place === "42", displayed as "Lake Estes (Lake) - Larimer"
+ * <TextInput label="Place" options={places} value={place} onChange={setPlace} />
+ * ```
  */
 export const TextInput = ({
   value,
@@ -182,6 +239,8 @@ export const TextInput = ({
   placeholder,
   error,
   helperText,
+  options,
+  noOptionsLabel = "No matches",
   className,
   id,
   ref,
@@ -202,17 +261,60 @@ export const TextInput = ({
   // The stored value is always the raw, unformatted value.
   const currentValue = isControlled ? value : internalValue;
 
+  // ── Autocomplete (combobox) ────────────────────────────────────
+  // A combobox is a text field whose *value* is an option value, so it renders
+  // as plain text and every mask is off the table.
+  const isCombobox = options !== undefined;
+  const comboOptions = options ?? NO_OPTIONS;
+
+  // What the reader has typed. `null` means "not typing", and the field then
+  // shows the selected option's label - which is what a closed select looks like.
+  const [query, setQuery] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [highlight, setHighlight] = useState(0);
+
+  const selectedLabel = useMemo(
+    () =>
+      comboOptions.find((option) => option.value === currentValue)?.label ?? "",
+    [comboOptions, currentValue],
+  );
+
+  const matches = useMemo(() => {
+    const folded = foldForSearch(query ?? "");
+    // An untouched field lists everything: the reader opened a select, and only
+    // typing turns it into a search.
+    if (!folded) return comboOptions;
+    return comboOptions.filter((option) =>
+      foldForSearch(option.label).includes(folded),
+    );
+  }, [comboOptions, query]);
+
+  // Clamped rather than reset on every filter, so narrowing the query cannot
+  // point the highlight past the end of the list it is drawn over.
+  const activeIndex = Math.min(highlight, Math.max(matches.length - 1, 0));
+
   // A mask always renders as a plain text field so we control the formatting;
   // the displayed value is masked, while the stored/emitted value stays raw.
-  const isMasked = format !== "text";
-  const effectiveType = isMasked ? "text" : type;
-  const displayValue = isMasked
-    ? toDisplayValue(currentValue ?? "", format)
-    : (currentValue ?? "");
+  const isMasked = format !== "text" && !isCombobox;
+  const effectiveType = isMasked || isCombobox ? "text" : type;
+  const displayValue = isCombobox
+    ? (query ?? selectedLabel)
+    : isMasked
+      ? toDisplayValue(currentValue ?? "", format)
+      : (currentValue ?? "");
 
   // Track focus independently so the label stays floated while typing.
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+
+  // Arrow-keying past the visible rows would otherwise look frozen: these lists
+  // run to hundreds of options and only a handful of them are on screen.
+  useEffect(() => {
+    if (!isOpen) return;
+    const row = listRef.current?.children[activeIndex];
+    if (row instanceof HTMLElement) row.scrollIntoView({ block: "nearest" });
+  }, [isOpen, activeIndex]);
 
   // Some input types always show browser-native UI (date picker, color swatch)
   // and must keep the label floated to avoid overlap with the native control.
@@ -233,18 +335,45 @@ export const TextInput = ({
   const safeStyle: CSSProperties = buildStyleProps(uiProps);
 
   // ── Handlers ──────────────────────────────────────────────────
+  const emit = (next: string) => {
+    if (!isControlled) setInternalValue(next);
+    onChange?.(next);
+  };
+
+  const commitOption = (option: TextInputOption) => {
+    emit(option.value);
+    setQuery(null);
+    setIsOpen(false);
+    setHighlight(0);
+  };
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
-    const next = isMasked ? toRawValue(e.target.value, format) : e.target.value;
-    if (!isControlled) setInternalValue(next);
-    onChange?.(next);
+    if (isCombobox) {
+      const typed = e.target.value;
+      setQuery(typed);
+      setIsOpen(true);
+      setHighlight(0);
+      // Emptying the field is the only way to clear a selection - there is no
+      // separate clear button, and an id left behind an empty box is worse than
+      // asking the question again.
+      if (typed === "") emit("");
+      return;
+    }
+    emit(isMasked ? toRawValue(e.target.value, format) : e.target.value);
   };
 
   const handleFocus = (
     e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     setIsFocused(true);
+    if (isCombobox) {
+      setIsOpen(true);
+      // Select the label so the first keystroke replaces it rather than being
+      // appended to it - "Lake Estes" + "riv" matches nothing.
+      e.currentTarget.select();
+    }
     (rest as NativeInputProps).onFocus?.(
       e as React.FocusEvent<HTMLInputElement>,
     );
@@ -254,9 +383,43 @@ export const TextInput = ({
     e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     setIsFocused(false);
+    if (isCombobox) {
+      setIsOpen(false);
+      // Whatever was typed is dropped: this field's value is an option value, so
+      // a half-typed name has nothing to be. The display falls back to the
+      // selection - or to empty, if the reader cleared it.
+      setQuery(null);
+    }
     (rest as NativeInputProps).onBlur?.(
       e as React.FocusEvent<HTMLInputElement>,
     );
+  };
+
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    if (isCombobox) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (isOpen) setHighlight(Math.min(activeIndex + 1, matches.length - 1));
+        else setIsOpen(true);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setHighlight(Math.max(activeIndex - 1, 0));
+      } else if (e.key === "Enter") {
+        const picked = matches[activeIndex];
+        if (isOpen && picked) {
+          // Enter must never reach an enclosing <form>: picking an option is not
+          // submitting the record it belongs to.
+          e.preventDefault();
+          commitOption(picked);
+        }
+      } else if (e.key === "Escape") {
+        setIsOpen(false);
+        setQuery(null);
+      }
+    }
+    onKeyDown?.(e);
   };
 
   // Resolve the ref to assign: merge the external ref with internal one.
@@ -278,6 +441,7 @@ export const TextInput = ({
   const message = (typeof error === "string" ? error : "") || helperText;
   const reactId = useId();
   const messageId = message ? `${id ?? reactId}-message` : undefined;
+  const listId = `${id ?? reactId}-options`;
 
   // ── Shared props for <input> / <textarea> ─────────────────────
   const sharedProps = {
@@ -292,7 +456,7 @@ export const TextInput = ({
     disabled,
     required,
     maxLength,
-    onKeyDown,
+    onKeyDown: handleKeyDown,
     onPaste,
     min,
     max,
@@ -302,6 +466,24 @@ export const TextInput = ({
     // visually replaces the placeholder via CSS, so we keep it empty.
     placeholder: placeholder ?? (isFocused && label ? label : undefined),
     "aria-label": label ?? ariaLabel ?? undefined,
+    ...(isCombobox
+      ? {
+          // Focus opens the list, but a field that has just been picked from is
+          // still focused - so a second click on it fires no focus event, and
+          // without this the list could only be reopened by typing.
+          onClick: () => setIsOpen(true),
+          role: "combobox",
+          "aria-expanded": isOpen,
+          "aria-controls": listId,
+          "aria-autocomplete": "list" as const,
+          "aria-activedescendant":
+            isOpen && matches[activeIndex]
+              ? `${listId}-${activeIndex}`
+              : undefined,
+          // The browser's own autofill panel would be drawn over the list.
+          autoComplete: "off",
+        }
+      : null),
   };
 
   // ── Wrapper class name ────────────────────────────────────────
@@ -343,6 +525,54 @@ export const TextInput = ({
 
         {/* Material active-indicator bar */}
         <span aria-hidden className="ui-text-input-bar" />
+
+        {/* The autocomplete list. Every row is a real <button> - a <div
+            role="option"> would need its own key handlers to be operable at
+            all, and the keyboard already lives on the input above. */}
+        {isCombobox && isOpen && (
+          <div
+            ref={listRef}
+            id={listId}
+            role="listbox"
+            aria-label={label ?? ariaLabel}
+            className="ui-text-input-options"
+          >
+            {matches.length === 0 ? (
+              <span
+                role="presentation"
+                className="ui-text-input-option ui-text-input-option--empty"
+              >
+                {noOptionsLabel}
+              </span>
+            ) : (
+              matches.map((option, index) => (
+                <button
+                  key={option.value}
+                  id={`${listId}-${index}`}
+                  type="button"
+                  role="option"
+                  aria-selected={option.value === currentValue}
+                  // Out of the tab order: a combobox is driven from its input,
+                  // and Tab has to leave the field rather than walk the list.
+                  tabIndex={-1}
+                  className={[
+                    "ui-text-input-option",
+                    index === activeIndex ? "ui-text-input-option--active" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  // The press must not blur the input first, or `handleBlur`
+                  // closes this list before the click can land on it.
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => commitOption(option)}
+                  onMouseEnter={() => setHighlight(index)}
+                >
+                  {option.label}
+                </button>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {message && (

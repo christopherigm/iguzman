@@ -129,9 +129,10 @@ function toSightingSlide(
     temperature: formatTemperature(sighting.temperature_c, format),
     individuals: sighting.individuals,
     image: sighting.image ?? sighting.species_image,
-    // Empty for a CMS entry nobody named *and* for a contribution filed
-    // anonymously - the API stores no name in either case, so this is one check
-    // rather than two (see `Sighting.author_name` in lib/journal.ts).
+    // Empty for a CMS entry (nobody filed it), for a contribution filed
+    // anonymously, and for an account with no first name - the API publishes
+    // nothing in all three cases, so this is one check rather than three (see
+    // `Sighting.author_name` in lib/journal.ts).
     authorByline: sighting.author_name
       ? tSighting("recordedBy", { name: sighting.author_name })
       : null,

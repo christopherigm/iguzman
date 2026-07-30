@@ -139,6 +139,79 @@ class FilterTests(CatalogFixtureMixin, IsolatedMediaTestCase):
         payload = self.client.get('/api/catalog/species/?search=quercus').json()
         self.assertEqual([row['slug'] for row in payload], ['coast-live-oak'])
 
+    def test_species_search_matches_the_english_half_of_the_name_pair(self):
+        """The CMS's search box is the only way to a species past its first page,
+        and the CMS shows both halves of the pair - so both must be searchable."""
+        Species.objects.filter(slug='coast-live-oak').update(en_name='Coast Live Oak')
+        Species.objects.filter(slug='white-tailed-deer').update(name='Venado', en_name='Deer')
+
+        by_english = self.client.get('/api/catalog/species/?search=deer').json()
+        self.assertEqual([row['slug'] for row in by_english], ['white-tailed-deer'])
+
+        by_spanish = self.client.get('/api/catalog/species/?search=venado').json()
+        self.assertEqual([row['slug'] for row in by_spanish], ['white-tailed-deer'])
+
+
+class SpeciesPaginationTests(CatalogFixtureMixin, IsolatedMediaTestCase):
+    """The catalog answers a page only when one is asked for.
+
+    A species row is expensive to serialize (`sighting_count` and `last_seen` are
+    per-object queries, plus its gallery), so the CMS asks for 50 at a time - but
+    the public grids read a whole category in one request and must keep getting a
+    bare array.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.category = self.make_category()
+        for index in range(7):
+            Species.objects.create(
+                category=self.category,
+                name=f'Species {index:02d}',
+                slug=f'species-{index:02d}',
+                sort_order=index,
+            )
+
+    def test_a_bare_read_is_still_a_bare_list(self):
+        payload = self.client.get('/api/catalog/species/').json()
+        self.assertIsInstance(payload, list)
+        self.assertEqual(len(payload), 7)
+
+    def test_asking_for_a_page_returns_the_envelope(self):
+        payload = self.client.get('/api/catalog/species/?limit=3').json()
+        self.assertEqual(payload['count'], 7)
+        self.assertEqual(payload['limit'], 3)
+        self.assertEqual(payload['offset'], 0)
+        self.assertEqual([row['slug'] for row in payload['results']],
+                         ['species-00', 'species-01', 'species-02'])
+
+    def test_offset_walks_the_list_without_gaps_or_repeats(self):
+        first = self.client.get('/api/catalog/species/?limit=3&offset=0').json()
+        second = self.client.get('/api/catalog/species/?limit=3&offset=3').json()
+        third = self.client.get('/api/catalog/species/?limit=3&offset=6').json()
+
+        slugs = [row['slug'] for page in (first, second, third) for row in page['results']]
+        self.assertEqual(slugs, [f'species-{index:02d}' for index in range(7)])
+        self.assertEqual(third['count'], 7)
+
+    def test_the_count_is_of_the_filtered_list_not_the_table(self):
+        """Otherwise the CMS's Load more button would promise rows that a search
+        has already excluded."""
+        Species.objects.filter(slug='species-00').update(en_name='Painted Bunting')
+        payload = self.client.get('/api/catalog/species/?search=bunting&limit=50').json()
+        self.assertEqual(payload['count'], 1)
+        self.assertEqual([row['slug'] for row in payload['results']], ['species-00'])
+
+    def test_a_page_is_not_served_from_the_bare_lists_cache_entry(self):
+        """`limit`/`offset` are query params like any other, so they are part of
+        the cache key - a paged response and a bare one cannot collide. The
+        response cache is forced on for these tests (see IsolatedMediaTestCase),
+        so the bare read below really does leave an entry behind."""
+        self.assertIsInstance(self.client.get('/api/catalog/species/').json(), list)
+        paged = self.client.get('/api/catalog/species/?limit=2').json()
+        self.assertEqual(paged['count'], 7)
+        self.assertEqual(len(paged['results']), 2)
+
 
 class SlugRouteTests(CatalogFixtureMixin, IsolatedMediaTestCase):
     def test_every_resource_is_reachable_by_slug(self):

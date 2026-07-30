@@ -217,9 +217,10 @@ export default async function SightingPage({ params }: Props) {
       }
       : null,
     // The credit line, last: it is who filed the entry rather than something the
-    // entry records. Empty for a CMS entry nobody named *and* for a contribution
-    // filed anonymously - the API stores no name in either case, so this is the
-    // one check, not two (see `Sighting.author_name` in lib/journal.ts).
+    // entry records. Empty for a CMS entry (nobody filed it), for a contribution
+    // filed anonymously, *and* for an account with no first name - the API
+    // publishes nothing in all three cases, so this is the one check, not three
+    // (see `Sighting.author_name` in lib/journal.ts).
     sighting.author_name
       ? { label: tSighting("author"), value: sighting.author_name }
       : null,

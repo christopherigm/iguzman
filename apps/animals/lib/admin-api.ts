@@ -53,6 +53,23 @@ async function parseResponse<T>(res: Response): Promise<T> {
 type Row = Record<string, unknown>;
 
 /**
+ * One page of a list, for a resource whose CMS table is too long to fetch whole.
+ * The `count` is of the **filtered** list, not the table - it is what tells the
+ * list page whether there is anything left to load.
+ */
+export interface ResourcePage {
+  count: number;
+  results: Row[];
+}
+
+export interface PageRequest {
+  /** Server-side search term. Matched against every name column the API indexes. */
+  search?: string;
+  limit: number;
+  offset: number;
+}
+
+/**
  * The five CRUD calls every catalog resource shares, bound to one API path.
  *
  * animals-api's `core/views.py` gives every resource the same eight methods
@@ -98,7 +115,39 @@ export async function updateSystem(data: Row): Promise<Row> {
 // ---- Catalog ----------------------------------------------------------------
 
 export const categories = resource('catalog/categories');
-export const species = resource('catalog/species');
+
+/**
+ * Species. **The one catalog resource the CMS reads a page at a time**, because
+ * it is the one that grew: a species row costs the API two queries of its own
+ * (`sighting_count` and `last_seen` are per-object) plus its gallery, and the
+ * CMS asks for every row including the unpublished drafts.
+ *
+ * So `listPage` is what `/admin/species` uses - 50 rows and a search term - while
+ * `list` (the shared, unpaginated one) stays for the callers that genuinely need
+ * every row in one array: the species picker on the sighting form, which is a
+ * combobox and has nothing to search *against* until the whole catalog is in it.
+ *
+ * The API pages **only when asked** (`paginate_on_request` in animals-api's
+ * `core/views.py`): sending `limit`/`offset` switches the response from a bare
+ * array to `{count, limit, offset, results}`, so adding either param anywhere
+ * else changes that caller's payload shape too.
+ */
+export const species = {
+  ...resource('catalog/species'),
+  listPage: async ({ search = '', limit, offset }: PageRequest): Promise<ResourcePage> => {
+    const params = new URLSearchParams({
+      include_disabled: 'true',
+      limit: String(limit),
+      offset: String(offset),
+    });
+    // Left off entirely when empty: `search=` is a param like any other and
+    // would key its own cache entry on the API for the same list.
+    if (search) params.set('search', search);
+    const res = await adminFetch(`/api/catalog/species/?${params.toString()}`);
+    return parseResponse<ResourcePage>(res);
+  },
+};
+
 export const seasons = resource('catalog/seasons');
 export const weatherConditions = resource('catalog/weather-conditions');
 export const locations = resource('catalog/locations');

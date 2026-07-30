@@ -82,8 +82,18 @@ class IsolatedMediaTestCase(TestCase):
         )
 
     @staticmethod
-    def make_visitor(username='visitor', password='just-looking-2026'):
-        return User.objects.create_user(username=username, password=password)
+    def make_visitor(username='visitor', password='just-looking-2026',
+                     first_name='Elena'):
+        """Signed in, may read, may not write.
+
+        ``first_name`` is filled by default because it is what a contribution's
+        **credit line** is now derived from - a factory that left it blank would
+        make every byline assertion pass against an empty string. Pass ``''`` to
+        get the account that skipped the field at sign-up, where it is optional.
+        """
+        return User.objects.create_user(
+            username=username, password=password, first_name=first_name
+        )
 
     @staticmethod
     def make_admin(username='author', password='fieldnotes-2026'):

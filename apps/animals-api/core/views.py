@@ -97,9 +97,17 @@ class CachedListCreateView(CachedViewMixin, APIView):
 
     Set ``paginate = True`` to return ``{count, limit, offset, results}`` instead
     of a bare list - for feeds that grow without bound.
+
+    Set ``paginate_on_request = True`` instead to answer that envelope **only when
+    the caller asks for a page** (``?limit=`` / ``?offset=``), and a bare list to
+    everyone else. That is for a list that is not a growing feed but has outgrown
+    one response for *some* callers: the CMS's species table asks for 50 rows and
+    a search term, while the public grids still read the whole category in one
+    request and must not have their payload shape changed underneath them.
     """
 
     paginate = False
+    paginate_on_request = False
     default_page_size = 20
 
     def filter_queryset(self, qs, request):
@@ -122,7 +130,14 @@ class CachedListCreateView(CachedViewMixin, APIView):
             qs = qs.filter(enabled=True)
         qs = self.filter_queryset(qs, request)
 
-        if self.paginate:
+        # The two ways in are the same envelope; what differs is only whether the
+        # endpoint always answers with it or waits to be asked. Note the cache key
+        # already carries `limit`/`offset` (they are query params like any other),
+        # so a paged response and a bare one never share an entry.
+        page_requested = self.paginate_on_request and (
+            'limit' in request.query_params or 'offset' in request.query_params
+        )
+        if self.paginate or page_requested:
             data = self._paginated(qs, request)
         else:
             data = self.serializer_class(qs, many=True, context={'request': request}).data

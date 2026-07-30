@@ -73,10 +73,10 @@ export interface SightingSlide {
    * The byline under the title - "Recorded by Elena Ruiz" - or `null`.
    *
    * Interpolated on the server like every other string on a slide, so the client
-   * slider holds no translator (see this file's header). `null` covers both "nobody
-   * was named" and "the contributor asked not to be credited": the API stores no
-   * name in either case, so the card has nothing to decide. See
-   * `Sighting.author_name` in `lib/journal.ts`.
+   * slider holds no translator (see this file's header). `null` covers "nobody
+   * filed it", "the contributor asked not to be credited" and "that account has
+   * no first name": the API publishes nothing in all three cases, so the card has
+   * nothing to decide. See `Sighting.author_name` in `lib/journal.ts`.
    */
   authorByline: string | null;
 }

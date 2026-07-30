@@ -24,7 +24,13 @@ from .serializers import (
     SightingWriteSerializer,
 )
 
-_SIGHTING_SELECT = ('species', 'species__category', 'location', 'season', 'weather')
+# `created_by` is joined for the **credit line**, not for the audit trail: the
+# read serializer publishes that account's first name, so without it a 100-entry
+# feed page costs 100 extra queries. The map endpoint below does not need it -
+# `SightingMapSerializer` carries no credit.
+_SIGHTING_SELECT = (
+    'species', 'species__category', 'location', 'season', 'weather', 'created_by',
+)
 _SIGHTING_PREFETCH = ('media',)
 
 

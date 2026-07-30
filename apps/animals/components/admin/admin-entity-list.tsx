@@ -69,6 +69,23 @@ interface AdminEntityListProps {
    */
   headerActions?: React.ReactNode;
   /**
+   * A block rendered between the header row and the table: the search field on a
+   * list that reads its rows a page at a time. Unlike `headerActions` it is
+   * rendered whatever the list's state is - a search that matched nothing must
+   * still leave the box that was typed into on screen.
+   */
+  toolbar?: React.ReactNode;
+  /**
+   * A block rendered immediately **below** the table, before `children`: the
+   * "showing N of M" line and the Load more button of a paged list.
+   */
+  footer?: React.ReactNode;
+  /**
+   * Replaces the "nothing here yet" message. For a filtered list, where an empty
+   * table means the search matched nothing rather than that the section is empty.
+   */
+  emptyMessage?: string;
+  /**
    * A block rendered **below** the table. For a page that edits the section
    * itself as well as its records: /admin/highlights puts the section's heading
    * pair and colour band here, so the records - the reason the page is open -
@@ -91,6 +108,9 @@ export function AdminEntityList({
   hideCreate,
   hideEdit,
   headerActions,
+  toolbar,
+  footer,
+  emptyMessage,
   children,
 }: AdminEntityListProps) {
   const t = useTranslations("Admin");
@@ -196,6 +216,10 @@ export function AdminEntityList({
       {/* Reorder persistence progress, directly under the header row. */}
       {saving && <ProgressBar />}
 
+      {/* The list's own controls - a search field - above the table it filters,
+          and outside every state branch below so it survives an empty result. */}
+      {toolbar}
+
       {sortMode && (
         <Typography variant="caption" color="var(--muted, #6b7280)">
           {t("sortRowsHint")}
@@ -234,7 +258,7 @@ export function AdminEntityList({
           color="var(--foreground)"
           styles={{ textAlign: "center" }}
         >
-          <Typography variant="body">{t("noItems")}</Typography>
+          <Typography variant="body">{emptyMessage ?? t("noItems")}</Typography>
         </Box>
       )}
 
@@ -341,6 +365,9 @@ export function AdminEntityList({
           </table>
         </Box>
       )}
+
+      {/* How much of the list is on screen, and the way to the rest. */}
+      {footer}
 
       {/* The page's own block (e.g. the section settings a list belongs to),
           after the records so the list leads the page. */}

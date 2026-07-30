@@ -8,6 +8,7 @@ import { PairedImageFields, useEntityImages } from '@/components/admin/entity-im
 import { EntityGalleryField, useEntityGallery } from '@/components/admin/entity-gallery';
 import { MapPicker } from '@/components/admin/map-picker';
 import { counties, locationImages, locations } from '@/lib/admin-api';
+import { PLACE_TYPES } from '@/lib/place-types';
 import { useDerivedSlug } from '@/hooks/use-derived-slug';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
@@ -15,24 +16,6 @@ import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
 
 type Props = { params: Promise<{ locale: string; id: string }> };
 type Coordinates = { latitude: number; longitude: number };
-
-/** Must match `catalog.models.PLACE_TYPE_CHOICES`; labels come from next-intl. */
-const PLACE_TYPES = [
-  'park',
-  'reserve',
-  'forest',
-  'trail',
-  'garden',
-  'lake',
-  'river',
-  'beach',
-  'wetland',
-  'mountain',
-  'desert',
-  'urban',
-  'backyard',
-  'other',
-] as const;
 
 export default function AdminLocationFormPage({ params }: Props) {
   const { id } = use(params);
