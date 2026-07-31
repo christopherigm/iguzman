@@ -8,19 +8,31 @@ import type { Swiper as SwiperType } from "swiper";
 import { Box } from "@repo/ui/core-elements/box";
 import { Container } from "@repo/ui/core-elements/container";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { IconButton } from "@repo/ui/core-elements/icon-button";
+import { SliderControls } from "@repo/ui/core-elements/slider-dots";
 import { HERO_HEIGHT } from "@/lib/hero-height";
 import "swiper/css";
 import "./species-gallery.css";
 
 /**
  * The landing's opening gallery: a randomized handful of featured species, one
- * full-bleed photograph per slide with its short description over the image.
+ * full-bleed photograph per slide, captioned with the category, the name and the
+ * scientific name. The species' **short description is deliberately not shown** -
+ * this band is an invitation into the catalog rather than a summary of it, and a
+ * paragraph of prose over a photograph that changes every six seconds is not
+ * read; the description belongs on the species' own page.
  *
  * The parent picks and shuffles the species server-side (see
  * `lib/catalog.ts` → `getFeaturedSpecies`), so this component is pure
  * presentation - it never fetches, and the slides it is handed are already in
  * the order they should appear.
+ *
+ * All three controls sit in **one row over the bottom of the photograph** - the
+ * arrows flanking a row of dots - rather than as two arrows floating at the
+ * slide's mid-height: the same `SliderControls` row the journal slider uses
+ * (`components/journal/latest-sightings.tsx`), so the landing pages through its
+ * two sliders identically. It is positioned against the gallery's own box, not
+ * inside a `SwiperSlide`, or it would be duplicated per slide and would slide
+ * away with the photograph it belongs to.
  */
 
 export interface SpeciesSlide {
@@ -28,7 +40,6 @@ export interface SpeciesSlide {
   slug: string;
   /** Already resolved for the current locale by the server component. */
   name: string;
-  shortDescription: string | null;
   scientificName: string | null;
   categoryName: string | null;
   categorySlug: string | null;
@@ -38,11 +49,14 @@ export interface SpeciesSlide {
 interface Props {
   slides: SpeciesSlide[];
   /** Supplied by the caller - `@repo/ui` is i18n-agnostic. */
-  labels: { previous: string; next: string };
+  labels: { previous: string; next: string; pagination: string };
 }
 
 export function SpeciesGallery({ slides, labels }: Props) {
   const [swiper, setSwiper] = useState<SwiperType | null>(null);
+  // `realIndex`, not `activeIndex`: with `loop` on, Swiper prepends duplicate
+  // slides, so only the former indexes back into `slides`.
+  const [activeIndex, setActiveIndex] = useState(0);
 
   if (slides.length === 0) return null;
 
@@ -52,6 +66,7 @@ export function SpeciesGallery({ slides, labels }: Props) {
         className="species-gallery__swiper"
         modules={[Autoplay, Keyboard]}
         onSwiper={setSwiper}
+        onSlideChange={(s) => setActiveIndex(s.realIndex)}
         loop={slides.length > 1}
         slidesPerView={1}
         keyboard={{ enabled: true }}
@@ -101,13 +116,13 @@ export function SpeciesGallery({ slides, labels }: Props) {
                 paddingX={10}
                 styles={{ position: "relative", zIndex: 1 }}
               >
-                {/* Same inset as `DetailHero`'s caption - the band is short
-                    enough now that the old 56px left the description tight
-                    against the bottom edge at the clamp's floor. */}
+                {/* The control row is parked over the bottom of the same
+                    photograph, so the caption's own inset has to clear it -
+                    ~56px of row plus a gap - rather than `DetailHero`'s 40. */}
                 <Box
                   flexDirection="column"
                   gap={8}
-                  paddingBottom={40}
+                  paddingBottom={slides.length > 1 ? 76 : 40}
                   maxWidth={720}
                 >
                   {/* Both captions are links into the catalog. The slide is not
@@ -164,16 +179,6 @@ export function SpeciesGallery({ slides, labels }: Props) {
                       {slide.scientificName}
                     </Typography>
                   )}
-
-                  {slide.shortDescription && (
-                    <Typography
-                      variant="body"
-                      color="#ffffff"
-                      styles={{ opacity: 0.92 }}
-                    >
-                      {slide.shortDescription}
-                    </Typography>
-                  )}
                 </Box>
               </Container>
             </Box>
@@ -181,38 +186,32 @@ export function SpeciesGallery({ slides, labels }: Props) {
         ))}
       </Swiper>
 
-      {slides.length > 1 && (
-        <>
-          <IconButton
-            icon="/icons/prev.svg"
-            aria-label={labels.previous}
-            styles={{
-              position: "absolute",
-              left: 12,
-              top: "50%",
-              transform: "translateY(-50%)",
-              zIndex: 10,
-            }}
-            onClick={() => swiper?.slidePrev()}
-            kind="success"
-            translucent
-          />
-          <IconButton
-            icon="/icons/next.svg"
-            aria-label={labels.next}
-            styles={{
-              position: "absolute",
-              right: 12,
-              top: "50%",
-              transform: "translateY(-50%)",
-              zIndex: 10,
-            }}
-            onClick={() => swiper?.slideNext()}
-            kind="success"
-            translucent
-          />
-        </>
-      )}
+      {/* Over the photograph's bottom edge, above the caption's scrim. It sits
+          on the gallery box rather than in a slide, so it stays put while the
+          photographs move under it; `SliderControls` renders nothing for a
+          single slide, which is what the caption's inset also keys off. */}
+      <SliderControls
+        count={slides.length}
+        active={activeIndex}
+        // `slideToLoop` indexes the real slides; it falls through to `slideTo`
+        // when the slider is not looping.
+        onSelect={(i) => swiper?.slideToLoop(i)}
+        onPrev={() => swiper?.slidePrev()}
+        onNext={() => swiper?.slideNext()}
+        label={labels.pagination}
+        // Each species' own name is a better destination than "slide 3", and it
+        // is already resolved for the locale.
+        dotLabel={(i) => slides[i]!.name}
+        previousLabel={labels.previous}
+        nextLabel={labels.next}
+        styles={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 20,
+          zIndex: 10,
+        }}
+      />
     </Box>
   );
 }

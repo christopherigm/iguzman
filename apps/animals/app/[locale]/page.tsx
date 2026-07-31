@@ -49,7 +49,6 @@ export default async function Home({ params }: Props) {
         id: item.id,
         slug: item.slug,
         name: localized(item, "name", locale) ?? item.slug,
-        shortDescription: localized(item, "short_description", locale),
         scientificName: item.scientific_name,
         categoryName: localized(
           { name: item.category_name, en_name: item.category_en_name },
@@ -72,7 +71,11 @@ export default async function Home({ params }: Props) {
       {hasGallery ? (
         <SpeciesGallery
           slides={speciesSlides}
-          labels={{ previous: tGallery("previous"), next: tGallery("next") }}
+          labels={{
+            previous: tGallery("previous"),
+            next: tGallery("next"),
+            pagination: tGallery("pagination"),
+          }}
         />
       ) : (
         // With no gallery the page would start underneath the fixed navbar.
