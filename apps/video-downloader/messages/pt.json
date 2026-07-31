@@ -420,6 +420,7 @@
     },
     "prev": "Slide anterior",
     "next": "Próximo slide",
+    "pagination": "Escolher um slide",
     "close": "Fechar",
     "dontShowAgain": "Não mostrar novamente",
     "dontShowAgainTitle": "Ocultar banner de recursos?",

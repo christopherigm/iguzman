@@ -1,11 +1,6 @@
-.fs-wrapper {
-  --swiper-pagination-color: #06b6d4;
-  --swiper-pagination-bullet-inactive-color: rgba(255, 255, 255, 0.4);
-  --swiper-pagination-bullet-inactive-opacity: 1;
-}
-
 .fs-swiper {
   width: 100%;
+  min-width: 0;
 }
 
 .fs-image-wrapper {
@@ -26,28 +21,9 @@
   gap: 8px;
 }
 
-/* Controls row: [prev] [dots] [next] */
+/* Controls row: holds `@repo/ui`'s `SliderControls` ([prev] [dots] [next]).
+   Only the strip's own padding lives here - the row and the dots carry their
+   own look, shared with every other slider in the monorepo. */
 .fs-controls {
-  display: flex;
-  align-items: center;
-  gap: 4px;
   padding: 6px 8px;
 }
-
-/*
- * Swiper forces position:absolute + bottom/left/width on its pagination element.
- * Override so the div stays in the flex flow and the dots center naturally.
- */
-.fs-pagination {
-  position: static !important;
-  width: auto !important;
-  bottom: auto !important;
-  top: auto !important;
-  left: auto !important;
-  transform: none !important;
-  flex: 1;
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
-}
-

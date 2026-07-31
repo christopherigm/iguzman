@@ -102,6 +102,7 @@ export function StageShell({
           size="lg"
           disabled={nextDisabled || busy}
           onClick={onNext}
+          isLoading={busy}
         />
       </Box>
     </Card>

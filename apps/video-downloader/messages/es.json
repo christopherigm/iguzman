@@ -422,6 +422,7 @@
     },
     "prev": "Diapositiva anterior",
     "next": "Diapositiva siguiente",
+    "pagination": "Elegir una diapositiva",
     "close": "Cerrar",
     "dontShowAgain": "No mostrar más",
     "dontShowAgainTitle": "¿Ocultar banner de características?",

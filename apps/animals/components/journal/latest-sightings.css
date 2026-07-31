@@ -131,35 +131,6 @@
   border: 0;
 }
 
-/* The pagination dots. They are plain `<button>`s - not `@repo/ui` components -
-   so the props-first rule does not reach them, and their whole look (including
-   the active pill) belongs here beside the slider it drives. */
-.latest-sightings__dot {
-  width: 10px;
-  height: 10px;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  cursor: pointer;
-  background: color-mix(in srgb, var(--accent, #06b6d4) 28%, transparent);
-  transition:
-    width 0.24s ease,
-    background-color 0.24s ease;
-}
-
-.latest-sightings__dot:hover {
-  background: color-mix(in srgb, var(--accent, #06b6d4) 55%, transparent);
-}
-
-.latest-sightings__dot:focus-visible {
-  outline: 2px solid var(--accent, #06b6d4);
-  outline-offset: 3px;
-}
-
-/* The current entry reads as a pill rather than a bigger dot, so the row keeps
-   its height and nothing below it shifts on a slide change. */
-.latest-sightings__dot--active,
-.latest-sightings__dot--active:hover {
-  width: 26px;
-  background: var(--accent, #06b6d4);
-}
+/* ⚠ The pagination dots are NOT here any more. The row is `@repo/ui`'s
+   `SliderControls` (`core-elements/slider-dots.css`), shared with every other
+   slider in the monorepo - style them there, not with a local override. */

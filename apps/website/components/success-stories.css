@@ -4,9 +4,12 @@
   box-sizing: border-box;
 }
 
-/* Swiper container */
+/* Swiper container. No bottom padding: the controls are `@repo/ui`'s
+   `SliderControls` row in normal flow beneath the slider, not Swiper's own
+   absolutely-positioned bullets, so nothing needs a gutter held open for it. */
 .stories-swiper {
-  padding-bottom: 44px !important; /* room for pagination dots */
+  width: 100%;
+  min-width: 0;
 }
 
 /* Each slide fills the swiper height */

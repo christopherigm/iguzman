@@ -20,9 +20,14 @@
   padding-right: 0;
 }
 
+/* The active page is filled with the site's primary colour, the same pairing
+   every paginator in the monorepo uses (cinelog's catalog bar, the accent dot
+   in each slider). `--accent-foreground` is the palette's own contrast colour
+   for that fill - a hard-coded white is wrong on the light palettes. Plain
+   `var()` with a fallback, which Chromium 76 supports; no `color-mix`. */
 .tv-pagination__page--active {
   background: var(--accent, #06b6d4);
-  color: #ffffff;
+  color: var(--accent-foreground, #ffffff);
 }
 
 .tv-pagination__ellipsis {

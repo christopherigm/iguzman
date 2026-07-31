@@ -61,31 +61,18 @@
 
 .detail__intel-swiper {
   width: 100%;
-  --swiper-pagination-color: var(--primary, #06b6d4);
-  --swiper-pagination-bullet-inactive-color: var(--border, #e5e7eb);
-  --swiper-pagination-bullet-inactive-opacity: 1;
+  min-width: 0;
 }
 
+/* Holds `@repo/ui`'s `SliderControls` ([prev] [dots] [next]). Only the strip's
+   own padding and top rule live here; the row and its accent dots carry their
+   own look, shared with every other slider in the monorepo. It replaced
+   Swiper's `Pagination` bullets, which were painted from `--primary` - not a
+   token this palette defines, so they always fell back to the hard-coded
+   cyan rather than following the theme's `--accent`. */
 .detail__intel-controls {
-  display: flex;
-  align-items: center;
-  gap: 4px;
   padding: 6px 8px;
   border-top: 1px solid var(--border, #e5e7eb);
-}
-
-/* Override Swiper's absolute positioning so pagination stays in the flex flow */
-[data-intel-pagination] {
-  position: static !important;
-  width: auto !important;
-  bottom: auto !important;
-  top: auto !important;
-  left: auto !important;
-  transform: none !important;
-  flex: 1;
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
 }
 
 /* ── Metric explain button ────────────────────────────────────── */

@@ -270,11 +270,28 @@ function JobSection({
                 onClick={() => onPageChange(page - 1)}
                 kind="primary"
               />
+              {/* The current page carries the site's primary colour - the one
+                  number in the row that says where you are, matching the active
+                  dot in every slider. `t.rich` rather than two strings, so each
+                  locale keeps its own word order around it. */}
               <Typography
                 variant="body"
                 color="var(--muted-foreground, #6b7280)"
               >
-                {t("pageOf", { page, total: totalPages })}
+                {t.rich("pageOf", {
+                  page,
+                  total: totalPages,
+                  current: (chunks) => (
+                    <Typography
+                      as="span"
+                      variant="none"
+                      fontWeight={600}
+                      color="var(--accent, #06b6d4)"
+                    >
+                      {chunks}
+                    </Typography>
+                  ),
+                })}
               </Typography>
               <Button
                 text={t("next")}

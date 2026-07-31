@@ -44,7 +44,7 @@ export async function SpeciesGrid({ species, locale }: Props) {
   return (
     <Grid container spacing={2}>
       {species.map((item) => (
-        <Grid key={item.id} size={{ xs: 6, md: 4 }}>
+        <Grid key={item.id} size={{ xs: 6, sm: 4, md: 3 }}>
           <SpeciesCard
             species={item}
             locale={locale}

@@ -244,8 +244,20 @@ export function VideoToolbar({
               styles={{ padding: 0, justifyContent: "center" }}
             />
 
+            {/* The current page carries the site's primary colour, the same way
+                the active dot does in every slider and the active page button
+                does in cinelog's catalog bar - it is the one number in the row
+                that says where you are. */}
             <Typography variant="body" className="vt-page-info">
-              {page} / {totalPages}
+              <Typography
+                as="span"
+                variant="none"
+                color="var(--accent, #06b6d4)"
+              >
+                {page}
+              </Typography>
+              {" / "}
+              {totalPages}
               <Typography as="span" variant="none" marginLeft={4}>
                 ({filteredCount})
               </Typography>

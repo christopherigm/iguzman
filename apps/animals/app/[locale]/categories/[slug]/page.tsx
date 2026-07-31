@@ -60,6 +60,13 @@ type Props = { params: Promise<{ locale: string; slug: string }> };
 /** How many journal entries the page's sightings band carries. */
 const SIGHTINGS_LIMIT = 6;
 
+/**
+ * How far the secondary FAB sits above the primary one: the primary's own 42 px
+ * box (`size="lg"`) plus a 12 px gap. Also the extra bottom clearance the page
+ * owes the stack on top of `PageBottomSpacer`.
+ */
+const FAB_STACK_OFFSET = 54;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   const category = await getCategory(slug);
@@ -193,9 +200,9 @@ export default async function CategoryPage({ params }: Props) {
                   { label: t("factKind"), value: kindLabel, href: branchHref },
                   category.scientific_name
                     ? {
-                        label: t("factScientificName"),
-                        value: category.scientific_name,
-                      }
+                      label: t("factScientificName"),
+                      value: category.scientific_name,
+                    }
                     : null,
                   {
                     label: t("factSpecies"),
@@ -265,21 +272,52 @@ export default async function CategoryPage({ params }: Props) {
       </Container>
 
       <PageBottomSpacer />
+      {/* A second spacer's worth of clearance, because the corner holds a *stack*
+          rather than one button - `PageBottomSpacer` alone leaves the last row of
+          the species grid under the upper FAB. */}
+      <Box height={FAB_STACK_OFFSET} aria-hidden />
 
-      {/* The page's primary action: propose a species for *this* category, which
-          is why the href carries the slug - the flow locks the category to it
-          rather than opening with a picker (see the contribute page's docstring).
-          Shown to every reader, signed in or not: the FAB is how a reader learns
-          the site takes contributions at all, and the destination explains itself
-          and offers the sign-in. Extended rather than a bare circle, because "+"
-          alone over a species grid reads as "add to a list". It is `position:
-          fixed`, so it sits outside the `Container` and after the spacer that
-          keeps the last row clear of it. */}
+      {/* Two actions, and the order between them is the point. **Filing a
+          sighting is the primary one**: a reader who has just scrolled a
+          category's photographs and journal entries has almost certainly seen one
+          of these things themselves, whereas proposing a species the catalog is
+          missing is the rarer, more editorial act. So "Add a sighting" takes the
+          accent fill and the corner, and "Add a species" sits above it in the
+          neutral kind at the smaller size.
+
+          Both carry `?category=` and mean subtly different things by it. The
+          species flow *locks* to the category - a species belongs to exactly one,
+          and the page it was pressed on decided which. The sighting flow only
+          *opens* on it: the entry records one of the category's species, and
+          which one is the first thing its form asks (see the contribute page's
+          docstring).
+
+          Shown to every reader, signed in or not: the FABs are how a reader learns
+          the site takes contributions at all, and each destination explains itself
+          and offers the sign-in. Extended rather than bare circles, because two
+          stacked "+" circles say nothing about which is which. Both are `position:
+          fixed`, so they sit outside the `Container` and after the spacers that
+          keep the last row clear of them. */}
       <FloatingActionButton
-        icon="/icons/add.svg"
+        icon="/icons/deer.svg"
         aria-label={tContribute("addSpecies")}
         label={tContribute("addSpecies")}
         href={`/contribute/species?category=${category.slug}`}
+        kind="warning"
+        size="md"
+        // The one thing `offset` cannot express: it sets both edges at once, and
+        // this button is the primary's own distance from the corner *plus* the
+        // primary. `--ui-fab-offset` is read rather than hard-coded so the pair
+        // still tucks in together below `sm`, where `.ui-fab` narrows it to 16px.
+        styles={{
+          bottom: `calc(var(--ui-fab-offset, 20px) + env(safe-area-inset-bottom, 0px) + ${FAB_STACK_OFFSET}px)`,
+        }}
+      />
+      <FloatingActionButton
+        icon="/icons/binoculars.svg"
+        aria-label={tContribute("addSighting")}
+        label={tContribute("addSighting")}
+        href={`/contribute/sightings?category=${category.slug}`}
       />
     </Box>
   );

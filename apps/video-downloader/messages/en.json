@@ -421,6 +421,7 @@
     },
     "prev": "Previous slide",
     "next": "Next slide",
+    "pagination": "Choose a slide",
     "close": "Close",
     "dontShowAgain": "Don't show again",
     "dontShowAgainTitle": "Hide Feature Banner?",

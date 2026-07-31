@@ -29,14 +29,20 @@ import {
   type SightingSubmission,
 } from "@/lib/contribute";
 import { uploadVideo, VideoUploadError } from "@/lib/video-upload";
+import {
+  SpeciesPicker,
+  type SpeciesChoice,
+  type SpeciesSubject,
+} from "./species-picker";
 
 /**
  * The three-stage journal entry.
  *
- * 1. **When, where, and the photographs.** The species is already decided (the FAB
- *   was pressed on its page), so this stage is the three things an entry cannot be
- *   filed without - and all three are what the API refuses without: a date, a place
- *   or a pin, and at least one photo.
+ * 1. **What, when, where, and the photographs.** The species is usually already
+ *   decided (the FAB was pressed on its page) and then this stage opens on the
+ *   date; entered from a *category* page, or from nothing at all, it opens on the
+ *   `SpeciesPicker` cascade instead. The rest is what the API refuses an entry
+ *   without: a date, a place or a pin, and at least one photo.
  * 2. **The rest of the outing** - a title, the story, the time, the weather, the
  *   temperature, how many were seen, and whether to be credited. Every field
  *   optional.
@@ -56,9 +62,20 @@ import { uploadVideo, VideoUploadError } from "@/lib/video-upload";
  */
 
 interface Props {
-  speciesId: number;
-  speciesName: string;
-  speciesHref: string;
+  /**
+   * The species the URL already named, or `null` when the flow has to ask for it.
+   * When it is set the picker is not rendered at all and the species cannot be
+   * changed - the reader chose it by pressing the FAB on its own page.
+   */
+  species: SpeciesSubject | null;
+  /**
+   * Every species that can be filed against, for the picker. Empty (and unused)
+   * whenever `species` is set.
+   */
+  speciesOptions: SpeciesChoice[];
+  /** The branch and category the FAB's page was under, to open the picker on. */
+  initialKind?: SpeciesChoice["kind"] | null;
+  initialCategorySlug?: string | null;
   /**
    * The account's first name, for display only - what the API will publish as
    * this entry's credit. Empty for an account that skipped the field at sign-up,
@@ -82,14 +99,25 @@ const EMPTY = {
 };
 
 export function SightingContributeForm({
-  speciesId,
-  speciesName,
-  speciesHref,
+  species,
+  speciesOptions,
+  initialKind,
+  initialCategorySlug,
   creditName,
   locations,
   weather,
 }: Props) {
   const t = useTranslations("Contribute");
+
+  /**
+   * The entry's subject. Seeded from the URL when it named one, and then never
+   * changed (the picker is not rendered); otherwise the picker writes it.
+   */
+  const [chosen, setChosen] = useState<SpeciesSubject | null>(species);
+  const speciesName = chosen?.name ?? "";
+  // Where "Back to …" goes once the entry is filed. The species page exists for
+  // every choice the picker can make, so this is safe to derive rather than pass.
+  const speciesHref = chosen ? `/species/${chosen.slug}` : "/";
 
   const [stage, setStage] = useState(1);
   const [draft, setDraft] = useState(EMPTY);
@@ -120,6 +148,10 @@ export function SightingContributeForm({
     setDraft((current) => ({ ...current, [key]: value }));
 
   const reset = () => {
+    // Back to what the URL said, which is `null` when it said nothing - "file
+    // another" from a category page means another species just as often as
+    // another encounter with the same one.
+    setChosen(species);
     setDraft(EMPTY);
     setPhotos([]);
     setVideo(null);
@@ -176,11 +208,15 @@ export function SightingContributeForm({
   };
 
   const submit = async () => {
+    // Stage 1 cannot be left without one, so this is a type narrowing rather
+    // than a reachable branch.
+    if (!chosen) return;
+
     setBusy(true);
     setError(null);
     try {
       const submission: SightingSubmission = {
-        species: speciesId,
+        species: chosen.id,
         date: draft.date,
         photos: photos.map((photo) => photo.dataUrl),
         author_anonymous: anonymous,
@@ -276,15 +312,40 @@ export function SightingContributeForm({
     <>
       {stage === 1 && (
         <StageShell
-          title={t("sightingStage1Title")}
-          description={t("sightingStage1Description")}
+          // The stage asks one more question when the species is still open, so
+          // it says so - "When and where" over a species picker would be
+          // describing a different stage than the one on screen.
+          title={
+            species ? t("sightingStage1Title") : t("sightingStage1TitleAny")
+          }
+          description={
+            species
+              ? t("sightingStage1Description")
+              : t("sightingStage1DescriptionAny")
+          }
           current={1}
           total={3}
           onNext={openStage2}
           nextDisabled={
-            draft.date === "" || draft.location === "" || photos.length === 0
+            chosen === null ||
+            draft.date === "" ||
+            draft.location === "" ||
+            photos.length === 0
           }
         >
+          {/* Only when the URL did not already name one. It leads the stage
+              because everything under it is a detail *of* the encounter, and
+              because it is the one field here that changes what the entry is. */}
+          {!species && (
+            <SpeciesPicker
+              options={speciesOptions}
+              initialKind={initialKind}
+              initialCategorySlug={initialCategorySlug}
+              value={chosen ? String(chosen.id) : ""}
+              onChange={setChosen}
+            />
+          )}
+
           <TextInput
             type="date"
             label={t("date")}
@@ -506,12 +567,40 @@ export function SightingContributeForm({
 
           {/* The clip goes up after the entry is filed, and on a phone that is
               minutes - so the submit button's own spinner is not enough to
-              explain why nothing has happened yet. */}
+              explain why nothing has happened yet.
+
+              The heading is written out rather than left to the bar's `label`,
+              which is only an `aria-label`: without it a sighted contributor
+              gets an unexplained bar. The line under it is not politeness -
+              `uploadVideo` chunks from this tab, so a refresh aborts the upload
+              and the entry keeps no video.
+
+              ⚠ Indeterminate until the first chunk reports. `onProgress` fires
+              per 90 MB chunk (`CHUNK_BYTES`), so a clip under that is a single
+              chunk and a determinate bar would read a frozen 0% for the whole
+              upload - which looks like a hang - then jump to 100. */}
           {uploadingVideo && (
-            <ProgressBar
-              value={videoProgress}
-              label={t("videoUploading", { percent: videoProgress })}
-            />
+            <Box flexDirection="column" gap={6}>
+              <Typography variant="label" fontWeight={600}>
+                {videoProgress > 0
+                  ? t("videoUploading", { percent: videoProgress })
+                  : t("videoUploadingStart")}
+              </Typography>
+              <ProgressBar
+                value={videoProgress > 0 ? videoProgress : undefined}
+                label={
+                  videoProgress > 0
+                    ? t("videoUploading", { percent: videoProgress })
+                    : t("videoUploadingStart")
+                }
+              />
+              <Typography
+                variant="caption"
+                color="var(--foreground-muted, #6b7280)"
+              >
+                {t("videoUploadingNotice")}
+              </Typography>
+            </Box>
           )}
 
           <Typography

@@ -420,6 +420,7 @@
     },
     "prev": "Vorherige Folie",
     "next": "Nächste Folie",
+    "pagination": "Folie auswählen",
     "close": "Schließen",
     "dontShowAgain": "Nicht mehr anzeigen",
     "dontShowAgainTitle": "Feature-Banner ausblenden?",

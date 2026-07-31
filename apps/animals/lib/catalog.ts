@@ -279,6 +279,30 @@ export async function getSpeciesByCategory(
 }
 
 /**
+ * Every enabled species in the catalog, for the sighting flow's species picker.
+ *
+ * The one read in this app that deliberately asks for the whole species table
+ * rather than a page of it. The picker is a **cascade** - branch, then category,
+ * then species - and each step narrows the list the next one offers, so the
+ * options have to be in the browser before any of them is chosen. Paging it
+ * would turn every branch change into a request and every species missing from
+ * page 1 into a species that cannot be filed against.
+ *
+ * It costs one Django request (cached in Redis, invalidated on any species
+ * write), and the page projects the payload down to `{id, slug, name, kind,
+ * category}` before it reaches the client - so the heavy half of a species row
+ * (its gallery, its descriptions) never crosses the wire. The CMS's own sighting
+ * form picks its species the same way, for the same reason.
+ *
+ * A list, so it keeps the list contract - and a failure here is not fatal: the
+ * flow still works from `?species=`, which is how it is entered from a species
+ * or a sighting page.
+ */
+export async function getAllSpecies(): Promise<Species[]> {
+  return fetchList<Species>("/api/catalog/species/", { cache: "no-store" });
+}
+
+/**
  * A random handful of featured species for the landing gallery.
  *
  * The API has no random ordering (and could not usefully have one - its list

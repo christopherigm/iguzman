@@ -417,7 +417,7 @@ export default async function SightingPage({ params }: Props) {
           a button that leads to a dead page. */}
       {sighting.species_slug && (
         <FloatingActionButton
-          icon="/icons/add.svg"
+          icon="/icons/binoculars.svg"
           aria-label={tContribute("addSighting")}
           label={tContribute("addSighting")}
           position="bottom-right"
@@ -498,7 +498,8 @@ function toGalleryImages(sighting: Sighting, locale: string): GalleryImage[] {
  * transcode finishes minutes later - so dropping the URL-less rows (which is
  * what this used to do) made a contributor's clip vanish from the page entirely
  * until it was ready, with nothing to say it was coming. They are emitted with a
- * `status` instead and rendered as a placeholder.
+ * `status` instead, and `SightingVideos` counts them into one line under the
+ * heading - not a frame each, which would be a black box the shape of a guess.
  *
  * A **link** is still dropped when it has no URL: there is nothing in flight
  * there, just an empty row.
@@ -544,7 +545,7 @@ function toVideos(sighting: Sighting, locale: string): SightingVideo[] {
  * dimensions when it finishes, so one still encoding has none and is treated as
  * landscape until it does. That is the honest answer rather than a gap - the
  * page cannot know a shape ffmpeg has not reported - and the poll that swaps the
- * placeholder for the player re-renders this with the real numbers.
+ * "being converted" line for the player re-renders this with the real numbers.
  */
 function isPortrait(video: SightingVideo): boolean {
   return Boolean(video.width && video.height && video.height > video.width);

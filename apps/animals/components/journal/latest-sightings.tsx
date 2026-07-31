@@ -10,7 +10,7 @@ import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { Button } from "@repo/ui/core-elements/button";
-import { IconButton } from "@repo/ui/core-elements/icon-button";
+import { SliderControls } from "@repo/ui/core-elements/slider-dots";
 import "swiper/css";
 import "./latest-sightings.css";
 
@@ -38,7 +38,9 @@ import "./latest-sightings.css";
  *
  * One entry is on screen at a time, and all three controls sit in a single row
  * beneath it: the arrows flank a row of dots in the site's primary colour
- * (`--accent`), which both counts the entries and jumps to one.
+ * (`--accent`), which both counts the entries and jumps to one. That row is
+ * `@repo/ui`'s `SliderControls` - the same one every slider in the monorepo
+ * uses - so the look lives in one place rather than in this stylesheet.
  *
  * A slide is a *summary*, and it carries two ways out of it: the category badge
  * opens the branch the entry is filed under, and the button under the facts
@@ -131,50 +133,23 @@ export function LatestSightings({ slides, labels }: Props) {
 
       {/* One control row rather than arrows floating over the slide: the entry
           is a sheet of paper now, and a button parked on top of it would read as
-          part of the note. */}
-      {slides.length > 1 && (
-        <Box justifyContent="center" alignItems="center" gap={16} width="100%">
-          <IconButton
-            icon="/icons/prev.svg"
-            aria-label={labels.previous}
-            onClick={() => swiper?.slidePrev()}
-            kind="success"
-            translucent
-          />
-
-          <Box
-            role="group"
-            aria-label={labels.pagination}
-            alignItems="center"
-            gap={8}
-          >
-            {slides.map((slide, i) => (
-              <button
-                key={slide.id}
-                type="button"
-                // Each entry's own title is a better destination than "slide 3",
-                // and it is already resolved for the locale.
-                aria-label={slide.title}
-                aria-current={i === activeIndex}
-                className={`latest-sightings__dot${
-                  i === activeIndex ? " latest-sightings__dot--active" : ""
-                }`}
-                // `slideToLoop` indexes the real slides; it falls through to
-                // `slideTo` when the slider is not looping.
-                onClick={() => swiper?.slideToLoop(i)}
-              />
-            ))}
-          </Box>
-
-          <IconButton
-            icon="/icons/next.svg"
-            aria-label={labels.next}
-            onClick={() => swiper?.slideNext()}
-            kind="success"
-            translucent
-          />
-        </Box>
-      )}
+          part of the note. `SliderControls` is the shared row (`@repo/ui`) every
+          slider in the monorepo uses; it renders nothing for a single slide. */}
+      <SliderControls
+        count={slides.length}
+        active={activeIndex}
+        // `slideToLoop` indexes the real slides; it falls through to `slideTo`
+        // when the slider is not looping.
+        onSelect={(i) => swiper?.slideToLoop(i)}
+        onPrev={() => swiper?.slidePrev()}
+        onNext={() => swiper?.slideNext()}
+        label={labels.pagination}
+        // Each entry's own title is a better destination than "slide 3", and it
+        // is already resolved for the locale.
+        dotLabel={(i) => slides[i]!.title}
+        previousLabel={labels.previous}
+        nextLabel={labels.next}
+      />
     </Box>
   );
 }

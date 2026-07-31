@@ -420,6 +420,7 @@
     },
     "prev": "Diapositive précédente",
     "next": "Diapositive suivante",
+    "pagination": "Choisir une diapositive",
     "close": "Fermer",
     "dontShowAgain": "Ne plus afficher",
     "dontShowAgainTitle": "Masquer la bannière des fonctionnalités ?",

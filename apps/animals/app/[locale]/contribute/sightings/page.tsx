@@ -8,26 +8,45 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { NavbarSpacer, PageBottomSpacer } from "@repo/ui/core-elements/navbar";
 import {
+  getAllSpecies,
+  getCategory,
   getContributeLocations,
   getSpecies,
   getWeatherConditions,
   kindHref,
   type ContributeLocation,
+  type Kind,
 } from "@/lib/catalog";
 import { isPlaceType } from "@/lib/place-types";
 import { localized } from "@/lib/i18n-field";
 import { SignInPrompt } from "@/components/contribute/sign-in-prompt";
 import { SightingContributeForm } from "./sighting-contribute-form";
+import type { SpeciesChoice, SpeciesSubject } from "./species-picker";
 
 /**
  * "Add a sighting" - the public, staged counterpart to the CMS's sighting form,
- * reached from the FAB on `/[locale]/sightings/[slug]`.
+ * reached from the FAB on `/[locale]/species/[slug]`, `/[locale]/sightings/[slug]`
+ * and `/[locale]/categories/[slug]`.
  *
- * **The species is a query param and it is required**, for the same reason the
- * category is on the species flow: an entry records *something*, the FAB was
- * pressed on a page that already names it, and a species picker over the whole
- * catalog is both a long dropdown and a chance to file the entry against the wrong
- * animal. A missing or unknown slug is a 404 rather than a picker.
+ * **How much of the subject the URL knows is what this page branches on**, and
+ * each of the three FABs knows a different amount:
+ *
+ * | Entered from  | Param                | The flow then asks for      |
+ * | ------------- | -------------------- | --------------------------- |
+ * | a species     | `?species=<slug>`    | nothing - it is decided     |
+ * | a sighting    | `?species=<slug>`    | nothing - it is decided     |
+ * | a category    | `?category=<slug>`   | which species, of that one  |
+ * | nowhere       | none                 | branch, category, species   |
+ *
+ * `?species=` is still the preferred way in and is still exact: the FAB was
+ * pressed on a page that names the animal, so re-asking would only be inviting a
+ * wrong answer, and an unknown slug is a **404** rather than a silent fallback to
+ * the picker. `?category=` is a *hint* instead - it prefills the picker's first
+ * two steps and nothing more - so an unknown one costs the prefill, not the page.
+ * With neither, the picker starts from the branch. See `SpeciesPicker`.
+ *
+ * The whole species list is only fetched in the two cases that actually open a
+ * picker; arriving with `?species=` reads one record, as it always did.
  *
  * The two lookup lists (places, weather) are fetched here rather than in the form:
  * they are bilingual data, so their labels have to be resolved per locale on the
@@ -43,7 +62,7 @@ import { SightingContributeForm } from "./sighting-contribute-form";
 
 type Props = {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ species?: string }>;
+  searchParams: Promise<{ species?: string; category?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -71,31 +90,91 @@ export default async function ContributeSightingPage({
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const { species: speciesSlug } = await searchParams;
-  if (!speciesSlug) notFound();
+  const { species: speciesSlug, category: categorySlug } = await searchParams;
 
   const t = await getTranslations("Contribute");
   const tKinds = await getTranslations("Kinds");
   const tPlaceTypes = await getTranslations("PlaceTypes");
 
-  // Four independent reads, so they start together rather than in sequence.
-  const [session, species, locations, weather] = await Promise.all([
-    getSession(),
-    getSpecies(speciesSlug),
-    getContributeLocations(),
-    getWeatherConditions(),
-  ]);
+  // Every read is independent, so they all start together rather than in
+  // sequence. Which of the three subject reads is a real request depends on what
+  // the URL named: with a species slug there is nothing to pick, so neither the
+  // category hint nor the whole species table is worth asking for.
+  const [session, species, hintCategory, allSpecies, locations, weather] =
+    await Promise.all([
+      getSession(),
+      speciesSlug ? getSpecies(speciesSlug) : Promise.resolve(null),
+      !speciesSlug && categorySlug
+        ? getCategory(categorySlug)
+        : Promise.resolve(null),
+      speciesSlug ? Promise.resolve([]) : getAllSpecies(),
+      getContributeLocations(),
+      getWeatherConditions(),
+    ]);
 
   // Null only on a real 404 - see lib/catalog.ts on why that is trustworthy.
-  if (!species) notFound();
+  // Only `?species=` is a promise the page has to keep: it is the whole subject
+  // of the entry. An unknown `?category=` is a hint that did not resolve, and
+  // costs the picker's prefill rather than the page.
+  if (speciesSlug && !species) notFound();
 
-  const speciesName = localized(species, "name", locale) ?? species.slug;
-  const speciesHref = `/species/${species.slug}`;
+  const speciesName = species
+    ? (localized(species, "name", locale) ?? species.slug)
+    : null;
+  const speciesHref = species ? `/species/${species.slug}` : null;
   const categoryName = localized(
-    { name: species.category_name, en_name: species.category_en_name },
+    species
+      ? { name: species.category_name, en_name: species.category_en_name }
+      : hintCategory,
     "name",
     locale,
   );
+
+  /**
+   * Every species the picker can offer, projected down to what it filters and
+   * labels by - so the API's galleries and descriptions never cross the wire for
+   * a dropdown. Both bilingual pairs are resolved here, on the server, exactly as
+   * `placeLabel` resolves a place's.
+   *
+   * Sorted **by category then by name**, which is the order both lower steps of
+   * the cascade read out of it: the category select takes the first appearance of
+   * each category, and a category's species arrive already alphabetized.
+   *
+   * A species whose category is missing is dropped - the cascade has no step to
+   * put it under, and the API only publishes such a row to an administrator.
+   */
+  const speciesOptions: SpeciesChoice[] = allSpecies
+    .flatMap((item) => {
+      if (!item.kind || !item.category_slug) return [];
+      return [
+        {
+          id: item.id,
+          slug: item.slug,
+          name: localized(item, "name", locale) ?? item.slug,
+          kind: item.kind,
+          categorySlug: item.category_slug,
+          categoryName:
+            localized(
+              { name: item.category_name, en_name: item.category_en_name },
+              "name",
+              locale,
+            ) ?? item.category_slug,
+        },
+      ];
+    })
+    .sort(
+      (a, b) =>
+        a.categoryName.localeCompare(b.categoryName, locale) ||
+        a.name.localeCompare(b.name, locale),
+    );
+
+  /**
+   * The species as the form's fixed subject, when the URL named one. `null` is
+   * what switches the flow's first stage over to the picker.
+   */
+  const fixedSpecies: SpeciesSubject | null = species
+    ? { id: species.id, slug: species.slug, name: speciesName ?? species.slug }
+    : null;
 
   /**
    * How one place reads in the picker: `Lake Estes (Lake) - Larimer`.
@@ -128,20 +207,38 @@ export default async function ContributeSightingPage({
       .join(" - ");
   };
 
+  /**
+   * The trail down to whatever the URL actually knew: the species' own branch and
+   * category when it named a species, the hint category's when it named one of
+   * those, and nothing but Home when it named neither.
+   *
+   * Both sources are read through the same two locals, which is why they are
+   * resolved above rather than off `species` inline - the crumbs do not care
+   * which of the two answered.
+   */
+  const branchKind: Kind | null = species
+    ? species.kind
+    : (hintCategory?.kind ?? null);
+  const crumbCategorySlug = species
+    ? species.category_slug
+    : (hintCategory?.slug ?? null);
+
   const breadcrumbs = [
     { label: t("breadcrumbHome"), href: "/" },
-    ...(species.kind
-      ? [{ label: tKinds(species.kind), href: kindHref(species.kind) }]
+    ...(branchKind
+      ? [{ label: tKinds(branchKind), href: kindHref(branchKind) }]
       : []),
-    ...(categoryName && species.category_slug
+    ...(categoryName && crumbCategorySlug
       ? [
           {
             label: categoryName,
-            href: `/categories/${species.category_slug}`,
+            href: `/categories/${crumbCategorySlug}`,
           },
         ]
       : []),
-    { label: speciesName, href: speciesHref },
+    ...(speciesName && speciesHref
+      ? [{ label: speciesName, href: speciesHref }]
+      : []),
     { label: t("sightingBreadcrumb") },
   ];
 
@@ -157,15 +254,23 @@ export default async function ContributeSightingPage({
             {t("sightingTitle")}
           </Typography>
           <Typography variant="body" color="var(--foreground-muted, #6b7280)">
-            {t("sightingIntro", { species: speciesName })}
+            {/* Named when the URL named it. The `?category=` case deliberately
+                does *not* get its own "for this category" line: the category is
+                only where the picker opens, and the contributor is free to move
+                off it, so promising one here would be a promise the form does
+                not keep. */}
+            {speciesName
+              ? t("sightingIntro", { species: speciesName })
+              : t("sightingIntroAny")}
           </Typography>
         </Box>
 
         {session ? (
           <SightingContributeForm
-            speciesId={species.id}
-            speciesName={speciesName}
-            speciesHref={speciesHref}
+            species={fixedSpecies}
+            speciesOptions={speciesOptions}
+            initialKind={branchKind}
+            initialCategorySlug={crumbCategorySlug}
             // Display only - the API derives the published credit from this same
             // account, so nothing here is submitted. `firstName`, not
             // `displayName`: the latter is the navbar's 10-char label and falls
@@ -189,7 +294,11 @@ export default async function ContributeSightingPage({
           />
         ) : (
           <SignInPrompt
-            description={t("signInSighting", { species: speciesName })}
+            description={
+              speciesName
+                ? t("signInSighting", { species: speciesName })
+                : t("signInSightingAny")
+            }
           />
         )}
       </Container>

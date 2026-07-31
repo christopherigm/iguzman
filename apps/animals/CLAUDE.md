@@ -9,14 +9,14 @@ file covers only what is specific, and why.
 Three detail routes and one **branch** page sit under the landing, and the
 landing's `CategoryNav` tiles, gallery captions and journal slider link into them:
 
-| Route                            | Renders                                                                          |
-| -------------------------------- | -------------------------------------------------------------------------------- |
-| `/[locale]/[kind]`               | One of the five branches: hero, its categories, its recent sightings, its map    |
-| `/[locale]/categories/[slug]`    | One category: hero, first row, its recent sightings, its species grid            |
-| `/[locale]/species/[slug]`       | One species: hero, first row, `video_link`, its sightings                        |
-| `/[locale]/sightings/[slug]`     | One journal entry: hero, first row, its clips, its map, more of the same species |
-| `/[locale]/contribute/species`   | The public staged form that **proposes** a species (`?category=<slug>`)          |
-| `/[locale]/contribute/sightings` | The public staged form that **files** a journal entry (`?species=<slug>`)        |
+| Route                            | Renders                                                                             |
+| -------------------------------- | ----------------------------------------------------------------------------------- |
+| `/[locale]/[kind]`               | One of the five branches: hero, its categories, its recent sightings, its map       |
+| `/[locale]/categories/[slug]`    | One category: hero, first row, its recent sightings, its species grid               |
+| `/[locale]/species/[slug]`       | One species: hero, first row, `video_link`, its sightings                           |
+| `/[locale]/sightings/[slug]`     | One journal entry: hero, first row, its clips, its map, more of the same species    |
+| `/[locale]/contribute/species`   | The public staged form that **proposes** a species (`?category=<slug>`)             |
+| `/[locale]/contribute/sightings` | The public staged form that **files** a journal entry (`?species=` or `?category=`) |
 
 All four are composed from `components/catalog/` (`DetailHero`, `FactsCard`,
 `DetailGallery`, `SpeciesGrid`) and `components/journal/sightings-section.tsx`, so
@@ -192,26 +192,35 @@ Twelve things that will bite:
 
 A signed-in reader can add to the site without the CMS. A
 `FloatingActionButton` (`@repo/ui`) sits on three public pages and opens a staged,
-Instagram-shaped form: **a category page proposes a species**, **a species page
-and a sighting page file a journal entry**. Everything filed this way lands
-**pending review**.
+Instagram-shaped form. Everything filed this way lands **pending review**.
 
-The species and sighting FABs are the same action at two depths - the subject is
-what differs, not the form: a species page names it in its own route slug (so the
-button needs no guard), a sighting page borrows it from the entry (so the button
-is only rendered when `species_slug` is non-null, or it would lead to a
-`notFound()`).
+**Filing a sighting is the primary action on all three pages**; proposing a
+species is the rarer, more editorial one and appears on the category page only:
 
-| Piece                       | Where                                                              |
-| --------------------------- | ------------------------------------------------------------------ |
-| The three FABs              | the category, species and sighting pages, after `PageBottomSpacer` |
-| The routes                  | `app/[locale]/contribute/{species,sightings}/`                     |
-| The wizards (one per route) | `…/species-contribute-form.tsx`, `…/sighting-contribute-form.tsx`  |
-| Shared stage chrome         | `components/contribute/` (stage shell, photo picker, review row)   |
-| Browser client              | `lib/contribute.ts`                                                |
-| Token-attaching proxy       | `app/api/contribute/[...path]/route.ts`                            |
+| Page       | FAB(s)                                       | Opens                                  |
+| ---------- | -------------------------------------------- | -------------------------------------- |
+| a species  | Add a sighting                               | `/contribute/sightings?species=<slug>` |
+| a sighting | Add a sighting                               | `/contribute/sightings?species=<slug>` |
+| a category | Add a sighting **and** Add a species (above) | `…?category=<slug>` for both           |
 
-Nine things that will bite:
+The species and sighting FABs are the same action at different depths - the
+subject is what differs, not the form: a species page names it in its own route
+slug (so the button needs no guard), a sighting page borrows it from the entry
+(so the button is only rendered when `species_slug` is non-null, or it would lead
+to a `notFound()`), and a category page **does not know it at all** - which is
+what the `SpeciesPicker` exists for.
+
+| Piece                       | Where                                                             |
+| --------------------------- | ----------------------------------------------------------------- |
+| The four FABs               | the category (two), species and sighting pages, after the spacers |
+| The routes                  | `app/[locale]/contribute/{species,sightings}/`                    |
+| The wizards (one per route) | `…/species-contribute-form.tsx`, `…/sighting-contribute-form.tsx` |
+| The species cascade         | `…/sightings/species-picker.tsx`                                  |
+| Shared stage chrome         | `components/contribute/` (stage shell, photo picker, review row)  |
+| Browser client              | `lib/contribute.ts`                                               |
+| Token-attaching proxy       | `app/api/contribute/[...path]/route.ts`                           |
+
+Ten things that will bite:
 
 - ⚠ **Pending means `enabled=false`, and there is no moderation queue.** The API
   creates a contribution disabled and flagged `is_contribution`; publishing it is
@@ -243,10 +252,38 @@ Nine things that will bite:
   `/auth` with no idea what they were about to do. Nothing is protected by
   rendering the form: the endpoint requires a session, re-derived from the token
   by Django on every call.
-- **The subject is a query param and it is required** - `?category=<slug>` and
-  `?species=<slug>`. The FAB was pressed on a page that already names it, so a
-  picker would be re-asking a settled question and inviting the wrong answer. A
-  missing or unknown slug is `notFound()`, not a fallback picker.
+- **The species flow's subject is a query param and it is required** -
+  `?category=<slug>`. The FAB was pressed on a category page, so a picker would be
+  re-asking a settled question and inviting the wrong answer, and there is no
+  meaningful "add a species to nowhere". A missing or unknown slug is
+  `notFound()`, not a fallback picker.
+- ⚠ **The sighting flow's is not, and how much the URL knows is what its page
+  branches on.** `?species=<slug>` is still the preferred way in and is still
+  exact - the FAB named the animal, and an unknown slug is a **404**. But the
+  category page's FAB opens the same flow with `?category=<slug>`, which is a
+  _hint_ rather than a subject: it prefills the first two steps of
+  `SpeciesPicker`'s branch → category → species cascade and nothing more, so an
+  unknown one costs the prefill, not the page. With neither param the picker
+  starts from the branch. Three consequences. The picker **narrows, it does not
+  fetch**: `getAllSpecies()` is the one read in this app that deliberately asks
+  for the whole species table, so changing a branch re-filters an array instead
+  of making a request - and the page projects each row down to its id, slug,
+  name, branch and category first, so the galleries never cross the wire. It is
+  only fetched in the two cases that actually open a picker; `?species=` still
+  reads one record. And the page's heading, its breadcrumbs, its sign-in prompt and
+  stage 1's own title all have a **second string** for the case where no species
+  is named yet (`sightingIntroAny`, `signInSightingAny`,
+  `sightingStage1TitleAny`, `sightingStage1DescriptionAny`) - a flow that has not
+  been told what was seen must not print a sentence with a hole in it.
+- **A species named in the URL and one the picker offers are different types.**
+  `SpeciesSubject` (`{id, slug, name}`) is all the form needs to file an entry;
+  `SpeciesChoice` adds the branch and category the cascade filters by. Keeping
+  them one type would make a catalog row missing either field unfileable even
+  from `?species=`, where nothing reads them.
+- **Each flow is one client component, not a route per stage.** The stages share a
+  draft and a stage boundary is not a navigation: stepping back must find stage 1
+  as it was left, which routes would only give by putting the draft somewhere it
+  can be lost.
 - **Each flow is one client component, not a route per stage.** The stages share a
   draft and a stage boundary is not a navigation: stepping back must find stage 1
   as it was left, which routes would only give by putting the draft somewhere it
@@ -290,7 +327,15 @@ Nine things that will bite:
   rather than disabling Continue silently. The **season** is not asked for either -
   `Sighting.save()` derives it from the date.
 
-All three FABs sit in the default corner, **bottom-right**.
+All four FABs sit in the default corner, **bottom-right**. The category page's
+two are a **stack**: "Add a sighting" takes the corner in the accent fill at
+`size="lg"`, and "Add a species" sits above it in `kind="default"` at `size="md"`.
+⚠ The upper one is raised with `styles={{ bottom }}`, not with `offset` - that
+prop sets _both_ edges at once, and would push the button sideways as well. It
+reads `var(--ui-fab-offset, 20px)` rather than a literal, so the pair still tucks
+in together below `sm`, where `.ui-fab` narrows the offset to 16px. The page also
+owes the stack a second spacer's worth of clearance (`FAB_STACK_OFFSET`) on top of
+`PageBottomSpacer`, or the last row of the species grid sits under the upper FAB.
 
 **Not built:** a contributor cannot see their own pending records. The flow
 confirms the submission and says it is awaiting review, but there is no "my
@@ -347,7 +392,7 @@ Eight rules that will bite:
   reads like a broken record rather than a missing param: for a while only
   `resource().list` sent it, so `/admin/sightings` listed an unpublished entry
   and opening its form answered 404 → "could not load this". `enabled` decides
-  who may *see* a row and nothing else - reading, editing and deleting any record
+  who may _see_ a row and nothing else - reading, editing and deleting any record
   in `/admin` must never depend on it. PATCH and DELETE were always fine; they
   look the row up without the filter.
 - ⚠ **`/admin/species` is the one list read a page at a time, and its search box
@@ -490,14 +535,14 @@ browser ──chunks (≤90 MB, sequential)──▶ this pod ──▶ /scratch
 browser ──polls the sighting payload──▶ animals-api   (status only)
 ```
 
-| Piece                     | Where                                                     |
-| ------------------------- | --------------------------------------------------------- |
-| Chunked upload endpoint   | `app/api/video/upload/route.ts`                           |
-| Queue, transcode, cleanup | `lib/video-pipeline.ts`                                   |
-| Browser uploader          | `lib/video-upload.ts`                                     |
-| R2 writes                 | `lib/r2.ts`                                               |
-| Encode settings           | `System.video_*`, authored at `/admin/system`             |
-| Public "processing" state | `sightings/[slug]/sighting-videos.tsx` + its poll notice  |
+| Piece                     | Where                                                    |
+| ------------------------- | -------------------------------------------------------- |
+| Chunked upload endpoint   | `app/api/video/upload/route.ts`                          |
+| Queue, transcode, cleanup | `lib/video-pipeline.ts`                                  |
+| Browser uploader          | `lib/video-upload.ts`                                    |
+| R2 writes                 | `lib/r2.ts`                                              |
+| Encode settings           | `System.video_*`, authored at `/admin/system`            |
+| Public "processing" state | `sightings/[slug]/sighting-videos.tsx` + its poll notice |
 
 Eight things that will bite:
 
@@ -522,7 +567,7 @@ Eight things that will bite:
   replica to one node - most of the point of scaling out.
 - **A pod restart loses the job, by design.** There is no queue that outlives the
   process. The row is left mid-flight and animals-api reports it `failed` once it
-  ages past `VIDEO_PROCESSING_TIMEOUT_MINUTES` - a *derived* sweep, needing no
+  ages past `VIDEO_PROCESSING_TIMEOUT_MINUTES` - a _derived_ sweep, needing no
   scheduler on either side. The contributor re-uploads.
 - ⚠ **Authorisation is a signed ticket, not the session.** This pod cannot decide
   who may write a given media row: for a contributor that turns on the sighting's
@@ -533,7 +578,7 @@ Eight things that will bite:
   falling open - an empty configured secret must never match an empty supplied
   one.
 - ⚠ **`transcodeForWeb` is not `scaleDown`.** The `@repo/helpers` function this
-  uses never upscales (`scaleDown` on a 480p source *enlarges* it, producing a
+  uses never upscales (`scaleDown` on a 480p source _enlarges_ it, producing a
   bigger file than the original), caps frame rate at 30 - the single largest
   saving on phone footage - and re-encodes audio to AAC rather than copying it.
   `scaleDown` is video-downloader's operation with its own contract; changing its
@@ -542,10 +587,17 @@ Eight things that will bite:
   smaller files, but Firefox and many desktop browsers cannot play HEVC at all,
   so the picker carries a warning that is not decoration. H.264 is the default
   and the safe answer.
-- **A processing row is rendered, not hidden.** `toVideos` in the sighting page
-  used to drop any media row without a `source_url`, which made a clip vanish
-  from the page for the minutes it was encoding with nothing to say it was
-  coming. It now emits the row with its status and the page shows a placeholder,
+- **A processing row is announced, not hidden - and not framed either.**
+  `toVideos` in the sighting page used to drop any media row without a
+  `source_url`, which made a clip vanish from the page for the minutes it was
+  encoding with nothing to say it was coming. It now emits the row with its
+  status, and `SightingVideos` lays out only the **ready** clips and counts the
+  rest into **one** spinner and one sentence under the heading (`videoProcessing`,
+  an ICU plural on that count: "A video is being converted…" / "2 videos are
+  being converted…"). It is deliberately not a frame per clip: a row in flight
+  has no dimensions yet, so the box would be a guessed 16:9 that jumps to the
+  real ratio when the poll lands, and a black video-shaped box that cannot be
+  played reads as a broken player rather than as one on its way. The line is
   refreshed by a slow client poll (`video-processing-notice.tsx`) - polling, not
   SSE, because the status already lives on the row and any replica can answer it
   from the database.
@@ -562,7 +614,7 @@ Eight things that will bite:
   ratio**, which is what makes the clips in a row come out the same height with
   no letterboxing - a portrait beside a landscape lands on 3/9 of the twelve, a
   row of portraits splits evenly into the `sm: 6 / md: 4 / lg: 3` grid. The one
-  case that is *a single portrait clip* is not a section at all: it is cut to the
+  case that is _a single portrait clip_ is not a section at all: it is cut to the
   map's height and rendered in the map's row through `SightingsMapSection`'s
   `aside` slot, under one heading (`mapAndVideoTitle`), because full width would
   run a 9:16 video a thousand pixels down the page. With no coordinates to map it

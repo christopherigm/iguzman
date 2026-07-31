@@ -3,16 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Pagination, Autoplay } from "swiper/modules";
+import { Autoplay } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Button } from "@repo/ui/core-elements/button";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
+import { SliderControls } from "@repo/ui/core-elements/slider-dots";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import "swiper/css";
-import "swiper/css/pagination";
 import "./feature-slider.css";
 
 const LS_KEY = "feature-slider-dismissed";
@@ -36,6 +36,9 @@ export function FeatureSlider() {
   const t = useTranslations("FeatureSlider");
   const tCommon = useTranslations("Common");
   const swiperRef = useRef<SwiperType | null>(null);
+  // `realIndex`, not `activeIndex`: the slider loops, so Swiper prepends
+  // duplicate slides and only the former indexes back into `CARDS`.
+  const [activeIndex, setActiveIndex] = useState(0);
   // Start hidden to match the server (which has no localStorage), then reveal
   // after mount unless the user has dismissed it. Reading localStorage during
   // render - even via a lazy init - makes the first client render disagree with
@@ -64,15 +67,15 @@ export function FeatureSlider() {
         >
           <Swiper
             className="fs-swiper"
-            modules={[Pagination, Autoplay]}
+            modules={[Autoplay]}
             slidesPerView={1}
             spaceBetween={0}
             loop
             autoplay={{ delay: 15000, disableOnInteraction: false }}
-            pagination={{ el: ".fs-pagination", clickable: true }}
             onSwiper={(s) => {
               swiperRef.current = s;
             }}
+            onSlideChange={(s) => setActiveIndex(s.realIndex)}
           >
             {CARDS.map((card) => (
               <SwiperSlide key={card.key}>
@@ -118,27 +121,26 @@ export function FeatureSlider() {
             ))}
           </Swiper>
 
-          <div className="fs-controls">
-            <IconButton
-              icon="/icons/chevron-left.svg"
-              iconSize={18}
-              iconColor="rgba(255, 255, 255, 0.7)"
-              aria-label={t("prev")}
-              onClick={() => swiperRef.current?.slidePrev()}
-              width={32}
-              height={32}
+          {/* The shared control row (`@repo/ui`): arrows flanking accent dots.
+              `translucentArrows` is off - the row sits on the card's own opaque
+              body, so there is nothing behind it worth blurring. */}
+          <Box className="fs-controls">
+            <SliderControls
+              count={CARDS.length}
+              active={activeIndex}
+              // `slideToLoop` indexes the real slides, past the duplicates the
+              // looping slider prepends.
+              onSelect={(i) => swiperRef.current?.slideToLoop(i)}
+              onPrev={() => swiperRef.current?.slidePrev()}
+              onNext={() => swiperRef.current?.slideNext()}
+              label={t("pagination")}
+              dotLabel={(i) => t(`${CARDS[i]!.key}.title`)}
+              previousLabel={t("prev")}
+              nextLabel={t("next")}
+              arrowSize="sm"
+              translucentArrows={false}
             />
-            <div className="fs-pagination" />
-            <IconButton
-              icon="/icons/chevron-right.svg"
-              iconSize={18}
-              iconColor="rgba(255, 255, 255, 0.7)"
-              aria-label={t("next")}
-              onClick={() => swiperRef.current?.slideNext()}
-              width={32}
-              height={32}
-            />
-          </div>
+          </Box>
         </Box>
       </Box>
 

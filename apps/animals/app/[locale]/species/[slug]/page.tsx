@@ -137,11 +137,11 @@ export default async function SpeciesPage({ params }: Props) {
       : []),
     ...(categoryName && species.category_slug
       ? [
-          {
-            label: categoryName,
-            href: `/categories/${species.category_slug}`,
-          },
-        ]
+        {
+          label: categoryName,
+          href: `/categories/${species.category_slug}`,
+        },
+      ]
       : []),
     { label: name },
   ];
@@ -198,21 +198,21 @@ export default async function SpeciesPage({ params }: Props) {
                 facts={[
                   species.scientific_name
                     ? {
-                        label: tCategory("factScientificName"),
-                        value: species.scientific_name,
-                      }
+                      label: tCategory("factScientificName"),
+                      value: species.scientific_name,
+                    }
                     : null,
                   species.family
                     ? { label: t("factFamily"), value: species.family }
                     : null,
                   categoryName
                     ? {
-                        label: tCategory("factCategory"),
-                        value: categoryName,
-                        href: species.category_slug
-                          ? `/categories/${species.category_slug}`
-                          : null,
-                      }
+                      label: tCategory("factCategory"),
+                      value: categoryName,
+                      href: species.category_slug
+                        ? `/categories/${species.category_slug}`
+                        : null,
+                    }
                     : null,
                   {
                     label: tCategory("factSightings"),
@@ -266,7 +266,7 @@ export default async function SpeciesPage({ params }: Props) {
           slug *is* the species the contribute form requires, and a slug that
           names nothing already went to `notFound()` above. */}
       <FloatingActionButton
-        icon="/icons/add.svg"
+        icon="/icons/binoculars.svg"
         aria-label={tContribute("addSighting")}
         label={tContribute("addSighting")}
         href={`/contribute/sightings?species=${slug}`}

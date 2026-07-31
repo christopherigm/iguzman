@@ -289,6 +289,30 @@ declare module "swiper/css/*";
 
 **Rule:** If you add a new CSS side-effect import from a third-party package and TypeScript raises TS2882, add a `declare module` entry to the app's `css.d.ts`. Never create a separate per-package `.d.ts` file - `css.d.ts` is the single place for these declarations.
 
+## Pagination - one row, painted from `--accent`
+
+**Every slider's pagination is `@repo/ui`'s `SliderControls`** (`core-elements/slider-dots`) - the two arrows flanking a row of dots, in one row **beneath** the slide. Never hand-roll dots, and never fall back to Swiper's own `Pagination` module: its bullets render at Swiper's stock blue unless every consumer remembers to override `--swiper-pagination-*`, which is exactly how `apps/website`'s success stories ended up ignoring the tenant's brand colour and `apps/edge-folio`'s intel card ended up pointing at a `--primary` token no palette defines.
+
+```tsx
+import { SliderControls } from "@repo/ui/core-elements/slider-dots";
+
+<SliderControls
+  count={slides.length} // or `swiper.snapGrid.length` when several slides share the viewport
+  active={activeIndex} // `realIndex` when looping, `snapIndex` when multi-view
+  onSelect={(i) => swiper?.slideToLoop(i)}
+  onPrev={() => swiper?.slidePrev()}
+  onNext={() => swiper?.slideNext()}
+  label={t("pagination")}
+  dotLabel={(i) => slides[i]!.title}
+  previousLabel={t("previous")}
+  nextLabel={t("next")}
+/>;
+```
+
+⚠ **A slider that shows more than one slide at a time must drive the dots from `snapGrid`/`snapIndex`, not from the slide count.** With three cards on screen the last snap is card 3 of 5, so a dot per card leaves two permanently unreachable.
+
+**A numbered page bar keeps its numbers** - `apps/cinelog`'s `MoviePagination`, `apps/cinelog-tv`'s `TvPagination` - but the current page carries the same colour the active dot does: a solid `var(--accent)` fill with `var(--accent-foreground)` text (never a hard-coded white, which is wrong on the light palettes). Where the bar is only a readout rather than buttons (`apps/video-downloader`'s toolbar, `apps/edge-folio`'s jobs list), the current page **number** takes `var(--accent)` and the rest of the label stays muted.
+
 ## Two-column layouts - split at `sm`, not `md`
 
 **A two-column `Grid` layout should go two-up from the `sm` breakpoint, not `md`** - stacking a pairing across the whole tablet band wastes the horizontal space. Use the `Grid` `size` prop (props-first; it reads the shared `BREAKPOINTS` scale):

@@ -18,11 +18,17 @@
   width: 240px;
   min-width: 240px;
   flex-shrink: 0;
+  transition:
+    width 0.2s ease,
+    min-width 0.2s ease;
 }
 
 .admin-sidebar {
   width: 240px;
   min-width: 240px;
+  transition:
+    width 0.2s ease,
+    min-width 0.2s ease;
   background: color-mix(in srgb, var(--background) 97%, var(--foreground) 3%);
   border-right: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
   display: flex;
@@ -84,6 +90,39 @@
   display: none;
 }
 
+/* The collapsed rail: the sidebar keeps its icons and drops its labels, so the
+   page beside it gets ~176px back.
+   `md` and up only, and the whole of it belongs in a media query rather than on
+   the components' props - below `md` this sidebar is a slide-in drawer whose
+   labels are the entire point, and the collapse control is hidden there. */
+@media (--md) {
+  .admin-sidebar--collapsed,
+  .admin-sidebar__spacer--collapsed {
+    width: 64px;
+    min-width: 64px;
+  }
+
+  .admin-sidebar--collapsed .admin-sidebar__link {
+    justify-content: center;
+    padding-left: 0;
+    /* Offsets the link's 3px left border (transparent until active), which
+       would otherwise sit the icon 1.5px left of centre. */
+    padding-right: 3px;
+  }
+
+  /* Hiding these is the collapse. It has to be CSS rather than a `collapsed &&`
+     in the component: below `md` the same markup is the drawer, where the
+     labels must stay. The footer needs no rule of its own - with the title
+     gone, its `space-between` leaves the lone button between the 16px padding
+     and the rail's edge, centred to within a couple of pixels. (It could not
+     have one anyway: its padding and alignment are `Box` props, i.e. inline
+     styles, which no class can override.) */
+  .admin-sidebar--collapsed .admin-sidebar__label,
+  .admin-sidebar--collapsed .admin-sidebar__title {
+    display: none;
+  }
+}
+
 @media (--below-md) {
   /* md */
   .admin-sidebar__spacer {
@@ -121,6 +160,13 @@
 
   .admin-sidebar--open {
     display: flex;
+  }
+
+  /* The drawer is already the narrow form of the sidebar and is dismissed
+     whole, so a rail toggle inside it would collapse something nobody can see.
+     A stored `collapsed` therefore has no effect at all below `md`. */
+  .admin-sidebar__collapse {
+    display: none;
   }
 
   .admin-sidebar__overlay {

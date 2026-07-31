@@ -1,18 +1,16 @@
 "use client";
 
-import { useRef, useId } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { Button } from "@repo/ui/core-elements/button";
 import { Spinner } from "@repo/ui/core-elements/spinner";
+import { SliderControls } from "@repo/ui/core-elements/slider-dots";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Pagination } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
 import type { CompanyIntelItem } from "@/lib/applications";
 import "swiper/css";
-import "swiper/css/pagination";
 
 function IntelItemCard({ item }: { item: CompanyIntelItem }) {
   return (
@@ -50,8 +48,9 @@ export function IntelSwiperCard({
 }) {
   const t = useTranslations("ApplicationDetailPage");
   const swiperRef = useRef<SwiperType | null>(null);
-  const id = useId();
-  const pagClass = `detail__intel-pag-${id.replace(/:/g, "")}`;
+  // `realIndex`, not `activeIndex`: the slider loops once there is more than one
+  // item, so Swiper prepends duplicates and only the former indexes into `items`.
+  const [activeIndex, setActiveIndex] = useState(0);
 
   return (
     <Card padding={0} styles={{ overflow: "hidden" }}>
@@ -73,18 +72,13 @@ export function IntelSwiperCard({
         <>
           <Swiper
             className="detail__intel-swiper"
-            modules={[Pagination]}
             slidesPerView={1}
             spaceBetween={0}
             loop={items.length > 1}
             onSwiper={(s) => {
               swiperRef.current = s;
             }}
-            pagination={
-              items.length > 1
-                ? { el: `.${pagClass}`, clickable: true }
-                : undefined
-            }
+            onSlideChange={(s) => setActiveIndex(s.realIndex)}
           >
             {items.map((item, i) => (
               <SwiperSlide key={i}>
@@ -100,30 +94,28 @@ export function IntelSwiperCard({
               </SwiperSlide>
             ))}
           </Swiper>
+          {/* The shared control row (`@repo/ui`): arrows flanking accent dots.
+              It renders nothing for a single item, so the strip's own border
+              only appears when there is something to page. `translucentArrows`
+              is off - the row sits on the card's opaque body. */}
           {items.length > 1 && (
-            <div className="detail__intel-controls">
-              <Button
-                icon="/icons/chevron-left.svg"
-                iconSize="16px"
-                aria-label={t("intelNavPrev")}
-                onClick={() => swiperRef.current?.slidePrev()}
-                width={28}
-                height={28}
-                border="1px solid var(--border, #e5e7eb)"
-                styles={{ padding: 0, justifyContent: "center" }}
+            <Box className="detail__intel-controls">
+              <SliderControls
+                count={items.length}
+                active={activeIndex}
+                // `slideToLoop` indexes the real items, past the duplicates the
+                // looping slider prepends.
+                onSelect={(i) => swiperRef.current?.slideToLoop(i)}
+                onPrev={() => swiperRef.current?.slidePrev()}
+                onNext={() => swiperRef.current?.slideNext()}
+                label={t("intelPagination")}
+                dotLabel={(i) => items[i]!.title}
+                previousLabel={t("intelNavPrev")}
+                nextLabel={t("intelNavNext")}
+                arrowSize="sm"
+                translucentArrows={false}
               />
-              <div className={pagClass} data-intel-pagination />
-              <Button
-                icon="/icons/chevron-right.svg"
-                iconSize="16px"
-                aria-label={t("intelNavNext")}
-                onClick={() => swiperRef.current?.slideNext()}
-                width={28}
-                height={28}
-                border="1px solid var(--border, #e5e7eb)"
-                styles={{ padding: 0, justifyContent: "center" }}
-              />
-            </div>
+            </Box>
           )}
         </>
       )}
