@@ -1,6 +1,10 @@
+from datetime import timedelta
+
+from django.conf import settings
 from django.db.models import Count, Max, Min, Prefetch, Q
+from django.utils import timezone
+from django.utils.crypto import constant_time_compare
 from rest_framework import status
-from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -8,7 +12,7 @@ from rest_framework.views import APIView
 from catalog.models import KIND_CHOICES, Category, Location, Species
 from core.cache import cached_get, cached_set, invalidate
 from core.contribute_views import ContributeView
-from core.permissions import IsSiteAdmin, show_disabled
+from core.permissions import IsContributor, IsSiteAdmin, show_disabled
 from core.views import CachedDetailView, CachedListCreateView, list_key
 
 from . import cache_keys as keys
@@ -20,9 +24,11 @@ from .serializers import (
     SightingMediaUpdateSerializer,
     SightingMediaWriteSerializer,
     SightingSerializer,
-    SightingVideoUploadSerializer,
+    SightingVideoProcessingSerializer,
+    SightingVideoReserveSerializer,
     SightingWriteSerializer,
 )
+from .upload_tickets import issue_upload_ticket
 
 # `created_by` is joined for the **credit line**, not for the audit trail: the
 # read serializer publishes that account's first name, so without it a 100-entry
@@ -334,28 +340,148 @@ class SightingMediaListCreateView(APIView):
         )
 
 
-class SightingVideoUploadView(APIView):
-    """
-    POST /api/journal/sightings/<pk>/media/video/ - upload a video file (staff).
+def _reserved_video_payload(media, request):
+    """A freshly reserved clip row, plus the ticket that lets it be uploaded.
 
-    Multipart only. ``file`` is the video; ``poster`` is an optional still frame.
+    ``upload_ticket`` is **not** on ``SightingMediaSerializer`` and must not be:
+    that serializer feeds every public read of every gallery, and a ticket is a
+    short-lived capability. It belongs only in the response to the caller who
+    just proved they may write this row.
+    """
+    payload = SightingMediaSerializer(media, context={'request': request}).data
+    return {**payload, 'upload_ticket': issue_upload_ticket(media)}
+
+
+class SightingVideoReserveView(APIView):
+    """
+    POST /api/journal/sightings/<pk>/media/video/ - reserve a row for a clip
+    that is about to be uploaded **to the handler**, not to here.
+
+    Answers the created row in ``pending``. The browser then uploads the file in
+    chunks to ``apps/animals``, which transcodes it, PUTs the result to R2 and
+    reports back through ``SightingVideoProcessingView`` below.
+
+    This replaced a multipart upload endpoint. A source clip is a camera-roll 4K
+    recording - several GB - which will not pass Cloudflare's body cap, would
+    occupy one of three sync gunicorn workers for the whole upload, and could not
+    be processed here regardless: there is no ffmpeg in this image and no worker
+    to run it in.
     """
 
     permission_classes = [IsSiteAdmin]
-    parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, pk):
         sighting = Sighting.objects.filter(pk=pk).first()
         if sighting is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        serializer = SightingVideoUploadSerializer(data=request.data)
+        serializer = SightingVideoReserveSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         media = serializer.save(sighting)
         _invalidate_sighting(sighting)
         return Response(
-            SightingMediaSerializer(media, context={'request': request}).data,
+            _reserved_video_payload(media, request),
             status=status.HTTP_201_CREATED,
         )
+
+
+class SightingContributeVideoView(APIView):
+    """
+    POST /api/journal/sightings/<pk>/media/video/contribute/ - a contributor
+    reserving a clip row on an entry they filed.
+
+    The sibling of ``SightingVideoReserveView`` for the public flow, and a
+    *sibling* rather than a relaxed permission on it for the reason the whole
+    contribute feature is built that way (see this project's CLAUDE.md): widening
+    the admin endpoint would widen every clip on every entry.
+
+    Three narrowings the CMS path does not have:
+
+    * the entry must be **the caller's own** and still **unpublished** - once an
+      administrator has approved it, adding media to it is authoring;
+    * one clip per entry, so a single outing cannot occupy the transcode queue;
+    * ``MAX_CONTRIBUTION_VIDEO_SECONDS`` and a rolling-day quota, because a
+      transcode is minutes of pinned CPU on a pod that also serves the public
+      site - this is admission control, not a storage limit.
+    """
+
+    permission_classes = [IsContributor]
+
+    def post(self, request, pk):
+        sighting = Sighting.objects.filter(pk=pk).first()
+        if sighting is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # 404 rather than 403 for someone else's entry: whether a given pk exists
+        # is not this caller's business.
+        if sighting.created_by_id != request.user.id or sighting.enabled:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if sighting.media.filter(kind='video').exists():
+            return Response(
+                {'detail': 'This entry already has a clip.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        since = timezone.now() - timedelta(days=1)
+        filed_today = SightingMedia.objects.filter(
+            kind='video',
+            sighting__created_by=request.user,
+            created__gte=since,
+        ).count()
+        if filed_today >= settings.MAX_CONTRIBUTION_VIDEOS_PER_DAY:
+            return Response(
+                {'detail': (
+                    f'Daily limit reached ({settings.MAX_CONTRIBUTION_VIDEOS_PER_DAY} '
+                    f'clips). Try again tomorrow.'
+                )},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        serializer = SightingVideoReserveSerializer(data=request.data, is_contribution=True)
+        serializer.is_valid(raise_exception=True)
+        media = serializer.save(sighting)
+        _invalidate_sighting(sighting)
+        return Response(
+            _reserved_video_payload(media, request),
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class SightingVideoProcessingView(APIView):
+    """
+    PATCH /api/journal/sightings/<pk>/media/<media_pk>/processing/ - the handler
+    reporting where a transcode got to.
+
+    ⚠ **Authenticated by a shared secret, not by a session**, and it is the only
+    endpoint here that is. The caller is ``apps/animals``' server side rather than
+    a browser: a transcode runs for minutes after the request that started it has
+    returned, and often outlives the session too, so there is no user token left
+    to present. ``VIDEO_HANDLER_TOKEN`` is held only by that pod.
+
+    Unset, this refuses everything rather than falling open - an empty configured
+    secret must never match an empty supplied one.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def patch(self, request, pk, media_pk):
+        expected = settings.VIDEO_HANDLER_TOKEN
+        supplied = request.headers.get('X-Video-Handler-Token', '')
+        if not expected or not constant_time_compare(supplied, expected):
+            return Response({'detail': 'Not authorised.'}, status=status.HTTP_403_FORBIDDEN)
+
+        media = SightingMedia.objects.filter(
+            pk=media_pk, sighting_id=pk, kind='video'
+        ).first()
+        if media is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = SightingVideoProcessingSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        media = serializer.save(media)
+        _invalidate_sighting(media.sighting)
+        return Response(SightingMediaSerializer(media, context={'request': request}).data)
 
 
 class SightingMediaDetailView(APIView):

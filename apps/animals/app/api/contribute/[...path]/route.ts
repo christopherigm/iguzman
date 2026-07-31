@@ -21,11 +21,31 @@ const ALLOWED_PATHS = [
   "journal/sightings/contribute/",
 ];
 
+/**
+ * The one contribute path that cannot be an exact string: reserving a clip row
+ * names the entry it belongs to.
+ *
+ * ⚠ Anchored, and `\d+` rather than anything looser. A pattern is a weaker
+ * promise than the exact list above, so it is written to match that one endpoint
+ * and nothing else - `journal/sightings/12/media/` or any other suffix must not
+ * slip through, or this handler would start forwarding gallery writes for any
+ * signed-in reader.
+ *
+ * Django still re-derives the real decision (the entry must be the caller's own
+ * and still unpublished); this only decides what may be *asked*.
+ */
+const ALLOWED_PATH_PATTERNS = [
+  /^journal\/sightings\/\d+\/media\/video\/contribute\/$/,
+];
+
 type Ctx = { params: Promise<{ path: string[] }> };
 
 export async function POST(request: NextRequest, { params }: Ctx) {
   const joined = `${(await params).path.join("/")}/`;
-  if (!ALLOWED_PATHS.includes(joined)) {
+  const allowed =
+    ALLOWED_PATHS.includes(joined) ||
+    ALLOWED_PATH_PATTERNS.some((pattern) => pattern.test(joined));
+  if (!allowed) {
     return NextResponse.json({ detail: "Not found" }, { status: 404 });
   }
 

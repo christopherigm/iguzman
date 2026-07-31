@@ -42,6 +42,27 @@ export interface SightingMedia {
   fit: ImageFit | null;
   background_color: string | null;
   sort_order: number;
+  /**
+   * Where an uploaded clip is in the transcode pipeline. Always `'ready'` for a
+   * photo and a link, which have nothing to process.
+   *
+   * ⚠ This is the API's **derived** answer, not its stored column: a clip whose
+   * handler died is reported `failed` once it ages past the API's timeout, since
+   * there is no worker on either side to sweep with. So a row can move to
+   * `failed` with nothing having written to it.
+   */
+  processing_status: "pending" | "processing" | "ready" | "failed";
+  /**
+   * Why a transcode failed, as a short code (`too_long`, `encode_failed`, …).
+   * Deliberately not a message: this field is on a payload cached under one key
+   * for every caller, so the frontend translates the code rather than the API
+   * publishing text - and ffmpeg's own error would carry server paths.
+   */
+  processing_error: string | null;
+  /** Of the transcoded output, not the source. Null until it is ready. */
+  width: number | null;
+  height: number | null;
+  size_bytes: number | null;
 }
 
 export interface Sighting {

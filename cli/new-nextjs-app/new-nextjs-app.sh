@@ -726,7 +726,7 @@ export default async function Home({ params }: Props) {
 
   return (
     <Container display="flex" alignItems="center" justifyContent="center" styles={{ minHeight: '100vh' }}>
-      <Box width={360} padding={32} borderRadius={12} flexDirection="column" alignItems="center">
+      <Box width={360} padding={32} borderRadius={8} flexDirection="column" alignItems="center">
         <h1 style={{ fontSize: 24, fontWeight: 600, color: 'var(--foreground)', marginBottom: 16 }}>
           ${title}
         </h1>

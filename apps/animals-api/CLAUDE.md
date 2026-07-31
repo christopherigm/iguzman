@@ -461,20 +461,65 @@ the same pattern as website-api. Write serializers declare their images through
 exists (the filename embeds the pk), and treats an explicitly empty value as
 "clear it" while an omitted one leaves the stored file alone.
 
-**A video file cannot go that route** - it is far past that limit, and base64 in
-a JSON body would hold the whole thing in memory as a string. Uploaded video has
-its own multipart endpoint, `POST /api/journal/sightings/<pk>/media/video/`,
-which Django streams to a temp file. Three limits have to agree, and they are in
-three different places:
+⚠ **A video file does not go that route either, and no longer reaches this
+service at all.** A source clip is a camera-roll 4K recording - a few GB - and
+three separate things make it impossible here: Cloudflare caps a request to
+`animals-api.iguzman.com.mx` at ~100 MB, a multi-GB upload would occupy one of
+three **sync** gunicorn workers for its whole duration, and there is no ffmpeg in
+this image and no worker to run it in. The multipart endpoint that used to try is
+gone.
 
-| Limit       | Where                                     | Value  |
-| ----------- | ----------------------------------------- | ------ |
-| Application | `MAX_VIDEO_UPLOAD_MB` (settings / secret) | 200 MB |
-| nginx       | `proxy-body-size` in `helm/values.yaml`   | 256m   |
-| gunicorn    | `GUNICORN_TIMEOUT` in `helm/values.yaml`  | 600    |
+**The pipeline lives in `apps/animals` (Next.js).** The browser uploads the clip
+in ≤90 MB chunks to a pod's own local disk (sticky sessions pin all of one
+upload's chunks to one pod), that pod transcodes it with ffmpeg, PUTs the ~100 MB
+result straight to R2, and reports back here. This API only ever holds control
+messages:
 
-⚠ nginx refuses an oversized body **before Django sees it**, so raising
-`MAX_VIDEO_UPLOAD_MB` alone just turns a readable 400 into an opaque 413.
+```
+POST  .../media/video/             reserve an empty row -> pending   (IsSiteAdmin)
+POST  .../media/video/contribute/  the same, from the public flow    (IsContributor)
+PATCH .../media/<pk>/processing/   the handler reporting the result  (shared secret)
+```
+
+Four things that will bite:
+
+- ⚠ **The status callback is authenticated by `VIDEO_HANDLER_TOKEN`, not by a
+  session** - the only endpoint here that is. A transcode runs for minutes after
+  the request that started it returned, and usually outlives the session too, so
+  there is no user token left to present. **Unset, it refuses everything**: an
+  empty configured secret must never match an empty supplied one, or the endpoint
+  is world-writable. There is a test for exactly that.
+- ⚠ **`processing_error` holds a short code, never ffmpeg's stderr.** This payload
+  is cached under one key and served to every caller, staff or not - the
+  `hide_precise_location` trap - so anything written there is public, and stderr
+  carries absolute paths from inside the pod. The handler maps its failure to one
+  of `too_long`, `too_large`, `unsupported_format`, `probe_failed`,
+  `encode_failed`, `upload_failed`, `abandoned`, and logs the detail on its side.
+- **The stale sweep is derived at read time, not written by anything.** The raw
+  upload sits on one pod's local disk, so a rollout, an OOM or a node drain takes
+  the job with it and leaves nothing to write `failed`. There is no Celery and no
+  cron in this project, so `SightingMedia.effective_processing_status` simply
+  *reports* a row still in flight past `VIDEO_PROCESSING_TIMEOUT_MINUTES` as
+  failed - which needs no scheduler and corrects itself if the pod comes back and
+  finishes late. The serializer publishes that, not the stored column.
+- **A `video` row exists before its file does**, so `clean()` skips the
+  "kind requires its field" check while the row is still in flight, and
+  `source_url` is null until the transcode lands - which is what the public page
+  renders as "processing" rather than as a broken player.
+
+The limits, and where each actually lives:
+
+| Limit                              | Where                                    | Value      |
+| ---------------------------------- | ---------------------------------------- | ---------- |
+| Source clip size (declared)        | `MAX_VIDEO_UPLOAD_MB`                    | 3000 MB    |
+| Contributor clip length            | `MAX_CONTRIBUTION_VIDEO_SECONDS`         | 90 s       |
+| Contributor clips per rolling day  | `MAX_CONTRIBUTION_VIDEOS_PER_DAY`        | 5          |
+| Abandoned-transcode timeout        | `VIDEO_PROCESSING_TIMEOUT_MINUTES`       | 45 min     |
+| Output resolution / CRF / codec    | `System.video_*`, authored at `/admin/system` | 1080p / 23 / h264 |
+
+⚠ **`proxy-body-size` is no longer one of them.** It is sized for the backup
+restore alone; raising it does nothing for video, and sizing video against it is
+how the old 200 MB ceiling came to be documented in three places.
 
 `SightingMedia` is one model with a `kind` (`image` / `video` / `link`) rather
 than three models, because a gallery is a single ordered list the author
@@ -493,11 +538,15 @@ and its two cache prefixes, and overrides `filter_queryset` for its own query
 params. What a subclass gets, and must not undo:
 
 - **GET public, writes admin-only** (`IsSiteAdmin`), via `get_permissions`.
-- **List keys include the resolved disabled-visibility**, never the raw
+- **Every cache key includes the resolved disabled-visibility**, never the raw
   `include_disabled` param - otherwise an admin response containing drafts is
   replayed to the next anonymous caller. There is a test for exactly that.
-  ⚠ The CMS asks for `?include_disabled=true` on **every** list, so this is not
-  a corner case any more - it is the path every authoring page takes.
+  ⚠ The CMS asks for `?include_disabled=true` on **every** read, so this is not
+  a corner case any more - it is the path every authoring page takes. That
+  includes the **detail** keys: a draft is addressable by pk for an
+  administrator, so `CachedDetailView` suffixes its key with `:staff` for a
+  request that may see one. Before the CMS sent the param on a detail read, an
+  author could list an unpublished row and then not open it (404).
 - **Every resource is addressable by pk _and_ by slug** (`/slug/<slug>/`, spelled
   with the literal so a numeric slug can never be read as a pk). The public site
   uses slugs; both are cached, under distinct keys, and a write clears the old
@@ -932,7 +981,12 @@ GET/POST          /api/catalog/locations/<pk>/images/[<img_pk>/]
 PATCH/DELETE      ...the same URLs with an <img_pk>                   admin only
 
 POST/PATCH/DELETE /api/journal/sightings/<pk>/media/[<media_pk>/]     JSON, image or link
-POST              /api/journal/sightings/<pk>/media/video/            multipart, video file
+
+# Video. No file travels through this API - these reserve a row and record where
+# the handler in `apps/animals` got to. See "Images ride in JSON, video does not".
+POST   /api/journal/sightings/<pk>/media/video/                      reserve a row (admin)
+POST   /api/journal/sightings/<pk>/media/video/contribute/           IsContributor, own pending entry
+PATCH  /api/journal/sightings/<pk>/media/<media_pk>/processing/      handler callback, shared secret
 
 # AI authoring - admin only, drafting only (see the LLM section above)
 POST   /api/ai/chat/        /api/ai/translate/   /api/ai/copy/   /api/ai/research/
@@ -942,9 +996,10 @@ Every catalog and journal payload carries **both** languages of each text field
 (`name` + `en_name`, …) - see "Bilingual content" above. `?search=` matches
 either language.
 
-`?include_disabled=true` is honoured for administrators on every list, ignored
-for everyone else. The CMS sends it on every list read, which is how an author
-sees a draft they have not published yet.
+`?include_disabled=true` is honoured for administrators on every list **and on
+every detail read**, ignored for everyone else. The CMS sends it on both, which
+is how an author sees a draft they have not published yet - and, on the detail
+route, how they open its form at all.
 
 ## Tests
 

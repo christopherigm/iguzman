@@ -67,7 +67,7 @@ export function VerifyEmail({ token }: { token: string }) {
         width="100%"
         maxWidth={420}
         padding={10}
-        borderRadius={12}
+        borderRadius={8}
         flexDirection="column"
         gap={20}
         elevation={5}

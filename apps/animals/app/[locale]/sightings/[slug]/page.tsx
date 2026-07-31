@@ -68,6 +68,15 @@ type Props = { params: Promise<{ locale: string; slug: string }> };
 /** How many other entries for the same species the page's related band carries. */
 const RELATED_LIMIT = 6;
 
+/**
+ * The map's height, and therefore a lone portrait clip's: the two stand in one
+ * row, so the clip is cut to this and takes whatever width its aspect ratio
+ * asks for. It is also what such a clip is capped at on an entry with no
+ * coordinates, where there is no map to stand beside but the same reason not to
+ * let a 9:16 video run a thousand pixels down the page.
+ */
+const MAP_HEIGHT = 380;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   const sighting = await getSighting(slug);
@@ -232,6 +241,19 @@ export default async function SightingPage({ params }: Props) {
   // marker is drawn with, exactly as the map endpoint does.
   const pin = sightingMapPin(sighting);
 
+  // Where a lone portrait clip goes. A phone's vertical video is thin and tall:
+  // given the page's full width it runs well past a screen, and given a section
+  // of its own it leaves two columns of nothing beside it. So the one case that
+  // is a single portrait clip is cut to the map's height and stands *in the
+  // map's row*, under one heading - and on an entry with no coordinates it keeps
+  // the height and simply stands alone. Anything else - a landscape clip, a clip
+  // still encoding (no dimensions yet, so no orientation), or two clips of any
+  // shape - goes to the video section, which lays them out as a grid.
+  const soloPortrait =
+    videos.length === 1 && videos[0] && isPortrait(videos[0]) ? videos[0] : null;
+  const videoBesideMap = soloPortrait && pin ? soloPortrait : null;
+  const sectionVideos = videoBesideMap ? [] : videos;
+
   return (
     <Box flexDirection="column" width="100%">
       <DetailHero
@@ -245,6 +267,13 @@ export default async function SightingPage({ params }: Props) {
         eyebrow={categoryName}
         eyebrowHref={categoryHref}
         title={title}
+        // Unlike a category or a species, an entry's title is free text an
+        // author types - "Pair of mule deer grazing the meadow behind the
+        // cabin at dusk" is a normal one - and at the h1's 56 px it would
+        // otherwise run down half the photograph. Two lines, then ellipsis;
+        // the whole title is still the breadcrumb, the tab title and the OG
+        // title, so nothing is lost by cutting it here.
+        titleLines={2}
         // The species is the entry's subject rather than its binomial, so it
         // takes the hero's secondary line - and the facts card links it.
         scientificName={speciesName}
@@ -307,12 +336,18 @@ export default async function SightingPage({ params }: Props) {
           )}
         </Grid>
 
-        {videos.length > 0 && (
+        {sectionVideos.length > 0 && (
           <Box flexDirection="column" gap={24} marginTop={56}>
             <Typography as="h2" variant="h2" fontWeight={700}>
               {t("videoTitle")}
             </Typography>
-            <SightingVideos videos={videos} />
+            <SightingVideos
+              videos={sectionVideos}
+              // Only ever set for the lone portrait clip that had no map to
+              // stand beside; every other section lets each clip take the width
+              // its column gives it.
+              {...(soloPortrait ? { frameHeight: MAP_HEIGHT } : {})}
+            />
           </Box>
         )}
 
@@ -327,7 +362,20 @@ export default async function SightingPage({ params }: Props) {
             <SightingsMapSection
               pins={[pin]}
               locale={locale}
-              title={t("mapTitle")}
+              // One heading over both when the clip is standing in this row -
+              // "Video" and "Where it was seen" as two titles over one band
+              // would read as two sections that happen to be side by side.
+              title={videoBesideMap ? t("mapAndVideoTitle") : t("mapTitle")}
+              {...(videoBesideMap
+                ? {
+                  aside: (
+                    <SightingVideos
+                      videos={[videoBesideMap]}
+                      frameHeight={MAP_HEIGHT}
+                    />
+                  ),
+                }
+                : {})}
               // The API blurs the pair to ~1 km for *every* caller when the
               // place is flagged sensitive, so this says so rather than
               // pretending the pin is exact.
@@ -337,7 +385,7 @@ export default async function SightingPage({ params }: Props) {
                   : (locationName ?? t("mapSubtitle"))
               }
               filters={[]}
-              height={380}
+              height={MAP_HEIGHT}
               // A single pin frames at whatever ceiling it is given. Backed off
               // from a building-level zoom: the subject is a place in a
               // landscape, and a sensitive one has been rounded to about this
@@ -442,19 +490,64 @@ function toGalleryImages(sighting: Sighting, locale: string): GalleryImage[] {
   return images;
 }
 
-/** The entry's clips - uploaded files and video links alike, via `source_url`. */
+/**
+ * The entry's clips - uploaded files and video links alike, via `source_url`.
+ *
+ * ⚠ **A row with no `source_url` is not skipped.** An uploaded clip exists as a
+ * row from the moment it is reserved, and its file only appears when the
+ * transcode finishes minutes later - so dropping the URL-less rows (which is
+ * what this used to do) made a contributor's clip vanish from the page entirely
+ * until it was ready, with nothing to say it was coming. They are emitted with a
+ * `status` instead and rendered as a placeholder.
+ *
+ * A **link** is still dropped when it has no URL: there is nothing in flight
+ * there, just an empty row.
+ *
+ * ⚠ **A `failed` clip is dropped outright**, which is why nothing downstream
+ * renders that state. There is no file and there never will be one - the row is
+ * a note to the author (who sees it in `/admin/sightings`, with the reason), not
+ * something a reader of the journal can act on, and a black frame apologising
+ * for a video they never knew existed is worse than the entry simply not having
+ * one. It also takes the media dimensions along: the frames are cut to the
+ * clip's real shape now, not to a fixed 16:9.
+ */
 function toVideos(sighting: Sighting, locale: string): SightingVideo[] {
   return sighting.media.flatMap((item) => {
-    if (item.kind === "image" || !item.source_url) return [];
+    if (item.kind === "image") return [];
+
+    // Read out before the guard so the narrowed union - the three states that
+    // can still reach a reader - is what `SightingVideo` carries.
+    const status = item.processing_status;
+    if (status === "failed") return [];
+
+    const pending = item.kind === "video" && status !== "ready";
+    if (!pending && !item.source_url) return [];
+
     return [
       {
         key: `media-${item.id}`,
         url: item.source_url,
+        status,
         title: localized(item, "name", locale),
         caption: localized(item, "description", locale),
+        width: item.width,
+        height: item.height,
       },
     ];
   });
+}
+
+/**
+ * Whether a clip is taller than it is wide - the shape that gets the map's row.
+ *
+ * Only ever true for a clip that is **ready**: the pipeline writes the output's
+ * dimensions when it finishes, so one still encoding has none and is treated as
+ * landscape until it does. That is the honest answer rather than a gap - the
+ * page cannot know a shape ffmpeg has not reported - and the poll that swaps the
+ * placeholder for the player re-renders this with the real numbers.
+ */
+function isPortrait(video: SightingVideo): boolean {
+  return Boolean(video.width && video.height && video.height > video.width);
 }
 
 type Formatter = Awaited<ReturnType<typeof getFormatter>>;

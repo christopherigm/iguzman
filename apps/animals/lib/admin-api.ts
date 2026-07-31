@@ -10,9 +10,12 @@
  *
  * * There is no `system` query param on anything. animals-api is single-tenant,
  *   so a list is simply the list.
- * * `include_disabled=true` is on every list read here. The CMS is where an
- *   author finds the draft they have not published yet; the API ignores the
- *   param for anyone who is not an administrator, so it cannot leak.
+ * * `include_disabled=true` is on every list read here **and on every detail
+ *   read**. The CMS is where an author finds the draft they have not published
+ *   yet; the API ignores the param for anyone who is not an administrator, so it
+ *   cannot leak. Without it on the detail read, opening an unpublished record's
+ *   own form answered 404 - the list showed the draft and the edit page could
+ *   not load it.
  */
 
 async function adminFetch(path: string, options: RequestInit = {}): Promise<Response> {
@@ -84,8 +87,11 @@ function resource(path: string) {
       const res = await adminFetch(`/api/${path}/?include_disabled=true${separator}${query}`);
       return parseResponse<Row[]>(res);
     },
+    // `include_disabled=true` for the same reason `list` sends it: an
+    // unpublished draft is exactly what an author opens this form to work on,
+    // and the API answers 404 for a disabled row without it.
     get: async (pk: number): Promise<Row> =>
-      parseResponse<Row>(await adminFetch(`/api/${path}/${pk}/`)),
+      parseResponse<Row>(await adminFetch(`/api/${path}/${pk}/?include_disabled=true`)),
     create: async (data: Row): Promise<Row> =>
       parseResponse<Row>(
         await adminFetch(`/api/${path}/`, { method: 'POST', body: JSON.stringify(data) }),
@@ -248,19 +254,33 @@ export const locationImages = childResource('catalog/locations');
 export const sightingMedia = {
   ...childResource('journal/sightings', 'media'),
   /**
-   * Upload a video file. **Not** through `adminFetch`: a video is far past the
-   * API's 10 MB JSON-body limit, so it goes as multipart to its own endpoint,
-   * which Django streams to a temp file. That endpoint is not on the admin
-   * proxy's allowlist either, for the same reason the restore upload is not -
-   * the proxy would destroy the multipart boundary.
+   * Reserve a row for a clip that is about to be uploaded.
+   *
+   * **No file travels through here.** This creates an empty `video` row in
+   * `pending` and returns it along with a short-lived `upload_ticket`; the bytes
+   * then go to this app's own `/api/video/upload`, which transcodes them and
+   * PUTs the result to R2. See `lib/video-upload.ts`.
+   *
+   * This replaced a multipart upload that posted straight to Django. It could
+   * not survive: a source clip is measured in GB, which is past Cloudflare's
+   * body cap on both hostnames, and animals-api has neither ffmpeg nor a worker
+   * to process one with.
    */
-  uploadVideo: async (sightingId: number, form: FormData): Promise<Row> => {
-    const res = await fetch(`/api/journal/sightings/${sightingId}/media/video/`, {
-      method: 'POST',
-      body: form,
-    });
-    return parseResponse<Row>(res);
-  },
+  reserveVideo: async (
+    sightingId: number,
+    body: {
+      filename: string;
+      size_bytes: number;
+      duration_seconds?: number | null;
+      sort_order?: number;
+    },
+  ): Promise<Row & { upload_ticket: string }> =>
+    parseResponse<Row & { upload_ticket: string }>(
+      await adminFetch(`/api/journal/sightings/${sightingId}/media/video/`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    ),
 };
 
 // ---- Users ------------------------------------------------------------------

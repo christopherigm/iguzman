@@ -108,6 +108,56 @@ export function contributeSighting(
 }
 
 /**
+ * Reserve a clip row on an entry this account just filed, and get the ticket
+ * that authorises uploading to it.
+ *
+ * **Two requests, and it cannot be one.** The entry and its photos travel
+ * together (see `contributeSighting` - a row that survived while its pictures
+ * failed is a pending entry nobody can tell is broken), but a clip is measured in
+ * GB and goes nowhere near this API: the bytes are chunked to this app's own
+ * `/api/video/upload`, which transcodes them. So the entry is filed first, and
+ * the clip is attached to the id that comes back.
+ *
+ * The consequence to design around: a failed upload leaves a **filed entry with
+ * no clip**, not a lost entry. That is the right way round - the outing is the
+ * thing worth keeping - and it is why the flow reports the entry as submitted
+ * even when the video half fails.
+ */
+export function reserveSightingVideo(
+  sightingId: number,
+  body: { filename: string; size_bytes: number; duration_seconds?: number | null },
+): Promise<VideoReservation> {
+  return post<VideoReservation>(
+    `journal/sightings/${sightingId}/media/video/contribute`,
+    body,
+  );
+}
+
+export interface VideoReservation {
+  id: number;
+  /** Short-lived, signed by the API. The handler verifies it locally. */
+  upload_ticket: string;
+}
+
+/**
+ * Longest clip the public flow accepts, mirroring animals-api's
+ * `MAX_CONTRIBUTION_VIDEO_SECONDS`.
+ *
+ * The API enforces it from the *declared* duration and the handler re-checks the
+ * real bytes with `ffprobe`; this copy is so the picker can refuse a long clip
+ * with a sentence rather than after a multi-GB upload on cellular data.
+ */
+export const MAX_VIDEO_SECONDS = 90;
+
+/**
+ * Largest source file the picker accepts, mirroring `MAX_VIDEO_UPLOAD_MB`.
+ *
+ * Three minutes of 4K60 from a phone is 1-2 GB, so this is generous rather than
+ * tight - the duration cap above is the limit that actually bites.
+ */
+export const MAX_VIDEO_BYTES = 3000 * 1024 * 1024;
+
+/**
  * The API's most useful sentence out of a DRF error body, or `null`.
  *
  * DRF answers `{field: ["message"], ...}` for a validation error and

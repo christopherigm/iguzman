@@ -379,6 +379,55 @@ class SiteAdminPermissionTests(IsolatedMediaTestCase):
         self.client.login(username='author', password='fieldnotes-2026')
         self.assertEqual(len(self.client.get('/api/catalog/categories/?include_disabled=true').json()), 2)
 
+    def test_an_admin_can_read_edit_and_delete_an_unpublished_record(self):
+        """The CMS's whole edit path against a draft: open it, save it, delete it.
+
+        `enabled` decides who may *see* a row, never what an administrator may do
+        with it. The detail GET is the half that used to be missing - the CMS
+        listed the draft and then answered "could not load this" when the author
+        opened its form, because only the list read was sending the param.
+        """
+        from catalog.models import Category
+
+        draft = Category.objects.create(
+            name='Borrador', slug='borrador', kind='plant', enabled=False
+        )
+        detail = f'/api/catalog/categories/{draft.pk}/'
+
+        self.make_admin()
+        self.client.login(username='author', password='fieldnotes-2026')
+
+        self.assertEqual(self.client.get(f'{detail}?include_disabled=true').status_code, 200)
+        self.assertEqual(
+            self.client.patch(
+                detail, data='{"name": "Borrador II"}', content_type='application/json'
+            ).status_code,
+            200,
+        )
+        self.assertEqual(self.client.delete(detail).status_code, 204)
+
+    def test_a_draft_read_by_an_admin_is_not_replayed_to_the_public(self):
+        """The cache key for a detail read varies by resolved disabled-visibility.
+
+        Now that the CMS asks for drafts by pk, the admin's own payload lands in
+        the response cache - under its own key, or the next anonymous caller
+        would be handed an unpublished record from it.
+        """
+        from catalog.models import Category
+
+        draft = Category.objects.create(
+            name='Borrador', slug='borrador', kind='plant', enabled=False
+        )
+        detail = f'/api/catalog/categories/{draft.pk}/'
+
+        self.make_admin()
+        self.client.login(username='author', password='fieldnotes-2026')
+        self.assertEqual(self.client.get(f'{detail}?include_disabled=true').status_code, 200)
+
+        self.client.logout()
+        self.assertEqual(self.client.get(detail).status_code, 404)
+        self.assertEqual(self.client.get(f'{detail}?include_disabled=true').status_code, 404)
+
     def test_the_token_claims_say_admin_for_both_kinds_of_admin(self):
         from users.serializers import CustomTokenObtainPairSerializer
 

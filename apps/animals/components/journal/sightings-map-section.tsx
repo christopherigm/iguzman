@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -8,6 +9,7 @@ import {
   type SightingMarker,
   type SightingsMapFilter,
 } from "./sightings-map";
+import "./sightings-map-section.css";
 
 /**
  * A titled band holding the map, and the server half of it.
@@ -42,6 +44,18 @@ interface Props {
    * backs it off for a coordinate the API has already blurred to ~1 km.
    */
   maxFitZoom?: number;
+  /**
+   * Something to stand **beside** the map from `sm` up, under the same heading,
+   * stacked above it below `sm`. It sizes itself - the map simply takes whatever
+   * horizontal space is left - so whatever is passed has to carry its own width
+   * (`SightingVideos` does, from its `frameHeight`).
+   *
+   * One caller: a sighting page whose only clip is portrait, where "where it was
+   * seen" and a tall thin video are one band rather than two, and the map's
+   * height is what the clip is cut to. Everything else leaves it unset and gets
+   * the full-width map.
+   */
+  aside?: ReactNode;
 }
 
 export async function SightingsMapSection({
@@ -52,6 +66,7 @@ export async function SightingsMapSection({
   filters,
   height,
   maxFitZoom,
+  aside,
 }: Props) {
   const t = await getTranslations("Map");
   const tSighting = await getTranslations("Sighting");
@@ -61,6 +76,38 @@ export async function SightingsMapSection({
   if (pins.length === 0) return null;
 
   const markers = pins.map((pin) => toMarker(pin, locale, format));
+
+  const map = (
+    <SightingsMap
+      markers={markers}
+      {...(filters ? { filters } : {})}
+      {...(height ? { height } : {})}
+      {...(maxFitZoom ? { maxFitZoom } : {})}
+      labels={{
+        map: t("label"),
+        zoomIn: t("zoomIn"),
+        zoomOut: t("zoomOut"),
+        attribution: t("attribution"),
+        close: t("close"),
+        all: t("filterAll"),
+        category: tSighting("category"),
+        species: tSighting("species"),
+        location: tSighting("location"),
+        year: t("filterYear"),
+        empty: t("empty"),
+        approximate: tSightingPage("mapApproximate"),
+        seeDetail: tSighting("seeDetail"),
+        yourLocation: t("yourLocation"),
+        locate: t("locate"),
+        fullscreen: t("fullscreen"),
+        exitFullscreen: t("exitFullscreen"),
+        // Both spellings of the modifier travel down; the client knows which
+        // keyboard the reader has, this component does not.
+        zoomHint: t("zoomHint"),
+        zoomHintMac: t("zoomHintMac"),
+      }}
+    />
+  );
 
   return (
     <Box flexDirection="column" gap={24} width="100%">
@@ -75,35 +122,26 @@ export async function SightingsMapSection({
         )}
       </Box>
 
-      <SightingsMap
-        markers={markers}
-        {...(filters ? { filters } : {})}
-        {...(height ? { height } : {})}
-        {...(maxFitZoom ? { maxFitZoom } : {})}
-        labels={{
-          map: t("label"),
-          zoomIn: t("zoomIn"),
-          zoomOut: t("zoomOut"),
-          attribution: t("attribution"),
-          close: t("close"),
-          all: t("filterAll"),
-          category: tSighting("category"),
-          species: tSighting("species"),
-          location: tSighting("location"),
-          year: t("filterYear"),
-          empty: t("empty"),
-          approximate: tSightingPage("mapApproximate"),
-          seeDetail: tSighting("seeDetail"),
-          yourLocation: t("yourLocation"),
-          locate: t("locate"),
-          fullscreen: t("fullscreen"),
-          exitFullscreen: t("exitFullscreen"),
-          // Both spellings of the modifier travel down; the client knows which
-          // keyboard the reader has, this component does not.
-          zoomHint: t("zoomHint"),
-          zoomHintMac: t("zoomHintMac"),
-        }}
-      />
+      {/* Below `sm` this is a plain column - the aside stacks above the map, and
+          the two read as one band either way. The row, and the aside keeping its
+          own width while the map takes the rest, is the media query in
+          `sightings-map-section.css`.
+
+          ⚠ Both breakpoints live in the CSS, and none of this is a prop. A prop
+          is an *inline style*, which beats a class - `flexDirection="column"`
+          here left the row stacked at every width (with the media query's
+          `align-items: flex-start` then shrinking the map to nothing, so it
+          rendered as a hairline). For the same reason neither child takes a
+          `width`. `gap` is still a prop: it is what makes this a flex container
+          at all, and it does not change across the breakpoint. */}
+      {aside ? (
+        <Box className="sms__row" gap={16} width="100%">
+          <Box className="sms__aside">{aside}</Box>
+          <Box className="sms__map">{map}</Box>
+        </Box>
+      ) : (
+        map
+      )}
     </Box>
   );
 }

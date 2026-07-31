@@ -174,7 +174,7 @@ function CategoryTile({
       flexDirection="column"
       alignItems="center"
       gap={6}
-      borderRadius={12}
+      borderRadius={8}
       color="inherit"
       // The branch colour is published once here as a custom property and read
       // by every descendant - including the hover rules in the stylesheet,

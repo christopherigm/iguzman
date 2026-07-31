@@ -1,0 +1,19 @@
+/**
+ * `SightingVideos` - the one rule its props cannot express.
+ *
+ * A lone portrait clip is full width on a phone and a fixed *height* from `sm`
+ * up (the map's height, so the two stand level in one row), which means a width
+ * that exists only above a breakpoint. The pixel value is per-clip - it is the
+ * height times that clip's aspect ratio - so the component sets it as
+ * `--sv-solo-width` inline and this file is only the media query that reads it.
+ *
+ * `max-width` because the width is derived from a height, not from the space
+ * available: a very wide clip must still not push the row past the container.
+ */
+
+@media (--sm) {
+  .sv__solo {
+    width: var(--sv-solo-width);
+    max-width: 100%;
+  }
+}

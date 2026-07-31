@@ -1,6 +1,7 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils import timezone
 
 from catalog.models import Category, Location, Season, Species, WeatherCondition
 from core.tests import IsolatedMediaTestCase, base64_image
@@ -377,31 +378,124 @@ class MediaTests(JournalFixtureMixin, IsolatedMediaTestCase):
         )
         self.assertEqual(response.status_code, 400)
 
-    def test_uploading_a_video_file(self):
+    def test_reserving_a_video_row(self):
+        """No file travels through this API - the row is created empty, pending.
+
+        The clip goes to the handler in `apps/animals`, which transcodes it and
+        PUTs the result to R2. What this endpoint hands back is the pk that
+        handler will report against.
+        """
         self.sign_in_staff()
-        upload = SimpleUploadedFile('fawn.mp4', b'\x00\x00\x00 ftypisom fake', content_type='video/mp4')
         response = self.client.post(
-            f'{self.media_url}video/', {'file': upload, 'duration_seconds': 12}
+            f'{self.media_url}video/',
+            {'filename': 'fawn.mp4', 'size_bytes': 12_000_000, 'duration_seconds': 12},
+            content_type='application/json',
         )
         self.assertEqual(response.status_code, 201, response.content)
         body = response.json()
         self.assertEqual(body['kind'], 'video')
-        self.assertTrue(body['file'])
-        self.assertEqual(body['source_url'], body['file'])
+        self.assertEqual(body['processing_status'], 'pending')
+        # Nothing to play yet, and that is the point: the frontend renders this
+        # row as "processing" rather than as a broken player.
+        self.assertIsNone(body['source_url'])
 
     def test_an_unplayable_container_is_rejected(self):
         self.sign_in_staff()
-        upload = SimpleUploadedFile('fawn.avi', b'fake', content_type='video/x-msvideo')
-        response = self.client.post(f'{self.media_url}video/', {'file': upload})
+        response = self.client.post(
+            f'{self.media_url}video/',
+            {'filename': 'fawn.avi', 'size_bytes': 1000},
+            content_type='application/json',
+        )
         self.assertEqual(response.status_code, 400)
-        self.assertIn('file', response.json())
+        self.assertIn('filename', response.json())
 
     def test_an_oversized_video_is_rejected(self):
+        """Refused from the declared size, before a single byte is uploaded."""
         self.sign_in_staff()
         with self.settings(MAX_VIDEO_UPLOAD_MB=1):
-            upload = SimpleUploadedFile('big.mp4', b'x' * (2 * 1024 * 1024), content_type='video/mp4')
-            response = self.client.post(f'{self.media_url}video/', {'file': upload})
+            response = self.client.post(
+                f'{self.media_url}video/',
+                {'filename': 'big.mp4', 'size_bytes': 2 * 1024 * 1024},
+                content_type='application/json',
+            )
         self.assertEqual(response.status_code, 400)
+        self.assertIn('size_bytes', response.json())
+
+    def _reserve_video(self):
+        response = self.client.post(
+            f'{self.media_url}video/',
+            {'filename': 'fawn.mp4', 'size_bytes': 12_000_000},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        return response.json()['id']
+
+    def test_the_handler_reports_a_finished_transcode(self):
+        self.sign_in_staff()
+        media_id = self._reserve_video()
+        self.client.logout()
+
+        # No session: the handler is a server, and a transcode outlives the
+        # request that started it.
+        with self.settings(VIDEO_HANDLER_TOKEN='secret'):
+            response = self.client.patch(
+                f'{self.media_url}{media_id}/processing/',
+                {
+                    'status': 'ready',
+                    'file_key': 'videos/sightingmedia/abc123.mp4',
+                    'width': 1920, 'height': 1080,
+                    'duration_seconds': 12, 'size_bytes': 8_400_000,
+                },
+                content_type='application/json',
+                headers={'X-Video-Handler-Token': 'secret'},
+            )
+        self.assertEqual(response.status_code, 200, response.content)
+        body = response.json()
+        self.assertEqual(body['processing_status'], 'ready')
+        self.assertEqual(body['width'], 1920)
+        self.assertIn('abc123.mp4', body['source_url'])
+
+    def test_the_status_callback_refuses_a_wrong_or_absent_token(self):
+        self.sign_in_staff()
+        media_id = self._reserve_video()
+        self.client.logout()
+
+        url = f'{self.media_url}{media_id}/processing/'
+        payload = {'status': 'failed', 'error': 'encode_failed'}
+        with self.settings(VIDEO_HANDLER_TOKEN='secret'):
+            for headers in ({}, {'X-Video-Handler-Token': 'wrong'}):
+                with self.subTest(headers=headers):
+                    response = self.client.patch(
+                        url, payload, content_type='application/json', headers=headers
+                    )
+                    self.assertEqual(response.status_code, 403)
+
+        # ⚠ Unset must not fall open - an empty configured secret matching an
+        # empty supplied one would leave this endpoint world-writable.
+        with self.settings(VIDEO_HANDLER_TOKEN=''):
+            response = self.client.patch(
+                url, payload, content_type='application/json',
+                headers={'X-Video-Handler-Token': ''},
+            )
+            self.assertEqual(response.status_code, 403)
+
+    def test_an_abandoned_transcode_reads_as_failed_without_being_written(self):
+        """The stale sweep is derived at read time - there is no worker to run one."""
+        self.sign_in_staff()
+        media_id = self._reserve_video()
+        media = SightingMedia.objects.get(pk=media_id)
+
+        stale = timezone.now() - timedelta(minutes=90)
+        SightingMedia.objects.filter(pk=media_id).update(
+            processing_status='processing', modified=stale
+        )
+        media.refresh_from_db()
+
+        with self.settings(VIDEO_PROCESSING_TIMEOUT_MINUTES=45):
+            self.assertEqual(media.effective_processing_status, 'failed')
+        # The column itself is untouched, so a pod that comes back and finishes
+        # late still writes a real result.
+        self.assertEqual(media.processing_status, 'processing')
 
     def test_media_is_staff_only(self):
         response = self.client.post(

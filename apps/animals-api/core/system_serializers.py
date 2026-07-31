@@ -71,6 +71,12 @@ SYSTEM_VALUE_FIELDS = (
     'watermark_opacity',
     'background_light',
     'background_dark',
+    # Read by the handler in `apps/animals` before every transcode. On the public
+    # payload like everything else here: these say how a clip was encoded, not how
+    # to reach anything, so there is nothing to withhold.
+    'video_max_height',
+    'video_quality',
+    'video_codec',
 )
 
 

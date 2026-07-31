@@ -312,6 +312,40 @@ class System(Common):
         max_length=16, default="#3c3c3c", help_text="Page background in the dark theme."
     )
 
+    # ── Video transcoding ────────────────────────────────────────────────────
+    # Read by the handler in `apps/animals` when it transcodes an uploaded clip.
+    # Authored at /admin/system. Changing any of them affects the *next* upload
+    # only - a clip already transcoded is not re-encoded, and the source it came
+    # from was deleted when it finished.
+    video_max_height = models.PositiveSmallIntegerField(
+        default=1080,
+        choices=[(720, "720p"), (1080, "1080p"), (1440, "1440p"), (2160, "2160p (4K)")],
+        help_text="Cap on the short edge of an uploaded clip - what '1080p' "
+                  "means, applied whichever way round the clip is. Never "
+                  "upscales: a smaller source is left at its own size.",
+    )
+    # Stored as the ffmpeg CRF it becomes, so the handler needs no lookup table -
+    # but the CMS renders it as four named steps, because the scale is inverted
+    # (lower is better) and a raw number reads backwards to an author.
+    video_quality = models.PositiveSmallIntegerField(
+        default=23,
+        choices=[
+            (20, "Maximum"),
+            (23, "High"),
+            (26, "Balanced"),
+            (29, "Small file"),
+        ],
+        help_text="Constant Rate Factor. Lower is better quality and a bigger file.",
+    )
+    video_codec = models.CharField(
+        max_length=8,
+        default="h264",
+        choices=[("h264", "H.264"), ("hevc", "HEVC / H.265")],
+        help_text="H.264 plays everywhere. HEVC files are ~30%% smaller but need "
+                  "hardware decode support - Firefox and many desktop browsers "
+                  "will not play them at all.",
+    )
+
     class Meta:
         verbose_name = "Site Settings"
         verbose_name_plural = "Site Settings"

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { AdminForm, type FieldDef } from '@/components/admin/admin-form';
 import { ContactSection, type SocialLink } from './contact-section';
+import { VideoSection } from './video-section';
 import { BackupSection } from './backup-section';
 import { RestoreSection } from './restore-section';
 import { getSystem, updateSystem } from '@/lib/admin-api';
@@ -23,6 +24,11 @@ const OWNED_FIELDS = [
   'en_site_description',
   'contact_email',
   'social_links',
+  // How an uploaded clip is re-encoded. Here rather than on the brand-kit page
+  // because it is a property of the site's operation, not of how it looks.
+  'video_max_height',
+  'video_quality',
+  'video_codec',
 ] as const;
 
 export default function AdminSystemPage() {
@@ -34,6 +40,11 @@ export default function AdminSystemPage() {
     en_site_description: '',
     contact_email: '',
     social_links: [],
+    // Matching the model's own defaults, so the controls render sensibly for the
+    // moment before the API answers rather than snapping from blank.
+    video_max_height: 1080,
+    video_quality: 23,
+    video_codec: 'h264',
   });
 
   const [loading, setLoading] = useState(true);
@@ -50,6 +61,9 @@ export default function AdminSystemPage() {
           en_site_description: data.en_site_description ?? '',
           contact_email: data.contact_email ?? '',
           social_links: data.social_links ?? [],
+          video_max_height: data.video_max_height ?? 1080,
+          video_quality: data.video_quality ?? 23,
+          video_codec: data.video_codec ?? 'h264',
         });
       })
       .catch(() => setError(t('errorLoad')))
@@ -121,6 +135,13 @@ export default function AdminSystemPage() {
         {/* `children` rather than a `beforeKey` slot: contact is the last thing
             on the form and there is no field below it to anchor above. */}
         <ContactSection
+          values={values}
+          onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
+        />
+
+        {/* Inside the form, unlike Backup and Restore below: these are ordinary
+            System keys saved by the form's own button, not a separate action. */}
+        <VideoSection
           values={values}
           onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
         />

@@ -1388,3 +1388,269 @@ export async function scaleDown(options: ScaleDownOptions): Promise<string> {
 
   return outputPath;
 }
+
+/* ── Web delivery transcode ──────────────────────────────────────────── */
+
+export interface ProbeVideoResult {
+  /** Pixel width as stored, before any rotation metadata is applied. */
+  width: number;
+  /** Pixel height as stored. */
+  height: number;
+  /** Length in seconds, `0` when it could not be read. */
+  durationSec: number;
+  /** Frames per second, defaulting to 30 when absent. */
+  fps: number;
+  /** Display rotation in degrees, normalised to 0-359. */
+  rotation: number;
+}
+
+/**
+ * Reads a media file's dimensions, duration, frame rate and rotation.
+ *
+ * The public face of the module's internal probe. Exported because a caller
+ * often has to *gate* on a clip before spending minutes encoding it - a
+ * contributor's upload has to be refused for being too long before, not after,
+ * the transcode - and re-implementing the stderr parsing at each call site is
+ * how two answers about the same file start disagreeing.
+ *
+ * Never rejects: an unreadable file resolves with `durationSec: 0` and the
+ * 1280x720/30fps defaults, so a caller checks the values rather than catching.
+ */
+export async function probeVideoFile(
+  filePath: string,
+  ffmpegBinary: string = DEFAULT_FFMPEG,
+): Promise<ProbeVideoResult> {
+  return probeVideo(filePath, ffmpegBinary);
+}
+
+export type WebVideoCodec = "h264" | "hevc";
+
+export interface TranscodeForWebOptions {
+  /** Absolute path to the source video. */
+  inputPath: string;
+  /** Absolute path to write the encoded result to. */
+  outputPath: string;
+  /**
+   * Cap on the video's **short edge** in pixels - i.e. what "1080p" means.
+   * A landscape clip is capped by height and a portrait one by width, so
+   * 3840x2160 and 2160x3840 both become 1080-something rather than one of them
+   * staying full size. A smaller source is left alone: this never upscales.
+   */
+  maxHeight: number;
+  /**
+   * Constant Rate Factor. Lower is better quality and a larger file; 20-29 is
+   * the useful band for both codecs here. Defaults to 23.
+   */
+  crf?: number;
+  /**
+   * `'h264'` (default) plays in every browser. `'hevc'` produces roughly 30%
+   * smaller files but needs hardware decode support - Firefox and many desktop
+   * browsers will not play it at all.
+   */
+  codec?: WebVideoCodec;
+  /**
+   * Cap on frame rate. A source at or below this is left alone rather than
+   * being interpolated up. Defaults to 30.
+   */
+  maxFps?: number;
+  /** x264/x265 speed preset. Defaults to `'medium'`. */
+  preset?: string;
+  /** Path to the ffmpeg binary. Defaults to `'ffmpeg'`. */
+  ffmpegBinary?: string;
+  /** Called with a value 0-100 as encoding progresses. */
+  onProgress?: (pct: number) => void;
+}
+
+/**
+ * Re-encodes a source video into something a website can actually serve.
+ *
+ * This is the "a contributor uploaded 2.5 GB of 4K60 from their phone" path:
+ * the point is to make the file **small enough to store and stream** while
+ * staying watchable, which is a different job from `scaleDown` and deliberately
+ * a separate function rather than more options on it - `scaleDown` is a
+ * video-downloader operation with its own contract, and quietly changing its
+ * defaults would change that app's output.
+ *
+ * Four differences from `scaleDown`, each of which matters here:
+ *
+ * - **It never upscales.** `scale=-2:1080` on a 480p source *enlarges* it,
+ *   producing a bigger file than the original with no added detail. The
+ *   `min(ih,N)` expression caps instead of setting.
+ * - **It caps the frame rate.** 60 → 30 fps is the single largest saving
+ *   available on phone footage and costs nothing a nature clip needs. A source
+ *   already at or below `maxFps` is untouched, so a 24 fps clip is not
+ *   duplicated up to 30.
+ * - **It re-encodes the audio** to AAC rather than `-c:a copy`. A 4K recording
+ *   often carries audio the target container cannot hold, and copying it keeps a
+ *   surprisingly large stream.
+ * - **CRF, preset and codec are the caller's**, because they are an authored
+ *   setting here rather than a constant.
+ *
+ * The output is `+faststart` (the MP4 index is moved to the front, without which
+ * a browser must download the whole file before it can begin playing) and
+ * `yuv420p` (the one pixel format every browser decodes; phone footage is often
+ * 10-bit, which silently plays as a black rectangle otherwise).
+ *
+ * @returns The resolved `outputPath`.
+ * @throws When ffmpeg exits with a non-zero code.
+ */
+export async function transcodeForWeb(
+  options: TranscodeForWebOptions,
+): Promise<string> {
+  const {
+    inputPath,
+    outputPath,
+    maxHeight,
+    crf = 23,
+    codec = "h264",
+    maxFps = 30,
+    preset = "medium",
+    ffmpegBinary = DEFAULT_FFMPEG,
+    onProgress,
+  } = options;
+
+  const { width, height, durationSec, fps } = await probeVideo(
+    inputPath,
+    ffmpegBinary,
+  );
+
+  // Frames of the *output*, not the input - the fps cap below means those are
+  // different numbers, and feeding the input's count makes the progress bar
+  // stall at half.
+  const outputFps = Math.min(fps, maxFps);
+  const estimatedFrames = durationSec > 0 ? durationSec * outputFps : 0;
+
+  // Cap the short edge whichever way the clip is oriented: a portrait phone
+  // video is 2160x3840 stored, so capping the height alone would leave it at
+  // 2160 wide - larger than the landscape clip beside it. `-2` on the other axis
+  // keeps the aspect ratio and rounds to an even number, which both encoders
+  // require. The quotes are load-bearing: the comma inside `min()` would
+  // otherwise be read as a filter separator.
+  const isPortrait = height > width && width > 0;
+  const scaleFilter = isPortrait
+    ? `scale='min(${maxHeight},iw)':-2:flags=lanczos`
+    : `scale=-2:'min(${maxHeight},ih)':flags=lanczos`;
+
+  const filters = [scaleFilter];
+  // Only when the source is genuinely faster. The `fps` filter duplicates
+  // frames when asked to raise a rate, which would inflate a 24 fps clip for
+  // nothing.
+  if (fps > maxFps) filters.push(`fps=${maxFps}`);
+
+  const videoCodec = codec === "hevc" ? "libx265" : "libx264";
+  // x265 writes `hvc1` only when told; without the tag Safari - the one browser
+  // with dependable HEVC support - refuses to play the result at all.
+  const codecExtras =
+    codec === "hevc" ? ["-tag:v", "hvc1"] : ["-profile:v", "high"];
+
+  await runFFmpeg(
+    [
+      "-i",
+      inputPath,
+      "-vf",
+      filters.join(","),
+      "-c:v",
+      videoCodec,
+      "-preset",
+      preset,
+      "-crf",
+      String(crf),
+      ...codecExtras,
+      "-pix_fmt",
+      "yuv420p",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "128k",
+      "-ac",
+      "2",
+      "-movflags",
+      "+faststart",
+      "-y",
+      outputPath,
+    ],
+    ffmpegBinary,
+    onProgress,
+    estimatedFrames,
+  );
+
+  return outputPath;
+}
+
+export interface ExtractPosterOptions {
+  /** Absolute path to the source video. */
+  inputPath: string;
+  /** Absolute path to write the JPEG to. */
+  outputPath: string;
+  /**
+   * How far into the clip to grab the frame, in seconds. Defaults to 1 - far
+   * enough past a fade-in to be a real picture, close enough to exist in a clip
+   * only a couple of seconds long.
+   */
+  atSeconds?: number;
+  /**
+   * Cap on the frame's **long** edge, unlike `transcodeForWeb`'s short-edge cap.
+   * A poster is a still that a page lays out by its width, so bounding the long
+   * edge is what keeps a 4K landscape frame from arriving 2276 px wide. Never
+   * upscales. Defaults to 1280.
+   */
+  maxEdge?: number;
+  /** Path to the ffmpeg binary. Defaults to `'ffmpeg'`. */
+  ffmpegBinary?: string;
+}
+
+/**
+ * Grabs a single frame to use as a video's poster image.
+ *
+ * Without one, a video tile paints nothing until playback starts - which on a
+ * gallery of clips reads as a page of black rectangles. Kept separate from
+ * `transcodeForWeb` so a caller can re-take a poster without re-encoding, and so
+ * a failure here does not lose an otherwise finished transcode.
+ *
+ * `-ss` is placed **before** `-i`, which seeks by keyframe rather than decoding
+ * every frame up to the mark - on a multi-GB source that is the difference
+ * between instant and a minute.
+ *
+ * ⚠ Nothing downstream will resize this. A caller that uploads the result
+ * straight to object storage bypasses Django's `ResizedImageField`, whose
+ * `pre_save` only runs for a file assigned through the ORM - so the dimensions
+ * this writes are the dimensions a reader downloads.
+ *
+ * @returns The resolved `outputPath`.
+ * @throws When ffmpeg exits with a non-zero code.
+ */
+export async function extractPoster(
+  options: ExtractPosterOptions,
+): Promise<string> {
+  const {
+    inputPath,
+    outputPath,
+    atSeconds = 1,
+    maxEdge = 1280,
+    ffmpegBinary = DEFAULT_FFMPEG,
+  } = options;
+
+  await runFFmpeg(
+    [
+      "-ss",
+      String(atSeconds),
+      "-i",
+      inputPath,
+      "-frames:v",
+      "1",
+      // Bounds *both* axes by the cap and by the source's own size, then
+      // `decrease` fits the frame inside that box - which caps the long edge
+      // whichever way round the clip is and cannot upscale a small one.
+      // `force_original_aspect_ratio=decrease` alone would enlarge a 640x480.
+      "-vf",
+      `scale='min(${maxEdge},iw)':'min(${maxEdge},ih)':force_original_aspect_ratio=decrease`,
+      "-q:v",
+      "3",
+      "-y",
+      outputPath,
+    ],
+    ffmpegBinary,
+  );
+
+  return outputPath;
+}

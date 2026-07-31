@@ -127,16 +127,43 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # image in this project arrives that way, at most 3840 px, so 10 MB is generous.
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB
 
-# Video is the one upload that does NOT ride in a JSON body: it goes to
-# `/api/journal/sightings/<pk>/media/video/` as multipart, which Django streams
-# to a temp file instead of holding in memory, so the limit above does not apply
-# to it. This is the ceiling that does - enforced in
-# `journal.serializers.SightingVideoUploadSerializer`, not by Django.
+# ── Video ────────────────────────────────────────────────────────────────────
+# ⚠ **No video file is uploaded to this API any more.** A source clip is a
+# camera-roll 4K recording - a few GB - which cannot pass Cloudflare's ~100 MB
+# body cap on `animals-api.iguzman.com.mx` in one request, and which this API has
+# no worker or ffmpeg to process even if it arrived. The pipeline lives in
+# `apps/animals` (Next.js): the browser uploads in chunks onto a pod's own disk,
+# that pod transcodes with ffmpeg and PUTs the ~100 MB result straight to R2,
+# then PATCHes the row here through `.../media/<pk>/processing/`.
 #
-# ⚠ nginx has its own limit in front of this one. The ingress must carry
-# `nginx.ingress.kubernetes.io/proxy-body-size` at least this large, or a big
-# upload is refused with a 413 that never reaches Django.
-MAX_VIDEO_UPLOAD_MB = int(os.environ.get('MAX_VIDEO_UPLOAD_MB', '200'))
+# So this is the ceiling on what a *contributor may pick*, enforced when the row
+# is created, not on any body Django receives. The handler re-checks it against
+# the bytes it actually gets.
+MAX_VIDEO_UPLOAD_MB = int(os.environ.get('MAX_VIDEO_UPLOAD_MB', '3000'))
+
+# Longest clip the public contribute flow accepts. The CMS is exempt: an author
+# uploading a ten-minute clip has decided to, while a contributor's phone will
+# happily hand over an unbounded recording. Checked in the browser from the file's
+# own metadata and again by `ffprobe` in the handler, since the first is advisory.
+MAX_CONTRIBUTION_VIDEO_SECONDS = int(os.environ.get('MAX_CONTRIBUTION_VIDEO_SECONDS', '90'))
+
+# How many clips one account may file per rolling day. A transcode is minutes of
+# pinned CPU on a pod that also serves the public site, so this is the admission
+# control on the whole pipeline, not a storage quota.
+MAX_CONTRIBUTION_VIDEOS_PER_DAY = int(os.environ.get('MAX_CONTRIBUTION_VIDEOS_PER_DAY', '5'))
+
+# When to give up on a clip whose handler never reported back. The raw upload
+# lives on one pod's local disk, so a rollout or an OOM takes the job with it and
+# leaves the row mid-flight forever. Applied at *read* time by
+# `SightingMedia.effective_processing_status` - there is no worker here to sweep
+# with, and a derived answer needs none.
+VIDEO_PROCESSING_TIMEOUT_MINUTES = int(os.environ.get('VIDEO_PROCESSING_TIMEOUT_MINUTES', '45'))
+
+# The shared secret the handler authenticates its status callbacks with. It runs
+# server-side in `apps/animals`, so it holds this rather than a user's token -
+# a transcode outlives the session that started it. Unset, the callback endpoint
+# refuses every request rather than falling open.
+VIDEO_HANDLER_TOKEN = os.environ.get('VIDEO_HANDLER_TOKEN', '')
 
 # ── Media files (uploaded by users) ──────────────────────────────────────────
 # **Production stores media in Cloudflare R2, and only there.** There is no

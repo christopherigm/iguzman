@@ -2,13 +2,15 @@ from django.urls import path
 
 from .views import (
     JournalStatsView,
+    SightingContributeVideoView,
     SightingContributeView,
     SightingDetailView,
     SightingMapView,
     SightingListCreateView,
     SightingMediaDetailView,
     SightingMediaListCreateView,
-    SightingVideoUploadView,
+    SightingVideoProcessingView,
+    SightingVideoReserveView,
 )
 
 urlpatterns = [
@@ -23,9 +25,24 @@ urlpatterns = [
     path('journal/sightings/<int:pk>/', SightingDetailView.as_view(), name='sighting-detail'),
     path('journal/sightings/slug/<slug:slug>/', SightingDetailView.as_view(), name='sighting-detail-slug'),
 
-    # Gallery. The `video/` upload sits above `<int:media_pk>/` so the literal is
-    # never read as a media pk.
+    # Gallery. The `video/` reservation sits above `<int:media_pk>/` so the
+    # literal is never read as a media pk.
     path('journal/sightings/<int:pk>/media/', SightingMediaListCreateView.as_view(), name='sighting-media-list'),
-    path('journal/sightings/<int:pk>/media/video/', SightingVideoUploadView.as_view(), name='sighting-media-video'),
+    # `video/contribute/` above `video/` - both are literals, but the longer one
+    # must be tried first or the prefix swallows it.
+    path(
+        'journal/sightings/<int:pk>/media/video/contribute/',
+        SightingContributeVideoView.as_view(),
+        name='sighting-media-video-contribute',
+    ),
+    path('journal/sightings/<int:pk>/media/video/', SightingVideoReserveView.as_view(), name='sighting-media-video'),
+    # The handler's status callback. Below the media detail route's prefix but a
+    # distinct literal, and the only endpoint here authenticated by a shared
+    # secret rather than a session - see the view.
+    path(
+        'journal/sightings/<int:pk>/media/<int:media_pk>/processing/',
+        SightingVideoProcessingView.as_view(),
+        name='sighting-media-processing',
+    ),
     path('journal/sightings/<int:pk>/media/<int:media_pk>/', SightingMediaDetailView.as_view(), name='sighting-media-detail'),
 ]

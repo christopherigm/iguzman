@@ -12,9 +12,12 @@ The contract every subclass inherits (see also website-api's CLAUDE.md
 
 * **GET is public, writes are admin-only.** Nothing here is per-user, which is
   what makes a single shared cache entry per key correct.
-* **A list response is cached under a key derived from its query params plus the
-  resolved disabled-visibility** - never the raw ``include_disabled`` param, or a
-  staff response containing unpublished drafts would be replayed to the public.
+* **Every cached response's key carries the resolved disabled-visibility** - a
+  list's on top of its query params, a detail's on top of its pk or slug - and
+  never the raw ``include_disabled`` param, or a staff response containing
+  unpublished drafts would be replayed to the public. A draft is addressable by
+  an administrator (that is how the CMS opens its edit form), so this matters on
+  the detail route too, not only on the lists.
 * **A write invalidates its own list namespace and its own detail keys.**
   Note this covers only writes that came through *this view*; the authoring
   surface here is the Django admin, whose saves never reach it. The receivers in
@@ -195,13 +198,19 @@ class CachedDetailView(CachedViewMixin, APIView):
         except self.model.DoesNotExist:
             return None
 
-    def _cache_key(self, pk=None, slug=None):
+    def _cache_key(self, pk=None, slug=None, disabled_visible=False):
+        # The resolved disabled-visibility is part of the key for the same reason
+        # it is on the list endpoints: an administrator's read of an unpublished
+        # draft must never be replayed to the next anonymous caller from the same
+        # entry. It is the *resolved* value, never the raw param.
+        suffix = ':staff' if disabled_visible else ''
         if pk is not None:
-            return f'{self.detail_cache_prefix}:{pk}'
-        return f'{self.detail_cache_prefix}:slug:{slug}'
+            return f'{self.detail_cache_prefix}:{pk}{suffix}'
+        return f'{self.detail_cache_prefix}:slug:{slug}{suffix}'
 
     def get(self, request, pk=None, slug=None):
-        cache_key = self._cache_key(pk, slug)
+        disabled_visible = show_disabled(request)
+        cache_key = self._cache_key(pk, slug, disabled_visible)
         cached = cached_get(cache_key)
         if cached is not None:
             return Response(cached)
@@ -210,9 +219,8 @@ class CachedDetailView(CachedViewMixin, APIView):
         if instance is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         # A disabled row is a draft: addressable by staff (who reach it from the
-        # admin), invisible to everyone else. Unlike the list endpoints this does
-        # not vary the cache key, because a 404 is not cached.
-        if not instance.enabled and not show_disabled(request):
+        # CMS with `?include_disabled=true`), invisible to everyone else.
+        if not instance.enabled and not disabled_visible:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         data = self.serializer_class(instance, context={'request': request}).data

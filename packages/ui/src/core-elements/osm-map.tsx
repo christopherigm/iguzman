@@ -732,7 +732,7 @@ export function OsmMap<M extends OsmMapMarker = OsmMapMarker>({
       aria-label={labels.map}
       tabIndex={0}
       height={fullscreen ? "100%" : height}
-      borderRadius={fullscreen ? 0 : 12}
+      borderRadius={fullscreen ? 0 : 8}
       border={
         fullscreen
           ? "none"

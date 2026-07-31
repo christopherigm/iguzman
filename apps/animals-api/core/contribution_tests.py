@@ -416,3 +416,113 @@ class ContributeValidationTests(ContributeFixtureMixin, IsolatedMediaTestCase):
             SIGHTING_URL, self.sighting_body(href='https://spam.example')
         ).json()
         self.assertIsNone(Sighting.objects.get(pk=sighting['id']).href)
+
+
+class ContributeVideoTests(ContributeFixtureMixin, IsolatedMediaTestCase):
+    """Reserving a clip on an entry you filed.
+
+    No file passes through this API - the row is created empty and the browser
+    uploads to the handler in ``apps/animals``, which transcodes and reports back.
+    What is under test here is the narrowing: whose entry, how many, how long.
+    """
+
+    def video_url(self, sighting_id):
+        return f'/api/journal/sightings/{sighting_id}/media/video/contribute/'
+
+    def file_a_sighting(self):
+        return self.post(SIGHTING_URL, self.sighting_body()).json()['id']
+
+    def reserve(self, sighting_id, **overrides):
+        body = {'filename': 'fawn.mp4', 'size_bytes': 40_000_000, 'duration_seconds': 30}
+        return self.post(self.video_url(sighting_id), {**body, **overrides})
+
+    def test_a_contributor_may_reserve_a_clip_on_their_own_pending_entry(self):
+        self.sign_in_visitor()
+        sighting_id = self.file_a_sighting()
+        response = self.reserve(sighting_id)
+        self.assertEqual(response.status_code, 201, response.content)
+        body = response.json()
+        self.assertEqual(body['kind'], 'video')
+        self.assertEqual(body['processing_status'], 'pending')
+
+    def test_a_contributor_cannot_reserve_a_clip_on_someone_elses_entry(self):
+        self.sign_in_visitor()
+        sighting_id = self.file_a_sighting()
+        self.client.logout()
+
+        self.make_visitor(username='someone-else')
+        self.client.login(username='someone-else', password='just-looking-2026')
+        # 404, not 403: whether that pk exists is not this caller's business.
+        self.assertEqual(self.reserve(sighting_id).status_code, 404)
+
+    def test_a_contributor_cannot_reserve_a_clip_on_a_published_entry(self):
+        """Once a reviewer has approved the entry, adding media to it is authoring."""
+        self.sign_in_visitor()
+        sighting_id = self.file_a_sighting()
+        Sighting.objects.filter(pk=sighting_id).update(enabled=True)
+        self.assertEqual(self.reserve(sighting_id).status_code, 404)
+
+    def test_one_clip_per_entry(self):
+        self.sign_in_visitor()
+        sighting_id = self.file_a_sighting()
+        self.assertEqual(self.reserve(sighting_id).status_code, 201)
+        self.assertEqual(self.reserve(sighting_id).status_code, 409)
+
+    def test_an_over_long_clip_is_refused(self):
+        self.sign_in_visitor()
+        sighting_id = self.file_a_sighting()
+        with self.settings(MAX_CONTRIBUTION_VIDEO_SECONDS=90):
+            response = self.reserve(sighting_id, duration_seconds=240)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('duration_seconds', response.json())
+
+    def test_the_daily_quota_is_admission_control_on_the_transcode_queue(self):
+        self.sign_in_visitor()
+        with self.settings(MAX_CONTRIBUTION_VIDEOS_PER_DAY=2):
+            for _ in range(2):
+                self.assertEqual(self.reserve(self.file_a_sighting()).status_code, 201)
+            self.assertEqual(self.reserve(self.file_a_sighting()).status_code, 429)
+
+    def test_the_cms_endpoint_stays_admin_only(self):
+        """The contributor route is a sibling, never a relaxed permission.
+
+        The same argument as `test_the_ordinary_write_endpoints_are_still_admin_only`
+        above: widening the admin endpoint would widen every clip on every entry.
+        """
+        self.sign_in_visitor()
+        sighting_id = self.file_a_sighting()
+        response = self.post(
+            f'/api/journal/sightings/{sighting_id}/media/video/',
+            {'filename': 'fawn.mp4', 'size_bytes': 40_000_000},
+        )
+        self.assertIn(response.status_code, (401, 403))
+
+    def test_the_reserve_response_carries_a_signed_upload_ticket(self):
+        """The handler has no way of its own to know who may write a row.
+
+        It could ask this API, but the answer turns on `created_by`, which the
+        read payload deliberately does not publish. The ticket carries the
+        decision these endpoints already made.
+        """
+        self.sign_in_visitor()
+        with self.settings(VIDEO_HANDLER_TOKEN='secret'):
+            body = self.reserve(self.file_a_sighting()).json()
+        self.assertIn('.', body['upload_ticket'])
+
+    def test_no_ticket_is_issued_without_a_configured_secret(self):
+        """Video stops working rather than working unauthorised."""
+        self.sign_in_visitor()
+        with self.settings(VIDEO_HANDLER_TOKEN=''):
+            body = self.reserve(self.file_a_sighting()).json()
+        self.assertEqual(body['upload_ticket'], '')
+
+    def test_a_ticket_never_appears_on_an_ordinary_gallery_read(self):
+        """It is a capability, not a field - a public read must not carry one."""
+        self.sign_in_visitor()
+        sighting_id = self.file_a_sighting()
+        with self.settings(VIDEO_HANDLER_TOKEN='secret'):
+            self.reserve(sighting_id)
+        rows = self.client.get(f'/api/journal/sightings/{sighting_id}/media/').json()
+        self.assertTrue(rows)
+        for row in rows:
+            self.assertNotIn('upload_ticket', row)

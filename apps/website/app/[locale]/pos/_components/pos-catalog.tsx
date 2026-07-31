@@ -196,7 +196,7 @@ function PosTile({
       display="flex"
       flexDirection="column"
       padding={0}
-      borderRadius={12}
+      borderRadius={8}
       border="1px solid var(--border, #e5e7eb)"
       backgroundColor="var(--surface-2)"
       styles={{ overflow: "hidden", textAlign: "left" }}

@@ -275,7 +275,7 @@ export function MapPicker({
           longitude: position.coords.longitude,
         });
       },
-      () => {},
+      () => { },
       OSM_GEOLOCATION_OPTIONS,
     );
     return () => {
@@ -547,16 +547,16 @@ export function MapPicker({
   const shownPin = draftPin ?? pin;
   const pinOffset = shownPin
     ? (() => {
-        const world = toWorld(shownPin, zoom);
-        return { left: world.x - origin.x, top: world.y - origin.y };
-      })()
+      const world = toWorld(shownPin, zoom);
+      return { left: world.x - origin.x, top: world.y - origin.y };
+    })()
     : null;
 
   const userOffset = userPoint
     ? (() => {
-        const world = toWorld(userPoint, zoom);
-        return { left: world.x - origin.x, top: world.y - origin.y };
-      })()
+      const world = toWorld(userPoint, zoom);
+      return { left: world.x - origin.x, top: world.y - origin.y };
+    })()
     : null;
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -654,7 +654,7 @@ export function MapPicker({
         aria-label={t('mapPickerTitle')}
         tabIndex={0}
         height={height}
-        borderRadius={12}
+        borderRadius={8}
         border="1px solid color-mix(in srgb, var(--foreground) 18%, transparent)"
         backgroundColor="var(--surface-2)"
         styles={{

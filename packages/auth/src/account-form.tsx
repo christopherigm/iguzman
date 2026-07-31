@@ -53,7 +53,7 @@ function Section({
       width="100%"
       maxWidth={520}
       padding={10}
-      borderRadius={12}
+      borderRadius={8}
       flexDirection="column"
       gap={20}
       elevation={5}

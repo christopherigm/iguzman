@@ -1,0 +1,39 @@
+/**
+ * `SightingsMapSection` - the `aside` row, and nothing else.
+ *
+ * A band with an `aside` (today: a sighting page's lone portrait clip) is a
+ * column on a phone and a row from `sm` up, with the aside at its own intrinsic
+ * width - it was cut to the map's height, so its width is already fixed by the
+ * clip's aspect ratio - and the map taking whatever is left. `min-width: 0` on
+ * the map because a flex item's default `min-width: auto` would let the tiles
+ * push the row wider than the container instead of shrinking.
+ *
+ * ⚠ **Both halves are here, including the stacked one.** `flex-direction` cannot
+ * come from the Box's props: a prop is an inline style and would beat this file
+ * at every width - which is exactly what left the map stacked *and* shrunk to a
+ * hairline by the `align-items` below. Only `gap` (which makes the Box a flex
+ * container in the first place) and `width` stay props; they are the same in
+ * both bands.
+ */
+
+@media (--below-sm) {
+  .sms__row {
+    flex-direction: column;
+  }
+}
+
+@media (--sm) {
+  .sms__row {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .sms__row > .sms__aside {
+    flex: 0 0 auto;
+  }
+
+  .sms__row > .sms__map {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}

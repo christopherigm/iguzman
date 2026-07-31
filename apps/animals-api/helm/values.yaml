@@ -30,24 +30,23 @@ ingress:
   className: 'nginx'
   annotations:
     cert-manager.io/cluster-issuer: 'letsencrypt-prod'
-    # Two endpoints send a large multipart body straight through nginx, and its
-    # default 1 MB cap would 413 both long before Django saw them:
+    # One endpoint sends a large multipart body straight through nginx, whose
+    # default 1 MB cap would 413 it long before Django saw it: a backup restore
+    # (POST /api/backups/restore/) - the whole site as a zip, media included.
     #
-    #   * a sighting video (POST /api/journal/sightings/<pk>/media/video/) -
-    #     keep this comfortably above MAX_VIDEO_UPLOAD_MB (200 MB), since
-    #     multipart adds framing on top of the file itself;
-    #   * a backup restore (POST /api/backups/restore/) - the whole site as a
-    #     zip, media included.
+    # ⚠ It has no ceiling of its own: nothing in Django caps an archive's size,
+    # so this annotation IS the limit, and a journal whose photographs outgrow it
+    # fails with an opaque 413 rather than a readable message. Raise it (or set
+    # '0' for unlimited, as website-api does) before the archive gets there -
+    # `pnpm helm` and a rollout, no code change.
     #
-    # ⚠ The restore is the one with no ceiling of its own: nothing in Django
-    # caps an archive's size, so this annotation IS the limit, and a journal
-    # whose photographs outgrow it fails with an opaque 413 rather than a
-    # readable message. Raise it (or set '0' for unlimited, as website-api does)
-    # before the archive gets there - `pnpm helm` and a rollout, no code change.
+    # ⚠ Do NOT size this for video. Sighting clips no longer pass through here at
+    # all - they go to the handler in `apps/animals`, which transcodes them and
+    # PUTs the result to R2 - and a multi-GB source could not have crossed
+    # Cloudflare's ~100 MB cap on this hostname regardless of what nginx allowed.
     #
-    # The default 60s read timeout would also cut either one off on a slow
-    # uplink; both build and restore are synchronous, hence 600 to match
-    # GUNICORN_TIMEOUT below.
+    # The default 60s read timeout would also cut a restore off on a slow uplink;
+    # build and restore are both synchronous, hence 600 to match GUNICORN_TIMEOUT.
     nginx.ingress.kubernetes.io/proxy-body-size: '256m'
     nginx.ingress.kubernetes.io/proxy-read-timeout: '600'
     nginx.ingress.kubernetes.io/proxy-send-timeout: '600'
@@ -66,11 +65,20 @@ ingress:
 env:
   EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: '24'
   GUNICORN_WORKERS: '3'
-  # Largest video a sighting may carry. Must stay under the ingress
-  # proxy-body-size above, which refuses a request before Django sees it.
-  MAX_VIDEO_UPLOAD_MB: '200'
-  # A 200 MB upload on a slow connection outlasts the 120s default and would be
-  # killed mid-write, leaving a partial object in the bucket.
+  # Largest source clip a sighting may carry. ⚠ Unrelated to proxy-body-size
+  # now: no video file is uploaded to this service at all. The browser uploads
+  # to `apps/animals`, which transcodes and PUTs the result to R2, so this is
+  # checked against the size declared when the row is reserved.
+  MAX_VIDEO_UPLOAD_MB: '3000'
+  # Public-contribution limits - see env.example. The transcode runs on a pod
+  # that also serves the public site, so these bound CPU, not storage.
+  MAX_CONTRIBUTION_VIDEO_SECONDS: '90'
+  MAX_CONTRIBUTION_VIDEOS_PER_DAY: '5'
+  # When a clip whose handler died stops reading as "processing". Derived at read
+  # time; there is no worker here to sweep with.
+  VIDEO_PROCESSING_TIMEOUT_MINUTES: '45'
+  # A backup restore still sends a multi-hundred-MB body on a slow uplink, and it
+  # is synchronous, so it outlasts the 120s default and would be killed mid-write.
   GUNICORN_TIMEOUT: '600'
   # Cache API responses in Redis. Stated explicitly rather than left to its
   # default (which is derived from DEBUG, a key that comes from the secret) so

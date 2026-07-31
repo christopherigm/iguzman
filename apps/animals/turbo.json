@@ -3,7 +3,18 @@
   "extends": ["//"],
   "tasks": {
     "build": {
-      "passThroughEnv": ["API_URL", "LOG_LEVEL"]
+      "passThroughEnv": [
+        "API_URL",
+        "LOG_LEVEL",
+        "VIDEO_SCRATCH_DIR",
+        "MAX_VIDEO_UPLOAD_MB",
+        "MAX_CONCURRENT_UPLOADS",
+        "VIDEO_HANDLER_TOKEN",
+        "R2_ACCOUNT_ID",
+        "R2_ACCESS_KEY_ID",
+        "R2_SECRET_ACCESS_KEY",
+        "R2_BUCKET_NAME"
+      ]
     }
   }
 }

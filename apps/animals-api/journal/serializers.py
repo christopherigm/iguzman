@@ -18,7 +18,15 @@ from core.serializers import (
 )
 from core.slugs import unique_slug
 
-from .models import Sighting, SightingMedia, round_coordinate
+from .models import (
+    PROCESSING_FAILED,
+    PROCESSING_PENDING,
+    PROCESSING_PROCESSING,
+    PROCESSING_READY,
+    Sighting,
+    SightingMedia,
+    round_coordinate,
+)
 
 # Container formats a browser can play natively. Anything else would upload
 # fine and then fail silently in a <video> tag, which is a worse outcome than a
@@ -37,6 +45,12 @@ class SightingMediaSerializer(serializers.ModelSerializer):
     # One URL to point a player or an <img> at, whatever the kind - so the
     # frontend renders a gallery without a three-way branch per tile.
     source_url = serializers.SerializerMethodField()
+    # The *derived* status, not the stored column: a clip whose handler died is
+    # reported failed rather than transcoding forever. See
+    # `SightingMedia.effective_processing_status`.
+    processing_status = serializers.CharField(
+        source='effective_processing_status', read_only=True
+    )
 
     class Meta:
         model = SightingMedia
@@ -44,6 +58,8 @@ class SightingMediaSerializer(serializers.ModelSerializer):
             'id', 'kind', 'name', 'en_name', 'description', 'en_description',
             'image', 'file', 'poster', 'url', 'source_url',
             'duration_seconds', 'fit', 'background_color', 'sort_order',
+            'processing_status', 'processing_error',
+            'width', 'height', 'size_bytes',
         ]
 
     def get_image(self, obj):
@@ -134,42 +150,77 @@ class SightingMediaWriteSerializer(serializers.Serializer):
         return instance
 
 
-class SightingVideoUploadSerializer(serializers.Serializer):
-    """Create a ``video`` media row from a multipart upload.
+class SightingVideoReserveSerializer(serializers.Serializer):
+    """Reserve an empty ``video`` row for a clip that is about to be uploaded.
 
-    Separate from the JSON path above because a video file cannot be base64'd
-    into a request body: Django would reject it at ``DATA_UPLOAD_MAX_MEMORY_SIZE``
-    and, below that limit, would hold the whole thing in memory as a string.
-    Multipart streams it to a temp file instead.
+    **No file travels through this API.** The clip goes to the handler in
+    ``apps/animals``, which uploads it in chunks onto its own disk, transcodes it
+    and PUTs the result to R2 - see this project's CLAUDE.md. What this endpoint
+    does is create the row, in ``pending``, so the handler has a pk to report
+    against and the CMS has something to show while the work runs.
+
+    The multipart endpoint this replaced could not survive the change: a source
+    clip is now measured in GB, which neither Cloudflare's body cap nor a sync
+    gunicorn worker will carry, and there is no ffmpeg on this side to process it
+    with.
+
+    ``filename`` and ``size_bytes`` describe the *source* the browser picked, and
+    are validated here so a contributor is refused before uploading rather than
+    after. The handler re-checks both against the bytes that actually arrive.
     """
 
-    file = serializers.FileField()
-    poster = serializers.ImageField(required=False, allow_null=True)
+    filename = serializers.CharField(max_length=255)
+    size_bytes = serializers.IntegerField(min_value=1)
+    # What the browser read off the file's own metadata. Advisory - a crafted
+    # request can lie - so `ffprobe` in the handler is what actually enforces it.
+    # Asking anyway is what lets an over-long clip be refused in the picker
+    # instead of after a multi-GB upload.
+    duration_seconds = serializers.IntegerField(min_value=0, required=False, allow_null=True)
     name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     en_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     en_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    duration_seconds = serializers.IntegerField(min_value=0, required=False, allow_null=True)
     sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
 
-    def validate_file(self, value):
-        ext = os.path.splitext(value.name)[1].lower()
+    def __init__(self, *args, is_contribution=False, **kwargs):
+        # The two callers differ only in their limits: an author who uploads a
+        # ten-minute clip has decided to, a contributor's phone hands over
+        # whatever it recorded.
+        self.is_contribution = is_contribution
+        super().__init__(*args, **kwargs)
+
+    def validate_filename(self, value):
+        ext = os.path.splitext(value)[1].lower()
         if ext not in ALLOWED_VIDEO_EXTENSIONS:
             raise serializers.ValidationError(
                 'Unsupported video format. Allowed: '
                 + ', '.join(sorted(ALLOWED_VIDEO_EXTENSIONS))
             )
+        return value
+
+    def validate_size_bytes(self, value):
         max_bytes = settings.MAX_VIDEO_UPLOAD_MB * 1024 * 1024
-        if value.size > max_bytes:
+        if value > max_bytes:
             raise serializers.ValidationError(
                 f'Video is too large (max {settings.MAX_VIDEO_UPLOAD_MB} MB).'
+            )
+        return value
+
+    def validate_duration_seconds(self, value):
+        if (
+            self.is_contribution
+            and value is not None
+            and value > settings.MAX_CONTRIBUTION_VIDEO_SECONDS
+        ):
+            raise serializers.ValidationError(
+                f'Video is too long (max {settings.MAX_CONTRIBUTION_VIDEO_SECONDS} seconds).'
             )
         return value
 
     def save(self, sighting):
         data = self.validated_data
         with transaction.atomic():
-            instance = SightingMedia(
+            instance = SightingMedia.objects.create(
                 sighting=sighting,
                 kind='video',
                 name=data.get('name'),
@@ -178,17 +229,66 @@ class SightingVideoUploadSerializer(serializers.Serializer):
                 en_description=data.get('en_description'),
                 duration_seconds=data.get('duration_seconds'),
                 sort_order=data.get('sort_order', 0),
+                processing_status=PROCESSING_PENDING,
             )
-            instance.file = data['file']
-            poster = data.get('poster')
-            if poster is not None:
-                # Assigned, not written through ImageProcessingSerializer: an
-                # uncommitted file assignment is exactly the case
-                # ResizedImageField.pre_save does resize, so the MEDIUM tier on
-                # the model field applies here.
-                instance.poster = poster
-            instance.save()
         return instance
+
+
+class SightingVideoProcessingSerializer(serializers.Serializer):
+    """The handler reporting where a transcode got to.
+
+    Written by ``apps/animals``' server side, not by a browser - which is why the
+    view behind it authenticates with ``VIDEO_HANDLER_TOKEN`` rather than a user's
+    session. A transcode outlives the request that started it, and often the
+    session too.
+
+    Only the columns the pipeline owns are writable here. Notably **not** the
+    caption, the sort order or anything an author edits: a status callback
+    arriving late must never overwrite an edit made while the clip was encoding.
+    """
+
+    status = serializers.ChoiceField(
+        choices=[PROCESSING_PROCESSING, PROCESSING_READY, PROCESSING_FAILED]
+    )
+    # A short code, never ffmpeg's stderr - see the note on the model field.
+    error = serializers.CharField(max_length=32, required=False, allow_null=True, allow_blank=True)
+    # Where the transcoded object landed in the bucket. The handler PUTs it
+    # itself, so this is a key to record rather than a file to receive.
+    file_key = serializers.CharField(max_length=512, required=False, allow_null=True, allow_blank=True)
+    poster_key = serializers.CharField(max_length=512, required=False, allow_null=True, allow_blank=True)
+    duration_seconds = serializers.IntegerField(min_value=0, required=False, allow_null=True)
+    width = serializers.IntegerField(min_value=0, required=False, allow_null=True)
+    height = serializers.IntegerField(min_value=0, required=False, allow_null=True)
+    size_bytes = serializers.IntegerField(min_value=0, required=False, allow_null=True)
+
+    def validate(self, attrs):
+        if attrs['status'] == PROCESSING_READY and not attrs.get('file_key'):
+            raise serializers.ValidationError(
+                {'file_key': 'Required when reporting a finished transcode.'}
+            )
+        return attrs
+
+    def save(self, media):
+        data = self.validated_data
+        status = data['status']
+
+        media.processing_status = status
+        media.processing_error = data.get('error') or None
+
+        # `FileField.name` rather than `.save()`: the handler already PUT the
+        # object into the bucket, so this records where it is. Assigning the file
+        # itself would re-upload bytes this API never held.
+        if data.get('file_key'):
+            media.file.name = data['file_key']
+        if data.get('poster_key'):
+            media.poster.name = data['poster_key']
+
+        for field in ('duration_seconds', 'width', 'height', 'size_bytes'):
+            if data.get(field) is not None:
+                setattr(media, field, data[field])
+
+        media.save()
+        return media
 
 
 class SightingMediaUpdateSerializer(serializers.ModelSerializer):

@@ -47,21 +47,21 @@ export interface FieldDef {
   key: string;
   label: string;
   type?:
-    | "text"
-    | "textarea"
-    | "boolean"
-    | "number"
-    | "url"
-    | "select"
-    | "color"
-    | "slug"
-    /**
-     * A write-only secret (an API key). Masked as you type, and - because the
-     * API never sends one back - always loads blank: an empty value means
-     * "leave unchanged", so the form must omit it from the payload rather than
-     * submit "" and wipe the stored secret.
-     */
-    | "password";
+  | "text"
+  | "textarea"
+  | "boolean"
+  | "number"
+  | "url"
+  | "select"
+  | "color"
+  | "slug"
+  /**
+   * A write-only secret (an API key). Masked as you type, and - because the
+   * API never sends one back - always loads blank: an empty value means
+   * "leave unchanged", so the form must omit it from the payload rather than
+   * submit "" and wipe the stored secret.
+   */
+  | "password";
   options?: { value: string | number; label: string }[];
   required?: boolean;
   placeholder?: string;
@@ -603,71 +603,71 @@ export function AdminForm({
                         {/* ── Action buttons (enhance, translate) ── */}
                         {(field.type === "textarea" ||
                           isTranslatable(field)) && (
-                          <Box display="flex" alignItems="center" gap={12}>
-                            {field.type === "textarea" && (
-                              <Button
-                                unstyled
-                                icon="/icons/enhance.svg"
-                                iconSize="16px"
-                                iconColor={
-                                  activeEnhanceField === field.key
-                                    ? "var(--accent, #06b6d4)"
-                                    : "var(--foreground, #171717)"
-                                }
-                                disabled={
-                                  llmBusy ||
-                                  !String(values[field.key] ?? "").trim()
-                                }
-                                onClick={() => triggerEnhance(field.key)}
-                                aria-label={t("enhanceLabel")}
-                                title={t("enhanceLabel")}
-                                className={[
-                                  "af__enhance-btn",
-                                  llmBusy ||
-                                  !String(values[field.key] ?? "").trim()
-                                    ? "af__enhance-btn--busy"
-                                    : "",
-                                  activeEnhanceField === field.key
-                                    ? "af__enhance-btn--active"
-                                    : "",
-                                ]
-                                  .filter(Boolean)
-                                  .join(" ")}
-                              />
-                            )}
-                            {isTranslatable(field) && (
-                              <Button
-                                unstyled
-                                icon="/icons/translate.svg"
-                                iconSize="16px"
-                                iconColor={
-                                  activeTranslateField === field.key
-                                    ? "var(--accent, #06b6d4)"
-                                    : "var(--foreground, #171717)"
-                                }
-                                disabled={
-                                  llmBusy ||
-                                  !String(values[field.key] ?? "").trim()
-                                }
-                                onClick={() => triggerTranslate(field.key)}
-                                aria-label={t("translateLabel")}
-                                title={t("translateLabel")}
-                                className={[
-                                  "af__enhance-btn",
-                                  llmBusy ||
-                                  !String(values[field.key] ?? "").trim()
-                                    ? "af__enhance-btn--busy"
-                                    : "",
-                                  activeTranslateField === field.key
-                                    ? "af__enhance-btn--active"
-                                    : "",
-                                ]
-                                  .filter(Boolean)
-                                  .join(" ")}
-                              />
-                            )}
-                          </Box>
-                        )}
+                            <Box display="flex" alignItems="center" gap={12}>
+                              {field.type === "textarea" && (
+                                <Button
+                                  unstyled
+                                  icon="/icons/enhance.svg"
+                                  iconSize="16px"
+                                  iconColor={
+                                    activeEnhanceField === field.key
+                                      ? "var(--accent, #06b6d4)"
+                                      : "var(--foreground, #171717)"
+                                  }
+                                  disabled={
+                                    llmBusy ||
+                                    !String(values[field.key] ?? "").trim()
+                                  }
+                                  onClick={() => triggerEnhance(field.key)}
+                                  aria-label={t("enhanceLabel")}
+                                  title={t("enhanceLabel")}
+                                  className={[
+                                    "af__enhance-btn",
+                                    llmBusy ||
+                                      !String(values[field.key] ?? "").trim()
+                                      ? "af__enhance-btn--busy"
+                                      : "",
+                                    activeEnhanceField === field.key
+                                      ? "af__enhance-btn--active"
+                                      : "",
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" ")}
+                                />
+                              )}
+                              {isTranslatable(field) && (
+                                <Button
+                                  unstyled
+                                  icon="/icons/translate.svg"
+                                  iconSize="16px"
+                                  iconColor={
+                                    activeTranslateField === field.key
+                                      ? "var(--accent, #06b6d4)"
+                                      : "var(--foreground, #171717)"
+                                  }
+                                  disabled={
+                                    llmBusy ||
+                                    !String(values[field.key] ?? "").trim()
+                                  }
+                                  onClick={() => triggerTranslate(field.key)}
+                                  aria-label={t("translateLabel")}
+                                  title={t("translateLabel")}
+                                  className={[
+                                    "af__enhance-btn",
+                                    llmBusy ||
+                                      !String(values[field.key] ?? "").trim()
+                                      ? "af__enhance-btn--busy"
+                                      : "",
+                                    activeTranslateField === field.key
+                                      ? "af__enhance-btn--active"
+                                      : "",
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" ")}
+                                />
+                              )}
+                            </Box>
+                          )}
                       </Box>
 
                       <TextInput
@@ -812,7 +812,7 @@ export function AdminForm({
               alignItems="center"
               gap={12}
               padding={10}
-              borderRadius={12}
+              borderRadius={8}
               border="1px solid color-mix(in srgb, var(--foreground) 12%, transparent)"
               backgroundColor="var(--background)"
               styles={{

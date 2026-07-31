@@ -296,7 +296,18 @@ export default function AdminSightingFormPage({ params }: Props) {
             ? `/sightings/${String(values.slug)}`
             : undefined
         }
-        imagesSlot={<EntityGalleryField gallery={gallery} />}
+        // Photos first, then the clips directly under them: both are the
+        // record's media, so the two uploaders belong together rather than with
+        // the clips exiled to the bottom of a form this long. The clips only
+        // appear once the entry exists - a video file is far past the API's
+        // JSON-body limit and goes to its own endpoint, so it cannot be held in
+        // form state the way a photo is.
+        imagesSlot={
+          <>
+            <EntityGalleryField gallery={gallery} />
+            {!isNew && <MediaEditor sightingId={Number(id)} />}
+          </>
+        }
         slots={[
           {
             beforeKey: "latitude",
@@ -314,13 +325,7 @@ export default function AdminSightingFormPage({ params }: Props) {
             ),
           },
         ]}
-      >
-        {/* The clips: uploaded video files and video links. Still one row at a
-            time, and still only once the entry exists - a video file is far past
-            the API's JSON-body limit and goes multipart to its own endpoint, so
-            it cannot be held in form state the way a photo is. */}
-        {!isNew && <MediaEditor sightingId={Number(id)} />}
-      </AdminForm>
+      />
     </>
   );
 }

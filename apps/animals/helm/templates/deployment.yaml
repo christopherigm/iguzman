@@ -19,6 +19,13 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if .Values.videoScratch.enabled }}
+      # An emptyDir arrives root-owned, and this container runs as uid 1001, so
+      # without an fsGroup for the kubelet to chown the volume to, every chunk
+      # write fails with EACCES. See the Dockerfile's /scratch note.
+      securityContext:
+        fsGroup: 1001
+      {{- end }}
       {{- if .Values.nodeAffinity.enabled }}
       affinity:
         nodeAffinity:
@@ -70,3 +77,19 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- if .Values.videoScratch.enabled }}
+          volumeMounts:
+            - name: video-scratch
+              mountPath: {{ .Values.videoScratch.mountPath }}
+          {{- end }}
+      {{- if .Values.videoScratch.enabled }}
+      volumes:
+        - name: video-scratch
+          emptyDir:
+            # ⚠ Exceeding this **evicts the pod** rather than failing the write -
+            # which takes the public site down briefly and kills every other
+            # in-flight transcode, not just the offender. The budget is
+            # (MAX_VIDEO_UPLOAD_MB x MAX_CONCURRENT_UPLOADS) plus the output, so
+            # raising either of those without raising this is how that happens.
+            sizeLimit: {{ .Values.videoScratch.sizeLimit }}
+      {{- end }}

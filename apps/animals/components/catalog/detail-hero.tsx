@@ -42,10 +42,33 @@ interface Props {
   scientificName: string | null;
   /** Counts and other one-word facts, rendered as badges under the title. */
   chips?: DetailHeroChip[];
+  /**
+   * Caps the title at N lines, ellipsised. Off by default: a category or a
+   * species is named in two or three words and a clamp there could only ever
+   * hide something. A journal entry's title is free text an author types, so
+   * the sighting page sets it - an untitled outing described in a sentence
+   * would otherwise run the h1 down half the photograph.
+   */
+  titleLines?: number;
 }
 
 /** The mark's box, in px. Square, so the 1:1 crop needs no aspect-ratio. */
 const ICON_SIZE = 64;
+
+/**
+ * The line clamp as inline styles - `-webkit-line-clamp` needs all four
+ * properties together, and none of them is a `UIComponentProps` prop. The same
+ * shape `SpeciesGrid` uses for its card descriptions.
+ */
+function clampStyles(lines: number | undefined) {
+  if (!lines) return undefined;
+  return {
+    display: '-webkit-box',
+    WebkitLineClamp: String(lines),
+    WebkitBoxOrient: 'vertical' as const,
+    overflow: 'hidden',
+  };
+}
 
 export function DetailHero({
   image,
@@ -57,9 +80,14 @@ export function DetailHero({
   title,
   scientificName,
   chips = [],
+  titleLines,
 }: Props) {
   if (!image) {
-    return <FlatHeader {...{ icon, eyebrow, eyebrowHref, title, scientificName, chips }} />;
+    return (
+      <FlatHeader
+        {...{ icon, eyebrow, eyebrowHref, title, scientificName, chips, titleLines }}
+      />
+    );
   }
 
   return (
@@ -109,7 +137,15 @@ export function DetailHero({
             <Eyebrow label={eyebrow} href={eyebrowHref} color="#ffffff" />
           )}
 
-          <Typography as="h1" variant="h1" color="#ffffff" fontWeight={700}>
+          <Typography
+            as="h1"
+            variant="h1"
+            color="#ffffff"
+            fontWeight={700}
+            // The full text stays reachable on hover when the clamp cuts it.
+            title={titleLines ? title : undefined}
+            styles={clampStyles(titleLines)}
+          >
             {title}
           </Typography>
 
@@ -145,6 +181,7 @@ function FlatHeader({
   title,
   scientificName,
   chips,
+  titleLines,
 }: Omit<Props, 'image' | 'fit' | 'backgroundColor'> & { chips: DetailHeroChip[] }) {
   return (
     <>
@@ -162,7 +199,13 @@ function FlatHeader({
               <Eyebrow label={eyebrow} href={eyebrowHref} color="var(--accent)" />
             )}
 
-            <Typography as="h1" variant="h1" fontWeight={700}>
+            <Typography
+              as="h1"
+              variant="h1"
+              fontWeight={700}
+              title={titleLines ? title : undefined}
+              styles={clampStyles(titleLines)}
+            >
               {title}
             </Typography>
 

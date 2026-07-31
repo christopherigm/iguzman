@@ -332,14 +332,14 @@ export default function AdminSocialPostFormPage({ params }: Props) {
             ) ??
             (post.item
               ? {
-                  kind: post.item.kind,
-                  id: post.item.id,
-                  name: post.item.name ?? "",
-                  image: post.item.image,
-                  comparePrice: post.item.compare_price,
-                  price: post.item.price,
-                  currency: post.item.currency,
-                }
+                kind: post.item.kind,
+                id: post.item.id,
+                name: post.item.name ?? "",
+                image: post.item.image,
+                comparePrice: post.item.compare_price,
+                price: post.item.price,
+                currency: post.item.currency,
+              }
               : null);
           setSelectedItem(match);
         }
@@ -1077,7 +1077,7 @@ export default function AdminSocialPostFormPage({ params }: Props) {
         alignItems="center"
         gap={12}
         padding={10}
-        borderRadius={12}
+        borderRadius={8}
         border="1px solid color-mix(in srgb, var(--foreground) 12%, transparent)"
         backgroundColor="var(--background)"
         styles={{

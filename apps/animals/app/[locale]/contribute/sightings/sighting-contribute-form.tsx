@@ -9,6 +9,7 @@ import { Switch } from "@repo/ui/core-elements/switch";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Toast } from "@repo/ui/core-elements/toast";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import {
   PhotoPicker,
   type PickedPhoto,
@@ -17,10 +18,17 @@ import { ReviewRow } from "@/components/contribute/review-row";
 import { StageShell } from "@/components/contribute/stage-shell";
 import { SubmittedPanel } from "@/components/contribute/submitted-panel";
 import {
+  VideoPicker,
+  type PickedVideo,
+} from "@/components/contribute/video-picker";
+import {
   contributeSighting,
   firstErrorMessage,
+  reserveSightingVideo,
+  MAX_VIDEO_SECONDS,
   type SightingSubmission,
 } from "@/lib/contribute";
+import { uploadVideo, VideoUploadError } from "@/lib/video-upload";
 
 /**
  * The three-stage journal entry.
@@ -86,6 +94,15 @@ export function SightingContributeForm({
   const [stage, setStage] = useState(1);
   const [draft, setDraft] = useState(EMPTY);
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
+  const [video, setVideo] = useState<PickedVideo | null>(null);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
+  /**
+   * Set when the entry was filed but its clip did not make it. Rendered on the
+   * confirmation rather than as an error, because the submission *did* succeed -
+   * see the catch in `submit`.
+   */
+  const [videoFailed, setVideoFailed] = useState<string | null>(null);
   const [anonymous, setAnonymous] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +122,9 @@ export function SightingContributeForm({
   const reset = () => {
     setDraft(EMPTY);
     setPhotos([]);
+    setVideo(null);
+    setVideoFailed(null);
+    setVideoProgress(0);
     setAnonymous(false);
     setNameTouched(false);
     setStage(1);
@@ -187,7 +207,38 @@ export function SightingContributeForm({
           submission.individuals = parsed;
       }
 
-      await contributeSighting(submission);
+      const created = await contributeSighting(submission);
+
+      // The clip is a **second** request, and it runs after the entry exists -
+      // it is far too large to have ridden in the body above. See
+      // `reserveSightingVideo`.
+      if (video) {
+        try {
+          setUploadingVideo(true);
+          const reservation = await reserveSightingVideo(created.id, {
+            filename: video.file.name,
+            size_bytes: video.file.size,
+            duration_seconds: video.durationSeconds,
+          });
+          await uploadVideo({
+            file: video.file,
+            ticket: reservation.upload_ticket,
+            maxDurationSeconds: MAX_VIDEO_SECONDS,
+            onProgress: setVideoProgress,
+          });
+        } catch (videoError) {
+          // ⚠ The entry is already filed, so this is **not** a failed
+          // submission. Losing the outing because its video failed would be the
+          // wrong way round - the encounter is the thing worth keeping - so the
+          // flow reports success and says the clip did not make it.
+          const code =
+            videoError instanceof VideoUploadError ? videoError.code : null;
+          setVideoFailed(code === "busy" ? t("videoBusy") : t("videoFailed"));
+        } finally {
+          setUploadingVideo(false);
+        }
+      }
+
       setDone(true);
     } catch (err) {
       setError(firstErrorMessage(err) ?? t("failed"));
@@ -198,13 +249,21 @@ export function SightingContributeForm({
 
   if (done) {
     return (
-      <SubmittedPanel
-        title={t("sightingSubmittedTitle")}
-        againLabel={t("sightingAgain")}
-        onAgain={reset}
-        doneLabel={t("backTo", { name: speciesName })}
-        doneHref={speciesHref}
-      />
+      <>
+        <SubmittedPanel
+          title={t("sightingSubmittedTitle")}
+          againLabel={t("sightingAgain")}
+          onAgain={reset}
+          doneLabel={t("backTo", { name: speciesName })}
+          doneHref={speciesHref}
+        />
+        {/* The entry was filed; only its clip failed. Said here rather than as
+            an error toast, because the submission succeeded and the contributor
+            should not be left thinking the outing was lost. */}
+        {videoFailed && (
+          <Toast message={videoFailed} variant="error" duration={0} />
+        )}
+      </>
     );
   }
 
@@ -264,6 +323,16 @@ export function SightingContributeForm({
               {t("photos")}
             </Typography>
             <PhotoPicker photos={photos} onChange={setPhotos} />
+          </Box>
+
+          {/* Optional, and under the photographs on purpose: at least one photo
+              is required to file at all, so the clip reads as the extra it is
+              rather than as a second mandatory upload. */}
+          <Box flexDirection="column" gap={8}>
+            <Typography variant="label" fontWeight={600}>
+              {t("video")}
+            </Typography>
+            <VideoPicker video={video} onChange={setVideo} />
           </Box>
         </StageShell>
       )}
@@ -414,6 +483,11 @@ export function SightingContributeForm({
               value={t("photoCountReview", { count: photos.length })}
             />
             <ReviewRow
+              label={t("video")}
+              value={video ? video.file.name : null}
+              fallback={t("noVideo")}
+            />
+            <ReviewRow
               label={t("credit")}
               value={anonymous ? t("anonymousValue") : creditName}
               fallback={t("notGiven")}
@@ -429,6 +503,16 @@ export function SightingContributeForm({
             <ReviewRow label={t("temperature")} value={draft.temperature} />
             <ReviewRow label={t("individuals")} value={draft.individuals} />
           </Card>
+
+          {/* The clip goes up after the entry is filed, and on a phone that is
+              minutes - so the submit button's own spinner is not enough to
+              explain why nothing has happened yet. */}
+          {uploadingVideo && (
+            <ProgressBar
+              value={videoProgress}
+              label={t("videoUploading", { percent: videoProgress })}
+            />
+          )}
 
           <Typography
             variant="caption"

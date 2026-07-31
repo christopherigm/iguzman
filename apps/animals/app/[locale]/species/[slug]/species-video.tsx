@@ -21,7 +21,7 @@ export function SpeciesVideo({ url, title }: { url: string; title: string }) {
   return (
     <Box
       width="100%"
-      borderRadius={12}
+      borderRadius={8}
       backgroundColor="#000000"
       aria-label={title}
       styles={{ position: 'relative', overflow: 'hidden', aspectRatio: '16 / 9' }}

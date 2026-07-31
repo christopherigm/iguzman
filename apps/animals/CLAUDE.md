@@ -339,10 +339,17 @@ read as one system. Where it diverges, it is because this backend is different:
 
 Eight rules that will bite:
 
-- **Every list read sends `?include_disabled=true`.** The CMS is where an author
-  finds the draft they have not published yet. The API ignores the param for
-  anyone who is not an administrator, so it cannot leak - but it does mean the
-  list you see here is not the list the public site sees.
+- **Every read sends `?include_disabled=true` - the detail reads as well as the
+  lists.** The CMS is where an author finds the draft they have not published
+  yet. The API ignores the param for anyone who is not an administrator, so it
+  cannot leak - but it does mean the list you see here is not the list the public
+  site sees. ⚠ The **detail** half is easy to forget and fails in a way that
+  reads like a broken record rather than a missing param: for a while only
+  `resource().list` sent it, so `/admin/sightings` listed an unpublished entry
+  and opening its form answered 404 → "could not load this". `enabled` decides
+  who may *see* a row and nothing else - reading, editing and deleting any record
+  in `/admin` must never depend on it. PATCH and DELETE were always fine; they
+  look the row up without the filter.
 - ⚠ **`/admin/species` is the one list read a page at a time, and its search box
   is a _server_ search.** The catalog outgrew one request - a species row costs
   the API two queries of its own (`sighting_count`, `last_seen`) plus its gallery,
@@ -382,10 +389,12 @@ Eight rules that will bite:
   photos as _pending_ and the next Save would upload every one of them again.
 - **A sighting's clips still save immediately, one row at a time.**
   `MediaEditor` keeps the video-file and video-link controls on the old
-  `GalleryEditor` path, because a video is far past the API's JSON-body limit and
-  goes multipart to its own endpoint - a streamed upload has nowhere to wait in
-  form state. All three kinds share one `SightingMedia` table, so the editor
-  filters `kind !== 'image'` out of its list; the photos are the uploader above.
+  `GalleryEditor` path - an upload that runs for minutes has nowhere to wait in
+  form state. A video now takes two steps (reserve the row, then upload the bytes
+  to **this app**; see "Video" below), and the row therefore appears in the list
+  before its file exists, in `processing`. All three kinds share one
+  `SightingMedia` table, so the editor filters `kind !== 'image'` out of its list;
+  the photos are the uploader above.
 - **Geography is a catalog, and it is edited where it is used.** A location no
   longer types its region and country as free text: it picks a **county**, and
   the state comes back through that county - and the country through that state
@@ -453,13 +462,125 @@ body and response as JSON:
 | --------------------- | ----------------------------------------------------------------- | ------------------------------------------------------- |
 | Backup download       | JSON re-encoding corrupts a zip                                   | `app/api/backups/[id]/download/` (streamed passthrough) |
 | Backup restore        | destroys the multipart boundary                                   | `app/api/backups/restore/` (buffered, see below)        |
-| Sighting video upload | same, and it is far past the API's 10 MB JSON-body limit          | posted straight to Django from `lib/admin-api.ts`       |
+| Sighting video upload | the file never goes to Django at all - see "Video" below          | `app/api/video/upload/` (this app transcodes it)        |
 | AI streaming          | `res.json()` would turn the live preview into one lump at the end | `app/api/ai/chat/` (pipes `res.body`)                   |
 
 ⚠ **The restore upload is buffered, not streamed, on purpose.** `apiFetch` retries
 once on a 401 and a `ReadableStream` body cannot be replayed - streaming would
 turn every expired-token restore into an unexplained failure _after_ the whole
 archive had been sent.
+
+## Video - this app transcodes it, and that is the whole design
+
+**A sighting clip never reaches animals-api.** A source is a camera-roll 4K
+recording, a few GB, and three separate things make Django impossible for it:
+Cloudflare caps a request to either hostname at ~100 MB, a multi-GB upload would
+hold one of three **sync** gunicorn workers for its whole duration, and that
+image has neither ffmpeg nor a worker to run one in. So the pipeline lives here.
+
+```
+browser ──chunks (≤90 MB, sequential)──▶ this pod ──▶ /scratch/<id>/source.mp4
+                                            │
+                                            ├─ PATCH animals-api: 'processing'
+                                            ├─ ffprobe: enforce the real duration
+                                            ├─ ffmpeg: downscale + CRF + AAC + poster
+                                            ├─ PUT output (~100 MB) ──▶ R2
+                                            ├─ PATCH animals-api: 'ready' + key
+                                            └─ rm -rf /scratch/<id>
+browser ──polls the sighting payload──▶ animals-api   (status only)
+```
+
+| Piece                     | Where                                                     |
+| ------------------------- | --------------------------------------------------------- |
+| Chunked upload endpoint   | `app/api/video/upload/route.ts`                           |
+| Queue, transcode, cleanup | `lib/video-pipeline.ts`                                   |
+| Browser uploader          | `lib/video-upload.ts`                                     |
+| R2 writes                 | `lib/r2.ts`                                               |
+| Encode settings           | `System.video_*`, authored at `/admin/system`             |
+| Public "processing" state | `sightings/[slug]/sighting-videos.tsx` + its poll notice  |
+
+Eight things that will bite:
+
+- ⚠ **This route is stateful, and the ingress affinity is what makes it work.**
+  Chunks are appended to a file on **one pod's** local disk, so every chunk of an
+  upload has to reach the replica that answered the first. A second Ingress
+  (`helm/templates/upload-ingress.yaml`) applies cookie session affinity to
+  `/api/video/upload` alone - scoped to that path so ordinary page traffic keeps
+  round-robin balancing. **Raising `replicaCount` without that affinity breaks
+  uploads outright**, it does not merely degrade them: replica B answers chunk 2
+  with `unknown_upload` and the upload can never complete.
+- ⚠ **Chunks go up sequentially, and must.** The handler appends each as it
+  arrives rather than staging N parts and concatenating, because concatenating
+  needs the whole file's worth of scratch a second time. Parallel chunks arrive
+  out of order and are refused. This is a throughput cost accepted on purpose.
+- ⚠ **The scratch volume is an `emptyDir` with a `sizeLimit`, and exceeding it
+  evicts the pod** - taking the public site down briefly and killing every other
+  in-flight transcode, not just the offender. The budget is
+  (`MAX_VIDEO_UPLOAD_MB` × `MAX_CONCURRENT_UPLOADS`) + output, which is why
+  uploads are admission-capped at all. It is **not** a PVC: the cluster has no
+  ReadWriteMany storage class, so a PVC would be node-local and would pin every
+  replica to one node - most of the point of scaling out.
+- **A pod restart loses the job, by design.** There is no queue that outlives the
+  process. The row is left mid-flight and animals-api reports it `failed` once it
+  ages past `VIDEO_PROCESSING_TIMEOUT_MINUTES` - a *derived* sweep, needing no
+  scheduler on either side. The contributor re-uploads.
+- ⚠ **Authorisation is a signed ticket, not the session.** This pod cannot decide
+  who may write a given media row: for a contributor that turns on the sighting's
+  `created_by`, which the read payload deliberately does not publish. The reserve
+  endpoints have already made that decision under their own permission classes,
+  and hand back an HMAC ticket (`VIDEO_HANDLER_TOKEN`, shared with animals-api)
+  naming the row. **Both sides refuse when the secret is unset** rather than
+  falling open - an empty configured secret must never match an empty supplied
+  one.
+- ⚠ **`transcodeForWeb` is not `scaleDown`.** The `@repo/helpers` function this
+  uses never upscales (`scaleDown` on a 480p source *enlarges* it, producing a
+  bigger file than the original), caps frame rate at 30 - the single largest
+  saving on phone footage - and re-encodes audio to AAC rather than copying it.
+  `scaleDown` is video-downloader's operation with its own contract; changing its
+  defaults would change that app's output.
+- **HEVC is offered and defaults off.** `/admin/system` can select it for ~30%
+  smaller files, but Firefox and many desktop browsers cannot play HEVC at all,
+  so the picker carries a warning that is not decoration. H.264 is the default
+  and the safe answer.
+- **A processing row is rendered, not hidden.** `toVideos` in the sighting page
+  used to drop any media row without a `source_url`, which made a clip vanish
+  from the page for the minutes it was encoding with nothing to say it was
+  coming. It now emits the row with its status and the page shows a placeholder,
+  refreshed by a slow client poll (`video-processing-notice.tsx`) - polling, not
+  SSE, because the status already lives on the row and any replica can answer it
+  from the database.
+- **A `failed` row, on the other hand, is dropped.** `toVideos` filters it out,
+  so `SightingVideos` has no failure state at all. There is no file and there
+  never will be one: the row is a note to the author (who sees it, with the
+  reason, in `/admin/sightings`), not something a reader can act on, and a black
+  frame apologising for a video they never knew existed is worse than the entry
+  simply not having one. The `SightingPage.videoFailed` message went with it.
+- ⚠ **A clip's frame is cut to the clip, not to 16:9 - and a lone portrait one
+  stands beside the map.** The pipeline stores the output's `width`/`height`, so
+  every frame takes its own aspect ratio, and the page's layout falls out of it
+  (`sighting-videos.tsx`): column spans are handed out **in proportion to aspect
+  ratio**, which is what makes the clips in a row come out the same height with
+  no letterboxing - a portrait beside a landscape lands on 3/9 of the twelve, a
+  row of portraits splits evenly into the `sm: 6 / md: 4 / lg: 3` grid. The one
+  case that is *a single portrait clip* is not a section at all: it is cut to the
+  map's height and rendered in the map's row through `SightingsMapSection`'s
+  `aside` slot, under one heading (`mapAndVideoTitle`), because full width would
+  run a 9:16 video a thousand pixels down the page. With no coordinates to map it
+  keeps the height and stands alone. Everything stacks full width below `sm`.
+  Two consequences: a clip still encoding has **no dimensions yet**, so it is
+  laid out as 16:9 and re-laid out by the poll when it turns ready; and **any
+  property that changes across that breakpoint has to leave the props**, because
+  a prop is an inline style and beats the media query. `flexDirection="column"`
+  on the aside row is what that costs when it is missed: the row never became a
+  row, and the query's `align-items: flex-start` then shrank the map to a 1 px
+  hairline under the video. Both bands of `flex-direction` therefore live in
+  `sightings-map-section.css`, and neither the aside nor the map takes a `width`.
+
+**Contributor limits** (`MAX_CONTRIBUTION_VIDEO_SECONDS` 90 s, one clip per entry,
+five per rolling day) are enforced by animals-api and re-checked against the real
+bytes here; the CMS has no duration limit. A contributor's upload failing leaves
+a **filed entry with no clip**, not a lost entry - the outing is the thing worth
+keeping, which is why the flow reports success and says the clip did not make it.
 
 ## Reads are `no-store` - the only cache is animals-api's
 

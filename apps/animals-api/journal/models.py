@@ -6,10 +6,13 @@ this place - and it is what the public site renders as a post. The stable record
 it points at (species, location, season, weather) live in the `catalog` app.
 """
 
+from datetime import timedelta
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 from core.fields import ResizedImageField
 from core.image_sizes import MEDIUM
@@ -176,11 +179,42 @@ MEDIA_KIND_CHOICES = [
 
 # Which field each kind requires. Enforced in clean() (admin) and in the write
 # serializer (API), so a row can never claim a kind whose payload is missing.
+#
+# ⚠ A `video` row is the one kind that exists *before* its required field does:
+# the handler creates the row, then uploads and transcodes, then attaches the
+# file. So `clean()` skips the check while the row is still being processed -
+# see `PROCESSING_STATUS_CHOICES` below.
 _REQUIRED_FIELD_FOR_KIND = {
     'image': 'image',
     'video': 'file',
     'link': 'url',
 }
+
+
+# Where an uploaded clip is in the transcode pipeline. Only `kind='video'` ever
+# leaves `ready`: a photo and a link have nothing to process, so they are born
+# finished - which is also why `ready` is the default and every row that predates
+# this is already correct.
+#
+# The work happens in `apps/animals` (Next.js), not here: it receives the upload
+# in chunks onto its own disk, runs ffmpeg, uploads the result to R2 and PATCHes
+# the row through `.../media/<pk>/processing/`. This API only records where that
+# got to.
+PROCESSING_PENDING = 'pending'
+PROCESSING_PROCESSING = 'processing'
+PROCESSING_READY = 'ready'
+PROCESSING_FAILED = 'failed'
+
+PROCESSING_STATUS_CHOICES = [
+    (PROCESSING_PENDING, 'Awaiting upload'),
+    (PROCESSING_PROCESSING, 'Transcoding'),
+    (PROCESSING_READY, 'Ready'),
+    (PROCESSING_FAILED, 'Failed'),
+]
+
+# The two states a handler is expected to move out of. A row sitting in either
+# for longer than the timeout below has lost the pod that was working on it.
+PROCESSING_IN_FLIGHT = {PROCESSING_PENDING, PROCESSING_PROCESSING}
 
 
 class SightingMedia(RegularPicture):
@@ -218,6 +252,33 @@ class SightingMedia(RegularPicture):
 
     sort_order = models.PositiveSmallIntegerField(default=0)
 
+    # ── Transcode state (kind='video' only) ──────────────────────────────────
+    # `ready` by default so a photo, a link, and every row written before this
+    # existed are all correct without a data migration.
+    processing_status = models.CharField(
+        max_length=12,
+        choices=PROCESSING_STATUS_CHOICES,
+        default=PROCESSING_READY,
+    )
+    # Why a transcode failed, as a short **code** the frontend translates -
+    # `too_long`, `too_large`, `unsupported_format`, `probe_failed`,
+    # `encode_failed`, `upload_failed`, `abandoned`.
+    #
+    # ⚠ Deliberately not ffmpeg's stderr. This payload is cached under one key
+    # and served to every caller, staff or not (the `hide_precise_location`
+    # trap), so whatever lands here is public - and stderr carries absolute
+    # paths from inside the pod. The handler maps its failure to one of these
+    # and logs the detail on its own side.
+    processing_error = models.CharField(max_length=32, null=True, blank=True)
+
+    # Filled by the handler from the *output* file, not the source, so they
+    # describe what a reader will actually download.
+    width = models.PositiveIntegerField(null=True, blank=True)
+    height = models.PositiveIntegerField(null=True, blank=True)
+    # PositiveBigInteger: a source clip is capped at 3 GB, which overflows the
+    # 2.1 GB ceiling of a plain PositiveInteger.
+    size_bytes = models.PositiveBigIntegerField(null=True, blank=True)
+
     class Meta:
         verbose_name = 'Sighting Media'
         verbose_name_plural = 'Sighting Media'
@@ -228,9 +289,35 @@ class SightingMedia(RegularPicture):
 
     def clean(self):
         super().clean()
+        # A video row is created before its file exists - the handler uploads and
+        # transcodes afterwards - so the requirement only applies once it claims
+        # to be finished.
+        if self.kind == 'video' and self.processing_status in PROCESSING_IN_FLIGHT:
+            return
         required = _REQUIRED_FIELD_FOR_KIND.get(self.kind)
         if required and not getattr(self, required, None):
             raise ValidationError({required: f'Required when kind is "{self.kind}".'})
+
+    @property
+    def effective_processing_status(self):
+        """``processing_status``, with an abandoned job reported as failed.
+
+        The handler is an ordinary Next.js pod with the raw upload on its own
+        local disk, so a rollout, an OOM or a node drain takes the job with it and
+        nothing is left to write ``failed``. There is no worker or scheduler in
+        this project to sweep for that, so the sweep is **derived at read time**:
+        a row still in flight past ``VIDEO_PROCESSING_TIMEOUT_MINUTES`` is
+        reported as failed without being written.
+
+        Not a stored transition on purpose - it needs no cron, and it corrects
+        itself if the pod comes back and finishes late.
+        """
+        if self.processing_status not in PROCESSING_IN_FLIGHT:
+            return self.processing_status
+        limit = timezone.now() - timedelta(minutes=settings.VIDEO_PROCESSING_TIMEOUT_MINUTES)
+        if self.modified and self.modified < limit:
+            return PROCESSING_FAILED
+        return self.processing_status
 
     @property
     def source_url(self):

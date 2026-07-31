@@ -1,5 +1,10 @@
 revisionHistoryLimit: 2
-replicaCount: 1
+# Each replica transcodes one clip at a time (see `lib/video-pipeline.ts`), so
+# this is also the ceiling on concurrent video conversions across the site.
+# Raising it scales that out - there is no shared state between replicas beyond
+# the API - but see `uploadIngress` below: an upload is pinned to whichever pod
+# answered its first chunk, so replicas only help if that affinity is in place.
+replicaCount: 2
 
 image:
   # Overridden at deploy time from DOCKER_REGISTRY (.env) → ${DOCKER_REGISTRY}/animals
@@ -31,14 +36,94 @@ ingress:
       hosts:
         - animals.iguzman.com.mx
 
+# ─── Video upload Ingress ───────────────────────────────────
+# A **second** Ingress for the upload path only, pointing at the same Service.
+#
+# Two things it does that the main one must not:
+#
+#   * `proxy-body-size: 100m`. The default is 1 MB, which would 413 every chunk.
+#     Sized to just clear the browser's 90 MB chunk plus request framing - and
+#     deliberately no larger, because Cloudflare refuses anything past ~100 MB at
+#     the edge anyway, so a bigger value here would buy nothing and only hide
+#     where the real limit is.
+#   * cookie session affinity. An upload's chunks are appended to a file on **one
+#     pod's own disk**, so every chunk has to reach the replica that answered the
+#     first one. Without this, a second replica answers chunk 2 with
+#     `unknown_upload` and the upload can never complete - which is exactly why
+#     this is scoped to a path rather than applied to the whole host: normal page
+#     traffic keeps round-robin balancing across replicas.
+#
+# ⚠ Both must move together with `replicaCount` above. Raising replicas without
+# this affinity breaks uploads outright rather than degrading them.
+uploadIngress:
+  enabled: true
+  className: 'nginx'
+  path: /api/video/upload
+  annotations:
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+    nginx.ingress.kubernetes.io/proxy-body-size: '100m'
+    # A 90 MB chunk on a slow uplink outlasts the 60s default and would be cut
+    # off mid-transfer.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '600'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '600'
+    # `persistent` rather than `balanced`: the cookie must keep pointing at the
+    # same pod for the whole upload even if the backend set changes underneath.
+    nginx.ingress.kubernetes.io/affinity: 'cookie'
+    nginx.ingress.kubernetes.io/affinity-mode: 'persistent'
+    nginx.ingress.kubernetes.io/session-cookie-name: 'animals-upload'
+    nginx.ingress.kubernetes.io/session-cookie-path: /api/video/upload
+    nginx.ingress.kubernetes.io/session-cookie-max-age: '21600'
+
+# ─── Video scratch ──────────────────────────────────────────
+# Where in-flight uploads and transcodes live. An emptyDir, not a PVC: the
+# cluster has no ReadWriteMany storage class, so a PVC would be node-local and
+# would pin every replica to one node - most of the point of scaling out. The
+# trade is that a pod restart loses whatever it was working on, which animals-api
+# reports as `failed` once the row ages past its own timeout.
+videoScratch:
+  enabled: true
+  mountPath: /scratch
+  # (3 GB max source x 2 concurrent uploads) + output + headroom. ⚠ Exceeding it
+  # evicts the pod - see the template. Node disk must comfortably exceed this:
+  # do not schedule this workload onto a node with a small root filesystem.
+  sizeLimit: 12Gi
+
 env:
   NODE_ENV: 'production'
   NEXT_TELEMETRY_DISABLED: '1'
+  VIDEO_SCRATCH_DIR: '/scratch'
+  # Mirrors animals-api's own ceiling; the handler re-checks the real bytes.
+  MAX_VIDEO_UPLOAD_MB: '3000'
+  # How many uploads one pod holds at once. This is a **disk** budget, not a CPU
+  # one - see videoScratch.sizeLimit above - and transcodes are serialised
+  # regardless.
+  MAX_CONCURRENT_UPLOADS: '2'
 
 envFromSecret:
   - name: API_URL
     secretName: animals-secrets
     secretKey: API_URL
+  # R2 credentials: this app PUTs the transcoded clip into the bucket directly,
+  # because pushing a finished ~100 MB file back through animals-api would mean
+  # that service holding it in memory to do the same thing.
+  - name: R2_ACCOUNT_ID
+    secretName: animals-secrets
+    secretKey: R2_ACCOUNT_ID
+  - name: R2_ACCESS_KEY_ID
+    secretName: animals-secrets
+    secretKey: R2_ACCESS_KEY_ID
+  - name: R2_SECRET_ACCESS_KEY
+    secretName: animals-secrets
+    secretKey: R2_SECRET_ACCESS_KEY
+  - name: R2_BUCKET_NAME
+    secretName: animals-secrets
+    secretKey: R2_BUCKET_NAME
+  # Signs the status callbacks to animals-api and verifies upload tickets it
+  # issued. ⚠ Must be the identical value on both sides: mismatched, every
+  # upload is refused and every clip stays "processing" until it times out.
+  - name: VIDEO_HANDLER_TOKEN
+    secretName: animals-secrets
+    secretKey: VIDEO_HANDLER_TOKEN
 
 probes:
   startupProbe:
@@ -58,10 +143,21 @@ nodeAffinity:
   enabled: false
   nodeNames: []
 
+# ⚠ Sized for ffmpeg, not for serving pages.
+#
+# The requests are what keep this workload off the cluster's small nodes: node1
+# has 2 CPU / 3.8 GB total, where a 4K transcode would crawl and risk OOM, and
+# asking for 2 CPU / 3 Gi means the scheduler simply cannot place a pod there.
+# That is deliberate in place of a node label - the constraint is genuinely
+# "enough CPU and memory", not "this named machine".
+#
+# The limit is what keeps a transcode from starving SSR for readers on the same
+# pod. ffmpeg will use every core it is given, so without a ceiling one upload
+# makes the public site slow for everyone that pod is serving.
 resources:
   requests:
-    cpu: 100m
-    memory: 128Mi
-  # limits:
-  #   cpu: 500m
-  #   memory: 512Mi
+    cpu: 2000m
+    memory: 3Gi
+  limits:
+    cpu: 4000m
+    memory: 6Gi

@@ -1,0 +1,56 @@
+{{- if and .Values.ingress.enabled .Values.uploadIngress.enabled }}
+{{/*
+  A second Ingress for the clip-upload path only, on the same hosts and pointing
+  at the same Service as the main one.
+
+  It exists because the upload path needs two things the rest of the site must
+  not have: a 100 MB body limit (every other request here is a page or a small
+  JSON call, and a raised ceiling site-wide is a raised ceiling for anything that
+  ever goes wrong), and cookie session affinity - an upload's chunks are appended
+  to a file on one pod's local disk, so they all have to reach the same replica.
+  Applying that affinity to the whole host would quietly undo load balancing for
+  ordinary page traffic across every reader.
+
+  ⚠ nginx matches the most specific path, so this Ingress's `/api/video/upload`
+  wins over the main Ingress's `/` for those requests, and nothing else changes.
+  Both must keep the same TLS secret and hosts, or the more specific rule is
+  served on a different certificate.
+*/}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "animals.fullname" . }}-upload
+  labels:
+    {{- include "animals.labels" . | nindent 4 }}
+  {{- with .Values.uploadIngress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.uploadIngress.className }}
+  ingressClassName: {{ .Values.uploadIngress.className }}
+  {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- range .Values.ingress.tls }}
+    - secretName: {{ .secretName | default (printf "%s-tls" (index .hosts 0 | default "app")) }}
+      hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          - path: {{ $.Values.uploadIngress.path }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "animals.fullname" $ }}
+                port:
+                  number: {{ $.Values.service.port }}
+    {{- end }}
+{{- end }}
