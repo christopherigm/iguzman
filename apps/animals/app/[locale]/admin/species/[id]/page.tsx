@@ -36,9 +36,10 @@ export default function AdminSpeciesFormPage({ params }: Props) {
     enabled: true,
   });
 
-  // Only the glyph is a single field now - the photographs are the gallery
-  // below, whose first row is what the API publishes as this species' cover.
-  const images = useEntityImages(['icon']);
+  // The chosen cover and the glyph. Leaving `image` empty is the normal case and
+  // hands the cover to the gallery's first row, which is what the API falls back
+  // to; filling it overrides that without disturbing the photographs.
+  const images = useEntityImages(['image', 'icon']);
   const gallery = useEntityGallery(speciesImages, isNew ? null : Number(id));
   const [categoryOptions, setCategoryOptions] = useState<
     { value: string | number; label: string }[]
@@ -181,7 +182,8 @@ export default function AdminSpeciesFormPage({ params }: Props) {
         imagesSlot={
           <EntityGalleryField
             gallery={gallery}
-            iconSlot={<PairedImageFields images={images} />}
+            headerSlot={<PairedImageFields images={images} />}
+            mainImageSet={images.has('image')}
           />
         }
       />

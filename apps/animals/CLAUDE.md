@@ -157,8 +157,10 @@ Twelve things that will bite:
   slideshow with its own thumbnails, where the cover is simply slide 1, not the
   contact sheet under a hero that these pages used to carry (that one _dropped_
   the cover, because repeating it read as a duplicate). Without the `seen` set it
-  would appear twice in a row instead. A cover uploaded separately in the Django
-  admin matches nothing and simply leads the strip on its own.
+  would appear twice in a row instead. A cover set through the CMS's **Main
+  Image** uploader (or in the Django admin) is a file of its own, matches no
+  gallery row, and simply leads the strip - which is the intended result: a main
+  image is hero, OG image _and_ slide 1, and the photographs follow it.
 - **A sighting's gallery is one table with a `kind`, so the page splits it.**
   `SightingMedia` holds photos, uploaded clips and video links in one ordered
   list (they share a `sort_order` an author arranges). The page sends the photos
@@ -413,16 +415,36 @@ Eight rules that will bite:
   `species.list` (the whole catalog, unpaginated) is still what the **sighting
   form's** species picker uses: that one is a combobox and has nothing to filter
   against until every row is in it.
-- **Photos are the gallery, and the first one is the record's main image.**
-  Categories, species, sightings, locations, seasons and weather conditions have
-  no single-cover uploader any more: `EntityGalleryField`
-  (`components/admin/entity-gallery.tsx`) takes several files at once, and the
-  API publishes the first row as that record's `image` (see animals-api's
-  CLAUDE.md → "The first photo is the record's cover"). A drag to re-order is
-  therefore a **cover change**, not housekeeping - which is why `persist()`
-  PATCHes `sort_order` on every surviving row. `icon` stays its own field
-  (`PairedImageFields`); it is a 128 px glyph and must never join the gallery, or
-  the cover would sometimes be a map pin.
+- **Photos are the gallery, and the first one is the record's main image -
+  unless a Main Image was chosen.** `EntityGalleryField`
+  (`components/admin/entity-gallery.tsx`) takes several files at once and the API
+  publishes the first row as that record's `image` (see animals-api's CLAUDE.md →
+  "The first photo is the record's cover"), so a drag to re-order is a **cover
+  change**, not housekeeping - which is why `persist()` PATCHes `sort_order` on
+  every surviving row. Beside it, all six forms carry an optional **Main Image**
+  uploader that overrides that pick; `icon` stays its own field too (both through
+  `PairedImageFields`), a 128 px glyph that must never join the gallery or the
+  cover would sometimes be a map pin.
+- ⚠ **The Main Image uploader hydrates from `main_image` and saves to `image`,
+  and swapping either breaks it quietly.** `FIELD_META` in
+  `components/admin/entity-images.tsx` is the one place that mapping lives. The
+  payload's `image` is the cover the site *renders*, which the API derives -
+  the column when set, else the first gallery photo - so an uploader filled from
+  it would show a photo nobody chose as though somebody had, and its remove
+  button would send `image: null`, clear an already-empty column, and leave the
+  cover exactly where it was: a delete that reads as broken. `main_image` is the
+  column alone. The label is mapped for a duller reason: `Admin.image` is already
+  the "Image" column header on three list pages, so the uploader reads
+  `Admin.mainImage`.
+- **A record with a Main Image stops its gallery claiming to be the cover.**
+  `EntityGalleryField` takes `mainImageSet` (each form passes
+  `images.has('image')`, which counts a photo picked but not yet saved) and both
+  drops the "MAIN" badge from tile 1 and swaps the caption for
+  `imagesIntroWithMain`. Without it the form would point at a photograph the
+  public site renders nowhere.
+- **A place can pick a cover now too.** `catalog.Location` gained an `image`
+  column in animals-api migration `0010_location_image`; it was previously the
+  one record whose only possible cover was its first photo.
 - **The gallery is written on Save - and only the gallery.** `useEntityGallery`
   holds adds, deletes and re-ordering in form state and writes them from the
   form's `handleSubmit`, **after** the parent row exists (a record being created

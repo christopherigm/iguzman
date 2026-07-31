@@ -51,9 +51,10 @@ def _cover(obj):
     """The record's cover file - its own ``image``, else its first gallery photo.
 
     The list columns have to resolve it the same way the API does
-    (``core.serializers.gallery_image_url``), or every row authored through the
-    CMS - which uploads into the gallery and never writes ``image`` - would show
-    an empty thumbnail here while the public site shows a photo.
+    (``core.serializers.gallery_image_url``), or every row whose Main Image was
+    left empty - the common case, and the only case before that uploader existed -
+    would show an empty thumbnail here while the public site shows its first
+    gallery photo.
     """
     image = getattr(obj, 'image', None)
     if image:
@@ -309,9 +310,13 @@ class LocationAdmin(admin.ModelAdmin):
                            'Chapultepec" / "Chapultepec Forest").',
         }),
         ('Content', {'fields': CONTENT_FIELDS, 'description': TRANSLATION_HELP}),
-        # A place has no `image` column - its photographs are the inline below,
-        # and the first of them is its cover. This is only the map-pin glyph.
-        ('Media', {'fields': ('icon',)}),
+        ('Media', {
+            'fields': ('image', 'icon'),
+            'description': 'Leave "Image" empty and the first photo in the gallery below '
+                           'becomes this place\'s cover, which is how most are set. Fill it '
+                           'to pick a different one. "Icon" is neither - it is the map-pin '
+                           'glyph, and has to stay legible at 24 px.',
+        }),
         ('Geography', {
             'fields': ('latitude', 'longitude', 'county'),
             'description': 'The state is not stored here - it is read from the county, so '

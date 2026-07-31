@@ -42,10 +42,11 @@ export default function AdminLocationFormPage({ params }: Props) {
     enabled: true,
   });
 
-  // A place has no `image` column at all, so unlike the other four records its
-  // first gallery photo is not merely the default cover - it is the only one.
-  // `icon` is the map-pin glyph and stays a field of its own.
-  const images = useEntityImages(['icon']);
+  // A place gained an `image` column of its own (animals-api migration 0010), so
+  // it now picks a cover exactly like the other four records: leave it empty and
+  // the gallery's first photo is the cover, fill it to override that. `icon`
+  // remains the map-pin glyph and is neither.
+  const images = useEntityImages(['image', 'icon']);
   const gallery = useEntityGallery(locationImages, isNew ? null : Number(id));
   const [parentOptions, setParentOptions] = useState<
     { value: string | number; label: string }[]
@@ -248,7 +249,8 @@ export default function AdminLocationFormPage({ params }: Props) {
         imagesSlot={
           <EntityGalleryField
             gallery={gallery}
-            iconSlot={<PairedImageFields images={images} />}
+            headerSlot={<PairedImageFields images={images} />}
+            mainImageSet={images.has('image')}
           />
         }
         slots={[

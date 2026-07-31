@@ -36,12 +36,15 @@ export interface EntityGallery {
 /**
  * A record's photo gallery, as one multi-select uploader.
  *
- * ⚠ **The first photo is the record's main image.** The API publishes a record's
- * `image` as its own column when it has one and otherwise the first gallery row
- * (`core.serializers.gallery_image_url`), and the CMS never writes that column -
- * so position 1 here *is* the cover, on the card, the hero and every thumbnail.
- * That is what the "MAIN" badge on the first tile means, and why a drag to
- * re-order is a real edit rather than housekeeping.
+ * ⚠ **The first photo is the record's main image, unless one was chosen.** The
+ * API publishes a record's `image` as its own column when it has one and
+ * otherwise the first gallery row (`core.serializers.gallery_image_url`). Most
+ * records leave that column empty - the Main Image uploader beside this one is
+ * optional - so position 1 here is normally the cover, on the card, the hero and
+ * every thumbnail, which is what the "MAIN" badge on the first tile means and
+ * why a drag to re-order is a real edit rather than housekeeping. Fill the Main
+ * Image field and this becomes an ordinary gallery: pass `mainImageSet` so the
+ * badge and the caption stop saying otherwise.
  *
  * **Unlike the old one-row-at-a-time editor, nothing here is written until the
  * form is saved.** An author picking eight photos from an outing gets one Save,
@@ -177,28 +180,39 @@ export function useEntityGallery(
 /**
  * The uploader itself, for `AdminForm`'s `imagesSlot`.
  *
- * `iconSlot` is where a record's separate glyph goes - it is not a photograph
- * and must not join the gallery, or the first tile (the cover) would sometimes
- * be a 128 px mark.
+ * `headerSlot` is where a record's Main Image and its separate glyph go - neither
+ * belongs in the gallery. The glyph because it is a 128 px mark and the first
+ * tile (the cover) would sometimes be one; the main image because it is the
+ * *choice* of cover rather than another photograph, and dropping it in here
+ * would put it back in the ordering it exists to override.
+ *
+ * ⚠ **`mainImageSet` decides whether this section may claim to hold the cover.**
+ * Both the "MAIN" badge on tile 1 and the caption say "the first one is the main
+ * image", which stops being true the moment a record has a main image of its
+ * own - the API prefers that column and only falls back to `images[0]`
+ * (`core.serializers.gallery_image_url`). Leaving them on would have the form
+ * pointing at a photo the site renders nowhere.
  */
 export function EntityGalleryField({
   gallery,
-  iconSlot,
+  headerSlot,
   maxImages = 20,
+  mainImageSet = false,
 }: {
   gallery: EntityGallery;
-  iconSlot?: React.ReactNode;
+  headerSlot?: React.ReactNode;
   maxImages?: number;
+  mainImageSet?: boolean;
 }) {
   const t = useTranslations("Admin");
 
   return (
     <Box display="flex" flexDirection="column" gap={20}>
-      {iconSlot}
+      {headerSlot}
       <Box display="flex" flexDirection="column" gap={8}>
         <Typography variant="label">{t("images")}</Typography>
         <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
-          {t("imagesIntro")}
+          {mainImageSet ? t("imagesIntroWithMain") : t("imagesIntro")}
         </Typography>
         {gallery.loading ? (
           <Typography variant="body">{t("loading")}</Typography>
@@ -211,6 +225,7 @@ export function EntityGalleryField({
             existingImages={gallery.existing}
             onChange={gallery.onChange}
             maxImages={maxImages}
+            showMainBadge={!mainImageSet}
           />
         )}
       </Box>

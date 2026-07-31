@@ -8,6 +8,10 @@ import {
   EntityGalleryField,
   useEntityGallery,
 } from "@/components/admin/entity-gallery";
+import {
+  PairedImageFields,
+  useEntityImages,
+} from "@/components/admin/entity-images";
 import { MapPicker } from "@/components/admin/map-picker";
 import { MediaEditor } from "../media-editor";
 import {
@@ -72,11 +76,15 @@ export default function AdminSightingFormPage({ params }: Props) {
     enabled: true,
   });
 
-  // The entry has no separate cover uploader any more: its photos are this
-  // gallery and the first of them is what the API publishes as `image`.
-  // `SightingMedia` is one list carrying photos, uploaded clips and video links,
-  // so the photo half is filtered out of it here and the two video kinds stay in
-  // `MediaEditor` below - they cannot ride in a JSON body the way an image does.
+  // The entry's chosen cover. Only `image` - a sighting has no `icon`; the map
+  // marker for one wears its *species'* glyph. Left empty, which is the normal
+  // case, the API falls back to the first photo in the gallery below.
+  const images = useEntityImages(["image"]);
+
+  // The photos themselves. `SightingMedia` is one list carrying photos, uploaded
+  // clips and video links, so the photo half is filtered out of it here and the
+  // two video kinds stay in `MediaEditor` below - they cannot ride in a JSON
+  // body the way an image does.
   const gallery = useEntityGallery(sightingMedia, isNew ? null : Number(id), {
     filter: (row) => row.kind === "image",
     createExtras: { kind: "image" },
@@ -152,9 +160,13 @@ export default function AdminSightingFormPage({ params }: Props) {
           is_featured: data.is_featured ?? false,
           enabled: data.enabled ?? true,
         });
+        images.hydrate(data);
       })
       .catch(() => setError(t("errorLoad")))
       .finally(() => setLoading(false));
+    // `images` is a stable object of refs and setters; re-running on it would
+    // re-fetch on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isNew, t]);
 
   const handleSubmit = async () => {
@@ -162,7 +174,7 @@ export default function AdminSightingFormPage({ params }: Props) {
     setError(null);
     setSuccess(null);
     try {
-      const payload: Record<string, unknown> = { ...values };
+      const payload: Record<string, unknown> = { ...values, ...images.payload() };
       // Updates are PATCH, so clearing an optional relation or number needs an
       // explicit null - an omitted key means "leave unchanged", and "" is not a
       // value any of these columns accepts.
@@ -296,15 +308,21 @@ export default function AdminSightingFormPage({ params }: Props) {
             ? `/sightings/${String(values.slug)}`
             : undefined
         }
-        // Photos first, then the clips directly under them: both are the
-        // record's media, so the two uploaders belong together rather than with
-        // the clips exiled to the bottom of a form this long. The clips only
-        // appear once the entry exists - a video file is far past the API's
+        // The cover, then the photos, then the clips directly under them: all
+        // three are the record's media, so the uploaders belong together rather
+        // than with the clips exiled to the bottom of a form this long. The
+        // cover rides in `EntityGalleryField`'s `headerSlot`, which is simply
+        // "above the gallery" - a sighting has no icon to put there. The clips
+        // only appear once the entry exists - a video file is far past the API's
         // JSON-body limit and goes to its own endpoint, so it cannot be held in
         // form state the way a photo is.
         imagesSlot={
           <>
-            <EntityGalleryField gallery={gallery} />
+            <EntityGalleryField
+              gallery={gallery}
+              headerSlot={<PairedImageFields images={images} />}
+              mainImageSet={images.has("image")}
+            />
             {!isNew && <MediaEditor sightingId={Number(id)} />}
           </>
         }

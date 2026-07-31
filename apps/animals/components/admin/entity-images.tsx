@@ -22,7 +22,31 @@ export interface EntityImages {
   onChange: (field: string, next: NewImage[], keptExistingIds: number[]) => void;
   /** The image half of a save payload. */
   payload: () => Record<string, unknown>;
+  /** Whether a field currently holds an image - saved or picked but not yet saved. */
+  has: (field: string) => boolean;
 }
+
+/**
+ * The two fields whose payload key or label key is not simply the field's own
+ * name. Everything else reads and labels itself under the name it is declared
+ * with, which is what keeps adding a third image field a one-word change.
+ *
+ * ⚠ **`image` reads from `main_image`, and that is load-bearing.** The payload's
+ * `image` is the cover the site *renders*, which the API derives - the record's
+ * own column when it has one, else its first gallery photo. Hydrating this
+ * uploader from it would show a photograph nobody chose as though somebody had,
+ * and pressing remove would then send `image: null`, clearing an already-empty
+ * column while the gallery cover stayed exactly where it was - a delete that
+ * reads as broken. `main_image` is the column alone, so the uploader is empty
+ * precisely when the column is. Writing still goes to `image`; only the read
+ * side differs.
+ *
+ * The label is separate because `Admin.image` is already the "Image" column
+ * header on three list pages and must not be repurposed into "Main Image".
+ */
+const FIELD_META: Record<string, { read?: string; label?: string }> = {
+  image: { read: "main_image", label: "mainImage" },
+};
 
 /**
  * State for a record's single-image fields (`image`, `icon`, …).
@@ -44,7 +68,7 @@ export function useEntityImages(fields: readonly string[]): EntityImages {
       setState(() =>
         Object.fromEntries(
           fields.map((field) => {
-            const url = record[field];
+            const url = record[FIELD_META[field]?.read ?? field];
             // `id: 0` is a stand-in: there is exactly one image per field, so
             // the uploader only needs the id to be stable within the field.
             return [field, { existing: url ? [{ id: 0, url: String(url) }] : [], pending: [] }];
@@ -80,9 +104,21 @@ export function useEntityImages(fields: readonly string[]): EntityImages {
     return out;
   }, [state]);
 
+  // Counts a photo the author has picked but not yet saved, so the gallery below
+  // stops promising to be the cover the moment a main image is chosen rather
+  // than one Save later.
+  const has = useCallback(
+    (field: string) => {
+      const value = state[field];
+      if (!value) return false;
+      return value.pending.length > 0 || value.existing.length > 0;
+    },
+    [state],
+  );
+
   return useMemo(
-    () => ({ fields, state, hydrate, onChange, payload }),
-    [fields, state, hydrate, onChange, payload],
+    () => ({ fields, state, hydrate, onChange, payload, has }),
+    [fields, state, hydrate, onChange, payload, has],
   );
 }
 
@@ -90,7 +126,13 @@ export function useEntityImages(fields: readonly string[]): EntityImages {
  * The uploaders themselves, side by side, for `AdminForm`'s `imagesSlot`.
  *
  * Each field's label comes from the `Admin` namespace under its own name
- * (`image`, `icon`, `poster`), so a new field needs a key rather than a branch.
+ * (`icon`, `poster`), so a new field needs a key rather than a branch -
+ * `FIELD_META` above holds the one exception and why it is one.
+ *
+ * The `image` field carries a caption the others do not, because it is the only
+ * one whose *empty* state means something: left alone, the record's cover is the
+ * first photo in the gallery below, and an author has no way to know that from
+ * an empty box.
  */
 export function PairedImageFields({ images }: { images: EntityImages }) {
   const t = useTranslations("Admin");
@@ -98,8 +140,13 @@ export function PairedImageFields({ images }: { images: EntityImages }) {
   return (
     <Box display="flex" gap={24} flexWrap="wrap">
       {images.fields.map((field) => (
-        <Box key={field} flexDirection="column" gap={8} minWidth={200}>
-          <Typography variant="label">{t(field)}</Typography>
+        <Box key={field} flexDirection="column" gap={8} minWidth={200} maxWidth={280}>
+          <Typography variant="label">{t(FIELD_META[field]?.label ?? field)}</Typography>
+          {field === "image" && (
+            <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+              {t("mainImageIntro")}
+            </Typography>
+          )}
           <AdminImageUploader
             existingImages={images.state[field]?.existing ?? []}
             onChange={(next, _deleted, kept) => images.onChange(field, next, kept)}

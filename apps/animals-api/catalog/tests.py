@@ -424,6 +424,60 @@ class GalleryTests(CatalogFixtureMixin, IsolatedMediaTestCase):
         self.assertIn(species.image.url, payload['image'])
         self.assertNotEqual(payload['image'], payload['images'][0]['image'])
 
+    def test_main_image_is_empty_while_the_cover_is_only_a_borrowed_photo(self):
+        """``main_image`` reports the column, ``image`` reports what to render.
+
+        This is the whole reason the field exists: the CMS's Main Image uploader
+        hydrates from ``main_image``, so a record whose cover is merely its first
+        gallery row must leave it null. Hydrating from ``image`` instead would
+        show a photo nobody chose as though somebody had - and its remove button
+        would then clear an empty column while the cover stayed put.
+        """
+        for label, url in self.parents():
+            with self.subTest(record=label):
+                response = self.client.post(
+                    f'{url}images/', {'image': base64_image()}, content_type='application/json'
+                )
+                self.assertEqual(response.status_code, 201, response.content)
+
+                payload = self.client.get(url).json()
+                self.assertEqual(payload['image'], payload['images'][0]['image'])
+                self.assertIsNone(payload['main_image'])
+
+    def test_choosing_a_main_image_publishes_it_on_both_fields(self):
+        """Every record can be given a cover of its own - **including a place**,
+        which had no ``image`` column at all before migration 0010."""
+        for label, url in self.parents():
+            with self.subTest(record=label):
+                self.client.post(
+                    f'{url}images/', {'image': base64_image()}, content_type='application/json'
+                )
+                response = self.client.patch(
+                    url, {'image': base64_image()}, content_type='application/json'
+                )
+                self.assertEqual(response.status_code, 200, response.content)
+
+                payload = self.client.get(url).json()
+                self.assertIsNotNone(payload['main_image'])
+                # The chosen one is what the site renders, and it is not the photo.
+                self.assertEqual(payload['image'], payload['main_image'])
+                self.assertNotEqual(payload['main_image'], payload['images'][0]['image'])
+
+    def test_clearing_the_main_image_falls_back_to_the_gallery_again(self):
+        """The uploader's remove button sends an explicit empty value; the cover
+        has to return to the first photo rather than disappearing."""
+        for label, url in self.parents():
+            with self.subTest(record=label):
+                self.client.post(
+                    f'{url}images/', {'image': base64_image()}, content_type='application/json'
+                )
+                self.client.patch(url, {'image': base64_image()}, content_type='application/json')
+                self.client.patch(url, {'image': None}, content_type='application/json')
+
+                payload = self.client.get(url).json()
+                self.assertIsNone(payload['main_image'])
+                self.assertEqual(payload['image'], payload['images'][0]['image'])
+
     def test_deleting_the_first_photo_promotes_the_next_one(self):
         url = f'/api/catalog/species/{self.make_species().pk}/'
         for order in (0, 1):

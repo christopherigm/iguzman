@@ -412,24 +412,39 @@ Every catalog record and every journal entry keeps its photographs in a **galler
 table** - `CategoryImage`, `SpeciesImage`, `SeasonImage`, `WeatherConditionImage`,
 `LocationImage` (all five from the abstract `catalog.GalleryImage`) and
 `journal.SightingMedia` - ordered by `sort_order`, and **the first row is the
-record's main image**.
+record's main image unless one was chosen**.
 
 `core.serializers.gallery_image_url` is the single place that resolves it: a
 record's own `image` column when it has one, and otherwise the first gallery row.
 Both halves matter.
 
-- **The CMS never writes the `image` column.** `apps/animals`' forms upload into
-  the gallery and PATCH `sort_order` on every row after a drag, so for anything
-  authored there the cover _is_ `images[0]` - which is what "upload several at
-  once, the first is the main one" means. A record's `icon` stays a separate
-  single field: it is a 128 px glyph for a map pin or a filter chip, not a
-  photograph, and must never join the gallery.
-- **The column still wins when it is set**, because the Django admin and
-  `seed_reference` can set it and a cover chosen deliberately must not be
-  overruled by whatever happened to be uploaded first.
-- **`catalog.Location` has no `image` column at all** (it is not a picture
-  model), so there the first gallery row is the only cover there is. It did gain
-  an `icon`, which is the one image field it owns.
+- **Most records leave the `image` column empty, and that is still the normal
+  path.** `apps/animals`' forms upload into the gallery and PATCH `sort_order` on
+  every row after a drag, so unless somebody fills the Main Image field the cover
+  _is_ `images[0]` - which is what "upload several at once, the first is the main
+  one" means. A record's `icon` stays a separate single field: it is a 128 px
+  glyph for a map pin or a filter chip, not a photograph, and must never join the
+  gallery.
+- **The column wins when it is set**, because a cover chosen deliberately must
+  not be overruled by whatever happened to be uploaded first. The Django admin
+  and `seed_reference` have always been able to set it; **the CMS can now too**,
+  through a Main Image uploader on all six forms.
+- ⚠ **`main_image` is on the read payload beside `image`, and the two are not
+  the same field.** `image` is the cover to _render_ and is derived (column, else
+  first photo); `main_image` is the column alone. A form hydrated from `image`
+  would show a photograph nobody chose as though somebody had, and its remove
+  button would then clear an empty column while the cover stayed put - so the
+  CMS reads `main_image` and writes `image`. Every read serializer here publishes
+  it (`catalog.serializers._MainImageMixin`, and `SightingSerializer`'s own copy -
+  a sighting's photos are `media` rows with a `kind`, which `gallery_image_url`
+  cannot read). **A sixth record's read serializer needs it too.**
+- **`catalog.Location` gained an `image` column** in migration `0010_location_image`,
+  so it now resolves a cover exactly like the other four. It is declared on the
+  model by hand rather than by reparenting onto `RegularPicture`: that base also
+  carries `href`, `fit` and `background_color`, which a place has no use for, and
+  would silently re-declare the six text columns `Location` deliberately owns.
+  Every place catalogued before this keeps the cover it had - the column is null,
+  so the fallback runs unchanged.
 
 Three consequences that are easy to miss:
 
@@ -971,8 +986,9 @@ GET               .../slug/<slug>/
 POST   /api/catalog/species/contribute/             IsContributor
 POST   /api/journal/sightings/contribute/           IsContributor
 
-# Photo galleries. GET is public like every other read; the first row is the
-# record's cover, so `sort_order` on the PATCH is what picks it.
+# Photo galleries. GET is public like every other read. The first row is the
+# record's cover unless its own `image` column is set, so `sort_order` on the
+# PATCH is what picks it for the records that left that column empty - most of them.
 GET/POST          /api/catalog/categories/<pk>/images/[<img_pk>/]
 GET/POST          /api/catalog/species/<pk>/images/[<img_pk>/]
 GET/POST          /api/catalog/seasons/<pk>/images/[<img_pk>/]

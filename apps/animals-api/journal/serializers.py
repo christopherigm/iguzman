@@ -313,6 +313,13 @@ class SightingMediaUpdateSerializer(serializers.ModelSerializer):
 
 class SightingSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
+    # The cover an author *chose*, as opposed to the one `image` resolves to.
+    # Same argument as `catalog.serializers._MainImageMixin` - which this cannot
+    # reuse, for the same reason `sighting_cover_url` is not `gallery_image_url`:
+    # a sighting's photographs are `media` rows carrying a `kind`, not `images`.
+    # The CMS's Main Image uploader hydrates from this so it is empty exactly
+    # when the column is, rather than showing a photo nobody picked.
+    main_image = serializers.SerializerMethodField()
     media = SightingMediaSerializer(many=True, read_only=True)
 
     # Every flattened relation label travels as a Spanish/English pair, for the
@@ -397,7 +404,7 @@ class SightingSerializer(serializers.ModelSerializer):
             'season', 'season_name', 'season_en_name', 'season_slug',
             'weather', 'weather_name', 'weather_en_name', 'weather_slug',
             'temperature_c', 'individuals',
-            'image', 'media', 'media_count', 'fit', 'background_color',
+            'image', 'main_image', 'media', 'media_count', 'fit', 'background_color',
             'is_featured',
             'author_name', 'author_anonymous', 'is_contribution',
         ]
@@ -405,6 +412,9 @@ class SightingSerializer(serializers.ModelSerializer):
 
     def get_image(self, obj):
         return sighting_cover_url(obj, self.context.get('request'))
+
+    def get_main_image(self, obj):
+        return file_url(obj.image, self.context.get('request'))
 
     def get_species_image(self, obj):
         # Through the same fallback the species' own payload uses, or a species

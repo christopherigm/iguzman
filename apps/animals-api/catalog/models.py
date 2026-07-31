@@ -14,7 +14,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from core.fields import ResizedImageField
-from core.image_sizes import ICON
+from core.image_sizes import ICON, REGULAR
 from core.models import Common, RegularPicture, picture
 
 
@@ -65,10 +65,11 @@ class GalleryImage(RegularPicture):
 
     A catalog record's photographs live in a table of their own rather than in a
     single ``image`` column, so an author can upload a whole outing's worth at
-    once and arrange them. **The first row is the record's main image**: the read
-    serializers publish ``image`` as the record's own column if it has one and
-    otherwise the first row here, so the CMS - which only ever writes the gallery -
-    makes position 1 the cover. See ``catalog.serializers.gallery_image_url``.
+    once and arrange them. **The first row is the record's main image unless one
+    was chosen**: the read serializers publish ``image`` as the record's own
+    column if it has one and otherwise the first row here, so a record whose Main
+    Image uploader was left empty - the common case - makes position 1 the cover.
+    See ``catalog.serializers.gallery_image_url``.
 
     Inherits ``RegularPicture``, so each row carries its own caption pair
     (``name``/``en_name``), ``description`` pair, ``fit`` and ``background_color``.
@@ -528,11 +529,10 @@ PLACE_TYPE_CHOICES = [
 class Location(Common):
     """A place things were seen: a park, a trail inside it, a backyard.
 
-    Still not a picture model - its photographs live in ``LocationImage``, and
-    unlike the other four records here it has no ``image`` column of its own, so
-    the first gallery row simply *is* its cover. It carries the place's *default*
-    coordinates; a sighting may override them with the exact spot (see
-    ``journal.Sighting.coordinates``).
+    Still not a picture model - its photographs live in ``LocationImage`` and it
+    declares its own ``image`` column rather than inheriting one (see the field
+    below). It carries the place's *default* coordinates; a sighting may override
+    them with the exact spot (see ``journal.Sighting.coordinates``).
     """
 
     # Location is the one content model that is not a picture model, so it
@@ -550,6 +550,30 @@ class Location(Common):
     # photographs are LocationImage rows; this is the mark, and it has to stay
     # legible at 24 px.
     icon = icon_field()
+
+    # The chosen cover, at RegularPicture's tier - the same column the other four
+    # records inherit, declared by hand because Location is not a picture model.
+    #
+    # Reparenting it onto RegularPicture would have been the shorter edit and is
+    # the wrong one: that base also carries `href`, `fit` and `background_color`,
+    # none of which a place has any use for, and the six text columns above would
+    # then be inherited rather than declared - a silent re-definition of fields
+    # this model deliberately owns. One column is the smaller change.
+    #
+    # Optional, and *still* falls back to the first gallery row when it is empty
+    # (``core.serializers.gallery_image_url``), so every place catalogued before
+    # this existed keeps exactly the cover it had.
+    # `REGULAR`, never the number - see core/image_sizes.py: the write
+    # serializer resizes before this field is ever reached, so a literal that
+    # drifted from the tier would be silently overruled by whichever is smaller.
+    image = ResizedImageField(
+        null=True,
+        blank=True,
+        max_size=[REGULAR, None],
+        quality=85,
+        upload_to=picture,
+        help_text='The place\'s main image. Leave empty to use the first photo below.',
+    )
 
     # A trail inside a park, a pond inside a reserve. One level is the intent;
     # nothing enforces a depth limit, so keep it shallow.
@@ -633,8 +657,10 @@ class Location(Common):
 class LocationImage(GalleryImage):
     """A photo of a place. The first is its cover - see ``GalleryImage``.
 
-    Location is the one record with no ``image`` column to fall back from, so
-    here the first row is not merely the default cover: it is the only one.
+    Location used to be the one record with no ``image`` column to fall back
+    from, which made the first row the only cover there was. It has one now, so
+    this behaves like every other gallery here: first row unless a main image
+    was chosen.
     """
 
     location = models.ForeignKey(

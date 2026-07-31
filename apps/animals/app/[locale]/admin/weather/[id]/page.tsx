@@ -31,9 +31,10 @@ export default function AdminWeatherFormPage({ params }: Props) {
     enabled: true,
   });
 
-  // Only the glyph is a single field now - the photographs are the gallery
-  // below, whose first row is what the API publishes as this record's cover.
-  const images = useEntityImages(['icon']);
+  // The chosen cover and the glyph. Leaving `image` empty is the normal case and
+  // hands the cover to the gallery's first row, which is what the API falls back
+  // to; filling it overrides that without disturbing the photographs.
+  const images = useEntityImages(['image', 'icon']);
   const gallery = useEntityGallery(weatherImages, isNew ? null : Number(id));
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
@@ -131,7 +132,8 @@ export default function AdminWeatherFormPage({ params }: Props) {
         imagesSlot={
           <EntityGalleryField
             gallery={gallery}
-            iconSlot={<PairedImageFields images={images} />}
+            headerSlot={<PairedImageFields images={images} />}
+            mainImageSet={images.has('image')}
           />
         }
       />
