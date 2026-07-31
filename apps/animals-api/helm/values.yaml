@@ -72,7 +72,10 @@ env:
   MAX_VIDEO_UPLOAD_MB: '3000'
   # Public-contribution limits - see env.example. The transcode runs on a pod
   # that also serves the public site, so these bound CPU, not storage.
-  MAX_CONTRIBUTION_VIDEO_SECONDS: '90'
+  # ⚠ animals' own MAX_CONTRIBUTION_VIDEO_SECONDS must carry the same number.
+  # This is the enforcing copy; that one is what the picker shows and refuses on,
+  # so a mismatch lets a contributor upload a clip the API then rejects.
+  MAX_CONTRIBUTION_VIDEO_SECONDS: '600'
   MAX_CONTRIBUTION_VIDEOS_PER_DAY: '5'
   # When a clip whose handler died stops reading as "processing". Derived at read
   # time; there is no worker here to sweep with.

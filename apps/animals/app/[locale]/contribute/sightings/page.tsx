@@ -17,6 +17,7 @@ import {
   type ContributeLocation,
   type Kind,
 } from "@/lib/catalog";
+import { DEFAULT_MAX_VIDEO_SECONDS } from "@/lib/contribute";
 import { isPlaceType } from "@/lib/place-types";
 import { localized } from "@/lib/i18n-field";
 import { SignInPrompt } from "@/components/contribute/sign-in-prompt";
@@ -277,6 +278,15 @@ export default async function ContributeSightingPage({
             // back to the email, so it would promise a credit that the API,
             // which publishes the first name or nothing, would not print.
             creditName={session.firstName}
+            // Read here, in a server component, so a Helm change moves it
+            // without a rebuild - `NEXT_PUBLIC_` would inline it at image build
+            // time instead. `Number('')` is 0 and `Number(undefined)` is NaN,
+            // and both are falsy, so an unset or malformed value falls back to
+            // the API's own default rather than to a cap of zero seconds.
+            maxVideoSeconds={
+              Number(process.env.MAX_CONTRIBUTION_VIDEO_SECONDS) ||
+              DEFAULT_MAX_VIDEO_SECONDS
+            }
             // Sorted here rather than in the fetcher: the label is *localized*,
             // so the order only exists once the locale has picked which half of
             // each pair is shown. It leads with the name, so this is still a

@@ -7,7 +7,7 @@ import { Button } from '@repo/ui/core-elements/button';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { IconButton } from '@repo/ui/core-elements/icon-button';
 import { readVideoDuration } from '@/lib/video-upload';
-import { MAX_VIDEO_SECONDS, MAX_VIDEO_BYTES } from '@/lib/contribute';
+import { MAX_VIDEO_BYTES } from '@/lib/contribute';
 
 /**
  * One optional clip on a contributed entry.
@@ -39,9 +39,15 @@ export interface PickedVideo {
 interface Props {
   video: PickedVideo | null;
   onChange: (video: PickedVideo | null) => void;
+  /**
+   * The duration cap to enforce, resolved from `MAX_CONTRIBUTION_VIDEO_SECONDS`
+   * by the server component that renders this flow. A prop rather than an import
+   * because this is a client component - see `DEFAULT_MAX_VIDEO_SECONDS`.
+   */
+  maxSeconds: number;
 }
 
-export function VideoPicker({ video, onChange }: Props) {
+export function VideoPicker({ video, onChange, maxSeconds }: Props) {
   const t = useTranslations('Contribute');
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -57,8 +63,8 @@ export function VideoPicker({ video, onChange }: Props) {
     }
 
     const durationSeconds = await readVideoDuration(file);
-    if (durationSeconds !== null && durationSeconds > MAX_VIDEO_SECONDS) {
-      setError(t('videoTooLong', { seconds: MAX_VIDEO_SECONDS }));
+    if (durationSeconds !== null && durationSeconds > maxSeconds) {
+      setError(t('videoTooLong', { seconds: maxSeconds }));
       if (input.current) input.current.value = '';
       return;
     }
@@ -120,7 +126,7 @@ export function VideoPicker({ video, onChange }: Props) {
       )}
 
       <Typography variant="caption" color="var(--foreground-muted, #6b7280)">
-        {t('videoHelp', { seconds: MAX_VIDEO_SECONDS })}
+        {t('videoHelp', { seconds: maxSeconds })}
       </Typography>
 
       {error && (

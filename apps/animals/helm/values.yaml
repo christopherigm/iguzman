@@ -98,6 +98,11 @@ env:
   # one - see videoScratch.sizeLimit above - and transcodes are serialised
   # regardless.
   MAX_CONCURRENT_UPLOADS: '2'
+  # ⚠ Must equal animals-api's MAX_CONTRIBUTION_VIDEO_SECONDS. That is the
+  # enforcing copy; this one is what the contribute picker shows and refuses on,
+  # so a lower value here silently hides capacity the API would have allowed and
+  # a higher one lets a contributor upload a clip the API then rejects.
+  MAX_CONTRIBUTION_VIDEO_SECONDS: '600'
 
 envFromSecret:
   - name: API_URL

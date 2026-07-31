@@ -628,11 +628,28 @@ Eight things that will bite:
   hairline under the video. Both bands of `flex-direction` therefore live in
   `sightings-map-section.css`, and neither the aside nor the map takes a `width`.
 
-**Contributor limits** (`MAX_CONTRIBUTION_VIDEO_SECONDS` 90 s, one clip per entry,
+**Contributor limits** (`MAX_CONTRIBUTION_VIDEO_SECONDS`, one clip per entry,
 five per rolling day) are enforced by animals-api and re-checked against the real
 bytes here; the CMS has no duration limit. A contributor's upload failing leaves
 a **filed entry with no clip**, not a lost entry - the outing is the thing worth
 keeping, which is why the flow reports success and says the clip did not make it.
+
+⚠ **The duration cap is set twice and both copies must carry the same number** -
+`MAX_CONTRIBUTION_VIDEO_SECONDS` in animals-api's env (the enforcing copy, in
+`journal/serializers.py`) and in **this app's** env, which is what the picker
+displays and refuses on before a byte is uploaded. Set this app's lower and you
+hide capacity the API would have allowed; set it higher and a contributor uploads
+a multi-GB clip only to have the reservation rejected. Both default to 90.
+
+**This app's copy is read on the *server*** - in `contribute/sightings/page.tsx`,
+handed to the form as `maxVideoSeconds` and on to `VideoPicker` as `maxSeconds`.
+It cannot be read in `lib/contribute.ts` (bundled into client components, so the
+lookup resolves to `undefined` in the browser) and it must **not** become a
+`NEXT_PUBLIC_` var: those are inlined when the image is built, which would freeze
+the limit at whatever the Dockerfile saw and make the Helm value inert.
+`DEFAULT_MAX_VIDEO_SECONDS` there is the fallback for an unset env, nothing more.
+A new env var read in this app also needs a line in `apps/animals/turbo.json`'s
+`passThroughEnv`, or `turbo/no-undeclared-env-vars` fails the zero-warning lint.
 
 ## Reads are `no-store` - the only cache is animals-api's
 

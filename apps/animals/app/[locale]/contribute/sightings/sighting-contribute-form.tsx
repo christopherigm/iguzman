@@ -25,7 +25,6 @@ import {
   contributeSighting,
   firstErrorMessage,
   reserveSightingVideo,
-  MAX_VIDEO_SECONDS,
   type SightingSubmission,
 } from "@/lib/contribute";
 import { uploadVideo, VideoUploadError } from "@/lib/video-upload";
@@ -84,6 +83,13 @@ interface Props {
   creditName: string;
   locations: SelectOption[];
   weather: SelectOption[];
+  /**
+   * The clip duration cap, resolved from `MAX_CONTRIBUTION_VIDEO_SECONDS` by the
+   * page. It is passed down rather than imported because this is a client
+   * component and the value must stay readable at run time - see
+   * `DEFAULT_MAX_VIDEO_SECONDS` in `lib/contribute.ts`.
+   */
+  maxVideoSeconds: number;
 }
 
 const EMPTY = {
@@ -106,6 +112,7 @@ export function SightingContributeForm({
   creditName,
   locations,
   weather,
+  maxVideoSeconds,
 }: Props) {
   const t = useTranslations("Contribute");
 
@@ -259,7 +266,7 @@ export function SightingContributeForm({
           await uploadVideo({
             file: video.file,
             ticket: reservation.upload_ticket,
-            maxDurationSeconds: MAX_VIDEO_SECONDS,
+            maxDurationSeconds: maxVideoSeconds,
             onProgress: setVideoProgress,
           });
         } catch (videoError) {
@@ -393,7 +400,11 @@ export function SightingContributeForm({
             <Typography variant="label" fontWeight={600}>
               {t("video")}
             </Typography>
-            <VideoPicker video={video} onChange={setVideo} />
+            <VideoPicker
+              video={video}
+              onChange={setVideo}
+              maxSeconds={maxVideoSeconds}
+            />
           </Box>
         </StageShell>
       )}

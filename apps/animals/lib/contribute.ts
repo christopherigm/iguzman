@@ -140,14 +140,25 @@ export interface VideoReservation {
 }
 
 /**
- * Longest clip the public flow accepts, mirroring animals-api's
- * `MAX_CONTRIBUTION_VIDEO_SECONDS`.
+ * Longest clip the public flow accepts when nothing says otherwise, matching
+ * animals-api's own default for `MAX_CONTRIBUTION_VIDEO_SECONDS`.
  *
- * The API enforces it from the *declared* duration and the handler re-checks the
- * real bytes with `ffprobe`; this copy is so the picker can refuse a long clip
- * with a sentence rather than after a multi-GB upload on cellular data.
+ * The API enforces the limit from the *declared* duration and the handler
+ * re-checks the real bytes with `ffprobe`; the browser copy is so the picker can
+ * refuse a long clip with a sentence rather than after a multi-GB upload on
+ * cellular data.
+ *
+ * ⚠ **This is the fallback, not the value the picker uses.** The real one is read
+ * from `MAX_CONTRIBUTION_VIDEO_SECONDS` **on the server** in the contribute
+ * page and handed down as a prop (see `maxVideoSeconds` there). It cannot be
+ * read here: this module is bundled into client components, so an env lookup in
+ * it would resolve to `undefined` in the browser - and it cannot be a
+ * `NEXT_PUBLIC_` var either, since those are inlined when the image is built,
+ * which would freeze the limit at whatever the Dockerfile saw and make the Helm
+ * value inert. Raising the cap therefore means changing it in **one** place per
+ * side: animals-api's env (it is the enforcing copy) and this app's env.
  */
-export const MAX_VIDEO_SECONDS = 90;
+export const DEFAULT_MAX_VIDEO_SECONDS = 90;
 
 /**
  * Largest source file the picker accepts, mirroring `MAX_VIDEO_UPLOAD_MB`.
