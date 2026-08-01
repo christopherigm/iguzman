@@ -9,6 +9,7 @@ import type { Swiper as SwiperType } from "swiper";
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
+import { SliderControls } from "@repo/ui/core-elements/slider-dots";
 import getImageDimensionsFromUrl from "@repo/helpers/get-image-dimensions-from-url";
 import type { ImageFit } from "@/lib/catalog";
 import "swiper/css";
@@ -20,6 +21,14 @@ import "./detail-gallery.css";
  * A detail page's photographs as a mounted slideshow: one large slide with a
  * strip of thumbnails under it and a fullscreen viewer, sitting beside the
  * description and the facts card in the page's first row.
+ *
+ * **Fullscreen is a second Swiper, not a lightbox showing one photo.** It opens
+ * on the slide that was pressed and pages through the whole set with a swipe -
+ * which is what a reader on a phone reaches for first - carrying no frame, no
+ * card and no background of its own: the photograph alone over the scrim, with
+ * `SliderControls` (the monorepo's one pagination row) beneath it. That row is
+ * what the slide has to make space for, hence `--detail-gallery-fs-controls`
+ * below.
  *
  * **All three detail routes share it** - a category, a species and a journal
  * entry each show their photographs this way, which is what makes their first
@@ -68,25 +77,32 @@ export function DetailGallery({ images, placeholderColor }: Props) {
     [],
   );
   const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
+  const [fullscreenSwiper, setFullscreenSwiper] = useState<SwiperType | null>(
+    null,
+  );
   const [isClosing, setIsClosing] = useState(false);
 
   const closeFullscreen = useCallback(() => {
+    if (isClosing) return;
     setIsClosing(true);
+    const lastIndex = fullscreenIndex;
     setTimeout(() => {
+      // The reader left fullscreen on a slide they chose - the strip behind it
+      // follows, rather than snapping back to the one they opened.
+      if (lastIndex !== null) mainSwiper?.slideToLoop(lastIndex);
       setFullscreenIndex(null);
+      setFullscreenSwiper(null);
       setIsClosing(false);
     }, 250);
-  }, []);
+  }, [isClosing, fullscreenIndex, mainSwiper]);
 
   const showPrevFullscreen = useCallback(() => {
-    setFullscreenIndex((i) =>
-      i === null ? null : (i - 1 + images.length) % images.length,
-    );
-  }, [images.length]);
+    fullscreenSwiper?.slidePrev();
+  }, [fullscreenSwiper]);
 
   const showNextFullscreen = useCallback(() => {
-    setFullscreenIndex((i) => (i === null ? null : (i + 1) % images.length));
-  }, [images.length]);
+    fullscreenSwiper?.slideNext();
+  }, [fullscreenSwiper]);
 
   useEffect(() => {
     if (fullscreenIndex === null) return;
@@ -137,11 +153,6 @@ export function DetailGallery({ images, placeholderColor }: Props) {
       />
     );
   }
-
-  const fullscreenAr =
-    fullscreenIndex !== null
-      ? (imageAspectRatios[fullscreenIndex] ?? 1.5)
-      : 1.5;
 
   return (
     <Card flexDirection="column" gap={8} width="100%" padding={8}>
@@ -199,7 +210,7 @@ export function DetailGallery({ images, placeholderColor }: Props) {
                   }}
                   onClick={() => setFullscreenIndex(i)}
                   kind="success"
-                  translucent
+                  solid
                 />
               </Box>
             </SwiperSlide>
@@ -220,7 +231,7 @@ export function DetailGallery({ images, placeholderColor }: Props) {
               }}
               onClick={() => mainSwiper?.slidePrev()}
               kind="success"
-              translucent
+              solid
             />
             <IconButton
               icon="/icons/next.svg"
@@ -234,7 +245,7 @@ export function DetailGallery({ images, placeholderColor }: Props) {
               }}
               onClick={() => mainSwiper?.slideNext()}
               kind="success"
-              translucent
+              solid
             />
           </>
         )}
@@ -298,67 +309,89 @@ export function DetailGallery({ images, placeholderColor }: Props) {
         >
           <Box
             className="detail-gallery__overlay-image-wrap"
-            styles={{
-              position: "relative",
-              width: `min(90vw, calc(90vh * ${fullscreenAr}))`,
-              maxHeight: "90vh",
-              aspectRatio: String(fullscreenAr),
-            }}
-            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            flexDirection="column"
+            alignItems="center"
+            gap={12}
+            width="100%"
           >
-            <Image
-              fill
-              src={images[fullscreenIndex]?.url ?? ""}
-              alt={images[fullscreenIndex]?.alt ?? ""}
-              sizes="90vw"
-              style={{ objectFit: "contain" }}
-            />
-          </Box>
+            <Swiper
+              // No `Thumbs`/`FreeMode` here - the fullscreen viewer is the
+              // photographs alone, so it needs neither the thumbnail strip nor
+              // its free-scrolling.
+              onSwiper={setFullscreenSwiper}
+              // ⚠ Swiper emits a final `slideChange` as it is torn down (loop
+              // mode restores the slide order on destroy), which lands *after*
+              // the close has already nulled the index - a plain
+              // `setFullscreenIndex(realIndex)` therefore reopened the overlay
+              // the instant the close button was pressed. `fullscreenIndex` is
+              // the open/closed flag as well as the current slide, so once it
+              // is null nothing may write a number back into it.
+              onSlideChange={(s) =>
+                setFullscreenIndex((i) => (i === null ? null : s.realIndex))
+              }
+              initialSlide={fullscreenIndex}
+              loop={images.length > 1}
+              spaceBetween={24}
+              className="detail-gallery__fullscreen"
+            >
+              {images.map((img, i) => (
+                <SwiperSlide key={img.url}>
+                  <Box
+                    // The photograph alone - no frame, no card, no background:
+                    // its own aspect ratio inside the height the control row
+                    // leaves, so nothing is cropped and nothing is letterboxed
+                    // over a plate the reader can see.
+                    styles={{
+                      position: "relative",
+                      width: `min(90vw, calc((90vh - var(--detail-gallery-fs-controls)) * ${
+                        imageAspectRatios[i] ?? 1.5
+                      }))`,
+                      maxHeight: "100%",
+                      aspectRatio: String(imageAspectRatios[i] ?? 1.5),
+                    }}
+                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                  >
+                    <Image
+                      fill
+                      src={img.url}
+                      alt={img.alt}
+                      sizes="90vw"
+                      style={{ objectFit: "contain" }}
+                    />
+                  </Box>
+                </SwiperSlide>
+              ))}
+            </Swiper>
 
-          {images.length > 1 && (
-            <>
-              <IconButton
-                icon="/icons/prev.svg"
-                aria-label={t("previous")}
-                styles={{
-                  position: "absolute",
-                  left: 16,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  showPrevFullscreen();
-                }}
-                kind="success"
-                translucent
+            {/* The row is inside the overlay, whose click closes it - so a
+                press on an arrow or a dot must not reach that handler. */}
+            <Box onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+              <SliderControls
+                count={images.length}
+                active={fullscreenIndex}
+                onSelect={(i) => fullscreenSwiper?.slideToLoop(i)}
+                onPrev={showPrevFullscreen}
+                onNext={showNextFullscreen}
+                label={t("paginationPhotos")}
+                dotLabel={(i) => images[i]?.alt ?? String(i + 1)}
+                previousLabel={t("previous")}
+                nextLabel={t("next")}
               />
-              <IconButton
-                icon="/icons/next.svg"
-                aria-label={t("next")}
-                styles={{
-                  position: "absolute",
-                  right: 16,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  showNextFullscreen();
-                }}
-                kind="success"
-                translucent
-              />
-            </>
-          )}
+            </Box>
+          </Box>
 
           <IconButton
             icon="/icons/close.svg"
             aria-label={t("close")}
             styles={{ position: "absolute", top: 16, right: 16 }}
-            onClick={closeFullscreen}
+            // Without this the press also reaches the overlay's own
+            // close-on-backdrop handler, running the whole close twice.
+            onClick={(e) => {
+              e.stopPropagation();
+              closeFullscreen();
+            }}
             kind="error"
-            translucent
+            solid
           />
         </Box>
       )}
