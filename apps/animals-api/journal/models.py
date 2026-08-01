@@ -16,16 +16,16 @@ from django.utils import timezone
 
 from core.fields import ResizedImageField
 from core.image_sizes import MEDIUM
-from core.models import RegularPicture, picture, video
+from core.models import RegularPlusPicture, picture, video
 
 
-class Sighting(RegularPicture):
+class Sighting(RegularPlusPicture):
     """One recorded encounter with a catalogued subject.
 
-    Inherits from RegularPicture, which provides:
+    Inherits from RegularPlusPicture, which provides:
       - Common:      enabled, created, modified, version
       - BasePicture: name, description, short_description, href, fit, background_color
-      - RegularPicture: image (max 1200px) - the entry's cover photo
+      - RegularPlusPicture: image (max 2560px, quality 90) - the entry's cover photo
 
     ``name`` is the entry's optional title ("First fawn of the spring"); when it
     is blank the frontend falls back to the species name. ``description`` is the
@@ -217,12 +217,15 @@ PROCESSING_STATUS_CHOICES = [
 PROCESSING_IN_FLIGHT = {PROCESSING_PENDING, PROCESSING_PROCESSING}
 
 
-class SightingMedia(RegularPicture):
+class SightingMedia(RegularPlusPicture):
     """One photo, uploaded video, or video link in a sighting's gallery.
 
-    Inherits RegularPicture, so `image` (max 1200px), `name` (the caption),
-    `description`, `fit` and `background_color` all come for free; the extra
-    fields below cover the two video kinds.
+    Inherits RegularPlusPicture, so `image` (max 2560px at quality 90), `name`
+    (the caption), `description`, `fit` and `background_color` all come for free;
+    the extra fields below cover the two video kinds.
+
+    The `poster` below stays at MEDIUM deliberately: it is the frame painted
+    behind a play button before the clip starts, never a picture a reader opens.
     """
 
     sighting = models.ForeignKey(

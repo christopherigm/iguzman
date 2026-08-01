@@ -172,7 +172,7 @@ class Base64ImagesMixin:
         class SpeciesWriteSerializer(Base64ImagesMixin, serializers.ModelSerializer):
             image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
             icon = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-            image_fields = {'image': image_cfg(REGULAR), 'icon': image_cfg(ICON)}
+            image_fields = {'image': photo_cfg(), 'icon': image_cfg(ICON)}
 
     Each declared field is validated as a decodable image up front, then written
     **after** the row is saved - the file name embeds the pk, which does not exist

@@ -33,8 +33,22 @@ REGULAR tier comes out ~800 px wide, not 1200.
 ICON = 192       # category/season/weather glyphs shown beside a label
 SMALL = 256      # SmallPicture   - thumbnails, avatars
 MEDIUM = 512     # MediumPicture  - cards, previews, video posters
-REGULAR = 1200   # RegularPicture - species portraits, sighting photos
+REGULAR = 1200   # RegularPicture - brand `img_about`, and anything still on it
+REGULAR_PLUS = 2560  # RegularPlusPicture - every catalog & journal photograph
 LARGE = 3840     # LargePicture   - full-bleed hero backgrounds
+
+# The quality REGULAR_PLUS is stored at, above the 85 every other tier uses.
+#
+# The two numbers travel together on purpose: this is a *photograph* tier, and a
+# 2560 px file re-encoded at 85 gives back in visible artefacts most of what the
+# extra pixels bought - at 2x on a retina display, and again when the frontend's
+# gallery lets a reader zoom in. It is named rather than typed at each call site
+# because it has to be repeated at both halves of the pipeline (the model mixin
+# and every serializer tier), which is the same drift `box()` exists to prevent.
+#
+# ⚠ Only JPEG and WEBP are re-encoded at all; a PNG upload keeps its alpha and
+# ignores this (see `core.fields.ResizedImageField._resize`).
+REGULAR_PLUS_QUALITY = 90
 
 
 def box(size: int) -> tuple[int, int]:
@@ -54,3 +68,15 @@ def image_cfg(size: int, quality: int = 85, force_format: str | None = None) -> 
     if force_format is not None:
         cfg["force_format"] = force_format
     return cfg
+
+
+def photo_cfg() -> dict:
+    """The serializer half of ``core.models.RegularPlusPicture``.
+
+    Every photograph in this project - a catalog record's cover, any gallery row,
+    a sighting's cover, a sighting's media - is stored at this one tier, and this
+    is the only place the size and its quality are paired. Spelling
+    ``image_cfg(REGULAR_PLUS)`` by hand instead silently drops back to quality 85,
+    which is the exact drift this module exists to prevent.
+    """
+    return image_cfg(REGULAR_PLUS, REGULAR_PLUS_QUALITY)

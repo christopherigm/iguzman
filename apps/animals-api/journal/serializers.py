@@ -9,7 +9,7 @@ from core.contributions import (
     ContributionSerializer,
     photos_field,
 )
-from core.image_sizes import MEDIUM, REGULAR, image_cfg
+from core.image_sizes import MEDIUM, image_cfg, photo_cfg
 from core.serializers import (
     Base64ImagesMixin,
     ImageProcessingSerializer,
@@ -106,11 +106,13 @@ class SightingMediaWriteSerializer(serializers.Serializer):
         if kind == 'link' and not attrs.get('url'):
             raise serializers.ValidationError({'url': 'Required when kind is "link".'})
 
-        for field, tier in (('image', REGULAR), ('poster', MEDIUM)):
+        # The photo at the shared photo tier; the poster stays at MEDIUM - it is
+        # the frame behind a play button, not a picture anyone opens.
+        for field, cfg in (('image', photo_cfg()), ('poster', image_cfg(MEDIUM))):
             raw = attrs.get(field)
             if not raw:
                 continue
-            sub = ImageProcessingSerializer(data={'base64_image': raw}, **image_cfg(tier))
+            sub = ImageProcessingSerializer(data={'base64_image': raw}, **cfg)
             if not sub.is_valid():
                 raise serializers.ValidationError({field: sub.errors['base64_image']})
         return attrs
@@ -134,11 +136,11 @@ class SightingMediaWriteSerializer(serializers.Serializer):
             instance.save()
 
             written = []
-            for field, tier in (('image', REGULAR), ('poster', MEDIUM)):
+            for field, cfg in (('image', photo_cfg()), ('poster', image_cfg(MEDIUM))):
                 raw = data.get(field)
                 if not raw:
                     continue
-                proc = ImageProcessingSerializer(data={'base64_image': raw}, **image_cfg(tier))
+                proc = ImageProcessingSerializer(data={'base64_image': raw}, **cfg)
                 proc.is_valid()
                 proc.save_to_field(
                     getattr(instance, field),
@@ -598,7 +600,7 @@ class SightingMapSerializer(serializers.ModelSerializer):
 
 class SightingWriteSerializer(Base64ImagesMixin, serializers.ModelSerializer):
     image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    image_fields = {'image': image_cfg(REGULAR)}
+    image_fields = {'image': photo_cfg()}
 
     class Meta:
         model = Sighting

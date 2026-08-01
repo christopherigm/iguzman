@@ -24,9 +24,16 @@ import "./photo-picker.css";
  * about a third, so those four arrive as a ~30 MB JSON body against Django's 10 MB
  * `DATA_UPLOAD_MAX_MEMORY_SIZE`. The submission would fail *after* the upload, on
  * a mobile connection, with the draft still on screen and nothing to do about it.
- * So every file is drawn through a canvas at `MAX_EDGE` first. The API still
- * resizes what arrives (`REGULAR`, 1200 px) - this is about what fits in the
- * request, not about the stored image.
+ * So every file is drawn through a canvas at `MAX_EDGE` first. This is about what
+ * fits in the request, not about the stored image.
+ *
+ * ⚠ `MAX_EDGE` is **below** the tier the API stores at (`REGULAR_PLUS`, 2560 px),
+ * and that gap is deliberate rather than an oversight to close. Ten photos is the
+ * ceiling, and ten 2560 px JPEGs base64 to well past the 10 MB the request is
+ * allowed to be - so raising this to match the tier would trade a slightly sharper
+ * contribution for submissions that fail outright on a full picker. A contributor's
+ * photo is stored at whatever arrives; the CMS's `AdminImageUploader`, which sends
+ * one considered file as picked, is the path that actually reaches 2560.
  *
  * **Order is meaning, not arrangement.** The API publishes a record's first
  * gallery row as its cover, so photo 1 is the cover - which is why the tiles are
@@ -325,8 +332,8 @@ export function PhotoPicker({ photos, onChange }: Props) {
  * thing nobody notices until a contributor's whole album is rotated.
  *
  * The result is always JPEG, whatever went in: this is a photograph bound for a
- * 1200 px gallery, and a 12-megapixel PNG straight off a screenshot-happy phone
- * would otherwise re-encode to something larger than the original.
+ * gallery, and a 12-megapixel PNG straight off a screenshot-happy phone would
+ * otherwise re-encode to something larger than the original.
  */
 async function downscale(file: File): Promise<string> {
   const bitmap = await createImageBitmap(file, {

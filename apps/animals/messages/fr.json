@@ -75,6 +75,8 @@
     "pagination": "Choisir une entrée",
     "paginationPhotos": "Choisir une photo",
     "expand": "Agrandir l'image",
+    "zoomIn": "Zoomer",
+    "zoomOut": "Dézoomer",
     "close": "Quitter le plein écran"
   },
   "Sighting": {

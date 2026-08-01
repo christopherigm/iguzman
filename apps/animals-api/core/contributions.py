@@ -22,7 +22,7 @@ to type the field into it.
 
 from rest_framework import serializers
 
-from .image_sizes import REGULAR, image_cfg
+from .image_sizes import photo_cfg
 from .serializers import ImageProcessingSerializer
 
 __all__ = [
@@ -79,8 +79,12 @@ class ContributionSerializer(serializers.ModelSerializer):
         of its photos. Validation up front, writes after the row exists.
         """
         for index, raw in enumerate(value):
+            # The same tier the gallery writer below stores at - this pass only
+            # decides whether the payload decodes, so a smaller box here would
+            # reject nothing but would make the two halves read as different
+            # rules.
             sub = ImageProcessingSerializer(
-                data={'base64_image': raw}, **image_cfg(REGULAR)
+                data={'base64_image': raw}, **photo_cfg()
             )
             if not sub.is_valid():
                 raise serializers.ValidationError(

@@ -6,7 +6,7 @@ from core.contributions import (
     ContributionSerializer,
     photos_field,
 )
-from core.image_sizes import ICON, REGULAR, image_cfg
+from core.image_sizes import ICON, image_cfg, photo_cfg
 from core.serializers import (
     Base64ImagesMixin,
     ImageProcessingSerializer,
@@ -31,8 +31,10 @@ from .models import (
     WeatherConditionImage,
 )
 
-# Every catalog record takes the same two images, at the same two tiers.
-_IMAGE_FIELDS = {'image': image_cfg(REGULAR), 'icon': image_cfg(ICON)}
+# Every catalog record takes the same two images, at the same two tiers: the
+# photograph at the shared photo tier (`photo_cfg`, which carries its own
+# quality), the glyph at ICON.
+_IMAGE_FIELDS = {'image': photo_cfg(), 'icon': image_cfg(ICON)}
 
 # The base64 field declaration shared by every write serializer below. A plain
 # CharField, not the model's ImageField, because the payload is a data URL.
@@ -114,7 +116,7 @@ class GalleryImageWriteSerializer(serializers.Serializer):
     sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
 
     def validate_image(self, value):
-        sub = ImageProcessingSerializer(data={'base64_image': value}, **image_cfg(REGULAR))
+        sub = ImageProcessingSerializer(data={'base64_image': value}, **photo_cfg())
         if not sub.is_valid():
             raise serializers.ValidationError(sub.errors['base64_image'])
         return value
@@ -135,7 +137,7 @@ class GalleryImageWriteSerializer(serializers.Serializer):
 
             proc = ImageProcessingSerializer(
                 data={'base64_image': self.validated_data['image']},
-                **image_cfg(REGULAR),
+                **photo_cfg(),
             )
             proc.is_valid()
             proc.save_to_field(

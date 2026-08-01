@@ -317,7 +317,7 @@ Five things to know:
   sort order. No `image`, no `icon`, no description pair, no gallery, no
   `/images/` endpoints, no public page. They exist so "Jalisco" is typed once
   and then _chosen_. If one ever needs a photograph it should become a
-  `RegularPicture` like the other four records, not grow the fields in place.
+  `RegularPlusPicture` like the other four records, not grow the fields in place.
   **`Country.code` is the one extra column** among the three - the ISO 3166-1
   alpha-2 identifier, nullable _and_ unique, which is why a blank is normalised to
   `NULL` in both `Country.clean()` and `CountryWriteSerializer` (two countries
@@ -440,7 +440,7 @@ Both halves matter.
   cannot read). **A sixth record's read serializer needs it too.**
 - **`catalog.Location` gained an `image` column** in migration `0010_location_image`,
   so it now resolves a cover exactly like the other four. It is declared on the
-  model by hand rather than by reparenting onto `RegularPicture`: that base also
+  model by hand rather than by reparenting onto `RegularPlusPicture`: that base also
   carries `href`, `fit` and `background_color`, which a place has no use for, and
   would silently re-declare the six text columns `Location` deliberately owns.
   Every place catalogued before this keeps the cover it had - the column is null,
@@ -475,6 +475,33 @@ the same pattern as website-api. Write serializers declare their images through
 `Base64ImagesMixin`, which validates them up front, writes them _after_ the row
 exists (the filename embeds the pk), and treats an explicitly empty value as
 "clear it" while an omitted one leaves the stored file alone.
+
+⚠ **Every photograph in this project is stored at one tier, and it is not the
+one its name suggests.** `REGULAR_PLUS` (2560 px, **quality 90**) is what the
+five catalog records, their five galleries, `Location.image`, `Sighting` and
+`SightingMedia.image` all carry - `RegularPlusPicture` on the model side,
+`core.image_sizes.photo_cfg()` on the serializer side. `REGULAR` (1200) is left
+for `System.img_about` and nothing else; `poster` stays at `MEDIUM` (it is the
+frame behind a play button), and every `icon` stays at `ICON`.
+
+Two rules, and both fail silently when broken:
+
+- **Call `photo_cfg()`, never `image_cfg(REGULAR_PLUS)`.** This is the one tier
+  whose quality is not the platform 85, and `image_cfg` defaults that argument -
+  so the hand-spelled version stores 2560 px files at 85 and nothing says so.
+- **The serializer is the half that actually decides.** It resizes before the
+  model field is ever reached, and its box is square on **both** axes, so a
+  portrait photo comes out 1920 × 2560, not 2560 wide. Raising the model tier
+  alone changes nothing at all - the write serializer's `image_cfg` has to move
+  in the same edit. That is the drift `core/image_sizes.py` opens by warning
+  about.
+
+⚠ **Neither tier change re-renders anything already uploaded.** `max_size` and
+`quality` live on the field instance, not in the column, so migrations
+`catalog/0011` and `journal/0007` rewrite no rows: every existing photo stays the
+1200 px file it was stored as, and only a re-upload gets the larger one. There is
+no re-encode command, and writing one would need the originals, which were never
+kept.
 
 ⚠ **A video file does not go that route either, and no longer reaches this
 service at all.** A source clip is a camera-roll 4K recording - a few GB - and

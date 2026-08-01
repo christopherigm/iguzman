@@ -75,6 +75,8 @@
     "pagination": "Eintrag auswählen",
     "paginationPhotos": "Foto auswählen",
     "expand": "Bild vergrößern",
+    "zoomIn": "Vergrößern",
+    "zoomOut": "Verkleinern",
     "close": "Vollbild schließen"
   },
   "Sighting": {

@@ -14,8 +14,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from core.fields import ResizedImageField
-from core.image_sizes import ICON, REGULAR
-from core.models import Common, RegularPicture, picture
+from core.image_sizes import ICON, REGULAR_PLUS, REGULAR_PLUS_QUALITY
+from core.models import Common, RegularPlusPicture, picture
 
 
 # The five top-level branches of the site. Deliberately a flat enum rather than
@@ -60,7 +60,7 @@ def icon_field():
     )
 
 
-class GalleryImage(RegularPicture):
+class GalleryImage(RegularPlusPicture):
     """One photo in a record's gallery. The shared shape of every ``*Image`` table.
 
     A catalog record's photographs live in a table of their own rather than in a
@@ -71,7 +71,7 @@ class GalleryImage(RegularPicture):
     Image uploader was left empty - the common case - makes position 1 the cover.
     See ``catalog.serializers.gallery_image_url``.
 
-    Inherits ``RegularPicture``, so each row carries its own caption pair
+    Inherits ``RegularPlusPicture``, so each row carries its own caption pair
     (``name``/``en_name``), ``description`` pair, ``fit`` and ``background_color``.
     The CMS deliberately edits none of those today - it uploads the photos and
     nothing else - but the Django admin's inlines still expose them, and the
@@ -92,13 +92,13 @@ class GalleryImage(RegularPicture):
         ordering = ['sort_order', 'id']
 
 
-class Category(RegularPicture):
+class Category(RegularPlusPicture):
     """A sub-category within one of the five branches: 'Deer', 'Squirrels', 'Oaks'.
 
-    Inherits from RegularPicture, which provides:
+    Inherits from RegularPlusPicture, which provides:
       - Common:      enabled, created, modified, version
       - BasePicture: name, description, short_description, href, fit, background_color
-      - RegularPicture: image (max 1200px)
+      - RegularPlusPicture: image (max 2560px, quality 90)
     """
 
     # `name` is required here, overriding BasePicture's nullable one.
@@ -156,7 +156,7 @@ class CategoryImage(GalleryImage):
         return f'Image for {self.category} (#{self.sort_order})'
 
 
-class Species(RegularPicture):
+class Species(RegularPlusPicture):
     """One catalogued subject: a White-tailed Deer, a Coast Live Oak, a Fly Agaric.
 
     Named for the common case even though a few entries are not species in the
@@ -259,7 +259,7 @@ class SpeciesImage(GalleryImage):
         return f'Image for {self.species} (#{self.sort_order})'
 
 
-class Season(RegularPicture):
+class Season(RegularPlusPicture):
     """One of the year's seasons - both a browsable section and a Sighting field.
 
     ``months`` is what lets a sighting date resolve to a season with no hard-coded
@@ -331,7 +331,7 @@ class SeasonImage(GalleryImage):
         return f'Image for {self.season} (#{self.sort_order})'
 
 
-class WeatherCondition(RegularPicture):
+class WeatherCondition(RegularPlusPicture):
     """The weather during a sighting - fog, overcast, snow - and its own section."""
 
     name = models.CharField(max_length=255)
@@ -551,10 +551,11 @@ class Location(Common):
     # legible at 24 px.
     icon = icon_field()
 
-    # The chosen cover, at RegularPicture's tier - the same column the other four
-    # records inherit, declared by hand because Location is not a picture model.
+    # The chosen cover, at RegularPlusPicture's tier - the same column the other
+    # four records inherit, declared by hand because Location is not a picture
+    # model.
     #
-    # Reparenting it onto RegularPicture would have been the shorter edit and is
+    # Reparenting it onto RegularPlusPicture would have been the shorter edit and is
     # the wrong one: that base also carries `href`, `fit` and `background_color`,
     # none of which a place has any use for, and the six text columns above would
     # then be inherited rather than declared - a silent re-definition of fields
@@ -563,14 +564,15 @@ class Location(Common):
     # Optional, and *still* falls back to the first gallery row when it is empty
     # (``core.serializers.gallery_image_url``), so every place catalogued before
     # this existed keeps exactly the cover it had.
-    # `REGULAR`, never the number - see core/image_sizes.py: the write
+    # `REGULAR_PLUS`, never the number - see core/image_sizes.py: the write
     # serializer resizes before this field is ever reached, so a literal that
     # drifted from the tier would be silently overruled by whichever is smaller.
+    # The quality is named for the same reason - it is not the platform default.
     image = ResizedImageField(
         null=True,
         blank=True,
-        max_size=[REGULAR, None],
-        quality=85,
+        max_size=[REGULAR_PLUS, None],
+        quality=REGULAR_PLUS_QUALITY,
         upload_to=picture,
         help_text='The place\'s main image. Leave empty to use the first photo below.',
     )

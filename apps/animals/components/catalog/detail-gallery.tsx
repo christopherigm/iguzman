@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Thumbs, FreeMode } from "swiper/modules";
+import { Thumbs, FreeMode, Zoom } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
@@ -15,6 +15,7 @@ import type { ImageFit } from "@/lib/catalog";
 import "swiper/css";
 import "swiper/css/free-mode";
 import "swiper/css/thumbs";
+import "swiper/css/zoom";
 import "./detail-gallery.css";
 
 /**
@@ -29,6 +30,13 @@ import "./detail-gallery.css";
  * `SliderControls` (the monorepo's one pagination row) beneath it. That row is
  * what the slide has to make space for, hence `--detail-gallery-fs-controls`
  * below.
+ *
+ * **Fullscreen also zooms**, through Swiper's own `Zoom` module: a pinch or a
+ * double-tap on a touchscreen, and the magnifier in the control row for a mouse
+ * - Swiper's zoom has no wheel handler, so without that button a desktop reader
+ * would have only the double-click. `MAX_ZOOM` is deliberately not capped to
+ * the photo's natural size (`limitToOriginalSize`): a small original would then
+ * make the button dead rather than merely soft.
  *
  * **All three detail routes share it** - a category, a species and a journal
  * entry each show their photographs this way, which is what makes their first
@@ -68,6 +76,9 @@ interface Props {
 const PORTRAIT_FRAME = 4 / 5; // 0.8
 const LANDSCAPE_FRAME = 5 / 4; // 1.25
 
+/** How far a fullscreen photo may be magnified - see the note above. */
+const MAX_ZOOM = 3;
+
 export function DetailGallery({ images, placeholderColor }: Props) {
   const t = useTranslations("Gallery");
   const [thumbsSwiper, setThumbsSwiper] = useState<SwiperType | null>(null);
@@ -81,6 +92,7 @@ export function DetailGallery({ images, placeholderColor }: Props) {
     null,
   );
   const [isClosing, setIsClosing] = useState(false);
+  const [isZoomed, setIsZoomed] = useState(false);
 
   const closeFullscreen = useCallback(() => {
     if (isClosing) return;
@@ -93,8 +105,13 @@ export function DetailGallery({ images, placeholderColor }: Props) {
       setFullscreenIndex(null);
       setFullscreenSwiper(null);
       setIsClosing(false);
+      setIsZoomed(false);
     }, 250);
   }, [isClosing, fullscreenIndex, mainSwiper]);
+
+  const toggleZoom = useCallback(() => {
+    fullscreenSwiper?.zoom.toggle();
+  }, [fullscreenSwiper]);
 
   const showPrevFullscreen = useCallback(() => {
     fullscreenSwiper?.slidePrev();
@@ -318,6 +335,9 @@ export function DetailGallery({ images, placeholderColor }: Props) {
               // No `Thumbs`/`FreeMode` here - the fullscreen viewer is the
               // photographs alone, so it needs neither the thumbnail strip nor
               // its free-scrolling.
+              modules={[Zoom]}
+              zoom={{ maxRatio: MAX_ZOOM, toggle: true }}
+              onZoomChange={(_s, scale) => setIsZoomed(scale > 1)}
               onSwiper={setFullscreenSwiper}
               // ⚠ Swiper emits a final `slideChange` as it is torn down (loop
               // mode restores the slide order on destroy), which lands *after*
@@ -335,12 +355,18 @@ export function DetailGallery({ images, placeholderColor }: Props) {
               className="detail-gallery__fullscreen"
             >
               {images.map((img, i) => (
-                <SwiperSlide key={img.url}>
+                <SwiperSlide key={img.url} zoom>
                   <Box
                     // The photograph alone - no frame, no card, no background:
                     // its own aspect ratio inside the height the control row
                     // leaves, so nothing is cropped and nothing is letterboxed
                     // over a plate the reader can see.
+                    //
+                    // `SwiperSlide zoom` wraps this in Swiper's own
+                    // `.swiper-zoom-container` (which fills the slide and
+                    // centres us), so the frame below keeps its aspect ratio -
+                    // don't move that class onto this box, where the
+                    // stylesheet's `height: 100%` would beat the ratio.
                     styles={{
                       position: "relative",
                       width: `min(90vw, calc((90vh - var(--detail-gallery-fs-controls)) * ${
@@ -364,8 +390,13 @@ export function DetailGallery({ images, placeholderColor }: Props) {
             </Swiper>
 
             {/* The row is inside the overlay, whose click closes it - so a
-                press on an arrow or a dot must not reach that handler. */}
-            <Box onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                press on an arrow, a dot or the magnifier must not reach that
+                handler. */}
+            <Box
+              alignItems="center"
+              gap={8}
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            >
               <SliderControls
                 count={images.length}
                 active={fullscreenIndex}
@@ -376,6 +407,17 @@ export function DetailGallery({ images, placeholderColor }: Props) {
                 dotLabel={(i) => images[i]?.alt ?? String(i + 1)}
                 previousLabel={t("previous")}
                 nextLabel={t("next")}
+                // The row defaults to `width: 100%`, which would push the
+                // magnifier off the end of this line.
+                width="auto"
+              />
+              <IconButton
+                icon={isZoomed ? "/icons/zoom-out.svg" : "/icons/zoom-in.svg"}
+                aria-label={isZoomed ? t("zoomOut") : t("zoomIn")}
+                aria-pressed={isZoomed}
+                onClick={toggleZoom}
+                kind="success"
+                translucent
               />
             </Box>
           </Box>

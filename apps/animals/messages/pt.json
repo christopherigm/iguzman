@@ -75,6 +75,8 @@
     "pagination": "Escolher um registo",
     "paginationPhotos": "Escolher uma foto",
     "expand": "Ampliar imagem",
+    "zoomIn": "Ampliar",
+    "zoomOut": "Reduzir",
     "close": "Fechar tela cheia"
   },
   "Sighting": {

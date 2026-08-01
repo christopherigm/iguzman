@@ -6,6 +6,7 @@ from colorfield.fields import ColorField
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from core import image_sizes
 from core.fields import ResizedImageField
 
 
@@ -134,11 +135,19 @@ def picture_mixin(max_width: int, quality: int = 85):
     return _PictureMixin
 
 
-# Standard size tiers - use these directly or call picture_mixin() for custom sizes.
-SmallPicture   = picture_mixin(256)          # thumbnails, avatars
-MediumPicture  = picture_mixin(512)          # cards, previews
-RegularPicture = picture_mixin(1200)         # content images, banners
-LargePicture   = picture_mixin(3840, quality=90)  # hero images, full-bleed
+# Standard size tiers - use these directly or call picture_mixin() for custom
+# sizes. The numbers are named in core.image_sizes, never typed here: the write
+# serializers resize against those same constants *before* the field is reached,
+# and the smaller of the two silently wins.
+SmallPicture   = picture_mixin(image_sizes.SMALL)     # thumbnails, avatars
+MediumPicture  = picture_mixin(image_sizes.MEDIUM)    # cards, previews
+RegularPicture = picture_mixin(image_sizes.REGULAR)   # content images, banners
+# Every photograph a person uploads to this journal - see the note on
+# REGULAR_PLUS_QUALITY for why this tier alone carries a quality of its own.
+RegularPlusPicture = picture_mixin(
+    image_sizes.REGULAR_PLUS, quality=image_sizes.REGULAR_PLUS_QUALITY
+)
+LargePicture   = picture_mixin(image_sizes.LARGE, quality=90)  # hero, full-bleed
 
 
 # ── Site settings ────────────────────────────────────────────────────────────
