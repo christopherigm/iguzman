@@ -156,7 +156,6 @@ export default async function SuccessStoryDetailPage({ params }: Props) {
               <ItemGalleryClient
                 images={galleryImages}
                 placeholderColor={story.background_color ?? undefined}
-                forceOrientation={{ xs: "horizontal", sm: "horizontal" }}
               />
             </Grid>
           )}

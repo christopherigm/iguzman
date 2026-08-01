@@ -399,6 +399,31 @@ the brief.
   `cssFontFamily` likewise rejects, rather than escapes, a family name that
   isn't plausibly a family name - it ends up in an inline `style` attribute.
 
+## Detail-page galleries
+
+All five detail routes - product, service, menu item, blog post, highlight -
+render `components/item-gallery-client.tsx`, which is now a **thin wrapper over
+`@repo/ui`'s `ImageGallery`**, shared with `apps/animals`' three catalog detail
+pages. The wrapper owns nothing but this app's `Gallery` message namespace (the
+package is i18n-agnostic and takes every string as a prop); the slideshow, the
+thumbnail strip, the fullscreen viewer and the frame sizing all live in
+`packages/ui/src/core-elements/image-gallery.tsx`, so change them there.
+
+Three things came with the move:
+
+- **Fullscreen pages and zooms.** It is a second Swiper opening on the slide
+  that was pressed, not a lightbox over one photo, and it pinches/double-taps to
+  zoom with a magnifier in the control row for the mouse. It also locks the page
+  behind itself (`useScrollLock`), which the old copy did not.
+- ⚠ **`forceOrientation` is gone.** The blog and highlight pages used to pin a
+  5:4 frame below `md`; the frame is now always the 4:5/5:4 box derived from the
+  most-portrait photo in the set, as on the other three pages. Don't reintroduce
+  a per-breakpoint override in one app - it was the last thing keeping the two
+  galleries from being one component.
+- ⚠ **`public/icons/` must carry all six glyphs the gallery reads** -
+  `fullscreen`, `prev`, `next`, `close`, and now `zoom-in`/`zoom-out`, which
+  were copied in from `apps/animals` with this change.
+
 ## Section background bands (`SectionBand`)
 
 The two full-width colour bands a landing paints behind its Catalog Items and

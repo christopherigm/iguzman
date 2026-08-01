@@ -242,7 +242,10 @@
     "previous": "Image précédente",
     "next": "Image suivante",
     "expand": "Agrandir l'image",
-    "close": "Quitter le plein écran"
+    "close": "Quitter le plein écran",
+    "paginationPhotos": "Choisir une photo",
+    "zoomIn": "Zoom avant",
+    "zoomOut": "Zoom arrière"
   },
   "ItemDetail": {
     "home": "Accueil",

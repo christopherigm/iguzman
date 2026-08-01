@@ -242,7 +242,10 @@
     "previous": "Vorheriges Bild",
     "next": "Nächstes Bild",
     "expand": "Bild vergrößern",
-    "close": "Vollbild schließen"
+    "close": "Vollbild schließen",
+    "paginationPhotos": "Foto auswählen",
+    "zoomIn": "Vergrößern",
+    "zoomOut": "Verkleinern"
   },
   "ItemDetail": {
     "home": "Startseite",

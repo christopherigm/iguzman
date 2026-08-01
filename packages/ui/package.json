@@ -50,6 +50,7 @@
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
     "react-player": "^3.4.0",
-    "remark-gfm": "^4"
+    "remark-gfm": "^4",
+    "swiper": "^12.2.0"
   }
 }

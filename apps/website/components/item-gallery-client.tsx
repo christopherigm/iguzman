@@ -1,351 +1,56 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Thumbs, FreeMode } from "swiper/modules";
-import type { Swiper as SwiperType } from "swiper";
-import { Box } from "@repo/ui/core-elements/box";
-import { IconButton } from "@repo/ui/core-elements/icon-button";
-import getImageDimensionsFromUrl from "@repo/helpers/get-image-dimensions-from-url";
-import "swiper/css";
-import "swiper/css/free-mode";
-import "swiper/css/thumbs";
-import "./item-gallery-client.css";
-import Card from "@repo/ui/core-elements/card";
+import { ImageGallery } from "@repo/ui/core-elements/image-gallery";
+
+/**
+ * A detail page's photographs as a mounted slideshow: one large slide with a
+ * strip of thumbnails under it and a fullscreen viewer, beside the item's copy.
+ * Rendered by all five detail routes - product, service, menu item, blog post
+ * and highlight - so they read as one object.
+ *
+ * **The gallery itself is `@repo/ui`'s `ImageGallery`**, shared with
+ * `apps/animals`' three catalog detail pages; what is left here is this app's
+ * `Gallery` message namespace, since that package is i18n-agnostic and takes
+ * every string as a prop. Two things came with the move and are deliberate:
+ * fullscreen now **pages and zooms** (a second Swiper rather than a lightbox
+ * over one photo, with pinch/double-tap and a magnifier for the mouse) and it
+ * **locks the page behind itself**.
+ *
+ * `forceOrientation` is gone with it. The blog and highlight pages used to pin
+ * a 5:4 frame below `md`; the frame is now always the 4:5/5:4 box derived from
+ * the most-portrait photo in the set, as on every other detail page here.
+ */
 
 export interface GalleryImage {
   url: string;
   alt: string;
 }
 
-type GalleryOrientation = "horizontal" | "vertical";
-
-/**
- * Per-breakpoint override for the gallery slide orientation. Each key pins the
- * slide to a horizontal (5:4) or vertical (4:5) frame within that breakpoint
- * band only. Omitted breakpoints fall back to the JS-computed aspect ratio.
- * e.g. { xs: "horizontal", sm: "horizontal" } forces landscape below 900px.
- */
-export type GalleryForceOrientation = Partial<
-  Record<"xs" | "sm" | "md" | "lg" | "xl", GalleryOrientation>
->;
-
 interface ItemGalleryClientProps {
   images: GalleryImage[];
   placeholderColor?: string;
-  forceOrientation?: GalleryForceOrientation | null;
 }
 
 export function ItemGalleryClient({
   images,
   placeholderColor,
-  forceOrientation,
 }: ItemGalleryClientProps) {
   const t = useTranslations("Gallery");
-  const [thumbsSwiper, setThumbsSwiper] = useState<SwiperType | null>(null);
-  const [mainSwiper, setMainSwiper] = useState<SwiperType | null>(null);
-  const [slideAspectRatio, setSlideAspectRatio] = useState<number | null>(null);
-  const [imageAspectRatios, setImageAspectRatios] = useState<(number | null)[]>(
-    [],
-  );
-  const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
-  const [isClosing, setIsClosing] = useState(false);
-
-  const closeFullscreen = useCallback(() => {
-    setIsClosing(true);
-    setTimeout(() => {
-      setFullscreenIndex(null);
-      setIsClosing(false);
-    }, 250);
-  }, []);
-
-  const showPrevFullscreen = useCallback(() => {
-    setFullscreenIndex((i) =>
-      i === null ? null : (i - 1 + images.length) % images.length,
-    );
-  }, [images.length]);
-
-  const showNextFullscreen = useCallback(() => {
-    setFullscreenIndex((i) => (i === null ? null : (i + 1) % images.length));
-  }, [images.length]);
-
-  useEffect(() => {
-    if (fullscreenIndex === null) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeFullscreen();
-      if (e.key === "ArrowLeft") showPrevFullscreen();
-      if (e.key === "ArrowRight") showNextFullscreen();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    fullscreenIndex,
-    closeFullscreen,
-    showPrevFullscreen,
-    showNextFullscreen,
-  ]);
-
-  useEffect(() => {
-    if (images.length === 0) return;
-    Promise.all(
-      images.map((img) => getImageDimensionsFromUrl(img.url).catch(() => null)),
-    ).then((results) => {
-      setImageAspectRatios(results.map((r) => r?.aspectRatio ?? null));
-      const ratios = results
-        .filter((r) => r !== null)
-        .map((r) => r!.aspectRatio);
-      if (ratios.length === 0) return;
-      // "The large image" is the most-portrait (smallest width/height ratio)
-      // one, which drives the slide size. Cap the slide to an Instagram-style
-      // frame based on that reference image's orientation: a 4:5 (portrait)
-      // frame when it's portrait, a 5:4 (landscape) frame otherwise. Every
-      // image is object-fit: cover, so they fill this capped frame.
-      const referenceRatio = Math.min(...ratios);
-      const PORTRAIT_FRAME = 4 / 5; // 0.8
-      const LANDSCAPE_FRAME = 5 / 4; // 1.25
-      setSlideAspectRatio(
-        referenceRatio < 1 ? PORTRAIT_FRAME : LANDSCAPE_FRAME,
-      );
-    });
-  }, [images]);
-
-  const slideClassName = [
-    "item-gallery__slide",
-    ...Object.entries(forceOrientation ?? {}).map(
-      ([breakpoint, orientation]) =>
-        `item-gallery__slide--${breakpoint}-${orientation}`,
-    ),
-  ].join(" ");
-
-  if (images.length === 0) {
-    return (
-      <Box
-        width="100%"
-        borderRadius={8}
-        styles={{
-          aspectRatio: "1 / 1",
-          backgroundColor: placeholderColor ?? "var(--surface-1, #e0e0e0)",
-        }}
-      />
-    );
-  }
-
-  const fullscreenAr =
-    fullscreenIndex !== null
-      ? (imageAspectRatios[fullscreenIndex] ?? 1.5)
-      : 1.5;
 
   return (
-    <Card flexDirection="column" gap={8} width="100%" padding={8}>
-      <Box width="100%" styles={{ position: "relative" }}>
-        <Swiper
-          modules={[Thumbs, FreeMode]}
-          onSwiper={setMainSwiper}
-          thumbs={{
-            swiper:
-              thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null,
-          }}
-          loop={images.length > 1}
-          spaceBetween={15}
-          className="item-gallery__main"
-        >
-          {images.map((img, i) => (
-            <SwiperSlide key={i}>
-              <Box
-                className={slideClassName}
-                width="100%"
-                styles={{
-                  position: "relative",
-                  overflow: "hidden",
-                  // The slide is capped to a fixed 4:5 (portrait) or 5:4
-                  // (landscape) frame derived from the large image's
-                  // orientation - see slideAspectRatio above. Every image is
-                  // object-fit: cover, so they scale up to fill the frame
-                  // (cropping their edges) instead of being letterboxed.
-                  aspectRatio:
-                    slideAspectRatio !== null
-                      ? String(slideAspectRatio)
-                      : "1 / 1",
-                }}
-              >
-                <Image
-                  fill
-                  src={img.url}
-                  alt={img.alt}
-                  sizes="(min-width: 1200px) 40vw, (min-width: 600px) 50vw, 100vw"
-                  priority={i === 0}
-                  style={{ objectFit: "cover" }}
-                />
-                <IconButton
-                  icon="/icons/fullscreen.svg"
-                  aria-label={t("expand")}
-                  styles={{
-                    position: "absolute",
-                    bottom: 8,
-                    right: 8,
-                    zIndex: 10,
-                  }}
-                  onClick={() => setFullscreenIndex(i)}
-                  kind="success"
-                  translucent
-                />
-              </Box>
-            </SwiperSlide>
-          ))}
-        </Swiper>
-
-        {images.length > 1 && (
-          <>
-            <IconButton
-              icon="/icons/prev.svg"
-              aria-label={t("previous")}
-              styles={{
-                position: "absolute",
-                left: 8,
-                top: "50%",
-                transform: "translateY(-50%)",
-                zIndex: 10,
-              }}
-              onClick={() => mainSwiper?.slidePrev()}
-              kind="success"
-              translucent
-            />
-            <IconButton
-              icon="/icons/next.svg"
-              aria-label={t("next")}
-              styles={{
-                position: "absolute",
-                right: 8,
-                top: "50%",
-                transform: "translateY(-50%)",
-                zIndex: 10,
-              }}
-              onClick={() => mainSwiper?.slideNext()}
-              kind="success"
-              translucent
-            />
-          </>
-        )}
-      </Box>
-
-      {images.length > 1 && (
-        <Swiper
-          modules={[Thumbs, FreeMode]}
-          onSwiper={setThumbsSwiper}
-          slidesPerView={5}
-          spaceBetween={8}
-          freeMode
-          watchSlidesProgress
-          className="item-gallery__thumbs"
-        >
-          {images.map((img, i) => (
-            <SwiperSlide key={i}>
-              <Box
-                className="item-gallery__thumb"
-                width="100%"
-                borderRadius={8}
-                backgroundColor="var(--surface-1, #f5f5f5)"
-                styles={{
-                  position: "relative",
-                  aspectRatio: "1 / 1",
-                  overflow: "hidden",
-                }}
-              >
-                <Image
-                  fill
-                  src={img.url}
-                  alt={img.alt}
-                  sizes="15vw"
-                  style={{ objectFit: "cover" }}
-                />
-              </Box>
-            </SwiperSlide>
-          ))}
-        </Swiper>
-      )}
-
-      {fullscreenIndex !== null && (
-        <Box
-          className={`item-gallery__overlay${isClosing ? " item-gallery__overlay--closing" : ""}`}
-          alignItems="center"
-          justifyContent="center"
-          styles={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 1000,
-            background: "rgba(0, 0, 0, 0.75)",
-          }}
-          role="dialog"
-          aria-modal
-          aria-label="Image fullscreen"
-          onClick={closeFullscreen}
-        >
-          <Box
-            className="item-gallery__overlay-image-wrap"
-            styles={{
-              position: "relative",
-              width: `min(90vw, calc(90vh * ${fullscreenAr}))`,
-              maxHeight: "90vh",
-              aspectRatio: String(fullscreenAr),
-            }}
-            onClick={(e: React.MouseEvent) => e.stopPropagation()}
-          >
-            <Image
-              fill
-              src={images[fullscreenIndex]?.url ?? ""}
-              alt={images[fullscreenIndex]?.alt ?? ""}
-              sizes="90vw"
-              style={{ objectFit: "contain" }}
-            />
-          </Box>
-          {images.length > 1 && (
-            <>
-              <IconButton
-                icon="/icons/prev.svg"
-                aria-label={t("previous")}
-                styles={{
-                  position: "absolute",
-                  left: 16,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  showPrevFullscreen();
-                }}
-                kind="success"
-                translucent
-              />
-              <IconButton
-                icon="/icons/next.svg"
-                aria-label={t("next")}
-                styles={{
-                  position: "absolute",
-                  right: 16,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  showNextFullscreen();
-                }}
-                kind="success"
-                translucent
-              />
-            </>
-          )}
-          <IconButton
-            icon="/icons/close.svg"
-            aria-label={t("close")}
-            styles={{ position: "absolute", top: 16, right: 16 }}
-            onClick={closeFullscreen}
-            kind="error"
-            translucent
-          />
-        </Box>
-      )}
-    </Card>
+    <ImageGallery
+      images={images}
+      placeholderColor={placeholderColor}
+      labels={{
+        expand: t("expand"),
+        previous: t("previous"),
+        next: t("next"),
+        close: t("close"),
+        zoomIn: t("zoomIn"),
+        zoomOut: t("zoomOut"),
+        pagination: t("paginationPhotos"),
+      }}
+    />
   );
 }

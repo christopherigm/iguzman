@@ -242,7 +242,10 @@
     "previous": "Imagem anterior",
     "next": "Próxima imagem",
     "expand": "Ampliar imagem",
-    "close": "Fechar tela cheia"
+    "close": "Fechar tela cheia",
+    "paginationPhotos": "Escolhe uma foto",
+    "zoomIn": "Ampliar",
+    "zoomOut": "Reduzir"
   },
   "ItemDetail": {
     "home": "Início",

@@ -124,7 +124,6 @@ export default async function HighlightDetailPage({ params }: Props) {
               <ItemGalleryClient
                 images={galleryImages}
                 placeholderColor={highlight.background_color ?? undefined}
-                forceOrientation={{ xs: "horizontal", sm: "horizontal" }}
               />
             </Grid>
           )}

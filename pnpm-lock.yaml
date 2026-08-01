@@ -866,6 +866,9 @@ importers:
       remark-gfm:
         specifier: ^4
         version: 4.0.1
+      swiper:
+        specifier: ^12.2.0
+        version: 12.2.0
     devDependencies:
       '@csstools/postcss-global-data':
         specifier: ^4.0.0

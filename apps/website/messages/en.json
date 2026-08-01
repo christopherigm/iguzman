@@ -254,7 +254,10 @@
     "previous": "Previous image",
     "next": "Next image",
     "expand": "Expand image",
-    "close": "Close fullscreen"
+    "close": "Close fullscreen",
+    "paginationPhotos": "Choose a photo",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out"
   },
   "ItemDetail": {
     "home": "Home",

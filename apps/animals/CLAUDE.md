@@ -34,7 +34,14 @@ filters.
 
 **"First row" is literally the same row on all three**: the description and the
 `FactsCard` as two stacked cards in one column, the record's photographs beside
-them as a `DetailGallery` slideshow. It splits at `sm` (`size={{ xs: 12, sm: 6 }}`,
+them as a `DetailGallery` slideshow - which is now a **thin wrapper over
+`@repo/ui`'s `ImageGallery`**, shared with `apps/website`'s five detail pages, so
+the two sites page through a record's photographs identically. All the wrapper
+still owns is this app's `Gallery` message namespace (the package is
+i18n-agnostic and takes every string as a prop) and the catalog's own `ImageFit`;
+the slideshow, the fullscreen Swiper, its zoom and the scroll lock all live in
+`packages/ui/src/core-elements/image-gallery.tsx` now, so a change to any of
+them belongs there rather than here. It splits at `sm` (`size={{ xs: 12, sm: 6 }}`,
 see `apps/CLAUDE.md`), and below `sm` the _text_ column carries
 `reorder={{ xs: 'last' }}` so the photographs lead once the two stack - a reader
 on a phone meets the subject before reading about it. A record with no
