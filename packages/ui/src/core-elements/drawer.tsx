@@ -9,6 +9,7 @@ import "./drawer.css";
 import getImageDimensionsFromBase64 from "@repo/helpers/get-image-dimensions-from-base64";
 import { ThemeSwitch } from "../theme-switch";
 import { Box } from "./box";
+import { useScrollLock } from "./use-scroll-lock";
 
 /**
  * Props for the `Drawer` component.
@@ -218,17 +219,14 @@ export const Drawer: React.FC<DrawerProps> = ({
     };
   }, [logo, logoHeight, logoWidth]);
 
-  // Prevent body scroll when drawer is open
-  useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [open]);
+  // Freeze the page behind the drawer while it is open. This used to be a local
+  // `document.body.style.overflow`, which locked the wrong element - `<html>` is
+  // the scroll container in every app whose `globals.css` sets
+  // `html { overflow-x: hidden }`, i.e. all of them - and blanked the value on
+  // cleanup rather than restoring it. See `useScrollLock`; it is also
+  // reference-counted, so a `ConfirmationModal` opened from a drawer item no
+  // longer hands scrolling back when only the dialog closes.
+  useScrollLock(open);
 
   if (!open) return null;
 

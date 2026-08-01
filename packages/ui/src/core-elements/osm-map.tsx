@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Box } from "./box";
 import { IconButton } from "./icon-button";
 import { Typography } from "./typography";
+import { useScrollLock } from "./use-scroll-lock";
 import {
   fitBounds,
   fromWorld,
@@ -626,8 +627,13 @@ export function OsmMap<M extends OsmMapMarker = OsmMapMarker>({
    * The scroll lock is what stops the page drifting behind the overlay: without
    * it a wheel over the map (which this map deliberately gives back to the page)
    * scrolls the document underneath, and leaving fullscreen lands the reader
-   * somewhere they never went.
+   * somewhere they never went. It is `useScrollLock` rather than a local
+   * `document.body.style.overflow` - the copy that used to sit here locked the
+   * wrong element and did nothing in any app whose `globals.css` sets
+   * `html { overflow-x: hidden }`, which is all of them.
    */
+  useScrollLock(fullscreen);
+
   useEffect(() => {
     if (!fullscreen) return;
 
@@ -638,12 +644,8 @@ export function OsmMap<M extends OsmMapMarker = OsmMapMarker>({
     };
     window.addEventListener("keydown", handleEscape);
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
     return () => {
       window.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = previousOverflow;
     };
   }, [fullscreen]);
 

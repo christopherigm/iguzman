@@ -10,6 +10,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { SliderControls } from "@repo/ui/core-elements/slider-dots";
+import { useScrollLock } from "@repo/ui/core-elements/use-scroll-lock";
 import getImageDimensionsFromUrl from "@repo/helpers/get-image-dimensions-from-url";
 import type { ImageFit } from "@/lib/catalog";
 import "swiper/css";
@@ -36,7 +37,9 @@ import "./detail-gallery.css";
  * - Swiper's zoom has no wheel handler, so without that button a desktop reader
  * would have only the double-click. `MAX_ZOOM` is deliberately not capped to
  * the photo's natural size (`limitToOriginalSize`): a small original would then
- * make the button dead rather than merely soft.
+ * make the button dead rather than merely soft. **Both halves of the gesture
+ * have to be taken from the page** for the pinch to work at all on a phone -
+ * the scroll lock and the overlay's `touch-action`, each noted where it sits.
  *
  * **All three detail routes share it** - a category, a species and a journal
  * entry each show their photographs this way, which is what makes their first
@@ -93,6 +96,10 @@ export function DetailGallery({ images, placeholderColor }: Props) {
   );
   const [isClosing, setIsClosing] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
+
+  // The page must not scroll under the viewer - see the note on the overlay's
+  // `touchAction` below for the half of this that a lock alone doesn't buy.
+  useScrollLock(fullscreenIndex !== null);
 
   const closeFullscreen = useCallback(() => {
     if (isClosing) return;
@@ -318,6 +325,16 @@ export function DetailGallery({ images, placeholderColor }: Props) {
             inset: 0,
             zIndex: 1000,
             background: "rgba(0, 0, 0, 0.75)",
+            // ⚠ The overlay claims every touch gesture, which is what makes the
+            // pinch reach Swiper's `Zoom`. `globals.css` puts
+            // `touch-action: pan-x pan-y` on `<body>`, so without this the
+            // browser answers two fingers by *panning the document* and the
+            // photograph never scales - `useScrollLock` above stops the page
+            // moving, but a gesture the browser has already claimed is one
+            // Swiper never sees. Safe here only because nothing inside the
+            // viewer scrolls; don't copy it onto an overlay that has a
+            // scrollable panel, where it would kill finger-scrolling.
+            touchAction: "none",
           }}
           role="dialog"
           aria-modal

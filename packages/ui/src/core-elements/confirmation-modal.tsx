@@ -5,6 +5,7 @@ import ReactDOM from "react-dom";
 import { Button } from "./button";
 import { Box } from "./box";
 import { Typography } from "./typography";
+import { useScrollLock } from "./use-scroll-lock";
 import "./confirmation-modal.css";
 
 export type ModalPosition = "top" | "center" | "bottom";
@@ -82,13 +83,14 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   // Dismissing the modal (Escape / overlay click) falls back to okCallback
   // when no cancelCallback is provided, since OK is then the only way out.
   const dismiss = cancelCallback ?? okCallback;
-  // Prevent body scroll while modal is open
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, []);
+  // Freeze the page behind the dialog for as long as it is mounted. This used
+  // to be a local `document.body.style.overflow = 'hidden'`, which did nothing
+  // in any app whose `globals.css` sets `html { overflow-x: hidden }` - i.e.
+  // all of them; see `useScrollLock` for why the root element is what has to be
+  // locked. The hook is reference-counted, so a dialog opened over a drawer (or
+  // over another dialog) does not hand scrolling back when only the top one
+  // closes.
+  useScrollLock();
 
   // Keyboard shortcuts: Enter → OK (unless disabled or an interactive child is focused), Escape → Cancel
   useEffect(() => {
