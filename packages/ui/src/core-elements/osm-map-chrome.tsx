@@ -5,6 +5,11 @@ import { Box } from "./box";
 import { Button } from "./button";
 import { Typography } from "./typography";
 import { TILE_SIZE } from "./mercator";
+import {
+  OSM_TILE_URL as BASEMAP_OSM_TILE_URL,
+  OSM_COPYRIGHT_URL as BASEMAP_OSM_COPYRIGHT_URL,
+  type BasemapFilter,
+} from "./basemaps";
 import "./osm-map.css";
 
 /**
@@ -28,10 +33,27 @@ import "./osm-map.css";
  * beneath it in one of them, or a step off the other's design.
  */
 
-/** Where the tiles come from. Fetched from the visitor's browser, not the server. */
-export const OSM_TILE_HOST = "https://tile.openstreetmap.org";
-/** The credit the OSM tile usage policy asks for - rendered by `OsmAttribution`. */
-export const OSM_COPYRIGHT_URL = "https://www.openstreetmap.org/copyright";
+/**
+ * Where the tiles come from by default. Fetched from the visitor's browser, not
+ * the server.
+ *
+ * ⚠ This is a `{z}/{x}/{y}` **template**, not the host prefix it used to be, and
+ * it is only a default - both maps take a `tileUrl` now, so an operator can point
+ * them at another style. `./basemaps.ts` is where the styles and their required
+ * credits live; don't hard-code a second URL here.
+ */
+export const OSM_TILE_URL = BASEMAP_OSM_TILE_URL;
+/**
+ * Where OSM's own credit points - re-exported from `./basemaps.ts`, which is
+ * where it lives now.
+ *
+ * ⚠ It is **not** where every credit points, which is what it used to be:
+ * `OsmAttribution` hard-coded this as its anchor, so a MapTiler or CARTO credit
+ * named one party and linked another. The href travels on the `Basemap` record
+ * beside the string now (`attributionUrl`); this constant is only that record's
+ * value for the OSM styles.
+ */
+export const OSM_COPYRIGHT_URL = BASEMAP_OSM_COPYRIGHT_URL;
 
 /**
  * Hit-test hooks, not styling: a map's pointer handlers are attached to the
@@ -97,11 +119,22 @@ export interface OsmOffset {
  * The tiles live in their own layer so the palette filter that gives them their
  * look (`osm-map.css`) applies once, to the surface only - markers, cards and
  * controls sit above it untouched.
+ *
+ * `filter` is the basemap's own (`./basemaps.ts`): `'grade'` wears the treatment
+ * written for OSM's standard cartography, `'none'` draws the tiles as they
+ * arrive. A style that is already a pale or dark canvas must take `'none'`, or
+ * it is graded twice and comes out washed to nothing.
  */
-export function OsmTileLayer({ tiles }: { tiles: OsmTile[] }) {
+export function OsmTileLayer({
+  tiles,
+  filter = "grade",
+}: {
+  tiles: OsmTile[];
+  filter?: BasemapFilter;
+}) {
   return (
     <Box
-      className="ui-osm-map__tiles"
+      className={`ui-osm-map__tiles${filter === "none" ? " ui-osm-map__tiles--as-is" : ""}`}
       styles={{ position: "absolute", inset: 0 }}
     >
       {tiles.map((tile) => (
@@ -198,10 +231,31 @@ export function OsmZoomControl({
 }
 
 /**
- * Required by the OSM tile usage policy. In the opposite corner from the
- * controls, where a web map's data credit belongs - leave it there.
+ * The tile provider's credit - required by every one of them. In the opposite
+ * corner from the controls, where a web map's data credit belongs; leave it
+ * there.
+ *
+ * ⚠ **`href` is the basemap's own, and is optional on purpose.** This used to
+ * anchor every credit to OpenStreetMap's copyright page whatever the label said,
+ * which is correct for the OSM and CARTO styles and wrong for anyone else: a
+ * "© MapTiler" that navigates to openstreetmap.org names one party owed and
+ * links a different one. With no href the credit renders as **plain text** -
+ * a licence wants the credit *visible*, and an unlinked one is a smaller failure
+ * than a misdirected one. Take it off the same `Basemap` record as the label
+ * (`./basemaps.ts`) rather than pairing a string with an unrelated URL.
  */
-export function OsmAttribution({ label }: { label: string }) {
+export function OsmAttribution({
+  label,
+  href,
+}: {
+  label: string;
+  href?: string;
+}) {
+  const credit = (
+    <Typography as="span" variant="label" color="var(--foreground)">
+      {label}
+    </Typography>
+  );
   return (
     <Box
       className={OSM_CHROME_CLASS}
@@ -210,11 +264,13 @@ export function OsmAttribution({ label }: { label: string }) {
       backgroundColor="color-mix(in srgb, var(--background) 78%, transparent)"
       styles={{ position: "absolute", left: 0, bottom: 0, zIndex: 2 }}
     >
-      <a href={OSM_COPYRIGHT_URL} target="_blank" rel="noopener noreferrer">
-        <Typography as="span" variant="label" color="var(--foreground)">
-          {label}
-        </Typography>
-      </a>
+      {href ? (
+        <a href={href} target="_blank" rel="noopener noreferrer">
+          {credit}
+        </a>
+      ) : (
+        credit
+      )}
     </Box>
   );
 }

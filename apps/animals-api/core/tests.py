@@ -513,6 +513,54 @@ class SystemEndpointTests(IsolatedMediaTestCase):
         )
         self.assertEqual(response.status_code, 400)
 
+    def test_a_custom_basemap_needs_a_tile_url_with_the_three_tokens(self):
+        # A custom style with no template - or one the renderer cannot
+        # substitute into - draws the same tile across the whole viewport rather
+        # than failing in any way that points at the cause, so it is refused at
+        # the write instead.
+        self.make_admin()
+        self.client.login(username='author', password='fieldnotes-2026')
+        for payload in (
+            {'map_style': 'custom'},
+            {'map_style': 'custom', 'map_tile_url': 'tiles.example.com/{z}/{x}/{y}.png'},
+            {'map_style': 'custom', 'map_tile_url': 'https://tiles.example.com/{z}.png'},
+        ):
+            with self.subTest(payload=payload):
+                response = self.client.patch(
+                    '/api/system/', data=json.dumps(payload),
+                    content_type='application/json',
+                )
+                self.assertEqual(response.status_code, 400)
+
+    def test_a_custom_basemap_with_a_usable_template_is_accepted(self):
+        self.make_admin()
+        self.client.login(username='author', password='fieldnotes-2026')
+        response = self.client.patch(
+            '/api/system/',
+            data=json.dumps({
+                'map_style': 'custom',
+                'map_tile_url': 'https://tiles.example.com/styles/plain/{z}/{x}/{y}.png',
+                'map_attribution': '© OpenStreetMap contributors',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['map_style'], 'custom')
+
+    def test_a_built_in_style_ignores_a_leftover_tile_url(self):
+        # The URL is only read under 'custom', and it is the normal state of a
+        # row somebody experimented with - validating it unconditionally would
+        # make switching back to a built-in style impossible without also
+        # clearing a field the frontend never looks at.
+        self.make_admin()
+        self.client.login(username='author', password='fieldnotes-2026')
+        response = self.client.patch(
+            '/api/system/',
+            data=json.dumps({'map_style': 'carto-light', 'map_tile_url': 'not-a-url'}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+
     def test_a_social_link_without_a_url_is_refused(self):
         self.make_admin()
         self.client.login(username='author', password='fieldnotes-2026')

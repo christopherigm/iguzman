@@ -15,6 +15,7 @@ import {
   type LatLng,
   type Size,
 } from "./mercator";
+import type { BasemapFilter } from "./basemaps";
 import {
   OSM_CHROME_CLASS,
   OSM_DRAG_THRESHOLD,
@@ -23,7 +24,7 @@ import {
   OSM_MARKER_CLASS,
   OSM_MARKER_SIZE,
   OSM_MARKER_TIP_HEIGHT,
-  OSM_TILE_HOST,
+  OSM_TILE_URL,
   OSM_ZOOM_WHEEL_STEP,
   OsmAttribution,
   OsmGestureHint,
@@ -47,11 +48,21 @@ import "./osm-map.css";
  * one Web Mercator, so a pin cannot land a pixel off the tile beneath it in one
  * of them.
  *
- * ⚠ **It makes third-party requests from the visitor's browser** -
+ * ⚠ **It makes third-party requests from the visitor's browser** - by default
  * `tile.openstreetmap.org`, one image per 256 px square on screen. Nothing else
- * is fetched: there is no geocoding here, so Nominatim is not involved. The OSM
- * tile usage policy asks for the attribution this renders in the corner; leave
- * it there.
+ * is fetched: there is no geocoding here, so Nominatim is not involved. Every
+ * tile provider requires a credit, which is what `labels.attribution` renders in
+ * the corner; leave it there, and change it *with* `tileUrl` rather than after -
+ * `./basemaps.ts` keeps the pair together so they cannot drift.
+ *
+ * ⚠ **Which basemap is a setting; what the basemap draws is not.** `tileUrl`
+ * chooses a style, and that is the whole of the control this renderer can offer:
+ * roads, labels and building footprints are baked into each PNG before it
+ * arrives, so there is no prop, and can be no prop, that turns houses off. The
+ * one way to a real per-layer switch is to point `tileUrl` at a style *you*
+ * authored - a hosted provider's style editor with the `building` layer deleted,
+ * published as raster; the other is to replace this renderer with a vector one,
+ * which is a different component, not a flag.
  *
  * Four things worth knowing before changing it:
  *
@@ -203,6 +214,40 @@ export interface OsmMapProps<M extends OsmMapMarker = OsmMapMarker> {
   locateIcon?: string;
   fullscreenIcon?: string;
   closeIcon?: string;
+  /**
+   * Which basemap to paint, as a `{z}/{x}/{y}` template. Defaults to OSM's own
+   * standard tiles - what this map drew unconditionally before.
+   *
+   * ⚠ **`labels.attribution` and `attributionUrl` have to move with it.** Every
+   * provider requires its own credit, so all three belong together: take them
+   * off one `Basemap` record (`./basemaps.ts`) rather than pairing a new URL
+   * with the old string, which silently under-credits the new provider.
+   *
+   * A hosted provider's key rides in the template as a query parameter
+   * (`…/{z}/{x}/{y}.png?key=…`); `tilesFor` substitutes only the placeholders it
+   * knows, so it survives. Such a key is fetched from the visitor's browser and
+   * is public by construction - restrict it by origin at the provider.
+   *
+   * ⚠ **A raster style's contents are not configurable from here.** Buildings,
+   * roads and labels are baked into the PNG before it arrives, so choosing what
+   * the map *shows* means choosing a different style - or pointing this at one
+   * you authored yourself, which is the only way to get a real per-layer switch
+   * without replacing this renderer with a vector one.
+   */
+  tileUrl?: string;
+  /**
+   * Where the credit links, when that provider asks for a linked one - the
+   * basemap's own `attributionUrl`. Omitted, the credit is plain text; it is
+   * never defaulted to OpenStreetMap's copyright page, which is what this
+   * component used to hard-code for every provider alike.
+   */
+  attributionUrl?: string;
+  /**
+   * How those tiles are graded once drawn - the basemap's own `filter`. Leave it
+   * with the URL: a pale style under the default `'grade'` washes out, and a
+   * dark one under it is inverted back to light.
+   */
+  tileFilter?: BasemapFilter;
   className?: string;
 }
 
@@ -218,6 +263,9 @@ export function OsmMap<M extends OsmMapMarker = OsmMapMarker>({
   locateIcon = "/icons/location-arrow.svg",
   fullscreenIcon = "/icons/fullscreen.svg",
   closeIcon = "/icons/close.svg",
+  tileUrl = OSM_TILE_URL,
+  attributionUrl,
+  tileFilter = "grade",
   className,
 }: OsmMapProps<M>) {
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
@@ -656,8 +704,8 @@ export function OsmMap<M extends OsmMapMarker = OsmMapMarker>({
     [center, zoom, size],
   );
   const tiles = useMemo(
-    () => tilesFor(origin, size, zoom, OSM_TILE_HOST),
-    [origin, size, zoom],
+    () => tilesFor(origin, size, zoom, tileUrl),
+    [origin, size, zoom, tileUrl],
   );
 
   /**
@@ -753,7 +801,7 @@ export function OsmMap<M extends OsmMapMarker = OsmMapMarker>({
         userSelect: "none",
       }}
     >
-      <OsmTileLayer tiles={tiles} />
+      <OsmTileLayer tiles={tiles} filter={tileFilter} />
 
       {placed.map(({ marker, left, top }) => {
         // No icon at all: the caller's colour still groups the pin, which beats
@@ -926,7 +974,10 @@ export function OsmMap<M extends OsmMapMarker = OsmMapMarker>({
         onZoomOut={() => setZoom((z) => Math.max(MIN_ZOOM, z - 1))}
       />
 
-      <OsmAttribution label={labels.attribution} />
+      <OsmAttribution
+        label={labels.attribution}
+        {...(attributionUrl ? { href: attributionUrl } : {})}
+      />
     </Box>
   );
 }

@@ -107,17 +107,59 @@ export function zoomAbout(
 }
 
 /**
+ * Subdomains a `{s}` placeholder is rotated through. Three is the shape every
+ * tile provider that still offers them uses, and the rotation is *deterministic*
+ * (see `tileUrlFor`) rather than random - a tile that changed host between two
+ * renders would be re-fetched instead of coming off the browser's cache.
+ */
+export const TILE_SUBDOMAINS = ["a", "b", "c"] as const;
+
+/**
+ * One tile's URL, from a `{z}/{x}/{y}` template.
+ *
+ * ⚠ **This takes a template, not a host prefix.** It used to build
+ * `${host}/${z}/${x}/${y}.png` itself, which fits OSM and CARTO and nothing
+ * else: a provider that wants an API key (`?key=…`), a retina suffix, or - like
+ * Esri - the path in `{z}/{y}/{x}` order simply could not be expressed, so the
+ * choice of basemap was effectively hard-coded to the two keyless hosts.
+ *
+ * Four placeholders are understood. `{z}`, `{x}` and `{y}` are the tile's own
+ * coordinates; `{s}` is the subdomain rotation above, and `{r}` is the retina
+ * marker, which resolves to the empty string - these maps draw a 256 px tile at
+ * 256 px, and asking for `@2x` would fetch four times the bytes to paint the
+ * same square. An unknown placeholder is left alone rather than blanked, so a
+ * malformed template fails as a visibly broken tile rather than as a silently
+ * wrong one.
+ */
+export function tileUrlFor(
+  template: string,
+  zoom: number,
+  x: number,
+  y: number,
+): string {
+  return template
+    .replace("{s}", TILE_SUBDOMAINS[(x + y) % TILE_SUBDOMAINS.length] ?? "a")
+    .replace("{z}", String(zoom))
+    .replace("{x}", String(x))
+    .replace("{y}", String(y))
+    .replace("{r}", "");
+}
+
+/**
  * Which tiles cover a viewport, and where each one goes.
  *
  * The world repeats east-west but stops at the poles, so `x` wraps and a `y`
  * that falls off the top or bottom is simply skipped - the alternative is a
  * request for a tile that does not exist and a broken-image square in the sea.
+ *
+ * `template` is a `{z}/{x}/{y}` URL - see `tileUrlFor` for why it is a template
+ * rather than the host prefix this used to take.
  */
 export function tilesFor(
   origin: Point,
   size: Size,
   zoom: number,
-  host: string,
+  template: string,
 ): { key: string; url: string; left: number; top: number }[] {
   if (size.width === 0 || size.height === 0) return [];
   const count = 2 ** zoom;
@@ -133,7 +175,7 @@ export function tilesFor(
       const wrappedX = ((x % count) + count) % count;
       out.push({
         key: `${zoom}/${x}/${y}`,
-        url: `${host}/${zoom}/${wrappedX}/${y}.png`,
+        url: tileUrlFor(template, zoom, wrappedX, y),
         left: x * TILE_SIZE - origin.x,
         top: y * TILE_SIZE - origin.y,
       });

@@ -47,7 +47,20 @@
    rather than their opposites. Labels come out light-on-dark, which is the whole
    point - a bright map is a torch in a dark page. */
 [data-theme="dark"] .ui-osm-map__tiles {
-  filter: invert(0.92) hue-rotate(180deg) saturate(0.5) brightness(0.92) contrast(0.95);
+  filter: invert(0.92) hue-rotate(180deg) saturate(0.5) brightness(0.92)
+    contrast(0.95);
+}
+
+/* A basemap that arrives already muted - CARTO's Positron or Dark Matter, or a
+   style rendered by a tileserver of ours - is drawn untouched, in BOTH themes.
+   Grading a pale canvas a second time washes it to nothing, and inverting one
+   that was authored pale turns its greens brown rather than dark. Which of the
+   two treatments a style gets is declared next to its URL in `basemaps.ts`; the
+   consequence is that a light style stays light on a dark page, and that is the
+   operator's choice to make when they pick it. */
+.ui-osm-map__tiles--as-is,
+[data-theme="dark"] .ui-osm-map__tiles--as-is {
+  filter: none;
 }
 
 /* ── Markers ─────────────────────────────────────────────────────────────── */

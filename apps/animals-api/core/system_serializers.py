@@ -71,6 +71,14 @@ SYSTEM_VALUE_FIELDS = (
     'watermark_opacity',
     'background_light',
     'background_dark',
+    # Which basemap every map in the frontend is painted from. Public like the
+    # rest: a tile URL is fetched from the visitor's own browser, so it could not
+    # be a secret even if we wanted it to be - which is also why a provider key
+    # embedded in one is a *restricted* key, and why the help text says so.
+    'map_style',
+    'map_tile_url',
+    'map_attribution',
+    'map_attribution_url',
     # Read by the handler in `apps/animals` before every transcode. On the public
     # payload like everything else here: these say how a clip was encoded, not how
     # to reach anything, so there is nothing to withhold.
@@ -158,3 +166,39 @@ class SystemWriteSerializer(Base64ImagesMixin, serializers.ModelSerializer):
         except DjangoValidationError as exc:
             raise serializers.ValidationError(list(exc.messages))
         return value
+
+    def validate(self, attrs):
+        """A custom basemap has to carry a usable template.
+
+        Checked across fields rather than on ``map_tile_url`` alone because the
+        requirement is conditional: the URL is ignored - and may be left over
+        from an earlier experiment - under any of the built-in styles. The CMS
+        PATCHes, so the *stored* style is what applies when only the URL is sent,
+        and vice versa; both are read off the instance when they are absent from
+        the payload, or switching to Custom in one request and filling the URL in
+        the next would be refused for a field that was already there.
+        """
+        attrs = super().validate(attrs)
+
+        style = attrs.get('map_style', getattr(self.instance, 'map_style', 'osm'))
+        if style != 'custom':
+            return attrs
+
+        url = (attrs.get('map_tile_url', getattr(self.instance, 'map_tile_url', '')) or '').strip()
+        if not url:
+            raise serializers.ValidationError({
+                'map_tile_url': 'A custom basemap needs a tile URL.',
+            })
+        if not url.startswith(('http://', 'https://')):
+            raise serializers.ValidationError({
+                'map_tile_url': 'The tile URL must start with http:// or https://.',
+            })
+        # The renderer substitutes these three; without them every tile request
+        # is the same URL, and the map draws one square repeated across the
+        # viewport rather than failing in any way that points at the cause.
+        missing = [token for token in ('{z}', '{x}', '{y}') if token not in url]
+        if missing:
+            raise serializers.ValidationError({
+                'map_tile_url': f'The tile URL must contain {", ".join(missing)}.',
+            })
+        return attrs

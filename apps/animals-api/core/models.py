@@ -321,6 +321,62 @@ class System(Common):
         max_length=16, default="#3c3c3c", help_text="Page background in the dark theme."
     )
 
+    # ── Maps ─────────────────────────────────────────────────────────────────
+    # Which basemap every map in `apps/animals` is painted from - the four public
+    # maps and the CMS's own coordinate picker, which all read one resolved
+    # value so they cannot show two different worlds.
+    #
+    # ⚠ This chooses a *style*, not what the style contains. The maps draw raster
+    # tiles, and roads, labels and building footprints are baked into each PNG
+    # before it arrives, so there is no "hide the houses" flag here and there
+    # cannot be one - the only way to that is `custom` below, pointed at a style
+    # authored in a hosted provider's editor with the layer deleted. See
+    # `packages/ui/src/core-elements/basemaps.ts`, which holds the matching list.
+    map_style = models.CharField(
+        max_length=32,
+        default="osm",
+        choices=[
+            ("osm", "OpenStreetMap standard"),
+            ("carto-light", "CARTO Positron (pale)"),
+            ("carto-dark", "CARTO Dark Matter"),
+            ("carto-voyager", "CARTO Voyager"),
+            ("custom", "Custom tile server"),
+        ],
+        help_text="Which basemap the site's maps are drawn from. 'Custom' uses "
+                  "the tile URL below - a provider needing an API key "
+                  "(MapTiler, Mapbox, Thunderforest), or a tile server of your own.",
+    )
+    map_tile_url = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+        help_text="Only used when the style is 'Custom'. A {z}/{x}/{y} template, "
+                  "e.g. https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=YOUR_KEY",
+    )
+    map_attribution = models.CharField(
+        max_length=200,
+        blank=True,
+        default="",
+        help_text="Only used when the style is 'Custom'. The credit drawn in the "
+                  "map's corner - required by every tile provider. Left blank, "
+                  "the OpenStreetMap credit is used.",
+    )
+    # Where that credit links. Separate from the string because the two are
+    # separate requirements: a provider's terms ask for a visible credit, and
+    # most also ask that it point back at them. The frontend used to anchor
+    # every credit to openstreetmap.org/copyright, so a "© MapTiler" named one
+    # party and linked another; blank here now renders the credit as plain text
+    # rather than borrowing that href. See `basemaps.ts` -> `attributionUrl`.
+    map_attribution_url = models.URLField(
+        max_length=300,
+        blank=True,
+        default="",
+        help_text="Only used when the style is 'Custom'. Where the credit links - "
+                  "most providers require it to point back at them, e.g. "
+                  "https://www.maptiler.com/copyright/ . Left blank, the credit "
+                  "is drawn as plain text.",
+    )
+
     # ── Video transcoding ────────────────────────────────────────────────────
     # Read by the handler in `apps/animals` when it transcodes an uploaded clip.
     # Authored at /admin/system. Changing any of them affects the *next* upload

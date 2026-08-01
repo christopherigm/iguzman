@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { AdminForm, type FieldDef } from '@/components/admin/admin-form';
 import { ContactSection, type SocialLink } from './contact-section';
 import { VideoSection } from './video-section';
+import { MapSection } from './map-section';
 import { BackupSection } from './backup-section';
 import { RestoreSection } from './restore-section';
 import { getSystem, updateSystem } from '@/lib/admin-api';
@@ -29,6 +30,13 @@ const OWNED_FIELDS = [
   'video_max_height',
   'video_quality',
   'video_codec',
+  // Which basemap every map on the site draws. Here rather than on the brand-kit
+  // page for the same reason as the video keys: it is how the site operates, not
+  // how it looks.
+  'map_style',
+  'map_tile_url',
+  'map_attribution',
+  'map_attribution_url',
 ] as const;
 
 export default function AdminSystemPage() {
@@ -45,6 +53,10 @@ export default function AdminSystemPage() {
     video_max_height: 1080,
     video_quality: 23,
     video_codec: 'h264',
+    map_style: 'osm',
+    map_tile_url: '',
+    map_attribution: '',
+    map_attribution_url: '',
   });
 
   const [loading, setLoading] = useState(true);
@@ -64,6 +76,10 @@ export default function AdminSystemPage() {
           video_max_height: data.video_max_height ?? 1080,
           video_quality: data.video_quality ?? 23,
           video_codec: data.video_codec ?? 'h264',
+          map_style: data.map_style ?? 'osm',
+          map_tile_url: data.map_tile_url ?? '',
+          map_attribution: data.map_attribution ?? '',
+          map_attribution_url: data.map_attribution_url ?? '',
         });
       })
       .catch(() => setError(t('errorLoad')))
@@ -142,6 +158,11 @@ export default function AdminSystemPage() {
         {/* Inside the form, unlike Backup and Restore below: these are ordinary
             System keys saved by the form's own button, not a separate action. */}
         <VideoSection
+          values={values}
+          onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
+        />
+
+        <MapSection
           values={values}
           onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
         />

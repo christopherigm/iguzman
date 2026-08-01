@@ -50,6 +50,18 @@ class SystemAdmin(admin.ModelAdmin):
                 'background_light', 'background_dark',
             ),
         }),
+        ('Maps', {
+            'description': (
+                'Which basemap the site draws. This picks a <em>style</em>, not what the '
+                'style contains: the maps draw raster tiles, so buildings, roads and labels '
+                'are baked into each image before it arrives. To control the layers, author '
+                'a style in your tile provider\'s editor with the layer deleted and point '
+                '"Custom" at the raster endpoint it publishes.'
+            ),
+            'fields': (
+                'map_style', 'map_tile_url', 'map_attribution', 'map_attribution_url',
+            ),
+        }),
     )
 
     def has_add_permission(self, request):

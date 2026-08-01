@@ -60,6 +60,32 @@ export interface System {
   watermark_opacity: number;
   background_light: string;
   background_dark: string;
+
+  /**
+   * Which basemap every map on the site is painted from - resolved once by
+   * `lib/basemap.ts` and published to the whole tree by `BasemapProvider`, so
+   * the four public maps and the CMS's coordinate picker cannot disagree.
+   *
+   * ⚠ This names a *style*, not what the style draws. The maps are raster tiles
+   * and every footprint, road and label is baked into the PNG before it
+   * arrives; `custom` pointed at a style we authored in a provider's own editor
+   * is the only route to a real per-layer choice. See
+   * `packages/ui/core-elements/basemaps`.
+   */
+  map_style: string;
+  /**
+   * Only read when `map_style` is `'custom'`. A `{z}/{x}/{y}` template.
+   *
+   * A hosted provider's key rides in it as a query parameter and is **public by
+   * construction** - the tiles are fetched from the visitor's own browser, so
+   * this payload being world-readable costs nothing that the network requests
+   * did not already give away. Restrict the key by origin at the provider.
+   */
+  map_tile_url: string;
+  /** Only read when `map_style` is `'custom'`. Blank falls back to OSM's credit. */
+  map_attribution: string;
+  /** Only read when `map_style` is `'custom'`. Blank draws the credit unlinked. */
+  map_attribution_url: string;
 }
 
 /**
@@ -104,6 +130,10 @@ export const SYSTEM_FALLBACK: System = {
   watermark_opacity: 4,
   background_light: '#e5e5e5',
   background_dark: '#3c3c3c',
+  map_style: 'osm',
+  map_tile_url: '',
+  map_attribution: '',
+  map_attribution_url: '',
 };
 
 export const getSystem = cache(async (): Promise<System> => {

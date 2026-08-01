@@ -87,7 +87,9 @@ export async function SightingsMapSection({
         map: t("label"),
         zoomIn: t("zoomIn"),
         zoomOut: t("zoomOut"),
-        attribution: t("attribution"),
+        // No `attribution` here: the credit belongs to whichever tile provider
+        // the site is configured for, so the map reads it off the resolved
+        // basemap rather than off a message key that cannot follow a setting.
         close: t("close"),
         all: t("filterAll"),
         category: tSighting("category"),

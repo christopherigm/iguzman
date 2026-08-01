@@ -14,7 +14,9 @@ import { NavbarWrapper } from './navbar-wrapper';
 import { Footer } from './footer';
 import { HideOnAdmin } from './hide-on-admin';
 import { LogoWatermark } from '@/components/logo-watermark';
+import { BasemapProvider } from '@/components/basemap-provider';
 import { getSystem, logoUrl } from '@/lib/system';
+import { basemapFor } from '@/lib/basemap';
 import { KINDS, KIND_SLUGS } from '@/lib/catalog';
 import { isGoogleFontUrl, cssFontFamily } from '@/lib/fonts';
 import { localized } from '@/lib/i18n-field';
@@ -190,6 +192,11 @@ export default async function LocaleLayout({ children, params }: Props) {
             <SessionProvider session={session}>
               <ThemeProvider initialMode={initialMode} initialResolved={initialResolved}>
                 <PaletteProvider palette="cyan" accent={system.primary_color}>
+                  {/* Every map in the app - the four public ones and the CMS's
+                      coordinate picker - reads its tiles and its credit from
+                      here, so one setting cannot leave two maps showing
+                      different worlds. See components/basemap-provider.tsx. */}
+                  <BasemapProvider basemap={basemapFor(system)}>
                   {/* Behind the public pages only: the CMS is a working surface
                       and a tiled logo behind a form is noise. */}
                   {system.watermark_enabled && watermarkPrimary && (
@@ -221,6 +228,7 @@ export default async function LocaleLayout({ children, params }: Props) {
                   <HideOnAdmin>
                     <Footer logo={logoUrl(system)} />
                   </HideOnAdmin>
+                  </BasemapProvider>
                 </PaletteProvider>
               </ThemeProvider>
             </SessionProvider>

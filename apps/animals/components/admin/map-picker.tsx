@@ -23,7 +23,6 @@ import {
   OSM_HINT_MS,
   OSM_MARKER_CLASS,
   OSM_MARKER_SIZE,
-  OSM_TILE_HOST,
   OSM_ZOOM_WHEEL_STEP,
   OsmAttribution,
   OsmGestureHint,
@@ -31,6 +30,7 @@ import {
   OsmUserMarker,
   OsmZoomControl,
 } from '@repo/ui/core-elements/osm-map-chrome';
+import { useBasemap } from '@/components/basemap-provider';
 import './map-picker.css';
 
 /**
@@ -146,6 +146,10 @@ export function MapPicker({
   height = 340,
 }: MapPickerProps) {
   const t = useTranslations('Admin');
+  // The same tiles and the same credit the public maps draw - one site setting,
+  // resolved in the layout. An author placing a pin has to be looking at the
+  // map a reader will see it on.
+  const basemap = useBasemap();
 
   const pin = useMemo(() => parseCoords(latitude, longitude), [latitude, longitude]);
 
@@ -542,7 +546,10 @@ export function MapPicker({
 
   const origin = useMemo(() => originOf(center, zoom, size), [center, zoom, size]);
 
-  const tiles = useMemo(() => tilesFor(origin, size, zoom, OSM_TILE_HOST), [origin, size, zoom]);
+  const tiles = useMemo(
+    () => tilesFor(origin, size, zoom, basemap.tileUrl),
+    [origin, size, zoom, basemap.tileUrl],
+  );
 
   const shownPin = draftPin ?? pin;
   const pinOffset = shownPin
@@ -665,7 +672,7 @@ export function MapPicker({
           userSelect: 'none',
         }}
       >
-        <OsmTileLayer tiles={tiles} />
+        <OsmTileLayer tiles={tiles} filter={basemap.filter} />
 
         {/* The author's own position, drawn by the shared marker: the same
             teardrop the public map gives a reader, so "where I am" reads the
@@ -706,7 +713,13 @@ export function MapPicker({
           onZoomOut={() => setZoom((z) => clampZoom(z - 1))}
         />
 
-        <OsmAttribution label={t('mapAttribution')} />
+        {/* The basemap's own credit, not `Admin.mapAttribution`: it changes with
+            the tile provider the site is set to, and a message key cannot follow
+            a setting. The key is gone. */}
+        <OsmAttribution
+          label={basemap.attribution}
+          {...(basemap.attributionUrl ? { href: basemap.attributionUrl } : {})}
+        />
       </Box>
     </Box>
   );

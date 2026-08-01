@@ -5,6 +5,7 @@
   "exports": {
     "./*": "./src/*.tsx",
     "./core-elements/utils": "./src/core-elements/utils.ts",
+    "./core-elements/basemaps": "./src/core-elements/basemaps.ts",
     "./core-elements/breakpoints": "./src/core-elements/breakpoints.ts",
     "./core-elements/mercator": "./src/core-elements/mercator.ts",
     "./core-elements/use-scroll-lock": "./src/core-elements/use-scroll-lock.ts",

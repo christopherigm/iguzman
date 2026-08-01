@@ -90,13 +90,43 @@ Twelve things that will bite:
   (tiles, pins, zoom control, credit, gesture scrim) through
   `@repo/ui/core-elements/osm-map-chrome`, so the two also _look_ the same.
   Three consequences: the
-  **public** site makes third-party requests to `tile.openstreetmap.org` from the
-  visitor's browser; the map's **filters narrow the pins that were loaded and
+  **public** site makes third-party requests to whichever tile host the site is
+  configured for - `tile.openstreetmap.org` unless someone has changed it - from
+  the visitor's browser; the map's **filters narrow the pins that were loaded and
   never re-query**, so a species dropdown shows that species _among these pins_,
   not its full history; and markers sharing a coordinate are **fanned out in
   screen pixels**, because an entry with no coordinates of its own inherits its
   location's centre and a season at one pond would otherwise stack into what
   looks like a single sighting.
+- ⚠ **Which basemap every map draws is one setting, and the credit travels with
+  it.** `System.map_style` (authored at `/admin/system` → Maps) picks between
+  OSM's standard tiles, three CARTO styles and a `custom` tile URL;
+  `lib/basemap.ts` resolves it once in `[locale]/layout.tsx` and
+  `BasemapProvider` publishes the result to the whole tree, so the four public
+  maps **and** the CMS's `MapPicker` read it with no prop threaded to any of
+  them. Four consequences. The **attribution is no longer a message key** - it
+  changes with the provider, and an i18n string cannot follow a setting an
+  operator edits at runtime, so `Map.attribution` and `Admin.mapAttribution` are
+  gone and the credit comes off the resolved basemap (`@repo/ui`'s
+  `core-elements/basemaps`, which keeps each URL beside the string that provider
+  requires). ⚠ **Nor is the credit's _link_ a constant**: `map_attribution_url`
+  is its own column, because most providers require the credit to point back at
+  them and the maps used to anchor every credit to openstreetmap.org/copyright
+  regardless - so a "© MapTiler" named one party and linked another. Blank is a
+  real answer and draws the credit unlinked; don't restore a default href.
+  ⚠ **A provider key pasted into `map_tile_url` is public**, and cannot be
+  otherwise: the tiles are fetched from the visitor's own browser, and
+  `GET /api/system/` is world-readable. Restrict the key by allowed origin at
+  the provider rather than treating the column as a secret. And ⚠ **this chooses
+  a style, not what the style contains**: these are raster tiles, so buildings,
+  roads and labels are painted into each PNG before it arrives and no "hide the
+  houses" switch can exist here. The route to a real per-layer choice is
+  `custom` pointed at a style authored in the tile provider's own editor with
+  the `building` layer deleted, published as a raster endpoint. (A self-hosted
+  `tileserver-gl` chart at `packages/charts/tileserver` was the other route and
+  is **gone** - strictly more machinery for the same result. What it bought,
+  should the quota ever argue for bringing it back: no per-tile billing, and no
+  third-party call from the visitor's browser at all.)
 - ⚠ **A public map pins the reader only when they press the button - no page
   here asks for the geolocation permission on its own any more.** `SightingsMap`
   passes `locateControl` and `fullscreenControl` to `OsmMap`, **both on by
@@ -554,7 +584,10 @@ Eight rules that will bite:
   a click inside it. It is **not** `@repo/ui`'s `OsmMap` either - that one
   _reads_ a set of markers, this one is a form control that writes two fields, so
   the click, the pin-drag, the place search and the render-time camera below are
-  its whole content. ⚠ **But everything it _shows_ is `OsmMap`'s**: the tile
+  its whole content. ⚠ **But it draws the site's configured basemap**, through
+  `useBasemap()` rather than a prop - an author placing a pin has to be looking
+  at the map a reader will see it on - and ⚠ **everything it _shows_ is
+  `OsmMap`'s**: the tile
   layer, the pin, the "you are here" pin, the zoom control, the credit and the
   gesture scrim all come from `@repo/ui/core-elements/osm-map-chrome`, so the CMS
   map and the public one are one design and a change to the chrome reaches both.
@@ -571,7 +604,10 @@ Eight rules that will bite:
   the author's panning - each time they typed.
 - **Two pages write `System`, and each PATCHes only the keys it owns**
   (`OWNED_FIELDS` in both). `/admin/system` owns the identity and contact half,
-  `/admin/logos-and-styles` the brand kit. Move a field between them and move it
+  plus the two operational sections - video transcoding and **Maps**
+  (`map_style` / `map_tile_url` / `map_attribution` / `map_attribution_url`, see
+  the basemap note above); `/admin/logos-and-styles` the brand kit. Move a field
+  between them and move it
   between those two lists in the same edit, or one page will start clobbering the
   other whenever both are open.
 

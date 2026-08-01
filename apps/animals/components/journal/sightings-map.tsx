@@ -9,6 +9,7 @@ import { Button } from "@repo/ui/core-elements/button";
 import { Select } from "@repo/ui/core-elements/select";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { OsmMap, type OsmMapMarker } from "@repo/ui/core-elements/osm-map";
+import { useBasemap } from "@/components/basemap-provider";
 import "./sightings-map.css";
 
 /**
@@ -98,7 +99,6 @@ interface Props {
     map: string;
     zoomIn: string;
     zoomOut: string;
-    attribution: string;
     close: string;
     all: string;
     category: string;
@@ -139,6 +139,9 @@ export function SightingsMap({
   labels,
 }: Props) {
   const [selection, setSelection] = useState<Selection>(NO_SELECTION);
+  // Which tiles to draw, and the credit that must travel with them - the site's
+  // one setting, resolved in the layout. See components/basemap-provider.tsx.
+  const basemap = useBasemap();
 
   // Built from the markers themselves: the dropdowns describe what is on the
   // map, so an option that would empty it is never offered in the first place.
@@ -222,11 +225,21 @@ export function SightingsMap({
         {...(maxFitZoom ? { maxFitZoom } : {})}
         locateControl={locateControl}
         fullscreenControl={fullscreenControl}
+        tileUrl={basemap.tileUrl}
+        tileFilter={basemap.filter}
+        {...(basemap.attributionUrl
+          ? { attributionUrl: basemap.attributionUrl }
+          : {})}
         labels={{
           map: labels.map,
           zoomIn: labels.zoomIn,
           zoomOut: labels.zoomOut,
-          attribution: labels.attribution,
+          // The basemap's own, never `labels.attribution`: the credit changes
+          // with the provider, and an i18n key cannot follow a setting an
+          // operator changes at runtime. Its href travels with it above - a
+          // credit naming one provider and linking another is worse than an
+          // unlinked one, which is what a basemap with no `attributionUrl` gets.
+          attribution: basemap.attribution,
           zoomHint: labels.zoomHint,
           zoomHintMac: labels.zoomHintMac,
           empty: labels.empty,
