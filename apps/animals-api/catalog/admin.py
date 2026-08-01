@@ -48,17 +48,13 @@ TRANSLATION_HELP = (
 
 
 def _cover(obj):
-    """The record's cover file - its own ``image``, else its first gallery photo.
+    """The record's cover file - the first photo in its gallery.
 
     The list columns have to resolve it the same way the API does
-    (``core.serializers.gallery_image_url``), or every row whose Main Image was
-    left empty - the common case, and the only case before that uploader existed -
-    would show an empty thumbnail here while the public site shows its first
-    gallery photo.
+    (``core.serializers.gallery_image_url``), or every row would show an empty
+    thumbnail here while the public site shows its first gallery photo. There is
+    no ``image`` column to check first any more; see ``0013_drop_main_image``.
     """
-    image = getattr(obj, 'image', None)
-    if image:
-        return image
     first = next((row for row in obj.images.all() if row.image), None)
     return first.image if first else None
 
@@ -74,9 +70,8 @@ def _thumb(image, size=48):
 
 # Every record's photographs live in a gallery table with the same columns, so
 # one inline base covers all five. ⚠ `sort_order` is not cosmetic here: the API
-# publishes the record's `image` as its own column if set and **otherwise the
-# first gallery row**, so re-ordering these picks the cover for a record with no
-# image of its own - which is every record authored through the CMS.
+# publishes the **first gallery row** as the record's `image`, and there is no
+# other place a cover can come from - so re-ordering these is what picks it.
 class GalleryImageInline(admin.TabularInline):
     extra = 0
     fields = ('image', 'name', 'en_name', 'description', 'en_description', 'sort_order', 'enabled')
@@ -122,7 +117,7 @@ class CategoryAdmin(admin.ModelAdmin):
             'description': TRANSLATION_HELP,
         }),
         ('Media', {
-            'fields': ('image', 'icon', 'fit', 'background_color'),
+            'fields': ('icon', 'fit', 'background_color'),
         }),
         ('Display', {
             'fields': ('is_featured', 'sort_order', 'enabled'),
@@ -166,7 +161,7 @@ class SpeciesAdmin(admin.ModelAdmin):
             'description': TRANSLATION_HELP,
         }),
         ('Media', {
-            'fields': ('image', 'icon', 'fit', 'background_color'),
+            'fields': ('icon', 'fit', 'background_color'),
         }),
         ('Display', {
             'fields': ('is_featured', 'sort_order', 'enabled'),
@@ -205,7 +200,7 @@ class SeasonAdmin(admin.ModelAdmin):
                            'A sighting with no season picked is filed by its date using these.',
         }),
         ('Content', {'fields': CONTENT_FIELDS + ('href',), 'description': TRANSLATION_HELP}),
-        ('Media', {'fields': ('image', 'icon', 'fit', 'background_color')}),
+        ('Media', {'fields': ('icon', 'fit', 'background_color')}),
         ('Display', {'fields': ('sort_order', 'enabled')}),
         ('Metadata', {'fields': ('version', 'created', 'modified'), 'classes': ('collapse',)}),
     )
@@ -226,7 +221,7 @@ class WeatherConditionAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Identity', {'fields': ('name', 'en_name', 'slug')}),
         ('Content', {'fields': CONTENT_FIELDS + ('href',), 'description': TRANSLATION_HELP}),
-        ('Media', {'fields': ('image', 'icon', 'fit', 'background_color')}),
+        ('Media', {'fields': ('icon', 'fit', 'background_color')}),
         ('Display', {'fields': ('sort_order', 'enabled')}),
         ('Metadata', {'fields': ('version', 'created', 'modified'), 'classes': ('collapse',)}),
     )
@@ -311,10 +306,9 @@ class LocationAdmin(admin.ModelAdmin):
         }),
         ('Content', {'fields': CONTENT_FIELDS, 'description': TRANSLATION_HELP}),
         ('Media', {
-            'fields': ('image', 'icon'),
-            'description': 'Leave "Image" empty and the first photo in the gallery below '
-                           'becomes this place\'s cover, which is how most are set. Fill it '
-                           'to pick a different one. "Icon" is neither - it is the map-pin '
+            'fields': ('icon',),
+            'description': 'The first photo in the gallery below is this place\'s cover. '
+                           '"Icon" is neither a cover nor a photo - it is the map-pin '
                            'glyph, and has to stay legible at 24 px.',
         }),
         ('Geography', {

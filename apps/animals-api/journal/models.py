@@ -16,16 +16,21 @@ from django.utils import timezone
 
 from core.fields import ResizedImageField
 from core.image_sizes import MEDIUM
-from core.models import RegularPlusPicture, picture, video
+from core.models import BasePicture, RegularPlusPicture, picture, video
 
 
-class Sighting(RegularPlusPicture):
+class Sighting(BasePicture):
     """One recorded encounter with a catalogued subject.
 
-    Inherits from RegularPlusPicture, which provides:
+    Inherits from BasePicture, which provides:
       - Common:      enabled, created, modified, version
       - BasePicture: name, description, short_description, href, fit, background_color
-      - RegularPlusPicture: image (max 2560px, quality 90) - the entry's cover photo
+
+    ⚠ **`BasePicture`, not `RegularPlusPicture` - an entry has no `image` column
+    of its own.** Its cover is the first photo among its ``media`` rows; see
+    ``journal.serializers.sighting_cover_url`` and migration
+    ``0009_drop_main_image``. `fit` and `background_color` still apply - they are
+    how that cover is *displayed*.
 
     ``name`` is the entry's optional title ("First fawn of the spring"); when it
     is blank the frontend falls back to the species name. ``description`` is the

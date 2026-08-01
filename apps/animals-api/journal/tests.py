@@ -518,35 +518,6 @@ class MediaTests(JournalFixtureMixin, IsolatedMediaTestCase):
         # With no cover of its own, the entry falls back to its first photo.
         self.assertTrue(payload['image'])
 
-    def test_main_image_reports_the_column_not_the_borrowed_cover(self):
-        """The CMS's Main Image uploader hydrates from ``main_image``, so it must
-        stay null while the cover is only the entry's first photo - and then
-        report the chosen one. Same contract as every catalog record's; a
-        sighting needs its own because its photos are ``media`` rows with a
-        ``kind``, which ``gallery_image_url`` cannot read."""
-        self.sign_in_staff()
-        url = '/api/journal/sightings/slug/first-fawn/'
-        detail = f'/api/journal/sightings/{self.sighting.pk}/'
-
-        self.client.post(
-            self.media_url, {'kind': 'image', 'image': base64_image()},
-            content_type='application/json',
-        )
-        payload = self.client.get(url).json()
-        self.assertTrue(payload['image'])
-        self.assertIsNone(payload['main_image'])
-
-        self.client.patch(detail, {'image': base64_image()}, content_type='application/json')
-        payload = self.client.get(url).json()
-        self.assertIsNotNone(payload['main_image'])
-        self.assertEqual(payload['image'], payload['main_image'])
-
-        # And clearing it hands the cover back to the photo.
-        self.client.patch(detail, {'image': None}, content_type='application/json')
-        payload = self.client.get(url).json()
-        self.assertIsNone(payload['main_image'])
-        self.assertTrue(payload['image'])
-
     def test_deleting_media(self):
         self.sign_in_staff()
         created = self.client.post(
@@ -646,3 +617,4 @@ class ReferenceCountTests(JournalFixtureMixin, IsolatedMediaTestCase):
         # The season was filled from the date, so its count moved too.
         self.assertEqual(self.client.get('/api/catalog/seasons/').json()[0]['sighting_count'], 1)
         self.assertEqual(Sighting.objects.get(slug='first-fawn').season, season)
+

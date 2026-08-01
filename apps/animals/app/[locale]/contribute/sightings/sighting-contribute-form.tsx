@@ -1,15 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { Select, type SelectOption } from "@repo/ui/core-elements/select";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Toast } from "@repo/ui/core-elements/toast";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
+import {
+  LocationContributeForm,
+  type ParentPlaceOption,
+} from "@/components/contribute/location-contribute-form";
 import {
   PhotoPicker,
   type PickedPhoto,
@@ -27,6 +32,7 @@ import {
   reserveSightingVideo,
   type SightingSubmission,
 } from "@/lib/contribute";
+import { placeLabel } from "@/lib/place-types";
 import { uploadVideo, VideoUploadError } from "@/lib/video-upload";
 import {
   SpeciesPicker,
@@ -84,6 +90,18 @@ interface Props {
   locations: SelectOption[];
   weather: SelectOption[];
   /**
+   * Every county, for the place form this flow can open under its place field.
+   * Passed down rather than fetched here for the reason the two lists above are:
+   * the labels are bilingual and have to be resolved on the server.
+   */
+  counties: SelectOption[];
+  /**
+   * The same catalogued places as `locations`, but carrying their coordinates -
+   * the place form opens its map over the parent a contributor picks. A second
+   * projection of one fetch, not a second request.
+   */
+  parentPlaces: ParentPlaceOption[];
+  /**
    * The clip duration cap, resolved from `MAX_CONTRIBUTION_VIDEO_SECONDS` by the
    * page. It is passed down rather than imported because this is a client
    * component and the value must stay readable at run time - see
@@ -112,9 +130,13 @@ export function SightingContributeForm({
   creditName,
   locations,
   weather,
+  counties,
+  parentPlaces,
   maxVideoSeconds,
 }: Props) {
   const t = useTranslations("Contribute");
+  const tPlaceTypes = useTranslations("PlaceTypes");
+  const locale = useLocale();
 
   /**
    * The entry's subject. Seeded from the URL when it named one, and then never
@@ -150,6 +172,21 @@ export function SightingContributeForm({
    * keystroke that empties it: a title deliberately cleared must stay cleared.
    */
   const [nameTouched, setNameTouched] = useState(false);
+  /** Whether the "add a place" panel under the place field is open. */
+  const [addingPlace, setAddingPlace] = useState(false);
+  /**
+   * Places created from inside this form, newest first, as picker options.
+   *
+   * They are held here rather than merged into `locations` by a re-fetch for two
+   * reasons. A refresh would throw the draft away - that is the whole argument
+   * for the panel being inline instead of a link to `/contribute/locations` - and
+   * a pending place is **absent from the public list** that prop was built from,
+   * so a re-fetch would not return it anyway. It is fileable against all the
+   * same: `SightingContributeSerializer` gates on the species being enabled and
+   * deliberately not on the location, so both rows land pending and a reviewer
+   * publishes the pair.
+   */
+  const [addedPlaces, setAddedPlaces] = useState<SelectOption[]>([]);
 
   const set = <K extends keyof typeof EMPTY>(key: K, value: string) =>
     setDraft((current) => ({ ...current, [key]: value }));
@@ -171,8 +208,17 @@ export function SightingContributeForm({
     setError(null);
   };
 
+  /**
+   * What the place field offers: the catalogue, led by anything added from here.
+   *
+   * The additions lead rather than sort in because the one a contributor just
+   * created is the one they are about to pick - and it is not in the catalogue's
+   * own alphabet at all until an administrator publishes it.
+   */
+  const placeOptions = [...addedPlaces, ...locations];
+
   const locationLabel =
-    locations.find((option) => option.value === draft.location)?.label ?? null;
+    placeOptions.find((option) => option.value === draft.location)?.label ?? null;
   const weatherLabel =
     weather.find((option) => option.value === draft.weather)?.label ?? null;
 
@@ -362,28 +408,104 @@ export function SightingContributeForm({
             helperText={t("dateHelp")}
           />
 
-          {locations.length > 0 ? (
-            // A `TextInput` with `options` rather than a `Select`: the place list
-            // is the whole catalog of places, which is the one field here that is
-            // long enough to scroll past what you are looking for. Typing filters
-            // it (name, kind of place or county - see `placeLabel` in the page),
-            // and the value it emits is still the location id a `Select` would
-            // have emitted.
-            <TextInput
-              label={t("place")}
-              value={draft.location}
-              onChange={(value) => set("location", value)}
-              options={locations}
-              noOptionsLabel={t("noPlaceMatches")}
-              helperText={t("placeHelp")}
+          {/* The place, and the way out of not finding it.
+
+              ⚠ The add button is what makes `noPlaces` below survivable, and it
+              is why that branch is no longer a dead end: a site with nothing
+              catalogued yet - or, far more often, an outing to a pond nobody has
+              filed - used to stop the flow here with a sentence and no action.
+              So the row is rendered in **both** branches, and only the field
+              beside it changes.
+
+              The panel it opens is inline rather than a link to
+              `/contribute/locations`, and that is the whole point of it. A
+              navigation would throw this draft away: the stages share one piece
+              of state and there is nowhere else it lives, which is the same
+              argument that makes each flow one component rather than a route per
+              stage. The route still exists, renders the same form, and is the
+              standalone way in. */}
+          <Box gap={8} alignItems="flex-start">
+            {placeOptions.length > 0 ? (
+              // A `TextInput` with `options` rather than a `Select`: the place
+              // list is the whole catalog of places, which is the one field here
+              // that is long enough to scroll past what you are looking for.
+              // Typing filters it (name, kind of place or county - see
+              // `placeLabel` in `lib/place-types.ts`), and the value it emits is
+              // still the location id a `Select` would have emitted.
+              <TextInput
+                label={t("place")}
+                value={draft.location}
+                onChange={(value) => set("location", value)}
+                options={placeOptions}
+                noOptionsLabel={t("noPlaceMatches")}
+                helperText={t("placeHelp")}
+                // `flex="1 1 0"` with `minWidth={0}`, as the temperature/count
+                // pair in stage 2 does: the field takes the rest of the row and
+                // may shrink below its content rather than pushing the button
+                // off a narrow phone.
+                flex="1 1 0"
+                minWidth={0}
+              />
+            ) : (
+              // A site with no places catalogued yet. It is no longer the end of
+              // the flow - the button beside this is - but it still says so,
+              // rather than leaving an empty picker to explain itself.
+              <Typography
+                variant="body"
+                color="var(--error, #ef4444)"
+                flex="1 1 0"
+                minWidth={0}
+              >
+                {t("noPlaces")}
+              </Typography>
+            )}
+
+            {/* Top-aligned, not `flex-end` as the CMS's input+button rows are:
+                this field carries helper text beneath it, so aligning to the
+                row's bottom would drop the button a line below the input it
+                belongs to. The nudge centres the 44 px button against the input
+                box itself (~52 px: 20 + 6 padding around a 24 px line). */}
+            <IconButton
+              icon="/icons/add.svg"
+              kind="primary"
+              size="lg"
+              aria-label={t("addPlace")}
+              title={t("addPlace")}
+              aria-expanded={addingPlace}
+              // Only while the panel is mounted: `aria-controls` pointing at an
+              // id that is not in the document is an ARIA error, and the panel
+              // is unmounted rather than hidden (closing it is how its own draft
+              // is discarded).
+              aria-controls={addingPlace ? "contribute-add-place" : undefined}
+              onClick={() => setAddingPlace((open) => !open)}
+              marginTop={4}
             />
-          ) : (
-            // A site with no places catalogued yet. The flow cannot be completed -
-            // the API refuses an entry with neither a place nor coordinates - so it
-            // says so rather than disabling Next with no explanation.
-            <Typography variant="body" color="var(--error, #ef4444)">
-              {t("noPlaces")}
-            </Typography>
+          </Box>
+
+          {addingPlace && (
+            <Box id="contribute-add-place" flexDirection="column">
+              <LocationContributeForm
+                parents={parentPlaces}
+                counties={counties}
+                onCancel={() => setAddingPlace(false)}
+                onCreated={(place) => {
+                  // Label it exactly as the page labelled every other option -
+                  // one helper, so the place someone just added cannot read
+                  // differently from the rest of the list it joins.
+                  const option = {
+                    value: String(place.id),
+                    label: placeLabel(place, locale, tPlaceTypes),
+                  };
+                  setAddedPlaces((current) => [option, ...current]);
+                  // Selected, not merely offered: it is the place this entry is
+                  // being filed at, and asking the contributor to go and find it
+                  // again would be asking them to re-answer the question they
+                  // just opened this panel to answer.
+                  set("location", option.value);
+                  setAddingPlace(false);
+                }}
+              />
+            </Box>
           )}
 
           <Box flexDirection="column" gap={8}>

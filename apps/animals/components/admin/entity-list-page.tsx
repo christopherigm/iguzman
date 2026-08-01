@@ -10,7 +10,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import type { PageRequest, ResourcePage } from "@/lib/admin-api";
-import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
+import { useToggleField } from "@/hooks/use-toggle-field";
 import { useReorder } from "@/hooks/use-reorder";
 
 type Row = Record<string, unknown>;
@@ -177,7 +177,7 @@ export function EntityListPage({
     }
   };
 
-  const handleToggleEnabled = useToggleEnabled(resource.update, setItems, setError);
+  const handleToggleField = useToggleField(resource.update, setItems, setError);
   const handleReorder = useReorder(resource.update, setItems, setError);
 
   const handleDelete = async (id: number) => {
@@ -218,7 +218,7 @@ export function EntityListPage({
         columns={columns}
         basePath={basePath}
         onDelete={handleDelete}
-        onToggleEnabled={handleToggleEnabled}
+        onToggleField={handleToggleField}
         onReorder={canReorder ? handleReorder : undefined}
         loading={loading}
         error={error}

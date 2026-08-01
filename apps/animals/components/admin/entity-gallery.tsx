@@ -36,15 +36,14 @@ export interface EntityGallery {
 /**
  * A record's photo gallery, as one multi-select uploader.
  *
- * ⚠ **The first photo is the record's main image, unless one was chosen.** The
- * API publishes a record's `image` as its own column when it has one and
- * otherwise the first gallery row (`core.serializers.gallery_image_url`). Most
- * records leave that column empty - the Main Image uploader beside this one is
- * optional - so position 1 here is normally the cover, on the card, the hero and
- * every thumbnail, which is what the "MAIN" badge on the first tile means and
- * why a drag to re-order is a real edit rather than housekeeping. Fill the Main
- * Image field and this becomes an ordinary gallery: pass `mainImageSet` so the
- * badge and the caption stop saying otherwise.
+ * ⚠ **The first photo is the record's main image, with no exception.** The API
+ * resolves a record's `image` to its first gallery row and to nothing else
+ * (`core.serializers.gallery_image_url`), so position 1 here is the cover - on
+ * the card, the hero and every thumbnail. That is what the "MAIN" badge on the
+ * first tile means, and why a drag to re-order is a real edit rather than
+ * housekeeping. Records used to carry a cover column that won ahead of this,
+ * written by a "Main Image" uploader; it is gone, and so is the column
+ * (animals-api `catalog.0013_drop_main_image`).
  *
  * **Unlike the old one-row-at-a-time editor, nothing here is written until the
  * form is saved.** An author picking eight photos from an outing gets one Save,
@@ -180,29 +179,24 @@ export function useEntityGallery(
 /**
  * The uploader itself, for `AdminForm`'s `imagesSlot`.
  *
- * `headerSlot` is where a record's Main Image and its separate glyph go - neither
- * belongs in the gallery. The glyph because it is a 128 px mark and the first
- * tile (the cover) would sometimes be one; the main image because it is the
- * *choice* of cover rather than another photograph, and dropping it in here
- * would put it back in the ordering it exists to override.
+ * `headerSlot` is where a record's separate glyph goes - it does not belong in
+ * the gallery, because it is a 128 px mark and the first tile (the cover) would
+ * sometimes be one.
  *
- * ⚠ **`mainImageSet` decides whether this section may claim to hold the cover.**
- * Both the "MAIN" badge on tile 1 and the caption say "the first one is the main
- * image", which stops being true the moment a record has a main image of its
- * own - the API prefers that column and only falls back to `images[0]`
- * (`core.serializers.gallery_image_url`). Leaving them on would have the form
- * pointing at a photo the site renders nowhere.
+ * This section may state flatly that tile 1 is the cover, in the "MAIN" badge
+ * and in the caption, because there is nowhere else a cover can come from. It
+ * used to have to hedge: a record could carry its own cover column that won
+ * ahead of the gallery, and the badge then pointed at a photo the site rendered
+ * nowhere. Both the column and the uploader that wrote it are gone.
  */
 export function EntityGalleryField({
   gallery,
   headerSlot,
   maxImages = 20,
-  mainImageSet = false,
 }: {
   gallery: EntityGallery;
   headerSlot?: React.ReactNode;
   maxImages?: number;
-  mainImageSet?: boolean;
 }) {
   const t = useTranslations("Admin");
 
@@ -212,7 +206,7 @@ export function EntityGalleryField({
       <Box display="flex" flexDirection="column" gap={8}>
         <Typography variant="label">{t("images")}</Typography>
         <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
-          {mainImageSet ? t("imagesIntroWithMain") : t("imagesIntro")}
+          {t("imagesIntro")}
         </Typography>
         {gallery.loading ? (
           <Typography variant="body">{t("loading")}</Typography>
@@ -225,7 +219,6 @@ export function EntityGalleryField({
             existingImages={gallery.existing}
             onChange={gallery.onChange}
             maxImages={maxImages}
-            showMainBadge={!mainImageSet}
           />
         )}
       </Box>

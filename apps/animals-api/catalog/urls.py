@@ -10,6 +10,7 @@ from .views import (
     CountyDetailView,
     CountyListCreateView,
     KindListView,
+    LocationContributeView,
     LocationDetailView,
     LocationImageDetailView,
     LocationImageListCreateView,
@@ -91,6 +92,8 @@ urlpatterns = [
 
     # Locations
     path('catalog/locations/', LocationListCreateView.as_view(), name='location-list'),
+    # The public contribute flow. Above `<int:pk>/`, like `species/contribute/`.
+    path('catalog/locations/contribute/', LocationContributeView.as_view(), name='location-contribute'),
     path('catalog/locations/<int:pk>/', LocationDetailView.as_view(), name='location-detail'),
     path('catalog/locations/slug/<slug:slug>/', LocationDetailView.as_view(), name='location-detail-slug'),
     path('catalog/locations/<int:pk>/images/', LocationImageListCreateView.as_view(), name='location-image-list'),

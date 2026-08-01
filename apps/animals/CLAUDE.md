@@ -17,6 +17,7 @@ landing's `CategoryNav` tiles, gallery captions and journal slider link into the
 | `/[locale]/sightings/[slug]`     | One journal entry: hero, first row, its clips, its map, more of the same species    |
 | `/[locale]/contribute/species`   | The public staged form that **proposes** a species (`?category=<slug>`)             |
 | `/[locale]/contribute/sightings` | The public staged form that **files** a journal entry (`?species=` or `?category=`) |
+| `/[locale]/contribute/locations` | The public form that **adds a place** (no param - see below)                       |
 
 All four are composed from `components/catalog/` (`DetailHero`, `FactsCard`,
 `DetailGallery`, `SpeciesGrid`) and `components/journal/sightings-section.tsx`, so
@@ -152,15 +153,13 @@ Twelve things that will bite:
 - ⚠ **All three `toGalleryImages` helpers dedupe by URL through a `seen` set, and
   they have to.** Every record's photos live in a gallery whose _first row_ the
   API publishes as `image` (animals-api's CLAUDE.md → "The first photo is the
-  record's cover"), so the cover is normally also one of the rows being iterated.
-  The **cover is deliberately kept** and leads the strip - this is a numbered
-  slideshow with its own thumbnails, where the cover is simply slide 1, not the
-  contact sheet under a hero that these pages used to carry (that one _dropped_
-  the cover, because repeating it read as a duplicate). Without the `seen` set it
-  would appear twice in a row instead. A cover set through the CMS's **Main
-  Image** uploader (or in the Django admin) is a file of its own, matches no
-  gallery row, and simply leads the strip - which is the intended result: a main
-  image is hero, OG image _and_ slide 1, and the photographs follow it.
+  record's cover"), so the cover is **always** one of the rows being iterated -
+  it is no longer a file of its own that could sit outside the list. The **cover
+  is deliberately kept** and leads the strip - this is a numbered slideshow with
+  its own thumbnails, where the cover is simply slide 1, not the contact sheet
+  under a hero that these pages used to carry (that one _dropped_ the cover,
+  because repeating it read as a duplicate). Without the `seen` set it would
+  appear twice in a row instead.
 - **A sighting's gallery is one table with a `kind`, so the page splits it.**
   `SightingMedia` holds photos, uploaded clips and video links in one ordered
   list (they share a `sort_order` an author arranges). The page sends the photos
@@ -196,6 +195,12 @@ A signed-in reader can add to the site without the CMS. A
 `FloatingActionButton` (`@repo/ui`) sits on three public pages and opens a staged,
 Instagram-shaped form. Everything filed this way lands **pending review**.
 
+**A place is the third thing that can be contributed, and it has no FAB.** Nobody
+sets out to catalogue a pond; they discover they need one halfway through filing a
+sighting at it. So it is reached from the add button beside the sighting form's
+place field - `/contribute/locations` exists and renders the same form, but it is
+the standalone door, not the main way in.
+
 **Filing a sighting is the primary action on all three pages**; proposing a
 species is the rarer, more editorial one and appears on the category page only:
 
@@ -212,17 +217,19 @@ slug (so the button needs no guard), a sighting page borrows it from the entry
 to a `notFound()`), and a category page **does not know it at all** - which is
 what the `SpeciesPicker` exists for.
 
-| Piece                       | Where                                                             |
-| --------------------------- | ----------------------------------------------------------------- |
-| The four FABs               | the category (two), species and sighting pages, after the spacers |
-| The routes                  | `app/[locale]/contribute/{species,sightings}/`                    |
-| The wizards (one per route) | `…/species-contribute-form.tsx`, `…/sighting-contribute-form.tsx` |
-| The species cascade         | `…/sightings/species-picker.tsx`                                  |
-| Shared stage chrome         | `components/contribute/` (stage shell, photo picker, review row)  |
-| Browser client              | `lib/contribute.ts`                                               |
-| Token-attaching proxy       | `app/api/contribute/[...path]/route.ts`                           |
+| Piece                       | Where                                                              |
+| --------------------------- | ------------------------------------------------------------------ |
+| The four FABs               | the category (two), species and sighting pages, after the spacers  |
+| The routes                  | `app/[locale]/contribute/{species,sightings,locations}/`           |
+| The two wizards             | `…/species-contribute-form.tsx`, `…/sighting-contribute-form.tsx`  |
+| The place form (one stage)  | `components/contribute/location-contribute-form.tsx`               |
+| The species cascade         | `…/sightings/species-picker.tsx`                                   |
+| Shared stage chrome         | `components/contribute/` (stage shell, photo picker, review row)   |
+| The place-option label      | `lib/place-types.ts` → `placeLabel` (server *and* browser)         |
+| Browser client              | `lib/contribute.ts`                                                |
+| Token-attaching proxy       | `app/api/contribute/[...path]/route.ts`                            |
 
-Ten things that will bite:
+Fourteen things that will bite:
 
 - ⚠ **Pending means `enabled=false`, and there is no moderation queue.** The API
   creates a contribution disabled and flagged `is_contribution`; publishing it is
@@ -285,11 +292,8 @@ Ten things that will bite:
 - **Each flow is one client component, not a route per stage.** The stages share a
   draft and a stage boundary is not a navigation: stepping back must find stage 1
   as it was left, which routes would only give by putting the draft somewhere it
-  can be lost.
-- **Each flow is one client component, not a route per stage.** The stages share a
-  draft and a stage boundary is not a navigation: stepping back must find stage 1
-  as it was left, which routes would only give by putting the draft somewhere it
-  can be lost.
+  can be lost. It is also why the "add a place" panel below opens **inline**
+  rather than navigating to `/contribute/locations`.
 - ⚠ **`components/contribute/photo-picker.tsx` downscales, and that is why it is
   not `AdminImageUploader`.** That component base64s the file as picked, which is
   fine for one considered photograph from a machine; a contributor picks four
@@ -319,15 +323,49 @@ Ten things that will bite:
   naming each option's state). The kind is translated through the `PlaceTypes`
   namespace from `lib/place-types.ts` - the API's `place_type_display` is
   English-only - and a place with neither kind nor county still reads as its bare
-  name. The **weather** field stays a plain `Select`: fourteen conditions is where
-  a phone's native picker beats a dropdown of ours.
+  name. ⚠ The label is built by **`placeLabel` in `lib/place-types.ts`, not in the
+  page**, and that move is load-bearing rather than tidiness: the page builds
+  these on the server, and the *form* has to build one more in the browser - for a
+  place added mid-flow - so two copies would make the place someone just created
+  read differently from every other option in the same list. The **weather** field
+  stays a plain `Select`: fourteen conditions is where a phone's native picker
+  beats a dropdown of ours.
+- ⚠ **A contributor who cannot find the place adds it, without leaving the form.**
+  An `IconButton` (`/icons/add.svg`) sits beside the place picker in stage 1 and
+  toggles `LocationContributeForm` open **inline, under the field**; the place it
+  creates is added to the picker's options and **selected**. It is not a link to
+  `/contribute/locations`, and must not become one: a navigation throws the draft
+  away - the stages share one piece of state with nowhere else to live, the same
+  argument that makes each flow one component rather than a route per stage. That
+  route still exists and renders the same component, as the standalone way in.
+  Three consequences. The new place is **pending, and fileable anyway** -
+  animals-api's sighting serializer gates on the *species* being enabled and
+  deliberately not on the location (see its CLAUDE.md), so both rows land pending
+  and a reviewer publishes the pair. The option is held in the form's own state
+  and **never re-fetched**, because a pending place is absent from the public list
+  the `locations` prop was built from. And `noPlaces` is **no longer a dead end**:
+  the add button renders in that branch too, so a site with an empty catalogue can
+  now be filled from the flow that needed it.
 - **A sighting picks a place; it does not drop a pin.** The API takes either and
   refuses neither, but an entry with no coordinates of its own inherits its
   place's centre, which is the documented normal case and enough for every map the
-  site draws. `MapPicker` stays a CMS form control. Consequence: with **no**
-  locations catalogued the sighting flow cannot be completed, and stage 1 says so
-  rather than disabling Continue silently. The **season** is not asked for either -
-  `Sighting.save()` derives it from the date.
+  site draws. The pin a contributor *does* drop belongs to the **place** they are
+  adding, not to the entry - which is why `MapPicker` is now mounted on a public
+  page (see the CMS note below; it is no longer a CMS-only control) while the
+  sighting form still has no coordinate fields of its own. The **season** is not
+  asked for either - `Sighting.save()` derives it from the date.
+- **The place form is one stage, and asks six questions.** A name and a map pin
+  (both required - a place with no pin is unmappable and a sighting inherits
+  nothing from it), a kind of place, an optional county, an optional parent place,
+  and optional photographs. It does **not** stage: it is short, and it has to be
+  fillable from inside another form, where a wizard nested in a wizard would leave
+  a contributor two "Continue" buttons deep with no idea which one files anything.
+  It also renders **no confirmation of its own** - the host owns the aftermath, so
+  the standalone route wraps it in `LocationContributePanel` for the
+  `SubmittedPanel`, and the sighting form just closes the panel. ⚠ Everything an
+  administrator owns is absent, including **`hide_precise_location`**, which is
+  not merely editorial: it blurs the place's coordinates *and every sighting later
+  filed at it*, for every caller.
 
 All four FABs sit in the default corner, **bottom-right**. The category page's
 two are a **stack**: "Add a sighting" takes the corner in the accent fill at
@@ -397,6 +435,16 @@ Eight rules that will bite:
   who may _see_ a row and nothing else - reading, editing and deleting any record
   in `/admin` must never depend on it. PATCH and DELETE were always fine; they
   look the row up without the filter.
+- **A flag an author flips row by row belongs in the table, as a Switch.**
+  `AdminEntityList` renders one for `enabled` on every list and for any other
+  boolean column marked `toggle` (`is_featured` on `/admin/categories` and
+  `/admin/species`), writing that single field through `useToggleField` -
+  optimistic, and rolled back when the PATCH rejects, so the switch never claims
+  a write the API refused. It is opt-in rather than automatic for every boolean:
+  a flag can be derived, or belong to a form that validates it against its
+  siblings. ⚠ The read-only tick/cross badge is what the other boolean columns
+  still render, and it is not a control - don't leave a flag looking clickable
+  without giving the column `toggle`.
 - ⚠ **`/admin/species` is the one list read a page at a time, and its search box
   is a _server_ search.** The catalog outgrew one request - a species row costs
   the API two queries of its own (`sighting_count`, `last_seen`) plus its gallery,
@@ -415,36 +463,40 @@ Eight rules that will bite:
   `species.list` (the whole catalog, unpaginated) is still what the **sighting
   form's** species picker uses: that one is a combobox and has nothing to filter
   against until every row is in it.
-- **Photos are the gallery, and the first one is the record's main image -
-  unless a Main Image was chosen.** `EntityGalleryField`
-  (`components/admin/entity-gallery.tsx`) takes several files at once and the API
-  publishes the first row as that record's `image` (see animals-api's CLAUDE.md →
-  "The first photo is the record's cover"), so a drag to re-order is a **cover
-  change**, not housekeeping - which is why `persist()` PATCHes `sort_order` on
-  every surviving row. Beside it, all six forms carry an optional **Main Image**
-  uploader that overrides that pick; `icon` stays its own field too (both through
-  `PairedImageFields`), a 128 px glyph that must never join the gallery or the
-  cover would sometimes be a map pin.
-- ⚠ **The Main Image uploader hydrates from `main_image` and saves to `image`,
-  and swapping either breaks it quietly.** `FIELD_META` in
-  `components/admin/entity-images.tsx` is the one place that mapping lives. The
-  payload's `image` is the cover the site *renders*, which the API derives -
-  the column when set, else the first gallery photo - so an uploader filled from
-  it would show a photo nobody chose as though somebody had, and its remove
-  button would send `image: null`, clear an already-empty column, and leave the
-  cover exactly where it was: a delete that reads as broken. `main_image` is the
-  column alone. The label is mapped for a duller reason: `Admin.image` is already
-  the "Image" column header on three list pages, so the uploader reads
-  `Admin.mainImage`.
-- **A record with a Main Image stops its gallery claiming to be the cover.**
-  `EntityGalleryField` takes `mainImageSet` (each form passes
-  `images.has('image')`, which counts a photo picked but not yet saved) and both
-  drops the "MAIN" badge from tile 1 and swaps the caption for
-  `imagesIntroWithMain`. Without it the form would point at a photograph the
-  public site renders nowhere.
-- **A place can pick a cover now too.** `catalog.Location` gained an `image`
-  column in animals-api migration `0010_location_image`; it was previously the
-  one record whose only possible cover was its first photo.
+- **Photos are the gallery, and the first one is the record's main image.**
+  `EntityGalleryField` (`components/admin/entity-gallery.tsx`) takes several
+  files at once and the API publishes the first row as that record's `image` (see
+  animals-api's CLAUDE.md → "The first photo is the record's cover"), so a drag to
+  re-order is a **cover change**, not housekeeping - which is why `persist()`
+  PATCHes `sort_order` on every surviving row. `icon` is the one single-image
+  field still beside it (through `PairedImageFields`), a 128 px glyph that must
+  never join the gallery or the cover would sometimes be a map pin.
+- ⚠ **The "Main Image" uploader is gone, and must not come back - there is
+  nothing left for it to write.** All six forms used to carry one, filling the
+  record's own `image` column, which the API honoured *ahead of* the gallery. Two
+  places to pick one cover read as a contradiction from the author's chair:
+  dragging a photograph to the front of the gallery below simply did nothing,
+  with no visible reason why. The uploader was removed,
+  `catalog.0012_main_image_into_gallery` / `journal.0008_main_image_into_media`
+  promoted every column that had been filled into that record's **first gallery
+  row** (so the choice survives as an ordinary photo), and
+  `catalog.0013_drop_main_image` / `journal.0009_drop_main_image` then dropped
+  the columns outright. Re-adding the field is a schema change now, not a form
+  change.
+- **So the CMS has exactly one single-image field left: `icon`.**
+  `useEntityImages` and `PairedImageFields`
+  (`components/admin/entity-images.tsx`) are still generic over a list of them -
+  a second (a poster, say) would be one word - but five forms declare only
+  `['icon']` and the **sighting form declares none at all**, so it renders no
+  header above its gallery. `payload()`'s "omitted means leave it, empty means
+  clear it" contract is what those two still exist for.
+- **Nothing hedges about the cover any more.** `EntityGalleryField` lost its
+  `mainImageSet` prop, `AdminImageUploader` lost `showMainBadge`, and the
+  `imagesIntroWithMain` string is gone: the "MAIN" badge on tile 1 and the
+  caption below the heading now simply state the rule. The badge is derived from
+  `maxImages > 1` instead - it describes *a position in an order*, so a
+  single-image field (an icon, a brand-kit logo) does not wear one, which it
+  wrongly did while the prop defaulted to `true`.
 - **The gallery is written on Save - and only the gallery.** `useEntityGallery`
   holds adds, deletes and re-ordering in form state and writes them from the
   form's `handleSubmit`, **after** the parent row exists (a record being created
@@ -484,9 +536,17 @@ Eight rules that will bite:
 - **The map picker is OpenStreetMap, and it cannot be Google.**
   `MapPicker` (`components/admin/map-picker.tsx`) sits above the Latitude field
   via `AdminForm`'s `slots` and writes _both_ coordinates at once. **Both** the
-  sighting form and the location form mount it: an entry's pin is the exact spot
-  and falls back to its location's coordinates, a place's pin is the place
-  itself and falls back to its _parent_ place (a trail opens over its park). It draws OSM
+  CMS's sighting form and its location form mount it: an entry's pin is the exact
+  spot and falls back to its location's coordinates, a place's pin is the place
+  itself and falls back to its _parent_ place (a trail opens over its park). ⚠ It
+  is **no longer CMS-only** - the public place form
+  (`components/contribute/location-contribute-form.tsx`) mounts it as its *whole*
+  coordinate control, since a contributor has a map and a place they were standing
+  in rather than a pair of decimals to transcribe. It stays in
+  `components/admin/` because that is still where both of its other consumers are;
+  what changed is only that its chrome now translates through the `Admin`
+  namespace on a **public** page, which works because every namespace is on the
+  client provider. It draws OSM
   raster tiles into its own DOM through the shared projection
   (`@repo/ui/core-elements/mercator`) - no `leaflet`, no API key, ~200 lines. It
   was never the keyless Google embed the public page used to carry, and could not

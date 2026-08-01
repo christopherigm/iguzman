@@ -33,6 +33,24 @@ export interface SpeciesSubmission {
   photos: ContributePhotos;
 }
 
+export interface LocationSubmission {
+  name: string;
+  /** The place this one sits inside - a trail in a park. Optional. */
+  parent?: number;
+  /** One of `PLACE_TYPES`. The API defaults to `other` when it is omitted. */
+  place_type?: string;
+  /**
+   * ⚠ **Required, unlike everywhere else this pair appears.** A place with no pin
+   * is unmappable, and a sighting filed at it inherits nothing - so the public
+   * form takes both from a map pin and the API refuses a place without them.
+   */
+  latitude: number;
+  longitude: number;
+  county?: number;
+  /** Optional here, unlike a species proposal - see `LocationContributeForm`. */
+  photos?: ContributePhotos;
+}
+
 export interface SightingSubmission {
   species: number;
   /** The entry's optional title; the API falls back to the species name. */
@@ -91,6 +109,39 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     throw new ContributeError(res.status, data);
   }
   return res.json() as Promise<T>;
+}
+
+/**
+ * A place as it comes back from `contributeLocation` - the record's **normal**
+ * read payload, narrowed to what a caller does something with.
+ *
+ * The extra fields over `ContributeResult` are there because this is the one
+ * contribution whose result is used **immediately**: the sighting flow adds the
+ * place it just created to its own picker and selects it, and that option's label
+ * is built by `placeLabel` from exactly these fields. Structurally a subset of
+ * `ContributeLocation` in `lib/catalog.ts`, so one label helper serves both.
+ */
+export interface ContributedLocation extends ContributeResult {
+  name: string;
+  en_name: string | null;
+  place_type: string | null;
+  county_name: string | null;
+  county_en_name: string | null;
+}
+
+/**
+ * Propose a place. Lands pending; an administrator publishes it.
+ *
+ * ⚠ **A pending place is still fileable against**, deliberately - see
+ * animals-api's `SightingContributeSerializer`, which checks `enabled` on the
+ * species and not on the location. That is the whole reason this endpoint exists:
+ * a contributor standing at an uncatalogued pond adds the pond and files the
+ * encounter in one sitting, and a reviewer publishes the pair.
+ */
+export function contributeLocation(
+  submission: LocationSubmission,
+): Promise<ContributedLocation> {
+  return post<ContributedLocation>("catalog/locations/contribute", submission);
 }
 
 /** Propose a species. Lands pending; an administrator publishes it. */

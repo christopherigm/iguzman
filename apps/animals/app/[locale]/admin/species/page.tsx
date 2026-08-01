@@ -15,8 +15,11 @@ import { species } from '@/lib/admin-api';
  *
  * The columns are the ones an author scans by: **both halves of the name pair**,
  * since this is the surface that edits them and a Spanish-only row is exactly
- * what the list should make visible. The scientific name and the featured flag
- * are on the form, not here - neither is what you look for a species by.
+ * what the list should make visible. The scientific name stays on the form - it
+ * is not what you look for a species by. `is_featured` and `enabled` are here as
+ * **switches**: both are decisions about a whole shelf of records rather than
+ * about one, so making either take a form round-trip per species is what the
+ * inline toggle exists to avoid.
  */
 export default function AdminSpeciesPage() {
   const t = useTranslations('Admin');
@@ -33,6 +36,12 @@ export default function AdminSpeciesPage() {
         { key: 'en_name', label: t('enName') },
         { key: 'category_name', label: t('category') },
         { key: 'sighting_count', label: t('sightings') },
+        {
+          key: 'is_featured',
+          label: t('featured'),
+          toggle: true,
+          toggleLabel: t('toggleFeatured'),
+        },
         { key: 'enabled', label: t('enabled') },
       ]}
     />

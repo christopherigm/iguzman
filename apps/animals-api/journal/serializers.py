@@ -11,7 +11,6 @@ from core.contributions import (
 )
 from core.image_sizes import MEDIUM, image_cfg, photo_cfg
 from core.serializers import (
-    Base64ImagesMixin,
     ImageProcessingSerializer,
     file_url,
     gallery_image_url,
@@ -315,13 +314,6 @@ class SightingMediaUpdateSerializer(serializers.ModelSerializer):
 
 class SightingSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
-    # The cover an author *chose*, as opposed to the one `image` resolves to.
-    # Same argument as `catalog.serializers._MainImageMixin` - which this cannot
-    # reuse, for the same reason `sighting_cover_url` is not `gallery_image_url`:
-    # a sighting's photographs are `media` rows carrying a `kind`, not `images`.
-    # The CMS's Main Image uploader hydrates from this so it is empty exactly
-    # when the column is, rather than showing a photo nobody picked.
-    main_image = serializers.SerializerMethodField()
     media = SightingMediaSerializer(many=True, read_only=True)
 
     # Every flattened relation label travels as a Spanish/English pair, for the
@@ -406,7 +398,7 @@ class SightingSerializer(serializers.ModelSerializer):
             'season', 'season_name', 'season_en_name', 'season_slug',
             'weather', 'weather_name', 'weather_en_name', 'weather_slug',
             'temperature_c', 'individuals',
-            'image', 'main_image', 'media', 'media_count', 'fit', 'background_color',
+            'image', 'media', 'media_count', 'fit', 'background_color',
             'is_featured',
             'author_name', 'author_anonymous', 'is_contribution',
         ]
@@ -414,9 +406,6 @@ class SightingSerializer(serializers.ModelSerializer):
 
     def get_image(self, obj):
         return sighting_cover_url(obj, self.context.get('request'))
-
-    def get_main_image(self, obj):
-        return file_url(obj.image, self.context.get('request'))
 
     def get_species_image(self, obj):
         # Through the same fallback the species' own payload uses, or a species
@@ -479,20 +468,22 @@ class SightingSerializer(serializers.ModelSerializer):
 
 
 def sighting_cover_url(obj, request=None):
-    """The entry's cover: its own ``image`` column, else its first photo.
+    """The entry's cover: the first photo among its media rows.
 
     ``core.serializers.gallery_image_url`` is the same rule for every *catalog*
     record and cannot be reused here: it reads ``obj.images``, and a sighting's
     gallery is ``media`` - one table holding photos, uploaded clips and video
-    links together, so the fallback has to skip everything whose ``kind`` is not
-    an image.
+    links together, so this has to skip everything whose ``kind`` is not an
+    image. An entry with only clips has no cover, which is correct: a video row
+    has no frame to borrow until its poster is generated.
+
+    Like its catalog twin, it has one answer and no column to consult first - see
+    that docstring, and ``journal.0009_drop_main_image``.
 
     Sorted in Python rather than with an ``order_by`` for the reason that helper
     gives: the views prefetch this list, and a queryset call here would re-query
     once per row of a list response.
     """
-    if obj.image:
-        return file_url(obj.image, request)
     photo = next(
         (m for m in sorted(obj.media.all(), key=lambda m: (m.sort_order, m.id))
          if m.kind == 'image' and m.image),
@@ -598,10 +589,10 @@ class SightingMapSerializer(serializers.ModelSerializer):
         return effective_coordinate(obj, 1)
 
 
-class SightingWriteSerializer(Base64ImagesMixin, serializers.ModelSerializer):
-    image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    image_fields = {'image': photo_cfg()}
-
+# No `Base64ImagesMixin`: an entry has no single-image field left to write. Its
+# cover is the first photo among its `media` rows (`sighting_cover_url`), and
+# those are written one at a time through `SightingMediaWriteSerializer`.
+class SightingWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sighting
         fields = [
@@ -610,7 +601,7 @@ class SightingWriteSerializer(Base64ImagesMixin, serializers.ModelSerializer):
             'short_description', 'en_short_description', 'href',
             'date', 'time', 'location', 'latitude', 'longitude',
             'season', 'weather', 'temperature_c', 'individuals',
-            'image', 'fit', 'background_color', 'is_featured', 'enabled',
+            'fit', 'background_color', 'is_featured', 'enabled',
             # The credit line itself is not editable here - it is the filing
             # account's own first name, so a misspelling is fixed on that account
             # rather than overwritten on each entry it filed. Only the

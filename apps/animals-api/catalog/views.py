@@ -37,6 +37,7 @@ from .serializers import (
     CountyWriteSerializer,
     StateSerializer,
     StateWriteSerializer,
+    LocationContributeSerializer,
     LocationImageSerializer,
     LocationImageWriteSerializer,
     LocationSerializer,
@@ -710,6 +711,29 @@ class LocationDetailView(CachedDetailView):
     # without it every row costs three extra queries.
     select_related = ('parent', 'county', 'county__state', 'county__state__country')
     prefetch_related = ('sightings', 'images')
+
+
+class LocationContributeView(ContributeView):
+    """
+    POST /api/catalog/locations/contribute/ - propose a place (any signed-in user).
+
+    Its own URL rather than a relaxed permission on `LocationListCreateView`, for
+    the reason spelled out in `core/contribute_views.py`. The place lands
+    `enabled=False` and joins the catalog when an administrator enables it.
+
+    ⚠ **A pending place is still pickable by the sighting flow**, and that is the
+    point of it: `SightingContributeSerializer` gates on the *species* being
+    enabled and deliberately not on the location, so a contributor who adds the
+    pond they are standing at can file the encounter in the same sitting. Both
+    rows are pending, and a reviewer publishes the pair.
+    """
+
+    serializer_class = LocationContributeSerializer
+    response_serializer_class = LocationSerializer
+    # A pending place is invisible to the public lists, so the only reader that
+    # can see it is the CMS - which reads both these namespaces with
+    # `include_disabled=true`.
+    cache_prefixes = (keys.LOCATIONS, keys.LOCATION)
 
 
 class SpeciesContributeView(ContributeView):

@@ -21,6 +21,7 @@ from .tests import IsolatedMediaTestCase, base64_image
 
 SPECIES_URL = '/api/catalog/species/contribute/'
 SIGHTING_URL = '/api/journal/sightings/contribute/'
+LOCATION_URL = '/api/catalog/locations/contribute/'
 
 
 class ContributeFixtureMixin:
@@ -57,6 +58,16 @@ class ContributeFixtureMixin:
             **overrides,
         }
 
+    def location_body(self, **overrides):
+        # No `photos` key: a place may be proposed without one, which is the
+        # difference from the other two bodies above and is asserted below.
+        return {
+            'name': 'Laguna de Sayula',
+            'latitude': '20.0123',
+            'longitude': '-103.5678',
+            **overrides,
+        }
+
     def post(self, url, body):
         return self.client.post(url, body, content_type='application/json')
 
@@ -77,6 +88,30 @@ class ContributePermissionTests(ContributeFixtureMixin, IsolatedMediaTestCase):
     def test_a_signed_in_visitor_may_contribute_a_sighting(self):
         self.sign_in_visitor()
         self.assertEqual(self.post(SIGHTING_URL, self.sighting_body()).status_code, 201)
+
+    def test_an_anonymous_visitor_may_not_contribute_a_location(self):
+        self.assertEqual(self.post(LOCATION_URL, self.location_body()).status_code, 401)
+
+    def test_a_signed_in_visitor_may_contribute_a_location(self):
+        self.sign_in_visitor()
+        self.assertEqual(self.post(LOCATION_URL, self.location_body()).status_code, 201)
+
+    def test_the_locations_write_endpoint_is_still_admin_only(self):
+        """`contribute/` sits above `<int:pk>/` on the same prefix - so this also
+        proves the literal did not shadow, or get shadowed by, the CMS's routes."""
+        self.sign_in_visitor()
+        created = self.post(
+            '/api/catalog/locations/', {'name': 'Direct', 'slug': 'direct-place'}
+        )
+        self.assertEqual(created.status_code, 403)
+        self.assertEqual(
+            self.client.patch(
+                f'/api/catalog/locations/{self.place.pk}/',
+                {'name': 'Renamed'},
+                content_type='application/json',
+            ).status_code,
+            403,
+        )
 
     def test_the_ordinary_write_endpoints_are_still_admin_only(self):
         """The whole safety argument: contributing did not open the CMS's doors.
@@ -416,6 +451,134 @@ class ContributeValidationTests(ContributeFixtureMixin, IsolatedMediaTestCase):
             SIGHTING_URL, self.sighting_body(href='https://spam.example')
         ).json()
         self.assertIsNone(Sighting.objects.get(pk=sighting['id']).href)
+
+
+class ContributeLocationTests(ContributeFixtureMixin, IsolatedMediaTestCase):
+    """The third thing the public flow can create - and the one a *sighting* may
+    depend on before anybody has reviewed it."""
+
+    def test_a_contributed_place_lands_disabled_and_flagged(self):
+        self.sign_in_visitor()
+        row = Location.objects.get(pk=self.post(LOCATION_URL, self.location_body()).json()['id'])
+        self.assertFalse(row.enabled)
+        self.assertTrue(row.is_contribution)
+        self.assertFalse(row.is_featured)
+        self.assertEqual(row.sort_order, 0)
+        self.assertEqual(row.created_by.username, 'visitor')
+
+    def test_the_slug_is_derived_from_the_name(self):
+        self.sign_in_visitor()
+        first = self.post(LOCATION_URL, self.location_body())
+        second = self.post(LOCATION_URL, self.location_body())
+        self.assertEqual(first.json()['slug'], 'laguna-de-sayula')
+        self.assertEqual(second.json()['slug'], 'laguna-de-sayula-2')
+
+    def test_a_place_may_be_proposed_without_a_photograph(self):
+        """Unlike a species. A pond is reviewable from its pin, and the flow adds
+        places mid-sighting, where the contributor's photographs are of the
+        animal rather than of the place."""
+        self.sign_in_visitor()
+        self.assertEqual(self.post(LOCATION_URL, self.location_body()).status_code, 201)
+
+    def test_photographs_are_written_when_they_are_sent(self):
+        self.sign_in_visitor()
+        response = self.post(LOCATION_URL, self.location_body(photos=[base64_image()]))
+        self.assertEqual(len(response.json()['images']), 1)
+
+    def test_coordinates_are_required(self):
+        """The one field the CMS leaves optional and this does not: a place with
+        no pin is unmappable, and a sighting filed at it inherits nothing."""
+        self.sign_in_visitor()
+        for missing in ('latitude', 'longitude'):
+            with self.subTest(missing=missing):
+                body = self.location_body()
+                body.pop(missing)
+                self.assertEqual(self.post(LOCATION_URL, body).status_code, 400)
+
+    def test_a_contributor_cannot_publish_feature_or_blur_a_place(self):
+        """⚠ `hide_precise_location` is the one that is not merely editorial: it
+        blurs this place's coordinates *and every sighting filed at it*, for every
+        caller. It is absent from `Meta.fields`, so DRF drops it."""
+        self.sign_in_visitor()
+        response = self.post(
+            LOCATION_URL,
+            self.location_body(
+                enabled=True, is_featured=True, sort_order=99, hide_precise_location=True
+            ),
+        )
+        row = Location.objects.get(pk=response.json()['id'])
+        self.assertFalse(row.enabled)
+        self.assertFalse(row.is_featured)
+        self.assertFalse(row.hide_precise_location)
+
+    def test_a_slug_and_an_icon_cannot_be_contributed(self):
+        self.sign_in_visitor()
+        response = self.post(
+            LOCATION_URL, self.location_body(slug='chosen-by-me', icon=base64_image())
+        )
+        row = Location.objects.get(pk=response.json()['id'])
+        self.assertEqual(row.slug, 'laguna-de-sayula')
+        self.assertFalse(row.icon)
+
+    def test_a_pending_place_is_absent_from_the_public_list(self):
+        self.sign_in_visitor()
+        self.post(LOCATION_URL, self.location_body())
+        self.client.logout()
+
+        rows = self.client.get('/api/catalog/locations/').json()
+        self.assertEqual([row['slug'] for row in rows], ['la-primavera'])
+
+    def test_a_sighting_may_be_filed_at_a_place_that_is_still_pending(self):
+        """The reason this endpoint exists at all: a contributor standing at an
+        uncatalogued pond adds the pond and files the encounter in one sitting.
+        Both rows are pending and a reviewer publishes the pair."""
+        self.sign_in_visitor()
+        place = self.post(LOCATION_URL, self.location_body()).json()['id']
+
+        response = self.post(SIGHTING_URL, self.sighting_body(location=place))
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Sighting.objects.get(pk=response.json()['id']).location_id, place)
+
+    def test_a_disabled_parent_or_county_is_refused(self):
+        """A *parent* is different from the location a sighting points at: this
+        place would hang inside a row that may never be published."""
+        from catalog.models import Country, County, State
+
+        self.sign_in_visitor()
+        self.place.enabled = False
+        self.place.save(update_fields=['enabled'])
+        self.assertEqual(
+            self.post(LOCATION_URL, self.location_body(parent=self.place.pk)).status_code, 400
+        )
+
+        country = Country.objects.create(name='México', slug='mexico', code='MX')
+        state = State.objects.create(name='Jalisco', slug='jalisco', country=country)
+        county = County.objects.create(
+            name='Sayula', slug='sayula', state=state, enabled=False
+        )
+        self.assertEqual(
+            self.post(LOCATION_URL, self.location_body(county=county.pk)).status_code, 400
+        )
+
+    def test_a_blank_name_is_refused(self):
+        self.sign_in_visitor()
+        self.assertEqual(self.post(LOCATION_URL, self.location_body(name='  ')).status_code, 400)
+
+    def test_publishing_a_place_is_an_ordinary_admin_patch(self):
+        self.sign_in_visitor()
+        pk = self.post(LOCATION_URL, self.location_body()).json()['id']
+        self.client.logout()
+
+        self.make_admin()
+        self.client.login(username='author', password='fieldnotes-2026')
+        response = self.client.patch(
+            f'/api/catalog/locations/{pk}/', {'enabled': True}, content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+
+        self.client.logout()
+        rows = self.client.get('/api/catalog/locations/').json()
+        self.assertIn('laguna-de-sayula', [row['slug'] for row in rows])
 
 
 class ContributeVideoTests(ContributeFixtureMixin, IsolatedMediaTestCase):

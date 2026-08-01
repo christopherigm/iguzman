@@ -7,7 +7,7 @@ import { apiFetch } from "@/lib/api-fetch";
  * A sibling of `/api/admin/[...path]` rather than a couple more lines in its
  * allowlist, and the separation is the point: that handler forwards the *whole*
  * admin surface, and the accounts that reach it are administrators. This one is
- * used by any signed-in reader, so its allowlist is two exact paths - not two
+ * used by any signed-in reader, so its allowlist is three exact paths - not three
  * prefixes - and it accepts nothing but POST.
  *
  * Django is what actually enforces the permission (`core.permissions.IsContributor`,
@@ -18,6 +18,10 @@ import { apiFetch } from "@/lib/api-fetch";
  */
 const ALLOWED_PATHS = [
   "catalog/species/contribute/",
+  // ⚠ Note what this is **not**: `catalog/locations/`. The literal segment is
+  // the whole point - the CMS's location list lives one path up and is
+  // administrator-only, and a prefix here would forward writes to it.
+  "catalog/locations/contribute/",
   "journal/sightings/contribute/",
 ];
 

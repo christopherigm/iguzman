@@ -134,34 +134,31 @@ def file_url(file_field, request=None):
 
 
 def gallery_image_url(obj, request=None):
-    """A record's main image: its own ``image`` column, else its first photo.
+    """A record's main image: the first photo in its gallery.
 
     Every catalog record and every journal entry keeps its photographs in a
     gallery table ordered by ``sort_order`` (``catalog.GalleryImage``,
     ``journal.SightingMedia``), and **the first row is the record's main image**.
-    The CMS uploads into the gallery and never writes the ``image`` column, so in
-    practice this resolves to ``images[0]`` - which is what makes "the first one
-    is the main one" true from an author's point of view.
+    That is the whole rule, and there is no second place to look: records used to
+    carry an ``image`` column that won ahead of this, which meant a photo dragged
+    to the front of the gallery could silently do nothing. The column was
+    promoted into the gallery (``catalog.0012_main_image_into_gallery``) and then
+    dropped (``0013_drop_main_image``).
 
-    The column is still honoured *first*, because the Django admin and
-    ``seed_reference`` can set it, and a cover somebody chose explicitly must win
-    over an upload order. ``catalog.Location`` has no ``image`` column at all -
-    the ``getattr`` below is what covers that - so for a place the first gallery
-    row is the only cover there is.
+    So ``sort_order`` *is* the cover, which is why the CMS PATCHes it on every
+    row after a drag - and why a ``*Image`` write invalidates the parent's own
+    cache namespaces, not just its gallery's.
 
     Sorted in Python rather than with an ``order_by``: the views prefetch these
     lists, and a queryset call here would re-query once per row in a list
     response.
     """
-    image = getattr(obj, 'image', None)
-    if not image:
-        first = next(
-            (row for row in sorted(obj.images.all(), key=lambda r: (r.sort_order, r.id))
-             if row.image),
-            None,
-        )
-        image = first.image if first else None
-    return file_url(image, request)
+    first = next(
+        (row for row in sorted(obj.images.all(), key=lambda r: (r.sort_order, r.id))
+         if row.image),
+        None,
+    )
+    return file_url(first.image, request) if first else None
 
 
 class Base64ImagesMixin:

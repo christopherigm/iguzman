@@ -25,6 +25,21 @@ export interface Column {
    * Use for image/icon columns, whose cell is a fixed-size square.
    */
   compact?: boolean;
+  /**
+   * Render this boolean field as an inline Switch that writes it on the spot,
+   * instead of the read-only tick/cross badge. Needs `onToggleField`.
+   *
+   * `enabled` is always a toggle - every list here has it and it is the CMS's
+   * publish control. Any other flag (`is_featured`) opts in, because a boolean
+   * column is not necessarily one an author may flip from the table: it can be
+   * derived, or belong to a form that validates it against its siblings.
+   */
+  toggle?: boolean;
+  /**
+   * Accessible label for the `toggle` Switch, when the column heading alone
+   * ("Featured") does not say what flipping it does. Defaults to `label`.
+   */
+  toggleLabel?: string;
 }
 
 interface AdminEntityListProps {
@@ -34,11 +49,12 @@ interface AdminEntityListProps {
   basePath: string;
   onDelete?: (id: number) => void;
   /**
-   * Enables the inline Enabled toggle: the `enabled` column renders a Switch that
-   * publishes/unpublishes the record on the spot. Must **reject** when the write
-   * fails, so the Switch can roll its optimistic state back.
+   * Enables the inline flag toggles: the `enabled` column, and every column
+   * marked `toggle`, renders a Switch that PATCHes that one field on the spot.
+   * Must **reject** when the write fails, so the Switch can roll its optimistic
+   * state back.
    */
-  onToggleEnabled?: (id: number, enabled: boolean) => Promise<void>;
+  onToggleField?: (id: number, field: string, value: boolean) => Promise<void>;
   /**
    * Enables sort mode: a Switch above the table strips every row down to its
    * image, name and a drag handle so the list can be re-arranged. Called with
@@ -101,7 +117,7 @@ export function AdminEntityList({
   columns,
   basePath,
   onDelete,
-  onToggleEnabled,
+  onToggleField,
   onReorder,
   loading,
   error,
@@ -309,12 +325,18 @@ export function AdminEntityList({
                     >
                       {col.render ? (
                         col.render(item[col.key], item)
-                      ) : onToggleEnabled && col.key === "enabled" ? (
-                        <EnabledSwitch
+                      ) : onToggleField && isToggleColumn(col) ? (
+                        <FlagSwitch
                           id={item.id as number}
-                          enabled={Boolean(item.enabled)}
-                          onToggle={onToggleEnabled}
-                          label={t("toggleEnabled")}
+                          field={col.key}
+                          value={Boolean(item[col.key])}
+                          onToggle={onToggleField}
+                          label={
+                            col.toggleLabel ??
+                            (col.key === "enabled"
+                              ? t("toggleEnabled")
+                              : col.label)
+                          }
                         />
                       ) : (
                         renderCell(item[col.key])
@@ -390,20 +412,27 @@ export function AdminEntityList({
   );
 }
 
+/** `enabled` is a toggle on every list; any other flag column opts in. */
+function isToggleColumn(col: Column): boolean {
+  return col.toggle ?? col.key === "enabled";
+}
+
 /**
- * Inline publish/unpublish toggle for a row's `enabled` field. Flips immediately
- * and rolls back if `onToggle` rejects, so the switch never claims a write that
- * the API refused.
+ * Inline toggle for one boolean field of a row - `enabled`, `is_featured`.
+ * Flips immediately and rolls back if `onToggle` rejects, so the switch never
+ * claims a write that the API refused.
  */
-function EnabledSwitch({
+function FlagSwitch({
   id,
-  enabled,
+  field,
+  value,
   onToggle,
   label,
 }: {
   id: number;
-  enabled: boolean;
-  onToggle: (id: number, enabled: boolean) => Promise<void>;
+  field: string;
+  value: boolean;
+  onToggle: (id: number, field: string, value: boolean) => Promise<void>;
   label: string;
 }) {
   // `pending` is the optimistic value shown while the write is in flight; the row
@@ -414,7 +443,7 @@ function EnabledSwitch({
   const handleChange = async (next: boolean) => {
     setPending(next);
     try {
-      await onToggle(id, next);
+      await onToggle(id, field, next);
     } catch {
       // The list already surfaced the error; the switch just falls back.
     } finally {
@@ -424,7 +453,7 @@ function EnabledSwitch({
 
   return (
     <Switch
-      checked={pending ?? enabled}
+      checked={pending ?? value}
       onChange={(next) => void handleChange(next)}
       disabled={pending !== null}
       aria-label={label}

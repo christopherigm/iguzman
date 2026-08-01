@@ -198,7 +198,8 @@ Six things to know before touching them:
   exists so a person rewrites this copy; a seed command that overwrote their
   edits on every deploy would be worse than no seed command. `SEEDED_FIELDS`
   names exactly what `--update` touches - never `enabled`, `is_featured`,
-  `image`, `icon`, `href` or `video_link`, which are an author's to set.
+  `icon`, `href` or `video_link`, which are an author's to set. (Nor a record's
+  photographs, which are gallery rows and were never reachable from here.)
 - **Every coordinate in `locations.json` is sourced, not estimated.** Each is
   either the coordinate Wikipedia publishes for that place through the MediaWiki
   `coordinates` API, or an OpenStreetMap/Nominatim match on the named feature, and
@@ -412,39 +413,49 @@ Every catalog record and every journal entry keeps its photographs in a **galler
 table** - `CategoryImage`, `SpeciesImage`, `SeasonImage`, `WeatherConditionImage`,
 `LocationImage` (all five from the abstract `catalog.GalleryImage`) and
 `journal.SightingMedia` - ordered by `sort_order`, and **the first row is the
-record's main image unless one was chosen**.
+record's main image**. No exception any more, which is the point of this section.
 
-`core.serializers.gallery_image_url` is the single place that resolves it: a
-record's own `image` column when it has one, and otherwise the first gallery row.
-Both halves matter.
+`core.serializers.gallery_image_url` is the single place that resolves it, and it
+has one answer: `images[0]`. Its journal twin is
+`journal.serializers.sighting_cover_url` - same rule, different table, because a
+sighting's photos are `media` rows carrying a `kind` and the clips have to be
+skipped.
 
-- **Most records leave the `image` column empty, and that is still the normal
-  path.** `apps/animals`' forms upload into the gallery and PATCH `sort_order` on
-  every row after a drag, so unless somebody fills the Main Image field the cover
-  _is_ `images[0]` - which is what "upload several at once, the first is the main
-  one" means. A record's `icon` stays a separate single field: it is a 128 px
-  glyph for a map pin or a filter chip, not a photograph, and must never join the
-  gallery.
-- **The column wins when it is set**, because a cover chosen deliberately must
-  not be overruled by whatever happened to be uploaded first. The Django admin
-  and `seed_reference` have always been able to set it; **the CMS can now too**,
-  through a Main Image uploader on all six forms.
-- ⚠ **`main_image` is on the read payload beside `image`, and the two are not
-  the same field.** `image` is the cover to _render_ and is derived (column, else
-  first photo); `main_image` is the column alone. A form hydrated from `image`
-  would show a photograph nobody chose as though somebody had, and its remove
-  button would then clear an empty column while the cover stayed put - so the
-  CMS reads `main_image` and writes `image`. Every read serializer here publishes
-  it (`catalog.serializers._MainImageMixin`, and `SightingSerializer`'s own copy -
-  a sighting's photos are `media` rows with a `kind`, which `gallery_image_url`
-  cannot read). **A sixth record's read serializer needs it too.**
-- **`catalog.Location` gained an `image` column** in migration `0010_location_image`,
-  so it now resolves a cover exactly like the other four. It is declared on the
-  model by hand rather than by reparenting onto `RegularPlusPicture`: that base also
-  carries `href`, `fit` and `background_color`, which a place has no use for, and
-  would silently re-declare the six text columns `Location` deliberately owns.
-  Every place catalogued before this keeps the cover it had - the column is null,
-  so the fallback runs unchanged.
+- ⚠ **There is no `image` column on any of the six records, and adding one back
+  is a schema change made on purpose, not a convenience.** They used to have one,
+  which won *ahead of* the gallery, so a cover could be picked in two places -
+  and a photograph dragged to the front of the gallery could silently do nothing.
+  It went in three steps: `apps/animals` dropped its Main Image uploader, the
+  Django admin dropped the field from its fieldsets,
+  `catalog.0012_main_image_into_gallery` / `journal.0008_main_image_into_media`
+  promoted every value into that record's **first gallery row**, and
+  `catalog.0013_drop_main_image` / `journal.0009_drop_main_image` removed the
+  columns. There is no `main_image` on any payload any more either.
+- **The four picture models shed it by reparenting**, `RegularPlusPicture` →
+  **`BasePicture`** (the same base minus `image`); `Sighting` did the same, and
+  `Location`, which declared its own copy, simply dropped the field. ⚠ **The
+  `*Image` tables and `SightingMedia` keep `RegularPlusPicture`** - a gallery
+  row's `image` *is* the photograph. That is the one thing to get right if this
+  ever has to be re-read: the base is shared, and the records are the side that
+  stopped using its column.
+- ⚠ **The promotion migrations hand the new gallery row the parent's stored
+  path; they do not copy the file.** Safe only because this project has no
+  `django-cleanup`, so emptying the column unlinks nothing. Don't add one without
+  re-reading them.
+- **So the cover _is_ `images[0]`, and `sort_order` is what picks it.** The CMS
+  uploads into the gallery and PATCHes `sort_order` on every row after a drag,
+  which is what "upload several at once, the first is the main one" means. A
+  record's `icon` stays a separate single field - it is a 128 px glyph for a map
+  pin or a filter chip, not a photograph - and is now the *only* single-image
+  field a catalog record writes (`_IMAGE_FIELDS` in `catalog/serializers.py`).
+  `SightingWriteSerializer` has none at all and no longer uses
+  `Base64ImagesMixin`.
+- ⚠ **A backup archive taken before 0012 no longer carries those covers over.**
+  `core.backup` builds a row from the model's *current* concrete fields, so an
+  archived `image` key now finds no field and is skipped: such an archive
+  restores each record's gallery, and a record whose only photograph lived in
+  that column restores with none. That was the accepted trade for retiring the
+  column rather than keeping a resolution branch nothing writes.
 
 Three consequences that are easy to miss:
 
@@ -478,9 +489,11 @@ exists (the filename embeds the pk), and treats an explicitly empty value as
 
 ⚠ **Every photograph in this project is stored at one tier, and it is not the
 one its name suggests.** `REGULAR_PLUS` (2560 px, **quality 90**) is what the
-five catalog records, their five galleries, `Location.image`, `Sighting` and
-`SightingMedia.image` all carry - `RegularPlusPicture` on the model side,
-`core.image_sizes.photo_cfg()` on the serializer side. `REGULAR` (1200) is left
+five galleries and `SightingMedia.image` carry - `RegularPlusPicture` on the
+model side, `core.image_sizes.photo_cfg()` on the serializer side. Those tables
+are now the *only* place a photograph lives: the records themselves are
+`BasePicture` and hold no image column at all (see "The first photo is the
+record's cover"). `REGULAR` (1200) is left
 for `System.img_about` and nothing else; `poster` stays at `MEDIUM` (it is the
 frame behind a play button), and every `icon` stays at `ICON`.
 
@@ -855,13 +868,15 @@ POST /api/ai/research/   draft a whole catalog record from live web sources
 Adding a translated field means adding it to `TRANSLATED_FIELDS`, which is what
 `/api/ai/translate/`'s allowlist is derived from - no edit needed in the AI layer.
 
-## Public contributions - two endpoints, and the line they must not cross
+## Public contributions - three endpoints, and the line they must not cross
 
-A signed-in reader can propose a **species** and file a **sighting** without the
-CMS (`apps/animals`' `/contribute/*` flow). Two POST-only endpoints serve it:
+A signed-in reader can propose a **species**, propose a **place** and file a
+**sighting** without the CMS (`apps/animals`' `/contribute/*` flow). Three
+POST-only endpoints serve it:
 
 ```
 POST /api/catalog/species/contribute/      IsContributor  -> a pending Species
+POST /api/catalog/locations/contribute/    IsContributor  -> a pending Location
 POST /api/journal/sightings/contribute/    IsContributor  -> a pending Sighting
 ```
 
@@ -869,15 +884,16 @@ POST /api/journal/sightings/contribute/    IsContributor  -> a pending Sighting
 whole safety argument.** `CachedViewMixin.get_permissions` is what makes every
 write on every resource admin-only; relaxing it would open the entire API to
 every account at once. Instead: `core/permissions.py` → `IsContributor` (any
-authenticated user) guards **only** these two views, and there is no path by which
-widening them widens anything else. There is a test asserting exactly that
-(`core/contribution_tests.py` → `test_the_ordinary_write_endpoints_are_still_admin_only`).
+authenticated user) guards **only** these three views, and there is no path by
+which widening them widens anything else. There is a test asserting exactly that
+(`core/contribution_tests.py` → `test_the_ordinary_write_endpoints_are_still_admin_only`
+and its locations twin).
 
 The shared machinery is in `core/`: `contributions.py` (the `photos` field, the
 ceiling, `ContributionSerializer`), `contribute_views.py` (`ContributeView`) and
 `slugs.py` (`unique_slug`).
 
-Seven rules:
+Nine rules:
 
 - **A contribution is created `enabled=False`** and marked `is_contribution=True`,
   so it is absent from every public read - the feed, the map, the stats, the
@@ -914,6 +930,24 @@ Seven rules:
   on something that may never be approved - and if the species were rejected,
   `PROTECT` would leave the sighting holding a row nobody can delete); a sighting
   needs a place **or** a coordinate pair; and its date may not be in the future.
+- ⚠ **A contributed _place_ is the one exception to the pending-cross-reference
+  rule, and it is deliberate.** `SightingContributeSerializer` gates on the
+  species being `enabled` and **not** on the location, so a sighting may be filed
+  at a place that is itself still pending. That is the entire reason
+  `locations/contribute/` exists: a contributor standing at a pond nobody has
+  catalogued could otherwise not file the encounter at all. Both rows land
+  pending and a reviewer publishes the pair. Don't "tidy" a `validate_location`
+  enabled-check into the sighting serializer - it would break the flow's main
+  path. (A location's own **`parent`** _is_ checked, because that one would hang
+  the new place inside a row that may never be published.)
+- **A place takes coordinates it does not have to, and photos it does.**
+  `LocationContributeSerializer` makes `latitude`/`longitude` **required** where
+  the model and the CMS leave them optional - a place with no pin is unmappable,
+  and a sighting filed at it inherits nothing - while `photos` is
+  `required=False`, unlike the other two. It also withholds
+  **`hide_precise_location`**, which is not merely editorial: it blurs this
+  place's coordinates *and every sighting filed at it*, for every caller, so it
+  is a disclosure decision for whoever reviews the contribution.
 
 ### The credit line: derived from `created_by`, never stored
 
@@ -1011,11 +1045,12 @@ GET               .../slug/<slug>/
 # with separate serializers, NOT a relaxed permission on the lists above; the row
 # lands enabled=False and is published by an administrator. See the section above.
 POST   /api/catalog/species/contribute/             IsContributor
+POST   /api/catalog/locations/contribute/           IsContributor
 POST   /api/journal/sightings/contribute/           IsContributor
 
 # Photo galleries. GET is public like every other read. The first row is the
-# record's cover unless its own `image` column is set, so `sort_order` on the
-# PATCH is what picks it for the records that left that column empty - most of them.
+# record's cover - there is no cover column - so `sort_order` on the PATCH is
+# what picks it.
 GET/POST          /api/catalog/categories/<pk>/images/[<img_pk>/]
 GET/POST          /api/catalog/species/<pk>/images/[<img_pk>/]
 GET/POST          /api/catalog/seasons/<pk>/images/[<img_pk>/]

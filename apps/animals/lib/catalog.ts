@@ -380,6 +380,37 @@ export async function getContributeLocations(): Promise<ContributeLocation[]> {
   });
 }
 
+/**
+ * A county, as the contribute flow's place form needs it.
+ *
+ * The state travels with it because a bare county name cannot say which one it
+ * is: `seed_geography` seeds two countries' counties, so there is a Durango in
+ * Mexico and a Durango in Colorado. The CMS's own county picker names the state
+ * on every option for exactly this reason.
+ */
+export interface ContributeCounty {
+  id: number;
+  name: string;
+  en_name: string | null;
+  slug: string;
+  state_name: string | null;
+  state_en_name: string | null;
+}
+
+/**
+ * Every enabled county, for the contribute flow's place form.
+ *
+ * A list read, so it keeps the list contract - and the degradation is real
+ * product here: the county is optional on a contributed place (a reviewer can
+ * fill it in from the pin), so a backend that cannot answer costs the field, not
+ * the form.
+ */
+export async function getContributeCounties(): Promise<ContributeCounty[]> {
+  return fetchList<ContributeCounty>("/api/catalog/counties/", {
+    cache: "no-store",
+  });
+}
+
 /** Every enabled weather condition, for the contribute flow's optional stage. */
 export async function getWeatherConditions(): Promise<ContributeLookup[]> {
   return fetchList<ContributeLookup>("/api/catalog/weather-conditions/", {

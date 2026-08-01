@@ -37,15 +37,6 @@ interface AdminImageUploaderProps {
    * side-by-side single-image fields; leave off for full-width galleries.
    */
   compact?: boolean;
-  /**
-   * Whether the first tile wears the "MAIN" badge. On by default, because in a
-   * record's gallery position 1 *is* the cover.
-   *
-   * Pass `false` when something else is the cover - a record whose own Main
-   * Image field is filled, where the badge would otherwise point at a photo the
-   * site is not rendering anywhere.
-   */
-  showMainBadge?: boolean;
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -68,7 +59,6 @@ export function AdminImageUploader({
   accept = "image/*",
   label,
   compact = false,
-  showMainBadge = true,
 }: AdminImageUploaderProps) {
   const t = useTranslations("AdminImageUploader");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -210,6 +200,13 @@ export function AdminImageUploader({
   };
 
   const canAdd = entries.length < maxImages;
+
+  // The "MAIN" badge only means something where there is an order to be first
+  // in: in a record's gallery, position 1 *is* the cover
+  // (`core.serializers.gallery_image_url`). A single-image field - an icon, a
+  // brand-kit logo - has no ordering to describe, so the badge there was only
+  // ever noise saying "this one image is the one image".
+  const showMainBadge = maxImages > 1;
 
   const dropzone = (
     <div

@@ -27,7 +27,12 @@ export default function AdminCategoriesPage() {
         },
         { key: 'slug', label: t('slug') },
         { key: 'species_count', label: t('species') },
-        { key: 'is_featured', label: t('featured') },
+        {
+          key: 'is_featured',
+          label: t('featured'),
+          toggle: true,
+          toggleLabel: t('toggleFeatured'),
+        },
         { key: 'enabled', label: t('enabled') },
       ]}
     />

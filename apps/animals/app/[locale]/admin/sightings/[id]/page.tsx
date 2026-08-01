@@ -8,10 +8,6 @@ import {
   EntityGalleryField,
   useEntityGallery,
 } from "@/components/admin/entity-gallery";
-import {
-  PairedImageFields,
-  useEntityImages,
-} from "@/components/admin/entity-images";
 import { MapPicker } from "@/components/admin/map-picker";
 import { MediaEditor } from "../media-editor";
 import {
@@ -76,10 +72,10 @@ export default function AdminSightingFormPage({ params }: Props) {
     enabled: true,
   });
 
-  // The entry's chosen cover. Only `image` - a sighting has no `icon`; the map
-  // marker for one wears its *species'* glyph. Left empty, which is the normal
-  // case, the API falls back to the first photo in the gallery below.
-  const images = useEntityImages(["image"]);
+  // No `useEntityImages` here: a sighting has no single-image field at all. It
+  // has no `icon` - the map marker for one wears its *species'* glyph - and its
+  // cover is the first photo among the media rows below (animals-api
+  // `journal.0009_drop_main_image`).
 
   // The photos themselves. `SightingMedia` is one list carrying photos, uploaded
   // clips and video links, so the photo half is filtered out of it here and the
@@ -160,13 +156,9 @@ export default function AdminSightingFormPage({ params }: Props) {
           is_featured: data.is_featured ?? false,
           enabled: data.enabled ?? true,
         });
-        images.hydrate(data);
       })
       .catch(() => setError(t("errorLoad")))
       .finally(() => setLoading(false));
-    // `images` is a stable object of refs and setters; re-running on it would
-    // re-fetch on every keystroke.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, isNew, t]);
 
   const handleSubmit = async () => {
@@ -174,7 +166,7 @@ export default function AdminSightingFormPage({ params }: Props) {
     setError(null);
     setSuccess(null);
     try {
-      const payload: Record<string, unknown> = { ...values, ...images.payload() };
+      const payload: Record<string, unknown> = { ...values };
       // Updates are PATCH, so clearing an optional relation or number needs an
       // explicit null - an omitted key means "leave unchanged", and "" is not a
       // value any of these columns accepts.
@@ -308,21 +300,14 @@ export default function AdminSightingFormPage({ params }: Props) {
             ? `/sightings/${String(values.slug)}`
             : undefined
         }
-        // The cover, then the photos, then the clips directly under them: all
-        // three are the record's media, so the uploaders belong together rather
-        // than with the clips exiled to the bottom of a form this long. The
-        // cover rides in `EntityGalleryField`'s `headerSlot`, which is simply
-        // "above the gallery" - a sighting has no icon to put there. The clips
-        // only appear once the entry exists - a video file is far past the API's
-        // JSON-body limit and goes to its own endpoint, so it cannot be held in
-        // form state the way a photo is.
+        // The photos, then the clips directly under them: both are the record's
+        // media, so they belong together rather than with the clips exiled to the
+        // bottom of a form this long. The clips only appear once the entry exists
+        // - a video file is far past the API's JSON-body limit and goes to its own
+        // endpoint, so it cannot be held in form state the way a photo is.
         imagesSlot={
           <>
-            <EntityGalleryField
-              gallery={gallery}
-              headerSlot={<PairedImageFields images={images} />}
-              mainImageSet={images.has("image")}
-            />
+            <EntityGalleryField gallery={gallery} />
             {!isNew && <MediaEditor sightingId={Number(id)} />}
           </>
         }

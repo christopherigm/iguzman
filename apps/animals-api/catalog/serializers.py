@@ -31,43 +31,16 @@ from .models import (
     WeatherConditionImage,
 )
 
-# Every catalog record takes the same two images, at the same two tiers: the
-# photograph at the shared photo tier (`photo_cfg`, which carries its own
-# quality), the glyph at ICON.
-_IMAGE_FIELDS = {'image': photo_cfg(), 'icon': image_cfg(ICON)}
+# The only single-image field a catalog record still writes. Its photographs are
+# gallery rows (`GalleryImageWriteSerializer`, at `photo_cfg`); this is the 24 px
+# glyph beside its name, and the record's cover is gallery row 1 - see
+# `core.serializers.gallery_image_url`.
+_IMAGE_FIELDS = {'icon': image_cfg(ICON)}
 
 # The base64 field declaration shared by every write serializer below. A plain
 # CharField, not the model's ImageField, because the payload is a data URL.
 def _base64_field():
     return serializers.CharField(required=False, allow_null=True, allow_blank=True)
-
-
-class _MainImageMixin:
-    """``get_main_image`` - the cover a person *chose*, as opposed to the one shown.
-
-    ``image`` on every read serializer here is **derived**: the record's own
-    column when it has one, else its first gallery row (see
-    ``core.serializers.gallery_image_url``). That is the right field for every
-    public surface, which only wants to know what to render.
-
-    It is the wrong field for a **form**. The CMS's Main Image uploader hydrated
-    from ``image`` would show a photograph nobody picked as though somebody had,
-    and its remove button would then send ``image: null`` - clearing an
-    already-empty column while the gallery cover stayed exactly where it was, so
-    the delete would read as broken. ``main_image`` is the column and nothing
-    else, so the uploader is empty precisely when the column is.
-
-    Null is the normal state: an author who never opens that uploader is relying
-    on the gallery fallback, which is still how most records get their cover.
-
-    Only the method is shared - DRF's metaclass collects declared fields from
-    bases that are themselves serializers, so each serializer below spells out
-    its own ``main_image = SerializerMethodField()``. The same reason
-    ``Base64ImagesMixin``'s consumers each declare their own image fields.
-    """
-
-    def get_main_image(self, obj):
-        return file_url(obj.image, self.context.get('request'))
 
 
 # ---------------------------------------------------------------------------
@@ -221,9 +194,8 @@ class _SlugUniqueMixin:
 # Category
 # ---------------------------------------------------------------------------
 
-class CategorySerializer(_MainImageMixin, serializers.ModelSerializer):
+class CategorySerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
-    main_image = serializers.SerializerMethodField()
     icon = serializers.SerializerMethodField()
     images = CategoryImageSerializer(many=True, read_only=True)
     kind_display = serializers.CharField(source='get_kind_display', read_only=True)
@@ -236,7 +208,7 @@ class CategorySerializer(_MainImageMixin, serializers.ModelSerializer):
             'kind', 'kind_display', 'name', 'en_name', 'slug', 'scientific_name',
             'description', 'en_description',
             'short_description', 'en_short_description', 'href',
-            'image', 'main_image', 'icon', 'images', 'fit', 'background_color',
+            'image', 'icon', 'images', 'fit', 'background_color',
             'is_featured', 'sort_order', 'species_count',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
@@ -252,7 +224,6 @@ class CategorySerializer(_MainImageMixin, serializers.ModelSerializer):
 
 
 class CategoryWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.ModelSerializer):
-    image = _base64_field()
     icon = _base64_field()
     image_fields = _IMAGE_FIELDS
 
@@ -262,7 +233,7 @@ class CategoryWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.M
             'kind', 'name', 'en_name', 'slug', 'scientific_name',
             'description', 'en_description',
             'short_description', 'en_short_description', 'href',
-            'image', 'icon', 'fit', 'background_color',
+            'icon', 'fit', 'background_color',
             'is_featured', 'sort_order', 'enabled',
         ]
 
@@ -271,9 +242,8 @@ class CategoryWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.M
 # Species
 # ---------------------------------------------------------------------------
 
-class SpeciesSerializer(_MainImageMixin, serializers.ModelSerializer):
+class SpeciesSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
-    main_image = serializers.SerializerMethodField()
     icon = serializers.SerializerMethodField()
     images = SpeciesImageSerializer(many=True, read_only=True)
     # `kind` is read through the category (Species has no column of its own -
@@ -296,7 +266,7 @@ class SpeciesSerializer(_MainImageMixin, serializers.ModelSerializer):
             'name', 'en_name', 'slug', 'scientific_name', 'family',
             'description', 'en_description',
             'short_description', 'en_short_description', 'href', 'video_link',
-            'image', 'main_image', 'icon', 'images', 'fit', 'background_color',
+            'image', 'icon', 'images', 'fit', 'background_color',
             'is_featured', 'sort_order',
             'sighting_count', 'last_seen',
         ]
@@ -320,7 +290,6 @@ class SpeciesSerializer(_MainImageMixin, serializers.ModelSerializer):
 
 
 class SpeciesWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.ModelSerializer):
-    image = _base64_field()
     icon = _base64_field()
     image_fields = _IMAGE_FIELDS
 
@@ -330,7 +299,7 @@ class SpeciesWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.Mo
             'category', 'name', 'en_name', 'slug', 'scientific_name', 'family',
             'description', 'en_description',
             'short_description', 'en_short_description', 'href', 'video_link',
-            'image', 'icon', 'fit', 'background_color',
+            'icon', 'fit', 'background_color',
             'is_featured', 'sort_order', 'enabled',
         ]
 
@@ -415,9 +384,8 @@ class SpeciesContributeSerializer(ContributionSerializer):
 # Season
 # ---------------------------------------------------------------------------
 
-class SeasonSerializer(_MainImageMixin, serializers.ModelSerializer):
+class SeasonSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
-    main_image = serializers.SerializerMethodField()
     icon = serializers.SerializerMethodField()
     images = SeasonImageSerializer(many=True, read_only=True)
     sighting_count = serializers.SerializerMethodField()
@@ -429,7 +397,7 @@ class SeasonSerializer(_MainImageMixin, serializers.ModelSerializer):
             'name', 'en_name', 'slug', 'months',
             'description', 'en_description',
             'short_description', 'en_short_description', 'href',
-            'image', 'main_image', 'icon', 'images', 'fit', 'background_color',
+            'image', 'icon', 'images', 'fit', 'background_color',
             'sort_order', 'sighting_count',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
@@ -445,7 +413,6 @@ class SeasonSerializer(_MainImageMixin, serializers.ModelSerializer):
 
 
 class SeasonWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.ModelSerializer):
-    image = _base64_field()
     icon = _base64_field()
     image_fields = _IMAGE_FIELDS
 
@@ -455,7 +422,7 @@ class SeasonWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.Mod
             'name', 'en_name', 'slug', 'months',
             'description', 'en_description',
             'short_description', 'en_short_description', 'href',
-            'image', 'icon', 'fit', 'background_color',
+            'icon', 'fit', 'background_color',
             'sort_order', 'enabled',
         ]
 
@@ -475,9 +442,8 @@ class SeasonWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.Mod
 # Weather conditions
 # ---------------------------------------------------------------------------
 
-class WeatherConditionSerializer(_MainImageMixin, serializers.ModelSerializer):
+class WeatherConditionSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
-    main_image = serializers.SerializerMethodField()
     icon = serializers.SerializerMethodField()
     images = WeatherConditionImageSerializer(many=True, read_only=True)
     sighting_count = serializers.SerializerMethodField()
@@ -489,7 +455,7 @@ class WeatherConditionSerializer(_MainImageMixin, serializers.ModelSerializer):
             'name', 'en_name', 'slug',
             'description', 'en_description',
             'short_description', 'en_short_description', 'href',
-            'image', 'main_image', 'icon', 'images', 'fit', 'background_color',
+            'image', 'icon', 'images', 'fit', 'background_color',
             'sort_order', 'sighting_count',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
@@ -505,7 +471,6 @@ class WeatherConditionSerializer(_MainImageMixin, serializers.ModelSerializer):
 
 
 class WeatherConditionWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.ModelSerializer):
-    image = _base64_field()
     icon = _base64_field()
     image_fields = _IMAGE_FIELDS
 
@@ -515,7 +480,7 @@ class WeatherConditionWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, seria
             'name', 'en_name', 'slug',
             'description', 'en_description',
             'short_description', 'en_short_description', 'href',
-            'image', 'icon', 'fit', 'background_color',
+            'icon', 'fit', 'background_color',
             'sort_order', 'enabled',
         ]
 
@@ -653,14 +618,13 @@ class CountyWriteSerializer(_SlugUniqueMixin, serializers.ModelSerializer):
 # Locations
 # ---------------------------------------------------------------------------
 
-class LocationSerializer(_MainImageMixin, serializers.ModelSerializer):
+class LocationSerializer(serializers.ModelSerializer):
     # A place resolves its cover exactly like the other four records now: its own
     # `image` column when an author chose one, else its first gallery row. It was
     # the one record with nothing to fall back *from* until it gained the column
     # (migration 0010). Published under the same name as everywhere else so a
     # card renders a place exactly like a species.
     image = serializers.SerializerMethodField()
-    main_image = serializers.SerializerMethodField()
     icon = serializers.SerializerMethodField()
     images = LocationImageSerializer(many=True, read_only=True)
     place_type_display = serializers.CharField(source='get_place_type_display', read_only=True)
@@ -699,7 +663,7 @@ class LocationSerializer(_MainImageMixin, serializers.ModelSerializer):
             'short_description', 'en_short_description',
             'parent', 'parent_name', 'parent_en_name', 'parent_slug',
             'place_type', 'place_type_display',
-            'image', 'main_image', 'icon', 'images',
+            'image', 'icon', 'images',
             'latitude', 'longitude',
             'county', 'county_name', 'county_en_name', 'county_slug',
             'state', 'state_name', 'state_en_name', 'state_slug',
@@ -751,7 +715,6 @@ class LocationWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.M
     # LocationImage rows posted to this location's own `/images/` URL - `image`
     # is only the one an author singled out, and leaving it empty keeps the
     # first of those photographs as the cover.
-    image = _base64_field()
     icon = _base64_field()
     image_fields = _IMAGE_FIELDS
 
@@ -761,7 +724,7 @@ class LocationWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.M
             'name', 'en_name', 'slug',
             'description', 'en_description',
             'short_description', 'en_short_description',
-            'parent', 'place_type', 'image', 'icon',
+            'parent', 'place_type', 'icon',
             # `county` is the only geography a place stores; its state comes
             # back through it on the read serializer and is not writable here.
             'latitude', 'longitude', 'county',
@@ -772,3 +735,99 @@ class LocationWriteSerializer(_SlugUniqueMixin, Base64ImagesMixin, serializers.M
         if self.instance and value is not None and value.pk == self.instance.pk:
             raise serializers.ValidationError('A location cannot be its own parent.')
         return value
+
+
+class LocationContributeSerializer(ContributionSerializer):
+    """What a signed-in reader may propose as a new place.
+
+    The third thing the public flow can create, and the one with a *reason to
+    exist mid-flow*: the sighting form asks for a place, and a contributor
+    standing at a pond nobody has catalogued cannot file the entry at all until
+    the pond exists. So this is reachable from the sighting form itself, not just
+    from its own route.
+
+    Six fields against ``LocationWriteSerializer``'s seventeen. What it withholds,
+    and why - the same argument as ``SpeciesContributeSerializer``, which see:
+
+    * **``slug``** - derived from the name (``core.slugs.unique_slug``).
+    * **``enabled``, ``is_featured``, ``sort_order``** - the administrator's;
+      ``create`` hard-codes all three.
+    * **``icon``** - the 24 px map-pin glyph, a design asset cut to a house style
+      rather than a photograph. A pin falls back to the record's own mark until
+      an author draws one.
+    * **``hide_precise_location``** - ⚠ this one is *not* merely editorial. It
+      blurs the published coordinates of this place **and of every sighting filed
+      at it**, for every caller, so it is a site-wide disclosure decision about
+      nesting sites and rare plants. Whoever reviews the contribution is who
+      should be making it.
+    * **``description``, ``short_description``, ``en_*``** - a place is a
+      reference record, and the prose about it is an authoring job. Leaving them
+      out is also what keeps this form short enough to fill in halfway through
+      filing a sighting.
+
+    Two things it takes that the other two contribute serializers do not:
+
+    * **Coordinates are required, and required together.** A place with no pin is
+      unmappable, and a sighting filed at it inherits *nothing* - which is most
+      of what the journal does with a location. The public form gets them from a
+      map pin rather than two number fields, so there is no half-typed pair to be
+      lenient about.
+    * **Photographs are optional.** A species proposal without a photograph is
+      unreviewable; a pond is not. Requiring one would also stop a contributor
+      adding the place they are *about* to file a sighting at, whose photographs
+      are of the animal.
+    """
+
+    photos = photos_field(required=False)
+    photo_write_serializer_class = LocationImageWriteSerializer
+
+    # Required here, unlike on the model and on the CMS's own write serializer.
+    latitude = serializers.DecimalField(max_digits=9, decimal_places=6)
+    longitude = serializers.DecimalField(max_digits=9, decimal_places=6)
+
+    class Meta:
+        model = Location
+        fields = ['name', 'parent', 'place_type', 'latitude', 'longitude',
+                  'county', 'photos']
+
+    def validate_name(self, value):
+        name = (value or '').strip()
+        if not name:
+            raise serializers.ValidationError('This field may not be blank.')
+        return name
+
+    def validate_parent(self, value):
+        # A disabled parent is a place an administrator has taken off the site -
+        # or another pending contribution. Either way, filing inside it would
+        # make this place's approval depend on a decision about a different row.
+        if value is not None and not value.enabled:
+            raise serializers.ValidationError('This place is not available.')
+        return value
+
+    def validate_county(self, value):
+        if value is not None and not value.enabled:
+            raise serializers.ValidationError('This county is not available.')
+        return value
+
+    @transaction.atomic
+    def create(self, validated_data):
+        photos = validated_data.pop('photos', [])
+        instance = Location(
+            **validated_data,
+            slug=unique_slug(Location, validated_data.get('name'), fallback='place'),
+            created_by=self._request_user(),
+            is_contribution=True,
+            # Invisible to every public read until an administrator enables it -
+            # the same flag an unpublished CMS draft uses. ⚠ A *sighting* may
+            # still be filed against it in the meantime, deliberately: that is
+            # the whole point of adding a place mid-flow, and
+            # `SightingContributeSerializer` checks `enabled` on the species
+            # alone for exactly this reason. Both rows land pending and a
+            # reviewer publishes the pair.
+            enabled=False,
+            is_featured=False,
+            sort_order=0,
+        )
+        instance.save()
+        self._write_photos(instance, photos)
+        return instance

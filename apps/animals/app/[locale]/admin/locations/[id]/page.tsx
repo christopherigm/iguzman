@@ -42,11 +42,10 @@ export default function AdminLocationFormPage({ params }: Props) {
     enabled: true,
   });
 
-  // A place gained an `image` column of its own (animals-api migration 0010), so
-  // it now picks a cover exactly like the other four records: leave it empty and
-  // the gallery's first photo is the cover, fill it to override that. `icon`
-  // remains the map-pin glyph and is neither.
-  const images = useEntityImages(['image', 'icon']);
+  // The map-pin glyph and nothing else. A place's cover is the first row of its
+  // gallery below - there is no cover field to set (animals-api
+  // `0013_drop_main_image`, which also took back the column 0010 had added).
+  const images = useEntityImages(['icon']);
   const gallery = useEntityGallery(locationImages, isNew ? null : Number(id));
   const [parentOptions, setParentOptions] = useState<
     { value: string | number; label: string }[]
@@ -250,7 +249,6 @@ export default function AdminLocationFormPage({ params }: Props) {
           <EntityGalleryField
             gallery={gallery}
             headerSlot={<PairedImageFields images={images} />}
-            mainImageSet={images.has('image')}
           />
         }
         slots={[

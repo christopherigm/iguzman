@@ -2,6 +2,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
 import { Container } from "@repo/ui/core-elements/container";
 import { NavbarSpacer, PageBottomSpacer } from "@repo/ui/core-elements/navbar";
+import { FloatingActionButton } from "@repo/ui/core-elements/floating-action-button";
 import { getCategories, getFeaturedSpecies } from "@/lib/catalog";
 import { getLatestMapPins, getLatestSightings } from "@/lib/journal";
 import { localized } from "@/lib/i18n-field";
@@ -28,6 +29,7 @@ export default async function Home({ params }: Props) {
 
   const t = await getTranslations("HomePage");
   const tGallery = await getTranslations("Gallery");
+  const tContribute = await getTranslations("Contribute");
 
   // Four independent sections, so they are fetched together rather than in
   // series; each fetcher answers an empty list instead of throwing, so a dead
@@ -115,6 +117,20 @@ export default async function Home({ params }: Props) {
       )}
 
       <PageBottomSpacer />
+
+      {/* The same action the species, sighting and category pages carry, at the
+          one depth that knows nothing about the subject: the landing names no
+          species and no branch, so the href carries no param at all and
+          `SpeciesPicker` starts its cascade from the branch (see the contribute
+          page's docstring). Shown to every reader, signed in or not - the FAB is
+          how a reader learns the site takes contributions, and the destination
+          offers the sign-in itself. */}
+      <FloatingActionButton
+        icon="/icons/binoculars.svg"
+        aria-label={tContribute("addSighting")}
+        label={tContribute("addSighting")}
+        href="/contribute/sightings"
+      />
     </Box>
   );
 }

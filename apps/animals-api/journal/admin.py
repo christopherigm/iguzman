@@ -52,18 +52,30 @@ class SightingAdmin(admin.ModelAdmin):
         }),
         ('Conditions', {'fields': ('weather', 'temperature_c', 'individuals')}),
         ('Story', {'fields': CONTENT_FIELDS + ('href',), 'description': TRANSLATION_HELP}),
-        ('Cover image', {'fields': ('image', 'fit', 'background_color')}),
+        # No `image` field: an entry has no cover column - its cover is the first
+        # photo in the Media inline below (see `journal.0009_drop_main_image`).
+        # What is left here is how that cover is *displayed*, not which one it is.
+        ('Cover display', {'fields': ('fit', 'background_color')}),
         ('Display', {'fields': ('is_featured', 'enabled')}),
         ('Metadata', {'fields': ('version', 'created', 'modified'), 'classes': ('collapse',)}),
     )
 
     @admin.display(description='')
     def thumb(self, obj):
-        if not obj.image:
+        """The entry's cover, resolved the way the API resolves it.
+
+        `journal.serializers.sighting_cover_url` in miniature: the first *photo*
+        among the media rows, skipping the clips, which have no frame to borrow.
+        Reading a column here (as this did before `0009_drop_main_image`) would
+        now be an AttributeError; reading `media.first()` would show a video row's
+        empty image for an entry whose clip sorts ahead of its photographs.
+        """
+        photo = obj.media.filter(kind='image').exclude(image='').first()
+        if not photo:
             return '-'
         return format_html(
             '<img src="{}" style="height:48px;width:48px;object-fit:cover;border-radius:4px" />',
-            obj.image.url,
+            photo.image.url,
         )
 
     @admin.display(description='Media')

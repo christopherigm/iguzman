@@ -10,6 +10,7 @@ import { NavbarSpacer, PageBottomSpacer } from "@repo/ui/core-elements/navbar";
 import {
   getAllSpecies,
   getCategory,
+  getContributeCounties,
   getContributeLocations,
   getSpecies,
   getWeatherConditions,
@@ -18,7 +19,7 @@ import {
   type Kind,
 } from "@/lib/catalog";
 import { DEFAULT_MAX_VIDEO_SECONDS } from "@/lib/contribute";
-import { isPlaceType } from "@/lib/place-types";
+import { placeLabel } from "@/lib/place-types";
 import { localized } from "@/lib/i18n-field";
 import { SignInPrompt } from "@/components/contribute/sign-in-prompt";
 import { SightingContributeForm } from "./sighting-contribute-form";
@@ -101,17 +102,28 @@ export default async function ContributeSightingPage({
   // sequence. Which of the three subject reads is a real request depends on what
   // the URL named: with a species slug there is nothing to pick, so neither the
   // category hint nor the whole species table is worth asking for.
-  const [session, species, hintCategory, allSpecies, locations, weather] =
-    await Promise.all([
-      getSession(),
-      speciesSlug ? getSpecies(speciesSlug) : Promise.resolve(null),
-      !speciesSlug && categorySlug
-        ? getCategory(categorySlug)
-        : Promise.resolve(null),
-      speciesSlug ? Promise.resolve([]) : getAllSpecies(),
-      getContributeLocations(),
-      getWeatherConditions(),
-    ]);
+  const [
+    session,
+    species,
+    hintCategory,
+    allSpecies,
+    locations,
+    weather,
+    counties,
+  ] = await Promise.all([
+    getSession(),
+    speciesSlug ? getSpecies(speciesSlug) : Promise.resolve(null),
+    !speciesSlug && categorySlug
+      ? getCategory(categorySlug)
+      : Promise.resolve(null),
+    speciesSlug ? Promise.resolve([]) : getAllSpecies(),
+    getContributeLocations(),
+    getWeatherConditions(),
+    // For the place form stage 1 can open under its picker. Read here rather
+    // than by that form because a county's label is bilingual and has to be
+    // resolved per locale on the server, like the two lists above it.
+    getContributeCounties(),
+  ]);
 
   // Null only on a real 404 - see lib/catalog.ts on why that is trustworthy.
   // Only `?species=` is a promise the page has to keep: it is the whole subject
@@ -180,33 +192,15 @@ export default async function ContributeSightingPage({
   /**
    * How one place reads in the picker: `Lake Estes (Lake) - Larimer`.
    *
-   * The picker is a search field rather than a dropdown, so an option's label is
-   * also the **haystack** it is matched against - a contributor who remembers the
-   * county but not the name of the pond types "Larimer" and finds it. It is what
-   * tells two places of the same name apart, too (this catalog has an "El Salto"
-   * waterfall and an "El Salto" village), the same job the CMS's county picker
-   * does by naming each option's state.
-   *
-   * Both extras are dropped when the place has neither, so a location filed
-   * before the geography catalog existed still reads as its bare name. The kind is
-   * translated rather than taken from the payload's `place_type_display`, which
-   * is English-only.
+   * ⚠ **Shared with the form** (`lib/place-types.ts`) rather than written here,
+   * because the form has to build one more label in the browser - for a place a
+   * contributor adds from inside stage 1 - and two copies of the rule would mean
+   * the place they just created reading differently from every other option in
+   * the same list. The `PlaceTypes` translator is passed in because the payload's
+   * own `place_type_display` is English-only.
    */
-  const placeLabel = (place: ContributeLocation): string => {
-    const name = localized(place, "name", locale) ?? place.slug;
-    const kind = isPlaceType(place.place_type)
-      ? tPlaceTypes(place.place_type)
-      : null;
-    const county = localized(
-      { name: place.county_name, en_name: place.county_en_name },
-      "name",
-      locale,
-    );
-
-    return [kind ? `${name} (${kind})` : name, county]
-      .filter(Boolean)
-      .join(" - ");
-  };
+  const label = (place: ContributeLocation): string =>
+    placeLabel(place, locale, tPlaceTypes);
 
   /**
    * The trail down to whatever the URL actually knew: the species' own branch and
@@ -294,13 +288,40 @@ export default async function ContributeSightingPage({
             locations={locations
               .map((place) => ({
                 value: String(place.id),
-                label: placeLabel(place),
+                label: label(place),
               }))
               .sort((a, b) => a.label.localeCompare(b.label, locale))}
             weather={weather.map((condition) => ({
               value: String(condition.id),
               label: localized(condition, "name", locale) ?? condition.slug,
             }))}
+            counties={counties
+              .map((county) => {
+                const name = localized(county, "name", locale) ?? county.slug;
+                const state = localized(
+                  { name: county.state_name, en_name: county.state_en_name },
+                  "name",
+                  locale,
+                );
+                return {
+                  value: String(county.id),
+                  label: state ? `${name} — ${state}` : name,
+                };
+              })
+              .sort((a, b) => a.label.localeCompare(b.label, locale))}
+            // The same places again, labelled by their bare name and carrying
+            // their coordinates: this list is the place form's *parent* picker,
+            // where the kind-and-county label the sighting's own picker needs
+            // would be noise, and where the coordinates decide what the map
+            // opens over.
+            parentPlaces={locations
+              .map((place) => ({
+                value: String(place.id),
+                label: localized(place, "name", locale) ?? place.slug,
+                latitude: place.latitude,
+                longitude: place.longitude,
+              }))
+              .sort((a, b) => a.label.localeCompare(b.label, locale))}
           />
         ) : (
           <SignInPrompt

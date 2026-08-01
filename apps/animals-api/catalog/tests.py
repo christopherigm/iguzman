@@ -238,17 +238,25 @@ class SlugRouteTests(CatalogFixtureMixin, IsolatedMediaTestCase):
 
 
 class ImageUploadTests(CatalogFixtureMixin, IsolatedMediaTestCase):
+    """The base64 write path, exercised through `icon`.
+
+    ⚠ **`icon` is the only single-image field a catalog record still has**, so it
+    is what these assert against - the photograph half of `Base64ImagesMixin` now
+    runs through the gallery endpoints instead (see `GalleryTests`). They are
+    about the *mixin's* contract, which the gallery writer does not share: an
+    omitted key leaves the stored file alone, an explicitly empty one clears it.
+    """
+
     def setUp(self):
         super().setUp()
         self.make_staff()
         self.client.login(username='ranger', password='fieldnotes-2026')
 
-    def test_base64_image_and_icon_are_stored(self):
+    def test_a_base64_icon_is_stored(self):
         response = self.client.post(
             '/api/catalog/categories/',
             {
                 'name': 'Squirrels', 'slug': 'squirrels', 'kind': 'animal',
-                'image': data_url((800, 600)),
                 'icon': base64_image((256, 256), fmt='PNG'),
             },
             content_type='application/json',
@@ -256,36 +264,42 @@ class ImageUploadTests(CatalogFixtureMixin, IsolatedMediaTestCase):
         self.assertEqual(response.status_code, 201, response.content)
 
         category = Category.objects.get(slug='squirrels')
-        self.assertTrue(category.image)
         self.assertTrue(category.icon)
-        # A PNG upload keeps its own format (transparency survives); the JPEG
-        # data URL does not become a PNG.
+        # A PNG upload keeps its own format, which is what a transparent glyph
+        # needs - it is not silently re-encoded to JPEG.
         self.assertTrue(category.icon.name.endswith('.png'))
-        self.assertTrue(category.image.name.endswith('.jpg'))
+
+    def test_a_data_url_is_accepted_as_well_as_a_bare_base64_string(self):
+        """The browser's FileReader produces the prefixed form."""
+        response = self.client.post(
+            '/api/catalog/categories/',
+            {
+                'name': 'Owls', 'slug': 'owls', 'kind': 'animal',
+                'icon': data_url((256, 256)),
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertTrue(Category.objects.get(slug='owls').icon)
 
     def test_an_invalid_image_is_a_400_not_a_500(self):
         response = self.client.post(
             '/api/catalog/categories/',
-            {'name': 'Bad', 'slug': 'bad', 'kind': 'animal', 'image': 'not-an-image'},
+            {'name': 'Bad', 'slug': 'bad', 'kind': 'animal', 'icon': 'not-an-image'},
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn('image', response.json())
+        self.assertIn('icon', response.json())
 
     def test_patching_a_text_field_leaves_the_image_alone(self):
         category = self.make_category()
-        self.client.post(
-            f'/api/catalog/categories/{category.pk}/',
-            {'image': base64_image()},
-            content_type='application/json',
-        )
         self.client.patch(
             f'/api/catalog/categories/{category.pk}/',
-            {'image': base64_image()},
+            {'icon': base64_image()},
             content_type='application/json',
         )
         category.refresh_from_db()
-        stored = category.image.name
+        stored = category.icon.name
 
         self.client.patch(
             f'/api/catalog/categories/{category.pk}/',
@@ -293,23 +307,23 @@ class ImageUploadTests(CatalogFixtureMixin, IsolatedMediaTestCase):
             content_type='application/json',
         )
         category.refresh_from_db()
-        self.assertEqual(category.image.name, stored)
+        self.assertEqual(category.icon.name, stored)
         self.assertEqual(category.short_description, 'All the deer.')
 
     def test_an_explicit_empty_value_clears_the_image(self):
         category = self.make_category()
         self.client.patch(
             f'/api/catalog/categories/{category.pk}/',
-            {'image': base64_image()},
+            {'icon': base64_image()},
             content_type='application/json',
         )
         self.client.patch(
             f'/api/catalog/categories/{category.pk}/',
-            {'image': ''},
+            {'icon': ''},
             content_type='application/json',
         )
         category.refresh_from_db()
-        self.assertFalse(category.image)
+        self.assertFalse(category.icon)
 
     def test_species_gallery_upload(self):
         species = self.make_species()
@@ -409,74 +423,28 @@ class GalleryTests(CatalogFixtureMixin, IsolatedMediaTestCase):
 
         self.assertEqual(self.client.get(url).json()['image'], second['image'])
 
-    def test_a_records_own_image_still_wins_over_the_gallery(self):
-        """A cover set deliberately - in the Django admin, or by seed_reference -
-        is not overruled by whatever happens to have been uploaded first."""
+    def test_there_is_no_second_place_a_cover_can_come_from(self):
+        """The gallery is the only source, and the API offers no way past it.
+
+        A record used to carry an `image` column that won ahead of `images[0]`,
+        which is what made a drag-to-reorder silently do nothing on the records
+        that had one. It is gone (`0013_drop_main_image`), so a write naming it
+        must not quietly resurrect the idea - DRF ignores an unknown key, and the
+        cover has to stay exactly where the gallery put it.
+        """
         species = self.make_species()
         url = f'/api/catalog/species/{species.pk}/'
-        self.client.patch(url, {'image': base64_image()}, content_type='application/json')
         self.client.post(
             f'{url}images/', {'image': base64_image()}, content_type='application/json'
         )
 
+        response = self.client.patch(url, {'image': base64_image()}, content_type='application/json')
+        self.assertEqual(response.status_code, 200, response.content)
+
         payload = self.client.get(url).json()
-        species.refresh_from_db()
-        self.assertIn(species.image.url, payload['image'])
-        self.assertNotEqual(payload['image'], payload['images'][0]['image'])
-
-    def test_main_image_is_empty_while_the_cover_is_only_a_borrowed_photo(self):
-        """``main_image`` reports the column, ``image`` reports what to render.
-
-        This is the whole reason the field exists: the CMS's Main Image uploader
-        hydrates from ``main_image``, so a record whose cover is merely its first
-        gallery row must leave it null. Hydrating from ``image`` instead would
-        show a photo nobody chose as though somebody had - and its remove button
-        would then clear an empty column while the cover stayed put.
-        """
-        for label, url in self.parents():
-            with self.subTest(record=label):
-                response = self.client.post(
-                    f'{url}images/', {'image': base64_image()}, content_type='application/json'
-                )
-                self.assertEqual(response.status_code, 201, response.content)
-
-                payload = self.client.get(url).json()
-                self.assertEqual(payload['image'], payload['images'][0]['image'])
-                self.assertIsNone(payload['main_image'])
-
-    def test_choosing_a_main_image_publishes_it_on_both_fields(self):
-        """Every record can be given a cover of its own - **including a place**,
-        which had no ``image`` column at all before migration 0010."""
-        for label, url in self.parents():
-            with self.subTest(record=label):
-                self.client.post(
-                    f'{url}images/', {'image': base64_image()}, content_type='application/json'
-                )
-                response = self.client.patch(
-                    url, {'image': base64_image()}, content_type='application/json'
-                )
-                self.assertEqual(response.status_code, 200, response.content)
-
-                payload = self.client.get(url).json()
-                self.assertIsNotNone(payload['main_image'])
-                # The chosen one is what the site renders, and it is not the photo.
-                self.assertEqual(payload['image'], payload['main_image'])
-                self.assertNotEqual(payload['main_image'], payload['images'][0]['image'])
-
-    def test_clearing_the_main_image_falls_back_to_the_gallery_again(self):
-        """The uploader's remove button sends an explicit empty value; the cover
-        has to return to the first photo rather than disappearing."""
-        for label, url in self.parents():
-            with self.subTest(record=label):
-                self.client.post(
-                    f'{url}images/', {'image': base64_image()}, content_type='application/json'
-                )
-                self.client.patch(url, {'image': base64_image()}, content_type='application/json')
-                self.client.patch(url, {'image': None}, content_type='application/json')
-
-                payload = self.client.get(url).json()
-                self.assertIsNone(payload['main_image'])
-                self.assertEqual(payload['image'], payload['images'][0]['image'])
+        self.assertEqual(len(payload['images']), 1)
+        self.assertEqual(payload['image'], payload['images'][0]['image'])
+        self.assertNotIn('main_image', payload)
 
     def test_deleting_the_first_photo_promotes_the_next_one(self):
         url = f'/api/catalog/species/{self.make_species().pk}/'
@@ -1094,3 +1062,4 @@ class TranslationFieldTests(CatalogFixtureMixin, IsolatedMediaTestCase):
         payload = self.client.get('/api/catalog/locations/').json()[0]
         self.assertEqual(payload['en_name'], 'Chapultepec Forest')
         self.assertEqual(payload['en_description'], 'An urban forest.')
+
