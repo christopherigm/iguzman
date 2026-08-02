@@ -26,7 +26,11 @@ import { SubmittedPanel } from "@/components/contribute/submitted-panel";
 
 interface Props {
   parents: ParentPlaceOption[];
-  counties: SelectOption[];
+  /**
+   * A promise, forwarded untouched - the page starts the read without awaiting
+   * it and `LocationContributeForm` unwraps it. See that component's prop note.
+   */
+  counties: Promise<SelectOption[]>;
   /** Where "done" goes - the journal's landing, since a place has no page yet. */
   doneLabel: string;
   doneHref: string;

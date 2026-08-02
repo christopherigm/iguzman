@@ -266,7 +266,7 @@ what the `SpeciesPicker` exists for.
 | Browser client              | `lib/contribute.ts`                                                |
 | Token-attaching proxy       | `app/api/contribute/[...path]/route.ts`                            |
 
-Fourteen things that will bite:
+Seventeen things that will bite:
 
 - ⚠ **Pending means `enabled=false`, and there is no moderation queue.** The API
   creates a contribution disabled and flagged `is_contribution`; publishing it is
@@ -403,6 +403,35 @@ Fourteen things that will bite:
   administrator owns is absent, including **`hide_precise_location`**, which is
   not merely editorial: it blurs the place's coordinates *and every sighting later
   filed at it*, for every caller.
+- ⚠ **`app/[locale]/contribute/loading.tsx` is why the FAB feels instant, and
+  deleting it makes every one of these routes feel broken again.** All three are
+  dynamic - they read `searchParams` and the session cookie - so Next cannot
+  prerender any of them, and a `Link`'s prefetch of a dynamic route reaches only
+  as far as the nearest loading boundary. With none, prefetching
+  `/contribute/sightings` returned **245 bytes** of route tree: the FAB's
+  `prefetch` bought nothing, the whole server render was paid *after* the click,
+  and until it landed the old page simply sat there with no sign that the button
+  had done anything. The shell takes that to ~79 KB the router can paint the
+  instant the FAB is pressed. It lives on the **segment**, not on one route, so
+  all three share it.
+- ⚠ **Three reads are gated on the session, and the gate has to stay above
+  them.** The FAB is shown to everyone (that is the point of it), so a signed-out
+  press is an expected path - and both pages used to fetch the species table, the
+  places, the weather and the counties before discovering there was only a
+  `SignInPrompt` to render. `getSession()` is a cookie read and a JWT decode with
+  no I/O, so awaiting it *first* costs nothing and takes the anonymous case from
+  four API requests to none. Don't fold it back into the `Promise.all`.
+- ⚠ **The counties list is started but never awaited, and must stay that way.**
+  It is the heaviest read in the app - `seed_geography` alone puts 244 rows in
+  it, each answered with the full location-grade payload - and it feeds **one
+  optional field** on a panel that is unmounted until somebody presses "add a
+  place". Both pages hand it down as a `Promise`, and `CountyField` inside
+  `LocationContributeForm` is the only thing that unwraps it (`use()`), scoped so
+  the suspension reaches that field and not the form around it. Awaiting it on
+  either page puts the app's slowest request back in front of every contributor,
+  for a control most of them never touch. The labels are still built on the
+  **server**, in the page's `.then()`, because they are bilingual and need the
+  request locale - only the *waiting* moved.
 
 All four FABs sit in the default corner, **bottom-right**. The category page's
 two are a **stack**: "Add a sighting" takes the corner in the accent fill at

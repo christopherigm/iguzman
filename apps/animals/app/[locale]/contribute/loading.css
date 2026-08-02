@@ -1,0 +1,26 @@
+/*
+ * The only thing this file may carry is the animation - every box below is
+ * sized, spaced and coloured through UIComponentProps (see the repo's
+ * "props first, CSS last" rule).
+ */
+
+.contribute-skeleton__block {
+  animation: contribute-skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes contribute-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contribute-skeleton__block {
+    animation: none;
+    opacity: 0.4;
+  }
+}

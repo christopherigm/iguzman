@@ -98,32 +98,82 @@ export default async function ContributeSightingPage({
   const tKinds = await getTranslations("Kinds");
   const tPlaceTypes = await getTranslations("PlaceTypes");
 
+  /**
+   * Who is asking, resolved **before** anything is fetched.
+   *
+   * ⚠ It is not one of the reads below, and putting it back among them would
+   * undo the guard underneath. `getSession()` is a cookie read and a JWT decode
+   * with no I/O behind it, so awaiting it on its own costs nothing measurable -
+   * and it is what lets the three option lists be skipped outright for a reader
+   * who is not signed in. That is not a rare path: the FAB is deliberately shown
+   * to everybody (it is how a reader learns the site takes contributions at all),
+   * so a signed-out press is expected, and this page answered it by fetching the
+   * whole catalog to render a sign-in prompt that reads none of it.
+   */
+  const session = await getSession();
+
+  /**
+   * The counties, for the place form stage 1 can open under its picker - and the
+   * one read on this page that is **started but never awaited**.
+   *
+   * ⚠ It is the most expensive list in the app and the least often looked at:
+   * `seed_geography` alone puts 244 rows in it, the API answers with the full
+   * location-grade payload for each, and locally that is ~97 KB and ~375 ms -
+   * more than the other three reads put together, and about twice what the whole
+   * rest of this page costs. Every contributor used to wait for it; almost none
+   * of them press "add a place", which is the only control that reads it.
+   *
+   * So it stays a promise. React streams it to the client and
+   * `LocationContributeForm` unwraps it with `use()` when the panel is actually
+   * opened - by which time it has long since resolved, so nothing suspends. The
+   * mapping still happens **here**, on the server, because a county's label is
+   * bilingual and `localized()` needs the request locale; only the *waiting*
+   * moved. Do not put it back in the `Promise.all` below.
+   *
+   * It also takes this page from four simultaneous requests to three, which
+   * matters in production: animals-api runs three **sync** gunicorn workers, so
+   * the fourth was queueing behind its own siblings.
+   */
+  const countiesPromise = (
+    session ? getContributeCounties() : Promise.resolve([])
+  ).then((counties) =>
+    counties
+      .map((county) => {
+        const name = localized(county, "name", locale) ?? county.slug;
+        const state = localized(
+          { name: county.state_name, en_name: county.state_en_name },
+          "name",
+          locale,
+        );
+        return {
+          value: String(county.id),
+          label: state ? `${name} — ${state}` : name,
+        };
+      })
+      .sort((a, b) => a.label.localeCompare(b.label, locale)),
+  );
+
   // Every read is independent, so they all start together rather than in
-  // sequence. Which of the three subject reads is a real request depends on what
-  // the URL named: with a species slug there is nothing to pick, so neither the
-  // category hint nor the whole species table is worth asking for.
-  const [
-    session,
-    species,
-    hintCategory,
-    allSpecies,
-    locations,
-    weather,
-    counties,
-  ] = await Promise.all([
-    getSession(),
-    speciesSlug ? getSpecies(speciesSlug) : Promise.resolve(null),
-    !speciesSlug && categorySlug
-      ? getCategory(categorySlug)
-      : Promise.resolve(null),
-    speciesSlug ? Promise.resolve([]) : getAllSpecies(),
-    getContributeLocations(),
-    getWeatherConditions(),
-    // For the place form stage 1 can open under its picker. Read here rather
-    // than by that form because a county's label is bilingual and has to be
-    // resolved per locale on the server, like the two lists above it.
-    getContributeCounties(),
-  ]);
+  // sequence. Two things decide which of them is a real request.
+  //
+  // What the URL named picks between the two subject reads: with a species slug
+  // there is nothing to pick, so neither the category hint nor the whole species
+  // table is worth asking for. Those two are read for **either** reader - the
+  // heading, the crumbs and the sign-in prompt all name the species, and an
+  // unknown `?species=` has to 404 whether or not anyone is signed in.
+  //
+  // Whether there is a session picks the three option lists, which exist for the
+  // form and are read by nothing else on the page.
+  const [species, hintCategory, allSpecies, locations, weather] =
+    await Promise.all([
+      speciesSlug ? getSpecies(speciesSlug) : Promise.resolve(null),
+      !speciesSlug && categorySlug
+        ? getCategory(categorySlug)
+        : Promise.resolve(null),
+      session && !speciesSlug ? getAllSpecies() : Promise.resolve([]),
+      session ? getContributeLocations() : Promise.resolve([]),
+      session ? getWeatherConditions() : Promise.resolve([]),
+    ]);
 
   // Null only on a real 404 - see lib/catalog.ts on why that is trustworthy.
   // Only `?species=` is a promise the page has to keep: it is the whole subject
@@ -295,20 +345,10 @@ export default async function ContributeSightingPage({
               value: String(condition.id),
               label: localized(condition, "name", locale) ?? condition.slug,
             }))}
-            counties={counties
-              .map((county) => {
-                const name = localized(county, "name", locale) ?? county.slug;
-                const state = localized(
-                  { name: county.state_name, en_name: county.state_en_name },
-                  "name",
-                  locale,
-                );
-                return {
-                  value: String(county.id),
-                  label: state ? `${name} — ${state}` : name,
-                };
-              })
-              .sort((a, b) => a.label.localeCompare(b.label, locale))}
+            // A promise, not an array - see `countiesPromise` above. It is
+            // forwarded untouched to the place form, which is the only thing
+            // that reads it and only once it has been opened.
+            counties={countiesPromise}
             // The same places again, labelled by their bare name and carrying
             // their coordinates: this list is the place form's *parent* picker,
             // where the kind-and-county label the sighting's own picker needs

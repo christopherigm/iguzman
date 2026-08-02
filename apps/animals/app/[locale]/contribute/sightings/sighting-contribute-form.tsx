@@ -93,8 +93,15 @@ interface Props {
    * Every county, for the place form this flow can open under its place field.
    * Passed down rather than fetched here for the reason the two lists above are:
    * the labels are bilingual and have to be resolved on the server.
+   *
+   * ⚠ **A promise, unlike its siblings, and it must stay one.** It is the
+   * heaviest list the flow can need and the one almost nobody opens, so the page
+   * starts the read without awaiting it and this component does nothing but
+   * forward it - only `LocationContributeForm` unwraps it, and only once the
+   * panel is on screen. Awaiting it here would put every contributor back behind
+   * a request made for a control they never pressed. See the page's docstring.
    */
-  counties: SelectOption[];
+  counties: Promise<SelectOption[]>;
   /**
    * The same catalogued places as `locations`, but carrying their coordinates -
    * the place form opens its map over the parent a contributor picks. A second

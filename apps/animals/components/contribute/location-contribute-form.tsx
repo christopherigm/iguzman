@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, use, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
@@ -77,8 +77,25 @@ export interface ParentPlaceOption extends SelectOption {
 interface Props {
   /** Every catalogued place, as candidate parents. */
   parents: ParentPlaceOption[];
-  /** Every county, each option already naming its state. */
-  counties: SelectOption[];
+  /**
+   * Every county, each option already naming its state - as a **promise**, which
+   * both hosts hand over without awaiting.
+   *
+   * ⚠ This is the app's most expensive list (244 rows from `seed_geography`
+   * alone, answered with the full location-grade payload) and it feeds **one
+   * optional field**. Awaiting it on the page put that cost in front of every
+   * contributor filing a sighting, most of whom never open this form at all.
+   *
+   * It is unwrapped by `CountyField` below - a component whose entire job is to
+   * `use()` it, so the suspension is scoped to the field rather than to this
+   * form. The rest of the form paints immediately and the county picker appears
+   * when the read lands, which is the right shape for an optional field: nothing
+   * a contributor has to fill in is ever behind a spinner.
+   *
+   * The labels are still built on the **server** by whichever page owns the
+   * fetch, because they are bilingual and need the request locale.
+   */
+  counties: Promise<SelectOption[]>;
   /**
    * Called with the place the API created. **When it is given, this component
    * renders no confirmation** - the host owns what happens next (the sighting
@@ -99,6 +116,48 @@ const EMPTY = {
   latitude: "",
   longitude: "",
 };
+
+/**
+ * The county picker, and the only thing in this file that reads the counties
+ * promise - which is the whole point of it being its own component.
+ *
+ * `use()` suspends whatever component calls it, so calling it in the form would
+ * hold the *entire* form behind the app's slowest read for the sake of one
+ * optional field. Here the suspension reaches no further than this field, and
+ * the `Suspense` wrapping it below falls back to nothing at all: an optional
+ * field that has not arrived yet should be absent, not a spinner standing where
+ * a contributor is trying to type.
+ *
+ * A `TextInput` with `options` rather than a `Select`: the geography seed carries
+ * hundreds of counties, which is well past what a dropdown can be scrolled
+ * through. Each option names its state - it is what tells the Durango in Mexico
+ * from the one in Colorado.
+ */
+function CountyField({
+  counties: countiesPromise,
+  value,
+  onChange,
+}: {
+  counties: Promise<SelectOption[]>;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const t = useTranslations("Contribute");
+  const counties = use(countiesPromise);
+
+  if (counties.length === 0) return null;
+
+  return (
+    <TextInput
+      label={t("placeCounty")}
+      value={value}
+      onChange={onChange}
+      options={counties}
+      noOptionsLabel={t("noCountyMatches")}
+      helperText={t("placeCountyHelp")}
+    />
+  );
+}
 
 export function LocationContributeForm({
   parents,
@@ -219,20 +278,15 @@ export function LocationContributeForm({
         />
       </Box>
 
-      {counties.length > 0 && (
-        // A `TextInput` with `options` rather than a `Select`: the geography
-        // seed carries hundreds of counties, which is well past what a dropdown
-        // can be scrolled through. Each option names its state - it is what
-        // tells the Durango in Mexico from the one in Colorado.
-        <TextInput
-          label={t("placeCounty")}
+      {/* Falls back to nothing: the field is optional, and a placeholder box
+          where one is not yet available would only make the form jump. */}
+      <Suspense fallback={null}>
+        <CountyField
+          counties={counties}
           value={draft.county}
           onChange={(value) => set("county", value)}
-          options={counties}
-          noOptionsLabel={t("noCountyMatches")}
-          helperText={t("placeCountyHelp")}
         />
-      )}
+      </Suspense>
 
       {parents.length > 0 && (
         <TextInput

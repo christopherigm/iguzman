@@ -59,13 +59,51 @@ export default async function ContributeLocationPage({ params }: Props) {
 
   const t = await getTranslations("Contribute");
 
-  // Independent reads, and both are optional fields on the form - so they start
-  // together and a failure of either costs a picker rather than the page.
-  const [session, places, counties] = await Promise.all([
-    getSession(),
-    getContributeLocations(),
-    getContributeCounties(),
-  ]);
+  /**
+   * Who is asking, resolved **before** either list is fetched - see the sighting
+   * page's note. Both lists feed the form and nothing else, so a reader who is
+   * not signed in should be reading none of them: this page used to fetch the
+   * whole place catalogue and the whole county table to render `SignInPrompt`.
+   */
+  const session = await getSession();
+
+  /**
+   * The counties, **started but not awaited** - exactly as the sighting page
+   * does it, and for the same reason: this is the app's heaviest list (244 rows
+   * from `seed_geography` alone, each answered with the full location-grade
+   * payload) feeding one optional field. `LocationContributeForm` unwraps it
+   * with `use()`, so the page paints on the places read alone.
+   *
+   * The mapping still runs here, on the server, because a county's label is
+   * bilingual and needs the request locale - only the waiting moved.
+   *
+   * Each option names its state, which is the only thing that tells the Durango
+   * in Mexico from the one in Colorado - the same job the CMS's own county
+   * picker does.
+   */
+  const countiesPromise = (
+    session ? getContributeCounties() : Promise.resolve([])
+  ).then((counties) =>
+    counties
+      .map((county) => {
+        const name = localized(county, "name", locale) ?? county.slug;
+        const state = localized(
+          { name: county.state_name, en_name: county.state_en_name },
+          "name",
+          locale,
+        );
+        return {
+          value: String(county.id),
+          label: state ? `${name} — ${state}` : name,
+        };
+      })
+      .sort((a, b) => a.label.localeCompare(b.label, locale)),
+  );
+
+  // The candidate parents - an optional field on the form, so a failure of it
+  // costs a picker rather than the page, and no request at all when there is no
+  // form to put it on.
+  const places = session ? await getContributeLocations() : [];
 
   const breadcrumbs = [
     { label: t("breadcrumbHome"), href: "/" },
@@ -101,23 +139,8 @@ export default async function ContributeLocationPage({ params }: Props) {
                 longitude: place.longitude,
               }))
               .sort((a, b) => a.label.localeCompare(b.label, locale))}
-            // Each county names its state, which is the only thing that tells the
-            // Durango in Mexico from the one in Colorado - the same job the CMS's
-            // own county picker does.
-            counties={counties
-              .map((county) => {
-                const name = localized(county, "name", locale) ?? county.slug;
-                const state = localized(
-                  { name: county.state_name, en_name: county.state_en_name },
-                  "name",
-                  locale,
-                );
-                return {
-                  value: String(county.id),
-                  label: state ? `${name} — ${state}` : name,
-                };
-              })
-              .sort((a, b) => a.label.localeCompare(b.label, locale))}
+            // A promise, forwarded untouched - see `countiesPromise` above.
+            counties={countiesPromise}
             doneLabel={t("backToJournal")}
             doneHref="/"
           />
