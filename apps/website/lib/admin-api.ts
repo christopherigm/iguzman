@@ -1157,3 +1157,78 @@ export async function testStorageConnection(
   });
   return parseResponse<StorageTestResult>(res);
 }
+
+// ---- Bookings (scheduled services) ----
+
+/** The lifecycle of an appointment. Deliberately **not** the order's status:
+ *  payment lives on `Order.status`, and a booking can be confirmed on an order
+ *  that has not been paid (and never will be, when it is paid in person). */
+export type BookingStatus = "pending" | "confirmed" | "completed" | "canceled";
+
+/** Where the work happens. `on_premises` is the customer's own address, which
+ *  is then carried on the booking's `address`. */
+export type BookingFulfillment = "branch" | "on_premises";
+
+/** What the customer chose to pay at booking time. */
+export type BookingPaymentOption = "full" | "deposit" | "in_person";
+
+/** One booking as the CMS list reads it (the API's AdminBookingSerializer). */
+export interface AdminBooking {
+  id: number;
+  status: BookingStatus;
+  fulfillment: BookingFulfillment;
+  branch: number | null;
+  branch_name: string | null;
+  /** UTC instant. Render it with `timezone`, never the browser's own - the
+   *  appointment happens at the branch's local time. */
+  starts_at: string;
+  ends_at: string;
+  timezone: string;
+  duration_minutes: number;
+  address: string;
+  notes: string;
+  payment_option: BookingPaymentOption;
+  deposit_percent: number;
+  amount_due_now: string;
+  amount_due_later: string;
+  order_public_id: string;
+  order_status: OrderStatus;
+  order_total: string;
+  currency: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  service: number | null;
+  service_name: string;
+  created_at: string;
+}
+
+/** The three transitions the CMS may apply. See `AdminBookingActionSerializer`. */
+export type AdminBookingAction = "confirm" | "complete" | "cancel";
+
+export async function listAdminBookings(params?: {
+  status?: BookingStatus[];
+  from?: string;
+  to?: string;
+}) {
+  const search = new URLSearchParams();
+  if (params?.status?.length) search.set("status", params.status.join(","));
+  if (params?.from) search.set("from", params.from);
+  if (params?.to) search.set("to", params.to);
+  const query = search.toString();
+  const res = await adminFetch(
+    `/api/bookings/admin/${query ? `?${query}` : ""}`,
+  );
+  return parseResponse<AdminBooking[]>(res);
+}
+
+export async function adminBookingAction(
+  id: number,
+  action: AdminBookingAction,
+) {
+  const res = await adminFetch(`/api/bookings/admin/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify({ action }),
+  });
+  return parseResponse<AdminBooking>(res);
+}

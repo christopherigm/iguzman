@@ -15,6 +15,10 @@ import {
   type VariantOption,
 } from "@/components/admin/variants-editor";
 import {
+  ServiceBookingSection,
+  type BookingBranchOption,
+} from "@/components/admin/service-booking-section";
+import {
   getService,
   cloneService,
   createService,
@@ -26,6 +30,7 @@ import {
   updateServiceImage,
   listServiceCategories,
   listBrands,
+  listBranches,
   checkSlug,
 } from "@/lib/admin-api";
 import { buildSlug } from "@/lib/slug-utils";
@@ -69,7 +74,18 @@ export default function AdminServiceFormPage({ params }: Props) {
     enabled: true,
     href: "",
     video_link: "",
+    booking_enabled: false,
+    booking_in_branch: true,
+    booking_on_premises: false,
+    booking_pay_full: false,
+    booking_pay_deposit: false,
+    booking_deposit_percent: 30,
+    booking_pay_in_person: true,
   });
+  // Kept out of `values`: it is an M2M the API takes as a list of ids, not a
+  // scalar the generic AdminForm can render - same shape as `variantIds`.
+  const [bookingBranchIds, setBookingBranchIds] = useState<number[]>([]);
+  const [branchOptions, setBranchOptions] = useState<BookingBranchOption[]>([]);
   const [existingImage, setExistingImage] = useState<
     { id: number; url: string }[]
   >([]);
@@ -128,11 +144,20 @@ export default function AdminServiceFormPage({ params }: Props) {
 
   const loadMeta = useCallback(async () => {
     try {
-      const [cats, brands, services] = await Promise.all([
+      const [cats, brands, services, branches] = await Promise.all([
         listServiceCategories(systemId),
         listBrands(systemId),
         listServices(systemId),
+        listBranches(systemId),
       ]);
+      setBranchOptions(
+        branches.map((b, index) => ({
+          id: b.id as number,
+          // A branch with no name still has to be pickable - the CMS lets one be
+          // created before it is named, and an unlabelled switch is unusable.
+          name: String(b.name ?? `#${index + 1}`),
+        })),
+      );
       setVariantCatalog(
         services.map((s) => ({
           id: s.id as number,
@@ -186,7 +211,17 @@ export default function AdminServiceFormPage({ params }: Props) {
             enabled: data.enabled ?? true,
             href: data.href ?? "",
             video_link: data.video_link ?? "",
+            booking_enabled: data.booking_enabled ?? false,
+            booking_in_branch: data.booking_in_branch ?? true,
+            booking_on_premises: data.booking_on_premises ?? false,
+            booking_pay_full: data.booking_pay_full ?? false,
+            booking_pay_deposit: data.booking_pay_deposit ?? false,
+            booking_deposit_percent: data.booking_deposit_percent ?? 30,
+            booking_pay_in_person: data.booking_pay_in_person ?? true,
           });
+          setBookingBranchIds(
+            ((data.booking_branches as number[] | undefined) ?? []).map(Number),
+          );
           if (data.image) {
             setExistingImage([{ id: Number(id), url: String(data.image) }]);
           }
@@ -234,6 +269,13 @@ export default function AdminServiceFormPage({ params }: Props) {
       // Symmetrical sibling variants, sent as a list of Service ids. The write
       // serializer strips any self-reference; an empty list clears them all.
       payload.variants = variantIds;
+      // Always sent, like `variants`: an empty list means "every branch" and has
+      // to actually clear the relation, so it cannot be omitted when empty.
+      payload.booking_branches = bookingBranchIds;
+      // The number input hands back a string; the API wants an integer, and a
+      // blank field means the tenant cleared it rather than chose zero.
+      payload.booking_deposit_percent =
+        Number(values.booking_deposit_percent) || 30;
       if (pendingImage.length > 0) {
         payload.image = pendingImage[0]?.base64;
       } else if (existingImage.length === 0) {
@@ -437,6 +479,15 @@ export default function AdminServiceFormPage({ params }: Props) {
                 : variantCatalog.filter((s) => s.id !== Number(id))
             }
             locale={locale}
+          />
+
+          {/* Booking: how (and whether) this service is sold as an appointment. */}
+          <ServiceBookingSection
+            values={values}
+            onChange={handleChange}
+            branches={branchOptions}
+            selectedBranchIds={bookingBranchIds}
+            onBranchesChange={setBookingBranchIds}
           />
 
           {/* Pricing & Costs, at the end of the form. */}

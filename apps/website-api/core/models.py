@@ -2,6 +2,7 @@ import os
 import uuid
 from decimal import Decimal
 from urllib.parse import urlparse
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from colorfield.fields import ColorField
 from django.core.exceptions import ValidationError
@@ -39,6 +40,20 @@ def picture(instance, filename):
     ext = os.path.splitext(filename)[1].lstrip(".") or "jpg"
     base = f"pictures/{instance.__class__.__name__.lower()}/{uuid.uuid4().hex}.{ext}"
     return tenant_path(system_id_for(instance), base)
+
+
+def validate_timezone(value):
+    """Accept any IANA name the running system's tz database knows.
+
+    Checked against `zoneinfo` rather than a `choices` list because the list of
+    zones is not ours to freeze: countries add, rename and merge them, and a
+    stale enum would reject a legitimate value with no way for a tenant to fix
+    it. Migrations reference this by name, so keep it module-level.
+    """
+    try:
+        ZoneInfo(value)
+    except (ZoneInfoNotFoundError, ValueError) as exc:
+        raise ValidationError(f"{value!r} is not a known timezone.") from exc
 
 
 FIT_CHOICES = [
@@ -955,6 +970,49 @@ class Branch(Common):
 
     sort_order = models.PositiveIntegerField(default=0)
 
+    # ── Booking ────────────────────────────────────────────────────────────────
+    # What a bookable service needs to know about this location. They live here
+    # rather than on Service because they describe the *place*: a branch keeps
+    # one set of opening hours however many services are sold out of it.
+
+    # ⚠ The one field with no sensible fallback. Django runs on UTC
+    # (settings.TIME_ZONE), so a `BranchHours` row saying "09:00" is meaningless
+    # until it is read against a zone - and reading it against UTC would open a
+    # Mexico City salon at 3am local. Stored as an IANA name and validated
+    # against the system's own tz database rather than a choices list, which
+    # would go stale every time a country changed its rules.
+    timezone = models.CharField(
+        max_length=64,
+        default="UTC",
+        validators=[validate_timezone],
+        help_text="IANA timezone name (e.g. America/Mexico_City). Opening hours are local to this.",
+    )
+    # How many bookings may overlap. 1 is the one-person business working out of
+    # their home; a three-chair salon sets 3. Deliberately on the branch and not
+    # the service: what it really counts is people or rooms, which are shared by
+    # every service the branch offers - per-service capacity would let three
+    # different services each book the only chair at 10am.
+    booking_capacity = models.PositiveIntegerField(
+        default=1,
+        help_text="How many bookings may overlap at this location (staff, chairs, rooms).",
+    )
+    # The grid start times are offered on. The *length* of a slot is the
+    # Service's own `duration`, so a 90-minute service on a 30-minute grid can
+    # start at 9:00, 9:30, 10:00 - it does not force 90-minute blocks.
+    booking_slot_minutes = models.PositiveIntegerField(
+        default=30,
+        help_text="Minutes between offered start times (the booking grid).",
+    )
+    # How soon is too soon. Stops a customer booking the 9:00 slot at 8:58.
+    booking_min_notice_hours = models.PositiveIntegerField(
+        default=2,
+        help_text="Minimum hours between now and the start of a bookable slot.",
+    )
+    booking_max_days_ahead = models.PositiveIntegerField(
+        default=60,
+        help_text="How far ahead the booking calendar goes.",
+    )
+
     class Meta:
         verbose_name = "Branch"
         verbose_name_plural = "Branches"
@@ -963,6 +1021,80 @@ class Branch(Common):
 
     def __str__(self):
         return self.name or f"Branch #{self.pk}"
+
+    @property
+    def tzinfo(self):
+        """The branch's zone, falling back to UTC rather than raising.
+
+        A row written before the validator existed (or straight into the
+        database) must not 500 every availability lookup for the tenant.
+        """
+        try:
+            return ZoneInfo(self.timezone or "UTC")
+        except (ZoneInfoNotFoundError, ValueError):
+            return ZoneInfo("UTC")
+
+
+class BranchHours(models.Model):
+    """When one branch is open on one weekday, and when it breaks for lunch.
+
+    One row per (branch, weekday) - seven at most, and a weekday with no row is
+    simply closed. That is why there is no separate "closed" flag: absence *is*
+    the closure, so the CMS deleting a day and the CMS never having created one
+    are the same state, and there is no third case where a row says open with no
+    times in it.
+
+    `weekday` follows **Python's** `date.weekday()` (Monday=0 … Sunday=6), not
+    Django's `__week_day` lookup (Sunday=1) - the availability engine walks dates
+    with `date.weekday()`, and a second convention in the same feature is how an
+    off-by-one lands on the wrong day of the week.
+
+    Times are **local wall clock** in `branch.timezone`. Storing them as
+    `TimeField` rather than as offsets is what keeps them correct across a
+    daylight-saving change: "we open at 9" stays 9 whatever UTC thinks.
+    """
+
+    WEEKDAY_CHOICES = [
+        (0, "Monday"),
+        (1, "Tuesday"),
+        (2, "Wednesday"),
+        (3, "Thursday"),
+        (4, "Friday"),
+        (5, "Saturday"),
+        (6, "Sunday"),
+    ]
+
+    branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="hours")
+    weekday = models.PositiveSmallIntegerField(choices=WEEKDAY_CHOICES)
+    opens_at = models.TimeField()
+    closes_at = models.TimeField()
+    # The midday closure. Both or neither - a start with no end cannot be
+    # subtracted from the open window, so `clean` rejects it rather than letting
+    # the engine guess.
+    break_start = models.TimeField(null=True, blank=True)
+    break_end = models.TimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Branch hours"
+        verbose_name_plural = "Branch hours"
+        ordering = ["branch", "weekday"]
+        constraints = [
+            models.UniqueConstraint(fields=["branch", "weekday"], name="branch_hours_unique_weekday"),
+        ]
+
+    def __str__(self):
+        return f"{self.branch} {self.get_weekday_display()} {self.opens_at}-{self.closes_at}"
+
+    def clean(self):
+        if self.opens_at and self.closes_at and self.opens_at >= self.closes_at:
+            raise ValidationError({"closes_at": "Closing time must be after opening time."})
+        if bool(self.break_start) != bool(self.break_end):
+            raise ValidationError({"break_start": "A break needs both a start and an end."})
+        if self.break_start and self.break_end:
+            if self.break_start >= self.break_end:
+                raise ValidationError({"break_end": "Break end must be after break start."})
+            if self.break_start < self.opens_at or self.break_end > self.closes_at:
+                raise ValidationError({"break_start": "The break must fall inside opening hours."})
 
 
 class ContactMessage(Common):

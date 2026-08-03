@@ -15,6 +15,10 @@ import {
   type OrderStatus,
   type OrderSummary,
 } from "@/lib/orders-shared";
+import {
+  formatBookingDateTime,
+  type BookingStatus,
+} from "@/lib/booking-shared";
 import { formatPrice } from "@/lib/price";
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
@@ -24,6 +28,16 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
   failed: "#ef4444",
   canceled: "#ef4444",
   refunded: "#6b7280",
+};
+
+/** The appointment axis, drawn in its own palette. Deliberately not reusing
+ *  `STATUS_COLORS`: a confirmed booking wearing the same green as a paid order
+ *  would read as "the money arrived", which it does not say. */
+const BOOKING_STATUS_COLORS: Record<BookingStatus, string> = {
+  pending: "#f59e0b",
+  confirmed: "#22c55e",
+  completed: "#6b7280",
+  canceled: "#ef4444",
 };
 
 /**
@@ -148,7 +162,35 @@ export function OrderCard({ order, locale }: OrderCardProps) {
             {t("completed")}
           </Badge>
         )}
+        {/* The appointment's own state, which is not the order's: a booking can
+            be confirmed on an order that is still awaiting payment. */}
+        {order.booking && (
+          <Badge
+            variant="subtle"
+            size="sm"
+            color={BOOKING_STATUS_COLORS[order.booking.status]}
+          >
+            {t(`bookingStatus_${order.booking.status}`)}
+          </Badge>
+        )}
       </Box>
+
+      {/* When and where, for an order that is an appointment. Formatted in the
+          branch's timezone, never the reader's - see `lib/booking-shared`. */}
+      {order.booking && (
+        <Typography variant="body" margin={0} fontWeight={600}>
+          {formatBookingDateTime(
+            order.booking.starts_at,
+            order.booking.timezone,
+            locale,
+          )}
+          {order.booking.fulfillment === "on_premises"
+            ? ` · ${t("bookingAtYourAddress")}`
+            : order.booking.branch_name
+              ? ` · ${order.booking.branch_name}`
+              : ""}
+        </Typography>
+      )}
 
       <Typography variant="caption" margin={0} color="var(--foreground)">
         {t("placedOn", {

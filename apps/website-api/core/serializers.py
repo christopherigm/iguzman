@@ -1,7 +1,9 @@
 import base64
 from io import BytesIO
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.files.base import ContentFile
+from django.db import transaction
 from PIL import Image, ImageOps
 from rest_framework import serializers
 
@@ -10,6 +12,7 @@ from .image_sizes import REGULAR, SMALL, MEDIUM, STANDARD, image_cfg
 from .models import (
     DIVIDER_CHOICES,
     Branch,
+    BranchHours,
     Brand,
     CompanyHighlight,
     CompanyHighlightItem,
@@ -20,6 +23,7 @@ from .models import (
     SuccessStoryImage,
     System,
     validate_google_font_url,
+    validate_timezone,
 )
 
 
@@ -1047,8 +1051,36 @@ class BrandWriteSerializer(serializers.Serializer):
 # Branch
 # ---------------------------------------------------------------------------
 
+class BranchHoursWriteSerializer(serializers.Serializer):
+    """One weekday of the schedule, as the CMS sends it.
+
+    A plain Serializer rather than a ModelSerializer because these rows are
+    written as a set (see `BranchWriteSerializer.save`) and never individually -
+    there is no instance to bind to.
+    """
+
+    weekday     = serializers.IntegerField(min_value=0, max_value=6)
+    opens_at    = serializers.TimeField()
+    closes_at   = serializers.TimeField()
+    break_start = serializers.TimeField(required=False, allow_null=True)
+    break_end   = serializers.TimeField(required=False, allow_null=True)
+
+
+class BranchHoursSerializer(serializers.ModelSerializer):
+    """One weekday's opening hours. Public - it is what a booking calendar reads."""
+
+    class Meta:
+        model = BranchHours
+        fields = ["weekday", "opens_at", "closes_at", "break_start", "break_end"]
+
+
 class BranchSerializer(serializers.ModelSerializer):
     """Read serializer for a physical location. Public - business contact info."""
+
+    # Nested rather than a separate endpoint: a branch's hours are never wanted
+    # without the branch, and the list is at most seven rows. The public booking
+    # calendar and the contact page therefore share one cached payload.
+    hours = BranchHoursSerializer(many=True, read_only=True)
 
     class Meta:
         model = Branch
@@ -1057,6 +1089,8 @@ class BranchSerializer(serializers.ModelSerializer):
             "system", "is_main",
             "name", "en_name", "address", "phone", "whatsapp", "email",
             "latitude", "longitude", "sort_order",
+            "timezone", "booking_capacity", "booking_slot_minutes",
+            "booking_min_notice_hours", "booking_max_days_ahead", "hours",
         ]
 
 
@@ -1076,10 +1110,55 @@ class BranchWriteSerializer(serializers.Serializer):
     enabled    = serializers.BooleanField(required=False)
     sort_order = serializers.IntegerField(min_value=0, required=False)
 
+    # ── Booking ────────────────────────────────────────────────────────────────
+    timezone   = serializers.CharField(max_length=64, required=False)
+    booking_capacity          = serializers.IntegerField(min_value=1, max_value=999, required=False)
+    booking_slot_minutes      = serializers.IntegerField(min_value=5, max_value=480, required=False)
+    booking_min_notice_hours  = serializers.IntegerField(min_value=0, max_value=8760, required=False)
+    booking_max_days_ahead    = serializers.IntegerField(min_value=1, max_value=730, required=False)
+    # The whole week in one go. A per-day endpoint would make the CMS form save
+    # in up to seven requests that can half-fail, leaving a branch open on days
+    # the operator just closed; sending the set is one atomic intent.
+    hours = BranchHoursWriteSerializer(many=True, required=False)
+
     _SCALAR_FIELDS = [
         "system", "is_main", "name", "en_name", "address", "phone", "whatsapp",
         "email", "latitude", "longitude", "enabled", "sort_order",
+        "timezone", "booking_capacity", "booking_slot_minutes",
+        "booking_min_notice_hours", "booking_max_days_ahead",
     ]
+
+    def validate_timezone(self, value):
+        try:
+            validate_timezone(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages) from exc
+        return value
+
+    def validate_hours(self, value):
+        """One row per weekday, each internally consistent.
+
+        Validated here rather than left to `BranchHours.clean`, which
+        `bulk_create` never calls - without this a break outside opening hours
+        would reach the database and quietly produce a day with no slots.
+        """
+        seen = set()
+        for row in value:
+            weekday = row["weekday"]
+            if weekday in seen:
+                raise serializers.ValidationError(f"Weekday {weekday} appears more than once.")
+            seen.add(weekday)
+            if row["opens_at"] >= row["closes_at"]:
+                raise serializers.ValidationError("Closing time must be after opening time.")
+            start, end = row.get("break_start"), row.get("break_end")
+            if bool(start) != bool(end):
+                raise serializers.ValidationError("A break needs both a start and an end.")
+            if start and end:
+                if start >= end:
+                    raise serializers.ValidationError("Break end must be after break start.")
+                if start < row["opens_at"] or end > row["closes_at"]:
+                    raise serializers.ValidationError("The break must fall inside opening hours.")
+        return value
 
     def save(self, instance):
         update_fields = []
@@ -1089,6 +1168,19 @@ class BranchWriteSerializer(serializers.Serializer):
                 update_fields.append(field_name)
         if update_fields:
             instance.save(update_fields=update_fields)
+
+        # Replace-all, not upsert: the payload is the complete week, so a weekday
+        # the operator removed has to disappear. Absent from the payload means
+        # "leave the schedule alone" (PATCH semantics), which is why this is
+        # keyed off presence rather than off truthiness - an empty list is a real
+        # instruction to close every day.
+        if "hours" in self.validated_data:
+            rows = self.validated_data["hours"]
+            with transaction.atomic():
+                instance.hours.all().delete()
+                BranchHours.objects.bulk_create(
+                    [BranchHours(branch=instance, **row) for row in rows]
+                )
         return instance
 
 

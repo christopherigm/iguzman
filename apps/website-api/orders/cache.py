@@ -19,3 +19,25 @@ def orders_key(user_id, system_id):
 
 def invalidate_orders(user_id, system_id):
     cache.delete(orders_key(user_id, system_id))
+
+
+# Availability is the most volatile payload in this app - every booking taken
+# invalidates it - so it is cached for a minute rather than the usual five, and
+# any write to a Booking clears the namespace outright (see orders/signals.py).
+# The short TTL is a floor under bursts, not a correctness mechanism: checkout
+# re-derives the slot before writing, so the worst a stale calendar can do is
+# offer a slot that is then honestly refused.
+AVAILABILITY_CACHE_TTL = 60
+
+
+def availability_key(service_id, branch_id, start_date, days):
+    return f"orders:availability:{service_id}:{branch_id or 0}:{start_date}:{days}"
+
+
+def invalidate_availability():
+    try:
+        cache.delete_pattern("orders:availability:*")
+    except AttributeError:
+        # LocMemCache in development and tests has no pattern delete; the
+        # one-minute TTL covers it there.
+        pass

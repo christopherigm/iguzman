@@ -10,11 +10,12 @@ here instead. A signal (rather than a line in each delete path) covers every
 route uniformly: admin single + bulk delete, the API view, and any cascade.
 """
 
+from django.core.cache import cache
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
 from .cache import invalidate_pattern, invalidate_system_payload
-from .models import Branch, Brand, SiteBackup, System
+from .models import Branch, BranchHours, Brand, SiteBackup, System
 from .storage import forget_system
 
 
@@ -40,6 +41,22 @@ def invalidate_system_on_branch_change(sender, instance, **kwargs):
     the catalog counts in ``catalog/signals.py`` - the count changes while the
     System row itself does not, so nothing else would clear it."""
     invalidate_system_payload()
+
+
+@receiver(post_save, sender=BranchHours)
+@receiver(post_delete, sender=BranchHours)
+def invalidate_branch_on_hours_change(sender, instance, **kwargs):
+    """A branch's hours are nested in its cached payload, and it is what the
+    public booking calendar reads its opening days from.
+
+    Needed as a signal rather than a line in the write path because there are
+    three of them: the CMS (`BranchWriteSerializer`, which replaces the whole
+    week), the Django admin's inline (saved through `save_formset`, which
+    `BranchAdmin.save_model` never sees), and any cascade. A tenant that closes
+    Saturdays and still sees Saturdays offered for the next five minutes reads
+    that as the setting not working."""
+    cache.delete(f"core:branch:{instance.branch_id}")
+    invalidate_pattern("core:branches:*")
 
 
 @receiver(post_save, sender=System)

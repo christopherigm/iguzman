@@ -1,20 +1,26 @@
 import json
 import uuid
+from datetime import date, datetime, time, timedelta
+from datetime import timezone as dt_timezone
 from decimal import Decimal
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
 from django.core import mail
 from django.core.cache import cache
 from django.test import TestCase
+from django.utils import timezone
 
 from catalog.models import MenuItem, Product, Service
 from core.crypto import decrypt, encrypt
-from core.models import System
+from core.models import Branch, BranchHours, System
 from users.models import CartItem
 
-from .models import Order, OrderLine
+from .models import Booking, Order, OrderLine
+from .services.booking import branches_for, is_slot_available, slots_for_day
 from .services.stripe_gateway import to_minor_units
+from .views import _booking_amounts
 
 
 class CryptoTests(TestCase):
@@ -1431,3 +1437,446 @@ class OrderEmailTests(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ["jo@guest.test"])
+
+
+class BookingAvailabilityTests(TestCase):
+    """The slot engine: hours, lunch, notice, horizon and capacity.
+
+    Every case pins `now` to a fixed instant rather than relying on the clock,
+    because "is this slot in the future" is half of what the engine decides -
+    a test that used the real time would pass or fail depending on the hour it
+    was run at.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.branch = Branch.objects.create(
+            system=self.system, name="Downtown", is_main=True,
+            timezone="America/Mexico_City", booking_capacity=1,
+            booking_slot_minutes=30, booking_min_notice_hours=0,
+            booking_max_days_ahead=60,
+        )
+        # Monday-Friday 09:00-17:00 with an hour for lunch at 13:00.
+        for weekday in range(5):
+            BranchHours.objects.create(
+                branch=self.branch, weekday=weekday,
+                opens_at=time(9, 0), closes_at=time(17, 0),
+                break_start=time(13, 0), break_end=time(14, 0),
+            )
+        self.service = Service.objects.create(
+            system=self.system, name="Haircut", slug="haircut",
+            price=Decimal("100.00"), currency="USD", duration=60,
+            booking_enabled=True,
+        )
+        # A Wednesday, comfortably in the future of `self.now`.
+        self.day = date(2026, 9, 9)
+        self.now = datetime(2026, 9, 1, 12, 0, tzinfo=dt_timezone.utc)
+
+    def _slots(self, **kwargs):
+        return slots_for_day(self.service, self.branch, self.day, now=self.now, **kwargs)
+
+    def _local(self, slot):
+        return slot.astimezone(ZoneInfo(self.branch.timezone)).strftime("%H:%M")
+
+    def test_slots_run_from_opening_to_the_last_that_fits(self):
+        labels = [self._local(s) for s in self._slots()]
+
+        # A 60-minute service on a 30-minute grid: 09:00 through 12:00 before
+        # lunch (12:30 would run into it), then 14:00 through 16:00 after.
+        self.assertEqual(labels[0], "09:00")
+        self.assertEqual(labels[-1], "16:00")
+        # 16:30 would end at 17:30, past closing.
+        self.assertNotIn("16:30", labels)
+
+    def test_the_lunch_break_is_subtracted(self):
+        labels = [self._local(s) for s in self._slots()]
+
+        # 12:30 and 13:00 both overlap the 13:00-14:00 break.
+        self.assertNotIn("12:30", labels)
+        self.assertNotIn("13:00", labels)
+        self.assertIn("12:00", labels)
+        self.assertIn("14:00", labels)
+
+    def test_a_closed_weekday_offers_nothing(self):
+        sunday = date(2026, 9, 13)
+        self.assertEqual(
+            slots_for_day(self.service, self.branch, sunday, now=self.now), []
+        )
+
+    def test_minimum_notice_trims_the_near_edge(self):
+        self.branch.booking_min_notice_hours = 26
+        self.branch.save()
+        # 12:00 UTC on the 8th is 06:00 in Mexico City; +26h lands at 08:00 local
+        # on the 9th, which still clears the 09:00 opening...
+        labels = [
+            self._local(s)
+            for s in slots_for_day(
+                self.service, self.branch, self.day,
+                now=datetime(2026, 9, 8, 12, 0, tzinfo=dt_timezone.utc),
+            )
+        ]
+        self.assertIn("09:00", labels)
+
+        # ...while a 32-hour notice pushes past it and eats the morning.
+        self.branch.booking_min_notice_hours = 32
+        self.branch.save()
+        labels = [
+            self._local(s)
+            for s in slots_for_day(
+                self.service, self.branch, self.day,
+                now=datetime(2026, 9, 8, 12, 0, tzinfo=dt_timezone.utc),
+            )
+        ]
+        self.assertNotIn("09:00", labels)
+        self.assertIn("14:00", labels)
+
+    def test_beyond_the_horizon_offers_nothing(self):
+        self.branch.booking_max_days_ahead = 3
+        self.branch.save()
+        self.assertEqual(self._slots(), [])
+
+    def test_a_booking_removes_the_slots_it_overlaps(self):
+        taken = self._slots()[0]  # 09:00 local
+        self._book(taken)
+
+        labels = [self._local(s) for s in self._slots()]
+        # The 60-minute appointment at 09:00 also blocks a start at 09:30, which
+        # would run into it.
+        self.assertNotIn("09:00", labels)
+        self.assertNotIn("09:30", labels)
+        self.assertIn("10:00", labels)
+
+    def test_capacity_lets_that_many_overlap(self):
+        self.branch.booking_capacity = 2
+        self.branch.save()
+        nine = self._slots()[0]
+        self._book(nine)
+
+        self.assertIn("09:00", [self._local(s) for s in self._slots()])
+
+        self._book(nine)
+        self.assertNotIn("09:00", [self._local(s) for s in self._slots()])
+
+    def test_a_canceled_booking_hands_its_slot_back(self):
+        nine = self._slots()[0]
+        booking = self._book(nine)
+        self.assertNotIn("09:00", [self._local(s) for s in self._slots()])
+
+        booking.status = Booking.STATUS_CANCELED
+        booking.save()
+
+        self.assertIn("09:00", [self._local(s) for s in self._slots()])
+
+    def test_is_slot_available_agrees_with_the_offered_list(self):
+        """The invariant the whole design rests on: what the calendar shows and
+        what checkout accepts are the same answer."""
+        offered = self._slots()
+        for slot in offered:
+            self.assertTrue(
+                is_slot_available(self.service, self.branch, slot, now=self.now)
+            )
+        # 12:30 local overlaps lunch and is not offered.
+        lunch_edge = datetime(2026, 9, 9, 12, 30, tzinfo=ZoneInfo(self.branch.timezone))
+        self.assertFalse(
+            is_slot_available(
+                self.service, self.branch,
+                lunch_edge.astimezone(dt_timezone.utc), now=self.now,
+            )
+        )
+
+    def test_a_branchless_tenant_still_gets_a_calendar(self):
+        """The home business: no Branch rows at all, so the defaults apply."""
+        solo_system = System.objects.create(site_name="Solo", host="solo.test")
+        solo = Service.objects.create(
+            system=solo_system, name="Consult", slug="consult",
+            price=Decimal("50.00"), currency="USD", duration=60,
+            booking_enabled=True,
+        )
+        self.assertEqual(branches_for(solo), [])
+        self.assertTrue(slots_for_day(solo, None, self.day, now=self.now))
+
+    def _book(self, start_utc, status=Booking.STATUS_PENDING):
+        order = Order.objects.create(
+            system=self.system, status=Order.STATUS_PLACED, currency="USD",
+            subtotal=Decimal("100.00"), total=Decimal("100.00"),
+        )
+        return Booking.objects.create(
+            order=order, service=self.service, branch=self.branch,
+            starts_at=start_utc, ends_at=start_utc + timedelta(minutes=60),
+            timezone=self.branch.timezone, duration_minutes=60, status=status,
+        )
+
+
+class BookingCheckoutTests(TestCase):
+    """Booking a slot: what is accepted, what is refused, and what gets charged."""
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(
+            site_name="Acme", host="acme.test", stripe_enabled=True,
+        )
+        self.system.set_stripe_secret_key("sk_test_123")
+        self.system.set_stripe_webhook_secret("whsec_123")
+        self.system.save()
+
+        self.branch = Branch.objects.create(
+            system=self.system, name="Downtown", is_main=True,
+            timezone="UTC", booking_capacity=1, booking_slot_minutes=30,
+            booking_min_notice_hours=0, booking_max_days_ahead=60,
+        )
+        for weekday in range(7):
+            BranchHours.objects.create(
+                branch=self.branch, weekday=weekday,
+                opens_at=time(9, 0), closes_at=time(17, 0),
+            )
+        self.service = Service.objects.create(
+            system=self.system, name="Haircut", slug="haircut",
+            price=Decimal("100.00"), currency="USD", duration=60,
+            booking_enabled=True, booking_in_branch=True,
+            booking_pay_full=True, booking_pay_deposit=True,
+            booking_deposit_percent=30, booking_pay_in_person=True,
+        )
+
+    def _slot(self):
+        """The first slot the engine actually offers, so a test can never send
+        a time the branch was never open for."""
+        tomorrow = (timezone.now() + timedelta(days=1)).date()
+        for offset in range(7):
+            slots = slots_for_day(self.service, self.branch, tomorrow + timedelta(days=offset))
+            if slots:
+                return slots[0]
+        raise AssertionError("the fixture branch offers no slots at all")
+
+    def _book(self, **overrides):
+        payload = {
+            "service": self.service.pk,
+            "branch": self.branch.pk,
+            "fulfillment": "branch",
+            "starts_at": self._slot().isoformat(),
+            "payment_option": "in_person",
+            "contact": {"name": "Ada", "email": "ada@example.test", "phone": "555"},
+            "locale": "en",
+        }
+        payload.update(overrides)
+        return self.client.post(
+            "/api/bookings/checkout/", payload,
+            content_type="application/json", HTTP_X_WEBSITE_HOST="acme.test",
+        )
+
+    def test_a_guest_can_book_and_the_order_is_placed(self):
+        response = self._book()
+
+        self.assertEqual(response.status_code, 201)
+        booking = Booking.objects.get(pk=response.json()["booking_id"])
+        self.assertEqual(booking.order.status, Order.STATUS_PLACED)
+        self.assertIsNone(booking.order.user)
+        self.assertEqual(booking.order.total, Decimal("100.00"))
+        # Nothing charged now, everything owed later.
+        self.assertEqual(booking.amount_due_now, Decimal("0.00"))
+        self.assertEqual(booking.amount_due_later, Decimal("100.00"))
+        # The service is snapshotted as an order line, like any other sale.
+        self.assertEqual(booking.order.lines.get().name, "Haircut")
+
+    def test_a_service_that_is_not_bookable_is_a_404(self):
+        self.service.booking_enabled = False
+        self.service.save()
+        self.assertEqual(self._book().status_code, 404)
+
+    def test_another_tenants_service_cannot_be_booked(self):
+        other = System.objects.create(site_name="Beta", host="beta.test")
+        theirs = Service.objects.create(
+            system=other, name="Theirs", slug="theirs",
+            price=Decimal("10.00"), currency="USD", booking_enabled=True,
+        )
+        self.assertEqual(self._book(service=theirs.pk).status_code, 404)
+
+    def test_a_branch_the_service_does_not_offer_is_refused(self):
+        elsewhere = Branch.objects.create(system=self.system, name="Uptown")
+        self.service.booking_branches.set([self.branch])
+
+        response = self._book(branch=elsewhere.pk)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "BRANCH_REQUIRED")
+
+    def test_a_taken_slot_is_refused_even_though_the_body_named_it(self):
+        slot = self._slot()
+        self.assertEqual(self._book(starts_at=slot.isoformat()).status_code, 201)
+
+        response = self._book(starts_at=slot.isoformat())
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "SLOT_UNAVAILABLE")
+
+    def test_a_slot_outside_opening_hours_is_refused(self):
+        # 03:00 UTC, hours away from the 09:00-17:00 window.
+        night = (timezone.now() + timedelta(days=2)).replace(
+            hour=3, minute=0, second=0, microsecond=0,
+        )
+        response = self._book(starts_at=night.isoformat())
+
+        self.assertEqual(response.status_code, 409)
+
+    def test_a_payment_option_the_tenant_disabled_is_refused(self):
+        self.service.booking_pay_full = False
+        self.service.save()
+
+        response = self._book(payment_option="full")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "PAYMENT_OPTION_UNAVAILABLE")
+
+    def test_on_premises_needs_an_address(self):
+        self.service.booking_on_premises = True
+        self.service.save()
+
+        response = self._book(fulfillment="on_premises", address="")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("address", response.json())
+
+    def test_a_booking_with_no_way_to_reach_the_customer_is_refused(self):
+        response = self._book(contact={"name": "Ada", "email": "", "phone": ""})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "CONTACT_REQUIRED")
+
+    @patch("orders.views.create_checkout_session", return_value=_StubSession())
+    def test_a_deposit_charges_the_percentage_and_records_the_rest(self, mocked):
+        response = self._book(payment_option="deposit")
+
+        self.assertEqual(response.status_code, 201)
+        booking = Booking.objects.get(pk=response.json()["booking_id"])
+        self.assertEqual(booking.amount_due_now, Decimal("30.00"))
+        self.assertEqual(booking.amount_due_later, Decimal("70.00"))
+        # The order still records the full price - the deposit is not a discount.
+        self.assertEqual(booking.order.total, Decimal("100.00"))
+        self.assertEqual(booking.order.status, Order.STATUS_PENDING)
+        # And Stripe is asked for the deposit, not the total.
+        self.assertEqual(mocked.call_args.kwargs["charge_amount"], Decimal("30.00"))
+
+    @patch("orders.views.create_checkout_session", return_value=_StubSession())
+    def test_paying_in_full_sends_the_lines_rather_than_an_amount(self, mocked):
+        response = self._book(payment_option="full")
+
+        self.assertEqual(response.status_code, 201)
+        self.assertIsNone(mocked.call_args.kwargs["charge_amount"])
+        booking = Booking.objects.get(pk=response.json()["booking_id"])
+        self.assertEqual(booking.amount_due_now, Decimal("100.00"))
+        self.assertEqual(booking.amount_due_later, Decimal("0.00"))
+
+    def test_a_site_without_stripe_cannot_take_a_deposit(self):
+        self.system.stripe_enabled = False
+        self.system.save()
+
+        response = self._book(payment_option="deposit")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["code"], "PAYMENTS_UNAVAILABLE")
+        # And nothing was written - a slot must not be held for a booking that
+        # could never be paid for.
+        self.assertFalse(Booking.objects.exists())
+
+    def test_the_deposit_split_always_sums_back_to_the_total(self):
+        """A percentage of an awkward price must not lose a cent."""
+        self.service.price = Decimal("99.99")
+        self.service.booking_deposit_percent = 33
+        self.service.save()
+
+        now, later = _booking_amounts(Decimal("99.99"), self.service, Booking.PAYMENT_DEPOSIT)
+
+        self.assertEqual(now + later, Decimal("99.99"))
+        self.assertEqual(now, Decimal("33.00"))
+
+
+class BookingAdminTests(TestCase):
+    """The CMS bookings screen and its three actions."""
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.other_system = System.objects.create(site_name="Beta", host="beta.test")
+        self.admin = User.objects.create_user("admin", password="x", email="a@acme.test")
+        self.admin.profile.system = self.system
+        self.admin.profile.is_admin = True
+        self.admin.profile.save()
+        self.client.force_login(self.admin)
+
+        self.booking = self._make_booking(self.system)
+
+    def _make_booking(self, system):
+        order = Order.objects.create(
+            system=system, status=Order.STATUS_PLACED, currency="USD",
+            subtotal=Decimal("100.00"), total=Decimal("100.00"),
+            shipping_name="Ada", email="ada@example.test",
+        )
+        start = timezone.now() + timedelta(days=1)
+        return Booking.objects.create(
+            order=order, starts_at=start, ends_at=start + timedelta(hours=1),
+            timezone="UTC", duration_minutes=60,
+        )
+
+    def test_list_returns_only_this_tenants_bookings(self):
+        self._make_booking(self.other_system)
+
+        response = self.client.get("/api/bookings/admin/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]["customer_name"], "Ada")
+
+    def test_a_non_admin_is_forbidden(self):
+        plain = User.objects.create_user("plain", password="x", email="p@acme.test")
+        plain.profile.system = self.system
+        plain.profile.save()
+        self.client.force_login(plain)
+
+        self.assertEqual(self.client.get("/api/bookings/admin/").status_code, 403)
+
+    def test_another_tenants_booking_is_a_404(self):
+        theirs = self._make_booking(self.other_system)
+
+        response = self.client.patch(
+            f"/api/bookings/admin/{theirs.pk}/",
+            {"action": "confirm"}, content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_confirm_moves_the_booking_without_touching_the_money(self):
+        response = self.client.patch(
+            f"/api/bookings/admin/{self.booking.pk}/",
+            {"action": "confirm"}, content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.booking.refresh_from_db()
+        self.booking.order.refresh_from_db()
+        self.assertEqual(self.booking.status, Booking.STATUS_CONFIRMED)
+        # Payment is a separate axis and must not move with the appointment.
+        self.assertEqual(self.booking.order.status, Order.STATUS_PLACED)
+
+    def test_complete_also_fulfils_the_order(self):
+        self.client.patch(
+            f"/api/bookings/admin/{self.booking.pk}/",
+            {"action": "complete"}, content_type="application/json",
+        )
+
+        self.booking.refresh_from_db()
+        self.booking.order.refresh_from_db()
+        self.assertEqual(self.booking.status, Booking.STATUS_COMPLETED)
+        self.assertTrue(self.booking.order.fulfilled)
+        # Still not paid: the tenant may well be collecting on the day.
+        self.assertEqual(self.booking.order.status, Order.STATUS_PLACED)
+
+    def test_cancel_cancels_the_order_with_it(self):
+        self.client.patch(
+            f"/api/bookings/admin/{self.booking.pk}/",
+            {"action": "cancel"}, content_type="application/json",
+        )
+
+        self.booking.refresh_from_db()
+        self.booking.order.refresh_from_db()
+        self.assertEqual(self.booking.status, Booking.STATUS_CANCELED)
+        self.assertEqual(self.booking.order.status, Order.STATUS_CANCELED)

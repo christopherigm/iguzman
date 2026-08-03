@@ -1,8 +1,12 @@
 from django.urls import path
 
 from .views import (
+    AdminBookingDetailView,
+    AdminBookingListView,
     AdminOrderDetailView,
     AdminOrderListView,
+    BookingAvailabilityView,
+    BookingCheckoutView,
     CheckoutView,
     OrderDetailView,
     OrderListView,
@@ -12,6 +16,14 @@ from .views import (
 
 urlpatterns = [
     path("orders/checkout/", CheckoutView.as_view(), name="order-checkout"),
+    # Bookings. Under their own prefix rather than `orders/bookings/` because a
+    # booking is addressed by its own id in the CMS, while its *order* is still
+    # addressed by `public_id` under `orders/` - nesting them would suggest one
+    # id space where there are two.
+    path("bookings/availability/", BookingAvailabilityView.as_view(), name="booking-availability"),
+    path("bookings/checkout/", BookingCheckoutView.as_view(), name="booking-checkout"),
+    path("bookings/admin/", AdminBookingListView.as_view(), name="admin-booking-list"),
+    path("bookings/admin/<int:pk>/", AdminBookingDetailView.as_view(), name="admin-booking-detail"),
     # Tenant order management. Ahead of the customer routes below, though the
     # `<uuid>` converter would not match "admin" anyway.
     path("orders/admin/", AdminOrderListView.as_view(), name="admin-order-list"),

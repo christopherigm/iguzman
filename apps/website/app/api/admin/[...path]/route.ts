@@ -19,6 +19,10 @@ const ALLOWED_PREFIXES = [
   "check-slug/",
   "auth/admin/users/",
   "orders/admin/",
+  // The CMS bookings screen. Only the admin sub-tree: the public availability
+  // and booking-checkout endpoints are reached from the storefront through
+  // their own handlers, not through this admin proxy.
+  "bookings/admin/",
   // Listing, creating and deleting restore points only. Downloading an archive
   // and uploading one to restore are binary/multipart and cannot come through
   // here (this proxy re-encodes every body and response as JSON) - they have

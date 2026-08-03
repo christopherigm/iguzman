@@ -7,6 +7,7 @@ import { Badge } from "@repo/ui/core-elements/badge";
 import { ShareButton } from "@repo/ui/core-elements/share-button";
 import { getSession } from "@repo/auth/session";
 import type { ServiceDetail } from "@/lib/catalog";
+import { getBranches } from "@/lib/branches";
 import { findCartLineId } from "@/lib/cart";
 import { isFavorite } from "@/lib/favorites";
 import { toShareDescription } from "@/lib/metadata";
@@ -15,6 +16,7 @@ import { AddToCartButton } from "./add-to-cart-button";
 import { BuyNowButton } from "./buy-now-button";
 import { FavoriteButton } from "./favorite-button";
 import { AdminEditButton } from "./admin-edit-button";
+import { ServiceBookingCta } from "./service-booking-cta";
 import { VariantThumbs } from "./variant-thumbs";
 
 function formatDuration(minutes: number): string {
@@ -198,11 +200,33 @@ export async function ServiceDetailPanel({
   service,
   locale,
 }: ServiceDetailProps) {
-  const [t, session, cartLineId] = await Promise.all([
+  const [t, session, cartLineId, branches] = await Promise.all([
     getTranslations("ItemDetail"),
     getSession(),
     findCartLineId("service", service.id),
+    // Only needed to name the locations in the booking picker. Fetched
+    // unconditionally because it is `cache()`d per request and the contact
+    // footer usually asks for it anyway.
+    getBranches(),
   ]);
+
+  // An empty `booking_branches` means "every branch", not "no branch" - see
+  // `branches_for` in website-api. A tenant with no Branch rows at all is the
+  // home business: no picker, and the booking carries no branch.
+  const bookingBranches = branches
+    .filter(
+      (branch) =>
+        service.booking_branches.length === 0 ||
+        service.booking_branches.includes(branch.id),
+    )
+    .map((branch) => ({
+      id: branch.id,
+      name:
+        (locale === "en" ? branch.en_name : branch.name) ??
+        branch.name ??
+        branch.en_name ??
+        "",
+    }));
 
   const discount = service.compare_price
     ? discountPercent(service.price, service.compare_price)
@@ -260,30 +284,41 @@ export async function ServiceDetailPanel({
             </Typography>
           )}
 
-          {/* Actions: secondary + primary CTAs share the width, wrapping on very
-            narrow widths so the buttons never get crushed. */}
-          <Box alignItems="center" gap={10} width="100%" flexWrap="wrap">
-            <AddToCartButton
-              kind="service"
-              id={service.id}
-              cartLineId={cartLineId}
-              isLoggedIn={session !== null}
-              display="button"
-              buttonKind="warning"
-              size="lg"
-              flex="1"
-              minWidth={140}
+          {/* Actions. A bookable service is sold as an appointment, so the two
+            cart CTAs are replaced outright rather than joined - a specific hour
+            at a specific place is not something a cart line can hold. */}
+          {service.booking_enabled ? (
+            <ServiceBookingCta
+              slug={service.slug}
+              fulfillmentOptions={service.booking_fulfillment_options}
+              branches={bookingBranches}
             />
-            <BuyNowButton
-              kind="service"
-              id={service.id}
-              isLoggedIn={session !== null}
-              text={t("buyNow")}
-              size="lg"
-              flex="1"
-              minWidth={140}
-            />
-          </Box>
+          ) : (
+            /* Secondary + primary CTAs share the width, wrapping on very narrow
+              widths so the buttons never get crushed. */
+            <Box alignItems="center" gap={10} width="100%" flexWrap="wrap">
+              <AddToCartButton
+                kind="service"
+                id={service.id}
+                cartLineId={cartLineId}
+                isLoggedIn={session !== null}
+                display="button"
+                buttonKind="warning"
+                size="lg"
+                flex="1"
+                minWidth={140}
+              />
+              <BuyNowButton
+                kind="service"
+                id={service.id}
+                isLoggedIn={session !== null}
+                text={t("buyNow")}
+                size="lg"
+                flex="1"
+                minWidth={140}
+              />
+            </Box>
+          )}
         </Card>
 
         {/* Service details spec table */}

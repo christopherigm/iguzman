@@ -158,6 +158,11 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
     # business key. Their auto_now_add timestamp is restored verbatim (see the
     # module docstring), so it *is* a stable identity across a backup round-trip.
     ModelSpec("core.Branch", SECTION_SYSTEM, "system", natural_key=("created",)),
+    # Opening hours have no identity apart from the branch they belong to (a
+    # weekday number is only meaningful within one), so they ride as children and
+    # are replaced wholesale per branch - the same shape gallery images use, and
+    # the same shape the CMS writes them in.
+    ModelSpec("core.BranchHours", SECTION_SYSTEM, "branch__system", parent="branch"),
     ModelSpec("core.SuccessStory", SECTION_SYSTEM, "system", natural_key=("slug",)),
     ModelSpec("core.SuccessStoryImage", SECTION_SYSTEM, "story__system", parent="story"),
     ModelSpec("core.CompanyHighlight", SECTION_SYSTEM, "system", natural_key=("slug",)),
@@ -177,6 +182,12 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
     ),
     ModelSpec("orders.Order", SECTION_SYSTEM, "system", natural_key=("public_id",)),
     ModelSpec("orders.OrderLine", SECTION_SYSTEM, "order__system", parent="order"),
+    # An appointment is part of its order's record and has to survive a restore
+    # with it - a tenant that restores yesterday's backup and finds Tuesday's
+    # bookings gone has lost its week. Keyed on the order for the same reason
+    # OrderLine is: a booking has no identity of its own, and there is exactly
+    # one per order (OneToOne), so replacing it per parent is exact.
+    ModelSpec("orders.Booking", SECTION_SYSTEM, "order__system", parent="order"),
     ModelSpec("users.Favorite", SECTION_SYSTEM, "system", natural_key=("created_at",)),
     ModelSpec("users.CartItem", SECTION_SYSTEM, "system", natural_key=("created_at",)),
     # ---- products ---------------------------------------------------------- #

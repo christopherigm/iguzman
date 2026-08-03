@@ -83,6 +83,62 @@ customization?, quantity}`) - Django re-prices every one of them
   `admin/payments/page.tsx` deletes empty secret keys from the payload; keep that
   if you touch the form.
 
+## Booking - a service sold as an appointment
+
+A service with `booking_enabled` swaps its cart CTAs for a fulfillment picker
+plus **Book now** (`components/service-booking-cta.tsx`), which leads to
+`/booking/<slug>` - a centred `Card` with the location select, a month calendar,
+the day's free times, a details box and the payment choice. The API side owns
+every rule; read `website-api/CLAUDE.md` → "Bookings" first.
+
+- **The cart CTAs are replaced, not joined.** A service sold as an appointment
+  occupies a specific hour at a specific place, which a cart line has no way to
+  hold - keeping "Add to cart" alongside would let a customer buy a haircut with
+  no time attached to it.
+- **Nothing in the frontend decides availability.** Every date and every time on
+  screen came from `/api/booking/availability`, which runs the same engine
+  checkout re-runs before writing. The form's job is to show that answer, not to
+  have an opinion about opening hours. A `SLOT_UNAVAILABLE` on submit drops the
+  selection and refetches rather than telling the customer to retry the same dead
+  slot.
+- ⚠ **Never format a booking instant with a bare `toLocaleString()`.** The
+  helpers in `lib/booking-shared.ts` all take the booking's own `timeZone` and
+  none of them fall back to the browser's: an appointment happens at the
+  _branch's_ local time, and a customer reading their order from another country
+  must be shown the hour they are expected to arrive. `localDateKey` exists for
+  the same reason - `toISOString()` would give the UTC date, filing an 8pm Mexico
+  City slot under tomorrow.
+- **`lib/booking-shared.ts` is the client-safe half**, split from `lib/booking.ts`
+  exactly as `orders-shared.ts` is split from `orders.ts` - a `"use client"`
+  component importing a runtime value from the fetcher module would drag
+  `next/headers` into its bundle and fail the build.
+- **One route handler for guests and signed-in customers** (`/api/booking/checkout`),
+  unlike cart checkout's `/api/auth/checkout` + `/api/guest/checkout` pair. Those
+  are split because a guest's cart travels in the body while a signed-in cart is
+  read from rows; a booking body is identical either way, so this uses
+  `allowAnonymous` plus `X-Website-Host` - token first, host as the fallback,
+  like `getOrder`.
+- **The location choice rides in search params**, so it survives a refresh, a
+  shared link and the back button. The booking page re-validates it against what
+  the service actually offers - the params are in a URL the customer can edit.
+- **An empty `booking_branches` means every branch**, not none. Both the detail
+  page and the booking page filter with that rule; getting it backwards makes an
+  unconfigured bookable service look broken.
+- **The calendar is hand-rolled** (`components/booking/booking-calendar.tsx`)
+  because the one thing a native `<input type="date">` cannot do is grey out the
+  days with no slots, which is the entire reason to show a calendar. Its day
+  cells are the one place here with a CSS file: every rule in it is a `:hover` /
+  `:disabled` / transition state a prop cannot express.
+- **In the CMS**, `/admin/bookings` lists upcoming appointments with
+  confirm/complete/cancel, and the booking block on a service is
+  `components/admin/service-booking-section.tsx`. A branch's schedule editor is
+  `components/admin/branch-hours-editor.tsx`, submitted with the rest of the
+  branch form as one `hours` array - **a day switched off is a row that is not
+  sent**, matching the API's "no row = closed".
+- Booking status has its **own** colour scale on the order card and the CMS list,
+  deliberately not the order-status one: a confirmed booking wearing the paid
+  order's green would read as "the money arrived", which it does not say.
+
 ## Anonymous cart, favorites and guest checkout
 
 **A visitor needs no account to save items, fill a cart, or pay.** The cart and
@@ -164,7 +220,7 @@ the default URL shape, so local images keep their resizing and modern formats.
 - **`/_next/image` still exists and two features still depend on it** — the
   social-post flyer export (`html-to-image` taints the canvas on a cross-origin
   fetch) and the hero `logo`-shape CSS mask (a cross-origin mask resolves to an
-  *empty* mask and clips the badge away). Both route a remote URL through the
+  _empty_ mask and clips the badge away). Both route a remote URL through the
   optimizer precisely to get a same-origin copy. That keeps working: the route is
   only disabled by `output: 'export'`, not by a custom loader.
 - ⚠ **Those two features are gated by `images.remotePatterns`.** The platform
@@ -182,7 +238,7 @@ the default URL shape, so local images keep their resizing and modern formats.
 `storage-section.tsx` is where a tenant connects **its own Cloudflare R2
 account**, so its images and backups live in its bucket and serve from its CDN
 hostname instead of the platform's. It sits above Backup & Restore because it
-decides *where* a backup is written. Like them it is outside the page's
+decides _where_ a backup is written. Like them it is outside the page's
 `AdminForm` and owns its own requests. The engine is `core/storage.py` in
 website-api — read that CLAUDE.md section before changing either side.
 

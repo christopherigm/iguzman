@@ -4,6 +4,7 @@ from django.core.cache import cache
 from .cache import invalidate_pattern as _invalidate_pattern
 from .models import (
     Branch,
+    BranchHours,
     Brand,
     CompanyHighlight,
     CompanyHighlightItem,
@@ -128,12 +129,20 @@ class BrandAdmin(admin.ModelAdmin):
         super().delete_model(request, obj)
 
 
+class BranchHoursInline(admin.TabularInline):
+    model = BranchHours
+    extra = 0
+    max_num = 7
+    fields = ("weekday", "opens_at", "closes_at", "break_start", "break_end")
+
+
 @admin.register(Branch)
 class BranchAdmin(admin.ModelAdmin):
-    list_display = ("name", "system", "is_main", "phone", "enabled", "modified")
+    list_display = ("name", "system", "is_main", "phone", "timezone", "enabled", "modified")
     list_filter = ("enabled", "is_main", "system")
     search_fields = ("name", "en_name", "address", "phone")
     readonly_fields = ("created", "modified", "version")
+    inlines = [BranchHoursInline]
     fieldsets = (
         ("Identity", {
             "fields": ("system", "is_main", "enabled", "sort_order", "version", "created", "modified"),
@@ -146,6 +155,16 @@ class BranchAdmin(admin.ModelAdmin):
         }),
         ("Coordinates", {
             "fields": ("latitude", "longitude"),
+        }),
+        ("Booking", {
+            "fields": (
+                "timezone", "booking_capacity", "booking_slot_minutes",
+                "booking_min_notice_hours", "booking_max_days_ahead",
+            ),
+            "description": (
+                "Opening hours below are local to this timezone. Capacity is how many "
+                "bookings may overlap here."
+            ),
         }),
     )
 

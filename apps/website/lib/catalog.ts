@@ -240,6 +240,18 @@ export interface ServiceDetail {
   modality: string | null;
   images: ServiceImage[];
   variants: ServiceVariant[];
+  /** When true the detail page sells this as an appointment: the cart CTAs are
+   *  replaced by "Book now", which leads to `/booking/<slug>`. */
+  booking_enabled: boolean;
+  /** Branch ids this service is offered at. **Empty means every branch** - see
+   *  `branches_for` in website-api's `orders/services/booking.py`. */
+  booking_branches: number[];
+  /** The resolved options, not the raw switches: the API applies the fallbacks
+   *  (no fulfillment set → `branch`, no payment set → `in_person`), so the
+   *  storefront and the checkout cannot disagree about what is on offer. */
+  booking_fulfillment_options: ("branch" | "on_premises")[];
+  booking_payment_options: ("full" | "deposit" | "in_person")[];
+  booking_deposit_percent: number;
 }
 
 export const getFeaturedProducts = cache(

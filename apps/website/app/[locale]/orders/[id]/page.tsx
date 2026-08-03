@@ -13,6 +13,7 @@ import { getSession } from "@repo/auth/session";
 import { getOrder, orderRef } from "@/lib/orders";
 import { formatPrice } from "@/lib/price";
 import { OrderStatusBanner } from "./order-status-banner";
+import { BookingDetails } from "./booking-details";
 import { OrderLineRow } from "./order-line-row";
 
 type Props = {
@@ -100,6 +101,15 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
               paymentMethod={order.payment_method}
               fulfilled={order.fulfilled}
             />
+            {/* For a booking this is what the customer came for - above the
+                lines, which for an appointment are a single receipt row. */}
+            {order.booking && (
+              <BookingDetails
+                booking={order.booking}
+                currency={order.currency}
+                locale={locale}
+              />
+            )}
             {order.lines.map((line) => (
               <OrderLineRow key={line.id} line={line} />
             ))}

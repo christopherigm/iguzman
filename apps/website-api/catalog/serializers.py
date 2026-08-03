@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.db import transaction
 from rest_framework import serializers
 
-from core.models import Brand, System, CURRENCY_CHOICES
+from core.models import Branch, Brand, System, CURRENCY_CHOICES
 from core.image_sizes import REGULAR, SMALL, STANDARD, image_cfg
 from core.serializers import ImageProcessingSerializer
 from .models import (
@@ -538,6 +538,19 @@ class ServiceSerializer(serializers.ModelSerializer):
     brand_name = serializers.CharField(source='brand.name', read_only=True, default=None)
     category_name = serializers.CharField(source='category.name', read_only=True, default=None)
     category_slug = serializers.SlugRelatedField(source='category', slug_field='slug', read_only=True)
+    # The *resolved* options rather than the raw switches, so the storefront and
+    # the checkout cannot disagree about what "no option enabled" means - the
+    # model properties own that fallback (see Service.booking_payment_options).
+    booking_payment_options = serializers.ListField(
+        child=serializers.CharField(), read_only=True,
+    )
+    booking_fulfillment_options = serializers.ListField(
+        child=serializers.CharField(), read_only=True,
+    )
+    # The ids the CMS picker round-trips. Which branches those *are* is a
+    # separate, cached read (`/api/branches/`), so this stays a flat id list and
+    # the service payload does not carry a copy of every location.
+    booking_branches = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
         model = Service
@@ -553,6 +566,10 @@ class ServiceSerializer(serializers.ModelSerializer):
             'price', 'compare_price', 'cost_price', 'currency',
             'is_featured', 'is_ai_generated', 'is_verified',
             'duration', 'modality',
+            'booking_enabled', 'booking_in_branch', 'booking_on_premises',
+            'booking_branches', 'booking_fulfillment_options',
+            'booking_pay_full', 'booking_pay_deposit', 'booking_deposit_percent',
+            'booking_pay_in_person', 'booking_payment_options',
             'sort_order',
         ]
 
@@ -617,6 +634,23 @@ class ServiceWriteSerializer(serializers.Serializer):
         choices=[c[0] for c in MODALITY_CHOICES], required=False, allow_null=True,
     )
 
+    # Booking configuration. Every one is optional, so a CMS save that predates
+    # this feature (or an integration that never sends them) leaves the service
+    # exactly as it was rather than silently turning booking off.
+    booking_enabled = serializers.BooleanField(required=False)
+    booking_in_branch = serializers.BooleanField(required=False)
+    booking_on_premises = serializers.BooleanField(required=False)
+    # Scoped to the caller's own tenant in `validate_booking_branches`, not here:
+    # a PrimaryKeyRelatedField queryset cannot see the request's System, and an
+    # unscoped one would let a crafted id attach another tenant's location.
+    booking_branches = serializers.PrimaryKeyRelatedField(
+        queryset=Branch.objects.all(), many=True, required=False,
+    )
+    booking_pay_full = serializers.BooleanField(required=False)
+    booking_pay_deposit = serializers.BooleanField(required=False)
+    booking_deposit_percent = serializers.IntegerField(min_value=1, max_value=100, required=False)
+    booking_pay_in_person = serializers.BooleanField(required=False)
+
     # Image as base64 string
     image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
@@ -656,6 +690,25 @@ class ServiceWriteSerializer(serializers.Serializer):
             value = [v for v in value if v.pk != self.instance.pk]
         return value
 
+    def validate_booking_branches(self, value):
+        """Keep only branches belonging to the service's own System.
+
+        The tenant is taken from the payload's `system` when one is being set and
+        from the existing row otherwise, which covers both create and PATCH. A
+        branch from another tenant is **dropped rather than rejected**: the CMS
+        can only ever offer the caller's own locations, so an id from elsewhere
+        is a crafted request, and answering it with a validation error would
+        confirm that the id exists.
+        """
+        system_id = None
+        if self.initial_data.get('system') is not None:
+            system_id = self.initial_data.get('system')
+        elif self.instance is not None:
+            system_id = self.instance.system_id
+        if system_id is None:
+            return value
+        return [b for b in value if str(b.system_id) == str(system_id)]
+
     _SCALAR_FIELDS = [
         'name', 'en_name', 'description', 'en_description',
         'short_description', 'en_short_description', 'href', 'video_link', 'fit',
@@ -664,15 +717,22 @@ class ServiceWriteSerializer(serializers.Serializer):
         'price', 'compare_price', 'cost_price', 'currency',
         'enabled', 'is_featured', 'is_ai_generated', 'is_verified',
         'duration', 'modality',
+        'booking_enabled', 'booking_in_branch', 'booking_on_premises',
+        'booking_pay_full', 'booking_pay_deposit', 'booking_deposit_percent',
+        'booking_pay_in_person',
     ]
 
     def create(self, validated_data):
         image_data = validated_data.pop('image', None)
         variants = validated_data.pop('variants', None)
+        booking_branches = validated_data.pop('booking_branches', None)
         service = Service(**validated_data)
         service.save()
         if variants is not None:
             service.variants.set(variants)
+        # After save: an M2M cannot be assigned before the row has a pk.
+        if booking_branches is not None:
+            service.booking_branches.set(booking_branches)
         if image_data:
             self._save_image(service, image_data)
         return service
@@ -681,6 +741,7 @@ class ServiceWriteSerializer(serializers.Serializer):
         clear_image = 'image' in validated_data and not validated_data.get('image')
         image_data = validated_data.pop('image', None)
         variants = validated_data.pop('variants', None)
+        booking_branches = validated_data.pop('booking_branches', None)
         for field_name, value in validated_data.items():
             setattr(instance, field_name, value)
         if clear_image:
@@ -688,6 +749,10 @@ class ServiceWriteSerializer(serializers.Serializer):
         instance.save()
         if variants is not None:
             instance.variants.set(variants)
+        # `None` means the key was absent (PATCH: leave alone); an empty list
+        # means "every branch" and must actually clear the relation.
+        if booking_branches is not None:
+            instance.booking_branches.set(booking_branches)
         if image_data:
             self._save_image(instance, image_data)
         return instance

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils import timezone
 
-from .models import Order, OrderLine
+from .models import Booking, Order, OrderLine
 
 
 class OrderLineInline(admin.TabularInline):
@@ -90,3 +90,46 @@ class OrderAdmin(admin.ModelAdmin):
     def unmark_fulfilled(self, request, queryset):
         updated = queryset.update(fulfilled=False, fulfilled_at=None)
         self.message_user(request, f"{updated} order(s) marked not fulfilled.")
+
+
+@admin.register(Booking)
+class BookingAdmin(admin.ModelAdmin):
+    list_display = (
+        "id", "starts_at", "status", "fulfillment", "branch_name",
+        "payment_option", "amount_due_now", "amount_due_later", "order",
+    )
+    list_filter = ("status", "fulfillment", "payment_option", "branch")
+    search_fields = ("order__public_id", "order__email", "branch_name", "notes", "address")
+    raw_id_fields = ("order", "service", "branch")
+    date_hierarchy = "starts_at"
+    # Everything the checkout derived is read-only: the amounts are the agreement
+    # struck with the customer, and the snapshots (timezone, duration,
+    # branch_name) are what make a past booking still read back correctly. The
+    # exceptions are the ones an operator legitimately changes by hand - the
+    # status, and rescheduling the appointment itself.
+    readonly_fields = (
+        "order", "service", "branch", "branch_name", "fulfillment",
+        "timezone", "duration_minutes", "payment_option", "deposit_percent",
+        "amount_due_now", "amount_due_later", "created_at", "updated_at",
+    )
+    fieldsets = (
+        ("Appointment", {
+            "fields": (
+                "order", "service", "status", "fulfillment",
+                "branch", "branch_name", "address",
+                "starts_at", "ends_at", "timezone", "duration_minutes",
+            ),
+        }),
+        ("Payment", {
+            "fields": ("payment_option", "deposit_percent", "amount_due_now", "amount_due_later"),
+        }),
+        ("Customer", {
+            "fields": ("notes", "created_at", "updated_at"),
+        }),
+    )
+
+    def has_add_permission(self, request):
+        # A booking only exists because a checkout created it - and one typed in
+        # here would have no order behind it, which is where its price, its
+        # customer and its payment all live.
+        return False

@@ -1,8 +1,9 @@
+from django.utils import timezone
 from rest_framework import serializers
 
 from users.serializers import CartItemWriteSerializer
 
-from .models import Order, OrderLine
+from .models import Booking, Order, OrderLine
 
 
 def resolve_line_image(obj, request=None):
@@ -85,9 +86,68 @@ class OrderLineSerializer(serializers.ModelSerializer):
         return obj.menu_item.kind if obj.menu_item else None
 
 
+class BookingSerializer(serializers.ModelSerializer):
+    """The appointment behind an order, as the customer's own pages read it.
+
+    `starts_at`/`ends_at` go out as UTC instants **and** `timezone` goes with
+    them, because the two are only meaningful together: an appointment happens at
+    the branch's local time, and a customer reading their order from another
+    country must be shown the hour they are expected to turn up, not the hour it
+    is where they are standing. The frontend formats with the `timeZone` option
+    rather than the browser default for exactly that reason.
+    """
+
+    branch_name = serializers.SerializerMethodField()
+    service_slug = serializers.CharField(source="service.slug", read_only=True, default=None)
+
+    class Meta:
+        model = Booking
+        fields = [
+            "id", "status", "fulfillment", "branch", "branch_name",
+            "starts_at", "ends_at", "timezone", "duration_minutes",
+            "address", "notes", "payment_option", "deposit_percent",
+            "amount_due_now", "amount_due_later", "service_slug",
+        ]
+
+    def get_branch_name(self, obj):
+        """The live branch name when it still exists, else the snapshot.
+
+        Preferring the live one keeps a renamed location reading correctly on
+        upcoming bookings; falling back to the snapshot is what makes a deleted
+        one still render at all.
+        """
+        if obj.branch is not None and obj.branch.name:
+            return obj.branch.name
+        return obj.branch_name or None
+
+
+class BookingSummarySerializer(serializers.ModelSerializer):
+    """A booking as a history-list row needs it: when, where, and what state.
+
+    Separate from `BookingSerializer` for the same reason `OrderSummarySerializer`
+    is separate from `OrderSerializer` - the list renders many of these and has no
+    use for the notes, the address or the payment split.
+    """
+
+    branch_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Booking
+        fields = ["status", "fulfillment", "branch_name", "starts_at", "timezone"]
+
+    def get_branch_name(self, obj):
+        if obj.branch is not None and obj.branch.name:
+            return obj.branch.name
+        return obj.branch_name or None
+
+
 class OrderSerializer(serializers.ModelSerializer):
     lines = OrderLineSerializer(many=True, read_only=True)
     item_count = serializers.IntegerField(read_only=True)
+    # Null on every ordinary order. Present, it is what turns the order page into
+    # an appointment record - which is the whole reason a booking rides on an
+    # Order rather than living in a parallel model.
+    booking = BookingSerializer(read_only=True)
 
     class Meta:
         model = Order
@@ -101,7 +161,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "currency", "subtotal", "total",
             "email", "phone", "shipping_name", "shipping_line1", "shipping_line2",
             "shipping_city", "shipping_state", "shipping_postal_code", "shipping_country",
-            "created_at", "paid_at", "item_count", "lines",
+            "created_at", "paid_at", "item_count", "lines", "booking",
         ]
 
 
@@ -115,13 +175,17 @@ class OrderSummarySerializer(serializers.ModelSerializer):
 
     item_count = serializers.IntegerField(read_only=True)
     line_images = serializers.SerializerMethodField()
+    # Just enough for the history card to say "Tue 12 Aug, 10:00 - Downtown"
+    # instead of pretending an appointment is an ordinary purchase. The full
+    # record stays on the detail page.
+    booking = BookingSummarySerializer(read_only=True)
 
     class Meta:
         model = Order
         fields = [
             "public_id", "status", "payment_method", "fulfilled",
             "currency", "total",
-            "created_at", "paid_at", "item_count", "line_images",
+            "created_at", "paid_at", "item_count", "line_images", "booking",
         ]
 
     def get_line_images(self, obj):
@@ -334,3 +398,139 @@ class CheckoutSerializer(serializers.Serializer):
                     {"shipping": "A delivery address is required for pay on delivery."}
                 )
         return attrs
+
+
+class BookingCheckoutSerializer(serializers.Serializer):
+    """What the browser may say when it books an appointment.
+
+    The same rule as `CheckoutSerializer`, applied to a different shape: this
+    names **which** service, **where** and **when**, and never how much. The
+    price comes off the catalog row, the deposit percentage off the service, and
+    the slot is re-validated against the branch's live availability - so a body
+    that named a price, a discount or a slot the branch never offered buys
+    nothing.
+
+    `starts_at` is an absolute instant (ISO 8601 with an offset), not a local
+    "2026-08-12 10:00" plus a separate date. A wall-clock string would have to be
+    interpreted against *some* zone, and the browser's is the one zone that is
+    certainly wrong for a branch in another country.
+    """
+
+    service = serializers.IntegerField()
+    branch = serializers.IntegerField(required=False, allow_null=True)
+    fulfillment = serializers.ChoiceField(
+        choices=[Booking.FULFILLMENT_BRANCH, Booking.FULFILLMENT_ON_PREMISES],
+        required=False,
+        default=Booking.FULFILLMENT_BRANCH,
+    )
+    starts_at = serializers.DateTimeField()
+    payment_option = serializers.ChoiceField(
+        choices=[Booking.PAYMENT_FULL, Booking.PAYMENT_DEPOSIT, Booking.PAYMENT_IN_PERSON],
+        required=False,
+        default=Booking.PAYMENT_IN_PERSON,
+    )
+    # Where the customer wants an on-premises service delivered. Required for
+    # that fulfillment and ignored otherwise - a branch booking's address is the
+    # branch's own, and taking a second copy of it would only let the two drift.
+    address = serializers.CharField(required=False, allow_blank=True, default="")
+    notes = serializers.CharField(required=False, allow_blank=True, default="")
+    locale = serializers.CharField(max_length=8, required=False, default="en")
+    # Reused verbatim from cart checkout: a booking always needs a way to reach
+    # the customer, guest or not, because someone has to be told if the
+    # appointment has to move.
+    contact = CheckoutContactSerializer(required=False)
+
+    def validate_starts_at(self, value):
+        if value is None:
+            raise serializers.ValidationError("A start time is required.")
+        # DRF returns an aware datetime whenever USE_TZ is on, but a naive one
+        # would silently be compared against aware instants further down and
+        # raise deep inside the availability engine instead of here.
+        if timezone.is_naive(value):
+            raise serializers.ValidationError("The start time must include a timezone offset.")
+        return value
+
+    def validate(self, attrs):
+        if attrs.get("fulfillment") == Booking.FULFILLMENT_ON_PREMISES:
+            if not (attrs.get("address") or "").strip():
+                raise serializers.ValidationError(
+                    {"address": "An address is required when the service comes to you."}
+                )
+        return attrs
+
+
+class AdminBookingSerializer(serializers.ModelSerializer):
+    """One row in the tenant's bookings screen.
+
+    Carries the customer's name and contact off the **order**, not off a copy
+    here: an appointment is useless to a tenant that cannot reach the person, and
+    duplicating those fields onto Booking would give two answers to one question
+    the first time a customer corrected their phone number.
+    """
+
+    order_public_id = serializers.CharField(source="order.public_id", read_only=True)
+    order_status = serializers.CharField(source="order.status", read_only=True)
+    order_total = serializers.DecimalField(
+        source="order.total", max_digits=12, decimal_places=2, read_only=True,
+    )
+    currency = serializers.CharField(source="order.currency", read_only=True)
+    customer_name = serializers.SerializerMethodField()
+    customer_email = serializers.CharField(source="order.email", read_only=True)
+    customer_phone = serializers.CharField(source="order.phone", read_only=True)
+    service_name = serializers.SerializerMethodField()
+    branch_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Booking
+        fields = [
+            "id", "status", "fulfillment", "branch", "branch_name",
+            "starts_at", "ends_at", "timezone", "duration_minutes",
+            "address", "notes", "payment_option", "deposit_percent",
+            "amount_due_now", "amount_due_later",
+            "order_public_id", "order_status", "order_total", "currency",
+            "customer_name", "customer_email", "customer_phone",
+            "service", "service_name", "created_at",
+        ]
+
+    def get_customer_name(self, obj):
+        # `shipping_name` is what our own checkout form collected; the account's
+        # own name is the fallback for a signed-in customer who never typed one.
+        order = obj.order
+        if order.shipping_name:
+            return order.shipping_name
+        if order.user_id and order.user.get_full_name():
+            return order.user.get_full_name()
+        return order.email or ""
+
+    def get_service_name(self, obj):
+        """The service's name, from the order line's snapshot when the catalog
+        row is gone - the line is the record, exactly as on an ordinary order."""
+        if obj.service is not None and obj.service.name:
+            return obj.service.name
+        line = obj.order.lines.first()
+        return line.name if line else ""
+
+    def get_branch_name(self, obj):
+        if obj.branch is not None and obj.branch.name:
+            return obj.branch.name
+        return obj.branch_name or None
+
+
+class AdminBookingActionSerializer(serializers.Serializer):
+    """A management action on one booking.
+
+    An action verb rather than a free `status` write, for the same reason
+    `AdminOrderActionSerializer` is one: the transitions are few, and a couple of
+    them (cancelling, which hands the slot back to the calendar) have
+    consequences beyond the field.
+
+    Note that none of these touch the money. `Order.status` is the payment axis
+    and stays where it is - a tenant confirming an appointment is not recording a
+    payment, and completing one is not collecting for it.
+    """
+
+    CONFIRM = "confirm"
+    COMPLETE = "complete"
+    CANCEL = "cancel"
+
+    action = serializers.ChoiceField(choices=[CONFIRM, COMPLETE, CANCEL])

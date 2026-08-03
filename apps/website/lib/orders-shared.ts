@@ -16,17 +16,15 @@
 // `lib/menu-kinds.ts` is deliberately plain data with no server imports, so it
 // is safe to pull a runtime-free type from it here (see its module docstring).
 import type { MenuItemKind } from "./menu-kinds";
+// Type-only, so nothing from that module reaches a client bundle at runtime -
+// though `booking-shared` is pure anyway, for the same reason this file is.
+import type { Booking, BookingSummary } from "./booking-shared";
 
 /** Mirrors `Order.STATUS_CHOICES` in website-api. `placed` is an offline order
  *  (pay-in-store / pay-on-delivery) awaiting the tenant to take payment - it
  *  never has a Stripe session, which is what keeps it apart from `pending`. */
 export type OrderStatus =
-  | "pending"
-  | "placed"
-  | "paid"
-  | "failed"
-  | "canceled"
-  | "refunded";
+  "pending" | "placed" | "paid" | "failed" | "canceled" | "refunded";
 
 /** The methods a customer can pick for themselves at checkout. */
 export type CustomerPaymentMethod = "online" | "in_store" | "on_delivery";
@@ -106,6 +104,9 @@ export interface Order {
   paid_at: string | null;
   item_count: number;
   lines: OrderLine[];
+  /** Null on every ordinary order. Present, this order *is* an appointment and
+   *  the page renders it as one - see `Booking` in website-api's orders app. */
+  booking: Booking | null;
 }
 
 /**
@@ -124,6 +125,9 @@ export interface OrderSummary {
   paid_at: string | null;
   item_count: number;
   line_images: string[];
+  /** Enough for the history card to show when and where, without the full
+   *  appointment record. Null on an ordinary order. */
+  booking: BookingSummary | null;
 }
 
 /**

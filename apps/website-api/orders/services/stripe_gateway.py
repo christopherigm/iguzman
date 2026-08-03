@@ -64,7 +64,17 @@ def _api_key(system) -> str:
     return key
 
 
-def create_checkout_session(system, order, lines, success_url, cancel_url, customer_email=""):
+def create_checkout_session(
+    system,
+    order,
+    lines,
+    success_url,
+    cancel_url,
+    customer_email="",
+    charge_amount=None,
+    charge_label="",
+    collect_shipping_address=True,
+):
     """Open a Stripe Checkout Session for ``order`` on ``system``'s Stripe account.
 
     ``lines`` are the order's own OrderLine snapshots rather than cart rows, so
@@ -73,30 +83,62 @@ def create_checkout_session(system, order, lines, success_url, cancel_url, custo
 
     Only the order id travels in ``metadata``: the webhook re-reads the order
     from our database rather than trusting amounts echoed back through Stripe.
+
+    ``charge_amount`` collapses the whole basket into a **single** line for that
+    amount, which is what a booking deposit needs: the order still records the
+    service at its full price (that is the agreement), while Stripe is asked for
+    the percentage due now. It is not a discount and must never be used as one -
+    the remainder is recorded on the booking as `amount_due_later` and collected
+    by the tenant, so an order whose Stripe session was created this way is not
+    "paid in full" when the webhook lands.
+
+    ``collect_shipping_address`` is off for a booking: an appointment has a
+    branch or the customer's own address on the booking record, and Stripe's
+    shipping form would ask a customer walking into a salon where to post it.
     """
     api_key = _api_key(system)
     currency = order.currency.lower()
+
+    if charge_amount is not None:
+        line_items = [
+            {
+                "quantity": 1,
+                "price_data": {
+                    "currency": currency,
+                    "unit_amount": to_minor_units(charge_amount, order.currency),
+                    "product_data": {
+                        "name": charge_label or (lines[0].name if lines else "Payment"),
+                    },
+                },
+            }
+        ]
+    else:
+        line_items = [
+            {
+                "quantity": line.quantity,
+                "price_data": {
+                    "currency": currency,
+                    "unit_amount": to_minor_units(line.unit_price, order.currency),
+                    "product_data": {
+                        "name": line.name,
+                    },
+                },
+            }
+            for line in lines
+        ]
 
     try:
         return stripe.checkout.Session.create(
             api_key=api_key,
             mode="payment",
-            line_items=[
-                {
-                    "quantity": line.quantity,
-                    "price_data": {
-                        "currency": currency,
-                        "unit_amount": to_minor_units(line.unit_price, order.currency),
-                        "product_data": {
-                            "name": line.name,
-                        },
-                    },
-                }
-                for line in lines
-            ],
+            line_items=line_items,
             # Stripe collects and validates the address, then hands it back on the
             # webhook - so there is no address form of ours to keep in step with it.
-            shipping_address_collection={"allowed_countries": _allowed_countries(order.currency)},
+            **(
+                {"shipping_address_collection": {"allowed_countries": _allowed_countries(order.currency)}}
+                if collect_shipping_address
+                else {}
+            ),
             customer_email=customer_email or None,
             # The order id is the whole payload: everything else the webhook needs
             # is already in our DB, and metadata is round-tripped through the

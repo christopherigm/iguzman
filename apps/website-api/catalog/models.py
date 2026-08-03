@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from colorfield.fields import ColorField
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from core.models import (
@@ -233,6 +234,62 @@ class Service(Buyable):
                   'it from one service surfaces it on the other too.',
     )
 
+    # ── Booking ────────────────────────────────────────────────────────────────
+    # A bookable service is sold as an *appointment* rather than as a cart line:
+    # the detail page drops "Add to cart"/"Buy now" for a "Book now" that leads
+    # to the scheduling checkout. Off by default, so every existing service keeps
+    # behaving exactly as it did.
+    booking_enabled = models.BooleanField(
+        default=False,
+        help_text='Sell this service as a scheduled appointment instead of a cart item.',
+    )
+    # Where the work happens. Independent switches rather than a three-way choice
+    # because "both" is a real configuration the customer then picks between -
+    # and a tenant that offers both should not have to model it as a third value
+    # that every consumer has to expand back into two.
+    booking_in_branch = models.BooleanField(
+        default=True,
+        help_text='Can be fulfilled at one of the business locations.',
+    )
+    booking_on_premises = models.BooleanField(
+        default=False,
+        help_text="Can be fulfilled at the customer's own address.",
+    )
+    # Which locations offer it. **Empty means every branch** - not "no branches",
+    # which would make an unconfigured bookable service unbookable and read as a
+    # bug. A tenant with no Branch rows at all is the home-business case: the
+    # booking then has no branch and follows the System's implicit single
+    # location (see `orders.services.booking.branches_for`).
+    booking_branches = models.ManyToManyField(
+        'core.Branch',
+        blank=True,
+        related_name='bookable_services',
+        help_text='Locations this service can be booked at. Leave empty to offer every location.',
+    )
+
+    # ── Booking payment ────────────────────────────────────────────────────────
+    # Each is its own switch and a tenant may enable any combination; the
+    # customer picks from what is on at checkout. All three off is the same as
+    # `booking_pay_in_person` on - see `booking_payment_options`, which is what
+    # every consumer reads rather than the raw flags.
+    booking_pay_full = models.BooleanField(
+        default=False,
+        help_text='Customer pays the full price online to confirm the booking.',
+    )
+    booking_pay_deposit = models.BooleanField(
+        default=False,
+        help_text='Customer pays a percentage online to secure the booking; the rest is due later.',
+    )
+    booking_deposit_percent = models.PositiveSmallIntegerField(
+        default=30,
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
+        help_text='Percentage charged up front when paying a deposit.',
+    )
+    booking_pay_in_person = models.BooleanField(
+        default=True,
+        help_text='Customer pays nothing now; the service is paid once delivered.',
+    )
+
     class Meta:
         verbose_name = 'Service'
         verbose_name_plural = 'Services'
@@ -240,6 +297,41 @@ class Service(Buyable):
 
     def __str__(self):
         return self.name or self.slug
+
+    # Payment options as the rest of the stack sees them. Read this, never the
+    # three booleans: a service with every switch off would otherwise offer the
+    # customer nothing to pick and the Book now button would dead-end. Paying in
+    # person is the safe fallback because it is the only option that commits the
+    # tenant to no payment infrastructure at all.
+    PAY_FULL = 'full'
+    PAY_DEPOSIT = 'deposit'
+    PAY_IN_PERSON = 'in_person'
+
+    @property
+    def booking_payment_options(self):
+        options = []
+        if self.booking_pay_full:
+            options.append(self.PAY_FULL)
+        if self.booking_pay_deposit:
+            options.append(self.PAY_DEPOSIT)
+        if self.booking_pay_in_person or not options:
+            options.append(self.PAY_IN_PERSON)
+        return options
+
+    @property
+    def booking_fulfillment_options(self):
+        """Where it can be delivered, same fallback logic as the payment options.
+
+        Both switches off means the tenant enabled booking and touched nothing
+        else; at a branch is the assumption that matches the default state of
+        `booking_in_branch`.
+        """
+        options = []
+        if self.booking_in_branch:
+            options.append('branch')
+        if self.booking_on_premises:
+            options.append('on_premises')
+        return options or ['branch']
 
 
 class ProductImage(StandardPicture):

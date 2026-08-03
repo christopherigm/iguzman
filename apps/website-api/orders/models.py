@@ -1,5 +1,6 @@
 import uuid
 from decimal import Decimal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.contrib.auth.models import User
 from django.db import models
@@ -232,3 +233,148 @@ class OrderLine(models.Model):
 
     def __str__(self):
         return f"{self.quantity} x {self.name} (order #{self.order_id})"
+
+
+class Booking(models.Model):
+    """The appointment behind an Order that sold a bookable Service.
+
+    **A booking is not a parallel kind of purchase.** It hangs off a perfectly
+    ordinary Order carrying one service line, which is what lets it inherit the
+    whole existing machine for free: Stripe sessions and the signed webhook,
+    guest orders addressed by `public_id`, `claim_guest_orders`, the confirmation
+    emails, `/orders` history and `/orders/<public_id>`. A standalone booking
+    aggregate would have needed a second implementation of every one of those,
+    and the second one is the one that goes wrong.
+
+    So `status` here is about the *appointment*, never about the money - that
+    stays on `Order.status`, where the webhook writes it. A booking can be
+    `confirmed` on an order that is still `pending` (an in-person-payment
+    booking is never paid online at all), and marking a booking `completed` says
+    the work was done, not that it was paid for. Keeping the two axes apart is
+    the same split `Order.fulfilled` already makes against `Order.status`.
+
+    Everything a booking needs to *read back* is snapshotted (`branch_name`,
+    `timezone`, `duration_minutes`, the amounts), for exactly the reason
+    `OrderLine` snapshots its price: the branch may be renamed, moved to another
+    timezone or deleted, and an appointment record that then re-renders at a
+    different hour is worse than useless.
+    """
+
+    FULFILLMENT_BRANCH = "branch"
+    FULFILLMENT_ON_PREMISES = "on_premises"
+    FULFILLMENT_CHOICES = [
+        (FULFILLMENT_BRANCH, "At the business location"),
+        (FULFILLMENT_ON_PREMISES, "At the customer's address"),
+    ]
+
+    # `pending` is a booking the tenant has not looked at yet - including one
+    # whose online payment is still in flight. The webhook does not touch this
+    # field; the tenant confirms from the CMS.
+    STATUS_PENDING = "pending"
+    STATUS_CONFIRMED = "confirmed"
+    STATUS_COMPLETED = "completed"
+    STATUS_CANCELED = "canceled"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_CONFIRMED, "Confirmed"),
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_CANCELED, "Canceled"),
+    ]
+
+    # The statuses that still occupy their slot. A canceled booking must free the
+    # time immediately - it is the only way a customer who cancels gives the hour
+    # back - and a completed one is in the past, so neither can block a new
+    # booking. `orders.services.booking` counts against exactly this set.
+    ACTIVE_STATUSES = (STATUS_PENDING, STATUS_CONFIRMED)
+
+    PAYMENT_FULL = "full"
+    PAYMENT_DEPOSIT = "deposit"
+    PAYMENT_IN_PERSON = "in_person"
+    PAYMENT_OPTION_CHOICES = [
+        (PAYMENT_FULL, "Paid in full on booking"),
+        (PAYMENT_DEPOSIT, "Deposit on booking"),
+        (PAYMENT_IN_PERSON, "Paid in person"),
+    ]
+
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name="booking")
+
+    # Provenance, like OrderLine's FKs - SET_NULL, because deleting a service
+    # must not delete the record that it was booked. Everything displayable is
+    # snapshotted here or on the order line.
+    service = models.ForeignKey(
+        "catalog.Service", null=True, blank=True, on_delete=models.SET_NULL, related_name="bookings",
+    )
+    branch = models.ForeignKey(
+        "core.Branch", null=True, blank=True, on_delete=models.SET_NULL, related_name="bookings",
+    )
+    # Null branch is two different things, told apart by `fulfillment`: an
+    # on-premises booking never had one, and a branch booking whose location was
+    # deleted still reads back through `branch_name`.
+    branch_name = models.CharField(max_length=255, blank=True, default="")
+
+    fulfillment = models.CharField(
+        max_length=16, choices=FULFILLMENT_CHOICES, default=FULFILLMENT_BRANCH,
+    )
+    # Where the customer wants the work done. Only ever set for an on-premises
+    # booking; a branch booking's address is the branch's own.
+    address = models.TextField(blank=True, default="")
+
+    # Stored in UTC like every other datetime here. `timezone` is the branch's
+    # IANA name at the time of booking and is what these must be rendered back
+    # in - not the reader's browser zone, which would show a customer in Madrid a
+    # Mexico City appointment at the wrong hour and call it 09:00 either way.
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField()
+    timezone = models.CharField(max_length=64, default="UTC")
+    duration_minutes = models.PositiveIntegerField(default=0)
+
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_PENDING)
+
+    payment_option = models.CharField(
+        max_length=16, choices=PAYMENT_OPTION_CHOICES, default=PAYMENT_IN_PERSON,
+    )
+    # 0 for anything but a deposit booking. Snapshotted because the tenant may
+    # change the service's percentage tomorrow, and this one was agreed today.
+    deposit_percent = models.PositiveSmallIntegerField(default=0)
+    # `amount_due_now` is what Stripe was asked to charge (0 for pay-in-person),
+    # `amount_due_later` the remainder the customer settles with the tenant.
+    # Both are derived at checkout and never recomputed: `order.total` is the
+    # full price of the service, and the split between the two is the agreement.
+    amount_due_now = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    amount_due_later = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+
+    # What the customer typed in the "booking details" box - allergies, gate
+    # codes, "the dog is friendly". Free text, shown to the tenant verbatim.
+    notes = models.TextField(blank=True, default="")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["starts_at"]
+        indexes = [
+            # The availability query: overlapping active bookings at one branch.
+            models.Index(fields=["branch", "starts_at"]),
+            # The CMS list: a tenant's upcoming bookings, soonest first.
+            models.Index(fields=["status", "starts_at"]),
+        ]
+
+    def __str__(self):
+        return f"Booking {self.starts_at:%Y-%m-%d %H:%M} ({self.status}) for order #{self.order_id}"
+
+    @property
+    def tzinfo(self):
+        """The zone this booking's times mean, falling back to UTC.
+
+        Read off the snapshot, not off `self.branch`: the branch may since have
+        moved zones, and re-rendering a past appointment an hour out because of
+        that would be rewriting history.
+        """
+        try:
+            return ZoneInfo(self.timezone or "UTC")
+        except (ZoneInfoNotFoundError, ValueError):
+            return ZoneInfo("UTC")
+
+    @property
+    def local_starts_at(self):
+        return self.starts_at.astimezone(self.tzinfo)

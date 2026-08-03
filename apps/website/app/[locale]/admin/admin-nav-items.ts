@@ -13,6 +13,14 @@ export const ADMIN_NAV_ITEMS = [
     descKey: "messagesDesc",
   },
   { key: "orders", href: "/admin/orders", icon: "📋", descKey: "ordersDesc" },
+  // Beside orders rather than beside branches: a booking is an order the tenant
+  // has to turn up for, and it is read on the same rhythm as the order list.
+  {
+    key: "bookings",
+    href: "/admin/bookings",
+    icon: "📅",
+    descKey: "bookingsDesc",
+  },
   {
     // `spotlightTitle` is the section's existing label ("Featured Spotlight"),
     // reused here rather than translated a second time under a nav-only key.

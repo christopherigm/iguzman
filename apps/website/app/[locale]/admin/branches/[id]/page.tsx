@@ -5,6 +5,11 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@repo/i18n/navigation";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import {
+  BranchHoursEditor,
+  type BranchHoursRow,
+} from "@/components/admin/branch-hours-editor";
+import { timezoneOptions } from "@/components/admin/timezone-options";
+import {
   getBranch,
   createBranch,
   updateBranch,
@@ -66,7 +71,15 @@ export default function AdminBranchFormPage({ params }: Props) {
     latitude: "",
     longitude: "",
     enabled: true,
+    timezone: "UTC",
+    booking_capacity: 1,
+    booking_slot_minutes: 30,
+    booking_min_notice_hours: 2,
+    booking_max_days_ahead: 60,
   });
+  // Kept out of `values` because the whole week is one editor, not a field the
+  // generic AdminForm can render - it is submitted with the rest of the form.
+  const [hours, setHours] = useState<BranchHoursRow[]>([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +101,13 @@ export default function AdminBranchFormPage({ params }: Props) {
             latitude: data.latitude ?? "",
             longitude: data.longitude ?? "",
             enabled: data.enabled ?? true,
+            timezone: data.timezone ?? "UTC",
+            booking_capacity: data.booking_capacity ?? 1,
+            booking_slot_minutes: data.booking_slot_minutes ?? 30,
+            booking_min_notice_hours: data.booking_min_notice_hours ?? 2,
+            booking_max_days_ahead: data.booking_max_days_ahead ?? 60,
           });
+          setHours((data.hours as BranchHoursRow[] | undefined) ?? []);
         })
         .catch(() => setError(t("errorLoad")))
         .finally(() => setLoading(false));
@@ -104,6 +123,10 @@ export default function AdminBranchFormPage({ params }: Props) {
       NULLABLE_ON_BLANK.forEach((k) => {
         if (payload[k] === "") payload[k] = null;
       });
+      // The complete week, always sent: the API replaces the schedule with what
+      // arrives, so omitting it would leave a removed day in place and an empty
+      // array is a real instruction to close every day.
+      payload.hours = hours;
       if (isNew) {
         const created = await createBranch(payload);
         setSuccess(t("saved"));
@@ -131,6 +154,24 @@ export default function AdminBranchFormPage({ params }: Props) {
     { key: "email", label: tc("email"), type: "text" },
     { key: "latitude", label: tc("latitude"), type: "number" },
     { key: "longitude", label: tc("longitude"), type: "number" },
+    {
+      key: "timezone",
+      label: tc("timezone"),
+      type: "select",
+      options: timezoneOptions(),
+    },
+    { key: "booking_capacity", label: tc("capacity"), type: "number" },
+    { key: "booking_slot_minutes", label: tc("slotMinutes"), type: "number" },
+    {
+      key: "booking_min_notice_hours",
+      label: tc("minNoticeHours"),
+      type: "number",
+    },
+    {
+      key: "booking_max_days_ahead",
+      label: tc("maxDaysAhead"),
+      type: "number",
+    },
     { key: "enabled", label: t("enabled"), type: "boolean" },
   ];
 
@@ -153,7 +194,9 @@ export default function AdminBranchFormPage({ params }: Props) {
       />
       <AdminForm
         title={
-          isNew ? `${t("newItem")} - ${tc("title")}` : `${t("edit")} - ${tc("title")}`
+          isNew
+            ? `${t("newItem")} - ${tc("title")}`
+            : `${t("edit")} - ${tc("title")}`
         }
         editingName={isNew ? undefined : String(values.name ?? "")}
         fields={fields}
@@ -163,7 +206,9 @@ export default function AdminBranchFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
-      />
+      >
+        <BranchHoursEditor value={hours} onChange={setHours} />
+      </AdminForm>
     </>
   );
 }

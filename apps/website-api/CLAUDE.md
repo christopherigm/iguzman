@@ -392,6 +392,85 @@ signature rejection, and the snapshot surviving a price change. Run them with
 `REDIS_URL='' python manage.py test orders` (the local `.env` points Redis at the
 cluster).
 
+## Bookings - a Service sold as an appointment
+
+A `Service` with `booking_enabled` is sold as a scheduled appointment instead of
+a cart line. The storefront drops "Add to cart"/"Buy now" for "Book now", which
+leads to a scheduling checkout.
+
+**A booking is not a parallel kind of purchase.** `orders.Booking` hangs off an
+ordinary `Order` (OneToOne) carrying one service line, which is what lets it
+inherit the whole existing machine: Stripe sessions and the signed webhook, guest
+orders addressed by `public_id`, `claim_guest_orders`, the confirmation emails,
+`/orders` history and `/orders/<public_id>`. A standalone booking aggregate would
+have needed a second implementation of every one of those.
+
+- **`Booking.status` is the appointment axis; `Order.status` is the money.** They
+  move independently, exactly as `Order.fulfilled` already does against
+  `Order.status`. A booking can be `confirmed` on an order that is still
+  `pending`, and a pay-in-person booking is never paid online at all. The CMS
+  actions (`confirm`/`complete`/`cancel`) never touch payment - `complete` does
+  set `Order.fulfilled`, because for an appointment the work and the handover are
+  the same moment.
+- **`orders/services/booking.py` is the single availability authority.** The
+  public availability endpoint the calendar paints from and the checkout that
+  writes the booking both call `slots_for_day`, so the times a customer is shown
+  and the times the server accepts cannot drift. **Never write a second, "quick"
+  overlap check inline in a view** - that is how a customer ends up staring at a
+  slot that refuses itself on submit. Checkout re-derives the slot through
+  `is_slot_available` rather than trusting the request: the calendar in front of
+  the customer may be minutes old.
+- **Hours are local wall clock; instants are UTC.** `BranchHours` stores
+  `TimeField`s that mean whatever `Branch.timezone` says, which is what keeps
+  "we open at 9" correct across a daylight-saving change. Django runs on
+  `TIME_ZONE='UTC'`, so a branch with a wrong timezone opens at the wrong hour
+  and nothing else will catch it. `Booking.timezone` is a **snapshot** for the
+  same reason `OrderLine` snapshots its price - re-rendering a past appointment
+  through a branch that has since moved zones would be rewriting history.
+- **A weekday with no `BranchHours` row is closed.** There is deliberately no
+  `is_closed` flag: absence *is* the closure, so there is one state where there
+  could be two. `BranchWriteSerializer` takes the whole week under `hours` and
+  **replaces** it; a per-day endpoint would let a save half-fail and leave a
+  branch open on days the operator had just closed.
+- **Capacity lives on the Branch, not the Service.** What it counts is people or
+  rooms, which every service at that location shares - per-service capacity would
+  let three different services each book the only chair at 10am. Only
+  `Booking.ACTIVE_STATUSES` occupy a slot, so a cancellation hands the time back
+  immediately.
+- **`Service.booking_branches` empty means *every* branch**, not none - see
+  `branches_for`. An unconfigured bookable service must still be bookable. A
+  tenant with no `Branch` rows at all is the home-business case: the booking
+  carries `branch=None` and follows the defaults in `_branch_settings`.
+- **Read `booking_payment_options` / `booking_fulfillment_options`, never the raw
+  switches.** The model properties own the fallbacks (all payment switches off →
+  pay in person, neither fulfillment on → at a branch), so the storefront and the
+  checkout cannot disagree about what is on offer.
+- **A deposit is not a discount.** `create_checkout_session(charge_amount=...)`
+  collapses the basket into one line for the amount due now; the order still
+  records the service at full price, and `Booking.amount_due_later` is what the
+  tenant collects. The split is computed once, in `_booking_amounts`, with the
+  remainder taken as the difference so the two halves always sum back to the
+  total. An order whose session was created this way is **not** paid in full when
+  the webhook lands.
+- **Availability is the one cached payload with a 60s TTL** (`AVAILABILITY_CACHE_TTL`),
+  and `orders/signals.py` drops the whole namespace on any Booking write. The
+  short TTL is a floor under bursts, not a correctness mechanism - checkout
+  re-derives the slot, so the worst a stale calendar can do is offer a slot that
+  is then honestly refused.
+- `availability_range` fetches occupancy **once for the whole range**. The
+  endpoint is public and unauthenticated; a query per day would be a
+  denial-of-service handed out for free, which is also why `days` is clamped to
+  `MAX_AVAILABILITY_DAYS`.
+
+Endpoints: `GET /api/bookings/availability/` and `POST /api/bookings/checkout/`
+are `AllowAny` (a visitor books before they have any reason to sign in - an
+anonymous caller is scoped by `X-Website-Host`, a signed-in one always by
+profile); `/api/bookings/admin/` and `/api/bookings/admin/<pk>/` are
+`IsSystemAdmin` and scoped to the caller's own System. Tests are in
+`orders/tests.py` (`BookingAvailabilityTests`, `BookingCheckoutTests`,
+`BookingAdminTests`) - they pin `now` to a fixed instant rather than reading the
+clock, because "is this slot in the future" is half of what the engine decides.
+
 ## LLM calls - always through `core/services/llm.py`
 
 Every AI call in the website stack runs here, not in the Next.js app. `stream_chat`

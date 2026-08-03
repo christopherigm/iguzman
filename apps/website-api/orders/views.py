@@ -1,5 +1,7 @@
 import logging
-from decimal import Decimal
+from datetime import datetime, time, timedelta
+from datetime import timezone as dt_timezone
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.conf import settings
 from django.core.cache import cache
@@ -7,12 +9,15 @@ from django.db import transaction
 from django.db.models import F, Value
 from django.db.models.functions import Greatest
 from django.utils import timezone
+from django.utils import timezone as dj_timezone
+from django.utils.dateparse import parse_date
 
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from catalog.models import Service
 from core.models import System
 from core.permissions import IsSystemAdmin
 from core.tenancy import host_system, request_system, user_system
@@ -20,16 +25,33 @@ from users.cache import invalidate_cart
 from users.guest import resolve_guest_cart
 from users.models import CartItem
 
-from .cache import ORDERS_CACHE_TTL, invalidate_orders, orders_key
-from .models import Order, OrderLine
+from .cache import (
+    AVAILABILITY_CACHE_TTL,
+    ORDERS_CACHE_TTL,
+    availability_key,
+    invalidate_availability,
+    invalidate_orders,
+    orders_key,
+)
+from .models import Booking, Order, OrderLine
 from .serializers import (
+    AdminBookingActionSerializer,
+    AdminBookingSerializer,
     AdminOrderActionSerializer,
     AdminOrderSerializer,
     AdminOrderSummarySerializer,
+    BookingCheckoutSerializer,
     CheckoutSerializer,
     OrderSerializer,
     OrderSummarySerializer,
     PosCheckoutSerializer,
+)
+from .services.booking import (
+    availability_range,
+    booking_window,
+    is_slot_available,
+    resolve_branch,
+    service_duration_minutes,
 )
 from .services.order_emails import (
     CONFIRMATION,
@@ -484,6 +506,10 @@ class OrderListView(APIView):
         orders = (
             Order.objects
             .filter(user=request.user, system=system)
+            # `booking` is nested in the payload and is null on most orders;
+            # select_related keeps a history page of appointments from costing a
+            # query per row.
+            .select_related("booking", "booking__branch")
             .prefetch_related(
                 "lines", "lines__product", "lines__service", "lines__menu_item",
                 # The image preview falls back to the item's gallery when it has
@@ -540,6 +566,7 @@ class OrderDetailView(APIView):
         order = (
             Order.objects
             .filter(public_id=public_id, system=request_system(request))
+            .select_related("booking", "booking__branch", "booking__service")
             .prefetch_related(
                 "lines", "lines__product", "lines__service",
                 # The serializer falls back to the item's gallery when it has no
@@ -1007,3 +1034,454 @@ class StripeWebhookView(APIView):
         order.shipping_postal_code = address.get("postal_code") or ""
         order.shipping_country = address.get("country") or ""
 
+
+
+# ---------------------------------------------------------------------------
+# Bookings
+# ---------------------------------------------------------------------------
+
+# How many days of calendar one availability request may ask for. The endpoint is
+# public and unauthenticated, and each day walks a slot generator - so the range
+# is bounded here rather than trusted from the query string.
+MAX_AVAILABILITY_DAYS = 62
+
+
+def _bookable_service(system, service_id):
+    """The service a booking request names, or None.
+
+    Scoped to `system` and to `booking_enabled`, so a crafted id can neither
+    reach another tenant's catalog nor book a service its owner never opened for
+    booking. `enabled` is checked too: a service withdrawn from the storefront
+    must stop taking appointments the moment it is withdrawn.
+    """
+    if system is None:
+        return None
+    return (
+        Service.objects.filter(
+            pk=service_id, system=system, enabled=True, booking_enabled=True,
+        )
+        .prefetch_related("booking_branches__hours")
+        .first()
+    )
+
+
+def _request_system(request):
+    """The tenant for a booking request: the profile's, else the host's.
+
+    Same rule as checkout - a signed-in caller is always scoped by their own
+    profile, because `X-Website-Host` is client-settable and must never be able
+    to point a logged-in user at another tenant.
+    """
+    if request.user.is_authenticated:
+        return user_system(request)
+    return host_system(request)
+
+
+class BookingAvailabilityView(APIView):
+    """
+    GET /api/bookings/availability/?service=<id>&branch=<id>&start=<YYYY-MM-DD>&days=<n>
+
+    The calendar's data source: which local dates have free slots, and what those
+    slots are. Public, because a visitor picks an appointment before they have
+    any reason to sign in.
+
+    Returns UTC instants plus the branch's `timezone`, never local strings. The
+    browser formats them with that zone, so a customer abroad reads the hour they
+    are expected to arrive rather than the hour on their own wall.
+    """
+
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        system = _request_system(request)
+        service = _bookable_service(system, request.query_params.get("service"))
+        if service is None:
+            return Response(
+                {"detail": "This service cannot be booked.", "code": "NOT_BOOKABLE"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        branch_id = request.query_params.get("branch")
+        try:
+            branch_id = int(branch_id) if branch_id not in (None, "") else None
+        except (TypeError, ValueError):
+            branch_id = None
+        branch, error = resolve_branch(service, branch_id)
+        if error is not None:
+            return Response({"detail": error, "code": "BRANCH_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+
+        settings_tz = branch.tzinfo if branch is not None else dj_timezone.get_default_timezone()
+        today_local = dj_timezone.now().astimezone(settings_tz).date()
+
+        start = parse_date(request.query_params.get("start") or "") or today_local
+        # Never look backwards: a past date has no bookable slot by definition,
+        # and honouring one would only produce an empty payload at full cost.
+        start = max(start, today_local)
+        try:
+            days = int(request.query_params.get("days") or 30)
+        except (TypeError, ValueError):
+            days = 30
+        days = max(1, min(days, MAX_AVAILABILITY_DAYS))
+
+        cache_key = availability_key(service.pk, branch.pk if branch else None, start, days)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        by_day = availability_range(service, branch, start, days)
+        earliest, last_date = booking_window(branch, now=dj_timezone.now())
+        payload = {
+            "service": service.pk,
+            "branch": branch.pk if branch else None,
+            "timezone": branch.timezone if branch else str(settings_tz),
+            "duration_minutes": service_duration_minutes(service),
+            "start": start.isoformat(),
+            "days": days,
+            "last_bookable_date": last_date.isoformat(),
+            # A flat map of local date -> the day's start instants. The frontend
+            # keys its calendar straight off it, so a date absent from the map is
+            # a date that cannot be selected.
+            "availability": {
+                day.isoformat(): [slot.isoformat() for slot in slots]
+                for day, slots in sorted(by_day.items())
+            },
+        }
+        cache.set(cache_key, payload, AVAILABILITY_CACHE_TTL)
+        return Response(payload)
+
+
+class BookingCheckoutView(APIView):
+    """
+    POST /api/bookings/checkout/ - turn a chosen slot into an Order + Booking.
+
+    The booking equivalent of `CheckoutView`, and deliberately its sibling rather
+    than a branch inside it: a cart checkout reads a basket, this one reads a
+    service, a place and a time. What they share is the part that matters -
+    `_open_order` writes the order and its snapshotted line, so a booked service
+    is priced by exactly the same code that prices it in a cart.
+
+    `AllowAny`, like cart checkout: a visitor may book without an account, and
+    the resulting order's only handle is its `public_id` (claimable later by
+    email, through `orders/claims.py`).
+
+    **The slot is re-derived here, never trusted.** The calendar the customer is
+    looking at may be minutes old.
+    """
+
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = BookingCheckoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        system = _request_system(request)
+        if system is None:
+            return Response(
+                {"detail": "No system for this request.", "code": "NO_SYSTEM"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        service = _bookable_service(system, data["service"])
+        if service is None:
+            return Response(
+                {"detail": "This service cannot be booked.", "code": "NOT_BOOKABLE"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        fulfillment = data["fulfillment"]
+        if fulfillment not in service.booking_fulfillment_options:
+            return Response(
+                {"detail": "This service is not offered that way.", "code": "FULFILLMENT_UNAVAILABLE"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        payment_option = data["payment_option"]
+        if payment_option not in service.booking_payment_options:
+            return Response(
+                {"detail": "That payment option is not available.", "code": "PAYMENT_OPTION_UNAVAILABLE"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # Paying anything up front means Stripe, and a tenant that has not
+        # connected an account can only take bookings paid in person. Checked
+        # before anything is written, so a misconfigured site refuses the booking
+        # rather than recording one it cannot collect on.
+        if payment_option != Booking.PAYMENT_IN_PERSON and not system.stripe_configured:
+            return Response(
+                {"detail": "This site is not set up to take payments.", "code": "PAYMENTS_UNAVAILABLE"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        # An on-premises booking still schedules against a branch's calendar -
+        # the staff going out are the same staff who would be in the shop, so the
+        # hours and the capacity that apply are the branch's.
+        branch, error = resolve_branch(service, data.get("branch"))
+        if error is not None:
+            return Response({"detail": error, "code": "BRANCH_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+
+        starts_at = data["starts_at"].astimezone(dt_timezone.utc)
+        if not is_slot_available(service, branch, starts_at):
+            return Response(
+                {
+                    "detail": "That time is no longer available. Please pick another.",
+                    "code": "SLOT_UNAVAILABLE",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        user = request.user if request.user.is_authenticated else None
+        contact = data.get("contact") or {}
+        email = (contact.get("email") or (user.email if user else "") or "").strip()
+        # Someone has to be reachable: an appointment that has to move and a
+        # customer nobody can tell is worse than no booking at all.
+        if not email and not (contact.get("phone") or "").strip():
+            return Response(
+                {"detail": "An email or a phone number is required to book.", "code": "CONTACT_REQUIRED"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # One unsaved cart line for the service, so `_open_order` prices and
+        # snapshots it exactly as it would in a cart. Quantity is always 1: an
+        # appointment is one appointment, and "2 x haircut at 10:00" is two
+        # bookings, not a quantity.
+        item = CartItem(system=system, service=service, quantity=1)
+        order, lines, order_error = _open_order(
+            system,
+            user,
+            [item],
+            # `placed` for pay-in-person (nothing will ever confirm it but the
+            # tenant), `pending` when a Stripe session is about to be opened -
+            # the same split the cart checkout makes.
+            order_status=(
+                Order.STATUS_PLACED
+                if payment_option == Booking.PAYMENT_IN_PERSON
+                else Order.STATUS_PENDING
+            ),
+            payment_method=(
+                Order.PAYMENT_IN_STORE
+                if payment_option == Booking.PAYMENT_IN_PERSON
+                else Order.PAYMENT_ONLINE
+            ),
+            email=email,
+        )
+        if order_error is not None:
+            return order_error
+
+        duration = service_duration_minutes(service)
+        amount_now, amount_later = _booking_amounts(order.total, service, payment_option)
+
+        booking = Booking.objects.create(
+            order=order,
+            service=service,
+            branch=branch,
+            branch_name=(branch.name or "") if branch else "",
+            fulfillment=fulfillment,
+            address=(data.get("address") or "").strip() if fulfillment == Booking.FULFILLMENT_ON_PREMISES else "",
+            starts_at=starts_at,
+            ends_at=starts_at + timedelta(minutes=duration),
+            timezone=(branch.timezone if branch else str(dj_timezone.get_default_timezone())),
+            duration_minutes=duration,
+            payment_option=payment_option,
+            deposit_percent=(
+                service.booking_deposit_percent if payment_option == Booking.PAYMENT_DEPOSIT else 0
+            ),
+            amount_due_now=amount_now,
+            amount_due_later=amount_later,
+            notes=(data.get("notes") or "").strip(),
+        )
+
+        order.phone = (contact.get("phone") or "").strip()
+        order.shipping_name = (contact.get("name") or "").strip()
+        order.save(update_fields=["phone", "shipping_name", "updated_at"])
+
+        invalidate_availability()
+        if user is not None:
+            invalidate_orders(user.id, system.id)
+
+        locale = data.get("locale") or "en"
+
+        if payment_option == Booking.PAYMENT_IN_PERSON:
+            # No Stripe session and no webhook, so the confirmation email is sent
+            # here - the same place the offline cart checkout sends it.
+            send_order_email(order, kind=CONFIRMATION)
+            logger.info("Booking %s placed (pay in person) for order %s", booking.pk, order.pk)
+            return Response(
+                {
+                    "order_id": str(order.public_id),
+                    "booking_id": booking.pk,
+                    "redirect": f"/{locale}/orders/{order.public_id}",
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
+        base_url = _site_base_url(system)
+        try:
+            session = create_checkout_session(
+                system=system,
+                order=order,
+                lines=lines,
+                success_url=(
+                    f"{base_url}/{locale}/orders/{order.public_id}"
+                    "?session_id={CHECKOUT_SESSION_ID}"
+                ),
+                cancel_url=f"{base_url}/{locale}/services/{service.slug}",
+                customer_email=email or "",
+                # A deposit charges a fraction of the order; a full payment
+                # charges the order and passes None so the line items are used.
+                charge_amount=(amount_now if payment_option == Booking.PAYMENT_DEPOSIT else None),
+                charge_label=(
+                    f"{service.name or 'Service'} - {service.booking_deposit_percent}% deposit"
+                    if payment_option == Booking.PAYMENT_DEPOSIT
+                    else ""
+                ),
+                # An appointment has a place already - the branch's address or
+                # the customer's own on the booking. Stripe's shipping form would
+                # ask a customer walking into a salon where to post the haircut.
+                collect_shipping_address=False,
+            )
+        except StripeNotConfigured:
+            order.delete()
+            return Response(
+                {"detail": "This site is not set up to take payments.", "code": "PAYMENTS_UNAVAILABLE"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        except StripeGatewayError:
+            # Deleting the order cascades the booking, which is what we want: a
+            # booking with no way to be paid would otherwise hold a slot nobody
+            # can take and nobody is coming to.
+            order.delete()
+            invalidate_availability()
+            return Response(
+                {"detail": "Could not start checkout. Please try again.", "code": "STRIPE_ERROR"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        order.stripe_session_id = session.id
+        order.save(update_fields=["stripe_session_id", "updated_at"])
+        logger.info("Booking %s created, Stripe session %s for order %s", booking.pk, session.id, order.pk)
+        return Response(
+            {"url": session.url, "order_id": str(order.public_id), "booking_id": booking.pk},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+def _booking_amounts(total, service, payment_option):
+    """Split an order total into what is charged now and what is owed later.
+
+    Rounded to the currency's own two decimals with `ROUND_HALF_UP` and the
+    remainder taken as the difference, so the two halves always add back up to
+    the total exactly - deriving both by percentage would leave a cent
+    unaccounted for on plenty of prices.
+    """
+    if payment_option == Booking.PAYMENT_FULL:
+        return total, Decimal("0.00")
+    if payment_option == Booking.PAYMENT_DEPOSIT:
+        percent = Decimal(service.booking_deposit_percent or 0)
+        now = (total * percent / Decimal(100)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        return now, total - now
+    return Decimal("0.00"), total
+
+
+class AdminBookingListView(APIView):
+    """GET /api/bookings/admin/ - the tenant's bookings, soonest first.
+
+    Filterable by `status` and by `from`/`to` local dates, which is how the CMS
+    shows "upcoming" without pulling a year of history into the browser.
+    """
+
+    permission_classes = (IsSystemAdmin,)
+
+    def get(self, request):
+        system = user_system(request)
+        if system is None:
+            return Response([], status=status.HTTP_200_OK)
+
+        qs = (
+            Booking.objects.filter(order__system=system)
+            .select_related("order", "order__user", "service", "branch")
+            .prefetch_related("order__lines")
+        )
+
+        status_filter = request.query_params.get("status")
+        if status_filter:
+            qs = qs.filter(status__in=[s for s in status_filter.split(",") if s])
+
+        start = parse_date(request.query_params.get("from") or "")
+        if start:
+            qs = qs.filter(starts_at__gte=datetime.combine(start, time.min, tzinfo=dt_timezone.utc))
+        end = parse_date(request.query_params.get("to") or "")
+        if end:
+            qs = qs.filter(
+                starts_at__lt=datetime.combine(end + timedelta(days=1), time.min, tzinfo=dt_timezone.utc)
+            )
+
+        # Not cached, deliberately: this is the screen a tenant refreshes while a
+        # customer is on the phone, and a five-minute-old answer about who is
+        # coming at 10am is worse than a query.
+        return Response(
+            AdminBookingSerializer(qs[:400], many=True, context={"request": request}).data
+        )
+
+
+class AdminBookingDetailView(APIView):
+    """
+    GET   /api/bookings/admin/<pk>/  - one booking in full.
+    PATCH /api/bookings/admin/<pk>/  - confirm / complete / cancel it.
+    """
+
+    permission_classes = (IsSystemAdmin,)
+
+    def _get_object(self, request, pk):
+        system = user_system(request)
+        if system is None:
+            return None
+        return (
+            Booking.objects.filter(pk=pk, order__system=system)
+            .select_related("order", "order__user", "service", "branch")
+            .first()
+        )
+
+    def get(self, request, pk):
+        booking = self._get_object(request, pk)
+        if booking is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(AdminBookingSerializer(booking, context={"request": request}).data)
+
+    def patch(self, request, pk):
+        booking = self._get_object(request, pk)
+        if booking is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = AdminBookingActionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        action = serializer.validated_data["action"]
+
+        if action == AdminBookingActionSerializer.CONFIRM:
+            booking.status = Booking.STATUS_CONFIRMED
+        elif action == AdminBookingActionSerializer.COMPLETE:
+            booking.status = Booking.STATUS_COMPLETED
+            # Completing an appointment *is* fulfilling the order it hangs off -
+            # unlike a shipped product, the two happen in the same moment. The
+            # payment axis is untouched: the tenant may still be owed the money.
+            if not booking.order.fulfilled:
+                booking.order.fulfilled = True
+                booking.order.fulfilled_at = timezone.now()
+                booking.order.save(update_fields=["fulfilled", "fulfilled_at", "updated_at"])
+        else:
+            booking.status = Booking.STATUS_CANCELED
+            # The order is canceled with it. A booking is the whole of its order,
+            # so leaving the order live would put a phantom in the customer's
+            # history for an appointment that is not happening.
+            if booking.order.status in (Order.STATUS_PENDING, Order.STATUS_PLACED):
+                booking.order.status = Order.STATUS_CANCELED
+                booking.order.save(update_fields=["status", "updated_at"])
+
+        booking.save(update_fields=["status", "updated_at"])
+        # Cancelling hands the slot back, and confirming/completing changes what
+        # the CMS shows - clear either way rather than reasoning about which
+        # transitions free time.
+        invalidate_availability()
+        if booking.order.user_id:
+            invalidate_orders(booking.order.user_id, booking.order.system_id)
+
+        return Response(AdminBookingSerializer(booking, context={"request": request}).data)
