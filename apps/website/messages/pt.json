@@ -439,7 +439,15 @@
     "bookingStatus_confirmed": "Confirmado",
     "bookingStatus_completed": "Concluído",
     "bookingStatus_canceled": "Cancelado",
-    "minutes": "{count} min"
+    "minutes": "{count} min",
+    "completePayment": "Concluir o pagamento",
+    "payLoading": "A encaminhá-lo para o pagamento…",
+    "payError": "Não foi possível reabrir o pagamento. Tente novamente.",
+    "payAlreadyPaid": "Esta encomenda já foi paga.",
+    "payOutOfStock": "Alguns artigos desta encomenda já não estão disponíveis.",
+    "paySlotUnavailable": "Esse horário de marcação já foi ocupado. Escolha um novo horário.",
+    "payOrderClosed": "Esta encomenda já não pode ser paga online.",
+    "payUnavailable": "Os pagamentos online não estão disponíveis de momento."
   },
   "VerifyEmailPage": {
     "loading": "Verificando sua conta, aguarde…",
@@ -1299,6 +1307,7 @@
     "emailLabel": "E-mail",
     "phoneLabel": "Telefone",
     "contactHint": "Precisamos de um e-mail ou telefone para falar com você sobre este agendamento.",
+    "contactAccountHint": "Estes dados vêm da sua conta. Se o agendamento for para outra pessoa, ou houver outra forma de falar com você, diga em \"Detalhes do agendamento\" abaixo.",
     "notesLabel": "Detalhes do agendamento",
     "notesHint": "Qualquer coisa que devamos saber antes do seu horário.",
     "paymentTitle": "Pagamento",

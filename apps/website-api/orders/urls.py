@@ -10,6 +10,7 @@ from .views import (
     CheckoutView,
     OrderDetailView,
     OrderListView,
+    OrderPayView,
     PosCheckoutView,
     StripeWebhookView,
 )
@@ -33,6 +34,11 @@ urlpatterns = [
     path("orders/admin/<uuid:public_id>/", AdminOrderDetailView.as_view(), name="admin-order-detail"),
     path("orders/", OrderListView.as_view(), name="order-list"),
     path("orders/<uuid:public_id>/", OrderDetailView.as_view(), name="order-detail"),
+    # Reopening checkout on an order that already exists, for the customer who
+    # came back from Stripe without paying. Under the order's own id rather than
+    # a second `orders/checkout/` verb: it acts on *this* order and charges its
+    # frozen lines, where checkout builds a new one out of a cart.
+    path("orders/<uuid:public_id>/pay/", OrderPayView.as_view(), name="order-pay"),
     # Keyed per tenant because each tenant's Stripe account signs with its own
     # secret - each pastes this URL, with their own token, into their own
     # dashboard. The token rather than the pk so that handing a tenant its own

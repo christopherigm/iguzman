@@ -42,12 +42,18 @@ export function StoriesSliderClient({
   const [swiper, setSwiper] = useState<SwiperType | null>(null);
   const [snaps, setSnaps] = useState({ count: 0, index: 0 });
 
-  const syncSnaps = (s: SwiperType) =>
+  // ⚠ Read the instance here, eagerly, and let the updater close over plain
+  // numbers. A functional updater that captured `s` would be replayed by React
+  // on the *next* render, and by then swiper-react's effect cleanup may have run
+  // `destroy(true, false)` - which deletes every own property of the instance,
+  // so `s.snapGrid` reads back `undefined`.
+  const syncSnaps = (s: SwiperType) => {
+    const count = s.snapGrid.length;
+    const index = s.snapIndex;
     setSnaps((prev) =>
-      prev.count === s.snapGrid.length && prev.index === s.snapIndex
-        ? prev
-        : { count: s.snapGrid.length, index: s.snapIndex },
+      prev.count === count && prev.index === index ? prev : { count, index },
     );
+  };
 
   return (
     <Box width="100%" flexDirection="column" gap={20}>

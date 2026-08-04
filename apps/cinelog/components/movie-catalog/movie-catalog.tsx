@@ -16,6 +16,7 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { Button } from "@repo/ui/core-elements/button";
 import { Spinner } from "@repo/ui/core-elements/spinner";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
+import { scrollWindowTo } from "@repo/ui/core-elements/scroll-to";
 import {
   getMovies,
   getCategories,
@@ -495,7 +496,9 @@ export function MovieCatalog({
   useEffect(() => {
     if (status !== "ready" || didRestoreScroll.current) return;
     didRestoreScroll.current = true;
-    if (initialScroll > 0) window.scrollTo(0, initialScroll);
+    // Instant: this puts the reader back where they were, so animating it would
+    // make a returning page look like it scrolled itself.
+    if (initialScroll > 0) scrollWindowTo(initialScroll, { smooth: false });
   }, [status, initialScroll]);
 
   // A random backdrop from the current grid, shown dimmed and fixed behind the

@@ -439,7 +439,15 @@
     "bookingStatus_confirmed": "Confirmé",
     "bookingStatus_completed": "Terminé",
     "bookingStatus_canceled": "Annulé",
-    "minutes": "{count} min"
+    "minutes": "{count} min",
+    "completePayment": "Finaliser le paiement",
+    "payLoading": "Redirection vers le paiement…",
+    "payError": "Impossible de rouvrir le paiement. Veuillez réessayer.",
+    "payAlreadyPaid": "Cette commande a déjà été payée.",
+    "payOutOfStock": "Certains articles de cette commande ne sont plus disponibles.",
+    "paySlotUnavailable": "Ce créneau de rendez-vous a été pris. Veuillez en réserver un autre.",
+    "payOrderClosed": "Cette commande ne peut plus être payée en ligne.",
+    "payUnavailable": "Les paiements en ligne ne sont pas disponibles pour le moment."
   },
   "VerifyEmailPage": {
     "loading": "Vérification de votre compte, veuillez patienter…",
@@ -1299,6 +1307,7 @@
     "emailLabel": "E-mail",
     "phoneLabel": "Téléphone",
     "contactHint": "Nous avons besoin d'un e-mail ou d'un téléphone pour vous joindre au sujet de ce rendez-vous.",
+    "contactAccountHint": "Ces informations proviennent de votre compte. Si le rendez-vous est pour quelqu'un d'autre, ou s'il existe un autre moyen de vous joindre, dites-le nous dans « Détails de la réservation » ci-dessous.",
     "notesLabel": "Détails de la réservation",
     "notesHint": "Tout ce que nous devrions savoir avant votre rendez-vous.",
     "paymentTitle": "Paiement",

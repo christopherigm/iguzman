@@ -205,3 +205,26 @@ def retrieve_session(system, session_id: str):
     except StripeError as exc:
         logger.error("Stripe session retrieve failed for %s: %s", session_id, exc)
         raise StripeGatewayError(str(exc)) from exc
+
+
+def expire_session(system, session_id: str) -> bool:
+    """Close a Checkout Session so it can no longer be paid. True if it worked.
+
+    Used when an order is about to be handed a *replacement* session: an order
+    must never have two payable sessions at once, or a customer with the old tab
+    still open can pay one while paying the other, and our webhook - idempotent
+    on `status == paid` - would quietly acknowledge the second charge instead of
+    refusing it. Expiring the old one first is what makes "pay again" safe.
+
+    Failure is returned rather than raised because every caller is already
+    committed to opening the new session; the alternative is refusing a payment
+    the customer is asking to make because of a call that only tidies up. Stripe
+    also rejects expiring a session that is already expired or complete, which is
+    not a problem worth an exception either.
+    """
+    try:
+        stripe.checkout.Session.expire(session_id, api_key=_api_key(system))
+        return True
+    except (StripeError, StripeNotConfigured) as exc:
+        logger.warning("Could not expire Stripe session %s: %s", session_id, exc)
+        return False

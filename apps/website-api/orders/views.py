@@ -63,6 +63,8 @@ from .services.stripe_gateway import (
     StripeGatewayError,
     StripeNotConfigured,
     create_checkout_session,
+    expire_session,
+    retrieve_session,
     verify_webhook,
 )
 
@@ -477,6 +479,40 @@ def _decrement_order_stock(order):
         )
 
 
+def _release_booking(order) -> bool:
+    """Cancel the appointment on a dead order, freeing the slot it still holds.
+
+    A `Booking` is written **before** the customer leaves for Stripe and is born
+    `pending`, which is in `Booking.ACTIVE_STATUSES` - so it occupies its hour
+    from the moment checkout starts, which is the point (two customers must not
+    be sent to Stripe for the same slot).
+
+    But occupancy is computed from `Booking.status` alone (see
+    `orders.services.booking._occupancy`) and never looks at the order, so an
+    order going `canceled`/`failed` releases nothing by itself. Without this, a
+    customer who abandons the Stripe page leaves an appointment nobody is coming
+    to blocking that time forever - and blocking it hardest for themselves, since
+    the slot they wanted is the one slot they can no longer rebook. This is the
+    same reasoning `BookingCheckoutView`'s `StripeGatewayError` branch records
+    when it deletes the order outright rather than leave a booking behind.
+
+    Canceled, not deleted: the order survives as a record of what was abandoned
+    (the customer can read it, and delete it themselves), so its booking should
+    survive with it. `post_save` on Booking drops the availability cache, which
+    is why nothing here calls `invalidate_availability` - see `orders/signals.py`.
+
+    Returns whether anything was released, so the caller can log it.
+    """
+    # A reverse OneToOne raises rather than returning None when absent; Django's
+    # RelatedObjectDoesNotExist subclasses AttributeError precisely so this works.
+    booking = getattr(order, "booking", None)
+    if booking is None or booking.status not in Booking.ACTIVE_STATUSES:
+        return False
+    booking.status = Booking.STATUS_CANCELED
+    booking.save(update_fields=["status", "updated_at"])
+    return True
+
+
 def _in_stock(item) -> bool:
     """Services are always orderable; a menu item follows its own availability
     flag; only products carry stock.
@@ -612,6 +648,232 @@ class OrderDetailView(APIView):
         order.delete()
         invalidate_orders(request.user.id, system_id or 0)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def _line_still_sellable(line) -> bool:
+    """Whether an order line may still be paid for.
+
+    The order-line counterpart of `_in_stock`, and deliberately more forgiving in
+    one place: the catalog FKs are `SET_NULL` provenance, so a deleted item
+    leaves `line.product` None. That is **not** treated as unavailable - the line
+    is a snapshot of an agreement that was already made, and refusing payment
+    because the tenant has since tidied the catalog would strand an order the
+    customer is actively trying to settle. Only an item that still exists *and*
+    says it is unavailable stops the payment.
+    """
+    if line.kind == "service":
+        return True
+    if line.kind == "menu_item":
+        return line.menu_item is None or line.menu_item.is_available
+    return line.product is None or line.product.in_stock
+
+
+class OrderPayView(APIView):
+    """POST /api/orders/<public_id>/pay/ - reopen checkout on an unpaid order.
+
+    For the customer who reached Stripe and came back without paying - the back
+    arrow, "return to store", a closed tab. The order and its snapshotted lines
+    already exist, so this hands back a Checkout URL for *that* order rather than
+    making them rebuild a cart, which for a booking would be worse than an
+    inconvenience: the appointment is holding its own slot, so the hour they
+    wanted is the one hour they could not rebook.
+
+    **Only a `pending` order qualifies**, never a `canceled` or `failed` one,
+    even though those are just as unpaid. `canceled` is also what the CMS writes
+    when a *tenant* refuses an order, and what the webhook writes when Stripe
+    expired the session; neither should be resurrectable from the browser. A
+    customer past that window re-adds to the cart, which is the honest answer -
+    prices and stock have to be read again anyway. `placed` is excluded for a
+    different reason: it is an offline order that was never going to have a
+    Stripe session at all.
+
+    Nothing here decides an amount, and nothing here marks anything paid. It
+    charges the order's own frozen lines, and the signed webhook remains the only
+    thing that may move the money - so an abandoned second attempt costs nothing
+    beyond another `pending` session on the same order.
+    """
+
+    # AllowAny for the same reason `OrderDetailView` is: a guest order has no
+    # owner to authenticate as, and its unguessable `public_id` is the only
+    # handle its customer will ever have. `_may_read` still refuses an *owned*
+    # order to anyone but its owner, so this opens up nothing the GET does not.
+    permission_classes = (AllowAny,)
+
+    def post(self, request, public_id):
+        system = request_system(request)
+        order = (
+            Order.objects
+            .filter(public_id=public_id, system=system)
+            .select_related("booking", "booking__service", "booking__branch")
+            .prefetch_related("lines", "lines__product", "lines__menu_item")
+            .first()
+        )
+        if order is None or not _may_read(request, order):
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        refusal = self._refuse(order, system)
+        if refusal is not None:
+            return refusal
+
+        # The old session has to be dealt with before a new one exists: an order
+        # must never carry two payable sessions, or a customer with the first tab
+        # still open can pay both, and `_handle_completed` - idempotent on an
+        # order already `paid` - would acknowledge the second charge rather than
+        # refuse it. Reusing a still-open session is the cheapest way to
+        # guarantee that, and it is also the common case (the customer is back
+        # within a minute of leaving).
+        existing = self._existing_session(order, system)
+        if existing is not None:
+            if existing.get("status") == "complete":
+                # Paid, with the webhook still in flight. Saying so lets the
+                # confirmation page keep polling instead of opening a second
+                # session for money that has already moved.
+                return Response(
+                    {"detail": "This order has already been paid.", "code": "ALREADY_PAID"},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            if existing.get("status") == "open" and existing.get("url"):
+                logger.info("Reusing open Stripe session %s for order %s", existing["id"], order.pk)
+                return Response({"url": existing["url"], "order_id": str(order.public_id)})
+
+        base_url = _site_base_url(system)
+        locale = (request.data or {}).get("locale") or "en"
+        try:
+            session = create_checkout_session(
+                system=system,
+                order=order,
+                lines=list(order.lines.all()),
+                success_url=f"{base_url}/{locale}/orders/{order.public_id}?session_id={{CHECKOUT_SESSION_ID}}",
+                cancel_url=f"{base_url}/{locale}/orders/{order.public_id}",
+                customer_email=order.email or "",
+                # A booking is charged exactly as it was the first time, deposit
+                # included - `amount_due_now` is the agreement, recorded when the
+                # appointment was made, and re-deriving it here from today's
+                # percentage could charge a different number than the customer
+                # was quoted.
+                charge_amount=self._booking_charge(order),
+                charge_label=self._booking_label(order),
+                collect_shipping_address=not hasattr(order, "booking"),
+            )
+        except StripeNotConfigured:
+            return Response(
+                {"detail": "This site is not set up to take payments.", "code": "PAYMENTS_UNAVAILABLE"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        except StripeGatewayError:
+            # The order is left exactly as it was, unlike the first checkout
+            # (which deletes it): it is a real order the customer can try again.
+            return Response(
+                {"detail": "Could not start checkout. Please try again.", "code": "STRIPE_ERROR"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        order.stripe_session_id = session.id
+        order.save(update_fields=["stripe_session_id", "updated_at"])
+        if order.user_id:
+            invalidate_orders(order.user_id, order.system_id or 0)
+
+        logger.info("Checkout session %s reopened for order %s", session.id, order.pk)
+        return Response({"url": session.url, "order_id": str(order.public_id)})
+
+    def _refuse(self, order, system):
+        """The 4xx/503 explaining why this order cannot be paid now, or None."""
+        if order.status in {Order.STATUS_PAID, Order.STATUS_REFUNDED}:
+            return Response(
+                {"detail": "This order has already been paid.", "code": "ALREADY_PAID"},
+                status=status.HTTP_409_CONFLICT,
+            )
+        if order.payment_method != Order.PAYMENT_ONLINE:
+            return Response(
+                {"detail": "This order is settled with the store.", "code": "NOT_ONLINE_ORDER"},
+                status=status.HTTP_409_CONFLICT,
+            )
+        if order.status != Order.STATUS_PENDING:
+            return Response(
+                {"detail": "This order can no longer be paid.", "code": "ORDER_CLOSED"},
+                status=status.HTTP_409_CONFLICT,
+            )
+        if not system.stripe_configured:
+            return Response(
+                {"detail": "This site is not set up to take payments.", "code": "PAYMENTS_UNAVAILABLE"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        # Re-checked rather than assumed, exactly as `_open_order` checks it: the
+        # order has been sitting unpaid, and the tenant may have marked something
+        # sold out meanwhile. Charging for it anyway is how an oversell starts.
+        if not all(_line_still_sellable(line) for line in order.lines.all()):
+            return Response(
+                {"detail": "Some items are no longer available.", "code": "OUT_OF_STOCK"},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        return self._refuse_booking(order)
+
+    def _refuse_booking(self, order):
+        """The 409 for an appointment that is no longer bookable, or None.
+
+        Re-derived through the single availability authority rather than trusted,
+        for the reason booking checkout re-derives it: time has passed, and the
+        slot may now be in the past or inside the branch's minimum notice - both
+        of which make it un-bookable however free it looks.
+
+        `exclude_booking_id` is what stops the booking from refusing itself: it
+        is `pending`, so it is occupying the very slot it is asking to pay for.
+        """
+        booking = getattr(order, "booking", None)
+        if booking is None:
+            return None
+        # With the service or branch deleted there is nothing to re-derive the
+        # slot from. The appointment still stands on its own snapshot, so let the
+        # payment through rather than block it on missing provenance.
+        if booking.service is None:
+            return None
+        if not is_slot_available(
+            booking.service,
+            booking.branch,
+            booking.starts_at,
+            exclude_booking_id=booking.pk,
+        ):
+            return Response(
+                {"detail": "That time is no longer available.", "code": "SLOT_UNAVAILABLE"},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return None
+
+    def _existing_session(self, order, system):
+        """This order's current Checkout Session, or None if there is none to use.
+
+        A read failure returns None *after* trying to expire the session, so the
+        fallback - opening a replacement - cannot leave a payable session behind
+        that we could not see. Best effort by design: refusing the customer's
+        payment because a tidy-up call failed would be the worse outcome.
+        """
+        if not order.stripe_session_id:
+            return None
+        try:
+            return retrieve_session(system, order.stripe_session_id)
+        except (StripeGatewayError, StripeNotConfigured):
+            expire_session(system, order.stripe_session_id)
+            return None
+
+    def _booking_charge(self, order):
+        """What Stripe is asked for: the deposit on a deposit booking, else None.
+
+        None means "use the order's line items", which is right for a cart order
+        and for a booking paid in full.
+        """
+        booking = getattr(order, "booking", None)
+        if booking is None or booking.payment_option != Booking.PAYMENT_DEPOSIT:
+            return None
+        return booking.amount_due_now
+
+    def _booking_label(self, order):
+        booking = getattr(order, "booking", None)
+        if booking is None or booking.payment_option != Booking.PAYMENT_DEPOSIT:
+            return ""
+        name = booking.service.name if booking.service else "Service"
+        return f"{name} - {booking.deposit_percent}% deposit"
 
 
 class AdminOrderListView(APIView):
@@ -763,8 +1025,14 @@ class AdminOrderDetailView(APIView):
                     {"detail": "Only an outstanding order can be canceled.", "code": "BAD_TRANSITION"},
                     status=status.HTTP_409_CONFLICT,
                 )
-            order.status = Order.STATUS_CANCELED
-            order.save(update_fields=["status", "updated_at"])
+            with transaction.atomic():
+                order.status = Order.STATUS_CANCELED
+                order.save(update_fields=["status", "updated_at"])
+                # The mirror of the booking CMS's own cancel, which already
+                # cancels the order with the booking (`AdminBookingDetailView`).
+                # Canceling from the orders list must free the appointment too,
+                # or the tenant has called off a job whose hour stays blocked.
+                _release_booking(order)
 
         elif action == Action.MARK_FULFILLED:
             order.fulfilled = True
@@ -1002,8 +1270,14 @@ class StripeWebhookView(APIView):
     def _handle_expired(self, order, session):
         if order.status != Order.STATUS_PENDING:
             return
-        order.status = Order.STATUS_CANCELED
-        order.save(update_fields=["status", "updated_at"])
+        with transaction.atomic():
+            order.status = Order.STATUS_CANCELED
+            order.save(update_fields=["status", "updated_at"])
+            # The session is gone, so this order can never be paid - and if it
+            # was a booking, the hour it is holding is now held for nobody.
+            released = _release_booking(order)
+        if released:
+            logger.info("Booking on expired order %s canceled, slot released", order.pk)
         invalidate_orders(order.user_id, order.system_id or 0)
         # A no-op for the usual abandoned checkout (no email was ever collected);
         # sends only if Stripe had already supplied an address.
@@ -1012,8 +1286,14 @@ class StripeWebhookView(APIView):
     def _handle_failed(self, order, session):
         if order.status != Order.STATUS_PENDING:
             return
-        order.status = Order.STATUS_FAILED
-        order.save(update_fields=["status", "updated_at"])
+        with transaction.atomic():
+            order.status = Order.STATUS_FAILED
+            order.save(update_fields=["status", "updated_at"])
+            # A payment that failed outright is as dead as an expired one, and
+            # holds its slot in exactly the same way.
+            released = _release_booking(order)
+        if released:
+            logger.info("Booking on failed order %s canceled, slot released", order.pk)
         invalidate_orders(order.user_id, order.system_id or 0)
         send_order_email(order, kind=STATUS)
 

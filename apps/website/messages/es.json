@@ -439,7 +439,15 @@
     "bookingStatus_confirmed": "Confirmada",
     "bookingStatus_completed": "Completada",
     "bookingStatus_canceled": "Cancelada",
-    "minutes": "{count} min"
+    "minutes": "{count} min",
+    "completePayment": "Completar el pago",
+    "payLoading": "Te llevamos al pago…",
+    "payError": "No pudimos reabrir el pago. Inténtalo de nuevo.",
+    "payAlreadyPaid": "Este pedido ya está pagado.",
+    "payOutOfStock": "Algunos artículos de este pedido ya no están disponibles.",
+    "paySlotUnavailable": "Esa hora de la cita ya está ocupada. Reserva un nuevo horario.",
+    "payOrderClosed": "Este pedido ya no se puede pagar en línea.",
+    "payUnavailable": "Los pagos en línea no están disponibles en este momento."
   },
   "VerifyEmailPage": {
     "loading": "Verificando tu cuenta, por favor espera…",
@@ -1299,6 +1307,7 @@
     "emailLabel": "Correo electrónico",
     "phoneLabel": "Teléfono",
     "contactHint": "Necesitamos un correo o un teléfono para poder contactarte sobre esta cita.",
+    "contactAccountHint": "Estos datos vienen de tu cuenta. Si la cita es para otra persona, o hay otra forma de contactarte, dínoslo en «Detalles de la reserva» más abajo.",
     "notesLabel": "Detalles de la reserva",
     "notesHint": "Lo que debamos saber antes de tu cita.",
     "paymentTitle": "Pago",

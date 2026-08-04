@@ -12,6 +12,7 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { getSession } from "@repo/auth/session";
 import { getOrder, orderRef } from "@/lib/orders";
 import { formatPrice } from "@/lib/price";
+import { CompletePaymentButton } from "./complete-payment-button";
 import { OrderStatusBanner } from "./order-status-banner";
 import { BookingDetails } from "./booking-details";
 import { OrderLineRow } from "./order-line-row";
@@ -69,6 +70,14 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
   ];
 
   const hasShipping = Boolean(order.shipping_line1);
+
+  // Only an online order still waiting on its payment can be paid, which is the
+  // same window the API accepts (`OrderPayView`); this just decides what is
+  // worth rendering. Suppressed right after a return from Stripe - see below.
+  const canPay =
+    order.status === "pending" &&
+    order.payment_method === "online" &&
+    !query.session_id;
 
   return (
     <Container
@@ -197,6 +206,14 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
                 </Box>
               </>
             ) : null}
+
+            {/* The customer who reached Stripe and came back without paying.
+                Hidden while `session_id` is present: they have just returned
+                from a payment and the banner above is waiting on the webhook, so
+                offering to charge them again would be alarming and wrong. If the
+                webhook genuinely never lands, a plain reload (no query) brings
+                the button back. */}
+            {canPay && <CompletePaymentButton publicId={order.public_id} />}
 
             {/* A guest has no order history to go back to - send them on to
                 the catalog instead of to a page that would bounce them. */}

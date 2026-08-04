@@ -439,7 +439,15 @@
     "bookingStatus_confirmed": "Confirmed",
     "bookingStatus_completed": "Completed",
     "bookingStatus_canceled": "Canceled",
-    "minutes": "{count} min"
+    "minutes": "{count} min",
+    "completePayment": "Complete payment",
+    "payLoading": "Taking you to checkout…",
+    "payError": "We couldn't reopen checkout. Please try again.",
+    "payAlreadyPaid": "This order has already been paid.",
+    "payOutOfStock": "Some items in this order are no longer available.",
+    "paySlotUnavailable": "That appointment time has been taken. Please book a new time.",
+    "payOrderClosed": "This order can no longer be paid online.",
+    "payUnavailable": "Online payments aren't available right now."
   },
   "VerifyEmailPage": {
     "loading": "Verifying your account, please wait…",
@@ -1299,6 +1307,7 @@
     "emailLabel": "Email",
     "phoneLabel": "Phone",
     "contactHint": "We need an email or a phone number so we can reach you about this appointment.",
+    "contactAccountHint": "These come from your account. If the appointment is for someone else, or there is another way to reach you, tell us in \"Booking details\" below.",
     "notesLabel": "Booking details",
     "notesHint": "Anything we should know before your appointment.",
     "paymentTitle": "Payment",

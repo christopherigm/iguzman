@@ -8,6 +8,7 @@ import { Badge } from "@repo/ui/core-elements/badge";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Card } from "@repo/ui/core-elements/card";
+import { Grid } from "@repo/ui/core-elements/grid";
 import { Select } from "@repo/ui/core-elements/select";
 import { Spinner } from "@repo/ui/core-elements/spinner";
 import { TextInput } from "@repo/ui/core-elements/text-input";
@@ -44,8 +45,8 @@ interface BookingFormProps {
   fulfillmentOptions: BookingFulfillment[];
   paymentOptions: BookingPaymentOption[];
   depositPercent: number;
-  /** The signed-in customer's details, pre-filled and still editable - a
-   *  customer may well be booking on behalf of someone else. Null for a guest. */
+  /** The signed-in customer's details, shown as a statement rather than as
+   *  fields - see `readOnlyName` below. Null for a guest, who fills them in. */
   account: { name: string; email: string } | null;
 }
 
@@ -200,6 +201,19 @@ export function BookingForm({
 
   const branch = branches.find((b) => b.id === branchId) ?? null;
 
+  // The account's own name and email are **shown, not offered as fields**: the
+  // booking is filed under the signed-in customer either way, so an edit here
+  // could only disagree with the account it lands on. Anything that still needs
+  // saying - the appointment is for someone else, a second number to try - goes
+  // in "Booking details" below, which the tenant reads.
+  //
+  // Both are decided from the `account` prop, never from the state they seed:
+  // read off the state, a signed-in customer with no name on their profile
+  // would watch the field turn into text as soon as they typed into it. A guest
+  // has no account to read at all, and keeps both fields.
+  const readOnlyName = (account?.name ?? "").trim().length > 0;
+  const readOnlyEmail = (account?.email ?? "").trim().length > 0;
+
   const price = Number(service.price);
   const dueNow =
     paymentOption === "full"
@@ -270,7 +284,7 @@ export function BookingForm({
   };
 
   return (
-    <Card gap={22} maxWidth={620} width="100%" margin="0 auto" padding={22}>
+    <Card gap={22} width="100%" padding={22}>
       <Box flexDirection="column" gap={6}>
         <Typography as="h2" variant="h3">
           {service.name}
@@ -287,207 +301,274 @@ export function BookingForm({
         </Box>
       </Box>
 
-      {/* Where. Rendered only when there is a genuine choice - a single-location
-        business offering one fulfillment sees neither control. */}
-      {fulfillmentOptions.length > 1 && (
-        <Select
-          label={t("whereLabel")}
-          value={fulfillment}
-          onChange={(v) => setFulfillment(v as BookingFulfillment)}
-          options={fulfillmentOptions.map((option) => ({
-            value: option,
-            label: t(`fulfillment_${option}`),
-          }))}
-        />
-      )}
-
-      {fulfillment === "branch" && branches.length > 1 && (
-        <Select
-          label={t("branchLabel")}
-          value={String(branchId ?? "")}
-          onChange={(v) => setBranchId(Number(v))}
-          options={branches.map((b) => ({
-            value: String(b.id),
-            label: b.name,
-          }))}
-        />
-      )}
-
-      {fulfillment === "branch" && branch?.address && (
-        <Typography variant="caption" color="var(--foreground)">
-          {branch.address}
-        </Typography>
-      )}
-
-      {fulfillment === "on_premises" && (
-        <TextInput
-          label={t("addressLabel")}
-          multirow
-          rows={3}
-          value={address}
-          onChange={setAddress}
-          helperText={t("addressHint")}
-        />
-      )}
-
-      {/* When. */}
-      <Box flexDirection="column" gap={10}>
-        <Typography as="h3" variant="h5">
-          {t("pickDay")}
-        </Typography>
-        <BookingCalendar
-          availableDays={availableDays}
-          value={selectedDay}
-          onChange={(day) => {
-            setSelectedDay(day);
-            setSelectedSlot(null);
-          }}
-          onMonthChange={setMonthStart}
-          lastBookableDay={availability?.last_bookable_date}
-          loading={loadingSlots}
-        />
-        {loadingSlots && (
-          <Box alignItems="center" gap={8}>
-            <Spinner size={16} />
-            <Typography variant="caption">{t("loadingSlots")}</Typography>
-          </Box>
-        )}
-        {!loadingSlots && availableDays.size === 0 && (
-          <Typography variant="body">{t("noAvailability")}</Typography>
-        )}
-      </Box>
-
-      {selectedDay && (
-        <Box flexDirection="column" gap={10}>
-          <Typography as="h3" variant="h5">
-            {t("pickTime")}
-          </Typography>
-          <Box gap={8} flexWrap="wrap">
-            {slotsForDay.map((slot) => (
-              <Button
-                key={slot}
-                text={formatSlotTime(slot, timeZone, locale)}
-                kind={selectedSlot === slot ? "primary" : undefined}
-                size="md"
-                aria-pressed={selectedSlot === slot}
-                onClick={() => setSelectedSlot(slot)}
+      {/* Two columns from `sm` up: what is being booked (where and when) on the
+        left, who it is for and how it is paid on the right. Below `sm` they
+        stack in that same order, which is the order the form is filled in. */}
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <Box flexDirection="column" gap={22}>
+            {/* Where. Rendered only when there is a genuine choice - a
+              single-location business offering one fulfillment sees neither
+              control. */}
+            {fulfillmentOptions.length > 1 && (
+              <Select
+                label={t("whereLabel")}
+                value={fulfillment}
+                onChange={(v) => setFulfillment(v as BookingFulfillment)}
+                options={fulfillmentOptions.map((option) => ({
+                  value: option,
+                  label: t(`fulfillment_${option}`),
+                }))}
               />
-            ))}
+            )}
+
+            {fulfillment === "branch" && branches.length > 1 && (
+              <Select
+                label={t("branchLabel")}
+                value={String(branchId ?? "")}
+                onChange={(v) => setBranchId(Number(v))}
+                options={branches.map((b) => ({
+                  value: String(b.id),
+                  label: b.name,
+                }))}
+              />
+            )}
+
+            {fulfillment === "branch" && branch?.address && (
+              <Typography variant="caption" color="var(--foreground)">
+                {branch.address}
+              </Typography>
+            )}
+
+            {fulfillment === "on_premises" && (
+              <TextInput
+                label={t("addressLabel")}
+                multirow
+                rows={3}
+                value={address}
+                onChange={setAddress}
+                helperText={t("addressHint")}
+              />
+            )}
+
+            {/* When. */}
+            <Box flexDirection="column" gap={10}>
+              <Typography as="h3" variant="h5">
+                {t("pickDay")}
+              </Typography>
+              <BookingCalendar
+                availableDays={availableDays}
+                value={selectedDay}
+                onChange={(day) => {
+                  setSelectedDay(day);
+                  setSelectedSlot(null);
+                }}
+                onMonthChange={setMonthStart}
+                lastBookableDay={availability?.last_bookable_date}
+                loading={loadingSlots}
+              />
+              {loadingSlots && (
+                <Box alignItems="center" gap={8}>
+                  <Spinner size={16} />
+                  <Typography variant="caption">{t("loadingSlots")}</Typography>
+                </Box>
+              )}
+              {!loadingSlots && availableDays.size === 0 && (
+                <Typography variant="body">{t("noAvailability")}</Typography>
+              )}
+            </Box>
+
+            {selectedDay && (
+              <Box flexDirection="column" gap={10}>
+                <Typography as="h3" variant="h5">
+                  {t("pickTime")}
+                </Typography>
+                <Box gap={8} flexWrap="wrap">
+                  {slotsForDay.map((slot) => (
+                    <Button
+                      key={slot}
+                      text={formatSlotTime(slot, timeZone, locale)}
+                      kind={selectedSlot === slot ? "primary" : undefined}
+                      size="md"
+                      aria-pressed={selectedSlot === slot}
+                      onClick={() => setSelectedSlot(slot)}
+                    />
+                  ))}
+                </Box>
+                <Typography variant="caption" color="var(--foreground)">
+                  {t("timesShownIn", { timezone: timeZone })}
+                </Typography>
+              </Box>
+            )}
           </Box>
-          <Typography variant="caption" color="var(--foreground)">
-            {t("timesShownIn", { timezone: timeZone })}
-          </Typography>
-        </Box>
-      )}
+        </Grid>
 
-      {/* Who. Pre-filled for a signed-in customer and still editable - they may
-        be booking for someone else. */}
-      <Box flexDirection="column" gap={12}>
-        <Typography as="h3" variant="h5">
-          {t("contactTitle")}
-        </Typography>
-        <TextInput label={t("nameLabel")} value={name} onChange={setName} />
-        <Box gap={12} flexWrap="wrap">
-          <TextInput
-            label={t("emailLabel")}
-            type="email"
-            value={email}
-            onChange={setEmail}
-            flex="1"
-            minWidth={200}
-          />
-          <TextInput
-            label={t("phoneLabel")}
-            format="phone"
-            value={phone}
-            onChange={setPhone}
-            flex="1"
-            minWidth={200}
-          />
-        </Box>
-        <Typography variant="caption" color="var(--foreground)">
-          {t("contactHint")}
-        </Typography>
-      </Box>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <Box flexDirection="column" gap={22}>
+            {/* Who. Read off the account where there is one; a guest fills it
+              in. The phone is always a field - it is on no account. */}
+            <Box flexDirection="column" gap={12}>
+              <Typography as="h3" variant="h5">
+                {t("contactTitle")}
+              </Typography>
 
-      <TextInput
-        label={t("notesLabel")}
-        multirow
-        rows={4}
-        value={notes}
-        onChange={setNotes}
-        helperText={t("notesHint")}
-      />
+              {readOnlyName ? (
+                <AccountDetail label={t("nameLabel")} value={name} />
+              ) : (
+                <TextInput
+                  label={t("nameLabel")}
+                  value={name}
+                  onChange={setName}
+                />
+              )}
 
-      {/* How to pay. One option is shown as a statement rather than a picker -
-        a select with a single choice is a question with one answer. */}
-      <Box flexDirection="column" gap={10}>
-        <Typography as="h3" variant="h5">
-          {t("paymentTitle")}
-        </Typography>
-        {paymentOptions.length > 1 ? (
-          <Select
-            label={t("paymentLabel")}
-            value={paymentOption}
-            onChange={(v) => setPaymentOption(v as BookingPaymentOption)}
-            options={paymentOptions.map((option) => ({
-              value: option,
-              label:
-                option === "deposit"
-                  ? t("payment_deposit_percent", { percent: depositPercent })
-                  : t(`payment_${option}`),
-            }))}
-          />
-        ) : (
-          <Typography variant="body">
-            {paymentOption === "deposit"
-              ? t("payment_deposit_percent", { percent: depositPercent })
-              : t(`payment_${paymentOption}`)}
-          </Typography>
-        )}
+              {readOnlyEmail ? (
+                <>
+                  <AccountDetail label={t("emailLabel")} value={email} />
+                  <TextInput
+                    label={t("phoneLabel")}
+                    format="phone"
+                    value={phone}
+                    onChange={setPhone}
+                  />
+                </>
+              ) : (
+                // Two fields still share a row; one field beside a line of text
+                // would only leave the text floating against a taller box.
+                <Box gap={12} flexWrap="wrap">
+                  <TextInput
+                    label={t("emailLabel")}
+                    type="email"
+                    value={email}
+                    onChange={setEmail}
+                    flex="1"
+                    minWidth={200}
+                  />
+                  <TextInput
+                    label={t("phoneLabel")}
+                    format="phone"
+                    value={phone}
+                    onChange={setPhone}
+                    flex="1"
+                    minWidth={200}
+                  />
+                </Box>
+              )}
 
-        <Box flexDirection="column" gap={4}>
-          <Typography variant="body">
-            {t("dueNow")}:{" "}
-            <strong>{formatPrice(dueNow.toFixed(2), service.currency)}</strong>
-          </Typography>
-          {dueLater > 0 && (
-            <Typography variant="body">
-              {t("dueLater")}:{" "}
-              <strong>
-                {formatPrice(dueLater.toFixed(2), service.currency)}
-              </strong>
-            </Typography>
-          )}
-        </Box>
-      </Box>
+              <Typography variant="caption" color="var(--foreground)">
+                {readOnlyName || readOnlyEmail
+                  ? t("contactAccountHint")
+                  : t("contactHint")}
+              </Typography>
+            </Box>
 
-      {error && (
-        <Typography variant="body" color="var(--error, #ef4444)">
-          {error}
-        </Typography>
-      )}
+            <TextInput
+              label={t("notesLabel")}
+              multirow
+              rows={4}
+              value={notes}
+              onChange={setNotes}
+              helperText={t("notesHint")}
+            />
 
-      <Button
-        text={
-          paymentOption === "in_person" ? t("confirmBooking") : t("payAndBook")
-        }
-        kind="primary"
-        size="lg"
-        width="100%"
-        disabled={!canSubmit}
-        isLoading={submitting}
-        onClick={() => void handleSubmit()}
-      />
-      {!selectedSlot && (
-        <Typography
-          variant="caption"
-          color="var(--foreground)"
-          textAlign="center"
-        >
-          {t("pickASlotFirst")}
-        </Typography>
-      )}
+            {/* How to pay. One option is shown as a statement rather than a
+              picker - a select with a single choice is a question with one
+              answer. */}
+            <Box flexDirection="column" gap={10}>
+              <Typography as="h3" variant="h5">
+                {t("paymentTitle")}
+              </Typography>
+              {paymentOptions.length > 1 ? (
+                <Select
+                  label={t("paymentLabel")}
+                  value={paymentOption}
+                  onChange={(v) => setPaymentOption(v as BookingPaymentOption)}
+                  options={paymentOptions.map((option) => ({
+                    value: option,
+                    label:
+                      option === "deposit"
+                        ? t("payment_deposit_percent", {
+                            percent: depositPercent,
+                          })
+                        : t(`payment_${option}`),
+                  }))}
+                />
+              ) : (
+                <Typography variant="body">
+                  {paymentOption === "deposit"
+                    ? t("payment_deposit_percent", { percent: depositPercent })
+                    : t(`payment_${paymentOption}`)}
+                </Typography>
+              )}
+
+              <Box flexDirection="column" gap={4}>
+                <Typography variant="body">
+                  {t("dueNow")}:{" "}
+                  <strong>
+                    {formatPrice(dueNow.toFixed(2), service.currency)}
+                  </strong>
+                </Typography>
+                {dueLater > 0 && (
+                  <Typography variant="body">
+                    {t("dueLater")}:{" "}
+                    <strong>
+                      {formatPrice(dueLater.toFixed(2), service.currency)}
+                    </strong>
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+
+            {error && (
+              <Typography variant="body" color="var(--error, #ef4444)">
+                {error}
+              </Typography>
+            )}
+
+            <Box flexDirection="column" gap={8}>
+              <Button
+                text={
+                  paymentOption === "in_person"
+                    ? t("confirmBooking")
+                    : t("payAndBook")
+                }
+                kind="primary"
+                size="lg"
+                width="100%"
+                disabled={!canSubmit}
+                isLoading={submitting}
+                onClick={() => void handleSubmit()}
+              />
+              {!selectedSlot && (
+                <Typography
+                  variant="caption"
+                  color="var(--foreground)"
+                  textAlign="center"
+                >
+                  {t("pickASlotFirst")}
+                </Typography>
+              )}
+            </Box>
+          </Box>
+        </Grid>
+      </Grid>
     </Card>
+  );
+}
+
+/**
+ * One detail taken from the customer's account, laid out like the field it
+ * replaces - the label in the same muted tone `TextInput` floats above a filled
+ * input - so the contact block still reads as one group rather than as a form
+ * with a paragraph dropped into the middle of it.
+ */
+function AccountDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <Box flexDirection="column" gap={2}>
+      <Typography as="span" variant="label" color="var(--muted, #757575)">
+        {label}
+      </Typography>
+      <Typography variant="body">{value}</Typography>
+    </Box>
   );
 }

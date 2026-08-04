@@ -184,18 +184,20 @@ export function ItemHeroVideo({
       )}
       {showCentered ? (
         <>
-          {/* Centred title. In the profile layout it is biased low (top: 50%)
-              and stops half a circle short of the bottom edge, so it sits just
-              above the disc; with the frame alone it centres in the full video
-              (below the navbar). Either way the bottom row is free, so the
-              expand button moves to the top-right corner. */}
+          {/* Centred title. It always starts below the fixed navbar overlaying
+              the video's top edge; in the profile layout it stops 24px short of
+              the disc straddling the bottom edge, so the title centres in the
+              whole band that is left rather than being crammed into its lower
+              half - the disc moves the band's floor, not the text's anchor.
+              Either way the bottom row is free, so the expand button moves to
+              the top-right corner. */}
           <Box
             alignItems="center"
             justifyContent="center"
             paddingX={24}
             styles={{
               position: "absolute",
-              top: isProfile ? "50%" : "var(--ui-navbar-height, 57px)",
+              top: "var(--ui-navbar-height, 57px)",
               left: 0,
               right: 0,
               bottom: isProfile ? `calc(${profileSize} / 2 + 24px)` : 0,

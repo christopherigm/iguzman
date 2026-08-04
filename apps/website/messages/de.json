@@ -439,7 +439,15 @@
     "bookingStatus_confirmed": "Bestätigt",
     "bookingStatus_completed": "Abgeschlossen",
     "bookingStatus_canceled": "Storniert",
-    "minutes": "{count} Min."
+    "minutes": "{count} Min.",
+    "completePayment": "Zahlung abschließen",
+    "payLoading": "Sie werden zur Kasse weitergeleitet…",
+    "payError": "Die Kasse konnte nicht erneut geöffnet werden. Bitte versuchen Sie es noch einmal.",
+    "payAlreadyPaid": "Diese Bestellung ist bereits bezahlt.",
+    "payOutOfStock": "Einige Artikel dieser Bestellung sind nicht mehr verfügbar.",
+    "paySlotUnavailable": "Dieser Termin ist inzwischen vergeben. Bitte buchen Sie eine neue Uhrzeit.",
+    "payOrderClosed": "Diese Bestellung kann nicht mehr online bezahlt werden.",
+    "payUnavailable": "Online-Zahlungen sind derzeit nicht verfügbar."
   },
   "VerifyEmailPage": {
     "loading": "Ihr Konto wird verifiziert, bitte warten…",
@@ -1299,6 +1307,7 @@
     "emailLabel": "E-Mail",
     "phoneLabel": "Telefon",
     "contactHint": "Wir benötigen eine E-Mail-Adresse oder eine Telefonnummer, um Sie zu diesem Termin erreichen zu können.",
+    "contactAccountHint": "Diese Angaben stammen aus Ihrem Konto. Ist der Termin für jemand anderen, oder erreichen wir Sie anders besser, schreiben Sie es unten unter „Angaben zur Buchung“.",
     "notesLabel": "Angaben zur Buchung",
     "notesHint": "Alles, was wir vor Ihrem Termin wissen sollten.",
     "paymentTitle": "Zahlung",

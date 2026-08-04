@@ -6,6 +6,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
+import { scrollToElement } from "@repo/ui/core-elements/scroll-to";
 import type { Platform } from "@repo/helpers/checkers";
 import type { BurnCaptionsConfig, CropRect, TrimRange } from "@/lib/types";
 import { PinnedVideoItemDownloading } from "./pinned-video-item-downloading";
@@ -130,10 +131,7 @@ export function VideoGrid({
       isFirstMount.current = false;
       return;
     }
-    completedTopRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
+    scrollToElement(completedTopRef);
   }, [safePage]);
 
   /* ── Scroll to newly duplicated video ────────────── */
@@ -160,12 +158,7 @@ export function VideoGrid({
     }
 
     const raf = requestAnimationFrame(() => {
-      const el = document.querySelector(
-        `[data-video-uuid="${pendingScrollUuid}"]`,
-      );
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+      scrollToElement(`[data-video-uuid="${pendingScrollUuid}"]`);
       setPendingScrollUuid(null);
     });
 

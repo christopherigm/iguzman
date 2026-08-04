@@ -15,6 +15,7 @@ import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Select } from "@repo/ui/core-elements/select";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { scrollToElement } from "@repo/ui/core-elements/scroll-to";
 import { useLlmProxy, type LlmMessage } from "@repo/ui/use-llm";
 import "./menu-ingredients-editor.css";
 
@@ -426,10 +427,7 @@ export function MenuIngredientsEditor({ value, onChange, catalog }: Props) {
   useEffect(() => {
     if (!shouldScrollRef.current) return;
     shouldScrollRef.current = false;
-    listEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-    });
+    scrollToElement(listEndRef, { block: "nearest" });
   }, [value.length]);
 
   // A short "62 kcal per 1 pc" hint for a catalog ingredient, shown in

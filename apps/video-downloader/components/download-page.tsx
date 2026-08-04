@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect } from "react";
 import { Typography } from "@repo/ui/core-elements/typography";
+import { scrollToElement } from "@repo/ui/core-elements/scroll-to";
 import { DownloadForm } from "./download-form";
 import { VideoGrid } from "./video-grid";
 import { useVideoStore } from "./use-video-store";
@@ -298,9 +299,9 @@ function DownloadPageInner({ serverDate }: { serverDate: string }) {
           insertBeforeCompleted(beforeUuid, newVideo);
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-              document
-                .querySelector(`[data-video-uuid="${newVideo.uuid}"]`)
-                ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+              scrollToElement(`[data-video-uuid="${newVideo.uuid}"]`, {
+                block: "nearest",
+              });
             });
           });
         }}

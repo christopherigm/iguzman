@@ -80,8 +80,18 @@ export function HeroVideo({
         {/*
          * react-player v3 controls autoplay/controls/mute/inline through the
          * standard media props below (no longer via per-player config). Only
-         * provider-specific options remain in `config`: hide YouTube related
-         * videos (rel) and enable Vimeo background mode.
+         * provider-specific options remain in `config`: the YouTube player
+         * parameters and Vimeo's background mode.
+         *
+         * The YouTube block is spread LAST into the embed URL that
+         * `youtube-video-element` builds, so every key here overrides that
+         * element's own default. Two of its defaults are wrong for a hero:
+         * `cc_load_policy: 1` force-enables closed captions (which is why
+         * caption text appeared a second or two into playback), and keyboard
+         * control is left on for a video the visitor never asked to drive.
+         * The rest re-state suppressions explicitly rather than inheriting
+         * them, since they are the difference between a clean background and
+         * YouTube's chrome, and must not silently change with the dependency.
          */}
         <ReactPlayer
           src={url}
@@ -93,7 +103,15 @@ export function HeroVideo({
           width="100%"
           height="100%"
           config={{
-            youtube: { rel: 0 },
+            youtube: {
+              cc_load_policy: 0, // never auto-show closed captions
+              iv_load_policy: 3, // hide video annotations / cards
+              rel: 0, // no related videos at the end
+              fs: 0, // no fullscreen button
+              // A background hero takes no input at all; with real controls the
+              // player is interactive, so leave the keyboard to the viewer.
+              disablekb: controls ? 0 : 1,
+            },
             vimeo: { background: !controls },
           }}
         />

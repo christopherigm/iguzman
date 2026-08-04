@@ -373,6 +373,22 @@ if you find yourself reaching for one, the design has been misread.
   header pick a logged-in user's tenant). `GET /api/orders/<public_id>/` is
   likewise `AllowAny`, but `_may_read` only opens up orders with **no** user;
   DELETE stays owner-only.
+- **`POST /api/orders/<public_id>/pay/` reopens checkout on an order that
+  already exists**, for the customer who reached Stripe and came back without
+  paying. It charges the order's own frozen lines - no cart, no amount in the
+  body - and only the webhook still marks anything paid, so an abandoned second
+  attempt costs nothing. Two rules hold it together: **only a `pending` online
+  order qualifies** (a `canceled` one is also what a *tenant* refusing an order
+  writes, and what the webhook writes on expiry - neither may be undone from a
+  browser), and **an order must never carry two payable sessions at once**. The
+  second is why `_existing_session` reuses a still-open session rather than
+  opening another, and calls `expire_session` when it cannot read the old one:
+  with two live sessions a customer can pay both, and `_handle_completed` -
+  idempotent on an order already `paid` - would acknowledge the second charge
+  instead of refusing it. Stock and (for a booking) slot availability are
+  re-derived before the session, since the order has been sitting unpaid.
+  `AllowAny` behind `_may_read`, like `OrderDetailView`. Tests: `OrderPayTests`,
+  `OrderPayBookingTests`.
 - **Guest orders are claimed by email, and only once Stripe has supplied one.**
   `orders/claims.py` runs at email verification and at login. `Order.email` is
   blank until the webhook copies what the customer typed on Stripe's page, so an
@@ -412,6 +428,20 @@ have needed a second implementation of every one of those.
   actions (`confirm`/`complete`/`cancel`) never touch payment - `complete` does
   set `Order.fulfilled`, because for an appointment the work and the handover are
   the same moment.
+- ⚠ **The one direction that must not stay independent: an order that dies has to
+  release its appointment.** The booking is written *before* the redirect to
+  Stripe and is born `pending`, which is in `ACTIVE_STATUSES` - so it occupies its
+  hour from the moment checkout starts (deliberately: two customers must not be
+  sent to Stripe for the same slot). But `_occupancy` reads `Booking.status`
+  alone and never looks at the order, so `checkout.session.expired`,
+  `async_payment_failed` and the CMS's order-level `cancel` release *nothing* on
+  their own. All three call `_release_booking(order)` in `orders/views.py`; drop
+  it and a customer who backs out of the Stripe page leaves that hour blocked
+  forever - blocked hardest for themselves, since the slot they wanted is the one
+  slot they can no longer rebook. `BookingCheckoutView`'s `StripeGatewayError`
+  branch is the same rule in its harshest form: it deletes the order outright
+  rather than leave a booking that can never be paid. Covered by
+  `AbandonedBookingTests`.
 - **`orders/services/booking.py` is the single availability authority.** The
   public availability endpoint the calendar paints from and the checkout that
   writes the booking both call `slots_for_day`, so the times a customer is shown

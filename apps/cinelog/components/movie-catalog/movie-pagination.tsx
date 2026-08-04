@@ -6,6 +6,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { BREAKPOINTS, type Breakpoint } from "@repo/ui/core-elements/utils";
+import { scrollToTop } from "@repo/ui/core-elements/scroll-to";
 
 type Props = {
   page: number;
@@ -88,12 +89,9 @@ export function MoviePagination({ page, totalPages, onPageChange }: Props) {
   const [docked, setDocked] = useState(true);
 
   // Switch pages, then ease back to the top so the new results start in view.
-  // Falls back to an instant jump when the browser lacks smooth-scroll support.
   const goToPage = (next: number) => {
     onPageChange(next);
-    if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+    scrollToTop();
   };
 
   // Keep the numeric buttons square by feeding a button's intrinsic height back

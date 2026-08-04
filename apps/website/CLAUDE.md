@@ -71,6 +71,16 @@ customization?, quantity}`) - Django re-prices every one of them
   it lands on a still-`pending` order, then says "confirming", never "failed".
 - **`getOrder` is not `cache()`d** across requests - a cached `pending` would
   outlive the webhook it is waiting for. `getOrders` (the history list) is.
+- **`complete-payment-button.tsx` sends a customer back to Stripe for an order
+  they left unpaid**, via `/api/orders/[id]/pay` (another `allowAnonymous` +
+  `X-Website-Host` pass-through, since a guest order has no owner). `page.tsx`
+  renders it only for a `pending` **online** order **and only when there is no
+  `session_id` in the URL** - a customer who has just returned from paying is
+  watching the banner wait on the webhook, and offering to charge them again
+  there would be alarming and wrong. A plain reload brings it back if the webhook
+  genuinely never lands. Every refusal is a real server-side state change (sold
+  out, slot taken, payment landed), so the handler calls `router.refresh()` as
+  well as showing the message - the banner above it is stale too.
 - **The cart button's disabled state is decided server-side** (`stripe_configured`
   from `getSystem()`, plus `totals.length > 1` for a mixed-currency cart) so it
   renders right in the first HTML. Django re-checks both; this only drives what

@@ -19,7 +19,7 @@ from users.models import CartItem
 
 from .models import Booking, Order, OrderLine
 from .services.booking import branches_for, is_slot_available, slots_for_day
-from .services.stripe_gateway import to_minor_units
+from .services.stripe_gateway import StripeGatewayError, to_minor_units
 from .views import _booking_amounts
 
 
@@ -1880,3 +1880,488 @@ class BookingAdminTests(TestCase):
         self.booking.order.refresh_from_db()
         self.assertEqual(self.booking.status, Booking.STATUS_CANCELED)
         self.assertEqual(self.booking.order.status, Order.STATUS_CANCELED)
+
+
+class _StubRetrieved(dict):
+    """A Checkout Session as `retrieve_session` hands it back."""
+
+    def __init__(self, status="open", url="https://checkout.stripe.com/c/pay/cs_old"):
+        super().__init__(id="cs_test_old", status=status, url=url)
+
+
+class OrderPayTests(TestCase):
+    """Paying an order that already exists - the customer who left Stripe without
+    paying and came back for it."""
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(
+            site_name="Acme", host="acme.test", stripe_enabled=True,
+        )
+        self.system.set_stripe_secret_key("sk_test_123")
+        self.system.set_stripe_webhook_secret("whsec_123")
+        self.system.save()
+
+        self.product = Product.objects.create(
+            system=self.system, name="Bag", slug="bag",
+            price=Decimal("10.00"), currency="USD", stock_count=5,
+        )
+        self.user = User.objects.create_user("a", password="x", email="a@acme.test")
+        self.user.profile.system = self.system
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+        self.order = self._make_order(user=self.user)
+
+    def _make_order(self, user=None, **overrides):
+        fields = {
+            "system": self.system,
+            "user": user,
+            "status": Order.STATUS_PENDING,
+            "payment_method": Order.PAYMENT_ONLINE,
+            "currency": "USD",
+            "subtotal": Decimal("20.00"),
+            "total": Decimal("20.00"),
+            "stripe_session_id": f"cs_test_old_{uuid.uuid4().hex[:8]}",
+        }
+        fields.update(overrides)
+        order = Order.objects.create(**fields)
+        OrderLine.objects.create(
+            order=order, kind="product", product=self.product, name="Bag",
+            unit_price=Decimal("10.00"), quantity=2, line_total=Decimal("20.00"),
+            currency="USD",
+        )
+        return order
+
+    def _pay(self, order=None, **extra):
+        return self.client.post(
+            f"/api/orders/{(order or self.order).public_id}/pay/",
+            {"locale": "en"}, content_type="application/json", **extra,
+        )
+
+    @patch("orders.views.create_checkout_session", return_value=_StubSession())
+    @patch("orders.views.retrieve_session", return_value=_StubRetrieved(status="expired"))
+    def test_a_pending_order_gets_a_fresh_session(self, mock_retrieve, mock_create):
+        response = self._pay()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["url"], _StubSession.url)
+        self.order.refresh_from_db()
+        # The order is charged for its own frozen lines, not for a cart.
+        self.assertEqual(self.order.stripe_session_id, "cs_test_123")
+        self.assertEqual(self.order.status, Order.STATUS_PENDING)
+        charged = mock_create.call_args.kwargs["lines"]
+        self.assertEqual([line.name for line in charged], ["Bag"])
+
+    @patch("orders.views.create_checkout_session")
+    @patch("orders.views.retrieve_session", return_value=_StubRetrieved(status="open"))
+    def test_a_session_that_is_still_open_is_reused(self, mock_retrieve, mock_create):
+        """Two payable sessions on one order is a double charge waiting to happen:
+        the webhook is idempotent on an order already paid, so it would
+        acknowledge the second one rather than refuse it."""
+        response = self._pay()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["url"], "https://checkout.stripe.com/c/pay/cs_old")
+        mock_create.assert_not_called()
+
+    @patch("orders.views.create_checkout_session", return_value=_StubSession())
+    @patch("orders.views.expire_session")
+    @patch("orders.views.retrieve_session", side_effect=StripeGatewayError("network"))
+    def test_an_unreadable_session_is_expired_before_a_replacement_opens(
+        self, mock_retrieve, mock_expire, mock_create,
+    ):
+        """If we cannot see the old session we must not leave it payable."""
+        response = self._pay()
+
+        self.assertEqual(response.status_code, 200)
+        mock_expire.assert_called_once()
+        mock_create.assert_called_once()
+
+    @patch("orders.views.retrieve_session", return_value=_StubRetrieved(status="complete"))
+    def test_a_session_already_paid_is_reported_not_reopened(self, mock_retrieve):
+        """The webhook is in flight. Opening a second session here would charge
+        for money that has already moved."""
+        response = self._pay()
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "ALREADY_PAID")
+
+    def test_a_paid_order_cannot_be_paid_again(self):
+        self.order.status = Order.STATUS_PAID
+        self.order.save()
+
+        response = self._pay()
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "ALREADY_PAID")
+
+    def test_an_offline_order_is_refused(self):
+        """A pay-in-store order was never going to have a Stripe session."""
+        offline = self._make_order(
+            user=self.user, status=Order.STATUS_PLACED,
+            payment_method=Order.PAYMENT_IN_STORE, stripe_session_id=None,
+        )
+
+        response = self._pay(offline)
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "NOT_ONLINE_ORDER")
+
+    def test_a_canceled_order_cannot_be_resurrected(self):
+        """`canceled` is also what a tenant refusing an order writes, and what
+        the webhook writes when Stripe expired the session. Neither may be undone
+        from the browser."""
+        self.order.status = Order.STATUS_CANCELED
+        self.order.save()
+
+        response = self._pay()
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "ORDER_CLOSED")
+
+    def test_an_item_that_sold_out_meanwhile_blocks_payment(self):
+        self.product.in_stock = False
+        self.product.save()
+
+        response = self._pay()
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "OUT_OF_STOCK")
+
+    @patch("orders.views.create_checkout_session", return_value=_StubSession())
+    @patch("orders.views.retrieve_session", return_value=_StubRetrieved(status="expired"))
+    def test_a_deleted_product_does_not_block_payment(self, mock_retrieve, mock_create):
+        """The line is a snapshot of an agreement already made; the FK is only
+        provenance, so a tidied catalog must not strand the order."""
+        self.product.delete()
+
+        self.assertEqual(self._pay().status_code, 200)
+
+    def test_a_site_without_stripe_cannot_reopen_checkout(self):
+        self.system.stripe_enabled = False
+        self.system.save()
+
+        response = self._pay()
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["code"], "PAYMENTS_UNAVAILABLE")
+
+    def test_another_users_order_is_a_404(self):
+        other = User.objects.create_user("b", password="x", email="b@acme.test")
+        other.profile.system = self.system
+        other.profile.save()
+        self.client.force_login(other)
+
+        self.assertEqual(self._pay().status_code, 404)
+
+    @patch("orders.views.create_checkout_session", return_value=_StubSession())
+    @patch("orders.views.retrieve_session", return_value=_StubRetrieved(status="expired"))
+    def test_a_guest_can_pay_their_own_order_by_its_link(self, mock_retrieve, mock_create):
+        """A guest order has no owner to authenticate as - the unguessable
+        public_id in the URL is the only handle its customer has."""
+        guest_order = self._make_order(user=None)
+        self.client.logout()
+
+        response = self.client.post(
+            f"/api/orders/{guest_order.public_id}/pay/",
+            {"locale": "en"}, content_type="application/json",
+            HTTP_X_WEBSITE_HOST="acme.test",
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+
+class OrderPayBookingTests(TestCase):
+    """Reopening checkout on an appointment - where the slot is the whole point."""
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(
+            site_name="Acme", host="acme.test", stripe_enabled=True,
+        )
+        self.system.set_stripe_secret_key("sk_test_123")
+        self.system.set_stripe_webhook_secret("whsec_123")
+        self.system.save()
+
+        self.branch = Branch.objects.create(
+            system=self.system, name="Downtown", is_main=True,
+            timezone="UTC", booking_capacity=1, booking_slot_minutes=30,
+            booking_min_notice_hours=0, booking_max_days_ahead=60,
+        )
+        for weekday in range(7):
+            BranchHours.objects.create(
+                branch=self.branch, weekday=weekday,
+                opens_at=time(9, 0), closes_at=time(17, 0),
+            )
+        self.service = Service.objects.create(
+            system=self.system, name="Haircut", slug="haircut",
+            price=Decimal("100.00"), currency="USD", duration=60,
+            booking_enabled=True, booking_in_branch=True,
+            booking_pay_full=True, booking_pay_deposit=True,
+            booking_deposit_percent=30,
+        )
+        self.starts_at = self._first_slot()
+        self.order, self.booking = self._make_booking()
+
+    def _first_slot(self):
+        tomorrow = (timezone.now() + timedelta(days=1)).date()
+        for offset in range(7):
+            slots = slots_for_day(self.service, self.branch, tomorrow + timedelta(days=offset))
+            if slots:
+                return slots[0]
+        raise AssertionError("the fixture branch offers no slots at all")
+
+    def _make_booking(self):
+        order = Order.objects.create(
+            system=self.system, status=Order.STATUS_PENDING,
+            payment_method=Order.PAYMENT_ONLINE, currency="USD",
+            subtotal=Decimal("100.00"), total=Decimal("100.00"),
+            stripe_session_id=f"cs_test_{uuid.uuid4().hex[:8]}",
+        )
+        OrderLine.objects.create(
+            order=order, kind="service", service=self.service, name="Haircut",
+            unit_price=Decimal("100.00"), quantity=1, line_total=Decimal("100.00"),
+            currency="USD",
+        )
+        booking = Booking.objects.create(
+            order=order, service=self.service, branch=self.branch,
+            starts_at=self.starts_at, ends_at=self.starts_at + timedelta(minutes=60),
+            timezone="UTC", duration_minutes=60,
+            payment_option=Booking.PAYMENT_FULL,
+            amount_due_now=Decimal("100.00"),
+        )
+        return order, booking
+
+    def _pay(self, order=None):
+        return self.client.post(
+            f"/api/orders/{(order or self.order).public_id}/pay/",
+            {"locale": "en"}, content_type="application/json",
+            HTTP_X_WEBSITE_HOST="acme.test",
+        )
+
+    @patch("orders.views.create_checkout_session", return_value=_StubSession())
+    @patch("orders.views.retrieve_session", return_value=_StubRetrieved(status="expired"))
+    def test_a_booking_does_not_refuse_its_own_slot(self, mock_retrieve, mock_create):
+        """The booking is `pending`, so it occupies the very hour it is paying
+        for - the availability re-check has to exclude it or nothing could ever
+        be paid for."""
+        response = self._pay()
+
+        self.assertEqual(response.status_code, 200)
+        # An appointment has its place already; Stripe must not ask where to post it.
+        self.assertFalse(mock_create.call_args.kwargs["collect_shipping_address"])
+
+    @patch("orders.views.create_checkout_session", return_value=_StubSession())
+    @patch("orders.views.retrieve_session", return_value=_StubRetrieved(status="expired"))
+    def test_a_slot_taken_meanwhile_blocks_payment(self, mock_retrieve, mock_create):
+        """Capacity is 1, so a second booking on the same hour means this one can
+        no longer be honoured - taking the money would sell an hour twice."""
+        rival_order = Order.objects.create(
+            system=self.system, status=Order.STATUS_PLACED, currency="USD",
+            subtotal=Decimal("100.00"), total=Decimal("100.00"),
+        )
+        Booking.objects.create(
+            order=rival_order, service=self.service, branch=self.branch,
+            starts_at=self.starts_at, ends_at=self.starts_at + timedelta(minutes=60),
+            timezone="UTC", duration_minutes=60,
+        )
+
+        response = self._pay()
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "SLOT_UNAVAILABLE")
+        mock_create.assert_not_called()
+
+    @patch("orders.views.create_checkout_session", return_value=_StubSession())
+    @patch("orders.views.retrieve_session", return_value=_StubRetrieved(status="expired"))
+    def test_a_deposit_booking_recharges_the_agreed_deposit(self, mock_retrieve, mock_create):
+        """`amount_due_now` was fixed when the appointment was made. Re-deriving
+        it from today's percentage could charge a number nobody was quoted."""
+        self.booking.payment_option = Booking.PAYMENT_DEPOSIT
+        self.booking.deposit_percent = 30
+        self.booking.amount_due_now = Decimal("30.00")
+        self.booking.amount_due_later = Decimal("70.00")
+        self.booking.save()
+        # The tenant has since raised its deposit; the agreement has not moved.
+        self.service.booking_deposit_percent = 50
+        self.service.save()
+
+        response = self._pay()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(mock_create.call_args.kwargs["charge_amount"], Decimal("30.00"))
+        self.assertIn("30% deposit", mock_create.call_args.kwargs["charge_label"])
+
+
+class AbandonedBookingTests(TestCase):
+    """The slot a customer walks away from must not stay held.
+
+    A Booking is written before the redirect to Stripe and is born `pending`,
+    which occupies its hour. Occupancy is read off `Booking.status` alone, so
+    nothing that only moves `Order.status` releases it - these are the paths that
+    end an appointment nobody is coming to, and each has to say so on the booking
+    as well as on the order.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(
+            site_name="Acme", host="acme.test", stripe_enabled=True,
+        )
+        self.system.set_stripe_secret_key("sk_test_123")
+        self.system.set_stripe_webhook_secret("whsec_123")
+        self.system.save()
+
+        self.branch = Branch.objects.create(
+            system=self.system, name="Downtown", is_main=True,
+            timezone="UTC", booking_capacity=1, booking_slot_minutes=30,
+            booking_min_notice_hours=0, booking_max_days_ahead=60,
+        )
+        for weekday in range(7):
+            BranchHours.objects.create(
+                branch=self.branch, weekday=weekday,
+                opens_at=time(9, 0), closes_at=time(17, 0),
+            )
+        self.service = Service.objects.create(
+            system=self.system, name="Haircut", slug="haircut",
+            price=Decimal("100.00"), currency="USD", duration=60,
+            booking_enabled=True, booking_in_branch=True, booking_pay_full=True,
+        )
+
+        self.starts_at = self._first_slot()
+        self.order = Order.objects.create(
+            system=self.system, status=Order.STATUS_PENDING, currency="USD",
+            subtotal=Decimal("100.00"), total=Decimal("100.00"),
+            stripe_session_id="cs_test_booking",
+        )
+        OrderLine.objects.create(
+            order=self.order, kind="service", service=self.service, name="Haircut",
+            unit_price=Decimal("100.00"), quantity=1, line_total=Decimal("100.00"),
+            currency="USD",
+        )
+        self.booking = Booking.objects.create(
+            order=self.order, service=self.service, branch=self.branch,
+            starts_at=self.starts_at,
+            ends_at=self.starts_at + timedelta(minutes=60),
+            timezone="UTC", duration_minutes=60,
+            payment_option=Booking.PAYMENT_FULL,
+            amount_due_now=Decimal("100.00"),
+        )
+
+    def _first_slot(self):
+        tomorrow = (timezone.now() + timedelta(days=1)).date()
+        for offset in range(7):
+            slots = slots_for_day(self.service, self.branch, tomorrow + timedelta(days=offset))
+            if slots:
+                return slots[0]
+        raise AssertionError("the fixture branch offers no slots at all")
+
+    def _post_event(self, event_type):
+        event = {
+            "type": event_type,
+            "data": {"object": {"id": "cs_test_booking", "payment_status": "unpaid"}},
+        }
+        with patch("orders.views.verify_webhook", return_value=event):
+            return self.client.post(
+                f"/api/orders/stripe/webhook/{self.system.stripe_webhook_token}/",
+                data="{}", content_type="application/json",
+                HTTP_STRIPE_SIGNATURE="t=1,v1=stub",
+            )
+
+    def test_the_slot_is_held_while_the_customer_is_on_the_stripe_page(self):
+        """The premise of the rest: a pending booking does occupy its hour, which
+        is what stops two customers being sent to Stripe for the same slot."""
+        self.assertFalse(
+            is_slot_available(self.service, self.branch, self.starts_at),
+        )
+
+    def test_an_expired_session_releases_the_slot(self):
+        response = self._post_event("checkout.session.expired")
+
+        self.assertEqual(response.status_code, 200)
+        self.order.refresh_from_db()
+        self.booking.refresh_from_db()
+        self.assertEqual(self.order.status, Order.STATUS_CANCELED)
+        self.assertEqual(self.booking.status, Booking.STATUS_CANCELED)
+        self.assertTrue(
+            is_slot_available(self.service, self.branch, self.starts_at),
+        )
+
+    def test_a_failed_payment_releases_the_slot(self):
+        self._post_event("checkout.session.async_payment_failed")
+
+        self.order.refresh_from_db()
+        self.booking.refresh_from_db()
+        self.assertEqual(self.order.status, Order.STATUS_FAILED)
+        self.assertEqual(self.booking.status, Booking.STATUS_CANCELED)
+        self.assertTrue(
+            is_slot_available(self.service, self.branch, self.starts_at),
+        )
+
+    def test_a_paid_booking_keeps_its_slot(self):
+        """The guard rail: only a dead order releases. A redelivered expiry event
+        after payment must not hand away an appointment that is going ahead."""
+        paid_event = {
+            "type": "checkout.session.completed",
+            "data": {"object": {"id": "cs_test_booking", "payment_status": "paid"}},
+        }
+        with patch("orders.views.verify_webhook", return_value=paid_event):
+            self.client.post(
+                f"/api/orders/stripe/webhook/{self.system.stripe_webhook_token}/",
+                data="{}", content_type="application/json",
+                HTTP_STRIPE_SIGNATURE="t=1,v1=stub",
+            )
+
+        self._post_event("checkout.session.expired")
+
+        self.order.refresh_from_db()
+        self.booking.refresh_from_db()
+        self.assertEqual(self.order.status, Order.STATUS_PAID)
+        self.assertEqual(self.booking.status, Booking.STATUS_PENDING)
+        self.assertFalse(
+            is_slot_available(self.service, self.branch, self.starts_at),
+        )
+
+    def test_an_expired_cart_order_with_no_booking_is_unaffected(self):
+        """Most expiries are plain carts; the release must be a no-op for them."""
+        plain = Order.objects.create(
+            system=self.system, status=Order.STATUS_PENDING, currency="USD",
+            subtotal=Decimal("10.00"), total=Decimal("10.00"),
+            stripe_session_id="cs_test_cart",
+        )
+        event = {
+            "type": "checkout.session.expired",
+            "data": {"object": {"id": "cs_test_cart"}},
+        }
+        with patch("orders.views.verify_webhook", return_value=event):
+            response = self.client.post(
+                f"/api/orders/stripe/webhook/{self.system.stripe_webhook_token}/",
+                data="{}", content_type="application/json",
+                HTTP_STRIPE_SIGNATURE="t=1,v1=stub",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        plain.refresh_from_db()
+        self.assertEqual(plain.status, Order.STATUS_CANCELED)
+
+    def test_canceling_the_order_in_the_cms_releases_the_slot(self):
+        """The mirror of the bookings screen's own cancel: a tenant calling off
+        the job from the orders list must free the hour too."""
+        admin = User.objects.create_user("admin", password="x", email="admin@acme.test")
+        admin.profile.system = self.system
+        admin.profile.is_admin = True
+        admin.profile.save()
+        self.client.force_login(admin)
+
+        response = self.client.post(
+            f"/api/orders/admin/{self.order.public_id}/",
+            {"action": "cancel"}, content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, Booking.STATUS_CANCELED)
+        self.assertTrue(
+            is_slot_available(self.service, self.branch, self.starts_at),
+        )
