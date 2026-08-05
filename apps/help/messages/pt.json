@@ -80,6 +80,8 @@
     "helmDescription": "Gerencie uma release Helm de forma interativa: verificar status, revelar secrets, implantar, forçar reimplantação, reiniciar rollout, rollback ou desinstalar.",
     "deployServicesSection": "deploy-* (serviços)",
     "deployServicesDescription": "Implanta um banco de dados, cache ou armazenamento de objetos compatível com S3 no Kubernetes via Helm. Cada comando guia pelo namespace, credenciais e tamanho do armazenamento persistente.",
+    "piholeSection": "pihole",
+    "piholeDescription": "Opera o chart Helm do Pi-hole (packages/charts/pihole): verificar o estado do deployment, atualizar a dependência do chart upstream, definir ou rotacionar a senha de admin (guardada num Secret fora do Helm), reimplantar, reiniciar ou escalar, ler logs e rodar um teste de DNS, reconstruir o gravity ou desinstalar. O menu repete até você sair; apagar o PVC, o Secret da senha ou o namespace é sempre opcional.",
     "uploadS3Section": "upload-s3",
     "uploadS3Description": "Uploader interativo por partes para o armazenamento Garage (S3). Usa o rclone com partes multipart de 50 MB para enviar pastas grandes além dos limites de tamanho de corpo do CloudFlare (~90 MB) e nginx (80 MB). Gerencia perfis de credenciais, lista buckets, espelha a árvore de pastas e retoma uploads interrompidos.",
     "devServicesSection": "dev-services (Docker local)",

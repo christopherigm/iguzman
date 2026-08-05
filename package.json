@@ -29,6 +29,7 @@
     "deploy-mysql": "bash cli/deploy-mysql/deploy-mysql.sh",
     "deploy-redis": "bash cli/deploy-redis/deploy-redis.sh",
     "deploy-garage": "bash cli/deploy-garage/deploy-garage.sh",
+    "pihole": "bash cli/pihole/pihole.sh",
     "upload-s3": "bash cli/upload-s3/upload-s3.sh",
     "setup-wifi": "bash cli/setup-wifi/setup-wifi.sh",
     "dev-services": "bash cli/dev-services/dev-services.sh",

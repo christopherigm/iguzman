@@ -82,6 +82,11 @@ const DEPLOY_SERVICES_COMMANDS =
   "pnpm deploy-mysql\n" +
   "pnpm deploy-redis\n" +
   "pnpm deploy-garage               # S3-compatible object store";
+const PIHOLE_COMMANDS =
+  "pnpm pihole                      # pick release/namespace, then an action\n" +
+  "                                 # status · chart repo update · admin password\n" +
+  "                                 # redeploy · restart/scale · logs · gravity\n" +
+  "                                 # uninstall (PVC/secret/namespace opt-in)";
 const UPLOAD_S3_COMMAND =
   "pnpm upload-s3                   # chunked upload to Garage (S3)";
 const DEV_SERVICES_COMMANDS =
@@ -322,6 +327,11 @@ export default async function Home({ params, searchParams }: Props) {
                   heading={t("deployServicesSection")}
                   description={t("deployServicesDescription")}
                   code={DEPLOY_SERVICES_COMMANDS}
+                />
+                <Section
+                  heading={t("piholeSection")}
+                  description={t("piholeDescription")}
+                  code={PIHOLE_COMMANDS}
                 />
                 <Section
                   heading={t("uploadS3Section")}

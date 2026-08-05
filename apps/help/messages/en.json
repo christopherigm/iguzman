@@ -80,6 +80,8 @@
     "helmDescription": "Interactively manage a Helm release: check status, reveal secrets, deploy, force redeploy, restart rollout, rollback, or uninstall.",
     "deployServicesSection": "deploy-* (services)",
     "deployServicesDescription": "Deploy a managed database, cache, or S3-compatible object store to Kubernetes via Helm. Each command walks you through namespace, credentials, and persistent storage size.",
+    "piholeSection": "pihole",
+    "piholeDescription": "Operate the Pi-hole Helm chart (packages/charts/pihole): check deployment status, refresh the upstream chart dependency, set or rotate the admin password (stored in a Secret outside Helm), redeploy, restart or scale, read logs and run a DNS test, rebuild gravity, or uninstall. The menu loops until you quit; deleting the PVC, the password Secret, or the namespace is always opt-in.",
     "uploadS3Section": "upload-s3",
     "uploadS3Description": "Interactive chunked uploader for the Garage (S3) store. Drives rclone with a 50 MB multipart part size to push large folders past the CloudFlare (~90 MB) and nginx (80 MB) body-size caps. Manages credential profiles, lists buckets, mirrors a folder tree, and resumes interrupted uploads.",
     "devServicesSection": "dev-services (local Docker)",

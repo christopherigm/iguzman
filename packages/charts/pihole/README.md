@@ -8,6 +8,22 @@ This is a wrapper chart that references the community [MoJo2600/pihole](https://
 - MetalLB installed and configured
 - Helm 3
 
+## Interactive CLI
+
+Everything below is also available from one interactive menu:
+
+```bash
+pnpm pihole    # or: bash cli/pihole/pihole.sh
+```
+
+It prompts for release + namespace, then loops over: deployment status,
+upstream chart repo/dependency update, set/rotate the admin password (writes
+the Secret and offers the required pod restart), redeploy, rollout restart or
+scale 0/1, logs + describe + events + DNS test, Pi-hole maintenance (gravity
+rebuild, log flush, domain/list counts, status, versions), and uninstall
+(deleting the PVC, the password Secret and the namespace are separate opt-in
+prompts). The raw commands are documented below for reference.
+
 ## Quick Install
 
 ```bash
@@ -25,13 +41,13 @@ helm install pihole pihole/ -n pihole --create-namespace -f pihole/values.yaml
 
 Edit `values.yaml` before installing:
 
-| Parameter                           | Description        | Default            |
-| ----------------------------------- | ------------------ | ------------------ |
-| `pihole.admin.existingSecret`       | Secret holding the Web UI password | `pihole-admin` |
-| `pihole.DNS1` / `pihole.DNS2`       | Upstream resolvers | `1.1.1.1`/`8.8.8.8` |
-| `pihole.serviceDns.loadBalancerIP`  | DNS service IP     | `192.168.0.200`    |
-| `pihole.serviceWeb.loadBalancerIP`  | Web UI IP          | `192.168.0.200`    |
-| `pihole.persistentVolumeClaim.size` | PVC size           | `2Gi`              |
+| Parameter                           | Description                        | Default             |
+| ----------------------------------- | ---------------------------------- | ------------------- |
+| `pihole.admin.existingSecret`       | Secret holding the Web UI password | `pihole-admin`      |
+| `pihole.DNS1` / `pihole.DNS2`       | Upstream resolvers                 | `1.1.1.1`/`8.8.8.8` |
+| `pihole.serviceDns.loadBalancerIP`  | DNS service IP                     | `192.168.0.200`     |
+| `pihole.serviceWeb.loadBalancerIP`  | Web UI IP                          | `192.168.0.200`     |
+| `pihole.persistentVolumeClaim.size` | PVC size                           | `2Gi`               |
 
 ### Update Admin Password
 
@@ -96,16 +112,16 @@ the same blocking.
 
 Current stack (~640k unique domains):
 
-| List | Domains | Purpose |
-| ---- | ------- | ------- |
-| StevenBlack `hosts` | 99,276 | Base ads + malware |
-| Hagezi `adblock/pro.txt` | 218,748 | Main ad/tracker list (ABP format) |
-| Hagezi `tif.medium.txt` | 387,953 | Threat intel: malware, phishing, scam |
-| Hagezi `popupads.txt` | 54,245 | Pop-up / interstitial ad networks |
-| Hagezi `native.samsung.txt` | 201 | Samsung TV ACR + ad telemetry |
-| Hagezi `native.amazon.txt` | 360 | Amazon device/voice telemetry |
-| Hagezi `native.apple.txt` | 107 | Apple telemetry |
-| Hagezi `native.winoffice.txt` | 390 | Windows/Office telemetry |
+| List                          | Domains | Purpose                               |
+| ----------------------------- | ------- | ------------------------------------- |
+| StevenBlack `hosts`           | 99,276  | Base ads + malware                    |
+| Hagezi `adblock/pro.txt`      | 218,748 | Main ad/tracker list (ABP format)     |
+| Hagezi `tif.medium.txt`       | 387,953 | Threat intel: malware, phishing, scam |
+| Hagezi `popupads.txt`         | 54,245  | Pop-up / interstitial ad networks     |
+| Hagezi `native.samsung.txt`   | 201     | Samsung TV ACR + ad telemetry         |
+| Hagezi `native.amazon.txt`    | 360     | Amazon device/voice telemetry         |
+| Hagezi `native.apple.txt`     | 107     | Apple telemetry                       |
+| Hagezi `native.winoffice.txt` | 390     | Windows/Office telemetry              |
 
 Plus `native.tiktok.txt` (427). Exact deny rules for single-endpoint telemetry:
 `ichnaea.netflix.com`, `telemetry.vercel.com`, `aet.spotify.com`.
@@ -134,13 +150,13 @@ chain at that domain is the first thing to check.
 
 **Rejected after testing against real traffic:**
 
-| List | Why not |
-| ---- | ------- |
-| `pro.plus.txt` | Blocks `graph.instagram.com` — breaks Instagram |
-| `spam-tlds.txt` | uBlock/AdGuard syntax (`\|\|*.tld^$denyallow=`) — Pi-hole parses **0** entries from it. TLD blocking needs a regex rule instead |
-| `urlshortener.txt` | No impact on current traffic, but breaks bit.ly / t.co links later |
-| `doh-vpn-proxy-bypass.txt` | Also blocks commercial VPN endpoints |
-| OISD Big | Missed the Samsung/Amazon trackers `pro.txt` caught, despite being 2× the size |
+| List                       | Why not                                                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `pro.plus.txt`             | Blocks `graph.instagram.com` — breaks Instagram                                                                                 |
+| `spam-tlds.txt`            | uBlock/AdGuard syntax (`\|\|*.tld^$denyallow=`) — Pi-hole parses **0** entries from it. TLD blocking needs a regex rule instead |
+| `urlshortener.txt`         | No impact on current traffic, but breaks bit.ly / t.co links later                                                              |
+| `doh-vpn-proxy-bypass.txt` | Also blocks commercial VPN endpoints                                                                                            |
+| OISD Big                   | Missed the Samsung/Amazon trackers `pro.txt` caught, despite being 2× the size                                                  |
 
 Hagezi serves these in ABP (`||domain^`) format under `adblock/`, which Pi-hole
 v6 parses natively. The old `hosts/` paths in that repo now 404.
@@ -163,10 +179,10 @@ Deliberately **not** blocked globally: `api.amazonalexa.com` (breaks Alexa) and
 > PVC**, not in `values.yaml`. A rebuild from an empty PVC loses them — only
 > `adlists` is reproduced from the chart. Re-create the following by hand.
 
-| Group | id | Members | Purpose |
-| ----- | -- | ------- | ------- |
-| Default | 0 | everything else | All adlists + global rules |
-| Samsung Soundbar | 3 | `192.168.0.23` | Group 0 **plus** the rule below |
+| Group            | id  | Members         | Purpose                         |
+| ---------------- | --- | --------------- | ------------------------------- |
+| Default          | 0   | everything else | All adlists + global rules      |
+| Samsung Soundbar | 3   | `192.168.0.23`  | Group 0 **plus** the rule below |
 
 Group-scoped rule (group 3 only — the soundbar polls this ~2,300×/hour):
 
@@ -203,7 +219,7 @@ mmechocaptiveportal.com      prod.amcs-tachyon.com
 api.amazon.com               dcape-na.amazon.com
 ```
 
-Voice recordings travel over the *same* endpoints as voice commands, so DNS
+Voice recordings travel over the _same_ endpoints as voice commands, so DNS
 cannot separate them. Control that in the Alexa app under **Alexa Privacy**
 (disable recording retention and human review), not here.
 
@@ -213,7 +229,7 @@ every adlist is attached to group 0. That is why the soundbar is assigned to
 from all ~640k domains. Any new group needs either its own lists or membership
 in group 0 alongside it.
 
-DNS blocking stops a device *reaching* a host; it does not stop it *asking*. The
+DNS blocking stops a device _reaching_ a host; it does not stop it _asking_. The
 soundbar's query rate is unchanged (~0.7/sec) — Pi-hole now answers `0.0.0.0`
 instead of the real address. To actually silence the traffic, take the device
 off Wi-Fi (fine if it is used over HDMI/optical).
