@@ -29,9 +29,12 @@ of System field truth.
 
 from __future__ import annotations
 
+from datetime import timezone as dt_timezone
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
+from django.utils import timezone as django_timezone
+from django.utils.dateparse import parse_datetime
 from django.utils.text import slugify
 
 from catalog.models import (
@@ -47,6 +50,7 @@ from catalog.models import (
 from core.models import (
     CompanyHighlight,
     CompanyHighlightItem,
+    Event,
     SuccessStory,
     System,
 )
@@ -145,6 +149,24 @@ HIGHLIGHT_FIELDS = (
     "icon",
 )
 HIGHLIGHT_ITEM_FIELDS = ("name", "en_name", "description", "icon")
+# An event's copy and its place-as-typed. The `branch` FK is deliberately absent
+# for the same reason `spotlight_items` is: a branch id is per-environment, so
+# publishing one would point a production event at whatever row happens to hold
+# that pk there - or at nothing. The tenant re-picks the location in the prod
+# CMS; the free-text venue below travels and is what a published event shows
+# until they do.
+EVENT_FIELDS = (
+    "name",
+    "en_name",
+    "short_description",
+    "en_short_description",
+    "description",
+    "en_description",
+    "href",
+    "venue_name",
+    "en_venue_name",
+    "address",
+)
 CATEGORY_FIELDS = ("name", "en_name", "description", "short_description")
 BUYABLE_TEXT_FIELDS = (
     "name",
@@ -203,6 +225,28 @@ def _highlight_dict(h: CompanyHighlight) -> dict:
         **_pick(h, HIGHLIGHT_FIELDS),
         "items": [_highlight_item_dict(i) for i in h.items.all()],
     }
+
+
+def _event_dict(e: Event) -> dict:
+    """One event, with its instants as ISO-8601 strings.
+
+    ``_pick`` would carry the two datetimes through as `datetime` objects, which
+    `export_site`'s `json.dumps` cannot encode - so they are formatted here and
+    parsed back in `_apply_events`. Everything else on the model is either copy
+    (`EVENT_FIELDS`), a flag, or the coordinates.
+    """
+    d = {"slug": e.slug, **_pick(e, EVENT_FIELDS)}
+    d["starts_at"] = e.starts_at.isoformat()
+    if e.ends_at is not None:
+        d["ends_at"] = e.ends_at.isoformat()
+    d["is_all_day"] = e.is_all_day
+    d["timezone"] = e.timezone
+    d["is_featured"] = e.is_featured
+    if e.latitude is not None:
+        d["latitude"] = str(e.latitude)
+    if e.longitude is not None:
+        d["longitude"] = str(e.longitude)
+    return d
 
 
 def _product_dict(p: Product) -> dict:
@@ -319,6 +363,7 @@ def serialize_system(system: System) -> dict:
             _highlight_dict(h)
             for h in system.highlights.all().prefetch_related("items")
         ],
+        "events": [_event_dict(e) for e in system.events.all()],
         "product_categories": [
             _product_category_dict(c)
             for c in system.product_categories.all().prefetch_related("products")
@@ -353,6 +398,25 @@ def _decimal(value) -> Decimal:
         return Decimal("0.00")
 
 
+def _datetime(value):
+    """Parse an ISO-8601 instant back out of a payload, or ``None``.
+
+    Django runs on UTC and refuses a naive datetime, so a value that carries no
+    offset (a hand-written brief) is anchored to UTC rather than rejected -
+    events are announced to the hour, and a payload that omitted the zone meant
+    the site's own, not "invalid". The event's own ``timezone`` field is what
+    renders it back to a reader.
+    """
+    if not value:
+        return None
+    parsed = parse_datetime(str(value))
+    if parsed is None:
+        return None
+    if django_timezone.is_naive(parsed):
+        return django_timezone.make_aware(parsed, dt_timezone.utc)
+    return parsed
+
+
 def _slug_of(item: dict) -> str | None:
     return item.get("slug") or slugify(item.get("name") or "") or None
 
@@ -370,6 +434,7 @@ def _defaults(system, item: dict, fields) -> dict:
 def _reset(system: System) -> None:
     system.success_stories.all().delete()
     system.highlights.all().delete()
+    system.events.all().delete()
     Product.objects.filter(system=system).delete()
     system.product_categories.all().delete()
     Service.objects.filter(system=system).delete()
@@ -394,6 +459,39 @@ def _apply_stories(system, items) -> dict:
         _, created = SuccessStory.objects.update_or_create(
             slug=slug, defaults=_defaults(system, it, STORY_FIELDS)
         )
+        _upsert(counts, created)
+    return counts
+
+
+def _apply_events(system, items) -> dict:
+    """Upsert events by slug.
+
+    An item with no parsable ``starts_at`` is **skipped**, not defaulted to now:
+    a date is the whole of what makes an event an event, and inventing one would
+    publish a fabricated announcement onto a customer's live site.
+    """
+    counts = {"created": 0, "updated": 0}
+    for it in items:
+        slug = _slug_of(it)
+        if not slug:
+            continue
+        starts_at = _datetime(it.get("starts_at"))
+        if starts_at is None:
+            continue
+        defaults = _defaults(system, it, EVENT_FIELDS)
+        defaults["starts_at"] = starts_at
+        ends_at = _datetime(it.get("ends_at"))
+        if ends_at is not None:
+            defaults["ends_at"] = ends_at
+        for flag in ("is_all_day", "is_featured"):
+            if it.get(flag) is not None:
+                defaults[flag] = bool(it[flag])
+        if it.get("timezone"):
+            defaults["timezone"] = it["timezone"]
+        for coord in ("latitude", "longitude"):
+            if it.get(coord) is not None:
+                defaults[coord] = _decimal(it[coord])
+        _, created = Event.objects.update_or_create(slug=slug, defaults=defaults)
         _upsert(counts, created)
     return counts
 
@@ -609,6 +707,7 @@ def apply_payload(payload: dict, *, reset: bool = False) -> dict:
             "system": "created" if created else "updated",
             "success_stories": _apply_stories(system, payload.get("success_stories") or []),
             "highlights": _apply_highlights(system, payload.get("highlights") or []),
+            "events": _apply_events(system, payload.get("events") or []),
             "product_categories": _apply_products(system, payload.get("product_categories") or []),
             "service_categories": _apply_services(system, payload.get("service_categories") or []),
             # Ingredients before menu items: the latter link to the former by slug.

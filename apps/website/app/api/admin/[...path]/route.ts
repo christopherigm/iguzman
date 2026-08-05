@@ -15,6 +15,7 @@ const ALLOWED_PREFIXES = [
   "contact-messages/admin/",
   "success-stories/",
   "highlights/",
+  "events/",
   "social-posts/",
   "check-slug/",
   "auth/admin/users/",

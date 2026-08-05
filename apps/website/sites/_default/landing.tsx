@@ -7,6 +7,7 @@ import { SuccessStories } from "@/components/success-stories";
 import { CompanyHighlights } from "@/components/company-highlights";
 import { CatalogCategories } from "@/components/catalog-categories";
 import { CatalogItems } from "@/components/catalog-items";
+import { Events } from "@/components/events";
 
 /**
  * The generic, fully DB-driven landing page - the original shared template.
@@ -57,6 +58,13 @@ export async function DefaultLanding() {
           <CatalogItems />
         </Container>
       </SectionBand>
+
+      {/* After the catalog: a visitor meets what the business sells before what
+          it is putting on. Renders nothing until the tenant has an event, so
+          every existing site is unchanged until they add one. */}
+      <Container paddingX={10}>
+        <Events />
+      </Container>
     </>
   );
 }

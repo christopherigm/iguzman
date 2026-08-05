@@ -17,6 +17,8 @@ from .models import (
     CompanyHighlight,
     CompanyHighlightItem,
     ContactMessage,
+    Event,
+    EventImage,
     SiteBackup,
     SocialPost,
     SuccessStory,
@@ -465,6 +467,249 @@ class CompanyHighlightItemWriteSerializer(serializers.Serializer):
 
 
 # ---------------------------------------------------------------------------
+# Event serializers
+# ---------------------------------------------------------------------------
+
+# Same two tiers as a success story: the cover is a REGULAR hero, its gallery
+# children are STANDARD. Kept as two configs rather than one because they were
+# one on SuccessStory and it silently stored every hero at the gallery's 900 px.
+_EVENT_IMAGE_CFG = image_cfg(REGULAR)
+_EVENT_GALLERY_IMAGE_CFG = image_cfg(STANDARD)
+
+
+class EventImageSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EventImage
+        fields = [
+            "id", "enabled", "created", "modified",
+            "name", "en_name", "description", "en_description",
+            "image", "fit", "background_color", "href",
+            "sort_order",
+        ]
+
+    def get_image(self, obj):
+        request = self.context.get("request")
+        if not obj.image:
+            return None
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url
+
+
+class EventSerializer(serializers.ModelSerializer):
+    """Read serializer for an Event.
+
+    The ``venue_*``/``address``/``latitude``/``longitude`` columns are published
+    **resolved** - each falls back to the event's ``branch`` (see
+    ``Event.effective_*``), so a consumer renders one answer and never has to
+    know which of the two ways of naming a place this row used. The raw columns
+    travel too, under ``own_*``, because the CMS form edits *those*: an editor
+    who sees the branch's address in the address box would "correct" it and
+    silently detach the event from its location.
+    """
+
+    image = serializers.SerializerMethodField()
+    images = EventImageSerializer(many=True, read_only=True)
+
+    # Resolved across the branch - what every public page renders.
+    venue_name = serializers.CharField(source="effective_venue_name", read_only=True)
+    en_venue_name = serializers.CharField(source="effective_en_venue_name", read_only=True)
+    address = serializers.CharField(source="effective_address", read_only=True)
+    latitude = serializers.DecimalField(
+        source="effective_latitude", max_digits=10, decimal_places=8, read_only=True
+    )
+    longitude = serializers.DecimalField(
+        source="effective_longitude", max_digits=11, decimal_places=8, read_only=True
+    )
+
+    # The row's own values, for the CMS form. Named `own_*` rather than shadowing
+    # the resolved pair above; blank here means "inherit from the branch".
+    own_venue_name = serializers.CharField(source="venue_name", read_only=True)
+    own_en_venue_name = serializers.CharField(source="en_venue_name", read_only=True)
+    own_address = serializers.CharField(source="address", read_only=True)
+    own_latitude = serializers.DecimalField(
+        source="latitude", max_digits=10, decimal_places=8, read_only=True
+    )
+    own_longitude = serializers.DecimalField(
+        source="longitude", max_digits=11, decimal_places=8, read_only=True
+    )
+
+    branch_name = serializers.CharField(source="branch.name", read_only=True, default=None)
+    branch_en_name = serializers.CharField(source="branch.en_name", read_only=True, default=None)
+
+    # Derived, so a consumer never re-implements "is this over?" - and in
+    # particular never does it by comparing `starts_at` to the clock, which
+    # retires an all-day event on the morning it runs (see `Event.effective_end`).
+    is_past = serializers.BooleanField(read_only=True)
+    effective_end = serializers.DateTimeField(read_only=True)
+
+    class Meta:
+        model = Event
+        fields = [
+            "id", "enabled", "created", "modified", "version",
+            "system",
+            "name", "en_name",
+            "short_description", "en_short_description",
+            "description", "en_description",
+            "image", "fit", "background_color", "href",
+            "slug",
+            "branch", "branch_name", "branch_en_name",
+            "venue_name", "en_venue_name", "address", "latitude", "longitude",
+            "own_venue_name", "own_en_venue_name", "own_address",
+            "own_latitude", "own_longitude",
+            "starts_at", "ends_at", "is_all_day", "timezone",
+            "is_past", "effective_end",
+            "is_featured",
+            "images",
+        ]
+
+    def get_image(self, obj):
+        request = self.context.get("request")
+        if not obj.image:
+            return None
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url
+
+
+class EventWriteSerializer(serializers.Serializer):
+    """Write serializer for Event - base64 image, every field optional (PATCH semantics).
+
+    ``starts_at`` is required on the model but optional here, because this same
+    serializer serves PATCH: a partial update that only flips ``enabled`` must
+    not have to resend the date. Creation supplies it (the view saves a bare
+    instance first to get a pk for the image upload, then applies this), and the
+    model's own NOT NULL is what refuses a row that never had one.
+    """
+
+    system      = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), required=False, allow_null=True)
+    branch      = serializers.PrimaryKeyRelatedField(queryset=Branch.objects.all(), required=False, allow_null=True)
+    name        = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    en_name     = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    short_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_short_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    href        = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    fit         = serializers.CharField(max_length=16, required=False, allow_null=True, allow_blank=True)
+    background_color = serializers.CharField(max_length=32, required=False, allow_null=True, allow_blank=True)
+    slug        = serializers.SlugField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    enabled     = serializers.BooleanField(required=False)
+    is_featured = serializers.BooleanField(required=False)
+
+    venue_name  = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    en_venue_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    address     = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    latitude    = serializers.DecimalField(max_digits=10, decimal_places=8, required=False, allow_null=True)
+    longitude   = serializers.DecimalField(max_digits=11, decimal_places=8, required=False, allow_null=True)
+
+    starts_at   = serializers.DateTimeField(required=False)
+    ends_at     = serializers.DateTimeField(required=False, allow_null=True)
+    is_all_day  = serializers.BooleanField(required=False)
+    timezone    = serializers.CharField(max_length=64, required=False, allow_blank=True)
+
+    image       = serializers.CharField(required=False, allow_null=True, allow_blank=True)  # base64
+
+    def validate_timezone(self, value):
+        # Blank is the CMS clearing the field; the model default stands in. An
+        # unknown name is refused here rather than at render time, where it would
+        # silently fall back to UTC and show the wrong hour.
+        if not value:
+            return "UTC"
+        try:
+            validate_timezone(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages)
+        return value
+
+    def validate_image(self, value):
+        if value:
+            sub = ImageProcessingSerializer(data={"base64_image": value}, **_EVENT_IMAGE_CFG)
+            if not sub.is_valid():
+                raise serializers.ValidationError(sub.errors["base64_image"])
+        return value
+
+    def validate(self, attrs):
+        # Only when both are being written: a PATCH that moves `starts_at` past a
+        # stored `ends_at` is caught by re-reading the instance in `save`, which
+        # is where both halves are known.
+        starts = attrs.get("starts_at")
+        ends = attrs.get("ends_at")
+        if starts and ends and ends < starts:
+            raise serializers.ValidationError(
+                {"ends_at": "The end must not be before the start."}
+            )
+        return attrs
+
+    def save(self, instance):
+        scalar_fields = [
+            "system", "branch", "name", "en_name",
+            "short_description", "en_short_description",
+            "description", "en_description",
+            "href", "fit", "background_color", "slug", "enabled", "is_featured",
+            "venue_name", "en_venue_name", "address", "latitude", "longitude",
+            "starts_at", "ends_at", "is_all_day", "timezone",
+        ]
+        update_fields = []
+        for field_name in scalar_fields:
+            if field_name in self.validated_data:
+                setattr(instance, field_name, self.validated_data[field_name])
+                update_fields.append(field_name)
+
+        # The cross-field check `validate` could not make: one half of the pair
+        # may be stored and the other arriving.
+        if instance.ends_at and instance.starts_at and instance.ends_at < instance.starts_at:
+            raise serializers.ValidationError(
+                {"ends_at": "The end must not be before the start."}
+            )
+
+        if "image" in self.validated_data:
+            image_value = self.validated_data["image"]
+            if image_value:
+                proc = ImageProcessingSerializer(data={"base64_image": image_value}, **_EVENT_IMAGE_CFG)
+                proc.is_valid()
+                proc.save_to_field(instance.image, f"event_{instance.pk}.jpg")
+            else:
+                instance.image = None
+            update_fields.append("image")
+
+        if update_fields:
+            instance.save(update_fields=update_fields)
+
+        return instance
+
+
+class EventImageWriteSerializer(serializers.Serializer):
+    """Create a gallery image linked to an event - accepts base64 image."""
+
+    image      = serializers.CharField()
+    name       = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
+
+    def validate_image(self, value):
+        sub = ImageProcessingSerializer(data={"base64_image": value}, **_EVENT_GALLERY_IMAGE_CFG)
+        if not sub.is_valid():
+            raise serializers.ValidationError(sub.errors["base64_image"])
+        return value
+
+    def save(self, event):
+        image_data = self.validated_data["image"]
+        instance = EventImage(
+            event=event,
+            name=self.validated_data.get("name"),
+            sort_order=self.validated_data.get("sort_order", 0),
+        )
+        instance.save()
+        proc = ImageProcessingSerializer(data={"base64_image": image_data}, **_EVENT_GALLERY_IMAGE_CFG)
+        proc.is_valid()
+        proc.save_to_field(instance.image, f"eventimage_{instance.pk}.jpg")
+        instance.save(update_fields=["image"])
+        return instance
+
+
+# ---------------------------------------------------------------------------
 # System image field configuration
 # ---------------------------------------------------------------------------
 
@@ -513,6 +758,7 @@ class SystemSerializer(serializers.ModelSerializer):
     menu_item_count = serializers.SerializerMethodField()
     menu_item_kind_counts = serializers.SerializerMethodField()
     branch_count = serializers.SerializerMethodField()
+    event_count = serializers.SerializerMethodField()
     stripe_configured = serializers.BooleanField(read_only=True)
     stripe_webhook_url = serializers.SerializerMethodField()
     storage_configured = serializers.BooleanField(read_only=True)
@@ -573,6 +819,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "product_count", "service_count", "menu_item_count",
             "menu_item_kind_counts",
             "branch_count",
+            "event_count",
         ]
 
     def _image_url(self, obj, field_name):
@@ -656,6 +903,18 @@ class SystemSerializer(serializers.ModelSerializer):
         # Drives whether the public Contact link appears (a Contact page is worth
         # showing once a tenant has a physical location or a contact email).
         return obj.branches.filter(enabled=True).count()
+
+    def get_event_count(self, obj):
+        """Enabled events, **past ones included** - it decides whether the site
+        has an events surface at all, not whether anything is coming up.
+
+        Counting only the upcoming ones would take the navbar link away the day
+        after the last event, stranding `/events` and every shared
+        `/events/<slug>` link with no way back into the site - and it would make
+        this payload's correctness depend on the clock, which an hour-long cache
+        cannot express. The landing slider does its own upcoming/past split.
+        """
+        return obj.events.filter(enabled=True).count()
 
 
 _TEXT_FIELDS = [

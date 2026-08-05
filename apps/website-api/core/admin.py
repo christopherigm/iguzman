@@ -9,12 +9,24 @@ from .models import (
     CompanyHighlight,
     CompanyHighlightItem,
     ContactMessage,
+    Event,
+    EventImage,
     SiteBackup,
     SocialPost,
     SuccessStory,
     SuccessStoryImage,
     System,
 )
+
+
+def _invalidate_event_cache(pk):
+    """Every namespace an Event write can make wrong - mirrors the same-named
+    helper in ``core/views.py`` (see its docstring for why the by-slug pattern
+    must be swept rather than deleted by key)."""
+    cache.delete(f"core:event:{pk}")
+    cache.delete(f"core:event_images:{pk}")
+    _invalidate_pattern("core:event:slug:*")
+    _invalidate_pattern("core:events:*")
 
 
 class CompanyHighlightItemInline(admin.TabularInline):
@@ -107,6 +119,57 @@ class SuccessStoryAdmin(admin.ModelAdmin):
         cache.delete(f"core:success_story_images:{obj.pk}")
         _invalidate_pattern("core:success_story:slug:*")
         _invalidate_pattern("core:success_stories:*")
+        super().delete_model(request, obj)
+
+
+class EventImageInline(admin.TabularInline):
+    model = EventImage
+    extra = 0
+    fields = ("image", "name", "sort_order", "enabled")
+    readonly_fields = ("created", "modified")
+
+
+@admin.register(Event)
+class EventAdmin(admin.ModelAdmin):
+    list_display = ("name", "starts_at", "slug", "system", "is_featured", "enabled", "modified")
+    list_filter = ("enabled", "is_featured", "is_all_day", "system")
+    search_fields = ("name", "en_name", "venue_name", "description")
+    prepopulated_fields = {"slug": ("name",)}
+    readonly_fields = ("created", "modified", "version")
+    date_hierarchy = "starts_at"
+    inlines = [EventImageInline]
+    fieldsets = (
+        ("Identity", {
+            "fields": ("system", "enabled", "is_featured", "slug", "version", "created", "modified"),
+        }),
+        ("When", {
+            "fields": ("starts_at", "ends_at", "is_all_day", "timezone"),
+            "description": "Times are local to the timezone below - Django itself runs on UTC.",
+        }),
+        ("Where", {
+            "fields": ("branch", "venue_name", "en_venue_name", "address", "latitude", "longitude"),
+            "description": (
+                "Pick one of the business's own locations, or name a one-off place. "
+                "A field left blank falls back to the branch's."
+            ),
+        }),
+        ("Content (ES)", {
+            "fields": ("name", "short_description", "description"),
+        }),
+        ("Content (EN)", {
+            "fields": ("en_name", "en_short_description", "en_description"),
+        }),
+        ("Media", {
+            "fields": ("image", "fit", "background_color", "href"),
+        }),
+    )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        _invalidate_event_cache(obj.pk)
+
+    def delete_model(self, request, obj):
+        _invalidate_event_cache(obj.pk)
         super().delete_model(request, obj)
 
 

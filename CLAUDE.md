@@ -77,6 +77,25 @@ This is a **Turborepo monorepo** with Next.js applications and shared packages.
 - **`@repo/typescript-config`** - Shared `tsconfig` base (ESM, strict, ES2022)
 - **`packages/charts`** - Helm charts for Kubernetes deployment
 
+### Hardware (`hardware/`)
+
+Physical-device projects - microcontroller firmware, schematics, and their
+notes. Currently `pumpkin-house` (Raspberry Pi Pico / MicroPython).
+
+Like `cli/`, this folder is **deliberately outside the pnpm workspace**:
+`pnpm-workspace.yaml` globs only `apps/*` and `packages/*`. Projects here
+have no `package.json`, nothing for `turbo run build` to build (MicroPython
+is interpreted and copied to the board), and no cluster deployment target -
+so `pnpm install`, `pnpm build`, `pnpm lint` and `pnpm check-types` do not
+see them, and they need no stub scripts. `apps/mob-forge` is in the
+workspace because it has a real Gradle build worth wiring into Turborepo;
+firmware does not. **Do not add `hardware/*` to `pnpm-workspace.yaml`.**
+
+Each project is self-contained: `README.md` (toolchain + flashing steps),
+`schematic.html` (standalone, opens in any browser), and `src/` (the files
+copied to the board). Toolchains are per-project and documented in each
+project's own README, not here. See `hardware/README.md`.
+
 ### Key Component Architecture (video-downloader)
 
 `VideoItem` is the main card component. Its logic is split across two hooks:

@@ -255,6 +255,7 @@ export default async function LocaleLayout({ children, params }: Props) {
                         !!system?.contact_email ||
                         (system?.branch_count ?? 0) > 0
                       }
+                      eventCount={system?.event_count ?? 0}
                       cartCount={cartCount}
                     />
                   </HideOnPos>

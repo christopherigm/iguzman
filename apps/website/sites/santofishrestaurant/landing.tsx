@@ -10,6 +10,7 @@ import { SuccessStories } from "@/components/success-stories";
 import { CompanyHighlights } from "@/components/company-highlights";
 import { CatalogCategories } from "@/components/catalog-categories";
 import { CatalogItems } from "@/components/catalog-items";
+import { Events } from "@/components/events";
 import { Spotlight } from "@/components/spotlight";
 import { Intro } from "./sections/intro";
 import { Bar } from "./sections/bar";
@@ -110,6 +111,15 @@ export async function Landing() {
           aguachile line - a bordered panel beside a hand-picked trio. Renders
           nothing until the copy and the three items are set in the CMS. */}
       <Spotlight />
+
+      {/* After the catalog, before the highlights band - and after the Spotlight
+          panel on purpose, so the page alternates grid → panel → slider rather
+          than running two card layouts together. Live music and a mariscos night
+          are exactly what this restaurant's events are. Renders nothing until
+          there is one. */}
+      <Container paddingX={10}>
+        <Events />
+      </Container>
 
       <SectionBand
         background={highlightsBg}

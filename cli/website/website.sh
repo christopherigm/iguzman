@@ -681,7 +681,7 @@ cmd_sync() {
 
 # ── pull ──────────────────────────────────────────────────────────────────────
 
-PULL_SECTIONS=(system stories highlights products services menu)
+PULL_SECTIONS=(system stories highlights events products services menu)
 
 # select_sections : interactive checklist (all checked by default). Sets the
 # global CHOSEN to a comma-joined list of the checked section keys.

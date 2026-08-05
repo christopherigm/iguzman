@@ -10,6 +10,7 @@ import { SuccessStories } from "@/components/success-stories";
 import { CompanyHighlights } from "@/components/company-highlights";
 import { CatalogCategories } from "@/components/catalog-categories";
 import { CatalogItems } from "@/components/catalog-items";
+import { Events } from "@/components/events";
 import { Spotlight } from "@/components/spotlight";
 import { Intro } from "./sections/intro";
 
@@ -86,6 +87,13 @@ export async function Landing() {
 
       <Container paddingX={10}>
         <CatalogCategories />
+      </Container>
+
+      {/* After the catalog, before the highlights band: a baking workshop or a
+          market stall belongs after the breads themselves. Renders nothing until
+          the baker adds one. */}
+      <Container paddingX={10}>
+        <Events />
       </Container>
 
       <SectionBand

@@ -104,7 +104,8 @@
     "favorites": "Favoriten",
     "cart": "Warenkorb",
     "orders": "Bestellungen",
-    "pos": "Kasse"
+    "pos": "Kasse",
+    "events": "Veranstaltungen"
   },
   "Pos": {
     "title": "Kasse",
@@ -329,6 +330,36 @@
     "previous": "Vorherige Geschichte",
     "next": "Nächste Geschichte",
     "pagination": "Geschichte auswählen"
+  },
+  "Events": {
+    "heading": "Veranstaltungen",
+    "subtitle": "Was ansteht.",
+    "subtitlePastOnly": "Was wir gemacht haben.",
+    "seeAll": "Alle Veranstaltungen",
+    "viewDetail": "Details ansehen",
+    "past": "Vergangen",
+    "allDay": "Ganztägig",
+    "empty": "Noch keine Veranstaltungen. Schauen Sie bald wieder vorbei.",
+    "home": "Startseite",
+    "upcomingHeading": "Demnächst",
+    "pastHeading": "Vergangene Veranstaltungen",
+    "whenLabel": "Wann",
+    "whereLabel": "Wo",
+    "durationLabel": "Dauer",
+    "getDirections": "Route planen",
+    "moreInfo": "Mehr Informationen",
+    "previous": "Vorherige Veranstaltung",
+    "next": "Nächste Veranstaltung",
+    "pagination": "Veranstaltung wählen",
+    "startsAtLabel": "Beginnt",
+    "endsAtLabel": "Endet",
+    "allDayLabel": "Ganztägige Veranstaltung",
+    "branchLabel": "Standort",
+    "branchNone": "Ein anderer Ort",
+    "venueLabel": "Veranstaltungsort",
+    "locationHint": "Wählen Sie einen Ihrer Standorte oder geben Sie unten einen einmaligen Ort an. Ein leeres Feld übernimmt den Wert des Standorts.",
+    "errorNoDate": "Eine Veranstaltung braucht ein Startdatum.",
+    "errorEndBeforeStart": "Das Ende darf nicht vor dem Beginn liegen."
   },
   "SuccessStoryDetail": {
     "home": "Startseite",
@@ -992,7 +1023,9 @@
     "restoreConfirmReplace": "Die ausgewählten Bereiche werden geleert und aus der Sicherung neu aufgebaut. Alles, was seit der Sicherung hinzugefügt wurde, wird endgültig gelöscht.",
     "restoreConfirmMerge": "Einträge aus der Sicherung überschreiben die passenden Einträge dieser Website. Alles, was seit der Sicherung hinzugefügt wurde, bleibt erhalten.",
     "bookings": "Buchungen",
-    "bookingsDesc": "Anstehende Termine ansehen und verwalten."
+    "bookingsDesc": "Anstehende Termine ansehen und verwalten.",
+    "events": "Veranstaltungen",
+    "eventsDesc": "Vorträge, Verkostungen, Workshops und andere Termine ankündigen."
   },
   "GradientBuilder": {
     "linear": "Linear",

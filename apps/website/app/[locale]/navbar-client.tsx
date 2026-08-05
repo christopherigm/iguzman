@@ -30,6 +30,13 @@ interface NavbarClientProps {
    */
   showContact: boolean;
   /**
+   * Number of enabled events, past ones included. Decides whether the Events
+   * link is rendered - a tenant that has never held one gets no link, and one
+   * whose last event has been and gone keeps theirs, because `/events` and every
+   * shared event link still resolve.
+   */
+  eventCount: number;
+  /**
    * Total quantity in the signed-in user's cart; 0 when logged out - a guest's
    * cart is in their browser, so it is counted here rather than on the server.
    */
@@ -43,6 +50,7 @@ export function NavbarClient({
   serviceCount,
   menuKindCounts,
   showContact,
+  eventCount,
   cartCount,
 }: NavbarClientProps) {
   const t = useTranslations("Navbar");
@@ -152,6 +160,9 @@ export function NavbarClient({
       ? [{ label: t("services"), href: "/categories/services" }]
       : []),
     ...menuItems,
+    // After the catalog and before Orders: events are something to browse, like
+    // the catalog above them, rather than an account surface.
+    ...(eventCount > 0 ? [{ label: t("events"), href: "/events" }] : []),
     // Order history stays signed-in only - a guest reaches their order by its
     // link, and there is no list of "their" orders to show. (Favorites and the
     // cart are in `fixedItems` below.)

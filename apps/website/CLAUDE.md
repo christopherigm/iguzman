@@ -149,6 +149,60 @@ every rule; read `website-api/CLAUDE.md` → "Bookings" first.
   deliberately not the order-status one: a confirmed booking wearing the paid
   order's green would read as "the money arrived", which it does not say.
 
+## Events - dated, informational, and never a booking
+
+An `Event` is a dated happening a tenant announces (a tasting, a workshop, a live
+set): editorial content in the same family as a success story, with a date and a
+place. **Purely informational by design** - nothing registers, reserves or pays.
+A service sold as an appointment is `booking_enabled` on a `Service`, which is a
+different feature with a different model; adding attendance here later means a
+second model hanging off `Event` (the shape `orders.Booking` uses against
+`Order`), not extra columns on it.
+
+| Piece                       | Where                                                     |
+| --------------------------- | --------------------------------------------------------- |
+| The landing band            | `components/events.tsx` (+ its slider and card)           |
+| The archive / one event     | `app/[locale]/events/`, `.../events/[slug]/`              |
+| Fetchers                    | `lib/events.ts`                                           |
+| Formatting, client-safe     | `lib/event-shared.ts`                                     |
+| The CMS                     | `app/[locale]/admin/events/`                              |
+| Model, API, cache           | website-api `core/` (`Event`, `EventImage`)               |
+
+Six things that will bite:
+
+- ⚠ **Never decide "is this over?" in the frontend.** `event.is_past` comes from
+  the API, which resolves it against the event's **own** timezone and, for an
+  all-day event, against the end of its local day. An all-day event is stored at
+  midnight, so `new Date(starts_at) < Date.now()` retires it one minute into the
+  day it is happening on - the one day it must be on the site.
+- ⚠ **Never format an event instant with a bare `toLocaleString()`.** Every
+  helper in `lib/event-shared.ts` takes the event's `timeZone` and none falls
+  back to the browser's - the same rule the booking helpers follow, and for the
+  same reason: a reader in another country must be shown the hour they are
+  expected to arrive.
+- ⚠ **The CMS form's date inputs are wall clock, not instants.** A
+  `datetime-local` value carries no zone, and `new Date()` resolves it in the
+  **browser's** - so an operator abroad would file every event at the wrong hour.
+  `wallClockToInstant` / `instantToWallClock` convert against the event's own
+  `timezone`; the `datetime` `FieldDef` type exists for exactly this and its
+  docstring says so.
+- **The location is resolved on the API side, and the CMS edits the raw
+  columns.** `venue_name`/`address`/`latitude`/`longitude` on the payload have
+  already fallen back to the event's `branch` (`Event.effective_*`); the row's
+  own values travel as `own_*`. Public pages read the resolved pair, the form
+  reads `own_*` - loading the resolved ones into the form would show the branch's
+  address in the address box, an author would "correct" it, and the event would
+  silently detach from the location carrying its coordinates.
+- **`Event` has no `sort_order`, deliberately** - unlike every sibling content
+  model. It is ordered by when it happens, and a hand-dragged order beside a date
+  is a second source of truth that can only disagree with the first. That is why
+  `/admin/events` is the one entity list with no drag-to-reorder mode.
+- **`event_count` includes past events**, and the navbar link is gated on it.
+  Counting only the upcoming ones would take the link away the day after the last
+  event and strand `/events` and every shared event link. Like every derived
+  count on `SystemSerializer` it needs a signal clearing the System payload on
+  write - `core/signals.py` has one; the payload is cached for an hour.
+
 ## Anonymous cart, favorites and guest checkout
 
 **A visitor needs no account to save items, fill a cart, or pay.** The cart and

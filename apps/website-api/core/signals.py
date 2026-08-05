@@ -15,7 +15,7 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
 from .cache import invalidate_pattern, invalidate_system_payload
-from .models import Branch, BranchHours, Brand, SiteBackup, System
+from .models import Branch, BranchHours, Brand, Event, SiteBackup, System
 from .storage import forget_system
 
 
@@ -57,6 +57,22 @@ def invalidate_branch_on_hours_change(sender, instance, **kwargs):
     that as the setting not working."""
     cache.delete(f"core:branch:{instance.branch_id}")
     invalidate_pattern("core:branches:*")
+
+
+@receiver(post_save, sender=Event)
+@receiver(post_delete, sender=Event)
+def invalidate_system_on_event_change(sender, instance, **kwargs):
+    """``event_count`` rides in the cached System payload, and it is what decides
+    whether the public Events link is rendered at all - the same job
+    ``branch_count`` does for Contact, and the same reason it needs a signal: the
+    count changes while the System row does not, so nothing else clears it.
+
+    It matters more than the list namespaces because the System payload is cached
+    for an **hour**: without this, a tenant's first event would sit on the site
+    with no way to navigate to it for up to that long, which reads as a lost
+    write rather than as a stale cache.
+    """
+    invalidate_system_payload()
 
 
 @receiver(post_save, sender=System)

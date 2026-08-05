@@ -9,6 +9,7 @@ import { SuccessStories } from "@/components/success-stories";
 import { CompanyHighlights } from "@/components/company-highlights";
 import { CatalogCategories } from "@/components/catalog-categories";
 import { CatalogItems } from "@/components/catalog-items";
+import { Events } from "@/components/events";
 import { Intro } from "./sections/intro";
 
 /**
@@ -91,6 +92,13 @@ export async function Landing() {
           <CatalogItems />
         </Container>
       </SectionBand>
+
+      {/* After the catalog, before the stories: a demo day or a training session
+          is what a prospect books *after* seeing the fleet. Renders nothing
+          until the tenant has an event. */}
+      <Container paddingX={10}>
+        <Events />
+      </Container>
 
       <Container paddingX={10}>
         <SuccessStories />

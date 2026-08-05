@@ -104,7 +104,8 @@
     "favorites": "Favorites",
     "cart": "Cart",
     "orders": "Orders",
-    "pos": "POS"
+    "pos": "POS",
+    "events": "Events"
   },
   "Pos": {
     "title": "Point of sale",
@@ -329,6 +330,36 @@
     "previous": "Previous story",
     "next": "Next story",
     "pagination": "Choose a story"
+  },
+  "Events": {
+    "heading": "Events",
+    "subtitle": "What's coming up.",
+    "subtitlePastOnly": "What we've been up to.",
+    "seeAll": "See all events",
+    "viewDetail": "View details",
+    "past": "Past",
+    "allDay": "All day",
+    "empty": "No events yet. Check back soon.",
+    "home": "Home",
+    "upcomingHeading": "Upcoming",
+    "pastHeading": "Past events",
+    "whenLabel": "When",
+    "whereLabel": "Where",
+    "durationLabel": "Duration",
+    "getDirections": "Get directions",
+    "moreInfo": "More information",
+    "previous": "Previous event",
+    "next": "Next event",
+    "pagination": "Choose an event",
+    "startsAtLabel": "Starts",
+    "endsAtLabel": "Ends",
+    "allDayLabel": "All-day event",
+    "branchLabel": "Location",
+    "branchNone": "Another place",
+    "venueLabel": "Venue",
+    "locationHint": "Pick one of your locations, or name a one-off place below. A field left blank uses the location's own.",
+    "errorNoDate": "An event needs a start date.",
+    "errorEndBeforeStart": "The end must not be before the start."
   },
   "SuccessStoryDetail": {
     "home": "Home",
@@ -992,7 +1023,9 @@
     "restoreConfirmReplace": "The selected sections will be emptied and rebuilt from the backup. Anything added since the backup was made will be permanently deleted.",
     "restoreConfirmMerge": "Items in the backup will overwrite the matching items on this site. Anything added since the backup was made will be kept.",
     "bookings": "Bookings",
-    "bookingsDesc": "See and manage upcoming appointments."
+    "bookingsDesc": "See and manage upcoming appointments.",
+    "events": "Events",
+    "eventsDesc": "Announce talks, tastings, workshops and other dated happenings."
   },
   "GradientBuilder": {
     "linear": "Linear",

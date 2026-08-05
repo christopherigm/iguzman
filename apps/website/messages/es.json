@@ -104,7 +104,8 @@
     "favorites": "Favoritos",
     "cart": "Carrito",
     "orders": "Pedidos",
-    "pos": "PdV"
+    "pos": "PdV",
+    "events": "Eventos"
   },
   "Pos": {
     "title": "Punto de venta",
@@ -329,6 +330,36 @@
     "previous": "Historia anterior",
     "next": "Historia siguiente",
     "pagination": "Elegir una historia"
+  },
+  "Events": {
+    "heading": "Eventos",
+    "subtitle": "Lo que viene.",
+    "subtitlePastOnly": "Lo que hemos hecho.",
+    "seeAll": "Ver todos los eventos",
+    "viewDetail": "Ver detalles",
+    "past": "Pasado",
+    "allDay": "Todo el día",
+    "empty": "Aún no hay eventos. Vuelve pronto.",
+    "home": "Inicio",
+    "upcomingHeading": "Próximos",
+    "pastHeading": "Eventos pasados",
+    "whenLabel": "Cuándo",
+    "whereLabel": "Dónde",
+    "durationLabel": "Duración",
+    "getDirections": "Cómo llegar",
+    "moreInfo": "Más información",
+    "previous": "Evento anterior",
+    "next": "Evento siguiente",
+    "pagination": "Elegir un evento",
+    "startsAtLabel": "Comienza",
+    "endsAtLabel": "Termina",
+    "allDayLabel": "Evento de todo el día",
+    "branchLabel": "Sucursal",
+    "branchNone": "Otro lugar",
+    "venueLabel": "Lugar",
+    "locationHint": "Elige una de tus sucursales o escribe un lugar puntual abajo. Un campo vacío usa el de la sucursal.",
+    "errorNoDate": "El evento necesita una fecha de inicio.",
+    "errorEndBeforeStart": "El final no puede ser anterior al inicio."
   },
   "SuccessStoryDetail": {
     "home": "Inicio",
@@ -992,7 +1023,9 @@
     "restoreConfirmReplace": "Las secciones seleccionadas se vaciarán y se reconstruirán desde la copia. Todo lo agregado después de la copia se eliminará de forma permanente.",
     "restoreConfirmMerge": "Los elementos de la copia sobrescribirán los elementos correspondientes de este sitio. Todo lo agregado después de la copia se conservará.",
     "bookings": "Reservas",
-    "bookingsDesc": "Consulta y gestiona las próximas citas."
+    "bookingsDesc": "Consulta y gestiona las próximas citas.",
+    "events": "Eventos",
+    "eventsDesc": "Anuncia charlas, catas, talleres y otros eventos con fecha."
   },
   "GradientBuilder": {
     "linear": "Lineal",

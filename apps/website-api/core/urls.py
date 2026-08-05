@@ -15,6 +15,11 @@ from .views import (
     CompanyHighlightItemsView,
     CompanyHighlightListView,
     ContactMessageCreateView,
+    EventBySlugView,
+    EventDetailView,
+    EventImageDetailView,
+    EventImagesView,
+    EventListView,
     PublishSiteView,
     SiteBackupDetailView,
     SiteBackupDownloadView,
@@ -54,6 +59,14 @@ urlpatterns = [
     path("highlights/<int:pk>/", CompanyHighlightDetailView.as_view(), name="highlight-detail"),
     path("highlights/<int:pk>/items/", CompanyHighlightItemsView.as_view(), name="highlight-items"),
     path("highlights/<int:pk>/items/<int:item_pk>/", CompanyHighlightItemDetailView.as_view(), name="highlight-item-detail"),
+
+    # `slug/<slug>/` is declared before `<int:pk>/` so the literal segment is not
+    # swallowed by the detail route - same ordering as the two blocks above.
+    path("events/", EventListView.as_view(), name="event-list"),
+    path("events/slug/<slug:slug>/", EventBySlugView.as_view(), name="event-by-slug"),
+    path("events/<int:pk>/", EventDetailView.as_view(), name="event-detail"),
+    path("events/<int:pk>/images/", EventImagesView.as_view(), name="event-images"),
+    path("events/<int:pk>/images/<int:img_pk>/", EventImageDetailView.as_view(), name="event-image-detail"),
 
     path("brands/", BrandListCreateView.as_view(), name="brand-list"),
     path("brands/<int:pk>/", BrandDetailView.as_view(), name="brand-detail"),

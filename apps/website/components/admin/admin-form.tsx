@@ -63,6 +63,20 @@ export interface FieldDef {
   | "color"
   | "slug"
   /**
+   * A native `<input type="datetime-local">`, whose value is **local wall clock
+   * with no zone** (`YYYY-MM-DDTHH:mm`).
+   *
+   * ⚠ That is the whole point and the whole trap. The author types "7pm", which
+   * means 7pm *where the thing happens* - not 7pm where the author is sitting,
+   * and not 7pm UTC. So a form using this owns the conversion to an instant
+   * against whatever zone the record carries; feeding the raw value to
+   * `new Date()` resolves it in the **browser's** zone, which is wrong for every
+   * author who is not in the same country as the record.
+   * `lib/event-shared.ts`'s `wallClockToInstant` / `instantToWallClock` are that
+   * conversion for events.
+   */
+  | "datetime"
+  /**
    * A write-only secret (an API key). Masked as you type, and - because the
    * API never sends one back - always loads blank: an empty value means
    * "leave unchanged", so the form must omit it from the payload rather than
@@ -615,6 +629,24 @@ export function AdminForm({
                         })) ?? []),
                       ]}
                     />
+                  ) : field.type === "datetime" ? (
+                    <Box flexDirection="column" gap={6}>
+                      <label
+                        className="af__label"
+                        htmlFor={`field-${field.key}`}
+                      >
+                        {field.label}
+                      </label>
+                      <input
+                        id={`field-${field.key}`}
+                        type="datetime-local"
+                        className="af__datetime-input"
+                        required={field.required}
+                        disabled={field.disabled}
+                        value={String(values[field.key] ?? "")}
+                        onChange={(e) => onChange(field.key, e.target.value)}
+                      />
+                    </Box>
                   ) : field.type === "color" ? (
                     <Box flexDirection="column" gap={6}>
                       <label

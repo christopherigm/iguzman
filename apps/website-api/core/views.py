@@ -6,6 +6,8 @@ import tempfile
 from django.conf import settings
 from django.core.cache import cache
 from django.core.files import File
+from django.db.models import Q
+from django.db.models.functions import Coalesce
 from django.http import FileResponse, StreamingHttpResponse
 from django.utils import timezone
 from django.utils.text import slugify
@@ -29,7 +31,7 @@ from .backup import (
 )
 from .cache import invalidate_pattern as _invalidate_pattern
 from .storage import test_credentials
-from .models import Branch, Brand, CompanyHighlight, CompanyHighlightItem, ContactMessage, SiteBackup, SocialPost, SuccessStory, SuccessStoryImage, System
+from .models import ALL_DAY_GRACE, Branch, Brand, CompanyHighlight, CompanyHighlightItem, ContactMessage, Event, EventImage, SiteBackup, SocialPost, SuccessStory, SuccessStoryImage, System
 from .serializers import (
     AiChatSerializer,
     BranchSerializer,
@@ -42,6 +44,10 @@ from .serializers import (
     CompanyHighlightWriteSerializer,
     ContactMessageCreateSerializer,
     ContactMessageSerializer,
+    EventImageSerializer,
+    EventImageWriteSerializer,
+    EventSerializer,
+    EventWriteSerializer,
     SiteBackupSerializer,
     SocialPostSerializer,
     SocialPostWriteSerializer,
@@ -60,6 +66,11 @@ logger = logging.getLogger(__name__)
 
 SYSTEM_CACHE_TTL = 3600  # 1 hour
 CACHE_TTL = 300  # 5 minutes
+# Event payloads whose *contents* depend on the clock - the upcoming/past lists
+# and any single event (which carries `is_past`). A five-minute entry would keep
+# announcing an event that finished four minutes ago; a signal cannot help,
+# because nothing was written when it ended.
+EVENT_SCOPED_CACHE_TTL = 60  # 1 minute
 
 
 def _sse_data(payload):
@@ -125,6 +136,9 @@ class PublishSiteView(APIView):
             "core:highlights:*",
             "core:highlight:*",
             "core:highlight_item*",
+            "core:events:*",
+            "core:event:*",
+            "core:event_images:*",
             "catalog:product_categories*",
             "catalog:products*",
             "catalog:service_categories*",
@@ -760,6 +774,339 @@ class CompanyHighlightItemDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+# --------------------------------------------------------------------------- #
+# Events
+# --------------------------------------------------------------------------- #
+
+# The largest `?limit=` an anonymous caller can ask for. The landing slider asks
+# for a handful; this only stops one request from serializing a tenant's whole
+# ten-year history of events (each with its gallery) into a cache entry.
+MAX_EVENT_LIMIT = 200
+
+EVENT_SCOPE_UPCOMING = "upcoming"
+EVENT_SCOPE_PAST = "past"
+EVENT_SCOPE_ALL = "all"
+
+
+def _invalidate_event(pk):
+    """Clear every namespace one event's write can make wrong.
+
+    One helper rather than four repeated lines because an event is read under
+    five key shapes (the scoped lists, the by-pk detail, the by-slug detail and
+    the gallery), and a write to any part of it invalidates all of them - the
+    list payloads embed the whole serialized event, gallery included.
+    ``core:events:*`` also has to be swept on a *slug* change, since the by-slug
+    key is namespaced by the old slug and nothing else would ever reach it.
+    """
+    cache.delete(f"core:event:{pk}")
+    cache.delete(f"core:event_images:{pk}")
+    _invalidate_pattern("core:event:slug:*")
+    _invalidate_pattern("core:events:*")
+
+
+def _event_queryset(system_id, *, scope, disabled_visible, limit=None):
+    """The events of one system, narrowed and ordered by ``scope``.
+
+    ``upcoming`` is soonest-first (what is coming up, in the order it arrives),
+    ``past`` is newest-first (the most recent thing that happened, first) and
+    ``all`` keeps the model's own chronological order.
+
+    ⚠ The upcoming/past split is made in **SQL**, against ``ends_at`` falling
+    back to ``starts_at``, and an all-day row is given ``ALL_DAY_GRACE`` on top -
+    an all-day event is stored at midnight and would otherwise retire one minute
+    into the day it runs on. That is an approximation of ``Event.effective_end``,
+    which is exact but needs each row's own timezone and so cannot be a ``WHERE``
+    clause. It errs toward keeping an event listed slightly too long; every
+    payload also carries the exact ``is_past``, which is what a consumer should
+    render a badge from.
+    """
+    now = timezone.now()
+    qs = (
+        Event.objects.filter(system_id=system_id)
+        .select_related("branch")
+        .prefetch_related("images")
+        .annotate(_ends=Coalesce("ends_at", "starts_at"))
+    )
+    if not disabled_visible:
+        qs = qs.filter(enabled=True)
+
+    live = Q(_ends__gte=now) | Q(is_all_day=True, _ends__gte=now - ALL_DAY_GRACE)
+    if scope == EVENT_SCOPE_UPCOMING:
+        qs = qs.filter(live).order_by("starts_at")
+    elif scope == EVENT_SCOPE_PAST:
+        qs = qs.exclude(live).order_by("-starts_at")
+    else:
+        qs = qs.order_by("starts_at")
+
+    if limit is not None:
+        qs = qs[:limit]
+    return qs
+
+
+def _event_scope(request):
+    scope = (request.query_params.get("scope") or EVENT_SCOPE_ALL).lower()
+    return scope if scope in (EVENT_SCOPE_UPCOMING, EVENT_SCOPE_PAST) else EVENT_SCOPE_ALL
+
+
+def _event_limit(request):
+    raw = request.query_params.get("limit")
+    if not raw:
+        return None
+    try:
+        return max(1, min(int(raw), MAX_EVENT_LIMIT))
+    except (TypeError, ValueError):
+        return None
+
+
+class EventListView(APIView):
+    """
+    GET  /api/events/   - list events for the current system (public).
+    POST /api/events/   - create an event (admin only).
+
+    Query params (GET):
+      system           - filter by system pk
+      scope            - 'upcoming' | 'past' | 'all' (default). See
+                         ``_event_queryset`` for the ordering each implies.
+      limit            - cap the number returned (max ``MAX_EVENT_LIMIT``)
+      include_disabled - 'true' to also return disabled events (system admins
+                         only; ignored for everyone else)
+    """
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def _resolve_system(self, request):
+        host = (
+            request.META.get("HTTP_X_WEBSITE_HOST") or request.get_host()
+        ).split(":")[0]
+        return System.objects.filter(host=host, enabled=True).first()
+
+    def get(self, request):
+        disabled_visible = show_disabled(request)
+        suffix = _disabled_suffix(disabled_visible)
+        scope = _event_scope(request)
+        limit = _event_limit(request)
+        system_id = request.query_params.get("system")
+        if system_id:
+            base = f"core:events:system:{system_id}"
+        else:
+            system = self._resolve_system(request)
+            if system is None:
+                return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
+            system_id = system.id
+            base = f"core:events:{system.host}"
+        cache_key = f"{base}:{scope}:{limit or 'all'}{suffix}"
+
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        qs = _event_queryset(
+            system_id, scope=scope, disabled_visible=disabled_visible, limit=limit
+        )
+        data = EventSerializer(qs, many=True, context={"request": request}).data
+        # ⚠ Deliberately shorter than CACHE_TTL for the scoped reads: their
+        # contents depend on the clock, so an event that has just finished must
+        # not keep claiming to be upcoming for five minutes. The unscoped list is
+        # time-independent and keeps the normal TTL.
+        ttl = CACHE_TTL if scope == EVENT_SCOPE_ALL else EVENT_SCOPED_CACHE_TTL
+        cache.set(cache_key, data, ttl)
+        return Response(data)
+
+    def post(self, request):
+        serializer = EventWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if not serializer.validated_data.get("starts_at"):
+            return Response(
+                {"starts_at": ["An event needs a start date."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # Saved bare first so the image upload has a pk to name its file with -
+        # the same two-step every other content model here uses. `starts_at` is
+        # NOT NULL, so the bare row carries the validated one from the start.
+        instance = Event(starts_at=serializer.validated_data["starts_at"])
+        instance.save()
+        instance = serializer.save(instance)
+        _invalidate_pattern("core:events:*")
+        return Response(
+            EventSerializer(instance, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class EventDetailView(APIView):
+    """
+    GET    /api/events/<pk>/   - retrieve an event (public).
+    PATCH  /api/events/<pk>/   - partial update (admin only).
+    DELETE /api/events/<pk>/   - delete (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def _get_object(self, pk):
+        try:
+            return (
+                Event.objects.select_related("branch")
+                .prefetch_related("images")
+                .get(pk=pk)
+            )
+        except Event.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        cache_key = f"core:event:{pk}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        instance = self._get_object(pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        data = EventSerializer(instance, context={"request": request}).data
+        # `is_past` rides in this payload, so it ages like the scoped lists do.
+        cache.set(cache_key, data, EVENT_SCOPED_CACHE_TTL)
+        return Response(data)
+
+    def patch(self, request, pk):
+        instance = self._get_object(pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = EventWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save(instance)
+        _invalidate_event(pk)
+        return Response(EventSerializer(instance, context={"request": request}).data)
+
+    def delete(self, request, pk):
+        instance = self._get_object(pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        instance.delete()
+        _invalidate_event(pk)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class EventBySlugView(APIView):
+    """GET /api/events/slug/<slug>/ - retrieve an event by slug for the current system (public)."""
+
+    permission_classes = [AllowAny]
+
+    def _resolve_system(self, request):
+        host = (
+            request.META.get("HTTP_X_WEBSITE_HOST") or request.get_host()
+        ).split(":")[0]
+        return System.objects.filter(host=host, enabled=True).first()
+
+    def get(self, request, slug):
+        system = self._resolve_system(request)
+        if system is None:
+            return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
+
+        cache_key = f"core:event:slug:{system.host}:{slug}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        try:
+            instance = (
+                Event.objects.select_related("branch")
+                .prefetch_related("images")
+                .get(system=system, slug=slug, enabled=True)
+            )
+        except Event.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = EventSerializer(instance, context={"request": request}).data
+        cache.set(cache_key, data, EVENT_SCOPED_CACHE_TTL)
+        return Response(data)
+
+
+class EventImagesView(APIView):
+    """
+    GET  /api/events/<pk>/images/ - list gallery images (public).
+    POST /api/events/<pk>/images/ - add an image (admin only, base64).
+    """
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def _get_event(self, pk):
+        try:
+            return Event.objects.get(pk=pk)
+        except Event.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        cache_key = f"core:event_images:{pk}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        event = self._get_event(pk)
+        if event is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        data = EventImageSerializer(
+            event.images.all(), many=True, context={"request": request}
+        ).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
+
+    def post(self, request, pk):
+        event = self._get_event(pk)
+        if event is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = EventImageWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        img = serializer.save(event)
+        _invalidate_event(pk)
+        return Response(
+            EventImageSerializer(img, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class EventImageDetailView(APIView):
+    """
+    PATCH  /api/events/<pk>/images/<img_pk>/ - update sort_order / name (admin only).
+    DELETE /api/events/<pk>/images/<img_pk>/ - delete an image (admin only).
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    def _get_image(self, pk, img_pk):
+        try:
+            return EventImage.objects.get(pk=img_pk, event_id=pk)
+        except EventImage.DoesNotExist:
+            return None
+
+    def patch(self, request, pk, img_pk):
+        img = self._get_image(pk, img_pk)
+        if img is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        name = request.data.get("name")
+        sort_order = request.data.get("sort_order")
+        if name is not None:
+            img.name = name
+        if sort_order is not None:
+            img.sort_order = sort_order
+        img.save(update_fields=[f for f in ["name", "sort_order"] if f in request.data])
+        _invalidate_event(pk)
+        return Response(EventImageSerializer(img, context={"request": request}).data)
+
+    def delete(self, request, pk, img_pk):
+        img = self._get_image(pk, img_pk)
+        if img is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        img.delete()
+        _invalidate_event(pk)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 def _get_admin_system_id(request):
     """Return the system_id of the authenticated admin, or None."""
     try:
@@ -1264,6 +1611,7 @@ class SlugCheckView(APIView):
         "brand": ("core", "Brand"),
         "highlight": ("core", "CompanyHighlight"),
         "success-story": ("core", "SuccessStory"),
+        "event": ("core", "Event"),
         "product": ("catalog", "Product"),
         "product-category": ("catalog", "ProductCategory"),
         "service": ("catalog", "Service"),

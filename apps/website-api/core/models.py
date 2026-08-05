@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -7,6 +8,10 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from colorfield.fields import ColorField
 from django.core.exceptions import ValidationError
 from django.db import models
+# Aliased because `Branch`, `Event` and friends all carry a `timezone` *field*,
+# and a bare `timezone` in a method body would read as that field rather than
+# Django's clock.
+from django.utils import timezone as django_tz
 
 from core import image_sizes as sizes
 from core.fields import ResizedImageField
@@ -372,6 +377,206 @@ class CompanyHighlightItem(SmallPicture):
 
     def __str__(self):
         return self.name or f"Item #{self.pk}"
+
+
+# How long an all-day event keeps counting as "on" after the instant stored in
+# `starts_at`/`ends_at`. An all-day row is stored at midnight, so comparing it
+# straight against the clock would retire today's event one minute into the day
+# it is happening on - and the tenant's own timezone is not available to the SQL
+# that filters the list. One day errs toward showing an event slightly too long,
+# which is the harmless direction: a visitor reading "today" about something that
+# finished this morning is a smaller failure than an event vanishing from the
+# site on the morning of the day it runs. See `Event.effective_end`, which is
+# exact, and `EventListView`, which is this approximation.
+ALL_DAY_GRACE = timedelta(days=1)
+
+
+class Event(RegularPicture):
+    """A dated happening a business announces: a tasting, a workshop, a live set.
+
+    Editorial content in the same family as ``SuccessStory`` and
+    ``CompanyHighlight`` - it is announced, read and shared, and that is all.
+    Deliberately **informational**: nothing here sells a ticket, counts a seat or
+    registers an attendee. Adding that later means a second model hanging off
+    this one (the shape ``orders.Booking`` uses against ``Order``), not extra
+    columns here.
+
+    Inherits from RegularPicture (1200 px) which provides:
+      - Common: enabled, created, modified, version
+      - BasePicture: name, en_name, description, en_description,
+        short_description, en_short_description, href, fit, background_color
+      - RegularPicture: image (max 1200 px) - the event's cover
+
+    **There is no `sort_order`.** Every sibling content model has one, and an
+    event is the one that must not: it is ordered by *when it happens*, and a
+    hand-dragged order beside a date is a second source of truth that can only
+    ever disagree with the first. The CMS list is chronological and has no
+    drag-to-reorder mode for this reason.
+    """
+
+    system = models.ForeignKey(
+        "core.System",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="events",
+    )
+    slug = models.SlugField(max_length=255, unique=True, null=True, blank=True)
+
+    # ── Where ─────────────────────────────────────────────────────────────────
+    # Two ways to answer, because both are real. A business holding a tasting in
+    # its own shop should pick the `Branch` it already maintains (address,
+    # coordinates and map come with it, and stay correct when the shop moves);
+    # one holding a pop-up in a rented hall or a park types the place instead.
+    # Read the `effective_*` properties, never these columns - they resolve the
+    # two into one answer, with the event's own value winning so a tenant can
+    # override a single field (a hall inside their building, say) without
+    # detaching the event from its branch.
+    #
+    # SET_NULL rather than CASCADE: retiring a location must not delete the
+    # history of what happened there.
+    branch = models.ForeignKey(
+        "core.Branch",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="events",
+        help_text="One of the business's own locations. Leave empty to name a one-off place below.",
+    )
+    venue_name = models.CharField(max_length=255, null=True, blank=True)
+    en_venue_name = models.CharField(max_length=255, null=True, blank=True)
+    address = models.TextField(null=True, blank=True)
+    # Same precision and reasoning as Branch.latitude/longitude - stored as
+    # decimals so they validate and the frontend needn't parse a "lat,lng" string.
+    latitude = models.DecimalField(max_digits=10, decimal_places=8, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=11, decimal_places=8, null=True, blank=True)
+
+    # ── When ──────────────────────────────────────────────────────────────────
+    # `starts_at` is the only required field on the whole model: an event without
+    # a date is not an event, and every consumer (the ordering, the upcoming
+    # filter, the "past" badge) reads it.
+    starts_at = models.DateTimeField(help_text="When the event begins.")
+    ends_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When it finishes. Blank for an event with no announced end.",
+    )
+    is_all_day = models.BooleanField(
+        default=False,
+        help_text="Show the date without a time (an open day, a week-long fair).",
+    )
+    # ⚠ Same trap as `Branch.timezone`, and for the same reason: Django runs on
+    # UTC, so an instant rendered without a zone shows a Mexico City evening as a
+    # small-hours event. Unlike Branch this is a *snapshot* rather than a live
+    # setting - an event happened in the zone it happened in, and re-rendering a
+    # past one through a branch that has since moved zones would rewrite history
+    # (the same rule `orders.Booking.timezone` follows).
+    timezone = models.CharField(
+        max_length=64,
+        default="UTC",
+        validators=[validate_timezone],
+        help_text="IANA timezone the times above are local to (e.g. America/Mexico_City).",
+    )
+
+    is_featured = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Event"
+        verbose_name_plural = "Events"
+        # Chronological, soonest first - see the class docstring on why there is
+        # no manual order to put ahead of it. The list endpoint flips this to
+        # newest-first when it is asked for past events.
+        ordering = ["starts_at"]
+        indexes = [
+            # Every public read is "this tenant's events, by date"; the CMS adds
+            # the disabled ones to the same shape.
+            models.Index(fields=["system", "starts_at"], name="core_event_system_start"),
+        ]
+
+    def __str__(self):
+        return self.name or self.slug or f"Event #{self.pk}"
+
+    @property
+    def tzinfo(self):
+        """The event's zone, falling back to UTC rather than raising.
+
+        A row written before the validator existed (or straight into the
+        database) must not 500 every page that renders it.
+        """
+        try:
+            return ZoneInfo(self.timezone or "UTC")
+        except (ZoneInfoNotFoundError, ValueError):
+            return ZoneInfo("UTC")
+
+    @property
+    def effective_end(self):
+        """The instant this event stops being current.
+
+        `ends_at` when one was announced, otherwise the start. An **all-day**
+        event runs to midnight at the end of its last local day - stored at
+        midnight, it would otherwise be over one minute into the day it is
+        happening on. This is the exact answer; the list endpoint's SQL filter
+        approximates it with `ALL_DAY_GRACE` because it cannot reach each row's
+        own zone from a `WHERE` clause.
+        """
+        end = self.ends_at or self.starts_at
+        if not self.is_all_day:
+            return end
+        local_end = end.astimezone(self.tzinfo)
+        return datetime.combine(
+            local_end.date() + timedelta(days=1), time.min, tzinfo=self.tzinfo
+        )
+
+    @property
+    def is_past(self) -> bool:
+        return self.effective_end < django_tz.now()
+
+    # ── Location resolved across the branch ──────────────────────────────────
+    # The event's own value wins in every one of these, so a tenant can override
+    # a single field without detaching the event from its branch.
+
+    @property
+    def effective_venue_name(self):
+        return self.venue_name or (self.branch.name if self.branch_id else None)
+
+    @property
+    def effective_en_venue_name(self):
+        return self.en_venue_name or (self.branch.en_name if self.branch_id else None)
+
+    @property
+    def effective_address(self):
+        return self.address or (self.branch.address if self.branch_id else None)
+
+    @property
+    def effective_latitude(self):
+        if self.latitude is not None:
+            return self.latitude
+        return self.branch.latitude if self.branch_id else None
+
+    @property
+    def effective_longitude(self):
+        if self.longitude is not None:
+            return self.longitude
+        return self.branch.longitude if self.branch_id else None
+
+
+class EventImage(StandardPicture):
+    """Additional gallery images for an event."""
+
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.CASCADE,
+        related_name="images",
+    )
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Event Image"
+        verbose_name_plural = "Event Images"
+        ordering = ["sort_order"]
+
+    def __str__(self):
+        return f"Image for {self.event} (#{self.sort_order})"
 
 
 class System(Common):

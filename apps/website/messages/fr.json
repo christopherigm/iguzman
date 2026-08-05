@@ -104,7 +104,8 @@
     "favorites": "Favoris",
     "cart": "Panier",
     "orders": "Commandes",
-    "pos": "PDV"
+    "pos": "PDV",
+    "events": "Événements"
   },
   "Pos": {
     "title": "Point de vente",
@@ -329,6 +330,36 @@
     "previous": "Histoire précédente",
     "next": "Histoire suivante",
     "pagination": "Choisir une histoire"
+  },
+  "Events": {
+    "heading": "Événements",
+    "subtitle": "Ce qui arrive.",
+    "subtitlePastOnly": "Ce que nous avons fait.",
+    "seeAll": "Voir tous les événements",
+    "viewDetail": "Voir les détails",
+    "past": "Passé",
+    "allDay": "Toute la journée",
+    "empty": "Pas encore d'événements. Revenez bientôt.",
+    "home": "Accueil",
+    "upcomingHeading": "À venir",
+    "pastHeading": "Événements passés",
+    "whenLabel": "Quand",
+    "whereLabel": "Où",
+    "durationLabel": "Durée",
+    "getDirections": "Itinéraire",
+    "moreInfo": "Plus d'informations",
+    "previous": "Événement précédent",
+    "next": "Événement suivant",
+    "pagination": "Choisir un événement",
+    "startsAtLabel": "Début",
+    "endsAtLabel": "Fin",
+    "allDayLabel": "Événement d'une journée",
+    "branchLabel": "Emplacement",
+    "branchNone": "Un autre lieu",
+    "venueLabel": "Lieu",
+    "locationHint": "Choisissez l'un de vos emplacements ou indiquez un lieu ponctuel ci-dessous. Un champ laissé vide reprend celui de l'emplacement.",
+    "errorNoDate": "Un événement doit avoir une date de début.",
+    "errorEndBeforeStart": "La fin ne peut pas précéder le début."
   },
   "SuccessStoryDetail": {
     "home": "Accueil",
@@ -992,7 +1023,9 @@
     "restoreConfirmReplace": "Les sections sélectionnées seront vidées puis reconstruites à partir de la sauvegarde. Tout ce qui a été ajouté depuis sera définitivement supprimé.",
     "restoreConfirmMerge": "Les éléments de la sauvegarde écraseront les éléments correspondants de ce site. Tout ce qui a été ajouté depuis sera conservé.",
     "bookings": "Réservations",
-    "bookingsDesc": "Consulter et gérer les rendez-vous à venir."
+    "bookingsDesc": "Consulter et gérer les rendez-vous à venir.",
+    "events": "Événements",
+    "eventsDesc": "Annoncer conférences, dégustations, ateliers et autres rendez-vous."
   },
   "GradientBuilder": {
     "linear": "Linéaire",

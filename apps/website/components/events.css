@@ -1,0 +1,20 @@
+.events-section {
+  width: 100%;
+  padding: 48px 0 56px;
+  box-sizing: border-box;
+}
+
+/* Swiper container. No bottom padding: the controls are `@repo/ui`'s
+   `SliderControls` row in normal flow beneath the slider, not Swiper's own
+   absolutely-positioned bullets, so nothing needs a gutter held open for it. */
+.events-swiper {
+  width: 100%;
+  min-width: 0;
+}
+
+/* `height: auto` lets every slide stretch to the tallest in view, which is what
+   the cards' own `height: 100%` then fills - so a row of events shares one
+   height however long their blurbs are. */
+.events-swiper__slide {
+  height: auto;
+}

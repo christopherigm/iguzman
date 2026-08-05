@@ -9,6 +9,7 @@ import { SuccessStories } from "@/components/success-stories";
 import { CompanyHighlights } from "@/components/company-highlights";
 import { CatalogCategories } from "@/components/catalog-categories";
 import { CatalogItems } from "@/components/catalog-items";
+import { Events } from "@/components/events";
 import { Spotlight } from "@/components/spotlight";
 import { Origin } from "./sections/origin";
 
@@ -90,6 +91,13 @@ export async function Landing() {
 
       <Container paddingX={10}>
         <CatalogCategories />
+      </Container>
+
+      {/* After the catalog, before the highlights band: a cupping or a tasting
+          reads as an invitation once the coffees themselves are on screen.
+          Renders nothing until the family adds one. */}
+      <Container paddingX={10}>
+        <Events />
       </Container>
 
       <SectionBand

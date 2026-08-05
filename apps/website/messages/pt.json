@@ -104,7 +104,8 @@
     "favorites": "Favoritos",
     "cart": "Carrinho",
     "orders": "Encomendas",
-    "pos": "PDV"
+    "pos": "PDV",
+    "events": "Eventos"
   },
   "Pos": {
     "title": "Ponto de venda",
@@ -329,6 +330,36 @@
     "previous": "História anterior",
     "next": "Próxima história",
     "pagination": "Escolher uma história"
+  },
+  "Events": {
+    "heading": "Eventos",
+    "subtitle": "O que está por vir.",
+    "subtitlePastOnly": "O que fizemos.",
+    "seeAll": "Ver todos os eventos",
+    "viewDetail": "Ver detalhes",
+    "past": "Passado",
+    "allDay": "O dia todo",
+    "empty": "Ainda não há eventos. Volte em breve.",
+    "home": "Início",
+    "upcomingHeading": "Próximos",
+    "pastHeading": "Eventos anteriores",
+    "whenLabel": "Quando",
+    "whereLabel": "Onde",
+    "durationLabel": "Duração",
+    "getDirections": "Como chegar",
+    "moreInfo": "Mais informações",
+    "previous": "Evento anterior",
+    "next": "Próximo evento",
+    "pagination": "Escolher um evento",
+    "startsAtLabel": "Começa",
+    "endsAtLabel": "Termina",
+    "allDayLabel": "Evento de dia inteiro",
+    "branchLabel": "Local",
+    "branchNone": "Outro lugar",
+    "venueLabel": "Local do evento",
+    "locationHint": "Escolha um dos seus locais ou indique um lugar pontual abaixo. Um campo vazio usa o do local.",
+    "errorNoDate": "O evento precisa de uma data de início.",
+    "errorEndBeforeStart": "O fim não pode ser anterior ao início."
   },
   "SuccessStoryDetail": {
     "home": "Início",
@@ -992,7 +1023,9 @@
     "restoreConfirmReplace": "As seções selecionadas serão esvaziadas e reconstruídas a partir do backup. Tudo o que foi adicionado depois do backup será excluído permanentemente.",
     "restoreConfirmMerge": "Os itens do backup vão sobrescrever os itens correspondentes deste site. Tudo o que foi adicionado depois do backup será mantido.",
     "bookings": "Agendamentos",
-    "bookingsDesc": "Veja e gerencie os próximos horários."
+    "bookingsDesc": "Veja e gerencie os próximos horários.",
+    "events": "Eventos",
+    "eventsDesc": "Anuncie palestras, degustações, oficinas e outros eventos com data."
   },
   "GradientBuilder": {
     "linear": "Linear",

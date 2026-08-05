@@ -625,6 +625,73 @@ export async function deleteSuccessStory(pk: number) {
   return parseResponse<void>(res);
 }
 
+// ---- Events ----
+// The list read is unscoped by date on purpose: the CMS is where an author finds
+// the event they have not published yet *and* the one that already happened, so
+// it asks for `scope=all` (the default) rather than the upcoming/past split the
+// public pages use.
+export async function listEvents(systemId: number) {
+  const res = await adminFetch(
+    `/api/events/?system=${systemId}&include_disabled=true`,
+  );
+  return parseResponse<Record<string, unknown>[]>(res);
+}
+export async function getEvent(pk: number) {
+  const res = await adminFetch(`/api/events/${pk}/`);
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function createEvent(data: Record<string, unknown>) {
+  const res = await adminFetch(`/api/events/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function updateEvent(pk: number, data: Record<string, unknown>) {
+  const res = await adminFetch(`/api/events/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function deleteEvent(pk: number) {
+  const res = await adminFetch(`/api/events/${pk}/`, { method: "DELETE" });
+  return parseResponse<void>(res);
+}
+
+// ---- Event Images ----
+export async function listEventImages(eventId: number) {
+  const res = await adminFetch(`/api/events/${eventId}/images/`);
+  return parseResponse<Record<string, unknown>[]>(res);
+}
+export async function createEventImage(
+  eventId: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(`/api/events/${eventId}/images/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function updateEventImage(
+  eventId: number,
+  imgId: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(`/api/events/${eventId}/images/${imgId}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function deleteEventImage(eventId: number, imgId: number) {
+  const res = await adminFetch(`/api/events/${eventId}/images/${imgId}/`, {
+    method: "DELETE",
+  });
+  return parseResponse<void>(res);
+}
+
 // ---- Success Story Images ----
 export async function listSuccessStoryImages(storyId: number) {
   const res = await adminFetch(`/api/success-stories/${storyId}/images/`);

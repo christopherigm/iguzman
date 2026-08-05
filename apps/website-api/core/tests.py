@@ -3,12 +3,14 @@ import os
 import shutil
 import tempfile
 import zipfile
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest import mock
 from decimal import Decimal
 from io import BytesIO
+from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -26,6 +28,8 @@ from catalog.models import (
 from core import storage as storage_module
 from core.backup import BackupError, restore_archive, write_archive
 from core.models import (
+    Branch,
+    Event,
     SiteBackup,
     SuccessStory,
     SuccessStoryImage,
@@ -602,3 +606,242 @@ class TenantStorageRoutingTests(TestCase):
         ):
             with self.assertLogs("core.storage", level="ERROR"):
                 self.assertIsNone(storage_module.tenant_storage(self.system.pk))
+
+
+class EventTests(TestCase):
+    """The two things about an event that are easy to get quietly wrong.
+
+    First, **an all-day event must not retire on the morning it happens.** It is
+    stored at midnight, so any naive "has the start passed?" check drops it from
+    the site one minute into the day it runs on - the one day it most needs to be
+    there. `Event.effective_end` carries it to the end of its local day, and the
+    list endpoint approximates that in SQL with `ALL_DAY_GRACE`; both are pinned
+    here because they are two implementations of one rule and would otherwise
+    drift apart.
+
+    Second, **the location resolves across the branch**, with the event's own
+    value winning field by field - so a tenant can name a hall inside their shop
+    without detaching the event from the location that carries the coordinates.
+    """
+
+    def setUp(self):
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.branch = Branch.objects.create(
+            system=self.system,
+            name="Centro",
+            address="Av. Juárez 100",
+            latitude=Decimal("19.43260000"),
+            longitude=Decimal("-99.13320000"),
+        )
+
+    def _event(self, **kwargs):
+        kwargs.setdefault("system", self.system)
+        kwargs.setdefault("starts_at", timezone.now() + timedelta(days=3))
+        kwargs.setdefault("name", "Tasting")
+        return Event.objects.create(**kwargs)
+
+    # ── When ─────────────────────────────────────────────────────────────────
+
+    def test_all_day_event_is_not_past_on_the_day_it_runs(self):
+        today = timezone.localtime(timezone.now()).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        event = self._event(starts_at=today, is_all_day=True)
+        self.assertFalse(event.is_past)
+
+    def test_all_day_event_is_past_once_its_day_is_over(self):
+        yesterday = timezone.localtime(timezone.now()).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ) - timedelta(days=2)
+        self.assertTrue(self._event(starts_at=yesterday, is_all_day=True).is_past)
+
+    def test_a_timed_event_is_past_the_moment_it_ends(self):
+        now = timezone.now()
+        event = self._event(starts_at=now - timedelta(hours=3), ends_at=now - timedelta(minutes=1))
+        self.assertTrue(event.is_past)
+        # With no announced end, the start is the end.
+        self.assertTrue(self._event(starts_at=now - timedelta(minutes=1)).is_past)
+        self.assertFalse(self._event(starts_at=now + timedelta(minutes=1)).is_past)
+
+    def test_effective_end_uses_the_events_own_timezone(self):
+        """The whole reason the zone is stored: an all-day event ends at midnight
+        *where it happens*, not at midnight UTC.
+
+        The same stored instant is a different calendar day in each zone, so the
+        two ends are six hours apart - and an all-day event authored in Mexico
+        City (stored at its own local midnight) runs to the next local midnight,
+        which is 06:00 UTC.
+        """
+        mx_zone = ZoneInfo("America/Mexico_City")
+        local_midnight = datetime(2026, 8, 5, tzinfo=mx_zone)
+
+        mx = self._event(
+            starts_at=local_midnight, is_all_day=True, timezone="America/Mexico_City"
+        )
+        self.assertEqual(mx.effective_end, datetime(2026, 8, 6, tzinfo=mx_zone))
+
+        # The identical row read as UTC is on the *previous* calendar day there
+        # (06:00 on the 5th local is 06:00 UTC), so it retires a day earlier.
+        utc = self._event(starts_at=local_midnight, is_all_day=True, timezone="UTC")
+        self.assertEqual(
+            utc.effective_end, datetime(2026, 8, 6, tzinfo=ZoneInfo("UTC"))
+        )
+        self.assertGreater(mx.effective_end, utc.effective_end)
+
+    def test_an_unknown_stored_timezone_falls_back_instead_of_raising(self):
+        event = self._event()
+        Event.objects.filter(pk=event.pk).update(timezone="Mars/Olympus")
+        event.refresh_from_db()
+        # A row written before the validator existed must not 500 every page.
+        self.assertIsNotNone(event.effective_end)
+
+    # ── Where ────────────────────────────────────────────────────────────────
+
+    def test_location_falls_back_to_the_branch(self):
+        event = self._event(branch=self.branch)
+        self.assertEqual(event.effective_venue_name, "Centro")
+        self.assertEqual(event.effective_address, "Av. Juárez 100")
+        self.assertEqual(event.effective_latitude, Decimal("19.43260000"))
+
+    def test_the_events_own_value_wins_field_by_field(self):
+        """Overriding the venue name must not cost the branch's coordinates -
+        otherwise naming a hall inside the shop un-maps the event."""
+        event = self._event(branch=self.branch, venue_name="Salón Azul")
+        self.assertEqual(event.effective_venue_name, "Salón Azul")
+        self.assertEqual(event.effective_address, "Av. Juárez 100")
+        self.assertEqual(event.effective_longitude, Decimal("-99.13320000"))
+
+    def test_a_one_off_place_needs_no_branch(self):
+        event = self._event(venue_name="Parque México", address="Av. México s/n")
+        self.assertEqual(event.effective_venue_name, "Parque México")
+        self.assertIsNone(event.effective_latitude)
+
+
+class EventApiTests(TestCase):
+    """The list endpoint's scopes, and the tenancy every read is scoped by."""
+
+    def setUp(self):
+        # These views cache, and Django's test runner does not clear the cache
+        # between tests - so without this a payload built by one test is served
+        # to the next, which is how a passing suite hides a serializer change.
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.other = System.objects.create(site_name="Rival", host="rival.test")
+        now = timezone.now()
+        self.upcoming = Event.objects.create(
+            system=self.system, name="Next week", slug="next-week",
+            starts_at=now + timedelta(days=7),
+        )
+        self.soon = Event.objects.create(
+            system=self.system, name="Tomorrow", slug="tomorrow",
+            starts_at=now + timedelta(days=1),
+        )
+        self.past = Event.objects.create(
+            system=self.system, name="Last month", slug="last-month",
+            starts_at=now - timedelta(days=30),
+        )
+        self.hidden = Event.objects.create(
+            system=self.system, name="Draft", slug="draft",
+            starts_at=now + timedelta(days=2), enabled=False,
+        )
+        Event.objects.create(
+            system=self.other, name="Theirs", slug="theirs",
+            starts_at=now + timedelta(days=1),
+        )
+
+    def _get(self, url):
+        return self.client.get(url, HTTP_X_WEBSITE_HOST="acme.test")
+
+    def test_upcoming_is_soonest_first_and_excludes_the_past(self):
+        res = self._get("/api/events/?scope=upcoming")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual([e["slug"] for e in res.json()], ["tomorrow", "next-week"])
+
+    def test_past_is_newest_first(self):
+        res = self._get("/api/events/?scope=past")
+        self.assertEqual([e["slug"] for e in res.json()], ["last-month"])
+
+    def test_a_disabled_event_is_invisible_to_the_public(self):
+        slugs = [e["slug"] for e in self._get("/api/events/").json()]
+        self.assertNotIn("draft", slugs)
+
+    def test_another_tenants_event_never_appears(self):
+        slugs = [e["slug"] for e in self._get("/api/events/").json()]
+        self.assertNotIn("theirs", slugs)
+
+    def test_limit_is_capped_rather_than_trusted(self):
+        res = self._get("/api/events/?scope=upcoming&limit=1")
+        self.assertEqual(len(res.json()), 1)
+        # A nonsense limit is ignored, not fatal.
+        self.assertEqual(self._get("/api/events/?limit=banana").status_code, 200)
+
+    def test_by_slug_is_scoped_to_the_host(self):
+        self.assertEqual(self._get("/api/events/slug/tomorrow/").status_code, 200)
+        # The rival's event exists, but not for this host.
+        self.assertEqual(self._get("/api/events/slug/theirs/").status_code, 404)
+
+    def test_by_slug_refuses_a_disabled_event(self):
+        self.assertEqual(self._get("/api/events/slug/draft/").status_code, 404)
+
+    def test_the_payload_carries_the_resolved_location_and_is_past(self):
+        branch = Branch.objects.create(system=self.system, name="Centro", address="Av. Juárez 100")
+        Event.objects.filter(pk=self.soon.pk).update(branch=branch)
+        data = self._get("/api/events/slug/tomorrow/").json()
+        self.assertEqual(data["venue_name"], "Centro")
+        self.assertEqual(data["address"], "Av. Juárez 100")
+        # The raw column stays blank - it is what the CMS form edits.
+        self.assertIsNone(data["own_venue_name"])
+        self.assertFalse(data["is_past"])
+
+    def test_creating_an_event_without_a_date_is_refused(self):
+        user = User.objects.create_user("admin", password="pw")
+        user.profile.system = self.system
+        user.profile.is_admin = True
+        user.profile.save()
+        self.client.force_login(user)
+        res = self.client.post(
+            "/api/events/",
+            data=json.dumps({"name": "Undated", "system": self.system.pk}),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("starts_at", res.json())
+
+
+class EventPublishRoundTripTests(TestCase):
+    """`export_site` -> `apply_payload` must carry an event's dates intact.
+
+    The two instants are the only datetimes in the whole payload, so they are the
+    only fields that have to survive a JSON encode/decode by hand - and an event
+    that lands in production a day off, or with the day it was published, is
+    worse than one that did not travel at all.
+    """
+
+    def test_dates_and_copy_survive_a_round_trip(self):
+        source = System.objects.create(site_name="Acme", host="acme.test")
+        starts = timezone.now().replace(microsecond=0) + timedelta(days=10)
+        Event.objects.create(
+            system=source, name="Cata de café", slug="cata", starts_at=starts,
+            ends_at=starts + timedelta(hours=2), timezone="America/Mexico_City",
+            venue_name="Salón Azul", is_featured=True,
+        )
+
+        payload = json.loads(json.dumps(serialize_system(source), default=str))
+        payload["system"]["host"] = "acme-prod.test"
+        apply_payload(payload)
+
+        target = System.objects.get(host="acme-prod.test")
+        event = target.events.get(slug="cata")
+        self.assertEqual(event.starts_at, starts)
+        self.assertEqual(event.ends_at, starts + timedelta(hours=2))
+        self.assertEqual(event.timezone, "America/Mexico_City")
+        self.assertEqual(event.venue_name, "Salón Azul")
+        self.assertTrue(event.is_featured)
+
+    def test_an_event_with_no_date_is_skipped_not_invented(self):
+        system = System.objects.create(site_name="Acme", host="acme.test")
+        apply_payload({
+            "system": {"host": system.host},
+            "events": [{"slug": "undated", "name": "Undated"}],
+        })
+        self.assertFalse(Event.objects.filter(slug="undated").exists())

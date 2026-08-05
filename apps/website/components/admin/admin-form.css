@@ -89,6 +89,34 @@
   flex-shrink: 0;
 }
 
+/* Native <input type="datetime-local"> - not a @repo/ui component.
+   `background` + `color` + `color-scheme` travel together (see
+   apps/CLAUDE.md → "Styling - Native Form Elements"): the last is what makes
+   the browser's own calendar/clock popup - which is outside CSS reach - follow
+   the app's theme instead of the OS's. */
+.af__datetime-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  font-size: 0.875rem; /* h6 / 14px */
+  font-family: inherit;
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--foreground);
+  color-scheme: light dark;
+}
+
+.af__datetime-input:focus-visible {
+  outline: 2px solid var(--accent, #06b6d4);
+  outline-offset: 1px;
+}
+
+.af__datetime-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Enhance-options modal body - a plain <div> inside ConfirmationModal. */
 .af__enhance-options {
   display: flex;

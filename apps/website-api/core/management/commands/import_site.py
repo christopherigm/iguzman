@@ -8,7 +8,7 @@ database **including its images**, so a developer can work against a faithful co
 of what customers actually see.
 
 Unlike publish, this reuses the API's existing **public read endpoints** (system,
-success stories, highlights, product/service/menu catalog) rather than a dedicated
+success stories, highlights, events, product/service/menu catalog) rather than a dedicated
 endpoint, so it works against production today with no redeploy. Each read
 endpoint already returns absolute image URLs; this command downloads those files
 and re-saves them onto the local records' ImageFields. Menu items bring their
@@ -26,9 +26,9 @@ Usage:
     python manage.py import_site acme.com \
         --api-url https://website-api.iguzman.com.mx \
         --user admin --password secret \
-        --sections system,stories,highlights,products,services
+        --sections system,stories,highlights,events,products,services
 
-`--sections` is a comma list drawn from: system, stories, highlights, products,
+`--sections` is a comma list drawn from: system, stories, highlights, events, products,
 services, menu (default: all). Pass `--no-reset` to upsert without wiping first.
 """
 
@@ -61,13 +61,15 @@ from catalog.models import (
 from core.models import (
     CompanyHighlight,
     CompanyHighlightItem,
+    Event,
+    EventImage,
     SuccessStory,
     SuccessStoryImage,
     System,
 )
 from core.site_payload import SYSTEM_TEXT_FIELDS
 
-ALL_SECTIONS = ("system", "stories", "highlights", "products", "services", "menu")
+ALL_SECTIONS = ("system", "stories", "highlights", "events", "products", "services", "menu")
 
 # The production WAF rejects the default "Python-urllib/x.y" User-Agent with a
 # 403, so every request (JSON reads + image downloads) sends a browser-like one.
@@ -108,6 +110,24 @@ HIGHLIGHT_FIELDS = (
 HIGHLIGHT_ITEM_FIELDS = (
     "name", "en_name", "description", "en_description",
     "href", "fit", "background_color", "icon", "sort_order",
+)
+# An event's copy plus its dates and flags. The two instants are strings on the
+# wire and `DateTimeField` parses an ISO-8601 string on assignment, so they need
+# no special handling here - unlike `export_site`, which has to *format* them.
+#
+# ⚠ `venue_name` / `en_venue_name` / `address` / `latitude` / `longitude` are
+# deliberately absent, and `branch` with them. The API publishes those already
+# resolved across the event's branch (see `Event.effective_*`), so importing them
+# would copy the *branch's* address onto the event's own columns and permanently
+# detach it from the location it was held at - a lossy round-trip that looks
+# fine until the branch moves. A pulled event keeps its dates and copy and
+# re-picks its place in the local CMS, exactly as `publish-site` treats it.
+EVENT_FIELDS = (
+    "name", "en_name",
+    "short_description", "en_short_description",
+    "description", "en_description",
+    "href", "fit", "background_color",
+    "starts_at", "ends_at", "is_all_day", "timezone", "is_featured",
 )
 CATEGORY_FIELDS = ("name", "en_name", "description", "en_description")
 PRODUCT_FIELDS = (
@@ -213,6 +233,8 @@ class Command(BaseCommand):
                 self._import_stories(system)
             if "highlights" in sections:
                 self._import_highlights(system)
+            if "events" in sections:
+                self._import_events(system)
             if "products" in sections:
                 self._import_products(system)
             if "services" in sections:
@@ -331,6 +353,37 @@ class Command(BaseCommand):
                 self._attach(item, "image", it.get("image"))
                 item.save()
         self.stdout.write(f"  Imported {len(highlights)} highlights")
+
+    # ------------------------------------------------------------------ #
+    # Events
+    # ------------------------------------------------------------------ #
+
+    def _import_events(self, system):
+        if self.reset:
+            system.events.all().delete()
+        # `scope=all` (the default) rather than the upcoming/past split the
+        # public pages use: a mirror of production has to carry the archive too,
+        # and a pull that quietly dropped every finished event would look like
+        # data loss the first time someone ran it out of season.
+        events = self._get("/api/events/")
+        for e in events:
+            if not e.get("starts_at"):
+                # A date is the whole of what makes an event an event; the API
+                # cannot serve one without it, so this only guards a hand-edited
+                # response.
+                continue
+            defaults = {"system": system, **self._scalars(e, EVENT_FIELDS)}
+            event, _ = Event.objects.update_or_create(
+                slug=e.get("slug"), defaults=defaults
+            )
+            self._attach(event, "image", e.get("image"))
+            event.save()
+            event.images.all().delete()
+            for g in e.get("images") or []:
+                img = EventImage(event=event, **self._scalars(g, GALLERY_FIELDS))
+                self._attach(img, "image", g.get("image"))
+                img.save()
+        self.stdout.write(f"  Imported {len(events)} events")
 
     # ------------------------------------------------------------------ #
     # Catalog - products

@@ -167,6 +167,8 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
     ModelSpec("core.SuccessStoryImage", SECTION_SYSTEM, "story__system", parent="story"),
     ModelSpec("core.CompanyHighlight", SECTION_SYSTEM, "system", natural_key=("slug",)),
     ModelSpec("core.CompanyHighlightItem", SECTION_SYSTEM, "highlight__system", parent="highlight"),
+    ModelSpec("core.Event", SECTION_SYSTEM, "system", natural_key=("slug",)),
+    ModelSpec("core.EventImage", SECTION_SYSTEM, "event__system", parent="event"),
     ModelSpec("core.SocialPost", SECTION_SYSTEM, "system", natural_key=("created",)),
     ModelSpec("core.ContactMessage", SECTION_SYSTEM, "system", natural_key=("created",)),
     ModelSpec(

@@ -114,6 +114,7 @@ a site gets for free and must not re-implement):
 | `auth`, `account`, `admin`                   | Sign-in/up, the customer's profile, the CMS                                 |
 | `products`, `services`, `food`, `categories` | Catalog listing + detail for all three Buyable families                     |
 | `blog`, `highlights`                         | Editorial + highlight detail pages                                          |
+| **`events`**                                 | The tenant's events archive + each event's own page (see below)            |
 | `cart`, `favorites`, `orders`                | Guest + signed-in cart, hearts, checkout confirmation & history             |
 | **`contact`**                                | The tenant's branches/map, contact email, social links, and a contact form  |
 | **`pos`**                                    | The admin-only point-of-sale till (see "Capabilities a site gets for free") |
@@ -189,6 +190,7 @@ Build a site by composing the shared, already-tenant-aware components in
 | `section-hero` (`SectionHero`)                                                       | Section/page hero for a **non**-landing page        | `System.hero_text_frame` + `img_brandmark`                                   |
 | `about-intro` (`AboutIntro`)                                                         | "Story + photo" two-column intro                    | passed in resolved (`System.about` / `img_about`) + your own CTAs            |
 | `success-stories` (`SuccessStories`)                                                 | Stories slider                                      | `getSuccessStories()`                                                        |
+| `events` (`Events`)                                                                  | Dated happenings slider (upcoming, then recent past) | `getUpcomingEvents()` / `getPastEvents()`                                   |
 | `company-highlights` (`CompanyHighlights`)                                           | Highlights grid                                     | `getHighlights()`                                                            |
 | `catalog-categories` (`CatalogCategories`)                                           | Product/service/menu category tiles                 | `getProductCategories()` / `getServiceCategories()` / `getMenuCategories()`  |
 | `catalog-items` (`CatalogItems`)                                                     | Featured product/service/food cards                 | `getFeaturedProducts()` / `getFeaturedServices()` / `getFeaturedMenuItems()` |
@@ -215,6 +217,23 @@ a title and at least one still-live item. So `<Spotlight />` is safe to compose
 into any landing before the content exists — it simply stays invisible.
 `cafedealtura` uses it as a wholesale invitation, `panorganico` as a vegan-bread
 showcase; one component, two completely different sections.
+
+**`<Events />` is the third block that is safe to compose blind**, alongside
+`Spotlight` and `SuccessStories`: it renders **nothing** until the tenant has an
+event, so every landing carries it and nothing appears until the CMS has one. It
+is entirely DB-driven (`/admin/events`) and it brings two platform routes with
+it — `/events` (the archive) and `/events/<slug>` (one event) — plus a navbar
+link the layout gates on `System.event_count`. All six landings place it
+**after the catalog and before the highlights band**, so a visitor meets what
+the business sells before what it is putting on; keep new sites in that slot
+unless the page's rhythm argues otherwise.
+
+⚠ **Never re-derive "is this event over?" in a site.** The API decides it against
+each event's own timezone — and, for an all-day event, against the end of its
+local day, since one is stored at midnight and a `new Date(...) < Date.now()`
+would retire it on the morning it runs. Read `event.is_past`, and format every
+instant through the helpers in `lib/event-shared.ts`, which all take the event's
+`timezone` and none of which falls back to the browser's.
 
 **`AboutIntro` is a shared block, not a per-site section.** If a site needs the
 "short story beside a photo" intro, compose `@/components/about-intro` and pass

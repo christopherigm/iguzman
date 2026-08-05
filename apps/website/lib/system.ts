@@ -175,6 +175,16 @@ export interface System {
   menu_item_kind_counts: Record<MenuItemKind, number>;
   /** Number of enabled physical locations; drives the Contact link alongside `contact_email`. */
   branch_count: number;
+  /**
+   * Number of enabled events, **past ones included** - it says whether this site
+   * has an events surface at all, not whether anything is coming up, and it
+   * drives the navbar's Events link.
+   *
+   * Counting only the upcoming ones would take the link away the day after the
+   * last event and strand `/events` and every shared `/events/<slug>` with no
+   * way back into the site. The landing band does its own upcoming/past split.
+   */
+  event_count: number;
 }
 
 /**

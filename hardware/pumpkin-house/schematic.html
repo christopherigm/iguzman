@@ -1,0 +1,1086 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body, h1, h2, h3, p, ul, ol, figure, dl, dd, pre { margin: 0; }
+  img, svg { max-width: 100%; }
+</style>
+<title>Pumpkin House Lantern — Build Sheet</title>
+
+<style>
+  :root {
+    --ground:   #E7E8E3;
+    --surface:  #F2F3EF;
+    --sunken:   #DDDFD8;
+    --ink:      #191C1E;
+    --ink-soft: #565C58;
+    --ink-faint:#7C837D;
+    --rule:     #C4C8C0;
+    --rule-soft:#D6D9D2;
+    --ember:    #B85E18;
+    --rust:     #A5382B;
+    --verdigris:#2A757B;
+
+    --display: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --body: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+
+    --measure: 68ch;
+    --pad: clamp(1.25rem, 4vw, 3rem);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground:   #131619;
+      --surface:  #191D20;
+      --sunken:   #0E1113;
+      --ink:      #DEE0DA;
+      --ink-soft: #969C96;
+      --ink-faint:#6E756F;
+      --rule:     #2E3438;
+      --rule-soft:#232A2E;
+      --ember:    #E8913F;
+      --rust:     #DB6552;
+      --verdigris:#5DB6BB;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:   #131619;
+    --surface:  #191D20;
+    --sunken:   #0E1113;
+    --ink:      #DEE0DA;
+    --ink-soft: #969C96;
+    --ink-faint:#6E756F;
+    --rule:     #2E3438;
+    --rule-soft:#232A2E;
+    --ember:    #E8913F;
+    --rust:     #DB6552;
+    --verdigris:#5DB6BB;
+  }
+
+  :root[data-theme="light"] {
+    --ground:   #E7E8E3;
+    --surface:  #F2F3EF;
+    --sunken:   #DDDFD8;
+    --ink:      #191C1E;
+    --ink-soft: #565C58;
+    --ink-faint:#7C837D;
+    --rule:     #C4C8C0;
+    --rule-soft:#D6D9D2;
+    --ember:    #B85E18;
+    --rust:     #A5382B;
+    --verdigris:#2A757B;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: var(--pad) var(--pad) 5rem;
+  }
+
+  .col { max-width: var(--measure); }
+
+  /* ---------- title block ---------- */
+
+  .titleblock {
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    margin-bottom: 3.5rem;
+  }
+  .titleblock-main {
+    padding: clamp(1.5rem, 4vw, 2.75rem);
+    border-bottom: 1px solid var(--rule);
+  }
+  .eyebrow {
+    font-family: var(--display);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ember);
+    margin: 0 0 1.1rem;
+  }
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(1.55rem, 4.4vw, 2.5rem);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.12;
+    text-wrap: balance;
+    margin: 0 0 1rem;
+  }
+  .standfirst {
+    font-size: 1.05rem;
+    color: var(--ink-soft);
+    max-width: 60ch;
+    margin: 0;
+  }
+  .specgrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+  .spec {
+    padding: 0.9rem 1.15rem;
+    border-right: 1px solid var(--rule);
+    border-top: 1px solid var(--rule-soft);
+  }
+  .spec:last-child { border-right: 0; }
+  .spec dt {
+    font-family: var(--display);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 0.25rem;
+  }
+  .spec dd {
+    font-family: var(--display);
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+  }
+
+  /* ---------- sections ---------- */
+
+  section { margin-bottom: 4rem; }
+
+  h2 {
+    font-family: var(--display);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin: 0 0 1.5rem;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: baseline;
+    gap: 0.9rem;
+  }
+  h2 .num {
+    color: var(--ember);
+    font-variant-numeric: tabular-nums;
+  }
+  h3 {
+    font-family: var(--display);
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    margin: 2.5rem 0 0.85rem;
+  }
+  p { margin: 0 0 1.1rem; max-width: var(--measure); }
+  ul, ol { margin: 0 0 1.1rem; padding-left: 1.3rem; max-width: var(--measure); }
+  li { margin-bottom: 0.5rem; }
+
+  code {
+    font-family: var(--display);
+    font-size: 0.87em;
+    background: var(--sunken);
+    padding: 0.1em 0.36em;
+    border: 1px solid var(--rule-soft);
+    white-space: nowrap;
+  }
+  strong { font-weight: 600; }
+  .em-ember { color: var(--ember); }
+  .em-rust  { color: var(--rust); }
+
+  /* ---------- callout ---------- */
+
+  .note {
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    padding: 1.15rem 1.35rem;
+    margin: 1.75rem 0;
+    max-width: var(--measure);
+  }
+  .note .tag {
+    font-family: var(--display);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  .note.warn { border-color: var(--rust); }
+  .note.warn .tag { color: var(--rust); }
+  .note.key .tag { color: var(--ember); }
+  .note p:last-child { margin-bottom: 0; }
+
+  /* ---------- figures ---------- */
+
+  figure {
+    margin: 2.25rem 0;
+    border: 1px solid var(--rule);
+    background: var(--surface);
+  }
+  .fig-scroll { overflow-x: auto; padding: 1.5rem 1.25rem 0.5rem; }
+  figure svg { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+  figcaption {
+    font-family: var(--display);
+    font-size: 0.76rem;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    padding: 0.85rem 1.25rem;
+    border-top: 1px solid var(--rule-soft);
+  }
+  figcaption b {
+    color: var(--ink);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    margin-right: 0.55rem;
+  }
+
+  /* SVG semantic strokes */
+  .wire   { stroke: currentColor; stroke-width: 1.6; fill: none; }
+  .wire-raw    { stroke: var(--rust);      stroke-width: 2.2; fill: none; }
+  .wire-logic  { stroke: var(--verdigris); stroke-width: 1.6; fill: none; }
+  .wire-live   { stroke: var(--ember);     stroke-width: 2.2; fill: none; }
+  .part   { stroke: currentColor; stroke-width: 1.6; fill: none; }
+  .part-fill { fill: currentColor; stroke: none; }
+  .box    { stroke: currentColor; stroke-width: 1.4; fill: none; }
+  .box-dash { stroke: var(--ink-faint); stroke-width: 1.2; fill: none; stroke-dasharray: 5 4; }
+  .lbl    { font-family: var(--display); font-size: 12px; fill: currentColor; }
+  .lbl-sm { font-family: var(--display); font-size: 10.5px; fill: var(--ink-soft); }
+  .lbl-hd { font-family: var(--display); font-size: 11px; fill: currentColor; letter-spacing: 0.1em; font-weight: 600; }
+  .lbl-raw   { fill: var(--rust); }
+  .lbl-live  { fill: var(--ember); }
+  .lbl-logic { fill: var(--verdigris); }
+  .node { fill: currentColor; }
+
+  /* ---------- tables ---------- */
+
+  .tablewrap { overflow-x: auto; margin: 1.75rem 0; border: 1px solid var(--rule); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.86rem; }
+  th, td {
+    text-align: left;
+    padding: 0.6rem 0.9rem;
+    border-bottom: 1px solid var(--rule-soft);
+    vertical-align: top;
+  }
+  th {
+    font-family: var(--display);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    background: var(--sunken);
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+  td { font-family: var(--body); }
+  td.mono, th.mono { font-family: var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  .ok   { color: var(--verdigris); font-weight: 600; }
+  .bad  { color: var(--rust); font-weight: 600; }
+
+  pre {
+    font-family: var(--display);
+    font-size: 0.8rem;
+    line-height: 1.6;
+    background: var(--sunken);
+    border: 1px solid var(--rule);
+    padding: 1rem 1.15rem;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+  }
+  pre code { background: none; border: 0; padding: 0; font-size: inherit; white-space: pre; }
+
+  a { color: var(--ember); }
+  a:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--ember);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="titleblock">
+    <div class="titleblock-main">
+      <p class="eyebrow">Build sheet · rev A</p>
+      <h1>Ceramic Pumpkin House<br>Lantern</h1>
+      <p class="standfirst">Four-cell NiMH, RP2040, common-cathode RGB on direct GPIO, plus an NPN flood channel and a fixed-pitch buzzer that earns its keep through rhythm alone.</p>
+    </div>
+    <dl class="specgrid">
+      <div class="spec"><dt>Enclosure</dt><dd>⌀120 × 110 mm</dd></div>
+      <div class="spec"><dt>Pack</dt><dd>4 × NiMH AA</dd></div>
+      <div class="spec"><dt>Rail</dt><dd>4.0 – 5.6 V</dd></div>
+      <div class="spec"><dt>Draw</dt><dd>≈ 93 mA</dd></div>
+      <div class="spec"><dt>Runtime</dt><dd>≈ 20 h</dd></div>
+    </dl>
+  </header>
+
+  <!-- ============================================ -->
+  <section>
+    <h2><span class="num">01</span> How many cells</h2>
+
+    <p>More cells will not make the LEDs brighter. Brightness is set by <em>current</em> through the die; extra series voltage is simply burned off as heat in the ballast resistor. What extra cells buy you is <strong>headroom</strong> — and headroom is exactly what your green and blue dice are short of.</p>
+
+    <p>The binding constraint is the Pico: <strong>VSYS accepts 1.8 V – 5.5 V</strong>, and that ceiling is not negotiable.</p>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Pack</th><th class="mono">Off charger</th><th class="mono">Nominal</th><th class="mono">End of life</th><th>Verdict</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">3 × NiMH</td><td class="mono">4.20 V</td><td class="mono">3.60 V</td><td class="mono">3.00 V</td><td>Safe, but blue/green starve as it sags</td></tr>
+          <tr><td class="mono">4 × NiMH</td><td class="mono">5.60 V</td><td class="mono">4.80 V</td><td class="mono">4.00 V</td><td><span class="bad">5.60 V exceeds VSYS</span> — needs the diode below</td></tr>
+          <tr><td class="mono">4 × NiMH + 1N5817</td><td class="mono">5.28 V</td><td class="mono">4.50 V</td><td class="mono">3.70 V</td><td><span class="ok">Recommended</span> — in spec across the whole discharge</td></tr>
+          <tr><td class="mono">5 × NiMH</td><td class="mono">7.00 V</td><td class="mono">6.00 V</td><td class="mono">5.00 V</td><td><span class="bad">Never</span> — no diode saves this</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>So: <strong>four cells</strong>, with a Schottky diode between the pack and VSYS. The diode costs you ~0.32 V, which is precisely what pulls the fresh-off-charger 5.6 V back under the ceiling — and it also lets you plug in USB for development without the pack fighting the USB rail.</p>
+
+    <p>The trick that makes four cells worth it: the <strong>LED and buzzer loads tap the pack <em>before</em> the diode</strong>, on the raw 4.8 V rail. They get the full voltage and its headroom; only the Pico pays the 0.32 V toll.</p>
+
+    <figure>
+      <div class="fig-scroll">
+        <svg viewBox="0 0 900 340" role="img" aria-label="Power path: a four-cell NiMH pack passes through a slide switch to a node that branches two ways — directly to the raw 4.8 volt rail feeding LEDs and buzzer, and through a 1N5817 Schottky diode which drops 0.32 volts before reaching the Pico's VSYS pin, keeping it under the 5.5 volt maximum.">
+
+          <!-- battery pack -->
+          <text x="60" y="88" class="lbl-hd">4 × NiMH AA</text>
+          <text x="60" y="104" class="lbl-sm">4.0 – 5.6 V</text>
+          <g class="part">
+            <line x1="72"  y1="128" x2="72"  y2="168"/>
+            <line x1="84"  y1="138" x2="84"  y2="158"/>
+            <line x1="96"  y1="128" x2="96"  y2="168"/>
+            <line x1="108" y1="138" x2="108" y2="158"/>
+            <line x1="120" y1="128" x2="120" y2="168"/>
+            <line x1="132" y1="138" x2="132" y2="158"/>
+            <line x1="144" y1="128" x2="144" y2="168"/>
+            <line x1="156" y1="138" x2="156" y2="158"/>
+          </g>
+          <text x="62" y="122" class="lbl-sm">+</text>
+
+          <!-- pack to switch -->
+          <path class="wire-raw" d="M72,148 L72,110 L72,148 M72,148 L48,148 L48,268"/>
+          <path class="wire-raw" d="M156,148 L215,148"/>
+
+          <!-- slide switch -->
+          <circle cx="218" cy="148" r="3" class="node"/>
+          <path class="wire-raw" d="M221,146 L249,132"/>
+          <circle cx="252" cy="148" r="3" class="node"/>
+          <path class="wire-raw" d="M255,148 L340,148"/>
+          <text x="204" y="182" class="lbl-sm">SW1 slide</text>
+
+          <!-- junction node -->
+          <circle cx="340" cy="148" r="4.5" class="node"/>
+          <text x="316" y="126" class="lbl-hd lbl-raw">RAW</text>
+
+          <!-- branch down to loads -->
+          <path class="wire-raw" d="M340,148 L340,236"/>
+          <rect x="248" y="236" width="188" height="50" class="box"/>
+          <text x="262" y="258" class="lbl">LED flood + buzzer</text>
+          <text x="262" y="275" class="lbl-sm lbl-raw">full 4.0 – 5.6 V, no toll</text>
+
+          <!-- diode -->
+          <path class="wire-raw" d="M340,148 L444,148"/>
+          <g>
+            <polygon points="444,136 444,160 468,148" class="part-fill"/>
+            <line x1="468" y1="134" x2="468" y2="162" class="part"/>
+          </g>
+          <text x="424" y="116" class="lbl-hd">D1 1N5817</text>
+          <text x="440" y="186" class="lbl-sm">−0.32 V</text>
+
+          <!-- diode to pico -->
+          <path class="wire-live" d="M468,148 L648,148"/>
+          <text x="500" y="128" class="lbl-hd lbl-live">3.7 – 5.28 V</text>
+
+          <!-- pico -->
+          <rect x="648" y="98" width="180" height="188" class="box"/>
+          <text x="666" y="126" class="lbl-hd">RASPBERRY PI</text>
+          <text x="666" y="142" class="lbl-hd">PICO / PICO W</text>
+          <line x1="648" y1="156" x2="828" y2="156" class="box"/>
+          <circle cx="648" cy="148" r="4" class="node"/>
+          <text x="666" y="180" class="lbl">VSYS · pin 39</text>
+          <text x="666" y="200" class="lbl-sm">accepts 1.8 – 5.5 V</text>
+          <text x="666" y="252" class="lbl">GND · pin 38</text>
+
+          <!-- ground return -->
+          <path class="wire" d="M648,244 L610,244 L610,268 L48,268"/>
+          <circle cx="648" cy="244" r="4" class="node"/>
+          <path class="wire" d="M340,286 L340,268"/>
+          <circle cx="340" cy="268" r="4.5" class="node"/>
+
+          <!-- ground symbol -->
+          <g class="part">
+            <line x1="330" y1="300" x2="350" y2="300"/>
+            <line x1="334" y1="306" x2="346" y2="306"/>
+            <line x1="338" y1="312" x2="342" y2="312"/>
+          </g>
+          <path class="wire" d="M340,286 L340,300"/>
+
+          <!-- ceiling annotation -->
+          <line x1="500" y1="60" x2="828" y2="60" class="box-dash"/>
+          <text x="500" y="52" class="lbl-sm">VSYS absolute ceiling 5.5 V — the diode is what keeps 5.6 V below it</text>
+        </svg>
+      </div>
+      <figcaption><b>Fig 1</b> The diode is not a formality. Straight off the charger the pack sits at 5.6 V, above the VSYS maximum; the 1N5817's 0.32 V forward drop lands it at 5.28 V. The loads branch upstream of the diode so they keep the full rail.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ============================================ -->
+  <section>
+    <h2><span class="num">02</span> Why the RGB LEDs hang off GPIO</h2>
+
+    <p>This is the one place your parts combination forces a decision. A <strong>common-cathode</strong> RGB LED has three separate anodes and one shared cathode. An NPN transistor switches on the <em>low</em> side — between the load and ground — so the only place an NPN can sit is on that shared cathode. Which means it switches all three colours together. You get an on/off lamp, not a colour mixer.</p>
+
+    <p>Per-colour switching from the 4.8 V rail would need high-side switches: a PNP or P-MOSFET per channel, each with its own NPN pre-driver to level-shift 3.3 V logic against a 4.8 V emitter. Six transistors per LED. Not worth it for a decoration.</p>
+
+    <figure>
+      <div class="fig-scroll">
+        <svg viewBox="0 0 900 360" role="img" aria-label="Comparison of two wiring options for a common-cathode RGB LED. On the left, a single NPN transistor on the shared cathode switches all three colour dice together, giving only on and off. On the right, each anode is driven by its own GPIO pin through its own resistor, giving three independent PWM channels and full colour mixing.">
+
+          <!-- ============ LEFT: low-side NPN ============ -->
+          <text x="40" y="34" class="lbl-hd">OPTION A — NPN ON THE COMMON CATHODE</text>
+
+          <path class="wire-raw" d="M60,68 L300,68"/>
+          <text x="60" y="58" class="lbl-sm lbl-raw">RAW 4.8 V</text>
+
+          <!-- three branches down -->
+          <g>
+            <path class="wire-raw" d="M110,68 L110,104"/>
+            <path class="wire-raw" d="M180,68 L180,104"/>
+            <path class="wire-raw" d="M250,68 L250,104"/>
+            <circle cx="110" cy="68" r="3.5" class="node"/>
+            <circle cx="180" cy="68" r="3.5" class="node"/>
+            <circle cx="250" cy="68" r="3.5" class="node"/>
+          </g>
+
+          <!-- resistors (vertical zigzags) -->
+          <g class="part">
+            <path d="M110,104 l0,4 l-7,3 l14,6 l-14,6 l14,6 l-7,3 l0,4"/>
+            <path d="M180,104 l0,4 l-7,3 l14,6 l-14,6 l14,6 l-7,3 l0,4"/>
+            <path d="M250,104 l0,4 l-7,3 l14,6 l-14,6 l14,6 l-7,3 l0,4"/>
+          </g>
+
+          <!-- LED triangles pointing down -->
+          <g>
+            <path class="wire-raw" d="M110,140 L110,156"/>
+            <path class="wire-raw" d="M180,140 L180,156"/>
+            <path class="wire-raw" d="M250,140 L250,156"/>
+            <polygon points="99,156 121,156 110,174" class="part-fill"/>
+            <line x1="97" y1="174" x2="123" y2="174" class="part"/>
+            <polygon points="169,156 191,156 180,174" class="part-fill"/>
+            <line x1="167" y1="174" x2="193" y2="174" class="part"/>
+            <polygon points="239,156 261,156 250,174" class="part-fill"/>
+            <line x1="237" y1="174" x2="263" y2="174" class="part"/>
+          </g>
+          <text x="100" y="196" class="lbl-sm">R</text>
+          <text x="170" y="196" class="lbl-sm">G</text>
+          <text x="240" y="196" class="lbl-sm">B</text>
+
+          <!-- shared cathode bus -->
+          <path class="wire" d="M110,174 L110,212 L250,212 L250,174 M180,174 L180,212"/>
+          <circle cx="180" cy="212" r="3.5" class="node"/>
+          <text x="262" y="216" class="lbl-sm">shared cathode</text>
+
+          <!-- NPN -->
+          <path class="wire" d="M180,212 L180,244"/>
+          <circle cx="180" cy="268" r="24" class="part"/>
+          <line x1="170" y1="252" x2="170" y2="284" class="part"/>
+          <path class="wire" d="M180,244 L180,258 L170,264"/>
+          <path class="wire" d="M170,272 L180,278 L180,296"/>
+          <polygon points="176,272 180,281 172,279" class="part-fill"/>
+          <path class="wire-logic" d="M146,268 L110,268"/>
+          <text x="60" y="272" class="lbl-sm lbl-logic">GPIO</text>
+
+          <!-- gnd -->
+          <path class="wire" d="M180,296 L180,308"/>
+          <g class="part">
+            <line x1="170" y1="308" x2="190" y2="308"/>
+            <line x1="174" y1="314" x2="186" y2="314"/>
+            <line x1="178" y1="320" x2="182" y2="320"/>
+          </g>
+
+          <text x="290" y="264" class="lbl bad" fill="var(--rust)">one switch,</text>
+          <text x="290" y="282" class="lbl" fill="var(--rust)">three dice —</text>
+          <text x="290" y="300" class="lbl" fill="var(--rust)">no mixing</text>
+
+          <!-- divider -->
+          <line x1="450" y1="20" x2="450" y2="340" class="box-dash"/>
+
+          <!-- ============ RIGHT: GPIO direct ============ -->
+          <text x="490" y="34" class="lbl-hd">OPTION B — ANODES STRAIGHT OFF GPIO</text>
+
+          <!-- three GPIO sources -->
+          <text x="490" y="94" class="lbl-sm lbl-logic">GP0</text>
+          <text x="490" y="164" class="lbl-sm lbl-logic">GP1</text>
+          <text x="490" y="234" class="lbl-sm lbl-logic">GP2</text>
+          <path class="wire-logic" d="M528,90 L586,90"/>
+          <path class="wire-logic" d="M528,160 L586,160"/>
+          <path class="wire-logic" d="M528,230 L586,230"/>
+
+          <!-- resistors horizontal -->
+          <g class="part">
+            <path d="M586,90 l4,0 l3,-8 l6,16 l6,-16 l6,16 l6,-16 l3,8 l4,0"/>
+            <path d="M586,160 l4,0 l3,-8 l6,16 l6,-16 l6,16 l6,-16 l3,8 l4,0"/>
+            <path d="M586,230 l4,0 l3,-8 l6,16 l6,-16 l6,16 l6,-16 l3,8 l4,0"/>
+          </g>
+          <text x="584" y="72" class="lbl-sm">150 Ω</text>
+          <text x="584" y="142" class="lbl-sm">68 Ω</text>
+          <text x="584" y="212" class="lbl-sm">68 Ω</text>
+
+          <!-- wires to LEDs -->
+          <path class="wire-logic" d="M624,90 L664,90"/>
+          <path class="wire-logic" d="M624,160 L664,160"/>
+          <path class="wire-logic" d="M624,230 L664,230"/>
+
+          <!-- LED triangles pointing right -->
+          <g>
+            <polygon points="664,79 664,101 684,90" class="part-fill"/>
+            <line x1="684" y1="77" x2="684" y2="103" class="part"/>
+            <polygon points="664,149 664,171 684,160" class="part-fill"/>
+            <line x1="684" y1="147" x2="684" y2="173" class="part"/>
+            <polygon points="664,219 664,241 684,230" class="part-fill"/>
+            <line x1="684" y1="217" x2="684" y2="243" class="part"/>
+          </g>
+          <text x="700" y="82" class="lbl-sm">R</text>
+          <text x="700" y="152" class="lbl-sm">G</text>
+          <text x="700" y="222" class="lbl-sm">B</text>
+
+          <!-- common cathode bus to gnd -->
+          <path class="wire" d="M684,90 L740,90 L740,230 L684,230 M684,160 L740,160"/>
+          <circle cx="740" cy="160" r="3.5" class="node"/>
+          <path class="wire" d="M740,160 L790,160 L790,282"/>
+          <g class="part">
+            <line x1="780" y1="282" x2="800" y2="282"/>
+            <line x1="784" y1="288" x2="796" y2="288"/>
+            <line x1="788" y1="294" x2="792" y2="294"/>
+          </g>
+          <text x="748" y="128" class="lbl-sm">shared cathode → GND</text>
+
+          <text x="490" y="290" class="lbl" fill="var(--verdigris)">three independent PWM channels</text>
+          <text x="490" y="308" class="lbl-sm">full colour mixing, zero transistors</text>
+        </svg>
+      </div>
+      <figcaption><b>Fig 2</b> The difference is where the switch can physically sit. An NPN can only interrupt the shared cathode, collapsing three colours into one channel; driving each anode from its own GPIO keeps them separate. The RP2040 sources up to 12 mA per pin, which is enough.</figcaption>
+    </figure>
+
+    <div class="note key">
+      <span class="tag">The cost of Option B</span>
+      <p>GPIO pins output 3.3 V. Red (V<sub>f</sub> ≈ 2.0 V) has plenty of headroom; green and blue (V<sub>f</sub> ≈ 3.0–3.2 V) have almost none, so they run at maybe 6 mA and dim noticeably as the pack drains. For a jack-o'-lantern this barely matters — you want amber and ember, which is red at full with a touch of green. Blue is a garnish. Save your transistors for the white flood channel in §04, which is where the real lumens come from.</p>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <section>
+    <h2><span class="num">03</span> RGB channel — schematic and values</h2>
+
+    <p>One group, repeated four times. Each LED gets its own three resistors — never share a resistor across colours or across LEDs, or the lowest-V<sub>f</sub> die hogs the current and the others go dark.</p>
+
+    <figure>
+      <div class="fig-scroll">
+        <svg viewBox="0 0 760 300" role="img" aria-label="Detailed schematic of one common-cathode RGB LED: GP0 through a 150 ohm resistor to the red anode, GP1 through 68 ohms to green, GP2 through 68 ohms to blue, with the shared cathode returning to a Pico ground pin.">
+
+          <text x="30" y="30" class="lbl-hd">RGB GROUP 1 OF 4</text>
+
+          <!-- pico edge -->
+          <rect x="30" y="52" width="120" height="196" class="box"/>
+          <text x="46" y="76" class="lbl-hd">PICO</text>
+          <text x="46" y="112" class="lbl">GP0</text>
+          <text x="46" y="152" class="lbl">GP1</text>
+          <text x="46" y="192" class="lbl">GP2</text>
+          <text x="46" y="232" class="lbl">GND</text>
+          <text x="104" y="112" class="lbl-sm">p1</text>
+          <text x="104" y="152" class="lbl-sm">p2</text>
+          <text x="104" y="192" class="lbl-sm">p4</text>
+          <text x="104" y="232" class="lbl-sm">p3</text>
+
+          <!-- three signal wires -->
+          <path class="wire-logic" d="M150,108 L226,108"/>
+          <path class="wire-logic" d="M150,148 L226,148"/>
+          <path class="wire-logic" d="M150,188 L226,188"/>
+
+          <!-- resistors -->
+          <g class="part">
+            <path d="M226,108 l4,0 l3,-8 l6,16 l6,-16 l6,16 l6,-16 l3,8 l4,0"/>
+            <path d="M226,148 l4,0 l3,-8 l6,16 l6,-16 l6,16 l6,-16 l3,8 l4,0"/>
+            <path d="M226,188 l4,0 l3,-8 l6,16 l6,-16 l6,16 l6,-16 l3,8 l4,0"/>
+          </g>
+          <text x="222" y="90"  class="lbl-sm">R1 · 150 Ω</text>
+          <text x="222" y="130" class="lbl-sm">R2 · 68 Ω</text>
+          <text x="222" y="170" class="lbl-sm">R3 · 68 Ω</text>
+
+          <path class="wire-logic" d="M264,108 L326,108"/>
+          <path class="wire-logic" d="M264,148 L326,148"/>
+          <path class="wire-logic" d="M264,188 L326,188"/>
+
+          <!-- LED symbols -->
+          <g>
+            <polygon points="326,97 326,119 348,108" class="part-fill"/>
+            <line x1="348" y1="95" x2="348" y2="121" class="part"/>
+            <polygon points="326,137 326,159 348,148" class="part-fill"/>
+            <line x1="348" y1="135" x2="348" y2="161" class="part"/>
+            <polygon points="326,177 326,199 348,188" class="part-fill"/>
+            <line x1="348" y1="175" x2="348" y2="201" class="part"/>
+          </g>
+          <!-- emission arrows on the red die -->
+          <g class="part">
+            <line x1="332" y1="88" x2="342" y2="76"/>
+            <polygon points="342,76 336,79 340,82" class="part-fill"/>
+            <line x1="342" y1="88" x2="352" y2="76"/>
+            <polygon points="352,76 346,79 350,82" class="part-fill"/>
+          </g>
+          <text x="358" y="102" class="lbl-sm">RED   V<tspan baseline-shift="sub" font-size="8">f</tspan> 2.0 V · 8.7 mA</text>
+          <text x="358" y="142" class="lbl-sm">GRN   V<tspan baseline-shift="sub" font-size="8">f</tspan> 2.9 V · 5.9 mA</text>
+          <text x="358" y="182" class="lbl-sm">BLU   V<tspan baseline-shift="sub" font-size="8">f</tspan> 2.9 V · 5.9 mA</text>
+
+          <!-- cathode bus -->
+          <path class="wire" d="M348,108 L620,108 L620,188 L348,188 M348,148 L620,148"/>
+          <circle cx="620" cy="148" r="3.5" class="node"/>
+          <path class="wire" d="M620,148 L660,148 L660,244 L150,244"/>
+          <circle cx="150" cy="244" r="3.5" class="node"/>
+          <text x="470" y="270" class="lbl-sm">common cathode → any Pico GND pin (3, 8, 13, 18, 23, 28, 38)</text>
+        </svg>
+      </div>
+      <figcaption><b>Fig 3</b> One RGB group. Build four of these on GP0–GP11; the pin assignments are in §05. Currents shown are at nominal V<sub>f</sub> — real dice vary, and green/blue will read a few mA either side.</figcaption>
+    </figure>
+
+    <div class="note warn">
+      <span class="tag">Easy to miss</span>
+      <p>The RP2040's pads default to <strong>4 mA drive strength</strong>, not 12 mA. Left alone, your LEDs run visibly dimmer than the maths predicts and the calculated resistor values will not deliver their currents. Set the drive to 12 mA on every LED pin at startup — see §06.</p>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <section>
+    <h2><span class="num">04</span> Flood channel and buzzer — the NPN stages</h2>
+
+    <p>Both of these run off the raw pack rail, both are low-side switched, and both are what your NPNs are actually good for. The white flood is where the brightness lives: a white 5 mm die at 12 mA off 4.8 V puts out far more usable light than an RGB die scraping along on 3.3 V, and bounced off the inside of the ceramic it reads as a genuine glow rather than three visible dots.</p>
+
+    <figure>
+      <div class="fig-scroll">
+        <svg viewBox="0 0 880 420" role="img" aria-label="Two NPN low-side driver stages. Left: GP12 through a 680 ohm base resistor into a 2N2222, switching four white LEDs each with a 120 ohm resistor from the raw rail. Right: GP16 through a 1 kilohm base resistor into a BC547, switching the CYT1036 active buzzer with a 1N4148 flyback diode across it.">
+
+          <!-- ===== LEFT: white flood ===== -->
+          <text x="30" y="30" class="lbl-hd">WHITE FLOOD · 4 × 5 mm</text>
+
+          <path class="wire-raw" d="M40,66 L340,66"/>
+          <text x="40" y="56" class="lbl-sm lbl-raw">RAW 4.8 V (pre-diode)</text>
+
+          <g>
+            <path class="wire-raw" d="M70,66 L70,100"/>
+            <path class="wire-raw" d="M140,66 L140,100"/>
+            <path class="wire-raw" d="M210,66 L210,100"/>
+            <path class="wire-raw" d="M280,66 L280,100"/>
+            <circle cx="70"  cy="66" r="3.5" class="node"/>
+            <circle cx="140" cy="66" r="3.5" class="node"/>
+            <circle cx="210" cy="66" r="3.5" class="node"/>
+            <circle cx="280" cy="66" r="3.5" class="node"/>
+          </g>
+
+          <!-- vertical resistors -->
+          <g class="part">
+            <path d="M70,100  l0,4 l-8,3 l16,6 l-16,6 l16,6 l-8,3 l0,4"/>
+            <path d="M140,100 l0,4 l-8,3 l16,6 l-16,6 l16,6 l-8,3 l0,4"/>
+            <path d="M210,100 l0,4 l-8,3 l16,6 l-16,6 l16,6 l-8,3 l0,4"/>
+            <path d="M280,100 l0,4 l-8,3 l16,6 l-16,6 l16,6 l-8,3 l0,4"/>
+          </g>
+          <text x="292" y="128" class="lbl-sm">120 Ω each</text>
+
+          <!-- LEDs pointing down -->
+          <g>
+            <path class="wire-raw" d="M70,136 L70,150"/>
+            <path class="wire-raw" d="M140,136 L140,150"/>
+            <path class="wire-raw" d="M210,136 L210,150"/>
+            <path class="wire-raw" d="M280,136 L280,150"/>
+            <polygon points="59,150 81,150 70,168" class="part-fill"/>
+            <line x1="57" y1="168" x2="83" y2="168" class="part"/>
+            <polygon points="129,150 151,150 140,168" class="part-fill"/>
+            <line x1="127" y1="168" x2="153" y2="168" class="part"/>
+            <polygon points="199,150 221,150 210,168" class="part-fill"/>
+            <line x1="197" y1="168" x2="223" y2="168" class="part"/>
+            <polygon points="269,150 291,150 280,168" class="part-fill"/>
+            <line x1="267" y1="168" x2="293" y2="168" class="part"/>
+          </g>
+          <text x="292" y="164" class="lbl-sm">warm white</text>
+
+          <!-- collector bus -->
+          <path class="wire" d="M70,168 L70,206 L280,206 L280,168 M140,168 L140,206 M210,168 L210,206"/>
+          <circle cx="140" cy="206" r="3.5" class="node"/>
+          <circle cx="210" cy="206" r="3.5" class="node"/>
+          <path class="wire" d="M175,206 L175,244"/>
+          <circle cx="175" cy="206" r="3.5" class="node"/>
+
+          <!-- NPN Q1 -->
+          <circle cx="175" cy="272" r="26" class="part"/>
+          <line x1="163" y1="254" x2="163" y2="290" class="part"/>
+          <path class="wire" d="M175,246 L175,260 L163,266"/>
+          <path class="wire" d="M163,278 L175,285 L175,306"/>
+          <polygon points="170,277 175,288 166,285" class="part-fill"/>
+          <text x="208" y="268" class="lbl">Q1</text>
+          <text x="208" y="286" class="lbl-sm">2N2222 / S8050</text>
+
+          <!-- base drive -->
+          <path class="wire-logic" d="M137,272 L96,272"/>
+          <g class="part">
+            <path d="M96,272 l-4,0 l-3,-8 l-6,16 l-6,-16 l-6,16 l-6,-16 l-3,8 l-4,0"/>
+          </g>
+          <path class="wire-logic" d="M58,272 L30,272"/>
+          <text x="52" y="252" class="lbl-sm">680 Ω</text>
+          <text x="26" y="296" class="lbl-sm lbl-logic">GP12 (PWM)</text>
+
+          <!-- gnd -->
+          <path class="wire" d="M175,306 L175,340"/>
+          <g class="part">
+            <line x1="163" y1="340" x2="187" y2="340"/>
+            <line x1="167" y1="347" x2="183" y2="347"/>
+            <line x1="172" y1="354" x2="178" y2="354"/>
+          </g>
+          <text x="30" y="384" class="lbl-sm">I<tspan baseline-shift="sub" font-size="8">C</tspan> ≈ 50 mA nominal · BC547 would work but sits close to its 100 mA limit</text>
+
+          <!-- divider -->
+          <line x1="440" y1="16" x2="440" y2="400" class="box-dash"/>
+
+          <!-- ===== RIGHT: buzzer ===== -->
+          <text x="490" y="30" class="lbl-hd">BUZZER · CYT1036 ACTIVE</text>
+
+          <path class="wire-raw" d="M500,66 L800,66"/>
+          <text x="500" y="56" class="lbl-sm lbl-raw">RAW 4.8 V (pre-diode)</text>
+
+          <path class="wire-raw" d="M620,66 L620,110"/>
+          <circle cx="620" cy="66" r="3.5" class="node"/>
+
+          <!-- buzzer body -->
+          <rect x="580" y="110" width="80" height="58" class="box"/>
+          <text x="596" y="136" class="lbl">BZ1</text>
+          <text x="590" y="154" class="lbl-sm">≈2.3 kHz</text>
+          <text x="586" y="106" class="lbl-sm">+</text>
+
+          <!-- flyback diode -->
+          <path class="wire-raw" d="M740,66 L740,110"/>
+          <circle cx="740" cy="66" r="3.5" class="node"/>
+          <g>
+            <line x1="728" y1="118" x2="752" y2="118" class="part"/>
+            <polygon points="728,142 752,142 740,118" class="part-fill"/>
+          </g>
+          <path class="wire" d="M740,142 L740,192"/>
+          <text x="762" y="134" class="lbl-sm">D2</text>
+          <text x="762" y="150" class="lbl-sm">1N4148</text>
+
+          <!-- buzzer minus to collector -->
+          <path class="wire" d="M620,168 L620,192 L740,192"/>
+          <circle cx="740" cy="192" r="3.5" class="node"/>
+          <path class="wire" d="M620,192 L620,236"/>
+          <circle cx="620" cy="192" r="3.5" class="node"/>
+
+          <!-- NPN Q2 -->
+          <circle cx="620" cy="264" r="26" class="part"/>
+          <line x1="608" y1="246" x2="608" y2="282" class="part"/>
+          <path class="wire" d="M620,238 L620,252 L608,258"/>
+          <path class="wire" d="M608,270 L620,277 L620,298"/>
+          <polygon points="615,269 620,280 611,277" class="part-fill"/>
+          <text x="653" y="260" class="lbl">Q2</text>
+          <text x="653" y="278" class="lbl-sm">BC547</text>
+
+          <!-- base drive -->
+          <path class="wire-logic" d="M582,264 L541,264"/>
+          <g class="part">
+            <path d="M541,264 l-4,0 l-3,-8 l-6,16 l-6,-16 l-6,16 l-6,-16 l-3,8 l-4,0"/>
+          </g>
+          <path class="wire-logic" d="M503,264 L478,264"/>
+          <text x="500" y="244" class="lbl-sm">1 kΩ</text>
+          <text x="474" y="288" class="lbl-sm lbl-logic">GP16 (digital)</text>
+
+          <!-- gnd -->
+          <path class="wire" d="M620,298 L620,332"/>
+          <g class="part">
+            <line x1="608" y1="332" x2="632" y2="332"/>
+            <line x1="612" y1="339" x2="628" y2="339"/>
+            <line x1="617" y1="346" x2="623" y2="346"/>
+          </g>
+          <text x="474" y="384" class="lbl-sm">≈30 mA — well over the 12 mA a GPIO pin can source, hence Q2</text>
+        </svg>
+      </div>
+      <figcaption><b>Fig 4</b> Both stages switch the low side of a load hung off the raw rail. D2 is a flyback clamp: magnetic-type active buzzers contain a coil, and killing the current in one produces a reverse spike that will slowly destroy Q2 without it.</figcaption>
+    </figure>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Ref</th><th>Part</th><th class="mono">Value</th><th>Working</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">R1,4,7,10</td><td>Resistor — RGB red anode</td><td class="mono">150 Ω</td><td class="mono">(3.3 − 2.0) / 0.15 kΩ = 8.7 mA</td></tr>
+          <tr><td class="mono">R2,3,…</td><td>Resistor — RGB green &amp; blue</td><td class="mono">68 Ω</td><td class="mono">worst-case V<sub>f</sub> 2.6 V → 10.3 mA, under the 12 mA pad limit</td></tr>
+          <tr><td class="mono">R13–16</td><td>Resistor — white flood</td><td class="mono">120 Ω</td><td class="mono">fresh 19 mA · nominal 12.5 mA · flat 5.8 mA</td></tr>
+          <tr><td class="mono">R17</td><td>Base resistor — Q1</td><td class="mono">680 Ω</td><td class="mono">I<sub>B</sub> 3.7 mA at forced β = 20 for I<sub>C</sub> 77 mA</td></tr>
+          <tr><td class="mono">R18</td><td>Base resistor — Q2</td><td class="mono">1 kΩ</td><td class="mono">I<sub>B</sub> 2.5 mA — hard saturation for a 30 mA load</td></tr>
+          <tr><td class="mono">D1</td><td>Schottky — pack to VSYS</td><td class="mono">1N5817</td><td class="mono">V<sub>f</sub> ≈ 0.32 V at 150 mA</td></tr>
+          <tr><td class="mono">D2</td><td>Flyback across BZ1</td><td class="mono">1N4148</td><td class="mono">cathode to RAW</td></tr>
+          <tr><td class="mono">Q1</td><td>NPN — flood driver</td><td class="mono">2N2222</td><td class="mono">S8050 equally fine; BC547 is marginal</td></tr>
+          <tr><td class="mono">Q2</td><td>NPN — buzzer driver</td><td class="mono">BC547</td><td class="mono">any of the three works here</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <section>
+    <h2><span class="num">05</span> Pin map</h2>
+
+    <p>The RP2040 has eight PWM slices of two channels each — <strong>16 independent PWM outputs</strong>, and two GPIOs landing on the same slice <em>and</em> channel are forced to the same duty cycle. GP0–GP12 gives thirteen genuinely independent channels, which is exactly four RGB LEDs plus the flood. The buzzer sits on GP16 as a plain digital output, timed in software, so it never fights the LEDs over a shared slice frequency.</p>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th class="mono">GPIO</th><th class="mono">Pin</th><th class="mono">Slice·Ch</th><th>Function</th><th>Mode</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">GP0 / GP1 / GP2</td><td class="mono">1 / 2 / 4</td><td class="mono">0A 0B 1A</td><td>LED 1 — red / green / blue</td><td>PWM</td></tr>
+          <tr><td class="mono">GP3 / GP4 / GP5</td><td class="mono">5 / 6 / 7</td><td class="mono">1B 2A 2B</td><td>LED 2 — red / green / blue</td><td>PWM</td></tr>
+          <tr><td class="mono">GP6 / GP7 / GP8</td><td class="mono">9 / 10 / 11</td><td class="mono">3A 3B 4A</td><td>LED 3 — red / green / blue</td><td>PWM</td></tr>
+          <tr><td class="mono">GP9 / GP10 / GP11</td><td class="mono">12 / 14 / 15</td><td class="mono">4B 5A 5B</td><td>LED 4 — red / green / blue</td><td>PWM</td></tr>
+          <tr><td class="mono">GP12</td><td class="mono">16</td><td class="mono">6A</td><td>White flood — Q1 base</td><td>PWM</td></tr>
+          <tr><td class="mono">GP16</td><td class="mono">21</td><td class="mono">—</td><td>Buzzer — Q2 base</td><td>Digital out</td></tr>
+          <tr><td class="mono">GP13 / GP14 / GP15</td><td class="mono">17 / 19 / 20</td><td class="mono">6B 7A 7B</td><td>Spare independent PWM</td><td>—</td></tr>
+          <tr><td class="mono">VSYS</td><td class="mono">39</td><td class="mono">—</td><td>Cathode of D1</td><td>Power in</td></tr>
+          <tr><td class="mono">GND</td><td class="mono">38 · 3 · 8 · 13 · 18 · 23 · 28</td><td class="mono">—</td><td>Common return</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>GP0 and GP1 are the default UART0 pins. That is harmless here — the REPL runs over USB CDC on a separate interface — but if you ever want a hardware serial console, move LED 1 to the spare channels and give up the flood's independence.</p>
+  </section>
+
+  <!-- ============================================ -->
+  <section>
+    <h2><span class="num">06</span> Setting pad drive strength</h2>
+
+    <p>MicroPython's <code>Pin</code> class doesn't expose drive strength, so poke <code>PADS_BANK0</code> directly. Bits 5:4 of each pad's control register select 2 / 4 / 8 / 12 mA; the reset value is 4 mA.</p>
+
+    <pre><code>import machine
+
+PADS_BANK0 = 0x4001C000
+
+def set_drive_12ma(gpio):
+    addr = PADS_BANK0 + 0x04 + 4 * gpio
+    machine.mem32[addr] = (machine.mem32[addr] &amp; ~(0b11 &lt;&lt; 4)) | (0b11 &lt;&lt; 4)
+
+for pin in range(0, 12):      # GP0–GP11, the RGB anodes
+    set_drive_12ma(pin)</code></pre>
+
+    <p>Leave GP12 and GP16 alone — they only ever drive transistor bases through a resistor, and 4 mA is more than enough for that.</p>
+  </section>
+
+  <!-- ============================================ -->
+  <section>
+    <h2><span class="num">07</span> What the buzzer can actually do</h2>
+
+    <p>The CYT1036 is an <strong>active</strong> buzzer: it contains its own oscillator, so applying power produces one fixed pitch of roughly 2.3 kHz and nothing else. You cannot play a melody on it. Feeding it PWM does not change the note, because the note isn't yours to change.</p>
+
+    <p>What you <em>do</em> control is the gate — when the carrier is on and when it is off. And the rate at which you gate it changes what the ear hears categorically, not just gradually. This is the whole design space:</p>
+
+    <figure>
+      <div class="fig-scroll">
+        <svg viewBox="0 0 880 300" role="img" aria-label="A gate-rate axis from 1 hertz to 3 kilohertz divided into three perceptual zones: below 20 hertz the gating is heard as rhythm, between 20 and 120 hertz it fuses into timbre and roughness via amplitude-modulation sidebands, and near the 2.3 kilohertz carrier it produces intermodulation warbles.">
+
+          <text x="30" y="28" class="lbl-hd">GATE RATE → PERCEPTUAL ZONE</text>
+
+          <!-- example gate waveforms -->
+          <g class="wire-logic">
+            <path d="M60,74 L60,54 L96,54 L96,74 L146,74 L146,54 L182,54 L182,74 L232,74"/>
+          </g>
+          <g class="wire-logic">
+            <path d="M340,74 L340,54 L352,54 L352,74 L364,74 L364,54 L376,54 L376,74 L388,74 L388,54 L400,54 L400,74 L412,74 L412,54 L424,54 L424,74 L436,74 L436,54 L448,54 L448,74 L460,74 L460,54 L472,54 L472,74 L484,74"/>
+          </g>
+          <g class="wire-logic">
+            <path d="M620,74 L620,54 L625,54 L625,74 L630,74 L630,54 L635,54 L635,74 L640,74 L640,54 L645,54 L645,74 L650,74 L650,54 L655,54 L655,74 L660,74 L660,54 L665,54 L665,74 L670,74 L670,54 L675,54 L675,74 L680,74 L680,54 L685,54 L685,74 L690,74 L690,54 L695,54 L695,74 L700,74 L700,54 L705,54 L705,74 L710,74 L710,54 L715,54 L715,74 L720,74 L720,54 L725,54 L725,74 L730,74 L730,54 L735,54 L735,74 L740,74 L740,54 L745,54 L745,74 L750,74 L750,54 L755,54 L755,74 L760,74 L760,54 L765,54 L765,74 L770,74"/>
+          </g>
+
+          <!-- axis -->
+          <line x1="40" y1="130" x2="840" y2="130" class="wire"/>
+          <g class="part">
+            <line x1="40"  y1="126" x2="40"  y2="134"/>
+            <line x1="306" y1="122" x2="306" y2="138"/>
+            <line x1="572" y1="122" x2="572" y2="138"/>
+            <line x1="840" y1="126" x2="840" y2="134"/>
+          </g>
+          <text x="30"  y="152" class="lbl-sm">1 Hz</text>
+          <text x="286" y="152" class="lbl-sm">20 Hz</text>
+          <text x="550" y="152" class="lbl-sm">120 Hz</text>
+          <text x="806" y="152" class="lbl-sm">3 kHz</text>
+
+          <!-- zone bars -->
+          <rect x="40"  y="176" width="262" height="30" class="box"/>
+          <rect x="308" y="176" width="260" height="30" fill="none" stroke="var(--ember)" stroke-width="1.6"/>
+          <rect x="574" y="176" width="266" height="30" fill="none" stroke="var(--verdigris)" stroke-width="1.6"/>
+
+          <text x="54"  y="196" class="lbl">RHYTHM</text>
+          <text x="322" y="196" class="lbl lbl-live">TIMBRE · ROUGHNESS</text>
+          <text x="588" y="196" class="lbl lbl-logic">INTERMODULATION</text>
+
+          <text x="40"  y="232" class="lbl-sm">Individual pulses are</text>
+          <text x="40"  y="248" class="lbl-sm">heard separately —</text>
+          <text x="40"  y="264" class="lbl-sm">beeps, ticks, Morse,</text>
+          <text x="40"  y="280" class="lbl-sm">heartbeats.</text>
+
+          <text x="308" y="232" class="lbl-sm">Pulses fuse. AM sidebands</text>
+          <text x="308" y="248" class="lbl-sm">appear around the carrier</text>
+          <text x="308" y="264" class="lbl-sm">and it turns raspy — this is</text>
+          <text x="308" y="280" class="lbl-sm">where the crow lives.</text>
+
+          <text x="574" y="232" class="lbl-sm">Gate and carrier beat against</text>
+          <text x="574" y="248" class="lbl-sm">each other, producing sum and</text>
+          <text x="574" y="264" class="lbl-sm">difference tones. Unpredictable</text>
+          <text x="574" y="280" class="lbl-sm">per unit — but free to try.</text>
+        </svg>
+      </div>
+      <figcaption><b>Fig 5</b> The carrier is fixed at ~2.3 kHz; only the gate is yours. Crossing roughly 20 Hz, gating stops being heard as separate events and starts being heard as tone colour — which is what makes a raspy crow call possible on a one-note device.</figcaption>
+    </figure>
+
+    <h3>Effects worth building</h3>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Effect</th><th>Gate pattern</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Crow caw</strong></td>
+            <td class="mono">sweep 70 → 25 Hz over 260 ms;<br>repeat ×2, 180 ms apart</td>
+            <td>The descending gate sweep is what sells it. Two calls read as a bird; one reads as a malfunction.</td>
+          </tr>
+          <tr>
+            <td><strong>Creaking hinge</strong></td>
+            <td class="mono">ramp 8 → 40 Hz over 1.4 s</td>
+            <td>Slow start, accelerating. Pair with a door-shaped light sweep across the windows.</td>
+          </tr>
+          <tr>
+            <td><strong>Heartbeat</strong></td>
+            <td class="mono">45 ms on · 120 off ·<br>35 on · 900 rest</td>
+            <td>The most effective of the lot under a dim amber pulse. Speed it up gradually for tension.</td>
+          </tr>
+          <tr>
+            <td><strong>Cricket</strong></td>
+            <td class="mono">3 × (12 ms on, 18 off),<br>every 2.2 s</td>
+            <td>Convincing out of proportion to its simplicity. Good ambient filler between set pieces.</td>
+          </tr>
+          <tr>
+            <td><strong>Bat squeaks</strong></td>
+            <td class="mono">4–6 blips of 8–20 ms,<br>gaps 100–400 ms, randomised</td>
+            <td>Randomness is the point — anything periodic stops sounding alive.</td>
+          </tr>
+          <tr>
+            <td><strong>Clock striking twelve</strong></td>
+            <td class="mono">10 ms tick at 1 Hz, then<br>12 × 140 ms at 1.2 s</td>
+            <td>Long-form. Run it once an hour and let the ticking carry the time between.</td>
+          </tr>
+          <tr>
+            <td><strong>Spirit telegraph</strong></td>
+            <td class="mono">Morse — dot 60 ms,<br>dash 180 ms, gap 60 ms</td>
+            <td>Spell something. Flash one LED in lockstep with the buzzer and it becomes a message.</td>
+          </tr>
+          <tr>
+            <td><strong>Addams Family</strong></td>
+            <td class="mono">4 beats + 2 short snaps</td>
+            <td>The closest you get to a tune: that figure is carried entirely by rhythm, so a fixed pitch loses nothing.</td>
+          </tr>
+          <tr>
+            <td><strong>Shave and a Haircut</strong></td>
+            <td class="mono">7 beats, classic timing</td>
+            <td>Same principle. Recognisable on one note.</td>
+          </tr>
+          <tr>
+            <td><strong>Ghost swell</strong></td>
+            <td class="mono">sweep gate 400 → 1200 Hz</td>
+            <td>Intermodulation territory. Varies wildly between buzzer units — test yours, keep it if it's eerie.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note key">
+      <span class="tag">The thing that actually sells it</span>
+      <p>Drive the LEDs from the same envelope as the buzzer. A caw with a red flare on each syllable, an amber swell on every heartbeat, the flood dropping to nothing a half-second before the hinge creaks. Sound and light on separate timelines read as two cheap effects; locked together they read as one thing that's alive. This is worth more than any refinement to either channel alone.</p>
+    </div>
+
+    <p>If the fixed pitch starts to feel limiting, a passive piezo disc costs about a pound and turns pitch into a variable — real music-box melodies, pitch-bent wails, the lot. It wires to a PWM pin through a 100 Ω resistor and needs no transistor. Your spare GP13 is already sitting there.</p>
+  </section>
+
+  <!-- ============================================ -->
+  <section>
+    <h2><span class="num">08</span> Power budget</h2>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Load</th><th class="mono">Average</th><th>Assumption</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Pico W, radio deinitialised</td><td class="mono">30 mA</td><td>Non-W Pico is ~22 mA; leaving Wi-Fi up costs 50–70 mA</td></tr>
+          <tr><td>4 × RGB, amber flicker</td><td class="mono">32 mA</td><td>Red ~70 % duty, green ~30 %, blue idle</td></tr>
+          <tr><td>4 × white flood</td><td class="mono">30 mA</td><td>12.5 mA each at ~60 % PWM</td></tr>
+          <tr><td>Buzzer</td><td class="mono">0.6 mA</td><td>30 mA at ~2 % duty over an evening</td></tr>
+          <tr><td><strong>Total</strong></td><td class="mono"><strong>≈ 93 mA</strong></td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>On 1900 mAh Eneloop-class cells that's about <strong>20 hours</strong> — several nights of use. If you want more, wire a second four-cell pack in <em>parallel</em> with the first (both packs through their own diode into the same node) for roughly 40 hours at identical brightness. Parallel adds runtime; it never adds light.</p>
+
+    <div class="note warn">
+      <span class="tag">Use low-self-discharge cells</span>
+      <p>Ordinary NiMH loses 15–20 % in the first day and keeps going. Charge a standard pack in early October and it will be flat by the 31st. Eneloop-type LSD cells hold ~85 % for a year, which is the difference between a decoration that works and one you have to remember to service.</p>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <section>
+    <h2><span class="num">09</span> Build notes</h2>
+
+    <h3>Optics</h3>
+    <ul>
+      <li><strong>Diffuse everything.</strong> Sand the LED domes flat with 400-grit until they're milky. This is the single highest-value thing you can do — it converts four visible point sources into a glow, and costs nothing.</li>
+      <li><strong>Aim at the ceramic, not out the windows.</strong> Point the LEDs at the inner wall and let the bounce light the openings. Direct line-of-sight to a die looks like an LED; bounced light looks like a fire.</li>
+      <li>Put the white flood low and the RGB group higher, so colour washes down over a warm base.</li>
+      <li>A ping-pong ball or a twist of baking parchment over the flood works as well as any purpose-made diffuser.</li>
+    </ul>
+
+    <h3>Mechanical</h3>
+    <ul>
+      <li>Slide switch in the pack's <strong>negative</strong> lead, mounted where you can reach it through the base.</li>
+      <li>Don't glue the battery holder in. A 4×AA holder is roughly 60 × 58 × 17 mm and needs to come out.</li>
+      <li>Total dissipation is under 1 W across the whole build, so heat inside the sealed ceramic is a non-issue.</li>
+      <li>Ceramic is an insulator, but any grit or moisture inside isn't — sleeve the pack terminals.</li>
+    </ul>
+
+    <h3>Two alternatives to the power switch</h3>
+    <ul>
+      <li>Tying <strong>3V3_EN (pin 37)</strong> to GND shuts the Pico's regulator down cleanly and drops it to microamps — but the flood and buzzer hang off the raw rail, so they stay live. Only useful alongside a rail switch, not instead of one.</li>
+      <li>A PIR sensor on a spare GPIO with the Pico in <code>lightsleep</code> gets you motion-triggered effects and stretches the pack across a whole season. Worth doing on version two.</li>
+    </ul>
+
+    <h3>Before powering up</h3>
+    <ol>
+      <li>Confirm your RGB LEDs really are common cathode: with a multimeter in diode mode, the longest leg should be the one that lights all three dice when the <em>black</em> probe touches it.</li>
+      <li>Check D1's orientation — banded end toward the Pico. Backwards means the Pico simply never powers up; that's the safe failure.</li>
+      <li>Measure VSYS with the pack fresh off the charger before trusting anything to it. You are looking for a number below 5.5 V.</li>
+      <li>Bring the flood channel up on its own first. If Q1 gets warm, your base resistor is too small or a flood resistor is missing.</li>
+    </ol>
+  </section>
+
+</div>
+</body>
+</html>
