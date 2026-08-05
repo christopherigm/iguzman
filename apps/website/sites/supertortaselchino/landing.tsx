@@ -82,6 +82,10 @@ export async function Landing() {
 
       <Intro />
 
+      <Container paddingX={10}>
+        <Events />
+      </Container>
+
       <SectionBand
         background={itemsBg}
         topDivider={system?.catalog_top_divider}
@@ -100,12 +104,6 @@ export async function Landing() {
 
       <Container paddingX={10}>
         <CatalogCategories />
-      </Container>
-
-      {/* After the catalog, before the highlights band. Renders nothing until
-          the tenant adds an event. */}
-      <Container paddingX={10}>
-        <Events />
       </Container>
 
       <SectionBand

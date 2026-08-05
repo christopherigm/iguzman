@@ -69,6 +69,10 @@ export async function Landing() {
 
       <Intro />
 
+      <Container paddingX={10}>
+        <Events />
+      </Container>
+
       <SectionBand
         background={highlightsBg}
         topDivider={system?.highlights_top_divider}
@@ -92,13 +96,6 @@ export async function Landing() {
           <CatalogItems />
         </Container>
       </SectionBand>
-
-      {/* After the catalog, before the stories: a demo day or a training session
-          is what a prospect books *after* seeing the fleet. Renders nothing
-          until the tenant has an event. */}
-      <Container paddingX={10}>
-        <Events />
-      </Container>
 
       <Container paddingX={10}>
         <SuccessStories />

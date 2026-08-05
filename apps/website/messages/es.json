@@ -354,9 +354,13 @@
     "startsAtLabel": "Comienza",
     "endsAtLabel": "Termina",
     "allDayLabel": "Evento de todo el día",
+    "timezoneLabel": "Zona horaria",
     "branchLabel": "Sucursal",
     "branchNone": "Otro lugar",
     "venueLabel": "Lugar",
+    "addressLabel": "Dirección",
+    "latitudeLabel": "Latitud",
+    "longitudeLabel": "Longitud",
     "locationHint": "Elige una de tus sucursales o escribe un lugar puntual abajo. Un campo vacío usa el de la sucursal.",
     "errorNoDate": "El evento necesita una fecha de inicio.",
     "errorEndBeforeStart": "El final no puede ser anterior al inicio."

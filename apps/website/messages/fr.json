@@ -354,9 +354,13 @@
     "startsAtLabel": "Début",
     "endsAtLabel": "Fin",
     "allDayLabel": "Événement d'une journée",
+    "timezoneLabel": "Fuseau horaire",
     "branchLabel": "Emplacement",
     "branchNone": "Un autre lieu",
     "venueLabel": "Lieu",
+    "addressLabel": "Adresse",
+    "latitudeLabel": "Latitude",
+    "longitudeLabel": "Longitude",
     "locationHint": "Choisissez l'un de vos emplacements ou indiquez un lieu ponctuel ci-dessous. Un champ laissé vide reprend celui de l'emplacement.",
     "errorNoDate": "Un événement doit avoir une date de début.",
     "errorEndBeforeStart": "La fin ne peut pas précéder le début."

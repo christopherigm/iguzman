@@ -57,7 +57,6 @@ export default function AdminEventFormPage({ params }: Props) {
   const isNew = id === "new";
   const t = useTranslations("Admin");
   const tEvents = useTranslations("Events");
-  const tc = useTranslations("Contact");
   const router = useRouter();
 
   const [values, setValues] = useState<Record<string, unknown>>({
@@ -312,7 +311,7 @@ export default function AdminEventFormPage({ params }: Props) {
     { key: "is_all_day", label: tEvents("allDayLabel"), type: "boolean" },
     {
       key: "timezone",
-      label: tc("timezone"),
+      label: tEvents("timezoneLabel"),
       type: "select",
       options: timezoneOptions(),
     },
@@ -325,9 +324,9 @@ export default function AdminEventFormPage({ params }: Props) {
     },
     { key: "venue_name", label: tEvents("venueLabel") },
     { key: "en_venue_name", label: `${tEvents("venueLabel")} (EN)` },
-    { key: "address", label: tc("address"), type: "textarea" },
-    { key: "latitude", label: tc("latitude"), type: "number" },
-    { key: "longitude", label: tc("longitude"), type: "number" },
+    { key: "address", label: tEvents("addressLabel"), type: "textarea" },
+    { key: "latitude", label: tEvents("latitudeLabel"), type: "number" },
+    { key: "longitude", label: tEvents("longitudeLabel"), type: "number" },
     { key: "href", label: t("link") ?? "Link", type: "url" },
     {
       key: "short_description",

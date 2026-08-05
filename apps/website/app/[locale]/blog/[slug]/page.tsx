@@ -150,7 +150,7 @@ export default async function SuccessStoryDetailPage({ params }: Props) {
             {shortDescription}
           </Typography>
         )}
-        <Grid container spacing={4} marginTop={32}>
+        <Grid container spacing={3} marginTop={32}>
           {galleryImages.length > 0 && (
             <Grid size={{ xs: 12, sm: 6 }}>
               <ItemGalleryClient

@@ -59,7 +59,7 @@ export function AboutIntro({
   return (
     <Container paddingX={10}>
       <Box paddingY={64}>
-        <Grid container spacing={4} alignItems="center">
+        <Grid container spacing={3} alignItems="center">
           <Grid size={{ xs: 12, sm: 6 }}>
             <Box display="flex" flexDirection="column" gap="20px">
               <Typography

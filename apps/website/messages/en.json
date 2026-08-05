@@ -354,9 +354,13 @@
     "startsAtLabel": "Starts",
     "endsAtLabel": "Ends",
     "allDayLabel": "All-day event",
+    "timezoneLabel": "Timezone",
     "branchLabel": "Location",
     "branchNone": "Another place",
     "venueLabel": "Venue",
+    "addressLabel": "Address",
+    "latitudeLabel": "Latitude",
+    "longitudeLabel": "Longitude",
     "locationHint": "Pick one of your locations, or name a one-off place below. A field left blank uses the location's own.",
     "errorNoDate": "An event needs a start date.",
     "errorEndBeforeStart": "The end must not be before the start."

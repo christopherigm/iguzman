@@ -192,7 +192,7 @@ export default async function EventDetailPage({ params }: Props) {
           </Typography>
         )}
 
-        <Grid container spacing={4} marginTop={32}>
+        <Grid container spacing={2} marginTop={32}>
           {galleryImages.length > 0 && (
             <Grid size={{ xs: 12, sm: 6 }}>
               <ItemGalleryClient

@@ -75,6 +75,10 @@ export async function Landing() {
 
       <Intro />
 
+      <Container paddingX={10}>
+        <Events />
+      </Container>
+
       <SectionBand
         background={itemsBg}
         topDivider={system?.catalog_top_divider}
@@ -87,13 +91,6 @@ export async function Landing() {
 
       <Container paddingX={10}>
         <CatalogCategories />
-      </Container>
-
-      {/* After the catalog, before the highlights band: a baking workshop or a
-          market stall belongs after the breads themselves. Renders nothing until
-          the baker adds one. */}
-      <Container paddingX={10}>
-        <Events />
       </Container>
 
       <SectionBand

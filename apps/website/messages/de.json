@@ -354,9 +354,13 @@
     "startsAtLabel": "Beginnt",
     "endsAtLabel": "Endet",
     "allDayLabel": "Ganztägige Veranstaltung",
+    "timezoneLabel": "Zeitzone",
     "branchLabel": "Standort",
     "branchNone": "Ein anderer Ort",
     "venueLabel": "Veranstaltungsort",
+    "addressLabel": "Adresse",
+    "latitudeLabel": "Breitengrad",
+    "longitudeLabel": "Längengrad",
     "locationHint": "Wählen Sie einen Ihrer Standorte oder geben Sie unten einen einmaligen Ort an. Ein leeres Feld übernimmt den Wert des Standorts.",
     "errorNoDate": "Eine Veranstaltung braucht ein Startdatum.",
     "errorEndBeforeStart": "Das Ende darf nicht vor dem Beginn liegen."

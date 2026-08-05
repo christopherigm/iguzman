@@ -90,14 +90,11 @@ export async function Landing() {
       </SectionBand>
 
       <Container paddingX={10}>
-        <CatalogCategories />
+        <Events />
       </Container>
 
-      {/* After the catalog, before the highlights band: a cupping or a tasting
-          reads as an invitation once the coffees themselves are on screen.
-          Renders nothing until the family adds one. */}
       <Container paddingX={10}>
-        <Events />
+        <CatalogCategories />
       </Container>
 
       <SectionBand
