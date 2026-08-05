@@ -3,10 +3,23 @@ pihole:
 
   image:
     repository: pihole/pihole
-    tag: "2026.04.1"
+    tag: "2026.07.2"
 
+  # Web UI / API password, read from a Secret created OUTSIDE Helm so the
+  # credential never lands in git. Create it once (see README "Update Admin
+  # Password"); `helm uninstall` will not remove it.
+  #
+  # With `existingSecret` set, the chart skips rendering its own Secret and the
+  # deployment references this one directly. `adminPassword` is then ignored -
+  # do not re-add it here.
+  #
+  # NOTE: `admin.password` is NOT a chart value. `admin` accepts only
+  # enabled/existingSecret/passwordKey/annotations, so a stray `admin.password`
+  # is silently discarded and the subchart default ("admin") takes effect.
   admin:
-    password: "changeme"
+    enabled: true
+    existingSecret: "pihole-admin"
+    passwordKey: "password"
 
   persistentVolumeClaim:
     enabled: true
@@ -35,10 +48,43 @@ pihole:
   serviceDhcp:
     enabled: false
 
+  # Upstream resolvers. These MUST be top-level chart values - the deployment
+  # template reads `.Values.DNS1`/`.Values.DNS2` and renders them into
+  # FTLCONF_dns_upstreams. Nesting them under `extraEnvVars` only sets literal
+  # DNS1/DNS2 container env vars, which Pi-hole v6 ignores (they are v5 names),
+  # leaving the subchart defaults 8.8.8.8;8.8.4.4 in force.
+  DNS1: "1.1.1.1"
+  DNS2: "8.8.8.8"
+
   extraEnvVars:
     TZ: "America/New_York"
-    DNS1: "1.1.1.1"
-    DNS2: "8.8.8.8"
+
+  # Rendered as FTLCONF_<key>. Settings pinned here become read-only in the
+  # web UI / API, so keep this list to things that should never drift.
+  ftl:
+    # Do not forward a truncated client subnet to upstream resolvers.
+    dns_EDNS0ECS: "false"
+
+  # DO NOT enable `adlists` against an existing PVC.
+  #
+  # Setting it makes the chart mount a *legacy* Pi-hole v5 file at
+  # /etc/pihole/adlists.list. Pi-hole v6 treats that as a migration source on
+  # every pod start, re-importing it and forcing a full gravity rebuild each
+  # time (observed: two "Gravity database has been updated" reloads within four
+  # minutes of a restart). It is also mounted read-only, so the container's
+  # chown/chmod of it fails on every boot.
+  #
+  # The gravity database on the PVC is the source of truth. Manage blocklists
+  # through the web UI / API instead - see README "Blocklists". Uncomment this
+  # ONLY to seed a genuinely fresh, empty PVC, then comment it out again.
+  #
+  # adlists:
+  #   - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
+  #   - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/pro.txt
+  #   - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/native.samsung.txt
+  #   - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/native.amazon.txt
+  #   - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/native.apple.txt
+  #   - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/native.winoffice.txt
 
   resources:
     limits:

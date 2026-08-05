@@ -25,28 +25,198 @@ helm install pihole pihole/ -n pihole --create-namespace -f pihole/values.yaml
 
 Edit `values.yaml` before installing:
 
-| Parameter                           | Description     | Default         |
-| ----------------------------------- | --------------- | --------------- |
-| `pihole.admin.password`             | Web UI password | `changeme`      |
-| `pihole.serviceDns.loadBalancerIP`  | DNS service IP  | `192.168.0.200` |
-| `pihole.serviceWeb.loadBalancerIP`  | Web UI IP       | `192.168.0.200` |
-| `pihole.persistentVolumeClaim.size` | PVC size        | `2Gi`           |
+| Parameter                           | Description        | Default            |
+| ----------------------------------- | ------------------ | ------------------ |
+| `pihole.admin.existingSecret`       | Secret holding the Web UI password | `pihole-admin` |
+| `pihole.DNS1` / `pihole.DNS2`       | Upstream resolvers | `1.1.1.1`/`8.8.8.8` |
+| `pihole.serviceDns.loadBalancerIP`  | DNS service IP     | `192.168.0.200`    |
+| `pihole.serviceWeb.loadBalancerIP`  | Web UI IP          | `192.168.0.200`    |
+| `pihole.persistentVolumeClaim.size` | PVC size           | `2Gi`              |
 
 ### Update Admin Password
 
-Before install, generate a secure password hash:
-
-```bash
-echo -n "YourPassword" | md5sum
-```
-
-Then update `values.yaml`:
+The password lives in a Secret created **outside Helm**, so it is never
+committed. `values.yaml` only names it:
 
 ```yaml
 pihole:
   admin:
-    password: "YOUR_PASSWORD_HASH"
+    enabled: true
+    existingSecret: "pihole-admin"
+    passwordKey: "password"
 ```
+
+Create or rotate it with:
+
+```bash
+kubectl create secret generic pihole-admin -n pihole \
+  --from-literal=password="$(openssl rand -base64 24 | tr -d '/+=' | head -c 28)" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# read it back when you need to log in
+kubectl get secret pihole-admin -n pihole -o jsonpath='{.data.password}' | base64 -d; echo
+
+# rotating requires a pod restart to re-read the env var
+kubectl rollout restart deploy/pihole -n pihole
+```
+
+Pi-hole v6 takes a **plaintext** password — it is passed as
+`FTLCONF_webserver_api_password`. Do not hash it; older docs suggesting
+`md5sum` describe Pi-hole v5 and do not apply.
+
+Notes:
+
+- With `existingSecret` set, the chart does **not** render its own Secret and
+  `adminPassword` is ignored. Do not set both.
+- The Secret is not owned by the release, so `helm uninstall` leaves it in
+  place. Delete it explicitly if you are tearing the namespace down.
+- If `admin.enabled` is true with neither `existingSecret` nor `adminPassword`,
+  the chart generates `randAlphaNum 40` **at render time** — meaning a new
+  password on every `helm upgrade`. Always set one of the two.
+
+> ⚠️ `admin.password` is not a chart value. The `admin` map accepts only
+> `enabled`, `existingSecret`, `passwordKey` and `annotations`; anything else
+> there is silently discarded and the chart falls back to its default of
+> `admin`.
+
+### Upstream DNS
+
+`DNS1`/`DNS2` must be **top-level** values under `pihole:`. The deployment
+template reads them to build `FTLCONF_dns_upstreams`. Putting them under
+`extraEnvVars` instead only sets literal `DNS1`/`DNS2` container env vars,
+which Pi-hole v6 ignores (those are v5 names), silently leaving the subchart
+defaults `8.8.8.8;8.8.4.4` in place.
+
+### Blocklists
+
+`pihole.adlists` is imported **only on first start against an empty PVC**. On a
+running instance, add lists through the web UI or the API and then rebuild
+gravity — but keep `values.yaml` in sync so a rebuild from scratch reproduces
+the same blocking.
+
+Current stack (~640k unique domains):
+
+| List | Domains | Purpose |
+| ---- | ------- | ------- |
+| StevenBlack `hosts` | 99,276 | Base ads + malware |
+| Hagezi `adblock/pro.txt` | 218,748 | Main ad/tracker list (ABP format) |
+| Hagezi `tif.medium.txt` | 387,953 | Threat intel: malware, phishing, scam |
+| Hagezi `popupads.txt` | 54,245 | Pop-up / interstitial ad networks |
+| Hagezi `native.samsung.txt` | 201 | Samsung TV ACR + ad telemetry |
+| Hagezi `native.amazon.txt` | 360 | Amazon device/voice telemetry |
+| Hagezi `native.apple.txt` | 107 | Apple telemetry |
+| Hagezi `native.winoffice.txt` | 390 | Windows/Office telemetry |
+
+Plus `native.tiktok.txt` (427). Exact deny rules for single-endpoint telemetry:
+`ichnaea.netflix.com`, `telemetry.vercel.com`, `aet.spotify.com`.
+
+Two further regex rules:
+
+```
+(\.|^)logs\.[a-z0-9]+\.datadoghq\.com$     # Datadog log intake (all regions)
+\.(zip|mov|cfd|sbs|rest|bond|cyou|icu|quest|buzz|monster|lol|cam|gq|ml|cf|tk|
+   ga|work|fit|beauty|hair|skin|makeup|mom|autos|boats|yachts|motorcycles|
+   homes|christmas|top|kim|stream|download|gdn|racing|win|bid|loan|date|faith|
+   science|party|review|trade|accountant|cricket|men)$
+```
+
+The TLD rule replaces the unusable `spam-tlds.txt`. It is a **curated** set of
+49 high-abuse TLDs, verified to match zero of the 300 domains this network
+actually resolves. `.xyz`, `.link`, `.live`, `.app`, `.dev` and `.io` are
+deliberately excluded — they have substantial legitimate use.
+
+### DNSSEC
+
+Enabled (`dns.dnssec = true`). Verified: signed responses carry the `ad` flag,
+and `dnssec-failed.org` correctly returns `SERVFAIL`. If a domain ever fails to
+resolve with `SERVFAIL` while working on another resolver, a broken DNSSEC
+chain at that domain is the first thing to check.
+
+**Rejected after testing against real traffic:**
+
+| List | Why not |
+| ---- | ------- |
+| `pro.plus.txt` | Blocks `graph.instagram.com` — breaks Instagram |
+| `spam-tlds.txt` | uBlock/AdGuard syntax (`\|\|*.tld^$denyallow=`) — Pi-hole parses **0** entries from it. TLD blocking needs a regex rule instead |
+| `urlshortener.txt` | No impact on current traffic, but breaks bit.ly / t.co links later |
+| `doh-vpn-proxy-bypass.txt` | Also blocks commercial VPN endpoints |
+| OISD Big | Missed the Samsung/Amazon trackers `pro.txt` caught, despite being 2× the size |
+
+Hagezi serves these in ABP (`||domain^`) format under `adblock/`, which Pi-hole
+v6 parses natively. The old `hosts/` paths in that repo now 404.
+
+Regex deny rules are held only in the running config (not in `values.yaml`),
+covering Samsung ad/ACR endpoints that no public list includes:
+
+```
+(\.|^)samsungqbe\.com$      (\.|^)samsungacr\.com$
+(\.|^)samsungnyc\.com$      (\.|^)samsungads\.com$
+(\.|^)samsungosp\.com$      ^web\.diagnostic\.networking\.aws\.dev$
+```
+
+Deliberately **not** blocked globally: `api.amazonalexa.com` (breaks Alexa) and
+`spectrum.s3.amazonaws.com` (Spectrum TV app).
+
+### Client groups
+
+> ⚠️ Groups, client assignments and domain rules live in the **database on the
+> PVC**, not in `values.yaml`. A rebuild from an empty PVC loses them — only
+> `adlists` is reproduced from the chart. Re-create the following by hand.
+
+| Group | id | Members | Purpose |
+| ----- | -- | ------- | ------- |
+| Default | 0 | everything else | All adlists + global rules |
+| Samsung Soundbar | 3 | `192.168.0.23` | Group 0 **plus** the rule below |
+
+Group-scoped rule (group 3 only — the soundbar polls this ~2,300×/hour):
+
+```
+(\.|^)samsungcloudsolution\.(com|net)$
+```
+
+Earlier `Work` (1) and `Chris` (2) groups were removed deliberately. Their
+clients `192.168.0.25` and `192.168.0.28` now fall into Default and are filtered
+like everything else — intended, not a regression.
+
+### Amazon Echo
+
+Echo telemetry is largely handled by `native.amazon.txt`. Verified blocked:
+`device-metrics-us{,-2}.amazon.com`, `*.minerva.devices.a2z.com`,
+`unagi-na.amazon.com`, `cdn.prod.adskit.juno.alexa.amazon.dev`,
+`trck.ahs.*.advertising.amazon.dev`, plus this regex for the Echo's network
+diagnostics telemetry (`v6.`/`https.`/`aga.`/`cloudfront.` variants):
+
+```
+(\.|^)diagnostic\.networking\.aws\.dev$
+```
+
+**Never block these** — they carry the "Alexa…" voice path and device state.
+Blocking the captive-portal names in particular makes an Echo believe it is
+offline:
+
+```
+api.amazonalexa.com          alexa.na.gateway.devices.a2z.com
+api.eu.amazonalexa.com       arcus-uswest.amazon.com
+api.fe.amazonalexa.com       msh.amazon.com
+acsechocaptiveportal.com     dss-na.amazon.com
+mmechocaptiveportal.com      prod.amcs-tachyon.com
+api.amazon.com               dcape-na.amazon.com
+```
+
+Voice recordings travel over the *same* endpoints as voice commands, so DNS
+cannot separate them. Control that in the Alexa app under **Alexa Privacy**
+(disable recording retention and human review), not here.
+
+**A client listed only in a non-default group gets no filtering at all**, because
+every adlist is attached to group 0. That is why the soundbar is assigned to
+`[0, 3]` and not `[3]` — assigning it to `[3]` alone would silently exempt it
+from all ~640k domains. Any new group needs either its own lists or membership
+in group 0 alongside it.
+
+DNS blocking stops a device *reaching* a host; it does not stop it *asking*. The
+soundbar's query rate is unchanged (~0.7/sec) — Pi-hole now answers `0.0.0.0`
+instead of the real address. To actually silence the traffic, take the device
+off Wi-Fi (fine if it is used over HDMI/optical).
 
 ## Pull Latest MoJo2600 Updates
 
@@ -98,7 +268,11 @@ kubectl scale deployment pihole-pihole -n pihole --replicas=1
 After installation:
 
 1. **URL**: `http://192.168.0.200/admin` or `https://192.168.0.200/admin`
-2. **Password**: Set in `values.yaml` (default: `changeme`)
+2. **Password**: stored in the `pihole-admin` Secret, not in `values.yaml`:
+
+   ```bash
+   kubectl get secret pihole-admin -n pihole -o jsonpath='{.data.password}' | base64 -d; echo
+   ```
 
 ## Router DNS Configuration
 
