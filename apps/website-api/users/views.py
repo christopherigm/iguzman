@@ -151,6 +151,23 @@ def _send_password_reset_email(user, token_obj):
     )
 
 
+def _session_tokens(user):
+    """The token pair that signs `user` in, returned alongside a verification.
+
+    Redeeming the emailed link proves the recipient controls that address, which
+    is at least as strong as the password login it used to send them off to - so
+    verifying activates the account *and* opens the session, instead of dropping
+    a customer who has just proved who they are onto a sign-in form.
+
+    The caller's frontend route handler is the only consumer: it moves these into
+    the HTTP-only cookies and strips them from the body, so the browser never
+    sees a token (see `verifyEmailRoute` in @repo/auth). Nothing here may be
+    reached without a valid, unexpired verification token.
+    """
+    token = CustomTokenObtainPairSerializer.get_token(user)
+    return {"access": str(token.access_token), "refresh": str(token)}
+
+
 def _send_verification_email(user, token_obj):
     expiry_hours = getattr(settings, 'EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS', 24)
     _send_branded_email(
@@ -209,18 +226,29 @@ class VerifyEmailView(APIView):
             return Response({"detail": "Link expired. Please request a new verification email."}, status=status.HTTP_400_BAD_REQUEST)
 
         user = token_obj.user
-        if user.is_active:
-            token_obj.delete()
-            return Response({"detail": "Account is already verified."}, status=status.HTTP_200_OK)
-
-        user.is_active = True
-        user.save(update_fields=["is_active"])
+        already_verified = user.is_active
+        if not already_verified:
+            user.is_active = True
+            user.save(update_fields=["is_active"])
         token_obj.delete()
         # Verifying the link is what proves this account holds the address, so it
         # is the moment any guest order Stripe recorded against that address may
         # become theirs. See orders/claims.py.
         claim_guest_orders(user, profile_system(user))
-        return Response({"detail": "Email verified successfully. You can now log in."}, status=status.HTTP_200_OK)
+        # The already-verified case gets a session too: the token was still valid
+        # and unexpired (checked above), so it proves exactly what the activating
+        # click proves. Only the wording differs.
+        return Response(
+            {
+                "detail": (
+                    "Account is already verified. You are now signed in."
+                    if already_verified
+                    else "Email verified successfully. You are now signed in."
+                ),
+                **_session_tokens(user),
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class ResendVerificationView(APIView):

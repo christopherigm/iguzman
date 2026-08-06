@@ -1,9 +1,12 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.test import TestCase
+from django.utils import timezone
+from rest_framework_simplejwt.tokens import AccessToken
 
 from catalog.models import (
     Ingredient,
@@ -14,7 +17,7 @@ from catalog.models import (
 )
 from core.models import System
 
-from .models import CartItem
+from .models import CartItem, EmailVerificationToken, UserProfile
 
 
 class CartConstraintTests(TestCase):
@@ -500,3 +503,82 @@ class GuestMergeTests(TestCase):
     def test_anonymous_cannot_merge(self):
         self.client.logout()
         self.assertIn(self._merge().status_code, (401, 403))
+
+
+class VerifyEmailSignsInTests(TestCase):
+    """Redeeming a verification link also opens the session.
+
+    The link proves the recipient controls the address, which is what the
+    password login it used to send them off to proves - so the response carries
+    a token pair and the frontend route handler turns it into cookies. What
+    these pin down is the boundary: which requests get a pair and which must
+    never, since a pair handed out on an expired or unknown token would make the
+    verification email a permanent skeleton key.
+    """
+
+    def setUp(self):
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+
+    def _user(self, email="new@acme.test", active=False):
+        user = User.objects.create_user(
+            username=f"{self.system.id}:{email}",
+            email=email,
+            password="x",
+            is_active=active,
+        )
+        UserProfile.objects.update_or_create(user=user, defaults={"system": self.system})
+        return user
+
+    def _verify(self, token):
+        return self.client.get(f"/api/auth/verify-email/{token}/")
+
+    def test_verifying_activates_and_returns_a_usable_token_pair(self):
+        user = self._user()
+        token = EmailVerificationToken.objects.create(user=user)
+
+        response = self._verify(token.token)
+
+        self.assertEqual(response.status_code, 200)
+        # The pair has to identify *this* user - a well-formed string is not
+        # enough, since the frontend hands it straight to the cookies.
+        self.assertEqual(
+            AccessToken(response.data["access"])["user_id"], str(user.id)
+        )
+        self.assertIn("refresh", response.data)
+        user.refresh_from_db()
+        self.assertTrue(user.is_active)
+        self.assertFalse(EmailVerificationToken.objects.filter(pk=token.pk).exists())
+
+    def test_already_verified_account_is_signed_in_too(self):
+        user = self._user(active=True)
+        token = EmailVerificationToken.objects.create(user=user)
+
+        response = self._verify(token.token)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("already verified", response.data["detail"].lower())
+        self.assertIn("access", response.data)
+
+    def test_expired_token_signs_nobody_in_even_on_an_active_account(self):
+        """Expiry is checked before the already-verified branch, and must stay so.
+
+        With the order reversed - which is how four of the five APIs were
+        written - an active user's long-dead token would fall into the
+        already-verified branch and be handed a session.
+        """
+        user = self._user(active=True)
+        token = EmailVerificationToken.objects.create(user=user)
+        EmailVerificationToken.objects.filter(pk=token.pk).update(
+            created_at=timezone.now() - timedelta(days=30)
+        )
+
+        response = self._verify(token.token)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertNotIn("access", response.data)
+
+    def test_unknown_token_signs_nobody_in(self):
+        response = self._verify("00000000-0000-0000-0000-000000000000")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertNotIn("access", response.data)

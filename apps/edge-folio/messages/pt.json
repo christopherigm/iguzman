@@ -72,6 +72,7 @@
     "loading": "Verificando seu e-mail…",
     "successTitle": "E-mail verificado",
     "successDetail": "Seu e-mail foi verificado. Você já pode entrar.",
+    "successSignedIn": "Seu e-mail foi verificado e você já está conectado.",
     "redirecting": "Redirecionando em {seconds}…",
     "redirectProgress": "Progresso do redirecionamento",
     "expiredTitle": "Link expirado",

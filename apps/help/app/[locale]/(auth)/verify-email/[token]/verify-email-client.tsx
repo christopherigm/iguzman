@@ -16,11 +16,15 @@ export function VerifyEmailClient({ token }: { token: string }) {
   const t = useTranslations("VerifyEmailPage");
   const router = useRouter();
   const [status, setStatus] = useState<Status>("loading");
+  const [signedIn, setSignedIn] = useState(false);
   const [countdown, setCountdown] = useState(REDIRECT_SECONDS);
 
   useEffect(() => {
     verifyEmail(token)
-      .then(() => setStatus("success"))
+      .then((result) => {
+        setSignedIn(result.signedIn);
+        setStatus("success");
+      })
       .catch((err) => {
         if (err instanceof ApiError) {
           const detail = String(
@@ -33,7 +37,19 @@ export function VerifyEmailClient({ token }: { token: string }) {
           setStatus("invalid");
         }
       });
+    // Keyed on the token alone, and it must stay that way: the token is
+    // single-use, so a re-run would ask an API that has already deleted it and
+    // turn a just-verified account into an "invalid link" screen. That is why
+    // the `router.refresh()` below is its own effect rather than a line in this
+    // `.then()` - it would have dragged `router` into these deps.
   }, [token]);
+
+  // Re-run the server components against the session cookie the route handler
+  // just wrote, rather than waiting out the countdown, so the navbar switches to
+  // the account menu while the user is still reading this card.
+  useEffect(() => {
+    if (signedIn) router.refresh();
+  }, [signedIn, router]);
 
   useEffect(() => {
     if (status !== "success") return;
@@ -88,7 +104,10 @@ export function VerifyEmailClient({ token }: { token: string }) {
           >
             <Typography variant="h5">{t("successTitle")}</Typography>
             <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-              {t("successDetail")}
+              {/* Say out loud that they are now signed in. A magic link that
+                  silently opens a session is how a forwarded link signs the
+                  wrong person in without either of them noticing. */}
+              {signedIn ? t("successSignedIn") : t("successDetail")}
             </Typography>
             <Typography
               variant="caption"

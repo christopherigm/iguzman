@@ -129,6 +129,7 @@
     "loading": "E-Mail wird verifiziert…",
     "successTitle": "E-Mail verifiziert",
     "successDetail": "Deine E-Mail wurde verifiziert. Du kannst dich jetzt anmelden.",
+    "successSignedIn": "Deine E-Mail wurde verifiziert und du bist jetzt angemeldet.",
     "redirecting": "Weiterleitung in {seconds}…",
     "redirectProgress": "Weiterleitungsfortschritt",
     "expiredTitle": "Link abgelaufen",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@repo/i18n/navigation";
 import { Button } from "@repo/ui/core-elements/button";
@@ -9,11 +9,30 @@ import { Toast } from "@repo/ui/core-elements/toast";
 import type { IconButtonSize } from "@repo/ui/core-elements/icon-button";
 import type { ButtonSize, ButtonKind } from "@repo/ui/core-elements/button";
 import { useGuestState } from "@/hooks/use-guest-cart";
+import type { MenuItemIngredient } from "@/lib/catalog";
+import { customizableIngredients } from "@/lib/menu-selection";
 import {
   addGuestCartLine,
   findGuestCartLine,
   removeGuestCartLine,
 } from "@/lib/guest-cart";
+import { MenuCustomizeModal } from "./menu-customize-modal";
+
+/**
+ * Everything the add-to-cart step needs to ask a customer how they want a dish
+ * before it goes in the cart. Passed only for a `food` item that has add-ons;
+ * without it (or with none) the button posts the base line as it always did.
+ */
+export interface AddToCartCustomization {
+  /** The dish's name, already resolved to the reader's locale. */
+  name: string;
+  /** The item's own list price - the modal adds the selection's up-charge to it. */
+  price: string;
+  currency: string;
+  /** The item's live ingredients (disabled rows already dropped by the caller). */
+  ingredients: MenuItemIngredient[];
+  locale: string;
+}
 
 interface AddToCartButtonProps {
   /**
@@ -57,6 +76,12 @@ interface AddToCartButtonProps {
   /** Full-width CTA behaviour for the detail pages' action row. */
   flex?: string;
   minWidth?: number;
+  /**
+   * Turns the add half into "ask, then add" for a configurable dish: the click
+   * opens `MenuCustomizeModal` instead of posting the defaults. Ignored in the
+   * remove state, and ignored when the dish has no customer-facing add-ons.
+   */
+  customize?: AddToCartCustomization;
 }
 
 /** What the last click produced, and so which toast to show. */
@@ -104,10 +129,12 @@ export function AddToCartButton({
   stopPropagation = false,
   flex,
   minWidth,
+  customize,
 }: AddToCartButtonProps) {
   const t = useTranslations("ItemDetail");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [customizing, setCustomizing] = useState(false);
   // `id` increments per click so the Toast remounts (and its timer restarts) on
   // a rapid second add, rather than the first one's timer expiring mid-animation.
   const [toast, setToast] = useState<{
@@ -127,6 +154,14 @@ export function AddToCartButton({
   const guestLine = findGuestCartLine(guest, cartKind, id);
   const inCart = isLoggedIn ? cartLineId !== null : guestLine !== -1;
 
+  // A dish whose add-ons are all internal (kitchen-only) has nothing to ask
+  // about, so it keeps the straight-to-cart click.
+  const hasAddOns = useMemo(
+    () => customizableIngredients(customize?.ingredients ?? []).length > 0,
+    [customize?.ingredients],
+  );
+  const asksFirst = kind === "food" && !inCart && hasAddOns;
+
   const label = inCart ? t("removeFromCart") : t("addToCart");
   const icon = inCart
     ? "/icons/remove-from-cart.svg"
@@ -136,6 +171,13 @@ export function AddToCartButton({
     if (stopPropagation) {
       e.preventDefault();
       e.stopPropagation();
+    }
+
+    // A configurable dish is asked about rather than assumed; the modal owns the
+    // write from here and reports back through `handleCustomizeResult`.
+    if (asksFirst) {
+      setCustomizing(true);
+      return;
     }
 
     if (!isLoggedIn) {
@@ -160,16 +202,16 @@ export function AddToCartButton({
         const res = inCart
           ? await fetch(`/api/auth/cart/${cartLineId}`, { method: "DELETE" })
           : await fetch("/api/auth/cart", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              // Food posts the base line: kind `menu_item` with no ingredient
-              // changes.
-              body: JSON.stringify(
-                kind === "food"
-                  ? { kind: "menu_item", id, customization: [], quantity: 1 }
-                  : { kind, id },
-              ),
-            });
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            // Food posts the base line: kind `menu_item` with no ingredient
+            // changes.
+            body: JSON.stringify(
+              kind === "food"
+                ? { kind: "menu_item", id, customization: [], quantity: 1 }
+                : { kind, id },
+            ),
+          });
 
         if (!res.ok) {
           showToast(inCart ? "removeFailed" : "addFailed");
@@ -182,6 +224,14 @@ export function AddToCartButton({
         showToast(inCart ? "removeFailed" : "addFailed");
       }
     });
+  };
+
+  // The modal wrote the line (or failed to); the toast and the re-read of the
+  // server's cart state stay here, where every other outcome is reported.
+  const handleCustomizeResult = (ok: boolean) => {
+    setCustomizing(false);
+    showToast(ok ? "added" : "addFailed");
+    if (ok && isLoggedIn) router.refresh();
   };
 
   return (
@@ -206,6 +256,20 @@ export function AddToCartButton({
           minWidth={minWidth}
           disabled={(disabled && !inCart) || isPending}
           onClick={handleClick}
+        />
+      )}
+
+      {customizing && customize && (
+        <MenuCustomizeModal
+          menuItemId={id}
+          name={customize.name}
+          basePrice={customize.price}
+          currency={customize.currency}
+          ingredients={customize.ingredients}
+          isLoggedIn={isLoggedIn}
+          locale={customize.locale}
+          onCancel={() => setCustomizing(false)}
+          onResult={handleCustomizeResult}
         />
       )}
 

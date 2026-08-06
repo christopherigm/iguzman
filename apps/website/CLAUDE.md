@@ -239,6 +239,43 @@ quantity}` and nothing else. Everything displayable comes back
   there is no profile to take the tenant from, so Django falls back to the host.
   An _owned_ order stays 404 to anyone but its owner.
 
+## Customising a dish - one picker, three surfaces
+
+A menu item's add-ons are rendered by **`components/menu-ingredient-picker.tsx`**
+and by nothing else. Three places ask the same question of the same data, and
+each one is a thin shell around that component:
+
+| Surface           | Shell                                          | Selection lives in            |
+| ----------------- | ---------------------------------------------- | ----------------------------- |
+| Item detail page  | `menu-item-customizer.tsx`                     | `MenuCustomizationProvider`   |
+| Catalog card      | `menu-customize-modal.tsx` (a `ConfirmationModal`) | local state              |
+| POS till          | `pos/_components/pos-customizer-modal.tsx`     | local state                   |
+
+- **The picker is fully controlled and owns no state**, because the detail page's
+  nutrition label has to mirror the customer's selection from a different grid
+  row - so the selection is lifted into the context there, while the two modals
+  keep it locally.
+- **The arithmetic is `lib/menu-selection.ts`, shared for the same reason.**
+  A dish configured at the counter and the same dish configured on the site must
+  never quote different numbers. None of it is authoritative: the server
+  re-prices every selection in `price_for_selection`.
+- **POS differs only by `size="lg"`**, which grows the hit targets for a finger
+  over a counter. Don't fork the markup to change the till's look - the three
+  copies this replaced had already drifted (only the detail page showed the
+  ingredient's photo and explained the free-portion allowance).
+- ⚠ **A food card's add-to-cart icon opens the modal; it does not post the base
+  line.** It used to, which silently chose the defaults for a customer who may
+  have wanted the dish without onions, and gave no hint the dish was
+  configurable at all. A dish with no customer-facing add-ons still adds in one
+  click, and the **remove** state is unchanged - a click on a dish already in
+  the cart deletes the line, with no modal.
+- **`enabledIngredients` lives in `lib/menu-selection.ts`, not beside the detail
+  page's components** - the card's customiser is a client component and cannot
+  import from a server one. A disabled row is an admin's "not right now" and
+  reaches no customer-facing surface. ⚠ The API does **not** filter it: the
+  nested `ingredients` on `MenuItemSerializer` carry every row, and
+  `price_for_selection` prices a disabled one at its `default_units`.
+
 ## POS - the counter-sale till (`/pos`)
 
 `app/[locale]/pos/` is an **admin-only** point-of-sale screen: a store associate

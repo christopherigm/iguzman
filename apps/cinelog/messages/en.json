@@ -34,6 +34,7 @@
     "loading": "Verifying your email…",
     "successTitle": "Email Verified",
     "successDetail": "Your email has been verified. You can now sign in.",
+    "successSignedIn": "Your email has been verified and you are now signed in.",
     "redirecting": "Redirecting in {seconds}…",
     "redirectProgress": "Redirect progress",
     "expiredTitle": "Link Expired",

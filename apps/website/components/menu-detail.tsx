@@ -6,11 +6,12 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { ShareButton } from "@repo/ui/core-elements/share-button";
 import { getSession } from "@repo/auth/session";
-import type { MenuItemDetail, MenuItemIngredient } from "@/lib/catalog";
+import type { MenuItemDetail } from "@/lib/catalog";
 import { isFavorite } from "@/lib/favorites";
 import { toShareDescription } from "@/lib/metadata";
 import { discountPercent } from "@/lib/price";
 import { nutritionRows } from "@/lib/nutrition";
+import { enabledIngredients } from "@/lib/menu-selection";
 import { menuItemHref } from "@/lib/menu-kinds";
 import { MenuItemCustomizer } from "./menu-item-customizer";
 import { FavoriteButton } from "./favorite-button";
@@ -25,14 +26,6 @@ interface MenuDetailProps {
 }
 
 /**
- * The ingredients a customer may actually see: the disabled ones are an admin's
- * hidden/paused rows and never reach the customiser, nutrition label, or cart.
- */
-export function enabledIngredients(item: MenuItemDetail): MenuItemIngredient[] {
-  return item.ingredients.filter((i) => i.enabled);
-}
-
-/**
  * Whether the nutrition-label card should render for this item: the admin
  * toggle is on *and* at least one enabled ingredient carries enough data to
  * chart. The detail page uses this to decide whether to reserve a grid row.
@@ -40,7 +33,7 @@ export function enabledIngredients(item: MenuItemDetail): MenuItemIngredient[] {
 export function menuItemShowsNutrition(item: MenuItemDetail): boolean {
   return (
     item.show_nutrition_label &&
-    nutritionRows(enabledIngredients(item)).length > 0
+    nutritionRows(enabledIngredients(item.ingredients)).length > 0
   );
 }
 
@@ -247,7 +240,7 @@ export async function MenuDetailPanel({ item, locale }: MenuDetailProps) {
             comparePrice={item.compare_price}
             discount={discount}
             currency={item.currency}
-            ingredients={enabledIngredients(item)}
+            ingredients={enabledIngredients(item.ingredients)}
             isAvailable={item.is_available}
             isLoggedIn={session !== null}
             locale={locale}
@@ -331,7 +324,7 @@ export async function MenuDetailNutrition({ item, locale }: MenuDetailProps) {
   return (
     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
       <NutritionLabel
-        ingredients={enabledIngredients(item)}
+        ingredients={enabledIngredients(item.ingredients)}
         locale={locale}
         portions={item.portions}
       />

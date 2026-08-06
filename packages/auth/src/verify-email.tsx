@@ -13,6 +13,13 @@ import { verifyEmail, ApiError } from "./client";
  * The page a verification email links to: redeems the token on mount, then
  * counts down and sends the user home. Text comes from the app's own
  * `VerifyEmailPage` namespace.
+ *
+ * Redeeming the link also **signs the user in** - the API returns a token pair
+ * with the verification and the route handler puts it in the cookies (see
+ * `verifyEmailRoute`). So this lands them home authenticated rather than on a
+ * sign-in form for an address they just proved they own. `signedIn` is what the
+ * handler reports; an API that does not mint tokens leaves it false and the old
+ * "you can now sign in" copy is shown instead.
  */
 
 type Status = "loading" | "success" | "expired" | "invalid";
@@ -23,11 +30,15 @@ export function VerifyEmail({ token }: { token: string }) {
   const t = useTranslations("VerifyEmailPage");
   const router = useRouter();
   const [status, setStatus] = useState<Status>("loading");
+  const [signedIn, setSignedIn] = useState(false);
   const [countdown, setCountdown] = useState(REDIRECT_SECONDS);
 
   useEffect(() => {
     verifyEmail(token)
-      .then(() => setStatus("success"))
+      .then((result) => {
+        setSignedIn(result.signedIn);
+        setStatus("success");
+      })
       .catch((err) => {
         if (err instanceof ApiError) {
           const detail = String(
@@ -40,7 +51,21 @@ export function VerifyEmail({ token }: { token: string }) {
           setStatus("invalid");
         }
       });
+    // Keyed on the token alone, and it must stay that way: the token is
+    // single-use, so a re-run would ask an API that has already deleted it and
+    // turn a just-verified account into an "invalid link" screen. That is why
+    // the `router.refresh()` below is its own effect rather than a line in this
+    // `.then()` - it would have dragged `router` into these deps.
   }, [token]);
+
+  // Re-run the server components against the session cookie the route handler
+  // just wrote, rather than waiting out the countdown: the navbar switches to
+  // the account menu while the user is still reading this card, and anything
+  // watching for a session to appear - website's <GuestMerge />, which folds a
+  // guest cart into the account - gets to run now instead of after the redirect.
+  useEffect(() => {
+    if (signedIn) router.refresh();
+  }, [signedIn, router]);
 
   useEffect(() => {
     if (status !== "success") return;
@@ -96,7 +121,10 @@ export function VerifyEmail({ token }: { token: string }) {
           >
             <Typography variant="h5">{t("successTitle")}</Typography>
             <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-              {t("successDetail")}
+              {/* Say out loud that they are now signed in. A magic link that
+                  silently opens a session is how a forwarded link signs the
+                  wrong person in without either of them noticing. */}
+              {signedIn ? t("successSignedIn") : t("successDetail")}
             </Typography>
             <Typography
               variant="caption"

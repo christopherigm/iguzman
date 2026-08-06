@@ -4,15 +4,15 @@ import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { ShareButton } from "@repo/ui/core-elements/share-button";
 import { AddToCartButton } from "./add-to-cart-button";
+import type { AddToCartCustomization } from "./add-to-cart-button";
 import { FavoriteButton } from "./favorite-button";
 
 interface BuyableCardActionsProps {
   /**
-   * A `food` item's card add-to-cart adds the base line - the dish with its
-   * default ingredients at the "from" price - so a customer can order the
-   * standard version without opening the customiser (the detail page is still
-   * where ingredients are added/removed). Its favorite and its cart line are
-   * both keyed `menu_item`, the kind those APIs know it by.
+   * A `food` item's card add-to-cart opens the customiser modal when the dish
+   * has add-ons (see `customize`), and posts the base line when it has none.
+   * Its favorite and its cart line are both keyed `menu_item`, the kind those
+   * APIs know it by.
    */
   kind: "product" | "service" | "food";
   /** The catalog item's id. */
@@ -40,6 +40,12 @@ interface BuyableCardActionsProps {
   cartLineId: number | null;
   /** The card's item is out of stock - the add button is offered disabled. */
   inStock: boolean;
+  /**
+   * A `food` card's add-ons, so adding from the grid asks how the customer wants
+   * the dish instead of quietly choosing the defaults for them. Absent on
+   * products and services, which have nothing to configure.
+   */
+  customize?: AddToCartCustomization;
 }
 
 /**
@@ -59,6 +65,7 @@ export function BuyableCardActions({
   isLoggedIn,
   cartLineId,
   inStock,
+  customize,
 }: BuyableCardActionsProps) {
   const t = useTranslations("ItemDetail");
 
@@ -89,6 +96,7 @@ export function BuyableCardActions({
         disabled={!inStock}
         size="sm"
         stopPropagation
+        customize={customize}
       />
     </Box>
   );

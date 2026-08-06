@@ -24,6 +24,7 @@
     "loading": "Verificando tu correo…",
     "successTitle": "Correo verificado",
     "successDetail": "Tu correo ha sido verificado. Ya puedes iniciar sesión.",
+    "successSignedIn": "Tu correo ha sido verificado y ya iniciaste sesión.",
     "redirecting": "Redirigiendo en {seconds}…",
     "redirectProgress": "Progreso de redirección",
     "expiredTitle": "Enlace expirado",

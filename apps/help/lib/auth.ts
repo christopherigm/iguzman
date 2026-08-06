@@ -88,12 +88,20 @@ export async function signUp(payload: {
   }
 }
 
-export async function verifyEmail(token: string): Promise<void> {
+/**
+ * Redeem a verification link.
+ *
+ * `signedIn` reports whether the route handler also opened a session from it.
+ * It is the handler's answer, not the browser's - the tokens themselves never
+ * reach this side.
+ */
+export async function verifyEmail(
+  token: string,
+): Promise<{ signedIn: boolean }> {
   const res = await fetch(`/api/auth/verify-email/${token}`);
-  if (!res.ok) {
-    const data: Record<string, unknown> = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, data);
-  }
+  const data: Record<string, unknown> = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(res.status, data);
+  return { signedIn: data.signed_in === true };
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {

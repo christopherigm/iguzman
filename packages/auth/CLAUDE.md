@@ -138,7 +138,7 @@ job-search section both ask on mount, and that used to be two round-trips.
 ## Route handlers: shared by re-export
 
 A `route.ts` has to live inside an app's `app/` tree, so what gets shared is the
-handler function. The five that are identical everywhere are bound in one line:
+handler function. The six that are identical everywhere are bound in one line:
 
 ```ts
 // app/api/auth/logout/route.ts
@@ -146,9 +146,38 @@ export { logoutRoute as POST } from "@repo/auth/route-handlers";
 ```
 
 `logoutRoute`, `changePasswordRoute`, `listPasskeyCredentialsRoute`,
-`deletePasskeyCredentialRoute`, `uploadProfilePictureRoute`. The rest stay in their
-apps because they genuinely differ - website injects `system_id` from the request
-host, edge-folio carries extra profile fields.
+`deletePasskeyCredentialRoute`, `uploadProfilePictureRoute`, `verifyEmailRoute`.
+The rest stay in their apps because they genuinely differ - website injects
+`system_id` from the request host, edge-folio carries extra profile fields.
+
+## Verifying an email signs the user in
+
+Redeeming a verification link proves the recipient controls that address, which
+is at least as strong as the password login the old flow then sent them off to.
+So every API's `VerifyEmailView` returns a token pair with the verification, and
+`verifyEmailRoute` moves it into the cookies: the user lands home **signed in**
+instead of on a sign-in form for an account they have just proved is theirs.
+
+- **The tokens are stripped from the body**, never handed to the browser. The
+  response carries `signed_in: true|false` and nothing else about the session -
+  the same invariant as login. `VerifyEmail` renders `successSignedIn` instead of
+  `successDetail` when it is true, because a link that silently opens a session
+  is how a forwarded email signs the wrong person in unnoticed.
+- **`signed_in: false` is the graceful path**, not an error: an API that does not
+  mint tokens here yields it and the screen keeps its old "you can now sign in"
+  copy. Binding the handler ahead of the backend is safe.
+- ⚠ **Check the token's expiry _before_ the `is_active` branch.** Four of the five
+  APIs used to answer "already verified" first, which was harmless while the
+  response was only a message - but that branch now opens a session, and an
+  expired token must never do that. All five now expire first.
+- **`VerifyEmail` calls `router.refresh()` the moment it learns it is signed in**,
+  not at the end of the countdown, so the navbar updates while the card is still
+  on screen and anything watching for a session to appear gets to run - website's
+  `<GuestMerge />` folds the visitor's guest cart into the new account there.
+- ⚠ **The effect that redeems the token is keyed on `[token]` alone.** The token is
+  single-use; any re-run asks an API that has already deleted it and turns a
+  just-verified account into an "invalid link" screen. That is why the refresh is
+  a separate effect - inlining it would have pulled `router` into those deps.
 
 ## Adding an app
 

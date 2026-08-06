@@ -110,8 +110,17 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [dismiss, okCallback, okDisabled]);
 
-  // Close when clicking the overlay directly (not the panel)
+  // Close when clicking the overlay directly (not the panel).
+  //
+  // The `stopPropagation` is what keeps every click *inside* the dialog inside
+  // it. The modal is portaled into <body>, but React dispatches events along the
+  // React tree rather than the DOM one, so a click on Cancel still bubbles up to
+  // whatever component rendered the modal. On a catalog card that ancestor is
+  // the card's own <Link>, and dismissing the dialog navigated to the item's
+  // detail page - the OK button, the overlay and any interactive child leaked
+  // the same way. A dialog is modal; nothing behind it should hear its clicks.
   const handleOverlayClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (e.target === e.currentTarget) dismiss();
   };
 

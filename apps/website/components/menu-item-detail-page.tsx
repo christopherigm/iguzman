@@ -25,8 +25,8 @@ import {
   MenuDetailAllergens,
   MenuDetailNutrition,
   MenuDetailQuestion,
-  enabledIngredients,
 } from "@/components/menu-detail";
+import { enabledIngredients } from "@/lib/menu-selection";
 import { MenuCustomizationProvider } from "@/components/menu-customization-context";
 
 /**
@@ -189,7 +189,7 @@ export async function MenuItemDetailPage({
             cell (or null), so absent cards leave no gap. The customiser and the
             nutrition label both read the shared customization context, so both
             sit inside the provider. */}
-        <MenuCustomizationProvider ingredients={enabledIngredients(item)}>
+        <MenuCustomizationProvider ingredients={enabledIngredients(item.ingredients)}>
           <Grid container spacing={2}>
             {/* xs: variants above the gallery. sm+: variants move into the
                 customize column, so this cell hides and the gallery leads. */}

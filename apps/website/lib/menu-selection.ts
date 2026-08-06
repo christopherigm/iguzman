@@ -76,6 +76,20 @@ export type SelectionQuantities = Record<number, number>;
 export type SelectionOptions = Record<number, number>;
 
 /**
+ * The ingredients that are live on the item at all.
+ *
+ * A disabled row is an admin's "not right now" - it stays on the menu item so
+ * the recipe is not lost, but no customer-facing surface may show it. Lives here
+ * rather than beside the detail page's components because the card's customiser
+ * is a client component and cannot import from a server one.
+ */
+export function enabledIngredients(
+  ingredients: MenuItemIngredient[],
+): MenuItemIngredient[] {
+  return ingredients.filter((ing) => ing.enabled);
+}
+
+/**
  * The ingredients a customer may actually configure.
  *
  * Internal ingredients are kitchen-only recipe components: hidden from every

@@ -9,6 +9,7 @@ import { Badge } from "@repo/ui/core-elements/badge";
 import { toShareDescription } from "@/lib/share";
 import { menuItemHref } from "@/lib/menu-kinds";
 import { formatPrice, discountPercent } from "@/lib/price";
+import { enabledIngredients } from "@/lib/menu-selection";
 import { BuyableCardActions } from "./buyable-card-actions";
 import { AdminEditButton } from "./admin-edit-button";
 import type { BuyableItem } from "./buyable-card";
@@ -359,6 +360,19 @@ export function BuyableCardView({
             isLoggedIn={isLoggedIn}
             cartLineId={cartLineId}
             inStock={inStock}
+            // Only a food card can be configured, and only its live ingredients
+            // are offered - a disabled row is an admin's "not right now".
+            customize={
+              item.kind === "food"
+                ? {
+                    name,
+                    price: effectivePrice,
+                    currency: data.currency,
+                    ingredients: enabledIngredients(item.data.ingredients),
+                    locale,
+                  }
+                : undefined
+            }
           />
         </Box>
       </Box>
