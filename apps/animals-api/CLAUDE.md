@@ -949,6 +949,63 @@ Nine rules:
   place's coordinates *and every sighting filed at it*, for every caller, so it
   is a disclosure decision for whoever reviews the contribution.
 
+### Reading it back: `/api/contributions/` (`core/my_contributions.py`)
+
+The other direction of the three endpoints above, and a later, **wider** grant: a
+contributor may now list, correct and withdraw what they filed. `apps/animals`'
+"My contributions" page is the only consumer.
+
+```
+GET              /api/contributions/                 IsContributor, own rows only
+GET/PATCH/DELETE /api/contributions/<type>/<pk>/     <type> = sightings|species|locations
+```
+
+Seven rules:
+
+- ⚠ **Nothing here is cached, and that is why it is a separate view rather than
+  a `?mine=true` on the public lists.** Every cached payload in this project is
+  keyed by the query params and the resolved disabled-visibility and by
+  **nothing about the caller**, so a per-user response written into one of those
+  namespaces would be replayed to the next reader asking the same question - the
+  `Location.hide_precise_location` trap. The alternative would have needed its
+  own namespace or no caching at all; this is the separate uncached view.
+- ⚠ **Ownership is the queryset, not a check after it.** Every read and write
+  here is filtered by `created_by=request.user` *before* the row is looked up, so
+  another account's pk answers **404**, never 403 - whether a given id exists is
+  not that caller's business. `is_contribution` is deliberately **not** part of
+  the filter: a row is one of this account's contributions because this account
+  filed it, and an administrator who tidied the flag off should not thereby make
+  it unreachable to the person who submitted it.
+- ⚠ **A PATCH un-publishes.** `ContributionUpdateSerializer.update` sets
+  `enabled=False` unconditionally, so correcting a contribution an administrator
+  has already published takes it **off** the public site until the edit is
+  reviewed. That is the whole safety argument for allowing edits at all - an
+  unreviewed change never reaches a reader - and the frontend warns before saving
+  and reports the resulting status afterwards.
+- ⚠ **`was_published` is what makes that state legible**, and it is the reason
+  the column exists (`core.models.was_published_field`, latched in each model's
+  `save()`). "Filed, never reviewed" and "was live, its author edited it" are
+  both `enabled=False` and mean opposite things to the person who filed them, so
+  the payload publishes a derived `contribution_status` of `pending` /
+  `published` / `in_review`.
+- **The edit serializers are siblings of the create ones**, which are siblings of
+  the CMS ones - never subclasses, for the reason at the top of this section. The
+  slug is deliberately **not** re-derived from a changed name: a published
+  record's URL may be linked from anywhere.
+- **`photos` on an edit is a diff, and the list *is* the gallery afterwards.**
+  `[{id}, {image}, {id}]` - a stored row left out is deleted, a bare `image` is
+  created, and `sort_order` is the array index, so re-ordering and changing the
+  cover cost no extra endpoints and re-upload nothing. `photo_rows()` is
+  overridden on the sighting serializer so the diff sees photographs only: its
+  gallery is one table that also holds clips, and a re-order would otherwise
+  delete the contributor's own video.
+- **The merged list is assembled in Python**, capped per type at
+  `MAX_CONTRIBUTIONS_SCAN`. Three tables with no common ancestor means no
+  queryset spans them, and a `Contribution` join table would be a migration of
+  the whole feature for a list one person reads. The models are reached by
+  **label** (`apps.get_model`, `import_string`), like `core/backup.py`'s
+  `MODEL_SPECS`, because `core` is imported *by* `catalog` and `journal`.
+
 ### The credit line: derived from `created_by`, never stored
 
 `Sighting` carries **two** author fields, and only one of them is written:
@@ -1048,6 +1105,12 @@ POST   /api/catalog/species/contribute/             IsContributor
 POST   /api/catalog/locations/contribute/           IsContributor
 POST   /api/journal/sightings/contribute/           IsContributor
 
+# Reading those back - the contributor's own records, and the only place they may
+# edit or withdraw one. Uncached and scoped to created_by; a PATCH un-publishes.
+# See "Reading it back" above.
+GET    /api/contributions/                          ?type= ?status= ?limit= ?offset=
+GET/PATCH/DELETE  /api/contributions/<type>/<pk>/   type = sightings|species|locations
+
 # Photo galleries. GET is public like every other read. The first row is the
 # record's cover - there is no cover column - so `sort_order` on the PATCH is
 # what picks it.
@@ -1133,12 +1196,11 @@ Deliberately out of scope so far - decide before adding, do not assume:
   English; see "Bilingual content" above for why five stored languages was
   rejected.
 - **No comments, likes or follows.** It is a journal, not a network.
-- **A contributor cannot read back their own pending records.** `created_by` and
-  its index exist on both models, but there is no `?mine=true` on either list and
-  no endpoint that answers "what have I submitted?" - so the frontend can only
-  confirm the submission, not track it. Adding one means deciding whether it is a
-  filter on the existing lists (which are cached under keys that do **not** vary
-  by user - so it would need its own namespace, or no caching at all) or a
-  separate uncached view. The second is almost certainly right.
+- **No way to *reject* a contribution with a reason.** A reviewer publishes by
+  enabling the row and declines by deleting it or leaving it disabled forever;
+  either way the contributor is told nothing beyond "still awaiting review" (see
+  the section above). A real rejection needs a status column and a note field on
+  all three models, and a decision about whether the contributor may then edit
+  and resubmit - which the edit endpoints would already allow.
 - **No trip/outing grouping.** A day out is currently N separate sightings that
   share a date and a location.

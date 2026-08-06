@@ -294,7 +294,7 @@ export function HeroTextFrame({
   // so `preserveAspectRatio: none` doesn't distort it) and a non-scaling 2px
   // stroke so the shoulders stay the same weight as the 2px flanks/side borders.
   const cradleW = `calc((${badge}) * 2.1)`;
-  const cradleH = `calc((${badge}) * 0.6)`;
+  const cradleH = `calc((${badge}) * 0.7)`;
   // Each flank runs from the outer corner (2px outside the padding box, over the
   // side border) to the edge of the centred cradle gap.
   const flankW = `calc(50% - (${cradleW}) / 2 + 2px)`;
@@ -370,7 +370,7 @@ export function HeroTextFrame({
             d="M0,60 Q26,36 66,30"
             fill="none"
             stroke={border}
-            strokeWidth={2}
+            strokeWidth={5}
             strokeLinecap="round"
             vectorEffect="non-scaling-stroke"
           />
@@ -378,7 +378,7 @@ export function HeroTextFrame({
             d="M210,60 Q184,36 144,30"
             fill="none"
             stroke={border}
-            strokeWidth={2}
+            strokeWidth={5}
             strokeLinecap="round"
             vectorEffect="non-scaling-stroke"
           />

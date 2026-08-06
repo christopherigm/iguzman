@@ -4,7 +4,9 @@ from rest_framework import serializers
 from core.contributions import (
     MAX_TEXT_LENGTH,
     ContributionSerializer,
+    ContributionUpdateSerializer,
     photos_field,
+    photos_patch_field,
 )
 from core.image_sizes import ICON, image_cfg, photo_cfg
 from core.serializers import (
@@ -378,6 +380,54 @@ class SpeciesContributeSerializer(ContributionSerializer):
         instance.save()
         self._write_photos(instance, photos)
         return instance
+
+
+class SpeciesContributeUpdateSerializer(ContributionUpdateSerializer):
+    """What the account that proposed a species may change about it afterwards.
+
+    The same seven fields ``SpeciesContributeSerializer`` takes, and withholding
+    exactly the same things - see that docstring. It is a sibling rather than a
+    subclass of it for the reason in ``core/contributions.py``: an inherited field
+    list is one that can widen by accident, and this is reachable by any signed-in
+    account.
+
+    ⚠ **The slug is not re-derived from a changed name, deliberately.** A
+    proposal that has already been published owns a URL that may be linked from
+    anywhere, and silently moving it to match a corrected spelling would break
+    those links to no one's benefit. Renaming a record's URL is an authoring
+    decision, and the CMS has the field for it.
+    """
+
+    photos = photos_patch_field()
+    photo_write_serializer_class = SpeciesImageWriteSerializer
+
+    description = serializers.CharField(
+        required=False, allow_blank=True, max_length=MAX_TEXT_LENGTH
+    )
+    short_description = serializers.CharField(
+        required=False, allow_blank=True, max_length=500
+    )
+
+    class Meta:
+        model = Species
+        fields = [
+            'category', 'name', 'scientific_name', 'family',
+            'description', 'short_description', 'photos',
+        ]
+
+    def validate_category(self, value):
+        # Same check the create path makes: a disabled category is one an
+        # administrator has taken off the site, so moving a proposal into it
+        # would leave it with nowhere to appear even once approved.
+        if not value.enabled:
+            raise serializers.ValidationError('This category is not available.')
+        return value
+
+    def validate_name(self, value):
+        name = (value or '').strip()
+        if not name:
+            raise serializers.ValidationError('This field may not be blank.')
+        return name
 
 
 # ---------------------------------------------------------------------------
@@ -831,3 +881,80 @@ class LocationContributeSerializer(ContributionSerializer):
         instance.save()
         self._write_photos(instance, photos)
         return instance
+
+
+class LocationContributeUpdateSerializer(ContributionUpdateSerializer):
+    """What the account that proposed a place may change about it afterwards.
+
+    The same six fields ``LocationContributeSerializer`` takes, withholding
+    exactly the same things - and ``hide_precise_location`` most pointedly of
+    all, since it blurs this place's coordinates *and every sighting filed at
+    it*, for every caller. That is a disclosure decision for whoever reviews the
+    contribution, and it does not become the contributor's to make just because
+    they are editing rather than creating.
+
+    ⚠ The slug is not re-derived from a changed name - see
+    ``SpeciesContributeUpdateSerializer`` for why.
+
+    Coordinates stay **required together** but are no longer required outright:
+    this is a PATCH, so a contributor correcting only the name sends neither, and
+    ``validate`` refuses only the half-changed pair.
+    """
+
+    photos = photos_patch_field(required=False)
+    photo_write_serializer_class = LocationImageWriteSerializer
+
+    latitude = serializers.DecimalField(
+        max_digits=9, decimal_places=6, required=False
+    )
+    longitude = serializers.DecimalField(
+        max_digits=9, decimal_places=6, required=False
+    )
+
+    class Meta:
+        model = Location
+        fields = ['name', 'parent', 'place_type', 'latitude', 'longitude',
+                  'county', 'photos']
+
+    def validate_name(self, value):
+        name = (value or '').strip()
+        if not name:
+            raise serializers.ValidationError('This field may not be blank.')
+        return name
+
+    def validate_parent(self, value):
+        if value is None:
+            return value
+        # A place may not be hung inside a row that may never be published - the
+        # same check the create path makes.
+        if not value.enabled:
+            raise serializers.ValidationError('This place is not available.')
+        # ⚠ Only reachable on an edit, which is why the create serializer has no
+        # counterpart: a row being created is not yet selectable as anyone's
+        # parent. `Location.parent` is a self-FK, so a place set as its own
+        # parent - or as its own descendant's - is a cycle, and `Location.state`
+        # / the CMS's tree walk would recurse until the stack gives out.
+        ancestor = value
+        while ancestor is not None:
+            if ancestor.pk == self.instance.pk:
+                raise serializers.ValidationError(
+                    'A place cannot be inside itself.'
+                )
+            ancestor = ancestor.parent
+        return value
+
+    def validate_county(self, value):
+        if value is not None and not value.enabled:
+            raise serializers.ValidationError('This county is not available.')
+        return value
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        # A place with no pin is unmappable and a sighting filed at it inherits
+        # nothing, so the pair may be left alone but never half-written.
+        if ('latitude' in attrs) != ('longitude' in attrs):
+            raise serializers.ValidationError(
+                {'latitude': 'Latitude and longitude must be set together.'}
+            )
+        return attrs
+

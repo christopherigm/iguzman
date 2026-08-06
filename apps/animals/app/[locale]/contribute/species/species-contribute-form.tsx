@@ -14,14 +14,20 @@ import {
 import { ReviewRow } from "@/components/contribute/review-row";
 import { StageShell } from "@/components/contribute/stage-shell";
 import { SubmittedPanel } from "@/components/contribute/submitted-panel";
+import { EditNotice } from "@/components/contribute/edit-notice";
 import {
   contributeSpecies,
   firstErrorMessage,
   type SpeciesSubmission,
 } from "@/lib/contribute";
+import {
+  photoPatch,
+  updateContribution,
+  type ContributionEdit,
+} from "@/lib/contributions";
 
 /**
- * The three-stage species proposal.
+ * The three-stage species proposal - **and the form that edits one back**.
  *
  * 1. **What is it, and what does it look like** - the name and the photographs.
  *    The two things a species record cannot do without, and the only stage with
@@ -32,7 +38,7 @@ import {
  *    photographs.
  * 3. **Review** - everything as it will be filed, then submit.
  *
- * Two things about how it is built:
+ * Three things about how it is built:
  *
  * - **One component, not a route per stage.** The stages share a draft and a stage
  *   boundary is not a navigation: a reader who reaches stage 3 and steps back must
@@ -43,15 +49,37 @@ import {
  *   column for every locale whose `en_` twin is blank - so the entry reads correctly
  *   in all five without asking a reader to translate themselves. Filling the twin is
  *   an authoring job, and the CMS has a translate button for it.
+ * - **`edit` turns the same three stages into an edit form** rather than there
+ *   being a second one. A contributor correcting a proposal should meet the form
+ *   they filled in; what changes is where the last stage sends it, what its
+ *   button says, and the notice above it. See `ContributionEdit`.
  */
+
+type Draft = {
+  name: string;
+  scientificName: string;
+  family: string;
+  shortDescription: string;
+  description: string;
+};
 
 interface Props {
   categoryId: number;
   categoryName: string;
   categoryHref: string;
+  /** Set to edit an existing proposal instead of filing a new one. */
+  edit?: ContributionEdit;
+  /** The record's current values, when editing. Ignored otherwise. */
+  initialDraft?: Partial<Draft>;
+  /**
+   * The record's stored gallery as picker tiles, when editing (see
+   * `galleryAsPhotos`). Each carries its row `id`, so an edit that only
+   * re-orders re-uploads nothing.
+   */
+  initialPhotos?: PickedPhoto[];
 }
 
-const EMPTY = {
+const EMPTY: Draft = {
   name: "",
   scientificName: "",
   family: "",
@@ -63,17 +91,21 @@ export function SpeciesContributeForm({
   categoryId,
   categoryName,
   categoryHref,
+  edit,
+  initialDraft,
+  initialPhotos,
 }: Props) {
   const t = useTranslations("Contribute");
+  const tContributions = useTranslations("Contributions");
 
   const [stage, setStage] = useState(1);
-  const [draft, setDraft] = useState(EMPTY);
-  const [photos, setPhotos] = useState<PickedPhoto[]>([]);
+  const [draft, setDraft] = useState<Draft>({ ...EMPTY, ...initialDraft });
+  const [photos, setPhotos] = useState<PickedPhoto[]>(initialPhotos ?? []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
-  const set = <K extends keyof typeof EMPTY>(key: K, value: string) =>
+  const set = <K extends keyof Draft>(key: K, value: string) =>
     setDraft((current) => ({ ...current, [key]: value }));
 
   const reset = () => {
@@ -88,6 +120,26 @@ export function SpeciesContributeForm({
     setBusy(true);
     setError(null);
     try {
+      if (edit) {
+        // ⚠ Every field is sent, including the ones the contributor cleared -
+        // the opposite of the filing path below, and deliberately. On a create,
+        // an omitted field and a blank one are both "not known"; on an edit,
+        // omitting a field means *leave it as it was*, so a family the
+        // contributor deleted would silently come back. The API takes a blank
+        // string as a real clear.
+        const saved = await updateContribution("species", edit.id, {
+          category: categoryId,
+          name: draft.name.trim(),
+          scientific_name: draft.scientificName.trim(),
+          family: draft.family.trim(),
+          short_description: draft.shortDescription.trim(),
+          description: draft.description.trim(),
+          photos: photoPatch(photos),
+        });
+        edit.onSaved(saved.contribution_status);
+        return;
+      }
+
       const submission: SpeciesSubmission = {
         category: categoryId,
         name: draft.name.trim(),
@@ -117,7 +169,9 @@ export function SpeciesContributeForm({
     }
   };
 
-  if (done) {
+  // Only the filing path has an "after": an edit hands control back to the page
+  // through `onSaved`, which is what shows the result and where to go next.
+  if (done && !edit) {
     return (
       <SubmittedPanel
         title={t("speciesSubmittedTitle")}
@@ -203,7 +257,7 @@ export function SpeciesContributeForm({
           total={3}
           onBack={() => setStage(2)}
           onNext={submit}
-          nextLabel={t("submit")}
+          nextLabel={edit ? tContributions("saveChanges") : t("submit")}
           busy={busy}
         >
           <Card
@@ -230,12 +284,16 @@ export function SpeciesContributeForm({
             <ReviewRow label={t("description")} value={draft.description} />
           </Card>
 
-          <Typography
-            variant="caption"
-            color="var(--foreground-muted, #6b7280)"
-          >
-            {t("pendingNotice")}
-          </Typography>
+          {edit ? (
+            <EditNotice status={edit.status} />
+          ) : (
+            <Typography
+              variant="caption"
+              color="var(--foreground-muted, #6b7280)"
+            >
+              {t("pendingNotice")}
+            </Typography>
+          )}
         </StageShell>
       )}
 

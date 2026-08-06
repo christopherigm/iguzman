@@ -14,12 +14,18 @@ import {
   PhotoPicker,
   type PickedPhoto,
 } from "@/components/contribute/photo-picker";
+import { EditNotice } from "@/components/contribute/edit-notice";
 import {
   contributeLocation,
   firstErrorMessage,
   type ContributedLocation,
   type LocationSubmission,
 } from "@/lib/contribute";
+import {
+  photoPatch,
+  updateContribution,
+  type ContributionEdit,
+} from "@/lib/contributions";
 import { PLACE_TYPES } from "@/lib/place-types";
 
 /**
@@ -106,9 +112,32 @@ interface Props {
   onCreated?: (place: ContributedLocation) => void;
   /** A way out, rendered only when given - the embedded case. */
   onCancel?: () => void;
+  /**
+   * Set to edit a place already proposed instead of adding a new one.
+   *
+   * Unlike the other two flows this form has no stages to change, so editing
+   * differs only in where Save sends it and in the notice above the button.
+   * ⚠ It is mutually exclusive with `onCreated` in practice: this form is never
+   * embedded in another one while editing, because the sighting flow's inline
+   * panel exists to *add* the place a contributor is about to file at.
+   */
+  edit?: ContributionEdit;
+  /** The place's current values, when editing. Ignored otherwise. */
+  initialDraft?: Partial<Draft>;
+  /** The place's stored photographs as picker tiles - see `galleryAsPhotos`. */
+  initialPhotos?: PickedPhoto[];
 }
 
-const EMPTY = {
+type Draft = {
+  name: string;
+  placeType: string;
+  parent: string;
+  county: string;
+  latitude: string;
+  longitude: string;
+};
+
+const EMPTY: Draft = {
   name: "",
   placeType: "other",
   parent: "",
@@ -164,16 +193,20 @@ export function LocationContributeForm({
   counties,
   onCreated,
   onCancel,
+  edit,
+  initialDraft,
+  initialPhotos,
 }: Props) {
   const t = useTranslations("Contribute");
+  const tContributions = useTranslations("Contributions");
   const tPlaceTypes = useTranslations("PlaceTypes");
 
-  const [draft, setDraft] = useState(EMPTY);
-  const [photos, setPhotos] = useState<PickedPhoto[]>([]);
+  const [draft, setDraft] = useState<Draft>({ ...EMPTY, ...initialDraft });
+  const [photos, setPhotos] = useState<PickedPhoto[]>(initialPhotos ?? []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const set = <K extends keyof typeof EMPTY>(key: K, value: string) =>
+  const set = <K extends keyof Draft>(key: K, value: string) =>
     setDraft((current) => ({ ...current, [key]: value }));
 
   const reset = () => {
@@ -197,6 +230,41 @@ export function LocationContributeForm({
     setBusy(true);
     setError(null);
     try {
+      if (edit) {
+        // Every field, cleared ones included - see the note on the sighting
+        // form's `saveEdit`: on a PATCH an omitted field means "leave it", so a
+        // county the contributor removed would otherwise come back.
+        //
+        // ⚠ **The coordinates are the exception, and must stay one.** A place an
+        // administrator has flagged `hide_precise_location` publishes its
+        // latitude and longitude **rounded to ~1 km, to every caller** - so what
+        // prefilled this map is the blurred pair, not the stored one. Sending it
+        // back unconditionally would quietly overwrite the precise coordinate
+        // with the blurred one, degrading the record a little more on every
+        // edit. So the pin travels only when the contributor actually moved it,
+        // which is the one case where what is on screen is genuinely newer than
+        // what is stored. See `Location.hide_precise_location`.
+        const moved =
+          draft.latitude !== (initialDraft?.latitude ?? "") ||
+          draft.longitude !== (initialDraft?.longitude ?? "");
+
+        const saved = await updateContribution("locations", edit.id, {
+          name: draft.name.trim(),
+          place_type: draft.placeType || null,
+          parent: draft.parent ? Number(draft.parent) : null,
+          county: draft.county ? Number(draft.county) : null,
+          ...(moved
+            ? {
+                latitude: Number(draft.latitude),
+                longitude: Number(draft.longitude),
+              }
+            : {}),
+          photos: photoPatch(photos),
+        });
+        edit.onSaved(saved.contribution_status);
+        return;
+      }
+
       const submission: LocationSubmission = {
         name: draft.name.trim(),
         // Both are guarded by `pinned` on the button, so this is a narrowing
@@ -228,10 +296,14 @@ export function LocationContributeForm({
     <Card gap={16} padding={20}>
       <Box flexDirection="column" gap={6}>
         <Typography as="h2" variant="h3" fontWeight={700}>
-          {t("placeFormTitle")}
+          {/* "Add a place" would be describing the wrong act on the edit page,
+              where the place already exists. */}
+          {edit ? tContributions("editPlaceTitle") : t("placeFormTitle")}
         </Typography>
         <Typography variant="body" color="var(--foreground-muted, #6b7280)">
-          {t("placeFormDescription")}
+          {edit
+            ? tContributions("editPlaceDescription")
+            : t("placeFormDescription")}
         </Typography>
       </Box>
 
@@ -309,9 +381,13 @@ export function LocationContributeForm({
         <PhotoPicker photos={photos} onChange={setPhotos} />
       </Box>
 
-      <Typography variant="caption" color="var(--foreground-muted, #6b7280)">
-        {t("placePendingNotice")}
-      </Typography>
+      {edit ? (
+        <EditNotice status={edit.status} />
+      ) : (
+        <Typography variant="caption" color="var(--foreground-muted, #6b7280)">
+          {t("placePendingNotice")}
+        </Typography>
+      )}
 
       <Box
         justifyContent={onCancel ? "space-between" : "flex-end"}
@@ -328,7 +404,7 @@ export function LocationContributeForm({
           />
         )}
         <Button
-          text={t("placeSubmit")}
+          text={edit ? tContributions("saveChanges") : t("placeSubmit")}
           kind="primary"
           size="lg"
           // Exactly what the API refuses, so a contributor is stopped here

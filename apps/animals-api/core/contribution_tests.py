@@ -689,3 +689,422 @@ class ContributeVideoTests(ContributeFixtureMixin, IsolatedMediaTestCase):
         self.assertTrue(rows)
         for row in rows:
             self.assertNotIn('upload_ticket', row)
+
+
+# ---------------------------------------------------------------------------
+# My contributions - reading back, editing and withdrawing
+# ---------------------------------------------------------------------------
+#
+# The other direction of the same feature (`core/my_contributions.py`). The
+# assertions that matter most here are again the negative ones: this surface is
+# reachable by any signed-in account, so "one contributor cannot see, edit or
+# delete another's" is the thing that must not regress.
+
+MINE_URL = '/api/contributions/'
+
+
+class MyContributionsFixtureMixin(ContributeFixtureMixin):
+    """A contributor with one of each of the three record types."""
+
+    def file_all_three(self):
+        """One species, one place and one sighting, all filed by `visitor`."""
+        self.sign_in_visitor()
+        species_id = self.post(SPECIES_URL, self.species_body()).json()['id']
+        place_id = self.post(LOCATION_URL, self.location_body()).json()['id']
+        sighting_id = self.post(SIGHTING_URL, self.sighting_body()).json()['id']
+        return species_id, place_id, sighting_id
+
+    def mine(self, **params):
+        query = '&'.join(f'{k}={v}' for k, v in params.items())
+        return self.client.get(f'{MINE_URL}?{query}' if query else MINE_URL)
+
+    def detail_url(self, type_key, pk):
+        return f'/api/contributions/{type_key}/{pk}/'
+
+    def patch(self, url, body):
+        return self.client.patch(url, body, content_type='application/json')
+
+
+class MyContributionsPermissionTests(MyContributionsFixtureMixin, IsolatedMediaTestCase):
+    """Signed in, and only ever your own rows."""
+
+    def test_an_anonymous_visitor_may_not_list_contributions(self):
+        self.assertEqual(self.mine().status_code, 401)
+
+    def test_an_anonymous_visitor_may_not_read_one(self):
+        _, _, sighting_id = self.file_all_three()
+        self.client.logout()
+        self.assertEqual(
+            self.client.get(self.detail_url('sightings', sighting_id)).status_code, 401
+        )
+
+    def test_the_list_carries_only_the_callers_own_rows(self):
+        self.file_all_three()
+        self.client.logout()
+
+        # A second contributor, who has filed nothing.
+        self.make_visitor(username='otra', password='just-looking-2026')
+        self.client.login(username='otra', password='just-looking-2026')
+
+        body = self.mine().json()
+        self.assertEqual(body['count'], 0)
+        self.assertEqual(body['results'], [])
+
+    def test_another_accounts_row_is_a_404_not_a_403(self):
+        """Whether a given pk exists is not this caller's business."""
+        _, _, sighting_id = self.file_all_three()
+        self.client.logout()
+        self.make_visitor(username='otra', password='just-looking-2026')
+        self.client.login(username='otra', password='just-looking-2026')
+
+        url = self.detail_url('sightings', sighting_id)
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.patch(url, {'name': 'Robado'}).status_code, 404)
+        self.assertEqual(self.client.delete(url).status_code, 404)
+
+    def test_another_account_cannot_edit_through_the_ownership_filter(self):
+        """The row is untouched after the refused PATCH, not merely refused."""
+        _, _, sighting_id = self.file_all_three()
+        original = Sighting.objects.get(pk=sighting_id).name
+        self.client.logout()
+
+        self.make_visitor(username='otra', password='just-looking-2026')
+        self.client.login(username='otra', password='just-looking-2026')
+        self.patch(self.detail_url('sightings', sighting_id), {'name': 'Robado'})
+
+        self.assertEqual(Sighting.objects.get(pk=sighting_id).name, original)
+
+    def test_an_unknown_type_segment_is_a_404(self):
+        self.file_all_three()
+        self.assertEqual(self.client.get(self.detail_url('categories', 1)).status_code, 404)
+
+    def test_an_unknown_type_filter_is_a_400(self):
+        self.file_all_three()
+        self.assertEqual(self.mine(type='categories').status_code, 400)
+
+
+class MyContributionsListTests(MyContributionsFixtureMixin, IsolatedMediaTestCase):
+    def test_all_three_kinds_come_back_in_one_list(self):
+        self.file_all_three()
+        body = self.mine().json()
+
+        self.assertEqual(body['count'], 3)
+        self.assertEqual(
+            {row['type'] for row in body['results']},
+            {'species', 'location', 'sighting'},
+        )
+
+    def test_the_type_filter_narrows_to_one_kind(self):
+        self.file_all_three()
+        body = self.mine(type='sightings').json()
+
+        self.assertEqual(body['count'], 1)
+        self.assertEqual(body['results'][0]['type'], 'sighting')
+
+    def test_a_freshly_filed_record_is_pending(self):
+        self.file_all_three()
+        for row in self.mine().json()['results']:
+            self.assertEqual(row['status'], 'pending')
+            self.assertFalse(row['enabled'])
+            self.assertFalse(row['was_published'])
+
+    def test_a_published_record_reads_as_published(self):
+        species_id, _, _ = self.file_all_three()
+        species = Species.objects.get(pk=species_id)
+        species.enabled = True
+        species.save()
+
+        row = self.mine(type='species').json()['results'][0]
+        self.assertEqual(row['status'], 'published')
+        self.assertTrue(row['was_published'])
+
+    def test_the_status_filter_narrows(self):
+        species_id, _, _ = self.file_all_three()
+        species = Species.objects.get(pk=species_id)
+        species.enabled = True
+        species.save()
+
+        self.assertEqual(self.mine(status='published').json()['count'], 1)
+        self.assertEqual(self.mine(status='pending').json()['count'], 2)
+
+    def test_a_card_carries_its_cover_photograph(self):
+        self.file_all_three()
+        row = self.mine(type='sightings').json()['results'][0]
+        self.assertTrue(row['image'])
+
+    def test_the_list_is_newest_first_across_the_three_tables(self):
+        """The merge is done in Python, so the ordering is worth asserting."""
+        self.file_all_three()
+        created = [row['created'] for row in self.mine().json()['results']]
+        self.assertEqual(created, sorted(created, reverse=True))
+
+
+class MyContributionsEditTests(MyContributionsFixtureMixin, IsolatedMediaTestCase):
+    def test_a_contributor_may_correct_their_own_entry(self):
+        _, _, sighting_id = self.file_all_three()
+        response = self.patch(
+            self.detail_url('sightings', sighting_id), {'name': 'Cervatillo corregido'}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            Sighting.objects.get(pk=sighting_id).name, 'Cervatillo corregido'
+        )
+
+    def test_editing_a_published_entry_returns_it_to_review(self):
+        """⚠ The load-bearing rule: an unreviewed edit never stays on the site."""
+        _, _, sighting_id = self.file_all_three()
+        sighting = Sighting.objects.get(pk=sighting_id)
+        sighting.enabled = True
+        sighting.save()
+
+        response = self.patch(
+            self.detail_url('sightings', sighting_id), {'name': 'Reescrito'}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['contribution_status'], 'in_review')
+
+        sighting.refresh_from_db()
+        self.assertFalse(sighting.enabled)
+        # Latched, which is the whole of how `in_review` is told from `pending`.
+        self.assertTrue(sighting.was_published)
+
+    def test_an_edit_cannot_publish_the_record(self):
+        """`enabled` is not on the field list, so sending it must do nothing."""
+        _, _, sighting_id = self.file_all_three()
+        self.patch(
+            self.detail_url('sightings', sighting_id),
+            {'name': 'Colado', 'enabled': True, 'is_featured': True},
+        )
+
+        sighting = Sighting.objects.get(pk=sighting_id)
+        self.assertFalse(sighting.enabled)
+        self.assertFalse(sighting.is_featured)
+
+    def test_the_slug_does_not_move_when_the_name_changes(self):
+        """A published record's URL may be linked from anywhere."""
+        _, _, sighting_id = self.file_all_three()
+        before = Sighting.objects.get(pk=sighting_id).slug
+
+        self.patch(self.detail_url('sightings', sighting_id), {'name': 'Otro nombre'})
+
+        self.assertEqual(Sighting.objects.get(pk=sighting_id).slug, before)
+
+    def test_a_future_date_is_still_refused_on_an_edit(self):
+        _, _, sighting_id = self.file_all_three()
+        tomorrow = (timezone.localdate() + timedelta(days=1)).isoformat()
+
+        response = self.patch(
+            self.detail_url('sightings', sighting_id), {'date': tomorrow}
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_an_edit_may_not_leave_the_entry_with_neither_place_nor_pin(self):
+        _, _, sighting_id = self.file_all_three()
+        response = self.patch(
+            self.detail_url('sightings', sighting_id), {'location': None}
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_a_place_may_not_become_its_own_parent(self):
+        _, place_id, _ = self.file_all_three()
+        response = self.patch(
+            self.detail_url('locations', place_id), {'parent': place_id}
+        )
+        self.assertEqual(response.status_code, 400)
+
+
+class MyContributionsPhotoDiffTests(MyContributionsFixtureMixin, IsolatedMediaTestCase):
+    """`photos` on an edit is the gallery afterwards - see `photos_patch_field`."""
+
+    def photo_rows(self, sighting_id):
+        return list(
+            SightingMedia.objects
+            .filter(sighting_id=sighting_id, kind='image')
+            .order_by('sort_order', 'id')
+        )
+
+    def file_with_two_photos(self):
+        self.sign_in_visitor()
+        return self.post(
+            SIGHTING_URL,
+            self.sighting_body(
+                photos=[base64_image(color=(10, 20, 30)), base64_image()]
+            ),
+        ).json()['id']
+
+    def test_omitting_photos_leaves_the_gallery_untouched(self):
+        sighting_id = self.file_with_two_photos()
+        self.patch(self.detail_url('sightings', sighting_id), {'name': 'Sin fotos'})
+        self.assertEqual(len(self.photo_rows(sighting_id)), 2)
+
+    def test_a_row_left_out_of_the_list_is_deleted(self):
+        sighting_id = self.file_with_two_photos()
+        keep, drop = self.photo_rows(sighting_id)
+
+        self.patch(
+            self.detail_url('sightings', sighting_id), {'photos': [{'id': keep.id}]}
+        )
+
+        remaining = self.photo_rows(sighting_id)
+        self.assertEqual([row.id for row in remaining], [keep.id])
+        self.assertFalse(SightingMedia.objects.filter(pk=drop.id).exists())
+
+    def test_a_bare_image_is_added(self):
+        sighting_id = self.file_with_two_photos()
+        first, second = self.photo_rows(sighting_id)
+
+        self.patch(
+            self.detail_url('sightings', sighting_id),
+            {'photos': [{'id': first.id}, {'id': second.id}, {'image': base64_image()}]},
+        )
+
+        rows = self.photo_rows(sighting_id)
+        self.assertEqual(len(rows), 3)
+        self.assertTrue(rows[2].image)
+
+    def test_reordering_the_list_changes_the_cover(self):
+        """`sort_order` is the cover - `core.serializers.gallery_image_url`."""
+        sighting_id = self.file_with_two_photos()
+        first, second = self.photo_rows(sighting_id)
+
+        self.patch(
+            self.detail_url('sightings', sighting_id),
+            {'photos': [{'id': second.id}, {'id': first.id}]},
+        )
+
+        self.assertEqual([row.id for row in self.photo_rows(sighting_id)],
+                         [second.id, first.id])
+
+    def test_a_photo_id_from_another_record_is_refused(self):
+        mine = self.file_with_two_photos()
+        theirs = self.post(SIGHTING_URL, self.sighting_body()).json()['id']
+        stranger = self.photo_rows(theirs)[0]
+
+        response = self.patch(
+            self.detail_url('sightings', mine), {'photos': [{'id': stranger.id}]}
+        )
+
+        self.assertEqual(response.status_code, 400)
+        # And nothing was deleted on the way to refusing.
+        self.assertEqual(len(self.photo_rows(mine)), 2)
+
+    def test_an_item_with_both_an_id_and_an_image_is_refused(self):
+        sighting_id = self.file_with_two_photos()
+        row = self.photo_rows(sighting_id)[0]
+
+        response = self.patch(
+            self.detail_url('sightings', sighting_id),
+            {'photos': [{'id': row.id, 'image': base64_image()}]},
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_an_undecodable_photo_is_refused(self):
+        sighting_id = self.file_with_two_photos()
+        response = self.patch(
+            self.detail_url('sightings', sighting_id),
+            {'photos': [{'image': 'not-an-image'}]},
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_the_photo_ceiling_still_applies(self):
+        sighting_id = self.file_with_two_photos()
+        response = self.patch(
+            self.detail_url('sightings', sighting_id),
+            {'photos': [{'image': base64_image()}] * 11},
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_the_diff_never_touches_a_clip(self):
+        """⚠ Photos and clips share one table; a re-order must not drop a video."""
+        sighting_id = self.file_with_two_photos()
+        clip = SightingMedia.objects.create(
+            sighting_id=sighting_id, kind='link',
+            url='https://example.com/clip', sort_order=9,
+        )
+
+        rows = self.photo_rows(sighting_id)
+        self.patch(
+            self.detail_url('sightings', sighting_id),
+            {'photos': [{'id': rows[1].id}, {'id': rows[0].id}]},
+        )
+
+        self.assertTrue(SightingMedia.objects.filter(pk=clip.pk).exists())
+
+    def test_remove_video_drops_the_clip_and_keeps_the_photographs(self):
+        sighting_id = self.file_with_two_photos()
+        SightingMedia.objects.create(
+            sighting_id=sighting_id, kind='link', url='https://example.com/clip'
+        )
+
+        self.patch(self.detail_url('sightings', sighting_id), {'remove_video': True})
+
+        self.assertFalse(
+            SightingMedia.objects.filter(sighting_id=sighting_id, kind='link').exists()
+        )
+        self.assertEqual(len(self.photo_rows(sighting_id)), 2)
+
+
+class MyContributionsDeleteTests(MyContributionsFixtureMixin, IsolatedMediaTestCase):
+    def test_a_contributor_may_withdraw_their_own_entry(self):
+        _, _, sighting_id = self.file_all_three()
+
+        response = self.client.delete(self.detail_url('sightings', sighting_id))
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Sighting.objects.filter(pk=sighting_id).exists())
+
+    def test_withdrawing_takes_the_photographs_with_it(self):
+        _, _, sighting_id = self.file_all_three()
+        self.client.delete(self.detail_url('sightings', sighting_id))
+        self.assertFalse(SightingMedia.objects.filter(sighting_id=sighting_id).exists())
+
+    def test_a_species_other_entries_reference_cannot_be_withdrawn(self):
+        """PROTECT is what stops one withdrawal taking somebody else's journal."""
+        species_id, _, _ = self.file_all_three()
+        species = Species.objects.get(pk=species_id)
+        species.enabled = True
+        species.save()
+        Sighting.objects.create(
+            species=species, name='De otra persona', slug='de-otra-persona',
+            date=date(2026, 5, 20),
+        )
+
+        response = self.client.delete(self.detail_url('species', species_id))
+
+        self.assertEqual(response.status_code, 409)
+        self.assertTrue(Species.objects.filter(pk=species_id).exists())
+
+
+class MyContributionsIsolationTests(MyContributionsFixtureMixin, IsolatedMediaTestCase):
+    """This surface must not have widened anything else on the way in."""
+
+    def test_the_ordinary_write_endpoints_are_still_admin_only(self):
+        self.sign_in_visitor()
+
+        for url, body in (
+            ('/api/catalog/species/', {'name': 'Colado', 'slug': 'colado',
+                                       'category': self.category.pk}),
+            ('/api/journal/sightings/', {'name': 'Colado', 'slug': 'colado',
+                                         'species': self.species.pk,
+                                         'date': '2026-05-14'}),
+            ('/api/catalog/locations/', {'name': 'Colado', 'slug': 'colado'}),
+        ):
+            with self.subTest(url=url):
+                self.assertEqual(self.post(url, body).status_code, 403)
+
+    def test_a_contributor_still_may_not_patch_a_record_through_the_public_api(self):
+        _, _, sighting_id = self.file_all_three()
+        response = self.patch(
+            f'/api/journal/sightings/{sighting_id}/', {'enabled': True}
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Sighting.objects.get(pk=sighting_id).enabled)
+
+    def test_a_pending_contribution_is_still_absent_from_the_public_feed(self):
+        self.file_all_three()
+        self.client.logout()
+
+        feed = self.client.get('/api/journal/sightings/').json()
+        self.assertEqual(feed['count'], 0)

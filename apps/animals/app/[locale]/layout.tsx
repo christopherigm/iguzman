@@ -221,6 +221,7 @@ export default async function LocaleLayout({ children, params }: Props) {
                       account: tNav('account'),
                       signOut: tNav('signOut'),
                       admin: tNav('admin'),
+                      contributions: tNav('contributions'),
                     }}
                     branches={branches}
                   />

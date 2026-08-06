@@ -150,6 +150,50 @@ RegularPlusPicture = picture_mixin(
 LargePicture   = picture_mixin(image_sizes.LARGE, quality=90)  # hero, full-bleed
 
 
+# ── Contributions ────────────────────────────────────────────────────────────
+#
+# `created_by` and `is_contribution` are declared on each of the three
+# contributable models rather than on a shared base, because each carries its own
+# `related_name` and its own help text (a species has nobody to credit, a
+# sighting does). `was_published` is the exception only in that its meaning is
+# identical everywhere, so the field itself is written once here - the models
+# still declare it individually, exactly like the other two.
+
+
+def was_published_field():
+    """Whether an administrator has ever had this row live on the public site.
+
+    Set the first time the row is saved with ``enabled=True`` and **never
+    cleared**, which is the whole of its usefulness: without it, a contribution
+    waiting for its first review and one that was published and has since been
+    edited back into the queue are both simply ``enabled=False``, and the
+    contributor's own list cannot tell them apart.
+
+    That distinction is not cosmetic. Editing a published contribution takes it
+    **off** the public site until it is re-approved, so the frontend has to be
+    able to say so - both as a warning before the edit is saved and as a distinct
+    status afterwards. See ``core/contribute_views.py``.
+
+    ⚠ It is set in each model's ``save()``, not in a serializer, because
+    publishing is an ordinary ``enabled=True`` PATCH from the CMS and is also
+    done from the Django admin - neither of which passes through the contribute
+    layer.
+    """
+    return models.BooleanField(
+        default=False,
+        help_text='Whether an administrator has ever published this row. Set the '
+                  'first time it is saved enabled and never cleared, so a '
+                  'contribution awaiting its first review can be told apart from '
+                  'a published one its author has edited back into review.',
+    )
+
+
+def stamp_published(instance):
+    """Latch ``was_published`` on a row being saved live. Call from ``save()``."""
+    if instance.enabled and not instance.was_published:
+        instance.was_published = True
+
+
 # ── Site settings ────────────────────────────────────────────────────────────
 #
 # ⚠ `System` here is **not** website-api's `System`, and the difference is the

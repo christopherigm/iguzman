@@ -8,7 +8,14 @@ import { useAuthActions } from '@repo/auth/use-auth-actions';
 interface NavbarWrapperProps {
   logo: string;
   version: string;
-  labels: { home: string; catalog: string; account: string; signOut: string; admin: string };
+  labels: {
+    home: string;
+    catalog: string;
+    account: string;
+    signOut: string;
+    admin: string;
+    contributions: string;
+  };
   /**
    * The five branches, as the Catalog dropdown's children - built in the layout,
    * which is where the locale and the `Kinds` messages live.
@@ -29,6 +36,9 @@ export function NavbarWrapper({ logo, version, labels, branches }: NavbarWrapper
   const { signOut } = useAuthActions();
   const displayName = session?.displayName ?? null;
   const isAdmin = session?.isAdmin === true;
+  // Any signed-in account may contribute, so this is the whole condition - there
+  // is no flag for it and there should not be one.
+  const isSignedIn = session !== null;
 
   const handleSignOut = () => void signOut('/auth');
 
@@ -56,6 +66,20 @@ export function NavbarWrapper({ logo, version, labels, branches }: NavbarWrapper
         // while they are on it. The drawer nests the same list on mobile.
         ...(branches.length > 0
           ? [{ label: labels.catalog, children: branches } satisfies MenuItem]
+          : []),
+        // A top-level item rather than an entry in the account dropdown, and
+        // shown to any signed-in reader rather than only to people who have
+        // already contributed. Both are deliberate: the point of the page is to
+        // let a contributor *follow* what they filed through review, which they
+        // cannot do if finding it takes two clicks and a guess about which menu
+        // it is under. Its href is locale-less like the rest - `Navbar` strips
+        // the locale before matching an item as active (see `branches` above).
+        //
+        // ⚠ It is presentation only. `proxy.ts` guards `/contributions`, and
+        // Django scopes every row to `created_by` from the token on each call -
+        // rendering or hiding this decides nothing about access.
+        ...(isSignedIn
+          ? [{ label: labels.contributions, href: '/contributions' }]
           : []),
         // Presentation only, exactly like website's: `proxy.ts` guards the
         // route, the CMS re-checks `isAdmin`, and Django re-derives it from the

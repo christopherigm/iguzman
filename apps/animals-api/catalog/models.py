@@ -15,7 +15,14 @@ from django.db import models
 
 from core.fields import ResizedImageField
 from core.image_sizes import ICON
-from core.models import BasePicture, Common, RegularPlusPicture, picture
+from core.models import (
+    BasePicture,
+    Common,
+    RegularPlusPicture,
+    picture,
+    stamp_published,
+    was_published_field,
+)
 
 
 # The five top-level branches of the site. Deliberately a flat enum rather than
@@ -216,6 +223,10 @@ class Species(BasePicture):
                   'CMS. Such an entry starts disabled and joins the catalog when '
                   'an administrator enables it.',
     )
+    # What tells "waiting for its first review" apart from "was live, its
+    # proposer edited it, and it is waiting again". See
+    # `core.models.was_published_field`.
+    was_published = was_published_field()
 
     class Meta:
         verbose_name = 'Species'
@@ -229,6 +240,13 @@ class Species(BasePicture):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        # Latched here rather than in a serializer: a proposal is published by an
+        # ordinary `enabled=True` PATCH from the CMS and can equally be published
+        # from the Django admin, and neither goes through the contribute layer.
+        stamp_published(self)
+        super().save(*args, **kwargs)
 
     @property
     def kind(self):
@@ -633,6 +651,8 @@ class Location(Common):
                   'CMS. Such a place starts disabled and joins the catalog when '
                   'an administrator enables it.',
     )
+    # See `core.models.was_published_field`.
+    was_published = was_published_field()
 
     class Meta:
         verbose_name = 'Location'
@@ -645,6 +665,12 @@ class Location(Common):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        # See Species.save - published from the CMS or the Django admin, neither
+        # of which goes through the contribute layer.
+        stamp_published(self)
+        super().save(*args, **kwargs)
 
     @property
     def state(self):

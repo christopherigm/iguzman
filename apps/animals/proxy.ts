@@ -8,8 +8,15 @@ import { createAuthProxy } from '@repo/auth/proxy';
 // ordinary reader sails past it with a perfectly valid session. Neither is what
 // actually protects the data: Django re-derives the permission from the token on
 // every call (core/permissions.py). They decide what is worth rendering.
+// ⚠ `/contributions` is guarded but `/contribute` deliberately is not, and the
+// difference is the point. The FAB that opens `/contribute` is shown to
+// everybody - that is how a reader discovers the site takes contributions at all
+// - so an anonymous press is expected and is answered with a `SignInPrompt`.
+// There is no such thing as "your contributions" for an account that does not
+// exist, so this one has nothing to show a signed-out visitor and the guard is
+// the right answer.
 export default createAuthProxy({
-  protectedPrefixes: ['/account', '/admin'],
+  protectedPrefixes: ['/account', '/admin', '/contributions'],
 });
 
 // The matcher must be an inline literal: Next.js statically analyses it at build

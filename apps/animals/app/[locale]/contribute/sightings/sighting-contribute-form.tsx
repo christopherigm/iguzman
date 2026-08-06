@@ -26,12 +26,18 @@ import {
   VideoPicker,
   type PickedVideo,
 } from "@/components/contribute/video-picker";
+import { EditNotice } from "@/components/contribute/edit-notice";
 import {
   contributeSighting,
   firstErrorMessage,
   reserveSightingVideo,
   type SightingSubmission,
 } from "@/lib/contribute";
+import {
+  photoPatch,
+  updateContribution,
+  type ContributionEdit,
+} from "@/lib/contributions";
 import { placeLabel } from "@/lib/place-types";
 import { uploadVideo, VideoUploadError } from "@/lib/video-upload";
 import {
@@ -74,6 +80,16 @@ interface Props {
    */
   species: SpeciesSubject | null;
   /**
+   * What the picker opens **already holding**, without locking it.
+   *
+   * The difference from `species` above is the whole reason both exist: that one
+   * says "the subject is settled, do not ask", which is right when a FAB on a
+   * species page named it. This one says "it is currently this, and it may be
+   * changed" - which is what an *edit* needs, since an entry filed against the
+   * wrong animal is one of the things the edit page exists to fix.
+   */
+  initialSpecies?: SpeciesSubject | null;
+  /**
    * Every species that can be filed against, for the picker. Empty (and unused)
    * whenever `species` is set.
    */
@@ -115,9 +131,38 @@ interface Props {
    * `DEFAULT_MAX_VIDEO_SECONDS` in `lib/contribute.ts`.
    */
   maxVideoSeconds: number;
+  /**
+   * Set to edit an entry already filed instead of filing a new one.
+   *
+   * The stages, the fields and the validation are all unchanged - a contributor
+   * correcting an outing meets the form they filled in, which was the brief.
+   * What changes is where stage 3 sends it, what its button says, and the notice
+   * above it. See `ContributionEdit`.
+   */
+  edit?: ContributionEdit;
+  /** The entry's current values, when editing. Ignored otherwise. */
+  initialDraft?: Partial<Draft>;
+  /** The entry's stored photographs as picker tiles - see `galleryAsPhotos`. */
+  initialPhotos?: PickedPhoto[];
+  /** Whether the entry already carries a clip, when editing. */
+  initialHasVideo?: boolean;
+  /** Whether the entry was filed without a credit line, when editing. */
+  initialAnonymous?: boolean;
 }
 
-const EMPTY = {
+type Draft = {
+  name: string;
+  shortDescription: string;
+  description: string;
+  date: string;
+  time: string;
+  location: string;
+  weather: string;
+  temperature: string;
+  individuals: string;
+};
+
+const EMPTY: Draft = {
   name: "",
   shortDescription: "",
   description: "",
@@ -131,6 +176,7 @@ const EMPTY = {
 
 export function SightingContributeForm({
   species,
+  initialSpecies,
   speciesOptions,
   initialKind,
   initialCategorySlug,
@@ -140,25 +186,44 @@ export function SightingContributeForm({
   counties,
   parentPlaces,
   maxVideoSeconds,
+  edit,
+  initialDraft,
+  initialPhotos,
+  initialHasVideo = false,
+  initialAnonymous = false,
 }: Props) {
   const t = useTranslations("Contribute");
+  const tContributions = useTranslations("Contributions");
   const tPlaceTypes = useTranslations("PlaceTypes");
   const locale = useLocale();
 
   /**
    * The entry's subject. Seeded from the URL when it named one, and then never
-   * changed (the picker is not rendered); otherwise the picker writes it.
+   * changed (the picker is not rendered); seeded from the record being edited
+   * when there is one, and changeable; otherwise the picker writes it.
    */
-  const [chosen, setChosen] = useState<SpeciesSubject | null>(species);
+  const [chosen, setChosen] = useState<SpeciesSubject | null>(
+    species ?? initialSpecies ?? null,
+  );
   const speciesName = chosen?.name ?? "";
   // Where "Back to …" goes once the entry is filed. The species page exists for
   // every choice the picker can make, so this is safe to derive rather than pass.
   const speciesHref = chosen ? `/species/${chosen.slug}` : "/";
 
   const [stage, setStage] = useState(1);
-  const [draft, setDraft] = useState(EMPTY);
-  const [photos, setPhotos] = useState<PickedPhoto[]>([]);
+  const [draft, setDraft] = useState<Draft>({ ...EMPTY, ...initialDraft });
+  const [photos, setPhotos] = useState<PickedPhoto[]>(initialPhotos ?? []);
   const [video, setVideo] = useState<PickedVideo | null>(null);
+  /**
+   * Whether the entry's existing clip is being kept, when editing.
+   *
+   * A clip cannot be *changed* here - the bytes never go near animals-api, so
+   * "replace it" is a removal plus a fresh two-request upload (see
+   * `reserveSightingVideo`). What the edit form offers is therefore the only
+   * thing expressible in a JSON body: drop it, which frees the entry to take a
+   * new one.
+   */
+  const [keepVideo, setKeepVideo] = useState(true);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [videoProgress, setVideoProgress] = useState(0);
   /**
@@ -167,7 +232,7 @@ export function SightingContributeForm({
    * see the catch in `submit`.
    */
   const [videoFailed, setVideoFailed] = useState<string | null>(null);
-  const [anonymous, setAnonymous] = useState(false);
+  const [anonymous, setAnonymous] = useState(initialAnonymous);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -195,7 +260,7 @@ export function SightingContributeForm({
    */
   const [addedPlaces, setAddedPlaces] = useState<SelectOption[]>([]);
 
-  const set = <K extends keyof typeof EMPTY>(key: K, value: string) =>
+  const set = <K extends keyof Draft>(key: K, value: string) =>
     setDraft((current) => ({ ...current, [key]: value }));
 
   const reset = () => {
@@ -263,8 +328,57 @@ export function SightingContributeForm({
   };
 
   const openStage2 = () => {
-    if (!nameTouched) set("name", suggestedName());
+    // Never re-suggested when editing: the entry already has whatever title it
+    // was filed with, and overwriting it with a fresh timestamp because the
+    // contributor stepped forward would be silently rewriting their own words.
+    if (!nameTouched && !edit) set("name", suggestedName());
     setStage(2);
+  };
+
+  /**
+   * Save a correction to an entry already filed.
+   *
+   * ⚠ **Every field is sent, including the ones the contributor cleared**, which
+   * is the opposite of the filing path below and is the point. On a create, an
+   * omitted field and a blank one both mean "not known"; on a PATCH, omitting a
+   * field means *leave it as it was* - so a temperature the contributor deleted
+   * would silently come back. `null` is how a relation is cleared and an empty
+   * string how a text field is.
+   */
+  const saveEdit = async (context: ContributionEdit) => {
+    if (!chosen) return;
+
+    const parsedTemperature = Number(draft.temperature);
+    const parsedIndividuals = Number(draft.individuals);
+
+    const saved = await updateContribution("sightings", context.id, {
+      species: chosen.id,
+      date: draft.date,
+      name: draft.name.trim(),
+      short_description: draft.shortDescription.trim(),
+      description: draft.description.trim(),
+      time: draft.time || null,
+      location: draft.location ? Number(draft.location) : null,
+      weather: draft.weather ? Number(draft.weather) : null,
+      temperature_c:
+        draft.temperature.trim() !== "" && !Number.isNaN(parsedTemperature)
+          ? parsedTemperature
+          : null,
+      individuals:
+        draft.individuals.trim() !== "" &&
+        Number.isInteger(parsedIndividuals) &&
+        parsedIndividuals > 0
+          ? parsedIndividuals
+          : null,
+      author_anonymous: anonymous,
+      photos: photoPatch(photos),
+      // Only ever sent as `true`: the API reads it as "drop the clip", and there
+      // is nothing for a `false` to mean - a clip that is being kept is simply
+      // not mentioned.
+      ...(initialHasVideo && !keepVideo ? { remove_video: true } : {}),
+    });
+
+    context.onSaved(saved.contribution_status);
   };
 
   const submit = async () => {
@@ -275,6 +389,11 @@ export function SightingContributeForm({
     setBusy(true);
     setError(null);
     try {
+      if (edit) {
+        await saveEdit(edit);
+        return;
+      }
+
       const submission: SightingSubmission = {
         species: chosen.id,
         date: draft.date,
@@ -343,7 +462,9 @@ export function SightingContributeForm({
     }
   };
 
-  if (done) {
+  // Only the filing path has an "after": an edit hands control back to the page
+  // through `onSaved`, which is what shows the result and where to go next.
+  if (done && !edit) {
     return (
       <>
         <SubmittedPanel
@@ -524,17 +645,48 @@ export function SightingContributeForm({
 
           {/* Optional, and under the photographs on purpose: at least one photo
               is required to file at all, so the clip reads as the extra it is
-              rather than as a second mandatory upload. */}
-          <Box flexDirection="column" gap={8}>
-            <Typography variant="label" fontWeight={600}>
-              {t("video")}
-            </Typography>
-            <VideoPicker
-              video={video}
-              onChange={setVideo}
-              maxSeconds={maxVideoSeconds}
-            />
-          </Box>
+              rather than as a second mandatory upload.
+
+              ⚠ Three different controls, because a clip is the one thing on this
+              form whose bytes never reach animals-api (see `reserveSightingVideo`).
+              Filing offers the picker. Editing an entry that already has a clip
+              offers only "remove it" - there is no upload half of a PATCH to
+              replace it through. Editing one that has none offers nothing at
+              all: adding a clip is a two-request upload against a *different*
+              service, which this form only knows how to do straight after
+              creating the entry. */}
+          {edit && initialHasVideo ? (
+            <Box flexDirection="column" gap={8}>
+              <Typography variant="label" fontWeight={600}>
+                {t("video")}
+              </Typography>
+              <Box alignItems="center" gap={10}>
+                <Switch checked={keepVideo} onChange={setKeepVideo} />
+                <Box flexDirection="column">
+                  <Typography variant="body">
+                    {tContributions("keepVideo")}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    color="var(--foreground-muted, #6b7280)"
+                  >
+                    {tContributions("keepVideoHelp")}
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+          ) : edit ? null : (
+            <Box flexDirection="column" gap={8}>
+              <Typography variant="label" fontWeight={600}>
+                {t("video")}
+              </Typography>
+              <VideoPicker
+                video={video}
+                onChange={setVideo}
+                maxSeconds={maxVideoSeconds}
+              />
+            </Box>
+          )}
         </StageShell>
       )}
 
@@ -668,7 +820,7 @@ export function SightingContributeForm({
           total={3}
           onBack={() => setStage(2)}
           onNext={submit}
-          nextLabel={t("submit")}
+          nextLabel={edit ? tContributions("saveChanges") : t("submit")}
           busy={busy}
         >
           <Card
@@ -685,7 +837,17 @@ export function SightingContributeForm({
             />
             <ReviewRow
               label={t("video")}
-              value={video ? video.file.name : null}
+              value={
+                edit
+                  ? initialHasVideo && keepVideo
+                    ? tContributions("videoKept")
+                    : initialHasVideo
+                      ? tContributions("videoRemoved")
+                      : null
+                  : video
+                    ? video.file.name
+                    : null
+              }
               fallback={t("noVideo")}
             />
             <ReviewRow
@@ -743,12 +905,16 @@ export function SightingContributeForm({
             </Box>
           )}
 
-          <Typography
-            variant="caption"
-            color="var(--foreground-muted, #6b7280)"
-          >
-            {t("pendingNotice")}
-          </Typography>
+          {edit ? (
+            <EditNotice status={edit.status} />
+          ) : (
+            <Typography
+              variant="caption"
+              color="var(--foreground-muted, #6b7280)"
+            >
+              {t("pendingNotice")}
+            </Typography>
+          )}
         </StageShell>
       )}
 

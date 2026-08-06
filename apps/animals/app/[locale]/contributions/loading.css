@@ -1,0 +1,27 @@
+/*
+ * The only thing this file may carry is the animation - every box in
+ * `loading.tsx` is sized, spaced and coloured through UIComponentProps (see the
+ * repo's "props first, CSS last" rule). The twin of `contribute/loading.css`;
+ * the class name differs so the two segments' skeletons stay independent.
+ */
+
+.contributions-skeleton__block {
+  animation: contributions-skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes contributions-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contributions-skeleton__block {
+    animation: none;
+    opacity: 0.4;
+  }
+}

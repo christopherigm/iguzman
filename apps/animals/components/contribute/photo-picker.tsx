@@ -59,10 +59,25 @@ const QUALITY = 0.82;
 export interface PickedPhoto {
   /** Stable across re-orders, so React keeps the right tile mounted. */
   key: string;
-  /** The data URL, downscaled and re-encoded - what is POSTed. */
+  /**
+   * What the tile displays: a downscaled data URL for a photo just picked, or
+   * the stored file's URL for one already on the record (see `id`).
+   */
   dataUrl: string;
   /** The original file's name, for the alt text and the review stage. */
   name: string;
+  /**
+   * The gallery row this tile already **is**, when the picker is editing a
+   * record rather than filing one.
+   *
+   * ⚠ Its presence is what decides how the tile is submitted: a row with an `id`
+   * travels as `{id}` (keep it, at this position), and one without as
+   * `{image: dataUrl}` (add it). A stored photo is therefore never re-uploaded
+   * by an edit that only re-orders - which matters on a phone, where the whole
+   * gallery would otherwise go back up to move the cover. See `photoPatch` in
+   * `lib/contributions.ts` and `photos_patch_field` on the API side.
+   */
+  id?: number;
 }
 
 interface Props {

@@ -16,7 +16,14 @@ from django.utils import timezone
 
 from core.fields import ResizedImageField
 from core.image_sizes import MEDIUM
-from core.models import BasePicture, RegularPlusPicture, picture, video
+from core.models import (
+    BasePicture,
+    RegularPlusPicture,
+    picture,
+    stamp_published,
+    video,
+    was_published_field,
+)
 
 
 class Sighting(BasePicture):
@@ -125,6 +132,10 @@ class Sighting(BasePicture):
                   'Such an entry starts disabled and is published by an '
                   'administrator enabling it.',
     )
+    # What tells "waiting for its first review" apart from "was live, its author
+    # edited it, and it is waiting again" - both of which are `enabled=False`.
+    # See `core.models.was_published_field`.
+    was_published = was_published_field()
 
     is_featured = models.BooleanField(default=False)
 
@@ -155,6 +166,10 @@ class Sighting(BasePicture):
             season = Season.for_date(self.date)
             if season is not None:
                 self.season = season
+        # Latched here rather than in a serializer: an entry is published by an
+        # ordinary `enabled=True` PATCH from the CMS and can equally be published
+        # from the Django admin, and neither goes through the contribute layer.
+        stamp_published(self)
         super().save(*args, **kwargs)
 
     @property

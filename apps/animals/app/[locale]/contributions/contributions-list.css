@@ -1,0 +1,39 @@
+/* Interaction state for the contribution cards - the species grid's card,
+   behaviour for behaviour, so a contributor's own grid and a category's read as
+   one design. Only pseudo-selectors, transitions and the zoom they drive live
+   here; every static value on the `@repo/ui` components inside is a prop (see
+   the props-first rule in packages/ui/CLAUDE.md). */
+
+.contribution-card {
+  transition: border-color 0.18s ease;
+}
+
+.contribution-card__image {
+  transition: transform 0.35s ease;
+}
+
+.contribution-card:hover,
+.contribution-card:focus-visible {
+  border-color: var(--accent);
+}
+
+.contribution-card:hover .contribution-card__image,
+.contribution-card:focus-visible .contribution-card__image {
+  transform: scale(1.06);
+}
+
+.contribution-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contribution-card__image {
+    transition: none;
+  }
+
+  .contribution-card:hover .contribution-card__image,
+  .contribution-card:focus-visible .contribution-card__image {
+    transform: none;
+  }
+}

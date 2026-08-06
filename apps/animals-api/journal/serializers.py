@@ -7,7 +7,9 @@ from rest_framework import serializers
 from core.contributions import (
     MAX_TEXT_LENGTH,
     ContributionSerializer,
+    ContributionUpdateSerializer,
     photos_field,
+    photos_patch_field,
 )
 from core.image_sizes import MEDIUM, image_cfg, photo_cfg
 from core.serializers import (
@@ -739,4 +741,105 @@ class SightingContributeSerializer(ContributionSerializer):
         )
         instance.save()
         self._write_photos(instance, photos)
+        return instance
+
+
+class SightingContributeUpdateSerializer(ContributionUpdateSerializer):
+    """What the account that filed an entry may change about it afterwards.
+
+    The same fourteen fields ``SightingContributeSerializer`` takes, withholding
+    the same things - ``enabled``, ``is_featured``, ``href``, ``season`` and the
+    ``en_*`` twins. A sibling rather than a subclass of it, for the reason in
+    ``core/contributions.py``.
+
+    Three things worth knowing:
+
+    * ⚠ **The slug is not re-derived from a changed title.** A published entry
+      owns a URL that may be linked from anywhere - see
+      ``SpeciesContributeUpdateSerializer``.
+    * **The season follows a corrected date by itself.** ``Sighting.save()``
+      only ever *fills a blank*, so an entry whose date moves across a season
+      boundary keeps the season it was filed with. That is the same rule the CMS
+      works under, and correcting it is a one-field edit there.
+    * **The clip is not editable here**, only removable - see ``remove_video``.
+      Uploading one is two requests against a pod that is not this service (see
+      this app's CLAUDE.md), so it keeps its own endpoint.
+    """
+
+    photos = photos_patch_field()
+    photo_write_serializer_class = SightingMediaWriteSerializer
+
+    description = serializers.CharField(
+        required=False, allow_blank=True, max_length=MAX_TEXT_LENGTH
+    )
+    short_description = serializers.CharField(
+        required=False, allow_blank=True, max_length=500
+    )
+    #: Drop the entry's uploaded clip. A write-only flag rather than a `video`
+    #: field, because there is nothing to send: the bytes never reach this
+    #: service, so "remove it" is the only thing about a clip that can be
+    #: expressed in a JSON body. Adding one back goes through
+    #: `SightingContributeVideoView` exactly as it did the first time.
+    remove_video = serializers.BooleanField(required=False, write_only=True)
+
+    class Meta:
+        model = Sighting
+        fields = [
+            'species', 'name', 'description', 'short_description',
+            'date', 'time', 'location', 'latitude', 'longitude',
+            'weather', 'temperature_c', 'individuals',
+            'author_anonymous', 'photos', 'remove_video',
+        ]
+
+    def photo_rows(self, instance):
+        # ⚠ Photos only. A sighting's gallery is one table holding photographs,
+        # uploaded clips and video links together (they share a `sort_order` the
+        # author arranges), so a diff that read every media row would delete the
+        # contributor's own clip the moment they re-ordered their pictures.
+        return [row for row in instance.media.all() if row.kind == 'image']
+
+    def validate_species(self, value):
+        # A species awaiting review is not yet part of the catalog - the same
+        # check the create path makes, and for the same `PROTECT` reason.
+        if not value.enabled:
+            raise serializers.ValidationError('This species is not available.')
+        return value
+
+    def validate_date(self, value):
+        from django.utils import timezone
+
+        if value > timezone.localdate():
+            raise serializers.ValidationError('An encounter cannot be in the future.')
+        return value
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+
+        # A PATCH may send neither half of the pair, one half, or both - and it
+        # is the *resulting* entry that has to be mappable, so each field falls
+        # back to what is already stored rather than to None.
+        lat = attrs['latitude'] if 'latitude' in attrs else self.instance.latitude
+        lng = attrs['longitude'] if 'longitude' in attrs else self.instance.longitude
+        if (lat is None) != (lng is None):
+            raise serializers.ValidationError(
+                {'latitude': 'Latitude and longitude must be set together.'}
+            )
+
+        location = (
+            attrs['location'] if 'location' in attrs else self.instance.location
+        )
+        if location is None and lat is None:
+            raise serializers.ValidationError(
+                {'location': 'Pick a place, or drop a pin on the map.'}
+            )
+        return attrs
+
+    def update(self, instance, validated_data):
+        remove_video = validated_data.pop('remove_video', False)
+        instance = super().update(instance, validated_data)
+        if remove_video:
+            # Both kinds: an uploaded clip and a video *link* are one media row
+            # each with nothing else to tell them apart from the contributor's
+            # side, and neither is a photograph the `photos` diff owns.
+            instance.media.filter(kind__in=('video', 'link')).delete()
         return instance

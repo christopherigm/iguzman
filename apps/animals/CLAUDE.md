@@ -18,6 +18,8 @@ landing's `CategoryNav` tiles, gallery captions and journal slider link into the
 | `/[locale]/contribute/species`   | The public staged form that **proposes** a species (`?category=<slug>`)             |
 | `/[locale]/contribute/sightings` | The public staged form that **files** a journal entry (`?species=` or `?category=`) |
 | `/[locale]/contribute/locations` | The public form that **adds a place** (no param - see below)                       |
+| `/[locale]/contributions`        | What this account has filed, and its status - see "My contributions"              |
+| `/[locale]/contributions/[type]/[id]` | One of them, in the form that filed it, plus withdraw                        |
 
 All four are composed from `components/catalog/` (`DetailHero`, `FactsCard`,
 `DetailGallery`, `SpeciesGrid`) and `components/journal/sightings-section.tsx`, so
@@ -443,10 +445,78 @@ in together below `sm`, where `.ui-fab` narrows the offset to 16px. The page als
 owes the stack a second spacer's worth of clearance (`FAB_STACK_OFFSET`) on top of
 `PageBottomSpacer`, or the last row of the species grid sits under the upper FAB.
 
-**Not built:** a contributor cannot see their own pending records. The flow
-confirms the submission and says it is awaiting review, but there is no "my
-contributions" list in `/account` - that needs a `created_by`-filtered endpoint
-(the column and its index exist) and a page. Decide before adding.
+## My contributions - reading it back, editing it, withdrawing it
+
+The other half of the flow above, at `/[locale]/contributions`. Until it existed
+a contribution vanished the moment it was filed: the flow confirmed the
+submission and nothing more, so a contributor who mistyped a date or uploaded a
+blurry photograph could neither fix it nor tell whether anyone had looked at it.
+
+| Piece                       | Where                                                      |
+| --------------------------- | ---------------------------------------------------------- |
+| The list                    | `app/[locale]/contributions/{page,contributions-list}.tsx` |
+| The edit page               | `app/[locale]/contributions/[type]/[id]/`                  |
+| The status badge            | `components/contribute/contribution-status-badge.tsx`      |
+| The "returns to review" note | `components/contribute/edit-notice.tsx`                    |
+| Browser client              | `lib/contributions.ts`                                     |
+| Token-attaching proxies     | `app/api/contributions/` (list) and `.../[type]/[id]/`     |
+
+Nine things that will bite:
+
+- ⚠ **Editing a published contribution takes it off the public site.**
+  animals-api sets `enabled=False` on every contributor PATCH, so an unreviewed
+  change never reaches a reader - which is the whole reason editing is allowed at
+  all. It is also the one outcome a contributor must never have to infer, so
+  `EditNotice` warns *before* the save and the page reports the status that came
+  back rather than assuming the record stayed put. Don't "simplify" either away.
+- ⚠ **There are three statuses, not two.** `pending` and `in_review` are the same
+  row state on the API (`enabled: false`) and are told apart by `was_published`;
+  the first means "nothing has happened yet" and the second "this **was** live
+  and your edit has taken it down". `in_review` therefore wears the warning
+  colour, not a second shade of the neutral one.
+- **The three contribute forms are reused, not re-implemented.** Each takes a
+  `ContributionEdit` prop plus its current values, and everything else about them
+  - the stages, the fields, the validation - is untouched, so correcting a
+  sighting is the same experience as filing one. A second set of forms would have
+  drifted within a release.
+- ⚠ **An edit sends every field, including the ones the contributor cleared** -
+  the opposite of the filing path. On a create, an omitted field and a blank one
+  both mean "not known"; on a PATCH, omitting a field means *leave it as it was*,
+  so a temperature someone deleted would silently come back.
+- ⚠ **The place form is the exception, and only for the coordinates.** A place an
+  administrator has flagged `hide_precise_location` publishes its pin **rounded
+  to ~1 km for every caller**, so what prefills that map is the blurred pair -
+  sending it back unconditionally would overwrite the precise coordinate with the
+  blurred one, a little more on every edit. The pin travels only when the
+  contributor actually moved it.
+- **`photos` is a diff, and the list is the gallery afterwards.** A tile that
+  came off the record keeps its row id, one just picked travels as a data URL,
+  and the array index is `sort_order` - so re-ordering or changing the cover
+  uploads nothing at all. `PickedPhoto.id` is what distinguishes the two, and
+  `photoPatch`/`galleryAsPhotos` in `lib/contributions.ts` are the only places
+  that conversion happens.
+- ⚠ **A clip can be removed here but not replaced.** Its bytes never go near
+  animals-api (see "Video" below), so "replace it" is a removal plus a fresh
+  two-request upload; the edit form offers the only thing a JSON body can express.
+  An entry with no clip is offered nothing, because adding one is a flow this
+  form only knows how to run straight after creating the entry.
+- ⚠ **The list is a client component, unlike every other list in this app.** The
+  public pages fetch on the server because their payloads are shared and cached
+  in Django; this one is per-account, uncached, and needs a bearer token -
+  and `apiFetch` refreshes that token by **writing a cookie**, which a server
+  component may not do. So it reads through the route handler, exactly as the CMS
+  does. The same is true of the edit page: only its *option lists* (species,
+  places, weather, counties) are fetched on the server, for the reason the
+  contribute pages fetch them there - the labels are bilingual.
+- ⚠ **`/contributions` IS in `proxy.ts`'s `protectedPrefixes`, unlike
+  `/contribute`.** That is not an inconsistency: the FAB is shown to everyone, so
+  a signed-out press of it is expected and is answered with a `SignInPrompt`.
+  There is no such thing as "your contributions" for an account that does not
+  exist, so this one has nothing to show such a reader.
+
+**Not built:** a reviewer cannot decline a contribution *with a reason*. Deleting
+it or leaving it disabled are the only options, and either way the contributor
+goes on seeing "awaiting review" - see animals-api's CLAUDE.md → "Not built yet".
 
 ## Auth - shared via `@repo/auth`
 
