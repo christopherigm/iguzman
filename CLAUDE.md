@@ -91,10 +91,13 @@ see them, and they need no stub scripts. `apps/mob-forge` is in the
 workspace because it has a real Gradle build worth wiring into Turborepo;
 firmware does not. **Do not add `hardware/*` to `pnpm-workspace.yaml`.**
 
-Each project is self-contained: `README.md` (toolchain + flashing steps),
-`schematic.html` (standalone, opens in any browser), and `src/` (the files
-copied to the board). Toolchains are per-project and documented in each
-project's own README, not here. See `hardware/README.md`.
+**A project folder here holds firmware only** (`src/` - the files copied to
+the board). Its documentation - schematic, wiring table, toolchain, flashing
+steps, tuning and troubleshooting - lives in the **help app's Hardware
+section**, as a menu item plus a detail page at `/hardware/<project-name>`.
+There is no per-project `README.md` or `schematic.html` any more; see
+`hardware/README.md` for why, and `apps/help/CLAUDE.md` → "Hardware" for how
+to add one.
 
 ### Key Component Architecture (video-downloader)
 
@@ -111,7 +114,11 @@ Filter state in `VideoGrid` is stored in URL search params (`?platform=`, `?stat
 
 ## Help App - Keep Documentation in Sync
 
-`apps/help/` is the developer documentation hub for this monorepo. **Any change to a documented CLI script, pnpm command, or app API must be reflected in `apps/help/` in the same task** - update both the source constant/code block and all five locale files (`messages/en.json`, `es.json`, `de.json`, `fr.json`, `pt.json`).
+`apps/help/` is the developer documentation hub for this monorepo. **Any change to a documented CLI script, pnpm command, or app API must be reflected in `apps/help/` in the same task** - update both the source constant/code block and its two locale files (`messages/en.json`, `es.json`).
+
+⚠ **This app is `en` + `es` only** - it has its own `i18n/routing.ts` rather than the shared five-locale `@repo/i18n/routing`, and anything that is not Spanish resolves to English.
+
+**Hardware projects are documented here too.** Every schematic, wiring table, toolchain instruction and troubleshooting note for anything in `hardware/` belongs to the help app's **Hardware** tab, with its own menu item and its own detail page at `/hardware/<project-name>` - not a `README.md` or `schematic.html` beside the firmware. The registry is `apps/help/lib/hardware-projects.json` (no database).
 
 See `apps/help/CLAUDE.md` for the full inventory: which scripts map to which constants and panel files.
 

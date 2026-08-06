@@ -1,0 +1,21 @@
+{
+  "projects": [
+    {
+      "slug": "pumpkin-house",
+      "icon": "🎃",
+      "nameKey": "hwPumpkinHouseName",
+      "descKey": "hwPumpkinHouseDesc",
+      "board": "Raspberry Pi Pico",
+      "language": "MicroPython",
+      "revision": "Build sheet · rev A",
+      "sourcePath": "hardware/pumpkin-house",
+      "specs": [
+        { "label": "Enclosure", "value": "⌀120 × 110 mm" },
+        { "label": "Pack", "value": "4 × NiMH AA" },
+        { "label": "Rail", "value": "4.0 – 5.6 V" },
+        { "label": "Draw", "value": "≈ 93 mA" },
+        { "label": "Runtime", "value": "≈ 20 h" }
+      ]
+    }
+  ]
+}

@@ -1,7 +1,8 @@
 """Pin map and tunables for the pumpkin-house lantern.
 
-Every value here matches schematic.html rev A. If you rewire the board,
-change it here and nowhere else.
+Every value here matches the rev A build sheet, which lives in the help app
+under Hardware -> /hardware/pumpkin-house. If you rewire the board, change it
+here and update that page in the same commit.
 """
 
 # --- RGB groups ----------------------------------------------------------

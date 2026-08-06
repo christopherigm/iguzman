@@ -1,0 +1,445 @@
+/*
+ * Build-sheet styling for a hardware project's documentation.
+ *
+ * These are the tokens the standalone schematic.html carried, scoped to
+ * `.hw-doc` instead of `:root` so they cannot leak into the rest of the help
+ * app, and re-pointed at the app's own `[data-theme]` switch rather than
+ * `prefers-color-scheme` - the theme toggle in the navbar has to move them, and
+ * the OS preference alone would leave the document light on a dark page.
+ *
+ * The mono "display" face and the serif body are deliberate and preserved from
+ * the original: this is a bench document - a drawing with a legend - and the
+ * tabular figures, pin numbers and resistor values want a monospace with real
+ * tabular numerals.
+ *
+ * Nearly everything here styles a RAW element (svg, table, figcaption, pre) or
+ * an interaction state. Layout, spacing and color on the @repo/ui components
+ * that wrap them stay on the components' own props, per the props-first rule.
+ */
+
+.hw-doc {
+  --ground: #e7e8e3;
+  --surface: #f2f3ef;
+  --sunken: #dddfd8;
+  --ink: #191c1e;
+  --ink-soft: #565c58;
+  --ink-faint: #7c837d;
+  --rule: #c4c8c0;
+  --rule-soft: #d6d9d2;
+  --ember: #b85e18;
+  --rust: #a5382b;
+  --verdigris: #2a757b;
+
+  --display:
+    ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas,
+    monospace;
+  --body: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+
+  --measure: 68ch;
+
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+:root[data-theme="dark"] .hw-doc {
+  --ground: #131619;
+  --surface: #191d20;
+  --sunken: #0e1113;
+  --ink: #dee0da;
+  --ink-soft: #969c96;
+  --ink-faint: #6e756f;
+  --rule: #2e3438;
+  --rule-soft: #232a2e;
+  --ember: #e8913f;
+  --rust: #db6552;
+  --verdigris: #5db6bb;
+}
+
+/* ---------- prose ---------- */
+
+.hw-doc p,
+.hw-doc ul,
+.hw-doc ol {
+  max-width: var(--measure);
+  margin: 0 0 1.1rem;
+}
+
+.hw-doc ul,
+.hw-doc ol {
+  padding-left: 1.3rem;
+}
+
+.hw-doc li {
+  margin-bottom: 0.5rem;
+}
+
+.hw-doc strong {
+  font-weight: 600;
+}
+
+.hw-doc code {
+  font-family: var(--display);
+  font-size: 0.87em;
+  background: var(--sunken);
+  padding: 0.1em 0.36em;
+  border: 1px solid var(--rule-soft);
+  white-space: nowrap;
+}
+
+.hw-doc a {
+  color: var(--ember);
+  text-decoration: underline;
+}
+
+.hw-doc a:focus-visible {
+  outline: 2px solid var(--ember);
+  outline-offset: 2px;
+}
+
+.hw-doc pre {
+  font-family: var(--display);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: var(--sunken);
+  border: 1px solid var(--rule);
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+}
+
+.hw-doc pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: inherit;
+  white-space: pre;
+}
+
+.hw-doc .em-ember {
+  color: var(--ember);
+}
+
+/* ---------- title block ---------- */
+
+.hw-titleblock {
+  border: 1px solid var(--rule);
+  background: var(--surface);
+}
+
+.hw-titleblock__main {
+  padding: clamp(1.5rem, 4vw, 2.75rem);
+  border-bottom: 1px solid var(--rule);
+}
+
+.hw-eyebrow {
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ember);
+}
+
+.hw-title {
+  font-family: var(--display);
+  font-size: clamp(1.55rem, 4.4vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.hw-standfirst {
+  font-family: var(--body);
+  font-size: 1.05rem;
+  line-height: 1.62;
+  color: var(--ink-soft);
+  max-width: 60ch;
+}
+
+.hw-specgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.hw-spec {
+  padding: 0.9rem 1.15rem;
+  border-right: 1px solid var(--rule);
+  border-top: 1px solid var(--rule-soft);
+}
+
+.hw-spec:last-child {
+  border-right: 0;
+}
+
+.hw-spec dt {
+  font-family: var(--display);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 0.25rem;
+}
+
+.hw-spec dd {
+  font-family: var(--display);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- sections & headings ---------- */
+
+.hw-section {
+  margin-bottom: 4rem;
+}
+
+.hw-h2 {
+  margin: 0 0 1.5rem;
+  font-family: var(--display);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+}
+
+.hw-h2 .hw-num {
+  color: var(--ember);
+  font-variant-numeric: tabular-nums;
+}
+
+.hw-h3 {
+  font-family: var(--display);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin: 2.5rem 0 0.85rem;
+}
+
+/* ---------- callouts ---------- */
+
+.hw-note {
+  display: block;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  padding: 1.15rem 1.35rem;
+  margin: 1.75rem 0;
+  max-width: var(--measure);
+}
+
+.hw-note .hw-note__tag {
+  font-family: var(--display);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--ember);
+}
+
+.hw-note p:last-child {
+  margin-bottom: 0;
+}
+
+.hw-note--warn {
+  border-color: var(--rust);
+}
+
+.hw-note--warn .hw-note__tag {
+  color: var(--rust);
+}
+
+/* ---------- figures ---------- */
+
+.hw-figure {
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  margin: 2.25rem 0;
+}
+
+.hw-figure__scroll {
+  overflow-x: auto;
+  padding: 1.5rem 1.25rem 0.5rem;
+}
+
+.hw-figure svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  color: var(--ink);
+}
+
+.hw-figure figcaption {
+  font-family: var(--display);
+  font-size: 0.76rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid var(--rule-soft);
+}
+
+.hw-figure figcaption b {
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  margin-right: 0.55rem;
+}
+
+/* ---------- SVG semantic strokes ---------- */
+
+.hw-doc .wire {
+  stroke: currentColor;
+  stroke-width: 1.6;
+  fill: none;
+}
+
+.hw-doc .wire-raw {
+  stroke: var(--rust);
+  stroke-width: 2.2;
+  fill: none;
+}
+
+.hw-doc .wire-logic {
+  stroke: var(--verdigris);
+  stroke-width: 1.6;
+  fill: none;
+}
+
+.hw-doc .wire-live {
+  stroke: var(--ember);
+  stroke-width: 2.2;
+  fill: none;
+}
+
+.hw-doc .part {
+  stroke: currentColor;
+  stroke-width: 1.6;
+  fill: none;
+}
+
+.hw-doc .part-fill {
+  fill: currentColor;
+  stroke: none;
+}
+
+.hw-doc .box {
+  stroke: currentColor;
+  stroke-width: 1.4;
+  fill: none;
+}
+
+.hw-doc .box-dash {
+  stroke: var(--ink-faint);
+  stroke-width: 1.2;
+  fill: none;
+  stroke-dasharray: 5 4;
+}
+
+.hw-doc .lbl {
+  font-family: var(--display);
+  font-size: 12px;
+  fill: currentColor;
+}
+
+.hw-doc .lbl-sm {
+  font-family: var(--display);
+  font-size: 10.5px;
+  fill: var(--ink-soft);
+}
+
+.hw-doc .lbl-hd {
+  font-family: var(--display);
+  font-size: 11px;
+  fill: currentColor;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+.hw-doc .lbl-raw {
+  fill: var(--rust);
+}
+
+.hw-doc .lbl-live {
+  fill: var(--ember);
+}
+
+.hw-doc .lbl-logic {
+  fill: var(--verdigris);
+}
+
+.hw-doc .node {
+  fill: currentColor;
+}
+
+/* ---------- tables ---------- */
+
+.hw-tablewrap {
+  overflow-x: auto;
+  border: 1px solid var(--rule);
+  margin: 1.75rem 0;
+}
+
+.hw-tablewrap table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.86rem;
+}
+
+.hw-tablewrap th,
+.hw-tablewrap td {
+  text-align: left;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid var(--rule-soft);
+  vertical-align: top;
+}
+
+.hw-tablewrap th {
+  font-family: var(--display);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  background: var(--sunken);
+  border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+}
+
+.hw-tablewrap td {
+  font-family: var(--body);
+}
+
+.hw-tablewrap .mono {
+  font-family: var(--display);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hw-tablewrap tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.hw-doc .ok {
+  color: var(--verdigris);
+  font-weight: 600;
+}
+
+.hw-doc .bad {
+  color: var(--rust);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hw-doc * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

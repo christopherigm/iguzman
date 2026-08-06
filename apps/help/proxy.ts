@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import createMiddleware from "next-intl/middleware";
-import { routing } from "@repo/i18n/routing";
+// This app's own en/es routing, not the shared five-locale one - see i18n/routing.ts.
+// It is what keeps /de, /fr and /pt (whose catalogues were deleted) unreachable.
+import { routing } from "@/i18n/routing";
 
 const intlMiddleware = createMiddleware(routing);
 

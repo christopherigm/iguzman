@@ -11,6 +11,7 @@ import { ToolsPanel } from "./edit-videos-panel";
 import { SmartTvPanel } from "./smarttv-panel";
 import { MobForgePanel } from "./mob-forge-panel";
 import { NewSitePanel } from "./new-site-panel";
+import { HardwarePanel } from "./hardware-panel";
 import "./page.css";
 
 type Props = {
@@ -26,6 +27,7 @@ const VALID_TABS = [
   "smart-tv",
   "mob-forge",
   "new-site",
+  "hardware",
   "dev-cycle",
 ] as const;
 type Tab = (typeof VALID_TABS)[number];
@@ -133,9 +135,11 @@ export default async function Home({ params, searchParams }: Props) {
               ? t("mobForgeTitle")
               : tab === "new-site"
                 ? t("newSiteTitle")
-                : tab === "dev-cycle"
-                  ? t("devCycleTitle")
-                  : t("title");
+                : tab === "hardware"
+                  ? t("hardwareTitle")
+                  : tab === "dev-cycle"
+                    ? t("devCycleTitle")
+                    : t("title");
 
   const subheading =
     tab === "getting-started"
@@ -150,9 +154,11 @@ export default async function Home({ params, searchParams }: Props) {
               ? t("mobForgeSubtitle")
               : tab === "new-site"
                 ? t("newSiteSubtitle")
-                : tab === "dev-cycle"
-                  ? t("devCycleSubtitle")
-                  : t("subtitle");
+                : tab === "hardware"
+                  ? t("hardwareSubtitle")
+                  : tab === "dev-cycle"
+                    ? t("devCycleSubtitle")
+                    : t("subtitle");
 
   const menuLabels = {
     "getting-started": t("menuGettingStarted"),
@@ -162,6 +168,7 @@ export default async function Home({ params, searchParams }: Props) {
     "smart-tv": t("menuSmartTv"),
     "mob-forge": t("menuMobForge"),
     "new-site": t("menuNewSite"),
+    hardware: t("menuHardware"),
     "dev-cycle": t("menuDevCycle"),
   };
 
@@ -397,6 +404,8 @@ export default async function Home({ params, searchParams }: Props) {
             {tab === "mob-forge" && <MobForgePanel />}
 
             {tab === "new-site" && <NewSitePanel />}
+
+            {tab === "hardware" && <HardwarePanel />}
 
             {tab === "dev-cycle" && (
               <>

@@ -25,27 +25,42 @@ for nothing. `apps/mob-forge` earns its place in the workspace because it
 has a real Gradle build worth wiring into Turborepo. Firmware does not.
 
 **Consequence:** `pnpm install`, `pnpm build`, `pnpm lint` and
-`pnpm check-types` do not see this folder. Toolchains are per-project and
-documented in each project's own README.
+`pnpm check-types` do not see this folder.
 
-## Layout
+## The documentation lives in `apps/help`, not here
 
-Each project is a self-contained folder:
+**This folder holds firmware and nothing else.** Every schematic, wiring
+table, toolchain instruction, tuning note and troubleshooting table for a
+hardware project belongs to the **Hardware section of the help app**, as a
+menu item plus its own detail page at `/hardware/<project-name>`:
 
 ```
 hardware/
   <project-name>/
-    README.md         toolchain to install, how to flash, how to test
-    schematic.html    wiring diagram — open in any browser, no install
-    src/              what gets copied to the board
+    src/              what gets copied to the board — that is all
+
+apps/help/
+  lib/hardware-projects.json                            the registry entry
+  app/[locale]/hardware/[project]/_projects/<name>.tsx  the build sheet
 ```
 
-Keep the schematic next to the code it describes. A firmware repo whose
-wiring diagram lives somewhere else is a firmware repo whose wiring diagram
-is wrong within a year.
+This reverses the advice that used to be here ("keep the schematic next to
+the code it describes"). The concern behind it was real — a wiring diagram
+kept away from its firmware is wrong within a year — but a `schematic.html`
+sitting in a folder nobody opens drifts just as fast, and it could not be
+searched, linked, themed, or read on a phone at the bench. So the diagram
+moved to where the rest of this monorepo's documentation already lives, and
+the drift risk is handled by a rule instead of by proximity:
+`apps/help/CLAUDE.md` requires the help page and the firmware to be updated
+in the **same task**, exactly as it already requires for every documented
+CLI script.
+
+Adding a project means a JSON entry, a `_projects/<slug>.tsx` build sheet,
+one line in that route's `PROJECT_DOCS` map, and the name/description keys
+in `messages/en.json` and `es.json`. See `apps/help/CLAUDE.md` → "Hardware".
 
 ## Projects
 
-| Project                            | Board                | Language    |
-| ---------------------------------- | -------------------- | ----------- |
-| [pumpkin-house](./pumpkin-house/)  | Pi Pico / Pico W     | MicroPython |
+| Project                            | Board                | Language    | Documentation                  |
+| ---------------------------------- | -------------------- | ----------- | ------------------------------ |
+| [pumpkin-house](./pumpkin-house/)  | Pi Pico / Pico W     | MicroPython | help app → `/hardware/pumpkin-house` |

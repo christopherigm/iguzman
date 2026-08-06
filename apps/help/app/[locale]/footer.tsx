@@ -7,7 +7,8 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { ThemeSwitch } from "@repo/ui/theme-switch";
 import { LocaleSwitcher } from "@repo/ui/core-elements/locale-switcher";
-import { routing } from "@repo/i18n/routing";
+// This app's own en/es routing, not the shared five-locale one - see i18n/routing.ts.
+import { routing } from "@/i18n/routing";
 import packageJson from "../../package.json";
 import "./footer.css";
 

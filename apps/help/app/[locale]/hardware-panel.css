@@ -1,0 +1,18 @@
+/* Layout, spacing, border and color for the card live on the component's props
+   (the props-first rule). Only the interaction states belong here. */
+.hardware-card {
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.hardware-card:hover {
+  border-color: var(--accent);
+}
+
+.hardware-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

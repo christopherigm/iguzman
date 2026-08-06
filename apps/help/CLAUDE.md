@@ -1,6 +1,14 @@
 # apps/help CLAUDE.md
 
-`apps/help/` is the developer documentation hub for this monorepo. It has eight tabs. When anything in the inventory below changes - flags, defaults, new operations, removed features, renamed commands - update both the relevant source file **and** all five locale files (`messages/en.json`, `es.json`, `de.json`, `fr.json`, `pt.json`) in the same task.
+`apps/help/` is the developer documentation hub for this monorepo. It has nine tabs. When anything in the inventory below changes - flags, defaults, new operations, removed features, renamed commands - update both the relevant source file **and** both locale files (`messages/en.json`, `es.json`) in the same task.
+
+## Locales - this app is en + es only
+
+**This app does not use `@repo/i18n/routing`.** It has its own `i18n/routing.ts` declaring `["en", "es"]` with `en` as the default, and the German, French and Portuguese catalogues were deleted: this is internal developer documentation, maintained in English, and three machine-translated catalogues nobody proofread were worse than not offering them. Anything that is not Spanish resolves to English, including a `fr`/`de`/`pt` browser hitting `/`.
+
+Use the **local** `routing` (`@/i18n/routing`) anywhere the locale *set* matters - `proxy.ts`, `generateStaticParams`, the `hasLocale` guard in `app/[locale]/layout.tsx`, and the footer's `LocaleSwitcher`. Importing the shared five-locale one in any of those re-opens `/de`, `/fr` and `/pt`, which now have no messages behind them and would render as raw key names.
+
+`@repo/i18n/navigation`'s `Link`/`useRouter` stay shared and remain the right import for every internal link - they only prefix the locale being rendered, and the middleware can no longer produce anything but `en` or `es`.
 
 ## Inventory by Tab
 
@@ -107,11 +115,63 @@ The end-to-end workflow for building a bespoke per-customer site in `apps/websit
 
 The panel has no external `DOC_*` links (the whole workflow is in-repo) and no per-OS split (it is a Claude Code + pnpm workflow). It reuses the same local `StepSection`/`GroupLabel` helpers as the Smart TV and Mob Forge panels.
 
+### Hardware - `app/[locale]/hardware-panel.tsx` + `app/[locale]/hardware/[project]/`
+
+> **The rule: every hardware project is documented here.** Schematics, wiring
+> tables, toolchain and flashing instructions, pin maps, tuning knobs and
+> troubleshooting for anything in `hardware/` **must** live in this app's
+> Hardware section, with **its own menu item on the tab's grid and its own
+> detail page** at `/hardware/<project-name>`. A project folder in `hardware/`
+> holds firmware (`src/`) and nothing else - no `README.md`, no
+> `schematic.html`. See `hardware/README.md` for why that reversed.
+
+The tab is a `Grid` of icon + text cards - the same data-driven shape as
+`apps/website`'s `ADMIN_NAV_ITEMS`, because the list is expected to grow.
+
+**There is deliberately no database and no API.** The registry is
+`lib/hardware-projects.json`, edited in the same commit as the project it
+describes. It carries only listing metadata plus the detail page's spec chips;
+the body of a build sheet is authored JSX, because prose, SVG figures and value
+tables are documents, not rows.
+
+| Piece                                                     | Holds                                                                                     |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `lib/hardware-projects.json`                              | The registry: `slug`, `icon`, `nameKey`, `descKey`, `board`, `language`, `revision`, `sourcePath`, `specs[]` |
+| `lib/hardware-projects.ts`                                | Types + `getHardwareProject(slug)`                                                        |
+| `app/[locale]/hardware-panel.tsx`                         | The tab: a `Grid` of project cards                                                        |
+| `app/[locale]/hardware/[project]/page.tsx`                | The detail route: title block, spec grid, and the `PROJECT_DOCS` slug → component map      |
+| `app/[locale]/hardware/[project]/_projects/<slug>.tsx`    | One project's build sheet                                                                 |
+| `app/[locale]/hardware/[project]/_projects/doc-primitives.tsx` | `P`, `DocSection`, `DocH3`, `DocNote`, `DocFigure`, `DocTable` - shared by every build sheet |
+| `app/[locale]/hardware/[project]/hardware-doc.css`        | The build-sheet token set (mono display face, semantic SVG stroke classes), theme-flipped on `[data-theme="dark"]` |
+
+**To add a project:**
+
+1. Add an entry to `lib/hardware-projects.json`.
+2. Write `_projects/<slug>.tsx` from the primitives in `doc-primitives.tsx`.
+3. Register it in `PROJECT_DOCS` in `app/[locale]/hardware/[project]/page.tsx` - a JSON entry with no component (or the reverse) 404s on purpose.
+4. Add the `nameKey` / `descKey` strings to `messages/en.json` **and** `es.json`.
+
+**i18n scope is narrower here than on the other tabs, deliberately.** The
+navigation chrome (tab label, tab title/subtitle, each project's name and
+one-line description) is translated; the build sheet body is authored English
+prose. Electronics documentation is written once, by the person holding the
+board, and machine-translating several thousand words of it into locales nobody
+proofreads would make it less trustworthy, not more accessible. Keep new
+projects to the same split.
+
+**Two conventions inside a build sheet.** Only **one** numbered `§` sequence per
+document, because the prose cross-references itself by number - `DocSection`'s
+`num` is optional so how-to sections stay unnumbered while the schematic keeps
+`01`-`09`. And headings/prose go through `<Typography variant="none">`, the
+documented escape hatch for when a CSS class must fully own typography; the
+semantic wrappers (`section`, `figure`, `table`) are raw elements, since `Box`
+renders only a `div` or an anchor.
+
 ## Adding a New Tool or Section
 
 1. Add the command/flag constant(s) to the appropriate panel file.
 2. Add a `<EvSection>` (tools tab) or `<Section>` (commands tab) referencing those constants.
-3. Add translation keys to all five locale files under `messages/`.
+3. Add translation keys to both locale files under `messages/` (`en.json`, `es.json`).
 4. Add a row to the inventory table above.
 
 ## i18n

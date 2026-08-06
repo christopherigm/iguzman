@@ -15,7 +15,8 @@ import {
 import type { ThemeMode, ResolvedTheme } from "@repo/ui/theme-provider";
 import { PaletteProvider } from "@repo/ui/palette-provider";
 import { palettes } from "@repo/ui/palettes";
-import { routing } from "@repo/i18n/routing";
+// This app's own en/es routing, not the shared five-locale one - see i18n/routing.ts.
+import { routing } from "@/i18n/routing";
 import { NavbarWrapper } from "./navbar-wrapper";
 import { Footer } from "./footer";
 import { SerwistProvider } from "@serwist/next/react";
