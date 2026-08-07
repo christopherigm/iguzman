@@ -3,7 +3,6 @@ from datetime import datetime, time, timedelta
 from datetime import timezone as dt_timezone
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models import F, Value
@@ -59,6 +58,7 @@ from .services.order_emails import (
     STATUS,
     send_order_email,
 )
+from .services.qr import attach_order_qr, site_base_url
 from .services.stripe_gateway import (
     StripeGatewayError,
     StripeNotConfigured,
@@ -81,11 +81,13 @@ def _site_base_url(system) -> str:
     middle of a payment flow, where the customer is least likely to notice.
 
     The local default host has no port, so development falls back to FRONTEND_URL.
+
+    The implementation moved to `services.qr` when the order QR code needed the
+    same origin for the same reason (a value the browser must not steer, this
+    time because it is printed on a receipt). Kept as an alias so the Stripe call
+    sites still read in the vocabulary of the flow they belong to.
     """
-    host = (system.host or "").strip()
-    if not host or host in {"localhost", "127.0.0.1"}:
-        return settings.FRONTEND_URL.rstrip("/")
-    return f"https://{host}"
+    return site_base_url(system)
 
 
 def _cart_qs(user, system):
@@ -454,6 +456,12 @@ def _open_order(system, user, items, *, order_status, payment_method, email):
         order.total = subtotal
         order.save(update_fields=["subtotal", "total"])
 
+    # Outside the transaction: writing the PNG is a round-trip to object storage,
+    # and holding a row lock open across it would put every checkout in a queue
+    # behind the network. Best-effort by construction - a failure here logs and
+    # leaves `qr_code` blank rather than costing the sale (see `services.qr`).
+    attach_order_qr(order)
+
     return order, lines, None
 
 
@@ -570,12 +578,43 @@ DELETABLE_STATUSES = frozenset(
 def _may_read(request, order) -> bool:
     """Whether this caller may see this order.
 
-    Two rules, and the first is the one that makes guest checkout work: an order
+    Three rules. The first is the one that makes guest checkout work: an order
     with no `user` is readable by anyone holding its `public_id`, because that
     unguessable id in the URL is the only handle its customer will ever have.
-    An order *with* a user is readable only by that user - signing in never
-    grants a view of someone else's order, and being signed in never costs a
-    guest the view of their own.
+    An order *with* a user is readable by that user - signing in never grants a
+    view of someone else's order, and being signed in never costs a guest the
+    view of their own.
+
+    The third is what makes the order QR code useful at a counter: **an admin of
+    the order's own tenant may read any of that tenant's orders.** They can
+    already see every one of them in the CMS (`AdminOrderDetailView`), so this
+    grants no new data - it only lets the *customer-facing* page answer for them,
+    which is what a scanned QR lands on. Without it an admin scanning a
+    customer's receipt gets a 404 on an order sitting in their own admin list.
+
+    The tenant boundary is not enforced here but upstream: every caller filters
+    on `request_system(request)` first, and a signed-in user's System always
+    comes from their profile (`core.tenancy`), never from a header - so an admin
+    of one tenant cannot reach another tenant's order to begin with.
+    """
+    if order.user_id is None:
+        return True
+    if not request.user.is_authenticated:
+        return False
+    if order.user_id == request.user.id:
+        return True
+    return IsSystemAdmin().has_permission(request, None)
+
+
+def _may_pay(request, order) -> bool:
+    """Whether this caller may reopen checkout on this order.
+
+    `_may_read`'s first two rules and deliberately **not** its admin rule.
+    Reopening checkout is a write: it expires the order's live Stripe session
+    before opening another (see `OrderPayView`), so an admin who scanned a
+    customer's QR while that customer was mid-payment on their phone would kill
+    the session under them. Reading an order to validate it at the counter is the
+    access this feature needed; paying for one on the customer's behalf is not.
     """
     if order.user_id is None:
         return True
@@ -695,7 +734,7 @@ class OrderPayView(APIView):
 
     # AllowAny for the same reason `OrderDetailView` is: a guest order has no
     # owner to authenticate as, and its unguessable `public_id` is the only
-    # handle its customer will ever have. `_may_read` still refuses an *owned*
+    # handle its customer will ever have. `_may_pay` still refuses an *owned*
     # order to anyone but its owner, so this opens up nothing the GET does not.
     permission_classes = (AllowAny,)
 
@@ -708,7 +747,7 @@ class OrderPayView(APIView):
             .prefetch_related("lines", "lines__product", "lines__menu_item")
             .first()
         )
-        if order is None or not _may_read(request, order):
+        if order is None or not _may_pay(request, order):
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 
         refusal = self._refuse(order, system)

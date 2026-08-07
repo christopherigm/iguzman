@@ -23,6 +23,7 @@ correctness problem. A failure is logged and swallowed; the order stands.
 """
 
 import logging
+from email.mime.image import MIMEImage
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
@@ -32,8 +33,16 @@ from core.media import absolute_media_url
 from core.services.contact import _admin_emails, _tenant_brand
 
 from ..serializers import resolve_line_image
+from .qr import order_qr_bytes
 
 logger = logging.getLogger(__name__)
+
+# The Content-ID the QR image is attached under, referenced as `cid:order-qr` in
+# the HTML part. **Embedded, not linked**, unlike the logo and the product
+# thumbnails in the same email: most clients block remote images by default, and
+# a blocked QR is a blank box - which for the one thing the recipient may have to
+# hold up at a counter is worse than showing no code at all.
+_QR_CID = "order-qr"
 
 
 # The three flavors of order email, distinguished only by their headline and
@@ -139,6 +148,12 @@ def send_order_email(order, *, kind):
         # for pickup" wording of a fulfillment email.
         is_delivery = bool((order.shipping_line1 or "").strip())
 
+        # Read once, up front: it decides both whether the template renders the
+        # QR block and whether there is an attachment to hang it on. None on an
+        # order that predates the field or whose write failed, and the email then
+        # simply goes out without a code.
+        qr_png = order_qr_bytes(order)
+
         ctx = {
             "order_ref": order_ref,
             "kind": kind,
@@ -158,6 +173,9 @@ def send_order_email(order, *, kind):
             # an order carries no locale of its own (an online one is emailed
             # from the webhook, which never saw the checkout request).
             "action_url": f"{brand['base_url']}/orders/{order.public_id}",
+            # `cid:` reference for the inline attachment below, or None so the
+            # template skips the whole block rather than rendering a broken image.
+            "qr_cid": _QR_CID if qr_png else None,
             "preheader": (
                 f"Pedido {order_ref} · {status_es} / Order {order_ref} · {status_en}"
             ),
@@ -189,6 +207,23 @@ def send_order_email(order, *, kind):
             reply_to=_admin_emails(system) or [brand["from_email"]],
         )
         message.attach_alternative(html_body, "text/html")
+
+        if qr_png:
+            image = MIMEImage(qr_png, "png")
+            image.add_header("Content-ID", f"<{_QR_CID}>")
+            # `inline`, so a client that understands the cid renders it in place
+            # instead of listing it as a download the reader has to go find.
+            image.add_header(
+                "Content-Disposition", "inline", filename=f"order-{order_ref}.png",
+            )
+            message.attach(image)
+            # Django nests the text/html alternatives inside a `multipart/mixed`
+            # by default, which leaves the image a sibling of the whole body and
+            # lets several clients (Outlook worst of all) refuse to resolve the
+            # cid. `related` is the subtype that says "this part belongs to that
+            # HTML" - without this line the block above renders as a broken image.
+            message.mixed_subtype = "related"
+
         message.send(fail_silently=False)
     except Exception:
         # Best-effort: a mail failure must never fail the order or the webhook.

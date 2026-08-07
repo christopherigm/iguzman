@@ -73,6 +73,29 @@ the full receipt (items, add-ons, summary, link) is written once. Bilingual
     </tr>
   </table>
 
+  {% comment %}
+  --- Order QR (shared, language-neutral) ---
+  `qr_cid` is the Content-ID of an image attached to this message, not a URL:
+  most clients block remote images by default and a blocked QR is a blank box.
+  The whole block is skipped when the order has no stored code (see
+  `orders.services.qr`), so nothing here ever renders as a broken image. White
+  background is explicit - a client in dark mode would otherwise invert the
+  padding around the symbol and stop it scanning.
+  {% endcomment %}
+  {% if qr_cid %}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 4px 0;">
+    <tr>
+      <td align="center" style="padding:20px; background-color:#ffffff; border:1px solid #edf0f5; border-radius:10px;">
+        <img src="cid:{{ qr_cid }}" alt="Pedido / Order #{{ order_ref }}" width="160" height="160" style="width:160px; height:160px; display:block; border:0;">
+        <div style="margin-top:12px; font-family:Arial,Helvetica,sans-serif; font-size:12px; color:#8a94a6; line-height:1.6;">
+          Escanea este código para ver tu pedido o mostrarlo en tienda.<br>
+          Scan this code to open your order or show it in store.
+        </div>
+      </td>
+    </tr>
+  </table>
+  {% endif %}
+
   {% include "users/_email_button.html" with url=action_url label="Ver mi pedido" primary_color=primary_color %}
 
   <hr style="border:0; border-top:1px solid #edf0f5; margin:28px 0;">

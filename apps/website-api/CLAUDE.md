@@ -501,6 +501,63 @@ profile); `/api/bookings/admin/` and `/api/bookings/admin/<pk>/` are
 `BookingAdminTests`) - they pin `now` to a fixed instant rather than reading the
 clock, because "is this slot in the future" is half of what the engine decides.
 
+## Order QR codes (`orders/services/qr.py`)
+
+Every order stores a PNG QR code (`Order.qr_code`) encoding its **public**
+detail URL, `https://<tenant host>/orders/<public_id>` - the same address the
+confirmation email already links to. It exists so a store admin can scan the
+emailed or printed code at the counter and land straight on the order to
+validate it.
+
+- ⚠ **The code points at the customer page, never at
+  `/admin/orders/<public_id>`.** A QR carries exactly one URL and it is printed
+  on paper the customer keeps, so it has to be the address that works for
+  whoever holds it. Admin validation is a *permission* on that page, not a
+  second code - which is why `_may_read` grew its third rule (below) and why the
+  frontend puts a "See in admin" button on the customer page.
+- **`_may_read` lets a tenant's admin read any order of their own System.**
+  They can already see every one of them through `AdminOrderDetailView`, so this
+  grants no new data; it only lets the customer-facing endpoint answer for them.
+  The tenant boundary is enforced *upstream*, not here: every caller filters on
+  `request_system(request)` first and a signed-in user's System always comes from
+  their profile (`core/tenancy.py`), so an admin cannot reach another tenant's
+  order at all.
+- ⚠ **`OrderPayView` uses `_may_pay`, which deliberately drops that admin rule.**
+  Reopening checkout expires the order's live Stripe session before opening
+  another, so an admin who scanned a QR while the customer was mid-payment on
+  their phone would kill the session under them. Validating an order is a read;
+  paying for one is not. Don't collapse the two predicates back together.
+- **Written once, at checkout** (`_open_order`, outside the transaction so a
+  round-trip to object storage never holds a row lock), never regenerated per
+  render: the payload derives only from `public_id` and the tenant's host,
+  neither of which moves, and a printed code that regenerated differently would
+  stop matching the receipt it is on. **Best-effort** like the order emails -
+  a storage failure logs and leaves `qr_code` blank rather than costing the sale,
+  so **every render site must handle a null code**. Fill gaps (and every order
+  placed before the field existed) with `python manage.py backfill_order_qr
+  [--host <host>] [--force] [--dry-run]`.
+- **The order email embeds the code as an inline `cid:` attachment**, unlike the
+  logo and the product thumbnails in the same message: most clients block remote
+  images by default and a blocked QR is a blank box, which for the one thing the
+  recipient may hold up at a counter is worse than no code. That needs
+  `message.mixed_subtype = "related"` - without it the image is a sibling of the
+  whole body rather than of the HTML and several clients refuse to resolve the
+  cid.
+- **`site_base_url` is shared with the Stripe return URL** (`_site_base_url` in
+  `orders/views.py` is now an alias) for the same reason it always had: the
+  origin comes off `System.host`, never from a client-settable header - this one
+  ends up printed on a receipt.
+- ⚠ **The stored file is as public as the link it encodes.** `order_qr_upload_path`
+  names it after the `public_id` and the R2 bucket is served by a Cloudflare
+  custom domain with no ACLs, so the unguessable id is the only lock - exactly as
+  it is in the URL. Never "tidy" the name to a sequential id, which would put
+  every other order's code one guess away from the last.
+
+Tests: `OrderQrTests` in `orders/tests.py`, plus the admin-read cases in
+`OrderReadTests` and `OrderPayTests`. ⚠ That module now sets `MEDIA_ROOT` to a
+temp dir via `setUpModule` - every checkout in it writes a real file, and
+unisolated they scatter a PNG per order through the developer's own `media/`.
+
 ## LLM calls - always through `core/services/llm.py`
 
 Every AI call in the website stack runs here, not in the Next.js app. `stream_chat`

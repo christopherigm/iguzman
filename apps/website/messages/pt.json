@@ -482,7 +482,11 @@
     "payOutOfStock": "Alguns artigos desta encomenda já não estão disponíveis.",
     "paySlotUnavailable": "Esse horário de marcação já foi ocupado. Escolha um novo horário.",
     "payOrderClosed": "Esta encomenda já não pode ser paga online.",
-    "payUnavailable": "Os pagamentos online não estão disponíveis de momento."
+    "payUnavailable": "Os pagamentos online não estão disponíveis de momento.",
+    "qrTitle": "Código do pedido",
+    "qrHint": "Leia o código para abrir este pedido ou mostre-o na loja.",
+    "qrAlt": "Código QR do pedido #{id}",
+    "seeInAdmin": "Ver na administração"
   },
   "VerifyEmailPage": {
     "loading": "Verificando sua conta, aguarde…",

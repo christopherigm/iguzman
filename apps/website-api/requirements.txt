@@ -2,6 +2,10 @@ Django==5.2.11
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
 Pillow==11.1.0
+# The QR code stored on every order (`orders/services/qr.py`). Pure Python and
+# renders through Pillow, which is already here - no native build, no new wheel
+# platform to worry about in the image.
+qrcode==8.2
 whitenoise==6.9.0
 gunicorn==23.0.0
 psycopg2-binary==2.9.10

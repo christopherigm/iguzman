@@ -107,6 +107,11 @@ export interface Order {
   /** Null on every ordinary order. Present, this order *is* an appointment and
    *  the page renders it as one - see `Booking` in website-api's orders app. */
   booking: Booking | null;
+  /** Absolute URL of the order's stored QR code, which encodes this order's own
+   *  public page. **Null on any order placed before the field existed**, so
+   *  every render site has to handle its absence rather than assume one is
+   *  there - see `orders/services/qr.py` in website-api. */
+  qr_code: string | null;
 }
 
 /**

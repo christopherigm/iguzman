@@ -1,4 +1,6 @@
 import json
+import shutil
+import tempfile
 import uuid
 from datetime import date, datetime, time, timedelta
 from datetime import timezone as dt_timezone
@@ -9,7 +11,7 @@ from zoneinfo import ZoneInfo
 from django.contrib.auth.models import User
 from django.core import mail
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from catalog.models import MenuItem, Product, Service
@@ -19,8 +21,33 @@ from users.models import CartItem
 
 from .models import Booking, Order, OrderLine
 from .services.booking import branches_for, is_slot_available, slots_for_day
+from .services.qr import order_detail_url
 from .services.stripe_gateway import StripeGatewayError, to_minor_units
 from .views import _booking_amounts
+
+# Every checkout in this module writes a real file: `_open_order` stores the
+# order's QR code, and `default_storage` points at the developer's own `media/`
+# directory. Left unisolated, a test run scatters a PNG per order through the
+# tree the local site serves from, run after run, with nothing to sweep them up.
+#
+# Module hooks rather than `core.tests.IsolatedMediaTestCase`, which does the
+# same job at class level: this needs to cover every class in the file, and half
+# of them create an order without caring that they do.
+_media_root = None
+_media_override = None
+
+
+def setUpModule():
+    global _media_root, _media_override
+    _media_root = tempfile.mkdtemp(prefix="website-api-orders-tests-")
+    _media_override = override_settings(MEDIA_ROOT=_media_root)
+    _media_override.enable()
+
+
+def tearDownModule():
+    if _media_override is not None:
+        _media_override.disable()
+    shutil.rmtree(_media_root, ignore_errors=True)
 
 
 class CryptoTests(TestCase):
@@ -519,6 +546,36 @@ class OrderReadTests(TestCase):
 
     def test_another_users_order_is_not_found(self):
         self.client.force_login(self.other_user)
+
+        response = self.client.get(f"/api/orders/{self.order.public_id}/")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_an_admin_may_read_another_customers_order(self):
+        """The rule that makes the order QR code useful at a counter.
+
+        An admin scanning a customer's receipt lands on the *customer-facing*
+        page, so that page has to answer for them - otherwise they get a 404 on
+        an order that is sitting in their own CMS list.
+        """
+        self.other_user.profile.is_admin = True
+        self.other_user.profile.save()
+        self.client.force_login(self.other_user)
+
+        response = self.client.get(f"/api/orders/{self.order.public_id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["public_id"], str(self.order.public_id))
+
+    def test_an_admin_of_another_tenant_still_gets_a_404(self):
+        """Admin is not a cross-tenant key. The boundary is upstream of
+        `_may_read`: a signed-in user's System comes from their profile, never
+        from a header, so the lookup never finds another tenant's order at all."""
+        other_system = System.objects.create(site_name="Rival", host="rival.test")
+        intruder = self._make_user("admin@rival.test", other_system)
+        intruder.profile.is_admin = True
+        intruder.profile.save()
+        self.client.force_login(intruder)
 
         response = self.client.get(f"/api/orders/{self.order.public_id}/")
 
@@ -1439,6 +1496,143 @@ class OrderEmailTests(TestCase):
         self.assertEqual(mail.outbox[0].to, ["jo@guest.test"])
 
 
+class OrderQrTests(TestCase):
+    """The QR code an order carries, and the two places it has to arrive.
+
+    What these pin down is the part that fails silently: a code that encodes the
+    wrong URL still looks like a perfectly good QR, and an email whose image is
+    linked rather than embedded still *sends* - it just renders as a blank box in
+    every client that blocks remote images, which is most of them.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(
+            site_name="Acme", host="acme.test", pay_in_store_enabled=True,
+        )
+        self.product = Product.objects.create(
+            system=self.system, name="Bag", slug="bag",
+            price=Decimal("10.00"), currency="USD", stock_count=5,
+        )
+        self.user = User.objects.create_user("u", password="x", email="a@acme.test")
+        self.user.profile.system = self.system
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    def _place_order(self):
+        CartItem.objects.create(user=self.user, system=self.system, product=self.product)
+        response = self.client.post(
+            "/api/orders/checkout/",
+            {
+                "locale": "en",
+                "payment_method": "in_store",
+                "contact": {"name": "Jo", "email": "jo@acme.test"},
+            },
+            content_type="application/json", HTTP_X_WEBSITE_HOST="acme.test",
+        )
+        self.assertEqual(response.status_code, 201)
+        return Order.objects.get(public_id=response.json()["order_id"])
+
+    def test_checkout_writes_a_qr_code_under_the_tenants_prefix(self):
+        order = self._place_order()
+
+        self.assertTrue(order.qr_code)
+        # Tenant-prefixed like every other file, so it follows the customer to
+        # its own R2 bucket, and named after the id it encodes.
+        self.assertEqual(
+            order.qr_code.name,
+            f"t/{self.system.pk}/orders/qr/{order.public_id}.png",
+        )
+        self.assertTrue(order.qr_code.read().startswith(b"\x89PNG"))
+
+    def test_the_code_encodes_the_public_order_page_not_the_admin_one(self):
+        """A QR carries exactly one URL and it is printed on paper the customer
+        keeps, so it has to be the address that works for whoever holds it.
+        Admin validation is a permission on that page, not a second code."""
+        order = self._place_order()
+
+        url = order_detail_url(order)
+
+        self.assertTrue(url.endswith(f"/orders/{order.public_id}"))
+        self.assertNotIn("/admin/", url)
+
+    def test_the_serialized_order_carries_the_code(self):
+        order = self._place_order()
+
+        body = self.client.get(f"/api/orders/{order.public_id}/").json()
+
+        self.assertIsNotNone(body["qr_code"])
+        self.assertIn(f"{order.public_id}.png", body["qr_code"])
+
+    def test_an_order_without_a_code_serializes_as_null(self):
+        """Every order placed before the field existed. The pages that render it
+        have to cope rather than assume one is always there."""
+        order = Order.objects.create(
+            system=self.system, user=self.user, currency="USD",
+            subtotal=Decimal("1.00"), total=Decimal("1.00"),
+        )
+
+        body = self.client.get(f"/api/orders/{order.public_id}/").json()
+
+        self.assertIsNone(body["qr_code"])
+
+    def test_the_confirmation_email_embeds_the_code_inline(self):
+        """Linked to the CDN it would be a blank box in any client with remote
+        images off, which is the default nearly everywhere - and this is the one
+        part of the email the customer may have to hold up at a counter."""
+        self._place_order()
+
+        message = mail.outbox[0]
+        html = next(body for body, mime in message.alternatives if mime == "text/html")
+
+        self.assertIn('src="cid:order-qr"', html)
+        # `related`, not Django's default `mixed`: with the image a sibling of the
+        # whole body rather than of the HTML, several clients refuse to resolve
+        # the cid and render a broken image instead.
+        self.assertEqual(message.mixed_subtype, "related")
+        attachment = next(
+            part for part in message.attachments
+            if part.get("Content-ID") == "<order-qr>"
+        )
+        self.assertEqual(attachment.get_content_type(), "image/png")
+
+    def test_an_email_for_an_order_with_no_code_omits_the_block(self):
+        """The template skips the whole block rather than rendering `cid:None`
+        as a broken image."""
+        order = Order.objects.create(
+            system=self.system, currency="USD", email="jo@acme.test",
+            subtotal=Decimal("1.00"), total=Decimal("1.00"),
+        )
+        from .services.order_emails import CONFIRMATION, send_order_email
+
+        send_order_email(order, kind=CONFIRMATION)
+
+        message = mail.outbox[0]
+        html = next(body for body, mime in message.alternatives if mime == "text/html")
+        self.assertNotIn("cid:", html)
+        self.assertEqual(message.attachments, [])
+
+    def test_backfill_writes_codes_for_orders_that_have_none(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        missing = Order.objects.create(
+            system=self.system, user=self.user, currency="USD",
+            subtotal=Decimal("1.00"), total=Decimal("1.00"),
+        )
+        existing = self._place_order()
+        original = existing.qr_code.name
+
+        call_command("backfill_order_qr", host="acme.test", stdout=StringIO())
+
+        missing.refresh_from_db()
+        existing.refresh_from_db()
+        self.assertTrue(missing.qr_code)
+        # Re-runnable: an order that already had one is left exactly as it was.
+        self.assertEqual(existing.qr_code.name, original)
+
+
 class BookingAvailabilityTests(TestCase):
     """The slot engine: hours, lunch, notice, horizon and capacity.
 
@@ -2053,6 +2247,25 @@ class OrderPayTests(TestCase):
         other.profile.save()
         self.client.force_login(other)
 
+        self.assertEqual(self._pay().status_code, 404)
+
+    def test_an_admin_may_read_but_not_pay_another_customers_order(self):
+        """`_may_pay` deliberately drops `_may_read`'s admin rule.
+
+        Reopening checkout expires the order's live Stripe session before opening
+        another, so an admin who scanned a customer's QR while that customer was
+        mid-payment on their phone would kill the session under them. Validating
+        an order at the counter is a read; paying for one is not.
+        """
+        admin = User.objects.create_user("mgr", password="x", email="mgr@acme.test")
+        admin.profile.system = self.system
+        admin.profile.is_admin = True
+        admin.profile.save()
+        self.client.force_login(admin)
+
+        self.assertEqual(
+            self.client.get(f"/api/orders/{self.order.public_id}/").status_code, 200,
+        )
         self.assertEqual(self._pay().status_code, 404)
 
     @patch("orders.views.create_checkout_session", return_value=_StubSession())

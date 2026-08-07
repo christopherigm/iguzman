@@ -482,7 +482,11 @@
     "payOutOfStock": "Algunos artículos de este pedido ya no están disponibles.",
     "paySlotUnavailable": "Esa hora de la cita ya está ocupada. Reserva un nuevo horario.",
     "payOrderClosed": "Este pedido ya no se puede pagar en línea.",
-    "payUnavailable": "Los pagos en línea no están disponibles en este momento."
+    "payUnavailable": "Los pagos en línea no están disponibles en este momento.",
+    "qrTitle": "Código del pedido",
+    "qrHint": "Escanéalo para abrir este pedido o muéstralo en tienda.",
+    "qrAlt": "Código QR del pedido #{id}",
+    "seeInAdmin": "Ver en administración"
   },
   "VerifyEmailPage": {
     "loading": "Verificando tu cuenta, por favor espera…",

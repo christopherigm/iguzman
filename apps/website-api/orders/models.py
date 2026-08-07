@@ -1,3 +1,4 @@
+import os
 import uuid
 from decimal import Decimal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -6,6 +7,27 @@ from django.contrib.auth.models import User
 from django.db import models
 
 from core.models import CURRENCY_CHOICES
+from core.tenant_paths import tenant_path
+
+
+def order_qr_upload_path(instance, filename):
+    """Where an order's QR code image is stored.
+
+    Tenant-prefixed like every other file (see `core.tenant_paths`), so it
+    follows a customer to its own R2 account when it connects one, and named
+    after the order's `public_id` - the same handle the code encodes - so a file
+    in the bucket is traceable to its order with no database lookup.
+
+    ⚠ **The `public_id` in the name is the order's only lock, exactly as it is in
+    the URL.** The bucket is served by a Cloudflare custom domain with no notion
+    of an ACL, so this file is public to anyone who can guess its path - which is
+    no weaker than the link it encodes, since that link is in the customer's
+    inbox and on the receipt they carry out of the shop. What must not happen is
+    someone "tidying" this to a sequential id: that would put every other order's
+    code one guess away from the last.
+    """
+    ext = os.path.splitext(filename)[1].lstrip(".") or "png"
+    return tenant_path(instance.system_id, f"orders/qr/{instance.public_id}.{ext}")
 
 
 class Order(models.Model):
@@ -91,6 +113,22 @@ class Order(models.Model):
     # Generated the moment the row is created, so it exists for a `pending`
     # order too, unlike any Stripe id, which is only set once payment moves.
     public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+
+    # A PNG of the order's public detail URL, written once at checkout by
+    # `orders.services.qr.attach_order_qr`. It exists so a store admin can scan
+    # the emailed or printed code at the counter and land straight on the order
+    # to validate it; the customer's own copy of the same code is how they pull
+    # their order up on their phone.
+    #
+    # Stored rather than regenerated per render because the payload is derived
+    # only from `public_id` and the tenant's host, neither of which moves in an
+    # order's lifetime - and a code printed on paper that later regenerated
+    # differently would stop matching the receipt it is on. Blank on an order
+    # placed before this landed, or one whose write failed; `backfill_order_qr`
+    # fills those in.
+    qr_code = models.ImageField(
+        upload_to=order_qr_upload_path, max_length=255, blank=True, null=True,
+    )
 
     system = models.ForeignKey(
         "core.System",

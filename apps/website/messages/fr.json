@@ -482,7 +482,11 @@
     "payOutOfStock": "Certains articles de cette commande ne sont plus disponibles.",
     "paySlotUnavailable": "Ce créneau de rendez-vous a été pris. Veuillez en réserver un autre.",
     "payOrderClosed": "Cette commande ne peut plus être payée en ligne.",
-    "payUnavailable": "Les paiements en ligne ne sont pas disponibles pour le moment."
+    "payUnavailable": "Les paiements en ligne ne sont pas disponibles pour le moment.",
+    "qrTitle": "Code de la commande",
+    "qrHint": "Scannez-le pour ouvrir cette commande, ou présentez-le en magasin.",
+    "qrAlt": "QR code de la commande #{id}",
+    "seeInAdmin": "Voir dans l'administration"
   },
   "VerifyEmailPage": {
     "loading": "Vérification de votre compte, veuillez patienter…",

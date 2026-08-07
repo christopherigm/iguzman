@@ -92,6 +92,18 @@ customization?, quantity}`) - Django re-prices every one of them
   **`admin/payments/`** - its own CMS page, not `/admin/system` - and
   `admin/payments/page.tsx` deletes empty secret keys from the payload; keep that
   if you touch the form.
+- **`/orders/[id]` is also where the order's QR code leads, and an admin may
+  open it for any of their tenant's orders.** The code (rendered in the summary
+  card, and embedded in the confirmation email) encodes this page, not
+  `/admin/orders/<public_id>` - a QR carries one URL and it is printed on a
+  receipt the customer keeps, so it has to work for whoever holds it. An admin
+  who scans one lands here and takes the **See in admin** button below "Back to
+  orders" through to the CMS. That button is gated on `session.isAdmin`, a claim
+  on the access token, so it renders in the first HTML - presentation only, since
+  `proxy.ts` guards `/admin` and Django re-derives the claim on every call. The
+  API side of this (`_may_read` vs `_may_pay`) is in website-api's CLAUDE.md →
+  "Order QR codes"; ⚠ `order.qr_code` is **null on any order placed before the
+  field existed**, so the block is conditional and must stay that way.
 
 ## Booking - a service sold as an appointment
 

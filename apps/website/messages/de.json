@@ -482,7 +482,11 @@
     "payOutOfStock": "Einige Artikel dieser Bestellung sind nicht mehr verfügbar.",
     "paySlotUnavailable": "Dieser Termin ist inzwischen vergeben. Bitte buchen Sie eine neue Uhrzeit.",
     "payOrderClosed": "Diese Bestellung kann nicht mehr online bezahlt werden.",
-    "payUnavailable": "Online-Zahlungen sind derzeit nicht verfügbar."
+    "payUnavailable": "Online-Zahlungen sind derzeit nicht verfügbar.",
+    "qrTitle": "Bestellcode",
+    "qrHint": "Scannen, um diese Bestellung zu öffnen, oder im Geschäft vorzeigen.",
+    "qrAlt": "QR-Code für Bestellung #{id}",
+    "seeInAdmin": "In der Verwaltung ansehen"
   },
   "VerifyEmailPage": {
     "loading": "Ihr Konto wird verifiziert, bitte warten…",

@@ -36,7 +36,7 @@ class OrderAdmin(admin.ModelAdmin):
     # (marking a refund issued in the Stripe dashboard, or an offline order paid /
     # handed over).
     readonly_fields = (
-        "public_id",
+        "public_id", "qr_code",
         "system", "user", "payment_method", "currency", "subtotal", "total",
         "stripe_session_id", "stripe_payment_intent_id",
         "email", "phone", "shipping_name", "shipping_line1", "shipping_line2",
@@ -47,7 +47,7 @@ class OrderAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Order", {
             "fields": (
-                "public_id", "system", "user", "status", "payment_method",
+                "public_id", "qr_code", "system", "user", "status", "payment_method",
                 "fulfilled", "fulfilled_at", "created_at", "updated_at", "paid_at",
             ),
         }),

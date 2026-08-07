@@ -28,6 +28,21 @@ def resolve_line_image(obj, request=None):
     return request.build_absolute_uri(source.url) if request else source.url
 
 
+def resolve_qr_code(order, request=None):
+    """The absolute URL of an order's stored QR code, or None.
+
+    Absolute for the same reason `resolve_line_image` is: on R2 the storage
+    backend already hands back a CDN URL, while on a local filesystem it hands
+    back a relative media path that a browser on another origin cannot resolve.
+    Null on an order placed before the field existed - the pages that render it
+    must cope with that rather than assume every order has one.
+    """
+    if not order.qr_code:
+        return None
+    url = order.qr_code.url
+    return request.build_absolute_uri(url) if request else url
+
+
 class OrderLineSerializer(serializers.ModelSerializer):
     """A purchased line, served from its own snapshot.
 
@@ -148,6 +163,10 @@ class OrderSerializer(serializers.ModelSerializer):
     # an appointment record - which is the whole reason a booking rides on an
     # Order rather than living in a parallel model.
     booking = BookingSerializer(read_only=True)
+    # The order's own QR code, so the detail page can show the customer the same
+    # symbol their email carries - and so an admin has something to scan back at
+    # the counter. Null on an order that predates the field.
+    qr_code = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -161,8 +180,11 @@ class OrderSerializer(serializers.ModelSerializer):
             "currency", "subtotal", "total",
             "email", "phone", "shipping_name", "shipping_line1", "shipping_line2",
             "shipping_city", "shipping_state", "shipping_postal_code", "shipping_country",
-            "created_at", "paid_at", "item_count", "lines", "booking",
+            "created_at", "paid_at", "item_count", "lines", "booking", "qr_code",
         ]
+
+    def get_qr_code(self, obj):
+        return resolve_qr_code(obj, self.context.get("request"))
 
 
 class OrderSummarySerializer(serializers.ModelSerializer):
@@ -225,6 +247,10 @@ class AdminOrderSerializer(serializers.ModelSerializer):
 
     lines = OrderLineSerializer(many=True, read_only=True)
     item_count = serializers.IntegerField(read_only=True)
+    # Carried here too so the CMS detail view can reprint the code an operator
+    # needs to stick on a package or hand back over the counter, without going
+    # through the customer-facing endpoint for it.
+    qr_code = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -233,8 +259,11 @@ class AdminOrderSerializer(serializers.ModelSerializer):
             "currency", "subtotal", "total",
             "email", "phone", "shipping_name", "shipping_line1", "shipping_line2",
             "shipping_city", "shipping_state", "shipping_postal_code", "shipping_country",
-            "created_at", "paid_at", "fulfilled_at", "item_count", "lines",
+            "created_at", "paid_at", "fulfilled_at", "item_count", "lines", "qr_code",
         ]
+
+    def get_qr_code(self, obj):
+        return resolve_qr_code(obj, self.context.get("request"))
 
 
 class AdminOrderActionSerializer(serializers.Serializer):

@@ -19,6 +19,10 @@ Total: {{ total_display }}
 
 Ver mi pedido / View my order:
 {{ action_url }}
+{% if qr_cid %}
+El código QR de tu pedido va adjunto a este correo; muéstralo en tienda.
+Your order's QR code is attached to this email - show it in store.
+{% endif %}
 
 {{ site_name }}{% if slogan %} - {{ slogan }}{% endif %}
 {{ base_url }}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
@@ -40,6 +41,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  * the webhook, which is the only thing that may mark an order paid. Reloading
  * this page later, with no query, shows the same order in whatever state it
  * really ended up in.
+ *
+ * **It is also where the order's QR code leads**, which is why an admin of the
+ * tenant may open it for any of their customers' orders (`_may_read` in
+ * website-api). A QR carries exactly one URL and it is printed on a receipt the
+ * customer keeps, so it has to be the address that works for whoever holds it;
+ * an admin who scans one lands here and takes the "See in admin" button through
+ * to the management view.
  */
 export default async function OrderDetailPage({ params, searchParams }: Props) {
   const { locale, id } = await params;
@@ -207,6 +215,56 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
               </>
             ) : null}
 
+            {/* The order's own QR code: the customer pulls their order up on a
+                phone with it, and a store admin scans it at the counter to
+                validate the order. Absent on any order placed before the field
+                existed, so the whole block is conditional rather than reserving
+                a slot that would render as a broken image. */}
+            {order.qr_code ? (
+              <>
+                <Box
+                  height={1}
+                  flex="0 0 auto"
+                  backgroundColor="var(--border)"
+                />
+                <Box flexDirection="column" alignItems="center" gap={8}>
+                  <Typography
+                    as="h3"
+                    variant="h6"
+                    margin={0}
+                    color="var(--on-surface)"
+                  >
+                    {t("qrTitle")}
+                  </Typography>
+                  {/* An explicit white plate under the code, not the card's own
+                      surface: a QR needs a light quiet zone to scan, and the
+                      card is dark in every dark palette. */}
+                  <Box
+                    flex="0 0 auto"
+                    backgroundColor="#ffffff"
+                    padding={8}
+                    borderRadius={8}
+                  >
+                    <Image
+                      src={order.qr_code}
+                      alt={t("qrAlt", { id: orderRef(order.public_id) })}
+                      width={160}
+                      height={160}
+                      style={{ display: "block" }}
+                    />
+                  </Box>
+                  <Typography
+                    variant="caption"
+                    margin={0}
+                    color="var(--foreground)"
+                    styles={{ textAlign: "center" }}
+                  >
+                    {t("qrHint")}
+                  </Typography>
+                </Box>
+              </>
+            ) : null}
+
             {/* The customer who reached Stripe and came back without paying.
                 Hidden while `session_id` is present: they have just returned
                 from a payment and the banner above is waiting on the webhook, so
@@ -225,6 +283,23 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
               kind="primary"
               width="100%"
             />
+
+            {/* The other half of scanning an order's QR: an admin lands on this
+                customer-facing page and needs one tap through to the controls
+                (mark paid, mark fulfilled) that live in the CMS.
+
+                `isAdmin` is a claim on the access token, so this renders in the
+                first HTML with no extra request. Presentation only - the admin
+                route is guarded by `proxy.ts` and Django re-derives the claim on
+                every call, so a customer who forged it would land on a page that
+                refuses to load. */}
+            {session?.isAdmin ? (
+              <Button
+                text={t("seeInAdmin")}
+                href={`/admin/orders/${order.public_id}`}
+                width="100%"
+              />
+            ) : null}
           </Card>
         </Grid>
       </Grid>

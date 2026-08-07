@@ -482,7 +482,11 @@
     "payOutOfStock": "Some items in this order are no longer available.",
     "paySlotUnavailable": "That appointment time has been taken. Please book a new time.",
     "payOrderClosed": "This order can no longer be paid online.",
-    "payUnavailable": "Online payments aren't available right now."
+    "payUnavailable": "Online payments aren't available right now.",
+    "qrTitle": "Order code",
+    "qrHint": "Scan to open this order, or show it in store.",
+    "qrAlt": "QR code for order #{id}",
+    "seeInAdmin": "See in admin"
   },
   "VerifyEmailPage": {
     "loading": "Verifying your account, please wait…",
