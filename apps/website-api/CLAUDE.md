@@ -567,17 +567,19 @@ is sold per person at all.
   the duration overlap - and `service_duration_minutes` silently falls back to 60
   when it is null. The CMS warns when booking is on and duration is empty.
 - **The duration also spaces the start times** (`slot_step_minutes`): a two-hour
-  tour is offered at 09:00 and 11:00, not every half hour.
-  `Branch.booking_slot_minutes` is now an **override, empty by default** - it
-  exists for the three-chair salon that begins a 90-minute colour every 30
-  minutes, where capacity rather than the clock is the limit. It used to be a
-  fixed 30-minute grid for every service at the location, which printed a row of
-  start times that deleted each other the moment one was taken (with one boat,
-  booking the 09:00 kills the 09:30). Migration `core.0058` clears the column on
-  every existing branch, because a stored 30 was the old default rather than
-  anybody's decision. ⚠ Read it through `slot_step_minutes`, never off
-  `_branch_settings` directly - `slot_minutes` is `None` there whenever the
-  branch has not overridden it, which is the ordinary case.
+  tour is offered at 09:00 and 11:00, not every half hour. ⚠ **There is no
+  per-branch grid setting, and adding one back is a regression.**
+  `Branch.booking_slot_minutes` was a fixed 30-minute grid for every service at
+  the location, which printed a row of start times that deleted each other the
+  moment one was taken (with one boat, booking the 09:00 kills the 09:30);
+  `core.0058` made it a nullable override and `core.0061` removed it outright.
+  It was the wrong shape twice over: one number had to serve a 30-minute trim
+  and a 4-hour tour alike, and it was a second source of truth beside the
+  duration it could only disagree with. A service whose starts should be closer
+  together than its length is asking for a shorter `Service.duration`.
+  `slot_step_minutes(service)` therefore takes **no branch**, and
+  `_branch_settings` carries no slot key - spacing is a property of the service,
+  and never passes through the branch.
 - ⚠ **`Branch.timezone` defaults to `"UTC"`, and a branch left on it is broken
   rather than neutral.** Opening hours are read against that zone, so a Los Cabos
   branch on UTC opens at 02:00 local, labels every slot in the wrong zone, and
@@ -714,6 +716,41 @@ resolves them once per request; see `apps/website/CLAUDE.md` → "Maps".
   at all, unlike the Stripe and R2 credentials it sits near in the model.
 
 Tests: `SystemMapSettingsTests` in `core/tests.py`.
+
+### `Branch.map_image` - the one map this API does not draw
+
+A booking confirmation email shows a picture of the location. **That picture is
+rendered in the browser, by the CMS's map picker, and uploaded with the
+coordinates it belongs to** (`lib/map-capture.ts` in `apps/website`); Django
+never fetches a map tile. It cannot: rendering one here would mean six
+third-party requests per queued message, from a pod behind a VPN sidecar, under
+a tile-usage policy written for interactive maps. The one moment a map of the
+place already exists is an operator dropping the pin, so that is where the image
+comes from.
+
+- ⚠ **It is a snapshot and can go stale.** Moving the pin re-renders it;
+  changing the tenant's brandmark or its basemap does not. That is the trade for
+  an image that costs nothing to send.
+- ⚠ **`map_image` follows the "omitted means leave it, blank means clear it"
+  contract**, like every base64 image field here - and it matters more than
+  usual, because the CMS only sends the field when the pin actually moved. Were
+  an omitted field to clear the column, a tenant would lose its map the first
+  time anyone edited the phone number.
+- **`_booking_location` in `orders/services/order_emails.py` is the gate**, and
+  `BookingSerializer.get_branch_location` is the same rule for the order page.
+  Three conditions: the order is a booking, its `fulfillment` is `branch`, and
+  the branch is pinned. ⚠ The middle one is not redundant - an `on_premises`
+  booking **does** carry a branch (it is scheduled against that branch's
+  calendar), so without it the confirmation for a visit to the customer's home
+  would carry a map of the shop.
+- **The picture and the Directions link are independent.** The link is built
+  from the coordinates, so a location that was pinned before the picker existed
+  still gets the useful half. The map is a **remote** `<img>`, unlike the order
+  QR beside it: a blocked map costs the reader nothing, while a blocked QR is
+  the one thing they may have to hold up at a counter.
+
+Tests: `BookingLocationTests` in `orders/tests.py` (both consumers) and
+`BranchMapImageTests` in `core/tests.py` (the PATCH semantics).
 
 ## LLM calls - always through `core/services/llm.py`
 

@@ -32,6 +32,7 @@ from django.template.loader import render_to_string
 from core.media import absolute_media_url
 from core.services.contact import _admin_emails, _tenant_brand
 
+from ..models import Booking
 from ..serializers import resolve_line_image
 from .qr import order_qr_bytes
 
@@ -90,6 +91,55 @@ def _line_image(line):
     made absolute exactly as the branded logo is.
     """
     return absolute_media_url(resolve_line_image(line)) or None
+
+
+def _booking_location(order):
+    """The map block for an order that is an appointment at a location, or None.
+
+    Three things have to line up before an email shows a map, and each absence
+    is ordinary rather than an error:
+
+    * the order is a **booking** - a shipped product has a delivery address, not
+      a place the customer travels to;
+    * that booking is fulfilled **at the branch**. An `on_premises` booking is
+      still scheduled against a branch's calendar (the staff going out are the
+      staff who would be in the shop), so it *has* a branch - but the venue is
+      the customer's own address, and a map of the shop on the very message
+      confirming someone will come to them points at the wrong place; and
+    * the branch was **pinned**. Coordinates are optional on a Branch, and the
+      picture is optional even with them (`Branch.map_image` is rendered by the
+      CMS's map picker, so a location saved before anyone opened it has none).
+
+    The picture and the directions link are therefore independent: a pinned
+    location with no screenshot still gets its "Directions" button, which is the
+    half that actually does something.
+    """
+    booking = getattr(order, "booking", None)
+    if booking is None or booking.fulfillment != Booking.FULFILLMENT_BRANCH:
+        return None
+    branch = booking.branch
+    if branch is None or branch.latitude is None or branch.longitude is None:
+        return None
+
+    return {
+        "name": booking.branch_name or branch.name or "",
+        "address": (branch.address or "").strip(),
+        # Absolute, exactly as the product thumbnails and the tenant logo in the
+        # same message are - a mail client has no request to resolve a media
+        # path against. Remote rather than a `cid:` attachment (which is what the
+        # QR gets): a blocked map costs the reader nothing, because the button
+        # under it is a plain link that always renders, while a blocked QR is the
+        # one thing they may have to hold up at a counter.
+        "map_image": absolute_media_url(branch.map_image) or None,
+        # Google Maps' universal directions URL, the same one the contact page's
+        # "Get directions" button builds. Coordinates rather than the address, so
+        # it lands on the pin the tenant actually placed rather than on whatever
+        # a geocoder makes of a free-text address.
+        "directions_url": (
+            "https://www.google.com/maps/dir/?api=1"
+            f"&destination={branch.latitude},{branch.longitude}"
+        ),
+    }
 
 
 def _order_items(order):
@@ -173,6 +223,10 @@ def send_order_email(order, *, kind):
             # an order carries no locale of its own (an online one is emailed
             # from the webhook, which never saw the checkout request).
             "action_url": f"{brand['base_url']}/orders/{order.public_id}",
+            # Where an appointment happens, when that is a place the customer
+            # travels to. None for everything else, and the whole block is then
+            # skipped - see `_booking_location`.
+            "location": _booking_location(order),
             # `cid:` reference for the inline attachment below, or None so the
             # template skips the whole block rather than rendering a broken image.
             "qr_cid": _QR_CID if qr_png else None,

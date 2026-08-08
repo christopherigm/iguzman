@@ -5,6 +5,18 @@
   padding-top: 56px;
 }
 
+/* The tenant's brandmark cradled on the top edge (`BrandmarkCradle`). The
+   cradle's own flanks *are* the rule, so the border comes off; the absolutely
+   positioned disc needs a positioned footer; and the top margin reserves the
+   space the disc and its shoulders occupy above the edge, so the page's last
+   block never sits behind them. `--footer-cradle-badge` is the disc's diameter,
+   published by footer.tsx from @repo/ui's HERO_FRAME_BADGE_SIZE. */
+.footer--cradled {
+  position: relative;
+  border-top: none;
+  margin-top: calc(var(--footer-cradle-badge) * 0.85 + 8px);
+}
+
 /* Nav link - a next/link <a>, not a @repo/ui component; the hover color swap
    must live in CSS. */
 .footer__link {

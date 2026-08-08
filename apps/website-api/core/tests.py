@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 import shutil
@@ -16,6 +17,7 @@ from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.utils import timezone
+from PIL import Image
 
 from catalog.models import (
     Ingredient,
@@ -40,7 +42,7 @@ from core.models import (
     picture,
 )
 from core.tenant_paths import system_id_for, system_id_from_name
-from core.serializers import SystemWriteSerializer
+from core.serializers import BranchWriteSerializer, SystemWriteSerializer
 from core.site_payload import serialize_system, apply_payload
 from orders.models import Booking, Order
 
@@ -949,3 +951,70 @@ class SystemMapSettingsTests(TestCase):
 
         self.system.refresh_from_db()
         self.assertEqual(self.system.map_style, "carto-light")
+
+
+class BranchMapImageTests(IsolatedMediaTestCase):
+    """The map screenshot the CMS's picker renders for a branch.
+
+    ⚠ **The PATCH semantics are the whole of this.** The picture is only re-taken
+    when the pin actually moves, so an ordinary save - a changed phone number, a
+    day added to the opening hours - sends no `map_image` at all, and that has to
+    mean "leave the stored one alone". Were an omitted field to clear the column,
+    a tenant's booking emails would quietly lose their map the first time anyone
+    touched anything else on the form.
+    """
+
+    # A 2×2 JPEG, base64'd as the CMS's canvas hands one over.
+    def _data_url(self):
+        image = Image.new("RGB", (2, 2), "white")
+        buffer = BytesIO()
+        image.save(buffer, format="JPEG")
+        return "data:image/jpeg;base64," + base64.b64encode(buffer.getvalue()).decode()
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.branch = Branch.objects.create(system=self.system, name="Marina")
+
+    def _save(self, payload):
+        serializer = BranchWriteSerializer(data=payload)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save(self.branch)
+        self.branch.refresh_from_db()
+
+    def test_a_captured_map_is_stored_under_the_tenant(self):
+        self._save({
+            "latitude": "22.88",
+            "longitude": "-109.9",
+            "map_image": self._data_url(),
+        })
+
+        self.assertTrue(self.branch.map_image)
+        # Tenant-prefixed like every other file, so it follows a customer to its
+        # own R2 bucket - see `core.tenant_paths`.
+        self.assertTrue(self.branch.map_image.name.startswith(f"t/{self.system.pk}/"))
+
+    def test_a_save_that_omits_the_field_keeps_the_stored_picture(self):
+        self._save({"map_image": self._data_url()})
+        stored = self.branch.map_image.name
+
+        self._save({"phone": "+52 000"})
+
+        self.assertEqual(self.branch.map_image.name, stored)
+
+    def test_a_blank_value_clears_it(self):
+        """What clearing the pin has to do: a map of nowhere is worse than none."""
+        self._save({"map_image": self._data_url()})
+
+        self._save({"latitude": None, "longitude": None, "map_image": ""})
+
+        self.assertFalse(self.branch.map_image)
+
+    def test_the_public_payload_carries_the_url(self):
+        self._save({"map_image": self._data_url()})
+
+        res = self.client.get("/api/branches/", HTTP_X_WEBSITE_HOST="acme.test")
+
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("map_image", res.json()[0])
+        self.assertIn("branchmap", res.json()[0]["map_image"])

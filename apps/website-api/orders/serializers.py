@@ -67,6 +67,7 @@ class OrderLineSerializer(serializers.ModelSerializer):
     item_id = serializers.SerializerMethodField()
     item_slug = serializers.SerializerMethodField()
     item_menu_kind = serializers.SerializerMethodField()
+    item_booking_enabled = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderLine
@@ -74,6 +75,7 @@ class OrderLineSerializer(serializers.ModelSerializer):
             "id", "kind", "name", "sku", "customization",
             "unit_price", "quantity", "line_total", "currency",
             "image", "item_id", "item_slug", "item_menu_kind",
+            "item_booking_enabled",
         ]
 
     @property
@@ -100,6 +102,21 @@ class OrderLineSerializer(serializers.ModelSerializer):
         because it only exists to address a page that still exists."""
         return obj.menu_item.kind if obj.menu_item else None
 
+    def get_item_booking_enabled(self, obj):
+        """Whether this line's service is *still* sold as an appointment.
+
+        Read live through the FK, like `item_slug` - it decides which action the
+        order page offers ("Book again" → `/booking/<slug>`, rather than a
+        one-click re-add to the cart), and an action must address the site as it
+        is now. A service whose tenant has since turned booking off is bought
+        again from the cart; one that was never bookable never had a booking
+        page to send anyone to.
+
+        False rather than null for a product or a menu item, so the frontend has
+        one boolean to branch on instead of a tri-state.
+        """
+        return bool(obj.service and obj.service.booking_enabled)
+
 
 class BookingSerializer(serializers.ModelSerializer):
     """The appointment behind an order, as the customer's own pages read it.
@@ -119,6 +136,7 @@ class BookingSerializer(serializers.ModelSerializer):
     # the order page can say "Boat: Panga Marlin" in the tenant's own vocabulary
     # instead of a generic label the customer never saw while booking.
     resource_unit_label = serializers.SerializerMethodField()
+    branch_location = serializers.SerializerMethodField()
 
     class Meta:
         model = Booking
@@ -128,6 +146,7 @@ class BookingSerializer(serializers.ModelSerializer):
             "address", "notes", "payment_option", "deposit_percent",
             "amount_due_now", "amount_due_later", "service_slug",
             "party_size", "resource_name", "resource_unit_label",
+            "branch_location",
         ]
 
     def get_branch_name(self, obj):
@@ -156,6 +175,43 @@ class BookingSerializer(serializers.ModelSerializer):
         if obj.resource is not None:
             return obj.resource.pool.unit_label or None
         return None
+
+    def get_branch_location(self, obj):
+        """Where the customer is expected to turn up, or None.
+
+        Read **live** through the FK and null once the branch is deleted, like
+        `OrderLine.image` and for the same reason: a map is decoration on a
+        record whose readable content (the time, the branch's name) is already
+        snapshotted, and freezing a copy of the picture per order would grow the
+        bucket without bound.
+
+        ⚠ **Null for an `on_premises` booking, even though it has a branch.**
+        Such a booking is still *scheduled* against a branch's calendar - the
+        staff going out are the staff who would be in the shop - but the venue
+        is the customer's own address, and a map of the shop on the very record
+        that carries the address they gave points at the wrong place.
+
+        Null too when nobody pinned the location: `map_image` is optional (an
+        operator can save a branch without ever opening the picker), so a
+        consumer must handle a location that has coordinates but no picture.
+        """
+        if obj.fulfillment == Booking.FULFILLMENT_ON_PREMISES:
+            return None
+        branch = obj.branch
+        if branch is None or branch.latitude is None or branch.longitude is None:
+            return None
+        request = self.context.get("request")
+        image = None
+        if branch.map_image:
+            image = branch.map_image.url
+            if request is not None:
+                image = request.build_absolute_uri(image)
+        return {
+            "latitude": str(branch.latitude),
+            "longitude": str(branch.longitude),
+            "address": branch.address or None,
+            "map_image": image,
+        }
 
 
 class BookingSummarySerializer(serializers.ModelSerializer):

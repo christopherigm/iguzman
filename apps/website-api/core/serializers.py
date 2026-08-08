@@ -1426,11 +1426,14 @@ class BranchSerializer(serializers.ModelSerializer):
             "id", "enabled", "created", "modified",
             "system", "is_main",
             "name", "en_name", "address", "phone", "whatsapp", "email",
-            "latitude", "longitude", "sort_order",
-            "timezone", "booking_capacity", "booking_slot_minutes",
+            "latitude", "longitude", "map_image", "sort_order",
+            "timezone", "booking_capacity",
             "booking_min_notice_hours", "booking_max_days_ahead", "hours",
             "resource_pools",
         ]
+
+
+_BRANCH_MAP_IMAGE_CFG = image_cfg(STANDARD)
 
 
 class BranchWriteSerializer(serializers.Serializer):
@@ -1446,16 +1449,18 @@ class BranchWriteSerializer(serializers.Serializer):
     email      = serializers.EmailField(max_length=254, required=False, allow_null=True, allow_blank=True)
     latitude   = serializers.DecimalField(max_digits=10, decimal_places=8, required=False, allow_null=True, min_value=-90, max_value=90)
     longitude  = serializers.DecimalField(max_digits=11, decimal_places=8, required=False, allow_null=True, min_value=-180, max_value=180)
+    # The map screenshot the CMS's picker rendered for the coordinates above,
+    # as a base64 data URL. Omitted means "leave the stored one alone" (a save
+    # that only changed the phone number re-uploads nothing); blank/null clears
+    # it, which is what clearing the pin has to do - a map of nowhere is worse
+    # than no map.
+    map_image  = serializers.CharField(required=False, allow_null=True, allow_blank=True)  # base64
     enabled    = serializers.BooleanField(required=False)
     sort_order = serializers.IntegerField(min_value=0, required=False)
 
     # ── Booking ────────────────────────────────────────────────────────────────
     timezone   = serializers.CharField(max_length=64, required=False)
     booking_capacity          = serializers.IntegerField(min_value=1, max_value=999, required=False)
-    # Nullable on purpose: an empty grid field means "space the starts by the
-    # service's own duration" (see `orders.services.booking.slot_step_minutes`),
-    # so the CMS has to be able to send the field back to null.
-    booking_slot_minutes      = serializers.IntegerField(min_value=5, max_value=480, required=False, allow_null=True)
     booking_min_notice_hours  = serializers.IntegerField(min_value=0, max_value=8760, required=False)
     booking_max_days_ahead    = serializers.IntegerField(min_value=1, max_value=730, required=False)
     # The whole week in one go. A per-day endpoint would make the CMS form save
@@ -1470,7 +1475,7 @@ class BranchWriteSerializer(serializers.Serializer):
     _SCALAR_FIELDS = [
         "system", "is_main", "name", "en_name", "address", "phone", "whatsapp",
         "email", "latitude", "longitude", "enabled", "sort_order",
-        "timezone", "booking_capacity", "booking_slot_minutes",
+        "timezone", "booking_capacity",
         "booking_min_notice_hours", "booking_max_days_ahead",
     ]
 
@@ -1479,6 +1484,13 @@ class BranchWriteSerializer(serializers.Serializer):
             validate_timezone(value)
         except DjangoValidationError as exc:
             raise serializers.ValidationError(exc.messages) from exc
+        return value
+
+    def validate_map_image(self, value):
+        if value:
+            sub = ImageProcessingSerializer(data={"base64_image": value}, **_BRANCH_MAP_IMAGE_CFG)
+            if not sub.is_valid():
+                raise serializers.ValidationError(sub.errors["base64_image"])
         return value
 
     def validate_hours(self, value):
@@ -1512,6 +1524,19 @@ class BranchWriteSerializer(serializers.Serializer):
             if field_name in self.validated_data:
                 setattr(instance, field_name, self.validated_data[field_name])
                 update_fields.append(field_name)
+
+        if "map_image" in self.validated_data:
+            value = self.validated_data["map_image"]
+            if value:
+                proc = ImageProcessingSerializer(
+                    data={"base64_image": value}, **_BRANCH_MAP_IMAGE_CFG,
+                )
+                proc.is_valid()
+                proc.save_to_field(instance.map_image, f"branch_map_{instance.pk}.jpg")
+            else:
+                instance.map_image = None
+            update_fields.append("map_image")
+
         if update_fields:
             instance.save(update_fields=update_fields)
 

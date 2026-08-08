@@ -237,7 +237,232 @@ const DEFAULT_LOGO_SIZE = "clamp(96px, 13vw, 160px)";
  * Grows a little with the viewport, like the profile disc, so it does not look
  * tiny on a wide hero nor overwhelm a phone-width one.
  */
-const HERO_FRAME_BADGE_SIZE = "clamp(36px, 4.55vw, 50px)";
+export const HERO_FRAME_BADGE_SIZE = "clamp(36px, 4.55vw, 50px)";
+
+/** The stroke `HeroTextFrame` draws its outline and cradle in, over a video. */
+const HERO_FRAME_BORDER = "rgba(255,255,255,0.9)";
+
+/**
+ * Weight of the cradle's two shoulder arcs. They are drawn with
+ * `vector-effect: non-scaling-stroke`, so the stroke stays a fixed number of
+ * *screen* pixels while the cradle itself shrinks with the badge's own
+ * `clamp()` - which is why one flat value cannot serve both ends: 5px reads
+ * right against a 50px badge on a desktop and comes out heavy and blunt against
+ * a 36px one on a phone. So the weight travels the same way the badge's
+ * diameter does, as a viewport clamp: 2px up to the `sm` breakpoint, growing to
+ * the historical 5px by `lg` (`0.5vw - 1px` passes through exactly 2px at 600px
+ * and 5px at 1200px).
+ *
+ * ⚠ It has to be applied as the CSS `stroke-width` **property**, not the SVG
+ * attribute of the same name - the attribute takes a plain length and would
+ * drop a `clamp()` on the floor.
+ */
+export const HERO_CRADLE_STROKE = "clamp(2px, calc(0.5vw - 1px), 5px)";
+
+/**
+ * Frosted-glass backdrop behind a framed heading, so the outline reads as a
+ * pane of glass over the video rather than a bare rule. The same 8px `Box`'s
+ * `translucent` prop (and the translucent `Navbar`/`Badge`) blur at - one blur
+ * radius across the design system, quoted from there rather than re-picked.
+ */
+const HERO_FRAME_BLUR = "blur(8px)";
+
+/**
+ * The cradle's box, derived from the (responsive) badge diameter so the whole
+ * thing scales with it. Shared by `BrandmarkCradle` and by the glass pane
+ * `HeroTextFrame` slips underneath it - two boxes that must line up exactly.
+ */
+const cradleWidth = (size: string) => `calc((${size}) * 2.1)`;
+const cradleHeight = (size: string) => `calc((${size}) * 0.7)`;
+
+/**
+ * The area the two shoulders enclose - the same two curves joined across the
+ * top by the chord between their tips, closed along the bottom - in the cradle
+ * SVG's own coordinates. The bottom runs 2 units *past* the 60-unit box so no
+ * antialiasing seam can open between it and whatever meets it at the line.
+ *
+ * One path, used twice: `BrandmarkCradle` paints it (its `fill`), and
+ * `HeroTextFrame` masks its glass pane with it. A second copy could only drift.
+ */
+const CRADLE_FILL_PATH =
+  "M0,60 Q26,36 66,30 L144,30 Q184,36 210,60 L210,62 L0,62 Z";
+
+/**
+ * That same area as a CSS mask, on a 62-unit-tall viewBox so the extra 2 units
+ * are drawn rather than clipped: at `preserveAspectRatio: none` the 0-60 band
+ * still maps onto the cradle's own height, so the curve lands on the shoulders
+ * and only the overshoot extends below.
+ */
+const CRADLE_FILL_MASK = `url("data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 62" preserveAspectRatio="none"><path d="${CRADLE_FILL_PATH}" fill="#fff"/></svg>`,
+)}")`;
+
+/**
+ * The brandmark circle cradled on an edge: a straight line broken by a centred
+ * gap, two curved shoulders rising off it into the circle's lower flanks, and
+ * the circle itself sitting mostly *above* the line.
+ *
+ * Absolutely positioned against the **top edge** of its parent, which must be
+ * `position: relative` and must not draw a top border of its own - these flanks
+ * are that border. The parent also has to reserve `size * 0.85 + 8px` of space
+ * above itself (a margin), or the circle and shoulders hang over whatever is
+ * there.
+ *
+ * Shared so every surface that cradles the tenant's brandmark draws the same
+ * object: the hero's `HeroTextFrame` below, and the website footer's top edge.
+ * Extracted rather than copied for the reason `heroOverlayBackground` exists -
+ * a second set of arc paths can only drift from these.
+ */
+export function BrandmarkCradle({
+  image,
+  imageAlt = "",
+  size = HERO_FRAME_BADGE_SIZE,
+  color = HERO_FRAME_BORDER,
+  circleBackground = "#fff",
+  fill = null,
+  overhang = 0,
+  strokeWidth = HERO_CRADLE_STROKE,
+}: {
+  /** The brandmark drawn inside the circle. */
+  image: string;
+  imageAlt?: string;
+  /** Diameter of the circle; every other length derives from it. @default HERO_FRAME_BADGE_SIZE */
+  size?: string;
+  /** Colour of the flanks and the two shoulders. @default the hero's white */
+  color?: string;
+  /**
+   * Weight of the two shoulder arcs, as a CSS length. The stroke does not scale
+   * with the badge (`non-scaling-stroke`), so the default is a viewport clamp
+   * rather than a number - see {@link HERO_CRADLE_STROKE}.
+   * @default HERO_CRADLE_STROKE
+   */
+  strokeWidth?: string | number;
+  /** What the circle is painted with, behind the brandmark. @default "#fff" */
+  circleBackground?: string;
+  /**
+   * Paints the area the two shoulders enclose - between them, above the line
+   * and under the circle - so the parent's surface reads as swelling up into
+   * the cradle rather than as a transparent notch cut through it. Pass the
+   * parent's own background. Omitted, that area stays transparent and whatever
+   * is behind the parent shows through, which is what a frame floating over a
+   * video wants. @default null
+   */
+  fill?: string | null;
+  /**
+   * How far (px) each flank runs *past* the parent's padding box, to close the
+   * corners over a side border it has. `0` for a parent with no side borders.
+   * @default 0
+   */
+  overhang?: number;
+}) {
+  // Widths derive from the (responsive) badge diameter so the cradle scales
+  // with it; the SVG keeps a fixed 210×60 viewBox (same 3.5 ratio as its box,
+  // so `preserveAspectRatio: none` doesn't distort it) and a non-scaling stroke
+  // so the shoulders keep their weight at every badge size.
+  const cradleW = cradleWidth(size);
+  const cradleH = cradleHeight(size);
+  // Each flank runs from the outer corner to the edge of the centred gap.
+  const flankW = `calc(50% - (${cradleW}) / 2 + ${overhang}px)`;
+
+  return (
+    <>
+      {/* Straight flanks, gapped in the centre for the cradle. */}
+      <div
+        style={{
+          position: "absolute",
+          top: -1,
+          left: -overhang,
+          width: flankW,
+          height: 2,
+          background: color,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          top: -1,
+          right: -overhang,
+          width: flankW,
+          height: 2,
+          background: color,
+        }}
+      />
+      {/* The two rising shoulders that cradle the circle. Each is a convex
+          arc (bulging up) that rises off the flank and eases into the circle's
+          lower flank; its viewBox coords in the 210×60 box correspond to a
+          circle centred at (105, 25) with radius 50 (the badge), and the arc
+          ends a few units *inside* that circle so its tip tucks under the
+          badge (drawn on top), guaranteeing a seamless join. */}
+      <svg
+        viewBox="0 0 210 60"
+        preserveAspectRatio="none"
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: `calc(-1 * (${cradleH}))`,
+          transform: "translateX(-50%)",
+          width: cradleW,
+          height: cradleH,
+          overflow: "visible",
+        }}
+      >
+        {/* The area the shoulders enclose, painted under them: the same two
+            curves joined across the top by the chord between their tips and
+            closed along the bottom. The chord sits at the circle's own centre
+            height and is narrower than the circle is there, so the opaque disc
+            (drawn after this) hides it. The bottom runs 2 units *past* the box
+            (`overflow: visible`) so no antialiasing seam can open between this
+            and the parent's own background at the line. */}
+        {fill && <path d={CRADLE_FILL_PATH} fill={fill} stroke="none" />}
+        {/* The weight rides in `style`, not the `stroke-width` attribute: the
+            attribute takes a plain length and would discard the clamp() that
+            keeps the arcs from reading heavy at phone widths. */}
+        <path
+          d="M0,60 Q26,36 66,30"
+          fill="none"
+          stroke={color}
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+          style={{ strokeWidth }}
+        />
+        <path
+          d="M210,60 Q184,36 144,30"
+          fill="none"
+          stroke={color}
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+          style={{ strokeWidth }}
+        />
+      </svg>
+      {/* The brandmark circle, sitting in the cradle above the line. */}
+      <div
+        style={{
+          position: "absolute",
+          top: `calc((${size}) * -0.85)`,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          background: circleBackground,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+          zIndex: 1,
+        }}
+      >
+        <img
+          src={image}
+          alt={imageAlt}
+          style={{ width: "85%", height: "85%", objectFit: "contain" }}
+        />
+      </div>
+    </>
+  );
+}
 
 /**
  * Wraps a hero's section/page heading in a thin outline frame. When `image` is
@@ -268,7 +493,7 @@ export function HeroTextFrame({
 }) {
   const sized = (v: string) => (scale === 1 ? v : `calc((${v}) * ${scale})`);
   const badge = sized(HERO_FRAME_BADGE_SIZE);
-  const border = "rgba(255,255,255,0.9)";
+  const border = HERO_FRAME_BORDER;
 
   // Bare outline (no brandmark): the original full-border frame, unchanged.
   if (!image) {
@@ -278,6 +503,8 @@ export function HeroTextFrame({
           style={{
             border: `2px solid ${border}`,
             padding: sized("0.8em 1.7em"),
+            backdropFilter: HERO_FRAME_BLUR,
+            WebkitBackdropFilter: HERO_FRAME_BLUR,
           }}
         >
           {children}
@@ -286,18 +513,9 @@ export function HeroTextFrame({
     );
   }
 
-  // Cradled brandmark: the top border is drawn as two straight flanks with a
-  // centred gap, bridged by an SVG that rises into two shoulders meeting the
-  // circle's lower flanks. The circle itself sits mostly above the frame.
-  // Widths derive from the (responsive) badge diameter so the cradle scales
-  // with it; the SVG keeps a fixed 210×60 viewBox (same 3.5 ratio as its box,
-  // so `preserveAspectRatio: none` doesn't distort it) and a non-scaling 2px
-  // stroke so the shoulders stay the same weight as the 2px flanks/side borders.
-  const cradleW = `calc((${badge}) * 2.1)`;
-  const cradleH = `calc((${badge}) * 0.7)`;
-  // Each flank runs from the outer corner (2px outside the padding box, over the
-  // side border) to the edge of the centred cradle gap.
-  const flankW = `calc(50% - (${cradleW}) / 2 + 2px)`;
+  // Cradled brandmark: the top border is drawn by `BrandmarkCradle` instead -
+  // two straight flanks with a centred gap, bridged by the shoulders that meet
+  // the circle's lower flanks, with the circle mostly above the frame.
   return (
     <div
       style={{
@@ -313,6 +531,37 @@ export function HeroTextFrame({
         marginBottom: `calc((${badge}) * 0.85 + 8px)`,
       }}
     >
+      {/* The glass continues up into the cradle: a pane masked to exactly the
+          area the shoulders enclose, so the frosted surface swells into the
+          arch instead of stopping dead at the frame's top edge.
+
+          ⚠ It is a sibling of the frame box, not a child of it. An element
+          with a `backdrop-filter` is a backdrop root, so a nested pane would
+          only ever sample what its ancestor painted - and the ancestor paints
+          nothing above its own top edge, which is precisely where this sits.
+          Painted before the frame box (and before the cradle's strokes and
+          disc, which live inside it), so all of those stay on top. */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: `calc(-1 * (${cradleHeight(badge)}))`,
+          transform: "translateX(-50%)",
+          width: cradleWidth(badge),
+          // The 62-unit mask over a 60-unit shape, so the pane overshoots the
+          // frame's top edge by the same hair the painted fill does.
+          height: `calc((${cradleHeight(badge)}) * 62 / 60)`,
+          backdropFilter: HERO_FRAME_BLUR,
+          WebkitBackdropFilter: HERO_FRAME_BLUR,
+          maskImage: CRADLE_FILL_MASK,
+          WebkitMaskImage: CRADLE_FILL_MASK,
+          maskSize: "100% 100%",
+          WebkitMaskSize: "100% 100%",
+          maskRepeat: "no-repeat",
+          WebkitMaskRepeat: "no-repeat",
+        }}
+      />
       <div
         style={{
           position: "relative",
@@ -321,93 +570,23 @@ export function HeroTextFrame({
           borderBottom: `2px solid ${border}`,
           borderTop: "none",
           padding: sized("0.8em 1.7em"),
+          backdropFilter: HERO_FRAME_BLUR,
+          WebkitBackdropFilter: HERO_FRAME_BLUR,
         }}
       >
-        {/* Straight top-border flanks, gapped in the centre for the cradle.
-            They start 2px outside the padding box (`left/right: -2`) so they run
-            fully over the side borders and close the top corners. */}
-        <div
-          style={{
-            position: "absolute",
-            top: -1,
-            left: -2,
-            width: flankW,
-            height: 2,
-            background: border,
-          }}
+        {/* The flanks run 2px outside the padding box so they close the top
+            corners over the side borders. */}
+        <BrandmarkCradle
+          image={image}
+          imageAlt={imageAlt}
+          size={badge}
+          color={border}
+          // The arcs' weight is screen-fixed, so a shrunk preview has to thin it
+          // by hand the way `sized` thins the badge and the padding - otherwise
+          // a half-size preview draws full-weight shoulders on a half-size cradle.
+          strokeWidth={sized(HERO_CRADLE_STROKE)}
+          overhang={2}
         />
-        <div
-          style={{
-            position: "absolute",
-            top: -1,
-            right: -2,
-            width: flankW,
-            height: 2,
-            background: border,
-          }}
-        />
-        {/* The two rising shoulders that cradle the circle. Each is a convex
-            arc (bulging up) that rises off the flank and eases into the circle's
-            lower flank; its viewBox coords in the 210×60 box correspond to a
-            circle centred at (105, 25) with radius 50 (the badge), and the arc
-            ends a few units *inside* that circle so its tip tucks under the
-            badge (drawn on top), guaranteeing a seamless join. */}
-        <svg
-          viewBox="0 0 210 60"
-          preserveAspectRatio="none"
-          aria-hidden
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: `calc(-1 * (${cradleH}))`,
-            transform: "translateX(-50%)",
-            width: cradleW,
-            height: cradleH,
-            overflow: "visible",
-          }}
-        >
-          <path
-            d="M0,60 Q26,36 66,30"
-            fill="none"
-            stroke={border}
-            strokeWidth={5}
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-          />
-          <path
-            d="M210,60 Q184,36 144,30"
-            fill="none"
-            stroke={border}
-            strokeWidth={5}
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
-        {/* The brandmark circle, sitting in the cradle above the frame. */}
-        <div
-          style={{
-            position: "absolute",
-            top: `calc((${badge}) * -0.85)`,
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: badge,
-            height: badge,
-            borderRadius: "50%",
-            background: "#fff",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            overflow: "hidden",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
-            zIndex: 1,
-          }}
-        >
-          <img
-            src={image}
-            alt={imageAlt}
-            style={{ width: "85%", height: "85%", objectFit: "contain" }}
-          />
-        </div>
         {children}
       </div>
     </div>

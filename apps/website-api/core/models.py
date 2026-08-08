@@ -1187,6 +1187,21 @@ class System(Common):
         )
 
 
+def branch_map_upload_path(instance, filename):
+    """Where a branch's rendered map screenshot is stored.
+
+    Tenant-prefixed like every other file (see `core.tenant_paths`) and named
+    after the branch, so re-picking a location overwrites nothing else and the
+    file in the bucket is traceable with no database lookup. A `uuid4` rides in
+    the name because storage never overwrites - it appends a suffix instead -
+    and without one a branch whose pin moved five times would leave five files
+    behind with only the last of them referenced.
+    """
+    ext = os.path.splitext(filename)[1].lstrip(".") or "jpg"
+    base = f"pictures/branchmap/{instance.pk or 'new'}-{uuid.uuid4().hex}.{ext}"
+    return tenant_path(system_id_for(instance), base)
+
+
 class Branch(Common):
     """A physical location for a System.
 
@@ -1231,6 +1246,25 @@ class Branch(Common):
     latitude = models.DecimalField(max_digits=10, decimal_places=8, null=True, blank=True)
     longitude = models.DecimalField(max_digits=11, decimal_places=8, null=True, blank=True)
 
+    # A picture of this location on the map, with the tenant's brandmark as its
+    # pin. **Rendered in the browser by the CMS's map picker** and uploaded with
+    # the coordinates it belongs to - not drawn here, and never drawn per
+    # send: an order email cannot run JavaScript and this API cannot fetch map
+    # tiles for every message it puts in a queue, so the one moment where a map
+    # of this place is already on screen (an operator choosing the pin) is where
+    # the image comes from.
+    #
+    # ⚠ It is a **snapshot and can go stale**: moving the pin re-renders it, but
+    # changing the tenant's brandmark or its basemap does not. That is the trade
+    # for an image that costs nothing to send.
+    map_image = ResizedImageField(
+        null=True,
+        blank=True,
+        max_size=[sizes.STANDARD, None],  # type: ignore
+        upload_to=branch_map_upload_path,
+        help_text="Map screenshot rendered by the CMS map picker. Emailed with a booking.",
+    )
+
     sort_order = models.PositiveIntegerField(default=0)
 
     # ── Booking ────────────────────────────────────────────────────────────────
@@ -1270,27 +1304,16 @@ class Branch(Common):
             "Ignored once this location defines resource pools - their capacities are used instead."
         ),
     )
-    # The grid start times are offered on. **Empty means "follow the service's
-    # own duration"**, which is the default and what a customer reading the times
-    # expects: a 60-minute tour offered at 9:00, 10:00, 11:00 rather than at
-    # every half hour - where, with one boat, taking the 9:00 kills the 9:30
-    # anyway and half the buttons on screen are there to disappear.
+    # ⚠ There is deliberately no per-branch "slot interval" column here. Start
+    # times are spaced by the **service's own duration** and by nothing else
+    # (`orders.services.booking.slot_step_minutes`): a 60-minute tour is offered
+    # at 9:00, 10:00, 11:00 rather than every half hour - where, with one boat,
+    # taking the 9:00 kills the 9:30 anyway and half the buttons on screen are
+    # there to disappear. A branch-level grid was the wrong shape for that
+    # decision twice over: it applied to every service sold out of the location,
+    # and it was a second source of truth beside the duration it could only
+    # disagree with. See migration `core.0061`.
     #
-    # A value here is an explicit override for the branch that genuinely wants
-    # starts closer together than one appointment is long: a three-chair salon
-    # can begin a 90-minute colour every 30 minutes because capacity, not the
-    # clock, is what limits it. It is per *branch* while the duration is per
-    # *service*, so an override applies to every service sold out of the
-    # location - which is the reason it is not the default.
-    booking_slot_minutes = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        default=None,
-        help_text=(
-            "Minutes between offered start times. Leave empty to space them by "
-            "each service's own duration."
-        ),
-    )
     # How soon is too soon. Stops a customer booking the 9:00 slot at 8:58.
     booking_min_notice_hours = models.PositiveIntegerField(
         default=2,

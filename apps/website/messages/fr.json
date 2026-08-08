@@ -98,7 +98,6 @@
       "eyebrow": "Point de départ",
       "heading": "Où nous trouver",
       "subtitle": "C'est ici que la sortie commence. Écrivez-nous pour confirmer votre horaire et le point de rendez-vous exact.",
-      "fallbackName": "Point de rendez-vous",
       "contactCta": "Accès et contact"
     },
     "about": {
@@ -489,6 +488,9 @@
     "backToOrders": "Retour aux commandes",
     "quantityTimesPrice": "{quantity} × {price}",
     "buyAgain": "Racheter",
+    "bookAgain": "Réserver à nouveau",
+    "locationTitle": "Où se rendre",
+    "getDirections": "Itinéraire",
     "status_pending": "Paiement en attente",
     "status_paid": "Paiement confirmé",
     "status_failed": "Paiement échoué",
@@ -1100,7 +1102,21 @@
     "mapCredit": "Crédit de la carte",
     "mapCreditHelp": "Affiché dans le coin de chaque carte. Exigé par tous les fournisseurs de tuiles ; laissé vide, le crédit OpenStreetMap est utilisé.",
     "mapCreditUrl": "Lien du crédit",
-    "mapCreditUrlHelp": "Vers où pointe le crédit. La plupart des fournisseurs de tuiles exigent qu'il renvoie vers eux ; laissé vide, le crédit est affiché en texte simple, sans lien."
+    "mapCreditUrlHelp": "Vers où pointe le crédit. La plupart des fournisseurs de tuiles exigent qu'il renvoie vers eux ; laissé vide, le crédit est affiché en texte simple, sans lien.",
+    "mapPickerTitle": "Placez le point exact",
+    "mapPickerHint": "Cliquez sur la carte pour poser le repère, ou faites-le glisser pour l'ajuster. Faites glisser la carte pour vous déplacer, Ctrl + molette pour zoomer.",
+    "mapSearchLabel": "Rechercher un lieu",
+    "mapSearchPlaceholder": "Rue, ville, point de repère…",
+    "mapSearchAction": "Rechercher",
+    "mapSearching": "Recherche…",
+    "mapSearchEmpty": "Aucun lieu trouvé sous ce nom.",
+    "mapSearchError": "La recherche de lieu n'a pas pu aboutir.",
+    "mapClearPin": "Retirer le repère",
+    "mapZoomIn": "Zoom avant",
+    "mapZoomOut": "Zoom arrière",
+    "mapYourLocation": "Votre position",
+    "mapZoomHint": "Utilisez Ctrl + molette pour zoomer sur la carte",
+    "mapZoomHintMac": "Utilisez ⌘ + molette pour zoomer sur la carte"
   },
   "GradientBuilder": {
     "linear": "Linéaire",
@@ -1285,6 +1301,12 @@
     "unmarkFulfilled": "Marquer non traitée",
     "cancelOrder": "Annuler la commande"
   },
+  "FindUs": {
+    "eyebrow": "Venez nous voir",
+    "heading": "Où nous trouver",
+    "subtitle": "Voici où nous trouver, et comment nous joindre avant de venir.",
+    "cta": "Itinéraire et contact"
+  },
   "Contact": {
     "home": "Accueil",
     "title": "Contact",
@@ -1334,12 +1356,11 @@
     "enNameLabel": "Nom (EN)",
     "whatsapp": "WhatsApp",
     "email": "E-mail",
-    "latitude": "Latitude",
-    "longitude": "Longitude",
+    "coordinatesValue": "Repère : {latitude}, {longitude}",
+    "coordinatesEmpty": "Pas encore de repère — cliquez sur la carte pour en poser un.",
+    "mapImageHint": "Une image de cette carte est enregistrée avec le lieu et envoyée dans les e-mails de confirmation de réservation. Elle est reprise à chaque déplacement du repère.",
     "timezone": "Fuseau horaire",
     "capacity": "Réservations simultanées",
-    "slotMinutes": "Intervalle de réservation (min, facultatif)",
-    "slotMinutesAuto": "Suit la durée de chaque service",
     "minNoticeHours": "Préavis minimum (heures)",
     "maxDaysAhead": "Jours réservables à l'avance",
     "hoursTitle": "Horaires d'ouverture",

@@ -12,6 +12,7 @@ import { CatalogCategories } from "@/components/catalog-categories";
 import { CatalogItems } from "@/components/catalog-items";
 import { Events } from "@/components/events";
 import { Spotlight } from "@/components/spotlight";
+import { FindUs } from "@/components/find-us";
 import { Intro } from "./sections/intro";
 
 /**
@@ -119,6 +120,11 @@ export async function Landing() {
       <Container paddingX={10}>
         <SuccessStories />
       </Container>
+
+      {/* Which corner of Papalotla the shop is on, with its map, and the way
+          through to /contact - the shared block, so these cards are the ones the
+          contact page draws. Invisible until a location exists in the CMS. */}
+      <FindUs />
     </>
   );
 }

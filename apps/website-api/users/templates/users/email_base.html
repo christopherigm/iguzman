@@ -18,11 +18,22 @@
           <tr>
             <td align="center" style="background-color:{{ primary_color|default:'#2196f3' }}; padding:32px;">
               {% if logo_url %}
-                {% comment %}Logo sits in a white circle with inner padding - like the "profile" hero layout's page-background disc, so an oversized logo never touches the edge. The logo is capped smaller than the disc, leaving the ring of white around it.{% endcomment %}
+                {% comment %}
+                Logo sits in a white circle - like the "profile" hero layout's
+                page-background disc. Both caps are 90% of the disc's diameter
+                (86 of 96px) so the logo fills the circle rather than floating
+                in it, whatever its aspect ratio: a wide wordmark is bounded by
+                the width, a tall mark by the height, and only ~5px of white is
+                left on the bounding axis.
+
+                Both must be the *same* number. Capping width and height apart
+                (it was 72 x 56) shrinks a square logo to the smaller of the
+                two, which is why every square brandmark rendered a size down.
+                {% endcomment %}
                 <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
                   <tr>
                     <td align="center" valign="middle" width="96" height="96" style="width:96px; height:96px; background-color:#ffffff; border-radius:50%; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.18);">
-                      <img src="{{ logo_url }}" alt="{{ site_name }}" style="display:inline-block; max-height:56px; max-width:72px; width:auto; height:auto; border:0; outline:none; text-decoration:none; vertical-align:middle;">
+                      <img src="{{ logo_url }}" alt="{{ site_name }}" style="display:inline-block; max-height:86px; max-width:86px; width:auto; height:auto; border:0; outline:none; text-decoration:none; vertical-align:middle;">
                     </td>
                   </tr>
                 </table>

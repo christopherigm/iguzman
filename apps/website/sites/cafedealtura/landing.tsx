@@ -11,6 +11,7 @@ import { CatalogCategories } from "@/components/catalog-categories";
 import { CatalogItems } from "@/components/catalog-items";
 import { Events } from "@/components/events";
 import { Spotlight } from "@/components/spotlight";
+import { FindUs } from "@/components/find-us";
 import { Origin } from "./sections/origin";
 
 /**
@@ -116,6 +117,11 @@ export async function Landing() {
       <Container paddingX={10}>
         <SuccessStories />
       </Container>
+
+      {/* The farm itself, on a map, and the way through to /contact - the shared
+          block, so these cards are the ones the contact page draws. Invisible
+          until the family adds a location in the CMS. */}
+      <FindUs />
     </>
   );
 }

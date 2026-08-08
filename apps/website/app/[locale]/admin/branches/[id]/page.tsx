@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use, useSyncExternalStore } from "react";
+import { useState, useEffect, use, useRef, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@repo/i18n/navigation";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
@@ -8,6 +8,10 @@ import {
   BranchHoursEditor,
   type BranchHoursRow,
 } from "@/components/admin/branch-hours-editor";
+import {
+  MapPicker,
+  type MapPickerHandle,
+} from "@/components/admin/map-picker";
 import {
   ResourcePoolsEditor,
   type ResourcePoolRow,
@@ -17,6 +21,7 @@ import {
   getBranch,
   createBranch,
   updateBranch,
+  getSystem,
   AdminApiError,
 } from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
@@ -36,11 +41,6 @@ const NULLABLE_ON_BLANK = [
   "email",
   "latitude",
   "longitude",
-  // A blank booking interval is a real instruction, not an omission: it means
-  // "space the start times by each service's own duration". Sent as "" the API
-  // would refuse it as a non-integer, and the location could never be handed
-  // back to the default once somebody had typed a number into it.
-  "booking_slot_minutes",
 ];
 
 /** The timezone read below is a constant of the environment - it never changes
@@ -87,9 +87,10 @@ export default function AdminBranchFormPage({ params }: Props) {
     // Blank until the operator picks one - see `detectedTimezone`.
     timezone: "",
     booking_capacity: 1,
-    // Blank, not 30: the grid is an override, and the default is the service's
-    // own duration - see `slot_step_minutes` in website-api.
-    booking_slot_minutes: "",
+    // ⚠ No slot-interval field. Start times are spaced by each service's own
+    // duration and by nothing else (`slot_step_minutes` in website-api) - a
+    // per-branch grid applied to every service sold here and could only
+    // disagree with the duration it sat beside.
     booking_min_notice_hours: 2,
     booking_max_days_ahead: 60,
   });
@@ -104,6 +105,25 @@ export default function AdminBranchFormPage({ params }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const systemId = useSession()?.systemId ?? 0;
+
+  // ── The map screenshot ──────────────────────────────────────────────────
+  //
+  // `Branch.map_image` is a picture of this location that a booking
+  // confirmation email shows - an email cannot draw a live map, and Django
+  // cannot fetch map tiles for every message it sends, so the picture is taken
+  // here, in the browser, at the one moment a map of this place is already on
+  // screen. See `lib/map-capture.ts`.
+  const pickerRef = useRef<MapPickerHandle>(null);
+  /**
+   * The coordinates and the screenshot as the **server** currently holds them,
+   * which is what makes the capture conditional: a save that only changed the
+   * phone number must not spend six tile requests and an upload re-taking a
+   * picture of a pin that did not move.
+   */
+  const [savedPin, setSavedPin] = useState("");
+  const [savedMap, setSavedMap] = useState<string | null>(null);
+  /** The tenant's brandmark, worn by the captured pin exactly as the live maps' pins wear it. */
+  const [brandmark, setBrandmark] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isNew) {
@@ -122,7 +142,6 @@ export default function AdminBranchFormPage({ params }: Props) {
             enabled: data.enabled ?? true,
             timezone: data.timezone ?? "",
             booking_capacity: data.booking_capacity ?? 1,
-            booking_slot_minutes: data.booking_slot_minutes ?? "",
             booking_min_notice_hours: data.booking_min_notice_hours ?? 2,
             booking_max_days_ahead: data.booking_max_days_ahead ?? 60,
           });
@@ -130,11 +149,24 @@ export default function AdminBranchFormPage({ params }: Props) {
           setPools(
             (data.resource_pools as ResourcePoolRow[] | undefined) ?? [],
           );
+          setSavedPin(`${data.latitude ?? ""},${data.longitude ?? ""}`);
+          setSavedMap((data.map_image as string | null) ?? null);
         })
         .catch(() => setError(t("errorLoad")))
         .finally(() => setLoading(false));
     }
   }, [id, isNew, t]);
+
+  // The brandmark the captured pin wears - the tenant's mark, not its logo: the
+  // pin's head is a 34 px circle that crops what it is given, so a wide wordmark
+  // comes out as three letters from its own middle. A failure here costs the
+  // capture its glyph and nothing else, so it is deliberately unreported.
+  useEffect(() => {
+    if (!systemId) return;
+    getSystem(systemId)
+      .then((data) => setBrandmark((data.img_brandmark as string) || null))
+      .catch(() => setBrandmark(null));
+  }, [systemId]);
 
   // What an unset timezone means: the operator's own zone, not the model's
   // "UTC" default. A branch left on UTC is not an inert default - opening hours
@@ -179,12 +211,37 @@ export default function AdminBranchFormPage({ params }: Props) {
       // delete-and-recreate would strip the assigned boat off every appointment
       // on any save of this form.
       payload.resource_pools = pools;
+
+      // The map screenshot, taken only when it would actually differ from the
+      // stored one: the pin moved, or there is a pin and no picture yet. Omitted
+      // from the payload means "leave the stored one alone" - which is what a
+      // save that only touched the opening hours has to mean.
+      const pinKey = `${values.latitude ?? ""},${values.longitude ?? ""}`;
+      const hasPin = Boolean(values.latitude && values.longitude);
+      if (!hasPin) {
+        // A cleared pin clears the picture with it. A map of nowhere is worse
+        // than no map, and the email's Directions button has no coordinate left
+        // to point at anyway.
+        if (savedMap) payload.map_image = null;
+      } else if (pinKey !== savedPin || !savedMap) {
+        // `null` here is an ordinary outcome, not a failure to report: a tile
+        // host that answers without CORS headers, or an offline moment. The
+        // coordinates save either way, and the customer still gets directions.
+        const captured = await pickerRef.current?.capture();
+        if (captured) payload.map_image = captured;
+      }
+
       if (isNew) {
         const created = await createBranch(payload);
         setSuccess(t("saved"));
         router.replace(`/admin/branches/${created.id}`);
       } else {
-        await updateBranch(Number(id), payload);
+        const updated = await updateBranch(Number(id), payload);
+        // Re-read from the response rather than from what was sent: it is what
+        // decides whether the *next* save re-captures, and the API is the one
+        // that knows whether the upload actually landed.
+        setSavedPin(`${updated.latitude ?? ""},${updated.longitude ?? ""}`);
+        setSavedMap((updated.map_image as string | null) ?? null);
         setSuccess(t("saved"));
       }
     } catch (err) {
@@ -204,8 +261,12 @@ export default function AdminBranchFormPage({ params }: Props) {
     { key: "phone", label: tc("phone") },
     { key: "whatsapp", label: tc("whatsapp") },
     { key: "email", label: tc("email"), type: "text" },
-    { key: "latitude", label: tc("latitude"), type: "number" },
-    { key: "longitude", label: tc("longitude"), type: "number" },
+    // ⚠ No Latitude / Longitude inputs. The coordinates are the map picker's
+    // output (mounted in the slot below, ahead of the booking group) and are
+    // shown there as a readout - two decimal boxes beside a map are a second
+    // way to set the same value, and the one that can disagree with the pin the
+    // screenshot was taken of. They are still ordinary fields in `values`, so
+    // nothing about the payload changed.
     {
       key: "timezone",
       label: tc("timezone"),
@@ -213,15 +274,6 @@ export default function AdminBranchFormPage({ params }: Props) {
       options: timezoneOptions(),
     },
     { key: "booking_capacity", label: tc("capacity"), type: "number" },
-    {
-      key: "booking_slot_minutes",
-      label: tc("slotMinutes"),
-      type: "number",
-      // The placeholder carries the meaning of an empty field, which is the
-      // state most branches should be left in: start times spaced by whatever
-      // each service lasts.
-      placeholder: tc("slotMinutesAuto"),
-    },
     {
       key: "booking_min_notice_hours",
       label: tc("minNoticeHours"),
@@ -266,6 +318,43 @@ export default function AdminBranchFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
+        slots={[
+          {
+            // Between the contact details and the booking group: the pin is
+            // part of *where this place is*, alongside the address it belongs
+            // with, not part of how it takes appointments.
+            beforeKey: "timezone",
+            node: (
+              <Box flexDirection="column" gap={8}>
+                <MapPicker
+                  ref={pickerRef}
+                  latitude={String(values.latitude ?? "")}
+                  longitude={String(values.longitude ?? "")}
+                  onChange={(latitude, longitude) =>
+                    setValues((prev) => ({ ...prev, latitude, longitude }))
+                  }
+                  pinIcon={brandmark}
+                />
+                {/* The coordinates as a readout, not as inputs - see the note
+                    where the two number fields used to be. */}
+                <Typography variant="caption" color="var(--foreground)">
+                  {values.latitude && values.longitude
+                    ? tc("coordinatesValue", {
+                        latitude: String(values.latitude),
+                        longitude: String(values.longitude),
+                      })
+                    : tc("coordinatesEmpty")}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color="var(--muted-foreground, #6b7280)"
+                >
+                  {tc("mapImageHint")}
+                </Typography>
+              </Box>
+            ),
+          },
+        ]}
       >
         <BranchHoursEditor value={hours} onChange={setHours} />
         <ResourcePoolsEditor

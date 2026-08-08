@@ -98,7 +98,6 @@
       "eyebrow": "Departure point",
       "heading": "Where to find us",
       "subtitle": "This is where the trip starts. Message us to confirm your time and the exact meeting point.",
-      "fallbackName": "Meeting point",
       "contactCta": "Directions and contact"
     },
     "about": {
@@ -489,6 +488,9 @@
     "backToOrders": "Back to orders",
     "quantityTimesPrice": "{quantity} × {price}",
     "buyAgain": "Buy again",
+    "bookAgain": "Book again",
+    "locationTitle": "Where to go",
+    "getDirections": "Directions",
     "status_pending": "Payment pending",
     "status_paid": "Payment confirmed",
     "status_failed": "Payment failed",
@@ -1100,7 +1102,21 @@
     "mapCredit": "Map credit",
     "mapCreditHelp": "Shown in the corner of every map. Required by every tile provider; left blank, the OpenStreetMap credit is used.",
     "mapCreditUrl": "Map credit link",
-    "mapCreditUrlHelp": "Where the credit links. Most tile providers require it to point back at them; left blank, the credit is drawn as plain text."
+    "mapCreditUrlHelp": "Where the credit links. Most tile providers require it to point back at them; left blank, the credit is drawn as plain text.",
+    "mapPickerTitle": "Pin the exact spot",
+    "mapPickerHint": "Click the map to drop the pin, or drag the pin to adjust it. Drag the map to pan, Ctrl + scroll to zoom.",
+    "mapSearchLabel": "Search a place",
+    "mapSearchPlaceholder": "Street, town, landmark…",
+    "mapSearchAction": "Search",
+    "mapSearching": "Searching…",
+    "mapSearchEmpty": "No place found with that name.",
+    "mapSearchError": "The place search could not be completed.",
+    "mapClearPin": "Remove the pin",
+    "mapZoomIn": "Zoom in",
+    "mapZoomOut": "Zoom out",
+    "mapYourLocation": "Your location",
+    "mapZoomHint": "Use Ctrl + scroll to zoom the map",
+    "mapZoomHintMac": "Use ⌘ + scroll to zoom the map"
   },
   "GradientBuilder": {
     "linear": "Linear",
@@ -1285,6 +1301,12 @@
     "unmarkFulfilled": "Mark not fulfilled",
     "cancelOrder": "Cancel order"
   },
+  "FindUs": {
+    "eyebrow": "Visit us",
+    "heading": "Where to find us",
+    "subtitle": "Here is where you'll find us, and how to reach us before you set out.",
+    "cta": "Directions and contact"
+  },
   "Contact": {
     "home": "Home",
     "title": "Contact",
@@ -1334,12 +1356,11 @@
     "enNameLabel": "Name (EN)",
     "whatsapp": "WhatsApp",
     "email": "Email",
-    "latitude": "Latitude",
-    "longitude": "Longitude",
+    "coordinatesValue": "Pin: {latitude}, {longitude}",
+    "coordinatesEmpty": "No pin yet — click the map to place one.",
+    "mapImageHint": "A picture of this map is saved with the location and sent in booking confirmation emails. It is retaken whenever you move the pin.",
     "timezone": "Timezone",
     "capacity": "Concurrent bookings",
-    "slotMinutes": "Booking interval (min, optional)",
-    "slotMinutesAuto": "Follows each service's duration",
     "minNoticeHours": "Minimum notice (hours)",
     "maxDaysAhead": "Bookable days ahead",
     "hoursTitle": "Opening hours",

@@ -78,6 +78,17 @@ export interface OrderLine {
    *  it is read live, not snapshotted. Both are needed to build the link, so a
    *  null here means the row renders without one. */
   item_menu_kind: MenuItemKind | null;
+  /**
+   * Whether this line's service is **still** sold as an appointment, which
+   * decides what re-ordering it means: "Book again" through `/booking/<slug>`,
+   * rather than a one-click re-add to the cart, because an appointment needs a
+   * time and a place a cart line cannot hold.
+   *
+   * Read live like `item_slug` and for the same reason - it addresses a page as
+   * the site is *now*. `false` for a product, a menu item, a deleted item, and a
+   * service whose tenant has since turned booking off.
+   */
+  item_booking_enabled: boolean;
 }
 
 export interface Order {

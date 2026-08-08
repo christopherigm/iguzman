@@ -55,6 +55,32 @@ export interface Booking {
    *  resource itself is gone - the label lives on its pool, not on the
    *  booking. */
   resource_unit_label: string | null;
+  /** Where the customer is expected to turn up, or null - see `BookingLocation`. */
+  branch_location: BookingLocation | null;
+}
+
+/**
+ * The branch a booking happens at, as its order page and its confirmation email
+ * draw it.
+ *
+ * ⚠ **Null is the common case and means "nothing to draw here"**, for three
+ * different reasons the frontend deliberately does not tell apart: the booking
+ * is `on_premises` (the venue is the customer's own address - the branch is only
+ * whose calendar it was scheduled against), nobody ever pinned the location, or
+ * the branch has since been deleted. Read live through the FK on the API side,
+ * like an order line's image.
+ *
+ * `map_image` is separately optional: `Branch.map_image` is rendered by the CMS
+ * map picker, so a location saved before anyone opened it has coordinates and no
+ * picture. The Directions link still works - it is built from the coordinates,
+ * not from the image.
+ */
+export interface BookingLocation {
+  /** Decimal strings from the API, as `Branch` serves them. */
+  latitude: string;
+  longitude: string;
+  address: string | null;
+  map_image: string | null;
 }
 
 /** The compact form on an order-history row (`BookingSummarySerializer`). */

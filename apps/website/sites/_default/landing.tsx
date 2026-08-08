@@ -8,6 +8,7 @@ import { CompanyHighlights } from "@/components/company-highlights";
 import { CatalogCategories } from "@/components/catalog-categories";
 import { CatalogItems } from "@/components/catalog-items";
 import { Events } from "@/components/events";
+import { FindUs } from "@/components/find-us";
 
 /**
  * The generic, fully DB-driven landing page - the original shared template.
@@ -65,6 +66,10 @@ export async function DefaultLanding() {
       <Container paddingX={10}>
         <Events />
       </Container>
+
+      {/* Closes the page with the tenant's locations and their maps, then hands
+          the visitor to /contact. Renders nothing until they add a branch. */}
+      <FindUs />
     </>
   );
 }

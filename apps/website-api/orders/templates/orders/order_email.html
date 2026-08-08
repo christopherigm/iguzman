@@ -74,6 +74,47 @@ the full receipt (items, add-ons, summary, link) is written once. Bilingual
   </table>
 
   {% comment %}
+  --- Where to go (shared, language-neutral) ---
+  Only for an appointment the customer travels to; see `_booking_location` for
+  the three conditions. The map is a **remote** image, unlike the QR below: a
+  client that blocks it costs the reader nothing, because the Directions button
+  under it is a plain link that always renders. The picture and the button are
+  independent - a pinned location whose screenshot was never taken still gets
+  the button.
+  {% endcomment %}
+  {% if location %}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 4px 0; background-color:#f7f9fc; border-radius:10px;">
+    <tr>
+      <td style="padding:16px 20px 4px 20px; font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#52606d; line-height:1.7;">
+        <strong style="color:#1f2933;">Dónde / Where:</strong>
+        {% if location.name %}<br>{{ location.name }}{% endif %}
+        {% if location.address %}<br><span style="color:#8a94a6;">{{ location.address|linebreaksbr }}</span>{% endif %}
+      </td>
+    </tr>
+    {% if location.map_image %}
+    <tr>
+      <td style="padding:12px 20px 0 20px;">
+        {% comment %}
+        A block-level image with `width:100%` and `height:auto` - the fixed
+        `width` attribute is what Outlook reads, the style is what everything
+        else scales by on a phone. Written with the comment *tag* deliberately:
+        Django's hash-comment is single-line only, so spread over three lines it
+        is not a comment at all and prints into the message body - which is how
+        this note first shipped, visible above the map.
+        {% endcomment %}
+        <img src="{{ location.map_image }}" alt="Mapa / Map: {{ location.name }}" width="520" style="width:100%; max-width:520px; height:auto; border-radius:8px; border:1px solid #edf0f5; display:block;">
+      </td>
+    </tr>
+    {% endif %}
+    <tr>
+      <td align="center" style="padding:4px 20px 8px 20px;">
+        {% include "users/_email_button.html" with url=location.directions_url label="Cómo llegar / Directions" primary_color=primary_color %}
+      </td>
+    </tr>
+  </table>
+  {% endif %}
+
+  {% comment %}
   --- Order QR (shared, language-neutral) ---
   `qr_cid` is the Content-ID of an image attached to this message, not a URL:
   most clients block remote images by default and a blocked QR is a blank box.

@@ -161,6 +161,14 @@ every rule; read `website-api/CLAUDE.md` → "Bookings" first.
   `components/admin/branch-hours-editor.tsx`, submitted with the rest of the
   branch form as one `hours` array - **a day switched off is a row that is not
   sent**, matching the API's "no row = closed".
+- **A past service line is re-ordered as a booking, not as a cart line.**
+  `order-line-row.tsx` swaps "Buy again" for **Book again** (→ `/booking/<slug>`)
+  whenever the line's service is `item_booking_enabled`, for the same reason the
+  detail page swaps its cart CTAs: an appointment needs an hour and a place a
+  cart line cannot hold. ⚠ The flag is read **live** through the FK on the API
+  side, like `item_slug` - it addresses the site as it is now, so a service the
+  tenant has since closed to booking goes back to "Buy again" rather than
+  linking to a page that 404s.
 - Booking status has its **own** colour scale on the order card and the CMS list,
   deliberately not the order-status one: a confirmed booking wearing the paid
   order's green would read as "the money arrived", which it does not say.
@@ -275,10 +283,12 @@ Six things that will bite:
 Every map on this site is `components/place-map.tsx` (`PlaceMap`), a thin client
 wrapper over `@repo/ui`'s **`OsmMap`**: OpenStreetMap-style raster tiles painted
 into the page's own DOM, one pin, no Google iframe. Four surfaces draw one: each
-location on the contact page (`components/contact/contact-locations.tsx`), an
-event's venue (`app/[locale]/events/[slug]/page.tsx`), the buy box of a bookable
-service (`components/service-booking-cta.tsx`), and the branch a booking is being
-made at (`booking-form.tsx`). It replaced the per-surface copies - an `EventMap`
+location on the contact page (`components/contact/contact-locations.tsx`) - and
+so, through the same component, each location in a landing's `FindUs` block
+(`components/find-us.tsx`) - an event's venue
+(`app/[locale]/events/[slug]/page.tsx`), the buy box of a bookable service
+(`components/service-booking-cta.tsx`), and the branch a booking is being made at
+(`booking-form.tsx`). It replaced the per-surface copies - an `EventMap`
 component and an inline `OsmMap` on the contact page - which had already started
 to drift.
 
@@ -330,13 +340,13 @@ Five things that will bite:
   failure. Fullscreen is a CSS overlay, not the Fullscreen API (`requestFullscreen`
   is still dead on iPhone Safari); `Escape` leaves it.
 
-**Two booking surfaces draw the location, and both gate it on `branch`
+**Three booking surfaces draw the location, and all three gate it on `branch`
 fulfillment.** With `on_premises` the tenant travels to the customer, so a map of
 the shop would point at the wrong address on the very page where the right one is
 typed. A location the tenant never pinned gets no map, exactly as on the contact
 page.
 
-- **The service detail page** draws it *inside* `ServiceBookingCta`, directly
+- **The service detail page** draws it _inside_ `ServiceBookingCta`, directly
   under the Where/Location selects and above the party counter and "Book now".
   It is in the client component rather than beside the price in
   `ServiceDetailPanel` because it **follows the select**: with several locations
@@ -347,6 +357,48 @@ page.
   details" - the location has already been chosen on the left, and this is the
   last chance to notice it is the wrong side of town before typing a name and
   paying.
+- **The order page** (`orders/[id]/booking-location.tsx`) puts it under the
+  lines, with a **Directions** button. It reads
+  `order.booking.branch_location`, which the API returns as `null` for an
+  on-premises booking, an unpinned branch and a deleted one alike - so the gate
+  above is enforced on the API side here rather than re-derived. It draws a
+  **live** `PlaceMap`, not the stored screenshot: a web page can render a map,
+  and a live one cannot go stale against a pin the tenant has since moved.
+
+### Picking the pin, and the screenshot that comes off it
+
+`components/admin/map-picker.tsx` is the CMS's coordinate control, on the branch
+form (`admin/branches/[id]`), mounted through `AdminForm`'s `slots` ahead of the
+booking group. It is ported from `apps/animals`' picker and shares its whole
+surface with `PlaceMap` through `@repo/ui`'s `osm-map-chrome` + `mercator`, so
+the map an operator pins on and the map a customer reads are one design.
+
+- ⚠ **The branch form has no Latitude / Longitude inputs any more.** The picker
+  writes both, and the pair is shown beneath it as a readout. Two decimal boxes
+  beside a map are a second way to set one value - and the one that can end up
+  disagreeing with the pin the screenshot was taken of. They are still ordinary
+  keys in `values`, so the payload is unchanged.
+- **It also takes `Branch.map_image`**, via `lib/map-capture.ts`: the tiles and
+  the brandmark pin painted into a canvas and uploaded as base64 with the
+  coordinates. That picture exists for the **confirmation email**, which cannot
+  draw a live map and whose sender (website-api) must not be fetching map tiles
+  per message - see that CLAUDE.md → "`Branch.map_image`".
+- **Captured on save, and only when the pin moved** (or there is a pin and no
+  stored picture). A save that only changed the phone number sends no
+  `map_image` at all, which the API reads as "leave the stored one alone".
+- ⚠ **Everything drawn into that canvas must be same-origin or CORS-clean**, or
+  `toDataURL` throws on a tainted canvas. Tiles are fetched
+  `crossOrigin="anonymous"` (OSM and CARTO both allow it); the brandmark goes
+  through `/_next/image` first (`lib/same-origin-image.ts`, shared with the
+  social-post flyer export, which needs it for the same reason). A tenant whose
+  **custom** tile URL sends no CORS header simply gets no screenshot - the
+  coordinates still save and the email still carries its Directions button.
+- **The provider's credit is burned into the image.** A still leaves the site
+  entirely and has nowhere else to put one; the live maps carry it as
+  `OsmAttribution`.
+- ⚠ **The captured pin is redrawn by hand to match `osm-map.css`** - a canvas has
+  no CSS. Keep the two in step, and remember the pin's **tip**, not its centre,
+  is the coordinate.
 
 ## Anonymous cart, favorites and guest checkout
 
@@ -675,6 +727,37 @@ landing, which is exactly what the preview shows.
   Keep that variable: it is what makes the disc read as a hole through the video
   onto the page, in either theme, without a reload.
 
+## The footer's cradled brandmark
+
+`System.hero_text_frame` ("Framed heading") does one more thing than frame a
+hero heading: with a `System.img_brandmark` set, it also cradles that mark on
+the **footer's top edge** (`components/footer.tsx`). Both are the same object -
+`@repo/ui`'s exported `BrandmarkCradle`, which `HeroTextFrame` hangs its own
+disc in - so the two brand moments cannot drift apart.
+
+- **It is on the frame switch on purpose, not a field of its own.** A site
+  wearing the frame wears it in both places; one that doesn't keeps the plain
+  rule. Both conditions are required - the switch **and** a brandmark - since
+  there is nothing to cradle without a mark.
+- **The cradle _replaces_ the footer's `border-top`**, so `.footer--cradled`
+  removes it: those flanks are the rule. It also positions the footer (the disc
+  is absolute) and reserves the overhang with a top margin, or the page's last
+  block sits behind the disc.
+- **The disc's diameter travels from TS to CSS as `--footer-cradle-badge`**,
+  set on the element from `HERO_FRAME_BADGE_SIZE`, so `@repo/ui` stays the one
+  place that decides how big a cradled brandmark is - don't re-type the `clamp()`
+  into `footer.css`.
+- **The colours are the footer's, not the hero's.** The hero draws its cradle in
+  white because it sits over a video; here it wears the border's own
+  `color-mix(… --foreground 10% …)` and a `var(--page-background, …)` disc, so
+  it follows the theme rather than staying white in dark mode.
+- **The area between the shoulders is filled with the footer's `--background`**
+  (the cradle's `fill`), so the footer swells up to meet the mark instead of the
+  page showing through a notch in its edge. That is also what makes the disc
+  legible: a `--page-background` circle against a `--background` bump reads as a
+  container, where against the bare page it was only a shadow. The hero passes
+  no `fill` - its frame floats over a video and has no surface to continue.
+
 ## Typography (per-tenant fonts)
 
 A tenant can ship its own typefaces: `System.google_font_url` (one Google Fonts
@@ -936,6 +1019,8 @@ Before defining a constant, type, or pure utility function in a component file, 
 | `apps/website/components/admin/paragraph-options.ts`       | `PARAGRAPH_WORD_COUNTS`, `PARAGRAPH_LENGTH_STEPS`, `PARAGRAPH_COUNT_STEPS` - used by `admin-form.tsx` and `ai-interviewer/ai-interviewer.tsx`                                                                                                                                                                 |
 | `apps/website/components/admin/logo-background-options.ts` | `LOGO_BACKGROUND_SHAPES`, `LOGO_BACKGROUND_LABEL_KEY`, `SCALE_STEPS` - the badge shapes and size stops, used by `admin/logos-and-styles/hero-video-section.tsx` and `admin/social-posts/[id]/page.tsx`                                                                                                        |
 | `apps/website/components/admin/divider-options.ts`         | `DIVIDER_OPTIONS`, `DIVIDER_LABEL_KEY`, `toDividerOption`, `DividerOption` - the shape-divider shapes every CMS divider picker offers (the hero's bottom edge, both section bands' top/bottom edges), used by `admin/logos-and-styles/hero-video-section.tsx` and `components/admin/section-band-section.tsx` |
+| `apps/website/lib/maps.ts`                                 | `directionsHref` - the Google Maps hand-off, built from **coordinates, never an address**. Used by the contact page's locations, an event's venue and an order's location; website-api builds the same URL for the order email                                                                          |
+| `apps/website/lib/same-origin-image.ts`                    | `toSameOriginDataUrl` - routes a remote image through `/_next/image` so a canvas that draws it is not tainted. Used by the social-post flyer export and by `lib/map-capture.ts`                                                                                                                        |
 
 **How to apply:**
 

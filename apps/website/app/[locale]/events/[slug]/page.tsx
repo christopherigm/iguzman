@@ -18,6 +18,7 @@ import { PlaceMap } from "@/components/place-map";
 import { AdminEditButton } from "@/components/admin-edit-button";
 import { getEvent } from "@/lib/events";
 import { eventLocationLabel, formatEventRange } from "@/lib/event-shared";
+import { directionsHref } from "@/lib/maps";
 import { getSystem } from "@/lib/system";
 import { getSession } from "@repo/auth/session";
 import "@/components/item-detail.css";
@@ -219,7 +220,7 @@ export default async function EventDetailPage({ params }: Props) {
                       text={t("getDirections")}
                       size="sm"
                       kind="primary"
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`}
+                      href={directionsHref(latitude!, longitude!)}
                       target="_blank"
                     />
                   )}

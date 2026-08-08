@@ -98,7 +98,6 @@
       "eyebrow": "Ablegestelle",
       "heading": "So finden Sie uns",
       "subtitle": "Hier beginnt die Tour. Schreiben Sie uns, um Ihre Uhrzeit und den genauen Treffpunkt zu bestätigen.",
-      "fallbackName": "Treffpunkt",
       "contactCta": "Anfahrt und Kontakt"
     },
     "about": {
@@ -489,6 +488,9 @@
     "backToOrders": "Zurück zu den Bestellungen",
     "quantityTimesPrice": "{quantity} × {price}",
     "buyAgain": "Erneut kaufen",
+    "bookAgain": "Erneut buchen",
+    "locationTitle": "Wohin",
+    "getDirections": "Route",
     "status_pending": "Zahlung ausstehend",
     "status_paid": "Zahlung bestätigt",
     "status_failed": "Zahlung fehlgeschlagen",
@@ -1100,7 +1102,21 @@
     "mapCredit": "Kartenhinweis",
     "mapCreditHelp": "Wird in der Ecke jeder Karte angezeigt. Von jedem Kachelanbieter verlangt; leer gelassen wird der OpenStreetMap-Hinweis verwendet.",
     "mapCreditUrl": "Link des Kartenhinweises",
-    "mapCreditUrlHelp": "Wohin der Hinweis verlinkt. Die meisten Kachelanbieter verlangen, dass er auf sie zurückverweist; leer gelassen wird der Hinweis als reiner Text ohne Link gezeichnet."
+    "mapCreditUrlHelp": "Wohin der Hinweis verlinkt. Die meisten Kachelanbieter verlangen, dass er auf sie zurückverweist; leer gelassen wird der Hinweis als reiner Text ohne Link gezeichnet.",
+    "mapPickerTitle": "Genauen Punkt markieren",
+    "mapPickerHint": "Auf die Karte klicken, um die Markierung zu setzen, oder die Markierung ziehen, um sie anzupassen. Karte ziehen zum Verschieben, Strg + Scrollen zum Zoomen.",
+    "mapSearchLabel": "Ort suchen",
+    "mapSearchPlaceholder": "Straße, Stadt, Wahrzeichen…",
+    "mapSearchAction": "Suchen",
+    "mapSearching": "Suche läuft…",
+    "mapSearchEmpty": "Kein Ort mit diesem Namen gefunden.",
+    "mapSearchError": "Die Ortssuche konnte nicht abgeschlossen werden.",
+    "mapClearPin": "Markierung entfernen",
+    "mapZoomIn": "Vergrößern",
+    "mapZoomOut": "Verkleinern",
+    "mapYourLocation": "Dein Standort",
+    "mapZoomHint": "Strg + Scrollen, um die Karte zu zoomen",
+    "mapZoomHintMac": "⌘ + Scrollen, um die Karte zu zoomen"
   },
   "GradientBuilder": {
     "linear": "Linear",
@@ -1285,6 +1301,12 @@
     "unmarkFulfilled": "Als nicht ausgeführt markieren",
     "cancelOrder": "Bestellung stornieren"
   },
+  "FindUs": {
+    "eyebrow": "Besuchen Sie uns",
+    "heading": "So finden Sie uns",
+    "subtitle": "Hier finden Sie uns - und so erreichen Sie uns, bevor Sie losfahren.",
+    "cta": "Anfahrt und Kontakt"
+  },
   "Contact": {
     "home": "Startseite",
     "title": "Kontakt",
@@ -1334,12 +1356,11 @@
     "enNameLabel": "Name (EN)",
     "whatsapp": "WhatsApp",
     "email": "E-Mail",
-    "latitude": "Breitengrad",
-    "longitude": "Längengrad",
+    "coordinatesValue": "Markierung: {latitude}, {longitude}",
+    "coordinatesEmpty": "Noch keine Markierung — auf die Karte klicken, um eine zu setzen.",
+    "mapImageHint": "Ein Bild dieser Karte wird mit dem Standort gespeichert und in Buchungsbestätigungen per E-Mail mitgeschickt. Es wird neu erstellt, sobald du die Markierung verschiebst.",
     "timezone": "Zeitzone",
     "capacity": "Gleichzeitige Buchungen",
-    "slotMinutes": "Buchungsintervall (Min., optional)",
-    "slotMinutesAuto": "Folgt der Dauer jedes Dienstes",
     "minNoticeHours": "Mindestvorlauf (Stunden)",
     "maxDaysAhead": "Buchbare Tage im Voraus",
     "hoursTitle": "Öffnungszeiten",

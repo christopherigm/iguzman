@@ -11,8 +11,8 @@ Four rules compose, in this order:
 
 1. **The branch's weekday hours** (`BranchHours`), read as local wall clock in
    the branch's own timezone - a day with no row is closed. Start times are
-   spaced by the **service's own duration** unless the branch overrides the grid;
-   see `slot_step_minutes`.
+   spaced by the **service's own duration**, and by nothing else; see
+   `slot_step_minutes`.
 2. **The lunch break**, subtracted from that window.
 3. **The minimum notice**, which trims the near edge of today (and possibly all
    of today).
@@ -279,28 +279,18 @@ def _branch_settings(branch):
     `capacity` here is in **seats**, and is only ever read as the capacity of the
     implicit resource `resources_for` falls back to.
 
-    `slot_minutes` is the odd one out: it is the branch's *override* of the
-    grid, so `None` (no override, follow the service's duration) is the ordinary
-    answer rather than a missing one - read it through `slot_step_minutes`, never
-    directly.
+    ⚠ Slot spacing is deliberately absent: it is a property of the *service*
+    (its duration), not of the location, so it is read straight off the service
+    in `slot_step_minutes` and never passes through here.
     """
     if branch is None:
         return {
-            "slot_minutes": None,
             "capacity": 1,
             "min_notice_hours": 2,
             "max_days_ahead": 60,
             "tzinfo": dj_timezone.get_default_timezone(),
         }
     return {
-        # `None` rather than a number is the ordinary case: it means the branch
-        # has not overridden the grid, and `slot_step_minutes` reads the
-        # service's duration instead.
-        "slot_minutes": (
-            max(branch.booking_slot_minutes, MIN_SLOT_MINUTES)
-            if branch.booking_slot_minutes
-            else None
-        ),
         "capacity": max(branch.booking_capacity or 1, 1),
         "min_notice_hours": branch.booking_min_notice_hours or 0,
         "max_days_ahead": branch.booking_max_days_ahead or 60,
@@ -320,23 +310,22 @@ def service_duration_minutes(service):
     return duration if duration > 0 else 60
 
 
-def slot_step_minutes(service, branch):
-    """How far apart the offered start times are.
+def slot_step_minutes(service):
+    """How far apart the offered start times are: **the service's own duration.**
 
-    **The service's own duration by default**, so a two-hour tour is offered at
-    9:00 and 11:00 rather than every half hour: with one boat, the 9:30 that a
-    finer grid printed beside them was never bookable once the 9:00 was taken,
-    and a screen full of buttons that delete each other is not a schedule.
+    A two-hour tour is offered at 9:00 and 11:00 rather than every half hour -
+    with one boat, the 9:30 a finer grid printed beside them was never bookable
+    once the 9:00 was taken, and a screen full of buttons that delete each other
+    is not a schedule.
 
-    `Branch.booking_slot_minutes` overrides it for the location that genuinely
-    starts appointments closer together than one of them lasts - a three-chair
-    salon beginning a 90-minute colour every 30 minutes, where capacity rather
-    than the clock is the limit. Empty (the default) is "follow the duration",
-    which is why the override is read as a truthy value and not with `or`.
+    ⚠ **This takes no branch, on purpose.** There used to be a per-branch
+    override (`Branch.booking_slot_minutes`, removed in `core.0061`) for the
+    three-chair salon starting a 90-minute colour every 30 minutes. It was the
+    wrong shape for that: a branch-level grid applies to every service sold out
+    of the location, and it is a second source of truth beside the duration that
+    can only disagree with it. A service whose starts are closer together than
+    its length is asking for a shorter `Service.duration`.
     """
-    override = _branch_settings(branch)["slot_minutes"]
-    if override:
-        return override
     return max(service_duration_minutes(service), MIN_SLOT_MINUTES)
 
 
@@ -413,7 +402,7 @@ def day_availability(
     settings = _branch_settings(branch)
     tzinfo = settings["tzinfo"]
     duration = timedelta(minutes=service_duration_minutes(service))
-    step = timedelta(minutes=slot_step_minutes(service, branch))
+    step = timedelta(minutes=slot_step_minutes(service))
     party_size = max(int(party_size or 1), 1)
 
     now = now or dj_timezone.now()

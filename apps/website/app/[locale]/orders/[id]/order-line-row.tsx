@@ -167,7 +167,26 @@ export async function OrderLineRow({ line }: OrderLineRowProps) {
             {formatPrice(line.line_total, line.currency)}
           </Typography>
           {line.item_id !== null &&
-            (line.kind === "menu_item" ? (
+            /* A service sold as an appointment is re-ordered by booking a new
+               time, not by re-adding it to a cart: a cart line has nowhere to
+               hold the hour and the location, which is the same reason the
+               detail page swaps its cart CTAs for "Book now". Checked first, so
+               a bookable service never falls through to the express-buy path
+               below. `item_booking_enabled` is read live, so a service the
+               tenant has since closed to booking goes back to "Buy again". */
+            (line.kind === "service" && line.item_booking_enabled ? (
+              line.item_slug && (
+                <Link
+                  href={`/booking/${line.item_slug}`}
+                  prefetch
+                  style={{ color: "inherit", textDecoration: "none" }}
+                >
+                  <Badge variant="outlined" size="sm">
+                    {t("bookAgain")}
+                  </Badge>
+                </Link>
+              )
+            ) : line.kind === "menu_item" ? (
               // A menu item is re-ordered by re-customising it, so link back to
               // its detail page rather than one-click re-adding the base dish.
               href && (

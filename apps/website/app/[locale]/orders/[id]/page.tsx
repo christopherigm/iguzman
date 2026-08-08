@@ -12,10 +12,12 @@ import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { getSession } from "@repo/auth/session";
 import { getOrder, orderRef } from "@/lib/orders";
+import { getSystem } from "@/lib/system";
 import { formatPrice } from "@/lib/price";
 import { CompletePaymentButton } from "./complete-payment-button";
 import { OrderStatusBanner } from "./order-status-banner";
 import { BookingDetails } from "./booking-details";
+import { BookingLocation } from "./booking-location";
 import { OrderLineRow } from "./order-line-row";
 
 type Props = {
@@ -55,10 +57,13 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
 
   // `id` is the order's public UUID. A malformed one is simply not found: the
   // Django lookup is scoped to the caller, so a bad or foreign id is a 404 here.
-  const [order, query, session, t] = await Promise.all([
+  const [order, query, session, system, t] = await Promise.all([
     getOrder(id),
     searchParams,
     getSession(),
+    // Only for the map pin's brandmark. `getSystem` is request-cached and the
+    // layout above has already asked for it, so this costs nothing.
+    getSystem(),
     getTranslations("Orders"),
   ]);
 
@@ -130,6 +135,18 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
             {order.lines.map((line) => (
               <OrderLineRow key={line.id} line={line} />
             ))}
+            {/* Where to turn up, under the line that was booked. Null for an
+                order that is not an appointment, for one the tenant travels to
+                (the address is the customer's own, on the card above), and for
+                a location nobody ever pinned - see `BookingLocation` in
+                `lib/booking-shared.ts`. */}
+            {order.booking?.branch_location && (
+              <BookingLocation
+                location={order.booking.branch_location}
+                name={order.booking.branch_name ?? ""}
+                pinIcon={system?.img_brandmark ?? null}
+              />
+            )}
           </Box>
         </Grid>
 

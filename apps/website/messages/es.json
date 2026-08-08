@@ -98,7 +98,6 @@
       "eyebrow": "Punto de zarpe",
       "heading": "Dónde nos encontramos",
       "subtitle": "Aquí empieza el recorrido. Escríbenos para confirmar tu horario y el punto exacto de encuentro.",
-      "fallbackName": "Punto de encuentro",
       "contactCta": "Cómo llegar y contacto"
     },
     "about": {
@@ -489,6 +488,9 @@
     "backToOrders": "Volver a pedidos",
     "quantityTimesPrice": "{quantity} × {price}",
     "buyAgain": "Comprar de nuevo",
+    "bookAgain": "Reservar de nuevo",
+    "locationTitle": "Cómo llegar",
+    "getDirections": "Cómo llegar",
     "status_pending": "Pago pendiente",
     "status_paid": "Pago confirmado",
     "status_failed": "Pago fallido",
@@ -1100,7 +1102,21 @@
     "mapCredit": "Créditos del mapa",
     "mapCreditHelp": "Se muestran en la esquina de cada mapa. Todos los proveedores de teselas los exigen; si se deja en blanco, se usan los de OpenStreetMap.",
     "mapCreditUrl": "Enlace de los créditos",
-    "mapCreditUrlHelp": "Adónde enlazan los créditos. Casi todos los proveedores de teselas exigen que apunten a ellos; si se deja en blanco, los créditos se dibujan como texto sin enlace."
+    "mapCreditUrlHelp": "Adónde enlazan los créditos. Casi todos los proveedores de teselas exigen que apunten a ellos; si se deja en blanco, los créditos se dibujan como texto sin enlace.",
+    "mapPickerTitle": "Marca el punto exacto",
+    "mapPickerHint": "Haz clic en el mapa para poner el marcador, o arrástralo para ajustarlo. Arrastra el mapa para moverte y usa Ctrl + rueda para acercar.",
+    "mapSearchLabel": "Buscar un lugar",
+    "mapSearchPlaceholder": "Calle, ciudad, referencia…",
+    "mapSearchAction": "Buscar",
+    "mapSearching": "Buscando…",
+    "mapSearchEmpty": "No se encontró ningún lugar con ese nombre.",
+    "mapSearchError": "No se pudo completar la búsqueda del lugar.",
+    "mapClearPin": "Quitar el marcador",
+    "mapZoomIn": "Acercar",
+    "mapZoomOut": "Alejar",
+    "mapYourLocation": "Tu ubicación",
+    "mapZoomHint": "Usa Ctrl + desplazamiento para ampliar el mapa",
+    "mapZoomHintMac": "Usa ⌘ + desplazamiento para ampliar el mapa"
   },
   "GradientBuilder": {
     "linear": "Lineal",
@@ -1285,6 +1301,12 @@
     "unmarkFulfilled": "Marcar no completado",
     "cancelOrder": "Cancelar pedido"
   },
+  "FindUs": {
+    "eyebrow": "Visítanos",
+    "heading": "Dónde nos encontramos",
+    "subtitle": "Aquí es donde nos encuentras, y cómo contactarnos antes de venir.",
+    "cta": "Cómo llegar y contacto"
+  },
   "Contact": {
     "home": "Inicio",
     "title": "Contacto",
@@ -1334,12 +1356,11 @@
     "enNameLabel": "Nombre (EN)",
     "whatsapp": "WhatsApp",
     "email": "Correo",
-    "latitude": "Latitud",
-    "longitude": "Longitud",
+    "coordinatesValue": "Marcador: {latitude}, {longitude}",
+    "coordinatesEmpty": "Aún sin marcador — haz clic en el mapa para ponerlo.",
+    "mapImageHint": "Se guarda una imagen de este mapa junto con la ubicación y se envía en los correos de confirmación de reserva. Se vuelve a generar cada vez que mueves el marcador.",
     "timezone": "Zona horaria",
     "capacity": "Reservas simultáneas",
-    "slotMinutes": "Intervalo de reserva (min, opcional)",
-    "slotMinutesAuto": "Sigue la duración de cada servicio",
     "minNoticeHours": "Antelación mínima (horas)",
     "maxDaysAhead": "Días reservables por adelantado",
     "hoursTitle": "Horario de atención",

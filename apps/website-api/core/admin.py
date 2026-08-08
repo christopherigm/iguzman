@@ -219,11 +219,16 @@ class BranchAdmin(admin.ModelAdmin):
             "fields": ("address", "phone", "whatsapp", "email"),
         }),
         ("Coordinates", {
-            "fields": ("latitude", "longitude"),
+            "fields": ("latitude", "longitude", "map_image"),
+            "description": (
+                "The map screenshot is normally rendered by the CMS's map picker when an "
+                "operator drops the pin, and is emailed with any booking made here. "
+                "Replacing the coordinates from this form does <b>not</b> re-render it."
+            ),
         }),
         ("Booking", {
             "fields": (
-                "timezone", "booking_capacity", "booking_slot_minutes",
+                "timezone", "booking_capacity",
                 "booking_min_notice_hours", "booking_max_days_ahead",
             ),
             "description": (

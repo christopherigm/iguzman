@@ -114,7 +114,7 @@ a site gets for free and must not re-implement):
 | `auth`, `account`, `admin`                   | Sign-in/up, the customer's profile, the CMS                                 |
 | `products`, `services`, `food`, `categories` | Catalog listing + detail for all three Buyable families                     |
 | `blog`, `highlights`                         | Editorial + highlight detail pages                                          |
-| **`events`**                                 | The tenant's events archive + each event's own page (see below)            |
+| **`events`**                                 | The tenant's events archive + each event's own page (see below)             |
 | `cart`, `favorites`, `orders`                | Guest + signed-in cart, hearts, checkout confirmation & history             |
 | **`contact`**                                | The tenant's branches/map, contact email, social links, and a contact form  |
 | **`pos`**                                    | The admin-only point-of-sale till (see "Capabilities a site gets for free") |
@@ -127,7 +127,10 @@ via `@repo/ui`'s `SocialLinks`, and the shared `ContactForm` — all resolved by
 request host and all self-editable in the CMS (`/admin/branches`,
 `/admin/system`). A `"/contact"` entry in a `pages` map is silently
 unreachable; three sites carried one as dead code until it was removed. Link to
-`/contact` from the landing instead.
+`/contact` from the landing instead — which is what the shared **`FindUs`** block
+below does, and it reuses that page's own location cards to do it, so the landing
+shows the same branch cards and maps rather than a second, thinner rendering of
+the same rows.
 
 ## Registering a site (`registry.ts`)
 
@@ -184,21 +187,22 @@ Build a site by composing the shared, already-tenant-aware components in
 `apps/website/components/` — each resolves the current tenant on its own via the
 `lib/` data helpers, so you rarely fetch data by hand. Core blocks:
 
-| Block (`@/components/…`)                                                             | Renders                                             | Backend source                                                               |
-| ------------------------------------------------------------------------------------ | --------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `hero` (`Hero`)                                                                      | Landing hero, logo/slogan/video/bg                  | `System` (see "The hero is a tenant composition")                            |
-| `section-hero` (`SectionHero`)                                                       | Section/page hero for a **non**-landing page        | `System.hero_text_frame` + `img_brandmark`                                   |
-| `about-intro` (`AboutIntro`)                                                         | "Story + photo" two-column intro                    | passed in resolved (`System.about` / `img_about`) + your own CTAs            |
-| `success-stories` (`SuccessStories`)                                                 | Stories slider                                      | `getSuccessStories()`                                                        |
-| `events` (`Events`)                                                                  | Dated happenings slider (upcoming, then recent past) | `getUpcomingEvents()` / `getPastEvents()`                                   |
-| `company-highlights` (`CompanyHighlights`)                                           | Highlights grid                                     | `getHighlights()`                                                            |
-| `catalog-categories` (`CatalogCategories`)                                           | Product/service/menu category tiles                 | `getProductCategories()` / `getServiceCategories()` / `getMenuCategories()`  |
-| `catalog-items` (`CatalogItems`)                                                     | Featured product/service/food cards                 | `getFeaturedProducts()` / `getFeaturedServices()` / `getFeaturedMenuItems()` |
-| `spotlight` (`Spotlight`)                                                            | Editorial promo panel + a hand-picked trio of items | `System.spotlight_*` + `spotlight_items` refs                                |
-| `buyable-card`, `product-detail`, `service-detail`, `menu-detail`, `category-detail` | Item/detail rendering                               | catalog helpers                                                              |
-| `menu-item-customizer`, `nutrition-label`                                            | Priced-ingredient picker + FDA panel                | `getMenuItem()` (its `ingredients`, `portions`)                              |
-| `section-band` (`SectionBand`)                                                       | Full-width band behind a section                    | `System.*_bg` + `System.*_top_divider` / `*_bottom_divider`                  |
-| `empty-catalog-state` (`EmptyCatalogState`)                                          | "Nothing here" + browse CTAs + categories           | `System.*_count`                                                             |
+| Block (`@/components/…`)                                                             | Renders                                                              | Backend source                                                               |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `hero` (`Hero`)                                                                      | Landing hero, logo/slogan/video/bg                                   | `System` (see "The hero is a tenant composition")                            |
+| `section-hero` (`SectionHero`)                                                       | Section/page hero for a **non**-landing page                         | `System.hero_text_frame` + `img_brandmark`                                   |
+| `about-intro` (`AboutIntro`)                                                         | "Story + photo" two-column intro                                     | passed in resolved (`System.about` / `img_about`) + your own CTAs            |
+| `success-stories` (`SuccessStories`)                                                 | Stories slider                                                       | `getSuccessStories()`                                                        |
+| `events` (`Events`)                                                                  | Dated happenings slider (upcoming, then recent past)                 | `getUpcomingEvents()` / `getPastEvents()`                                    |
+| `company-highlights` (`CompanyHighlights`)                                           | Highlights grid                                                      | `getHighlights()`                                                            |
+| `catalog-categories` (`CatalogCategories`)                                           | Product/service/menu category tiles                                  | `getProductCategories()` / `getServiceCategories()` / `getMenuCategories()`  |
+| `catalog-items` (`CatalogItems`)                                                     | Featured product/service/food cards                                  | `getFeaturedProducts()` / `getFeaturedServices()` / `getFeaturedMenuItems()` |
+| `spotlight` (`Spotlight`)                                                            | Editorial promo panel + a hand-picked trio of items                  | `System.spotlight_*` + `spotlight_items` refs                                |
+| `buyable-card`, `product-detail`, `service-detail`, `menu-detail`, `category-detail` | Item/detail rendering                                                | catalog helpers                                                              |
+| `menu-item-customizer`, `nutrition-label`                                            | Priced-ingredient picker + FDA panel                                 | `getMenuItem()` (its `ingredients`, `portions`)                              |
+| `section-band` (`SectionBand`)                                                       | Full-width band behind a section                                     | `System.*_bg` + `System.*_top_divider` / `*_bottom_divider`                  |
+| `find-us` (`FindUs`)                                                                 | "Where to find us": the branch cards + their maps + a `/contact` CTA | `getBranches()` (+ `System.img_brandmark` for the pin)                       |
+| `empty-catalog-state` (`EmptyCatalogState`)                                          | "Nothing here" + browse CTAs + categories                            | `System.*_count`                                                             |
 
 **Wrap a banded section in `SectionBand`, never a bare `<Box styles={{ width:
 "100%", background }}>`.** It carries the tenant's band background _and_ the
@@ -218,8 +222,24 @@ into any landing before the content exists — it simply stays invisible.
 `cafedealtura` uses it as a wholesale invitation, `panorganico` as a vegan-bread
 showcase; one component, two completely different sections.
 
-**`<Events />` is the third block that is safe to compose blind**, alongside
-`Spotlight` and `SuccessStories`: it renders **nothing** until the tenant has an
+**`<FindUs />` closes every landing, and its cards are the contact page's own.**
+It answers the one question none of the other blocks does — _where are you_ — with
+the tenant's `Branch` rows, main location first: a single location renders as the
+prominent detail-plus-map view, several as the grid of branch cards, each with its
+`PlaceMap`, its call/WhatsApp/email row and its directions link. It renders
+`components/contact/contact-locations.tsx` itself rather than a landing-shaped
+imitation, so a branch that gains coordinates gains its map on both surfaces at
+once (the hand-built name-and-address list this replaced on `tamaratours` had
+neither the map nor the contact row). It is a **pointer to `/contact`, not a copy
+of it** — no form, no social links, just the CTA through. All four strings default
+to the shared **`FindUs`** message namespace, so `<FindUs />` needs no props; a
+site with its own voice for this beat passes them (`tamaratours`'
+`sections/departure.tsx` is the thin wrapper that does, calling it the departure
+point). Admin edit/remove controls are deliberately off here — those belong on
+`/contact` and `/admin/branches`, not one mis-tap away on the storefront's landing.
+
+**`<Events />` is safe to compose blind too**, alongside `Spotlight`,
+`SuccessStories` and `FindUs`: it renders **nothing** until the tenant has an
 event, so every landing carries it and nothing appears until the CMS has one. It
 is entirely DB-driven (`/admin/events`) and it brings two platform routes with
 it — `/events` (the archive) and `/events/<slug>` (one event) — plus a navbar
@@ -590,7 +610,8 @@ Build & verify locally, then publish to prod:
 2. `registry.ts` entry present (CLI-inserted), `_default` still last.
 3. `landing.tsx` composed from the block library + any `sections/`, props-first —
    including `SectionBand` for banded sections (with the tenant's divider fields
-   passed through) and `<Spotlight />` where the landing needs a non-grid beat.
+   passed through), `<Spotlight />` where the landing needs a non-grid beat, and
+   `<FindUs />` closing the page.
 4. Extra `pages/` wired into the `SiteModule.pages` map if the customer needs
    them — and **not** named after a reserved platform route (no site `/contact`;
    link to the shared one).

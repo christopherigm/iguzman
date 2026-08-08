@@ -1498,6 +1498,192 @@ class OrderEmailTests(TestCase):
         self.assertEqual(mail.outbox[0].to, ["jo@guest.test"])
 
 
+class BookingLocationTests(TestCase):
+    """Where an appointment happens, in the two places a customer reads it: the
+    confirmation email, and `branch_location` on the order payload.
+
+    Both are gated the same way and each owns its copy of the gate, so both are
+    covered here - the alternative was a rule stated twice and tested once.
+
+    What these pin down is the pair of silent failures. A map of the *shop* on an
+    on-premises booking - where the tenant travels to the customer - is a picture
+    of the wrong place on the one message that carries the right address, and it
+    looks perfectly fine in an inbox. And a Directions button that stopped being
+    rendered because the branch was never screenshotted takes the only actionable
+    thing in the block with it: the link is built from the coordinates and must
+    not depend on the picture.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.branch = Branch.objects.create(
+            system=self.system, name="Marina", address="Dock 4\nCabo",
+            latitude=Decimal("22.88000000"), longitude=Decimal("-109.90000000"),
+        )
+        self.service = Service.objects.create(
+            system=self.system, name="Tour", slug="tour",
+            price=Decimal("100.00"), currency="USD", booking_enabled=True,
+        )
+
+    def _booked_order(self, **booking_kwargs):
+        order = Order.objects.create(
+            system=self.system, currency="USD", email="buyer@acme.test",
+            subtotal=Decimal("100.00"), total=Decimal("100.00"),
+        )
+        OrderLine.objects.create(
+            order=order, kind="service", service=self.service, name="Tour",
+            unit_price=Decimal("100.00"), quantity=1,
+            line_total=Decimal("100.00"), currency="USD",
+        )
+        starts = timezone.now() + timedelta(days=2)
+        defaults = dict(
+            order=order, service=self.service, branch=self.branch,
+            branch_name="Marina", fulfillment=Booking.FULFILLMENT_BRANCH,
+            starts_at=starts, ends_at=starts + timedelta(hours=1),
+            timezone="America/Mazatlan", duration_minutes=60,
+        )
+        defaults.update(booking_kwargs)
+        Booking.objects.create(**defaults)
+        return order
+
+    def _send(self, order):
+        from .services.order_emails import CONFIRMATION, send_order_email
+
+        mail.outbox.clear()
+        send_order_email(order, kind=CONFIRMATION)
+        self.assertEqual(len(mail.outbox), 1)
+        message = mail.outbox[0]
+        html = dict((mime, content) for content, mime in message.alternatives)["text/html"]
+        return message, html
+
+    def test_a_branch_booking_carries_the_address_and_a_directions_link(self):
+        _, html = self._send(self._booked_order())
+
+        self.assertIn("Marina", html)
+        self.assertIn("Dock 4", html)
+        # Coordinates, never the address: a geocoder makes what it will of free
+        # text, and this is the link that has to land the customer on the pin.
+        self.assertIn(
+            "maps/dir/?api=1&amp;destination=22.88000000,-109.90000000", html,
+        )
+
+    def test_the_directions_link_does_not_depend_on_the_screenshot(self):
+        """`Branch.map_image` is optional - a location saved before anyone opened
+        the CMS's map picker has coordinates and no picture. The block still has
+        to render the half that does something."""
+        _, html = self._send(self._booked_order())
+
+        self.assertNotIn("Mapa / Map:", html)  # no <img>, broken or otherwise
+        self.assertIn("maps/dir/?api=1", html)
+
+    def test_a_screenshotted_branch_puts_the_map_in_the_message(self):
+        """The name is written straight to the column rather than uploaded: what
+        is under test is that the template reaches the stored file's URL, not
+        that Pillow can write a JPEG. `QuerySet.update` because a `save()` would
+        send `ResizedImageField.pre_save` looking for bytes that do not exist."""
+        Branch.objects.filter(pk=self.branch.pk).update(
+            map_image="t/1/pictures/branchmap/9-abc.jpg",
+        )
+        self.branch.refresh_from_db()
+
+        _, html = self._send(self._booked_order())
+
+        self.assertIn("Mapa / Map:", html)
+        self.assertIn("branchmap/9-abc.jpg", html)
+
+    def test_an_on_premises_booking_gets_no_map_of_the_shop(self):
+        """It still *has* a branch - that is whose calendar it was scheduled
+        against - but the venue is the customer's own address."""
+        message, html = self._send(
+            self._booked_order(
+                fulfillment=Booking.FULFILLMENT_ON_PREMISES,
+                address="12 Customer St",
+            ),
+        )
+
+        self.assertNotIn("maps/dir/", html)
+        self.assertNotIn("maps/dir/", message.body)
+
+    def test_an_unpinned_branch_gets_no_block(self):
+        self.branch.latitude = None
+        self.branch.longitude = None
+        self.branch.save(update_fields=["latitude", "longitude"])
+
+        _, html = self._send(self._booked_order())
+
+        self.assertNotIn("maps/dir/", html)
+
+    def test_an_ordinary_order_gets_no_block(self):
+        order = Order.objects.create(
+            system=self.system, currency="USD", email="buyer@acme.test",
+            subtotal=Decimal("10.00"), total=Decimal("10.00"),
+        )
+        OrderLine.objects.create(
+            order=order, kind="service", service=self.service, name="Tour",
+            unit_price=Decimal("10.00"), quantity=1,
+            line_total=Decimal("10.00"), currency="USD",
+        )
+
+        _, html = self._send(order)
+
+        self.assertNotIn("maps/dir/", html)
+
+    # ── The order payload the customer's own page reads ──────────────────────
+
+    def _read(self, order):
+        res = self.client.get(
+            f"/api/orders/{order.public_id}/", HTTP_X_WEBSITE_HOST="acme.test",
+        )
+        self.assertEqual(res.status_code, 200)
+        return res.json()["booking"]
+
+    def test_the_order_payload_carries_the_branch_location(self):
+        booking = self._read(self._booked_order())
+
+        self.assertEqual(booking["branch_location"]["latitude"], "22.88000000")
+        self.assertEqual(booking["branch_location"]["longitude"], "-109.90000000")
+        self.assertEqual(booking["branch_location"]["address"], "Dock 4\nCabo")
+        # Optional, and null until somebody opens the CMS's map picker.
+        self.assertIsNone(booking["branch_location"]["map_image"])
+
+    def test_the_order_payload_omits_it_for_an_on_premises_booking(self):
+        booking = self._read(
+            self._booked_order(
+                fulfillment=Booking.FULFILLMENT_ON_PREMISES,
+                address="12 Customer St",
+            ),
+        )
+
+        self.assertIsNone(booking["branch_location"])
+
+    def test_the_order_payload_omits_it_for_an_unpinned_branch(self):
+        self.branch.latitude = None
+        self.branch.longitude = None
+        self.branch.save(update_fields=["latitude", "longitude"])
+
+        self.assertIsNone(self._read(self._booked_order())["branch_location"])
+
+    def test_a_bookable_service_line_says_so(self):
+        """What the order page swaps "Buy again" for "Book again" on. Read live,
+        so a service the tenant has since closed to booking goes back."""
+        order = self._booked_order()
+
+        res = self.client.get(
+            f"/api/orders/{order.public_id}/", HTTP_X_WEBSITE_HOST="acme.test",
+        )
+        self.assertTrue(res.json()["lines"][0]["item_booking_enabled"])
+
+        self.service.booking_enabled = False
+        self.service.save(update_fields=["booking_enabled"])
+        cache.clear()
+
+        res = self.client.get(
+            f"/api/orders/{order.public_id}/", HTTP_X_WEBSITE_HOST="acme.test",
+        )
+        self.assertFalse(res.json()["lines"][0]["item_booking_enabled"])
+
+
 class OrderQrTests(TestCase):
     """The QR code an order carries, and the two places it has to arrive.
 
@@ -1650,12 +1836,7 @@ class BookingAvailabilityTests(TestCase):
         self.branch = Branch.objects.create(
             system=self.system, name="Downtown", is_main=True,
             timezone="America/Mexico_City", booking_capacity=1,
-            # An explicit override of the grid, not the default - left empty the
-            # starts would be spaced by the service's own duration. Pinned here
-            # so the hours/lunch/notice cases below read against a fixed half-hour
-            # grid; the duration-driven default has its own tests.
-            booking_slot_minutes=30, booking_min_notice_hours=0,
-            booking_max_days_ahead=60,
+            booking_min_notice_hours=0, booking_max_days_ahead=60,
         )
         # Monday-Friday 09:00-17:00 with an hour for lunch at 13:00.
         for weekday in range(5):
@@ -1682,18 +1863,14 @@ class BookingAvailabilityTests(TestCase):
     def test_slots_run_from_opening_to_the_last_that_fits(self):
         labels = [self._local(s) for s in self._slots()]
 
-        # A 60-minute service on a 30-minute grid: 09:00 through 12:00 before
-        # lunch (12:30 would run into it), then 14:00 through 16:00 after.
+        # A 60-minute service on the hour: 09:00 through 12:00 before lunch,
+        # then 14:00 through 16:00 after.
         self.assertEqual(labels[0], "09:00")
         self.assertEqual(labels[-1], "16:00")
-        # 16:30 would end at 17:30, past closing.
-        self.assertNotIn("16:30", labels)
+        # 17:00 would end at 18:00, past closing.
+        self.assertNotIn("17:00", labels)
 
-    def test_start_times_are_spaced_by_the_services_duration_by_default(self):
-        # No branch override - the ordinary configuration.
-        self.branch.booking_slot_minutes = None
-        self.branch.save()
-
+    def test_start_times_are_spaced_by_the_services_duration(self):
         labels = [self._local(s) for s in self._slots()]
 
         # An hour-long haircut, offered on the hour: the 09:30 a finer grid used
@@ -1703,8 +1880,6 @@ class BookingAvailabilityTests(TestCase):
         )
 
     def test_a_longer_service_gets_fewer_starts(self):
-        self.branch.booking_slot_minutes = None
-        self.branch.save()
         self.service.duration = 120
         self.service.save()
 
@@ -1714,17 +1889,33 @@ class BookingAvailabilityTests(TestCase):
         # start would run an hour past closing.
         self.assertEqual(labels, ["09:00", "11:00", "14:00"])
 
-    def test_the_branch_grid_overrides_the_duration(self):
-        # The three-chair salon: appointments last 60 minutes but start every 30,
-        # because capacity rather than the clock is what limits them.
-        self.branch.booking_slot_minutes = 30
-        self.branch.save()
+    def test_two_services_at_one_branch_keep_their_own_grids(self):
+        """The reason the grid is not a branch setting.
 
-        self.assertIn("09:30", [self._local(s) for s in self._slots()])
+        `Branch.booking_slot_minutes` used to override it for the whole location,
+        which meant one number had to serve every service sold there - a 30-minute
+        trim and a 4-hour tour alike. The spacing belongs to the service.
+        """
+        tour = Service.objects.create(
+            system=self.system, name="City tour", slug="city-tour",
+            price=Decimal("300.00"), currency="USD", duration=240,
+            booking_enabled=True,
+        )
+
+        haircut = [self._local(s) for s in self._slots()]
+        tour_slots = [
+            self._local(s)
+            for s in slots_for_day(tour, self.branch, self.day, now=self.now)
+        ]
+
+        self.assertEqual(
+            haircut, ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00"],
+        )
+        # Four hours fits the 09:00-13:00 window exactly and nowhere else - the
+        # afternoon one (14:00-17:00) is an hour too short.
+        self.assertEqual(tour_slots, ["09:00"])
 
     def test_a_service_with_no_duration_falls_back_to_hourly_starts(self):
-        self.branch.booking_slot_minutes = None
-        self.branch.save()
         self.service.duration = None
         self.service.save()
 
@@ -1739,8 +1930,8 @@ class BookingAvailabilityTests(TestCase):
     def test_the_lunch_break_is_subtracted(self):
         labels = [self._local(s) for s in self._slots()]
 
-        # 12:30 and 13:00 both overlap the 13:00-14:00 break.
-        self.assertNotIn("12:30", labels)
+        # A 13:00 start runs straight into the 13:00-14:00 break; 12:00 ends
+        # exactly as it begins, which is allowed.
         self.assertNotIn("13:00", labels)
         self.assertIn("12:00", labels)
         self.assertIn("14:00", labels)
@@ -1788,10 +1979,8 @@ class BookingAvailabilityTests(TestCase):
         self._book(taken)
 
         labels = [self._local(s) for s in self._slots()]
-        # The 60-minute appointment at 09:00 also blocks a start at 09:30, which
-        # would run into it.
         self.assertNotIn("09:00", labels)
-        self.assertNotIn("09:30", labels)
+        # The next start clears the 60-minute appointment exactly.
         self.assertIn("10:00", labels)
 
     def test_capacity_lets_that_many_overlap(self):
@@ -1869,7 +2058,7 @@ class BookingCheckoutTests(TestCase):
 
         self.branch = Branch.objects.create(
             system=self.system, name="Downtown", is_main=True,
-            timezone="UTC", booking_capacity=1, booking_slot_minutes=30,
+            timezone="UTC", booking_capacity=1,
             booking_min_notice_hours=0, booking_max_days_ahead=60,
         )
         for weekday in range(7):
@@ -2352,7 +2541,7 @@ class OrderPayBookingTests(TestCase):
 
         self.branch = Branch.objects.create(
             system=self.system, name="Downtown", is_main=True,
-            timezone="UTC", booking_capacity=1, booking_slot_minutes=30,
+            timezone="UTC", booking_capacity=1,
             booking_min_notice_hours=0, booking_max_days_ahead=60,
         )
         for weekday in range(7):
@@ -2481,7 +2670,7 @@ class AbandonedBookingTests(TestCase):
 
         self.branch = Branch.objects.create(
             system=self.system, name="Downtown", is_main=True,
-            timezone="UTC", booking_capacity=1, booking_slot_minutes=30,
+            timezone="UTC", booking_capacity=1,
             booking_min_notice_hours=0, booking_max_days_ahead=60,
         )
         for weekday in range(7):
@@ -2646,7 +2835,7 @@ class PartyBookingTests(TestCase):
         self.system = System.objects.create(site_name="Acme", host="acme.test")
         self.branch = Branch.objects.create(
             system=self.system, name="Marina", is_main=True,
-            timezone="UTC", booking_capacity=10, booking_slot_minutes=60,
+            timezone="UTC", booking_capacity=10,
             booking_min_notice_hours=0, booking_max_days_ahead=60,
         )
         for weekday in range(7):
@@ -2820,7 +3009,7 @@ class ResourcePoolTests(TestCase):
         self.system = System.objects.create(site_name="Acme", host="acme.test")
         self.branch = Branch.objects.create(
             system=self.system, name="Marina", is_main=True,
-            timezone="UTC", booking_capacity=1, booking_slot_minutes=60,
+            timezone="UTC", booking_capacity=1,
             booking_min_notice_hours=0, booking_max_days_ahead=60,
         )
         for weekday in range(7):
@@ -3015,7 +3204,7 @@ class BookingReassignTests(TestCase):
         self.system = System.objects.create(site_name="Acme", host="acme.test")
         self.branch = Branch.objects.create(
             system=self.system, name="Marina", is_main=True,
-            timezone="UTC", booking_capacity=1, booking_slot_minutes=60,
+            timezone="UTC", booking_capacity=1,
             booking_min_notice_hours=0, booking_max_days_ahead=60,
         )
         for weekday in range(7):
@@ -3153,7 +3342,7 @@ class BookingCheckoutAtomicityTests(TransactionTestCase):
         self.system = System.objects.create(site_name="Acme", host="acme.test")
         self.branch = Branch.objects.create(
             system=self.system, name="Marina", is_main=True,
-            timezone="UTC", booking_capacity=10, booking_slot_minutes=60,
+            timezone="UTC", booking_capacity=10,
             booking_min_notice_hours=0, booking_max_days_ahead=60,
         )
         for weekday in range(7):

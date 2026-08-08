@@ -1,0 +1,27 @@
+/* Only the states props cannot express: the rest of the picker is styled with
+   UIComponentProps on its Box / Button / Typography, and everything the map
+   itself draws comes from `@repo/ui`'s `osm-map.css` via the shared chrome. */
+
+/* The one thing the shared marker does not say: this pin can be picked up and
+   moved, because here it *is* the value. A location's pin on a public map has
+   nothing to drag. */
+.mp__pin {
+  cursor: grab;
+}
+
+.mp__pin:active {
+  cursor: grabbing;
+}
+
+.mp__result {
+  transition: background-color 0.15s ease;
+}
+
+.mp__result:hover,
+.mp__result:focus-visible {
+  background-color: color-mix(in srgb, var(--accent, #06b6d4) 12%, transparent);
+}
+
+.mp__result + .mp__result {
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+}

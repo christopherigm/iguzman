@@ -23,6 +23,7 @@ import {
   AdminImageUploader,
   type NewImage,
 } from "@/components/admin-image-uploader/admin-image-uploader";
+import { toSameOriginDataUrl } from "@/lib/same-origin-image";
 import {
   LOGO_BACKGROUND_SHAPES,
   LOGO_BACKGROUND_LABEL_KEY,
@@ -92,29 +93,6 @@ const EMPTY_IMAGES: Record<ImageField, ImageState> = {
  * preview shrinks instead of bleeding out of its cell.
  */
 const PREVIEW_MAX_W = 440;
-
-/**
- * Route an API image URL through the same-origin Next optimizer and read it back
- * as a data URL, so the export canvas is never tainted by a cross-origin fetch.
- * Returns the original URL on failure (preview still shows; export may be blocked).
- */
-async function toSameOriginDataUrl(url: string): Promise<string> {
-  if (url.startsWith("data:")) return url;
-  try {
-    const optimized = `/_next/image?url=${encodeURIComponent(url)}&w=1080&q=90`;
-    const res = await fetch(optimized);
-    if (!res.ok) return url;
-    const blob = await res.blob();
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return url;
-  }
-}
 
 /** Whole-percent discount from a compare/sale pair, or null when there is none. */
 function discountPercent(

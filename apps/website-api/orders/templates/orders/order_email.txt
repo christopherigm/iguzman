@@ -17,6 +17,12 @@ Estado / Status: {{ status_label_es }} / {{ status_label_en }}
 Subtotal ({{ item_count }}): {{ subtotal_display }}
 Total: {{ total_display }}
 
+{% if location %}
+Dónde / Where: {{ location.name }}{% if location.address %}
+{{ location.address }}{% endif %}
+Cómo llegar / Directions:
+{{ location.directions_url }}
+{% endif %}
 Ver mi pedido / View my order:
 {{ action_url }}
 {% if qr_cid %}
