@@ -85,6 +85,55 @@
       "visionHeading": "Notre vision"
     }
   },
+  "TamaraToursSite": {
+    "hero": {
+      "viewTours": "Voir nos excursions"
+    },
+    "intro": {
+      "eyebrow": "En mer",
+      "arch": "Découvrir El Arco",
+      "story": "Notre histoire"
+    },
+    "departure": {
+      "eyebrow": "Point de départ",
+      "heading": "Où nous trouver",
+      "subtitle": "C'est ici que la sortie commence. Écrivez-nous pour confirmer votre horaire et le point de rendez-vous exact.",
+      "fallbackName": "Point de rendez-vous",
+      "contactCta": "Accès et contact"
+    },
+    "about": {
+      "home": "Accueil",
+      "eyebrow": "Qui sommes-nous",
+      "title": "À propos",
+      "titleNamed": "À propos de {name}",
+      "placeholder": "Notre histoire arrive bientôt. Revenez vite pour rencontrer l'équipage et découvrir nos sorties.",
+      "missionHeading": "Notre mission",
+      "visionHeading": "Notre vision",
+      "contactCta": "Nous contacter"
+    },
+    "archPage": {
+      "eyebrow": "La destination",
+      "breadcrumb": "El Arco",
+      "title": "El Arco de Cabo San Lucas",
+      "subtitle": "Le bout des terres de la péninsule de Basse-Californie, là où la mer de Cortés rejoint le Pacifique.",
+      "intro": "El Arco est la formation rocheuse qui ferme la pointe sud de la péninsule de Basse-Californie, à l'endroit que les cartes appellent Land's End : le point exact où la mer de Cortés et l'océan Pacifique se rejoignent. On ne le voit que depuis l'eau ; pour se retrouver devant, il faut prendre un bateau depuis la baie de Cabo San Lucas.",
+      "sightsHeading": "Ce que vous verrez",
+      "beaches": {
+        "title": "Playa del Amor et Playa del Divorcio",
+        "text": "Deux plages séparées par la même roche : la Playa del Amor donne sur la mer de Cortés, calme et abritée ; la Playa del Divorcio sur le Pacifique ouvert, avec de forts courants et sans baignade."
+      },
+      "sealions": {
+        "title": "La colonie d'otaries",
+        "text": "Une colonie d'otaries de Californie vit sur les rochers, à côté de l'arche. On les voit et on les entend depuis le bateau toute l'année."
+      },
+      "whales": {
+        "title": "Saison des baleines",
+        "text": "De décembre à avril, les baleines à bosse passent au large de Los Cabos. Rien n'est jamais garanti, mais c'est la période où elles s'approchent de la côte."
+      },
+      "gettingThereHeading": "Comment s'y rendre",
+      "gettingThereText": "Aucune route n'y mène : on rejoint l'arche en bateau depuis la baie de Cabo San Lucas, et la traversée est courte. Consultez les excursions pour les horaires, la durée et ce que chaque sortie comprend, ou écrivez-nous pour composer la vôtre."
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""
@@ -430,7 +479,6 @@
     "heading": "Commandes",
     "home": "Accueil",
     "empty": "Vous n'avez pas encore de commandes.",
-    "browseProducts": "Voir les produits",
     "breadcrumb": "Commande n° {id}",
     "detailTitle": "Commande n° {id}",
     "placedOn": "Passée le {date}",

@@ -85,6 +85,55 @@
       "visionHeading": "Nossa visão"
     }
   },
+  "TamaraToursSite": {
+    "hero": {
+      "viewTours": "Ver nossos passeios"
+    },
+    "intro": {
+      "eyebrow": "No mar",
+      "arch": "Conheça El Arco",
+      "story": "Nossa história"
+    },
+    "departure": {
+      "eyebrow": "Ponto de partida",
+      "heading": "Onde nos encontrar",
+      "subtitle": "É aqui que o passeio começa. Fale com a gente para confirmar o horário e o ponto exato de encontro.",
+      "fallbackName": "Ponto de encontro",
+      "contactCta": "Como chegar e contato"
+    },
+    "about": {
+      "home": "Início",
+      "eyebrow": "Quem somos",
+      "title": "Sobre nós",
+      "titleNamed": "Sobre {name}",
+      "placeholder": "Estamos preparando nossa história. Volte em breve para conhecer a tripulação e como saímos para navegar.",
+      "missionHeading": "Nossa missão",
+      "visionHeading": "Nossa visão",
+      "contactCta": "Fale com a gente"
+    },
+    "archPage": {
+      "eyebrow": "O destino",
+      "breadcrumb": "El Arco",
+      "title": "El Arco de Cabo San Lucas",
+      "subtitle": "O fim das terras da península da Baixa Califórnia, onde o Mar de Cortés encontra o Pacífico.",
+      "intro": "El Arco é a formação de rocha que fecha a ponta sul da península da Baixa Califórnia, no lugar que os mapas chamam de Land's End: o ponto exato onde o Mar de Cortés e o Oceano Pacífico se encontram. Só dá para vê-lo da água, então a única forma de ficar na frente dele é sair de barco da baía de Cabo San Lucas.",
+      "sightsHeading": "O que você vai ver",
+      "beaches": {
+        "title": "Playa del Amor e Playa del Divorcio",
+        "text": "Duas praias separadas pela mesma formação de rocha: a do Amor fica no Mar de Cortés, calma e protegida; a do Divórcio dá para o Pacífico aberto, com correntes fortes e sem banho."
+      },
+      "sealions": {
+        "title": "A colônia de leões-marinhos",
+        "text": "Nas rochas ao lado do Arco vive uma colônia de leões-marinhos-da-califórnia. Dá para vê-los e ouvi-los do barco o ano inteiro."
+      },
+      "whales": {
+        "title": "Temporada de baleias",
+        "text": "Entre dezembro e abril as baleias-jubarte passam pelas águas de Los Cabos. Avistar nunca é garantido, mas é a época em que elas se aproximam da costa."
+      },
+      "gettingThereHeading": "Como chegar",
+      "gettingThereText": "Não há estrada: chega-se ao Arco navegando da baía de Cabo San Lucas, e a travessia é curta. Veja os passeios para conferir horários, duração e o que cada saída inclui, ou fale com a gente para montar o seu."
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""
@@ -430,7 +479,6 @@
     "heading": "Encomendas",
     "home": "Início",
     "empty": "Ainda não tem encomendas.",
-    "browseProducts": "Ver produtos",
     "breadcrumb": "Encomenda n.º {id}",
     "detailTitle": "Encomenda n.º {id}",
     "placedOn": "Efetuada a {date}",

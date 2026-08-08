@@ -162,6 +162,12 @@ export interface FeaturedService {
   is_featured: boolean;
   modality: string | null;
   duration: number | null;
+  /**
+   * Sold as an appointment rather than a cart line, so a card for it leads to
+   * `/booking/<slug>` instead of adding to the cart. The list endpoint uses the
+   * full `ServiceSerializer`, so the flag is on every service payload.
+   */
+  booking_enabled: boolean;
   variants: ServiceVariant[];
 }
 

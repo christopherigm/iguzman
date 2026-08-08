@@ -85,6 +85,55 @@
       "visionHeading": "Nuestra visión"
     }
   },
+  "TamaraToursSite": {
+    "hero": {
+      "viewTours": "Ver nuestros tours"
+    },
+    "intro": {
+      "eyebrow": "Salimos a navegar",
+      "arch": "Conoce El Arco",
+      "story": "Nuestra historia"
+    },
+    "departure": {
+      "eyebrow": "Punto de zarpe",
+      "heading": "Dónde nos encontramos",
+      "subtitle": "Aquí empieza el recorrido. Escríbenos para confirmar tu horario y el punto exacto de encuentro.",
+      "fallbackName": "Punto de encuentro",
+      "contactCta": "Cómo llegar y contacto"
+    },
+    "about": {
+      "home": "Inicio",
+      "eyebrow": "Quiénes somos",
+      "title": "Nosotros",
+      "titleNamed": "Sobre {name}",
+      "placeholder": "Estamos preparando nuestra historia. Vuelve pronto para conocer a la tripulación y la forma en que salimos a navegar.",
+      "missionHeading": "Nuestra misión",
+      "visionHeading": "Nuestra visión",
+      "contactCta": "Contáctanos"
+    },
+    "archPage": {
+      "eyebrow": "El destino",
+      "breadcrumb": "El Arco",
+      "title": "El Arco de Cabo San Lucas",
+      "subtitle": "El fin de la tierra en la península de Baja California, donde el Mar de Cortés se encuentra con el Pacífico.",
+      "intro": "El Arco es la formación de roca que cierra la punta sur de la península de Baja California, en el lugar que los mapas llaman Land's End: el punto exacto donde el Mar de Cortés y el Océano Pacífico se juntan. Solo se puede ver desde el agua, así que la única manera de estar frente a él es salir en lancha desde la bahía de Cabo San Lucas.",
+      "sightsHeading": "Qué vas a ver",
+      "beaches": {
+        "title": "Playa del Amor y Playa del Divorcio",
+        "text": "Dos playas separadas por la misma formación de roca: la del Amor mira al Mar de Cortés, tranquila y protegida; la del Divorcio da al Pacífico abierto, con corrientes fuertes y sin acceso al agua."
+      },
+      "sealions": {
+        "title": "La colonia de lobos marinos",
+        "text": "En las rocas junto al Arco vive una colonia de lobos marinos de California. Se les ve y se les escucha desde la lancha durante todo el año."
+      },
+      "whales": {
+        "title": "Temporada de ballenas",
+        "text": "Entre diciembre y abril las ballenas jorobadas pasan por las aguas de Los Cabos. Verlas nunca está garantizado, pero es la época en que se acercan a la costa."
+      },
+      "gettingThereHeading": "Cómo llegar hasta ahí",
+      "gettingThereText": "No hay camino por tierra: al Arco se llega navegando desde la bahía de Cabo San Lucas, y el recorrido toma poco tiempo. Revisa los tours para ver los horarios, la duración y qué incluye cada salida, o escríbenos si prefieres armar el recorrido a tu medida."
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""
@@ -430,7 +479,6 @@
     "heading": "Pedidos",
     "home": "Inicio",
     "empty": "Aún no tienes pedidos.",
-    "browseProducts": "Ver productos",
     "breadcrumb": "Pedido n.º {id}",
     "detailTitle": "Pedido n.º {id}",
     "placedOn": "Realizado el {date}",

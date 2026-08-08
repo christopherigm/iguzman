@@ -101,6 +101,7 @@ export function ServiceBookingCta({
 
       <Button
         text={t("bookNow")}
+        icon="/icons/calendar.svg"
         kind="primary"
         size="lg"
         width="100%"

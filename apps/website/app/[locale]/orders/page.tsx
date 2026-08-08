@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { setRequestLocale, getTranslations } from "next-intl/server";
-import { Box } from "@repo/ui/core-elements/box";
-import { Button } from "@repo/ui/core-elements/button";
 import { Container } from "@repo/ui/core-elements/container";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -10,6 +8,7 @@ import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { getSession } from "@repo/auth/session";
 import { redirect } from "@repo/i18n/navigation";
 import { getOrders } from "@/lib/orders";
+import { EmptyCatalogState } from "@/components/empty-catalog-state";
 import { OrderCard } from "./order-card";
 
 type Props = {
@@ -68,14 +67,7 @@ export default async function OrdersPage({ params }: Props) {
           ))}
         </Grid>
       ) : (
-        <Box flexDirection="column" alignItems="flex-start" gap={20}>
-          <Typography variant="body">{t("empty")}</Typography>
-          <Button
-            text={t("browseProducts")}
-            href="/categories/products"
-            kind="primary"
-          />
-        </Box>
+        <EmptyCatalogState message={t("empty")} />
       )}
     </Container>
   );

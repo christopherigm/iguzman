@@ -85,6 +85,55 @@
       "visionHeading": "Our vision"
     }
   },
+  "TamaraToursSite": {
+    "hero": {
+      "viewTours": "See our tours"
+    },
+    "intro": {
+      "eyebrow": "Out on the water",
+      "arch": "About El Arco",
+      "story": "Our story"
+    },
+    "departure": {
+      "eyebrow": "Departure point",
+      "heading": "Where to find us",
+      "subtitle": "This is where the trip starts. Message us to confirm your time and the exact meeting point.",
+      "fallbackName": "Meeting point",
+      "contactCta": "Directions and contact"
+    },
+    "about": {
+      "home": "Home",
+      "eyebrow": "Who we are",
+      "title": "About us",
+      "titleNamed": "About {name}",
+      "placeholder": "We're getting our story ready. Come back soon to meet the crew and see how we take people out.",
+      "missionHeading": "Our mission",
+      "visionHeading": "Our vision",
+      "contactCta": "Get in touch"
+    },
+    "archPage": {
+      "eyebrow": "The destination",
+      "breadcrumb": "El Arco",
+      "title": "El Arco de Cabo San Lucas",
+      "subtitle": "Land's End on the Baja California peninsula, where the Sea of Cortez meets the Pacific.",
+      "intro": "El Arco is the rock formation that closes the southern tip of the Baja California peninsula, at the place the maps call Land's End: the exact point where the Sea of Cortez and the Pacific Ocean meet. It can only be seen from the water, so the only way to stand in front of it is to take a boat out from Cabo San Lucas bay.",
+      "sightsHeading": "What you'll see",
+      "beaches": {
+        "title": "Lovers Beach and Divorce Beach",
+        "text": "Two beaches separated by the same rock formation: Lovers Beach faces the calm, sheltered Sea of Cortez; Divorce Beach faces the open Pacific, with strong currents and no swimming."
+      },
+      "sealions": {
+        "title": "The sea lion colony",
+        "text": "A colony of California sea lions lives on the rocks beside the Arch. You can see and hear them from the boat all year round."
+      },
+      "whales": {
+        "title": "Whale season",
+        "text": "Between December and April humpback whales pass through the waters off Los Cabos. Sightings are never guaranteed, but that is when they come close to shore."
+      },
+      "gettingThereHeading": "Getting there",
+      "gettingThereText": "There is no road: you reach the Arch by boat from Cabo San Lucas bay, and the crossing is short. Check the tours for departure times, duration and what each trip includes, or message us if you would rather put together your own."
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""
@@ -430,7 +479,6 @@
     "heading": "Orders",
     "home": "Home",
     "empty": "You have no orders yet.",
-    "browseProducts": "Browse products",
     "breadcrumb": "Order #{id}",
     "detailTitle": "Order #{id}",
     "placedOn": "Placed on {date}",

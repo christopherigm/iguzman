@@ -1,7 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useRouter } from "@repo/i18n/navigation";
 import { Box } from "@repo/ui/core-elements/box";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { ShareButton } from "@repo/ui/core-elements/share-button";
 import { AddToCartButton } from "./add-to-cart-button";
 import type { AddToCartCustomization } from "./add-to-cart-button";
@@ -46,6 +48,14 @@ interface BuyableCardActionsProps {
    * products and services, which have nothing to configure.
    */
   customize?: AddToCartCustomization;
+  /**
+   * The service's slug when it is sold as an appointment. Its presence
+   * **replaces** the cart button with a calendar one leading to
+   * `/booking/<slug>` - a specific hour at a specific place is not something a
+   * cart line can hold, so offering to add it would be a lie. Null on
+   * everything else, which keeps the cart button.
+   */
+  bookingSlug?: string | null;
 }
 
 /**
@@ -66,8 +76,20 @@ export function BuyableCardActions({
   cartLineId,
   inStock,
   customize,
+  bookingSlug = null,
 }: BuyableCardActionsProps) {
   const t = useTranslations("ItemDetail");
+  const tBooking = useTranslations("Booking");
+  const router = useRouter();
+
+  // Pushed rather than rendered as a link: this button sits inside a card that
+  // is itself an anchor, and a nested one is invalid markup. The click is
+  // swallowed for the same reason every other button here swallows it.
+  const handleBook = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    router.push(`/booking/${bookingSlug}`);
+  };
 
   return (
     <Box justifyContent="space-evenly" alignItems="center" gap={6}>
@@ -88,16 +110,27 @@ export function BuyableCardActions({
         size="sm"
         stopPropagation
       />
-      <AddToCartButton
-        kind={kind}
-        id={id}
-        cartLineId={cartLineId}
-        isLoggedIn={isLoggedIn}
-        disabled={!inStock}
-        size="sm"
-        stopPropagation
-        customize={customize}
-      />
+      {bookingSlug ? (
+        <IconButton
+          icon="/icons/calendar.svg"
+          aria-label={tBooking("bookNow")}
+          title={tBooking("bookNow")}
+          kind="primary"
+          size="sm"
+          onClick={handleBook}
+        />
+      ) : (
+        <AddToCartButton
+          kind={kind}
+          id={id}
+          cartLineId={cartLineId}
+          isLoggedIn={isLoggedIn}
+          disabled={!inStock}
+          size="sm"
+          stopPropagation
+          customize={customize}
+        />
+      )}
     </Box>
   );
 }

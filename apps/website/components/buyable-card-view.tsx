@@ -152,6 +152,14 @@ export function BuyableCardView({
 
   const duration = item.kind === "service" ? item.data.duration : null;
 
+  // A bookable service is sold as an appointment, which a cart line has no way
+  // to hold - so its card leads to the booking page instead of offering to add
+  // it, exactly as the detail page's buy box replaces its two cart CTAs.
+  const bookingSlug =
+    item.kind === "service" && item.data.booking_enabled
+      ? item.data.slug
+      : null;
+
   return (
     <Card
       href={href}
@@ -360,6 +368,7 @@ export function BuyableCardView({
             isLoggedIn={isLoggedIn}
             cartLineId={cartLineId}
             inStock={inStock}
+            bookingSlug={bookingSlug}
             // Only a food card can be configured, and only its live ingredients
             // are offered - a disabled row is an admin's "not right now".
             customize={

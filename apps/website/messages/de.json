@@ -85,6 +85,55 @@
       "visionHeading": "Unsere Vision"
     }
   },
+  "TamaraToursSite": {
+    "hero": {
+      "viewTours": "Unsere Touren ansehen"
+    },
+    "intro": {
+      "eyebrow": "Raus aufs Wasser",
+      "arch": "El Arco entdecken",
+      "story": "Unsere Geschichte"
+    },
+    "departure": {
+      "eyebrow": "Ablegestelle",
+      "heading": "So finden Sie uns",
+      "subtitle": "Hier beginnt die Tour. Schreiben Sie uns, um Ihre Uhrzeit und den genauen Treffpunkt zu bestätigen.",
+      "fallbackName": "Treffpunkt",
+      "contactCta": "Anfahrt und Kontakt"
+    },
+    "about": {
+      "home": "Startseite",
+      "eyebrow": "Wer wir sind",
+      "title": "Über uns",
+      "titleNamed": "Über {name}",
+      "placeholder": "Unsere Geschichte ist in Arbeit. Schauen Sie bald wieder vorbei und lernen Sie die Crew kennen.",
+      "missionHeading": "Unsere Mission",
+      "visionHeading": "Unsere Vision",
+      "contactCta": "Kontakt aufnehmen"
+    },
+    "archPage": {
+      "eyebrow": "Das Ziel",
+      "breadcrumb": "El Arco",
+      "title": "El Arco de Cabo San Lucas",
+      "subtitle": "Land's End auf der Halbinsel Baja California, wo das Cortez-Meer auf den Pazifik trifft.",
+      "intro": "El Arco ist die Felsformation am Südzipfel der Halbinsel Baja California, an dem Ort, den die Karten Land's End nennen: genau dort, wo das Cortez-Meer und der Pazifik zusammenkommen. Man sieht ihn nur vom Wasser aus – wer davorstehen will, fährt mit dem Boot aus der Bucht von Cabo San Lucas hinaus.",
+      "sightsHeading": "Was Sie sehen",
+      "beaches": {
+        "title": "Playa del Amor und Playa del Divorcio",
+        "text": "Zwei Strände, getrennt durch dieselbe Felsformation: die Playa del Amor liegt am ruhigen, geschützten Cortez-Meer, die Playa del Divorcio am offenen Pazifik – mit starker Strömung und ohne Badebetrieb."
+      },
+      "sealions": {
+        "title": "Die Seelöwenkolonie",
+        "text": "Auf den Felsen neben dem Bogen lebt eine Kolonie kalifornischer Seelöwen. Vom Boot aus sind sie das ganze Jahr über zu sehen und zu hören."
+      },
+      "whales": {
+        "title": "Walsaison",
+        "text": "Von Dezember bis April ziehen Buckelwale durch die Gewässer vor Los Cabos. Eine Sichtung ist nie garantiert, aber in dieser Zeit kommen sie nah an die Küste."
+      },
+      "gettingThereHeading": "So kommen Sie hin",
+      "gettingThereText": "Es führt keine Straße dorthin: Den Bogen erreicht man per Boot aus der Bucht von Cabo San Lucas, die Überfahrt ist kurz. In den Touren finden Sie Abfahrtszeiten, Dauer und Leistungen – oder schreiben Sie uns, wenn Sie Ihre Tour lieber selbst zusammenstellen."
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""
@@ -430,7 +479,6 @@
     "heading": "Bestellungen",
     "home": "Startseite",
     "empty": "Sie haben noch keine Bestellungen.",
-    "browseProducts": "Produkte ansehen",
     "breadcrumb": "Bestellung #{id}",
     "detailTitle": "Bestellung #{id}",
     "placedOn": "Aufgegeben am {date}",
