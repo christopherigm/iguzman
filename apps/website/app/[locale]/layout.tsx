@@ -29,6 +29,8 @@ import packageJson from "@/package.json";
 import { getCartCount } from "@/lib/cart";
 import { EMPTY_MENU_KIND_COUNTS } from "@/lib/menu-kinds";
 import { getSystem } from "@/lib/system";
+import { basemapFor } from "@/lib/basemap";
+import { BasemapProvider } from "@/components/basemap-provider";
 import { isGoogleFontUrl, cssFontFamily } from "@/lib/fonts";
 import { DEV_SITE_COOKIE, SITE_CONFIGS } from "@/sites/registry";
 import "../globals.css";
@@ -113,11 +115,9 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   const cookieStore = await cookies();
   const themeModeCookie = cookieStore.get("theme-mode")?.value as
-    | ThemeMode
-    | undefined;
+    ThemeMode | undefined;
   const themeResolvedCookie = cookieStore.get(RESOLVED_COOKIE_NAME)?.value as
-    | ResolvedTheme
-    | undefined;
+    ResolvedTheme | undefined;
   // Customer sites default to a light theme for first-time visitors (no saved
   // theme-mode cookie yet) rather than following the OS setting. The ThemeSwitch
   // still lets a visitor pick dark, and that choice persists via the cookie.
@@ -202,89 +202,97 @@ export default async function LocaleLayout({ children, params }: Props) {
                 initialResolved={initialResolved}
               >
                 <PaletteProvider palette="cyan" accent={accent}>
-                  {/* Sits behind everything (z-index -1) and off the CMS.
+                  {/* One basemap for every map on the site - the contact page's
+                      locations, an event's pin, the booking page's branch map -
+                      resolved here because this layout already reads `getSystem`
+                      and the maps themselves are client components several
+                      levels down. See `components/basemap-provider.tsx`. */}
+                  <BasemapProvider basemap={basemapFor(system)}>
+                    {/* Sits behind everything (z-index -1) and off the CMS.
                       Which images tile: the logo, the brandmark (only if one is
                       uploaded), or both intercalated. With neither selected the
                       layer paints nothing, so it is not rendered at all. */}
-                  {system?.watermark_enabled &&
-                    (() => {
-                      const showBrandmark =
-                        system.watermark_show_brandmark &&
-                        !!system.img_brandmark;
-                      const logo = system.img_logo || "/logo.png";
-                      const primary = system.watermark_show_logo
-                        ? logo
-                        : showBrandmark
-                          ? system.img_brandmark
-                          : undefined;
-                      const secondary =
-                        system.watermark_show_logo && showBrandmark
-                          ? system.img_brandmark
-                          : undefined;
-                      if (!primary) return null;
-                      return (
-                        <HideOnAdmin>
-                          <HideOnPos>
-                            <LogoWatermark
-                              logo={primary}
-                              secondaryLogo={secondary}
-                              size={system.watermark_size}
-                              spacing={system.watermark_spacing}
-                              rotation={system.watermark_rotation}
-                              intercalated={system.watermark_intercalated}
-                              opacity={system.watermark_opacity}
-                            />
-                          </HideOnPos>
-                        </HideOnAdmin>
-                      );
-                    })()}
-                  {/* The till renders its own slim bar instead - a full-screen
+                    {system?.watermark_enabled &&
+                      (() => {
+                        const showBrandmark =
+                          system.watermark_show_brandmark &&
+                          !!system.img_brandmark;
+                        const logo = system.img_logo || "/logo.png";
+                        const primary = system.watermark_show_logo
+                          ? logo
+                          : showBrandmark
+                            ? system.img_brandmark
+                            : undefined;
+                        const secondary =
+                          system.watermark_show_logo && showBrandmark
+                            ? system.img_brandmark
+                            : undefined;
+                        if (!primary) return null;
+                        return (
+                          <HideOnAdmin>
+                            <HideOnPos>
+                              <LogoWatermark
+                                logo={primary}
+                                secondaryLogo={secondary}
+                                size={system.watermark_size}
+                                spacing={system.watermark_spacing}
+                                rotation={system.watermark_rotation}
+                                intercalated={system.watermark_intercalated}
+                                opacity={system.watermark_opacity}
+                              />
+                            </HideOnPos>
+                          </HideOnAdmin>
+                        );
+                      })()}
+                    {/* The till renders its own slim bar instead - a full-screen
                       single-purpose tool has no use for a Favorites link
                       mid-sale. The CMS keeps the navbar (its layout reserves
                       the height), which is why this is not `HideOnAdmin`. */}
-                  <HideOnPos>
-                    <NavbarClient
-                      logo={system?.img_logo ?? "/logo.png"}
-                      version={`v${packageJson.version}`}
-                      productCount={system?.product_count ?? 0}
-                      serviceCount={system?.service_count ?? 0}
-                      menuKindCounts={
-                        system?.menu_item_kind_counts ?? EMPTY_MENU_KIND_COUNTS
-                      }
-                      showContact={
-                        !!system?.contact_email ||
-                        (system?.branch_count ?? 0) > 0
-                      }
-                      eventCount={system?.event_count ?? 0}
-                      cartCount={cartCount}
-                    />
-                  </HideOnPos>
-                  {/* Renders nothing; folds a guest's localStorage cart and
+                    <HideOnPos>
+                      <NavbarClient
+                        logo={system?.img_logo ?? "/logo.png"}
+                        version={`v${packageJson.version}`}
+                        productCount={system?.product_count ?? 0}
+                        serviceCount={system?.service_count ?? 0}
+                        menuKindCounts={
+                          system?.menu_item_kind_counts ??
+                          EMPTY_MENU_KIND_COUNTS
+                        }
+                        showContact={
+                          !!system?.contact_email ||
+                          (system?.branch_count ?? 0) > 0
+                        }
+                        eventCount={system?.event_count ?? 0}
+                        cartCount={cartCount}
+                      />
+                    </HideOnPos>
+                    {/* Renders nothing; folds a guest's localStorage cart and
                       favorites into their account as soon as a session exists. */}
-                  <GuestMerge />
-                  {children}
-                  {isDev && (
+                    <GuestMerge />
+                    {children}
+                    {isDev && (
+                      <HideOnAdmin>
+                        <HideOnPos>
+                          <DevSiteSwitcher
+                            sites={SITE_CONFIGS.map((c) => ({
+                              slug: c.slug,
+                              name: c.name,
+                            }))}
+                            current={devSite}
+                            cookieName={DEV_SITE_COOKIE}
+                          />
+                        </HideOnPos>
+                      </HideOnAdmin>
+                    )}
                     <HideOnAdmin>
                       <HideOnPos>
-                        <DevSiteSwitcher
-                          sites={SITE_CONFIGS.map((c) => ({
-                            slug: c.slug,
-                            name: c.name,
-                          }))}
-                          current={devSite}
-                          cookieName={DEV_SITE_COOKIE}
+                        <Footer
+                          logo={system?.img_logo ?? "/logo.png"}
+                          system={system}
                         />
                       </HideOnPos>
                     </HideOnAdmin>
-                  )}
-                  <HideOnAdmin>
-                    <HideOnPos>
-                      <Footer
-                        logo={system?.img_logo ?? "/logo.png"}
-                        system={system}
-                      />
-                    </HideOnPos>
-                  </HideOnAdmin>
+                  </BasemapProvider>
                 </PaletteProvider>
               </ThemeProvider>
             </SessionProvider>

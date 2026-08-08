@@ -64,6 +64,7 @@ from .serializers import (
     ProductImageWriteSerializer,
     ServiceCategorySerializer,
     ServiceCategoryWriteSerializer,
+    ServiceDetailSerializer,
     ServiceSerializer,
     ServiceWriteSerializer,
     ServiceImageSerializer,
@@ -541,15 +542,24 @@ class ServiceListCreateView(APIView):
         if modality:
             qs = qs.filter(modality=modality)
 
+        # ⚠ A `slug` filter is the storefront's *detail* read, not a list: it is
+        # what `getService(slug)` in the website's `lib/catalog.ts` calls, and it
+        # matches at most one row. So it gets the detail serializer - the party
+        # bounds and `booking_party_limit` live only there, and served with the
+        # list serializer the booking page's counter reads `undefined` bounds,
+        # never renders, and prices a party of `NaN`. The N+1 the split exists to
+        # avoid needs a grid; one row can afford the walk over pools and
+        # resources, which is why the prefetch rides along with it.
         slug = request.query_params.get('slug')
         if slug:
-            qs = qs.filter(slug=slug)
+            qs = qs.filter(slug=slug).prefetch_related('booking_pools__resources')
 
         search = request.query_params.get('search')
         if search:
             qs = qs.filter(name__icontains=search)
 
-        data = ServiceSerializer(qs, many=True, context={'request': request}).data
+        serializer_class = ServiceDetailSerializer if slug else ServiceSerializer
+        data = serializer_class(qs, many=True, context={'request': request}).data
         cache.set(cache_key, data, CACHE_TTL)
         return Response(data)
 
@@ -575,7 +585,9 @@ class ServiceDetailView(APIView):
 
     def _get_object(self, pk):
         try:
-            return Service.objects.select_related('brand', 'category', 'system').prefetch_related('images', 'variants', 'variants__images').get(pk=pk)
+            return Service.objects.select_related('brand', 'category', 'system').prefetch_related(
+                'images', 'variants', 'variants__images', 'booking_pools__resources',
+            ).get(pk=pk)
         except Service.DoesNotExist:
             return None
 
@@ -587,7 +599,9 @@ class ServiceDetailView(APIView):
         service = self._get_object(pk)
         if service is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        data = ServiceSerializer(service, context={'request': request}).data
+        # The detail serializer, not the list one: this is the single-row screen
+        # that can afford `booking_party_limit`'s walk over pools and resources.
+        data = ServiceDetailSerializer(service, context={'request': request}).data
         cache.set(cache_key, data, CACHE_TTL)
         return Response(data)
 
@@ -604,7 +618,9 @@ class ServiceDetailView(APIView):
         # not just this one's.
         _invalidate_pattern('catalog:service:*')
         _invalidate_pattern('catalog:services:*')
-        return Response(ServiceSerializer(service, context={'request': request}).data)
+        # The CMS editor reloads from this response, so it has to carry the same
+        # booking fields the GET does - the party bounds and the pool ids.
+        return Response(ServiceDetailSerializer(service, context={'request': request}).data)
 
     def delete(self, request, pk):
         service = self._get_object(pk)

@@ -467,6 +467,131 @@ have needed a second implementation of every one of those.
   let three different services each book the only chair at 10am. Only
   `Booking.ACTIVE_STATUSES` occupy a slot, so a cancellation hands the time back
   immediately.
+- ⚠ **Capacity is counted in _seats_, not in bookings.** It used to be bookings,
+  and the two only agree while every booking is for one person. `Booking.party_size`
+  is the unit now: a party of four consumes four seats and its order line carries
+  `quantity=4`, which is what makes the price (and the deposit split, which works
+  off `order.total`) multiply. `Branch.booking_capacity` kept its name and changed
+  its meaning; its `help_text` says so.
+
+### Party size and resource pools
+
+Two models on `core` describe what a branch actually books against:
+`ResourcePool` ("Large boats", "Guides") and `BookingResource` (one boat, with a
+`capacity` in people). `Service.booking_party_enabled` decides whether a service
+is sold per person at all.
+
+- ⚠ **The fallback is the whole safety story.** A branch with **no pools**
+  resolves to one implicit resource carrying `Branch.booking_capacity`
+  (`resources_for`), which reproduces the pre-pool behaviour exactly - at party
+  size 1, summing seats is arithmetically identical to counting overlapping rows.
+  Every existing tenant is unaffected and all of this is opt-in. **Do not
+  "clean it up" into a data migration that gives every branch a real pool**: the
+  implicit case has to keep working for a branch created tomorrow too.
+- **One row per resource that differs in capacity or that a customer can pick by
+  name.** Six identical eight-seat tables are *one* row with `capacity=48`, not
+  six - the engine only tells parties apart from each other, and six rows would
+  refuse a party of ten that four of those tables could seat together. Two boats
+  of different sizes are two rows, because which one a party of six lands on is a
+  real question.
+- **Assignment is automatic, best fit, at write time.** Of the resources that can
+  take the whole party, `assign_resource` picks the one with the *least* room
+  left. That consolidates (two half-full boats become one) and so preserves the
+  large free blocks large parties need; first fit does the precise opposite.
+  Staff may reassign afterwards from the CMS.
+- **A party never splits across two resources.** `seats_left` in the availability
+  payload is therefore the largest free block on a *single* resource, never the
+  sum - two boats with three seats each answer "no" to a party of six.
+- ⚠ **A booking with a null `resource` is charged to _every_ resource.** Rows
+  written before pools existed carry no assignment and there is no way to know
+  which boat they are on; counting them against only the (now absent) implicit
+  resource would drop them from the arithmetic and oversell every real one. The
+  charge is conservative rather than exact, and self-heals as those appointments
+  age out of the active statuses.
+- **`Service.booking_pools` empty means _every_ pool at the resolved branch**, the
+  same rule `booking_branches` follows. The two compose rather than fight: pools
+  are always filtered by the branch, so a pool at a location this service is not
+  offered at is never reachable.
+- ⚠ **`booking_party_limit` is on `ServiceDetailSerializer`, never on the list
+  one.** It walks pools and resources per service - an N+1 across a catalog grid.
+  The card only needs the `booking_party_enabled` boolean, which is why that is
+  the one party field on `ServiceSerializer`. **But which serializer runs is
+  decided by the query, not by the endpoint**: `?slug=` on
+  `/api/catalog/services/` is the storefront's *detail* read - `getService(slug)`
+  has no other route to one service - so it matches at most one row and gets
+  `ServiceDetailSerializer`. Served with the list one it dropped the party
+  bounds, and the booking page's counter (gated on `max > min`) never rendered
+  while its heading priced a party of `NaN`. Pinned by `ServiceSlugReadTests`.
+  And it is an **upper bound, not a
+  promise**: capacity differs per branch and it says nothing about who is already
+  booked, so the detail page uses it as a static ceiling while the booking page
+  does the real filtering from the availability payload.
+- **`party_size` is validated, never clamped.** A body naming a party outside
+  `booking_party_range` is refused with `PARTY_SIZE_INVALID` - clamping would
+  charge a customer for a different number of people than they asked for. Party
+  off forces 1 whatever the body says. `resource` is only honoured when its pool
+  is `customer_selectable` and reachable from the resolved branch, and is a
+  *preference*: a pick that has since filled up falls through to best fit rather
+  than failing the booking.
+- ⚠ **Checkout holds a row lock.** `assign_for_slot` and the `Booking` write run
+  inside one `transaction.atomic()` with a `select_for_update` on the Branch (the
+  System for a branchless tenant). Un-serialised, two checkouts can both see the
+  last four seats free and both take them - a window that was one row wide when
+  capacity counted bookings, and a real over-sell now that a party of six can walk
+  into it with money attached. **Stripe stays outside the block**, and so does the
+  QR write (`_open_order(defer_qr=True)`): a network round-trip under a row lock
+  would queue every checkout at that branch behind a third party.
+- **A service add-on may be priced, never scheduled.** If something needs its own
+  availability, it is a service, not an add-on. There is deliberately no second
+  scheduling primitive.
+- ⚠ **The old "2 x haircut at 10:00 is two bookings, not a quantity" reasoning is
+  reversed for party services, and the comment at the `CartItem` line says why.**
+  Both readings are right, for different things: an *appointment* is one person's
+  turn in a chair, and booking two of them is two separate slots a single quantity
+  cannot express. A *departure* - a boat, a tour, a table - is one slot several
+  people share, priced per head. `booking_party_enabled` is which of the two a
+  service is.
+- **`core/backup.py` keys pools and resources rather than riding them as
+  `parent=` children**, unlike `BranchHours`. `BranchHours` has no identity, so
+  replacing a branch's week wholesale is indistinguishable from editing it; a
+  `BookingResource` is pointed at by `Booking.resource` (`SET_NULL`), so wholesale
+  replacement would null the boat on every appointment - or re-point it at the
+  wrong one. Same reason `BranchWriteSerializer._save_pools` **upserts by id**
+  instead of the replace-all `hours` uses.
+- **`orders/signals.py` drops the availability namespace on pool, resource,
+  branch and branch-hours writes too**, not just Booking writes. Editing a boat
+  from ten seats to eight has to reach the calendar now, not whenever the next
+  booking happens to clear it.
+- **`Service.duration` is load-bearing** once resources exist: with three boats
+  and a four-hour tour, what stops boat 1 being booked at both 10:00 and 11:00 is
+  the duration overlap - and `service_duration_minutes` silently falls back to 60
+  when it is null. The CMS warns when booking is on and duration is empty.
+- **The duration also spaces the start times** (`slot_step_minutes`): a two-hour
+  tour is offered at 09:00 and 11:00, not every half hour.
+  `Branch.booking_slot_minutes` is now an **override, empty by default** - it
+  exists for the three-chair salon that begins a 90-minute colour every 30
+  minutes, where capacity rather than the clock is the limit. It used to be a
+  fixed 30-minute grid for every service at the location, which printed a row of
+  start times that deleted each other the moment one was taken (with one boat,
+  booking the 09:00 kills the 09:30). Migration `core.0058` clears the column on
+  every existing branch, because a stored 30 was the old default rather than
+  anybody's decision. ⚠ Read it through `slot_step_minutes`, never off
+  `_branch_settings` directly - `slot_minutes` is `None` there whenever the
+  branch has not overridden it, which is the ordinary case.
+- ⚠ **`Branch.timezone` defaults to `"UTC"`, and a branch left on it is broken
+  rather than neutral.** Opening hours are read against that zone, so a Los Cabos
+  branch on UTC opens at 02:00 local, labels every slot in the wrong zone, and
+  loses same-day booking for most of the working day (its "now" is seven hours
+  ahead of the shop's). Nothing 500s and nothing warns; the calendar just looks
+  oddly empty. The CMS branch form now seeds a *new* branch with the operator's
+  own zone for exactly this reason - check this field first whenever a tenant
+  reports missing or wrongly-timed slots.
+- ⚠ **A branchless tenant has one implicit seat.** `_branch_settings(None)` returns
+  `capacity: 1` and there is no UI to raise it, so a home business that turns on
+  party bookings gets a counter capped at 1. That is arithmetically correct - one
+  seat cannot hold four people - but it is a configuration dead end: creating a
+  Branch and setting its capacity is the fix, and the CMS's party section shows
+  the ceiling it is working from.
 - **`Service.booking_branches` empty means *every* branch**, not none - see
   `branches_for`. An unconfigured bookable service must still be bookable. A
   tenant with no `Branch` rows at all is the home-business case: the booking
@@ -487,10 +612,15 @@ have needed a second implementation of every one of those.
   short TTL is a floor under bursts, not a correctness mechanism - checkout
   re-derives the slot, so the worst a stale calendar can do is offer a slot that
   is then honestly refused.
-- `availability_range` fetches occupancy **once for the whole range**. The
-  endpoint is public and unauthenticated; a query per day would be a
-  denial-of-service handed out for free, which is also why `days` is clamped to
-  `MAX_AVAILABILITY_DAYS`.
+- `availability_range` fetches occupancy **once for the whole range**, and the
+  pools/resources once too. The endpoint is public and unauthenticated; a query
+  per day would be a denial-of-service handed out for free, which is also why
+  `days` is clamped to `MAX_AVAILABILITY_DAYS` and `party` to `MAX_PARTY_SIZE`.
+- ⚠ **`availability_key` includes `party` and `resource`.** Both change which
+  slots come back, so leaving either out would serve a party of six the calendar
+  computed for a solo customer for up to a minute. Cardinality grows by
+  party × resource, which is trivial at a 60s TTL - do not "optimise" them back
+  out of the key.
 
 Endpoints: `GET /api/bookings/availability/` and `POST /api/bookings/checkout/`
 are `AllowAny` (a visitor books before they have any reason to sign in - an
@@ -557,6 +687,33 @@ Tests: `OrderQrTests` in `orders/tests.py`, plus the admin-read cases in
 `OrderReadTests` and `OrderPayTests`. ⚠ That module now sets `MEDIA_ROOT` to a
 temp dir via `setUpModule` - every checkout in it writes a real file, and
 unisolated they scatter a PNG per order through the developer's own `media/`.
+
+## Maps - the basemap is four columns on `System`
+
+`map_style` / `map_tile_url` / `map_attribution` / `map_attribution_url` decide
+which basemap every map on a tenant's site is painted from (the contact page's
+locations, an event's venue, the booking page's branch map). The frontend
+resolves them once per request; see `apps/website/CLAUDE.md` → "Maps".
+
+- ⚠ **The credit travels with the URL, and neither is decoration.** Every tile
+  provider requires a specific attribution string, and it changes with the tiles
+  - so these are stored as a set, and `map_attribution_url` is separate from the
+  string because most providers also require the credit to *link* back at them.
+  Blank means unlinked, not "default to OpenStreetMap", which is what the
+  frontend used to do for every provider alike.
+- **The three custom fields are deliberately not validated conditionally on the
+  style.** A leftover URL under a built-in style is the normal state of a row
+  somebody experimented with, and refusing the save would make the CMS picker
+  feel broken for a change that has no effect. The style itself *is* a
+  `ChoiceField`: an unknown id falls back to OSM's standard tiles on the
+  frontend, which reads as the setting having been ignored.
+- ⚠ **`map_tile_url` is not a secret and cannot be made one.** A provider key
+  rides in it as `?key=…`, the tiles are fetched from the visitor's own browser,
+  and `GET /api/system/` is `AllowAny` - so the key is public by construction.
+  Restrict it by origin at the provider. This is why it is on `SystemSerializer`
+  at all, unlike the Stripe and R2 credentials it sits near in the model.
+
+Tests: `SystemMapSettingsTests` in `core/tests.py`.
 
 ## LLM calls - always through `core/services/llm.py`
 

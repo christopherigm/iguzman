@@ -168,6 +168,16 @@ export interface FeaturedService {
    * full `ServiceSerializer`, so the flag is on every service payload.
    */
   booking_enabled: boolean;
+  /**
+   * Priced per person, so the card says so.
+   *
+   * ⚠ It has to be on **this** (list) type, not only on `ServiceDetail`: the
+   * card renders from the list payload, and a field present only on the detail
+   * type means the label silently never appears. It is deliberately the only
+   * party field here - the bounds and the seat ceiling need pools and their
+   * resources, which is an N+1 across a grid.
+   */
+  booking_party_enabled: boolean;
   variants: ServiceVariant[];
 }
 
@@ -258,6 +268,22 @@ export interface ServiceDetail {
   booking_fulfillment_options: ("branch" | "on_premises")[];
   booking_payment_options: ("full" | "deposit" | "in_person")[];
   booking_deposit_percent: number;
+  /** One booking may cover several people, and the price is per person. */
+  booking_party_enabled: boolean;
+  booking_party_min: number;
+  booking_party_max: number;
+  /**
+   * The largest party the counter should offer.
+   *
+   * ⚠ **An upper bound, not a promise.** It is
+   * `min(what the service allows, what the biggest single resource holds)`
+   * across every location - so it ignores who is already booked and can differ
+   * per branch. The detail page uses it as a static ceiling; the booking page
+   * does the real filtering from the availability payload.
+   */
+  booking_party_limit: number;
+  /** Pool ids this service draws on. **Empty means every pool at the branch.** */
+  booking_pools: number[];
 }
 
 export const getFeaturedProducts = cache(

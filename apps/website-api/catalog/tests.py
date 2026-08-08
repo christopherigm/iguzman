@@ -819,3 +819,55 @@ class CloneTests(TestCase):
 
         selection = [{"ingredient": clone_row.id, "quantity": 2}]
         self.assertEqual(clone.price_for_selection(selection), Decimal("5.00"))
+
+
+class ServiceSlugReadTests(TestCase):
+    """`?slug=` on the services *list* endpoint is the storefront's detail read.
+
+    `getService(slug)` in the website's `lib/catalog.ts` has no other route to a
+    single service, so this query has to answer with everything a detail page
+    needs. Served with the list serializer it silently omitted the party bounds,
+    and the booking page's counter - gated on `max > min` - never rendered while
+    its heading priced a party of `NaN`.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Tours", host="tours.test")
+        self.branch = Branch.objects.create(
+            system=self.system, name="Marina", booking_capacity=4,
+        )
+        self.service = Service.objects.create(
+            system=self.system, name="Boat tour", slug="boat-tour",
+            price=Decimal("500.00"), duration=120,
+            booking_enabled=True, booking_party_enabled=True,
+            booking_party_min=2, booking_party_max=12,
+        )
+        self.url = "/api/catalog/services/?slug=boat-tour"
+
+    def _row(self, url=None):
+        rows = self.client.get(url or self.url, HTTP_X_WEBSITE_HOST="tours.test").json()
+        self.assertEqual(len(rows), 1)
+        return rows[0]
+
+    def test_slug_read_carries_the_party_bounds(self):
+        row = self._row()
+        self.assertEqual(row["booking_party_min"], 2)
+        self.assertEqual(row["booking_party_max"], 12)
+        self.assertIn("booking_party_limit", row)
+
+    def test_party_limit_is_capped_by_the_biggest_resource(self):
+        """The ceiling is `min(what the service allows, what one resource holds)`
+        - here the branch's implicit four-seat resource, not the service's 12."""
+        self.assertEqual(self._row()["booking_party_limit"], 4)
+
+    def test_grid_read_stays_on_the_cheap_serializer(self):
+        """The split exists to keep `booking_party_limit`'s walk over pools and
+        resources off a catalog grid - an unfiltered list must not grow it."""
+        rows = self.client.get(
+            "/api/catalog/services/", HTTP_X_WEBSITE_HOST="tours.test"
+        ).json()
+        self.assertEqual(len(rows), 1)
+        self.assertIn("booking_party_enabled", rows[0])
+        self.assertNotIn("booking_party_limit", rows[0])
+        self.assertNotIn("booking_party_min", rows[0])

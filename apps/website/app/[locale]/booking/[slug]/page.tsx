@@ -94,6 +94,11 @@ export default async function BookingPage({ params }: Props) {
         branch.en_name ??
         "",
       address: branch.address ?? null,
+      // Decimal strings from the API; the form's map wants numbers, and a
+      // branch with either one missing simply gets no map. Converted at the
+      // point of use rather than here, so the shape stays the API's.
+      latitude: branch.latitude,
+      longitude: branch.longitude,
     }));
 
   const breadcrumbs: BreadcrumbItem[] = [
@@ -175,8 +180,19 @@ export default async function BookingPage({ params }: Props) {
             price: service.price,
             currency: service.currency,
             duration: service.duration,
+            partyEnabled: service.booking_party_enabled,
+            partyMin: service.booking_party_min,
+            // The resolved ceiling, not the raw maximum: it already accounts
+            // for the largest single resource, so the counter cannot offer a
+            // party that no location could seat.
+            partyMax: service.booking_party_limit,
           }}
           branches={bookingBranches}
+          // The mark drawn inside the map pin: the tenant's brandmark, not its
+          // logo - the pin's head is a 34 px circle that crops what it is
+          // given, so a wide wordmark comes out as three letters from its own
+          // middle. With none, the pin is a plain accent teardrop.
+          pinIcon={system?.img_brandmark ?? null}
           fulfillmentOptions={service.booking_fulfillment_options}
           paymentOptions={service.booking_payment_options}
           depositPercent={service.booking_deposit_percent}

@@ -11,6 +11,7 @@ from . import image_sizes
 from .image_sizes import REGULAR, SMALL, MEDIUM, STANDARD, image_cfg
 from .models import (
     DIVIDER_CHOICES,
+    BookingResource,
     Branch,
     BranchHours,
     Brand,
@@ -19,6 +20,7 @@ from .models import (
     ContactMessage,
     Event,
     EventImage,
+    ResourcePool,
     SiteBackup,
     SocialPost,
     SuccessStory,
@@ -799,6 +801,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "watermark_show_logo", "watermark_show_brandmark",
             "watermark_size", "watermark_spacing", "watermark_opacity",
             "background_light", "background_dark",
+            "map_style", "map_tile_url", "map_attribution", "map_attribution_url",
             "google_font_url", "font_display", "font_body",
             "about", "en_about",
             "mission", "en_mission",
@@ -935,6 +938,7 @@ _TEXT_FIELDS = [
     "watermark_show_logo", "watermark_show_brandmark",
     "watermark_size", "watermark_spacing", "watermark_opacity",
     "background_light", "background_dark",
+    "map_style", "map_tile_url", "map_attribution", "map_attribution_url",
     "google_font_url", "font_display", "font_body",
     "about", "en_about", "mission", "en_mission", "vision", "en_vision",
     "privacy_policy", "en_privacy_policy",
@@ -1063,6 +1067,26 @@ class SystemWriteSerializer(serializers.Serializer):
     watermark_opacity  = serializers.IntegerField(required=False, min_value=1, max_value=25)
     background_light   = serializers.CharField(max_length=16, required=False)
     background_dark    = serializers.CharField(max_length=16, required=False)
+
+    # Maps. The style is constrained to what the frontend can actually paint -
+    # an unknown id falls back to OpenStreetMap's standard tiles, which reads as
+    # the setting having been ignored. The other three are only consulted for
+    # "custom", and are deliberately **not** validated conditionally on it: a
+    # leftover URL under a built-in style is the normal state of a row somebody
+    # experimented with, and refusing the save would make the picker feel broken.
+    #
+    # ⚠ A provider key pasted into map_tile_url is public by construction - the
+    # tiles are fetched from the visitor's own browser and GET /api/system/ is
+    # AllowAny. Restrict it by origin at the provider; this column cannot hide it.
+    map_style = serializers.ChoiceField(
+        choices=[c[0] for c in System._meta.get_field("map_style").choices],
+        required=False,
+    )
+    map_tile_url = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    map_attribution = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    map_attribution_url = serializers.URLField(
+        max_length=300, required=False, allow_blank=True
+    )
 
     # Typography. The URL is host-restricted by the same validator the model
     # uses, because the frontend renders it into a <link rel="stylesheet"> - see
@@ -1333,6 +1357,58 @@ class BranchHoursSerializer(serializers.ModelSerializer):
         fields = ["weekday", "opens_at", "closes_at", "break_start", "break_end"]
 
 
+class BookingResourceSerializer(serializers.ModelSerializer):
+    """One bookable thing inside a pool. Public - the booking page may show it."""
+
+    class Meta:
+        model = BookingResource
+        fields = ["id", "name", "en_name", "capacity", "enabled", "sort_order"]
+
+
+class ResourcePoolSerializer(serializers.ModelSerializer):
+    """A pool with its resources nested, as the CMS and the booking page read it."""
+
+    resources = BookingResourceSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ResourcePool
+        fields = [
+            "id", "branch", "name", "en_name", "unit_label", "en_unit_label",
+            "customer_selectable", "enabled", "sort_order", "resources",
+        ]
+
+
+class BookingResourceWriteSerializer(serializers.Serializer):
+    """One resource as the CMS sends it, inside its pool.
+
+    ⚠ `id` is optional but load-bearing: a row that carries one is **updated**,
+    and a row that does not is created. `Booking.resource` points at these, so
+    the replace-all strategy `BranchHours` uses would null out every booking's
+    boat on the next save of an unrelated field. See `ResourcePoolWriteSerializer`.
+    """
+
+    id                 = serializers.IntegerField(required=False)
+    name               = serializers.CharField(max_length=255)
+    en_name            = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    capacity           = serializers.IntegerField(min_value=1, max_value=9999, required=False, default=1)
+    enabled            = serializers.BooleanField(required=False, default=True)
+    sort_order         = serializers.IntegerField(min_value=0, required=False, default=0)
+
+
+class ResourcePoolWriteSerializer(serializers.Serializer):
+    """One pool and its resources as the CMS sends them, nested in the branch form."""
+
+    id                  = serializers.IntegerField(required=False)
+    name                = serializers.CharField(max_length=255)
+    en_name             = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    unit_label          = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
+    en_unit_label       = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
+    customer_selectable = serializers.BooleanField(required=False, default=False)
+    enabled             = serializers.BooleanField(required=False, default=True)
+    sort_order          = serializers.IntegerField(min_value=0, required=False, default=0)
+    resources           = BookingResourceWriteSerializer(many=True, required=False)
+
+
 class BranchSerializer(serializers.ModelSerializer):
     """Read serializer for a physical location. Public - business contact info."""
 
@@ -1340,6 +1416,9 @@ class BranchSerializer(serializers.ModelSerializer):
     # without the branch, and the list is at most seven rows. The public booking
     # calendar and the contact page therefore share one cached payload.
     hours = BranchHoursSerializer(many=True, read_only=True)
+    # Same reasoning, and the same payload: the CMS editor and the booking page
+    # both want a branch's pools whenever they want the branch.
+    resource_pools = ResourcePoolSerializer(many=True, read_only=True)
 
     class Meta:
         model = Branch
@@ -1350,6 +1429,7 @@ class BranchSerializer(serializers.ModelSerializer):
             "latitude", "longitude", "sort_order",
             "timezone", "booking_capacity", "booking_slot_minutes",
             "booking_min_notice_hours", "booking_max_days_ahead", "hours",
+            "resource_pools",
         ]
 
 
@@ -1372,13 +1452,20 @@ class BranchWriteSerializer(serializers.Serializer):
     # ── Booking ────────────────────────────────────────────────────────────────
     timezone   = serializers.CharField(max_length=64, required=False)
     booking_capacity          = serializers.IntegerField(min_value=1, max_value=999, required=False)
-    booking_slot_minutes      = serializers.IntegerField(min_value=5, max_value=480, required=False)
+    # Nullable on purpose: an empty grid field means "space the starts by the
+    # service's own duration" (see `orders.services.booking.slot_step_minutes`),
+    # so the CMS has to be able to send the field back to null.
+    booking_slot_minutes      = serializers.IntegerField(min_value=5, max_value=480, required=False, allow_null=True)
     booking_min_notice_hours  = serializers.IntegerField(min_value=0, max_value=8760, required=False)
     booking_max_days_ahead    = serializers.IntegerField(min_value=1, max_value=730, required=False)
     # The whole week in one go. A per-day endpoint would make the CMS form save
     # in up to seven requests that can half-fail, leaving a branch open on days
     # the operator just closed; sending the set is one atomic intent.
     hours = BranchHoursWriteSerializer(many=True, required=False)
+    # The pools, likewise submitted with the branch form - but **upserted, not
+    # replaced**; see `_save_pools` for why the two nested lists cannot share a
+    # strategy.
+    resource_pools = ResourcePoolWriteSerializer(many=True, required=False)
 
     _SCALAR_FIELDS = [
         "system", "is_main", "name", "en_name", "address", "phone", "whatsapp",
@@ -1440,7 +1527,63 @@ class BranchWriteSerializer(serializers.Serializer):
                 BranchHours.objects.bulk_create(
                     [BranchHours(branch=instance, **row) for row in rows]
                 )
+
+        if "resource_pools" in self.validated_data:
+            self._save_pools(instance, self.validated_data["resource_pools"])
         return instance
+
+    def _save_pools(self, instance, payload):
+        """Upsert the branch's pools and their resources by id.
+
+        ⚠ **Deliberately not the replace-all that `hours` uses.** A `BranchHours`
+        row has no identity - nothing points at it, so deleting the week and
+        writing it back is indistinguishable from editing it. A `BookingResource`
+        is pointed at by `Booking.resource`, and `SET_NULL` means a delete-and-
+        recreate would quietly strip the assigned boat off every appointment that
+        had one, on any save of the branch form - including one that only changed
+        the phone number.
+
+        Rows the payload omits **are** removed, because that is what "I deleted
+        this boat" has to mean; they take the same `SET_NULL` hit, which is
+        correct there - the resource really is gone, and the booking keeps
+        `resource_name` to read back from.
+        """
+        with transaction.atomic():
+            kept_pools = []
+            for pool_row in payload:
+                resources = pool_row.pop("resources", None)
+                pool_id = pool_row.pop("id", None)
+                pool = None
+                if pool_id is not None:
+                    # Scoped to this branch: an id from another tenant's branch
+                    # must not be adoptable by naming it in a payload.
+                    pool = instance.resource_pools.filter(pk=pool_id).first()
+                if pool is None:
+                    pool = ResourcePool.objects.create(branch=instance, **pool_row)
+                else:
+                    for field_name, value in pool_row.items():
+                        setattr(pool, field_name, value)
+                    pool.save()
+                kept_pools.append(pool.pk)
+
+                if resources is not None:
+                    kept_resources = []
+                    for row in resources:
+                        row = dict(row)
+                        resource_id = row.pop("id", None)
+                        resource = None
+                        if resource_id is not None:
+                            resource = pool.resources.filter(pk=resource_id).first()
+                        if resource is None:
+                            resource = BookingResource.objects.create(pool=pool, **row)
+                        else:
+                            for field_name, value in row.items():
+                                setattr(resource, field_name, value)
+                            resource.save()
+                        kept_resources.append(resource.pk)
+                    pool.resources.exclude(pk__in=kept_resources).delete()
+
+            instance.resource_pools.exclude(pk__in=kept_pools).delete()
 
 
 # ---------------------------------------------------------------------------

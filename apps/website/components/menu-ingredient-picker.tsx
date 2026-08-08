@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
+import { QuantityStepper } from "@/components/quantity-stepper";
 import type { MenuItemIngredient } from "@/lib/catalog";
 import { formatPrice } from "@/lib/price";
 import { formatPortion } from "@/lib/nutrition";
@@ -23,16 +24,15 @@ import {
  * the touch targets for the POS till, where an associate drives it with a finger
  * over a counter. Only sizes change - every surface shows the same rows, the
  * same portions and the same "Included" / up-charge wording.
+ *
+ * Shares its names with `QuantityStepper`'s own size scale, which is what lets
+ * this pass `size` straight through to it.
  */
 export type MenuIngredientPickerSize = "sm" | "lg";
 
 const SIZES = {
   sm: {
     image: 44,
-    stepSize: "sm",
-    stepMinWidth: 30,
-    qtyVariant: "h6",
-    qtyMinWidth: 28,
     chipPaddingX: 12,
     chipPaddingY: 6,
     chipFontSize: "0.8125rem",
@@ -41,10 +41,6 @@ const SIZES = {
   },
   lg: {
     image: 56,
-    stepSize: "md",
-    stepMinWidth: 44,
-    qtyVariant: "h5",
-    qtyMinWidth: 32,
     chipPaddingX: 14,
     chipPaddingY: 10,
     chipFontSize: "0.875rem",
@@ -229,42 +225,16 @@ export function MenuIngredientPicker({
                   locked, so it has no stepper. */}
               {!included && (
                 <Box flexDirection="column" alignItems="flex-end" gap={4}>
-                  <Box
-                    alignItems="center"
-                    gap={4}
-                    padding={2}
-                    borderRadius={8}
-                    border="1px solid var(--border, #e5e7eb)"
-                  >
-                    <Button
-                      text="−"
-                      aria-label={t("decrease")}
-                      title={t("decrease")}
-                      size={s.stepSize}
-                      minWidth={s.stepMinWidth}
-                      disabled={qty <= min}
-                      onClick={() => setQty(ing, qty - 1)}
-                    />
-                    <Typography
-                      as="span"
-                      variant={s.qtyVariant}
-                      margin={0}
-                      minWidth={s.qtyMinWidth}
-                      textAlign="center"
-                      aria-live="polite"
-                    >
-                      {qty}
-                    </Typography>
-                    <Button
-                      text="+"
-                      aria-label={t("increase")}
-                      title={t("increase")}
-                      size={s.stepSize}
-                      minWidth={s.stepMinWidth}
-                      disabled={qty >= ing.max_quantity}
-                      onClick={() => setQty(ing, qty + 1)}
-                    />
-                  </Box>
+                  <QuantityStepper
+                    value={qty}
+                    onChange={(next) => setQty(ing, next)}
+                    min={min}
+                    max={ing.max_quantity}
+                    size={size}
+                    decreaseLabel={t("decrease")}
+                    increaseLabel={t("increase")}
+                    ariaLabel={name}
+                  />
                   {ing.quantity && ing.unit && (
                     <Typography
                       variant="caption"

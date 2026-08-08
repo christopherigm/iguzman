@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@repo/i18n/navigation";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
@@ -8,6 +8,10 @@ import {
   BranchHoursEditor,
   type BranchHoursRow,
 } from "@/components/admin/branch-hours-editor";
+import {
+  ResourcePoolsEditor,
+  type ResourcePoolRow,
+} from "@/components/admin/resource-pools-editor";
 import { timezoneOptions } from "@/components/admin/timezone-options";
 import {
   getBranch,
@@ -32,7 +36,16 @@ const NULLABLE_ON_BLANK = [
   "email",
   "latitude",
   "longitude",
+  // A blank booking interval is a real instruction, not an omission: it means
+  // "space the start times by each service's own duration". Sent as "" the API
+  // would refuse it as a non-integer, and the location could never be handed
+  // back to the default once somebody had typed a number into it.
+  "booking_slot_minutes",
 ];
+
+/** The timezone read below is a constant of the environment - it never changes
+ *  while the form is open - so the store it is read from has nothing to notify. */
+const subscribeToNothing = () => () => {};
 
 /**
  * Flatten a DRF validation body (`{ field: ["msg", …] }` or `{ detail: "…" }`)
@@ -71,15 +84,21 @@ export default function AdminBranchFormPage({ params }: Props) {
     latitude: "",
     longitude: "",
     enabled: true,
-    timezone: "UTC",
+    // Blank until the operator picks one - see `detectedTimezone`.
+    timezone: "",
     booking_capacity: 1,
-    booking_slot_minutes: 30,
+    // Blank, not 30: the grid is an override, and the default is the service's
+    // own duration - see `slot_step_minutes` in website-api.
+    booking_slot_minutes: "",
     booking_min_notice_hours: 2,
     booking_max_days_ahead: 60,
   });
   // Kept out of `values` because the whole week is one editor, not a field the
   // generic AdminForm can render - it is submitted with the rest of the form.
   const [hours, setHours] = useState<BranchHoursRow[]>([]);
+  // Same reasoning as `hours`, and the same submission: one editor, not a field
+  // the generic AdminForm can render.
+  const [pools, setPools] = useState<ResourcePoolRow[]>([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,25 +120,52 @@ export default function AdminBranchFormPage({ params }: Props) {
             latitude: data.latitude ?? "",
             longitude: data.longitude ?? "",
             enabled: data.enabled ?? true,
-            timezone: data.timezone ?? "UTC",
+            timezone: data.timezone ?? "",
             booking_capacity: data.booking_capacity ?? 1,
-            booking_slot_minutes: data.booking_slot_minutes ?? 30,
+            booking_slot_minutes: data.booking_slot_minutes ?? "",
             booking_min_notice_hours: data.booking_min_notice_hours ?? 2,
             booking_max_days_ahead: data.booking_max_days_ahead ?? 60,
           });
           setHours((data.hours as BranchHoursRow[] | undefined) ?? []);
+          setPools(
+            (data.resource_pools as ResourcePoolRow[] | undefined) ?? [],
+          );
         })
         .catch(() => setError(t("errorLoad")))
         .finally(() => setLoading(false));
     }
   }, [id, isNew, t]);
 
+  // What an unset timezone means: the operator's own zone, not the model's
+  // "UTC" default. A branch left on UTC is not an inert default - opening hours
+  // are read against it, so a Los Cabos shop that never touched the field opens
+  // at 02:00 local, labels every slot in the wrong zone, and loses same-day
+  // booking for most of the working day. The operator can still pick any zone.
+  //
+  // Read through `useSyncExternalStore` rather than in a `useState` initializer
+  // because the zone only exists in the browser: the server would render the
+  // fallback and the client would want another value, which is a hydration
+  // mismatch on the select. The server snapshot keeps both renders on "UTC" and
+  // React swaps in the real one straight after.
+  const detectedTimezone = useSyncExternalStore(
+    subscribeToNothing,
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+    () => "UTC",
+  );
+  const timezone = (values.timezone as string) || detectedTimezone;
+
   const handleSubmit = async () => {
     setSaving(true);
     setError(null);
     setSuccess(null);
     try {
-      const payload: Record<string, unknown> = { ...values, system: systemId };
+      const payload: Record<string, unknown> = {
+        ...values,
+        // The resolved value, not the raw blank one: a new branch is saved with
+        // the zone the form was showing all along.
+        timezone,
+        system: systemId,
+      };
       NULLABLE_ON_BLANK.forEach((k) => {
         if (payload[k] === "") payload[k] = null;
       });
@@ -127,6 +173,12 @@ export default function AdminBranchFormPage({ params }: Props) {
       // arrives, so omitting it would leave a removed day in place and an empty
       // array is a real instruction to close every day.
       payload.hours = hours;
+      // Always sent, like `hours`, so an emptied list can actually clear the
+      // pools. Unlike `hours` the API **upserts** these by id rather than
+      // replacing them - `Booking.resource` points at a resource, and a
+      // delete-and-recreate would strip the assigned boat off every appointment
+      // on any save of this form.
+      payload.resource_pools = pools;
       if (isNew) {
         const created = await createBranch(payload);
         setSuccess(t("saved"));
@@ -161,7 +213,15 @@ export default function AdminBranchFormPage({ params }: Props) {
       options: timezoneOptions(),
     },
     { key: "booking_capacity", label: tc("capacity"), type: "number" },
-    { key: "booking_slot_minutes", label: tc("slotMinutes"), type: "number" },
+    {
+      key: "booking_slot_minutes",
+      label: tc("slotMinutes"),
+      type: "number",
+      // The placeholder carries the meaning of an empty field, which is the
+      // state most branches should be left in: start times spaced by whatever
+      // each service lasts.
+      placeholder: tc("slotMinutesAuto"),
+    },
     {
       key: "booking_min_notice_hours",
       label: tc("minNoticeHours"),
@@ -200,7 +260,7 @@ export default function AdminBranchFormPage({ params }: Props) {
         }
         editingName={isNew ? undefined : String(values.name ?? "")}
         fields={fields}
-        values={values}
+        values={{ ...values, timezone }}
         onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
         onSubmit={handleSubmit}
         saving={saving}
@@ -208,6 +268,11 @@ export default function AdminBranchFormPage({ params }: Props) {
         success={success}
       >
         <BranchHoursEditor value={hours} onChange={setHours} />
+        <ResourcePoolsEditor
+          value={pools}
+          onChange={setPools}
+          branchCapacity={Number(values.booking_capacity) || 1}
+        />
       </AdminForm>
     </>
   );

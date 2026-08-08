@@ -366,6 +366,30 @@ class Booking(models.Model):
     timezone = models.CharField(max_length=64, default="UTC")
     duration_minutes = models.PositiveIntegerField(default=0)
 
+    # How many people this one booking covers. **This is the unit capacity is
+    # counted in** - a party of four consumes four seats of the resource it is
+    # assigned to, and the order line's quantity is the same number, which is
+    # what makes the price multiply.
+    #
+    # `default=1` is what makes the migration a no-op in meaning as well as in
+    # schema: summing `party_size` over rows written before this field existed
+    # reproduces the old "count the bookings" number exactly.
+    party_size = models.PositiveSmallIntegerField(default=1)
+
+    # Which boat / guide / room this party was put on. Null is the ordinary case
+    # for a tenant with no resource pools - the branch is then one implicit
+    # resource and there is nothing to name. SET_NULL for the same reason
+    # `service` and `branch` are: deleting a boat must not delete the record that
+    # someone booked it.
+    resource = models.ForeignKey(
+        "core.BookingResource", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="bookings",
+    )
+    # Snapshot, exactly like `branch_name`: the boat may be renamed or retired,
+    # and an appointment record that then reads back as blank is worse than one
+    # that reads back as what was agreed.
+    resource_name = models.CharField(max_length=255, blank=True, default="")
+
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_PENDING)
 
     payment_option = models.CharField(
@@ -393,6 +417,9 @@ class Booking(models.Model):
         indexes = [
             # The availability query: overlapping active bookings at one branch.
             models.Index(fields=["branch", "starts_at"]),
+            # The same query once pools exist: occupancy is summed per resource,
+            # so the seat arithmetic reads rows by the resource they sit on.
+            models.Index(fields=["resource", "starts_at"]),
             # The CMS list: a tenant's upcoming bookings, soonest first.
             models.Index(fields=["status", "starts_at"]),
         ]

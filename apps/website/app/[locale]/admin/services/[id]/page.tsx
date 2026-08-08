@@ -81,10 +81,14 @@ export default function AdminServiceFormPage({ params }: Props) {
     booking_pay_deposit: false,
     booking_deposit_percent: 30,
     booking_pay_in_person: true,
+    booking_party_enabled: false,
+    booking_party_min: 1,
+    booking_party_max: 10,
   });
   // Kept out of `values`: it is an M2M the API takes as a list of ids, not a
   // scalar the generic AdminForm can render - same shape as `variantIds`.
   const [bookingBranchIds, setBookingBranchIds] = useState<number[]>([]);
+  const [bookingPoolIds, setBookingPoolIds] = useState<number[]>([]);
   const [branchOptions, setBranchOptions] = useState<BookingBranchOption[]>([]);
   const [existingImage, setExistingImage] = useState<
     { id: number; url: string }[]
@@ -156,6 +160,30 @@ export default function AdminServiceFormPage({ params }: Props) {
           // A branch with no name still has to be pickable - the CMS lets one be
           // created before it is named, and an unlabelled switch is unusable.
           name: String(b.name ?? `#${index + 1}`),
+          bookingCapacity: Number(b.booking_capacity) || 1,
+          // Flattened off the branch payload, which already nests them - the
+          // pool picker needs no request of its own.
+          pools: (
+            (b.resource_pools as
+              | {
+                  id: number;
+                  name: string;
+                  enabled: boolean;
+                  resources: { capacity: number; enabled: boolean }[];
+                }[]
+              | undefined) ?? []
+          )
+            .filter((pool) => pool.enabled)
+            .map((pool) => ({
+              id: pool.id,
+              name: pool.name,
+              branchId: b.id as number,
+              // The biggest single resource, not the sum: a party never splits
+              // across two, so this is the real ceiling the picker reports.
+              largestCapacity: pool.resources
+                .filter((r) => r.enabled)
+                .reduce((max, r) => Math.max(max, Number(r.capacity) || 0), 0),
+            })),
         })),
       );
       setVariantCatalog(
@@ -218,7 +246,13 @@ export default function AdminServiceFormPage({ params }: Props) {
             booking_pay_deposit: data.booking_pay_deposit ?? false,
             booking_deposit_percent: data.booking_deposit_percent ?? 30,
             booking_pay_in_person: data.booking_pay_in_person ?? true,
+            booking_party_enabled: data.booking_party_enabled ?? false,
+            booking_party_min: data.booking_party_min ?? 1,
+            booking_party_max: data.booking_party_max ?? 10,
           });
+          setBookingPoolIds(
+            ((data.booking_pools as number[] | undefined) ?? []).map(Number),
+          );
           setBookingBranchIds(
             ((data.booking_branches as number[] | undefined) ?? []).map(Number),
           );
@@ -272,6 +306,11 @@ export default function AdminServiceFormPage({ params }: Props) {
       // Always sent, like `variants`: an empty list means "every branch" and has
       // to actually clear the relation, so it cannot be omitted when empty.
       payload.booking_branches = bookingBranchIds;
+      // Same rule, same reason: empty means "every pool at the location", so it
+      // is always sent rather than omitted when empty.
+      payload.booking_pools = bookingPoolIds;
+      payload.booking_party_min = Number(values.booking_party_min) || 1;
+      payload.booking_party_max = Number(values.booking_party_max) || 1;
       // The number input hands back a string; the API wants an integer, and a
       // blank field means the tenant cleared it rather than chose zero.
       payload.booking_deposit_percent =
@@ -488,6 +527,8 @@ export default function AdminServiceFormPage({ params }: Props) {
             branches={branchOptions}
             selectedBranchIds={bookingBranchIds}
             onBranchesChange={setBookingBranchIds}
+            selectedPoolIds={bookingPoolIds}
+            onPoolsChange={setBookingPoolIds}
           />
 
           {/* Pricing & Costs, at the end of the form. */}

@@ -104,6 +104,15 @@ SYSTEM_TEXT_FIELDS = (
     "watermark_opacity",
     "background_light",
     "background_dark",
+    # The basemap the site's maps are painted from. Portable like the palette
+    # and the fonts: it is a design decision made once per site, not a
+    # per-environment id. The credit and its link travel with the tile URL for
+    # the same reason they are stored together - a URL published without them
+    # under-credits whoever serves the tiles.
+    "map_style",
+    "map_tile_url",
+    "map_attribution",
+    "map_attribution_url",
     "google_font_url",
     "font_display",
     "font_body",

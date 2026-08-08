@@ -45,6 +45,16 @@ export interface Booking {
   amount_due_now: string;
   amount_due_later: string;
   service_slug: string | null;
+  /** How many people this booking covers. `1` on every non-party booking, so a
+   *  consumer never has to special-case the feature being off. */
+  party_size: number;
+  /** The boat/guide/room assigned, live name falling back to the snapshot.
+   *  Null whenever the branch defines no resource pools, which is the norm. */
+  resource_name: string | null;
+  /** The singular noun for that resource ("boat", "guide"). Null once the
+   *  resource itself is gone - the label lives on its pool, not on the
+   *  booking. */
+  resource_unit_label: string | null;
 }
 
 /** The compact form on an order-history row (`BookingSummarySerializer`). */
@@ -54,6 +64,26 @@ export interface BookingSummary {
   branch_name: string | null;
   starts_at: string;
   timezone: string;
+  party_size: number;
+}
+
+/** One offered start time and how big a party could still take it. */
+export interface AvailabilitySlot {
+  /** UTC instant. Always render through the payload's `timezone`. */
+  at: string;
+  /** The largest free block on a **single** resource, never the sum across
+   *  them: two boats with three free seats each cannot seat a party of six. */
+  seats_left: number;
+}
+
+/** A resource the customer may pick between, when its pool allows it. */
+export interface AvailabilityResource {
+  id: number;
+  name: string;
+  en_name: string;
+  capacity: number;
+  unit_label: string;
+  en_unit_label: string;
 }
 
 /** The availability payload the calendar is painted from. */
@@ -65,9 +95,20 @@ export interface AvailabilityResponse {
   start: string;
   days: number;
   last_bookable_date: string;
-  /** Local `YYYY-MM-DD` → the day's bookable start instants, as UTC ISO strings.
-   *  A date absent from this map cannot be selected. */
-  availability: Record<string, string[]>;
+  /** Local `YYYY-MM-DD` → the day's bookable slots. A date absent from this map
+   *  cannot be selected. */
+  availability: Record<string, AvailabilitySlot[]>;
+  /** The party size this payload was computed for - echoed back because the API
+   *  clamps what was asked to what the service accepts. */
+  party: number;
+  party_min: number;
+  party_max: number;
+  party_enabled: boolean;
+  /** The resource this payload was filtered by, if any. */
+  resource: number | null;
+  /** Empty unless a `customer_selectable` pool applies - which is the ordinary
+   *  case, and means the booking page shows no picker at all. */
+  resources: AvailabilityResource[];
 }
 
 /**

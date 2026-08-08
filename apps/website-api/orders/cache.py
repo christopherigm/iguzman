@@ -30,8 +30,22 @@ def invalidate_orders(user_id, system_id):
 AVAILABILITY_CACHE_TTL = 60
 
 
-def availability_key(service_id, branch_id, start_date, days):
-    return f"orders:availability:{service_id}:{branch_id or 0}:{start_date}:{days}"
+def availability_key(service_id, branch_id, start_date, days, party_size=1, resource_id=None):
+    """The cache key for one availability payload.
+
+    ⚠ **Every input the payload varies on must appear here.** Party size and the
+    chosen resource both change which slots come back, so leaving either out
+    would serve a party of six the calendar computed for a solo customer - and
+    they would only find out at checkout, which honestly refuses the slot.
+
+    Cardinality grows by party x resource, which is why `party` is clamped at the
+    view before it reaches this. At a 60-second TTL that is still a trivial number
+    of keys; do not "optimise" them back out of the key.
+    """
+    return (
+        f"orders:availability:{service_id}:{branch_id or 0}:{start_date}:{days}"
+        f":{party_size}:{resource_id or 0}"
+    )
 
 
 def invalidate_availability():

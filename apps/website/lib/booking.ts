@@ -45,6 +45,13 @@ export async function fetchAvailability(
     branch?: number | null;
     start?: string;
     days?: number;
+    /** How many people. Changes which slots come back *and* the seat counts on
+     *  them, so it is part of what the calendar is asking - not a display
+     *  filter applied afterwards. */
+    party?: number;
+    /** Narrow to one specific resource. Only meaningful for a
+     *  `customer_selectable` pool; the API ignores anything else. */
+    resource?: number | null;
   },
   signal?: AbortSignal,
 ): Promise<AvailabilityResponse> {
@@ -52,6 +59,8 @@ export async function fetchAvailability(
   if (params.branch != null) search.set("branch", String(params.branch));
   if (params.start) search.set("start", params.start);
   if (params.days) search.set("days", String(params.days));
+  if (params.party) search.set("party", String(params.party));
+  if (params.resource != null) search.set("resource", String(params.resource));
 
   const res = await fetch(`/api/booking/availability/?${search.toString()}`, {
     signal,
@@ -80,6 +89,14 @@ export interface BookingRequest {
   notes?: string;
   locale: string;
   contact: { name: string; email: string; phone: string };
+  /** How many people. The API forces it back to 1 when the service does not
+   *  sell party bookings, and refuses (rather than clamps) a size outside the
+   *  service's own range - so this must be a size the form actually offered. */
+  party_size?: number;
+  /** The customer's pick. A preference, not an instruction: the API honours it
+   *  only for a `customer_selectable` pool and falls back to best fit if it has
+   *  filled up since the calendar was painted. */
+  resource?: number | null;
 }
 
 /** Where the browser goes next: Stripe's hosted page, or straight to the order. */

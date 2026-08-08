@@ -267,6 +267,43 @@ class Service(Buyable):
         help_text='Locations this service can be booked at. Leave empty to offer every location.',
     )
 
+    # ── Booking party size ─────────────────────────────────────────────────────
+    # Whether one booking may cover several people. Off - the default, and what
+    # every existing service keeps - means one booking is one person: the price
+    # is the price and the slot loses one seat.
+    #
+    # On, the party size **multiplies the price and consumes that many seats**.
+    # That is the only pricing model here on purpose: a flat group rate
+    # ("MX$2,000 for up to 6") is not a party size, it is a different service
+    # with this switch off, and modelling it as a third mode would put two
+    # incompatible meanings behind one number.
+    booking_party_enabled = models.BooleanField(
+        default=False,
+        help_text='One booking can cover several people (price is per person).',
+    )
+    booking_party_min = models.PositiveSmallIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        help_text='Smallest party this service accepts.',
+    )
+    booking_party_max = models.PositiveSmallIntegerField(
+        default=10,
+        validators=[MinValueValidator(1)],
+        help_text='Largest party this service accepts (still capped by what a resource holds).',
+    )
+    # Which pools this service draws on. **Empty means every pool at the resolved
+    # branch**, the same "empty is everything" rule `booking_branches` follows -
+    # an unconfigured bookable service must stay bookable. Composes with
+    # `booking_branches` rather than fighting it: pools are always filtered by
+    # the branch the request resolved to, so a pool belonging to a branch this
+    # service is not offered at is simply never reachable.
+    booking_pools = models.ManyToManyField(
+        'core.ResourcePool',
+        blank=True,
+        related_name='services',
+        help_text='Which resources this service uses. Leave empty to use every pool at the location.',
+    )
+
     # ── Booking payment ────────────────────────────────────────────────────────
     # Each is its own switch and a tenant may enable any combination; the
     # customer picks from what is on at checkout. All three off is the same as
@@ -332,6 +369,21 @@ class Service(Buyable):
         if self.booking_on_premises:
             options.append('on_premises')
         return options or ['branch']
+
+    @property
+    def booking_party_range(self):
+        """``(min, max)`` party size, with the same "read this, not the raw
+        switches" contract the two properties above carry.
+
+        Party off collapses to ``(1, 1)`` so a caller never has to special-case
+        the switch, and a max that a CMS edit left below the min is widened to
+        the min rather than producing an empty range that would make the service
+        unbookable at every size.
+        """
+        if not self.booking_party_enabled:
+            return 1, 1
+        low = max(self.booking_party_min or 1, 1)
+        return low, max(self.booking_party_max or low, low)
 
 
 class ProductImage(StandardPicture):

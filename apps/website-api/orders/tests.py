@@ -11,14 +11,16 @@ from zoneinfo import ZoneInfo
 from django.contrib.auth.models import User
 from django.core import mail
 from django.core.cache import cache
-from django.test import TestCase, override_settings
+from django.db import transaction
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
 from catalog.models import MenuItem, Product, Service
 from core.crypto import decrypt, encrypt
-from core.models import Branch, BranchHours, System
+from core.models import BookingResource, Branch, BranchHours, ResourcePool, System
 from users.models import CartItem
 
+from . import views as orders_views
 from .models import Booking, Order, OrderLine
 from .services.booking import branches_for, is_slot_available, slots_for_day
 from .services.qr import order_detail_url
@@ -1648,6 +1650,10 @@ class BookingAvailabilityTests(TestCase):
         self.branch = Branch.objects.create(
             system=self.system, name="Downtown", is_main=True,
             timezone="America/Mexico_City", booking_capacity=1,
+            # An explicit override of the grid, not the default - left empty the
+            # starts would be spaced by the service's own duration. Pinned here
+            # so the hours/lunch/notice cases below read against a fixed half-hour
+            # grid; the duration-driven default has its own tests.
             booking_slot_minutes=30, booking_min_notice_hours=0,
             booking_max_days_ahead=60,
         )
@@ -1682,6 +1688,53 @@ class BookingAvailabilityTests(TestCase):
         self.assertEqual(labels[-1], "16:00")
         # 16:30 would end at 17:30, past closing.
         self.assertNotIn("16:30", labels)
+
+    def test_start_times_are_spaced_by_the_services_duration_by_default(self):
+        # No branch override - the ordinary configuration.
+        self.branch.booking_slot_minutes = None
+        self.branch.save()
+
+        labels = [self._local(s) for s in self._slots()]
+
+        # An hour-long haircut, offered on the hour: the 09:30 a finer grid used
+        # to print was never bookable at this branch once the 09:00 was taken.
+        self.assertEqual(
+            labels, ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00"],
+        )
+
+    def test_a_longer_service_gets_fewer_starts(self):
+        self.branch.booking_slot_minutes = None
+        self.branch.save()
+        self.service.duration = 120
+        self.service.save()
+
+        labels = [self._local(s) for s in self._slots()]
+
+        # Two hours each: 11:00 ends exactly at the lunch break, and a 16:00
+        # start would run an hour past closing.
+        self.assertEqual(labels, ["09:00", "11:00", "14:00"])
+
+    def test_the_branch_grid_overrides_the_duration(self):
+        # The three-chair salon: appointments last 60 minutes but start every 30,
+        # because capacity rather than the clock is what limits them.
+        self.branch.booking_slot_minutes = 30
+        self.branch.save()
+
+        self.assertIn("09:30", [self._local(s) for s in self._slots()])
+
+    def test_a_service_with_no_duration_falls_back_to_hourly_starts(self):
+        self.branch.booking_slot_minutes = None
+        self.branch.save()
+        self.service.duration = None
+        self.service.save()
+
+        labels = [self._local(s) for s in self._slots()]
+
+        # `service_duration_minutes` reads a missing duration as an hour, and the
+        # grid follows it rather than collapsing to a zero-length step.
+        self.assertEqual(
+            labels, ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00"],
+        )
 
     def test_the_lunch_break_is_subtracted(self):
         labels = [self._local(s) for s in self._slots()]
@@ -2578,3 +2631,605 @@ class AbandonedBookingTests(TestCase):
         self.assertTrue(
             is_slot_available(self.service, self.branch, self.starts_at),
         )
+
+
+class PartyBookingTests(TestCase):
+    """Party size: seats, not bookings, and the arithmetic that has to agree.
+
+    The premise of the whole feature is that turning it on changes nothing for a
+    tenant that never configures it, so the first test here is the one that pins
+    the old behaviour down at party size 1.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.branch = Branch.objects.create(
+            system=self.system, name="Marina", is_main=True,
+            timezone="UTC", booking_capacity=10, booking_slot_minutes=60,
+            booking_min_notice_hours=0, booking_max_days_ahead=60,
+        )
+        for weekday in range(7):
+            BranchHours.objects.create(
+                branch=self.branch, weekday=weekday,
+                opens_at=time(9, 0), closes_at=time(17, 0),
+            )
+        self.service = Service.objects.create(
+            system=self.system, name="Whale tour", slug="whale-tour",
+            price=Decimal("500.00"), currency="MXN", duration=240,
+            booking_enabled=True, booking_in_branch=True, booking_pay_in_person=True,
+            booking_party_enabled=True, booking_party_min=1, booking_party_max=8,
+        )
+
+    def _slot(self):
+        tomorrow = (timezone.now() + timedelta(days=1)).date()
+        for offset in range(7):
+            slots = slots_for_day(self.service, self.branch, tomorrow + timedelta(days=offset))
+            if slots:
+                return slots[0]
+        raise AssertionError("the fixture branch offers no slots at all")
+
+    def _book(self, **overrides):
+        payload = {
+            "service": self.service.pk,
+            "branch": self.branch.pk,
+            "fulfillment": "branch",
+            "starts_at": self._slot().isoformat(),
+            "payment_option": "in_person",
+            "contact": {"name": "Ada", "email": "ada@example.test"},
+            "locale": "en",
+        }
+        payload.update(overrides)
+        return self.client.post(
+            "/api/bookings/checkout/", payload,
+            content_type="application/json", HTTP_X_WEBSITE_HOST="acme.test",
+        )
+
+    # ---- the no-op invariant ------------------------------------------------ #
+
+    def test_at_party_one_seats_reproduce_the_old_booking_count(self):
+        """Capacity 3, three solo bookings, and the fourth is refused - exactly
+        what counting rows used to do."""
+        self.branch.booking_capacity = 3
+        self.branch.save()
+        slot = self._slot()
+
+        for _ in range(3):
+            self.assertEqual(self._book(starts_at=slot.isoformat(), party_size=1).status_code, 201)
+
+        self.assertEqual(self._book(starts_at=slot.isoformat(), party_size=1).status_code, 409)
+
+    def test_a_branch_with_no_pools_uses_its_capacity_as_seats(self):
+        slot = self._slot()
+
+        self.assertEqual(self._book(starts_at=slot.isoformat(), party_size=6).status_code, 201)
+        # 6 of 10 seats gone; a party of 5 no longer fits, a party of 4 does.
+        self.assertEqual(self._book(starts_at=slot.isoformat(), party_size=5).status_code, 409)
+        self.assertEqual(self._book(starts_at=slot.isoformat(), party_size=4).status_code, 201)
+
+    # ---- price and quantity ------------------------------------------------- #
+
+    def test_the_party_multiplies_the_price(self):
+        response = self._book(party_size=4)
+
+        booking = Booking.objects.get(pk=response.json()["booking_id"])
+        self.assertEqual(booking.party_size, 4)
+        self.assertEqual(booking.order.total, Decimal("2000.00"))
+        self.assertEqual(booking.order.lines.get().quantity, 4)
+
+    def test_a_deposit_splits_the_multiplied_total(self):
+        self.service.booking_pay_deposit = True
+        self.service.booking_deposit_percent = 25
+        self.service.save()
+
+        # No Stripe account on this fixture, so the deposit path is refused
+        # before it writes - which is itself the rule worth pinning.
+        self.assertEqual(self._book(party_size=4, payment_option="deposit").status_code, 503)
+
+    def test_party_off_forces_one_however_big_the_body_claims(self):
+        self.service.booking_party_enabled = False
+        self.service.save()
+
+        response = self._book(party_size=6)
+
+        booking = Booking.objects.get(pk=response.json()["booking_id"])
+        self.assertEqual(booking.party_size, 1)
+        self.assertEqual(booking.order.total, Decimal("500.00"))
+
+    def test_a_party_outside_the_service_range_is_refused_not_clamped(self):
+        response = self._book(party_size=9)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "PARTY_SIZE_INVALID")
+        self.assertFalse(Booking.objects.exists())
+
+    # ---- sharing a departure ------------------------------------------------ #
+
+    def test_two_parties_share_one_departure(self):
+        slot = self._slot()
+
+        self.assertEqual(self._book(starts_at=slot.isoformat(), party_size=4).status_code, 201)
+        self.assertEqual(self._book(starts_at=slot.isoformat(), party_size=6).status_code, 201)
+
+        self.assertEqual(Booking.objects.count(), 2)
+        self.assertEqual(
+            sum(b.party_size for b in Booking.objects.all()), 10,
+        )
+
+    def test_the_availability_payload_reports_seats_left(self):
+        slot = self._slot()
+        self._book(starts_at=slot.isoformat(), party_size=4)
+        cache.clear()
+
+        response = self.client.get(
+            "/api/bookings/availability/",
+            {"service": self.service.pk, "branch": self.branch.pk, "party": 2},
+            HTTP_X_WEBSITE_HOST="acme.test",
+        )
+
+        payload = response.json()
+        self.assertEqual(payload["party"], 2)
+        self.assertEqual(payload["party_max"], 8)
+        entry = next(
+            s
+            for day in payload["availability"].values()
+            for s in day
+            if s["at"] == slot.isoformat().replace("+00:00", "Z")
+            or s["at"] == slot.isoformat()
+        )
+        self.assertEqual(entry["seats_left"], 6)
+
+    def test_a_party_bigger_than_the_branch_sees_no_slots(self):
+        self.branch.booking_capacity = 4
+        self.branch.save()
+        cache.clear()
+
+        response = self.client.get(
+            "/api/bookings/availability/",
+            {"service": self.service.pk, "branch": self.branch.pk, "party": 8},
+            HTTP_X_WEBSITE_HOST="acme.test",
+        )
+
+        self.assertEqual(response.json()["availability"], {})
+
+    def test_the_cache_key_separates_party_sizes(self):
+        """Two parties must not be served each other's calendar for a minute."""
+        self.branch.booking_capacity = 4
+        self.branch.save()
+
+        solo = self.client.get(
+            "/api/bookings/availability/",
+            {"service": self.service.pk, "branch": self.branch.pk, "party": 1},
+            HTTP_X_WEBSITE_HOST="acme.test",
+        ).json()
+        big = self.client.get(
+            "/api/bookings/availability/",
+            {"service": self.service.pk, "branch": self.branch.pk, "party": 8},
+            HTTP_X_WEBSITE_HOST="acme.test",
+        ).json()
+
+        self.assertTrue(solo["availability"])
+        self.assertEqual(big["availability"], {})
+
+
+class ResourcePoolTests(TestCase):
+    """Pools, best fit, and the customer-selectable picker."""
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.branch = Branch.objects.create(
+            system=self.system, name="Marina", is_main=True,
+            timezone="UTC", booking_capacity=1, booking_slot_minutes=60,
+            booking_min_notice_hours=0, booking_max_days_ahead=60,
+        )
+        for weekday in range(7):
+            BranchHours.objects.create(
+                branch=self.branch, weekday=weekday,
+                opens_at=time(9, 0), closes_at=time(17, 0),
+            )
+        self.service = Service.objects.create(
+            system=self.system, name="Whale tour", slug="whale-tour",
+            price=Decimal("500.00"), currency="MXN", duration=240,
+            booking_enabled=True, booking_in_branch=True, booking_pay_in_person=True,
+            booking_party_enabled=True, booking_party_min=1, booking_party_max=10,
+        )
+        self.pool = ResourcePool.objects.create(
+            branch=self.branch, name="Boats", unit_label="boat",
+        )
+        self.small = BookingResource.objects.create(pool=self.pool, name="Panga", capacity=4)
+        self.large = BookingResource.objects.create(pool=self.pool, name="Marlin", capacity=10)
+
+    def _slot(self):
+        tomorrow = (timezone.now() + timedelta(days=1)).date()
+        for offset in range(7):
+            slots = slots_for_day(self.service, self.branch, tomorrow + timedelta(days=offset))
+            if slots:
+                return slots[0]
+        raise AssertionError("the fixture branch offers no slots at all")
+
+    def _book(self, **overrides):
+        payload = {
+            "service": self.service.pk,
+            "branch": self.branch.pk,
+            "fulfillment": "branch",
+            "starts_at": self._slot().isoformat(),
+            "payment_option": "in_person",
+            "contact": {"name": "Ada", "email": "ada@example.test"},
+            "locale": "en",
+        }
+        payload.update(overrides)
+        return self.client.post(
+            "/api/bookings/checkout/", payload,
+            content_type="application/json", HTTP_X_WEBSITE_HOST="acme.test",
+        )
+
+    def test_pools_override_the_branch_capacity(self):
+        """`booking_capacity` is 1 on this fixture and irrelevant: the resources
+        say 14 seats, and that is what the engine counts."""
+        slot = self._slot()
+
+        self.assertEqual(self._book(starts_at=slot.isoformat(), party_size=10).status_code, 201)
+        self.assertEqual(self._book(starts_at=slot.isoformat(), party_size=4).status_code, 201)
+
+    def test_best_fit_picks_the_tightest_resource_that_holds_the_party(self):
+        response = self._book(party_size=3)
+
+        booking = Booking.objects.get(pk=response.json()["booking_id"])
+        # The 4-seat Panga, not the 10-seat Marlin: consolidating small parties
+        # is what preserves the big boat for a party that needs it.
+        self.assertEqual(booking.resource, self.small)
+        self.assertEqual(booking.resource_name, "Panga")
+
+    def test_best_fit_preserves_the_large_boat_for_a_large_party(self):
+        slot = self._slot()
+        self._book(starts_at=slot.isoformat(), party_size=3)
+
+        response = self._book(starts_at=slot.isoformat(), party_size=9)
+
+        self.assertEqual(response.status_code, 201)
+        booking = Booking.objects.get(pk=response.json()["booking_id"])
+        self.assertEqual(booking.resource, self.large)
+
+    def test_a_party_larger_than_every_resource_is_refused(self):
+        """14 seats exist, but no single boat holds 12 - and a party does not
+        split across two boats."""
+        self.service.booking_party_max = 14
+        self.service.save()
+
+        self.assertEqual(self._book(party_size=12).status_code, 409)
+
+    def test_seats_are_counted_per_resource_not_across_the_branch(self):
+        slot = self._slot()
+        # Fills the Marlin exactly.
+        self._book(starts_at=slot.isoformat(), party_size=10)
+
+        # 4 seats remain, all of them on the Panga - so a party of 4 fits...
+        self.assertEqual(self._book(starts_at=slot.isoformat(), party_size=4).status_code, 201)
+        # ...and now nothing does.
+        self.assertEqual(self._book(starts_at=slot.isoformat(), party_size=1).status_code, 409)
+
+    def test_a_disabled_resource_stops_being_offered(self):
+        self.large.enabled = False
+        self.large.save()
+
+        self.assertEqual(self._book(party_size=10).status_code, 409)
+        self.assertEqual(self._book(party_size=4).status_code, 201)
+
+    def test_booking_pools_scopes_which_resources_a_service_uses(self):
+        other = ResourcePool.objects.create(branch=self.branch, name="Kayaks")
+        BookingResource.objects.create(pool=other, name="Kayak fleet", capacity=20)
+        self.service.booking_pools.set([other])
+        self.service.booking_party_max = 20
+        self.service.save()
+
+        response = self._book(party_size=20)
+
+        booking = Booking.objects.get(pk=response.json()["booking_id"])
+        self.assertEqual(booking.resource.pool, other)
+
+    # ---- customer-selectable ------------------------------------------------ #
+
+    def test_resources_are_not_published_unless_the_pool_says_so(self):
+        payload = self.client.get(
+            "/api/bookings/availability/",
+            {"service": self.service.pk, "branch": self.branch.pk},
+            HTTP_X_WEBSITE_HOST="acme.test",
+        ).json()
+
+        self.assertEqual(payload["resources"], [])
+
+    def test_a_selectable_pool_publishes_its_resources(self):
+        self.pool.customer_selectable = True
+        self.pool.save()
+
+        payload = self.client.get(
+            "/api/bookings/availability/",
+            {"service": self.service.pk, "branch": self.branch.pk},
+            HTTP_X_WEBSITE_HOST="acme.test",
+        ).json()
+
+        names = [r["name"] for r in payload["resources"]]
+        self.assertEqual(names, ["Panga", "Marlin"])
+        self.assertEqual(payload["resources"][0]["unit_label"], "boat")
+
+    def test_a_customer_pick_is_honoured_when_the_pool_is_selectable(self):
+        self.pool.customer_selectable = True
+        self.pool.save()
+
+        response = self._book(party_size=2, resource=self.large.pk)
+
+        booking = Booking.objects.get(pk=response.json()["booking_id"])
+        # Best fit would have chosen the Panga; the customer asked for the Marlin.
+        self.assertEqual(booking.resource, self.large)
+
+    def test_a_pick_on_a_non_selectable_pool_is_ignored_not_refused(self):
+        response = self._book(party_size=2, resource=self.large.pk)
+
+        self.assertEqual(response.status_code, 201)
+        booking = Booking.objects.get(pk=response.json()["booking_id"])
+        self.assertEqual(booking.resource, self.small)
+
+    def test_another_tenants_resource_cannot_be_picked(self):
+        other_system = System.objects.create(site_name="Beta", host="beta.test")
+        other_branch = Branch.objects.create(system=other_system, name="Theirs")
+        other_pool = ResourcePool.objects.create(
+            branch=other_branch, name="Theirs", customer_selectable=True,
+        )
+        theirs = BookingResource.objects.create(pool=other_pool, name="Theirs", capacity=50)
+
+        response = self._book(party_size=2, resource=theirs.pk)
+
+        self.assertEqual(response.status_code, 201)
+        booking = Booking.objects.get(pk=response.json()["booking_id"])
+        self.assertNotEqual(booking.resource, theirs)
+
+    # ---- legacy rows -------------------------------------------------------- #
+
+    def test_an_unassigned_booking_is_charged_to_every_resource(self):
+        """A row written before pools existed carries no resource, and there is
+        no way to know which boat it is on - so it weighs on all of them rather
+        than vanishing from the arithmetic."""
+        slot = self._slot()
+        order = Order.objects.create(
+            system=self.system, status=Order.STATUS_PLACED, currency="MXN",
+            subtotal=Decimal("500.00"), total=Decimal("500.00"),
+        )
+        Booking.objects.create(
+            order=order, service=self.service, branch=self.branch,
+            starts_at=slot, ends_at=slot + timedelta(minutes=240),
+            timezone="UTC", duration_minutes=240, party_size=8, resource=None,
+        )
+
+        # 8 unattributed seats: the Panga (4) can take nobody, and the Marlin
+        # (10) has 2 left.
+        self.assertEqual(self._book(starts_at=slot.isoformat(), party_size=3).status_code, 409)
+        self.assertEqual(self._book(starts_at=slot.isoformat(), party_size=2).status_code, 201)
+
+
+class BookingReassignTests(TestCase):
+    """Moving a party to another resource from the CMS."""
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.branch = Branch.objects.create(
+            system=self.system, name="Marina", is_main=True,
+            timezone="UTC", booking_capacity=1, booking_slot_minutes=60,
+            booking_min_notice_hours=0, booking_max_days_ahead=60,
+        )
+        for weekday in range(7):
+            BranchHours.objects.create(
+                branch=self.branch, weekday=weekday,
+                opens_at=time(9, 0), closes_at=time(17, 0),
+            )
+        self.service = Service.objects.create(
+            system=self.system, name="Whale tour", slug="whale-tour",
+            price=Decimal("500.00"), currency="MXN", duration=240,
+            booking_enabled=True, booking_party_enabled=True, booking_party_max=10,
+        )
+        self.pool = ResourcePool.objects.create(branch=self.branch, name="Boats", unit_label="boat")
+        self.small = BookingResource.objects.create(pool=self.pool, name="Panga", capacity=4)
+        self.large = BookingResource.objects.create(pool=self.pool, name="Marlin", capacity=10)
+
+        tomorrow = (timezone.now() + timedelta(days=1)).date()
+        self.starts_at = slots_for_day(self.service, self.branch, tomorrow)[0]
+        order = Order.objects.create(
+            system=self.system, status=Order.STATUS_PLACED, currency="MXN",
+            subtotal=Decimal("1500.00"), total=Decimal("1500.00"),
+        )
+        self.booking = Booking.objects.create(
+            order=order, service=self.service, branch=self.branch,
+            starts_at=self.starts_at, ends_at=self.starts_at + timedelta(minutes=240),
+            timezone="UTC", duration_minutes=240, party_size=3,
+            resource=self.small, resource_name="Panga",
+        )
+
+        self.admin = User.objects.create_user("admin", password="x", email="a@acme.test")
+        self.admin.profile.system = self.system
+        self.admin.profile.is_admin = True
+        self.admin.profile.save()
+        self.client.force_login(self.admin)
+
+    def _patch(self, **body):
+        return self.client.patch(
+            f"/api/bookings/admin/{self.booking.pk}/",
+            {"action": "reassign", **body}, content_type="application/json",
+        )
+
+    def test_a_staff_reassignment_moves_the_party_and_the_snapshot(self):
+        response = self._patch(resource=self.large.pk)
+
+        self.assertEqual(response.status_code, 200)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.resource, self.large)
+        self.assertEqual(self.booking.resource_name, "Marlin")
+
+    def test_a_reassignment_is_revalidated_through_the_engine(self):
+        """The Marlin is already full, so the move is refused - and refused by
+        the availability authority, not by an inline check written here."""
+        other = Order.objects.create(
+            system=self.system, status=Order.STATUS_PLACED, currency="MXN",
+            subtotal=Decimal("0.00"), total=Decimal("0.00"),
+        )
+        Booking.objects.create(
+            order=other, service=self.service, branch=self.branch,
+            starts_at=self.starts_at, ends_at=self.starts_at + timedelta(minutes=240),
+            timezone="UTC", duration_minutes=240, party_size=10, resource=self.large,
+        )
+
+        response = self._patch(resource=self.large.pk)
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "RESOURCE_FULL")
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.resource, self.small)
+
+    def test_force_overbooks_deliberately(self):
+        other = Order.objects.create(
+            system=self.system, status=Order.STATUS_PLACED, currency="MXN",
+            subtotal=Decimal("0.00"), total=Decimal("0.00"),
+        )
+        Booking.objects.create(
+            order=other, service=self.service, branch=self.branch,
+            starts_at=self.starts_at, ends_at=self.starts_at + timedelta(minutes=240),
+            timezone="UTC", duration_minutes=240, party_size=10, resource=self.large,
+        )
+
+        response = self._patch(resource=self.large.pk, force=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.resource, self.large)
+
+    def test_another_tenants_resource_is_refused(self):
+        other_system = System.objects.create(site_name="Beta", host="beta.test")
+        other_branch = Branch.objects.create(system=other_system, name="Theirs")
+        other_pool = ResourcePool.objects.create(branch=other_branch, name="Theirs")
+        theirs = BookingResource.objects.create(pool=other_pool, name="Theirs", capacity=99)
+
+        response = self._patch(resource=theirs.pk)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "RESOURCE_INVALID")
+
+    def test_a_completed_booking_cannot_be_reassigned(self):
+        self.booking.status = Booking.STATUS_COMPLETED
+        self.booking.save()
+
+        response = self._patch(resource=self.large.pk)
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "BOOKING_CLOSED")
+
+    def test_reassigning_needs_an_explicit_resource(self):
+        response = self.client.patch(
+            f"/api/bookings/admin/{self.booking.pk}/",
+            {"action": "reassign"}, content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+
+class BookingCheckoutAtomicityTests(TransactionTestCase):
+    """The seat check and the booking write must be one transaction.
+
+    Un-serialised, two checkouts can both see the last four seats free and both
+    take them. That window was one row wide when capacity counted bookings; at
+    ten seats with money attached it is a real over-sell.
+
+    Real concurrency is not what is tested here - threads against SQLite inside
+    Django's own test transaction prove nothing about Postgres row locks. What is
+    tested is the invariant that makes the lock work at all: that the engine's
+    answer and the write that depends on it cannot be separated by a commit.
+
+    ⚠ `TransactionTestCase`, not `TestCase`, and that is the whole point:
+    `TestCase` wraps every test in its own atomic block, so `in_atomic_block`
+    would read True everywhere and both assertions below would be meaningless -
+    one passing for the wrong reason and one impossible to satisfy.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.branch = Branch.objects.create(
+            system=self.system, name="Marina", is_main=True,
+            timezone="UTC", booking_capacity=10, booking_slot_minutes=60,
+            booking_min_notice_hours=0, booking_max_days_ahead=60,
+        )
+        for weekday in range(7):
+            BranchHours.objects.create(
+                branch=self.branch, weekday=weekday,
+                opens_at=time(9, 0), closes_at=time(17, 0),
+            )
+        self.service = Service.objects.create(
+            system=self.system, name="Whale tour", slug="whale-tour",
+            price=Decimal("500.00"), currency="MXN", duration=240,
+            booking_enabled=True, booking_pay_in_person=True,
+            booking_party_enabled=True, booking_party_max=8,
+        )
+
+    def _slot(self):
+        tomorrow = (timezone.now() + timedelta(days=1)).date()
+        for offset in range(7):
+            slots = slots_for_day(self.service, self.branch, tomorrow + timedelta(days=offset))
+            if slots:
+                return slots[0]
+        raise AssertionError("the fixture branch offers no slots at all")
+
+    def test_the_assignment_runs_inside_a_transaction(self):
+        seen = {}
+        real = orders_views.assign_for_slot
+
+        def spy(*args, **kwargs):
+            seen["in_atomic"] = transaction.get_connection().in_atomic_block
+            return real(*args, **kwargs)
+
+        with patch.object(orders_views, "assign_for_slot", side_effect=spy):
+            response = self.client.post(
+                "/api/bookings/checkout/",
+                {
+                    "service": self.service.pk,
+                    "branch": self.branch.pk,
+                    "fulfillment": "branch",
+                    "starts_at": self._slot().isoformat(),
+                    "payment_option": "in_person",
+                    "party_size": 4,
+                    "contact": {"name": "Ada", "email": "ada@example.test"},
+                    "locale": "en",
+                },
+                content_type="application/json",
+                HTTP_X_WEBSITE_HOST="acme.test",
+            )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(seen["in_atomic"])
+
+    def test_the_qr_write_is_deferred_out_of_the_lock(self):
+        """A round-trip to object storage under a row lock would queue every
+        other checkout at this branch behind the network - the same mistake
+        `_open_order` already avoids for a cart order."""
+        seen = {}
+        real = orders_views.attach_order_qr
+
+        def spy(order):
+            seen["in_atomic"] = transaction.get_connection().in_atomic_block
+            return real(order)
+
+        with patch.object(orders_views, "attach_order_qr", side_effect=spy):
+            response = self.client.post(
+                "/api/bookings/checkout/",
+                {
+                    "service": self.service.pk,
+                    "branch": self.branch.pk,
+                    "fulfillment": "branch",
+                    "starts_at": self._slot().isoformat(),
+                    "payment_option": "in_person",
+                    "contact": {"name": "Ada", "email": "ada@example.test"},
+                    "locale": "en",
+                },
+                content_type="application/json",
+                HTTP_X_WEBSITE_HOST="acme.test",
+            )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertFalse(seen["in_atomic"])

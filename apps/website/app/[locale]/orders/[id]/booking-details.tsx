@@ -90,6 +90,22 @@ export async function BookingDetails({
             <td>{t("bookingDuration")}</td>
             <td>{t("minutes", { count: booking.duration_minutes })}</td>
           </tr>
+          {/* Only for a real party: "1 person" on every haircut is noise. */}
+          {booking.party_size > 1 && (
+            <tr>
+              <td>{t("bookingParty")}</td>
+              <td>{t("bookingPeople", { count: booking.party_size })}</td>
+            </tr>
+          )}
+          {booking.resource_name && (
+            <tr>
+              {/* The tenant's own noun where the resource still exists; a
+                generic fallback once it has been retired, since the label lives
+                on the pool and only the name is snapshotted. */}
+              <td>{booking.resource_unit_label || t("bookingResource")}</td>
+              <td>{booking.resource_name}</td>
+            </tr>
+          )}
           {dueNow > 0 && (
             <tr>
               <td>{t("bookingPaidNow")}</td>

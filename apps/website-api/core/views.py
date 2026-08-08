@@ -1253,7 +1253,7 @@ class BranchListCreateView(APIView):
             return Response(cached)
         # `hours` is nested in the payload, so prefetch it - otherwise a tenant
         # with six locations costs seven queries to render its contact page.
-        qs = Branch.objects.filter(system_id=system_id).prefetch_related("hours")
+        qs = Branch.objects.filter(system_id=system_id).prefetch_related("hours", "resource_pools__resources")
         if not disabled_visible:
             qs = qs.filter(enabled=True)
         data = BranchSerializer(qs, many=True, context={"request": request}).data
@@ -1290,7 +1290,7 @@ class BranchDetailView(APIView):
 
     def _get_object(self, pk):
         try:
-            return Branch.objects.prefetch_related("hours").get(pk=pk)
+            return Branch.objects.prefetch_related("hours", "resource_pools__resources").get(pk=pk)
         except Branch.DoesNotExist:
             return None
 

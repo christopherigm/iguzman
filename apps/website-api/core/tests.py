@@ -28,8 +28,10 @@ from catalog.models import (
 from core import storage as storage_module
 from core.backup import BackupError, restore_archive, write_archive
 from core.models import (
+    BookingResource,
     Branch,
     Event,
+    ResourcePool,
     SiteBackup,
     SuccessStory,
     SuccessStoryImage,
@@ -38,8 +40,9 @@ from core.models import (
     picture,
 )
 from core.tenant_paths import system_id_for, system_id_from_name
+from core.serializers import SystemWriteSerializer
 from core.site_payload import serialize_system, apply_payload
-from orders.models import Order
+from orders.models import Booking, Order
 
 
 class SitePayloadIngredientRoundTripTests(TestCase):
@@ -269,6 +272,43 @@ class SiteBackupRoundTripTests(IsolatedMediaTestCase):
 
         restored = Order.objects.get(public_id=order.public_id)
         self.assertEqual(restored.created_at, placed_at)
+
+    def test_a_bookings_resource_survives_the_round_trip(self):
+        """The reason pools and resources are keyed rather than ridden as
+        `parent=` children: `Booking.resource` points at one, so replacing a
+        branch's resources wholesale would null out the boat on every
+        appointment - or, worse, silently re-point it at a different one."""
+        system = self._system()
+        branch = Branch.objects.create(system=system, name="Marina", timezone="UTC")
+        pool = ResourcePool.objects.create(branch=branch, name="Boats", unit_label="boat")
+        BookingResource.objects.create(pool=pool, name="Panga", capacity=4)
+        marlin = BookingResource.objects.create(pool=pool, name="Marlin", capacity=10)
+
+        order = Order.objects.create(
+            system=system, total=Decimal("500.00"), subtotal=Decimal("500.00"),
+        )
+        starts_at = timezone.now() + timedelta(days=3)
+        Booking.objects.create(
+            order=order, branch=branch, starts_at=starts_at,
+            ends_at=starts_at + timedelta(hours=4), timezone="UTC",
+            duration_minutes=240, party_size=6,
+            resource=marlin, resource_name="Marlin",
+        )
+        path, _ = self._archive(system, sections=("system",))
+
+        Booking.objects.all().delete()
+        Order.objects.all().delete()
+        BookingResource.objects.all().delete()
+        ResourcePool.objects.all().delete()
+        restore_archive(system, path, ["system"], mode="replace")
+
+        restored = Booking.objects.get()
+        self.assertEqual(restored.party_size, 6)
+        self.assertEqual(restored.resource_name, "Marlin")
+        self.assertIsNotNone(restored.resource)
+        self.assertEqual(restored.resource.name, "Marlin")
+        self.assertEqual(restored.resource.capacity, 10)
+        self.assertEqual(restored.resource.pool.unit_label, "boat")
 
     def test_system_fields_are_restored_but_secrets_never_travel(self):
         system = self._system()
@@ -845,3 +885,67 @@ class EventPublishRoundTripTests(TestCase):
             "events": [{"slug": "undated", "name": "Undated"}],
         })
         self.assertFalse(Event.objects.filter(slug="undated").exists())
+
+
+class SystemMapSettingsTests(TestCase):
+    """The basemap a tenant picks, on the way out and on the way in.
+
+    The style is the one map setting with a closed vocabulary, and an unknown id
+    is worse than a refused save: the frontend falls back to OpenStreetMap's
+    standard tiles, so a typo would look exactly like the setting being ignored.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+
+    def test_a_fresh_tenant_reads_as_openstreetmap_with_no_custom_fields(self):
+        res = self.client.get("/api/system/", HTTP_X_WEBSITE_HOST="acme.test")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["map_style"], "osm")
+        self.assertEqual(data["map_tile_url"], "")
+        self.assertEqual(data["map_attribution"], "")
+        self.assertEqual(data["map_attribution_url"], "")
+
+    def test_a_custom_basemap_round_trips_with_its_credit(self):
+        serializer = SystemWriteSerializer(data={
+            "map_style": "custom",
+            "map_tile_url": "https://tiles.example.com/{z}/{x}/{y}.png?key=abc",
+            "map_attribution": "© Example Tiles",
+            "map_attribution_url": "https://example.com/attribution/",
+        })
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save(self.system)
+
+        self.system.refresh_from_db()
+        self.assertEqual(self.system.map_style, "custom")
+        self.assertEqual(
+            self.system.map_tile_url,
+            "https://tiles.example.com/{z}/{x}/{y}.png?key=abc",
+        )
+        self.assertEqual(self.system.map_attribution, "© Example Tiles")
+        self.assertEqual(
+            self.system.map_attribution_url, "https://example.com/attribution/"
+        )
+
+    def test_an_unknown_style_is_refused_rather_than_silently_ignored(self):
+        serializer = SystemWriteSerializer(data={"map_style": "google"})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("map_style", serializer.errors)
+
+    def test_a_leftover_custom_url_under_a_built_in_style_still_saves(self):
+        """Half-filled is the normal state of a form somebody experimented with.
+
+        The frontend only reads these three for "custom", so refusing the save
+        would make the picker feel broken for a change that has no effect.
+        """
+        serializer = SystemWriteSerializer(data={
+            "map_style": "carto-light",
+            "map_tile_url": "https://tiles.example.com/{z}/{x}/{y}.png",
+        })
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save(self.system)
+
+        self.system.refresh_from_db()
+        self.assertEqual(self.system.map_style, "carto-light")

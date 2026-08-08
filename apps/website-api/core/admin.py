@@ -3,6 +3,7 @@ from django.core.cache import cache
 
 from .cache import invalidate_pattern as _invalidate_pattern
 from .models import (
+    BookingResource,
     Branch,
     BranchHours,
     Brand,
@@ -11,6 +12,7 @@ from .models import (
     ContactMessage,
     Event,
     EventImage,
+    ResourcePool,
     SiteBackup,
     SocialPost,
     SuccessStory,
@@ -226,7 +228,8 @@ class BranchAdmin(admin.ModelAdmin):
             ),
             "description": (
                 "Opening hours below are local to this timezone. Capacity is how many "
-                "bookings may overlap here."
+                "<b>people</b> can be booked into the same time here - it is ignored "
+                "once this location defines resource pools."
             ),
         }),
     )
@@ -239,6 +242,57 @@ class BranchAdmin(admin.ModelAdmin):
     def delete_model(self, request, obj):
         cache.delete(f"core:branch:{obj.pk}")
         _invalidate_pattern("core:branches:*")
+        super().delete_model(request, obj)
+
+
+class BookingResourceInline(admin.TabularInline):
+    model = BookingResource
+    extra = 0
+    fields = ("name", "en_name", "capacity", "enabled", "sort_order")
+
+
+@admin.register(ResourcePool)
+class ResourcePoolAdmin(admin.ModelAdmin):
+    """The boats/guides/rooms a branch books against.
+
+    A pool is entirely optional: a branch with none falls back to one implicit
+    resource of `Branch.booking_capacity` seats, which is what every tenant had
+    before pools existed.
+    """
+
+    list_display = ("name", "branch", "unit_label", "customer_selectable", "enabled", "sort_order")
+    list_filter = ("enabled", "customer_selectable", "branch")
+    search_fields = ("name", "en_name", "unit_label")
+    inlines = [BookingResourceInline]
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        self._invalidate(obj)
+
+    def delete_model(self, request, obj):
+        self._invalidate(obj)
+        super().delete_model(request, obj)
+
+    def _invalidate(self, obj):
+        # Only the branch payload here: the availability namespace is cleared by
+        # `orders/signals.py`, which covers this admin, the API and a shell
+        # session alike.
+        cache.delete(f"core:branch:{obj.branch_id}")
+        _invalidate_pattern("core:branches:*")
+
+
+@admin.register(BookingResource)
+class BookingResourceAdmin(admin.ModelAdmin):
+    list_display = ("name", "pool", "capacity", "enabled", "sort_order")
+    list_filter = ("enabled", "pool")
+    search_fields = ("name", "en_name")
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        _invalidate_pattern("core:branch*")
+
+    def delete_model(self, request, obj):
+        _invalidate_pattern("core:branch*")
         super().delete_model(request, obj)
 
 
@@ -394,6 +448,21 @@ class SystemAdmin(admin.ModelAdmin):
                 "The site's logo tiled faintly behind every public page, and the "
                 "page background it sits on. Normally set from the site's CMS, "
                 "which previews the result live."
+            ),
+            "classes": ("collapse",),
+        }),
+        ("Maps", {
+            "fields": (
+                "map_style", "map_tile_url", "map_attribution", "map_attribution_url",
+            ),
+            "description": (
+                "Which basemap every map on this site is drawn from - the contact "
+                "page's locations, an event's pin, and the booking page's map of "
+                "the chosen branch. The three fields below the style are only read "
+                "for 'Custom'. This picks a style, not what the style shows: these "
+                "are raster tiles, so roads, labels and buildings are painted into "
+                "each image before it reaches the browser. Normally set from the "
+                "site's CMS."
             ),
             "classes": ("collapse",),
         }),

@@ -114,6 +114,25 @@ export interface System {
   background_light: string;
   background_dark: string;
   /**
+   * Which basemap every map on the site is painted from - one of the ids in
+   * `@repo/ui`'s `basemaps.ts`, or `"custom"`, in which case the three fields
+   * below are the operator's own. Resolved once by `lib/basemap.ts` and
+   * published to the whole tree by `BasemapProvider`, so no map reads these
+   * columns directly.
+   */
+  map_style: string;
+  /** Only read for `map_style: "custom"` - a `{z}/{x}/{y}` template. */
+  map_tile_url: string;
+  /**
+   * The credit that provider requires, drawn in the map's corner. Blank falls
+   * back to OpenStreetMap's. ⚠ Never render a message key here instead: the
+   * string changes with the tile URL, and an i18n key cannot follow a setting
+   * an operator edits at runtime.
+   */
+  map_attribution: string;
+  /** Where that credit links. Blank draws it as plain text, never someone else's href. */
+  map_attribution_url: string;
+  /**
    * Google Fonts stylesheet URL carrying this tenant's typefaces (one URL can
    * load both families). Empty keeps the platform default. The API restricts it
    * to a Google Fonts host, and the layout re-checks before rendering the

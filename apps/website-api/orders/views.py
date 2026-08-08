@@ -17,7 +17,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from catalog.models import Service
-from core.models import System
+from core.models import Branch, BookingResource, System
 from core.permissions import IsSystemAdmin
 from core.tenancy import host_system, request_system, user_system
 from users.cache import invalidate_cart
@@ -46,10 +46,11 @@ from .serializers import (
     PosCheckoutSerializer,
 )
 from .services.booking import (
+    assign_for_slot,
     availability_range,
     booking_window,
-    is_slot_available,
     resolve_branch,
+    selectable_resources,
     service_duration_minutes,
 )
 from .services.order_emails import (
@@ -374,11 +375,17 @@ class CheckoutView(APIView):
         )
 
 
-def _open_order(system, user, items, *, order_status, payment_method, email):
+def _open_order(system, user, items, *, order_status, payment_method, email, defer_qr=False):
     """Validate a priced basket and write it as an Order plus snapshotted lines.
 
     Returns ``(order, lines, None)``, or ``(None, None, Response)`` carrying the
     4xx that explains the refusal.
+
+    `defer_qr` hands the QR write back to the caller. Booking checkout calls this
+    from *inside* a row lock it holds to serialise seat allocation, and the whole
+    point of writing the PNG outside a transaction is lost if it happens under
+    someone else's - so that caller takes the code on itself once the lock is
+    released.
 
     Shared by the customer checkout and the POS, which is the point: every rule
     that decides what an order *is* - one currency, nothing sold that the tenant
@@ -460,7 +467,8 @@ def _open_order(system, user, items, *, order_status, payment_method, email):
     # and holding a row lock open across it would put every checkout in a queue
     # behind the network. Best-effort by construction - a failure here logs and
     # leaves `qr_code` blank rather than costing the sale (see `services.qr`).
-    attach_order_qr(order)
+    if not defer_qr:
+        attach_order_qr(order)
 
     return order, lines, None
 
@@ -858,7 +866,14 @@ class OrderPayView(APIView):
         of which make it un-bookable however free it looks.
 
         `exclude_booking_id` is what stops the booking from refusing itself: it
-        is `pending`, so it is occupying the very slot it is asking to pay for.
+        is `pending`, so it is occupying the very seats it is asking to pay for.
+
+        **The resource is re-derived too, and may move.** The party's original
+        boat is offered back first (`preferred_id`); if the branch has been
+        rearranged since, best fit seats them elsewhere and the assignment is
+        updated. Only "no resource can take this party" is a refusal - flatly
+        rejecting a payment because one particular guide is now busy would be a
+        worse answer than quietly booking them with another.
         """
         booking = getattr(order, "booking", None)
         if booking is None:
@@ -868,16 +883,26 @@ class OrderPayView(APIView):
         # payment through rather than block it on missing provenance.
         if booking.service is None:
             return None
-        if not is_slot_available(
+
+        assignment = assign_for_slot(
             booking.service,
             booking.branch,
             booking.starts_at,
+            party_size=booking.party_size,
+            preferred_id=booking.resource_id,
             exclude_booking_id=booking.pk,
-        ):
+        )
+        if not assignment.fits:
             return Response(
                 {"detail": "That time is no longer available.", "code": "SLOT_UNAVAILABLE"},
                 status=status.HTTP_409_CONFLICT,
             )
+
+        new_resource_id = assignment.resource.pk if assignment.resource else None
+        if new_resource_id != booking.resource_id:
+            booking.resource = assignment.resource
+            booking.resource_name = assignment.resource.name if assignment.resource else ""
+            booking.save(update_fields=["resource", "resource_name", "updated_at"])
         return None
 
     def _existing_session(self, order, system):
@@ -1364,6 +1389,29 @@ class StripeWebhookView(APIView):
 # is bounded here rather than trusted from the query string.
 MAX_AVAILABILITY_DAYS = 62
 
+# The hard ceiling on a requested party size, whatever the service says. Same
+# reasoning as `MAX_AVAILABILITY_DAYS`: the endpoint is public and unauthenticated,
+# and party size feeds the seat arithmetic on every candidate slot, so an
+# unbounded one is a cheap way to make the engine work hard (and to mint cache
+# keys). The service's own `booking_party_max` is applied on top of this.
+MAX_PARTY_SIZE = 100
+
+
+def _party_param(request, service):
+    """The party size a request is asking about, clamped to what is offered.
+
+    Never trusted as given, and never allowed past the service's own maximum: the
+    availability payload has to answer the same question checkout will, and a
+    calendar painted for a party the service would refuse is a calendar full of
+    slots that refuse themselves on submit.
+    """
+    low, high = service.booking_party_range
+    try:
+        party = int(request.query_params.get("party") or low)
+    except (TypeError, ValueError):
+        party = low
+    return max(low, min(party, high, MAX_PARTY_SIZE))
+
 
 def _bookable_service(system, service_id):
     """The service a booking request names, or None.
@@ -1379,7 +1427,7 @@ def _bookable_service(system, service_id):
         Service.objects.filter(
             pk=service_id, system=system, enabled=True, booking_enabled=True,
         )
-        .prefetch_related("booking_branches__hours")
+        .prefetch_related("booking_branches__hours", "booking_pools__resources")
         .first()
     )
 
@@ -1398,15 +1446,19 @@ def _request_system(request):
 
 class BookingAvailabilityView(APIView):
     """
-    GET /api/bookings/availability/?service=<id>&branch=<id>&start=<YYYY-MM-DD>&days=<n>
+    GET /api/bookings/availability/
+        ?service=<id>&branch=<id>&start=<YYYY-MM-DD>&days=<n>&party=<n>&resource=<id>
 
-    The calendar's data source: which local dates have free slots, and what those
-    slots are. Public, because a visitor picks an appointment before they have
-    any reason to sign in.
+    The calendar's data source: which local dates have free slots, what those
+    slots are, and how many seats each still has. Public, because a visitor picks
+    an appointment before they have any reason to sign in.
 
     Returns UTC instants plus the branch's `timezone`, never local strings. The
     browser formats them with that zone, so a customer abroad reads the hour they
     are expected to arrive rather than the hour on their own wall.
+
+    `party` and `resource` both change the answer, so both are clamped/validated
+    here and both are part of the cache key.
     """
 
     permission_classes = (AllowAny,)
@@ -1442,13 +1494,34 @@ class BookingAvailabilityView(APIView):
             days = 30
         days = max(1, min(days, MAX_AVAILABILITY_DAYS))
 
-        cache_key = availability_key(service.pk, branch.pk if branch else None, start, days)
+        party = _party_param(request, service)
+
+        # The customer's own pick, honoured only when the pool offering it is
+        # `customer_selectable` and reachable from the resolved branch - the same
+        # rule checkout applies, because a resource the calendar filtered by and
+        # a resource checkout would refuse must not be two different sets.
+        pickable = selectable_resources(service, branch)
+        resource_id = None
+        raw_resource = request.query_params.get("resource")
+        if raw_resource not in (None, "", "0"):
+            try:
+                wanted = int(raw_resource)
+            except (TypeError, ValueError):
+                wanted = None
+            resource_id = next((r.pk for r, _ in pickable if r.pk == wanted), None)
+
+        cache_key = availability_key(
+            service.pk, branch.pk if branch else None, start, days, party, resource_id,
+        )
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
 
-        by_day = availability_range(service, branch, start, days)
+        by_day = availability_range(
+            service, branch, start, days, party_size=party, resource_id=resource_id,
+        )
         earliest, last_date = booking_window(branch, now=dj_timezone.now())
+        party_min, party_max = service.booking_party_range
         payload = {
             "service": service.pk,
             "branch": branch.pk if branch else None,
@@ -1457,13 +1530,37 @@ class BookingAvailabilityView(APIView):
             "start": start.isoformat(),
             "days": days,
             "last_bookable_date": last_date.isoformat(),
-            # A flat map of local date -> the day's start instants. The frontend
-            # keys its calendar straight off it, so a date absent from the map is
-            # a date that cannot be selected.
+            # A flat map of local date -> the day's slots. The frontend keys its
+            # calendar straight off it, so a date absent from the map is a date
+            # that cannot be selected.
+            #
+            # `seats_left` is the largest free block on a *single* resource, not
+            # the sum across them: it answers "can the six of us take the 10:00?",
+            # which two boats with three free seats each answer no.
             "availability": {
-                day.isoformat(): [slot.isoformat() for slot in slots]
+                day.isoformat(): [
+                    {"at": slot.at.isoformat(), "seats_left": slot.seats_left} for slot in slots
+                ]
                 for day, slots in sorted(by_day.items())
             },
+            "party": party,
+            "party_min": party_min,
+            "party_max": party_max,
+            "party_enabled": service.booking_party_enabled,
+            # Only ever populated for a `customer_selectable` pool. An empty list
+            # is the ordinary case and means the booking page shows no picker.
+            "resource": resource_id,
+            "resources": [
+                {
+                    "id": r.pk,
+                    "name": r.name,
+                    "en_name": r.en_name or "",
+                    "capacity": r.capacity,
+                    "unit_label": pool.unit_label or "",
+                    "en_unit_label": pool.en_unit_label or "",
+                }
+                for r, pool in pickable
+            ],
         }
         cache.set(cache_key, payload, AVAILABILITY_CACHE_TTL)
         return Response(payload)
@@ -1538,15 +1635,35 @@ class BookingCheckoutView(APIView):
         if error is not None:
             return Response({"detail": error, "code": "BRANCH_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
 
-        starts_at = data["starts_at"].astimezone(dt_timezone.utc)
-        if not is_slot_available(service, branch, starts_at):
+        # Party size is never trusted: it multiplies the price and consumes that
+        # many seats, so a body naming 40 people on a service that accepts 8 has
+        # to be refused, not clamped - the customer would be charged for a party
+        # they did not ask for. A service with party off is forced back to 1
+        # whatever the body says.
+        party_min, party_max = service.booking_party_range
+        party_size = data.get("party_size") or 1
+        if not service.booking_party_enabled:
+            party_size = 1
+        elif not (party_min <= party_size <= party_max):
             return Response(
                 {
-                    "detail": "That time is no longer available. Please pick another.",
-                    "code": "SLOT_UNAVAILABLE",
+                    "detail": f"This service takes between {party_min} and {party_max} people.",
+                    "code": "PARTY_SIZE_INVALID",
                 },
-                status=status.HTTP_409_CONFLICT,
+                status=status.HTTP_400_BAD_REQUEST,
             )
+
+        # Same rule the availability endpoint applies: a pick is honoured only
+        # when its pool is customer-selectable and belongs to the resolved branch.
+        # Anything else is dropped rather than refused - it is a preference, and
+        # the engine will seat them somewhere.
+        wanted_resource = data.get("resource")
+        preferred_id = next(
+            (r.pk for r, _ in selectable_resources(service, branch) if r.pk == wanted_resource),
+            None,
+        )
+
+        starts_at = data["starts_at"].astimezone(dt_timezone.utc)
 
         user = request.user if request.user.is_authenticated else None
         contact = data.get("contact") or {}
@@ -1559,55 +1676,113 @@ class BookingCheckoutView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # One unsaved cart line for the service, so `_open_order` prices and
-        # snapshots it exactly as it would in a cart. Quantity is always 1: an
-        # appointment is one appointment, and "2 x haircut at 10:00" is two
-        # bookings, not a quantity.
-        item = CartItem(system=system, service=service, quantity=1)
-        order, lines, order_error = _open_order(
-            system,
-            user,
-            [item],
-            # `placed` for pay-in-person (nothing will ever confirm it but the
-            # tenant), `pending` when a Stripe session is about to be opened -
-            # the same split the cart checkout makes.
-            order_status=(
-                Order.STATUS_PLACED
-                if payment_option == Booking.PAYMENT_IN_PERSON
-                else Order.STATUS_PENDING
-            ),
-            payment_method=(
-                Order.PAYMENT_IN_STORE
-                if payment_option == Booking.PAYMENT_IN_PERSON
-                else Order.PAYMENT_ONLINE
-            ),
-            email=email,
-        )
-        if order_error is not None:
-            return order_error
-
         duration = service_duration_minutes(service)
-        amount_now, amount_later = _booking_amounts(order.total, service, payment_option)
 
-        booking = Booking.objects.create(
-            order=order,
-            service=service,
-            branch=branch,
-            branch_name=(branch.name or "") if branch else "",
-            fulfillment=fulfillment,
-            address=(data.get("address") or "").strip() if fulfillment == Booking.FULFILLMENT_ON_PREMISES else "",
-            starts_at=starts_at,
-            ends_at=starts_at + timedelta(minutes=duration),
-            timezone=(branch.timezone if branch else str(dj_timezone.get_default_timezone())),
-            duration_minutes=duration,
-            payment_option=payment_option,
-            deposit_percent=(
-                service.booking_deposit_percent if payment_option == Booking.PAYMENT_DEPOSIT else 0
-            ),
-            amount_due_now=amount_now,
-            amount_due_later=amount_later,
-            notes=(data.get("notes") or "").strip(),
-        )
+        # ── The critical section ───────────────────────────────────────────────
+        # Checking availability and writing the booking must be one atomic step.
+        # Un-serialised, two checkouts can both see the last four seats free and
+        # both take them - a window that was one row wide when capacity counted
+        # bookings, and is a real over-sell now that a party of six can walk into
+        # it with money attached.
+        #
+        # The lock is taken on the Branch (the System for a branchless tenant)
+        # because that is the row every booking at one location contends for.
+        # Coarse on purpose: contention at a single physical place is inherently
+        # serial, and a finer lock per resource could not cover the best-fit
+        # decision that reads all of them.
+        #
+        # ⚠ Stripe stays *outside* this block. A network round-trip holding a row
+        # lock would serialise every checkout at the branch behind the slowest
+        # call to a third party - the same mistake the QR write already avoids.
+        with transaction.atomic():
+            if branch is not None:
+                Branch.objects.select_for_update().filter(pk=branch.pk).first()
+            else:
+                System.objects.select_for_update().filter(pk=system.pk).first()
+
+            assignment = assign_for_slot(
+                service, branch, starts_at, party_size=party_size, preferred_id=preferred_id,
+            )
+            if not assignment.fits:
+                return Response(
+                    {
+                        "detail": "That time is no longer available. Please pick another.",
+                        "code": "SLOT_UNAVAILABLE",
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            # One unsaved cart line for the service, so `_open_order` prices and
+            # snapshots it exactly as it would in a cart.
+            #
+            # ⚠ Quantity is the **party size**, and this is deliberately not the
+            # "2 x haircut at 10:00 is two bookings" case it used to be. Both
+            # readings are right, for different services: an appointment is one
+            # person's turn in a chair, and booking two of them is two separate
+            # slots that a single quantity cannot express. A *departure* - a boat,
+            # a tour, a table - is one slot that several people share, priced per
+            # head. `booking_party_enabled` is which of the two a service is, and
+            # the quantity is only ever above 1 when the tenant said so.
+            item = CartItem(system=system, service=service, quantity=party_size)
+            order, lines, order_error = _open_order(
+                system,
+                user,
+                [item],
+                # `placed` for pay-in-person (nothing will ever confirm it but the
+                # tenant), `pending` when a Stripe session is about to be opened -
+                # the same split the cart checkout makes.
+                order_status=(
+                    Order.STATUS_PLACED
+                    if payment_option == Booking.PAYMENT_IN_PERSON
+                    else Order.STATUS_PENDING
+                ),
+                payment_method=(
+                    Order.PAYMENT_IN_STORE
+                    if payment_option == Booking.PAYMENT_IN_PERSON
+                    else Order.PAYMENT_ONLINE
+                ),
+                email=email,
+                # See `_open_order`: the QR is written after the lock is released.
+                defer_qr=True,
+            )
+            if order_error is not None:
+                return order_error
+
+            # Works off `order.total` and so multiplies with the party for free -
+            # a 30% deposit on four seats is 30% of four seats.
+            amount_now, amount_later = _booking_amounts(order.total, service, payment_option)
+
+            booking = Booking.objects.create(
+                order=order,
+                service=service,
+                branch=branch,
+                branch_name=(branch.name or "") if branch else "",
+                fulfillment=fulfillment,
+                address=(
+                    (data.get("address") or "").strip()
+                    if fulfillment == Booking.FULFILLMENT_ON_PREMISES
+                    else ""
+                ),
+                starts_at=starts_at,
+                ends_at=starts_at + timedelta(minutes=duration),
+                timezone=(branch.timezone if branch else str(dj_timezone.get_default_timezone())),
+                duration_minutes=duration,
+                party_size=party_size,
+                resource=assignment.resource,
+                resource_name=(assignment.resource.name if assignment.resource else ""),
+                payment_option=payment_option,
+                deposit_percent=(
+                    service.booking_deposit_percent if payment_option == Booking.PAYMENT_DEPOSIT else 0
+                ),
+                amount_due_now=amount_now,
+                amount_due_later=amount_later,
+                notes=(data.get("notes") or "").strip(),
+            )
+
+        # Both deferred out of the critical section above: a round-trip to object
+        # storage under a row lock would queue every other checkout at this branch
+        # behind the network.
+        attach_order_qr(order)
 
         order.phone = (contact.get("phone") or "").strip()
         order.shipping_name = (contact.get("name") or "").strip()
@@ -1717,7 +1892,7 @@ class AdminBookingListView(APIView):
 
         qs = (
             Booking.objects.filter(order__system=system)
-            .select_related("order", "order__user", "service", "branch")
+            .select_related("order", "order__user", "service", "branch", "resource", "resource__pool")
             .prefetch_related("order__lines")
         )
 
@@ -1756,7 +1931,7 @@ class AdminBookingDetailView(APIView):
             return None
         return (
             Booking.objects.filter(pk=pk, order__system=system)
-            .select_related("order", "order__user", "service", "branch")
+            .select_related("order", "order__user", "service", "branch", "resource", "resource__pool")
             .first()
         )
 
@@ -1774,6 +1949,9 @@ class AdminBookingDetailView(APIView):
         serializer = AdminBookingActionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         action = serializer.validated_data["action"]
+
+        if action == AdminBookingActionSerializer.REASSIGN:
+            return self._reassign(request, booking, serializer.validated_data)
 
         if action == AdminBookingActionSerializer.CONFIRM:
             booking.status = Booking.STATUS_CONFIRMED
@@ -1802,5 +1980,74 @@ class AdminBookingDetailView(APIView):
         invalidate_availability()
         if booking.order.user_id:
             invalidate_orders(booking.order.user_id, booking.order.system_id)
+
+        return Response(AdminBookingSerializer(booking, context={"request": request}).data)
+
+    def _reassign(self, request, booking, data):
+        """Move a party to another resource, re-validated through the engine.
+
+        **Never an inline seat check.** The whole design rests on one authority
+        deciding what fits, and a second opinion written here is exactly the drift
+        `orders/services/booking.py` exists to prevent - the difference would show
+        up as a boat the CMS says is free and checkout refuses.
+
+        `force` is the deliberate override, and it is not a loophole: an operator
+        sometimes knows what the seat count cannot (a toddler on a lap, a guide
+        riding along), and denying them one would only make them cancel and
+        re-enter the booking to route around us - losing its order, its payment
+        and its history in the process.
+        """
+        if booking.status in (Booking.STATUS_COMPLETED, Booking.STATUS_CANCELED):
+            return Response(
+                {
+                    "detail": "A completed or canceled booking cannot be reassigned.",
+                    "code": "BOOKING_CLOSED",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        wanted_id = data.get("resource")
+        resource = None
+        if wanted_id is not None:
+            # Scoped through the pool's branch to the caller's own System, so a
+            # crafted id can neither reach another tenant's boats nor a pool at a
+            # location this booking is not at.
+            resource = BookingResource.objects.filter(
+                pk=wanted_id,
+                pool__branch=booking.branch,
+                pool__branch__system=booking.order.system,
+            ).select_related("pool").first()
+            if resource is None:
+                return Response(
+                    {"detail": "That resource is not available here.", "code": "RESOURCE_INVALID"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        if not data.get("force") and booking.service is not None:
+            assignment = assign_for_slot(
+                booking.service,
+                booking.branch,
+                booking.starts_at,
+                party_size=booking.party_size,
+                preferred_id=wanted_id,
+                exclude_booking_id=booking.pk,
+            )
+            # `fits` alone is not enough: best fit would happily seat them
+            # somewhere *else*, and silently honouring a reassignment to a
+            # different resource than the operator picked is worse than refusing.
+            chosen_id = assignment.resource.pk if assignment.resource else None
+            if not assignment.fits or chosen_id != wanted_id:
+                return Response(
+                    {
+                        "detail": "That resource cannot take this party at this time.",
+                        "code": "RESOURCE_FULL",
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+        booking.resource = resource
+        booking.resource_name = resource.name if resource is not None else ""
+        booking.save(update_fields=["resource", "resource_name", "updated_at"])
+        invalidate_availability()
 
         return Response(AdminBookingSerializer(booking, context={"request": request}).data)

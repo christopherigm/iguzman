@@ -21,6 +21,11 @@ export interface BuyableCardViewProps {
   serviceLabel: string;
   menuLabel?: string;
   fromLabel?: string;
+  /** "per person" suffix for a service whose booking is priced per head. The
+   *  symmetric case to `fromLabel`: the number on the card is not the whole
+   *  story, and saying nothing would quote a family of four one quarter of what
+   *  they will actually pay. */
+  perPersonLabel?: string;
   /** Absolute origin, for the share link. Only the server knows the request
    *  host, so it is always passed in. */
   origin: string;
@@ -51,6 +56,7 @@ export function BuyableCardView({
   serviceLabel,
   menuLabel,
   fromLabel,
+  perPersonLabel,
   origin,
   isAdmin,
   editLabel,
@@ -339,6 +345,18 @@ export function BuyableCardView({
             >
               {formatPrice(effectivePrice, data.currency)}
             </Typography>
+            {kind === "service" &&
+              perPersonLabel &&
+              "booking_party_enabled" in data &&
+              data.booking_party_enabled && (
+                <Typography
+                  as="span"
+                  variant="caption"
+                  color="var(--foreground)"
+                >
+                  {perPersonLabel}
+                </Typography>
+              )}
             {effectiveCompare &&
               parseFloat(effectiveCompare) > parseFloat(effectivePrice) && (
                 <Typography

@@ -907,6 +907,64 @@ class System(Common):
         help_text="Page background color in the dark theme.",
     )
 
+    # ── Maps ──────────────────────────────────────────────────────────────────
+    # Which basemap every map on this tenant's site is painted from - the contact
+    # page's locations, an event's pin, and the booking page's map of the chosen
+    # branch. One setting for all of them, so a customer cannot be shown two
+    # different worlds on two pages of the same site.
+    #
+    # ⚠ This chooses a *style*, not what the style contains. The maps draw raster
+    # tiles, and roads, labels and building footprints are baked into each PNG
+    # before it arrives, so there is no "hide the houses" flag here and there
+    # cannot be one - the only way to that is `custom` below, pointed at a style
+    # authored in a hosted provider's editor with the layer deleted. See
+    # `packages/ui/src/core-elements/basemaps.ts`, which holds the matching list
+    # and each style's required credit.
+    map_style = models.CharField(
+        max_length=32,
+        default="osm",
+        choices=[
+            ("osm", "OpenStreetMap standard"),
+            ("carto-light", "CARTO Positron (pale)"),
+            ("carto-dark", "CARTO Dark Matter"),
+            ("carto-voyager", "CARTO Voyager"),
+            ("custom", "Custom tile server"),
+        ],
+        help_text="Which basemap this site's maps are drawn from. 'Custom' uses "
+                  "the tile URL below - a provider needing an API key "
+                  "(MapTiler, Mapbox, Thunderforest), or a tile server of your own.",
+    )
+    map_tile_url = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+        help_text="Only used when the style is 'Custom'. A {z}/{x}/{y} template, "
+                  "e.g. https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=YOUR_KEY",
+    )
+    map_attribution = models.CharField(
+        max_length=200,
+        blank=True,
+        default="",
+        help_text="Only used when the style is 'Custom'. The credit drawn in the "
+                  "map's corner - required by every tile provider. Left blank, "
+                  "the OpenStreetMap credit is used.",
+    )
+    # Where that credit links. Separate from the string because the two are
+    # separate requirements: a provider's terms ask for a visible credit, and
+    # most also ask that it point back at them. The frontend used to anchor
+    # every credit to openstreetmap.org/copyright, so a "© MapTiler" named one
+    # party and linked another; blank here renders the credit as plain text
+    # rather than borrowing that href. See `basemaps.ts` -> `attributionUrl`.
+    map_attribution_url = models.URLField(
+        max_length=300,
+        blank=True,
+        default="",
+        help_text="Only used when the style is 'Custom'. Where the credit links - "
+                  "most providers require it to point back at them, e.g. "
+                  "https://www.maptiler.com/copyright/ . Left blank, the credit "
+                  "is drawn as plain text.",
+    )
+
     # ── Typography ────────────────────────────────────────────────────────────
     # The tenant's own typeface, loaded from Google Fonts. One URL carries both
     # families (`css2?family=A&family=B`), and the two name fields say which of
@@ -1192,21 +1250,46 @@ class Branch(Common):
         validators=[validate_timezone],
         help_text="IANA timezone name (e.g. America/Mexico_City). Opening hours are local to this.",
     )
-    # How many bookings may overlap. 1 is the one-person business working out of
-    # their home; a three-chair salon sets 3. Deliberately on the branch and not
-    # the service: what it really counts is people or rooms, which are shared by
-    # every service the branch offers - per-service capacity would let three
-    # different services each book the only chair at 10am.
+    # How many **people** may be booked into one moment here. 1 is the one-person
+    # business working out of their home; a three-chair salon sets 3; a boat with
+    # ten seats sets 10. Deliberately on the branch and not the service: what it
+    # really counts is people, chairs or rooms, which are shared by every service
+    # the branch offers - per-service capacity would let three different services
+    # each book the only chair at 10am.
+    #
+    # ⚠ The unit is **seats, not bookings**. It used to be bookings, and the two
+    # only agree while every booking is for one person; a party of four now
+    # consumes four of these. This field is the fallback used when the branch has
+    # no `ResourcePool` rows - one implicit resource of this capacity, which is
+    # exactly the behaviour a tenant that never opens the pools editor had before
+    # pools existed (see `orders.services.booking.resources_for`).
     booking_capacity = models.PositiveIntegerField(
         default=1,
-        help_text="How many bookings may overlap at this location (staff, chairs, rooms).",
+        help_text=(
+            "How many people can be booked into the same time here (seats, chairs, places). "
+            "Ignored once this location defines resource pools - their capacities are used instead."
+        ),
     )
-    # The grid start times are offered on. The *length* of a slot is the
-    # Service's own `duration`, so a 90-minute service on a 30-minute grid can
-    # start at 9:00, 9:30, 10:00 - it does not force 90-minute blocks.
+    # The grid start times are offered on. **Empty means "follow the service's
+    # own duration"**, which is the default and what a customer reading the times
+    # expects: a 60-minute tour offered at 9:00, 10:00, 11:00 rather than at
+    # every half hour - where, with one boat, taking the 9:00 kills the 9:30
+    # anyway and half the buttons on screen are there to disappear.
+    #
+    # A value here is an explicit override for the branch that genuinely wants
+    # starts closer together than one appointment is long: a three-chair salon
+    # can begin a 90-minute colour every 30 minutes because capacity, not the
+    # clock, is what limits it. It is per *branch* while the duration is per
+    # *service*, so an override applies to every service sold out of the
+    # location - which is the reason it is not the default.
     booking_slot_minutes = models.PositiveIntegerField(
-        default=30,
-        help_text="Minutes between offered start times (the booking grid).",
+        null=True,
+        blank=True,
+        default=None,
+        help_text=(
+            "Minutes between offered start times. Leave empty to space them by "
+            "each service's own duration."
+        ),
     )
     # How soon is too soon. Stops a customer booking the 9:00 slot at 8:58.
     booking_min_notice_hours = models.PositiveIntegerField(
@@ -1300,6 +1383,108 @@ class BranchHours(models.Model):
                 raise ValidationError({"break_end": "Break end must be after break start."})
             if self.break_start < self.opens_at or self.break_end > self.closes_at:
                 raise ValidationError({"break_start": "The break must fall inside opening hours."})
+
+
+class ResourcePool(models.Model):
+    """A named group of interchangeable things a booking consumes seats on.
+
+    "Large boats", "Guides", "Treatment rooms". A pool exists so the availability
+    engine can answer a question `Branch.booking_capacity` alone cannot: *can
+    these six people travel together?* A branch with ten seats spread over five
+    two-seat boats has capacity for ten customers and room for no party of three,
+    and only a per-resource model can tell those apart.
+
+    **Pools are entirely opt-in.** A branch with no pools falls back to one
+    implicit resource carrying `Branch.booking_capacity`, which reproduces the
+    pre-pool behaviour exactly - see `orders.services.booking.resources_for`.
+    That fallback is the whole safety story for every tenant already taking
+    bookings, so it must not be "tidied" into a data migration that creates a
+    real pool per branch: the implicit case has to keep working for a branch
+    created tomorrow, too.
+
+    Tenancy flows pool → branch → system, like `BranchHours`, rather than through
+    a second `system` FK that could disagree with `branch.system`.
+    """
+
+    branch = models.ForeignKey(
+        Branch, on_delete=models.CASCADE, related_name="resource_pools",
+    )
+
+    name = models.CharField(max_length=255)
+    en_name = models.CharField(max_length=255, null=True, blank=True)
+
+    # The singular noun for one member of the pool - "boat", "guide", "table".
+    # Used in customer-facing copy ("3 seats left on this boat") and in the CMS,
+    # which is why it is translated like every other display string here.
+    unit_label = models.CharField(
+        max_length=64,
+        null=True,
+        blank=True,
+        help_text='What one of these is called, singular: "boat", "guide", "table".',
+    )
+    en_unit_label = models.CharField(max_length=64, null=True, blank=True)
+
+    # Whether the customer gets to choose *which* one. Off is the common case -
+    # a salon assigns whichever chair is free and the customer never hears about
+    # it - and it is what keeps `BookingResource.name` an internal label. Turning
+    # it on publishes those names on the booking page.
+    customer_selectable = models.BooleanField(
+        default=False,
+        help_text="Let the customer pick a specific one when booking.",
+    )
+
+    enabled = models.BooleanField(default=True)
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Resource pool"
+        verbose_name_plural = "Resource pools"
+        ordering = ["sort_order", "pk"]
+
+    def __str__(self):
+        return f"{self.name} ({self.branch})"
+
+
+class BookingResource(models.Model):
+    """One bookable thing inside a pool, with the number of people it holds.
+
+    **One row per resource that differs in capacity or that a customer can pick
+    by name.** Six identical eight-seat tables are *one* row with `capacity=48`,
+    not six rows - the engine only needs to tell parties apart from each other,
+    and six rows would make it refuse a party of ten that four of those tables
+    could seat together. Two boats of different sizes are two rows, because which
+    one a party of six lands on is a real question with a real answer.
+
+    `capacity` is in **people**, matching `Branch.booking_capacity`. A resource
+    that is not really about seating (one guide, one chair) simply keeps the
+    default of 1.
+    """
+
+    pool = models.ForeignKey(
+        ResourcePool, on_delete=models.CASCADE, related_name="resources",
+    )
+
+    name = models.CharField(max_length=255)
+    # Only ever shown when the pool is `customer_selectable`; a proper noun
+    # ("Montse", "Panga Marlin") leaves it blank and reads the same in every
+    # locale.
+    en_name = models.CharField(max_length=255, null=True, blank=True)
+
+    capacity = models.PositiveIntegerField(
+        default=1,
+        help_text="How many people this one holds.",
+    )
+
+    enabled = models.BooleanField(default=True)
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Booking resource"
+        verbose_name_plural = "Booking resources"
+        ordering = ["sort_order", "pk"]
+
+    def __str__(self):
+        return f"{self.name} ({self.pool.name})"
 
 
 class ContactMessage(Common):

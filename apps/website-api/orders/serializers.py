@@ -114,6 +114,11 @@ class BookingSerializer(serializers.ModelSerializer):
 
     branch_name = serializers.SerializerMethodField()
     service_slug = serializers.CharField(source="service.slug", read_only=True, default=None)
+    resource_name = serializers.SerializerMethodField()
+    # The singular noun for whatever was assigned - "boat", "guide", "table" - so
+    # the order page can say "Boat: Panga Marlin" in the tenant's own vocabulary
+    # instead of a generic label the customer never saw while booking.
+    resource_unit_label = serializers.SerializerMethodField()
 
     class Meta:
         model = Booking
@@ -122,6 +127,7 @@ class BookingSerializer(serializers.ModelSerializer):
             "starts_at", "ends_at", "timezone", "duration_minutes",
             "address", "notes", "payment_option", "deposit_percent",
             "amount_due_now", "amount_due_later", "service_slug",
+            "party_size", "resource_name", "resource_unit_label",
         ]
 
     def get_branch_name(self, obj):
@@ -134,6 +140,22 @@ class BookingSerializer(serializers.ModelSerializer):
         if obj.branch is not None and obj.branch.name:
             return obj.branch.name
         return obj.branch_name or None
+
+    def get_resource_name(self, obj):
+        """Same live-then-snapshot rule as the branch, and for the same reason:
+        a renamed boat should read correctly on an upcoming trip, and a retired
+        one should still render on the record of a past trip."""
+        if obj.resource is not None and obj.resource.name:
+            return obj.resource.name
+        return obj.resource_name or None
+
+    def get_resource_unit_label(self, obj):
+        # Only available while the resource still exists - the label lives on the
+        # pool, and there is deliberately no third snapshot column for a word that
+        # is decoration on a name we already kept.
+        if obj.resource is not None:
+            return obj.resource.pool.unit_label or None
+        return None
 
 
 class BookingSummarySerializer(serializers.ModelSerializer):
@@ -148,7 +170,7 @@ class BookingSummarySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Booking
-        fields = ["status", "fulfillment", "branch_name", "starts_at", "timezone"]
+        fields = ["status", "fulfillment", "branch_name", "starts_at", "timezone", "party_size"]
 
     def get_branch_name(self, obj):
         if obj.branch is not None and obj.branch.name:
@@ -464,6 +486,17 @@ class BookingCheckoutSerializer(serializers.Serializer):
     address = serializers.CharField(required=False, allow_blank=True, default="")
     notes = serializers.CharField(required=False, allow_blank=True, default="")
     locale = serializers.CharField(max_length=8, required=False, default="en")
+    # How many people. Bounded loosely here and *properly* in the view, against
+    # the service's own `booking_party_range` - the serializer has no service to
+    # check against, and a body naming a party the service does not accept must
+    # be refused rather than clamped, so the customer is never charged for a
+    # different number of people than they asked for.
+    party_size = serializers.IntegerField(min_value=1, max_value=1000, required=False, default=1)
+    # The customer's pick of boat/guide/room. A hint, not an instruction: the
+    # view honours it only when its pool is `customer_selectable` and reachable
+    # from the resolved branch, and falls back to best fit when it has filled up
+    # since the calendar was painted.
+    resource = serializers.IntegerField(required=False, allow_null=True)
     # Reused verbatim from cart checkout: a booking always needs a way to reach
     # the customer, guest or not, because someone has to be told if the
     # appointment has to move.
@@ -508,6 +541,8 @@ class AdminBookingSerializer(serializers.ModelSerializer):
     customer_phone = serializers.CharField(source="order.phone", read_only=True)
     service_name = serializers.SerializerMethodField()
     branch_name = serializers.SerializerMethodField()
+    resource_name = serializers.SerializerMethodField()
+    resource_unit_label = serializers.SerializerMethodField()
 
     class Meta:
         model = Booking
@@ -519,6 +554,7 @@ class AdminBookingSerializer(serializers.ModelSerializer):
             "order_public_id", "order_status", "order_total", "currency",
             "customer_name", "customer_email", "customer_phone",
             "service", "service_name", "created_at",
+            "party_size", "resource", "resource_name", "resource_unit_label",
         ]
 
     def get_customer_name(self, obj):
@@ -544,6 +580,16 @@ class AdminBookingSerializer(serializers.ModelSerializer):
             return obj.branch.name
         return obj.branch_name or None
 
+    def get_resource_name(self, obj):
+        if obj.resource is not None and obj.resource.name:
+            return obj.resource.name
+        return obj.resource_name or None
+
+    def get_resource_unit_label(self, obj):
+        if obj.resource is not None:
+            return obj.resource.pool.unit_label or None
+        return None
+
 
 class AdminBookingActionSerializer(serializers.Serializer):
     """A management action on one booking.
@@ -556,10 +602,31 @@ class AdminBookingActionSerializer(serializers.Serializer):
     Note that none of these touch the money. `Order.status` is the payment axis
     and stays where it is - a tenant confirming an appointment is not recording a
     payment, and completing one is not collecting for it.
+
+    `reassign` is the one that carries a payload: which resource to move the
+    party to, and whether to do it even if the seats do not fit.
     """
 
     CONFIRM = "confirm"
     COMPLETE = "complete"
     CANCEL = "cancel"
+    REASSIGN = "reassign"
 
-    action = serializers.ChoiceField(choices=[CONFIRM, COMPLETE, CANCEL])
+    action = serializers.ChoiceField(choices=[CONFIRM, COMPLETE, CANCEL, REASSIGN])
+    # Null is meaningful: "take them off any specific resource", which is what a
+    # branch with no pools looks like. `required=False` distinguishes an absent
+    # key from an explicit null.
+    resource = serializers.IntegerField(required=False, allow_null=True)
+    # Deliberate overbooking, behind an explicit confirmation in the CMS. An
+    # operator sometimes knows something the seat count does not - a toddler on a
+    # lap, a guide riding along - and without an override they would simply cancel
+    # and re-enter the booking to route around us, losing its history in the
+    # process.
+    force = serializers.BooleanField(required=False, default=False)
+
+    def validate(self, attrs):
+        if attrs.get("action") == self.REASSIGN and "resource" not in attrs:
+            raise serializers.ValidationError(
+                {"resource": "Reassigning needs a resource (or an explicit null)."}
+            )
+        return attrs

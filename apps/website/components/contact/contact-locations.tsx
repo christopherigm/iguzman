@@ -9,8 +9,8 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { Button } from "@repo/ui/core-elements/button";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { OsmMap } from "@repo/ui/core-elements/osm-map";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { PlaceMap } from "@/components/place-map";
 import { deleteBranch } from "@/lib/admin-api";
 import { branchHasCoordinates, type Branch } from "@/lib/contact";
 
@@ -160,30 +160,17 @@ export function ContactLocations({
         </Box>
 
         {/* OpenStreetMap tiles drawn into the page, not a Google iframe: the
-            pin is ours, so it wears the tenant's own logo instead of a generic
-            red teardrop. No card on click - the address, the phone and the
-            directions button are already right above it, so there is nothing
-            for a popup to add. */}
+            pin is ours, so it wears the tenant's own brandmark instead of a
+            generic red teardrop. The shared single-pin wrapper, so this map,
+            an event's and the booking page's are one thing - it also carries
+            the tenant's chosen basemap and that provider's required credit. */}
         {branchHasCoordinates(branch) && (
-          <OsmMap
-            markers={[
-              {
-                id: branch.id,
-                latitude: Number(branch.latitude),
-                longitude: Number(branch.longitude),
-                title: name || t("mapTitle"),
-                icon: pinIcon,
-              },
-            ]}
+          <PlaceMap
+            latitude={Number(branch.latitude)}
+            longitude={Number(branch.longitude)}
+            title={name}
+            pinIcon={pinIcon}
             height={single ? 320 : 220}
-            labels={{
-              map: name ? t("mapOf", { name }) : t("mapTitle"),
-              zoomIn: t("mapZoomIn"),
-              zoomOut: t("mapZoomOut"),
-              attribution: t("mapAttribution"),
-              zoomHint: t("mapZoomHint"),
-              zoomHintMac: t("mapZoomHintMac"),
-            }}
           />
         )}
       </Box>

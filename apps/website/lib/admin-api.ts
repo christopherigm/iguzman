@@ -1268,10 +1268,16 @@ export interface AdminBooking {
   service: number | null;
   service_name: string;
   created_at: string;
+  /** How many people. `1` on every non-party booking. */
+  party_size: number;
+  /** The assigned resource's id, or null when the branch defines no pools. */
+  resource: number | null;
+  resource_name: string | null;
+  resource_unit_label: string | null;
 }
 
-/** The three transitions the CMS may apply. See `AdminBookingActionSerializer`. */
-export type AdminBookingAction = "confirm" | "complete" | "cancel";
+/** The transitions the CMS may apply. See `AdminBookingActionSerializer`. */
+export type AdminBookingAction = "confirm" | "complete" | "cancel" | "reassign";
 
 export async function listAdminBookings(params?: {
   status?: BookingStatus[];
@@ -1296,6 +1302,29 @@ export async function adminBookingAction(
   const res = await adminFetch(`/api/bookings/admin/${id}/`, {
     method: "PATCH",
     body: JSON.stringify({ action }),
+  });
+  return parseResponse<AdminBooking>(res);
+}
+
+/**
+ * Move a booking onto another resource.
+ *
+ * `resource` is `null` to take the party off any specific one, which is what a
+ * branch with no pools looks like - so it is sent explicitly rather than
+ * omitted, and the API refuses a `reassign` with no key at all.
+ *
+ * `force` overbooks deliberately, behind a confirmation in the UI: an operator
+ * sometimes knows what the seat count cannot (a toddler on a lap), and without
+ * an override they would cancel and re-enter the booking to route around us.
+ */
+export async function reassignBooking(
+  id: number,
+  resource: number | null,
+  force = false,
+) {
+  const res = await adminFetch(`/api/bookings/admin/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify({ action: "reassign", resource, force }),
   });
   return parseResponse<AdminBooking>(res);
 }

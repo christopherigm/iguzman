@@ -14,7 +14,7 @@ import { RichText } from "@repo/ui/core-elements/rich-text";
 import { SectionHero } from "@/components/section-hero";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
 import type { GalleryImage } from "@/components/item-gallery-client";
-import { EventMap } from "@/components/event-map";
+import { PlaceMap } from "@/components/place-map";
 import { AdminEditButton } from "@/components/admin-edit-button";
 import { getEvent } from "@/lib/events";
 import { eventLocationLabel, formatEventRange } from "@/lib/event-shared";
@@ -251,7 +251,7 @@ export default async function EventDetailPage({ params }: Props) {
             <Typography as="h2" variant="h2" className="section-title">
               {t("whereLabel")}
             </Typography>
-            <EventMap
+            <PlaceMap
               latitude={latitude}
               longitude={longitude}
               title={name}

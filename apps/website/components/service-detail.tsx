@@ -200,8 +200,12 @@ export async function ServiceDetailPanel({
   service,
   locale,
 }: ServiceDetailProps) {
-  const [t, session, cartLineId, branches] = await Promise.all([
+  const [t, tBooking, session, cartLineId, branches] = await Promise.all([
     getTranslations("ItemDetail"),
+    // Only for the "per person" qualifier beside the price - the same word the
+    // catalog card prints, from the same namespace, so a bookable service reads
+    // the same on the grid it was clicked from and on the page it opens.
+    getTranslations("Booking"),
     getSession(),
     findCartLineId("service", service.id),
     // Only needed to name the locations in the booking picker. Fetched
@@ -260,6 +264,15 @@ export async function ServiceDetailPanel({
             <Typography as="span" variant="none" className="item-price">
               {formatPrice(service.price, service.currency)}
             </Typography>
+            {/* A party service is priced per head, so the figure above "Book
+              now" is a unit price, not the total - saying so here matches the
+              catalog card the customer arrived from, and the counter below
+              spells out what the whole party comes to. */}
+            {service.booking_enabled && service.booking_party_enabled && (
+              <Typography as="span" variant="caption" color="var(--foreground)">
+                {tBooking("perPerson")}
+              </Typography>
+            )}
             {service.compare_price &&
               parseFloat(service.compare_price) > parseFloat(service.price) && (
                 <Typography
@@ -292,6 +305,14 @@ export async function ServiceDetailPanel({
               slug={service.slug}
               fulfillmentOptions={service.booking_fulfillment_options}
               branches={bookingBranches}
+              partyEnabled={service.booking_party_enabled}
+              partyMin={service.booking_party_min}
+              // The API's own ceiling, not `booking_party_max`: it is already
+              // capped by the biggest single resource, so the counter cannot
+              // offer a party no boat could seat.
+              partyMax={service.booking_party_limit}
+              price={service.price}
+              currency={service.currency}
             />
           ) : (
             /* Secondary + primary CTAs share the width, wrapping on very narrow

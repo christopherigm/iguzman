@@ -14,6 +14,8 @@ import { Spinner } from "@repo/ui/core-elements/spinner";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { BookingCalendar } from "@/components/booking/booking-calendar";
+import { QuantityStepper } from "@/components/quantity-stepper";
+import { PlaceMap } from "@/components/place-map";
 import {
   BookingError,
   createBooking,
@@ -30,6 +32,9 @@ export interface BookingFormBranch {
   id: number;
   name: string;
   address: string | null;
+  /** Decimal strings from the API, or null where the tenant never pinned it. */
+  latitude: string | null;
+  longitude: string | null;
 }
 
 interface BookingFormProps {
@@ -40,8 +45,16 @@ interface BookingFormProps {
     price: string;
     currency: string;
     duration: number | null;
+    /** One booking may cover several people, priced per head. */
+    partyEnabled: boolean;
+    partyMin: number;
+    /** The API's `booking_party_limit` - an upper bound across every location,
+     *  not a promise about this branch on this day. */
+    partyMax: number;
   };
   branches: BookingFormBranch[];
+  /** The tenant's brandmark, drawn inside the location map's pin. */
+  pinIcon: string | null;
   fulfillmentOptions: BookingFulfillment[];
   paymentOptions: BookingPaymentOption[];
   depositPercent: number;
@@ -53,6 +66,10 @@ interface BookingFormProps {
 /** How many days of availability to ask for at a time. Comfortably a month plus
  *  the overhang either side, and under the API's own 62-day cap. */
 const AVAILABILITY_DAYS = 45;
+
+/** How often an open booking page re-asks for availability. Matches the API's
+ *  own 60-second cache TTL, so a poll normally costs a cache read. */
+const AVAILABILITY_REFRESH_MS = 60_000;
 
 /**
  * The booking checkout: pick where, pick when, say anything the tenant needs to
@@ -72,6 +89,7 @@ const AVAILABILITY_DAYS = 45;
 export function BookingForm({
   service,
   branches,
+  pinIcon,
   fulfillmentOptions,
   paymentOptions,
   depositPercent,
@@ -98,10 +116,25 @@ export function BookingForm({
       ? requested
       : (branches[0]?.id ?? null);
   })();
+  // Same treatment as the two above: seeded from the detail page's counter and
+  // clamped to what the service accepts, because the param is in a URL the
+  // customer can edit. The API refuses (rather than clamps) a party outside the
+  // range, so sending an unclamped one would fail at submit instead of here.
+  const initialParty = (() => {
+    if (!service.partyEnabled) return 1;
+    const requested = Number(searchParams.get("party"));
+    if (!Number.isFinite(requested) || requested < 1) return service.partyMin;
+    return Math.max(service.partyMin, Math.min(requested, service.partyMax));
+  })();
 
   const [fulfillment, setFulfillment] =
     useState<BookingFulfillment>(initialFulfillment);
   const [branchId, setBranchId] = useState<number | null>(initialBranch);
+  const [party, setParty] = useState<number>(initialParty);
+  // The customer's pick of boat/guide/room, when the tenant publishes them.
+  // `null` is "any", which is both the default and the only option for the
+  // overwhelming majority of tenants.
+  const [resourceId, setResourceId] = useState<number | null>(null);
   const [monthStart, setMonthStart] = useState<string>(() =>
     keyFromDate(new Date()),
   );
@@ -133,7 +166,11 @@ export function BookingForm({
   // What the calendar is currently asking for. Everything about availability
   // hangs off this one string, so there is no way for the branch, the month and
   // the loaded data to be describing three different things.
-  const requestKey = `${branchId ?? "none"}|${monthStart}`;
+  //
+  // Party size and the chosen resource are part of it because they change which
+  // slots come back and how many seats each reports - not a filter applied to
+  // an answer computed for somebody else.
+  const requestKey = `${branchId ?? "none"}|${monthStart}|${party}|${resourceId ?? "any"}`;
 
   // Aborts the in-flight availability request when the branch or month changes,
   // so a slow first response can never land after a faster second one and
@@ -142,6 +179,29 @@ export function BookingForm({
   // Bumped to force a refetch of the *same* key - what a rejected slot needs,
   // since nothing about the request has changed but the answer has.
   const [reloadToken, setReloadToken] = useState(0);
+
+  // Availability decays on its own for **today**: a page opened at 11:00 is
+  // still offering the 13:00 at 13:05, and the customer only finds out when
+  // checkout honestly refuses it. So the calendar re-asks on a timer rather than
+  // filtering the list here - the API is the only thing that decides which times
+  // exist, and it is the only thing that knows the branch's clock.
+  //
+  // A minute matches the availability payload's own TTL, so a poll never costs
+  // more than a cache read. It is skipped while the tab is hidden: a booking
+  // form left open in a background tab for an afternoon should not be waking up
+  // to poll, and it refetches on the way back into view anyway.
+  useEffect(() => {
+    const revalidate = () => {
+      if (document.visibilityState !== "visible") return;
+      setReloadToken((n) => n + 1);
+    };
+    const timer = window.setInterval(revalidate, AVAILABILITY_REFRESH_MS);
+    document.addEventListener("visibilitychange", revalidate);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", revalidate);
+    };
+  }, []);
 
   useEffect(() => {
     abortRef.current?.abort();
@@ -156,6 +216,8 @@ export function BookingForm({
             branch: branchId,
             start: monthStart,
             days: AVAILABILITY_DAYS,
+            party,
+            resource: resourceId,
           },
           controller.signal,
         );
@@ -169,9 +231,18 @@ export function BookingForm({
     })();
 
     return () => controller.abort();
-    // `requestKey` is derived from `branchId` and `monthStart`, so listing all
-    // three keeps the lint rule satisfied without refetching more than once.
-  }, [service.id, branchId, monthStart, requestKey, reloadToken, t]);
+    // `requestKey` is derived from the four values above it, so listing them
+    // all keeps the lint rule satisfied without refetching more than once.
+  }, [
+    service.id,
+    branchId,
+    monthStart,
+    party,
+    resourceId,
+    requestKey,
+    reloadToken,
+    t,
+  ]);
 
   const availability =
     loaded && loaded.key === requestKey ? loaded.response : null;
@@ -192,14 +263,46 @@ export function BookingForm({
     ? (availability?.availability[selectedDay] ?? [])
     : [];
   // Likewise for the time: a slot only counts while it is still on the list its
-  // day offers.
+  // day offers. Growing the party is what makes this earn its keep - the 10:00
+  // with three seats left simply stops being offered, and the selection falls
+  // away with it rather than sitting highlighted and un-bookable.
   const selectedSlot =
-    selectedSlotRaw && slotsForDay.includes(selectedSlotRaw)
+    selectedSlotRaw && slotsForDay.some((s) => s.at === selectedSlotRaw)
       ? selectedSlotRaw
       : null;
   const timeZone = availability?.timezone ?? "UTC";
 
   const branch = branches.find((b) => b.id === branchId) ?? null;
+
+  // Where the appointment happens, when there is a "where" worth drawing. Only
+  // for `branch` fulfillment: with `on_premises` the tenant travels to the
+  // customer, so a map of the shop would be answering a question nobody asked -
+  // and pointing at the wrong address on the page where the right one is typed.
+  // A branch the tenant never pinned simply gets no map, exactly as on the
+  // contact page.
+  const branchPin =
+    fulfillment === "branch" &&
+    branch &&
+    branch.latitude !== null &&
+    branch.longitude !== null
+      ? {
+          latitude: Number(branch.latitude),
+          longitude: Number(branch.longitude),
+          title: branch.name,
+        }
+      : null;
+
+  // Published only for a `customer_selectable` pool; empty for everybody else,
+  // which is what keeps the picker off the page for the ordinary tenant.
+  const resourceOptions = availability?.resources ?? [];
+  // The tenant's own noun for one of them ("boat", "guide"), falling back to a
+  // generic word so the label never reads as a blank.
+  const resourceUnit = resourceOptions[0]?.unit_label || t("resourceUnit");
+  // Seat counts are worth showing once a slot can hold more than one party -
+  // either because this service sells parties, or because the tenant models
+  // multi-seat resources.
+  const showSeatsLeft =
+    service.partyEnabled || slotsForDay.some((slot) => slot.seats_left > 1);
 
   // The account's own name and email are **shown, not offered as fields**: the
   // booking is filed under the signed-in customer either way, so an edit here
@@ -214,7 +317,9 @@ export function BookingForm({
   const readOnlyName = (account?.name ?? "").trim().length > 0;
   const readOnlyEmail = (account?.email ?? "").trim().length > 0;
 
-  const price = Number(service.price);
+  // The party multiplies the price, exactly as it multiplies the order line's
+  // quantity on the API side - so the deposit and the balance follow for free.
+  const price = Number(service.price) * party;
   const dueNow =
     paymentOption === "full"
       ? price
@@ -239,6 +344,8 @@ export function BookingForm({
         branch: fulfillment === "branch" ? branchId : branchId,
         fulfillment,
         starts_at: selectedSlot,
+        party_size: party,
+        resource: resourceId,
         payment_option: paymentOption,
         address: fulfillment === "on_premises" ? address.trim() : "",
         notes: notes.trim(),
@@ -290,9 +397,20 @@ export function BookingForm({
           {service.name}
         </Typography>
         <Box alignItems="center" gap={10} flexWrap="wrap">
+          {/* The party's total, not the unit price - it is what the customer is
+            about to be charged, and the per-person figure is spelled out beside
+            it rather than left to be multiplied in their head. */}
           <Typography as="span" variant="none" className="item-price">
-            {formatPrice(service.price, service.currency)}
+            {formatPrice(price.toFixed(2), service.currency)}
           </Typography>
+          {service.partyEnabled && (
+            <Typography as="span" variant="caption" color="var(--foreground)">
+              {t("partyPriceBreakdown", {
+                unit: formatPrice(service.price, service.currency),
+                count: party,
+              })}
+            </Typography>
+          )}
           {service.duration && (
             <Badge variant="filled" color="var(--accent)">
               ⏱ {t("minutes", { count: service.duration })}
@@ -351,6 +469,68 @@ export function BookingForm({
               />
             )}
 
+            {/* How many. Above the calendar, because it decides which days and
+              times the calendar may show at all - putting it below would let a
+              customer pick a slot and then watch it disappear. */}
+            {service.partyEnabled && service.partyMax > service.partyMin && (
+              <Box flexDirection="column" gap={6}>
+                <Typography as="h3" variant="h5">
+                  {t("partyTitle")}
+                </Typography>
+                <Box
+                  alignItems="center"
+                  justifyContent="space-between"
+                  gap={12}
+                  flexWrap="wrap"
+                >
+                  <Typography variant="caption" color="var(--foreground)">
+                    {t("partyHint")}
+                  </Typography>
+                  <QuantityStepper
+                    value={party}
+                    onChange={(next) => {
+                      setParty(next);
+                      // The slot is dropped rather than left to be filtered out
+                      // on the next render: between the click and the new
+                      // payload arriving there is a moment where the old, now
+                      // possibly too-small, slot would still read as selected.
+                      setSelectedSlot(null);
+                    }}
+                    min={service.partyMin}
+                    max={service.partyMax}
+                    decreaseLabel={t("partyDecrease")}
+                    increaseLabel={t("partyIncrease")}
+                    ariaLabel={t("partyTitle")}
+                  />
+                </Box>
+              </Box>
+            )}
+
+            {/* Which one. Only rendered when the tenant publishes its resources
+              - a `customer_selectable` pool - which is the exception, not the
+              rule: a salon assigns whichever chair is free and the customer
+              never hears about it. */}
+            {resourceOptions.length > 0 && (
+              <Select
+                label={t("resourceLabel", { unit: resourceUnit })}
+                value={resourceId == null ? "" : String(resourceId)}
+                onChange={(v) => {
+                  setResourceId(v === "" ? null : Number(v));
+                  setSelectedSlot(null);
+                }}
+                options={[
+                  {
+                    value: "",
+                    label: t("resourceAny", { unit: resourceUnit }),
+                  },
+                  ...resourceOptions.map((r) => ({
+                    value: String(r.id),
+                    label: r.name,
+                  })),
+                ]}
+              />
+            )}
+
             {/* When. */}
             <Box flexDirection="column" gap={10}>
               <Typography as="h3" variant="h5">
@@ -383,16 +563,29 @@ export function BookingForm({
                 <Typography as="h3" variant="h5">
                   {t("pickTime")}
                 </Typography>
-                <Box gap={8} flexWrap="wrap">
+                <Box gap={8} flexWrap="wrap" alignItems="flex-start">
                   {slotsForDay.map((slot) => (
-                    <Button
-                      key={slot}
-                      text={formatSlotTime(slot, timeZone, locale)}
-                      kind={selectedSlot === slot ? "primary" : undefined}
-                      size="md"
-                      aria-pressed={selectedSlot === slot}
-                      onClick={() => setSelectedSlot(slot)}
-                    />
+                    <Box key={slot.at} flexDirection="column" gap={2}>
+                      <Button
+                        text={formatSlotTime(slot.at, timeZone, locale)}
+                        kind={selectedSlot === slot.at ? "primary" : undefined}
+                        size="md"
+                        aria-pressed={selectedSlot === slot.at}
+                        onClick={() => setSelectedSlot(slot.at)}
+                      />
+                      {/* Only where seats are actually a scarce thing. On a
+                        one-person appointment every slot has exactly one seat
+                        left, and printing that on all of them says nothing. */}
+                      {showSeatsLeft && (
+                        <Typography
+                          variant="caption"
+                          color="var(--foreground)"
+                          textAlign="center"
+                        >
+                          {t("seatsLeft", { count: slot.seats_left })}
+                        </Typography>
+                      )}
+                    </Box>
                   ))}
                 </Box>
                 <Typography variant="caption" color="var(--foreground)">
@@ -405,6 +598,22 @@ export function BookingForm({
 
         <Grid size={{ xs: 12, sm: 6 }}>
           <Box flexDirection="column" gap={22}>
+            {/* Where it happens, at the top of the column the customer fills
+              in: the location has already been chosen on the left, and this is
+              the last chance to notice it is the wrong side of town before
+              typing a name and paying. The same single-pin map the contact page
+              and an event draw, so all three wear the tenant's own basemap and
+              brandmark. */}
+            {branchPin && (
+              <PlaceMap
+                latitude={branchPin.latitude}
+                longitude={branchPin.longitude}
+                title={branchPin.title}
+                pinIcon={pinIcon}
+                height={220}
+              />
+            )}
+
             {/* Who. Read off the account where there is one; a guest fills it
               in. The phone is always a field - it is on no account. */}
             <Box flexDirection="column" gap={12}>

@@ -163,6 +163,21 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
     # are replaced wholesale per branch - the same shape gallery images use, and
     # the same shape the CMS writes them in.
     ModelSpec("core.BranchHours", SECTION_SYSTEM, "branch__system", parent="branch"),
+    # ⚠ Pools and resources are keyed, **not** ridden as `parent=` children -
+    # unlike BranchHours right above, which they otherwise resemble. The
+    # difference is that something points at them: `Booking.resource` is a
+    # `SET_NULL` FK, so replacing a branch's resources wholesale on every restore
+    # would either null out the boat on every appointment or (worse) re-point it
+    # at whichever new row happened to land on that pk. A key scoped to the
+    # parent keeps a restored booking on the boat it was actually booked on.
+    #
+    # They also have to be written **before** `orders.Booking` further down, which
+    # is what this list's order is for.
+    ModelSpec("core.ResourcePool", SECTION_SYSTEM, "branch__system", natural_key=("branch", "name")),
+    ModelSpec(
+        "core.BookingResource", SECTION_SYSTEM, "pool__branch__system",
+        natural_key=("pool", "name"),
+    ),
     ModelSpec("core.SuccessStory", SECTION_SYSTEM, "system", natural_key=("slug",)),
     ModelSpec("core.SuccessStoryImage", SECTION_SYSTEM, "story__system", parent="story"),
     ModelSpec("core.CompanyHighlight", SECTION_SYSTEM, "system", natural_key=("slug",)),

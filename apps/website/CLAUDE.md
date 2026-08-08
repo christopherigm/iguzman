@@ -122,7 +122,11 @@ every rule; read `website-api/CLAUDE.md` → "Bookings" first.
   checkout re-runs before writing. The form's job is to show that answer, not to
   have an opinion about opening hours. A `SLOT_UNAVAILABLE` on submit drops the
   selection and refetches rather than telling the customer to retry the same dead
-  slot.
+  slot. **Today's slots decay while the page is open**, so `booking-form.tsx`
+  re-asks every 60 seconds (skipped while the tab is hidden, and again on the way
+  back into view) - a refetch, deliberately, rather than a client-side "drop the
+  ones that have passed" filter, which would be this component forming exactly
+  the opinion the rule above forbids.
 - ⚠ **Never format a booking instant with a bare `toLocaleString()`.** The
   helpers in `lib/booking-shared.ts` all take the booking's own `timeZone` and
   none of them fall back to the browser's: an appointment happens at the
@@ -161,6 +165,57 @@ every rule; read `website-api/CLAUDE.md` → "Bookings" first.
   deliberately not the order-status one: a confirmed booking wearing the paid
   order's green would read as "the money arrived", which it does not say.
 
+### Party size (a booking that covers several people)
+
+A service with `booking_party_enabled` is priced **per person**, and one booking
+covers a whole party. The API owns every rule; read website-api's CLAUDE.md →
+"Party size and resource pools" first.
+
+- **The counter appears twice**, and neither is decorative: on the service detail
+  page (`components/service-booking-cta.tsx`, beside "Book now") where it seeds
+  the choice, and above the calendar on `/booking/<slug>` where it decides which
+  days and times may be shown at all. Putting the booking-page one _below_ the
+  calendar would let a customer pick a slot and watch it vanish.
+- **`party` rides in the search params**, exactly like `fulfillment` and
+  `branch`, and the booking page re-validates it - the params are in a URL the
+  customer can edit. It also joins `requestKey`, so changing it refetches and the
+  derived-selection pattern drops a now-impossible slot for free.
+- ⚠ **`booking_party_limit` is an upper bound, not a promise.** The API computes
+  it as `min(what the service allows, what the biggest single resource holds)`
+  across every location, so it ignores who is already booked and can differ per
+  branch. Use it as the counter's static ceiling - never as "this party will
+  definitely fit". The availability payload is what actually answers that.
+- ⚠ **`booking_party_enabled` must be on `FeaturedService` in `lib/catalog.ts`,
+  not only on `ServiceDetail`.** The catalog card renders from the **list**
+  payload, and a field present only on the detail type means the "per person"
+  label silently never appears. It is deliberately the only party field on the
+  list type - the bounds and the ceiling cost the API a walk over pools and
+  resources per service.
+- **`seats_left` is the largest free block on one resource, not the sum**, so a
+  slot showing "3 places left" genuinely cannot take a party of four. The slot
+  buttons only print it where seats are actually scarce - on a one-person
+  appointment every slot has one seat and saying so on all of them says nothing.
+- **The resource picker ("Any boat" / Panga / Marlin) only renders when the
+  payload carries `resources`**, which happens only for a `customer_selectable`
+  pool. That is the exception: a salon assigns whichever chair is free and the
+  customer never hears about it.
+- **`components/quantity-stepper.tsx` is the shared `− n +` control**, extracted
+  from `menu-ingredient-picker.tsx` when the party counter became its second
+  consumer. Fully controlled and owns no state: both consumers need the number
+  elsewhere (a customization context, the availability request key), and a
+  stepper holding its own copy would be a second source of truth.
+- **A branch's resources are edited in
+  `components/admin/resource-pools-editor.tsx`**, on the branch form beside the
+  hours. ⚠ Unlike the hours it is **not** replace-all: each row carries its `id`
+  and the API upserts, because `Booking.resource` points at these rows and a
+  delete-and-recreate would strip the assigned boat off every appointment on any
+  save of that form - including one that only changed the phone number.
+- **`/admin/bookings` can reassign a party**, with two separate buttons: **Move**
+  re-validates through the availability engine and refuses a resource that cannot
+  take the party, **Overbook** confirms first and forces it. Keeping them apart is
+  the point - the safe action must not quietly become the unsafe one because a
+  seat count was tight.
+
 ## Events - dated, informational, and never a booking
 
 An `Event` is a dated happening a tenant announces (a tasting, a workshop, a live
@@ -171,14 +226,14 @@ different feature with a different model; adding attendance here later means a
 second model hanging off `Event` (the shape `orders.Booking` uses against
 `Order`), not extra columns on it.
 
-| Piece                       | Where                                                     |
-| --------------------------- | --------------------------------------------------------- |
-| The landing band            | `components/events.tsx` (+ its slider and card)           |
-| The archive / one event     | `app/[locale]/events/`, `.../events/[slug]/`              |
-| Fetchers                    | `lib/events.ts`                                           |
-| Formatting, client-safe     | `lib/event-shared.ts`                                     |
-| The CMS                     | `app/[locale]/admin/events/`                              |
-| Model, API, cache           | website-api `core/` (`Event`, `EventImage`)               |
+| Piece                   | Where                                           |
+| ----------------------- | ----------------------------------------------- |
+| The landing band        | `components/events.tsx` (+ its slider and card) |
+| The archive / one event | `app/[locale]/events/`, `.../events/[slug]/`    |
+| Fetchers                | `lib/events.ts`                                 |
+| Formatting, client-safe | `lib/event-shared.ts`                           |
+| The CMS                 | `app/[locale]/admin/events/`                    |
+| Model, API, cache       | website-api `core/` (`Event`, `EventImage`)     |
 
 Six things that will bite:
 
@@ -214,6 +269,63 @@ Six things that will bite:
   event and strand `/events` and every shared event link. Like every derived
   count on `SystemSerializer` it needs a signal clearing the System payload on
   write - `core/signals.py` has one; the payload is cached for an hour.
+
+## Maps - one component, one basemap, one credit
+
+Every map on this site is `components/place-map.tsx` (`PlaceMap`), a thin client
+wrapper over `@repo/ui`'s **`OsmMap`**: OpenStreetMap-style raster tiles painted
+into the page's own DOM, one pin, no Google iframe. Three surfaces draw one:
+each location on the contact page (`components/contact/contact-locations.tsx`),
+an event's venue (`app/[locale]/events/[slug]/page.tsx`), and the branch a
+booking is being made at (`booking-form.tsx`). It replaced the per-surface copies
+- an `EventMap` component and an inline `OsmMap` on the contact page - which had
+already started to drift.
+
+**Which basemap they draw is one tenant setting**, authored in the CMS at
+`/admin/system` → Maps (`admin/system/map-section.tsx`): `System.map_style` picks
+between OSM's standard tiles, three CARTO styles and a `custom` tile URL, with
+`map_tile_url` / `map_attribution` / `map_attribution_url` beside it.
+`lib/basemap.ts` resolves the four columns once in `[locale]/layout.tsx` and
+`BasemapProvider` publishes the result to the whole tree, so no map takes a prop
+for it and no page hosting one has to fetch `getSystem()`.
+
+Five things that will bite:
+
+- ⚠ **The credit is not a translation, and `Contact.mapAttribution` is gone.**
+  Every provider requires its own attribution string and it changes with the tile
+  URL, so a CARTO basemap credited "© OpenStreetMap contributors" is
+  under-credited - a licence problem, not a copy problem. An i18n key cannot
+  follow a setting an operator edits at runtime, so the string comes off the
+  resolved basemap (`@repo/ui/core-elements/basemaps`, which keeps each URL
+  beside the credit it owes). The key was removed from all five locale files;
+  don't reintroduce it.
+- ⚠ **The credit's link is its own field, and blank means unlinked.** Most
+  providers require the credit to point back at them; `OsmAttribution` used to
+  anchor every credit to openstreetmap.org/copyright regardless, so a
+  "© MapTiler" named one party and linked another. Absent, the credit is plain
+  text - never restore a default href.
+- ⚠ **This picks a style, not what the style shows.** These are raster tiles:
+  roads, labels and building footprints are painted into each PNG before it
+  arrives, so there is no "hide the houses" flag here and there cannot be one
+  while the renderer is a raster one. The route to a real per-layer choice is
+  `custom` pointed at a style authored in a provider's own editor with that
+  layer deleted.
+- ⚠ **A provider key pasted into `map_tile_url` is public**, and cannot be
+  otherwise: tiles are fetched from the visitor's own browser and
+  `GET /api/system/` is `AllowAny`. Restrict it by origin at the provider rather
+  than treating the column as a secret.
+- **The pin wears the tenant's `img_brandmark`, not its logo.** The pin's head
+  is a 34 px circle that crops what it is given, so a wide wordmark comes out as
+  three letters from its own middle. With no brandmark it is a plain accent
+  teardrop, which is fine.
+
+**On the booking page** the map sits at the top of the right-hand column, above
+"Your details" - the location has already been chosen on the left, and this is
+the last chance to notice it is the wrong side of town before typing a name and
+paying. It is rendered only for `branch` fulfillment: with `on_premises` the
+tenant travels to the customer, so a map of the shop would point at the wrong
+address on the very page where the right one is typed. A branch the tenant never
+pinned gets no map, exactly as on the contact page.
 
 ## Anonymous cart, favorites and guest checkout
 
@@ -257,11 +369,11 @@ A menu item's add-ons are rendered by **`components/menu-ingredient-picker.tsx`*
 and by nothing else. Three places ask the same question of the same data, and
 each one is a thin shell around that component:
 
-| Surface           | Shell                                          | Selection lives in            |
-| ----------------- | ---------------------------------------------- | ----------------------------- |
-| Item detail page  | `menu-item-customizer.tsx`                     | `MenuCustomizationProvider`   |
-| Catalog card      | `menu-customize-modal.tsx` (a `ConfirmationModal`) | local state              |
-| POS till          | `pos/_components/pos-customizer-modal.tsx`     | local state                   |
+| Surface          | Shell                                              | Selection lives in          |
+| ---------------- | -------------------------------------------------- | --------------------------- |
+| Item detail page | `menu-item-customizer.tsx`                         | `MenuCustomizationProvider` |
+| Catalog card     | `menu-customize-modal.tsx` (a `ConfirmationModal`) | local state                 |
+| POS till         | `pos/_components/pos-customizer-modal.tsx`         | local state                 |
 
 - **The picker is fully controlled and owns no state**, because the detail page's
   nutrition label has to mirror the customer's selection from a different grid

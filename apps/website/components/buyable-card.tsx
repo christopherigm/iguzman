@@ -52,11 +52,16 @@ export async function BuyableCard({
   // their own kind. This is the only place the two names diverge.
   const favoriteKind = kind === "food" ? "menu_item" : kind;
 
-  const [session, favorite, origin, tAdmin] = await Promise.all([
+  const [session, favorite, origin, tAdmin, tBooking] = await Promise.all([
     getSession(),
     isFavorite(favoriteKind, data.id),
     getRequestOrigin(),
     getTranslations("Admin"),
+    // Resolved here rather than threaded through every grid that renders a
+    // card: this half is already a server component with the request's locale,
+    // and adding a required prop to a dozen call sites for one word would be
+    // the worse trade.
+    getTranslations("Booking"),
   ]);
 
   // Whether this card's item is already a line, and which line it is - the
@@ -76,6 +81,7 @@ export async function BuyableCard({
       serviceLabel={serviceLabel}
       menuLabel={menuLabel}
       fromLabel={fromLabel}
+      perPersonLabel={tBooking("perPerson")}
       origin={origin}
       isAdmin={session?.isAdmin ?? false}
       editLabel={tAdmin("edit")}

@@ -2,17 +2,21 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { useSession } from "@repo/auth/session-provider";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { Box } from "@repo/ui/core-elements/box";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { Button } from "@repo/ui/core-elements/button";
 import { Card } from "@repo/ui/core-elements/card";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { Select } from "@repo/ui/core-elements/select";
 import { Spinner } from "@repo/ui/core-elements/spinner";
 import { Typography } from "@repo/ui/core-elements/typography";
 import {
   adminBookingAction,
   listAdminBookings,
+  listBranches,
+  reassignBooking,
   type AdminBooking,
   type AdminBookingAction,
   type BookingStatus,
@@ -35,6 +39,14 @@ const STATUS_COLOR: Record<BookingStatus, string> = {
  *  ask for the same statuses and differ only in the date floor. */
 type Filter = "upcoming" | "pending" | "all";
 
+/** One resource an operator may move a booking onto, flattened out of the
+ *  branches payload (which already nests pools and their resources). */
+interface ResourceOption {
+  id: number;
+  label: string;
+  branchId: number;
+}
+
 export default function AdminBookingsPage() {
   const t = useTranslations("AdminBookings");
   const locale = useLocale();
@@ -46,6 +58,11 @@ export default function AdminBookingsPage() {
   // Which row is mid-action, so only its own buttons spin rather than the page
   // blanking while a tenant confirms one of thirty appointments.
   const [busyId, setBusyId] = useState<number | null>(null);
+  const systemId = useSession()?.systemId ?? 0;
+  // Every resource the tenant has, keyed by branch below. Loaded once: the list
+  // may show thirty appointments across a handful of locations, and a request
+  // per row would be thirty round trips for one dropdown.
+  const [resources, setResources] = useState<ResourceOption[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -77,6 +94,50 @@ export default function AdminBookingsPage() {
     })();
   }, [load]);
 
+  useEffect(() => {
+    void (async () => {
+      try {
+        const branches = await listBranches(systemId);
+        setResources(
+          branches.flatMap((branch) =>
+            (
+              (branch.resource_pools as
+                | {
+                    name: string;
+                    unit_label: string | null;
+                    enabled: boolean;
+                    resources: {
+                      id: number;
+                      name: string;
+                      capacity: number;
+                      enabled: boolean;
+                    }[];
+                  }[]
+                | undefined) ?? []
+            )
+              .filter((pool) => pool.enabled)
+              .flatMap((pool) =>
+                pool.resources
+                  .filter((r) => r.enabled)
+                  .map((r) => ({
+                    id: r.id,
+                    // The pool's own noun where it has one ("boat"), so the
+                    // dropdown reads in the tenant's vocabulary rather than in
+                    // ours.
+                    label: `${r.name} (${pool.unit_label || pool.name} · ${r.capacity})`,
+                    branchId: branch.id as number,
+                  })),
+              ),
+          ),
+        );
+      } catch {
+        // A failure here costs the reassign dropdown and nothing else, so the
+        // page must not show an error for it - the appointments still list.
+        setResources([]);
+      }
+    })();
+  }, [systemId]);
+
   const act = async (id: number, action: AdminBookingAction) => {
     setBusyId(id);
     setError(null);
@@ -90,6 +151,28 @@ export default function AdminBookingsPage() {
       );
     } catch {
       setError(t("errorAction"));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const reassign = async (
+    booking: AdminBooking,
+    resourceId: number | null,
+    force = false,
+  ) => {
+    setBusyId(booking.id);
+    setError(null);
+    try {
+      const updated = await reassignBooking(booking.id, resourceId, force);
+      setBookings((prev) =>
+        prev.map((b) => (b.id === updated.id ? updated : b)),
+      );
+    } catch {
+      // The API refuses a move that does not fit, and the operator can retry it
+      // with the overbook confirmation - so this says the move failed, not that
+      // the action is broken.
+      setError(t("errorReassign"));
     } finally {
       setBusyId(null);
     }
@@ -190,6 +273,20 @@ export default function AdminBookingsPage() {
                     <td>{t("duration")}</td>
                     <td>{t("minutes", { count: booking.duration_minutes })}</td>
                   </tr>
+                  {/* Only for a real party: printing "1 person" on every
+                      appointment at a salon is noise. */}
+                  {booking.party_size > 1 && (
+                    <tr>
+                      <td>{t("partySize")}</td>
+                      <td>{t("people", { count: booking.party_size })}</td>
+                    </tr>
+                  )}
+                  {booking.resource_name && (
+                    <tr>
+                      <td>{booking.resource_unit_label || t("resource")}</td>
+                      <td>{booking.resource_name}</td>
+                    </tr>
+                  )}
                   <tr>
                     <td>{t("payment")}</td>
                     <td>
@@ -252,10 +349,112 @@ export default function AdminBookingsPage() {
                 )}
                 {busyId === booking.id && <Spinner size={16} />}
               </Box>
+
+              {/* Reassignment. Rendered only where there is somewhere to move
+                to - a branch with no pools has one implicit resource and
+                nothing to choose between - and only while the appointment is
+                still live, which is the same rule the API enforces. */}
+              {(booking.status === "pending" ||
+                booking.status === "confirmed") &&
+                resources.some((r) => r.branchId === booking.branch) && (
+                  <ReassignControl
+                    booking={booking}
+                    options={resources.filter(
+                      (r) => r.branchId === booking.branch,
+                    )}
+                    disabled={busyId === booking.id}
+                    onReassign={(resourceId, force) =>
+                      void reassign(booking, resourceId, force)
+                    }
+                  />
+                )}
             </Card>
           ))}
         </Box>
       )}
     </>
+  );
+}
+
+/**
+ * The "move this party to another boat" row on one booking.
+ *
+ * Two buttons rather than one: **Move** re-validates through the availability
+ * engine and refuses a resource that cannot take the party, while **Overbook**
+ * asks for a confirmation first and then puts them there anyway. Keeping them
+ * apart is the point - the safe action must not quietly become the unsafe one
+ * because a seat count happened to be tight, and the override must be something
+ * an operator chose rather than something they fell into.
+ *
+ * Local to this page: it reads nothing but its props and has exactly one
+ * consumer, which is the threshold `apps/CLAUDE.md` sets for staying beside the
+ * route that uses it.
+ */
+function ReassignControl({
+  booking,
+  options,
+  disabled,
+  onReassign,
+}: {
+  booking: AdminBooking;
+  options: ResourceOption[];
+  disabled: boolean;
+  onReassign: (resourceId: number | null, force: boolean) => void;
+}) {
+  const t = useTranslations("AdminBookings");
+  const [choice, setChoice] = useState<string>(
+    booking.resource != null ? String(booking.resource) : "",
+  );
+  const [confirmingOverbook, setConfirmingOverbook] = useState(false);
+
+  const resourceId = choice === "" ? null : Number(choice);
+  const unchanged = resourceId === booking.resource;
+
+  return (
+    <Box flexDirection="column" gap={10} paddingTop={10}>
+      {/* Divider: a 1px filled Box rather than a border, so the rule stays in
+        props - the same shape the catalog card uses. */}
+      <Box height={1} flex="0 0 auto" backgroundColor="var(--border)" />
+      <Box gap={10} flexWrap="wrap" alignItems="flex-end">
+        <Box flex="1" minWidth={220}>
+          <Select
+            label={t("reassignLabel")}
+            value={choice}
+            onChange={setChoice}
+            options={[
+              { value: "", label: t("reassignNone") },
+              ...options.map((r) => ({ value: String(r.id), label: r.label })),
+            ]}
+          />
+        </Box>
+        <Button
+          text={t("reassign")}
+          size="md"
+          disabled={disabled || unchanged}
+          onClick={() => onReassign(resourceId, false)}
+        />
+        <Button
+          text={t("overbook")}
+          kind="warning"
+          size="md"
+          disabled={disabled || unchanged}
+          onClick={() => setConfirmingOverbook(true)}
+        />
+
+        {confirmingOverbook && (
+          <ConfirmationModal
+            title={t("overbookTitle")}
+            text={t("overbookText", { party: booking.party_size })}
+            okLabel={t("overbookConfirm")}
+            cancelLabel={t("cancelAction")}
+            okCallback={() => {
+              setConfirmingOverbook(false);
+              onReassign(resourceId, true);
+            }}
+            cancelCallback={() => setConfirmingOverbook(false)}
+          />
+        )}
+      </Box>
+    </Box>
   );
 }

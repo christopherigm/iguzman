@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.db import transaction
 from rest_framework import serializers
 
-from core.models import Branch, Brand, System, CURRENCY_CHOICES
+from core.models import Branch, Brand, ResourcePool, System, CURRENCY_CHOICES
 from core.image_sizes import REGULAR, SMALL, STANDARD, image_cfg
 from core.serializers import ImageProcessingSerializer
 from .models import (
@@ -570,6 +570,10 @@ class ServiceSerializer(serializers.ModelSerializer):
             'booking_branches', 'booking_fulfillment_options',
             'booking_pay_full', 'booking_pay_deposit', 'booking_deposit_percent',
             'booking_pay_in_person', 'booking_payment_options',
+            # The boolean alone, deliberately. It is all a catalog card needs to
+            # print "per person", and it costs no extra query - unlike the party
+            # bounds, which live on `ServiceDetailSerializer` below.
+            'booking_party_enabled',
             'sort_order',
         ]
 
@@ -580,6 +584,42 @@ class ServiceSerializer(serializers.ModelSerializer):
         if request:
             return request.build_absolute_uri(obj.image.url)
         return obj.image.url
+
+
+class ServiceDetailSerializer(ServiceSerializer):
+    """A single service, with the fields a detail page needs and a grid must not.
+
+    Split from `ServiceSerializer` for one reason: `booking_party_limit` walks
+    the service's pools and their resources, which is a query or two per service.
+    Harmless on one row, an N+1 across a catalog grid - so the list serializer
+    stays exactly as cheap as it was and the card makes do with the boolean.
+    """
+
+    booking_pools = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    booking_party_limit = serializers.SerializerMethodField()
+
+    class Meta(ServiceSerializer.Meta):
+        fields = ServiceSerializer.Meta.fields + [
+            'booking_party_min', 'booking_party_max', 'booking_party_limit',
+            'booking_pools',
+        ]
+
+    def get_booking_party_limit(self, obj):
+        """The largest party the counter should offer, as an **upper bound**.
+
+        `min(what the service allows, what the biggest single resource holds)`.
+        It is not a guarantee: capacity differs per branch and says nothing about
+        who is already booked, so the booking page still does the real filtering
+        from the availability payload. Computed here rather than min'd in the
+        frontend, following the same "read the resolved options, never the raw
+        switches" rule the payment and fulfillment options follow.
+        """
+        if not obj.booking_party_enabled:
+            return 1
+        from orders.services.booking import party_capacity_ceiling
+
+        low, high = obj.booking_party_range
+        return max(low, min(high, party_capacity_ceiling(obj)))
 
 
 class ServiceWriteSerializer(serializers.Serializer):
@@ -651,6 +691,16 @@ class ServiceWriteSerializer(serializers.Serializer):
     booking_deposit_percent = serializers.IntegerField(min_value=1, max_value=100, required=False)
     booking_pay_in_person = serializers.BooleanField(required=False)
 
+    booking_party_enabled = serializers.BooleanField(required=False)
+    booking_party_min = serializers.IntegerField(min_value=1, max_value=1000, required=False)
+    booking_party_max = serializers.IntegerField(min_value=1, max_value=1000, required=False)
+    # Scoped to the caller's own tenant in `validate_booking_pools`, for the same
+    # reason `booking_branches` is: an unscoped queryset would let a crafted id
+    # attach another tenant's boats to this service.
+    booking_pools = serializers.PrimaryKeyRelatedField(
+        queryset=ResourcePool.objects.all(), many=True, required=False,
+    )
+
     # Image as base64 string
     image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
@@ -709,6 +759,41 @@ class ServiceWriteSerializer(serializers.Serializer):
             return value
         return [b for b in value if str(b.system_id) == str(system_id)]
 
+    def validate_booking_pools(self, value):
+        """Keep only pools belonging to the service's own System.
+
+        Same rule and same silent-drop as `validate_booking_branches`; the tenant
+        is reached through the pool's branch, which is the only path a pool has to
+        a System.
+        """
+        system_id = None
+        if self.initial_data.get('system') is not None:
+            system_id = self.initial_data.get('system')
+        elif self.instance is not None:
+            system_id = self.instance.system_id
+        if system_id is None:
+            return value
+        return [p for p in value if str(p.branch.system_id) == str(system_id)]
+
+    def validate(self, attrs):
+        """A party range has to be a range.
+
+        Checked across both fields rather than per-field because either one may be
+        absent from a PATCH: the missing half is read off the instance, so a save
+        that only moves the maximum still cannot put it under the minimum.
+        """
+        low = attrs.get('booking_party_min')
+        high = attrs.get('booking_party_max')
+        if low is None and self.instance is not None:
+            low = self.instance.booking_party_min
+        if high is None and self.instance is not None:
+            high = self.instance.booking_party_max
+        if low is not None and high is not None and low > high:
+            raise serializers.ValidationError(
+                {'booking_party_max': 'The largest party cannot be smaller than the smallest.'}
+            )
+        return attrs
+
     _SCALAR_FIELDS = [
         'name', 'en_name', 'description', 'en_description',
         'short_description', 'en_short_description', 'href', 'video_link', 'fit',
@@ -720,12 +805,14 @@ class ServiceWriteSerializer(serializers.Serializer):
         'booking_enabled', 'booking_in_branch', 'booking_on_premises',
         'booking_pay_full', 'booking_pay_deposit', 'booking_deposit_percent',
         'booking_pay_in_person',
+        'booking_party_enabled', 'booking_party_min', 'booking_party_max',
     ]
 
     def create(self, validated_data):
         image_data = validated_data.pop('image', None)
         variants = validated_data.pop('variants', None)
         booking_branches = validated_data.pop('booking_branches', None)
+        booking_pools = validated_data.pop('booking_pools', None)
         service = Service(**validated_data)
         service.save()
         if variants is not None:
@@ -733,6 +820,8 @@ class ServiceWriteSerializer(serializers.Serializer):
         # After save: an M2M cannot be assigned before the row has a pk.
         if booking_branches is not None:
             service.booking_branches.set(booking_branches)
+        if booking_pools is not None:
+            service.booking_pools.set(booking_pools)
         if image_data:
             self._save_image(service, image_data)
         return service
@@ -742,6 +831,7 @@ class ServiceWriteSerializer(serializers.Serializer):
         image_data = validated_data.pop('image', None)
         variants = validated_data.pop('variants', None)
         booking_branches = validated_data.pop('booking_branches', None)
+        booking_pools = validated_data.pop('booking_pools', None)
         for field_name, value in validated_data.items():
             setattr(instance, field_name, value)
         if clear_image:
@@ -753,6 +843,8 @@ class ServiceWriteSerializer(serializers.Serializer):
         # means "every branch" and must actually clear the relation.
         if booking_branches is not None:
             instance.booking_branches.set(booking_branches)
+        if booking_pools is not None:
+            instance.booking_pools.set(booking_pools)
         if image_data:
             self._save_image(instance, image_data)
         return instance

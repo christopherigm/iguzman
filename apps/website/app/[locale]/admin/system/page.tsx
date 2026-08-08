@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import { ContactSection } from "./contact-section";
+import { MapSection } from "./map-section";
 import { StorageSection } from "./storage-section";
 import { BackupSection } from "./backup-section";
 import { RestoreSection } from "./restore-section";
@@ -25,6 +26,14 @@ export default function AdminSystemPage() {
     contact_email: "",
     social_links: [],
     enabled: true,
+    // Which basemap every map on the site draws. Here rather than on the
+    // brand-kit page because it is a property of the site's operation, not of
+    // how it looks. Seeded with the model's own default so the picker renders
+    // sensibly for the moment before the API answers, rather than snapping.
+    map_style: "osm",
+    map_tile_url: "",
+    map_attribution: "",
+    map_attribution_url: "",
   });
 
   const [loading, setLoading] = useState(true);
@@ -51,6 +60,10 @@ export default function AdminSystemPage() {
           contact_email: data.contact_email ?? "",
           social_links: data.social_links ?? [],
           enabled: data.enabled ?? true,
+          map_style: data.map_style ?? "osm",
+          map_tile_url: data.map_tile_url ?? "",
+          map_attribution: data.map_attribution ?? "",
+          map_attribution_url: data.map_attribution_url ?? "",
         });
       })
       .catch(() => setError(t("errorLoad")))
@@ -151,6 +164,14 @@ export default function AdminSystemPage() {
             panel on /admin/featured-spotlight; Stripe and the offline payment
             methods on /admin/payments.) */}
         <ContactSection
+          values={values}
+          onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
+        />
+
+        {/* Inside the form, unlike Storage/Backup/Restore below: these are
+            ordinary System keys saved by the form's own button, not a separate
+            action with a request of its own. */}
+        <MapSection
           values={values}
           onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
         />
