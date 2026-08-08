@@ -8,12 +8,16 @@ import { Button } from "@repo/ui/core-elements/button";
 import { Select } from "@repo/ui/core-elements/select";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { QuantityStepper } from "@/components/quantity-stepper";
+import { PlaceMap } from "@/components/place-map";
 import type { BookingFulfillment } from "@/lib/booking-shared";
 import { formatPrice } from "@/lib/price";
 
 export interface BookingCtaBranch {
   id: number;
   name: string;
+  /** Decimal strings from the API, or null where the tenant never pinned it. */
+  latitude: string | null;
+  longitude: string | null;
 }
 
 interface ServiceBookingCtaProps {
@@ -36,6 +40,8 @@ interface ServiceBookingCtaProps {
   partyMax: number;
   price: string;
   currency: string;
+  /** The tenant's brandmark, drawn inside the location map's pin. */
+  pinIcon: string | null;
 }
 
 /**
@@ -66,6 +72,7 @@ export function ServiceBookingCta({
   partyMax,
   price,
   currency,
+  pinIcon,
 }: ServiceBookingCtaProps) {
   const t = useTranslations("Booking");
   const router = useRouter();
@@ -90,6 +97,33 @@ export function ServiceBookingCta({
   // on-premises job happens at their address, so which branch it is staffed
   // from is not theirs to pick.
   const showBranches = fulfillment === "branch" && branches.length > 1;
+
+  // Where it happens, drawn under the pickers that chose it.
+  //
+  // Gated on `branch` fulfillment for the same reason the picker above it is:
+  // an on-premises job happens at the customer's own address, so a map of the
+  // shop would be pointing at the wrong place entirely. It follows the select
+  // rather than being fixed to the first location - which is the whole reason
+  // it is rendered here, in the component that owns that state, rather than
+  // beside the price in the server component above.
+  //
+  // With exactly one location there is no select to follow and the map simply
+  // shows it. A location the tenant never pinned gets no map, exactly as on the
+  // contact page.
+  const selectedBranch =
+    fulfillment === "branch"
+      ? (branches.find((b) => String(b.id) === branchId) ?? null)
+      : null;
+  const branchPin =
+    selectedBranch &&
+    selectedBranch.latitude !== null &&
+    selectedBranch.longitude !== null
+      ? {
+          latitude: Number(selectedBranch.latitude),
+          longitude: Number(selectedBranch.longitude),
+          title: selectedBranch.name,
+        }
+      : null;
 
   // One control when only the fulfillment varies, one when only the branch does,
   // and two when both do.
@@ -130,6 +164,22 @@ export function ServiceBookingCta({
             value: String(branch.id),
             label: branch.name,
           }))}
+        />
+      )}
+
+      {/* Directly under the pickers that chose the place - so it reads as the
+        answer to "which location?", not as a detail of the party size or the
+        button below it. The same single-pin map the contact page, an event and
+        the booking page draw, so all four wear the tenant's own basemap and
+        brandmark. Shorter than elsewhere: this column is half a page wide and
+        the button under it has to stay in view. */}
+      {branchPin && (
+        <PlaceMap
+          latitude={branchPin.latitude}
+          longitude={branchPin.longitude}
+          title={branchPin.title}
+          pinIcon={pinIcon}
+          height={200}
         />
       )}
 

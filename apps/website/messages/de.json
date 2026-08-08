@@ -1315,6 +1315,10 @@
     "mapZoomOut": "Verkleinern",
     "mapZoomHint": "Zum Zoomen Strg + Scrollen verwenden",
     "mapZoomHintMac": "Zum Zoomen ⌘ + Scrollen verwenden",
+    "mapYourLocation": "Dein Standort",
+    "mapLocate": "Meinen Standort anzeigen",
+    "mapFullscreen": "Vollbild",
+    "mapExitFullscreen": "Vollbild beenden",
     "aboutItem": "Betreff: {name}",
     "askAboutHeading": "Haben Sie eine Frage dazu?",
     "askAboutDescription": "Fragen Sie uns alles und wir antworten per E-Mail."

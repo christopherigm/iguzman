@@ -8,6 +8,7 @@ import { ShareButton } from "@repo/ui/core-elements/share-button";
 import { getSession } from "@repo/auth/session";
 import type { ServiceDetail } from "@/lib/catalog";
 import { getBranches } from "@/lib/branches";
+import { getSystem } from "@/lib/system";
 import { findCartLineId } from "@/lib/cart";
 import { isFavorite } from "@/lib/favorites";
 import { toShareDescription } from "@/lib/metadata";
@@ -200,19 +201,23 @@ export async function ServiceDetailPanel({
   service,
   locale,
 }: ServiceDetailProps) {
-  const [t, tBooking, session, cartLineId, branches] = await Promise.all([
-    getTranslations("ItemDetail"),
-    // Only for the "per person" qualifier beside the price - the same word the
-    // catalog card prints, from the same namespace, so a bookable service reads
-    // the same on the grid it was clicked from and on the page it opens.
-    getTranslations("Booking"),
-    getSession(),
-    findCartLineId("service", service.id),
-    // Only needed to name the locations in the booking picker. Fetched
-    // unconditionally because it is `cache()`d per request and the contact
-    // footer usually asks for it anyway.
-    getBranches(),
-  ]);
+  const [t, tBooking, session, cartLineId, branches, system] =
+    await Promise.all([
+      getTranslations("ItemDetail"),
+      // Only for the "per person" qualifier beside the price - the same word the
+      // catalog card prints, from the same namespace, so a bookable service reads
+      // the same on the grid it was clicked from and on the page it opens.
+      getTranslations("Booking"),
+      getSession(),
+      findCartLineId("service", service.id),
+      // Names the locations in the booking picker, and pins the one it selects.
+      // Fetched unconditionally because it is `cache()`d per request and the
+      // contact footer usually asks for it anyway.
+      getBranches(),
+      // Only for the map pin's brandmark. Request-cached, and the layout has
+      // already asked for it on every page.
+      getSystem(),
+    ]);
 
   // An empty `booking_branches` means "every branch", not "no branch" - see
   // `branches_for` in website-api. A tenant with no Branch rows at all is the
@@ -230,6 +235,10 @@ export async function ServiceDetailPanel({
         branch.name ??
         branch.en_name ??
         "",
+      // Decimal strings from the API; the CTA's map converts them at the point
+      // of use, so the shape here stays the API's.
+      latitude: branch.latitude,
+      longitude: branch.longitude,
     }));
 
   const discount = service.compare_price
@@ -313,6 +322,10 @@ export async function ServiceDetailPanel({
               partyMax={service.booking_party_limit}
               price={service.price}
               currency={service.currency}
+              // The tenant's brandmark, not its logo: the pin's head is a 34 px
+              // circle that crops what it is given, so a wide wordmark comes out
+              // as three letters from its own middle.
+              pinIcon={system?.img_brandmark ?? null}
             />
           ) : (
             /* Secondary + primary CTAs share the width, wrapping on very narrow

@@ -274,12 +274,13 @@ Six things that will bite:
 
 Every map on this site is `components/place-map.tsx` (`PlaceMap`), a thin client
 wrapper over `@repo/ui`'s **`OsmMap`**: OpenStreetMap-style raster tiles painted
-into the page's own DOM, one pin, no Google iframe. Three surfaces draw one:
-each location on the contact page (`components/contact/contact-locations.tsx`),
-an event's venue (`app/[locale]/events/[slug]/page.tsx`), and the branch a
-booking is being made at (`booking-form.tsx`). It replaced the per-surface copies
-- an `EventMap` component and an inline `OsmMap` on the contact page - which had
-already started to drift.
+into the page's own DOM, one pin, no Google iframe. Four surfaces draw one: each
+location on the contact page (`components/contact/contact-locations.tsx`), an
+event's venue (`app/[locale]/events/[slug]/page.tsx`), the buy box of a bookable
+service (`components/service-booking-cta.tsx`), and the branch a booking is being
+made at (`booking-form.tsx`). It replaced the per-surface copies - an `EventMap`
+component and an inline `OsmMap` on the contact page - which had already started
+to drift.
 
 **Which basemap they draw is one tenant setting**, authored in the CMS at
 `/admin/system` → Maps (`admin/system/map-section.tsx`): `System.map_style` picks
@@ -318,14 +319,34 @@ Five things that will bite:
   is a 34 px circle that crops what it is given, so a wide wordmark comes out as
   three letters from its own middle. With no brandmark it is a plain accent
   teardrop, which is fine.
+- **Both map controls are on by default** - a two-button row in the top-right
+  corner (locate, then fullscreen; in fullscreen, locate then close), wearing
+  `OsmMap`'s own default glyphs, all three of which `public/icons/` ships. Every
+  surface here answers "where is this, relative to me?", which is why they are on
+  the shared component rather than per-page. ⚠ **Locating is a _button_**: nothing
+  asks for the geolocation permission until it is pressed, and a refusal, a
+  device with no fix and an insecure origin are all the same path - no pin, no
+  message, the map exactly as it was. Never write a branch that reports the
+  failure. Fullscreen is a CSS overlay, not the Fullscreen API (`requestFullscreen`
+  is still dead on iPhone Safari); `Escape` leaves it.
 
-**On the booking page** the map sits at the top of the right-hand column, above
-"Your details" - the location has already been chosen on the left, and this is
-the last chance to notice it is the wrong side of town before typing a name and
-paying. It is rendered only for `branch` fulfillment: with `on_premises` the
-tenant travels to the customer, so a map of the shop would point at the wrong
-address on the very page where the right one is typed. A branch the tenant never
-pinned gets no map, exactly as on the contact page.
+**Two booking surfaces draw the location, and both gate it on `branch`
+fulfillment.** With `on_premises` the tenant travels to the customer, so a map of
+the shop would point at the wrong address on the very page where the right one is
+typed. A location the tenant never pinned gets no map, exactly as on the contact
+page.
+
+- **The service detail page** draws it *inside* `ServiceBookingCta`, directly
+  under the Where/Location selects and above the party counter and "Book now".
+  It is in the client component rather than beside the price in
+  `ServiceDetailPanel` because it **follows the select**: with several locations
+  it re-centres as the customer changes their pick, and with one it simply shows
+  that one. That is also why `BookingCtaBranch` carries coordinates - the
+  server component resolves them, the client one chooses between them.
+- **The booking page** puts it at the top of the right-hand column, above "Your
+  details" - the location has already been chosen on the left, and this is the
+  last chance to notice it is the wrong side of town before typing a name and
+  paying.
 
 ## Anonymous cart, favorites and guest checkout
 

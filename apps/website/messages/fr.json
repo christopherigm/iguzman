@@ -1315,6 +1315,10 @@
     "mapZoomOut": "Zoom arrière",
     "mapZoomHint": "Utilisez Ctrl + défilement pour zoomer sur la carte",
     "mapZoomHintMac": "Utilisez ⌘ + défilement pour zoomer sur la carte",
+    "mapYourLocation": "Votre position",
+    "mapLocate": "Afficher ma position",
+    "mapFullscreen": "Plein écran",
+    "mapExitFullscreen": "Quitter le plein écran",
     "aboutItem": "À propos : {name}",
     "askAboutHeading": "Une question à ce sujet ?",
     "askAboutDescription": "Posez-nous vos questions et nous répondrons par e-mail."

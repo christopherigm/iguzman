@@ -30,6 +30,15 @@ import { useBasemap } from "@/components/basemap-provider";
  * No `renderPopup`: with one pin there is nothing for a card to add that the
  * address beside it does not already say - and omitting it is what makes the
  * marker a labelled image rather than a button that opens nothing.
+ *
+ * **Both map controls are on by default**, exactly as on `apps/animals`'
+ * `SightingsMap`, and they wear `OsmMap`'s own default glyphs -
+ * `/icons/location-arrow.svg`, `/icons/fullscreen.svg` and `/icons/close.svg`,
+ * all of which this app ships. Every surface drawing this map answers "where is
+ * this, relative to me?" - a branch on the contact page, a venue, the location a
+ * booking is being made at - and locating the reader is a *button*: nothing here
+ * asks the browser where anyone is until it is pressed, and a refusal, a device
+ * with no fix and an insecure origin are all the same silent no-op.
  */
 export function PlaceMap({
   latitude,
@@ -37,6 +46,8 @@ export function PlaceMap({
   title,
   pinIcon = null,
   height = 320,
+  locateControl = true,
+  fullscreenControl = true,
 }: {
   latitude: number;
   longitude: number;
@@ -50,6 +61,10 @@ export function PlaceMap({
    */
   pinIcon?: string | null;
   height?: number;
+  /** Offer the button that pins the reader's own position. @default true */
+  locateControl?: boolean;
+  /** Offer the button that fills the screen with the map. @default true */
+  fullscreenControl?: boolean;
 }) {
   const t = useTranslations("Contact");
   const basemap = useBasemap();
@@ -60,6 +75,8 @@ export function PlaceMap({
     <OsmMap
       markers={[{ id: 1, latitude, longitude, title: name, icon: pinIcon }]}
       height={height}
+      locateControl={locateControl}
+      fullscreenControl={fullscreenControl}
       tileUrl={basemap.tileUrl}
       tileFilter={basemap.filter}
       {...(basemap.attributionUrl
@@ -72,6 +89,10 @@ export function PlaceMap({
         attribution: basemap.attribution,
         zoomHint: t("mapZoomHint"),
         zoomHintMac: t("mapZoomHintMac"),
+        yourLocation: t("mapYourLocation"),
+        locate: t("mapLocate"),
+        enterFullscreen: t("mapFullscreen"),
+        exitFullscreen: t("mapExitFullscreen"),
       }}
     />
   );

@@ -70,8 +70,8 @@ export async function Footer({ logo, system }: Props) {
               <Image
                 src={logo}
                 alt={system?.site_name ?? ""}
-                width={140}
-                height={44}
+                width={315}
+                height={99}
                 style={{ objectFit: "contain", objectPosition: "left center" }}
               />
               {system?.site_name && (
