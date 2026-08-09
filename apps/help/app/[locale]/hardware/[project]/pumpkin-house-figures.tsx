@@ -1,10 +1,15 @@
 /**
- * The five schematic drawings for the Pumpkin House Lantern build sheet.
+ * The three wiring drawings for the Pumpkin House Lantern tutorial.
  *
  * Ported from the standalone `schematic.html` that used to live in
  * `hardware/pumpkin-house/`. The geometry is unchanged - every coordinate,
  * path and label is the original - only the attribute names are React's
  * (`class` → `className`, `stroke-width` → `strokeWidth`, and so on).
+ *
+ * Two further drawings came across in that port and have since been dropped:
+ * an NPN-vs-GPIO comparison and a buzzer gate-rate axis. Both illustrated an
+ * *argument* rather than a connection, and the tutorial makes those points in
+ * a sentence. Everything kept here is something you wire while holding it.
  *
  * Colour comes entirely from the semantic stroke classes in
  * `hardware-doc.css` (`wire-raw` for the battery rail, `wire-live` for the
@@ -139,192 +144,7 @@ export function PowerPathFigure() {
   );
 }
 
-/** Fig 2 - low-side NPN vs. anodes straight off GPIO. */
-export function RgbOptionsFigure() {
-  return (
-    <svg
-      viewBox="0 0 900 360"
-      role="img"
-      aria-label="Comparison of two wiring options for a common-cathode RGB LED. On the left, a single NPN transistor on the shared cathode switches all three colour dice together, giving only on and off. On the right, each anode is driven by its own GPIO pin through its own resistor, giving three independent PWM channels and full colour mixing."
-    >
-      {/* ============ LEFT: low-side NPN ============ */}
-      <text x="40" y="34" className="lbl-hd">
-        OPTION A — NPN ON THE COMMON CATHODE
-      </text>
-
-      <path className="wire-raw" d="M60,68 L300,68" />
-      <text x="60" y="58" className="lbl-sm lbl-raw">
-        RAW 4.8 V
-      </text>
-
-      {/* three branches down */}
-      <g>
-        <path className="wire-raw" d="M110,68 L110,104" />
-        <path className="wire-raw" d="M180,68 L180,104" />
-        <path className="wire-raw" d="M250,68 L250,104" />
-        <circle cx="110" cy="68" r="3.5" className="node" />
-        <circle cx="180" cy="68" r="3.5" className="node" />
-        <circle cx="250" cy="68" r="3.5" className="node" />
-      </g>
-
-      {/* resistors (vertical zigzags) */}
-      <g className="part">
-        <path d="M110,104 l0,4 l-7,3 l14,6 l-14,6 l14,6 l-7,3 l0,4" />
-        <path d="M180,104 l0,4 l-7,3 l14,6 l-14,6 l14,6 l-7,3 l0,4" />
-        <path d="M250,104 l0,4 l-7,3 l14,6 l-14,6 l14,6 l-7,3 l0,4" />
-      </g>
-
-      {/* LED triangles pointing down */}
-      <g>
-        <path className="wire-raw" d="M110,140 L110,156" />
-        <path className="wire-raw" d="M180,140 L180,156" />
-        <path className="wire-raw" d="M250,140 L250,156" />
-        <polygon points="99,156 121,156 110,174" className="part-fill" />
-        <line x1="97" y1="174" x2="123" y2="174" className="part" />
-        <polygon points="169,156 191,156 180,174" className="part-fill" />
-        <line x1="167" y1="174" x2="193" y2="174" className="part" />
-        <polygon points="239,156 261,156 250,174" className="part-fill" />
-        <line x1="237" y1="174" x2="263" y2="174" className="part" />
-      </g>
-      <text x="100" y="196" className="lbl-sm">
-        R
-      </text>
-      <text x="170" y="196" className="lbl-sm">
-        G
-      </text>
-      <text x="240" y="196" className="lbl-sm">
-        B
-      </text>
-
-      {/* shared cathode bus */}
-      <path
-        className="wire"
-        d="M110,174 L110,212 L250,212 L250,174 M180,174 L180,212"
-      />
-      <circle cx="180" cy="212" r="3.5" className="node" />
-      <text x="262" y="216" className="lbl-sm">
-        shared cathode
-      </text>
-
-      {/* NPN */}
-      <path className="wire" d="M180,212 L180,244" />
-      <circle cx="180" cy="268" r="24" className="part" />
-      <line x1="170" y1="252" x2="170" y2="284" className="part" />
-      <path className="wire" d="M180,244 L180,258 L170,264" />
-      <path className="wire" d="M170,272 L180,278 L180,296" />
-      <polygon points="176,272 180,281 172,279" className="part-fill" />
-      <path className="wire-logic" d="M146,268 L110,268" />
-      <text x="60" y="272" className="lbl-sm lbl-logic">
-        GPIO
-      </text>
-
-      {/* gnd */}
-      <path className="wire" d="M180,296 L180,308" />
-      <g className="part">
-        <line x1="170" y1="308" x2="190" y2="308" />
-        <line x1="174" y1="314" x2="186" y2="314" />
-        <line x1="178" y1="320" x2="182" y2="320" />
-      </g>
-
-      <text x="290" y="264" className="lbl" fill="var(--rust)">
-        one switch,
-      </text>
-      <text x="290" y="282" className="lbl" fill="var(--rust)">
-        three dice —
-      </text>
-      <text x="290" y="300" className="lbl" fill="var(--rust)">
-        no mixing
-      </text>
-
-      {/* divider */}
-      <line x1="450" y1="20" x2="450" y2="340" className="box-dash" />
-
-      {/* ============ RIGHT: GPIO direct ============ */}
-      <text x="490" y="34" className="lbl-hd">
-        OPTION B — ANODES STRAIGHT OFF GPIO
-      </text>
-
-      {/* three GPIO sources */}
-      <text x="490" y="94" className="lbl-sm lbl-logic">
-        GP0
-      </text>
-      <text x="490" y="164" className="lbl-sm lbl-logic">
-        GP1
-      </text>
-      <text x="490" y="234" className="lbl-sm lbl-logic">
-        GP2
-      </text>
-      <path className="wire-logic" d="M528,90 L586,90" />
-      <path className="wire-logic" d="M528,160 L586,160" />
-      <path className="wire-logic" d="M528,230 L586,230" />
-
-      {/* resistors horizontal */}
-      <g className="part">
-        <path d="M586,90 l4,0 l3,-8 l6,16 l6,-16 l6,16 l6,-16 l3,8 l4,0" />
-        <path d="M586,160 l4,0 l3,-8 l6,16 l6,-16 l6,16 l6,-16 l3,8 l4,0" />
-        <path d="M586,230 l4,0 l3,-8 l6,16 l6,-16 l6,16 l6,-16 l3,8 l4,0" />
-      </g>
-      <text x="584" y="72" className="lbl-sm">
-        150 Ω
-      </text>
-      <text x="584" y="142" className="lbl-sm">
-        68 Ω
-      </text>
-      <text x="584" y="212" className="lbl-sm">
-        68 Ω
-      </text>
-
-      {/* wires to LEDs */}
-      <path className="wire-logic" d="M624,90 L664,90" />
-      <path className="wire-logic" d="M624,160 L664,160" />
-      <path className="wire-logic" d="M624,230 L664,230" />
-
-      {/* LED triangles pointing right */}
-      <g>
-        <polygon points="664,79 664,101 684,90" className="part-fill" />
-        <line x1="684" y1="77" x2="684" y2="103" className="part" />
-        <polygon points="664,149 664,171 684,160" className="part-fill" />
-        <line x1="684" y1="147" x2="684" y2="173" className="part" />
-        <polygon points="664,219 664,241 684,230" className="part-fill" />
-        <line x1="684" y1="217" x2="684" y2="243" className="part" />
-      </g>
-      <text x="700" y="82" className="lbl-sm">
-        R
-      </text>
-      <text x="700" y="152" className="lbl-sm">
-        G
-      </text>
-      <text x="700" y="222" className="lbl-sm">
-        B
-      </text>
-
-      {/* common cathode bus to gnd */}
-      <path
-        className="wire"
-        d="M684,90 L740,90 L740,230 L684,230 M684,160 L740,160"
-      />
-      <circle cx="740" cy="160" r="3.5" className="node" />
-      <path className="wire" d="M740,160 L790,160 L790,282" />
-      <g className="part">
-        <line x1="780" y1="282" x2="800" y2="282" />
-        <line x1="784" y1="288" x2="796" y2="288" />
-        <line x1="788" y1="294" x2="792" y2="294" />
-      </g>
-      <text x="748" y="128" className="lbl-sm">
-        shared cathode → GND
-      </text>
-
-      <text x="490" y="290" className="lbl" fill="var(--verdigris)">
-        three independent PWM channels
-      </text>
-      <text x="490" y="308" className="lbl-sm">
-        full colour mixing, zero transistors
-      </text>
-    </svg>
-  );
-}
-
-/** Fig 3 - one RGB group in detail, with resistor values. */
+/** Fig 2 - one RGB group in detail, with resistor values. */
 export function RgbGroupFigure() {
   return (
     <svg
@@ -444,7 +264,7 @@ export function RgbGroupFigure() {
   );
 }
 
-/** Fig 4 - the two NPN low-side driver stages (white flood, buzzer). */
+/** Fig 3 - the two NPN low-side driver stages (white flood, buzzer). */
 export function NpnStagesFigure() {
   return (
     <svg
@@ -638,123 +458,6 @@ export function NpnStagesFigure() {
       </g>
       <text x="474" y="384" className="lbl-sm">
         ≈30 mA — well over the 12 mA a GPIO pin can source, hence Q2
-      </text>
-    </svg>
-  );
-}
-
-/** Fig 5 - the gate-rate axis and its three perceptual zones. */
-export function GateRateFigure() {
-  return (
-    <svg
-      viewBox="0 0 880 300"
-      role="img"
-      aria-label="A gate-rate axis from 1 hertz to 3 kilohertz divided into three perceptual zones: below 20 hertz the gating is heard as rhythm, between 20 and 120 hertz it fuses into timbre and roughness via amplitude-modulation sidebands, and near the 2.3 kilohertz carrier it produces intermodulation warbles."
-    >
-      <text x="30" y="28" className="lbl-hd">
-        GATE RATE → PERCEPTUAL ZONE
-      </text>
-
-      {/* example gate waveforms */}
-      <g className="wire-logic">
-        <path d="M60,74 L60,54 L96,54 L96,74 L146,74 L146,54 L182,54 L182,74 L232,74" />
-      </g>
-      <g className="wire-logic">
-        <path d="M340,74 L340,54 L352,54 L352,74 L364,74 L364,54 L376,54 L376,74 L388,74 L388,54 L400,54 L400,74 L412,74 L412,54 L424,54 L424,74 L436,74 L436,54 L448,54 L448,74 L460,74 L460,54 L472,54 L472,74 L484,74" />
-      </g>
-      <g className="wire-logic">
-        <path d="M620,74 L620,54 L625,54 L625,74 L630,74 L630,54 L635,54 L635,74 L640,74 L640,54 L645,54 L645,74 L650,74 L650,54 L655,54 L655,74 L660,74 L660,54 L665,54 L665,74 L670,74 L670,54 L675,54 L675,74 L680,74 L680,54 L685,54 L685,74 L690,74 L690,54 L695,54 L695,74 L700,74 L700,54 L705,54 L705,74 L710,74 L710,54 L715,54 L715,74 L720,74 L720,54 L725,54 L725,74 L730,74 L730,54 L735,54 L735,74 L740,74 L740,54 L745,54 L745,74 L750,74 L750,54 L755,54 L755,74 L760,74 L760,54 L765,54 L765,74 L770,74" />
-      </g>
-
-      {/* axis */}
-      <line x1="40" y1="130" x2="840" y2="130" className="wire" />
-      <g className="part">
-        <line x1="40" y1="126" x2="40" y2="134" />
-        <line x1="306" y1="122" x2="306" y2="138" />
-        <line x1="572" y1="122" x2="572" y2="138" />
-        <line x1="840" y1="126" x2="840" y2="134" />
-      </g>
-      <text x="30" y="152" className="lbl-sm">
-        1 Hz
-      </text>
-      <text x="286" y="152" className="lbl-sm">
-        20 Hz
-      </text>
-      <text x="550" y="152" className="lbl-sm">
-        120 Hz
-      </text>
-      <text x="806" y="152" className="lbl-sm">
-        3 kHz
-      </text>
-
-      {/* zone bars */}
-      <rect x="40" y="176" width="262" height="30" className="box" />
-      <rect
-        x="308"
-        y="176"
-        width="260"
-        height="30"
-        fill="none"
-        stroke="var(--ember)"
-        strokeWidth="1.6"
-      />
-      <rect
-        x="574"
-        y="176"
-        width="266"
-        height="30"
-        fill="none"
-        stroke="var(--verdigris)"
-        strokeWidth="1.6"
-      />
-
-      <text x="54" y="196" className="lbl">
-        RHYTHM
-      </text>
-      <text x="322" y="196" className="lbl lbl-live">
-        TIMBRE · ROUGHNESS
-      </text>
-      <text x="588" y="196" className="lbl lbl-logic">
-        INTERMODULATION
-      </text>
-
-      <text x="40" y="232" className="lbl-sm">
-        Individual pulses are
-      </text>
-      <text x="40" y="248" className="lbl-sm">
-        heard separately —
-      </text>
-      <text x="40" y="264" className="lbl-sm">
-        beeps, ticks, Morse,
-      </text>
-      <text x="40" y="280" className="lbl-sm">
-        heartbeats.
-      </text>
-
-      <text x="308" y="232" className="lbl-sm">
-        Pulses fuse. AM sidebands
-      </text>
-      <text x="308" y="248" className="lbl-sm">
-        appear around the carrier
-      </text>
-      <text x="308" y="264" className="lbl-sm">
-        and it turns raspy — this is
-      </text>
-      <text x="308" y="280" className="lbl-sm">
-        where the crow lives.
-      </text>
-
-      <text x="574" y="232" className="lbl-sm">
-        Gate and carrier beat against
-      </text>
-      <text x="574" y="248" className="lbl-sm">
-        each other, producing sum and
-      </text>
-      <text x="574" y="264" className="lbl-sm">
-        difference tones. Unpredictable
-      </text>
-      <text x="574" y="280" className="lbl-sm">
-        per unit — but free to try.
       </text>
     </svg>
   );

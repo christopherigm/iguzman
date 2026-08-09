@@ -13,7 +13,7 @@ import data from "./hardware-projects.json";
  *
  * The JSON carries only what the **listing** needs plus the detail page's spec
  * chips. The body of each project's documentation is a React component under
- * `app/[locale]/hardware/[project]/_projects/`, registered in that route's
+ * `app/[locale]/hardware/[project]/`, registered in that route's
  * `PROJECT_DOCS` map - prose, schematics and wiring tables are authored, not
  * data, and trying to express an SVG figure in JSON would be a worse version of
  * a `.tsx` file.

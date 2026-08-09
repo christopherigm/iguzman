@@ -7,7 +7,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
  * A project's documentation is a *drawing with a legend*, not app UI: numbered
  * sections, figures with captions, dense value tables and two kinds of callout.
  * Those pieces repeat across every project, so they live here rather than being
- * re-declared in each `_projects/<slug>.tsx`.
+ * re-declared in each `<slug>.tsx`.
  *
  * Two notes on how this is styled, both deliberate:
  *
@@ -32,12 +32,13 @@ export function P({ children }: { children: ReactNode }) {
 }
 
 /**
- * A top-level section, e.g. "01 How many cells".
+ * A top-level section, e.g. "02 Build the power path".
  *
- * `num` is optional so a document can carry **one** numbered sequence. The
- * build sheet's prose cross-references its own sections by number ("see §04",
- * "§2 of the schematic"), so those keep their numbers; the how-to sections that
- * precede them are titled but unnumbered, and a bare "§04" stays unambiguous.
+ * `num` is optional so a document can carry **one** numbered sequence. In a
+ * build tutorial that sequence is the steps you perform, which the prose
+ * cross-references by number ("see the callout in step 03"); the orientation
+ * sections before them and the reference tail after them are titled but
+ * unnumbered, so a bare "step 03" stays unambiguous.
  */
 export function DocSection({
   num,

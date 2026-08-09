@@ -8,7 +8,7 @@ import { Badge } from "@repo/ui/core-elements/badge";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { NavbarSpacer, PageBottomSpacer } from "@repo/ui/core-elements/navbar";
 import { HARDWARE_PROJECTS, getHardwareProject } from "@/lib/hardware-projects";
-import { PumpkinHouseDoc } from "./_projects/pumpkin-house";
+import { PumpkinHouseDoc } from "./pumpkin-house";
 import "./hardware-doc.css";
 
 type Props = {
@@ -20,7 +20,8 @@ type Props = {
  *
  * The registry in `lib/hardware-projects.json` carries the listing metadata;
  * the body of each build sheet is authored JSX, so it is registered here. A new
- * project is a JSON entry, a `_projects/<slug>.tsx`, and one line in this map.
+ * project is a JSON entry, a `<slug>.tsx` beside this file, and one line in
+ * this map.
  */
 const PROJECT_DOCS: Record<string, () => ReactNode> = {
   "pumpkin-house": PumpkinHouseDoc,

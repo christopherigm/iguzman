@@ -1,0 +1,255 @@
+/*
+ * The one stylesheet the pictorial hardware parts share.
+ *
+ * This is a deliberate departure from the "one .css per component" convention
+ * in `packages/ui/CLAUDE.md`, for the same reason `hardware-doc.css` is one
+ * sheet in the help app: these ten-odd components are not ten independent
+ * widgets, they are one *drawing style*. A resistor's body colour and a
+ * breadboard's substrate have to be chosen against each other, and the glow, the
+ * current-flow dashes and the buzzer's sound arcs are the same three keyframes
+ * reused by several parts. Splitting them per file would mean either duplicating
+ * the keyframes or having `led.css` silently depend on `wire.css` being loaded.
+ *
+ * Every part file imports this sheet; bundlers de-duplicate it.
+ *
+ * ── Colour policy ──────────────────────────────────────────────────────────
+ *
+ * These parts depict **physical objects**, so their colours are literal, not
+ * semantic: a resistor is beige with real IEC colour-code bands, a Pico is
+ * that particular green, a jumper wire is whatever colour you plugged in. Those
+ * do not get re-themed - a red wire that turned grey in dark mode would be
+ * teaching the reader the wrong thing.
+ *
+ * What *does* flip with the theme is the **substrate and the paper**: the
+ * breadboard's plastic, its hole shadows, and any text, which all take the
+ * page's own foreground. The literal part colours are then nudged (slightly
+ * deepened, never hue-shifted) so they sit on a dark page without glaring.
+ */
+
+.hw-fig {
+  /* Substrate - the parts that are "the page's furniture", not a component. */
+  --hw-board: #f1efe6;
+  --hw-board-edge: #d5d0c0;
+  --hw-board-groove: #e4e1d6;
+  --hw-hole: #cec9b8;
+  --hw-hole-slot: #6f6a5c;
+  --hw-ink: currentColor;
+  --hw-ink-soft: color-mix(in srgb, currentColor 62%, transparent);
+
+  /* Rails. */
+  --hw-rail-positive: #cf4a3c;
+  --hw-rail-negative: #3b6fb5;
+
+  /* Literal part colours. */
+  --hw-pcb: #1d6f48;
+  --hw-pcb-dark: #145637;
+  --hw-silk: #eaf1ec;
+  --hw-pad: #d8b243;
+  --hw-pad-ring: #a9862b;
+  --hw-metal: #b7bac1;
+  --hw-metal-dark: #82868e;
+  --hw-resistor: #d9c69f;
+  --hw-resistor-shade: #bda887;
+  --hw-plastic-dark: #23262b;
+
+  color: inherit;
+}
+
+:root[data-theme="dark"] .hw-fig {
+  --hw-board: #232830;
+  --hw-board-edge: #171b21;
+  --hw-board-groove: #1c2027;
+  --hw-hole: #171b21;
+  --hw-hole-slot: #0c0e12;
+  --hw-rail-positive: #e0685a;
+  --hw-rail-negative: #5b90d6;
+  --hw-pcb: #1a6642;
+  --hw-pcb-dark: #114a30;
+  --hw-silk: #dfe8e1;
+  --hw-pad: #c9a43c;
+  --hw-pad-ring: #8f7226;
+  --hw-metal: #9aa0a8;
+  --hw-metal-dark: #6b7079;
+  --hw-resistor: #c4b189;
+  --hw-resistor-shade: #a89573;
+  --hw-plastic-dark: #14161a;
+}
+
+/* ── Text on a drawing ──────────────────────────────────────────────────── */
+
+.hw-fig text {
+  font-family:
+    ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas,
+    monospace;
+  fill: var(--hw-ink);
+}
+
+.hw-fig .hw-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.hw-fig .hw-label-sm {
+  font-size: 9.5px;
+  fill: var(--hw-ink-soft);
+}
+
+.hw-fig .hw-label-chip {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  fill: #ffffff;
+}
+
+/*
+ * Text printed ON a part - a PCB's silkscreen, a case marking.
+ *
+ * It needs its own class rather than a `fill` attribute on the element: in SVG
+ * a CSS declaration beats a presentation attribute, so `.hw-fig text { fill }`
+ * above silently wins over `<text fill="…">` and every silkscreen legend came
+ * out in the page's ink colour - dark grey on a dark green board.
+ */
+.hw-fig .hw-silk {
+  font-size: 9.5px;
+  fill: var(--hw-silk);
+}
+
+/* ── Current flow along a wire ──────────────────────────────────────────── */
+
+/*
+ * The marching dashes ride *on top of* the wire as a lighter overlay, rather
+ * than the wire itself being dashed - a dashed wire reads as a signal that is
+ * not connected, which is the opposite of what this animation is saying.
+ */
+@keyframes hw-flow {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+
+.hw-fig .hw-flow {
+  stroke-dasharray: 6 22;
+  stroke-linecap: round;
+  animation: hw-flow 1.15s linear infinite;
+}
+
+/* ── LED emission ───────────────────────────────────────────────────────── */
+
+@keyframes hw-pulse {
+  0%,
+  100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+/*
+ * The flicker is the firmware's flame, not a fault: mostly bright, with short
+ * irregular dips. Even steps would read as a loose connection.
+ */
+@keyframes hw-flicker {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+  8% {
+    opacity: 0.55;
+  }
+  14% {
+    opacity: 0.95;
+  }
+  27% {
+    opacity: 0.62;
+  }
+  33% {
+    opacity: 1;
+  }
+  47% {
+    opacity: 0.72;
+  }
+  58% {
+    opacity: 0.98;
+  }
+  66% {
+    opacity: 0.5;
+  }
+  71% {
+    opacity: 0.88;
+  }
+  85% {
+    opacity: 0.68;
+  }
+  92% {
+    opacity: 1;
+  }
+}
+
+.hw-fig .hw-glow-pulse {
+  animation: hw-pulse 1.9s ease-in-out infinite;
+}
+
+.hw-fig .hw-glow-flicker {
+  animation: hw-flicker 2.6s steps(1, end) infinite;
+}
+
+/* ── Buzzer sound ───────────────────────────────────────────────────────── */
+
+/*
+ * Three arcs on the same keyframes, staggered by delay, so a ring appears to
+ * leave the can and fade as it travels.
+ */
+@keyframes hw-sound {
+  0% {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+  25% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+.hw-fig .hw-sound-arc {
+  animation: hw-sound 1.35s ease-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.hw-fig .hw-sound-arc:nth-of-type(2) {
+  animation-delay: 0.45s;
+}
+
+.hw-fig .hw-sound-arc:nth-of-type(3) {
+  animation-delay: 0.9s;
+}
+
+/* ── Motion is optional ─────────────────────────────────────────────────── */
+
+/*
+ * A reader who has asked for reduced motion still needs to see which parts are
+ * lit and which wire is live, so the animations stop at their *bright* state
+ * rather than disappearing - the drawing loses its motion, not its meaning.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .hw-fig .hw-flow,
+  .hw-fig .hw-glow-pulse,
+  .hw-fig .hw-glow-flicker,
+  .hw-fig .hw-sound-arc {
+    animation: none;
+  }
+
+  .hw-fig .hw-glow-pulse,
+  .hw-fig .hw-glow-flicker {
+    opacity: 0.9;
+  }
+
+  .hw-fig .hw-sound-arc {
+    opacity: 0.5;
+  }
+}

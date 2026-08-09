@@ -6,7 +6,7 @@
 
 **This app does not use `@repo/i18n/routing`.** It has its own `i18n/routing.ts` declaring `["en", "es"]` with `en` as the default, and the German, French and Portuguese catalogues were deleted: this is internal developer documentation, maintained in English, and three machine-translated catalogues nobody proofread were worse than not offering them. Anything that is not Spanish resolves to English, including a `fr`/`de`/`pt` browser hitting `/`.
 
-Use the **local** `routing` (`@/i18n/routing`) anywhere the locale *set* matters - `proxy.ts`, `generateStaticParams`, the `hasLocale` guard in `app/[locale]/layout.tsx`, and the footer's `LocaleSwitcher`. Importing the shared five-locale one in any of those re-opens `/de`, `/fr` and `/pt`, which now have no messages behind them and would render as raw key names.
+Use the **local** `routing` (`@/i18n/routing`) anywhere the locale _set_ matters - `proxy.ts`, `generateStaticParams`, the `hasLocale` guard in `app/[locale]/layout.tsx`, and the footer's `LocaleSwitcher`. Importing the shared five-locale one in any of those re-opens `/de`, `/fr` and `/pt`, which now have no messages behind them and would render as raw key names.
 
 `@repo/i18n/navigation`'s `Link`/`useRouter` stay shared and remain the right import for every internal link - they only prefix the locale being rendered, and the middleware can no longer produce anything but `en` or `es`.
 
@@ -134,22 +134,26 @@ describes. It carries only listing metadata plus the detail page's spec chips;
 the body of a build sheet is authored JSX, because prose, SVG figures and value
 tables are documents, not rows.
 
-| Piece                                                     | Holds                                                                                     |
-| --------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `lib/hardware-projects.json`                              | The registry: `slug`, `icon`, `nameKey`, `descKey`, `board`, `language`, `revision`, `sourcePath`, `specs[]` |
-| `lib/hardware-projects.ts`                                | Types + `getHardwareProject(slug)`                                                        |
-| `app/[locale]/hardware-panel.tsx`                         | The tab: a `Grid` of project cards                                                        |
-| `app/[locale]/hardware/[project]/page.tsx`                | The detail route: title block, spec grid, and the `PROJECT_DOCS` slug → component map      |
-| `app/[locale]/hardware/[project]/_projects/<slug>.tsx`    | One project's build sheet                                                                 |
-| `app/[locale]/hardware/[project]/_projects/doc-primitives.tsx` | `P`, `DocSection`, `DocH3`, `DocNote`, `DocFigure`, `DocTable` - shared by every build sheet |
-| `app/[locale]/hardware/[project]/hardware-doc.css`        | The build-sheet token set (mono display face, semantic SVG stroke classes), theme-flipped on `[data-theme="dark"]` |
+| Piece                                                  | Holds                                                                                                              |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `lib/hardware-projects.json`                           | The registry: `slug`, `icon`, `nameKey`, `descKey`, `board`, `language`, `revision`, `sourcePath`, `specs[]`       |
+| `lib/hardware-projects.ts`                             | Types + `getHardwareProject(slug)`                                                                                 |
+| `app/[locale]/hardware-panel.tsx`                      | The tab: a `Grid` of project cards                                                                                 |
+| `app/[locale]/hardware/[project]/page.tsx`             | The detail route: title block, spec grid, and the `PROJECT_DOCS` slug → component map                              |
+| `app/[locale]/hardware/[project]/<slug>.tsx`           | One project's build sheet                                                                                          |
+| `app/[locale]/hardware/[project]/<slug>-figures.tsx`   | That project's **schematic** figures - hand-placed SVG symbols                                                     |
+| `app/[locale]/hardware/[project]/<slug>-pictorial.tsx` | That project's **breadboard** figures, built from `@repo/ui/hardware`                                              |
+| `app/[locale]/hardware/[project]/doc-primitives.tsx`   | `P`, `DocSection`, `DocH3`, `DocNote`, `DocFigure`, `DocTable` - shared by every build sheet                       |
+| `app/[locale]/hardware/[project]/doc-dual-figure.tsx`  | `DocDualFigure` - a figure carrying both views and the switch between them. **The only client component here.**    |
+| `app/[locale]/hardware/[project]/hardware-doc.css`     | The build-sheet token set (mono display face, semantic SVG stroke classes), theme-flipped on `[data-theme="dark"]` |
 
 **To add a project:**
 
 1. Add an entry to `lib/hardware-projects.json`.
-2. Write `_projects/<slug>.tsx` from the primitives in `doc-primitives.tsx`.
-3. Register it in `PROJECT_DOCS` in `app/[locale]/hardware/[project]/page.tsx` - a JSON entry with no component (or the reverse) 404s on purpose.
-4. Add the `nameKey` / `descKey` strings to `messages/en.json` **and** `es.json`.
+2. Write `<slug>.tsx`, beside `page.tsx`, from the primitives in `doc-primitives.tsx`.
+3. Put its drawings in `<slug>-figures.tsx` (schematics) and `<slug>-pictorial.tsx` (breadboard views), and pair them up with `DocDualFigure`.
+4. Register it in `PROJECT_DOCS` in `app/[locale]/hardware/[project]/page.tsx` - a JSON entry with no component (or the reverse) 404s on purpose.
+5. Add the `nameKey` / `descKey` strings to `messages/en.json` **and** `es.json`.
 
 **i18n scope is narrower here than on the other tabs, deliberately.** The
 navigation chrome (tab label, tab title/subtitle, each project's name and
@@ -159,13 +163,73 @@ board, and machine-translating several thousand words of it into locales nobody
 proofreads would make it less trustworthy, not more accessible. Keep new
 projects to the same split.
 
-**Two conventions inside a build sheet.** Only **one** numbered `§` sequence per
-document, because the prose cross-references itself by number - `DocSection`'s
-`num` is optional so how-to sections stay unnumbered while the schematic keeps
-`01`-`09`. And headings/prose go through `<Typography variant="none">`, the
-documented escape hatch for when a CSS class must fully own typography; the
-semantic wrappers (`section`, `figure`, `table`) are raw elements, since `Box`
-renders only a `div` or an anchor.
+**Every wiring figure carries two drawings, and a switch between them.**
+
+A schematic and a breadboard view are not draft and final - they answer
+different questions, and which one is useful depends entirely on who is
+reading. A schematic states the topology and nothing else: it is the faster
+read once you can read one, and the only view that survives being redrawn on
+paper. A breadboard view states the **build** - which hole the leg goes in,
+which way round the banded end faces, what the part looks like in your hand.
+Someone who has never wired a transistor cannot get that from a symbol, and
+someone who has does not want to count holes.
+
+So a wiring figure uses `DocDualFigure` rather than `DocFigure`, passing both,
+and the reader flips between them:
+
+```tsx
+<DocDualFigure
+  captionLabel="Fig 1"
+  caption="…the schematic's caption…"
+  pictorialCaption="…what the breadboard view is showing…"
+  schematic={<PowerPathFigure />}
+  pictorial={<PowerPathPictorial />}
+/>
+```
+
+- **The switch is per figure, not per page**, because the choice is per
+  _question_ rather than per reader: the power path is worth seeing as a
+  breadboard even if you read schematics fluently (it is where the diode's
+  polarity bites), while two driver stages are far quicker to check as symbols.
+  One sticky setting would force a single answer onto three different questions.
+- **It opens on the schematic.** `defaultPictorial` flips a figure, but the
+  default stays the drawing the document has always shown - a build sheet that
+  silently redrew itself is a worse surprise than one extra click.
+- **Keep `"use client"` in `doc-dual-figure.tsx` and nowhere else.** Every part
+  in `@repo/ui/hardware` is static SVG with CSS animations and renders on the
+  server; only the switch needs state. Don't push the boundary up into
+  `doc-primitives`, which the whole document is built from.
+- **`DocFigure` is still right for a single-view figure** - a reference drawing
+  with no second reading, like the Pico pinout card in the reference tail.
+- The breadboard figures are positioned by **hole**, not pixel, and
+  `packages/ui/CLAUDE.md` → "Hardware drawings" carries the part inventory and
+  the three physical rules the geometry enforces. Read it before drawing a new
+  one; the layouts look arbitrary until you know that a column is a node and
+  that the Pico's body covers four rows.
+
+**Three conventions inside a build sheet.**
+
+- **Write it as a tutorial**, in the order the work happens: what you're
+  building, the parts to buy, the software to install, the numbered build
+  steps, then a reference tail (pin map, component values, tuning,
+  troubleshooting). Engineering rationale belongs in a `DocNote` attached to the
+  step it affects, not in a section of its own - `pumpkin-house.tsx` was
+  originally ~60 % standalone argument and read as a paper rather than
+  something you could follow at the bench.
+- **Only one numbered sequence per document**, because the prose
+  cross-references itself by number. `DocSection`'s `num` is optional: the build
+  steps carry `01`-`NN` and everything around them is titled but unnumbered, so
+  a bare "step 03" is unambiguous.
+- **Headings and prose go through `<Typography variant="none">`**, the
+  documented escape hatch for when a CSS class must fully own typography; the
+  semantic wrappers (`section`, `figure`, `table`) are raw elements, since `Box`
+  renders only a `div` or an anchor.
+
+Prose in `hardware-doc.css` is deliberately **not** capped to a reading measure
+
+- the tables and figures are full-bleed, and a narrow text column beside them
+  left the page looking half-empty. The page's `Container size="lg"` bounds the
+  line length.
 
 ## Adding a New Tool or Section
 

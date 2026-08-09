@@ -41,7 +41,7 @@ hardware/
 
 apps/help/
   lib/hardware-projects.json                            the registry entry
-  app/[locale]/hardware/[project]/_projects/<name>.tsx  the build sheet
+  app/[locale]/hardware/[project]/<name>.tsx            the build sheet
 ```
 
 This reverses the advice that used to be here ("keep the schematic next to
@@ -55,12 +55,12 @@ the drift risk is handled by a rule instead of by proximity:
 in the **same task**, exactly as it already requires for every documented
 CLI script.
 
-Adding a project means a JSON entry, a `_projects/<slug>.tsx` build sheet,
+Adding a project means a JSON entry, a `<slug>.tsx` build sheet,
 one line in that route's `PROJECT_DOCS` map, and the name/description keys
 in `messages/en.json` and `es.json`. See `apps/help/CLAUDE.md` → "Hardware".
 
 ## Projects
 
-| Project                            | Board                | Language    | Documentation                  |
-| ---------------------------------- | -------------------- | ----------- | ------------------------------ |
-| [pumpkin-house](./pumpkin-house/)  | Pi Pico / Pico W     | MicroPython | help app → `/hardware/pumpkin-house` |
+| Project                           | Board            | Language    | Documentation                        |
+| --------------------------------- | ---------------- | ----------- | ------------------------------------ |
+| [pumpkin-house](./pumpkin-house/) | Pi Pico / Pico W | MicroPython | help app → `/hardware/pumpkin-house` |

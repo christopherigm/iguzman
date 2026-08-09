@@ -35,8 +35,6 @@
     monospace;
   --body: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
 
-  --measure: 68ch;
-
   color: var(--ink);
   font-family: var(--body);
   font-size: 17px;
@@ -60,10 +58,16 @@
 
 /* ---------- prose ---------- */
 
+/*
+ * Prose runs the full width of the container rather than being capped to a
+ * reading measure. The document's own tables and figures are full-bleed, and a
+ * narrow column of text beside them left the page looking half-empty and
+ * inconsistently laid out. The Container the page renders inside (`size="lg"`)
+ * is what bounds the line length now.
+ */
 .hw-doc p,
 .hw-doc ul,
 .hw-doc ol {
-  max-width: var(--measure);
   margin: 0 0 1.1rem;
 }
 
@@ -230,7 +234,6 @@
   background: var(--surface);
   padding: 1.15rem 1.35rem;
   margin: 1.75rem 0;
-  max-width: var(--measure);
 }
 
 .hw-note .hw-note__tag {
@@ -266,6 +269,22 @@
 .hw-figure__scroll {
   overflow-x: auto;
   padding: 1.5rem 1.25rem 0.5rem;
+}
+
+/*
+ * The schematic/breadboard switch bar on a two-view figure. Only the rule under
+ * it lives here - the bar's own layout, spacing and the active label's colour
+ * are component props on `DocDualFigure`, per the props-first rule.
+ */
+.hw-figure__head {
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.hw-figure__viewlabel {
+  font-family: var(--display);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .hw-figure svg {
