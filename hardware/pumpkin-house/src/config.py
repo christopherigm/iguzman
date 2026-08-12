@@ -20,6 +20,44 @@ RGB_PINS = (
 FLOOD_PIN = 12  # Q1 base - white flood string off the raw pack rail
 BUZZER_PIN = 16  # Q2 base - CYT1036 active buzzer
 
+# --- Buttons -------------------------------------------------------------
+# Two momentary switches, each shorting its pin to GND. They run on the
+# RP2040's internal pull-ups, so they are active-low and need no external
+# resistors at all.
+#
+# GP17 and GP18 are physical pins 22 and 24, with a GND on pin 23 sitting
+# directly between them - one ground jumper serves both buttons - and they
+# leave GP13/GP14/GP15 free as the three spare PWM channels.
+POWER_PIN = 17  # three-press cycle: on -> sound -> off; see buttons.py
+SCENE_PIN = 18  # cut to the next scene in scenes.SEQUENCE
+
+# Contact bounce on a 6 mm tactile switch settles well inside this. Pushing
+# it much past 250 ms would start swallowing deliberate double presses.
+BUTTON_DEBOUNCE_MS = 40
+
+# --- Power-button feedback ----------------------------------------------
+# Each press of the power button answers with the flood at full and one flat
+# colour across every RGB group, so the button is readable in the dark from
+# across a porch: white = the lantern just woke, green/red = sound just went
+# audible/silent, purple = it is going to sleep.
+#
+# These are drive levels, not matched output. Red has the most headroom off
+# 3.3 V and reads brightest (see CHANNEL_TRIM), so equal thirds come out
+# warm. If the white confirmation looks pink, pull the red term *here* down
+# toward 150 - do not touch CHANNEL_TRIM, which the flame's ember colours
+# are tuned against.
+POWER_ON_RGB = (255, 255, 255)  # white - system on
+SOUND_ON_RGB = (0, 255, 0)  # green - sound now audible
+SOUND_OFF_RGB = (255, 0, 0)  # red - sound now silent
+POWER_OFF_RGB = (150, 0, 255)  # purple - system going off
+CONFIRM_FLOOD = 255  # "flood 100%" - full white string behind the colour
+
+# Long enough to register as deliberate, short enough that it does not stall
+# the show. The off confirmation is the exception: it is the last thing the
+# lantern does before going dark, so it gets to linger.
+CONFIRM_MS = 400
+POWER_OFF_CONFIRM_MS = 2000
+
 # Above flicker fusion, below the point where transistor switching losses
 # start to matter. 1 kHz also keeps the flood's Q1 comfortably in saturation.
 PWM_FREQ = 1000

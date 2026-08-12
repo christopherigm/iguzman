@@ -1,5 +1,5 @@
 /**
- * The three wiring drawings for the Pumpkin House Lantern tutorial.
+ * The four wiring drawings for the Pumpkin House Lantern tutorial.
  *
  * Ported from the standalone `schematic.html` that used to live in
  * `hardware/pumpkin-house/`. The geometry is unchanged - every coordinate,
@@ -458,6 +458,125 @@ export function NpnStagesFigure() {
       </g>
       <text x="474" y="384" className="lbl-sm">
         ≈30 mA — well over the 12 mA a GPIO pin can source, hence Q2
+      </text>
+    </svg>
+  );
+}
+
+/** Fig 4 - the two buttons, on internal pull-ups. */
+export function ButtonsFigure() {
+  return (
+    <svg
+      viewBox="0 0 780 320"
+      role="img"
+      aria-label="Two momentary pushbuttons on internal pull-ups. GP17 and GP18 each sit at the bottom of a pull-up resistor inside the RP2040, so each pin idles at 3.3 volts; its button shorts the pin to ground when pressed, pulling it low. No external resistors are required, and GND pin 23 sits physically between pins 22 and 24 so one ground jumper serves both buttons."
+    >
+      <text x="30" y="30" className="lbl-hd">
+        POWER + SCENE · ACTIVE LOW
+      </text>
+
+      {/* pico edge */}
+      <rect x="30" y="58" width="150" height="188" className="box" />
+      <text x="48" y="84" className="lbl-hd">
+        PICO
+      </text>
+      <text x="48" y="128" className="lbl">
+        GP17
+      </text>
+      <text x="48" y="188" className="lbl">
+        GP18
+      </text>
+      <text x="48" y="228" className="lbl">
+        GND
+      </text>
+      <text x="134" y="128" className="lbl-sm">
+        p22
+      </text>
+      <text x="134" y="188" className="lbl-sm">
+        p24
+      </text>
+      <text x="134" y="228" className="lbl-sm">
+        p23
+      </text>
+
+      {/* the internal pull-ups, drawn inside a dashed boundary because they
+          are on the die - there is nothing here for you to fit */}
+      <rect x="228" y="42" width="250" height="182" className="box-dash" />
+      <text x="238" y="34" className="lbl-sm">
+        inside the RP2040 — Pin.PULL_UP
+      </text>
+
+      <path className="wire-live" d="M330,58 L330,88 M416,58 L416,88" />
+      <path className="wire-live" d="M300,58 L446,58" />
+      <text x="300" y="50" className="lbl-sm lbl-live">
+        3.3 V
+      </text>
+
+      <g className="part">
+        <path d="M330,88 l0,4 l-8,3 l16,6 l-16,6 l16,6 l-8,3 l0,4" />
+        <path d="M416,88 l0,4 l-8,3 l16,6 l-16,6 l16,6 l-8,3 l0,4" />
+      </g>
+      <text x="248" y="118" className="lbl-sm">
+        ≈50 kΩ each
+      </text>
+
+      <path className="wire-logic" d="M330,124 L330,128 L180,128" />
+      <path className="wire-logic" d="M416,124 L416,188 L180,188" />
+      <circle cx="330" cy="128" r="3.5" className="node" />
+      <circle cx="416" cy="188" r="3.5" className="node" />
+
+      {/* the two buttons */}
+      <path className="wire-logic" d="M330,128 L560,128" />
+      <path className="wire-logic" d="M416,188 L560,188" />
+
+      <g>
+        {/* SW2 - power */}
+        <circle cx="563" cy="128" r="3" className="node" />
+        <path className="part" d="M566,126 L604,112" />
+        <circle cx="607" cy="128" r="3" className="node" />
+        <path className="part" d="M578,104 L578,96 M570,100 L586,100" />
+        <text x="548" y="92" className="lbl-hd">
+          SW2 · POWER
+        </text>
+        <text x="548" y="160" className="lbl-sm">
+          momentary
+        </text>
+      </g>
+      <g>
+        {/* SW3 - scene */}
+        <circle cx="563" cy="188" r="3" className="node" />
+        <path className="part" d="M566,186 L604,172" />
+        <circle cx="607" cy="188" r="3" className="node" />
+        <path className="part" d="M578,164 L578,156 M570,160 L586,160" />
+        <text x="548" y="152" className="lbl-hd">
+          SW3 · SCENE
+        </text>
+        <text x="548" y="220" className="lbl-sm">
+          momentary
+        </text>
+      </g>
+
+      {/* the shared return */}
+      <path className="wire" d="M607,128 L680,128 L680,188 L607,188" />
+      <circle cx="680" cy="188" r="3.5" className="node" />
+      <path className="wire" d="M680,188 L680,246 L180,246" />
+      <circle cx="180" cy="246" r="3.5" className="node" />
+
+      <g className="part">
+        <line x1="670" y1="262" x2="690" y2="262" />
+        <line x1="674" y1="268" x2="686" y2="268" />
+        <line x1="678" y1="274" x2="682" y2="274" />
+      </g>
+      <path className="wire" d="M680,246 L680,262" />
+
+      <text x="30" y="292" className="lbl-sm">
+        Idle: the pull-up holds the pin at 3.3 V, so the firmware reads 1.
+        Pressed: the switch shorts it to 0 V and the falling edge fires the
+        interrupt.
+      </text>
+      <text x="30" y="310" className="lbl-sm">
+        No external resistors — GP17 and GP18 are pins 22 and 24, and the GND on
+        pin 23 between them is the return for both.
       </text>
     </svg>
   );

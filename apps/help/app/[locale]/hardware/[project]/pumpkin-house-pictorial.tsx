@@ -9,6 +9,7 @@ import { Led, RgbLed } from "@repo/ui/hardware/led";
 import {
   Buzzer,
   Diode,
+  Pushbutton,
   Resistor,
   Transistor,
 } from "@repo/ui/hardware/discretes";
@@ -20,9 +21,9 @@ import {
 } from "@repo/ui/hardware/power-parts";
 
 /**
- * The beginner view of the three Pumpkin House wiring drawings.
+ * The beginner view of the four Pumpkin House wiring drawings.
  *
- * These are the *same three circuits* as `pumpkin-house-figures.tsx`, drawn as
+ * These are the *same four circuits* as `pumpkin-house-figures.tsx`, drawn as
  * parts on a solderless breadboard instead of as schematic symbols. Neither
  * view replaces the other and both stay in the document: a schematic says what
  * is connected to what and is the faster read once you can read one, while this
@@ -363,6 +364,92 @@ export function NpnStagesPictorial() {
       <Wire from={pico.tap(18, "b")} to={hole(20, "-b")} color="black" flow />
 
       <PicoBoard footprint={pico} highlight={[16, 21, 18, 23]} labels="used" />
+    </PictorialFigure>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Fig 4 - the two buttons
+   ══════════════════════════════════════════════════════════════════════════ */
+
+export function ButtonsPictorial() {
+  const board = breadboardLayout({ columns: 44, x: 40, y: 80 });
+  const pico = picoFootprint({ layout: board, column: 3 });
+  const { hole } = board;
+
+  // A tactile switch is the one part here that *has* to straddle the ravine -
+  // its 6.5 mm axis is what spans it - so each button necessarily puts one of
+  // its two nodes in the upper bank and the other in the lower one. The GPIO
+  // jumper therefore comes in from above and the ground jumper leaves below.
+  const power = 27;
+  const scene = 35;
+
+  return (
+    <PictorialFigure
+      width={900}
+      height={440}
+      label="Breadboard view of the two buttons. Each 6 mm tactile switch straddles the ravine, so its upper pair of legs is one node and its lower pair the other. A jumper runs from GP17 to the upper node of the power button and from GP18 to the upper node of the scene button; each lower node is jumpered down to the blue ground rail, which is bridged to the top blue rail where the Pico's own ground pin plugs in. There are no resistors anywhere in this drawing - the pull-ups are inside the RP2040."
+    >
+      <Breadboard layout={board} />
+
+      {/* One blue rail for the whole board, as in Fig 3. */}
+      <Wire from={hole(1, "-t")} to={hole(1, "-b")} color="black" bow={0.03} />
+
+      <text className="hw-label" x={board.x + 6} y={board.y - 34}>
+        no resistors in this figure — the pull-ups are on the RP2040 die
+      </text>
+      <text className="hw-label" x={board.columnX(power)} y={board.y - 12}>
+        SW2 · POWER · GP17
+      </text>
+      <text className="hw-label" x={board.columnX(scene)} y={board.y - 12}>
+        SW3 · SCENE · GP18
+      </text>
+
+      {/* ── the two buttons, each across the ravine ─────────────────────── */}
+      <Pushbutton a={hole(power, "f")} b={hole(power, "e")} designator="SW2" />
+      <Pushbutton a={hole(scene, "f")} b={hole(scene, "e")} designator="SW3" />
+
+      {/* ── GPIO in, above the ravine ───────────────────────────────────── */}
+      <Wire
+        from={pico.tap(22, "i")}
+        to={hole(power, "j")}
+        color="purple"
+        bow={0.08}
+      />
+      <Wire
+        from={pico.tap(24, "j")}
+        to={hole(scene, "j")}
+        color="green"
+        bow={0.12}
+      />
+
+      {/* ── ground out, below it ────────────────────────────────────────── */}
+      <Wire from={hole(power, "a")} to={hole(power, "-b")} color="black" flow />
+      <Wire from={hole(scene, "a")} to={hole(scene, "-b")} color="black" flow />
+
+      {/* The Pico's own ground - pin 23, which is physically between the two
+          signal pins, so on the real board this is one short jumper. */}
+      <Wire from={pico.tap(23, "i")} to={hole(20, "-t")} color="black" flow />
+
+      <PicoBoard footprint={pico} highlight={[22, 23, 24]} labels="used" />
+
+      {/* Both leaders land right of the last leg or below the board - the
+          only regions here that are not either under the Pico's body or in a
+          lane one of the four jumpers already runs down. */}
+      <Callout
+        at={hole(scene + 2, "f")}
+        to={hole(scene + 5, "h")}
+        anchor="start"
+      >
+        4 legs, 2 nodes
+      </Callout>
+      <Callout
+        at={hole(power, "e")}
+        to={{ x: board.columnX(power), y: board.y + board.height + 26 }}
+        anchor="start"
+      >
+        the pair sharing a digit is already connected inside the switch
+      </Callout>
     </PictorialFigure>
   );
 }

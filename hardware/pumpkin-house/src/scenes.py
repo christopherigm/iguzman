@@ -9,10 +9,11 @@ happened, not alongside it.
 Mechanically: `Stage.idle` is handed to the Buzzer, and the buzzer calls it
 in every gap between pulses. Normally it ticks the flame. A scene calls
 `take_over()` to borrow that slot for its own animation, and `release()` to
-give it back.
+give it back. That same slot is where the front-panel buttons get served,
+because it is the only code that keeps running while a scene blocks.
 """
 
-from time import ticks_add, ticks_diff, ticks_ms
+from time import sleep_ms, ticks_add, ticks_diff, ticks_ms
 
 import buzzer as fx
 import leds as light
@@ -28,12 +29,26 @@ class Wash:
     def __init__(self, lamps, decay=10, interval_ms=16):
         self._lamps = lamps
         self._rgb = [0, 0, 0]
+        self._floor = [0, 0, 0]
         self._decay = decay
         self._interval = interval_ms
         self._next = ticks_ms()
 
     def flare(self, r, g, b):
         self._rgb = [r, g, b]
+        self._write()
+
+    def glow(self, r, g, b):
+        """A resting colour the decay stops at instead of black.
+
+        With a floor set, a flare reads as movement on top of an ambience
+        rather than a stab out of darkness - which is what an ambient scene
+        wants and a scare does not.
+        """
+        self._floor = [r, g, b]
+        for i in range(3):
+            if self._rgb[i] < self._floor[i]:
+                self._rgb[i] = self._floor[i]
         self._write()
 
     def tick(self):
@@ -44,14 +59,16 @@ class Wash:
         changed = False
         for i in range(3):
             value = self._rgb[i]
-            if value:
-                self._rgb[i] = max(0, value - self._decay)
+            floor = self._floor[i]
+            if value > floor:
+                self._rgb[i] = max(floor, value - self._decay)
                 changed = True
         if changed:
             self._write()
 
     def off(self):
         self._rgb = [0, 0, 0]
+        self._floor = [0, 0, 0]
         self._write()
 
     def _write(self):
@@ -63,17 +80,78 @@ class Wash:
 class Stage:
     """Everything a scene needs, plus ownership of the idle slot."""
 
-    def __init__(self, lamps, flood, flame, bz):
+    def __init__(self, lamps, flood, flame, bz, controls=None):
         self.lamps = lamps
         self.flood = flood
         self.flame = flame
         self.buzzer = bz
+        self.controls = controls
         self.wash = Wash(lamps)
         self._idle_fn = flame.tick
         bz.set_idle(self.idle)
+        if controls is not None:
+            bz.set_abort(self.interrupted)
 
     def idle(self):
+        """The one callback that runs whatever is currently blocking.
+
+        Which is exactly why the buttons are served from here: an effect can
+        hold the CPU for seconds, and this is the only slot that keeps
+        getting a turn while it does.
+        """
+        if self.controls is not None:
+            self.controls.poll()
         self._idle_fn()
+
+    # -- the buttons -----------------------------------------------------
+
+    def interrupted(self):
+        """True while a press is still waiting to change what is playing.
+
+        The buzzer polls this and returns early from its blocking calls, so
+        the running scene unwinds through its own `release()` rather than
+        being killed - the wash gets cleared and the flame handed back
+        exactly as it would at a natural end.
+
+        The power button counts as well as the scene button. Its off leg has
+        already darkened the lantern by the time this reads False for power,
+        and a scene left running under that would keep making noise into a
+        dark house - the one thing someone reaching for that button is
+        definitely trying to stop.
+        """
+        if self.controls is None:
+            return False
+        return not self.controls.powered() or self.controls.scene_requested()
+
+    def take_scene_request(self):
+        """Consume a pending press. True if there was one."""
+        return self.controls is not None and self.controls.take_scene_request()
+
+    def powered(self):
+        """False while the lantern is asleep. True whenever there are no
+        controls at all, so a Stage built by hand at the REPL still runs."""
+        return self.controls is None or self.controls.powered()
+
+    def standby(self):
+        """Sit dark and silent until the power button brings it back.
+
+        The show is switched off once, here, rather than left to whichever
+        scene got interrupted: a scene unwinds through `release()`, and
+        release hands the flame straight back. So this pauses the flame
+        first and only resumes it on the way out, after the white
+        confirmation the button itself has already shown.
+        """
+        self.flame.pause()
+        self.all_off()
+        while not self.powered():
+            self.idle()
+            sleep_ms(20)
+        # Presses made while it was asleep are not a queue of scenes to catch
+        # up on - somebody was prodding a dark lantern to see if it did
+        # anything.
+        self.take_scene_request()
+        self.flame.resume()
+        self.flame.tick(force=True)
 
     def take_over(self, fn):
         """Borrow the idle slot for a scene's own animation."""
@@ -84,6 +162,12 @@ class Stage:
         """Hand it back to the flame and clear whatever the scene left."""
         self._idle_fn = self.flame.tick
         self.wash.off()
+        if not self.powered():
+            # Cut short by the power button. Handing the flame back here
+            # would relight the lantern for the moment it takes `main.run`
+            # to notice, which reads as a fault rather than an off switch.
+            self.all_off()
+            return
         self.flame.resume()
         self.flame.tick(force=True)
 
@@ -153,10 +237,25 @@ def the_hinge(stage):
 
 
 def night_crickets(stage):
-    """Ambient filler. The flame carries on untouched - only the sound
-    changes, which is what makes it read as background rather than an
-    event."""
-    fx.cricket(stage.buzzer, chirps=3, reps=3)
+    """Ambient filler, in the green of a lawn after dark.
+
+    The wash rests on a low green instead of black and each chirp pushes a
+    brighter green on top of it, so the light only ever moves as far as the
+    sound does. The flood stays low rather than off - white desaturates the
+    green, but killing it entirely would turn the most-played scene in the
+    rotation into a blackout.
+    """
+    stage.take_over(stage.wash.tick)
+    stage.flood.set(100)
+    stage.wash.glow(6, 45, 14)
+    fx.cricket(
+        stage.buzzer,
+        chirps=3,
+        reps=3,
+        on_chirp=lambda: stage.wash.flare(30, 200, 60),
+    )
+    stage.buzzer.rest(300)
+    stage.release()
 
 
 def bat_flit(stage):
@@ -236,6 +335,23 @@ def haunting(stage):
     stage.release()
 
 
+# Every scene, in order, for the scene button and for main.demo(). This is
+# deliberately a separate list from ROTATION below rather than derived from
+# it: the button is how you walk the whole show at the bench or on the
+# doorstep, and it has to reach a scene that is currently commented out of
+# the random rotation - which is the normal state while you are tuning one.
+SEQUENCE = (
+    crow,
+    pulse_of_the_house,
+    the_hinge,
+    night_crickets,
+    bat_flit,
+    witching_hour,
+    seance,
+    ballroom,
+    haunting,
+)
+
 # Scenes the ambient loop picks from, with relative weight. Crickets are
 # heavier because ambient filler should outnumber set pieces - a lantern
 # that performs constantly stops being atmospheric.
@@ -243,9 +359,9 @@ ROTATION = (
     (night_crickets, 5),
     (crow, 3),
     (bat_flit, 3),
-    (pulse_of_the_house, 2),
-    (the_hinge, 2),
-    (ballroom, 2),
-    (seance, 1),
-    (haunting, 1),
+    # (pulse_of_the_house, 2),
+    # (the_hinge, 2),
+    # (ballroom, 2),
+    # (seance, 1),
+    # (haunting, 1),
 )

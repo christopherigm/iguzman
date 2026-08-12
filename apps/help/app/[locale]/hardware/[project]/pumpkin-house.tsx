@@ -11,11 +11,13 @@ import {
   PowerPathFigure,
   RgbGroupFigure,
   NpnStagesFigure,
+  ButtonsFigure,
 } from "./pumpkin-house-figures";
 import {
   PowerPathPictorial,
   RgbGroupPictorial,
   NpnStagesPictorial,
+  ButtonsPictorial,
   PicoPinoutPictorial,
 } from "./pumpkin-house-pictorial";
 import { DocDualFigure } from "./doc-dual-figure";
@@ -24,7 +26,7 @@ import { DocDualFigure } from "./doc-dual-figure";
  * The Pumpkin House Lantern build tutorial.
  *
  * Shaped as a tutorial, in the order you actually work: what you are building,
- * what to buy, what to install, seven numbered build steps, then a reference
+ * what to buy, what to install, eight numbered build steps, then a reference
  * tail for the things you look up at the bench rather than read once.
  *
  * This descends from two documents that used to live in `hardware/pumpkin-house/`
@@ -33,13 +35,13 @@ import { DocDualFigure } from "./doc-dual-figure";
  * merged onto this page and are now condensed into it. The engineering rationale
  * that filled most of the merged version survives as callouts attached to the
  * step it affects: why four cells and a Schottky (step 02), why the RGB anodes
- * hang off GPIO instead of transistors (step 03), why the pads need 12 mA drive
- * (the reference tail). The dropped material was the long-form argument around
- * those conclusions, plus a catalogue of buzzer gate patterns that `buzzer.py`
- * already implements.
+ * hang off GPIO instead of transistors (step 03), why the buttons are read from
+ * an interrupt (step 05), why the pads need 12 mA drive (the reference tail).
+ * The dropped material was the long-form argument around those conclusions,
+ * plus a catalogue of buzzer gate patterns that `buzzer.py` already implements.
  *
  * Only **one** numbered section sequence exists here, per `apps/help/CLAUDE.md`:
- * the build steps carry 01-07 and everything around them is titled but
+ * the build steps carry 01-08 and everything around them is titled but
  * unnumbered, so a bare "step 03" in the prose is unambiguous.
  */
 
@@ -77,6 +79,24 @@ const BENCH_TEST =
   "\n" +
   "stage.all_off()";
 
+const BUTTON_TEST =
+  "# Are the switches wired the right way round? Both should print 1 at\n" +
+  "# rest and 0 while held - a pin stuck at 0 is the shorted pair.\n" +
+  "from machine import Pin\n" +
+  "import config\n" +
+  "\n" +
+  "power = Pin(config.POWER_PIN, Pin.IN, Pin.PULL_UP)\n" +
+  "scene = Pin(config.SCENE_PIN, Pin.IN, Pin.PULL_UP)\n" +
+  "print(power.value(), scene.value())\n" +
+  "\n" +
+  "# Then the firmware's own view of them, with the show running:\n" +
+  "stage.powered()                 # False until the first press of SW2\n" +
+  "stage.controls.set_power(True)  # wake it without a press, for the bench\n" +
+  "stage.buzzer.toggle_mute()      # what press 2 of the cycle does\n" +
+  "stage.buzzer.is_muted()\n" +
+  "stage.controls.poll()           # serve whatever the interrupts latched\n" +
+  "stage.interrupted()             # True if a press is waiting to be served";
+
 const PAD_DRIVE =
   "import machine\n" +
   "\n" +
@@ -101,7 +121,23 @@ export function PumpkinHouseDoc() {
           Raspberry Pi Pico running MicroPython off four AA cells. The firmware
           burns a continuous flame flicker and drops set pieces into it at
           random - a crow call with a red flare on each syllable, a heartbeat
-          under an amber pulse, crickets between them.
+          under an amber pulse, green crickets between them.
+        </P>
+        <P>
+          Two buttons on the outside of the case drive it.{" "}
+          <strong>Power</strong> is a three-press cycle - on, sound on/off, off
+          - and answers every press with a colour before it acts: white for
+          awake, green or red for audible or silent, purple for going to sleep.{" "}
+          <strong>Scene</strong> cuts straight to the next set piece, and
+          pressing it again during one skips on to the following, which is the
+          fastest way to audition the whole show while you are still tuning it.
+        </P>
+        <P>
+          <strong>The lantern boots asleep.</strong> Flick the pack&rsquo;s
+          slide switch and nothing lights until someone presses power - a
+          decoration you have to switch on is a decoration that does not run its
+          cells down in a cupboard. The slide switch is still the real cut-off;
+          the power button leaves the Pico running at a few milliamps.
         </P>
         <P>
           It draws about <strong>93 mA</strong>, which is roughly{" "}
@@ -140,7 +176,7 @@ export function PumpkinHouseDoc() {
               <td>RGB LED, 5 mm, common cathode</td>
               <td>
                 <strong>Common cathode specifically</strong> - common anode will
-                not work with this circuit. Verify before wiring, see step 07.
+                not work with this circuit. Verify before wiring, see step 08.
               </td>
             </tr>
             <tr>
@@ -217,6 +253,15 @@ export function PumpkinHouseDoc() {
               <td className="mono">1</td>
               <td>Slide switch</td>
               <td>Goes in the pack&rsquo;s negative lead.</td>
+            </tr>
+            <tr>
+              <td className="mono">2</td>
+              <td>Momentary pushbutton, 6 mm tactile</td>
+              <td>
+                SW2 power, SW3 scene. Any normally-open momentary switch works -
+                the firmware supplies the pull-up. Panel-mount buttons are
+                easier to fit through ceramic; see step 05.
+              </td>
             </tr>
             <tr>
               <td className="mono">1</td>
@@ -479,7 +524,133 @@ export function PumpkinHouseDoc() {
         </P>
       </DocSection>
 
-      <DocSection num="05" title="Upload the firmware">
+      <DocSection num="05" title="Wire the two buttons">
+        <P>
+          This is the cheapest stage on the board: two switches, two jumpers, a
+          shared ground, and <strong>no other components at all</strong>. Each
+          button shorts its GPIO to GND when pressed, and the pull-up that makes
+          that readable is inside the RP2040 - the firmware turns it on with{" "}
+          <code>Pin.PULL_UP</code>, so the pin idles at 3.3 V and reads{" "}
+          <code>1</code> until you press it.
+        </P>
+        <ul>
+          <li>
+            <strong>Power (SW2):</strong> GP17 (pin 22) → one side of the
+            switch; the other side → GND.
+          </li>
+          <li>
+            <strong>Scene (SW3):</strong> GP18 (pin 24) → one side of the
+            switch; the other side → GND.
+          </li>
+        </ul>
+        <P>
+          Those two pins were chosen for where they sit rather than for anything
+          electrical: <strong>GND on pin 23 falls between them</strong>, so one
+          jumper off that pin is the return for both buttons, and they leave
+          GP13&ndash;GP15 free as the three spare PWM channels.
+        </P>
+
+        <DocDualFigure
+          captionLabel="Fig 4"
+          caption="Both buttons are active-low. The pull-up resistors are drawn inside a dashed boundary because they are on the RP2040 die — there is nothing here for you to fit, and adding an external pull-up on top of the internal one is harmless but pointless."
+          pictorialCaption="The same two buttons on a breadboard. A 6 mm tactile switch has four legs and only two nodes: the pair on one side of the ravine is already connected inside the part, and the switch is between the two sides — which is why it has to straddle the ravine, and why the legs carry a digit each here. The GPIO jumper comes in above and the ground jumper leaves below."
+          schematic={<ButtonsFigure />}
+          pictorial={<ButtonsPictorial />}
+        />
+
+        <P>
+          <strong>Check the orientation before you trust it.</strong> A tactile
+          switch has four legs but only two nodes, and rotating one a quarter
+          turn wires the already-connected pair across your circuit - giving a
+          button that reads as permanently held. With a multimeter on
+          continuity, the two legs you are actually using must read{" "}
+          <em>open</em> until you press. This failure looks exactly like a
+          firmware bug, so rule it out first.
+        </P>
+
+        <DocNote tag="Why the firmware reads these from an interrupt">
+          <P>
+            Everything else in this build blocks. A single buzzer pulse holds
+            the CPU for up to 230 ms, and a scene can run for twenty seconds; a
+            loop that samples the pin when it gets a moment would simply not see
+            a tap that started and ended inside one of those. So{" "}
+            <code>buttons.py</code> registers a falling-edge{" "}
+            <code>Pin.irq</code> whose handler does two things and stops -
+            debounce, then set a flag. It never touches the buzzer or the LEDs,
+            because both of those sleep, and sleeping inside an interrupt is how
+            you get a lantern that stops responding to anything at all. Acting
+            on the flag happens back in normal code, in <code>Stage.idle</code>{" "}
+            - the one callback that keeps getting a turn while a scene is
+            blocking.
+          </P>
+        </DocNote>
+
+        <DocH3>What SW2 does: one button, three jobs</DocH3>
+        <P>
+          SW2 is a <strong>cycle</strong>, not a toggle. There is no display on
+          a ceramic pumpkin, so each press paints its own answer across the
+          whole lantern first - the flood to 100% and every RGB group to one
+          flat colour - and only then does the thing it says:
+        </P>
+        <DocTable>
+          <thead>
+            <tr>
+              <th className="mono">Press</th>
+              <th>What it does</th>
+              <th>Confirmation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="mono">1</td>
+              <td>Wake up &mdash; the show starts</td>
+              <td>White, 400 ms</td>
+            </tr>
+            <tr>
+              <td className="mono">2</td>
+              <td>Sound on / off</td>
+              <td>Green if now audible, red if now silent &mdash; 400 ms</td>
+            </tr>
+            <tr>
+              <td className="mono">3</td>
+              <td>Sleep &mdash; dark and silent until pressed again</td>
+              <td>Purple, 2 s, then black</td>
+            </tr>
+          </tbody>
+        </DocTable>
+        <P>
+          A fourth press starts the cycle over. The cycle is{" "}
+          <strong>positional</strong> - press three is always &ldquo;off&rdquo;,
+          never &ldquo;off unless the sound happens to be muted&rdquo; - because
+          a button whose next action depends on hidden state is a button nobody
+          can use in the dark.
+        </P>
+
+        <DocNote tag="Two consequences worth knowing before you retune it">
+          <P>
+            <strong>There is one sound toggle per cycle</strong>, so the mute
+            state has to survive going off and coming back - otherwise the
+            second press of every cycle would be the only one that ever silenced
+            it, and a lantern you muted at 10pm would be loud again the moment
+            you woke it. <code>_muted</code> lives on the Buzzer and nothing in{" "}
+            <code>buttons.py</code> resets it. The practical effect is that
+            sound alternates cycle to cycle: mute on this one, unmute on the
+            next.
+          </P>
+          <P>
+            <strong>Press 3 cuts whatever is playing.</strong>{" "}
+            <code>Stage.interrupted()</code> counts the power button as well as
+            the scene button, so the buzzer&rsquo;s blocking primitives bail out
+            and the running scene unwinds through its own <code>release()</code>{" "}
+            - which checks the power state and goes dark instead of handing the
+            flame back. Without that check the lantern relights for the fraction
+            of a second it takes <code>main.run</code> to notice, and that reads
+            as a fault rather than an off switch.
+          </P>
+        </DocNote>
+      </DocSection>
+
+      <DocSection num="06" title="Upload the firmware">
         <P>From the repo root, with the Pico on USB:</P>
         <CodeBlock language="bash" code={UPLOAD} />
         <P>
@@ -502,11 +673,11 @@ export function PumpkinHouseDoc() {
         <P>
           Expect <code>main.py</code>, <code>config.py</code>,{" "}
           <code>leds.py</code>, <code>buzzer.py</code>, <code>scenes.py</code>,{" "}
-          <code>pads.py</code>. All six, in the root.
+          <code>pads.py</code>, <code>buttons.py</code>. All seven, in the root.
         </P>
       </DocSection>
 
-      <DocSection num="06" title="Test on the bench">
+      <DocSection num="07" title="Test on the bench">
         <P>
           <code>main.py</code> guards its entry point, so importing it does{" "}
           <strong>not</strong> start the show. Connect with{" "}
@@ -519,6 +690,36 @@ export function PumpkinHouseDoc() {
           base resistor is too small or one of the flood resistors is missing -
           stop and fix that before running the full demo.
         </P>
+
+        <DocH3>Then the buttons</DocH3>
+        <CodeBlock language="python" code={BUTTON_TEST} />
+        <P>
+          Both pins should print <code>1</code> at rest and <code>0</code> while
+          held. A pin stuck at <code>0</code> is the rotated switch from step
+          05, not a bad pin. Then press <strong>power</strong> four times slowly
+          and watch the confirmations walk white → green or red → purple →
+          white: that one sequence proves the switch, the debounce, the flood
+          channel and all three RGB channels in one go.
+        </P>
+        <P>
+          With the show running, press <strong>scene</strong> repeatedly: it
+          should walk <code>scenes.SEQUENCE</code> in order, one press per
+          scene, cutting the current one short rather than queueing behind it.
+          The sound leg of the power button should kill the sound instantly
+          while the lighting carries on at exactly the same pace - muting gates
+          the carrier and changes no durations, so a scene looks identical
+          silenced.
+        </P>
+        <DocNote tag="Nothing happens when you call a scene by hand">
+          <P>
+            Expected: a Stage built at the REPL is <em>asleep</em>, exactly as
+            the lantern is at boot, and every effect aborts against{" "}
+            <code>Stage.interrupted()</code> the instant it starts. Call{" "}
+            <code>stage.controls.set_power(True)</code> first - there is no
+            button to press up there. <code>main.demo(stage)</code> does it for
+            you.
+          </P>
+        </DocNote>
         <P>
           To stop the lantern once it is running the real loop:{" "}
           <code>mpremote repl</code>, then <strong>Ctrl-C</strong>.{" "}
@@ -529,8 +730,8 @@ export function PumpkinHouseDoc() {
         </P>
       </DocSection>
 
-      <DocSection num="07" title="Assemble it in the pumpkin">
-        <DocH3>Check these four things before powering up</DocH3>
+      <DocSection num="08" title="Assemble it in the pumpkin">
+        <DocH3>Check these five things before powering up</DocH3>
         <ol>
           <li>
             Confirm your RGB LEDs really are common cathode: with a multimeter
@@ -543,6 +744,10 @@ export function PumpkinHouseDoc() {
             for a number below 5.5 V.
           </li>
           <li>Sleeve the pack terminals. Ceramic insulates; grit does not.</li>
+          <li>
+            Check each button on continuity: the two legs you wired must read
+            open until pressed.
+          </li>
         </ol>
 
         <DocH3>Optics</DocH3>
@@ -570,6 +775,20 @@ export function PumpkinHouseDoc() {
         <ul>
           <li>
             Mount the slide switch where you can reach it through the base.
+          </li>
+          <li>
+            <strong>
+              Put the two buttons where a hand lands, not where the wiring is
+              short.
+            </strong>{" "}
+            They are the only part of this build anyone but you will touch, so
+            they want to be reachable without picking the lantern up or tipping
+            it over - the back of the case at hand height beats the underside.
+            Give them different shapes or spacing so power and scene are
+            distinguishable in the dark; power is the one a stranger will reach
+            for, so make it the obvious one. Leave enough slack in the two
+            jumpers that the board can still come out of the case with the
+            buttons attached.
           </li>
           <li>
             Don&rsquo;t glue the battery holder in - it has to come out to
@@ -602,10 +821,13 @@ export function PumpkinHouseDoc() {
           the flood. The buzzer sits on GP16 as a plain digital output, timed in
           software, so it never fights the LEDs over a shared slice frequency.
           This is why the RGB pins cannot be reassigned freely if you rewire.
+          The two buttons are inputs and so care about none of this - GP17 and
+          GP18 were picked for the GND on pin 23 sitting between them, and to
+          leave GP13&ndash;GP15 free.
         </P>
 
         <DocFigure
-          captionLabel="Fig 4"
+          captionLabel="Fig 5"
           caption="The whole 40-pin map on the board, for when the table below is not the thing you want. Pins 1–20 run along one long edge starting at GP0 beside the USB connector, and 21–40 back along the other, so pin 21 (GP16) sits directly opposite pin 20 (GP15)."
         >
           <PicoPinoutPictorial />
@@ -663,6 +885,20 @@ export function PumpkinHouseDoc() {
               <td className="mono">—</td>
               <td>Buzzer — Q2 base</td>
               <td>Digital out</td>
+            </tr>
+            <tr>
+              <td className="mono">GP17</td>
+              <td className="mono">22</td>
+              <td className="mono">—</td>
+              <td>Power button — SW2</td>
+              <td>Input, pull-up</td>
+            </tr>
+            <tr>
+              <td className="mono">GP18</td>
+              <td className="mono">24</td>
+              <td className="mono">—</td>
+              <td>Scene button — SW3</td>
+              <td>Input, pull-up</td>
             </tr>
             <tr>
               <td className="mono">GP13 / GP14 / GP15</td>
@@ -811,11 +1047,35 @@ export function PumpkinHouseDoc() {
                 that lock light to sound. <code>scenes.ROTATION</code> sets
                 which play and how often - weights are relative, and crickets
                 are heaviest on purpose because ambient filler should outnumber
-                set pieces.
+                set pieces. <code>scenes.SEQUENCE</code> is the separate ordered
+                list the scene button walks; see the note below.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">buttons.py</td>
+              <td>
+                <code>Button</code> (one debounced switch, latched from a pin
+                interrupt) and <code>Controls</code>, which owns both, runs the
+                power button&rsquo;s three-press cycle, and paints each
+                press&rsquo;s confirmation colour. It holds the lamps and the
+                flood for that reason - the confirmation belongs to the button,
+                not to the show, so no scene has to know about it.
               </td>
             </tr>
           </tbody>
         </DocTable>
+
+        <DocNote tag="SEQUENCE and ROTATION are deliberately two lists">
+          <P>
+            <code>ROTATION</code> is what the ambient loop picks from, with
+            weights. <code>SEQUENCE</code> is every scene in order, and it is
+            what the scene button walks and what <code>main.demo()</code> plays.
+            Deriving the second from the first would look tidier and would be
+            wrong: commenting a scene out of the rotation while you tune it is
+            the normal state of this file, and the button has to keep reaching
+            it. Add a new scene to both.
+          </P>
+        </DocNote>
 
         <DocNote kind="warn" tag="Why pads.py exists">
           <P>
@@ -878,6 +1138,52 @@ export function PumpkinHouseDoc() {
               <td>
                 White flood level as eighths of mean flame. Raise for more
                 overall light.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">BUTTON_DEBOUNCE_MS</td>
+              <td>
+                How long after an accepted press further edges are ignored.
+                Raise it if a button registers twice; past ~250 ms it starts
+                swallowing deliberate double presses.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">
+                POWER_ON_RGB
+                <br />
+                SOUND_ON_RGB
+                <br />
+                SOUND_OFF_RGB
+                <br />
+                POWER_OFF_RGB
+              </td>
+              <td>
+                The four confirmation colours. These are drive levels, not
+                matched output - red has the most headroom off 3.3 V and reads
+                brightest, so if the white confirmation looks pink, pull the red
+                term <em>here</em> down toward <code>150</code>. Don&rsquo;t
+                reach for <code>CHANNEL_TRIM</code>: the ember colours are tuned
+                against it.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">
+                CONFIRM_MS
+                <br />
+                POWER_OFF_CONFIRM_MS
+              </td>
+              <td>
+                How long a confirmation holds - 400 ms for on and sound, 2 s for
+                off. The hold is blocking, so raising the first one stalls the
+                show by that much on every sound toggle.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">CONFIRM_FLOOD</td>
+              <td>
+                Flood level behind a confirmation, 0&ndash;255. Full by default
+                so a press is unmissable from across a porch.
               </td>
             </tr>
           </tbody>
@@ -949,6 +1255,69 @@ export function PumpkinHouseDoc() {
               <td>Flicker looks like stepping, not flame</td>
               <td>
                 <code>FLAME_STEP</code> too high, or gamma correction bypassed.
+              </td>
+            </tr>
+            <tr>
+              <td>A button does nothing at all</td>
+              <td>
+                Wired to the wrong pin, or its ground leg never reached GND.
+                Check with the snippet in step 07 before suspecting the
+                firmware.
+              </td>
+            </tr>
+            <tr>
+              <td>A button behaves as if permanently held</td>
+              <td>
+                The switch is a quarter turn out, so its already-connected pair
+                is across the circuit. It must straddle the ravine - step 05.
+              </td>
+            </tr>
+            <tr>
+              <td>One press fires twice</td>
+              <td>
+                Contact bounce past the debounce window. Raise{" "}
+                <code>BUTTON_DEBOUNCE_MS</code>.
+              </td>
+            </tr>
+            <tr>
+              <td>Muting also changes the lights</td>
+              <td>
+                It shouldn&rsquo;t - mute only gates the carrier. A scene
+                driving its lighting from something other than the
+                buzzer&rsquo;s callbacks is the bug.
+              </td>
+            </tr>
+            <tr>
+              <td>Dead on power-up, but the power button wakes it</td>
+              <td>
+                Not a fault. It boots asleep on purpose - see step 05. Wire the
+                slide switch as the real cut-off.
+              </td>
+            </tr>
+            <tr>
+              <td>The white confirmation looks pink</td>
+              <td>
+                Expected at <code>(255, 255, 255)</code> - red has the most
+                headroom of the three. Lower the red term in{" "}
+                <code>POWER_ON_RGB</code>, not <code>CHANNEL_TRIM</code>.
+              </td>
+            </tr>
+            <tr>
+              <td>It relights for an instant after the purple</td>
+              <td>
+                A scene handing the flame back on its way out.{" "}
+                <code>Stage.release()</code> must check <code>powered()</code>{" "}
+                and go dark instead of calling <code>flame.resume()</code>.
+              </td>
+            </tr>
+            <tr>
+              <td>Pressing the power button during a scene stacks colours</td>
+              <td>
+                The confirmation hold is re-entrant. It must sleep with{" "}
+                <code>sleep_ms</code>, never the buzzer&rsquo;s{" "}
+                <code>rest()</code> - <code>rest()</code> runs the idle
+                callback, which calls <code>poll()</code>, which is what is
+                already running.
               </td>
             </tr>
           </tbody>

@@ -1,6 +1,6 @@
 {
   "name": "help",
-  "version": "0.1.21",
+  "version": "0.1.24",
   "type": "module",
   "private": true,
   "scripts": {

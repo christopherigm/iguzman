@@ -19,6 +19,12 @@ Every effect below is built from three primitives - pulse(), gate() and
 sweep(). The `idle` callback passed to Buzzer is invoked in the gaps so the
 flame keeps animating while an effect plays; without it the lantern freezes
 solid every time it makes a noise.
+
+Two things reach in from the outside, both driven by the front-panel buttons
+in `buttons.py`: `mute()` gates the carrier without altering a single
+duration, and `set_abort()` installs a predicate that lets the blocking
+primitives give up early. Neither is checked in the tight switching loops,
+so the timing that carries the timbre is unaffected by either.
 """
 
 from machine import Pin
@@ -36,6 +42,8 @@ class Buzzer:
         self._pin = Pin(pin, Pin.OUT, value=0)
         self._idle = idle if idle is not None else _noop
         self._rng = rng or urandom
+        self._muted = False
+        self._abort = None
 
     # -- primitives ------------------------------------------------------
 
@@ -47,9 +55,55 @@ class Buzzer:
         lighting off the same timeline the sound is on."""
         self._idle = fn if fn is not None else _noop
 
+    # -- mute ------------------------------------------------------------
+    #
+    # Muting gates the carrier and nothing else: every effect still runs for
+    # its full length, so the lighting a scene drives off its callbacks is
+    # untouched. That is deliberate - the second press of the power button is
+    # for a quiet house, not for a different show, and a lantern whose
+    # animation changed when you silenced it would look broken rather than
+    # considerate. Going properly dark is the third press, not this.
+    #
+    # `_muted` is also the only thing that survives an off-and-on: there is
+    # one sound toggle per cycle of the power button, so resetting it here
+    # would make a silenced lantern noisy again every time it woke up.
+
+    def mute(self, on=True):
+        self._muted = bool(on)
+        if self._muted:
+            self._pin.value(0)  # drop mid-pulse rather than at the next gap
+
+    def toggle_mute(self):
+        self.mute(not self._muted)
+        if not self._muted:
+            # Unmuting blips; muting is self-evident. Without this a press
+            # during a quiet ambient stretch gives no sign it registered.
+            self.pulse(40)
+        return self._muted
+
+    def is_muted(self):
+        return self._muted
+
+    # -- interruption ----------------------------------------------------
+
+    def set_abort(self, fn):
+        """A predicate the blocking primitives check, so an effect can be cut
+        short from outside. `scenes` wires this to the scene button.
+
+        It is only tested where `idle()` already runs - the gaps, and gate
+        periods long enough to afford a callback - so the tight switching
+        loops that carry the timbre keep their timing exactly.
+        """
+        self._abort = fn
+
+    def aborting(self):
+        return self._abort is not None and self._abort()
+
     def pulse(self, on_ms, off_ms=0):
         """One flat blip of carrier."""
-        self._pin.value(1)
+        if self.aborting():
+            return
+        self._pin.value(0 if self._muted else 1)
         sleep_ms(on_ms)
         self._pin.value(0)
         if off_ms:
@@ -63,6 +117,8 @@ class Buzzer:
             if remaining <= 0:
                 return
             self._idle()
+            if self.aborting():
+                return
             sleep_ms(remaining if remaining < 8 else 8)
 
     def gate(self, rate_hz, duration_ms, duty=0.5):
@@ -75,12 +131,14 @@ class Buzzer:
         end = ticks_add(ticks_ms(), duration_ms)
         allow_idle = period_us > _IDLE_THRESHOLD_US
         while ticks_diff(end, ticks_ms()) > 0:
-            self._pin.value(1)
+            self._pin.value(0 if self._muted else 1)
             sleep_us(on_us)
             self._pin.value(0)
             sleep_us(off_us)
             if allow_idle:
                 self._idle()
+                if self.aborting():
+                    break
         self._pin.value(0)
 
     def sweep(self, from_hz, to_hz, duration_ms, duty=0.5):
@@ -103,12 +161,14 @@ class Buzzer:
                 break
             period_us = int(1_000_000 / rate)
             on_us = int(period_us * duty)
-            self._pin.value(1)
+            self._pin.value(0 if self._muted else 1)
             sleep_us(on_us)
             self._pin.value(0)
             sleep_us(period_us - on_us)
             if period_us > _IDLE_THRESHOLD_US:
                 self._idle()
+                if self.aborting():
+                    break
         self._pin.value(0)
 
     # -- randomness ------------------------------------------------------
@@ -164,11 +224,13 @@ def heartbeat(bz, beats=6, start_bpm=54, end_bpm=96, on_beat=None):
         bz.rest(max(80, cycle_ms - 200))
 
 
-def cricket(bz, chirps=3, reps=1):
+def cricket(bz, chirps=3, reps=1, on_chirp=None):
     """Convincing out of all proportion to its complexity. Good ambient
     filler between the set pieces."""
     for _ in range(reps):
         for _ in range(chirps):
+            if on_chirp:
+                on_chirp()
             bz.pulse(12)
             bz.rest(18)
         bz.rest(2200)

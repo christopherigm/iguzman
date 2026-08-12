@@ -2,6 +2,7 @@ import {
   angleDegrees,
   distance,
   formatOhms,
+  HOLE_PITCH,
   midpoint,
   resistorBands,
   type Point,
@@ -10,8 +11,8 @@ import { Lead } from "./wire";
 import "./hardware.css";
 
 /**
- * The small two- and three-legged parts: resistors, diodes, transistors,
- * and the active buzzer.
+ * The small two-, three- and four-legged parts: resistors, diodes,
+ * transistors, the active buzzer, and the tactile pushbutton.
  *
  * Each takes the holes its legs go into and works out its own body position and
  * angle, so a figure never places a body by hand - move the holes and the part
@@ -439,6 +440,127 @@ export function Buzzer({
           −
         </text>
       </g>
+    </g>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Pushbutton
+   ══════════════════════════════════════════════════════════════════════════ */
+
+export interface PushbuttonProps {
+  /**
+   * The two holes the switched pair of legs plugs into - one either side of
+   * the ravine, in the same column.
+   */
+  a: Point;
+  b: Point;
+  /** Printed part description, e.g. `6 mm tactile`. */
+  label?: string;
+  /** Reference designator, e.g. `SW2`. */
+  designator?: string;
+  /** Draw the plunger pushed in. */
+  pressed?: boolean;
+  /**
+   * Distance to the second leg of each pair. Two holes, which is what the
+   * part's 4.5 mm leg spacing bends out to on a 2.54 mm grid.
+   */
+  legSpan?: number;
+}
+
+/**
+ * A 6 mm tactile switch - the four-legged button, straddling the ravine.
+ *
+ * **Four legs, two nodes**, and that is the entire reason this is worth
+ * drawing rather than writing down. The two legs on the same side of the
+ * ravine are shorted together inside the part; the switch is between the two
+ * sides. Turn one a quarter turn from that and you have wired the shorted
+ * pair across your circuit instead - a button that reads as permanently
+ * pressed, which looks like a firmware bug and is not one. The legs are
+ * numbered on the drawing so the two that share a node are visibly the pair
+ * that share a digit.
+ *
+ * It only fits one way round, which is the other half of the point: the
+ * 6.5 mm axis is what spans the ravine, so a button that seems to want to sit
+ * within a single bank is a button rotated 90° from where it belongs.
+ */
+export function Pushbutton({
+  a,
+  b,
+  label,
+  designator,
+  pressed = false,
+  legSpan = 2 * HOLE_PITCH,
+}: PushbuttonProps) {
+  // The companion leg of each pair sits `legSpan` along, on the same row.
+  const legs = [
+    { at: a, node: 1 },
+    { at: { x: a.x + legSpan, y: a.y }, node: 1 },
+    { at: b, node: 2 },
+    { at: { x: b.x + legSpan, y: b.y }, node: 2 },
+  ];
+  const centre = { x: a.x + legSpan / 2, y: (a.y + b.y) / 2 };
+  const size = 40;
+  const plunger = pressed ? 8 : 9.5;
+
+  return (
+    <g>
+      {legs.map(({ at }, index) => (
+        <Lead key={`leg-${index}`} from={at} to={centre} bow={0.04} />
+      ))}
+
+      {/* body */}
+      <rect
+        x={centre.x - size / 2}
+        y={centre.y - size / 2}
+        width={size}
+        height={size}
+        rx={4}
+        fill="var(--hw-plastic-dark)"
+        stroke="rgba(0,0,0,0.5)"
+        strokeWidth={1}
+      />
+      {/* the raised collar the plunger sits in */}
+      <circle
+        cx={centre.x}
+        cy={centre.y}
+        r={13}
+        fill="none"
+        stroke="var(--hw-metal-dark)"
+        strokeWidth={1.2}
+      />
+      <circle
+        cx={centre.x}
+        cy={centre.y}
+        r={plunger}
+        fill="var(--hw-metal)"
+        stroke="var(--hw-metal-dark)"
+        strokeWidth={1}
+      />
+
+      {/* Same digit = same node, already connected inside the part. */}
+      <g className="hw-label-sm" textAnchor="middle">
+        {legs.map(({ at, node }, index) => (
+          <text
+            key={`node-${index}`}
+            x={at.x}
+            y={at.y + (at.y < centre.y ? -9 : 17)}
+          >
+            {node}
+          </text>
+        ))}
+      </g>
+
+      {label || designator ? (
+        <text
+          className="hw-label"
+          x={centre.x}
+          y={centre.y - size / 2 - 22}
+          textAnchor="middle"
+        >
+          {[designator, label].filter(Boolean).join(" · ")}
+        </text>
+      ) : null}
     </g>
   );
 }
