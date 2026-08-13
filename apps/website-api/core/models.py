@@ -1247,6 +1247,14 @@ class Branch(Common):
             "parking). Shown under the map and sent in booking emails."
         ),
     )
+    en_location_details = models.TextField(
+        null=True,
+        blank=True,
+        help_text=(
+            "English version of the location details. Shown to readers on the "
+            "English site; the Spanish one is used when this is blank."
+        ),
+    )
     phone = models.CharField(max_length=32, null=True, blank=True)
     # Digits (with country code) for the wa.me link the frontend builds.
     whatsapp = models.CharField(max_length=32, null=True, blank=True)

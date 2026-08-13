@@ -682,7 +682,11 @@ measure), `subline` (a quieter supporting line under the slogan) and `actions`
 (a CTA row). The website wrapper (`components/hero.tsx`) surfaces those plus
 `splitSlogan`, which reads the tenant's **first slogan line as the headline and
 the rest as the subline** - the hierarchy is a design decision the site makes,
-without adding a CMS field for the customer to fill. `sites/cafedealtura` uses
+without adding a CMS field for the customer to fill. A split slogan also passes
+`hideSublineOnMobile`, so on the `xs` band only the headline is shown: the
+subtitle is what pushes the CTA off the fold on a phone. A tenant who typed two
+equal lines (no `splitSlogan`) still gets both - that copy is one block, not a
+hierarchy we may trim. `sites/cafedealtura` uses
 all of it; the default template uses none.
 
 The shared `Hero` also has a `scrim` prop (0-1 flat black over the whole frame),

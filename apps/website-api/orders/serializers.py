@@ -212,8 +212,11 @@ class BookingSerializer(serializers.ModelSerializer):
             "address": branch.address or None,
             # The "once you are there" half - read live off the branch for the
             # same reason the address is: a correction to how the entrance is
-            # described should reach the customer who is about to use it.
+            # described should reach the customer who is about to use it. Both
+            # languages travel; the page picks by its own locale and falls back
+            # to whichever one the tenant actually wrote.
             "location_details": branch.location_details or None,
+            "en_location_details": branch.en_location_details or None,
             "map_image": image,
         }
 

@@ -8,3 +8,14 @@
     min-height: 350px;
   }
 }
+
+/*
+ * `hideSublineOnMobile` - the subline is dropped on the xs band only. The
+ * element is still rendered (the split is decided in a server component, which
+ * has no viewport), so this is the one place that can make the call.
+ */
+@media (--below-sm) {
+  .hero__subline--xs-hidden {
+    display: none;
+  }
+}

@@ -94,9 +94,15 @@ export default async function BookingPage({ params }: Props) {
         branch.en_name ??
         "",
       address: branch.address ?? null,
-      // Not locale-split like the name: one free-text note the tenant writes
-      // once, in whatever language it serves its customers in.
-      locationDetails: branch.location_details ?? null,
+      // Locale-split like the name, and with the same fallback: a tenant that
+      // only wrote one of the two versions shows that one on both sites.
+      locationDetails:
+        ((locale === "en"
+          ? branch.en_location_details
+          : branch.location_details) ??
+          branch.location_details ??
+          branch.en_location_details) ||
+        null,
       // Decimal strings from the API; the form's map wants numbers, and a
       // branch with either one missing simply gets no map. Converted at the
       // point of use rather than here, so the shape stays the API's.

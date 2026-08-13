@@ -7,8 +7,10 @@ import {
   type MenuItemDetail,
 } from "@/lib/catalog";
 import { Box } from "@repo/ui/core-elements/box";
+import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Grid } from "@repo/ui/core-elements/grid";
+import { MENU_ALL_PATH } from "@/lib/menu-kinds";
 import { BuyableCard, type BuyableItem } from "./buyable-card";
 import "./catalog-items.css";
 
@@ -58,6 +60,23 @@ export async function CatalogItems() {
     ),
   ].sort((a, b) => shuffleKey(a, daySeed) - shuffleKey(b, daySeed));
 
+  // One "see more" per family that actually has a card in the grid above -
+  // keyed on what was rendered, not on the tenant's counts, so the row never
+  // offers a listing the visitor has just been shown nothing from. A food CTA
+  // goes to the whole menu (`MENU_ALL_PATH`), since the featured dishes can be
+  // any mix of the five kinds.
+  const seeMore = [
+    ...(services.length > 0
+      ? [{ label: t("seeMoreServices"), href: "/categories/services" }]
+      : []),
+    ...(products.length > 0
+      ? [{ label: t("seeMoreProducts"), href: "/categories/products" }]
+      : []),
+    ...(menuItems.length > 0
+      ? [{ label: t("seeMoreMenuItems"), href: MENU_ALL_PATH }]
+      : []),
+  ];
+
   return (
     <section className="catalog-items-section">
       <Box className="highlights-header">
@@ -82,6 +101,17 @@ export async function CatalogItems() {
           </Grid>
         ))}
       </Grid>
+      <Box justifyContent="center" flexWrap="wrap" gap={12} marginTop={32}>
+        {seeMore.map((link) => (
+          <Button
+            key={link.href}
+            text={link.label}
+            href={link.href}
+            kind="primary"
+            size="lg"
+          />
+        ))}
+      </Box>
     </section>
   );
 }

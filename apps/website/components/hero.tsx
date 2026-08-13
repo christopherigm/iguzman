@@ -52,6 +52,11 @@ export function Hero({
       logoAlt={system?.site_name}
       slogan={splitSlogan ? headline.trim() : system?.slogan}
       subline={splitSlogan ? subline || null : null}
+      // A split slogan is a headline plus a subtitle, and on an xs viewport the
+      // subtitle is what pushes the CTA off the fold - so there we keep only the
+      // first line. A tenant who typed two equal lines (no `splitSlogan`) still
+      // gets both: that copy is one block, not a hierarchy we may trim.
+      hideSublineOnMobile={splitSlogan}
       actions={actions}
       align={align}
       layout={system?.hero_video_layout ?? "default"}

@@ -34,6 +34,7 @@ const NULLABLE_ON_BLANK = [
   "en_name",
   "address",
   "location_details",
+  "en_location_details",
   "phone",
   "whatsapp",
   "email",
@@ -77,6 +78,7 @@ export default function AdminBranchFormPage({ params }: Props) {
     en_name: "",
     address: "",
     location_details: "",
+    en_location_details: "",
     phone: "",
     whatsapp: "",
     email: "",
@@ -134,6 +136,7 @@ export default function AdminBranchFormPage({ params }: Props) {
             en_name: data.en_name ?? "",
             address: data.address ?? "",
             location_details: data.location_details ?? "",
+            en_location_details: data.en_location_details ?? "",
             phone: data.phone ?? "",
             whatsapp: data.whatsapp ?? "",
             email: data.email ?? "",
@@ -264,6 +267,15 @@ export default function AdminBranchFormPage({ params }: Props) {
     {
       key: "location_details",
       label: tc("locationDetails"),
+      type: "textarea",
+      placeholder: tc("locationDetailsPlaceholder"),
+    },
+    // The same note in English, beside its Spanish original exactly as
+    // `en_name` sits beside `name`. Left blank, the storefront falls back to
+    // the line above rather than showing an English reader nothing.
+    {
+      key: "en_location_details",
+      label: tc("enLocationDetails"),
       type: "textarea",
       placeholder: tc("locationDetailsPlaceholder"),
     },

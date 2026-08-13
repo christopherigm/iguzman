@@ -62,12 +62,7 @@ export type HeroLogoBackground =
  * - `vignette` - clear in the centre, darkening towards the corners.
  */
 export type HeroOverlayStyle =
-  | "none"
-  | "full"
-  | "bottom"
-  | "top"
-  | "both"
-  | "vignette";
+  "none" | "full" | "bottom" | "top" | "both" | "vignette";
 
 /**
  * Neutral value for `heroOverlayBackground`'s `extent`: the point on the 0-100
@@ -104,7 +99,8 @@ export function heroOverlayBackground(
   const clear = "rgba(0,0,0,0)";
   // `reach` is 1 at the neutral extent, so multiplying a style's historical stop
   // by it leaves that stop unchanged at 50 and scales it linearly either side.
-  const reach = Math.min(Math.max(extent, 0), 100) / DEFAULT_HERO_OVERLAY_EXTENT;
+  const reach =
+    Math.min(Math.max(extent, 0), 100) / DEFAULT_HERO_OVERLAY_EXTENT;
   const pct = (n: number) => Math.round(Math.min(Math.max(n, 0), 100));
   switch (style) {
     case "full":
@@ -613,6 +609,17 @@ export type HeroProps = {
    */
   subline?: string | null;
   /**
+   * Drop the `subline` on the smallest phones (below the `sm` breakpoint), so a
+   * split slogan shows only its headline there. A hero is short on an `xs`
+   * viewport and the supporting line is the first thing that pushes the CTA off
+   * the fold; the headline alone still says what the site is.
+   *
+   * It hides rather than unmounts, deliberately: the split happens in a server
+   * component, which cannot know the viewport, so the choice has to be a media
+   * query. @default false
+   */
+  hideSublineOnMobile?: boolean;
+  /**
    * Horizontal alignment of the slogan block. `start` also caps its measure, so
    * a left-aligned headline breaks into a tight stack of short lines rather
    * than running the full width of the container. The logo (in the `default`
@@ -762,6 +769,7 @@ export function Hero({
   backgroundAlt = "",
   slogan,
   subline,
+  hideSublineOnMobile = false,
   actions,
   align = "center",
   scrim = 0,
@@ -798,15 +806,18 @@ export function Hero({
   // the text and any actions over the video. It also rules out the profile
   // treatment, which is a logo layout.
   const hideLogo = layout === "none";
-  const hasBadge =
-    !hideLogo && logoBackground !== "none" && Boolean(logoImage);
+  const hasBadge = !hideLogo && logoBackground !== "none" && Boolean(logoImage);
   const isProfile = layout === "profile" && Boolean(logoImage);
   const isStart = align === "start";
 
   // The tenant-configured overlay, and whether the type can stop carrying its
   // own shadow: only an overlay that darkens the whole frame (a flat tint, or a
   // scrim) does that - a gradient leaves the far edge as bright as the video.
-  const overlay = heroOverlayBackground(overlayStyle, overlayOpacity, overlayExtent);
+  const overlay = heroOverlayBackground(
+    overlayStyle,
+    overlayOpacity,
+    overlayExtent,
+  );
   const litFromBelow =
     scrim > 0 || (overlayStyle === "full" && Boolean(overlay));
 
@@ -952,6 +963,9 @@ export function Hero({
       )}
       {subline && (
         <p
+          className={
+            hideSublineOnMobile ? "hero__subline--xs-hidden" : undefined
+          }
           style={{
             margin: slogan ? `${scaled("0.75rem")} 0 0` : 0,
             color: "rgba(255,255,255,0.86)",
@@ -995,9 +1009,9 @@ export function Hero({
   // Only a `bottom` divider matters here - a `top` notch is nowhere near the disc.
   const profileDividerLift =
     isProfile &&
-      bottomDivider &&
-      bottomDivider !== "none" &&
-      bottomDividerEdge === "bottom"
+    bottomDivider &&
+    bottomDivider !== "none" &&
+    bottomDividerEdge === "bottom"
       ? shapeDividerEdgeInset(bottomDivider, bottomDividerHeight)
       : null;
   // The disc's own overhang below the hero, and the offsets built on it: its
@@ -1013,7 +1027,11 @@ export function Hero({
   // same shape. `"none"` (the CMS default) draws nothing.
   const dividerMask: CSSProperties =
     bottomDivider && bottomDivider !== "none"
-      ? shapeDividerMaskStyle(bottomDivider, bottomDividerEdge, bottomDividerHeight)
+      ? shapeDividerMaskStyle(
+          bottomDivider,
+          bottomDividerEdge,
+          bottomDividerHeight,
+        )
       : {};
 
   const hero = (
@@ -1095,7 +1113,7 @@ export function Hero({
             right: 0,
             bottom: isProfile
               ? // Follows the disc: a lifted disc lifts its 24px clearance too.
-              profileDividerLift
+                profileDividerLift
                 ? `calc(${profileLogoSize} / 2 + 24px + ${profileDividerLift})`
                 : `calc(${profileLogoSize} / 2 + 24px)`
               : 0,

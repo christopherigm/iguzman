@@ -1018,3 +1018,47 @@ class BranchMapImageTests(IsolatedMediaTestCase):
         self.assertEqual(res.status_code, 200)
         self.assertIn("map_image", res.json()[0])
         self.assertIn("branchmap", res.json()[0]["map_image"])
+
+
+class BranchLocationDetailsTests(TestCase):
+    """The bilingual "how to find the entrance" note.
+
+    Both versions travel on the public payload, exactly as `name`/`en_name` do -
+    the storefront picks by the locale it is rendering and falls back to
+    whichever one the tenant actually wrote, so a branch that only ever had the
+    Spanish note reads the same in English as it did before this field existed.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.branch = Branch.objects.create(system=self.system, name="Marina")
+
+    def test_both_versions_round_trip_through_the_write_serializer(self):
+        serializer = BranchWriteSerializer(data={
+            "location_details": "Portón azul junto a la gasolinera",
+            "en_location_details": "Blue gate beside the fuel dock",
+        })
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save(self.branch)
+        self.branch.refresh_from_db()
+
+        self.assertEqual(self.branch.en_location_details, "Blue gate beside the fuel dock")
+
+        res = self.client.get("/api/branches/", HTTP_X_WEBSITE_HOST="acme.test")
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(
+            res.json()[0]["en_location_details"], "Blue gate beside the fuel dock",
+        )
+
+    def test_a_save_that_omits_it_leaves_it_alone(self):
+        self.branch.en_location_details = "Blue gate beside the fuel dock"
+        self.branch.save(update_fields=["en_location_details"])
+
+        serializer = BranchWriteSerializer(data={"phone": "+52 000"})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save(self.branch)
+        self.branch.refresh_from_db()
+
+        self.assertEqual(self.branch.en_location_details, "Blue gate beside the fuel dock")

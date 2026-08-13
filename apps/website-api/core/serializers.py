@@ -1425,7 +1425,8 @@ class BranchSerializer(serializers.ModelSerializer):
         fields = [
             "id", "enabled", "created", "modified",
             "system", "is_main",
-            "name", "en_name", "address", "location_details",
+            "name", "en_name", "address",
+            "location_details", "en_location_details",
             "phone", "whatsapp", "email",
             "latitude", "longitude", "map_image", "sort_order",
             "timezone", "booking_capacity",
@@ -1446,6 +1447,7 @@ class BranchWriteSerializer(serializers.Serializer):
     en_name    = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     address    = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     location_details = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_location_details = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     phone      = serializers.CharField(max_length=32, required=False, allow_null=True, allow_blank=True)
     whatsapp   = serializers.CharField(max_length=32, required=False, allow_null=True, allow_blank=True)
     email      = serializers.EmailField(max_length=254, required=False, allow_null=True, allow_blank=True)
@@ -1475,7 +1477,8 @@ class BranchWriteSerializer(serializers.Serializer):
     resource_pools = ResourcePoolWriteSerializer(many=True, required=False)
 
     _SCALAR_FIELDS = [
-        "system", "is_main", "name", "en_name", "address", "location_details",
+        "system", "is_main", "name", "en_name", "address",
+        "location_details", "en_location_details",
         "phone", "whatsapp",
         "email", "latitude", "longitude", "enabled", "sort_order",
         "timezone", "booking_capacity",

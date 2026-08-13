@@ -82,6 +82,9 @@ export interface BookingLocation {
   address: string | null;
   /** How to find the entrance once you are there, drawn under the address. */
   location_details: string | null;
+  /** Its English version, picked on an `en` page; blank falls back to the line
+   *  above, so a tenant that wrote only one shows that one everywhere. */
+  en_location_details: string | null;
   map_image: string | null;
 }
 

@@ -76,6 +76,13 @@ export function ContactLocations({
     branch.en_name ??
     "";
 
+  /** Same precedence as the name: the page's own language first, then whichever
+   *  version the tenant actually wrote. */
+  const branchLocationDetails = (branch: Branch) =>
+    (locale === "en" ? branch.en_location_details : branch.location_details) ??
+    branch.location_details ??
+    branch.en_location_details;
+
   const renderAdminControls = (branch: Branch) =>
     isAdmin ? (
       <Box gap={8} alignItems="center">
@@ -176,7 +183,7 @@ export function ContactLocations({
           the reader to the street. Not merged into the address above: that one
           is the postal line, this one is the landmark - and a reader scanning
           for a street name must not have to read past a note about parking. */}
-        {branch.location_details && (
+        {branchLocationDetails(branch) && (
           <Typography
             variant="caption"
             color="var(--foreground)"
@@ -185,7 +192,7 @@ export function ContactLocations({
             <Typography as="span" variant="label" color="var(--muted, #757575)">
               {t("locationDetailsLabel")}
             </Typography>{" "}
-            {branch.location_details}
+            {branchLocationDetails(branch)}
           </Typography>
         )}
       </Box>

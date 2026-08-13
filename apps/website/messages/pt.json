@@ -343,7 +343,10 @@
     "menuLabel": "Prato",
     "browseProducts": "Ver produtos",
     "browseServices": "Ver serviços",
-    "browseFood": "Ver comida"
+    "browseFood": "Ver comida",
+    "seeMoreServices": "Ver mais serviços",
+    "seeMoreProducts": "Ver mais produtos",
+    "seeMoreMenuItems": "Ver mais do cardápio"
   },
   "CategoryDetail": {
     "home": "Início",
@@ -1353,6 +1356,7 @@
     "main": "Principal",
     "address": "Endereço",
     "locationDetails": "Como nos encontrar",
+    "enLocationDetails": "Como nos encontrar (EN)",
     "locationDetailsPlaceholder": "Como encontrar a entrada: referências, andar, estacionamento…",
     "phone": "Telefone",
     "isMain": "Localização principal",

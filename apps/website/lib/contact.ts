@@ -15,6 +15,9 @@ export interface Branch {
   /** How to find the entrance once you are there - the landmark, the gate, the
    *  floor. Rendered under the map beside the address, never merged into it. */
   location_details: string | null;
+  /** The English version of the note above, picked on an `en` page exactly as
+   *  `en_name` is. Blank falls back to `location_details`. */
+  en_location_details: string | null;
   phone: string | null;
   whatsapp: string | null;
   email: string | null;

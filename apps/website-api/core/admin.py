@@ -216,7 +216,10 @@ class BranchAdmin(admin.ModelAdmin):
             "fields": ("name", "en_name"),
         }),
         ("Contact", {
-            "fields": ("address", "location_details", "phone", "whatsapp", "email"),
+            "fields": (
+                "address", "location_details", "en_location_details",
+                "phone", "whatsapp", "email",
+            ),
         }),
         ("Coordinates", {
             "fields": ("latitude", "longitude", "map_image"),

@@ -297,7 +297,10 @@
     "menuLabel": "Food item",
     "browseProducts": "Browse products",
     "browseServices": "Browse services",
-    "browseFood": "Browse food"
+    "browseFood": "Browse food",
+    "seeMoreServices": "See more services",
+    "seeMoreProducts": "See more products",
+    "seeMoreMenuItems": "See more menu items"
   },
   "Gallery": {
     "previous": "Previous image",
@@ -1353,6 +1356,7 @@
     "main": "Main",
     "address": "Address",
     "locationDetails": "Location details",
+    "enLocationDetails": "Location details (EN)",
     "locationDetailsPlaceholder": "How to find the entrance: landmarks, floor, parking…",
     "phone": "Phone",
     "isMain": "Main location",

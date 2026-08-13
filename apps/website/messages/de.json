@@ -343,7 +343,10 @@
     "menuLabel": "Gericht",
     "browseProducts": "Produkte ansehen",
     "browseServices": "Dienstleistungen ansehen",
-    "browseFood": "Essen ansehen"
+    "browseFood": "Essen ansehen",
+    "seeMoreServices": "Mehr Dienstleistungen ansehen",
+    "seeMoreProducts": "Mehr Produkte ansehen",
+    "seeMoreMenuItems": "Mehr aus der Speisekarte"
   },
   "CategoryDetail": {
     "home": "Startseite",
@@ -1353,6 +1356,7 @@
     "main": "Haupt",
     "address": "Adresse",
     "locationDetails": "Wegbeschreibung",
+    "enLocationDetails": "Wegbeschreibung (EN)",
     "locationDetailsPlaceholder": "So finden Sie den Eingang: Orientierungspunkte, Etage, Parken…",
     "phone": "Telefon",
     "isMain": "Hauptstandort",

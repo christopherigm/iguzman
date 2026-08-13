@@ -343,7 +343,10 @@
     "menuLabel": "Plat",
     "browseProducts": "Voir les produits",
     "browseServices": "Voir les services",
-    "browseFood": "Voir la nourriture"
+    "browseFood": "Voir la nourriture",
+    "seeMoreServices": "Voir plus de services",
+    "seeMoreProducts": "Voir plus de produits",
+    "seeMoreMenuItems": "Voir plus du menu"
   },
   "CategoryDetail": {
     "home": "Accueil",
@@ -1353,6 +1356,7 @@
     "main": "Principal",
     "address": "Adresse",
     "locationDetails": "Comment nous trouver",
+    "enLocationDetails": "Comment nous trouver (EN)",
     "locationDetailsPlaceholder": "Comment trouver l'entrée : repères, étage, stationnement…",
     "phone": "Téléphone",
     "isMain": "Emplacement principal",

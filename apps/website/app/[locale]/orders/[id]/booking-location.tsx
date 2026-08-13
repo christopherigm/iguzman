@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Card } from "@repo/ui/core-elements/card";
@@ -40,7 +40,16 @@ export async function BookingLocation({
   name,
   pinIcon = null,
 }: BookingLocationProps) {
-  const t = await getTranslations("Orders");
+  const [t, locale] = await Promise.all([getTranslations("Orders"), getLocale()]);
+
+  // The page's own language first, then whichever version the tenant actually
+  // wrote - the same precedence every other bilingual field here follows.
+  const locationDetails =
+    (locale === "en"
+      ? location.en_location_details
+      : location.location_details) ??
+    location.location_details ??
+    location.en_location_details;
 
   return (
     <Card gap={12}>
@@ -79,7 +88,7 @@ export async function BookingLocation({
       {/* Under the map rather than beside the address above it: the street name
         gets the reader to the block and this gets them through the right door,
         so it is read last, on the way out. */}
-      {location.location_details && (
+      {locationDetails && (
         <Typography
           variant="caption"
           margin={0}
@@ -89,7 +98,7 @@ export async function BookingLocation({
           <Typography as="span" variant="label" color="var(--muted, #757575)">
             {t("locationDetailsLabel")}
           </Typography>{" "}
-          {location.location_details}
+          {locationDetails}
         </Typography>
       )}
 

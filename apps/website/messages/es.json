@@ -297,7 +297,10 @@
     "menuLabel": "Plato",
     "browseProducts": "Ver productos",
     "browseServices": "Ver servicios",
-    "browseFood": "Ver comida"
+    "browseFood": "Ver comida",
+    "seeMoreServices": "Ver más servicios",
+    "seeMoreProducts": "Ver más productos",
+    "seeMoreMenuItems": "Ver más del menú"
   },
   "Gallery": {
     "previous": "Imagen anterior",
@@ -1353,6 +1356,7 @@
     "main": "Principal",
     "address": "Dirección",
     "locationDetails": "Cómo ubicarnos",
+    "enLocationDetails": "Cómo ubicarnos (EN)",
     "locationDetailsPlaceholder": "Cómo encontrar la entrada: referencias, piso, estacionamiento…",
     "phone": "Teléfono",
     "isMain": "Ubicación principal",
