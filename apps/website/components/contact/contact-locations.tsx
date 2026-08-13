@@ -12,7 +12,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { PlaceMap } from "@/components/place-map";
 import { deleteBranch } from "@/lib/admin-api";
-import { branchHasCoordinates, type Branch } from "@/lib/contact";
+import { branchHasCoordinates, whatsappHref, type Branch } from "@/lib/contact";
 import { directionsHref } from "@/lib/maps";
 
 interface ContactLocationsProps {
@@ -31,9 +31,6 @@ interface ContactLocationsProps {
 
 function telHref(phone: string): string {
   return `tel:${phone.replace(/[^\d+]/g, "")}`;
-}
-function waHref(whatsapp: string): string {
-  return `https://wa.me/${whatsapp.replace(/[^\d]/g, "")}`;
 }
 
 /**
@@ -142,7 +139,7 @@ export function ContactLocations({
             <Button
               text={t("whatsapp")}
               size="sm"
-              href={waHref(branch.whatsapp)}
+              href={whatsappHref(branch.whatsapp)}
               target="_blank"
             />
           )}

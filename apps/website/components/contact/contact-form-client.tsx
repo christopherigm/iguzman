@@ -3,10 +3,7 @@
 import { useTranslations } from "next-intl";
 import { ContactForm } from "@repo/ui/core-elements/contact-form";
 import { useSession } from "@repo/auth/session-provider";
-import {
-  sendContactMessage,
-  type ContactRelatedKind,
-} from "@/lib/contact";
+import { sendContactMessage, type ContactRelatedKind } from "@/lib/contact";
 
 interface ContactFormClientProps {
   /** Optional heading above the form (omit on the contact page, which has its own). */
@@ -50,8 +47,11 @@ export function ContactFormClient({
     <ContactForm
       heading={heading}
       description={description}
-      contextLabel={related ? t("aboutItem", { name: related.name }) : undefined}
+      contextLabel={
+        related ? t("aboutItem", { name: related.name }) : undefined
+      }
       account={account}
+      collectPhone
       labels={{
         nameLabel: t("nameLabel"),
         emailLabel: t("emailLabel"),
@@ -62,11 +62,18 @@ export function ContactFormClient({
         successMessage: t("successMessage"),
         errorMessage: t("errorMessage"),
         sendingAs: t("sendingAs"),
+        phoneLabel: t("phoneLabel"),
+        channelLabel: t("channelLabel"),
+        channelEmail: t("channelEmail"),
+        channelWhatsapp: t("channelWhatsapp"),
+        contactRequired: t("contactRequired"),
       }}
       onSubmit={(values) =>
         sendContactMessage({
           name: values.name,
           email: values.email,
+          phone: values.phone,
+          preferred_channel: values.preferredChannel,
           message: values.message,
           related_kind: related?.kind,
           related_id: related?.id,

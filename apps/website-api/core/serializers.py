@@ -1632,10 +1632,11 @@ class ContactMessageSerializer(serializers.ModelSerializer):
         model = ContactMessage
         fields = [
             "id", "created", "modified", "system",
-            "name", "email", "subject", "message",
+            "name", "email", "phone", "preferred_channel", "subject", "message",
             "related_kind", "related_id", "related_name",
             "is_read",
-            "reply_subject", "reply_body", "replied_at", "replied_by_name",
+            "reply_channel", "reply_subject", "reply_body", "replied_at",
+            "replied_by_name",
         ]
 
     def get_replied_by_name(self, obj):
@@ -1648,14 +1649,23 @@ class ContactMessageSerializer(serializers.ModelSerializer):
 class ContactMessageCreateSerializer(serializers.Serializer):
     """Public create serializer for a customer's contact-form submission.
 
-    `name`/`email` are required only for an anonymous sender; the view fills them
-    from the account for a signed-in one and ignores whatever the body claimed
-    (so a logged-in user can't spoof another address). The related-item fields are
+    `name` is required only for an anonymous sender; the view fills it from the
+    account for a signed-in one and ignores whatever the body claimed (so a
+    logged-in user can't spoof another identity). The related-item fields are
     optional and only present when the form was embedded on a detail page.
+
+    A guest must leave **either** an email or a WhatsApp number - the view
+    enforces that, not this serializer, because a signed-in sender always has an
+    address from their account and only the view knows which branch it is on.
     """
 
     name    = serializers.CharField(max_length=255, required=False, allow_blank=True)
     email   = serializers.EmailField(max_length=254, required=False, allow_blank=True)
+    phone   = serializers.CharField(max_length=32, required=False, allow_null=True, allow_blank=True)
+    preferred_channel = serializers.ChoiceField(
+        choices=[c[0] for c in ContactMessage.CHANNEL_CHOICES],
+        required=False, allow_blank=True,
+    )
     subject = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     message = serializers.CharField(max_length=5000)
 

@@ -306,16 +306,24 @@ class BookingResourceAdmin(admin.ModelAdmin):
 
 @admin.register(ContactMessage)
 class ContactMessageAdmin(admin.ModelAdmin):
-    list_display = ("name", "email", "system", "related_name", "is_read", "replied_at", "created")
-    list_filter = ("is_read", "system", "related_kind")
+    list_display = (
+        "name", "email", "preferred_channel", "system", "related_name",
+        "is_read", "replied_at", "created",
+    )
+    list_filter = ("is_read", "system", "related_kind", "preferred_channel", "reply_channel")
+    # `phone` is deliberately absent from both `list_display` and `search_fields`:
+    # it is customer PII with no reason to sit on a screen listing every customer
+    # at once, and the inbox at /admin/messages - not this admin - is where a
+    # tenant actually works. It stays visible (read-only) on the detail form.
     search_fields = ("name", "email", "subject", "message", "related_name")
     # The message is a customer record, not editable content; everything is
     # read-only except the read flag the inbox toggles. The reply is sent from the
     # CMS inbox (never composed here), so its fields are read-only too.
     readonly_fields = (
-        "system", "user", "name", "email", "subject", "message",
+        "system", "user", "name", "email", "phone", "preferred_channel",
+        "subject", "message",
         "related_kind", "related_id", "related_name",
-        "reply_subject", "reply_body", "replied_at", "replied_by",
+        "reply_channel", "reply_subject", "reply_body", "replied_at", "replied_by",
         "created", "modified", "version",
     )
 

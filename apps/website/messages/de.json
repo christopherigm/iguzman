@@ -1348,7 +1348,12 @@
     "mapExitFullscreen": "Vollbild beenden",
     "aboutItem": "Betreff: {name}",
     "askAboutHeading": "Haben Sie eine Frage dazu?",
-    "askAboutDescription": "Fragen Sie uns alles und wir antworten per E-Mail."
+    "askAboutDescription": "Frag uns alles - wir melden uns bei dir.",
+    "phoneLabel": "Deine WhatsApp-Nummer",
+    "channelLabel": "Wie sollen wir antworten?",
+    "channelEmail": "Per E-Mail",
+    "channelWhatsapp": "Per WhatsApp",
+    "contactRequired": "Hinterlasse eine E-Mail-Adresse oder eine WhatsApp-Nummer, damit wir antworten können."
   },
   "AdminBranches": {
     "title": "Standorte",
@@ -1396,7 +1401,7 @@
     "from": "Von",
     "subject": "Betreff",
     "date": "Datum",
-    "noSubject": "(kein Betreff)",
+    "contactFormSubject": "Nachricht von {name} über das Kontaktformular",
     "markRead": "Als gelesen markieren",
     "markUnread": "Als ungelesen markieren",
     "reply": "Antworten",
@@ -1417,7 +1422,23 @@
     "sending": "Wird gesendet…",
     "replyErrorSend": "Die Antwort konnte nicht gesendet werden. Bitte versuche es erneut.",
     "sentReplyHeading": "Deine Antwort",
-    "repliedMeta": "Beantwortet von {name} am {date}"
+    "repliedMeta": "Beantwortet von {name} am {date}",
+    "phoneLabel": "WhatsApp",
+    "preferredChannelLabel": "Bevorzugt",
+    "channelEmail": "E-Mail",
+    "channelWhatsapp": "WhatsApp",
+    "prefersWhatsapp": "Bevorzugt WhatsApp",
+    "replyOnWhatsapp": "Per WhatsApp antworten",
+    "replyTitleWhatsapp": "{name} per WhatsApp antworten",
+    "openInWhatsapp": "In WhatsApp öffnen",
+    "markReplied": "Als beantwortet markieren",
+    "whatsappHint": "Beim Öffnen von WhatsApp wird die Nachricht von deinem eigenen Konto gesendet. Komm zurück und markiere sie als beantwortet, damit der Posteingang das zeigt.",
+    "whatsappGreeting": "Hallo {name}, zu deiner Nachricht \"{subject}\":",
+    "whatsappGreetingNoSubject": "Hallo {name}, zu deiner Nachricht:",
+    "whatsappRecordedNote": "Hier erfasst - die Zustellung über WhatsApp wird nicht bestätigt.",
+    "repliedOnWhatsapp": "Per WhatsApp beantwortet",
+    "sentReplyHeadingWhatsapp": "Deine WhatsApp-Antwort",
+    "replyErrorRecord": "Die Antwort konnte nicht erfasst werden. Bitte versuche es erneut."
   },
   "Booking": {
     "heading": "Termin buchen",

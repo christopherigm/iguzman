@@ -11,6 +11,7 @@ from io import BytesIO
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
+from django.core import mail
 from django.core.cache import cache
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
@@ -32,6 +33,7 @@ from core.backup import BackupError, restore_archive, write_archive
 from core.models import (
     BookingResource,
     Branch,
+    ContactMessage,
     Event,
     ResourcePool,
     SiteBackup,
@@ -1062,3 +1064,115 @@ class BranchLocationDetailsTests(TestCase):
         self.branch.refresh_from_db()
 
         self.assertEqual(self.branch.en_location_details, "Blue gate beside the fuel dock")
+
+
+class ContactChannelTests(TestCase):
+    """A customer reaches the tenant by email **or** WhatsApp.
+
+    What these pin down is the pair of rules that make the choice safe: a message
+    must carry at least one way to answer it, and a reply must never be recorded
+    against a channel the customer left no address for. The WhatsApp reply path
+    is also asymmetric on purpose - it records without sending, because the send
+    happens in the admin's own WhatsApp (see `AdminContactMessageReplyView`).
+    """
+
+    def setUp(self):
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        cache.clear()
+
+    @staticmethod
+    def _admin(username, system):
+        # Same shape as SiteBackupApiTests._admin - see its docstring for why the
+        # profile must be written through the cached instance.
+        user = User.objects.create_user(username, password="pw")
+        user.profile.system = system
+        user.profile.is_admin = True
+        user.profile.save()
+        return user
+
+    def _post(self, **body):
+        return self.client.post(
+            "/api/contact-messages/",
+            data=json.dumps(body),
+            content_type="application/json",
+            HTTP_X_WEBSITE_HOST="acme.test",
+        )
+
+    def test_whatsapp_only_sender_is_accepted(self):
+        """No email at all is fine as long as there is a number."""
+        res = self._post(name="Ana", phone="+52 155 1234 5678", message="Hola")
+        self.assertEqual(res.status_code, 201, res.content)
+
+        msg = ContactMessage.objects.get(pk=res.json()["id"])
+        self.assertEqual(msg.email, "")
+        self.assertEqual(msg.phone, "+52 155 1234 5678")
+        # With only one address given, the preference follows it rather than
+        # defaulting to a channel the customer cannot be reached on.
+        self.assertEqual(msg.preferred_channel, ContactMessage.CHANNEL_WHATSAPP)
+
+    def test_message_with_neither_address_is_refused(self):
+        res = self._post(name="Ana", message="Hola")
+        self.assertEqual(res.status_code, 400)
+        self.assertFalse(ContactMessage.objects.exists())
+
+    def test_stated_preference_falls_back_to_the_address_that_exists(self):
+        """A body may ask for WhatsApp without leaving a number - honouring it
+        would file the message under a channel nobody can answer on."""
+        res = self._post(
+            name="Ana", email="ana@example.com",
+            preferred_channel="whatsapp", message="Hola",
+        )
+        self.assertEqual(res.status_code, 201, res.content)
+        msg = ContactMessage.objects.get(pk=res.json()["id"])
+        self.assertEqual(msg.preferred_channel, ContactMessage.CHANNEL_EMAIL)
+
+    def test_notification_email_survives_a_sender_with_no_address(self):
+        """`reply_to` used to be `[message.email]`; an empty entry is a malformed
+        header, so a WhatsApp-only sender would have broken the admin notice."""
+        self._admin("admin", self.system).email = "admin@acme.test"
+        User.objects.filter(username="admin").update(email="admin@acme.test")
+
+        res = self._post(name="Ana", phone="5551234567", message="Hola")
+        self.assertEqual(res.status_code, 201, res.content)
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertTrue(all(mail.outbox[0].reply_to))
+
+    def test_whatsapp_reply_is_recorded_without_sending_mail(self):
+        msg = ContactMessage.objects.create(
+            system=self.system, name="Ana", email="", phone="5551234567",
+            preferred_channel=ContactMessage.CHANNEL_WHATSAPP, message="Hola",
+        )
+        self.client.force_login(self._admin("admin", self.system))
+
+        res = self.client.post(
+            f"/api/contact-messages/admin/{msg.pk}/reply/",
+            data=json.dumps({"body": "Claro que si", "channel": "whatsapp"}),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 200, res.content)
+
+        msg.refresh_from_db()
+        self.assertEqual(msg.reply_channel, ContactMessage.CHANNEL_WHATSAPP)
+        self.assertEqual(msg.reply_body, "Claro que si")
+        self.assertIsNotNone(msg.replied_at)
+        self.assertTrue(msg.is_read)
+        # The admin's own WhatsApp sends it - this endpoint must not mail anyone.
+        self.assertEqual(mail.outbox, [])
+
+    def test_reply_is_refused_on_a_channel_with_no_address(self):
+        msg = ContactMessage.objects.create(
+            system=self.system, name="Ana", email="", phone="5551234567",
+            message="Hola",
+        )
+        self.client.force_login(self._admin("admin", self.system))
+
+        res = self.client.post(
+            f"/api/contact-messages/admin/{msg.pk}/reply/",
+            data=json.dumps({"body": "Hi", "channel": "email"}),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 400)
+
+        msg.refresh_from_db()
+        self.assertIsNone(msg.replied_at)

@@ -18,6 +18,7 @@ import {
   ServiceDetailPanel,
   ServiceDetailSections,
 } from "@/components/service-detail";
+import { ItemQuestionCard } from "@/components/contact/item-question-card";
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
@@ -186,6 +187,11 @@ export default async function ServicePage({ params }: Props) {
           </Grid>
           <ServiceDetailPanel service={service} locale={locale} />
           <ServiceDetailSections service={service} locale={locale} />
+          <ItemQuestionCard
+            kind="service"
+            id={service.id}
+            name={displayName}
+          />
         </Grid>
       </Container>
     </>

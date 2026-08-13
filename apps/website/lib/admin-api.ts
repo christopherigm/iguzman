@@ -797,14 +797,21 @@ export interface AdminContactMessage {
   created: string;
   modified: string;
   name: string;
+  /** Blank when the customer left only a WhatsApp number. */
   email: string;
+  phone: string | null;
+  /** Which channel the customer asked to be answered on. */
+  preferred_channel: "email" | "whatsapp";
   subject: string | null;
   message: string;
   related_kind: "product" | "service" | "food" | null;
   related_id: number | null;
   related_name: string | null;
   is_read: boolean;
-  // An admin's reply sent back to the customer, recorded once the email went out.
+  // An admin's reply sent back to the customer. ⚠ For `email` this was recorded
+  // once the mail actually went out; for `whatsapp` it is what an admin said
+  // they sent from their own WhatsApp - the API never saw it delivered.
+  reply_channel: "email" | "whatsapp" | null;
   reply_subject: string | null;
   reply_body: string | null;
   replied_at: string | null;
@@ -840,9 +847,16 @@ export async function deleteContactMessage(pk: number) {
  * (and marks it read) server-side only if the email actually went out, so the
  * returned message carries the truthful `replied_at` / `replied_by_name`.
  */
+/**
+ * Record (and, for email, send) an admin's reply to a contact message.
+ *
+ * ⚠ `channel: "whatsapp"` only **records** the reply - the API sends nothing.
+ * The caller is responsible for opening the wa.me link that actually delivers
+ * it; see `admin/messages/[id]/page.tsx`.
+ */
 export async function replyToContactMessage(
   pk: number,
-  data: { subject?: string; body: string },
+  data: { subject?: string; body: string; channel?: "email" | "whatsapp" },
 ) {
   const res = await adminFetch(`/api/contact-messages/admin/${pk}/reply/`, {
     method: "POST",

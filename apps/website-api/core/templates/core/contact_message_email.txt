@@ -2,8 +2,10 @@ Nuevo mensaje de contacto / New contact message
 {{ site_name }}
 
 Nombre / Name: {{ sender_name }}
-Correo / Email: {{ sender_email }}
-{% if subject %}Asunto / Subject: {{ subject }}
+{% if sender_email %}Correo / Email: {{ sender_email }}
+{% endif %}{% if sender_phone %}WhatsApp: {{ sender_phone }}{% if prefers_whatsapp %} (prefiere WhatsApp / prefers WhatsApp){% endif %}
+{{ whatsapp_url }}
+{% endif %}{% if subject %}Asunto / Subject: {{ subject }}
 {% endif %}{% if related_name %}Sobre / About: {{ related_name }}{% if related_label %} ({{ related_label }}){% endif %}
 {% endif %}
 Mensaje / Message:
@@ -12,5 +14,6 @@ Mensaje / Message:
 Ver en el panel / Open in dashboard:
 {{ action_url }}
 
-Puedes responder directamente a este correo para contestarle al cliente.
-You can reply directly to this email to answer the customer.
+{% if sender_email %}Puedes responder directamente a este correo para contestarle al cliente.
+You can reply directly to this email to answer the customer.{% else %}Este cliente solo dejó un número de WhatsApp; respóndele por ahí o desde el panel.
+This customer left only a WhatsApp number - answer there or from the dashboard.{% endif %}

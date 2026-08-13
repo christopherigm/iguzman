@@ -24,8 +24,8 @@ import {
   MenuDetailSections,
   MenuDetailAllergens,
   MenuDetailNutrition,
-  MenuDetailQuestion,
 } from "@/components/menu-detail";
+import { ItemQuestionCard } from "@/components/contact/item-question-card";
 import { enabledIngredients } from "@/lib/menu-selection";
 import { MenuCustomizationProvider } from "@/components/menu-customization-context";
 
@@ -202,7 +202,7 @@ export async function MenuItemDetailPage({
             </Grid>
             <MenuDetailPanel item={item} locale={locale} />
             <MenuDetailSections item={item} locale={locale} />
-            <MenuDetailQuestion item={item} locale={locale} />
+            <ItemQuestionCard kind="food" id={item.id} name={displayName} />
             <MenuDetailAllergens item={item} locale={locale} />
             <MenuDetailNutrition item={item} locale={locale} />
           </Grid>

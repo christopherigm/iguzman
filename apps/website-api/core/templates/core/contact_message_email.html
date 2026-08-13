@@ -9,10 +9,18 @@
       <td style="padding:6px 0; color:#8a94a6; width:120px;">Nombre / Name</td>
       <td style="padding:6px 0;"><strong>{{ sender_name }}</strong></td>
     </tr>
+    {% if sender_email %}
     <tr>
       <td style="padding:6px 0; color:#8a94a6;">Correo / Email</td>
       <td style="padding:6px 0;"><a href="mailto:{{ sender_email }}" style="color:{{ primary_color|default:'#2196f3' }};">{{ sender_email }}</a></td>
     </tr>
+    {% endif %}
+    {% if sender_phone %}
+    <tr>
+      <td style="padding:6px 0; color:#8a94a6;">WhatsApp</td>
+      <td style="padding:6px 0;"><a href="{{ whatsapp_url }}" style="color:{{ primary_color|default:'#2196f3' }};">{{ sender_phone }}</a>{% if prefers_whatsapp %} <span style="color:#8a94a6;">(prefiere WhatsApp / prefers WhatsApp)</span>{% endif %}</td>
+    </tr>
+    {% endif %}
     {% if subject %}
     <tr>
       <td style="padding:6px 0; color:#8a94a6;">Asunto / Subject</td>
@@ -31,5 +39,10 @@
 
   {% include "users/_email_button.html" with url=action_url label="Ver en el panel / Open in dashboard" primary_color=primary_color %}
 
+  {% if sender_email %}
   <p style="margin:8px 0 0 0; font-size:14px; color:#52606d;">Puedes responder directamente a este correo para contestarle al cliente. / You can reply directly to this email to answer the customer.</p>
+  {% else %}
+  {# No address to reply to - this customer left only a WhatsApp number. #}
+  <p style="margin:8px 0 0 0; font-size:14px; color:#52606d;">Este cliente solo dejó un número de WhatsApp; respóndele por ahí o desde el panel. / This customer left only a WhatsApp number - answer there or from the dashboard.</p>
+  {% endif %}
 {% endblock %}

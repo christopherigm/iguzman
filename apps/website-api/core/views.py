@@ -1341,6 +1341,10 @@ class ContactMessageCreateView(APIView):
     than whatever the body claims. Scoped to the tenant by request host for a
     guest, by the account's own system for a signed-in user - never let a header
     pick a logged-in user's tenant. On success the tenant's admins are emailed.
+
+    A sender leaves an email, a WhatsApp number, or both; the message is refused
+    only when there is no way at all to answer it. A signed-in sender always has
+    an account email, so for them the number is purely an extra way to be reached.
     """
 
     permission_classes = [AllowAny]
@@ -1361,13 +1365,36 @@ class ContactMessageCreateView(APIView):
             name = (data.get("name") or "").strip()
             email = (data.get("email") or "").strip()
 
+        # The number is taken from the body on both paths - an account has no
+        # phone of its own, so even a signed-in sender types it here.
+        phone = (data.get("phone") or "").strip()
+        preferred = data.get("preferred_channel") or ""
+
         if system is None:
             return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
-        if not name or not email:
-            # A guest must supply both; a signed-in account always has them.
+        if not name:
             return Response(
-                {"detail": "Name and email are required."},
+                {"detail": "A name is required."},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not email and not phone:
+            # One way to answer is the minimum; which one is the sender's choice.
+            return Response(
+                {"detail": "An email address or a WhatsApp number is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Fall back to whichever channel the sender actually left, so a stated
+        # preference can never point at an address that is not there.
+        if preferred == ContactMessage.CHANNEL_WHATSAPP and not phone:
+            preferred = ContactMessage.CHANNEL_EMAIL
+        elif preferred == ContactMessage.CHANNEL_EMAIL and not email:
+            preferred = ContactMessage.CHANNEL_WHATSAPP
+        elif not preferred:
+            preferred = (
+                ContactMessage.CHANNEL_WHATSAPP
+                if phone and not email
+                else ContactMessage.CHANNEL_EMAIL
             )
 
         message = ContactMessage.objects.create(
@@ -1375,6 +1402,8 @@ class ContactMessageCreateView(APIView):
             user=user,
             name=name[:255],
             email=email,
+            phone=(phone[:32] or None),
+            preferred_channel=preferred,
             subject=(data.get("subject") or None),
             message=data["message"],
             related_kind=(data.get("related_kind") or None),
@@ -1460,12 +1489,20 @@ class AdminContactMessageDetailView(APIView):
 
 
 class AdminContactMessageReplyView(APIView):
-    """POST /api/contact-messages/admin/<pk>/reply/ - email the customer a reply.
+    """POST /api/contact-messages/admin/<pk>/reply/ - record an admin's reply.
 
-    Admin-only and system-scoped like the rest of the inbox. The reply is recorded
-    on the message (body, subject, who, when) **only if the email actually went
-    out**, so the inbox's "Replied" state never lies and a second admin can see it
-    was already answered. Marks the message read as a side effect.
+    Admin-only and system-scoped like the rest of the inbox. Marks the message
+    read as a side effect. The optional `channel` picks how the reply reaches the
+    customer, and the two are **not** symmetrical:
+
+    - ``email`` (the default) sends it from here. Nothing is recorded unless the
+      mail actually went out, so the inbox's "Replied" state never lies.
+    - ``whatsapp`` sends nothing. The admin's own WhatsApp does that, through a
+      wa.me deep link the CMS opens with this text prefilled; this endpoint only
+      records what they wrote so the inbox keeps a thread and a second admin does
+      not answer again unaware. ⚠ It therefore records an *intent*, not a
+      delivery - there is no send to fail and no receipt to wait for. Whoever
+      displays it must not imply otherwise.
     """
 
     permission_classes = [IsSystemAdmin]
@@ -1479,31 +1516,56 @@ class AdminContactMessageReplyView(APIView):
 
         body = (request.data.get("body") or "").strip()
         subject = (request.data.get("subject") or "").strip()
+        channel = (request.data.get("channel") or "").strip() or ContactMessage.CHANNEL_EMAIL
         if not body:
             return Response(
                 {"detail": "A reply message is required."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        try:
-            send_contact_message_reply(message, body, subject or None)
-        except Exception:
-            # Nothing is recorded on a send failure, so the admin can retry and the
-            # inbox keeps showing the message as un-answered.
-            logger.exception("Failed to send contact-message reply for #%s", message.pk)
+        if channel not in dict(ContactMessage.CHANNEL_CHOICES):
             return Response(
-                {"detail": "The reply could not be sent. Please try again."},
-                status=status.HTTP_502_BAD_GATEWAY,
+                {"detail": "Unknown reply channel."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # Refuse a channel the customer left no address for, rather than
+        # recording a reply that could not have reached anyone.
+        if channel == ContactMessage.CHANNEL_WHATSAPP and not message.phone:
+            return Response(
+                {"detail": "This message has no WhatsApp number."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if channel == ContactMessage.CHANNEL_EMAIL and not message.email:
+            return Response(
+                {"detail": "This message has no email address."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
+        if channel == ContactMessage.CHANNEL_EMAIL:
+            try:
+                send_contact_message_reply(message, body, subject or None)
+            except Exception:
+                # Nothing is recorded on a send failure, so the admin can retry and the
+                # inbox keeps showing the message as un-answered.
+                logger.exception("Failed to send contact-message reply for #%s", message.pk)
+                return Response(
+                    {"detail": "The reply could not be sent. Please try again."},
+                    status=status.HTTP_502_BAD_GATEWAY,
+                )
+
         message.reply_body = body
-        message.reply_subject = subject or None
+        # A WhatsApp message has no subject line, so never store one against it -
+        # it would render a field the customer was never shown.
+        message.reply_subject = (
+            (subject or None) if channel == ContactMessage.CHANNEL_EMAIL else None
+        )
+        message.reply_channel = channel
         message.replied_at = timezone.now()
         message.replied_by = request.user
         message.is_read = True
         message.save(
             update_fields=[
-                "reply_body", "reply_subject", "replied_at", "replied_by", "is_read"
+                "reply_body", "reply_subject", "reply_channel",
+                "replied_at", "replied_by", "is_read",
             ]
         )
         _invalidate_pattern("core:contact_messages:*")

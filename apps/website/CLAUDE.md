@@ -105,6 +105,59 @@ customization?, quantity}`) - Django re-prices every one of them
   "Order QR codes"; ⚠ `order.qr_code` is **null on any order placed before the
   field existed**, so the block is conditional and must stay that way.
 
+## Contact by WhatsApp - deep links, not the Cloud API
+
+A customer leaves an **email or a WhatsApp number** (or both) on the contact
+form, and an admin answers from `/admin/messages/[id]` on either channel. The
+WhatsApp half is **click-to-chat only**: `lib/contact.ts`'s `whatsappHref` builds
+a `wa.me` URL and the admin's own WhatsApp sends the message. There is no Meta
+Cloud API, no WABA, no webhook and no provider credential anywhere in the stack.
+
+- ⚠ **A recorded WhatsApp reply is an intent, not a delivery.** The email path
+  writes `replied_at` only after the mail actually went out, so the "Replied"
+  badge never lies. The WhatsApp path cannot make that promise - the message
+  leaves through an app this code cannot see - so
+  `POST /api/contact-messages/admin/<pk>/reply/` with `channel: "whatsapp"`
+  **records without sending**, and every surface that shows it says so
+  (`whatsappRecordedNote`). Don't collapse the two paths into one "send" button;
+  the asymmetry is the honest part.
+- **That is also why the CMS hands off in two steps** - "Open in WhatsApp" (a
+  plain link) and then "Mark as replied" (the recording call). One button cannot
+  do both anyway: `@repo/ui`'s `Button` renders a `<Link>` wrapper when given an
+  `href` and **drops `onClick` entirely**, and an async `window.open` after the
+  recording round-trip is what popup blockers exist to stop.
+- **`ContactMessage.email` is optional now.** Anything reading it must treat it
+  as possibly blank - the notification email's `reply_to` especially, where an
+  empty entry is a malformed header. The API refuses a message carrying neither
+  address, which is the only thing that keeps every message answerable.
+- **`preferred_channel` is what the customer asked for; `reply_channel` is what
+  an admin used.** They are separate because they genuinely disagree - a customer
+  may leave both addresses and be answered on the other one. Neither is ever
+  stored pointing at an address that is not there: the create view falls back to
+  whichever one exists, and the shared `ContactForm` asks the question the other
+  way round - its two channel buttons **swap** the email field for the WhatsApp
+  one, so the chosen channel's address is the required field and cannot be
+  missing. (Both addresses are still submitted when a sender filled both before
+  switching, which is why the API-side fallback stays.)
+- **The form is embedded on a detail page by one component**,
+  `components/contact/item-question-card.tsx` (`ItemQuestionCard`), used by all
+  three catalog families - product, service and menu item. It takes
+  `{kind, id, name}` (the name already resolved for the locale by the page) and
+  renders its own grid cell, so it drops into any of the three detail grids.
+  It replaced a `*DetailQuestion` copy in `product-detail.tsx` and
+  `menu-detail.tsx` that had already started to describe itself differently;
+  don't add a fourth per-module copy for a new surface. The WhatsApp choice
+  comes with it for free - `ContactFormClient` always passes `collectPhone`, so
+  a detail page asks the channel question exactly as `/contact` does.
+- **The upgrade path is inbound-first, not outbound-first.** If this ever becomes
+  a real Cloud API integration, the piece to build is the **webhook** that turns
+  an inbound WhatsApp message into a `ContactMessage` - not a send call. Meta's
+  24-hour customer service window only opens on a message *from* the customer, so
+  a reply to a web-form submission would be template-gated and the free-text box
+  in the CMS would be unusable. Per-tenant credentials would follow the Stripe
+  pattern (Fernet on `System`, blank-means-unchanged in the CMS) and the webhook
+  the `stripe_webhook_token` pattern.
+
 ## Booking - a service sold as an appointment
 
 A service with `booking_enabled` swaps its cart CTAs for a fulfillment picker
@@ -1025,6 +1078,7 @@ Before defining a constant, type, or pure utility function in a component file, 
 | `apps/website/components/admin/divider-options.ts`         | `DIVIDER_OPTIONS`, `DIVIDER_LABEL_KEY`, `toDividerOption`, `DividerOption` - the shape-divider shapes every CMS divider picker offers (the hero's bottom edge, both section bands' top/bottom edges), used by `admin/logos-and-styles/hero-video-section.tsx` and `components/admin/section-band-section.tsx` |
 | `apps/website/lib/maps.ts`                                 | `directionsHref` - the Google Maps hand-off, built from **coordinates, never an address**. Used by the contact page's locations, an event's venue and an order's location; website-api builds the same URL for the order email                                                                          |
 | `apps/website/lib/same-origin-image.ts`                    | `toSameOriginDataUrl` - routes a remote image through `/_next/image` so a canvas that draws it is not tainted. Used by the social-post flyer export and by `lib/map-capture.ts`                                                                                                                        |
+| `apps/website/lib/contact.ts`                              | `whatsappHref` - the wa.me click-to-chat URL, with the number stripped to digits (wa.me rejects the spaces and dashes people type) and an optional prefilled message. Used both directions: a **branch's** number on the contact page, a **customer's** in the admin inbox                              |
 
 **How to apply:**
 

@@ -67,9 +67,25 @@ export default function AdminMessagesPage() {
     {
       key: "name",
       label: tm("from"),
+      // The tooltip falls back to the number: a WhatsApp-only sender has no
+      // email, and an empty `title` would leave the cell with no contact detail.
       render: (v, row) => (
-        <CellText title={String(row.email ?? "")}>{String(v ?? "")}</CellText>
+        <CellText title={String(row.email || row.phone || "")}>
+          {String(v ?? "")}
+        </CellText>
       ),
+    },
+    {
+      key: "preferred_channel",
+      label: tm("preferredChannelLabel"),
+      render: (v) =>
+        v === "whatsapp" ? (
+          <Badge variant="outlined" size="sm" color="var(--accent, #2196f3)">
+            {tm("channelWhatsapp")}
+          </Badge>
+        ) : (
+          <CellText>{tm("channelEmail")}</CellText>
+        ),
     },
     {
       key: "subject",

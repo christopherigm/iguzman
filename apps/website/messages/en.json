@@ -1348,7 +1348,12 @@
     "mapExitFullscreen": "Exit fullscreen",
     "aboutItem": "About: {name}",
     "askAboutHeading": "Have a question about this?",
-    "askAboutDescription": "Ask us anything and we'll reply by email."
+    "askAboutDescription": "Ask us anything and we'll get back to you.",
+    "phoneLabel": "Your WhatsApp number",
+    "channelLabel": "How should we reply?",
+    "channelEmail": "By email",
+    "channelWhatsapp": "By WhatsApp",
+    "contactRequired": "Leave an email address or a WhatsApp number so we can reply."
   },
   "AdminBranches": {
     "title": "Locations",
@@ -1396,7 +1401,7 @@
     "from": "From",
     "subject": "Subject",
     "date": "Date",
-    "noSubject": "(no subject)",
+    "contactFormSubject": "Message from {name} using contact form",
     "markRead": "Mark as read",
     "markUnread": "Mark as unread",
     "reply": "Reply",
@@ -1417,7 +1422,23 @@
     "sending": "Sending…",
     "replyErrorSend": "The reply could not be sent. Please try again.",
     "sentReplyHeading": "Your reply",
-    "repliedMeta": "Replied by {name} on {date}"
+    "repliedMeta": "Replied by {name} on {date}",
+    "phoneLabel": "WhatsApp",
+    "preferredChannelLabel": "Prefers",
+    "channelEmail": "Email",
+    "channelWhatsapp": "WhatsApp",
+    "prefersWhatsapp": "Prefers WhatsApp",
+    "replyOnWhatsapp": "Reply on WhatsApp",
+    "replyTitleWhatsapp": "Reply to {name} on WhatsApp",
+    "openInWhatsapp": "Open in WhatsApp",
+    "markReplied": "Mark as replied",
+    "whatsappHint": "Opening WhatsApp sends the message from your own account. Come back and mark it as replied so the inbox shows it was answered.",
+    "whatsappGreeting": "Hi {name}, about your message \"{subject}\":",
+    "whatsappGreetingNoSubject": "Hi {name}, about your message:",
+    "whatsappRecordedNote": "Recorded from this screen - delivery on WhatsApp is not confirmed here.",
+    "repliedOnWhatsapp": "Replied on WhatsApp",
+    "sentReplyHeadingWhatsapp": "Your WhatsApp reply",
+    "replyErrorRecord": "The reply could not be recorded. Please try again."
   },
   "Booking": {
     "heading": "Book an appointment",

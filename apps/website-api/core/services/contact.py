@@ -87,7 +87,18 @@ def send_contact_message_notification(message):
     related_label = _RELATED_KIND_LABELS.get(message.related_kind or "")
     ctx = {
         "sender_name": message.name,
-        "sender_email": message.email,
+        "sender_email": message.email or "",
+        "sender_phone": message.phone or "",
+        # Which channel the customer asked to be answered on, as a label the
+        # admin reading the email can act on.
+        "prefers_whatsapp": message.preferred_channel == message.CHANNEL_WHATSAPP,
+        # A wa.me link so an admin can answer straight from the notification,
+        # exactly as the CMS's button does. Digits only - wa.me rejects anything else.
+        "whatsapp_url": (
+            f"https://wa.me/{''.join(c for c in message.phone if c.isdigit())}"
+            if message.phone
+            else ""
+        ),
         "subject": message.subject or "",
         "body": message.message,
         "related_name": message.related_name or "",
@@ -109,8 +120,10 @@ def send_contact_message_notification(message):
         # set To to the site's own from-address so the message is well-formed.
         to=[brand["from_email"]],
         bcc=recipients,
-        # A direct reply goes to the customer, not the platform mailbox.
-        reply_to=[message.email],
+        # A direct reply goes to the customer, not the platform mailbox. A
+        # WhatsApp-only sender has no address to reply to, so fall back to the
+        # site's own - an empty reply_to entry is a malformed header.
+        reply_to=[message.email or brand["from_email"]],
     )
     email.attach_alternative(html_body, "text/html")
     email.send(fail_silently=False)

@@ -30,14 +30,35 @@ export interface Branch {
 /** The catalog family a contact message can be about (matches the API kinds). */
 export type ContactRelatedKind = "product" | "service" | "food";
 
+/** Which channel a customer asked to be answered on (matches the API's choices). */
+export type ContactChannel = "email" | "whatsapp";
+
 export interface ContactMessagePayload {
   name?: string;
   email?: string;
+  /** The customer's WhatsApp number. Either this or `email` must be present. */
+  phone?: string;
+  preferred_channel?: ContactChannel;
   subject?: string;
   message: string;
   related_kind?: ContactRelatedKind;
   related_id?: number;
   related_name?: string;
+}
+
+/**
+ * The click-to-chat URL for a WhatsApp number, optionally with a message
+ * prefilled. wa.me takes digits only - it rejects the spaces, dashes and
+ * parentheses people actually type - so the number is stripped here rather than
+ * at every call site.
+ *
+ * Used both ways round: by the contact page for a *branch's* number, and by the
+ * admin inbox for a *customer's*.
+ */
+export function whatsappHref(number: string, text?: string): string {
+  const digits = number.replace(/[^\d]/g, "");
+  const query = text ? `?text=${encodeURIComponent(text)}` : "";
+  return `https://wa.me/${digits}${query}`;
 }
 
 /**

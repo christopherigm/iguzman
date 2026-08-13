@@ -18,7 +18,6 @@ import { FavoriteButton } from "./favorite-button";
 import { NutritionLabel } from "./nutrition-label";
 import { AdminEditButton } from "./admin-edit-button";
 import { VariantThumbs } from "./variant-thumbs";
-import { ContactFormClient } from "./contact/contact-form-client";
 
 interface MenuDetailProps {
   item: MenuItemDetail;
@@ -360,33 +359,6 @@ export async function MenuDetailSections({ item, locale }: MenuDetailProps) {
         >
           {description}
         </Typography>
-      </Card>
-    </Grid>
-  );
-}
-
-/**
- * "Ask a question about this item" - the shared contact form, pre-tagged with
- * this dish. A small grid card in the bottom info row (sm:6, md:4) alongside
- * the allergens and nutrition cards.
- */
-export async function MenuDetailQuestion({ item, locale }: MenuDetailProps) {
-  const t = await getTranslations("Contact");
-
-  const name =
-    (locale === "en" ? item.en_name : item.name) ??
-    item.name ??
-    item.en_name ??
-    "";
-
-  return (
-    <Grid size={{ xs: 12, sm: 6, md: 4 }} reorder={{ xs: "last" }}>
-      <Card width="100%">
-        <ContactFormClient
-          heading={t("askAboutHeading")}
-          description={t("askAboutDescription")}
-          related={{ kind: "food", id: item.id, name }}
-        />
       </Card>
     </Grid>
   );

@@ -1348,7 +1348,12 @@
     "mapExitFullscreen": "Quitter le plein écran",
     "aboutItem": "À propos : {name}",
     "askAboutHeading": "Une question à ce sujet ?",
-    "askAboutDescription": "Posez-nous vos questions et nous répondrons par e-mail."
+    "askAboutDescription": "Posez-nous vos questions, nous vous répondrons.",
+    "phoneLabel": "Votre numéro WhatsApp",
+    "channelLabel": "Comment souhaitez-vous être recontacté ?",
+    "channelEmail": "Par e-mail",
+    "channelWhatsapp": "Par WhatsApp",
+    "contactRequired": "Laissez une adresse e-mail ou un numéro WhatsApp pour que nous puissions vous répondre."
   },
   "AdminBranches": {
     "title": "Emplacements",
@@ -1396,7 +1401,7 @@
     "from": "De",
     "subject": "Objet",
     "date": "Date",
-    "noSubject": "(sans objet)",
+    "contactFormSubject": "Message de {name} via le formulaire de contact",
     "markRead": "Marquer comme lu",
     "markUnread": "Marquer comme non lu",
     "reply": "Répondre",
@@ -1417,7 +1422,23 @@
     "sending": "Envoi…",
     "replyErrorSend": "La réponse n'a pas pu être envoyée. Veuillez réessayer.",
     "sentReplyHeading": "Votre réponse",
-    "repliedMeta": "Répondu par {name} le {date}"
+    "repliedMeta": "Répondu par {name} le {date}",
+    "phoneLabel": "WhatsApp",
+    "preferredChannelLabel": "Préfère",
+    "channelEmail": "E-mail",
+    "channelWhatsapp": "WhatsApp",
+    "prefersWhatsapp": "Préfère WhatsApp",
+    "replyOnWhatsapp": "Répondre sur WhatsApp",
+    "replyTitleWhatsapp": "Répondre à {name} sur WhatsApp",
+    "openInWhatsapp": "Ouvrir dans WhatsApp",
+    "markReplied": "Marquer comme répondu",
+    "whatsappHint": "Ouvrir WhatsApp envoie le message depuis votre propre compte. Revenez ensuite le marquer comme répondu pour que la boîte de réception le reflète.",
+    "whatsappGreeting": "Bonjour {name}, à propos de votre message \"{subject}\" :",
+    "whatsappGreetingNoSubject": "Bonjour {name}, à propos de votre message :",
+    "whatsappRecordedNote": "Enregistré depuis cet écran - la remise sur WhatsApp n'est pas confirmée ici.",
+    "repliedOnWhatsapp": "Répondu sur WhatsApp",
+    "sentReplyHeadingWhatsapp": "Votre réponse WhatsApp",
+    "replyErrorRecord": "La réponse n'a pas pu être enregistrée. Veuillez réessayer."
   },
   "Booking": {
     "heading": "Réserver un rendez-vous",

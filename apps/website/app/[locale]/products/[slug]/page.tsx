@@ -17,8 +17,8 @@ import {
   ProductDetailVariantsMobile,
   ProductDetailPanel,
   ProductDetailSections,
-  ProductDetailQuestion,
 } from "@/components/product-detail";
+import { ItemQuestionCard } from "@/components/contact/item-question-card";
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
@@ -187,7 +187,11 @@ export default async function ProductPage({ params }: Props) {
           </Grid>
           <ProductDetailPanel product={product} locale={locale} />
           <ProductDetailSections product={product} locale={locale} />
-          <ProductDetailQuestion product={product} locale={locale} />
+          <ItemQuestionCard
+            kind="product"
+            id={product.id}
+            name={displayName}
+          />
         </Grid>
       </Container>
     </>

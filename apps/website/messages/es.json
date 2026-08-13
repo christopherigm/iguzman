@@ -1348,7 +1348,12 @@
     "mapExitFullscreen": "Salir de pantalla completa",
     "aboutItem": "Sobre: {name}",
     "askAboutHeading": "¿Tienes una pregunta sobre esto?",
-    "askAboutDescription": "Pregúntanos lo que quieras y te responderemos por correo."
+    "askAboutDescription": "Pregúntanos lo que quieras y te responderemos.",
+    "phoneLabel": "Tu número de WhatsApp",
+    "channelLabel": "¿Cómo prefieres que te respondamos?",
+    "channelEmail": "Por correo",
+    "channelWhatsapp": "Por WhatsApp",
+    "contactRequired": "Déjanos un correo o un número de WhatsApp para poder responderte."
   },
   "AdminBranches": {
     "title": "Ubicaciones",
@@ -1396,7 +1401,7 @@
     "from": "De",
     "subject": "Asunto",
     "date": "Fecha",
-    "noSubject": "(sin asunto)",
+    "contactFormSubject": "Mensaje de {name} desde el formulario de contacto",
     "markRead": "Marcar como leído",
     "markUnread": "Marcar como no leído",
     "reply": "Responder",
@@ -1417,7 +1422,23 @@
     "sending": "Enviando…",
     "replyErrorSend": "No se pudo enviar la respuesta. Inténtalo de nuevo.",
     "sentReplyHeading": "Tu respuesta",
-    "repliedMeta": "Respondido por {name} el {date}"
+    "repliedMeta": "Respondido por {name} el {date}",
+    "phoneLabel": "WhatsApp",
+    "preferredChannelLabel": "Prefiere",
+    "channelEmail": "Correo",
+    "channelWhatsapp": "WhatsApp",
+    "prefersWhatsapp": "Prefiere WhatsApp",
+    "replyOnWhatsapp": "Responder por WhatsApp",
+    "replyTitleWhatsapp": "Responder a {name} por WhatsApp",
+    "openInWhatsapp": "Abrir en WhatsApp",
+    "markReplied": "Marcar como respondido",
+    "whatsappHint": "Al abrir WhatsApp el mensaje se envía desde tu propia cuenta. Vuelve aquí y márcalo como respondido para que la bandeja lo refleje.",
+    "whatsappGreeting": "Hola {name}, sobre tu mensaje \"{subject}\":",
+    "whatsappGreetingNoSubject": "Hola {name}, sobre tu mensaje:",
+    "whatsappRecordedNote": "Registrado desde esta pantalla; aquí no se confirma la entrega en WhatsApp.",
+    "repliedOnWhatsapp": "Respondido por WhatsApp",
+    "sentReplyHeadingWhatsapp": "Tu respuesta por WhatsApp",
+    "replyErrorRecord": "No se pudo registrar la respuesta. Inténtalo de nuevo."
   },
   "Booking": {
     "heading": "Reservar una cita",

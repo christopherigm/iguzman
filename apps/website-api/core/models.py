@@ -1539,10 +1539,28 @@ class ContactMessage(Common):
     detail page - the latter records which item it was about, so an admin reading
     the inbox knows the context without the customer having to spell it out.
 
-    Stores customer PII (name/email), so it is exposed only to a tenant's own
-    admins (the inbox), never on any public endpoint. A logged-in sender is linked
-    via `user`, and their account name/email are used rather than trusting the body.
+    Stores customer PII (name/email/phone), so it is exposed only to a tenant's
+    own admins (the inbox), never on any public endpoint. A logged-in sender is
+    linked via `user`, and their account name/email are used rather than trusting
+    the body.
+
+    A customer reaches the tenant by **email or WhatsApp** - `preferred_channel`
+    records which they asked to be answered on, and `reply_channel` records which
+    one an admin actually used. The two are separate because they genuinely
+    disagree: a customer may leave both addresses, and an admin may answer by
+    email anyway.
     """
+
+    # How a customer asked to be reached, and how an admin replied. A WhatsApp
+    # reply leaves this app entirely (the admin's own WhatsApp sends it via a
+    # wa.me deep link), so it is *recorded* here rather than confirmed - see
+    # AdminContactMessageReplyView.
+    CHANNEL_EMAIL = "email"
+    CHANNEL_WHATSAPP = "whatsapp"
+    CHANNEL_CHOICES = (
+        (CHANNEL_EMAIL, "Email"),
+        (CHANNEL_WHATSAPP, "WhatsApp"),
+    )
 
     # The three catalog families a message may be about (the frontend's kind
     # names, matching the guest-cart / spotlight refs). Blank = a general enquiry.
@@ -1571,7 +1589,19 @@ class ContactMessage(Common):
         related_name="+",
     )
     name = models.CharField(max_length=255)
-    email = models.EmailField(max_length=254)
+    # Either of these may be blank, but never both - the view refuses a message
+    # with no way to answer it. `email` was once required; it is optional now
+    # that a customer may leave a WhatsApp number instead, so every reader has to
+    # treat it as possibly empty (the notification email's `reply_to` especially).
+    email = models.EmailField(max_length=254, blank=True, default="")
+    # The customer's WhatsApp number, as typed. Deliberately a free CharField
+    # like `Branch.whatsapp` rather than a validated phone type: the wa.me link
+    # strips it to digits at render time, and refusing an oddly-formatted number
+    # would lose the message rather than the formatting.
+    phone = models.CharField(max_length=32, null=True, blank=True)
+    preferred_channel = models.CharField(
+        max_length=16, choices=CHANNEL_CHOICES, default=CHANNEL_EMAIL
+    )
     subject = models.CharField(max_length=255, null=True, blank=True)
     message = models.TextField()
 
@@ -1587,9 +1617,16 @@ class ContactMessage(Common):
 
     is_read = models.BooleanField(default=False)
 
-    # An admin's reply, sent back to the customer from the inbox. These are set
-    # only once the reply email has actually gone out, so the inbox can show a
-    # truthful "Replied" state and a second admin does not answer again unaware.
+    # An admin's reply, sent back to the customer from the inbox. For an email
+    # reply these are set only once the mail has actually gone out, so the inbox
+    # shows a truthful "Replied" state and a second admin does not answer again
+    # unaware. ⚠ A WhatsApp reply cannot make that promise: it is handed to the
+    # admin's own WhatsApp through a wa.me link and this app never hears back, so
+    # `reply_channel="whatsapp"` means "an admin said they sent this", not "this
+    # was delivered". Keep the distinction visible wherever it is displayed.
+    reply_channel = models.CharField(
+        max_length=16, choices=CHANNEL_CHOICES, null=True, blank=True
+    )
     reply_subject = models.CharField(max_length=255, null=True, blank=True)
     reply_body = models.TextField(null=True, blank=True)
     replied_at = models.DateTimeField(null=True, blank=True)
@@ -1607,7 +1644,9 @@ class ContactMessage(Common):
         ordering = ["-created"]
 
     def __str__(self):
-        return f"Message from {self.name} ({self.email})"
+        # Either contact detail may be blank now, so fall back rather than
+        # printing an empty pair of brackets.
+        return f"Message from {self.name} ({self.email or self.phone or '-'})"
 
 
 class SocialPost(Common):
