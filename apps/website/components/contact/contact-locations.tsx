@@ -171,6 +171,23 @@ export function ContactLocations({
             height={single ? 320 : 220}
           />
         )}
+
+        {/* How to find the entrance once you are there, under the map that got
+          the reader to the street. Not merged into the address above: that one
+          is the postal line, this one is the landmark - and a reader scanning
+          for a street name must not have to read past a note about parking. */}
+        {branch.location_details && (
+          <Typography
+            variant="caption"
+            color="var(--foreground)"
+            styles={{ whiteSpace: "pre-line" }}
+          >
+            <Typography as="span" variant="label" color="var(--muted, #757575)">
+              {t("locationDetailsLabel")}
+            </Typography>{" "}
+            {branch.location_details}
+          </Typography>
+        )}
       </Box>
     );
   };

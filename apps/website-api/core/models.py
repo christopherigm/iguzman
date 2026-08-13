@@ -1233,6 +1233,20 @@ class Branch(Common):
     # Optional: a pure-online branch (e.g. a pickup-by-appointment number) may
     # have a phone but no street address.
     address = models.TextField(null=True, blank=True)
+    # The half of "where is it" a street address cannot carry: the landmark to
+    # turn at, which gate to use, what floor, where to park. A separate column
+    # rather than more lines in `address` because the two are read by different
+    # things - `address` is what a geocoder and a postal label want, this is
+    # what a person standing outside wants - and the storefront renders them as
+    # two labelled lines.
+    location_details = models.TextField(
+        null=True,
+        blank=True,
+        help_text=(
+            "How to find the entrance once you are there (landmarks, floor, "
+            "parking). Shown under the map and sent in booking emails."
+        ),
+    )
     phone = models.CharField(max_length=32, null=True, blank=True)
     # Digits (with country code) for the wa.me link the frontend builds.
     whatsapp = models.CharField(max_length=32, null=True, blank=True)

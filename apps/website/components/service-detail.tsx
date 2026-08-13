@@ -235,6 +235,9 @@ export async function ServiceDetailPanel({
         branch.name ??
         branch.en_name ??
         "",
+      // Not locale-split like the name: it is one free-text note the tenant
+      // writes once, in whatever language it serves its customers in.
+      locationDetails: branch.location_details,
       // Decimal strings from the API; the CTA's map converts them at the point
       // of use, so the shape here stays the API's.
       latitude: branch.latitude,

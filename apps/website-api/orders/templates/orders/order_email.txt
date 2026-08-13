@@ -19,7 +19,8 @@ Total: {{ total_display }}
 
 {% if location %}
 Dónde / Where: {{ location.name }}{% if location.address %}
-{{ location.address }}{% endif %}
+Dirección / Address: {{ location.address }}{% endif %}{% if location.location_details %}
+Cómo ubicarnos / Location details: {{ location.location_details }}{% endif %}
 Cómo llegar / Directions:
 {{ location.directions_url }}
 {% endif %}

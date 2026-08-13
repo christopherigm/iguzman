@@ -76,6 +76,23 @@ export async function BookingLocation({
         height={260}
       />
 
+      {/* Under the map rather than beside the address above it: the street name
+        gets the reader to the block and this gets them through the right door,
+        so it is read last, on the way out. */}
+      {location.location_details && (
+        <Typography
+          variant="caption"
+          margin={0}
+          color="var(--foreground)"
+          styles={{ whiteSpace: "pre-line" }}
+        >
+          <Typography as="span" variant="label" color="var(--muted, #757575)">
+            {t("locationDetailsLabel")}
+          </Typography>{" "}
+          {location.location_details}
+        </Typography>
+      )}
+
       <Button
         text={t("getDirections")}
         size="md"

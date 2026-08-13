@@ -8,10 +8,7 @@ import {
   BranchHoursEditor,
   type BranchHoursRow,
 } from "@/components/admin/branch-hours-editor";
-import {
-  MapPicker,
-  type MapPickerHandle,
-} from "@/components/admin/map-picker";
+import { MapPicker, type MapPickerHandle } from "@/components/admin/map-picker";
 import {
   ResourcePoolsEditor,
   type ResourcePoolRow,
@@ -36,6 +33,7 @@ const NULLABLE_ON_BLANK = [
   "name",
   "en_name",
   "address",
+  "location_details",
   "phone",
   "whatsapp",
   "email",
@@ -78,6 +76,7 @@ export default function AdminBranchFormPage({ params }: Props) {
     name: "",
     en_name: "",
     address: "",
+    location_details: "",
     phone: "",
     whatsapp: "",
     email: "",
@@ -134,6 +133,7 @@ export default function AdminBranchFormPage({ params }: Props) {
             name: data.name ?? "",
             en_name: data.en_name ?? "",
             address: data.address ?? "",
+            location_details: data.location_details ?? "",
             phone: data.phone ?? "",
             whatsapp: data.whatsapp ?? "",
             email: data.email ?? "",
@@ -258,6 +258,15 @@ export default function AdminBranchFormPage({ params }: Props) {
     { key: "name", label: tc("nameLabel") },
     { key: "en_name", label: tc("enNameLabel") },
     { key: "address", label: tc("address"), type: "textarea" },
+    // Beside the address rather than merged into it: the address is what a
+    // geocoder and a postal label want, this is what a customer standing
+    // outside wants, and the storefront renders them as two labelled lines.
+    {
+      key: "location_details",
+      label: tc("locationDetails"),
+      type: "textarea",
+      placeholder: tc("locationDetailsPlaceholder"),
+    },
     { key: "phone", label: tc("phone") },
     { key: "whatsapp", label: tc("whatsapp") },
     { key: "email", label: tc("email"), type: "text" },

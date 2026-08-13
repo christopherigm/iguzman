@@ -80,6 +80,8 @@ export interface BookingLocation {
   latitude: string;
   longitude: string;
   address: string | null;
+  /** How to find the entrance once you are there, drawn under the address. */
+  location_details: string | null;
   map_image: string | null;
 }
 

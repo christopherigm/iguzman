@@ -15,6 +15,8 @@ import { formatPrice } from "@/lib/price";
 export interface BookingCtaBranch {
   id: number;
   name: string;
+  /** How to find the entrance once you are there, drawn under the map. */
+  locationDetails: string | null;
   /** Decimal strings from the API, or null where the tenant never pinned it. */
   latitude: string | null;
   longitude: string | null;
@@ -181,6 +183,23 @@ export function ServiceBookingCta({
           pinIcon={pinIcon}
           height={200}
         />
+      )}
+
+      {/* How to find the entrance once you are there, under the map that got
+        the customer to the street. Follows the select exactly as the map does,
+        and is not gated on the pin: a location nobody pinned can still be the
+        one with the useful "blue gate beside the fuel dock". */}
+      {selectedBranch?.locationDetails && (
+        <Typography
+          variant="caption"
+          color="var(--foreground)"
+          styles={{ whiteSpace: "pre-line" }}
+        >
+          <Typography as="span" variant="label" color="var(--muted, #757575)">
+            {t("locationDetailsLabel")}
+          </Typography>{" "}
+          {selectedBranch.locationDetails}
+        </Typography>
       )}
 
       {showParty && (

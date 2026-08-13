@@ -32,6 +32,8 @@ export interface BookingFormBranch {
   id: number;
   name: string;
   address: string | null;
+  /** How to find the entrance once you are there, drawn under the address. */
+  locationDetails: string | null;
   /** Decimal strings from the API, or null where the tenant never pinned it. */
   latitude: string | null;
   longitude: string | null;
@@ -452,12 +454,11 @@ export function BookingForm({
               />
             )}
 
-            {fulfillment === "branch" && branch?.address && (
-              <Typography variant="caption" color="var(--foreground)">
-                {branch.address}
-              </Typography>
-            )}
-
+            {/* ⚠ The branch's address is deliberately **not** here any more.
+              It reads as an answer to "where?", so it belongs under the map in
+              the right-hand column that draws that place - beside the location
+              details, which are only useful next to it. What stays here is the
+              *customer's* address, which is a question this column asks. */}
             {fulfillment === "on_premises" && (
               <TextInput
                 label={t("addressLabel")}
@@ -613,6 +614,50 @@ export function BookingForm({
                 height={220}
               />
             )}
+
+            {/* The address and then how to find the entrance, in that order and
+              directly under the map: the street gets the customer to the block,
+              the details get them through the right door. Both are gated on
+              `branch` fulfillment for the same reason the map is - with
+              `on_premises` the tenant travels to the customer - and neither is
+              gated on the pin, so an unpinned location still says where it is. */}
+            {fulfillment === "branch" &&
+              (branch?.address || branch?.locationDetails) && (
+                <Box flexDirection="column" gap={6}>
+                  {branch.address && (
+                    <Typography
+                      variant="caption"
+                      color="var(--foreground)"
+                      styles={{ whiteSpace: "pre-line" }}
+                    >
+                      <Typography
+                        as="span"
+                        variant="label"
+                        color="var(--muted, #757575)"
+                      >
+                        {t("branchAddressLabel")}
+                      </Typography>{" "}
+                      {branch.address}
+                    </Typography>
+                  )}
+                  {branch.locationDetails && (
+                    <Typography
+                      variant="caption"
+                      color="var(--foreground)"
+                      styles={{ whiteSpace: "pre-line" }}
+                    >
+                      <Typography
+                        as="span"
+                        variant="label"
+                        color="var(--muted, #757575)"
+                      >
+                        {t("locationDetailsLabel")}
+                      </Typography>{" "}
+                      {branch.locationDetails}
+                    </Typography>
+                  )}
+                </Box>
+              )}
 
             {/* Who. Read off the account where there is one; a guest fills it
               in. The phone is always a field - it is on no account. */}

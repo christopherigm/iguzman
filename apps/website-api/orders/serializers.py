@@ -210,6 +210,10 @@ class BookingSerializer(serializers.ModelSerializer):
             "latitude": str(branch.latitude),
             "longitude": str(branch.longitude),
             "address": branch.address or None,
+            # The "once you are there" half - read live off the branch for the
+            # same reason the address is: a correction to how the entrance is
+            # described should reach the customer who is about to use it.
+            "location_details": branch.location_details or None,
             "map_image": image,
         }
 

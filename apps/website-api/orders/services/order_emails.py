@@ -124,6 +124,12 @@ def _booking_location(order):
     return {
         "name": booking.branch_name or branch.name or "",
         "address": (branch.address or "").strip(),
+        # The "once you are there" half of the location - the landmark, the
+        # gate, the floor. Read live off the Branch rather than snapshotted onto
+        # the Booking (as `branch_name` is): a correction to how the entrance is
+        # described is a correction the *next* email should carry, and unlike a
+        # price it is not part of what was agreed.
+        "location_details": (branch.location_details or "").strip(),
         # Absolute, exactly as the product thumbnails and the tenant logo in the
         # same message are - a mail client has no request to resolve a media
         # path against. Remote rather than a `cid:` attachment (which is what the

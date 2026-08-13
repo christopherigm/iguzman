@@ -88,7 +88,14 @@ the full receipt (items, add-ons, summary, link) is written once. Bilingual
       <td style="padding:16px 20px 4px 20px; font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#52606d; line-height:1.7;">
         <strong style="color:#1f2933;">Dónde / Where:</strong>
         {% if location.name %}<br>{{ location.name }}{% endif %}
-        {% if location.address %}<br><span style="color:#8a94a6;">{{ location.address|linebreaksbr }}</span>{% endif %}
+        {% if location.address %}<br><span style="color:#8a94a6;"><strong style="color:#52606d;">Dirección / Address:</strong> {{ location.address|linebreaksbr }}</span>{% endif %}
+        {% comment %}
+        The "once you are there" half - the landmark, the gate, the floor. Its
+        own labelled line rather than more text appended to the address: a
+        reader scanning for the street name must not have to read past a
+        paragraph about parking to find it.
+        {% endcomment %}
+        {% if location.location_details %}<br><span style="color:#8a94a6;"><strong style="color:#52606d;">Cómo ubicarnos / Location details:</strong> {{ location.location_details|linebreaksbr }}</span>{% endif %}
       </td>
     </tr>
     {% if location.map_image %}

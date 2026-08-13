@@ -1568,6 +1568,25 @@ class BookingLocationTests(TestCase):
             "maps/dir/?api=1&amp;destination=22.88000000,-109.90000000", html,
         )
 
+    def test_the_email_carries_the_location_details_when_there_are_any(self):
+        """The half a street address cannot carry - which gate, which floor.
+        Its own labelled line in both bodies, so a reader scanning for the
+        street name does not have to read past a note about parking."""
+        self.branch.location_details = "Blue gate beside the fuel dock"
+        self.branch.save(update_fields=["location_details"])
+
+        message, html = self._send(self._booked_order())
+
+        self.assertIn("Blue gate beside the fuel dock", html)
+        self.assertIn("Location details:", html)
+        self.assertIn("Blue gate beside the fuel dock", message.body)
+
+    def test_the_email_omits_the_details_line_when_the_branch_has_none(self):
+        message, html = self._send(self._booked_order())
+
+        self.assertNotIn("Location details:", html)
+        self.assertNotIn("Location details:", message.body)
+
     def test_the_directions_link_does_not_depend_on_the_screenshot(self):
         """`Branch.map_image` is optional - a location saved before anyone opened
         the CMS's map picker has coordinates and no picture. The block still has
@@ -1644,8 +1663,21 @@ class BookingLocationTests(TestCase):
         self.assertEqual(booking["branch_location"]["latitude"], "22.88000000")
         self.assertEqual(booking["branch_location"]["longitude"], "-109.90000000")
         self.assertEqual(booking["branch_location"]["address"], "Dock 4\nCabo")
+        # Optional like the picture, and rendered under the address when set.
+        self.assertIsNone(booking["branch_location"]["location_details"])
         # Optional, and null until somebody opens the CMS's map picker.
         self.assertIsNone(booking["branch_location"]["map_image"])
+
+    def test_the_order_payload_carries_the_location_details(self):
+        self.branch.location_details = "Blue gate beside the fuel dock"
+        self.branch.save(update_fields=["location_details"])
+
+        booking = self._read(self._booked_order())
+
+        self.assertEqual(
+            booking["branch_location"]["location_details"],
+            "Blue gate beside the fuel dock",
+        )
 
     def test_the_order_payload_omits_it_for_an_on_premises_booking(self):
         booking = self._read(

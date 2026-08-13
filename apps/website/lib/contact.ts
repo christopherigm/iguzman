@@ -12,6 +12,9 @@ export interface Branch {
   name: string | null;
   en_name: string | null;
   address: string | null;
+  /** How to find the entrance once you are there - the landmark, the gate, the
+   *  floor. Rendered under the map beside the address, never merged into it. */
+  location_details: string | null;
   phone: string | null;
   whatsapp: string | null;
   email: string | null;
