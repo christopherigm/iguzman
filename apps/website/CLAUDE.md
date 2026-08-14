@@ -442,8 +442,8 @@ the map an operator pins on and the map a customer reads are one design.
 - ⚠ **Everything drawn into that canvas must be same-origin or CORS-clean**, or
   `toDataURL` throws on a tainted canvas. Tiles are fetched
   `crossOrigin="anonymous"` (OSM and CARTO both allow it); the brandmark goes
-  through `/_next/image` first (`lib/same-origin-image.ts`, shared with the
-  social-post flyer export, which needs it for the same reason). A tenant whose
+  through `/api/media` first (`lib/same-origin-image.ts`, shared with the
+  flyer exports, which need it for the same reason). A tenant whose
   **custom** tile URL sends no CORS header simply gets no screenshot - the
   coordinates still save and the email still carries its Directions button.
 - **The provider's credit is burned into the image.** A still leaves the site
@@ -561,28 +561,36 @@ In production every uploaded file lives in Cloudflare R2 and the API returns an
 **absolute** URL on the bucket's hostname. `next.config.js` sets
 `images.loader: 'custom'` + `loaderFile: './image-loader.ts'`, and that loader
 returns an absolute URL **untouched** so the browser fetches it straight from the
-edge. Anything relative (`/public` assets) still goes through `/_next/image` with
-the default URL shape, so local images keep their resizing and modern formats.
+edge. **Everything else is returned untouched too**, including relative
+`/public` paths — see the next bullet for why that is not a missed optimization.
 
-- **Stored media gets no per-viewport resizing**, by design: website-api already
-  caps every upload at its tier (`core/image_sizes.py`, 256–3840 px), so what is
-  stored is what is served. Give large images an explicit `sizes` rather than
-  reaching for the optimizer.
-- **`/_next/image` still exists and two features still depend on it** — the
-  social-post flyer export (`html-to-image` taints the canvas on a cross-origin
-  fetch) and the hero `logo`-shape CSS mask (a cross-origin mask resolves to an
-  _empty_ mask and clips the badge away). Both route a remote URL through the
-  optimizer precisely to get a same-origin copy. That keeps working: the route is
-  only disabled by `output: 'export'`, not by a custom loader.
-- ⚠ **Those two features are gated by `images.remotePatterns`.** The platform
-  bucket is covered by the `**.iguzman.com.mx` entry. **A customer that connects
-  its own R2 account with its own CDN hostname must have that hostname added to
-  `remotePatterns`**, or the flyer export and the logo mask fall back to the
-  un-proxied URL for that tenant. It cannot be read from the database —
-  `next.config.js` is evaluated at build time and baked into
-  `.next/required-server-files.json` for the standalone server. Onboarding a
-  customer is already a code change here (`sites/registry.ts`), so this is one
-  more line in the same commit.
+- ⚠ **`/_next/image` does not exist in this app.** Next serves the optimizer
+  route only for the default loader: `next-server` 404s it unconditionally when
+  `images.loader !== 'default'`, whatever `images.remotePatterns` says. So the
+  loader must return every src as-is (emitting the optimizer's URL shape "for
+  local assets" yields a 404 and a blank image), `remotePatterns` is **inert
+  config** that gates nothing at runtime, and adding a customer's CDN hostname
+  there fixes nothing.
+- **Nothing gets per-viewport resizing**, by design: website-api already caps
+  every upload at its tier (`core/image_sizes.py`, 256–3840 px), so what is
+  stored is what is served. Commit `/public` art at roughly its drawn size and
+  give large images an explicit `sizes` rather than reaching for the optimizer.
+- **The same-origin door is `app/api/media/route.ts`** (`/api/media?url=…`), a
+  byte-for-byte passthrough this app owns. The features that need *same-origin
+  pixels* rather than a fast image go through it via
+  `lib/same-origin-image.ts`: the flyer exports (`html-to-image` taints the
+  canvas on a cross-origin fetch) and the branch map capture. It allowlists by
+  **request host** — the site's own domain and any subdomain of it (so
+  `r2.<customer>.com` on `<customer>.com` works with no configuration),
+  `**.iguzman.com.mx`, and anything in `MEDIA_PROXY_HOSTS` — so onboarding a
+  customer needs no entry anywhere, which a build-time `remotePatterns` could
+  never manage. ⚠ Keep that allowlist and the `image/*` content-type check
+  narrow; together they are what stops the route being an open proxy.
+- ⚠ **The hero `logo`-shape CSS mask is still broken in production** for any
+  tenant whose media is on a separate origin: `heroLogoMaskUrl` in `@repo/ui`
+  still points at `/_next/image`, so the mask resolves empty and clips the badge
+  away. Fixing it means letting the app supply the proxy path (the package is
+  shared with `apps/animals`, which has the same dead route).
 
 ## Storage (`/admin/system`, staff only)
 
@@ -790,10 +798,11 @@ The CMS can render a catalog item into a shareable Instagram/story flyer.
   entry - no migration**. Never fork the registry into a `sites/<slug>/` folder;
   the CMS would never see it, and templates are meant to serve every tenant.
 - **Export is `html-to-image` → JPG, and it is same-origin-sensitive.** Any
-  remote image must be routed through `/_next/image` before it lands in a
-  template, or the canvas is tainted and the export fails. This is the same
-  same-origin constraint as the hero's `logo`-shape mask and the shape divider's
-  `brandmarkUrl`.
+  remote image must be routed through `/api/media` (via `toSameOriginDataUrl`)
+  before it lands in a template, or the canvas is tainted and the export fails
+  on a CORS error. ⚠ Not `/_next/image`: that route 404s in this app - see
+  "Media comes from a CDN". This is the same same-origin constraint as the
+  hero's `logo`-shape mask and the shape divider's `brandmarkUrl`.
 - **The badge shapes come from the shared
   `components/admin/logo-background-options.ts`**, which the hero's logo-badge
   picker also reads - so a flyer and the hero stay recognisably one brand. Extend
@@ -1200,7 +1209,7 @@ Before defining a constant, type, or pure utility function in a component file, 
 | `apps/website/components/admin/logo-background-options.ts` | `LOGO_BACKGROUND_SHAPES`, `LOGO_BACKGROUND_LABEL_KEY`, `SCALE_STEPS` - the badge shapes and size stops, used by `admin/logos-and-styles/hero-video-section.tsx` and `admin/social-posts/[id]/page.tsx`                                                                                                        |
 | `apps/website/components/admin/divider-options.ts`         | `DIVIDER_OPTIONS`, `DIVIDER_LABEL_KEY`, `toDividerOption`, `DividerOption` - the shape-divider shapes every CMS divider picker offers (the hero's bottom edge, both section bands' top/bottom edges), used by `admin/logos-and-styles/hero-video-section.tsx` and `components/admin/section-band-section.tsx` |
 | `apps/website/lib/maps.ts`                                 | `directionsHref` - the Google Maps hand-off, built from **coordinates, never an address**. Used by the contact page's locations, an event's venue and an order's location; website-api builds the same URL for the order email                                                                          |
-| `apps/website/lib/same-origin-image.ts`                    | `toSameOriginDataUrl` - routes a remote image through `/_next/image` so a canvas that draws it is not tainted. Used by the social-post flyer export and by `lib/map-capture.ts`                                                                                                                        |
+| `apps/website/lib/same-origin-image.ts`                    | `toSameOriginDataUrl` - routes a remote image through `/api/media` (this app's own passthrough proxy) so a canvas that draws it is not tainted. Used by both flyer exports and by `lib/map-capture.ts`                                                                                                                        |
 | `apps/website/lib/contact.ts`                              | `whatsappHref` - the wa.me click-to-chat URL, with the number stripped to digits (wa.me rejects the spaces and dashes people type) and an optional prefilled message. Used both directions: a **branch's** number on the contact page, a **customer's** in the admin inbox                              |
 
 **How to apply:**

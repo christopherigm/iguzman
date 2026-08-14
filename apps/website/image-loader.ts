@@ -13,35 +13,25 @@
  * Cloudflare edge next to the visitor. So an absolute URL is returned untouched
  * and the browser fetches it directly.
  *
- * Everything else - `/public` assets, anything relative - still goes to the
- * built-in optimizer, so local images keep their resizing and modern formats.
+ * ⚠ **Everything else is returned untouched too, including relative paths.**
+ * Declaring a custom loader makes Next 404 `/_next/image` unconditionally
+ * (`next-server` bails out of the optimizer for any `loader !== 'default'`), so
+ * emitting that route's URL shape "for local assets" produces a 404 and a blank
+ * image rather than an optimized one. A `/public` asset is simply served as it
+ * was committed.
  *
  * Two consequences worth knowing:
  *
- * * **No per-viewport resizing for stored media.** The API already caps every
- *   upload at its tier (`core/image_sizes.py`: 256 - 3840 px), so what is stored
- *   is what is served. Give large images an explicit `sizes` so the browser at
- *   least does not lay out for the biggest one.
- * * **`/_next/image` still works and is still needed.** Two features route a
- *   remote image through it deliberately, to get a *same-origin* copy: the
- *   social-post flyer export (`html-to-image` taints the canvas otherwise) and
- *   the hero's `logo`-shape CSS mask (a cross-origin mask resolves to an empty
- *   mask and clips the badge away). Both therefore still need their media host
- *   listed in `next.config.js` → `images.remotePatterns`.
+ * * **No per-viewport resizing, for stored media or local art.** The API caps
+ *   every upload at its tier (`core/image_sizes.py`: 256 - 3840 px), so what is
+ *   stored is what is served; commit `/public` art at roughly its drawn size and
+ *   give large images an explicit `sizes` so the browser at least does not lay
+ *   out for the biggest one.
+ * * **`/_next/image` is not available as a same-origin proxy.** The features
+ *   that need *same-origin pixels* - the flyer exports (`html-to-image` taints
+ *   the canvas otherwise) and the branch map capture - go through this app's own
+ *   `/api/media` route instead; see `lib/same-origin-image.ts`.
  */
-export default function mediaImageLoader({
-  src,
-  width,
-  quality,
-}: {
-  src: string;
-  width: number;
-  quality?: number;
-}): string {
-  // Already on a CDN (or a data: URI) - hand it to the browser as it is.
-  if (/^(https?:)?\/\//i.test(src) || src.startsWith("data:")) return src;
-
-  // The default loader's own URL shape, so local assets are unaffected by this
-  // file existing.
-  return `/_next/image?url=${encodeURIComponent(src)}&w=${width}&q=${quality || 75}`;
+export default function mediaImageLoader({ src }: { src: string }): string {
+  return src;
 }

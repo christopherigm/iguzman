@@ -19,7 +19,7 @@
  * `toDataURL` throws `SecurityError` on a tainted canvas and there is no
  * screenshot at all. Tiles are requested `crossOrigin="anonymous"` (OSM and
  * CARTO both answer with `Access-Control-Allow-Origin: *`); the brandmark is
- * routed through `/_next/image` first (see `lib/same-origin-image.ts`). A tenant
+ * routed through `/api/media` first (see `lib/same-origin-image.ts`). A tenant
  * whose **custom** tile URL serves no CORS header simply gets no capture - the
  * pin still saves, the site's live maps are unaffected, and the email falls back
  * to its Directions button, which is the half that actually does something.
@@ -232,14 +232,13 @@ export async function captureMapImage({
   const origin = originOf(center, captureZoom, size);
   const tiles = tilesFor(origin, size, captureZoom, tileUrl);
 
-  // The brandmark is fetched through this app's own optimizer first; a mark that
-  // could not be proxied is dropped rather than drawn, because drawing it is
-  // what would taint the canvas and lose the whole capture.
-  const iconSrc = pinIcon
-    ? await toSameOriginDataUrl(pinIcon, { width: 128 })
-    : null;
+  // The brandmark is fetched through this app's own media proxy first; a mark
+  // that could not be proxied is dropped rather than drawn, because drawing it
+  // is what would taint the canvas and lose the whole capture. A relative path
+  // is already this origin and needs neither the proxy nor the guard.
+  const iconSrc = pinIcon ? await toSameOriginDataUrl(pinIcon) : null;
   const [glyph, ...loaded] = await Promise.all([
-    iconSrc && iconSrc.startsWith("data:")
+    iconSrc && (iconSrc.startsWith("data:") || iconSrc.startsWith("/"))
       ? loadImage(iconSrc)
       : Promise.resolve(null),
     ...tiles.map((tile) => loadImage(tile.url)),

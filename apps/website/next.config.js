@@ -52,18 +52,18 @@ const nextConfig = {
     // ./image-loader.ts for what the loader does and what it costs.
     loader: 'custom',
     loaderFile: './image-loader.ts',
-    // `remotePatterns` still matters even with a custom loader: it gates
-    // `/_next/image`, which two features use *on purpose* to obtain a
-    // same-origin copy of a remote image - the social-post flyer export (canvas
-    // taint) and the hero `logo`-shape CSS mask (an empty mask otherwise).
+    // ⚠ `remotePatterns` is **inert while `loader` is 'custom'**: Next only
+    // serves `/_next/image` for the default loader and 404s the route
+    // otherwise, so this list gates nothing at runtime. It is kept only so the
+    // config still makes sense if the custom loader is ever dropped - do NOT
+    // add a tenant's CDN hostname here expecting it to fix anything.
     //
-    // ⚠ A customer that connects its own R2 account with its own CDN hostname
-    // (e.g. cdn.elpanbueno.com) must have that hostname added here, or those two
-    // features fall back to the un-proxied URL for that tenant. It cannot be
-    // read from the database: `next.config.js` is evaluated at build time and
-    // baked into `.next/required-server-files.json` for the standalone server.
-    // Adding a customer is already a code change in this app (sites/registry.ts),
-    // so this is one more line in the same commit.
+    // The features that need a *same-origin* copy of a remote image - the flyer
+    // exports (canvas taint) and the branch map capture - go through this app's
+    // own `/api/media` route, which allowlists by request host and so needs no
+    // per-customer entry anywhere. (The hero `logo`-shape CSS mask still points
+    // at `/_next/image` inside `@repo/ui` and is therefore still broken in
+    // production for tenants on a separate media origin.)
     remotePatterns: [
       {
         protocol: 'https',
