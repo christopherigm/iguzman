@@ -1,7 +1,23 @@
 from django.contrib import admin
 from django.utils import timezone
 
-from .models import Booking, Order, OrderLine
+from .models import Booking, Coupon, Order, OrderLine
+
+
+@admin.register(Coupon)
+class CouponAdmin(admin.ModelAdmin):
+    list_display = (
+        "code", "system", "kind", "value", "currency", "times_redeemed",
+        "max_redemptions", "starts_at", "expires_at", "enabled",
+    )
+    list_filter = ("kind", "enabled", "system", "currency")
+    search_fields = ("code", "name", "description", "public_id")
+    date_hierarchy = "created_at"
+    # `times_redeemed` is moved only by `redeem_coupon`'s F() expression, which is
+    # what keeps two simultaneous checkouts from both taking the last redemption.
+    # Typing over it here would race with exactly that, so it is a readout - use
+    # `max_redemptions` to widen or close a campaign.
+    readonly_fields = ("public_id", "qr_code", "times_redeemed", "created_at", "updated_at")
 
 
 class OrderLineInline(admin.TabularInline):

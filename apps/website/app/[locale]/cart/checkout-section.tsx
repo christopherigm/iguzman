@@ -11,6 +11,9 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { useGuestState } from "@/hooks/use-guest-cart";
 import { clearGuestCart } from "@/lib/guest-cart";
+import { CouponField } from "@/components/coupon-field";
+import { formatPrice } from "@/lib/price";
+import type { CouponQuote } from "@/lib/coupon-shared";
 import type { CustomerPaymentMethod } from "@/lib/orders-shared";
 import "./checkout-section.css";
 
@@ -46,6 +49,18 @@ const ERROR_MESSAGES: Record<string, string> = {
   MIXED_CURRENCY: "checkoutMixedCurrency",
   OUT_OF_STOCK: "checkoutOutOfStock",
   CART_EMPTY: "empty",
+  // A coupon that was good when it was applied but is not any more - taken by
+  // someone else, or expired while the customer sat on the page. Checkout
+  // refuses rather than quietly charging full price, so these have to be sayable
+  // here too, not only in the coupon box.
+  COUPON_NOT_FOUND: "couponNotFound",
+  COUPON_INACTIVE: "couponInactive",
+  COUPON_NOT_STARTED: "couponNotStarted",
+  COUPON_EXPIRED: "couponExpired",
+  COUPON_EXHAUSTED: "couponExhausted",
+  COUPON_WRONG_CURRENCY: "couponWrongCurrency",
+  COUPON_MIN_ORDER: "couponMinOrder",
+  COUPON_ERROR: "couponError",
 };
 
 /** The methods in the order they are offered, with the flag that gates each. */
@@ -113,6 +128,7 @@ export function CheckoutSection({
   const [postal, setPostal] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [coupon, setCoupon] = useState<CouponQuote | null>(null);
 
   const isOffline = selected === "in_store" || selected === "on_delivery";
   const needsAddress = selected === "on_delivery";
@@ -142,6 +158,10 @@ export function CheckoutSection({
         payment_method: selected,
       };
       if (isGuest) body.cart = guest.cart;
+      // The code alone. The amounts the box is showing were computed by the
+      // API for display; Django re-validates and re-prices here, so a body that
+      // named a discount would be naming its own price.
+      if (coupon) body.coupon_code = coupon.code;
       if (isOffline) {
         body.contact = {
           name: name.trim(),
@@ -209,6 +229,7 @@ export function CheckoutSection({
     selected,
     isGuest,
     guest.cart,
+    coupon,
     t,
   ]);
 
@@ -367,6 +388,42 @@ export function CheckoutSection({
               </Box>
             </>
           ) : null}
+        </Box>
+      ) : null}
+
+      {/* Above the button, below the contact form: the customer has to be able
+          to see the discount land before committing to pay. A guest's cart
+          travels as references so the API can price the minimum-order rule
+          against it; a signed-in customer sends none and Django reads their own
+          rows. */}
+      <CouponField
+        cart={isGuest ? guest.cart : []}
+        quote={coupon}
+        onChange={setCoupon}
+        // A signed-in cart is read from rows and is ready immediately; a guest's
+        // arrives one frame after hydration, so wait for it or the stashed code
+        // is validated against an empty basket.
+        autoApply={!isGuest || guest.cart.length > 0}
+      />
+
+      {coupon ? (
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          width="100%"
+        >
+          <Typography as="span" variant="body" color="var(--foreground)">
+            {t("total")}
+          </Typography>
+          <Typography
+            as="span"
+            variant="body"
+            fontWeight={700}
+            color="var(--foreground)"
+          >
+            {formatPrice(coupon.total, coupon.currency)}
+          </Typography>
         </Box>
       ) : null}
 

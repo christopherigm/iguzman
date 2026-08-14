@@ -21,8 +21,17 @@ from core.models import BookingResource, Branch, BranchHours, ResourcePool, Syst
 from users.models import CartItem
 
 from . import views as orders_views
-from .models import Booking, Order, OrderLine
+from .models import Booking, Coupon, Order, OrderLine
 from .services.booking import branches_for, is_slot_available, slots_for_day
+from .services.coupons import (
+    CouponError,
+    attach_coupon_qr,
+    discount_for,
+    find_coupon,
+    redeem_coupon,
+    release_coupon,
+    validate_coupon,
+)
 from .services.qr import order_detail_url
 from .services.stripe_gateway import StripeGatewayError, to_minor_units
 from .views import _booking_amounts
@@ -3454,3 +3463,387 @@ class BookingCheckoutAtomicityTests(TransactionTestCase):
 
         self.assertEqual(response.status_code, 201)
         self.assertFalse(seen["in_atomic"])
+
+
+class CouponTests(TestCase):
+    """The discount engine: what a coupon is worth, and who may still have it.
+
+    The cases here are the ones that cost real money if they regress - the
+    arithmetic that decides what is charged, the tenant boundary, and the
+    redemption ceiling that is the only thing standing between a campaign and
+    being redeemed forever.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.other_system = System.objects.create(site_name="Beta", host="beta.test")
+        self.product = Product.objects.create(
+            system=self.system, name="Loaf", slug="loaf",
+            price=Decimal("100.00"), currency="USD", stock_count=50,
+        )
+        self.admin = User.objects.create_user("admin", password="x", email="a@acme.test")
+        self.admin.profile.system = self.system
+        self.admin.profile.is_admin = True
+        self.admin.profile.save()
+
+    def _coupon(self, **kwargs):
+        defaults = dict(
+            system=self.system, code="SUMMER20",
+            kind=Coupon.KIND_PERCENT, value=Decimal("20.00"), currency="USD",
+        )
+        return Coupon.objects.create(**{**defaults, **kwargs})
+
+    def _sell(self, body):
+        self.client.force_login(self.admin)
+        return self.client.post(
+            "/api/orders/admin/pos/", body, content_type="application/json",
+        )
+
+    def _cart(self, quantity=1):
+        return [{"kind": "product", "id": self.product.pk, "quantity": quantity}]
+
+    # ---- what a coupon is worth ------------------------------------------ #
+
+    def test_a_percentage_comes_off_the_subtotal(self):
+        coupon = self._coupon()
+        self.assertEqual(discount_for(coupon, Decimal("200.00")), Decimal("40.00"))
+
+    def test_a_fixed_amount_comes_off_whole(self):
+        coupon = self._coupon(kind=Coupon.KIND_FIXED, value=Decimal("15.00"))
+        self.assertEqual(discount_for(coupon, Decimal("200.00")), Decimal("15.00"))
+
+    def test_a_percentage_rounds_to_two_places(self):
+        # 33% of 10.10 is 3.333; the column holds two decimals, and a value that
+        # does not round here is a total that will not reconcile against Stripe.
+        coupon = self._coupon(value=Decimal("33.00"))
+        self.assertEqual(discount_for(coupon, Decimal("10.10")), Decimal("3.33"))
+
+    def test_a_fixed_amount_never_exceeds_the_subtotal(self):
+        # A negative total is not a refund - it is a Stripe session that cannot
+        # be created and an order nobody can reconcile.
+        coupon = self._coupon(kind=Coupon.KIND_FIXED, value=Decimal("500.00"))
+        self.assertEqual(discount_for(coupon, Decimal("30.00")), Decimal("30.00"))
+
+    # ---- who may still have it -------------------------------------------- #
+
+    def test_an_expired_coupon_is_refused(self):
+        coupon = self._coupon(expires_at=timezone.now() - timedelta(days=1))
+        with self.assertRaises(CouponError) as caught:
+            validate_coupon(self.system, coupon.code, subtotal=Decimal("100.00"), currency="USD")
+        self.assertEqual(caught.exception.code, "COUPON_EXPIRED")
+
+    def test_a_coupon_that_has_not_started_is_refused(self):
+        coupon = self._coupon(starts_at=timezone.now() + timedelta(days=1))
+        with self.assertRaises(CouponError) as caught:
+            validate_coupon(self.system, coupon.code, subtotal=Decimal("100.00"), currency="USD")
+        self.assertEqual(caught.exception.code, "COUPON_NOT_STARTED")
+
+    def test_a_fully_redeemed_coupon_is_refused(self):
+        coupon = self._coupon(max_redemptions=2, times_redeemed=2)
+        with self.assertRaises(CouponError) as caught:
+            validate_coupon(self.system, coupon.code, subtotal=Decimal("100.00"), currency="USD")
+        self.assertEqual(caught.exception.code, "COUPON_EXHAUSTED")
+
+    def test_a_disabled_coupon_is_refused(self):
+        coupon = self._coupon(enabled=False)
+        with self.assertRaises(CouponError) as caught:
+            validate_coupon(self.system, coupon.code, subtotal=Decimal("100.00"), currency="USD")
+        self.assertEqual(caught.exception.code, "COUPON_INACTIVE")
+
+    def test_a_fixed_coupon_is_refused_in_another_currency(self):
+        # Honouring it would mean inventing an exchange rate - the same thing
+        # checkout refuses to do for a mixed-currency cart.
+        coupon = self._coupon(kind=Coupon.KIND_FIXED, value=Decimal("50.00"), currency="MXN")
+        with self.assertRaises(CouponError) as caught:
+            validate_coupon(self.system, coupon.code, subtotal=Decimal("100.00"), currency="USD")
+        self.assertEqual(caught.exception.code, "COUPON_WRONG_CURRENCY")
+
+    def test_a_percentage_coupon_applies_in_any_currency(self):
+        coupon = self._coupon(currency="MXN")
+        self.assertEqual(
+            validate_coupon(self.system, coupon.code, subtotal=Decimal("100.00"), currency="USD"),
+            coupon,
+        )
+
+    def test_a_subtotal_below_the_minimum_is_refused(self):
+        coupon = self._coupon(min_order_amount=Decimal("150.00"))
+        with self.assertRaises(CouponError) as caught:
+            validate_coupon(self.system, coupon.code, subtotal=Decimal("100.00"), currency="USD")
+        self.assertEqual(caught.exception.code, "COUPON_MIN_ORDER")
+
+    def test_another_tenants_coupon_is_not_found(self):
+        # The tenant boundary: a code guessed off a rival's poster must not work
+        # here, and must be indistinguishable from a code that does not exist.
+        Coupon.objects.create(
+            system=self.other_system, code="BETAONLY",
+            kind=Coupon.KIND_PERCENT, value=Decimal("50.00"),
+        )
+        with self.assertRaises(CouponError) as caught:
+            validate_coupon(self.system, "BETAONLY", subtotal=Decimal("100.00"), currency="USD")
+        self.assertEqual(caught.exception.code, "COUPON_NOT_FOUND")
+
+    def test_a_code_is_matched_case_insensitively(self):
+        # The customer is typing off a poster, on a keyboard that auto-capitalises.
+        coupon = self._coupon(code="SummerSale")
+        self.assertEqual(find_coupon(self.system, "summersale"), coupon)
+        self.assertEqual(find_coupon(self.system, "  SUMMERSALE "), coupon)
+
+    # ---- the redemption ceiling ------------------------------------------- #
+
+    def test_redeeming_stops_at_the_ceiling(self):
+        coupon = self._coupon(max_redemptions=2)
+        self.assertTrue(redeem_coupon(coupon))
+        coupon.refresh_from_db()
+        self.assertTrue(redeem_coupon(coupon))
+        coupon.refresh_from_db()
+        # The third must fail even though `coupon` in memory is stale - the
+        # ceiling is enforced by the UPDATE's own WHERE clause, not by the
+        # instance's idea of the count.
+        self.assertFalse(redeem_coupon(coupon))
+        coupon.refresh_from_db()
+        self.assertEqual(coupon.times_redeemed, 2)
+
+    def test_a_stale_instance_cannot_exceed_the_ceiling(self):
+        # The race the up-front validation cannot close: two checkouts both read
+        # the coupon with one redemption left. Only one may take it.
+        coupon = self._coupon(max_redemptions=1)
+        first = Coupon.objects.get(pk=coupon.pk)
+        second = Coupon.objects.get(pk=coupon.pk)
+        self.assertTrue(redeem_coupon(first))
+        self.assertFalse(redeem_coupon(second))
+        coupon.refresh_from_db()
+        self.assertEqual(coupon.times_redeemed, 1)
+
+    def test_an_unlimited_coupon_still_counts_up(self):
+        coupon = self._coupon(max_redemptions=0)
+        for _ in range(3):
+            self.assertTrue(redeem_coupon(coupon))
+        coupon.refresh_from_db()
+        self.assertEqual(coupon.times_redeemed, 3)
+
+    def test_releasing_never_goes_negative(self):
+        # A double-delivered webhook must not drive the count below zero -
+        # PositiveIntegerField would raise on the write and fail a webhook that
+        # has nothing else wrong with it.
+        coupon = self._coupon()
+        redeem_coupon(coupon)
+        coupon.refresh_from_db()
+        self.assertTrue(release_coupon(coupon))
+        self.assertFalse(release_coupon(coupon))
+        coupon.refresh_from_db()
+        self.assertEqual(coupon.times_redeemed, 0)
+
+    # ---- through a real checkout ------------------------------------------ #
+
+    def test_a_pos_sale_records_the_discount_and_takes_a_redemption(self):
+        coupon = self._coupon(max_redemptions=5)
+        response = self._sell({
+            "cart": self._cart(quantity=2),
+            "payment_method": "cash",
+            "coupon_code": "summer20",
+        })
+        self.assertEqual(response.status_code, 201)
+
+        order = Order.objects.get(public_id=response.json()["public_id"])
+        self.assertEqual(order.subtotal, Decimal("200.00"))
+        self.assertEqual(order.discount_amount, Decimal("40.00"))
+        self.assertEqual(order.total, Decimal("160.00"))
+        # Snapshotted as typed by the tenant, not as typed by the customer.
+        self.assertEqual(order.coupon_code, "SUMMER20")
+        coupon.refresh_from_db()
+        self.assertEqual(coupon.times_redeemed, 1)
+
+    def test_a_sale_with_no_coupon_is_unchanged(self):
+        response = self._sell({"cart": self._cart(), "payment_method": "cash"})
+        self.assertEqual(response.status_code, 201)
+        order = Order.objects.get(public_id=response.json()["public_id"])
+        self.assertEqual(order.discount_amount, Decimal("0.00"))
+        self.assertEqual(order.total, order.subtotal)
+        self.assertEqual(order.coupon_code, "")
+
+    def test_an_expired_coupon_refuses_the_sale_and_writes_no_order(self):
+        # The order is discarded rather than left as a phantom, exactly as the
+        # Stripe-failure branches discard theirs.
+        self._coupon(expires_at=timezone.now() - timedelta(days=1))
+        response = self._sell({
+            "cart": self._cart(),
+            "payment_method": "cash",
+            "coupon_code": "SUMMER20",
+        })
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "COUPON_EXPIRED")
+        self.assertFalse(Order.objects.exists())
+
+    def test_the_stock_of_a_refused_sale_is_untouched(self):
+        self._coupon(enabled=False)
+        self._sell({
+            "cart": self._cart(quantity=3),
+            "payment_method": "cash",
+            "coupon_code": "SUMMER20",
+        })
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_count, 50)
+
+    # ---- the endpoints ---------------------------------------------------- #
+
+    def test_validate_prices_the_discount_without_redeeming(self):
+        coupon = self._coupon()
+        response = self.client.post(
+            "/api/coupons/validate/",
+            {"code": "SUMMER20", "cart": self._cart(quantity=2)},
+            content_type="application/json", HTTP_X_WEBSITE_HOST="acme.test",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["discount"], "40.00")
+        self.assertEqual(response.json()["total"], "160.00")
+        # Advisory only: nothing may be consumed by asking.
+        coupon.refresh_from_db()
+        self.assertEqual(coupon.times_redeemed, 0)
+
+    def test_validate_refuses_an_empty_cart(self):
+        self._coupon()
+        response = self.client.post(
+            "/api/coupons/validate/", {"code": "SUMMER20", "cart": []},
+            content_type="application/json", HTTP_X_WEBSITE_HOST="acme.test",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "CART_EMPTY")
+
+    def test_the_public_landing_hides_campaign_performance(self):
+        self._coupon(name="Internal name", max_redemptions=50, times_redeemed=12)
+        response = self.client.get(
+            "/api/coupons/SUMMER20/", HTTP_X_WEBSITE_HOST="acme.test",
+        )
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["valid"])
+        for leaked in ("times_redeemed", "max_redemptions", "name"):
+            self.assertNotIn(leaked, body)
+
+    def test_the_public_landing_reports_an_expired_coupon_as_invalid(self):
+        # 200 with valid:false, not 404: the page has to be able to say "this
+        # offer has ended" for a code the tenant really did print.
+        self._coupon(expires_at=timezone.now() - timedelta(days=1))
+        response = self.client.get(
+            "/api/coupons/SUMMER20/", HTTP_X_WEBSITE_HOST="acme.test",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["valid"])
+
+    def test_an_unknown_code_is_a_404(self):
+        response = self.client.get(
+            "/api/coupons/NOPE/", HTTP_X_WEBSITE_HOST="acme.test",
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_an_admin_may_not_read_another_tenants_coupon(self):
+        other = Coupon.objects.create(
+            system=self.other_system, code="BETAONLY",
+            kind=Coupon.KIND_PERCENT, value=Decimal("50.00"),
+        )
+        self.client.force_login(self.admin)
+        response = self.client.get(f"/api/coupons/admin/{other.pk}/")
+        self.assertEqual(response.status_code, 404)
+
+    def test_creating_a_coupon_writes_its_qr_code(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            "/api/coupons/admin/",
+            {"code": "NEW10", "kind": "percent", "value": "10.00"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.json()["qr_code"])
+        self.assertTrue(Coupon.objects.get(code="NEW10").qr_code)
+
+    def test_a_duplicate_code_is_refused_regardless_of_case(self):
+        self._coupon(code="SUMMER20")
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            "/api/coupons/admin/",
+            {"code": "summer20", "kind": "percent", "value": "10.00"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_a_percentage_over_one_hundred_is_refused(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            "/api/coupons/admin/",
+            {"code": "TOOMUCH", "kind": "percent", "value": "120.00"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_a_code_with_a_slash_is_refused(self):
+        # It travels in the `/coupon/<code>` path the QR encodes.
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            "/api/coupons/admin/",
+            {"code": "SUM/20", "kind": "percent", "value": "10.00"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_the_flyers_logo_plate_round_trips(self):
+        coupon = self._coupon()
+        self.client.force_login(self.admin)
+        response = self.client.patch(
+            f"/api/coupons/admin/{coupon.pk}/",
+            {
+                "brand_logo_background": "hexagon",
+                "brand_logo_background_scale": 80,
+                "brand_logo_scale": 60,
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["brand_logo_background"], "hexagon")
+        coupon.refresh_from_db()
+        self.assertEqual(coupon.brand_logo_background_scale, 80)
+        self.assertEqual(coupon.brand_logo_scale, 60)
+
+    def test_a_logo_scale_outside_the_sliders_range_is_refused(self):
+        # The CMS is not the only possible caller: below 30 the logo all but
+        # vanishes, and there is nothing above 100 to draw.
+        coupon = self._coupon()
+        self.client.force_login(self.admin)
+        response = self.client.patch(
+            f"/api/coupons/admin/{coupon.pk}/",
+            {"brand_logo_scale": 10}, content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_renaming_a_coupon_rewrites_its_qr_code(self):
+        # The PNG encodes /coupon/<code>, so a rename leaves the stored one
+        # pointing at a code that no longer resolves.
+        coupon = self._coupon()
+        attach_coupon_qr(coupon)
+        before = coupon.qr_code.name
+        self.client.force_login(self.admin)
+        response = self.client.patch(
+            f"/api/coupons/admin/{coupon.pk}/",
+            {"code": "WINTER30"}, content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        coupon.refresh_from_db()
+        self.assertTrue(coupon.qr_code)
+        with coupon.qr_code.open("rb") as handle:
+            self.assertTrue(handle.read())
+        self.assertEqual(coupon.qr_code.name, before)
+
+    def test_deleting_a_coupon_keeps_the_orders_that_used_it(self):
+        # Deleting a finished campaign must not erase the record of the
+        # discounts it gave.
+        coupon = self._coupon()
+        response = self._sell({
+            "cart": self._cart(), "payment_method": "cash", "coupon_code": "SUMMER20",
+        })
+        order = Order.objects.get(public_id=response.json()["public_id"])
+        coupon.delete()
+        order.refresh_from_db()
+        self.assertIsNone(order.coupon)
+        self.assertEqual(order.coupon_code, "SUMMER20")
+        self.assertEqual(order.discount_amount, Decimal("20.00"))
+        self.assertEqual(order.total, Decimal("80.00"))

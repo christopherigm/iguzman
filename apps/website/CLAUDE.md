@@ -654,6 +654,129 @@ The engine, the archive format and the tenancy rules live in `website-api`
   show All-on beside a half-empty selection; it locks the individual switches
   while on.
 
+## Coupons - a discount code, its QR, and its flyer
+
+A tenant creates a coupon in `/admin/coupons`, downloads a flyer carrying its QR,
+and a customer who scans that QR lands on `/coupon/<code>` and shops with the
+code already applied. The API owns every rule; read website-api's CLAUDE.md →
+"Coupons" first.
+
+| Piece                    | Where                                            |
+| ------------------------ | ------------------------------------------------ |
+| The CMS list / one coupon | `app/[locale]/admin/coupons/`, `.../[id]/`       |
+| The four flyer templates | `components/admin/coupon-templates/`             |
+| The "have a coupon?" box | `components/coupon-field.tsx`                    |
+| Formatting, client-safe  | `lib/coupon-shared.ts`                           |
+| The scanned-code carrier | `lib/coupon-stash.ts`                            |
+| The public landing       | `app/[locale]/coupon/[code]/`                    |
+
+- ⚠ **Nothing in the browser ever computes a discount.** The amounts
+  `CouponField` shows come from `POST /api/coupons/validate/`, and even those are
+  only for display - checkout re-validates the code and re-prices the order
+  server-side. **Only the code travels in the checkout body**, exactly as the
+  cart travels as references and never prices: a client that could name a
+  discount could name its own price.
+- ⚠ **Applying a coupon reserves nothing.** The code can be taken by someone else
+  between the validate call and checkout, which the API refuses honestly at that
+  point (`COUPON_EXHAUSTED`) rather than charging full price. That is why
+  `ERROR_MESSAGES` in `checkout-section.tsx` and `failureMessage` in the POS
+  charge panel both have to speak `COUPON_*` - a refusal that only the coupon box
+  could explain would surface at checkout as an unexplained failure.
+- **One field, two consumers**, like the ingredient picker: the cart's checkout
+  section and the POS charge panel both render `CouponField`, and it is fully
+  controlled - both parents need the quote elsewhere (the cart's summary, the
+  till's amount due), so a field holding its own copy would be a second source of
+  truth about what is being charged. POS differs only by `size="lg"`.
+- ⚠ **The till's "amount due" comes from the API's quote, never from
+  `total - discount` recomputed locally.** A rounding rule that differs from
+  Django's puts a different number on the screen than on the receipt, with a
+  customer standing there.
+- **A scanned code rides in `sessionStorage`, not a URL param**
+  (`lib/coupon-stash.ts`) - the same call `apps/cinelog` made for its AI search.
+  A `?coupon=` param has to be threaded through every link between the landing
+  and the cart to survive, and makes the code part of every URL the customer
+  might share. `sessionStorage` rather than `localStorage`: a cart persists for
+  weeks because the customer means to come back to it, but a coupon scanned and
+  abandoned should not resurface in a month attached to an unrelated basket.
+- **`autoApply` is the parent's call, not the field's.** A guest's cart is read
+  through `useSyncExternalStore`, whose server snapshot is empty, so it arrives
+  one frame after hydration - auto-applying before then validates the code
+  against an empty basket and refuses a coupon that actually meets its
+  minimum-order rule. A refused auto-apply seeds the input instead of showing an
+  error: the customer never typed it, so an unasked-for error reads as breakage.
+- **The landing leads to the catalog, not the cart.** Someone who just scanned a
+  poster has an empty cart, and a cart page telling them so is a dead end at the
+  exact moment they were most willing to buy something.
+- **`/coupon/[code]` is `noindex`.** Letting a search engine list every live
+  campaign turns a targeted offer into a public discount feed, and leaves expired
+  ones ranking long after the campaign ended. An **unknown** code 404s; an
+  **expired** one does not - the API answers `valid: false` so the page can say
+  the offer has ended, which is a better answer for someone holding a real flyer.
+- ⚠ **`lib/coupons.ts` must stay uncached.** `valid` folds in whether the coupon
+  is exhausted, which moves on every checkout - same reasoning that keeps
+  `getOrder` uncached while `getOrders` is cached.
+- **The order page shows subtotal + discount + total, or none of them.** With the
+  total alone, an order placed with a coupon shows a number that does not add up
+  from its own lines. `discount_amount` is `"0.00"` on every other order, so the
+  block tests the **number**, not the string's truthiness.
+
+### The flyer templates
+
+`components/admin/coupon-templates/registry.ts` mirrors the social-post registry
+exactly - four self-styled components (`ticket`, `bold`, `elegant`, `scan`), the
+DB stores only the `id`, so **adding a template is a component plus one registry
+entry, no migration**. `DEFAULT_COUPON_TEMPLATE_ID` must stay in step with
+`Coupon.template_id`'s model default.
+
+- **Kept separate from the social registry, not merged into it.** A social
+  template composes an *item* (photo, price, compare price); a coupon template
+  composes an *offer* (a code, a QR, an expiry). Neither can render the other's
+  data, so one list would be a picker where most entries are wrong for whatever
+  you are making. The pure helpers (`contrastText`, `tint`, `FORMAT_DIMENSIONS`)
+  **are** imported from the social types rather than re-declared - per the shared
+  constants rule.
+- ⚠ **Everything drawn into a flyer must be a same-origin data URL**, the QR PNG
+  included - it is served from R2 on a CDN hostname, so an `<img>` pointed
+  straight at `coupon.qr_code` taints the `html-to-image` canvas and every
+  download fails. Route it through `toSameOriginDataUrl` like the logo.
+- ⚠ **A QR needs a white ground and its quiet zone.** `CouponQr` puts every code
+  on a white tile for exactly that reason; drawn onto a brand-coloured panel it
+  photographs badly under shop lighting, which for the one element the flyer
+  exists to deliver is the worst thing it could be.
+- **The ticket's perforation notches are painted in white, not cut out.** The
+  export is a JPG, which has no alpha, so a transparent cut-out comes out as a
+  black bite taken from the ticket.
+- **The backdrop upload is not saved on the coupon**, deliberately - it only
+  decorates the exported image, and persisting it would add a stored file per
+  coupon that no customer-facing surface ever reads. **The logo plate _is_
+  saved** (`brand_logo_background` + its two scales, the same trio a
+  `SocialPost` carries) - it is part of how this coupon looks every time it is
+  re-downloaded, which is the same reason `template_id` is a column.
+- ⚠ **`CouponLogo`'s plate constants are deliberately not the social flyer's
+  3.5 / 0.9.** There the base height is a small design token and the *bare* logo
+  is scaled up off it too; here the base height is the drawn logo height itself,
+  so reusing those numbers triples the logo on every existing coupon. The pair
+  in `coupon-parts.tsx` are **equal** (2 / 2), so both sliders at 100% draw the
+  logo filling the plate edge to edge - there is no built-in inset, and a ring
+  of plate around the mark is asked for by turning the logo slider down. The **shapes**
+  are still the shared ones (`heroLogoBackgroundStyle` / `heroLogoMaskStyle`),
+  so a hexagon cannot come out different here than on the hero or a post.
+- **An unsaved coupon draws a dashed placeholder where the QR will go**
+  (`qrPlaceholder`, `CouponQrPlaceholder`). The API mints the PNG on create, so
+  before the first save the one element the flyer exists to deliver is a silent
+  hole with nothing on screen to say it is temporary. It is set **only** while
+  `isNew`: a saved coupon whose PNG write failed gets nothing, because there is
+  no "once saved" left to promise.
+- ⚠ **The tenant's Google Fonts `<link>` carries `crossOrigin="anonymous"`, and
+  that is load-bearing for both exports.** `html-to-image` walks every
+  stylesheet on the page to inline its `@font-face` rules, and reading
+  `cssRules` on a stylesheet the browser considers origin-unclean throws a
+  SecurityError - which surfaced on every Download flyer press. Requesting it in
+  CORS mode (Google answers `access-control-allow-origin: *`) makes the sheet
+  readable. `handleDownload` also retries once with `skipFonts: true`, since a
+  stylesheet this app does not control - a browser extension's - can still
+  poison the walk, and a flyer in a fallback face beats a button that refuses.
+
 ## Social posts - the flyer generator (`/admin/social-posts`)
 
 The CMS can render a catalog item into a shareable Instagram/story flyer.

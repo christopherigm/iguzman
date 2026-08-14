@@ -5,9 +5,189 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models.functions import Upper
 
-from core.models import CURRENCY_CHOICES
+from core.models import CURRENCY_CHOICES, System
 from core.tenant_paths import tenant_path
+
+
+def coupon_qr_upload_path(instance, filename):
+    """Where a coupon's QR code image is stored.
+
+    Tenant-prefixed like every other file (see `core.tenant_paths`) and named
+    after the coupon's `public_id` rather than its `code`. The code is the thing
+    a tenant renames - fixing a typo in "SUMER20" would otherwise orphan the PNG
+    that is already on a printed flyer, and leave the bucket holding a file named
+    after an offer that no longer exists.
+
+    ⚠ Unlike an order's QR, this file is **meant** to be public: it goes on
+    posters and social posts, and the code it encodes is one a tenant is handing
+    out on purpose. There is nothing here to guess your way into.
+    """
+    ext = os.path.splitext(filename)[1].lstrip(".") or "png"
+    return tenant_path(instance.system_id, f"coupons/qr/{instance.public_id}.{ext}")
+
+
+class Coupon(models.Model):
+    """A discount code a tenant hands out, redeemable a limited number of times.
+
+    **One coupon is one code.** "SUMMER20", 20% off, redeemable 50 times, expiring
+    on the 31st - not a batch of single-use codes. That is what makes the QR on a
+    poster meaningful: everyone who scans it gets the same offer, and `max_redemptions`
+    is what stops it from running forever. A per-customer single-use code would be a
+    different model (a child row per issued code), and this one is deliberately not
+    pretending to be both.
+
+    **The discount is order-level.** A percentage or a fixed amount off the cart
+    subtotal, never a per-item rule - which is also the only shape that maps onto
+    a single session-level Stripe discount without inventing per-line rounding.
+
+    Nothing here is ever trusted from a browser: `orders.services.coupons` re-reads
+    the row and re-computes the discount at checkout, and `times_redeemed` is moved
+    with an F() expression so two customers checking out at once cannot both take
+    the last redemption.
+    """
+
+    KIND_PERCENT = "percent"
+    KIND_FIXED = "fixed"
+    KIND_CHOICES = [
+        (KIND_PERCENT, "Percentage off"),
+        (KIND_FIXED, "Fixed amount off"),
+    ]
+
+    # The coupon's stable handle, used for the QR file name and the CMS detail
+    # URL. `code` is the customer-facing key but a tenant may edit it (a typo, a
+    # re-run of last year's campaign), and anything keyed on it would break the
+    # moment they did.
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+
+    system = models.ForeignKey(
+        "core.System", on_delete=models.CASCADE, related_name="coupons",
+    )
+
+    # Stored exactly as the tenant typed it, so a flyer prints "SummerSale" the
+    # way it was written - but matched case-insensitively at redemption, because
+    # a customer reading it off a poster will type whatever they type. The unique
+    # constraint below is on the *upper-cased* form so "summer20" and "SUMMER20"
+    # cannot coexist and race for the same redemptions.
+    code = models.CharField(max_length=64)
+    # Internal label for the CMS list ("Black Friday, in-store flyers"). Never
+    # shown to a customer.
+    name = models.CharField(max_length=255, blank=True, default="")
+    # Shown to the customer on the /coupon/<code> landing the QR points at.
+    description = models.TextField(blank=True, default="")
+
+    kind = models.CharField(max_length=8, choices=KIND_CHOICES, default=KIND_PERCENT)
+    # Percent (1-100) when `kind` is percent, else an amount in `currency`. One
+    # column rather than two nullable ones: a coupon has exactly one value, and
+    # two fields would let a row carry a contradiction.
+    value = models.DecimalField(max_digits=12, decimal_places=2)
+    # Only meaningful for a fixed-amount coupon, and it is what makes it refusable
+    # against a cart in another currency - discounting 100 MXN off a USD order
+    # would be inventing an exchange rate, which is exactly what checkout refuses
+    # to do for a mixed-currency cart.
+    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default="USD")
+
+    # 0 means unlimited. A nullable column would say the same thing, but every
+    # comparison would then need a None branch; this way the check is one `>`.
+    max_redemptions = models.PositiveIntegerField(default=0)
+    times_redeemed = models.PositiveIntegerField(default=0)
+
+    # Both optional and both inclusive of the instant they name. Null `starts_at`
+    # means "live now", null `expires_at` means "until the redemptions run out".
+    starts_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+
+    # A floor on the subtotal, in the coupon's own currency. Zero disables it.
+    min_order_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal("0.00"),
+    )
+
+    # The tenant's off switch, matching every other content model. Separate from
+    # the date window on purpose: pulling a live campaign should not require
+    # rewriting the dates it is supposed to have run for.
+    enabled = models.BooleanField(default=True)
+
+    # A PNG of the coupon's public landing URL, written by
+    # `orders.services.coupons.attach_coupon_qr` on create and re-written when
+    # the code changes (the URL is derived from it). Blank if the write failed -
+    # best-effort like the order QR, since a coupon with no PNG is still a
+    # working coupon.
+    qr_code = models.ImageField(
+        upload_to=coupon_qr_upload_path, max_length=255, blank=True, null=True,
+    )
+
+    # The flyer the CMS renders for this coupon, from the code-defined template
+    # registry in the frontend. Only the id is stored - adding a template is a
+    # component plus a registry entry, never a migration. Same contract as
+    # `SocialPost.template_id`.
+    template_id = models.CharField(max_length=32, default="ticket")
+
+    # ── Brand-logo badge ──────────────────────────────────────────────────────
+    # A plate behind the tenant's logo on the flyer, in every template. Same
+    # shape vocabulary and the same two-scale relationship as `SocialPost`'s own
+    # trio (and the hero's `System.hero_logo_background*`), so a tenant tunes it
+    # with the controls they already know and a flyer stays recognisably the
+    # same brand as a social post. Defaults to "none" - no plate - so every
+    # coupon written before these columns existed renders exactly as it did.
+    #
+    # These are stored while the flyer's *background image* deliberately is not:
+    # a backdrop only decorates one exported JPG, but the logo lockup is part of
+    # how the coupon looks every time it is re-downloaded - the same reason
+    # `template_id` is a column.
+    brand_logo_background = models.CharField(
+        max_length=16,
+        choices=System.HERO_LOGO_BACKGROUND_CHOICES,
+        default=System.HERO_LOGO_BG_NONE,
+        help_text="Shape of the plate behind the brand logo. 'None' draws the logo bare.",
+    )
+    # The drawn size of the plate (shape and logo together), as a whole percent
+    # of the template's default logo height.
+    brand_logo_background_scale = models.PositiveSmallIntegerField(
+        default=100,
+        help_text="Logo-with-background size as a whole percent (30-100).",
+    )
+    # The drawn size of the logo inside the plate, as a whole percent of it;
+    # below 100 the logo shrinks about the centre and a ring of plate shows.
+    brand_logo_scale = models.PositiveSmallIntegerField(
+        default=100,
+        help_text="Logo size inside its background, as a whole percent (30-100).",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            # Upper-cased so the tenant cannot create two coupons that a
+            # case-insensitive redemption lookup would both match - whichever one
+            # the query happened to return would silently own the redemptions.
+            models.UniqueConstraint(
+                Upper("code"), "system", name="coupon_code_unique_per_system",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(value__gt=0), name="coupon_value_positive",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["system", "enabled"]),
+        ]
+
+    def __str__(self):
+        worth = f"{self.value}%" if self.kind == self.KIND_PERCENT else f"{self.value} {self.currency}"
+        return f"{self.code} ({worth})"
+
+    @property
+    def redemptions_left(self):
+        """How many redemptions remain, or None when the coupon is unlimited."""
+        if not self.max_redemptions:
+            return None
+        return max(0, self.max_redemptions - self.times_redeemed)
+
+    @property
+    def is_exhausted(self):
+        return bool(self.max_redemptions) and self.times_redeemed >= self.max_redemptions
 
 
 def order_qr_upload_path(instance, filename):
@@ -172,6 +352,30 @@ class Order(models.Model):
     currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default="USD")
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+
+    # The coupon this order was placed with, if any. SET_NULL for the same reason
+    # OrderLine's catalog FKs are: deleting a finished campaign must not erase the
+    # record that its discount was given, and the order still reads back in full
+    # without it - which is what `coupon_code` and `discount_amount` are for.
+    coupon = models.ForeignKey(
+        "orders.Coupon",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="orders",
+    )
+    # Snapshotted at checkout, exactly like `OrderLine.name` and `unit_price`: what
+    # the customer typed and was honoured, frozen. Re-reading it through the FK
+    # would rewrite history the first time a tenant renamed a code, and would show
+    # nothing at all once the coupon was deleted.
+    coupon_code = models.CharField(max_length=64, blank=True, default="")
+    # What the coupon actually took off, in the order's own currency - never the
+    # coupon's percentage. A percent re-applied to today's subtotal would drift
+    # from what was charged, and this is the number that has to reconcile against
+    # Stripe forever.
+    discount_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal("0.00"),
+    )
 
     # Stripe's ids. `stripe_session_id` is unique so a replayed webhook cannot
     # produce a second paid order, and it is how the confirmation page proves the

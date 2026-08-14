@@ -229,6 +229,26 @@ export function VideoGrid({
             diarizeMaxWords: (extra as number) ?? null,
           });
           break;
+        /* Re-download the original URL from scratch. Moving the entry back to
+           pinned as 'pending' remounts PinnedVideoItemDownloading, which starts
+           the download; every field the failed attempt left behind is cleared so
+           the retry repopulates them. */
+        case "retry":
+          onReprocessCompleted(uuid, {
+            status: "pending" as VideoStatus,
+            error: null,
+            taskId: null,
+            serverTaskId: null,
+            file: null,
+            downloadURL: null,
+            thumbnail: null,
+            captionsFile: null,
+            commentsFile: null,
+            fileSize: null,
+            serverFileDeleted: false,
+            operationCredits: null,
+          });
+          break;
       }
     },
     [onReprocessCompleted],

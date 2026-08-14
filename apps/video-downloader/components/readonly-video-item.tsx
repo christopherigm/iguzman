@@ -18,6 +18,7 @@ import {
   VideoCardHeader,
   VideoFooterLink,
   PlatformIconBg,
+  isFailedDownload,
 } from "./video-item-shared";
 import { VideoComments } from "./video-comments";
 import { setCreditsBalance } from "./use-credits-store";
@@ -44,7 +45,8 @@ export type ReprocessAction =
   | "scaleDown"
   | "crop"
   | "trim"
-  | "diarize";
+  | "diarize"
+  | "retry";
 
 /** Per-action payload: a number for fps/scaleDown, a rectangle or range for the edits. */
 export type ReprocessExtra = number | CropRect | TrimRange;
@@ -423,6 +425,7 @@ export function ReadOnlyVideoItem({
         displayName={displayName}
         detailsOpen={detailsOpen}
         onToggleDetails={() => setDetailsOpen((p) => !p)}
+        onUpdate={onUpdate}
         t={t}
       />
       {/* ── Details panel (collapsible) ───────────── */}
@@ -467,6 +470,7 @@ export function ReadOnlyVideoItem({
           commentsOpen={commentsOpen}
           onCopy={handleCopy}
           onRedownload={handleRedownload}
+          onRetry={() => onReprocess(video.uuid, "retry")}
           onToggleExtra={() => setExtraActionsOpen((p) => !p)}
           onToggleComments={
             video.commentsFile ? () => setCommentsOpen((p) => !p) : undefined
@@ -476,7 +480,7 @@ export function ReadOnlyVideoItem({
         />
       </Box>
       {/* ── Extra actions panel (collapsible) ─────────── */}
-      {extraActionsOpen ? (
+      {extraActionsOpen && !isFailedDownload(video) ? (
         <VideoExtraActions
           video={video}
           isBusy={false}

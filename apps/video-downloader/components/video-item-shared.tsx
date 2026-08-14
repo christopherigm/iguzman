@@ -6,6 +6,8 @@ import { Box } from "@repo/ui/core-elements/box";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Icon } from "@repo/ui/core-elements/icon";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
+import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { Button } from "@repo/ui/core-elements/button";
 import { Grid } from "@repo/ui/core-elements/grid";
@@ -662,6 +664,16 @@ export function VideoStatusHints({
   return null;
 }
 
+/**
+ * True when the item errored before any media was produced - i.e. the download
+ * itself failed. Such an item has nothing to process, so its extra actions are
+ * replaced by a retry of the original URL. An item that errored on a later step
+ * (convert, crop, caption translation) still has a file and keeps its actions.
+ */
+export function isFailedDownload(video: StoredVideo): boolean {
+  return video.status === "error" && !video.downloadURL;
+}
+
 export function VideoActions({
   video,
   isBusy,
@@ -670,6 +682,7 @@ export function VideoActions({
   commentsOpen,
   onCopy,
   onRedownload,
+  onRetry,
   onToggleExtra,
   onToggleComments,
   onDelete,
@@ -682,12 +695,15 @@ export function VideoActions({
   commentsOpen?: boolean;
   onCopy: () => void;
   onRedownload: () => void;
+  /** Re-runs the download of `video.originalURL`. Omit to hide the retry action. */
+  onRetry?: () => void;
   onToggleExtra: () => void;
   onToggleComments?: () => void;
   onDelete: () => void;
   t: TranslationFn;
 }) {
   const isOnline = useOnlineStatus();
+  const canRetry = !!onRetry && isFailedDownload(video);
 
   return (
     <Box className="vi-actions" display="flex" justifyContent="space-evenly">
@@ -745,23 +761,37 @@ export function VideoActions({
         />
       ) : null}
 
-      <Button
-        unstyled
-        className="vi-icon-btn"
-        onClick={onToggleExtra}
-        aria-label={t("toggleExtraActions")}
-        title={t("toggleExtraActions")}
-        disabled={isBusy || !isOnline}
-      >
-        <Icon
-          icon="/icons/chevron-down.svg"
-          size={15}
-          color="var(--foreground, #171717)"
-          className={
-            extraActionsOpen ? "vi-chevron--open" : "vi-chevron--closed"
-          }
+      {canRetry ? (
+        <Button
+          unstyled
+          className="vi-icon-btn"
+          onClick={onRetry}
+          aria-label={t("retryDownload")}
+          title={t("retryDownload")}
+          disabled={!isOnline}
+          icon="/icons/retry.svg"
+          iconSize="15px"
+          iconColor="var(--accent, #06b6d4)"
         />
-      </Button>
+      ) : (
+        <Button
+          unstyled
+          className="vi-icon-btn"
+          onClick={onToggleExtra}
+          aria-label={t("toggleExtraActions")}
+          title={t("toggleExtraActions")}
+          disabled={isBusy || !isOnline}
+        >
+          <Icon
+            icon="/icons/chevron-down.svg"
+            size={15}
+            color="var(--foreground, #171717)"
+            className={
+              extraActionsOpen ? "vi-chevron--open" : "vi-chevron--closed"
+            }
+          />
+        </Button>
+      )}
     </Box>
   );
 }
@@ -1386,14 +1416,41 @@ export function VideoCardHeader({
   displayName,
   detailsOpen,
   onToggleDetails,
+  onUpdate,
   t,
 }: {
   video: StoredVideo;
   displayName: string;
   detailsOpen: boolean;
   onToggleDetails: () => void;
+  /** Persists the edited name/description. Omit to hide the edit action. */
+  onUpdate?: (uuid: string, patch: Partial<StoredVideo>) => void;
   t: TranslationFn;
 }) {
+  const tCommon = useTranslations("Common");
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+
+  const openEdit = () => {
+    setEditName(video.fulltitle ?? video.name ?? "");
+    setEditDescription(video.description ?? "");
+    setEditOpen(true);
+  };
+
+  const saveEdit = () => {
+    const name = editName.trim();
+    const description = editDescription.trim();
+    // `name` doubles as the download filename base, so a rename updates both it
+    // and the title the card displays.
+    onUpdate?.(video.uuid, {
+      fulltitle: name || null,
+      name: name || null,
+      description: description || null,
+    });
+    setEditOpen(false);
+  };
+
   const uploaderHandle =
     video.uploader_id != null
       ? video.uploader_id.startsWith("@")
@@ -1413,31 +1470,77 @@ export function VideoCardHeader({
   const subtitle = [uploaderHandle, uploadDateStr].filter(Boolean).join(" · ");
 
   return (
-    <Box className="vi-header">
-      <Box styles={{ minWidth: 0, flex: 1 }}>
-        <Typography
-          as="span"
-          variant="body"
-          className={`vi-name${detailsOpen ? " vi-name--expanded" : ""}`}
+    <>
+      {editOpen ? (
+        <ConfirmationModal
+          title={t("editDetailsTitle")}
+          text={t("editDetailsText")}
+          okCallback={saveEdit}
+          cancelCallback={() => setEditOpen(false)}
+          panelMaxWidth="380px"
+          okLabel={tCommon("save")}
+          cancelLabel={tCommon("cancel")}
         >
-          {displayName}
-        </Typography>
-        {subtitle ? (
-          <Typography as="p" variant="caption" className="vi-subtitle">
-            {subtitle}
+          <TextInput
+            label={t("editNameLabel")}
+            value={editName}
+            onChange={setEditName}
+          />
+          <TextInput
+            label={t("editDescriptionLabel")}
+            value={editDescription}
+            onChange={setEditDescription}
+            multirow
+            rows={4}
+            marginTop={12}
+          />
+        </ConfirmationModal>
+      ) : null}
+      <Box className="vi-header">
+        <Box styles={{ minWidth: 0, flex: 1 }}>
+          <Typography
+            as="span"
+            variant="body"
+            className={`vi-name${detailsOpen ? " vi-name--expanded" : ""}`}
+          >
+            {displayName}
           </Typography>
-        ) : null}
+          {subtitle ? (
+            <Typography as="p" variant="caption" className="vi-subtitle">
+              {subtitle}
+            </Typography>
+          ) : null}
+        </Box>
+        {/* Stacked so the edit action appears *below* the toggle when the
+            details open, instead of pushing the header row's fields around. */}
+        <Box
+          flexDirection="column"
+          alignItems="center"
+          alignSelf="flex-start"
+          gap={4}
+        >
+          <Button
+            unstyled
+            className="vi-icon-btn"
+            onClick={onToggleDetails}
+            aria-label={t("toggleDetails")}
+            icon="/icons/hamburger.svg"
+            iconSize="16px"
+            iconColor="var(--foreground, #171717)"
+          />
+          {detailsOpen && onUpdate ? (
+            <IconButton
+              icon="/icons/write.svg"
+              size="sm"
+              kind="primary"
+              aria-label={t("editDetails")}
+              title={t("editDetails")}
+              onClick={openEdit}
+            />
+          ) : null}
+        </Box>
       </Box>
-      <Button
-        unstyled
-        className="vi-icon-btn"
-        onClick={onToggleDetails}
-        aria-label={t("toggleDetails")}
-        icon="/icons/hamburger.svg"
-        iconSize="16px"
-        iconColor="var(--foreground, #171717)"
-      />
-    </Box>
+    </>
   );
 }
 

@@ -206,7 +206,9 @@
     "errorOutOfStock": "Algunos artículos ya no están disponibles. Quítalos e inténtalo de nuevo.",
     "errorCartEmpty": "Ninguno de estos artículos sigue a la venta.",
     "errorCompleteFailed": "El pedido se registró pero no se pudo marcar como pagado. Inténtalo otra vez o hazlo desde Pedidos.",
-    "errorGeneric": "No se pudo registrar la venta. Inténtalo de nuevo."
+    "errorGeneric": "No se pudo registrar la venta. Inténtalo de nuevo.",
+    "errorCoupon": "Ese cupón ya no es válido. Quítalo e inténtalo de nuevo.",
+    "couponApplied": "{code} · −{amount}"
   },
   "AuthPage": {
     "tabSignIn": "Iniciar sesión",
@@ -475,7 +477,20 @@
     "placeOrderNote": "No se cobra ahora: pagarás en persona.",
     "checkoutNameRequired": "Ingresa tu nombre.",
     "checkoutContactRequired": "Ingresa un correo o un teléfono.",
-    "checkoutAddressRequired": "Ingresa una dirección de entrega."
+    "checkoutAddressRequired": "Ingresa una dirección de entrega.",
+    "couponLabel": "Código de cupón",
+    "couponPlaceholder": "p. ej. VERANO20",
+    "couponApply": "Aplicar",
+    "couponChecking": "Comprobando…",
+    "couponRemove": "Quitar",
+    "couponNotFound": "Ese código de cupón no es válido.",
+    "couponInactive": "Ese cupón ya no está activo.",
+    "couponNotStarted": "Ese cupón aún no está activo.",
+    "couponExpired": "Ese cupón ha caducado.",
+    "couponExhausted": "Ese cupón ya se ha canjeado por completo.",
+    "couponWrongCurrency": "Ese cupón no se puede usar con la moneda de este pedido.",
+    "couponMinOrder": "Tu pedido está por debajo del mínimo de este cupón.",
+    "couponError": "No se pudo aplicar ese cupón."
   },
   "Orders": {
     "heading": "Pedidos",
@@ -543,7 +558,9 @@
     "seeInAdmin": "Ver en administración",
     "bookingParty": "Personas",
     "bookingPeople": "{count, plural, one {# persona} other {# personas}}",
-    "bookingResource": "Asignado"
+    "bookingResource": "Asignado",
+    "subtotal": "Subtotal",
+    "discount": "Descuento"
   },
   "VerifyEmailPage": {
     "loading": "Verificando tu cuenta, por favor espera…",
@@ -1120,7 +1137,42 @@
     "mapZoomOut": "Alejar",
     "mapYourLocation": "Tu ubicación",
     "mapZoomHint": "Usa Ctrl + desplazamiento para ampliar el mapa",
-    "mapZoomHintMac": "Usa ⌘ + desplazamiento para ampliar el mapa"
+    "mapZoomHintMac": "Usa ⌘ + desplazamiento para ampliar el mapa",
+    "coupons": "Cupones",
+    "couponsDesc": "Crea códigos de descuento y descarga folletos para compartir",
+    "couponNew": "Nuevo cupón",
+    "couponEdit": "Editar cupón",
+    "couponCode": "Código",
+    "couponName": "Nombre interno",
+    "couponDescription": "Descripción",
+    "couponKind": "Tipo de descuento",
+    "couponKindPercent": "Porcentaje",
+    "couponKindFixed": "Cantidad fija",
+    "couponValue": "Valor",
+    "couponCurrency": "Moneda",
+    "couponMaxRedemptions": "Canjes máximos",
+    "couponUnlimitedHint": "0 = ilimitado",
+    "couponRedemptions": "Canjeado",
+    "couponMinOrder": "Importe mínimo del pedido",
+    "couponMinShort": "Mínimo",
+    "couponStartsAt": "Comienza",
+    "couponExpiresAt": "Caduca",
+    "couponExpires": "Caduca",
+    "couponNoExpiry": "Sin caducidad",
+    "couponOff": "DE DESCUENTO",
+    "couponValidUntil": "Válido hasta el",
+    "couponFlyer": "Folleto para compartir",
+    "couponTemplate": "Plantilla",
+    "couponTemplate_ticket": "Boleto",
+    "couponTemplate_bold": "Impactante",
+    "couponTemplate_elegant": "Elegante",
+    "couponTemplate_scan": "Escanéame",
+    "couponBackground": "Imagen de fondo",
+    "couponBackgroundHint": "Solo decora la imagen descargada; no se guarda en el cupón.",
+    "couponDownload": "Descargar folleto",
+    "couponExportError": "No se pudo exportar el folleto.",
+    "couponSaveForQr": "Guarda el cupón para generar su código QR y luego descarga el folleto.",
+    "couponQrPlaceholder": "El código QR se generará aquí cuando guardes el cupón."
   },
   "GradientBuilder": {
     "linear": "Lineal",
@@ -1613,5 +1665,15 @@
     "resourceCapacity": "Admite",
     "resourceCapacityHint": "Personas. Varios idénticos son una sola entrada con su total: un grupo nunca se reparte entre dos.",
     "poolSummary": "{total} lugares en total, el mayor admite {largest}"
+  },
+  "Coupon": {
+    "title": "Cupón",
+    "home": "Inicio",
+    "off": "de descuento",
+    "minOrder": "Pedido mínimo {amount}",
+    "validUntil": "Válido hasta el {date}",
+    "ended": "Esta oferta ha terminado.",
+    "startShopping": "Empezar a comprar",
+    "appliedAtCheckout": "El código te estará esperando en el carrito al pagar."
   }
 }

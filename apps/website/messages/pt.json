@@ -206,7 +206,9 @@
     "errorOutOfStock": "Alguns itens não estão mais disponíveis. Remova-os e tente de novo.",
     "errorCartEmpty": "Nenhum destes itens continua à venda.",
     "errorCompleteFailed": "O pedido foi registrado mas não pôde ser marcado como pago. Tente de novo ou faça isso em Pedidos.",
-    "errorGeneric": "Não foi possível registrar a venda. Tente de novo."
+    "errorGeneric": "Não foi possível registrar a venda. Tente de novo.",
+    "errorCoupon": "Esse cupom não é mais válido. Remova-o e tente novamente.",
+    "couponApplied": "{code} · −{amount}"
   },
   "AuthPage": {
     "tabSignIn": "Entrar",
@@ -475,7 +477,20 @@
     "placeOrderNote": "Nada é cobrado agora — você pagará pessoalmente.",
     "checkoutNameRequired": "Informe o seu nome.",
     "checkoutContactRequired": "Informe um e-mail ou telefone.",
-    "checkoutAddressRequired": "Informe um endereço de entrega."
+    "checkoutAddressRequired": "Informe um endereço de entrega.",
+    "couponLabel": "Código de cupom",
+    "couponPlaceholder": "ex. VERAO20",
+    "couponApply": "Aplicar",
+    "couponChecking": "Verificando…",
+    "couponRemove": "Remover",
+    "couponNotFound": "Esse código de cupom não é válido.",
+    "couponInactive": "Esse cupom não está mais ativo.",
+    "couponNotStarted": "Esse cupom ainda não está ativo.",
+    "couponExpired": "Esse cupom expirou.",
+    "couponExhausted": "Esse cupom já foi totalmente resgatado.",
+    "couponWrongCurrency": "Esse cupom não pode ser usado na moeda deste pedido.",
+    "couponMinOrder": "Seu pedido está abaixo do mínimo deste cupom.",
+    "couponError": "Não foi possível aplicar esse cupom."
   },
   "Orders": {
     "heading": "Encomendas",
@@ -543,7 +558,9 @@
     "seeInAdmin": "Ver na administração",
     "bookingParty": "Pessoas",
     "bookingPeople": "{count, plural, one {# pessoa} other {# pessoas}}",
-    "bookingResource": "Atribuído"
+    "bookingResource": "Atribuído",
+    "subtotal": "Subtotal",
+    "discount": "Desconto"
   },
   "VerifyEmailPage": {
     "loading": "Verificando sua conta, aguarde…",
@@ -1120,7 +1137,42 @@
     "mapZoomOut": "Afastar",
     "mapYourLocation": "A tua localização",
     "mapZoomHint": "Usa Ctrl + deslocamento para ampliar o mapa",
-    "mapZoomHintMac": "Usa ⌘ + deslocamento para ampliar o mapa"
+    "mapZoomHintMac": "Usa ⌘ + deslocamento para ampliar o mapa",
+    "coupons": "Cupons",
+    "couponsDesc": "Crie códigos de desconto e baixe panfletos para compartilhar",
+    "couponNew": "Novo cupom",
+    "couponEdit": "Editar cupom",
+    "couponCode": "Código",
+    "couponName": "Nome interno",
+    "couponDescription": "Descrição",
+    "couponKind": "Tipo de desconto",
+    "couponKindPercent": "Porcentagem",
+    "couponKindFixed": "Valor fixo",
+    "couponValue": "Valor",
+    "couponCurrency": "Moeda",
+    "couponMaxRedemptions": "Resgates máximos",
+    "couponUnlimitedHint": "0 = ilimitado",
+    "couponRedemptions": "Resgatado",
+    "couponMinOrder": "Valor mínimo do pedido",
+    "couponMinShort": "Mínimo",
+    "couponStartsAt": "Começa",
+    "couponExpiresAt": "Expira",
+    "couponExpires": "Expira",
+    "couponNoExpiry": "Sem expiração",
+    "couponOff": "DE DESCONTO",
+    "couponValidUntil": "Válido até",
+    "couponFlyer": "Panfleto para compartilhar",
+    "couponTemplate": "Modelo",
+    "couponTemplate_ticket": "Bilhete",
+    "couponTemplate_bold": "Impactante",
+    "couponTemplate_elegant": "Elegante",
+    "couponTemplate_scan": "Escaneie-me",
+    "couponBackground": "Imagem de fundo",
+    "couponBackgroundHint": "Apenas decora a imagem baixada; não é salva no cupom.",
+    "couponDownload": "Baixar panfleto",
+    "couponExportError": "Não foi possível exportar o panfleto.",
+    "couponSaveForQr": "Salve o cupom para gerar o código QR e depois baixe o panfleto.",
+    "couponQrPlaceholder": "O código QR será gerado aqui depois que o cupom for salvo."
   },
   "GradientBuilder": {
     "linear": "Linear",
@@ -1613,5 +1665,15 @@
     "resourceCapacity": "Comporta",
     "resourceCapacityHint": "Pessoas. Vários idênticos são uma só entrada com o total - um grupo nunca se divide entre dois.",
     "poolSummary": "{total} lugares no total, o maior comporta {largest}"
+  },
+  "Coupon": {
+    "title": "Cupom",
+    "home": "Início",
+    "off": "de desconto",
+    "minOrder": "Pedido mínimo {amount}",
+    "validUntil": "Válido até {date}",
+    "ended": "Esta oferta terminou.",
+    "startShopping": "Começar a comprar",
+    "appliedAtCheckout": "O código estará no seu carrinho ao finalizar a compra."
   }
 }

@@ -408,6 +408,110 @@ signature rejection, and the snapshot surviving a price change. Run them with
 `REDIS_URL='' python manage.py test orders` (the local `.env` points Redis at the
 cluster).
 
+## Coupons - a discount code, redeemable a limited number of times
+
+`orders.Coupon` is a campaign a tenant runs: **one coupon is one code**
+("SUMMER20", 20% off, redeemable 50 times, expiring on the 31st), not a batch of
+single-use codes. That is what makes the QR on a poster meaningful - everyone who
+scans it gets the same offer, and `max_redemptions` is what stops it running
+forever. A per-customer single-use code would be a child row per issued code, and
+this model deliberately does not pretend to be both.
+
+The engine is **`orders/services/coupons.py`**, and every path that can discount
+an order goes through it - the signed-in checkout, the guest one, the POS till,
+and the advisory "is this code good?" call the cart makes. Same reason
+`_open_order` is shared by all of them: two copies of "is this coupon still
+valid?" would eventually disagree, and the first symptom would be a code the cart
+accepted being refused at the moment of payment.
+
+- **The discount is order-level**: a percentage or a fixed amount off the cart
+  subtotal, never a per-item rule. That is also the only shape that maps onto a
+  single session-level Stripe discount without inventing per-line rounding.
+- ⚠ **`redeem_coupon` is the only place `times_redeemed` moves, and it must stay
+  a single conditional UPDATE.** Two customers checking out at the same instant
+  both pass `validate_coupon`; a read-modify-write would let both take the 50th
+  of 50 redemptions and store 50 either way. The `filter(times_redeemed__lt=...)`
+  on the queryset is what makes the check and the increment one statement the
+  database resolves serially - `.update()` returning 0 means someone else won.
+- ⚠ **Validation is not a reservation, and losing the race is a refusal.**
+  `apply_coupon_to_order` raises `COUPON_EXHAUSTED` rather than writing the order
+  at full price. The alternative is worse than it looks: a customer quoted 160
+  and charged 200 is a surprise on the Stripe page and, at a counter, an
+  associate reading one number off the till while the receipt prints another.
+  Callers discard the half-built order (`_discount_order`) and return the code.
+- ⚠ **A dead order has to hand its redemption back**, exactly as it hands back a
+  booking slot - the redemption is taken optimistically when checkout opens.
+  `_release_order_coupon` does it on an expired session, a failed payment and a
+  CMS cancel, and the two `order.delete()` branches around Stripe call
+  `release_coupon` directly. Drop any of them and an abandoned checkout quietly
+  burns a redemption the tenant meant to sell with. `release_coupon` is floored
+  at zero with the same conditional-UPDATE shape, so a double-delivered webhook
+  cannot drive a `PositiveIntegerField` negative and fail a webhook that has
+  nothing else wrong with it.
+- **Stripe gets a one-off `amount_off` coupon, never a `percent_off`**
+  (`create_discount_coupon`), applied at the **session** level so the line items
+  stay at the prices the order recorded and the customer sees a named discount.
+  `Order.discount_amount` is the number that was computed, shown and stored;
+  asking Stripe to re-derive a percentage of its own subtotal invites the two to
+  disagree by a cent, at which point nothing reconciles. It is `duration: once`
+  with a `redeem_by` an hour out, so a tenant's dashboard does not fill with one
+  coupon row per discounted sale.
+- ⚠ **A failed Stripe coupon creation must refuse the checkout, not proceed.**
+  The line items are at full price, so going ahead without the discount object
+  charges the undiscounted total against an order that records the discounted
+  one. `_checkout` deletes the order, releases the redemption and returns
+  `COUPON_ERROR`.
+- ⚠ **`discount_coupon` is ignored alongside `charge_amount`.** That path
+  collapses the basket into a single amount for a booking *deposit*, and a
+  discount on top of a partial charge takes it off the deposit rather than the
+  order - discounting the same money twice once the remainder is collected.
+  Bookings do not take coupons today, and this is what keeps that explicit rather
+  than silently wrong.
+- **The code is matched case-insensitively**, and the unique constraint is on
+  `Upper("code")` per system - the customer is typing off a poster on a keyboard
+  that auto-capitalises, and two rows differing only in case would race for the
+  same redemptions with whichever one the query returned owning them.
+- **`Order.coupon` is `SET_NULL` and `coupon_code`/`discount_amount` are
+  snapshots**, exactly like `OrderLine`. Deleting a finished campaign must not
+  erase the record of the discounts it gave, and a percentage re-applied to
+  today's subtotal would drift from what was actually charged.
+- **A fixed-amount coupon is refused in another currency** rather than converted -
+  the same rule that refuses a mixed-currency cart, for the same reason: we have
+  no rate. A percentage carries no currency and applies to any basket.
+- **The discount is clamped to the subtotal.** A 500-off coupon on a 300 basket
+  discounts 300: a negative total is not a refund, it is a Stripe session that
+  cannot be created.
+- **`attach_coupon_qr` deletes the old file before writing**, unlike the order QR
+  which is written once and left alone forever. A coupon's code is editable and
+  the PNG encodes a URL built from it, so a rename has to re-render - and storage
+  backends do not overwrite, they suffix (`<public_id>_wTGsKbw.png`), so without
+  the delete every save orphans the previous PNG in the bucket.
+- **The QR is named after `public_id`, not `code`** - a tenant fixing a typo in
+  the code would otherwise orphan the file that is already on a printed flyer.
+  Unlike an order's QR this file is *meant* to be public; there is nothing here
+  to guess your way into.
+- **`brand_logo_background` + its two scales are stored** alongside
+  `template_id`, mirroring `SocialPost`'s trio (same choices, same 30-100
+  bounds, same "none draws it bare" default) so a flyer and a post stay
+  recognisably one brand. They are columns while the flyer's *backdrop* upload
+  deliberately is not: a backdrop decorates one exported JPG, but the logo
+  lockup is how the coupon looks every time it is re-downloaded.
+
+Endpoints: `POST /api/coupons/validate/` and `GET /api/coupons/<code>/` are
+`AllowAny` (a visitor scans a poster before they have any reason to sign in, and
+is scoped by `X-Website-Host`); `/api/coupons/admin/` and
+`/api/coupons/admin/<pk>/` are `IsSystemAdmin`, scoped to the caller's own System.
+**None of them are cached**, deliberately: `times_redeemed` moves on every
+checkout, so a cached "still available" outliving the last redemption is the one
+wrong answer that costs a customer a wasted trip to the cart. Same exception an
+individual order already carries. The public landing serves the narrow
+`CouponPublicSerializer` - what the offer *is*, never how the campaign is
+performing - and answers 200 with `valid: false` for an expired coupon rather
+than 404, so the page can say "this offer has ended" for a code the tenant really
+did print.
+
+Tests: `CouponTests` in `orders/tests.py`.
+
 ## Bookings - a Service sold as an appointment
 
 A `Service` with `booking_enabled` is sold as a scheduled appointment instead of

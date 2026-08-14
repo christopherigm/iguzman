@@ -24,6 +24,10 @@ const ALLOWED_PREFIXES = [
   // and booking-checkout endpoints are reached from the storefront through
   // their own handlers, not through this admin proxy.
   "bookings/admin/",
+  // Only the admin sub-tree, like the bookings above: the public validate and
+  // landing endpoints are reached from the storefront by their own handlers, and
+  // proxying them here would put a customer-facing read behind an admin token.
+  "coupons/admin/",
   // Listing, creating and deleting restore points only. Downloading an archive
   // and uploading one to restore are binary/multipart and cannot come through
   // here (this proxy re-encodes every body and response as JSON) - they have

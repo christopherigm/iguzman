@@ -206,7 +206,9 @@
     "errorOutOfStock": "Some items are no longer available. Remove them and try again.",
     "errorCartEmpty": "None of these items are still on sale.",
     "errorCompleteFailed": "The order was recorded but could not be marked paid. Try again, or settle it from Orders.",
-    "errorGeneric": "Could not record the sale. Try again."
+    "errorGeneric": "Could not record the sale. Try again.",
+    "errorCoupon": "That coupon is no longer valid. Remove it and try again.",
+    "couponApplied": "{code} · −{amount}"
   },
   "AuthPage": {
     "tabSignIn": "Sign In",
@@ -475,7 +477,20 @@
     "placeOrderNote": "No payment is taken now — you'll pay in person.",
     "checkoutNameRequired": "Please enter your name.",
     "checkoutContactRequired": "Please enter an email or phone number.",
-    "checkoutAddressRequired": "Please enter a delivery address."
+    "checkoutAddressRequired": "Please enter a delivery address.",
+    "couponLabel": "Coupon code",
+    "couponPlaceholder": "e.g. SUMMER20",
+    "couponApply": "Apply",
+    "couponChecking": "Checking…",
+    "couponRemove": "Remove",
+    "couponNotFound": "That coupon code is not valid.",
+    "couponInactive": "That coupon is no longer active.",
+    "couponNotStarted": "That coupon is not active yet.",
+    "couponExpired": "That coupon has expired.",
+    "couponExhausted": "That coupon has been fully redeemed.",
+    "couponWrongCurrency": "That coupon cannot be used on this order's currency.",
+    "couponMinOrder": "Your order is below this coupon's minimum.",
+    "couponError": "That coupon could not be applied."
   },
   "Orders": {
     "heading": "Orders",
@@ -543,7 +558,9 @@
     "seeInAdmin": "See in admin",
     "bookingParty": "People",
     "bookingPeople": "{count, plural, one {# person} other {# people}}",
-    "bookingResource": "Assigned"
+    "bookingResource": "Assigned",
+    "subtotal": "Subtotal",
+    "discount": "Discount"
   },
   "VerifyEmailPage": {
     "loading": "Verifying your account, please wait…",
@@ -1120,7 +1137,42 @@
     "mapZoomOut": "Zoom out",
     "mapYourLocation": "Your location",
     "mapZoomHint": "Use Ctrl + scroll to zoom the map",
-    "mapZoomHintMac": "Use ⌘ + scroll to zoom the map"
+    "mapZoomHintMac": "Use ⌘ + scroll to zoom the map",
+    "coupons": "Coupons",
+    "couponsDesc": "Create discount codes and download shareable flyers",
+    "couponNew": "New coupon",
+    "couponEdit": "Edit coupon",
+    "couponCode": "Code",
+    "couponName": "Internal name",
+    "couponDescription": "Description",
+    "couponKind": "Discount type",
+    "couponKindPercent": "Percentage",
+    "couponKindFixed": "Fixed amount",
+    "couponValue": "Value",
+    "couponCurrency": "Currency",
+    "couponMaxRedemptions": "Maximum redemptions",
+    "couponUnlimitedHint": "0 = unlimited",
+    "couponRedemptions": "Redeemed",
+    "couponMinOrder": "Minimum order amount",
+    "couponMinShort": "Minimum",
+    "couponStartsAt": "Starts",
+    "couponExpiresAt": "Expires",
+    "couponExpires": "Expires",
+    "couponNoExpiry": "No expiry",
+    "couponOff": "OFF",
+    "couponValidUntil": "Valid until",
+    "couponFlyer": "Shareable flyer",
+    "couponTemplate": "Template",
+    "couponTemplate_ticket": "Ticket",
+    "couponTemplate_bold": "Bold",
+    "couponTemplate_elegant": "Elegant",
+    "couponTemplate_scan": "Scan me",
+    "couponBackground": "Background image",
+    "couponBackgroundHint": "Only decorates the downloaded image; it is not saved on the coupon.",
+    "couponDownload": "Download flyer",
+    "couponExportError": "The flyer could not be exported.",
+    "couponSaveForQr": "Save the coupon to generate its QR code, then download the flyer.",
+    "couponQrPlaceholder": "The QR code will be generated here once the coupon is saved."
   },
   "GradientBuilder": {
     "linear": "Linear",
@@ -1613,5 +1665,15 @@
     "resourceCapacity": "Holds",
     "resourceCapacityHint": "People. Several identical ones are a single entry with their total - a group never splits across two.",
     "poolSummary": "{total} places in total, largest holds {largest}"
+  },
+  "Coupon": {
+    "title": "Coupon",
+    "home": "Home",
+    "off": "off",
+    "minOrder": "Minimum order {amount}",
+    "validUntil": "Valid until {date}",
+    "ended": "This offer has ended.",
+    "startShopping": "Start shopping",
+    "appliedAtCheckout": "The code will be waiting in your cart at checkout."
   }
 }

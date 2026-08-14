@@ -188,7 +188,15 @@ export default async function LocaleLayout({ children, params }: Props) {
               href="https://fonts.gstatic.com"
               crossOrigin=""
             />
-            <link rel="stylesheet" href={fontUrl} />
+            {/* ⚠ `crossOrigin` is load-bearing for the CMS's flyer exports, not
+                a tidy-up. Without it the browser marks this stylesheet
+                origin-unclean, and every read of `sheet.cssRules` throws a
+                SecurityError - which is exactly what `html-to-image` does when
+                it walks the page's stylesheets to embed the @font-face rules
+                for a coupon or social-post capture. Google Fonts answers with
+                `access-control-allow-origin: *`, so requesting it in CORS mode
+                makes the sheet readable and the export silent. */}
+            <link rel="stylesheet" href={fontUrl} crossOrigin="anonymous" />
           </>
         )}
         <ThemeScript defaultMode="light" />

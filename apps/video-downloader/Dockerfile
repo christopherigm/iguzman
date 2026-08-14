@@ -80,8 +80,24 @@ RUN apk add --no-cache \
 # (or any new value) to force a re-pull even when no new release exists.
 ADD https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest /tmp/yt-dlp-release.json
 ARG CACHEBUST=1
+# curl_cffi is pinned below 0.14 on purpose. The TikTok extractor requests its
+# webpage with impersonate=True, which is an *empty* ImpersonateTarget meaning
+# "match any" - and because that empty target is truthy it takes precedence over
+# --impersonate, so the flag cannot be used to steer this. yt-dlp then resolves
+# it to the first entry of _SUPPORTED_IMPERSONATE_TARGET_MAP, i.e. the newest
+# target curl_cffi offers. curl_cffi 0.14 added chrome142, and TikTok's WAF
+# answers that fingerprint with a 537-byte "Site Maintenance" page instead of
+# the video page, which surfaces as the misleading
+#   ERROR: [TikTok] <id>: Unexpected response from webpage request
+# (the challenge solver bails because there is no challenge markup to parse).
+# Every other target - chrome131 and older, safari, firefox, edge - still works.
+# Holding curl_cffi at 0.13.x keeps chrome142 out of the map so the default
+# resolves to chrome-131:macos-14.
+# Re-check on yt-dlp upgrades: once chrome142 lands in _DEPRIORITIZED_TARGETS in
+# yt_dlp/networking/_curlcffi.py, this pin can be dropped.
 RUN pip install --break-system-packages --no-cache-dir --upgrade \
     "yt-dlp[default,curl-cffi]" \
+    "curl_cffi<0.14" \
     gallery-dl
 
 # Copy only what the standalone server needs

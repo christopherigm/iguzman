@@ -16,6 +16,8 @@ import {
   type PosPaymentMethod,
 } from "@/lib/admin-api";
 import { toCartPayload, type PosLine } from "@/lib/pos";
+import { CouponField } from "@/components/coupon-field";
+import type { CouponQuote } from "@/lib/coupon-shared";
 
 interface Props {
   lines: PosLine[];
@@ -57,7 +59,19 @@ export function PosChargePanel({
   /** Set once the order exists; from here the sale is recorded and the only
    *  remaining question is whether the money arrived. */
   const [placed, setPlaced] = useState<{ publicId: string } | null>(null);
+  /** The coupon the customer handed over, if any. Cleared with the basket. */
+  const [coupon, setCoupon] = useState<CouponQuote | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  /**
+   * What the customer actually hands over.
+   *
+   * Taken from the API's own quote rather than recomputed from `total` here -
+   * the till must never do the discount arithmetic itself, or a rounding rule
+   * that differs from Django's puts a different number on the screen than on the
+   * receipt. Falls back to the basket total when no coupon is applied.
+   */
+  const due = coupon ? Number(coupon.total) : total;
 
   const failureMessage = (err: unknown): string => {
     if (err instanceof AdminApiError) {
@@ -65,6 +79,11 @@ export function PosChargePanel({
       if (code === "OUT_OF_STOCK") return t("errorOutOfStock");
       if (code === "CART_EMPTY") return t("errorCartEmpty");
       if (code === "MIXED_CURRENCY") return t("mixedCurrency");
+      // The coupon ran out (or expired) between the associate applying it and
+      // pressing Place. The API refuses rather than silently charging full
+      // price, so the till has to be able to say why - a customer quoted one
+      // number and charged another is a dispute at the counter.
+      if (code?.startsWith("COUPON_")) return t("errorCoupon");
     }
     return t("errorGeneric");
   };
@@ -75,6 +94,10 @@ export function PosChargePanel({
         const order = await posCheckout({
           cart: toCartPayload(lines),
           payment_method: method,
+          // The code only. The API re-validates it and re-prices the basket, so
+          // the amount on this screen is what it *will* charge, never what it
+          // is told to charge.
+          ...(coupon ? { coupon_code: coupon.code } : {}),
           // Only sent when the associate actually took one; the API treats every
           // contact field as optional.
           ...(email.trim() ? { contact: { email: email.trim() } } : {}),
@@ -133,8 +156,16 @@ export function PosChargePanel({
             {t("amountDue")}
           </Typography>
           <Typography variant="h1" margin={0} fontWeight={700}>
-            {formatPrice(total.toFixed(2), currency)}
+            {formatPrice(due.toFixed(2), currency)}
           </Typography>
+          {coupon ? (
+            <Typography variant="caption" margin={0} textAlign="center">
+              {t("couponApplied", {
+                code: coupon.code,
+                amount: formatPrice(coupon.discount, currency),
+              })}
+            </Typography>
+          ) : null}
         </Box>
 
         {placed ? (
@@ -173,6 +204,13 @@ export function PosChargePanel({
                 onClick={() => setMethod("cash")}
               />
             </Box>
+
+            <CouponField
+              cart={toCartPayload(lines)}
+              quote={coupon}
+              onChange={setCoupon}
+              size="lg"
+            />
 
             <TextInput
               label={t("receiptEmail")}

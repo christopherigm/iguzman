@@ -978,6 +978,12 @@ export async function posCheckout(payload: {
   cart: PosCartLine[];
   payment_method: PosPaymentMethod;
   contact?: PosContact;
+  /**
+   * A coupon the customer presented at the counter. The **code only** - the API
+   * re-validates it and re-prices the basket, so the till can no more name a
+   * discount than it can name a price.
+   */
+  coupon_code?: string;
 }) {
   const res = await adminFetch(`/api/orders/admin/pos/`, {
     method: "POST",
@@ -1089,6 +1095,85 @@ export async function updateSocialPost(
 }
 export async function deleteSocialPost(pk: number) {
   const res = await adminFetch(`/api/social-posts/${pk}/`, {
+    method: "DELETE",
+  });
+  return parseResponse<void>(res);
+}
+
+// ---- Coupons ----
+// Scoped to the admin's own tenant server-side (from the token), like the
+// contact inbox and the order list, so no `system` param is sent.
+
+/** How a coupon's `value` is read: a percentage, or an amount in `currency`. */
+export type CouponKind = "percent" | "fixed";
+
+export interface Coupon {
+  id: number;
+  public_id: string;
+  code: string;
+  /** Internal label for the CMS list - never shown to a customer. */
+  name: string;
+  /** Shown to the customer on the `/coupon/<code>` landing the QR points at. */
+  description: string;
+  kind: CouponKind;
+  value: string;
+  currency: string;
+  /** 0 means unlimited. */
+  max_redemptions: number;
+  times_redeemed: number;
+  /** Null when the coupon is unlimited. */
+  redemptions_left: number | null;
+  is_exhausted: boolean;
+  starts_at: string | null;
+  expires_at: string | null;
+  min_order_amount: string;
+  enabled: boolean;
+  template_id: string;
+  /**
+   * The stored QR PNG. **Null when the write failed** - a coupon with no code
+   * image is still a working coupon, so every render site must cope rather than
+   * assume one is there.
+   */
+  qr_code: string | null;
+  /** The URL that QR encodes, resolved from the tenant's own host by the API. */
+  landing_url: string;
+  /**
+   * The plate behind the brand logo on the flyer, and the two sizes that tune
+   * it - the same trio a `SocialPost` carries, so a flyer and a post stay
+   * recognisably one brand. Stored (unlike the flyer's backdrop upload) because
+   * the lockup is part of how this coupon looks every time it is re-downloaded.
+   */
+  brand_logo_background: string;
+  brand_logo_background_scale: number;
+  brand_logo_scale: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function listCoupons() {
+  const res = await adminFetch(`/api/coupons/admin/`);
+  return parseResponse<Coupon[]>(res);
+}
+export async function getCoupon(pk: number) {
+  const res = await adminFetch(`/api/coupons/admin/${pk}/`);
+  return parseResponse<Coupon>(res);
+}
+export async function createCoupon(data: Record<string, unknown>) {
+  const res = await adminFetch(`/api/coupons/admin/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Coupon>(res);
+}
+export async function updateCoupon(pk: number, data: Record<string, unknown>) {
+  const res = await adminFetch(`/api/coupons/admin/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Coupon>(res);
+}
+export async function deleteCoupon(pk: number) {
+  const res = await adminFetch(`/api/coupons/admin/${pk}/`, {
     method: "DELETE",
   });
   return parseResponse<void>(res);

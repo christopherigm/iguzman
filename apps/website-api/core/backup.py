@@ -197,6 +197,10 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         "users.UserProfile", SECTION_SYSTEM, "system",
         natural_key=("user",), never_delete=True,
     ),
+    # Ahead of Order, which points at it: a restore that wrote the orders first
+    # would have nothing to resolve their `coupon` FK against and would silently
+    # null it out, losing which campaign each sale came from.
+    ModelSpec("orders.Coupon", SECTION_SYSTEM, "system", natural_key=("code",)),
     ModelSpec("orders.Order", SECTION_SYSTEM, "system", natural_key=("public_id",)),
     ModelSpec("orders.OrderLine", SECTION_SYSTEM, "order__system", parent="order"),
     # An appointment is part of its order's record and has to survive a restore

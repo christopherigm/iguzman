@@ -7,7 +7,11 @@ from .views import (
     AdminOrderListView,
     BookingAvailabilityView,
     BookingCheckoutView,
+    AdminCouponDetailView,
+    AdminCouponListView,
     CheckoutView,
+    CouponPublicDetailView,
+    CouponValidateView,
     OrderDetailView,
     OrderListView,
     OrderPayView,
@@ -25,6 +29,17 @@ urlpatterns = [
     path("bookings/checkout/", BookingCheckoutView.as_view(), name="booking-checkout"),
     path("bookings/admin/", AdminBookingListView.as_view(), name="admin-booking-list"),
     path("bookings/admin/<int:pk>/", AdminBookingDetailView.as_view(), name="admin-booking-detail"),
+    # Coupons. Under their own top-level prefix rather than `orders/coupons/`
+    # because a coupon exists before any order does - it is a campaign the tenant
+    # runs, which some orders happen to reference.
+    path("coupons/admin/", AdminCouponListView.as_view(), name="admin-coupon-list"),
+    path("coupons/admin/<int:pk>/", AdminCouponDetailView.as_view(), name="admin-coupon-detail"),
+    # Ahead of `<str:code>/`, which would otherwise swallow "validate" as a code.
+    path("coupons/validate/", CouponValidateView.as_view(), name="coupon-validate"),
+    # The address every coupon QR resolves to, via the storefront's own
+    # `/coupon/<code>` page. `str` rather than `slug` so a code is matched exactly
+    # as it was printed and an unknown one 404s here instead of failing to route.
+    path("coupons/<str:code>/", CouponPublicDetailView.as_view(), name="coupon-detail"),
     # Tenant order management. Ahead of the customer routes below, though the
     # `<uuid>` converter would not match "admin" anyway.
     path("orders/admin/", AdminOrderListView.as_view(), name="admin-order-list"),

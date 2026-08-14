@@ -77,6 +77,15 @@ export const ADMIN_NAV_ITEMS = [
     icon: "🍽️",
     descKey: "menuItemsDesc",
   },
+  // Beside social posts rather than beside orders: both are things the tenant
+  // *makes* and downloads as an image to share, and they are used on the same
+  // rhythm - a campaign gets a coupon and the posts that carry it in one sitting.
+  {
+    key: "coupons",
+    href: "/admin/coupons",
+    icon: "🎟️",
+    descKey: "couponsDesc",
+  },
   {
     key: "socialPosts",
     href: "/admin/social-posts",

@@ -206,7 +206,9 @@
     "errorOutOfStock": "Certains articles ne sont plus disponibles. Retirez-les et réessayez.",
     "errorCartEmpty": "Aucun de ces articles n'est encore en vente.",
     "errorCompleteFailed": "La commande a été enregistrée mais n'a pas pu être marquée payée. Réessayez ou faites-le depuis Commandes.",
-    "errorGeneric": "Impossible d'enregistrer la vente. Réessayez."
+    "errorGeneric": "Impossible d'enregistrer la vente. Réessayez.",
+    "errorCoupon": "Ce code promo n'est plus valide. Retirez-le et réessayez.",
+    "couponApplied": "{code} · −{amount}"
   },
   "AuthPage": {
     "tabSignIn": "Connexion",
@@ -475,7 +477,20 @@
     "placeOrderNote": "Aucun paiement maintenant — vous paierez en personne.",
     "checkoutNameRequired": "Veuillez saisir votre nom.",
     "checkoutContactRequired": "Veuillez saisir un e-mail ou un téléphone.",
-    "checkoutAddressRequired": "Veuillez saisir une adresse de livraison."
+    "checkoutAddressRequired": "Veuillez saisir une adresse de livraison.",
+    "couponLabel": "Code promo",
+    "couponPlaceholder": "ex. ETE20",
+    "couponApply": "Appliquer",
+    "couponChecking": "Vérification…",
+    "couponRemove": "Retirer",
+    "couponNotFound": "Ce code promo n'est pas valide.",
+    "couponInactive": "Ce code promo n'est plus actif.",
+    "couponNotStarted": "Ce code promo n'est pas encore actif.",
+    "couponExpired": "Ce code promo a expiré.",
+    "couponExhausted": "Ce code promo a été entièrement utilisé.",
+    "couponWrongCurrency": "Ce code promo ne s'applique pas à la devise de cette commande.",
+    "couponMinOrder": "Votre commande est inférieure au minimum de ce code promo.",
+    "couponError": "Ce code promo n'a pas pu être appliqué."
   },
   "Orders": {
     "heading": "Commandes",
@@ -543,7 +558,9 @@
     "seeInAdmin": "Voir dans l'administration",
     "bookingParty": "Personnes",
     "bookingPeople": "{count, plural, one {# personne} other {# personnes}}",
-    "bookingResource": "Attribué"
+    "bookingResource": "Attribué",
+    "subtotal": "Sous-total",
+    "discount": "Remise"
   },
   "VerifyEmailPage": {
     "loading": "Vérification de votre compte, veuillez patienter…",
@@ -1120,7 +1137,42 @@
     "mapZoomOut": "Zoom arrière",
     "mapYourLocation": "Votre position",
     "mapZoomHint": "Utilisez Ctrl + molette pour zoomer sur la carte",
-    "mapZoomHintMac": "Utilisez ⌘ + molette pour zoomer sur la carte"
+    "mapZoomHintMac": "Utilisez ⌘ + molette pour zoomer sur la carte",
+    "coupons": "Codes promo",
+    "couponsDesc": "Créez des codes de réduction et téléchargez des visuels à partager",
+    "couponNew": "Nouveau code promo",
+    "couponEdit": "Modifier le code promo",
+    "couponCode": "Code",
+    "couponName": "Nom interne",
+    "couponDescription": "Description",
+    "couponKind": "Type de remise",
+    "couponKindPercent": "Pourcentage",
+    "couponKindFixed": "Montant fixe",
+    "couponValue": "Valeur",
+    "couponCurrency": "Devise",
+    "couponMaxRedemptions": "Utilisations maximum",
+    "couponUnlimitedHint": "0 = illimité",
+    "couponRedemptions": "Utilisé",
+    "couponMinOrder": "Montant minimum de commande",
+    "couponMinShort": "Minimum",
+    "couponStartsAt": "Début",
+    "couponExpiresAt": "Expire",
+    "couponExpires": "Expire",
+    "couponNoExpiry": "Sans expiration",
+    "couponOff": "DE RÉDUCTION",
+    "couponValidUntil": "Valable jusqu'au",
+    "couponFlyer": "Visuel à partager",
+    "couponTemplate": "Modèle",
+    "couponTemplate_ticket": "Ticket",
+    "couponTemplate_bold": "Impactant",
+    "couponTemplate_elegant": "Élégant",
+    "couponTemplate_scan": "Scannez-moi",
+    "couponBackground": "Image de fond",
+    "couponBackgroundHint": "Décore uniquement l'image téléchargée ; elle n'est pas enregistrée sur le code promo.",
+    "couponDownload": "Télécharger le visuel",
+    "couponExportError": "Le visuel n'a pas pu être exporté.",
+    "couponSaveForQr": "Enregistrez le code promo pour générer son QR code, puis téléchargez le visuel.",
+    "couponQrPlaceholder": "Le QR code sera généré ici une fois le code promo enregistré."
   },
   "GradientBuilder": {
     "linear": "Linéaire",
@@ -1613,5 +1665,15 @@
     "resourceCapacity": "Accueille",
     "resourceCapacityHint": "Personnes. Plusieurs identiques forment une seule entrée avec leur total - un groupe ne se répartit jamais sur deux.",
     "poolSummary": "{total} places au total, la plus grande accueille {largest}"
+  },
+  "Coupon": {
+    "title": "Code promo",
+    "home": "Accueil",
+    "off": "de réduction",
+    "minOrder": "Commande minimum {amount}",
+    "validUntil": "Valable jusqu'au {date}",
+    "ended": "Cette offre est terminée.",
+    "startShopping": "Commencer mes achats",
+    "appliedAtCheckout": "Le code vous attendra dans votre panier au moment de payer."
   }
 }

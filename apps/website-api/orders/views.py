@@ -4,7 +4,7 @@ from datetime import timezone as dt_timezone
 from decimal import ROUND_HALF_UP, Decimal
 
 from django.core.cache import cache
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import F, Value
 from django.db.models.functions import Greatest
 from django.utils import timezone
@@ -32,7 +32,7 @@ from .cache import (
     invalidate_orders,
     orders_key,
 )
-from .models import Booking, Order, OrderLine
+from .models import Booking, Coupon, Order, OrderLine
 from .serializers import (
     AdminBookingActionSerializer,
     AdminBookingSerializer,
@@ -41,6 +41,9 @@ from .serializers import (
     AdminOrderSummarySerializer,
     BookingCheckoutSerializer,
     CheckoutSerializer,
+    CouponPublicSerializer,
+    CouponSerializer,
+    CouponValidateSerializer,
     OrderSerializer,
     OrderSummarySerializer,
     PosCheckoutSerializer,
@@ -59,11 +62,21 @@ from .services.order_emails import (
     STATUS,
     send_order_email,
 )
+from .services.coupons import (
+    CouponError,
+    apply_coupon_to_order,
+    attach_coupon_qr,
+    discount_for,
+    find_coupon,
+    release_coupon,
+    validate_coupon,
+)
 from .services.qr import attach_order_qr, site_base_url
 from .services.stripe_gateway import (
     StripeGatewayError,
     StripeNotConfigured,
     create_checkout_session,
+    create_discount_coupon,
     expire_session,
     retrieve_session,
     verify_webhook,
@@ -282,9 +295,31 @@ class CheckoutView(APIView):
         if error is not None:
             return error
 
+        # Before the offline branch and before Stripe: both charge `order.total`,
+        # so the discount has to be on the order by the time either reads it.
+        refusal = _discount_order(order, system, data.get("coupon_code", "").strip())
+        if refusal is not None:
+            return refusal
+
         if is_offline:
             return self._finalize_offline(
                 order, user, system, method, locale, contact, data.get("shipping") or {},
+            )
+
+        # None when the order carries no discount, which is every order placed
+        # without a coupon - but also when Stripe refused to create the coupon.
+        # Those two must not be confused: the line items are at full price, so
+        # going ahead without the discount object would charge the customer the
+        # undiscounted total while the order records the discounted one. Refuse
+        # instead, and let them retry - the redemption goes back with the order.
+        discount_coupon = create_discount_coupon(system, order)
+        if order.discount_amount > 0 and discount_coupon is None:
+            if order.coupon_id:
+                release_coupon(order.coupon)
+            order.delete()
+            return Response(
+                {"detail": "Could not apply that coupon. Please try again.", "code": "COUPON_ERROR"},
+                status=status.HTTP_502_BAD_GATEWAY,
             )
 
         base_url = _site_base_url(system)
@@ -293,12 +328,18 @@ class CheckoutView(APIView):
                 system=system,
                 order=order,
                 lines=lines,
+                discount_coupon=discount_coupon,
                 success_url=f"{base_url}/{locale}/orders/{order.public_id}?session_id={{CHECKOUT_SESSION_ID}}",
                 cancel_url=f"{base_url}/{locale}/cart",
                 # Omitted for a guest so Stripe's own page asks for it.
                 customer_email=(user.email or "") if user else "",
             )
         except StripeNotConfigured:
+            # The redemption was taken when the discount was applied; the order it
+            # was taken for is about to stop existing, so it has to go back or the
+            # campaign quietly loses a redemption to a checkout that never opened.
+            if order.coupon_id:
+                release_coupon(order.coupon)
             order.delete()
             return Response(
                 {"detail": "This site is not set up to take payments.", "code": "PAYMENTS_UNAVAILABLE"},
@@ -308,6 +349,8 @@ class CheckoutView(APIView):
             # The order has no session and can never be paid, so it would only sit
             # in the customer's history as a phantom. Already logged in the gateway
             # with the upstream detail, which is not for the browser.
+            if order.coupon_id:
+                release_coupon(order.coupon)
             order.delete()
             return Response(
                 {"detail": "Could not start checkout. Please try again.", "code": "STRIPE_ERROR"},
@@ -471,6 +514,64 @@ def _open_order(system, user, items, *, order_status, payment_method, email, def
         attach_order_qr(order)
 
     return order, lines, None
+
+
+def _discount_order(order, system, code):
+    """Apply `code` to a freshly opened `order`, or return the 4xx that refuses it.
+
+    Returns `None` when there is nothing to do (no code) or the discount landed;
+    a `Response` when the coupon cannot be honoured. **On a refusal the order is
+    deleted**, exactly as the `StripeNotConfigured` branch deletes one: it has no
+    payment behind it and would otherwise sit in the customer's history as a
+    phantom of a checkout they never completed.
+
+    Validated here against `order.subtotal` - the number `_open_order` just
+    computed off the catalog - rather than against anything the caller passed in,
+    so this cannot be handed a subtotal the lines do not add up to. The cart
+    already validated the same code through `CouponValidateView`, and this is not
+    a duplicate of that: that call is advisory and touches nothing, while this one
+    is what actually takes the redemption.
+    """
+    if not code:
+        return None
+
+    try:
+        coupon = validate_coupon(
+            system, code, subtotal=order.subtotal, currency=order.currency,
+        )
+        apply_coupon_to_order(order, coupon, subtotal=order.subtotal)
+    except CouponError as exc:
+        order.delete()
+        return Response(
+            {"detail": exc.detail, "code": exc.code},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    return None
+
+
+def _release_order_coupon(order) -> bool:
+    """Hand back the redemption an order took, and forget it ever had one.
+
+    Called wherever an order stops being a sale - an expired or failed Stripe
+    session, a tenant cancelling from the CMS - and it mirrors `_release_booking`
+    exactly: the redemption, like the appointment slot, is taken optimistically
+    when checkout opens so two customers cannot both claim the last one, and
+    something has to give it back when the checkout dies.
+
+    `discount_amount` is cleared with it so a canceled order does not read as
+    though a discount was ever given, while `coupon_code` stays: what the customer
+    typed is part of the record of the attempt. Idempotent by way of the
+    `coupon_id` check, so a double-delivered webhook cannot refund two redemptions
+    for one order.
+    """
+    if not order.coupon_id:
+        return False
+    release_coupon(order.coupon)
+    order.coupon = None
+    order.discount_amount = Decimal("0.00")
+    order.total = order.subtotal
+    order.save(update_fields=["coupon", "discount_amount", "total", "updated_at"])
+    return True
 
 
 def _decrement_order_stock(order):
@@ -1097,6 +1198,10 @@ class AdminOrderDetailView(APIView):
                 # Canceling from the orders list must free the appointment too,
                 # or the tenant has called off a job whose hour stays blocked.
                 _release_booking(order)
+                # And its redemption, for the same reason: an order the tenant
+                # refused was never a sale, so it must not have cost the campaign
+                # one of its uses.
+                _release_order_coupon(order)
 
         elif action == Action.MARK_FULFILLED:
             order.fulfilled = True
@@ -1176,6 +1281,14 @@ class PosCheckoutView(APIView):
         if error is not None:
             return error
 
+        # A counter sale takes a coupon exactly as the storefront does - the
+        # customer hands over a phone with the QR on it, or reads the code off a
+        # flyer. Same engine, so the till cannot quote a discount the site would
+        # not have given.
+        refusal = _discount_order(order, system, data.get("coupon_code", "").strip())
+        if refusal is not None:
+            return refusal
+
         order.phone = (contact.get("phone") or "").strip()
         order.shipping_name = (contact.get("name") or "").strip()
 
@@ -1195,6 +1308,243 @@ class PosCheckoutView(APIView):
             AdminOrderSerializer(order, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+def _basket_totals(system, request, cart_refs):
+    """The subtotal and currency of whatever basket this caller has.
+
+    A signed-in customer's own cart rows, or - for a guest, or the POS - the
+    references in the body, re-priced by `resolve_guest_cart`. Either way the
+    numbers come off the catalog, never off the request.
+
+    Returns `(subtotal, currency)`, with `currency` None for an empty or
+    mixed-currency basket: a coupon cannot be judged against either, and both are
+    refused further up by the time real money is involved.
+    """
+    if request.user.is_authenticated and not cart_refs:
+        items = list(_cart_qs(request.user, system))
+    else:
+        items = resolve_guest_cart(system, cart_refs or [])
+
+    if not items:
+        return Decimal("0.00"), None
+
+    currencies = {item.target.currency for item in items}
+    subtotal = sum((item.line_total for item in items), Decimal("0.00"))
+    return subtotal, currencies.pop() if len(currencies) == 1 else None
+
+
+class CouponValidateView(APIView):
+    """POST /api/coupons/validate/ - is this code good for this basket?
+
+    Answers the cart's "Apply" button while the customer is still typing, so a
+    dead code is refused where there is room to explain it rather than at the
+    moment of payment. **It changes nothing**: no redemption is held, no row is
+    touched, and the same validation runs again inside checkout - which is the
+    only place that may take a redemption.
+
+    That means a coupon can validate here and still be refused seconds later, if
+    someone else took the last redemption in between. That race is deliberate and
+    unavoidable (holding one open would need a reservation with an expiry, and
+    would let a script exhaust a campaign by opening carts), and checkout handles
+    losing it gracefully - see `apply_coupon_to_order`.
+
+    `AllowAny`, like checkout itself: a guest may use a coupon, and an anonymous
+    caller is scoped by `X-Website-Host` exactly as their cart already is.
+    """
+
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        system = request_system(request)
+        if system is None:
+            return Response(
+                {"detail": "Unknown site.", "code": "NO_SYSTEM"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = CouponValidateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        subtotal, currency = _basket_totals(
+            system, request, serializer.validated_data.get("cart"),
+        )
+        if currency is None:
+            # An empty cart or a mixed-currency one. Checkout refuses both on
+            # their own terms; here there is simply no basket to price a discount
+            # against, and saying "your cart is empty" is more use than a coupon
+            # verdict the customer cannot act on.
+            return Response(
+                {"detail": "Your cart is empty.", "code": "CART_EMPTY"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            coupon = validate_coupon(
+                system, serializer.validated_data["code"],
+                subtotal=subtotal, currency=currency,
+            )
+        except CouponError as exc:
+            return Response(
+                {"detail": exc.detail, "code": exc.code},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        discount = discount_for(coupon, subtotal)
+        return Response(
+            {
+                "code": coupon.code,
+                "kind": coupon.kind,
+                "value": str(coupon.value),
+                "currency": currency,
+                "subtotal": str(subtotal),
+                "discount": str(discount),
+                "total": str(subtotal - discount),
+            }
+        )
+
+
+class CouponPublicDetailView(APIView):
+    """GET /api/coupons/<code>/ - the offer behind a scanned QR code.
+
+    Feeds the storefront's `/coupon/<code>` landing, which is where every coupon
+    QR points. `AllowAny` and scoped by host, because the whole point is that
+    someone who has never visited the site scans a poster and arrives here.
+
+    Serves the deliberately narrow `CouponPublicSerializer` - what the offer *is*,
+    never how the campaign is performing. And it answers 200 with `valid: false`
+    for an expired or exhausted coupon rather than 404: the page can then say
+    "this offer has ended" instead of showing a generic not-found for a code the
+    tenant really did print. An unknown code is still a 404.
+
+    Not cached, for the same reason an individual order is not: `valid` folds in
+    `is_exhausted`, which moves on every checkout, and a cached "still available"
+    outliving the last redemption is the one wrong answer here that costs a
+    customer a wasted trip to the cart.
+    """
+
+    permission_classes = (AllowAny,)
+
+    def get(self, request, code):
+        system = host_system(request)
+        coupon = find_coupon(system, code)
+        if coupon is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(CouponPublicSerializer(coupon, context={"request": request}).data)
+
+
+class AdminCouponListView(APIView):
+    """GET/POST /api/coupons/admin/ - the tenant's coupons, and creating one.
+
+    Scoped to the caller's own `System`, which is also what a new coupon is
+    written against - the body cannot name a tenant, exactly as it cannot on any
+    other admin write here.
+
+    Not cached: `times_redeemed` moves on every checkout, and the whole reason a
+    tenant opens this page is to see how a campaign is doing.
+    """
+
+    permission_classes = (IsSystemAdmin,)
+
+    def get(self, request):
+        system = user_system(request)
+        if system is None:
+            return Response([], status=status.HTTP_200_OK)
+        coupons = Coupon.objects.filter(system=system)
+        return Response(
+            CouponSerializer(coupons, many=True, context={"request": request}).data
+        )
+
+    def post(self, request):
+        system = user_system(request)
+        if system is None:
+            return Response(
+                {"detail": "No system for this user.", "code": "NO_SYSTEM"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = CouponSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        try:
+            coupon = serializer.save(system=system)
+        except IntegrityError:
+            # The unique constraint is on Upper(code) per system, so this is the
+            # tenant reusing a code that differs only in case from one they
+            # already have - which the CMS cannot see without asking the database.
+            return Response(
+                {"code": ["A coupon with this code already exists."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # After the row exists: the QR encodes a URL built from the code, and
+        # `upload_to` names the file after `public_id`. Best-effort, so a storage
+        # hiccup leaves a working coupon with no flyer rather than failing the
+        # create.
+        attach_coupon_qr(coupon)
+        return Response(
+            CouponSerializer(coupon, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class AdminCouponDetailView(APIView):
+    """GET/PATCH/DELETE /api/coupons/admin/<pk>/ - one coupon.
+
+    Scoped to the admin's own `System`: another tenant's coupon id is a 404, never
+    a 403, so this cannot be used to probe what exists elsewhere - the same rule
+    `AdminOrderDetailView` follows.
+    """
+
+    permission_classes = (IsSystemAdmin,)
+
+    def _get_coupon(self, request, pk):
+        system = user_system(request)
+        if system is None:
+            return None
+        return Coupon.objects.filter(pk=pk, system=system).first()
+
+    def get(self, request, pk):
+        coupon = self._get_coupon(request, pk)
+        if coupon is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(CouponSerializer(coupon, context={"request": request}).data)
+
+    def patch(self, request, pk):
+        coupon = self._get_coupon(request, pk)
+        if coupon is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        previous_code = coupon.code
+        serializer = CouponSerializer(
+            coupon, data=request.data, partial=True, context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+        try:
+            coupon = serializer.save()
+        except IntegrityError:
+            return Response(
+                {"code": ["A coupon with this code already exists."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # The QR encodes `/coupon/<code>`, so a renamed coupon's stored PNG now
+        # points at a code that no longer resolves. Re-rendered rather than left
+        # alone - the opposite of an order's QR, which must never change because
+        # it is already printed on a receipt. A coupon's flyer is regenerated from
+        # the CMS anyway, so the newest PNG is the one that matters.
+        if coupon.code != previous_code or not coupon.qr_code:
+            attach_coupon_qr(coupon, force=True)
+        return Response(CouponSerializer(coupon, context={"request": request}).data)
+
+    def delete(self, request, pk):
+        coupon = self._get_coupon(request, pk)
+        if coupon is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        # `Order.coupon` is SET_NULL, so past orders keep their `coupon_code` and
+        # `discount_amount` snapshots and still read back in full - deleting a
+        # finished campaign must not erase the record of the discounts it gave.
+        coupon.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class StripeWebhookView(APIView):
@@ -1340,6 +1690,10 @@ class StripeWebhookView(APIView):
             # The session is gone, so this order can never be paid - and if it
             # was a booking, the hour it is holding is now held for nobody.
             released = _release_booking(order)
+            # Same reasoning for the coupon: the redemption was taken when the
+            # order was opened, and an abandoned checkout must not burn one the
+            # tenant meant to sell with.
+            _release_order_coupon(order)
         if released:
             logger.info("Booking on expired order %s canceled, slot released", order.pk)
         invalidate_orders(order.user_id, order.system_id or 0)
@@ -1354,8 +1708,9 @@ class StripeWebhookView(APIView):
             order.status = Order.STATUS_FAILED
             order.save(update_fields=["status", "updated_at"])
             # A payment that failed outright is as dead as an expired one, and
-            # holds its slot in exactly the same way.
+            # holds its slot - and its redemption - in exactly the same way.
             released = _release_booking(order)
+            _release_order_coupon(order)
         if released:
             logger.info("Booking on failed order %s canceled, slot released", order.pk)
         invalidate_orders(order.user_id, order.system_id or 0)

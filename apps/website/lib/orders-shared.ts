@@ -101,6 +101,18 @@ export interface Order {
   fulfilled: boolean;
   currency: string;
   subtotal: string;
+  /**
+   * What a coupon took off, in the order's own currency - the **frozen amount**,
+   * never the coupon's percentage. "0.00" on every order placed without one, so
+   * a summary must test the number rather than the string's truthiness.
+   */
+  discount_amount: string;
+  /**
+   * The code that was honoured, snapshotted at checkout like `OrderLine.name`.
+   * It outlives the coupon itself (`Order.coupon` is SET_NULL), so a deleted
+   * campaign's orders still read back in full. Empty when none was used.
+   */
+  coupon_code: string;
   total: string;
   email: string;
   phone: string;
@@ -137,6 +149,9 @@ export interface OrderSummary {
   fulfilled: boolean;
   currency: string;
   total: string;
+  /** The coupon honoured on this order, or empty. Enough for a history row to
+   *  show a chip beside the charged total. */
+  coupon_code: string;
   created_at: string;
   paid_at: string | null;
   item_count: number;

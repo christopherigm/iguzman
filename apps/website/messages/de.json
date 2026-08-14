@@ -206,7 +206,9 @@
     "errorOutOfStock": "Einige Artikel sind nicht mehr verfügbar. Entferne sie und versuche es erneut.",
     "errorCartEmpty": "Keiner dieser Artikel wird noch verkauft.",
     "errorCompleteFailed": "Die Bestellung wurde erfasst, konnte aber nicht als bezahlt markiert werden. Versuche es erneut oder erledige es unter Bestellungen.",
-    "errorGeneric": "Verkauf konnte nicht erfasst werden. Versuche es erneut."
+    "errorGeneric": "Verkauf konnte nicht erfasst werden. Versuche es erneut.",
+    "errorCoupon": "Dieser Gutschein ist nicht mehr gültig. Entferne ihn und versuche es erneut.",
+    "couponApplied": "{code} · −{amount}"
   },
   "AuthPage": {
     "tabSignIn": "Anmelden",
@@ -475,7 +477,20 @@
     "placeOrderNote": "Es wird jetzt nichts abgebucht – Sie zahlen persönlich.",
     "checkoutNameRequired": "Bitte geben Sie Ihren Namen ein.",
     "checkoutContactRequired": "Bitte geben Sie eine E-Mail oder Telefonnummer ein.",
-    "checkoutAddressRequired": "Bitte geben Sie eine Lieferadresse ein."
+    "checkoutAddressRequired": "Bitte geben Sie eine Lieferadresse ein.",
+    "couponLabel": "Gutscheincode",
+    "couponPlaceholder": "z. B. SOMMER20",
+    "couponApply": "Anwenden",
+    "couponChecking": "Wird geprüft…",
+    "couponRemove": "Entfernen",
+    "couponNotFound": "Dieser Gutscheincode ist ungültig.",
+    "couponInactive": "Dieser Gutschein ist nicht mehr aktiv.",
+    "couponNotStarted": "Dieser Gutschein ist noch nicht aktiv.",
+    "couponExpired": "Dieser Gutschein ist abgelaufen.",
+    "couponExhausted": "Dieser Gutschein ist bereits vollständig eingelöst.",
+    "couponWrongCurrency": "Dieser Gutschein gilt nicht für die Währung dieser Bestellung.",
+    "couponMinOrder": "Deine Bestellung liegt unter dem Mindestbetrag dieses Gutscheins.",
+    "couponError": "Dieser Gutschein konnte nicht angewendet werden."
   },
   "Orders": {
     "heading": "Bestellungen",
@@ -543,7 +558,9 @@
     "seeInAdmin": "In der Verwaltung ansehen",
     "bookingParty": "Personen",
     "bookingPeople": "{count, plural, one {# Person} other {# Personen}}",
-    "bookingResource": "Zugewiesen"
+    "bookingResource": "Zugewiesen",
+    "subtotal": "Zwischensumme",
+    "discount": "Rabatt"
   },
   "VerifyEmailPage": {
     "loading": "Ihr Konto wird verifiziert, bitte warten…",
@@ -1120,7 +1137,42 @@
     "mapZoomOut": "Verkleinern",
     "mapYourLocation": "Dein Standort",
     "mapZoomHint": "Strg + Scrollen, um die Karte zu zoomen",
-    "mapZoomHintMac": "⌘ + Scrollen, um die Karte zu zoomen"
+    "mapZoomHintMac": "⌘ + Scrollen, um die Karte zu zoomen",
+    "coupons": "Gutscheine",
+    "couponsDesc": "Rabattcodes erstellen und teilbare Flyer herunterladen",
+    "couponNew": "Neuer Gutschein",
+    "couponEdit": "Gutschein bearbeiten",
+    "couponCode": "Code",
+    "couponName": "Interner Name",
+    "couponDescription": "Beschreibung",
+    "couponKind": "Rabattart",
+    "couponKindPercent": "Prozentsatz",
+    "couponKindFixed": "Fester Betrag",
+    "couponValue": "Wert",
+    "couponCurrency": "Währung",
+    "couponMaxRedemptions": "Maximale Einlösungen",
+    "couponUnlimitedHint": "0 = unbegrenzt",
+    "couponRedemptions": "Eingelöst",
+    "couponMinOrder": "Mindestbestellwert",
+    "couponMinShort": "Mindestens",
+    "couponStartsAt": "Beginnt",
+    "couponExpiresAt": "Läuft ab",
+    "couponExpires": "Läuft ab",
+    "couponNoExpiry": "Kein Ablauf",
+    "couponOff": "RABATT",
+    "couponValidUntil": "Gültig bis",
+    "couponFlyer": "Teilbarer Flyer",
+    "couponTemplate": "Vorlage",
+    "couponTemplate_ticket": "Ticket",
+    "couponTemplate_bold": "Auffällig",
+    "couponTemplate_elegant": "Elegant",
+    "couponTemplate_scan": "Scan mich",
+    "couponBackground": "Hintergrundbild",
+    "couponBackgroundHint": "Dient nur der heruntergeladenen Grafik und wird nicht am Gutschein gespeichert.",
+    "couponDownload": "Flyer herunterladen",
+    "couponExportError": "Der Flyer konnte nicht exportiert werden.",
+    "couponSaveForQr": "Speichere den Gutschein, um seinen QR-Code zu erzeugen, und lade dann den Flyer herunter.",
+    "couponQrPlaceholder": "Der QR-Code wird hier erzeugt, sobald der Gutschein gespeichert ist."
   },
   "GradientBuilder": {
     "linear": "Linear",
@@ -1613,5 +1665,15 @@
     "resourceCapacity": "Fasst",
     "resourceCapacityHint": "Personen. Mehrere identische sind ein Eintrag mit ihrer Summe - eine Gruppe wird nie auf zwei aufgeteilt.",
     "poolSummary": "{total} Plätze insgesamt, größte fasst {largest}"
+  },
+  "Coupon": {
+    "title": "Gutschein",
+    "home": "Startseite",
+    "off": "Rabatt",
+    "minOrder": "Mindestbestellwert {amount}",
+    "validUntil": "Gültig bis {date}",
+    "ended": "Dieses Angebot ist beendet.",
+    "startShopping": "Jetzt einkaufen",
+    "appliedAtCheckout": "Der Code liegt beim Bezahlen in deinem Warenkorb bereit."
   }
 }

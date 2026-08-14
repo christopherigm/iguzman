@@ -1235,6 +1235,7 @@ export function PinnedVideoItemServer({
         displayName={displayName}
         detailsOpen={detailsOpen}
         onToggleDetails={() => setDetailsOpen((p) => !p)}
+        onUpdate={onUpdate}
         t={t}
       />
       {/* ── Details panel (collapsible) ───────────────── */}

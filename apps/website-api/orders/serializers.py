@@ -1,9 +1,11 @@
+import re
+
 from django.utils import timezone
 from rest_framework import serializers
 
 from users.serializers import CartItemWriteSerializer
 
-from .models import Booking, Order, OrderLine
+from .models import Booking, Coupon, Order, OrderLine
 
 
 def resolve_line_image(obj, request=None):
@@ -262,7 +264,10 @@ class OrderSerializer(serializers.ModelSerializer):
         # page reads.
         fields = [
             "public_id", "status", "payment_method", "fulfilled",
-            "currency", "subtotal", "total",
+            # `subtotal` and `discount_amount` are both needed to render the
+            # summary honestly: with only the total, an order placed with a
+            # coupon shows a number that does not add up from its own lines.
+            "currency", "subtotal", "discount_amount", "coupon_code", "total",
             "email", "phone", "shipping_name", "shipping_line1", "shipping_line2",
             "shipping_city", "shipping_state", "shipping_postal_code", "shipping_country",
             "created_at", "paid_at", "item_count", "lines", "booking", "qr_code",
@@ -291,7 +296,7 @@ class OrderSummarySerializer(serializers.ModelSerializer):
         model = Order
         fields = [
             "public_id", "status", "payment_method", "fulfilled",
-            "currency", "total",
+            "currency", "total", "coupon_code",
             "created_at", "paid_at", "item_count", "line_images", "booking",
         ]
 
@@ -316,7 +321,7 @@ class AdminOrderSummarySerializer(serializers.ModelSerializer):
         model = Order
         fields = [
             "public_id", "status", "payment_method", "fulfilled",
-            "currency", "total", "email", "phone", "shipping_name",
+            "currency", "total", "coupon_code", "email", "phone", "shipping_name",
             "created_at", "paid_at", "fulfilled_at", "item_count",
         ]
 
@@ -341,7 +346,10 @@ class AdminOrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = [
             "public_id", "status", "payment_method", "fulfilled",
-            "currency", "subtotal", "total",
+            # `subtotal` and `discount_amount` are both needed to render the
+            # summary honestly: with only the total, an order placed with a
+            # coupon shows a number that does not add up from its own lines.
+            "currency", "subtotal", "discount_amount", "coupon_code", "total",
             "email", "phone", "shipping_name", "shipping_line1", "shipping_line2",
             "shipping_city", "shipping_state", "shipping_postal_code", "shipping_country",
             "created_at", "paid_at", "fulfilled_at", "item_count", "lines", "qr_code",
@@ -349,6 +357,158 @@ class AdminOrderSerializer(serializers.ModelSerializer):
 
     def get_qr_code(self, obj):
         return resolve_qr_code(obj, self.context.get("request"))
+
+
+def resolve_coupon_qr(coupon, request=None):
+    """The absolute URL of a coupon's stored QR code, or None.
+
+    Absolute for the same reason `resolve_qr_code` is, and null for the same
+    reason too: a coupon whose PNG write failed is still a working coupon, so
+    every consumer has to cope with the field being empty rather than assume it.
+    """
+    if not coupon.qr_code:
+        return None
+    url = coupon.qr_code.url
+    return request.build_absolute_uri(url) if request else url
+
+
+class CouponSerializer(serializers.ModelSerializer):
+    """A coupon in full, for the tenant's CMS.
+
+    `times_redeemed` is read-only here even though it is an ordinary column: it is
+    moved only by `redeem_coupon`'s conditional UPDATE, and letting the CMS PATCH
+    it would race with exactly the thing that increment exists to serialise. A
+    tenant who wants to give a campaign more room edits `max_redemptions`.
+    """
+
+    times_redeemed = serializers.IntegerField(read_only=True)
+    redemptions_left = serializers.IntegerField(read_only=True)
+    is_exhausted = serializers.BooleanField(read_only=True)
+    qr_code = serializers.SerializerMethodField()
+    # The URL the QR encodes, served alongside it so the CMS can show the tenant
+    # exactly where a scan lands (and offer it as copyable text for a caption)
+    # without rebuilding the tenant's own origin in the browser - which it cannot
+    # do correctly anyway, since `site_base_url` reads the System's `host`.
+    landing_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Coupon
+        fields = [
+            "id", "public_id", "code", "name", "description",
+            "kind", "value", "currency",
+            "max_redemptions", "times_redeemed", "redemptions_left", "is_exhausted",
+            "starts_at", "expires_at", "min_order_amount",
+            "enabled", "template_id", "qr_code", "landing_url",
+            "brand_logo_background", "brand_logo_background_scale", "brand_logo_scale",
+            "created_at", "updated_at",
+        ]
+        read_only_fields = ["id", "public_id", "created_at", "updated_at"]
+        extra_kwargs = {
+            # The same bounds the CMS sliders offer (SCALE_STEPS in the
+            # website's logo-background-options.ts), enforced here because the
+            # CMS is not the only possible caller: below 30 the logo all but
+            # vanishes, above 100 there is nothing bigger to draw. Identical to
+            # `SocialPostWriteSerializer`'s, which offers the same three
+            # controls.
+            "brand_logo_background_scale": {"min_value": 30, "max_value": 100},
+            "brand_logo_scale": {"min_value": 30, "max_value": 100},
+        }
+
+    def get_qr_code(self, obj):
+        return resolve_coupon_qr(obj, self.context.get("request"))
+
+    def get_landing_url(self, obj):
+        from .services.coupons import coupon_landing_url
+
+        return coupon_landing_url(obj)
+
+    def validate_code(self, value):
+        """A code a customer can actually read off a poster and type back in.
+
+        Restricted to letters, digits, dashes and underscores because it travels
+        in a URL path (`/coupon/<code>`) that the QR encodes: a space or a slash
+        there would either break the scan target or need escaping that nobody
+        typing it by hand would reproduce.
+        """
+        cleaned = (value or "").strip()
+        if not cleaned:
+            raise serializers.ValidationError("A coupon code is required.")
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", cleaned):
+            raise serializers.ValidationError(
+                "A coupon code may only contain letters, numbers, dashes and underscores."
+            )
+        return cleaned
+
+    def validate(self, attrs):
+        # `self.instance` fills the gaps on a PATCH, which may name only one half
+        # of a pair - a partial update that moved `expires_at` alone would
+        # otherwise be validated against no `starts_at` at all.
+        def current(field):
+            if field in attrs:
+                return attrs[field]
+            return getattr(self.instance, field, None)
+
+        kind = current("kind")
+        value = current("value")
+        if kind == Coupon.KIND_PERCENT and value is not None and value > 100:
+            raise serializers.ValidationError(
+                {"value": "A percentage discount cannot be more than 100%."}
+            )
+
+        starts_at, expires_at = current("starts_at"), current("expires_at")
+        if starts_at and expires_at and expires_at <= starts_at:
+            raise serializers.ValidationError(
+                {"expires_at": "The end date must be after the start date."}
+            )
+        return attrs
+
+
+class CouponPublicSerializer(serializers.ModelSerializer):
+    """What a *visitor* may see about a coupon, on the `/coupon/<code>` landing.
+
+    Deliberately far smaller than the CMS payload. The landing page is reachable
+    by anyone holding the code - that is the whole point of putting it on a
+    poster - so it carries what the offer *is* and nothing about how the campaign
+    is performing: no `times_redeemed`, no `max_redemptions`, no internal `name`.
+    A competitor scanning a rival's flyer learns the discount, which is public by
+    construction, and not how many have been sold.
+
+    `valid` is the same verdict `validate_coupon` reaches, minus the basket-shaped
+    checks (a minimum subtotal cannot be judged before there is a cart), so the
+    page can say "this expired" instead of silently offering a dead code.
+    """
+
+    valid = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Coupon
+        fields = [
+            "code", "description", "kind", "value", "currency",
+            "min_order_amount", "expires_at", "valid",
+        ]
+
+    def get_valid(self, obj):
+        now = timezone.now()
+        return bool(
+            obj.enabled
+            and not obj.is_exhausted
+            and (obj.starts_at is None or now >= obj.starts_at)
+            and (obj.expires_at is None or now <= obj.expires_at)
+        )
+
+
+class CouponValidateSerializer(serializers.Serializer):
+    """The cart asking whether a typed code is good, and what it would take off.
+
+    Carries the guest's `cart` for the same reason `CheckoutSerializer` does: an
+    anonymous visitor has no server-side rows to price a subtotal from, and the
+    minimum-order rule cannot be judged without one. References only - the
+    subtotal this is checked against is the one Django re-prices, never a number
+    the browser sends.
+    """
+
+    code = serializers.CharField(max_length=64)
+    cart = CartItemWriteSerializer(many=True, required=False, default=list)
 
 
 class AdminOrderActionSerializer(serializers.Serializer):
@@ -452,6 +612,12 @@ class PosCheckoutSerializer(serializers.Serializer):
     cart = CartItemWriteSerializer(many=True)
     payment_method = serializers.ChoiceField(choices=[TERMINAL, CASH])
     contact = PosContactSerializer(required=False)
+    # The code the customer typed, never the discount it is worth. Validated and
+    # priced server-side by `orders.services.coupons` at the moment the order is
+    # written - the same rule the cart references follow, for the same reason.
+    coupon_code = serializers.CharField(
+        max_length=64, required=False, allow_blank=True, default="",
+    )
 
     def validate_cart(self, value):
         if not value:
@@ -486,6 +652,12 @@ class CheckoutSerializer(serializers.Serializer):
     )
     contact = CheckoutContactSerializer(required=False)
     shipping = CheckoutShippingSerializer(required=False)
+    # The code the customer typed, never the discount it is worth. Validated and
+    # priced server-side by `orders.services.coupons` at the moment the order is
+    # written - the same rule the cart references follow, for the same reason.
+    coupon_code = serializers.CharField(
+        max_length=64, required=False, allow_blank=True, default="",
+    )
 
     def validate(self, attrs):
         method = attrs.get("payment_method", self.ONLINE)

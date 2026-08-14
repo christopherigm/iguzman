@@ -64,6 +64,56 @@ def _api_key(system) -> str:
     return key
 
 
+def create_discount_coupon(system, order):
+    """A one-off Stripe coupon for the discount already recorded on ``order``.
+
+    Returns a coupon id to hand to ``create_checkout_session(discount_coupon=...)``,
+    or None when the order carries no discount.
+
+    **Created as a fixed `amount_off`, never a `percent_off`**, even when our own
+    coupon is a percentage. `Order.discount_amount` is the number that was
+    computed, shown to the customer and stored, and asking Stripe to re-derive a
+    percentage of its own line-item subtotal invites the two to disagree by a cent
+    on rounding - at which point the charge no longer matches the order and
+    nothing reconciles.
+
+    **One coupon per session, `duration: once`, not reused.** A Stripe coupon is
+    an object on the tenant's account, and a shared one would be a second place
+    the campaign's rules live - redeemable independently of ours, with its own
+    `max_redemptions` that our `times_redeemed` knows nothing about. This one
+    exists to express a single amount on a single session; ours stays the
+    authority on who may have it.
+
+    `name` is what the customer reads on Stripe's page, so it carries the code
+    they typed rather than an internal id.
+    """
+    if not order.discount_amount or order.discount_amount <= 0:
+        return None
+
+    try:
+        coupon = stripe.Coupon.create(
+            api_key=_api_key(system),
+            amount_off=to_minor_units(order.discount_amount, order.currency),
+            currency=order.currency.lower(),
+            duration="once",
+            name=order.coupon_code or "Discount",
+            # Stripe keeps a created coupon on the account forever otherwise, and
+            # a tenant's dashboard would fill with one row per discounted sale.
+            # An hour outlives any checkout session (`STRIPE_CHECKOUT_SESSION_TTL`)
+            # while keeping the list readable.
+            redeem_by=int(time.time()) + 3600,
+            metadata={"order_id": str(order.pk), "coupon_code": order.coupon_code},
+        )
+        return coupon.id
+    except StripeError as exc:
+        # Logged and swallowed: the caller is mid-checkout, and the alternative is
+        # refusing a sale the customer is trying to make over the mechanics of a
+        # discount. The caller drops the discount and re-prices the order at full
+        # value rather than charging less than it collects - see `_apply_discount`.
+        logger.error("Stripe coupon creation failed for order %s: %s", order.pk, exc)
+        return None
+
+
 def create_checkout_session(
     system,
     order,
@@ -74,6 +124,7 @@ def create_checkout_session(
     charge_amount=None,
     charge_label="",
     collect_shipping_address=True,
+    discount_coupon=None,
 ):
     """Open a Stripe Checkout Session for ``order`` on ``system``'s Stripe account.
 
@@ -95,6 +146,20 @@ def create_checkout_session(
     ``collect_shipping_address`` is off for a booking: an appointment has a
     branch or the customer's own address on the booking record, and Stripe's
     shipping form would ask a customer walking into a salon where to post it.
+
+    ``discount_coupon`` is an id from `create_discount_coupon`, applied at the
+    **session** level so Stripe shows the customer the same three lines the cart
+    did - subtotal, the named discount, total - and the line items stay at the
+    prices the order recorded. Deliberately not folded into the line amounts:
+    prorating a discount across lines invents per-line rounding that no longer
+    sums to `Order.discount_amount`.
+
+    ⚠ **It is ignored alongside ``charge_amount``.** That path already collapses
+    the basket into a single amount for a booking *deposit*, and a discount on top
+    of a partial charge would take the discount off the deposit rather than off
+    the order - discounting the same money twice once the remainder is collected.
+    Bookings do not take coupons today, and this is what makes that explicit
+    rather than silently wrong.
     """
     api_key = _api_key(system)
     currency = order.currency.lower()
@@ -132,6 +197,11 @@ def create_checkout_session(
             api_key=api_key,
             mode="payment",
             line_items=line_items,
+            **(
+                {"discounts": [{"coupon": discount_coupon}]}
+                if discount_coupon and charge_amount is None
+                else {}
+            ),
             # Stripe collects and validates the address, then hands it back on the
             # webhook - so there is no address form of ours to keep in step with it.
             **(

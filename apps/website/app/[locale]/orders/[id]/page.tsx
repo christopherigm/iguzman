@@ -175,6 +175,56 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
               </Typography>
             </Box>
 
+            {/* Only on a discounted order, and then both lines are needed: with
+                the total alone, an order placed with a coupon shows a number
+                that does not add up from its own lines. `discount_amount` is the
+                frozen amount that was actually taken off - never the coupon's
+                percentage re-applied, which would drift from what was charged. */}
+            {Number(order.discount_amount) > 0 ? (
+              <>
+                <Box
+                  alignItems="baseline"
+                  justifyContent="space-between"
+                  gap={8}
+                >
+                  <Typography
+                    as="span"
+                    variant="body"
+                    color="var(--foreground)"
+                  >
+                    {t("subtotal")}
+                  </Typography>
+                  <Typography
+                    as="span"
+                    variant="body"
+                    color="var(--foreground)"
+                  >
+                    {formatPrice(order.subtotal, order.currency)}
+                  </Typography>
+                </Box>
+                <Box
+                  alignItems="baseline"
+                  justifyContent="space-between"
+                  gap={8}
+                >
+                  <Typography
+                    as="span"
+                    variant="body"
+                    color="var(--primary, #16a34a)"
+                  >
+                    {order.coupon_code || t("discount")}
+                  </Typography>
+                  <Typography
+                    as="span"
+                    variant="body"
+                    color="var(--primary, #16a34a)"
+                  >
+                    −{formatPrice(order.discount_amount, order.currency)}
+                  </Typography>
+                </Box>
+              </>
+            ) : null}
+
             <Box alignItems="baseline" justifyContent="space-between" gap={8}>
               <Typography as="span" variant="body" color="var(--on-surface)">
                 {t("total")}

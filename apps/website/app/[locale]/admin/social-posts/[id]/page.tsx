@@ -436,8 +436,17 @@ export default function AdminSocialPostFormPage({ params }: Props) {
       format,
       // The uploaded override wins over the catalog photo in every template -
       // that is the whole point of the field.
-      itemImage:
-        overrideImageData ?? itemImageData ?? selectedItem?.image ?? undefined,
+      //
+      // ⚠ Deliberately no `?? selectedItem?.image` fallback, and none on
+      // `brandLogo` below: those are the raw CDN URLs, and a cross-origin image
+      // inside the captured node taints the canvas, so `toDataURL` throws and
+      // the download fails outright. `toSameOriginDataUrl` already returns the
+      // original URL when it cannot proxy, so the only thing a fallback bought
+      // was the frame before the round-trip resolves - during which a press of
+      // Download captured a URL that could not be exported. The templates draw
+      // their own placeholder for an absent image, which is what that frame
+      // shows now. Same rule as the coupon flyer.
+      itemImage: overrideImageData ?? itemImageData,
       backgroundImage: backgroundImageData,
       itemName: selectedItem?.name,
       imageText: String(values.image_text ?? ""),
@@ -448,7 +457,7 @@ export default function AdminSocialPostFormPage({ params }: Props) {
         selectedItem?.price ?? null,
         selectedItem?.comparePrice ?? null,
       ),
-      brandLogo: brandLogoData ?? brand.logo ?? undefined,
+      brandLogo: brandLogoData,
       brandName: brand.name ?? undefined,
       brandSlogan: brand.slogan ?? undefined,
       primaryColor: brand.primary,
@@ -625,7 +634,8 @@ export default function AdminSocialPostFormPage({ params }: Props) {
     setExporting(true);
     setError(null);
     try {
-      const dataUrl = await toJpeg(flyerRef.current, {
+      const node = flyerRef.current;
+      const options = {
         quality: 0.95,
         // The node is laid out at 1080 natural width regardless of the scaled
         // on-screen preview; capture at that true size.
@@ -634,7 +644,20 @@ export default function AdminSocialPostFormPage({ params }: Props) {
         pixelRatio: 1,
         backgroundColor: "#ffffff",
         cacheBust: true,
-      });
+      };
+      // `html-to-image` walks every stylesheet on the page to inline the
+      // @font-face rules the flyer uses, and reading the rules of a stylesheet
+      // the browser considers cross-origin throws a SecurityError. The tenant's
+      // own Google Fonts link is loaded in CORS mode for exactly this reason
+      // (see `[locale]/layout.tsx`), but a stylesheet this app does not control
+      // - a browser extension's, most often - can still poison the walk. When
+      // that happens, fall back to a capture with the fonts skipped: the flyer
+      // comes out in a fallback face, which is a far better answer than a
+      // download button that refuses for a reason nobody can see. Same fallback
+      // as the coupon flyer, which draws through the same library.
+      const dataUrl = await toJpeg(node, options).catch(() =>
+        toJpeg(node, { ...options, skipFonts: true }),
+      );
       const link = document.createElement("a");
       const base =
         String(values.name || selectedItem?.name || "social-post")
