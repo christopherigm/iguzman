@@ -376,6 +376,7 @@
   "FoodPage": {
     "heading": "Menú",
     "categoriesHeading": "Categorías del Menú",
+    "categoryNav": "Ir a una categoría",
     "itemsHeading": "Todos los Platos"
   },
   "ProductsPage": {

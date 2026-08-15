@@ -376,6 +376,7 @@
   "FoodPage": {
     "heading": "Speisekarte",
     "categoriesHeading": "Speisekarten-Kategorien",
+    "categoryNav": "Zu einer Kategorie springen",
     "itemsHeading": "Alle Gerichte"
   },
   "ProductsPage": {

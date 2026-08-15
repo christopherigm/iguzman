@@ -1,0 +1,27 @@
+/*
+ * The category rail's own positioning.
+ *
+ * `position: sticky` is the whole behaviour: the rail sits in-line at the top of
+ * its column (beside the first item grid) until the page scrolls it up to the
+ * fixed navbar, then stays there - and stops when its grid column ends, so it
+ * never floats over the sections that follow the menu.
+ *
+ * The offset is the navbar's own height variable, never a copied pixel value.
+ */
+.menu-category-nav {
+  position: sticky;
+  top: calc(var(--ui-navbar-height, 57px) + 16px);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hover/focus tint mixed from the card's own text colour, so it reads on a
+ * light accent (dark `--accent-foreground`) as well as a dark one. */
+.menu-category-nav__item {
+  transition: background-color 150ms ease;
+}
+
+.menu-category-nav__item:hover,
+.menu-category-nav__item:focus-visible {
+  background-color: color-mix(in srgb, currentColor 18%, transparent);
+}

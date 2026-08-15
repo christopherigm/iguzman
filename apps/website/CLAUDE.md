@@ -384,6 +384,25 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   the items - so the operator's arrangement is what the page reads as. A category
   with no items gets its card but no section: an empty grid under a heading reads
   as a broken page.
+- **The item sections sit beside a category rail** (`components/menu-category-nav.tsx`),
+  because a menu with a few hundred dishes is otherwise navigable only by
+  scrolling - the category cards at the top are an index right up until they
+  leave the screen. It is `position: sticky` under the fixed navbar, **not** a
+  hand-positioned `fixed` box: sticky gives both halves of the behaviour (in-line
+  beside the first grid, pinned from there on) and stops travelling when its grid
+  column ends, so the rail cannot outlive the sections it addresses. Its cell
+  carries `hidden={{ xs: true, sm: true }}`, so it is `md`-and-up only and no
+  media query decides that - a phone-sized index is a different control and isn't
+  built yet. Clicking an entry goes through `scrollToElement` (never a bare
+  `scrollIntoView`) at the section heading's own `id`; the heading carries the
+  `scroll-margin-top` that clears the navbar. The rail claims 3 of 12 columns
+  from `md`, which is why the item cards go three-across there (`md: 4`).
+  ⚠ **It starts level with the first item _card_, and the way it does that is a
+  spacer that _is_ the section heading** - the same `Box` + `Typography` markup
+  carrying one non-breaking space, above `.catalog-section`'s own 48px top
+  padding. A hard-coded offset would be wrong the moment the heading's type or
+  rhythm changed; this moves both columns together. The 48 is the one number
+  copied from `catalog-categories.css` - keep the two in step.
 - ⚠ **In the CMS, Category is a required field on the menu-item form and is
   deliberately excluded from the "blank → null" list** in `handleSubmit`. A blank
   must reach the API and be refused, not be nulled into a row the storefront

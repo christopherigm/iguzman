@@ -8,6 +8,7 @@ import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { SectionHero } from "@/components/section-hero";
 import { CategoryCard } from "@/components/catalog-categories";
 import { BuyableCard } from "@/components/buyable-card";
+import { MenuCategoryNav } from "@/components/menu-category-nav";
 import {
   getMenuCategories,
   getAllMenuItems,
@@ -72,6 +73,10 @@ export async function MenuListing({ locale }: MenuListingProps) {
       items: items.filter((item) => item.category === c.id),
     }))
     .filter((section) => section.items.length > 0);
+
+  /** The `id` the category rail scrolls to - the section's own heading, so the
+   *  reader lands on the title rather than mid-grid. */
+  const sectionHeadingId = (key: string) => `menu-section-${key}`;
 
   const images = [
     ...categories.map((c) => c.image),
@@ -153,34 +158,68 @@ export async function MenuListing({ locale }: MenuListingProps) {
             </Grid>
           </section>
         )}
-        {sections.map((section, index) => (
-          <section
-            key={section.key}
-            className={sectionClassName(!hasCategories && index === 0)}
-          >
-            <Box
-              marginBottom={32}
-              display="flex"
-              flexDirection="column"
-              gap={10}
-            >
-              <Typography as="h2" variant="h2" className="section-title">
-                {section.heading}
-              </Typography>
-            </Box>
-            <Grid container spacing={2}>
-              {section.items.map((item) => (
-                <Grid key={item.id} size={{ xs: 6, sm: 3 }}>
-                  <BuyableCard
-                    item={{ kind: "food", data: item }}
-                    locale={locale}
-                    fromLabel={menuT("from")}
-                  />
+        {/* The item grids and the category rail beside them. The rail is a grid
+         *  cell of its own so it is `hidden` below `md` with no media query, and
+         *  so it stretches to the full height of the sections column - which is
+         *  what its `position: sticky` travels inside. */}
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12, md: 3 }} hidden={{ xs: true, sm: true }}>
+            <MenuCategoryNav
+              title={t("categoryNav")}
+              // The rail's lead spacer drops the same top padding the first
+              // section drops, so both columns start level either way.
+              flushTop={!hasCategories}
+              items={sections.map((section) => ({
+                targetId: sectionHeadingId(section.key),
+                label: section.heading,
+              }))}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 9 }}>
+            {sections.map((section, index) => (
+              <section
+                key={section.key}
+                className={sectionClassName(!hasCategories && index === 0)}
+              >
+                <Box
+                  marginBottom={32}
+                  display="flex"
+                  flexDirection="column"
+                  gap={10}
+                >
+                  <Typography
+                    as="h2"
+                    variant="h2"
+                    className="section-title"
+                    id={sectionHeadingId(section.key)}
+                    // The rail's target: clear the fixed navbar the scroll would
+                    // otherwise park this heading under.
+                    styles={{
+                      scrollMarginTop:
+                        "calc(var(--ui-navbar-height, 57px) + 16px)",
+                    }}
+                  >
+                    {section.heading}
+                  </Typography>
+                </Box>
+                <Grid container spacing={2}>
+                  {section.items.map((item) => (
+                    // Three across from `md` up: that is where the rail claims
+                    // its column, and a fourth card in the remaining 9/12 comes
+                    // out too narrow to read.
+                    <Grid key={item.id} size={{ xs: 6, sm: 3, md: 4 }}>
+                      <BuyableCard
+                        item={{ kind: "food", data: item }}
+                        locale={locale}
+                        fromLabel={menuT("from")}
+                      />
+                    </Grid>
+                  ))}
                 </Grid>
-              ))}
-            </Grid>
-          </section>
-        ))}
+              </section>
+            ))}
+          </Grid>
+        </Grid>
         {items.length === 0 && (
           <Typography variant="none" className="section-subtitle">
             {menuT("empty")}
