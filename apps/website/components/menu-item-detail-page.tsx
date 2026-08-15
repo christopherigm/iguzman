@@ -6,18 +6,17 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { getMenuItem } from "@/lib/catalog";
-import type { MenuItemDetail, MenuItemKind } from "@/lib/catalog";
+import type { MenuItemDetail } from "@/lib/catalog";
 import {
   MENU_ALL_PATH,
-  MENU_KIND_PATHS,
+  menuCategoryHref,
   menuItemHref,
-} from "@/lib/menu-kinds";
+} from "@/lib/menu-paths";
 import { getRequestOrigin, toShareDescription } from "@/lib/metadata";
 import type { GalleryImage } from "@/components/item-gallery-client";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
 import { ItemHeroVideo } from "@/components/item-hero-video";
 import { getSystem } from "@/lib/system";
-import { kindLabel, kindLabels } from "@/lib/kind-labels";
 import {
   MenuDetailHeader,
   MenuDetailVariantsMobile,
@@ -31,32 +30,33 @@ import { enabledIngredients } from "@/lib/menu-selection";
 import { MenuCustomizationProvider } from "@/components/menu-customization-context";
 
 /**
- * One menu item's detail page - shared by all five kind routes (`/food/<slug>`,
- * `/drink/<slug>`, `/dessert/<slug>`, `/side/<slug>`, `/appetizer/<slug>`) so
- * they cannot drift apart. Each route is a thin wrapper that names its own kind.
+ * One menu item's detail page, at `/menu/<category>/<slug>`.
  *
- * **Each route serves only its own kind; anything else is a 404.** A slug is
- * unique across the whole menu, so the lookup does not need the kind - which
- * means `routeKind` is a genuine check rather than part of the query. One item
- * therefore has exactly one URL, and `/drink/<a-dish>` is simply not a page.
+ * **The route serves the item only under its own category; anything else is a
+ * 404.** A slug is unique across the whole menu, so the lookup does not need
+ * the category - which means `routeCategory` is a genuine check rather than
+ * part of the query. One item therefore has exactly one URL, and
+ * `/menu/bebidas/<a-dish>` is simply not a page.
  *
- * Every link in the app is built from the item's own kind (`menuItemHref`), so
- * nothing here should ever produce a mismatch; a 404 is how a stale hand-written
- * or bookmarked URL surfaces instead of quietly rendering the item under a URL
- * that misdescribes it.
+ * Every link in the app is built from the item's own category
+ * (`menuItemHref`), so nothing here should ever produce a mismatch. ⚠ A 404 is
+ * also how an item *re-filed* in the CMS surfaces on its old URL - the category
+ * segment makes the address mutable, which is the cost of having it there.
+ * `next.config.js` redirects the pre-category paths (`/food/<slug>` and its
+ * four siblings) here.
  */
 
 export async function generateMenuItemMetadata({
   locale,
   slug,
-  routeKind,
+  routeCategory,
 }: {
   locale: string;
   slug: string;
-  routeKind: MenuItemKind;
+  routeCategory: string;
 }): Promise<Metadata> {
   const [item, origin] = await Promise.all([getMenuItem(slug), getRequestOrigin()]);
-  if (!item || item.kind !== routeKind) return {};
+  if (!item || item.category_slug !== routeCategory) return {};
 
   const name =
     (locale === "en" ? item.en_name : item.name) ??
@@ -70,9 +70,9 @@ export async function generateMenuItemMetadata({
     item.en_description ??
     undefined;
 
-  // Built from the item's own kind rather than the route, which is the same
+  // Built from the item's own category rather than the route, which is the same
   // thing by the time we get here - the mismatch returned above.
-  const url = `${origin}/${locale}${menuItemHref(item.kind, slug)}`;
+  const url = `${origin}/${locale}${menuItemHref(item.category_slug, slug)}`;
   const image = item.image ?? item.images.find((img) => img.image)?.image;
 
   return {
@@ -107,22 +107,22 @@ function buildGalleryImages(item: MenuItemDetail): GalleryImage[] {
 export async function MenuItemDetailPage({
   locale,
   slug,
-  routeKind,
+  routeCategory,
 }: {
   locale: string;
   slug: string;
-  routeKind: MenuItemKind;
+  routeCategory: string;
 }) {
-  const [item, system, t, tMenu, tKind] = await Promise.all([
+  const [item, system, t, tMenu] = await Promise.all([
     getMenuItem(slug),
     getSystem(),
     getTranslations("ItemDetail"),
     getTranslations("Menu"),
-    getTranslations("MenuKinds"),
   ]);
 
-  // An item of another kind has its own route; this one is not its page.
-  if (!item || item.kind !== routeKind) notFound();
+  // An item filed under another category lives at another URL; this is not its
+  // page.
+  if (!item || item.category_slug !== routeCategory) notFound();
 
   const galleryImages = buildGalleryImages(item);
 
@@ -132,27 +132,15 @@ export async function MenuItemDetailPage({
     item.en_name ??
     slug;
 
-  // Menu > <Kind> > <Category> > this item. The kind step is what makes the
-  // trail match the URL the visitor is on, and it is always present because
-  // every item has a kind; the category step still is not, since an item may be
-  // filed under none.
+  // Menu > <Category> > this item, which is exactly the URL the visitor is on.
+  // The category step is always present now that the field is required.
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },
     { label: tMenu("menu"), href: MENU_ALL_PATH },
     {
-      // The tenant's own name for the kind, so the trail reads the way their
-      // menu does; the href is structural and stays as it is.
-      label: kindLabel(kindLabels(system, locale), item.kind, tKind(item.kind)),
-      href: MENU_KIND_PATHS[item.kind],
+      label: item.category_name,
+      href: menuCategoryHref(item.category_slug),
     },
-    ...(item.category_name && item.category_slug
-      ? [
-          {
-            label: item.category_name,
-            href: `/categories/food/${item.category_slug}`,
-          },
-        ]
-      : []),
     { label: displayName },
   ];
 

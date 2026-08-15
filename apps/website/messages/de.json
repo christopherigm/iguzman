@@ -944,12 +944,6 @@
     "instruction": "Anweisung",
     "basePrice": "Grundpreis",
     "calories": "Kalorien",
-    "menuItemKind": "Art",
-    "kindFood": "Speise",
-    "kindDrink": "Getränk",
-    "kindDessert": "Dessert",
-    "kindSide": "Beilage",
-    "kindAppetizer": "Vorspeise",
     "kindLabelsTitle": "Katalogbezeichnungen",
     "kindLabelsIntro": "Wie diese Website jede Art von Angebot nennt. Aus \"Essen\" wird \"Pizzas\" - und das Menü-Dropdown, die Übersichtsseiten, deren Überschriften und die Brotkrumen ziehen mit.",
     "kindLabelsHelp": "Leer lassen, um den voreingestellten Namen zu behalten. Es ändert sich nur der Wortlaut: die Seitenadressen bleiben gleich, bestehende Links und Lesezeichen funktionieren weiter.",
@@ -1185,7 +1179,8 @@
     "couponDownload": "Flyer herunterladen",
     "couponExportError": "Der Flyer konnte nicht exportiert werden.",
     "couponSaveForQr": "Speichere den Gutschein, um seinen QR-Code zu erzeugen, und lade dann den Flyer herunter.",
-    "couponQrPlaceholder": "Der QR-Code wird hier erzeugt, sobald der Gutschein gespeichert ist."
+    "couponQrPlaceholder": "Der QR-Code wird hier erzeugt, sobald der Gutschein gespeichert ist.",
+    "selectCategory": "- Kategorie wählen -"
   },
   "GradientBuilder": {
     "linear": "Linear",
@@ -1322,16 +1317,8 @@
     "vitaminD": "Vitamin D",
     "calcium": "Kalzium",
     "iron": "Eisen",
-    "potassium": "Kalium"
-  },
-  "MenuKinds": {
-    "menu": "Speisekarte",
-    "all": "Gesamte Speisekarte",
-    "food": "Speisen",
-    "drink": "Getränke",
-    "dessert": "Desserts",
-    "side": "Beilagen",
-    "appetizer": "Vorspeisen"
+    "potassium": "Kalium",
+    "all": "Gesamte Speisekarte"
   },
   "AdminOrders": {
     "home": "Startseite",

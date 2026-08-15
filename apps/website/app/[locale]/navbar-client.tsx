@@ -6,13 +6,15 @@ import { useSession } from "@repo/auth/session-provider";
 import { useAuthActions } from "@repo/auth/use-auth-actions";
 import { useGuestState } from "@/hooks/use-guest-cart";
 import { guestCartCount } from "@/lib/guest-cart";
-import {
-  MENU_ALL_PATH,
-  MENU_ITEM_KINDS,
-  MENU_KIND_PATHS,
-  type MenuItemKind,
-} from "@/lib/menu-kinds";
+import { MENU_ALL_PATH, menuCategoryHref } from "@/lib/menu-paths";
 import { kindLabel, type KindLabels } from "@/lib/kind-labels";
+
+/** One entry of the Menu dropdown: a tenant menu category, with its name
+ *  already resolved for the rendered locale by the server layout. */
+export interface NavbarMenuCategory {
+  slug: string;
+  name: string;
+}
 
 interface NavbarClientProps {
   logo: string;
@@ -20,14 +22,17 @@ interface NavbarClientProps {
   productCount: number;
   serviceCount: number;
   /**
-   * Enabled menu items per `kind`. Drives the whole Menu entry: a kind with no
-   * items gets no link, and a tenant with no menu at all gets nothing.
+   * The tenant's menu categories, in CMS order, each already carrying at least
+   * one enabled item. Drives the whole Menu entry: a tenant with no menu gets
+   * nothing, and an empty category is never offered as a dead link.
    */
-  menuKindCounts: Record<MenuItemKind, number>;
+  menuCategories: NavbarMenuCategory[];
   /**
-   * What the tenant calls each kind it sells, already resolved for the rendered
-   * locale (`getKindLabels`). A kind the tenant has not renamed is absent and
-   * keeps this app's own translation - so an un-renamed site's bar is unchanged.
+   * What the tenant calls the two Buyable families it sells, already resolved
+   * for the rendered locale (`getKindLabels`). A family the tenant has not
+   * renamed is absent and keeps this app's own translation - so an un-renamed
+   * site's bar is unchanged. The menu carries no override: its sections are the
+   * categories below, which are the tenant's own copy already.
    */
   kindLabels: KindLabels;
   /**
@@ -55,14 +60,14 @@ export function NavbarClient({
   version,
   productCount,
   serviceCount,
-  menuKindCounts,
+  menuCategories,
   kindLabels,
   showContact,
   eventCount,
   cartCount,
 }: NavbarClientProps) {
   const t = useTranslations("Navbar");
-  const kindT = useTranslations("MenuKinds");
+  const menuT = useTranslations("Menu");
   // Comes from the server via SessionProvider, decoded from the access-token
   // cookie - so the admin link and the account menu are already right in the
   // first HTML instead of popping in after hydration.
@@ -121,39 +126,33 @@ export function NavbarClient({
         ariaLabel: t("accessAccount"),
       };
 
-  // The menu is one entry with a dropdown, not one top-level link per kind: a
-  // restaurant carrying dishes, drinks, desserts and sides would otherwise push
-  // Orders and Contact into the hamburger on a laptop. Only kinds the tenant
-  // actually has are offered, so a taquería with no dessert never shows an
-  // empty Desserts page.
-  const stockedKinds = MENU_ITEM_KINDS.filter(
-    (kind) => (menuKindCounts[kind] ?? 0) > 0,
-  );
-  // The tenant's own name for each kind wins over ours ("Pizzas", not "Food");
-  // the href is untouched, since a label rename must never move a page.
-  const kindItems = stockedKinds.map((kind) => ({
-    label: kindLabel(kindLabels, kind, kindT(kind)),
-    href: MENU_KIND_PATHS[kind],
+  // The menu is one entry with a dropdown, not one top-level link per category:
+  // a restaurant carrying pizzas, pastas, drinks and desserts would otherwise
+  // push Orders and Contact into the hamburger on a laptop. The categories are
+  // the tenant's own copy, so nothing here translates them.
+  const categoryItems = menuCategories.map((category) => ({
+    label: category.name,
+    href: menuCategoryHref(category.slug),
   }));
-  // With a single kind there is nothing to choose between: the dropdown would
-  // hold "Full menu" and one link to the same items, so it collapses to a plain
-  // link straight to that kind's page.
+  // With a single category there is nothing to choose between: the dropdown
+  // would hold "Full menu" and one link to the same items, so it collapses to a
+  // plain link straight to that category's page.
   const menuItems =
-    stockedKinds.length === 0
+    categoryItems.length === 0
       ? []
-      : stockedKinds.length === 1
-        ? kindItems
+      : categoryItems.length === 1
+        ? categoryItems
         : [
             {
-              label: kindT("menu"),
+              label: menuT("menu"),
               // A parent with children renders as a button, but the shared
               // Navbar still reads `href` to decide the active underline - and
               // it also marks a parent active when any child is, so this is
               // only what the "Full menu" page itself matches.
               href: MENU_ALL_PATH,
               children: [
-                { label: kindT("all"), href: MENU_ALL_PATH },
-                ...kindItems,
+                { label: menuT("all"), href: MENU_ALL_PATH },
+                ...categoryItems,
               ],
             },
           ];

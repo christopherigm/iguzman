@@ -13,7 +13,7 @@ import { discountPercent } from "@/lib/price";
 import { nutritionRows } from "@/lib/nutrition";
 import { enabledIngredients } from "@/lib/menu-selection";
 import { menuEtaLabel } from "@/lib/menu-eta";
-import { menuItemHref } from "@/lib/menu-kinds";
+import { menuItemHref } from "@/lib/menu-paths";
 import { MenuItemCustomizer } from "./menu-item-customizer";
 import { FavoriteButton } from "./favorite-button";
 import { NutritionLabel } from "./nutrition-label";
@@ -169,16 +169,17 @@ async function MenuVariantsCard({ item, locale }: MenuDetailProps) {
         {tMenu("variants")}
       </Typography>
       <VariantThumbs
-        // Each sibling's *own* kind: the relation means "an alternative version
-        // of this dish", so siblings normally share a kind - but nothing in the
-        // CMS enforces it, and a route serves only its own kind, so assuming
-        // this page's kind would link a cross-kind variant to a 404.
-        hrefFor={(v) => menuItemHref(v.kind, v.slug)}
+        // Each sibling's *own* category: the relation means "an alternative
+        // version of this dish", so siblings are normally filed together - but
+        // nothing in the CMS enforces it, and the route serves an item only
+        // under its own category, so assuming this page's would link a
+        // cross-category variant to a 404.
+        hrefFor={(v) => menuItemHref(v.category_slug, v.slug)}
         current={{
           slug: item.slug,
           name,
           image: item.image,
-          href: menuItemHref(item.kind, item.slug),
+          href: menuItemHref(item.category_slug, item.slug),
         }}
         variants={item.variants}
         locale={locale}

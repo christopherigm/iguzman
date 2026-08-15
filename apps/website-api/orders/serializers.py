@@ -68,7 +68,7 @@ class OrderLineSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
     item_id = serializers.SerializerMethodField()
     item_slug = serializers.SerializerMethodField()
-    item_menu_kind = serializers.SerializerMethodField()
+    item_menu_category_slug = serializers.SerializerMethodField()
     item_booking_enabled = serializers.SerializerMethodField()
 
     class Meta:
@@ -76,7 +76,7 @@ class OrderLineSerializer(serializers.ModelSerializer):
         fields = [
             "id", "kind", "name", "sku", "customization",
             "unit_price", "quantity", "line_total", "currency",
-            "image", "item_id", "item_slug", "item_menu_kind",
+            "image", "item_id", "item_slug", "item_menu_category_slug",
             "item_booking_enabled",
         ]
 
@@ -96,13 +96,14 @@ class OrderLineSerializer(serializers.ModelSerializer):
         target = obj.product or obj.service or obj.menu_item
         return getattr(target, "slug", None) if target else None
 
-    def get_item_menu_kind(self, obj):
-        """A menu item's ``kind``, so the order page can link to the route that
-        matches it (``/drink/<slug>`` rather than ``/food/<slug>``). Null for a
-        product or a service, and null once the item is deleted - like `image`
-        and `item_slug`, this is read live through the FK rather than snapshotted,
-        because it only exists to address a page that still exists."""
-        return obj.menu_item.kind if obj.menu_item else None
+    def get_item_menu_category_slug(self, obj):
+        """A menu item's category slug - the first segment of its detail route
+        (``/menu/<category>/<slug>``). Null for a product or a service, and null
+        once the item is deleted - like `image` and `item_slug`, this is read
+        live through the FK rather than snapshotted, because it only exists to
+        address a page that still exists, and an item re-filed under another
+        category has moved."""
+        return obj.menu_item.category.slug if obj.menu_item else None
 
     def get_item_booking_enabled(self, obj):
         """Whether this line's service is *still* sold as an appointment.

@@ -325,15 +325,17 @@ exactly this reason.
 on an empty listing before the catalog is seeded.
 
 **A food CTA points at `MENU_ALL_PATH` (`/categories/menu`), never a path
-literal.** The menu is six pages: `/categories/menu` is the whole thing, and
-`/categories/{food,drinks,desserts,sides,appetizers}` each list one
-`MenuItem.kind` (`MENU_KIND_PATHS` in `lib/catalog.ts` maps kind → path — the
-enum value is singular and the path plural, so never build one by
-concatenation). `/categories/food` is now the **dishes**, not the menu: a "see
-our menu" button sent there would silently hide a bar's drinks. To link one
-kind — a drinks CTA on a cantina's landing — use `MENU_KIND_PATHS.drink` and
-gate it on `system.menu_item_kind_counts.drink`, the per-kind counterpart to
-`menu_item_count`.
+literal.** The menu is one listing — `/categories/menu`, the whole thing — plus
+a page per category at `menuCategoryHref(slug)`. Both live in
+`lib/menu-paths.ts`; never build one by concatenation. There used to be five
+per-kind listings beside it (`/categories/{food,drinks,desserts,sides,appetizers}`)
+backed by a `MenuItem.kind` enum; the enum is gone and a menu is sectioned by the
+tenant's own categories now, so **to feature one section — a drinks band on a
+cantina's landing — read `getMenuCategories()` and pick the category**, then
+filter `getAllMenuItems()` by `item.category`. `sites/santofishrestaurant/sections/bar.tsx`
+is the worked example, and ⚠ its docstring is worth reading first: with no
+structural per-item field left, choosing "the bar" is a name match, and it fails
+soft (renders nothing) rather than dressing the panel with the wrong food.
 
 ## Shape dividers — the seam treatment, and who owns it
 

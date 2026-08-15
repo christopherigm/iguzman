@@ -7,7 +7,7 @@ import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { toShareDescription } from "@/lib/share";
-import { menuItemHref } from "@/lib/menu-kinds";
+import { menuItemHref } from "@/lib/menu-paths";
 import { formatPrice, discountPercent } from "@/lib/price";
 import { enabledIngredients } from "@/lib/menu-selection";
 import { BuyableCardActions } from "./buyable-card-actions";
@@ -123,7 +123,7 @@ export function BuyableCardView({
       ? `/products/${item.data.slug}`
       : item.kind === "service"
         ? `/services/${item.data.slug}`
-        : menuItemHref(item.data.kind, item.data.slug);
+        : menuItemHref(item.data.category_slug, item.data.slug);
 
   // A sibling variant is its own catalog item with its own card, so a card only
   // ever prices and pictures the item it is for.

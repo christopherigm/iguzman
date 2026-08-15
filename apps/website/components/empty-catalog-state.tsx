@@ -3,7 +3,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { getSystem } from "@/lib/system";
-import { MENU_ALL_PATH } from "@/lib/menu-kinds";
+import { MENU_ALL_PATH } from "@/lib/menu-paths";
 import { CatalogCategories } from "./catalog-categories";
 
 interface EmptyCatalogStateProps {

@@ -13,7 +13,7 @@ from .models import (
     MenuItemIngredientOption, RecipeStep,
     Ingredient, IngredientProvider,
     DIMENSION_UNIT_CHOICES, WEIGHT_UNIT_CHOICES, MODALITY_CHOICES,
-    QUANTITY_UNIT_CHOICES, MENU_ITEM_KIND_CHOICES,
+    QUANTITY_UNIT_CHOICES,
 )
 
 
@@ -1429,16 +1429,17 @@ class MenuItemVariantSerializer(serializers.ModelSerializer):
     nest ``variants``/``ingredients``, so the public payload can never recurse
     through the symmetrical relation.
 
-    ``kind`` is here for the link, not for display: a menu item's detail route
-    follows its kind (``/drink/<slug>``, not ``/food/<slug>``), and nothing stops
-    the CMS from linking a variant of a different kind, so a thumbnail cannot
-    assume its sibling shares the current page's route."""
+    ``category_slug`` is here for the link, not for display: a menu item's
+    detail route is ``/menu/<category>/<slug>``, and nothing stops the CMS from
+    linking a variant filed under a different category, so a thumbnail cannot
+    assume its sibling shares the current page's category segment."""
 
     image = serializers.SerializerMethodField()
+    category_slug = serializers.SlugRelatedField(source='category', slug_field='slug', read_only=True)
 
     class Meta:
         model = MenuItem
-        fields = ['id', 'slug', 'name', 'en_name', 'kind', 'image']
+        fields = ['id', 'slug', 'name', 'en_name', 'category_slug', 'image']
 
     def get_image(self, obj):
         return _buyable_image_url(obj, self.context.get('request'))
@@ -1465,7 +1466,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
             'brand', 'brand_name',
             'name', 'en_name', 'description', 'en_description',
             'short_description', 'en_short_description',
-            'slug', 'sku', 'kind',
+            'slug', 'sku',
             'image', 'images', 'ingredients', 'variants',
             'href', 'video_link', 'fit', 'background_color',
             'price', 'compare_price', 'cost_price', 'currency',
@@ -1507,8 +1508,12 @@ class MenuItemWriteSerializer(serializers.Serializer):
     brand = serializers.PrimaryKeyRelatedField(
         queryset=Brand.objects.all(), required=False, allow_null=True,
     )
+    # Required, unlike its Product/Service counterparts: the category sections
+    # the menu, fills the navbar dropdown and is a segment of the item's URL.
+    # `required=False` on a PATCH is handled by the partial-update path, which
+    # only writes the keys it was sent.
     category = serializers.PrimaryKeyRelatedField(
-        queryset=MenuCategory.objects.all(), required=False, allow_null=True,
+        queryset=MenuCategory.objects.all(),
     )
     # Sibling variants (symmetrical M2M). Written as a list of MenuItem ids; the
     # relation is set after the item is saved (see create/update).
@@ -1519,9 +1524,6 @@ class MenuItemWriteSerializer(serializers.Serializer):
     # Menu-item-specific fields
     slug = serializers.SlugField(max_length=255)
     sku = serializers.CharField(max_length=100, required=False, allow_null=True, allow_blank=True)
-    kind = serializers.ChoiceField(
-        choices=[c[0] for c in MENU_ITEM_KIND_CHOICES], required=False, default='food',
-    )
 
     price = serializers.DecimalField(max_digits=12, decimal_places=2)
     compare_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)

@@ -7,9 +7,10 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
 import {
   getMenuCategories,
-  getMenuItemsByKind,
+  getAllMenuItems,
   type MenuItemDetail,
 } from "@/lib/catalog";
+import { menuCategoryHref } from "@/lib/menu-paths";
 import { formatPrice } from "@/lib/price";
 
 /**
@@ -26,26 +27,34 @@ import { formatPrice } from "@/lib/price";
  * `MenuCategory` rows (its image, name and description) plus its drinks and
  * their live prices.
  *
- * **What counts as a drink is `MenuItem.kind`, not the category's name.** The
- * section asks the API for `?kind=drink` and then dresses the panel with the
- * first of the tenant's categories that actually holds one. This used to be a
- * 24-word keyword list matched against category names, which needed
- * accent-stripping and whole-word-only matching to keep "barbacoa" and
- * "cocteles y caldos" (shrimp cocktails - food) from matching, and still broke
- * silently the moment the tenant renamed the category in the CMS. A slug or id
- * literal is no better: `seed_site` host-namespaces every slug, so one would
- * break as soon as the site were re-seeded on another host. `kind` is set per
- * item and survives all of it.
+ * ⚠ **Which category is the bar is decided by `BAR_MATCH` below, and that is
+ * the fragile part of this file.** It used to be decided by `MenuItem.kind`
+ * (`?kind=drink`), a structural per-item field that survived a rename; that
+ * enum is gone, and a menu is sectioned by the tenant's own categories now, so
+ * there is no longer anything in the data that says "these are the drinks".
  *
- * Because the list is now keyed on the items rather than the category, a bar
- * snack filed under the same category no longer appears in the price list -
- * only drinks do. If no category holds an available drink, the section renders
- * nothing, exactly like the shared blocks.
+ * What is left is a name match, and it is deliberately **one** token rather
+ * than the 24-word keyword list this replaced - that list needed
+ * accent-stripping and whole-word-only matching to keep "barbacoa" and
+ * "cocteles y caldos" (shrimp cocktails - food) from matching it, and still
+ * broke silently. A hard-coded slug or id is no better: `seed_site`
+ * host-namespaces every slug, so one would break the moment the site were
+ * re-seeded on another host.
+ *
+ * **If the tenant renames the category away from "barra", this section stops
+ * rendering** - it fails soft, exactly like the shared blocks, rather than
+ * dressing the panel with the wrong food. Point `BAR_MATCH` at the new name.
  *
  * Deliberately contained rather than full-bleed: a full-width opaque band
  * outside `SectionBand` would paint over the tenant's logo watermark and page
  * background. Here the page shows through on both sides of the panel.
  */
+
+/** The token a category's name or slug must contain to *be* the bar. Matched
+ *  case-insensitively against both, so it survives the tenant editing the
+ *  display name ("La Barra" -> "Barra & Coctelería") without surviving a rename
+ *  to something else entirely - which is the honest failure here. */
+const BAR_MATCH = "barra";
 
 function pick(
   locale: string,
@@ -86,28 +95,27 @@ function BarLine({
 }
 
 export async function Bar() {
-  const [categories, drinks, locale, t] = await Promise.all([
+  const [categories, allItems, locale, t] = await Promise.all([
     getMenuCategories(),
-    getMenuItemsByKind("drink"),
+    getAllMenuItems(),
     getLocale(),
     getTranslations("SantoFishSite"),
   ]);
 
-  const available = drinks.filter((item) => item.is_available);
-
-  // The panel's photo, heading, copy and CTA are a real MenuCategory, so pick
-  // the first of the tenant's own categories (their CMS order) that holds a
-  // drink. Keying the choice on the items is what makes a rename harmless.
-  const category = categories.find((cat) =>
-    available.some((item) => item.category === cat.id),
+  // The panel's photo, heading, copy and CTA are a real MenuCategory - the
+  // tenant's own bar section. See BAR_MATCH above for why this is a name match
+  // and what happens when it stops matching.
+  const matches = (value: string | null) =>
+    (value ?? "").toLowerCase().includes(BAR_MATCH);
+  const category = categories.find(
+    (cat) => matches(cat.name) || matches(cat.en_name) || matches(cat.slug),
   );
   if (!category) return null;
 
-  // Scoped to that category so the CTA below leads to exactly this list; a
-  // drink filed elsewhere belongs to that category's own page.
-  const items = available
-    .filter((item) => item.category === category.id)
+  const items = allItems
+    .filter((item) => item.is_available && item.category === category.id)
     .slice(0, 8);
+  if (items.length === 0) return null;
 
   const name = pick(locale, category.name, category.en_name);
   const description = pick(
@@ -196,7 +204,7 @@ export async function Bar() {
                   <Box marginTop={8}>
                     <Button
                       text={t("bar.cta")}
-                      href={`/categories/food/${category.slug}/`}
+                      href={menuCategoryHref(category.slug)}
                       kind="primary"
                       size="lg"
                     />

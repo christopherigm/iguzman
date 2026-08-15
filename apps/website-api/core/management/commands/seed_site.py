@@ -483,7 +483,6 @@ class Command(BaseCommand):
                     price=self._price(m.get("price")),
                     compare_price=self._price(m["compare_price"]) if m.get("compare_price") else None,
                     currency=m.get("currency") or "USD",
-                    kind=m.get("kind") or "food",
                     is_featured=m.get("is_featured", True),
                     is_available=m.get("is_available", True),
                     eta_minutes=m.get("eta_minutes"),

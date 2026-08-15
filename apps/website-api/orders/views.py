@@ -664,7 +664,7 @@ class OrderListView(APIView):
             # query per row.
             .select_related("booking", "booking__branch")
             .prefetch_related(
-                "lines", "lines__product", "lines__service", "lines__menu_item",
+                "lines", "lines__product", "lines__service", "lines__menu_item", "lines__menu_item__category",
                 # The image preview falls back to the item's gallery when it has
                 # no own `image`; prefetch it so the strip is not an N+1.
                 "lines__product__images", "lines__service__images", "lines__menu_item__images",
@@ -853,7 +853,7 @@ class OrderPayView(APIView):
             Order.objects
             .filter(public_id=public_id, system=system)
             .select_related("booking", "booking__service", "booking__branch")
-            .prefetch_related("lines", "lines__product", "lines__menu_item")
+            .prefetch_related("lines", "lines__product", "lines__menu_item", "lines__menu_item__category")
             .first()
         )
         if order is None or not _may_pay(request, order):
@@ -1087,7 +1087,7 @@ class AdminOrderDetailView(APIView):
             Order.objects
             .filter(public_id=public_id, system=system)
             .prefetch_related(
-                "lines", "lines__product", "lines__service", "lines__menu_item",
+                "lines", "lines__product", "lines__service", "lines__menu_item", "lines__menu_item__category",
                 "lines__product__images", "lines__service__images", "lines__menu_item__images",
             )
             .first()

@@ -1,5 +1,4 @@
 import { cache } from "react";
-import type { MenuItemKind } from "./menu-kinds";
 import { getTenantHost } from "./resolve-site";
 import { API_URL } from "./config";
 import logger from "./logger";
@@ -516,21 +515,16 @@ export interface MenuItemImageT {
 /** A sibling variant of a menu item - an alternative version of the same dish
  *  (e.g. a vegan or gluten-free one), each its own orderable MenuItem. Shallow
  *  by design: just enough to render a linkable thumbnail on the detail page. */
-/** Re-exported for convenience next to the menu helpers below. Only the type -
- *  the kind **constants** live in `lib/menu-kinds.ts` and must be imported from
- *  there, since a client component that reached them through this module would
- *  pull `next/headers` into the browser bundle. */
-export type { MenuItemKind } from "./menu-kinds";
-
 export interface MenuItemVariant {
   id: number;
   slug: string;
   name: string | null;
   en_name: string | null;
-  /** The sibling's own kind, which is what its detail route is - a variant is
-   *  normally the same kind as the item it hangs off, but the CMS does not
-   *  enforce that, so the link is built from this rather than from the page. */
-  kind: MenuItemKind;
+  /** The sibling's own category slug, which is the first segment of its detail
+   *  route - a variant is normally filed beside the item it hangs off, but the
+   *  CMS does not enforce that, so the link is built from this rather than from
+   *  the page it is rendered on. */
+  category_slug: string;
   image: string | null;
 }
 
@@ -539,7 +533,6 @@ export interface MenuItemVariant {
 export interface MenuItemDetail {
   id: number;
   slug: string;
-  kind: MenuItemKind;
   name: string | null;
   en_name: string | null;
   description: string | null;
@@ -555,9 +548,12 @@ export interface MenuItemDetail {
   is_available: boolean;
   is_featured: boolean;
   show_nutrition_label: boolean;
-  category: number | null;
-  category_name: string | null;
-  category_slug: string | null;
+  /** Required on a menu item, unlike on a product or a service: the category
+   *  sections the menu, fills the navbar's Menu dropdown, and is the first
+   *  segment of the item's URL. */
+  category: number;
+  category_name: string;
+  category_slug: string;
   brand: number | null;
   brand_name: string | null;
   /** Minutes until the item is ready - the customer-facing "Ready in ..."
@@ -622,23 +618,6 @@ export async function getMenuItemsByCategory(
     `/api/catalog/menu-items/?category=${categoryId}`,
     host,
     `menu items(category=${categoryId})`,
-  );
-}
-
-/**
- * Every menu item of one kind, across all categories - the structural way to
- * ask for "the drinks" (or the desserts, the sides...). Prefer this over
- * matching a category's name: `kind` is set per item in the CMS, while a
- * category is free-form copy the tenant may rename at any time.
- */
-export async function getMenuItemsByKind(
-  kind: MenuItemKind,
-): Promise<MenuItemDetail[]> {
-  const host = await getTenantHost();
-  return fetchWithHost<MenuItemDetail>(
-    `/api/catalog/menu-items/?kind=${kind}`,
-    host,
-    `menu items(kind=${kind})`,
   );
 }
 

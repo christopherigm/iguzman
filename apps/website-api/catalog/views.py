@@ -53,7 +53,7 @@ from .models import (
     ProductCategory, Product, ProductImage,
     ServiceCategory, Service, ServiceImage,
     MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient, RecipeStep,
-    Ingredient, MENU_ITEM_KIND_CHOICES,
+    Ingredient,
 )
 from .serializers import (
     ProductCategorySerializer,
@@ -1032,7 +1032,6 @@ class MenuItemListCreateView(APIView):
       brand     - filter by brand pk
       featured  - 'true' to show only featured items
       available - 'true' to show only orderable items
-      kind      - one of 'food' | 'drink' | 'dessert' | 'side' | 'appetizer'
       dietary   - one of 'vegetarian' | 'vegan' | 'gluten_free'
       search    - text search on name
       include_disabled - 'true' to also return disabled items (system admins only)
@@ -1075,14 +1074,6 @@ class MenuItemListCreateView(APIView):
 
         if request.query_params.get('available') == 'true':
             qs = qs.filter(is_available=True)
-
-        # Single-valued on purpose: `_list_key` reads `query_params.items()`,
-        # which yields only the LAST value of a repeated key, so a repeatable
-        # ?kind= would let two different filter combinations share one cache
-        # entry. A caller wanting several kinds asks for them separately.
-        kind = request.query_params.get('kind')
-        if kind in dict(MENU_ITEM_KIND_CHOICES):
-            qs = qs.filter(kind=kind)
 
         dietary = request.query_params.get('dietary')
         if dietary == 'vegetarian':

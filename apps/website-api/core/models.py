@@ -131,19 +131,14 @@ DIVIDER_CHOICES = (
 )
 
 
-# The seven things a tenant can sell and may rename in the CMS: the five
-# MenuItem kinds (catalog.MENU_ITEM_KIND_CHOICES) plus the two other Buyable
-# families, Product and Service.
+# The two Buyable families a tenant can rename in the CMS.
 #
-# Spelled out here rather than imported from `catalog.models`, which points at
-# `core.System` and would close an import loop. `SystemKindLabelTests` pins this
-# tuple against the menu kinds so the two cannot drift apart in silence.
+# MenuItem is deliberately absent: a menu is sectioned by the tenant's own
+# `MenuCategory` rows, which are already their own copy, so there is nothing
+# left for a label override to rename. This list used to carry the five
+# `MenuItem.kind` values alongside these two; both the kinds and their ten
+# label columns are gone.
 CATALOG_KINDS = (
-    "food",
-    "drink",
-    "dessert",
-    "side",
-    "appetizer",
     "product",
     "service",
 )
@@ -1136,34 +1131,23 @@ class System(Common):
     )
 
     # ── Catalog kind labels ───────────────────────────────────────────────────
-    # What this tenant *calls* each of the seven things it can sell: the five
-    # MenuItem kinds (see catalog.MENU_ITEM_KIND_CHOICES) plus the two other
-    # Buyable families, Product and Service. A pizzeria renames "Food" to
-    # "Pizzas"; a workshop renames "Services" to "Lo que hacemos".
+    # What this tenant *calls* the two Buyable families it can sell: a workshop
+    # renames "Services" to "Lo que hacemos". (A menu is sectioned by the
+    # tenant's own MenuCategory rows, so it has nothing to rename here.)
     #
-    # These are *display* overrides and nothing else. The kind values, the
-    # `?kind=` filter and every URL (`/categories/food`, `/food/<slug>`) are
-    # structural and stay as they are - renaming a label must not move a page a
-    # customer has bookmarked or a search engine has indexed. Blank means "use
-    # the frontend's own translation", which is why they are nullable with no
-    # default: a default would have to be written in one language and would then
-    # be wrong on the four locales the site does not store copy for.
+    # These are *display* overrides and nothing else. Every URL
+    # (`/categories/products`, `/products/<slug>`) is structural and stays as it
+    # is - renaming a label must not move a page a customer has bookmarked or a
+    # search engine has indexed. Blank means "use the frontend's own
+    # translation", which is why they are nullable with no default: a default
+    # would have to be written in one language and would then be wrong on the
+    # four locales the site does not store copy for.
     #
     # Bilingual in the same shape as every other pair on this model: the bare
     # column is the Spanish copy and `en_*` the English one. `max_length=64`
     # rather than the 255 its siblings carry - the string lands in a navbar
-    # dropdown item as well as a page heading, and a paragraph pasted here would
-    # break the bar rather than the sentence.
-    kind_label_food = models.CharField(max_length=64, null=True, blank=True)
-    en_kind_label_food = models.CharField(max_length=64, null=True, blank=True)
-    kind_label_drink = models.CharField(max_length=64, null=True, blank=True)
-    en_kind_label_drink = models.CharField(max_length=64, null=True, blank=True)
-    kind_label_dessert = models.CharField(max_length=64, null=True, blank=True)
-    en_kind_label_dessert = models.CharField(max_length=64, null=True, blank=True)
-    kind_label_side = models.CharField(max_length=64, null=True, blank=True)
-    en_kind_label_side = models.CharField(max_length=64, null=True, blank=True)
-    kind_label_appetizer = models.CharField(max_length=64, null=True, blank=True)
-    en_kind_label_appetizer = models.CharField(max_length=64, null=True, blank=True)
+    # item as well as a page heading, and a paragraph pasted here would break
+    # the bar rather than the sentence.
     kind_label_product = models.CharField(max_length=64, null=True, blank=True)
     en_kind_label_product = models.CharField(max_length=64, null=True, blank=True)
     kind_label_service = models.CharField(max_length=64, null=True, blank=True)

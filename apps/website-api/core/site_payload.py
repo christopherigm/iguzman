@@ -137,9 +137,9 @@ SYSTEM_TEXT_FIELDS = (
     "en_terms_and_conditions",
     "user_data",
     "en_user_data",
-    # What the site calls each kind of thing it sells ("Pizzas" for food, …).
-    # Copy, like the spotlight labels above it - decided once when the site is
-    # written and travels with it, unlike anything holding a per-environment id.
+    # What the site calls its products and its services. Copy, like the
+    # spotlight labels above it - decided once when the site is written and
+    # travels with it, unlike anything holding a per-environment id.
     *KIND_LABEL_FIELDS,
 )
 
@@ -368,7 +368,6 @@ def _menu_item_dict(m: MenuItem) -> dict:
     if m.compare_price is not None:
         d["compare_price"] = str(m.compare_price)
     d["currency"] = m.currency
-    d["kind"] = m.kind
     d["is_featured"] = m.is_featured
     d["is_available"] = m.is_available
     # Dietary/serving flags travel only when set (see MENU_ITEM_FLAG_FIELDS).
@@ -675,7 +674,6 @@ def _apply_menu(system, categories) -> dict:
                 _decimal(m["compare_price"]) if m.get("compare_price") else None
             )
             defaults["currency"] = m.get("currency") or "USD"
-            defaults["kind"] = m.get("kind") or "food"
             defaults["is_featured"] = m.get("is_featured", True)
             defaults["is_available"] = m.get("is_available", True)
             for f in MENU_ITEM_FLAG_FIELDS:

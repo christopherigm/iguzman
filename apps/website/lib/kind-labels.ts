@@ -1,37 +1,34 @@
 /**
- * What *this tenant* calls each kind of thing it sells.
+ * What *this tenant* calls the two Buyable families it sells.
  *
- * A pizzeria's menu section is "Pizzas", not "Food"; a workshop's services are
- * "Lo que hacemos". `System` carries a bilingual label column pair for each of
- * the seven catalog kinds (the five `MenuItemKind`s plus the two other Buyable
- * families), and this module turns those columns into the strings the site
- * paints - falling back to the app's own translations wherever a tenant has
- * typed nothing.
+ * A workshop's services are "Lo que hacemos". `System` carries a bilingual
+ * label column pair for products and for services, and this module turns those
+ * columns into the strings the site paints - falling back to the app's own
+ * translations wherever a tenant has typed nothing.
  *
- * ⚠ **These rename a label and nothing else.** The kind values, the API's
- * `?kind=` filter and every URL (`/categories/food`, `/food/<slug>`) are
- * structural: renaming "Food" to "Pizzas" must not move a page a customer has
- * bookmarked. Never build a path from a label.
+ * **A menu is absent on purpose.** It is sectioned by the tenant's own
+ * `MenuCategory` rows, which are already their own copy, so there is nothing
+ * here for a label to rename. This used to carry five more kinds
+ * (food/drink/dessert/side/appetizer) alongside these two; both they and their
+ * ten `System` columns are gone.
  *
- * Plain data with no server import, for the same reason `menu-kinds.ts` is: the
+ * ⚠ **These rename a label and nothing else.** Every URL
+ * (`/categories/products`, `/products/<slug>`) is structural: renaming
+ * "Products" must not move a page a customer has bookmarked. Never build a path
+ * from a label.
+ *
+ * Plain data with no server import, for the same reason `menu-paths.ts` is: the
  * navbar is a **client** component and needs this, while `lib/system.ts` reaches
  * `next/headers` through `resolve-site.ts` to resolve the tenant. That is why
  * `KindLabelOverrides` is declared here structurally rather than imported from
  * the `System` type - `System` extends it, not the other way round.
  */
 
-import { MENU_ITEM_KINDS, type MenuItemKind } from "./menu-kinds";
+/** The two Buyable families a tenant may rename. Mirrors `CATALOG_KINDS` in
+ *  `core/models.py`. */
+export type CatalogKind = "product" | "service";
 
-/** Everything a tenant sells and may therefore rename: the five menu kinds plus
- *  the two other Buyable families. Mirrors `CATALOG_KINDS` in `core/models.py`. */
-export type CatalogKind = MenuItemKind | "product" | "service";
-
-/** In the order a site reads: the menu, then the other two families. */
-export const CATALOG_KINDS: CatalogKind[] = [
-  ...MENU_ITEM_KINDS,
-  "product",
-  "service",
-];
+export const CATALOG_KINDS: CatalogKind[] = ["product", "service"];
 
 /**
  * The `System` columns behind the labels - the bare field is the tenant's
@@ -40,29 +37,19 @@ export const CATALOG_KINDS: CatalogKind[] = [
  * every tenant that has never opened the section.
  */
 export interface KindLabelOverrides {
-  kind_label_food: string | null;
-  en_kind_label_food: string | null;
-  kind_label_drink: string | null;
-  en_kind_label_drink: string | null;
-  kind_label_dessert: string | null;
-  en_kind_label_dessert: string | null;
-  kind_label_side: string | null;
-  en_kind_label_side: string | null;
-  kind_label_appetizer: string | null;
-  en_kind_label_appetizer: string | null;
   kind_label_product: string | null;
   en_kind_label_product: string | null;
   kind_label_service: string | null;
   en_kind_label_service: string | null;
 }
 
-/** The overrides a tenant actually typed, resolved for one locale. A kind with
- *  no override is **absent**, never an empty string - so a consumer can read it
- *  as "did the tenant rename this?" without a truthiness dance. */
+/** The overrides a tenant actually typed, resolved for one locale. A family
+ *  with no override is **absent**, never an empty string - so a consumer can
+ *  read it as "did the tenant rename this?" without a truthiness dance. */
 export type KindLabels = Partial<Record<CatalogKind, string>>;
 
-/** The two column names holding one kind's label. Derived rather than typed out
- *  so a kind added to `CATALOG_KINDS` cannot be half-wired. */
+/** The two column names holding one family's label. Derived rather than typed
+ *  out so a family added to `CATALOG_KINDS` cannot be half-wired. */
 function columnsFor(
   kind: CatalogKind,
 ): [keyof KindLabelOverrides, keyof KindLabelOverrides] {
@@ -109,7 +96,7 @@ export function kindLabels(
 }
 
 /**
- * The label to print for one kind: the tenant's own, or the app's translation.
+ * The label to print for one family: the tenant's own, or the app's translation.
  *
  * `fallback` is always evaluated by the caller (a `t(...)` call), which is what
  * keeps this module free of i18n - and what makes an un-renamed site render
@@ -121,24 +108,4 @@ export function kindLabel(
   fallback: string,
 ): string {
   return labels?.[kind] ?? fallback;
-}
-
-/**
- * The CMS's way of naming a kind: the canonical label, plus the tenant's own in
- * parentheses when they have renamed it - "Food (Pizzas)".
- *
- * Deliberately *both*, unlike the storefront. An operator picking a kind on the
- * menu-item form is setting a structural field that drives routes and filters,
- * so the canonical name has to stay visible; but a menu of "Food / Drink / Side"
- * is unrecognisable to someone whose whole site says Pizzas, Bebidas, Extras.
- */
-export function kindLabelWithOverride(
-  labels: KindLabels | undefined,
-  kind: CatalogKind,
-  canonical: string,
-): string {
-  const override = labels?.[kind];
-  return override && override !== canonical
-    ? `${canonical} (${override})`
-    : canonical;
 }

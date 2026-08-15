@@ -9,7 +9,7 @@ import { getCoupon } from "@/lib/coupons";
 import { getSystem } from "@/lib/system";
 import { couponValueLabel, hasMinOrder } from "@/lib/coupon-shared";
 import { formatPrice } from "@/lib/price";
-import { MENU_ALL_PATH } from "@/lib/menu-kinds";
+import { MENU_ALL_PATH } from "@/lib/menu-paths";
 import { CouponClaim, type CouponDestination } from "./coupon-claim";
 
 type Props = { params: Promise<{ locale: string; code: string }> };

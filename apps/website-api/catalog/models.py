@@ -440,22 +440,6 @@ class ServiceImage(StandardPicture):
 #   * A Recipe (RecipeStep rows) is *internal*: preparation instructions for the
 #     kitchen, never served on the public API. See RecipeStep.
 
-# What kind of thing a MenuItem is - the menu *section* it belongs to, as a
-# structural field rather than a guess at the category's name.
-#
-# Deliberately one flat enum on two axes: 'drink' is beverage-vs-food, while
-# 'dessert'/'side'/'appetizer' are courses (a dessert is, of course, still
-# food). It reads the way an operator talks about their menu, which is what the
-# CMS dropdown has to match. The consequence to know: code that wants
-# "everything edible" asks for `kind != 'drink'`, not `kind == 'food'`.
-MENU_ITEM_KIND_CHOICES = [
-    ('food', 'Food'),
-    ('drink', 'Drink'),
-    ('dessert', 'Dessert'),
-    ('side', 'Side'),
-    ('appetizer', 'Appetizer'),
-]
-
 QUANTITY_UNIT_CHOICES = [
     ('g', 'Grams'),
     ('kg', 'Kilograms'),
@@ -516,34 +500,23 @@ class MenuItem(Buyable):
     single source of truth for that arithmetic and is used by the cart, checkout,
     and storefront alike so a customised price can never drift between them.
 
-    ``kind`` separates a drink from a dish (and a dessert, side or appetizer)
-    without a second model: a beverage carries the same priced ingredients,
-    nutrition, availability and variants a dish does, so the difference is a
-    field, not a class.
+    The tenant's own ``MenuCategory`` is the only sectioning there is, and it is
+    **required**: it groups the menu page, fills the navbar's Menu dropdown and
+    is a segment of every item's URL (``/menu/<category>/<slug>``), none of
+    which has an answer for an item filed under nothing. This replaced a
+    structural ``kind`` enum (food/drink/dessert/side/appetizer) that sat
+    alongside the category and could only ever be a second, disagreeing
+    sectioning of the same menu.
     """
 
+    # Required, and CASCADE: deleting a category deletes the items filed under
+    # it. There is no "no category" state for an item to fall back to.
     category = models.ForeignKey(
         MenuCategory,
-        null=True,
-        blank=True,
         on_delete=models.CASCADE,
         related_name='menu_items',
     )
     slug = models.SlugField(max_length=255, unique=True)
-
-    # What this item *is*, structurally - a drink, a dessert, a side. It lives
-    # here rather than on MenuCategory because an item's nature does not change
-    # with the section the tenant happens to file it under (a beer in a
-    # "Promociones" category is still a drink), and two fields would eventually
-    # disagree. Categories stay free-form tenant copy; this is what code may
-    # branch on. See MENU_ITEM_KIND_CHOICES.
-    kind = models.CharField(
-        max_length=16,
-        choices=MENU_ITEM_KIND_CHOICES,
-        default='food',
-        help_text='What this item is - drives menu sections, filters and the '
-                  'storefront (e.g. a bar/drinks list).',
-    )
 
     # Identifier
     sku = models.CharField(max_length=100, null=True, blank=True, unique=True)

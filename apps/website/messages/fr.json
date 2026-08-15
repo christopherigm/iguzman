@@ -944,12 +944,6 @@
     "instruction": "Instruction",
     "basePrice": "Prix de base",
     "calories": "Calories",
-    "menuItemKind": "Type",
-    "kindFood": "Plat",
-    "kindDrink": "Boisson",
-    "kindDessert": "Dessert",
-    "kindSide": "Accompagnement",
-    "kindAppetizer": "Entrée",
     "kindLabelsTitle": "Noms du catalogue",
     "kindLabelsIntro": "Comment ce site nomme chaque type de chose qu'il vend. Renommez \"Plats\" en \"Pizzas\" et le menu déroulant, les pages de liste, leurs titres et le fil d'Ariane suivent.",
     "kindLabelsHelp": "Laissez un champ vide pour conserver le nom par défaut. Seul le libellé change : les adresses des pages restent identiques, les liens et favoris continuent de fonctionner.",
@@ -1185,7 +1179,8 @@
     "couponDownload": "Télécharger le visuel",
     "couponExportError": "Le visuel n'a pas pu être exporté.",
     "couponSaveForQr": "Enregistrez le code promo pour générer son QR code, puis téléchargez le visuel.",
-    "couponQrPlaceholder": "Le QR code sera généré ici une fois le code promo enregistré."
+    "couponQrPlaceholder": "Le QR code sera généré ici une fois le code promo enregistré.",
+    "selectCategory": "- Choisir une catégorie -"
   },
   "GradientBuilder": {
     "linear": "Linéaire",
@@ -1322,16 +1317,8 @@
     "vitaminD": "Vitamine D",
     "calcium": "Calcium",
     "iron": "Fer",
-    "potassium": "Potassium"
-  },
-  "MenuKinds": {
-    "menu": "Menu",
-    "all": "Menu complet",
-    "food": "Plats",
-    "drink": "Boissons",
-    "dessert": "Desserts",
-    "side": "Accompagnements",
-    "appetizer": "Entrées"
+    "potassium": "Potassium",
+    "all": "Menu complet"
   },
   "AdminOrders": {
     "home": "Accueil",

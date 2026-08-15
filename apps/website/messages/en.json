@@ -944,12 +944,6 @@
     "instruction": "Instruction",
     "basePrice": "Base price",
     "calories": "Calories",
-    "menuItemKind": "Kind",
-    "kindFood": "Food",
-    "kindDrink": "Drink",
-    "kindDessert": "Dessert",
-    "kindSide": "Side",
-    "kindAppetizer": "Appetizer",
     "kindLabelsTitle": "Catalog names",
     "kindLabelsIntro": "What this site calls each kind of thing it sells. Rename \"Food\" to \"Pizzas\" and the menu dropdown, the listing pages, their headings and the breadcrumbs all follow.",
     "kindLabelsHelp": "Leave a field empty to keep the built-in name. Only the wording changes: the page addresses stay the same, so existing links and bookmarks keep working.",
@@ -1185,7 +1179,8 @@
     "couponDownload": "Download flyer",
     "couponExportError": "The flyer could not be exported.",
     "couponSaveForQr": "Save the coupon to generate its QR code, then download the flyer.",
-    "couponQrPlaceholder": "The QR code will be generated here once the coupon is saved."
+    "couponQrPlaceholder": "The QR code will be generated here once the coupon is saved.",
+    "selectCategory": "- Select a category -"
   },
   "GradientBuilder": {
     "linear": "Linear",
@@ -1322,16 +1317,8 @@
     "vitaminD": "Vitamin D",
     "calcium": "Calcium",
     "iron": "Iron",
-    "potassium": "Potassium"
-  },
-  "MenuKinds": {
-    "menu": "Menu",
-    "all": "Full menu",
-    "food": "Food",
-    "drink": "Drinks",
-    "dessert": "Desserts",
-    "side": "Sides",
-    "appetizer": "Appetizers"
+    "potassium": "Potassium",
+    "all": "Full menu"
   },
   "AdminOrders": {
     "home": "Home",

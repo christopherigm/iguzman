@@ -32,6 +32,37 @@ const nextConfig = {
     };
     return config;
   },
+  // The menu used to be sectioned by a `MenuItem.kind` enum, which gave it five
+  // listing pages and five detail routes. Both sets are gone - a menu is
+  // sectioned by the tenant's own categories now - but the URLs are on printed
+  // menus, flyers and QR codes, so they are redirected rather than 404'd.
+  //
+  // Written twice per path because a request may or may not carry a locale
+  // prefix by the time it reaches here; the locale is pinned to the real list so
+  // `/:locale/...` cannot swallow an unrelated two-segment path.
+  async redirects() {
+    const LOCALE = ':locale(de|en|es|fr|pt)';
+    // Listing pages -> the one menu listing.
+    const listings = ['food', 'drinks', 'desserts', 'sides', 'appetizers'];
+    // Detail routes -> the slug-only permalink, which looks the item up and
+    // redirects on to `/menu/<category>/<slug>`. A static rule cannot know an
+    // item's category; `app/[locale]/menu/[category]/page.tsx` does.
+    const details = ['food', 'drink', 'dessert', 'side', 'appetizer'];
+
+    return [
+      ...listings.flatMap((kind) => [
+        { source: `/categories/${kind}`, destination: '/categories/menu', permanent: true },
+        { source: `/${LOCALE}/categories/${kind}`, destination: '/:locale/categories/menu', permanent: true },
+      ]),
+      // Menu categories moved under the listing they belong to.
+      { source: '/categories/food/:slug', destination: '/categories/menu/:slug', permanent: true },
+      { source: `/${LOCALE}/categories/food/:slug`, destination: '/:locale/categories/menu/:slug', permanent: true },
+      ...details.flatMap((kind) => [
+        { source: `/${kind}/:slug`, destination: '/menu/:slug', permanent: true },
+        { source: `/${LOCALE}/${kind}/:slug`, destination: '/:locale/menu/:slug', permanent: true },
+      ]),
+    ];
+  },
   async headers() {
     return [
       {

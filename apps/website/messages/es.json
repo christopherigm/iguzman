@@ -944,12 +944,6 @@
     "instruction": "Instrucción",
     "basePrice": "Precio base",
     "calories": "Calorías",
-    "menuItemKind": "Tipo",
-    "kindFood": "Comida",
-    "kindDrink": "Bebida",
-    "kindDessert": "Postre",
-    "kindSide": "Guarnición",
-    "kindAppetizer": "Entrada",
     "kindLabelsTitle": "Nombres del catálogo",
     "kindLabelsIntro": "Cómo llama este sitio a cada tipo de cosa que vende. Cambia \"Comida\" por \"Pizzas\" y el menú desplegable, las páginas de listado, sus títulos y las migas de pan lo siguen.",
     "kindLabelsHelp": "Deja un campo vacío para conservar el nombre predeterminado. Solo cambia el texto: las direcciones de las páginas no se mueven, así que los enlaces y favoritos siguen funcionando.",
@@ -1185,7 +1179,8 @@
     "couponDownload": "Descargar folleto",
     "couponExportError": "No se pudo exportar el folleto.",
     "couponSaveForQr": "Guarda el cupón para generar su código QR y luego descarga el folleto.",
-    "couponQrPlaceholder": "El código QR se generará aquí cuando guardes el cupón."
+    "couponQrPlaceholder": "El código QR se generará aquí cuando guardes el cupón.",
+    "selectCategory": "- Selecciona una categoría -"
   },
   "GradientBuilder": {
     "linear": "Lineal",
@@ -1322,16 +1317,8 @@
     "vitaminD": "Vitamina D",
     "calcium": "Calcio",
     "iron": "Hierro",
-    "potassium": "Potasio"
-  },
-  "MenuKinds": {
-    "menu": "Menú",
-    "all": "Menú completo",
-    "food": "Comida",
-    "drink": "Bebidas",
-    "dessert": "Postres",
-    "side": "Acompañamientos",
-    "appetizer": "Entradas"
+    "potassium": "Potasio",
+    "all": "Menú completo"
   },
   "AdminOrders": {
     "home": "Inicio",

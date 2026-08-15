@@ -62,9 +62,9 @@ export async function CategoryDetail({
   // `items` is cast per branch because destructuring `kind` off the union loses
   // its correlation with `items`.
   // The section is titled with whatever the tenant calls this family. The food
-  // branch deliberately keeps its own label ("Menu"): a menu category may hold
-  // drinks and desserts as well as food, so naming it after the food *kind*
-  // would promise a section of one course and list five.
+  // branch has no override to read - a menu is sectioned by the tenant's own
+  // categories, which are already their own copy, so this step names the *menu*
+  // and the category's own name is the page heading above it.
   const heading =
     kind === "product"
       ? kindLabel(labels, "product", t("products"))

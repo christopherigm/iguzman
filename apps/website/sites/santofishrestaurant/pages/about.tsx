@@ -9,7 +9,7 @@ import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { SectionHero } from "@/components/section-hero";
 import { getSystem } from "@/lib/system";
-import { MENU_ALL_PATH } from "@/lib/menu-kinds";
+import { MENU_ALL_PATH } from "@/lib/menu-paths";
 
 /**
  * "/about" for Santo Fish - the long version of the story the landing's Intro

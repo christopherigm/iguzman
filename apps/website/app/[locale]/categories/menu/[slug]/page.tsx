@@ -9,7 +9,7 @@ import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { SectionHero } from "@/components/section-hero";
 import { getSession } from "@repo/auth/session";
 import { getMenuCategory, getMenuItemsByCategory } from "@/lib/catalog";
-import { MENU_ALL_PATH } from "@/lib/menu-kinds";
+import { MENU_ALL_PATH } from "@/lib/menu-paths";
 import { CategoryDetail } from "@/components/category-detail";
 import { AdminEditButton } from "@/components/admin-edit-button";
 
@@ -78,9 +78,6 @@ export default async function MenuCategoryPage({ params }: Props) {
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },
-    // Deliberately NOT a kind label: this step is the whole menu (it links to
-    // `MENU_ALL_PATH`), and a category may hold drinks and desserts as well as
-    // food. Renaming it to the food kind's label would mislabel the trail.
     { label: t("food"), href: MENU_ALL_PATH },
     { label: name },
   ];

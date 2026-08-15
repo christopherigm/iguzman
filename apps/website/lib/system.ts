@@ -5,7 +5,6 @@ import type {
   HeroOverlayStyle,
 } from "@repo/ui/hero";
 import type { ShapeDividerMask } from "@repo/ui/shape-divider";
-import type { MenuItemKind } from "./catalog";
 import {
   kindLabels,
   type KindLabelOverrides,
@@ -190,13 +189,6 @@ export interface System extends KindLabelOverrides {
   product_count: number;
   service_count: number;
   menu_item_count: number;
-  /**
-   * Enabled menu items per `kind`, every choice present (zero included). Drives
-   * which per-kind links the navbar's Menu dropdown renders, which is why it
-   * rides along on the System payload the layout already fetches rather than
-   * costing one catalog call per kind.
-   */
-  menu_item_kind_counts: Record<MenuItemKind, number>;
   /** Number of enabled physical locations; drives the Contact link alongside `contact_email`. */
   branch_count: number;
   /**

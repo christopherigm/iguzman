@@ -18,12 +18,11 @@ admin single + bulk delete, the API views, and any cascade uniformly:
    a ``category`` reassignment); ``post_delete`` covers removals.
 
 3. **Items -> the System payload.** ``SystemSerializer`` embeds
-   ``product_count``, ``service_count``, ``menu_item_count`` and
-   ``menu_item_kind_counts``, and that payload is cached for a whole hour. The
-   storefront navbar builds its links from those numbers, so an item write -
-   creating the tenant's first drink, disabling the last one, or moving one from
-   ``kind='food'`` to ``kind='drink'`` - has to clear it too, or the Drinks link
-   stays missing (or stays after the drinks are gone) until the TTL lapses.
+   ``product_count``, ``service_count`` and ``menu_item_count``, and that
+   payload is cached for a whole hour. The storefront navbar builds its links
+   from those numbers, so an item write - creating the tenant's first menu item,
+   or disabling the last one - has to clear it too, or the Menu entry stays
+   missing (or stays after the menu is gone) until the TTL lapses.
 """
 
 from django.db.models.signals import post_delete, post_save
@@ -41,9 +40,9 @@ def _invalidate_family(family):
     invalidate_pattern(f"catalog:{family}:*")   # detail endpoints (per-pk)
 
 
-def _invalidate_categories(kind):
-    invalidate_pattern(f"catalog:{kind}_categories:*")  # list (item_count)
-    invalidate_pattern(f"catalog:{kind}_category:*")    # detail (item_count)
+def _invalidate_categories(family):
+    invalidate_pattern(f"catalog:{family}_categories:*")  # list (item_count)
+    invalidate_pattern(f"catalog:{family}_category:*")    # detail (item_count)
 
 
 # ── Category -> item caches ──────────────────────────────────────────────────
@@ -86,6 +85,4 @@ def invalidate_service_categories_on_item_change(sender, instance, **kwargs):
 @receiver(post_delete, sender=MenuItem)
 def invalidate_menu_categories_on_item_change(sender, instance, **kwargs):
     _invalidate_categories("menu")
-    # Also the per-kind counts: `kind` is a plain field, so an edit that only
-    # moves an item from Food to Drinks fires nothing else that would notice.
     invalidate_system_payload()

@@ -759,7 +759,6 @@ class SystemSerializer(serializers.ModelSerializer):
     product_count = serializers.SerializerMethodField()
     service_count = serializers.SerializerMethodField()
     menu_item_count = serializers.SerializerMethodField()
-    menu_item_kind_counts = serializers.SerializerMethodField()
     branch_count = serializers.SerializerMethodField()
     event_count = serializers.SerializerMethodField()
     stripe_configured = serializers.BooleanField(read_only=True)
@@ -820,12 +819,11 @@ class SystemSerializer(serializers.ModelSerializer):
             "spotlight_text", "en_spotlight_text",
             "spotlight_button_label", "en_spotlight_button_label",
             "spotlight_button_link", "spotlight_items",
-            # What this tenant calls each kind of thing it sells. Public by
-            # design - every storefront heading, breadcrumb and navbar entry for
-            # a kind is painted from these.
+            # What this tenant calls the two Buyable families it sells. Public
+            # by design - every storefront heading, breadcrumb and navbar entry
+            # for a family is painted from these.
             *KIND_LABEL_FIELDS,
             "product_count", "service_count", "menu_item_count",
-            "menu_item_kind_counts",
             "branch_count",
             "event_count",
         ]
@@ -883,29 +881,6 @@ class SystemSerializer(serializers.ModelSerializer):
     def get_menu_item_count(self, obj):
         from catalog.models import MenuItem
         return MenuItem.objects.filter(system=obj, enabled=True).count()
-
-    def get_menu_item_kind_counts(self, obj):
-        """How many enabled menu items this tenant has of each `kind`.
-
-        One aggregate rather than five `?kind=` list calls: the navbar has to
-        decide which per-kind links to render on *every* page, and the System
-        payload is already fetched there. Every choice is present, zero
-        included, so a consumer can read a count without guarding the key.
-        """
-        from django.db.models import Count
-
-        from catalog.models import MENU_ITEM_KIND_CHOICES, MenuItem
-
-        counts = dict.fromkeys((c[0] for c in MENU_ITEM_KIND_CHOICES), 0)
-        rows = (
-            MenuItem.objects.filter(system=obj, enabled=True)
-            .values('kind')
-            .annotate(total=Count('id'))
-        )
-        for row in rows:
-            if row['kind'] in counts:
-                counts[row['kind']] = row['total']
-        return counts
 
     def get_branch_count(self, obj):
         # Drives whether the public Contact link appears (a Contact page is worth
@@ -1176,16 +1151,6 @@ class SystemWriteSerializer(serializers.Serializer):
     # clears the override and hands the label back to the frontend's own
     # translation, which is why every one of them allows a blank string.
     # `SystemKindLabelTests` pins these declarations against `KIND_LABEL_FIELDS`.
-    kind_label_food            = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
-    en_kind_label_food         = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
-    kind_label_drink           = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
-    en_kind_label_drink        = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
-    kind_label_dessert         = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
-    en_kind_label_dessert      = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
-    kind_label_side            = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
-    en_kind_label_side         = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
-    kind_label_appetizer       = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
-    en_kind_label_appetizer    = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
     kind_label_product         = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
     en_kind_label_product      = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
     kind_label_service         = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)

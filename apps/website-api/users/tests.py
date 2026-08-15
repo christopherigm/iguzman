@@ -10,6 +10,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 from catalog.models import (
     Ingredient,
+    MenuCategory,
     MenuItem,
     MenuItemIngredient,
     Product,
@@ -120,7 +121,11 @@ class CartApiTests(TestCase):
         )
 
         self.menu_item = MenuItem.objects.create(
-            system=self.system, name="Burger", slug="burger",
+            system=self.system,
+            category=MenuCategory.objects.create(
+                system=self.system, name="Hamburguesas", slug="burgers",
+            ),
+            name="Burger", slug="burger",
             price=Decimal("12.00"), currency="USD",
         )
         # An optional add-on (extra patty), so a non-empty selection (a double

@@ -10,7 +10,7 @@ from decimal import Decimal
 from core.models import Branch, Brand, System
 
 from .models import (
-    Product, ProductImage, MenuItem, MenuItemIngredient,
+    Product, ProductImage, MenuCategory, MenuItem, MenuItemIngredient,
     MenuItemIngredientOption, Ingredient, RecipeStep, Service,
     normalize_selection,
 )
@@ -134,97 +134,114 @@ class ListCacheInvalidationTests(TestCase):
         )
 
 
-class MenuItemKindTests(TestCase):
-    """`kind` is what separates a drink from a dish without a second model, and
-    what the storefront filters a bar/drinks list on - so the default, the
-    round-trip and the ?kind= filter are pinned here.
+class MenuItemCategoryTests(TestCase):
+    """The tenant's own `MenuCategory` is the *only* sectioning a menu has, and
+    it is required - it groups the menu page, fills the navbar's Menu dropdown
+    and is a segment of every item's URL (`/menu/<category>/<slug>`).
 
-    The filter is deliberately single-valued: `_list_key` builds the cache key
-    from `query_params.items()`, which yields only the LAST value of a repeated
-    key, so a repeatable ?kind= would let two different filter combinations
-    share one cache entry.
+    It replaced a structural `kind` enum (food/drink/dessert/side/appetizer)
+    that sat alongside it and could only ever be a second, disagreeing
+    sectioning of one menu. What is pinned here is what that removal has to keep
+    working: the `?category=` filter, the variant reference carrying the segment
+    it links through, and the fact that an item cannot be filed under nothing.
     """
 
     def setUp(self):
         cache.clear()
         self.system = System.objects.create(site_name="Bar", host="bar.test")
+        self.dishes = MenuCategory.objects.create(
+            system=self.system, name="Platillos", slug="k-platillos",
+        )
+        self.drinks = MenuCategory.objects.create(
+            system=self.system, name="Bebidas", slug="k-bebidas",
+        )
         self.dish = MenuItem.objects.create(
-            system=self.system, name="Taco", slug="k-taco", price=Decimal("8.00"),
+            system=self.system, category=self.dishes, name="Taco",
+            slug="k-taco", price=Decimal("8.00"),
         )
         self.drink = MenuItem.objects.create(
-            system=self.system, name="Michelada", slug="k-michelada",
-            price=Decimal("6.00"), kind="drink",
+            system=self.system, category=self.drinks, name="Michelada",
+            slug="k-michelada", price=Decimal("6.00"),
         )
-        self.dessert = MenuItem.objects.create(
-            system=self.system, name="Flan", slug="k-flan",
-            price=Decimal("4.00"), kind="dessert",
+        self.flan = MenuItem.objects.create(
+            system=self.system, category=self.dishes, name="Flan",
+            slug="k-flan", price=Decimal("4.00"),
         )
         self.url = f"/api/catalog/menu-items/?system={self.system.id}"
 
     def _names(self, response):
         return sorted(row["name"] for row in response.json())
 
-    def test_default_is_food(self):
-        self.assertEqual(self.dish.kind, "food")
+    def test_public_read_exposes_the_category_and_its_slug(self):
+        """`category_slug` is the first segment of the item's detail URL, so a
+        card cannot link anywhere without it."""
+        rows = {r["name"]: r for r in self.client.get(self.url).json()}
+        self.assertEqual(rows["Michelada"]["category_slug"], "k-bebidas")
+        self.assertEqual(rows["Michelada"]["category_name"], "Bebidas")
 
-    def test_public_read_exposes_kind(self):
-        rows = {r["name"]: r["kind"] for r in self.client.get(self.url).json()}
-        self.assertEqual(rows["Michelada"], "drink")
-        self.assertEqual(rows["Taco"], "food")
-
-    def test_filter_returns_only_that_kind(self):
-        response = self.client.get(f"{self.url}&kind=drink")
+    def test_filter_returns_only_that_category(self):
+        response = self.client.get(f"{self.url}&category={self.drinks.id}")
         self.assertEqual(self._names(response), ["Michelada"])
 
-    def test_unfiltered_list_returns_every_kind(self):
+    def test_unfiltered_list_returns_every_category(self):
         self.assertEqual(
             self._names(self.client.get(self.url)), ["Flan", "Michelada", "Taco"]
         )
-
-    def test_bogus_kind_is_ignored_rather_than_emptying_the_menu(self):
-        # An unknown value must not silently filter the whole menu away, which
-        # is what `qs.filter(kind=<junk>)` would do.
-        response = self.client.get(f"{self.url}&kind=beverage")
-        self.assertEqual(self._names(response), ["Flan", "Michelada", "Taco"])
 
     def test_filtered_and_unfiltered_lists_do_not_share_a_cache_entry(self):
-        self.assertEqual(self._names(self.client.get(f"{self.url}&kind=drink")),
-                         ["Michelada"])
+        self.assertEqual(
+            self._names(self.client.get(f"{self.url}&category={self.drinks.id}")),
+            ["Michelada"],
+        )
         self.assertEqual(
             self._names(self.client.get(self.url)), ["Flan", "Michelada", "Taco"]
         )
 
-    def test_variant_reference_carries_its_own_kind(self):
-        """A variant thumbnail links to the sibling's own route, and each route
-        serves only its own kind - so the reference has to say what the sibling
-        is rather than let the page assume its own kind. Nothing stops the CMS
-        from pairing across kinds, which is exactly when assuming would 404."""
+    def test_variant_reference_carries_its_own_category_slug(self):
+        """A variant thumbnail links to the sibling's own URL, whose first
+        segment is the sibling's category - not the current page's. Nothing
+        stops the CMS from pairing across categories, which is exactly when
+        assuming would 404."""
         self.dish.variants.add(self.drink)
 
         rows = {r["name"]: r for r in self.client.get(self.url).json()}
-        variants = {v["slug"]: v["kind"] for v in rows["Taco"]["variants"]}
+        variants = {v["slug"]: v["category_slug"] for v in rows["Taco"]["variants"]}
 
-        self.assertEqual(variants, {"k-michelada": "drink"})
+        self.assertEqual(variants, {"k-michelada": "k-bebidas"})
 
-    def test_system_payload_counts_every_kind(self):
-        # The navbar decides which per-kind links to render from this one field,
-        # so every choice must be present - a kind the tenant has none of has to
-        # come back as 0 rather than be missing.
-        counts = self.client.get(
+    def test_the_write_serializer_refuses_an_item_with_no_category(self):
+        """Optional on Product and Service, required here: an uncategorized item
+        has no section to appear in and no URL to live at."""
+        from .serializers import MenuItemWriteSerializer
+
+        serializer = MenuItemWriteSerializer(data={
+            "system": self.system.id, "slug": "k-orphan",
+            "name": "Orphan", "price": "5.00",
+        })
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("category", serializer.errors)
+
+    def test_deleting_a_category_deletes_its_items(self):
+        """CASCADE, not PROTECT - there is no "no category" state for an item to
+        fall back to, so the row cannot outlive its section."""
+        self.drinks.delete()
+        self.assertFalse(MenuItem.objects.filter(pk=self.drink.pk).exists())
+        self.assertTrue(MenuItem.objects.filter(pk=self.dish.pk).exists())
+
+    def test_system_payload_counts_the_menu(self):
+        # The navbar decides whether to render a Menu entry at all from this.
+        payload = self.client.get(
             "/api/system/", HTTP_X_WEBSITE_HOST="bar.test"
-        ).json()["menu_item_kind_counts"]
-        self.assertEqual(
-            counts,
-            {"food": 1, "drink": 1, "dessert": 1, "side": 0, "appetizer": 0},
-        )
+        ).json()
+        self.assertEqual(payload["menu_item_count"], 3)
 
     def test_system_payload_ignores_disabled_items(self):
         self.drink.enabled = False
         self.drink.save()
-        counts = self.client.get(
+        payload = self.client.get(
             "/api/system/", HTTP_X_WEBSITE_HOST="bar.test"
-        ).json()["menu_item_kind_counts"]
-        self.assertEqual(counts["drink"], 0)
+        ).json()
+        self.assertEqual(payload["menu_item_count"], 2)
 
 
 class SystemPayloadInvalidationTests(TestCase):
@@ -235,51 +252,50 @@ class SystemPayloadInvalidationTests(TestCase):
     Every test here reads the endpoint once *before* writing, so the assertion is
     against a populated cache - that is the whole failure mode. Without the
     signals these all pass on a cold cache and fail in production, which is how
-    an item moved from Food to Drinks left the navbar without a Drinks link for
-    up to an hour.
+    a menu item write left the navbar without a Menu link for up to an hour.
     """
 
     def setUp(self):
         cache.clear()
         self.system = System.objects.create(site_name="Bar", host="inv.test")
+        self.category = MenuCategory.objects.create(
+            system=self.system, name="Bebidas", slug="inv-bebidas",
+        )
         self.url = "/api/system/"
         self.host = {"HTTP_X_WEBSITE_HOST": "inv.test"}
 
     def _payload(self):
         return self.client.get(self.url, **self.host).json()
 
-    def test_changing_a_menu_items_kind_updates_the_counts(self):
-        item = MenuItem.objects.create(
-            system=self.system, name="Michelada", slug="inv-michelada",
-            price=Decimal("6.00"), kind="food",
-        )
-        self.assertEqual(self._payload()["menu_item_kind_counts"]["food"], 1)
-
-        # The edit the bug report was about: only `kind` moves, so nothing else
-        # in the write path would notice the payload had gone stale.
-        item.kind = "drink"
-        item.save()
-
-        counts = self._payload()["menu_item_kind_counts"]
-        self.assertEqual(counts["drink"], 1)
-        self.assertEqual(counts["food"], 0)
-
-    def test_creating_the_first_drink_updates_the_counts(self):
-        self.assertEqual(self._payload()["menu_item_kind_counts"]["drink"], 0)
+    def test_creating_the_first_menu_item_updates_the_count(self):
+        self.assertEqual(self._payload()["menu_item_count"], 0)
         MenuItem.objects.create(
-            system=self.system, name="Agua", slug="inv-agua",
-            price=Decimal("2.00"), kind="drink",
+            system=self.system, category=self.category, name="Agua",
+            slug="inv-agua", price=Decimal("2.00"),
         )
-        self.assertEqual(self._payload()["menu_item_kind_counts"]["drink"], 1)
+        self.assertEqual(self._payload()["menu_item_count"], 1)
 
-    def test_deleting_a_menu_item_updates_the_counts(self):
+    def test_disabling_the_last_menu_item_updates_the_count(self):
         item = MenuItem.objects.create(
-            system=self.system, name="Flan", slug="inv-flan",
-            price=Decimal("4.00"), kind="dessert",
+            system=self.system, category=self.category, name="Michelada",
+            slug="inv-michelada", price=Decimal("6.00"),
         )
-        self.assertEqual(self._payload()["menu_item_kind_counts"]["dessert"], 1)
+        self.assertEqual(self._payload()["menu_item_count"], 1)
+
+        # Nothing but `enabled` moves, so no other write path would notice the
+        # payload had gone stale.
+        item.enabled = False
+        item.save()
+        self.assertEqual(self._payload()["menu_item_count"], 0)
+
+    def test_deleting_a_menu_item_updates_the_count(self):
+        item = MenuItem.objects.create(
+            system=self.system, category=self.category, name="Flan",
+            slug="inv-flan", price=Decimal("4.00"),
+        )
+        self.assertEqual(self._payload()["menu_item_count"], 1)
         item.delete()
-        self.assertEqual(self._payload()["menu_item_kind_counts"]["dessert"], 0)
+        self.assertEqual(self._payload()["menu_item_count"], 0)
 
     def test_product_and_service_counts_are_invalidated_too(self):
         # Same class of bug, same fix: these drive the Products/Services links.
@@ -310,8 +326,12 @@ class MenuItemPricingTests(TestCase):
     def setUp(self):
         cache.clear()
         self.system = System.objects.create(site_name="Cocina", host="cocina.test")
+        self.category = MenuCategory.objects.create(
+            system=self.system, name="Platillos", slug="taco-platillos",
+        )
         self.item = MenuItem.objects.create(
-            system=self.system, name="Taco", slug="taco", price=Decimal("8.00"),
+            system=self.system, category=self.category, name="Taco",
+            slug="taco", price=Decimal("8.00"),
         )
         # Shared, reusable ingredients (identity + nutrition live here now).
         tortilla_ing = Ingredient.objects.create(
@@ -433,7 +453,8 @@ class MenuItemPricingTests(TestCase):
 
     def test_selection_ignores_foreign_ingredients(self):
         other = MenuItem.objects.create(
-            system=self.system, name="Burrito", slug="burrito", price=Decimal("10.00"),
+            system=self.system, category=self.category, name="Burrito",
+            slug="burrito", price=Decimal("10.00"),
         )
         rice_ing = Ingredient.objects.create(
             system=self.system, name="Rice", slug="rice", unit="g",
@@ -458,7 +479,11 @@ class MenuItemChoiceGroupTests(TestCase):
         cache.clear()
         self.system = System.objects.create(site_name="Cafe", host="cafe.test")
         self.item = MenuItem.objects.create(
-            system=self.system, name="Latte", slug="latte", price=Decimal("4.00"),
+            system=self.system,
+            category=MenuCategory.objects.create(
+                system=self.system, name="Bebidas", slug="latte-bebidas",
+            ),
+            name="Latte", slug="latte", price=Decimal("4.00"),
         )
         self.refined = Ingredient.objects.create(
             system=self.system, name="Refined sugar", slug="refined", unit="g",
@@ -569,7 +594,11 @@ class IngredientNutritionTests(TestCase):
             nutrition_basis_quantity=Decimal("1"), calories=Decimal("62"),
         )
         self.item = MenuItem.objects.create(
-            system=self.system, name="Bread", slug="bread", price=Decimal("5.00"),
+            system=self.system,
+            category=MenuCategory.objects.create(
+                system=self.system, name="Panes", slug="bread-panes",
+            ),
+            name="Bread", slug="bread", price=Decimal("5.00"),
         )
 
     def test_calories_scale_by_mass_portion(self):
@@ -649,7 +678,13 @@ class IngredientEndpointTests(TestCase):
     def test_delete_is_blocked_while_in_use(self):
         client = self._admin_client()
         ing = Ingredient.objects.create(system=self.system, name="Salt", slug="salt", unit="g")
-        item = MenuItem.objects.create(system=self.system, name="Pretzel", slug="pretzel", price=Decimal("3"))
+        item = MenuItem.objects.create(
+            system=self.system,
+            category=MenuCategory.objects.create(
+                system=self.system, name="Panes", slug="pretzel-panes",
+            ),
+            name="Pretzel", slug="pretzel", price=Decimal("3"),
+        )
         MenuItemIngredient.objects.create(menu_item=item, ingredient=ing)
         res = client.delete(f"/api/catalog/ingredients/{ing.id}/", **self._host())
         self.assertEqual(res.status_code, 409)
@@ -762,7 +797,11 @@ class CloneTests(TestCase):
 
     def test_menu_item_clone_copies_ingredients_options_and_recipe(self):
         item = MenuItem.objects.create(
-            system=self.system, name="Latte", slug="latte", price=Decimal("4.00"),
+            system=self.system,
+            category=MenuCategory.objects.create(
+                system=self.system, name="Bebidas", slug="latte-group-bebidas",
+            ),
+            name="Latte", slug="latte", price=Decimal("4.00"),
         )
         sugar = Ingredient.objects.create(system=self.system, name="Sugar", slug="sugar", unit="g")
         splenda = Ingredient.objects.create(system=self.system, name="Splenda", slug="splenda", unit="g")
@@ -805,7 +844,11 @@ class CloneTests(TestCase):
         """The clone's pricing must run on the clone's ingredient ids, not the
         original's - otherwise a customised order on the copy prices as base."""
         item = MenuItem.objects.create(
-            system=self.system, name="Latte", slug="latte", price=Decimal("4.00"),
+            system=self.system,
+            category=MenuCategory.objects.create(
+                system=self.system, name="Bebidas", slug="latte-upcharge-bebidas",
+            ),
+            name="Latte", slug="latte", price=Decimal("4.00"),
         )
         sugar = Ingredient.objects.create(system=self.system, name="Sugar", slug="sugar", unit="g")
         MenuItemIngredient.objects.create(

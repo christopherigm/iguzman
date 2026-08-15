@@ -83,12 +83,12 @@ Current pairings, each documented at its receiver:
 | ------------------------------ | ------------------------------------------------------------------- |
 | `Brand`                        | `catalog:*` (items embed `brand_name`)                              |
 | `*Category`                    | `catalog:<family>*` (items embed `category_name/slug`)              |
-| `Product`/`Service`/`MenuItem` | `catalog:<kind>_categor*` (`item_count`) **and** the System payload |
+| `Product`/`Service`/`MenuItem` | `catalog:<family>_categor*` (`item_count`) **and** the System payload |
 | `Branch`                       | the System payload (`branch_count`)                                 |
 
 **The System payload is the one that bites.** `GET /api/system/` is cached for an
 hour (`SYSTEM_CACHE_TTL`), and `SystemSerializer` carries `product_count`,
-`service_count`, `menu_item_count`, `menu_item_kind_counts` and `branch_count` -
+`service_count`, `menu_item_count` and `branch_count` -
 counts of models it does not own. The storefront navbar builds its links from
 exactly those numbers, so any write that changes one must call
 `core.cache.invalidate_system_payload()`. **If you add another derived field to
@@ -794,31 +794,68 @@ Tests: `OrderQrTests` in `orders/tests.py`, plus the admin-read cases in
 temp dir via `setUpModule` - every checkout in it writes a real file, and
 unisolated they scatter a PNG per order through the developer's own `media/`.
 
-## Catalog kind labels - fourteen columns on `System`
+## Catalog kind labels - four columns on `System`
 
-`kind_label_<kind>` / `en_kind_label_<kind>` hold what a tenant calls each of the
-seven things it can sell - the five `MENU_ITEM_KIND_CHOICES` plus `product` and
-`service`. `core.models.CATALOG_KINDS` is the list and `KIND_LABEL_FIELDS` the
-derived column pairs, imported by the read serializer, the write serializer,
-`SystemAdmin` and `SYSTEM_TEXT_FIELDS` so those four cannot list different sets.
-The frontend resolution rules are in `apps/website/CLAUDE.md`.
+`kind_label_<kind>` / `en_kind_label_<kind>` hold what a tenant calls the two
+Buyable families it can sell, `product` and `service`. `core.models.CATALOG_KINDS`
+is the list and `KIND_LABEL_FIELDS` the derived column pairs, imported by the read
+serializer, the write serializer, `SystemAdmin` and `SYSTEM_TEXT_FIELDS` so those
+four cannot list different sets. The frontend resolution rules are in
+`apps/website/CLAUDE.md`.
 
-- ⚠ **They rename a label and nothing else.** `MenuItem.kind`, the `?kind=`
-  filter and every storefront URL are structural - never derive one from a label,
-  and never validate a kind against one.
+- **A menu has no labels here.** It is sectioned by the tenant's own
+  `MenuCategory` rows, which are already their own copy - renaming a menu section
+  is editing the category. This used to be *fourteen* columns: the two families
+  plus the five `MenuItem.kind` values. `catalog.0037` removed the enum and
+  `core.0066` removed its ten columns; see "Menu sectioning" below.
+- ⚠ **They rename a label and nothing else.** Every storefront URL is structural -
+  never derive one from a label, and never validate anything against one.
 - **Public by design**, unlike the credentials they sit near: they are on
   `SystemSerializer` because every storefront heading is painted from them.
 - **Nullable with no default, and blank is meaningful** - it is how a tenant
-  hands a kind back to the frontend's own translation. A default would have to be
-  written in one language and would be wrong on the four locales the model stores
-  no copy for.
-- **`CATALOG_KINDS` is a hand-kept copy of the menu kinds** (importing
-  `catalog.models` from `core.models` closes an import loop). `SystemKindLabelTests`
-  in `core/tests.py` pins the two lists together, and pins the write serializer's
-  hand-declared fields against `KIND_LABEL_FIELDS`.
+  hands a family back to the frontend's own translation. A default would have to
+  be written in one language and would be wrong on the four locales the model
+  stores no copy for.
+- `SystemKindLabelTests` in `core/tests.py` pins `CATALOG_KINDS` to the two
+  families, and pins the write serializer's hand-declared fields against
+  `KIND_LABEL_FIELDS`.
 - They are in `SYSTEM_TEXT_FIELDS`, so they travel with `export_site` /
   `publish-site` and can be set from a `seed_site` brief - they are copy decided
   once when a site is written, with no per-environment id in them.
+
+## Menu sectioning - the category, and nothing else
+
+A `MenuItem` belongs to exactly one `MenuCategory`, and **`category` is
+required**. That one relation is the whole sectioning story: it groups
+`/categories/menu`, fills the navbar's Menu dropdown, and is the first segment of
+every item's public URL (`/menu/<category>/<slug>`).
+
+It used to be sectioned twice. `MenuItem.kind` was a five-value enum
+(food/drink/dessert/side/appetizer) that sat beside the optional category and
+drove a `?kind=` filter, five listing pages, five detail routes and ten
+`System` label columns. Two sectionings of one menu can only ever disagree, so
+the enum is gone (`catalog.0037`).
+
+- ⚠ **`category` is `on_delete=CASCADE` and required**, unlike its optional
+  `Product`/`Service` counterparts - so **deleting a category deletes every menu
+  item in it**. That is deliberate (there is no "no category" state for a row to
+  fall back to), but it makes a category delete far more destructive than a
+  product-category one. `MenuItemCategoryTests` pins it.
+- **`MenuItemWriteSerializer.category` has no `required=False`**, so a create
+  with no category is a 400 rather than a row the storefront cannot address.
+- **`MenuItemVariantSerializer` carries `category_slug`**, and
+  `OrderLineSerializer` carries `item_menu_category_slug` - both are the first
+  segment of a link to a page that still exists, so both are read live through
+  the FK rather than snapshotted. ⚠ Anywhere `lines__menu_item` is prefetched,
+  `lines__menu_item__category` must be too, or the order page is an N+1.
+- ⚠ **The item's URL is therefore mutable**: re-filing a dish in the CMS moves
+  it. The frontend keeps a slug-only permalink (`/menu/<slug>`) that resolves and
+  redirects, which is what should be handed out when an address has to outlive an
+  edit.
+- **The `catalog.0037` migration files every previously-uncategorized item into a
+  per-System "Otros" category** before setting the column `NOT NULL` - Postgres
+  refuses `SET NOT NULL` otherwise. Deliberately *not* derived from the old
+  `kind`; operators re-file from the CMS.
 
 ## Maps - the basemap is four columns on `System`
 

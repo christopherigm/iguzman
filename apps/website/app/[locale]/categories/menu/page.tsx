@@ -3,10 +3,10 @@ import { setRequestLocale, getTranslations } from "next-intl/server";
 import { MenuListing } from "@/components/menu-listing";
 
 /**
- * The whole menu: the tenant's categories plus every item, grouped into a
- * section per kind. The per-kind pages beside it (`/categories/food`,
- * `/categories/drinks`, …) each show one kind; this is the one page that shows
- * them all, and the "Full menu" entry of the navbar's Menu dropdown.
+ * The whole menu: the tenant's category cards plus every item, grouped into a
+ * section per category. The only menu listing there is - the five per-kind
+ * pages that used to sit beside it (`/categories/food`, `/categories/drinks`, …)
+ * went with `MenuItem.kind`. One category on its own is `./menu/<slug>`.
  */
 
 type Props = {
@@ -25,5 +25,5 @@ export default async function MenuPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  return <MenuListing locale={locale} kind={null} />;
+  return <MenuListing locale={locale} />;
 }

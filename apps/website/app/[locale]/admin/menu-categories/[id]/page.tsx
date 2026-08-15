@@ -16,6 +16,7 @@ import {
   listMenuCategories,
   checkSlug,
 } from "@/lib/admin-api";
+import { menuCategoryHref } from "@/lib/menu-paths";
 import { buildSlug } from "@/lib/slug-utils";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
@@ -203,7 +204,7 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
         success={success}
         productionHref={
           !isNew && values.slug
-            ? `/categories/food/${String(values.slug)}`
+            ? menuCategoryHref(String(values.slug))
             : undefined
         }
         imagesSlot={

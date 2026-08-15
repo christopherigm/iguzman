@@ -13,7 +13,7 @@ import { IconButton } from "@repo/ui/core-elements/icon-button";
 import type { CartItem } from "@/lib/cart";
 import { formatPrice } from "@/lib/price";
 import { menuEtaLabel } from "@/lib/menu-eta";
-import { menuItemHref } from "@/lib/menu-kinds";
+import { menuItemHref } from "@/lib/menu-paths";
 import "./cart-line.css";
 
 interface CartLineProps {
@@ -68,7 +68,7 @@ export function CartLine({
       ? `/products/${line.item.slug}`
       : line.kind === "service"
         ? `/services/${line.item.slug}`
-        : menuItemHref(line.item.kind, line.item.slug);
+        : menuItemHref(line.item.category_slug, line.item.slug);
 
   // A dish says how long it will take instead of naming its family: the customer
   // already knows what they put in their basket, and "ready in 20 min" is the

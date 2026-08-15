@@ -331,22 +331,84 @@ Six things that will bite:
   count on `SystemSerializer` it needs a signal clearing the System payload on
   write - `core/signals.py` has one; the payload is cached for an hour.
 
-## Catalog kind labels - what a tenant calls what it sells
+## The menu - one sectioning, one listing, one detail route
 
-A pizzeria's "Food" section is *Pizzas*; a workshop's "Services" are *Lo que
-hacemos*. `System` carries a bilingual label pair (`kind_label_<kind>` /
-`en_kind_label_<kind>`) for each of the **seven** catalog kinds - the five
-`MenuItemKind`s plus the two other Buyable families - authored in the CMS at
-`/admin/system` → Catalog names (`admin/system/kind-labels-section.tsx`).
-`lib/kind-labels.ts` resolves them; `getKindLabels(locale)` in `lib/system.ts` is
-the server-side read (a thin, `cache()`d view over the System payload the request
-already fetched).
+A menu is sectioned by the tenant's own `MenuCategory` rows and by nothing else,
+and `MenuItem.category` is **required**. Everything follows from that:
 
-- ⚠ **A label is a label. Nothing routes off one.** `/categories/food`,
-  `/food/<slug>`, the API's `?kind=` filter and the `kind` values themselves are
-  structural and must not move when a tenant renames a kind - a customer's
-  bookmark and a search result have to keep working. Never build a path from a
-  label, and never store one as a kind.
+| Surface                    | Path                        | File                                            |
+| -------------------------- | --------------------------- | ----------------------------------------------- |
+| The whole menu             | `/categories/menu`          | `components/menu-listing.tsx`                   |
+| One category               | `/categories/menu/<slug>`   | `app/[locale]/categories/menu/[slug]/page.tsx`  |
+| One item                   | `/menu/<category>/<slug>`   | `components/menu-item-detail-page.tsx`          |
+| One item, stable permalink | `/menu/<slug>`              | `app/[locale]/menu/[category]/page.tsx`         |
+| Paths                      | —                           | `lib/menu-paths.ts`                             |
+
+This replaced a `MenuItem.kind` enum (food/drink/dessert/side/appetizer) that sat
+beside the category and drove five listing pages
+(`/categories/{food,drinks,desserts,sides,appetizers}`), five detail routes
+(`/food/<slug>` and siblings), a `?kind=` filter and ten `System` label columns.
+The API side is in website-api's CLAUDE.md → "Menu sectioning".
+
+- ⚠ **Never build a menu path by concatenation.** `MENU_ALL_PATH`,
+  `menuCategoryHref(slug)` and `menuItemHref(categorySlug, slug)` in
+  `lib/menu-paths.ts` are the only three. That module is deliberately plain data
+  with no server import: the navbar is a **client** component and needs it, while
+  `lib/catalog.ts` reaches `next/headers` through `resolve-site.ts`.
+- ⚠ **An item's URL moves when an operator re-files the dish.** The slug alone
+  is globally unique, so the category segment addresses nothing extra - it is
+  there because the URL is meant to read that way. `/menu/<slug>` is the
+  category-independent permalink that resolves and `permanentRedirect`s to the
+  current URL; hand *that* out for anything printed. `next.config.js` redirects
+  all ten pre-category paths (and `/categories/food/<slug>`) permanently.
+- ⚠ **Both menu routes live under `app/[locale]/menu/[category]/`** - the
+  permalink is that folder's own `page.tsx` and the detail page is `[slug]/`
+  inside it. The two *URLs* don't collide (Next matches on segment count), but
+  the *folders* would: giving one dynamic level two different slug names
+  (`menu/[slug]` beside `menu/[category]/…`) makes Next refuse to start with
+  "You cannot use different slug names for the same dynamic path". So the
+  permalink page reads its item slug out of the `category` param, and says so.
+- **The detail route serves an item only under its own category**; anything else
+  is `notFound()`. One item, one URL - and a 404 is also how a re-filed item
+  surfaces on its old address, rather than rendering under a URL that
+  misdescribes it.
+- **The navbar's Menu dropdown is one entry per category**, resolved in
+  `[locale]/layout.tsx` (the navbar is a client component, and category names are
+  per-locale tenant copy) and filtered to `item_count > 0` so an empty category is
+  never a dead link. With a single category the dropdown collapses to a plain
+  link. It costs one `getMenuCategories()` read, which is `cache()`d per request
+  and cached in Django - it is **content**, so it is not on the System payload
+  beside the flat `menu_item_count`.
+- **`/categories/menu` groups items by category in the categories' own CMS
+  order** (`sort_order`), driven by the `categories` list rather than by grouping
+  the items - so the operator's arrangement is what the page reads as. A category
+  with no items gets its card but no section: an empty grid under a heading reads
+  as a broken page.
+- ⚠ **In the CMS, Category is a required field on the menu-item form and is
+  deliberately excluded from the "blank → null" list** in `handleSubmit`. A blank
+  must reach the API and be refused, not be nulled into a row the storefront
+  cannot address.
+- ⚠ **Deleting a menu category deletes every dish in it** (CASCADE on a required
+  FK). Far more destructive than deleting a product category, whose items merely
+  lose their FK.
+
+## Catalog kind labels - what a tenant calls its products and services
+
+A workshop's "Services" are *Lo que hacemos*. `System` carries a bilingual label
+pair (`kind_label_<kind>` / `en_kind_label_<kind>`) for each of the **two**
+Buyable families, authored in the CMS at `/admin/system` → Catalog names
+(`admin/system/kind-labels-section.tsx`). `lib/kind-labels.ts` resolves them;
+`getKindLabels(locale)` in `lib/system.ts` is the server-side read (a thin,
+`cache()`d view over the System payload the request already fetched).
+
+- **A menu has no labels here**, because its sections are the tenant's own
+  categories - see above. This used to cover seven kinds; the five menu ones went
+  with `MenuItem.kind`, and `kindLabelWithOverride` (the CMS's "Food (Pizzas)"
+  dropdown annotation) went with them.
+- ⚠ **A label is a label. Nothing routes off one.** `/categories/products` and
+  `/products/<slug>` are structural and must not move when a tenant renames a
+  family - a customer's bookmark and a search result have to keep working. Never
+  build a path from a label.
 - **Blank means "use our translation".** `kindLabels()` drops empty overrides, so
   an un-renamed site renders exactly as it did before the feature existed and
   clearing both fields is how a rename is undone. English reads `en_*` and falls
@@ -354,32 +416,18 @@ already fetched).
   back to English - the same rule `metadata.ts` and the catalog cards follow, so
   a tenant who fills one language is renamed everywhere rather than on half the
   site.
-- **Where the override applies**: the navbar (its Menu dropdown and the
-  Products/Services links), each listing page's `<h1>`, hero slogan and tab
-  title, the per-kind section headings on `/categories/menu`, and the kind step
-  of a product/service/menu-item breadcrumb.
-- ⚠ **Three "food" surfaces deliberately keep the built-in word**, because they
-  name the *whole menu* rather than the food kind: the `/categories/menu` page
-  heading, the menu step of a menu-category breadcrumb (it links to
-  `MENU_ALL_PATH`), and `CategoryDetail`'s food heading. A menu category may hold
-  drinks and desserts too, so titling one "Pizzas" would promise one course and
-  list five.
+- **Where the override applies**: the navbar's Products/Services links, each
+  listing page's `<h1>`, hero slogan and tab title, and the family step of a
+  product/service breadcrumb.
 - **Composed sentences are left alone** - `CatalogItems`' "See more products",
   the listing pages' "All Products" / "Product Categories". Substituting a label
   into a translated sentence is not safe across five locales (French elides
   before a vowel, German puts the noun mid-clause), and the destination page the
   CTA leads to carries the tenant's own name anyway.
-- **The CMS shows both**: the menu-item form's Kind dropdown reads
-  "Food (Pizzas)" via `kindLabelWithOverride`. An operator picking a kind is
-  setting a structural field, so the canonical name has to stay visible - but a
-  menu of Food/Drink/Side is unrecognisable to someone whose whole site says
-  Pizzas and Bebidas. The POS kind tabs and an order line's kind chip keep the
-  canonical label for a different reason: both are **family**-level ("menu item"
-  covers all five kinds), so no single kind's label is the right word there.
 - **The navbar takes them as a prop.** It is a client component, so
   `[locale]/layout.tsx` resolves `kindLabels(system, locale)` from the System it
   already holds. `lib/kind-labels.ts` is plain data with no server import for the
-  same reason `lib/menu-kinds.ts` is - and that is why `KindLabelOverrides` is
+  same reason `lib/menu-paths.ts` is - and that is why `KindLabelOverrides` is
   declared there and `System` extends it, rather than the reverse.
 
 ## Maps - one component, one basemap, one credit

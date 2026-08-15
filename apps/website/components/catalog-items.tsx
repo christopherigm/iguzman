@@ -10,7 +10,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Grid } from "@repo/ui/core-elements/grid";
-import { MENU_ALL_PATH } from "@/lib/menu-kinds";
+import { MENU_ALL_PATH } from "@/lib/menu-paths";
 import { BuyableCard, type BuyableItem } from "./buyable-card";
 import "./catalog-items.css";
 

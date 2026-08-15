@@ -27,9 +27,9 @@ import { GuestMerge } from "@/components/guest-merge";
 import { LogoWatermark } from "@/components/logo-watermark";
 import packageJson from "@/package.json";
 import { getCartCount } from "@/lib/cart";
-import { EMPTY_MENU_KIND_COUNTS } from "@/lib/menu-kinds";
 import { kindLabels } from "@/lib/kind-labels";
 import { getSystem } from "@/lib/system";
+import { getMenuCategories, type MenuCategory } from "@/lib/catalog";
 import { basemapFor } from "@/lib/basemap";
 import { BasemapProvider } from "@/components/basemap-provider";
 import { isGoogleFontUrl, cssFontFamily } from "@/lib/fonts";
@@ -107,12 +107,34 @@ export default async function LocaleLayout({ children, params }: Props) {
   // The session is decoded from the access-token cookie during this request, so
   // the HTML we send already reflects who the user is - the admin link and the
   // account menu no longer pop in after hydration.
-  const [messages, system, session, cartCount] = await Promise.all([
-    getMessages(),
-    getSystem(),
-    getSession(),
-    getCartCount(),
-  ]);
+  const [messages, system, session, cartCount, menuCategories] =
+    await Promise.all([
+      getMessages(),
+      getSystem(),
+      getSession(),
+      getCartCount(),
+      // The navbar's Menu dropdown is one entry per category, so the list has
+      // to be here rather than on the System payload - unlike the flat
+      // per-family counts beside it, this is content. `getMenuCategories` is
+      // `cache()`d per request and Django caches the response, so the bar costs
+      // one already-warm read.
+      getMenuCategories(),
+    ]);
+
+  // Only categories that actually have something in them: an empty one in the
+  // dropdown is a link to a page that says nothing is there.
+  const stockedMenuCategories = (menuCategories as MenuCategory[])
+    .filter((category) => category.item_count > 0)
+    .map((category) => ({
+      slug: category.slug,
+      // Resolved here, like `kindLabels` below, because the navbar is a client
+      // component and this is per-locale tenant copy.
+      name:
+        (locale === "en" ? category.en_name : category.name) ??
+        category.name ??
+        category.en_name ??
+        category.slug,
+    }));
 
   const cookieStore = await cookies();
   const themeModeCookie = cookieStore.get("theme-mode")?.value as
@@ -263,10 +285,7 @@ export default async function LocaleLayout({ children, params }: Props) {
                         version={`v${packageJson.version}`}
                         productCount={system?.product_count ?? 0}
                         serviceCount={system?.service_count ?? 0}
-                        menuKindCounts={
-                          system?.menu_item_kind_counts ??
-                          EMPTY_MENU_KIND_COUNTS
-                        }
+                        menuCategories={stockedMenuCategories}
                         // Resolved here, from the System payload this layout
                         // already holds, because the navbar is a client
                         // component and the labels are per-locale content.

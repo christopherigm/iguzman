@@ -15,7 +15,7 @@ from django.db import transaction
 from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
-from catalog.models import MenuItem, Product, Service
+from catalog.models import MenuCategory, MenuItem, Product, Service
 from core.crypto import decrypt, encrypt
 from core.models import BookingResource, Branch, BranchHours, ResourcePool, System
 from users.models import CartItem
@@ -592,14 +592,17 @@ class OrderReadTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
-    def test_menu_line_carries_the_items_kind_for_the_detail_link(self):
-        """`item_menu_kind` is what lets the order page link to /drink/<slug>
-        instead of /food/<slug>. Read live through the FK, so it follows a kind
-        change in the CMS - the link has to address the page that exists now, not
-        the one that existed at checkout."""
+    def test_menu_line_carries_its_category_slug_for_the_detail_link(self):
+        """`item_menu_category_slug` is the first segment of the item's URL
+        (/menu/<category>/<slug>). Read live through the FK, so it follows an
+        item re-filed in the CMS - the link has to address the page that exists
+        now, not the one that existed at checkout."""
         item = MenuItem.objects.create(
-            system=self.system, name="Michelada", slug="o-michelada",
-            price=Decimal("6.00"), kind="drink",
+            system=self.system,
+            category=MenuCategory.objects.create(
+                system=self.system, name="Bebidas", slug="o-bebidas",
+            ),
+            name="Michelada", slug="o-michelada", price=Decimal("6.00"),
         )
         OrderLine.objects.create(
             order=self.order, kind="menu_item", menu_item=item, name="Michelada",
@@ -610,15 +613,20 @@ class OrderReadTests(TestCase):
         lines = self.client.get(f"/api/orders/{self.order.public_id}/").json()["lines"]
         by_name = {line["name"]: line for line in lines}
 
-        self.assertEqual(by_name["Michelada"]["item_menu_kind"], "drink")
-        # A product line has no menu kind rather than a defaulted "food", so the
-        # frontend cannot mistake one for a menu item.
-        self.assertIsNone(by_name["Bag"]["item_menu_kind"])
+        self.assertEqual(
+            by_name["Michelada"]["item_menu_category_slug"], "o-bebidas"
+        )
+        # A product line carries no menu category at all, so the frontend cannot
+        # mistake one for a menu item.
+        self.assertIsNone(by_name["Bag"]["item_menu_category_slug"])
 
-    def test_menu_kind_is_null_once_the_item_is_deleted(self):
+    def test_menu_category_slug_is_null_once_the_item_is_deleted(self):
         item = MenuItem.objects.create(
-            system=self.system, name="Flan", slug="o-flan",
-            price=Decimal("4.00"), kind="dessert",
+            system=self.system,
+            category=MenuCategory.objects.create(
+                system=self.system, name="Postres", slug="o-postres",
+            ),
+            name="Flan", slug="o-flan", price=Decimal("4.00"),
         )
         line = OrderLine.objects.create(
             order=self.order, kind="menu_item", menu_item=item, name="Flan",
@@ -634,7 +642,7 @@ class OrderReadTests(TestCase):
         # exists goes away, exactly like `item_slug`.
         self.assertEqual(row["name"], "Flan")
         self.assertIsNone(row["item_slug"])
-        self.assertIsNone(row["item_menu_kind"])
+        self.assertIsNone(row["item_menu_category_slug"])
 
     def test_a_line_outlives_its_deleted_product(self):
         """SET_NULL, not CASCADE: deleting a product must not delete the record

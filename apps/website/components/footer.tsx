@@ -11,7 +11,7 @@ import { BrandmarkCradle, HERO_FRAME_BADGE_SIZE } from "@repo/ui/hero";
 import { LocaleSwitcher } from "@repo/ui/core-elements/locale-switcher";
 import { routing } from "@repo/i18n/routing";
 import { type System } from "@/lib/system";
-import { MENU_ALL_PATH } from "@/lib/menu-kinds";
+import { MENU_ALL_PATH } from "@/lib/menu-paths";
 import { kindLabel, kindLabels } from "@/lib/kind-labels";
 import { getSite } from "@/lib/resolve-site";
 import "./footer.css";

@@ -11,86 +11,67 @@ import { BuyableCard } from "@/components/buyable-card";
 import {
   getMenuCategories,
   getAllMenuItems,
-  getMenuItemsByKind,
   type MenuItemDetail,
 } from "@/lib/catalog";
-import {
-  MENU_ALL_PATH,
-  MENU_ITEM_KINDS,
-  type MenuItemKind,
-} from "@/lib/menu-kinds";
-import { kindLabel } from "@/lib/kind-labels";
-import { getKindLabels } from "@/lib/system";
+import { menuCategoryHref } from "@/lib/menu-paths";
 
 /**
- * The menu listing, in its two shapes - shared by all six routes so they cannot
- * drift apart.
+ * The whole menu: the tenant's `MenuCategory` cards, then one section of items
+ * per category, in the categories' own `sort_order` - the way a printed menu
+ * reads, and the order the operator arranged in the CMS.
  *
- * - `kind: null` (`/categories/menu`) is the **whole menu**: the tenant's
- *   `MenuCategory` cards, then one section per kind in `MENU_ITEM_KINDS` order,
- *   the way a printed menu reads.
- * - `kind: "drink"` (and the rest) is **one kind**, every category together -
- *   the structural question the API's `?kind=` filter answers. No category
- *   cards here: a category may hold several kinds, so its card would promise
- *   items this page is not showing.
+ * The category is the *only* sectioning a menu has. This page used to render a
+ * section per `MenuItem.kind` (Food, Drinks, Desserts…) with five per-kind
+ * sibling pages beside it; that enum is gone, along with the pages, because two
+ * sectionings of one menu can only ever disagree.
  *
- * Categories stay free-form tenant copy and `kind` is what code branches on, so
- * a page is never selected by matching a category's name (see the note on
- * `MENU_ITEM_KIND_CHOICES` in `catalog/models.py`).
+ * `MenuItem.category` is required, so every item lands in exactly one section
+ * and there is no "uncategorized" bucket to render.
  */
 interface MenuListingProps {
   locale: string;
-  /** The single kind to list, or `null` for the whole menu. */
-  kind: MenuItemKind | null;
 }
 
-export async function MenuListing({ locale, kind }: MenuListingProps) {
-  const [categories, items, t, detailT, kindT, menuT, labels] =
-    await Promise.all([
-      kind === null ? getMenuCategories() : Promise.resolve([]),
-      kind === null ? getAllMenuItems() : getMenuItemsByKind(kind),
-      getTranslations("FoodPage"),
-      getTranslations("CategoryDetail"),
-      getTranslations("MenuKinds"),
-      getTranslations("Menu"),
-      getKindLabels(locale),
-    ]);
+export async function MenuListing({ locale }: MenuListingProps) {
+  const [categories, items, t, detailT, menuT] = await Promise.all([
+    getMenuCategories(),
+    getAllMenuItems(),
+    getTranslations("FoodPage"),
+    getTranslations("CategoryDetail"),
+    getTranslations("Menu"),
+  ]);
 
-  /** This tenant's name for a kind ("Pizzas"), or ours. */
-  const label = (k: MenuItemKind) => kindLabel(labels, k, kindT(k));
+  /** The category's own name for the rendered locale, with the usual fallback:
+   *  English reads `en_name` and falls back to the Spanish copy, everything else
+   *  the other way round. */
+  const categoryName = (c: (typeof categories)[number]) =>
+    (locale === "en" ? c.en_name : c.name) ?? c.name ?? c.en_name ?? c.slug;
 
-  // The whole-menu page is titled by the *menu*, not by a kind, so it keeps its
-  // own heading - there is no one kind for a tenant to have renamed there.
-  const heading = kind === null ? t("heading") : label(kind);
+  const heading = t("heading");
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: detailT("home"), href: "/" },
-    ...(kind === null
-      ? [{ label: detailT("food") }]
-      : [
-          { label: detailT("food"), href: MENU_ALL_PATH },
-          { label: label(kind) },
-        ]),
+    { label: detailT("food") },
   ];
 
-  // On the whole-menu page, one section per kind that has something in it - the
-  // headings are what make that page worth visiting over a kind page. A kind
-  // page is a single section and needs no heading of its own: the page title
-  // already says which kind it is.
+  // One section per category that has something in it - an empty category still
+  // gets its *card* above (the card states its own count), but an empty grid
+  // under a heading reads as a broken page.
+  //
+  // Driven by `categories` rather than by grouping `items`, so the sections come
+  // out in the order the operator dragged them into in the CMS
+  // (`MenuCategory.sort_order`) instead of whatever order the items arrived in.
   const sections: {
     key: string;
-    heading: string | null;
+    heading: string;
     items: MenuItemDetail[];
-  }[] =
-    kind === null
-      ? MENU_ITEM_KINDS.map((k) => ({
-          key: k,
-          heading: label(k),
-          items: items.filter((item) => item.kind === k),
-        })).filter((section) => section.items.length > 0)
-      : items.length > 0
-        ? [{ key: kind, heading: null, items }]
-        : [];
+  }[] = categories
+    .map((c) => ({
+      key: c.slug,
+      heading: categoryName(c),
+      items: items.filter((item) => item.category === c.id),
+    }))
+    .filter((section) => section.items.length > 0);
 
   const images = [
     ...categories.map((c) => c.image),
@@ -150,11 +131,6 @@ export async function MenuListing({ locale, kind }: MenuListingProps) {
             </Box>
             <Grid container spacing={2}>
               {categories.map((cat) => {
-                const name =
-                  (locale === "en" ? cat.en_name : cat.name) ??
-                  cat.name ??
-                  cat.en_name ??
-                  "";
                 const description =
                   (locale === "en" ? cat.en_description : cat.description) ??
                   cat.description ??
@@ -164,12 +140,12 @@ export async function MenuListing({ locale, kind }: MenuListingProps) {
                   <Grid key={cat.id} size={{ xs: 6, sm: 4, lg: 3 }}>
                     <CategoryCard
                       id={cat.id}
-                      name={name}
+                      name={categoryName(cat)}
                       description={description}
                       image={cat.image}
                       itemCount={cat.item_count}
                       type="food"
-                      href={`/categories/food/${cat.slug}/`}
+                      href={menuCategoryHref(cat.slug)}
                     />
                   </Grid>
                 );
@@ -182,18 +158,16 @@ export async function MenuListing({ locale, kind }: MenuListingProps) {
             key={section.key}
             className={sectionClassName(!hasCategories && index === 0)}
           >
-            {section.heading !== null && (
-              <Box
-                marginBottom={32}
-                display="flex"
-                flexDirection="column"
-                gap={10}
-              >
-                <Typography as="h2" variant="h2" className="section-title">
-                  {section.heading}
-                </Typography>
-              </Box>
-            )}
+            <Box
+              marginBottom={32}
+              display="flex"
+              flexDirection="column"
+              gap={10}
+            >
+              <Typography as="h2" variant="h2" className="section-title">
+                {section.heading}
+              </Typography>
+            </Box>
             <Grid container spacing={2}>
               {section.items.map((item) => (
                 <Grid key={item.id} size={{ xs: 6, sm: 3 }}>

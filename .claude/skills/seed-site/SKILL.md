@@ -165,12 +165,14 @@ a product and you silently throw away ingredient customisation.
      each `menu_item` its `ingredients` list: leave base components as
      `is_removable: false` (the default — included in the base `price`, locked),
      and mark each optional add-on `is_removable: true` with a realistic per-unit
-     `price` (and `max_quantity` for "double X"). **Set each `menu_item`'s
-     `kind`** — `"food"` (the default), `"drink"`, `"dessert"`, `"side"` or
-     `"appetizer"`. Don't lean on the category name to carry it: `kind` is the
-     structural field the storefront filters on (a bar/drinks section asks for
-     `?kind=drink`), and a category is free-form copy the customer may rename.
-     Optionally set `portions` on a `menu_item` (servings the dish yields) to
+     `price` (and `max_quantity` for "double X"). **The category is the only
+     sectioning a menu has, and every item must be under one** — it groups
+     `/categories/menu`, fills the navbar's Menu dropdown and is the first
+     segment of the item's URL (`/menu/<category>/<slug>`). So name the
+     categories the way the customer's own printed menu is divided (Pizzas,
+     Bebidas, Postres…), not generically: there is no separate `kind` field
+     behind them any more, and a storefront section that wants "the drinks" now
+     finds them by category. Optionally set `portions` on a `menu_item` (servings the dish yields) to
      drive the per-serving nutrition label. Leave the internal recipe out — the
      seed doesn't populate `recipe_steps`.
    - Fill `en_*` fields only when the site is bilingual.

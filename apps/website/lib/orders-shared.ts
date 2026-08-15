@@ -13,9 +13,6 @@
  * these from `@/lib/orders` unchanged.
  */
 
-// `lib/menu-kinds.ts` is deliberately plain data with no server imports, so it
-// is safe to pull a runtime-free type from it here (see its module docstring).
-import type { MenuItemKind } from "./menu-kinds";
 // Type-only, so nothing from that module reaches a client bundle at runtime -
 // though `booking-shared` is pure anyway, for the same reason this file is.
 import type { Booking, BookingSummary } from "./booking-shared";
@@ -72,12 +69,13 @@ export interface OrderLine {
   image: string | null;
   item_id: number | null;
   item_slug: string | null;
-  /** A menu line's current `kind`, which its detail route is named after. Null
-   *  for a product or service line, and null once the item is deleted - like
-   *  `item_slug`, it addresses a page rather than recording what was bought, so
-   *  it is read live, not snapshotted. Both are needed to build the link, so a
-   *  null here means the row renders without one. */
-  item_menu_kind: MenuItemKind | null;
+  /** A menu line's current category slug - the first segment of its detail
+   *  route. Null for a product or service line, and null once the item is
+   *  deleted; like `item_slug`, it addresses a page rather than recording what
+   *  was bought, so it is read live and follows an item re-filed in the CMS.
+   *  Both are needed to build the link, so a null here means the row renders
+   *  without one. */
+  item_menu_category_slug: string | null;
   /**
    * Whether this line's service is **still** sold as an appointment, which
    * decides what re-ordering it means: "Book again" through `/booking/<slug>`,

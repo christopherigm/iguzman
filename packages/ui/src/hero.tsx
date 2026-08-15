@@ -527,37 +527,57 @@ export function HeroTextFrame({
         marginBottom: `calc((${badge}) * 0.85 + 8px)`,
       }}
     >
-      {/* The glass continues up into the cradle: a pane masked to exactly the
-          area the shoulders enclose, so the frosted surface swells into the
-          arch instead of stopping dead at the frame's top edge.
+      {/* ONE pane of glass for the whole frame - the heading's box *and* the
+          arch above it - so there is a single blur across both.
 
-          ⚠ It is a sibling of the frame box, not a child of it. An element
-          with a `backdrop-filter` is a backdrop root, so a nested pane would
-          only ever sample what its ancestor painted - and the ancestor paints
-          nothing above its own top edge, which is precisely where this sits.
-          Painted before the frame box (and before the cradle's strokes and
-          disc, which live inside it), so all of those stay on top. */}
+          ⚠ Never split this back into two blurred elements (a pane for the
+          arch, `backdrop-filter` on the frame box below it). Every element
+          carrying a `backdrop-filter` is its own backdrop root: it samples
+          only what is painted behind its own box and clamps at its edges, so
+          two adjacent roots blur the same video into two slightly different
+          results and a hairline seam appears along the frame's top edge - the
+          one place the two shapes meet. The 62/60 overshoot below closes the
+          *geometric* gap, but the discontinuity is in the blur itself.
+
+          The two shapes are unioned as two `mask` layers (composited `add`)
+          rather than as one path: the frame's width is content-driven while
+          the cradle is a fixed multiple of the badge stretched at
+          `preserveAspectRatio: none`, so one viewBox spanning both would
+          distort the arch.
+
+          ⚠ It is a sibling of the frame box, not a child of it - a nested
+          pane would sample only what its ancestor painted, and the ancestor
+          paints nothing above its own top edge, which is precisely where the
+          arch sits. Painted before the frame box (and before the cradle's
+          strokes and disc, which live inside it), so all of those stay on
+          top. */}
       <div
         aria-hidden
         style={{
           position: "absolute",
-          left: "50%",
+          left: 0,
+          right: 0,
+          bottom: 0,
           top: `calc(-1 * (${cradleHeight(badge)}))`,
-          transform: "translateX(-50%)",
-          width: cradleWidth(badge),
-          // The 62-unit mask over a 60-unit shape, so the pane overshoots the
-          // frame's top edge by the same hair the painted fill does.
-          height: `calc((${cradleHeight(badge)}) * 62 / 60)`,
           backdropFilter: HERO_FRAME_BLUR,
           WebkitBackdropFilter: HERO_FRAME_BLUR,
-          maskImage: CRADLE_FILL_MASK,
-          WebkitMaskImage: CRADLE_FILL_MASK,
-          maskSize: "100% 100%",
-          WebkitMaskSize: "100% 100%",
-          maskRepeat: "no-repeat",
-          WebkitMaskRepeat: "no-repeat",
+          // Layer 1: the arch, top-centred, in its own box. Layer 2: the
+          // frame's own rectangle, filling what is left beneath it. The arch's
+          // 62-unit mask over a 60-unit shape overshoots the frame's top edge
+          // by the same hair the painted fill does, so the two layers overlap
+          // there rather than meeting on a line.
+          maskImage: `${CRADLE_FILL_MASK}, linear-gradient(#fff, #fff)`,
+          WebkitMaskImage: `${CRADLE_FILL_MASK}, linear-gradient(#fff, #fff)`,
+          maskSize: `${cradleWidth(badge)} calc((${cradleHeight(badge)}) * 62 / 60), 100% calc(100% - (${cradleHeight(badge)}))`,
+          WebkitMaskSize: `${cradleWidth(badge)} calc((${cradleHeight(badge)}) * 62 / 60), 100% calc(100% - (${cradleHeight(badge)}))`,
+          maskPosition: "top center, bottom center",
+          WebkitMaskPosition: "top center, bottom center",
+          maskRepeat: "no-repeat, no-repeat",
+          WebkitMaskRepeat: "no-repeat, no-repeat",
         }}
       />
+      {/* No `backdrop-filter` of its own - the pane above is the glass for
+          this box too. See the warning there. */}
       <div
         style={{
           position: "relative",
@@ -566,8 +586,6 @@ export function HeroTextFrame({
           borderBottom: `2px solid ${border}`,
           borderTop: "none",
           padding: sized("0.8em 1.7em"),
-          backdropFilter: HERO_FRAME_BLUR,
-          WebkitBackdropFilter: HERO_FRAME_BLUR,
         }}
       >
         {/* The flanks run 2px outside the padding box so they close the top

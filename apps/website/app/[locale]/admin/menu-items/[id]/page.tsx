@@ -5,14 +5,8 @@ import { useTranslations } from "next-intl";
 import { use } from "react";
 import { useRouter } from "@repo/i18n/navigation";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
-// One list of kinds for the whole app - the CMS dropdown offers exactly what
-// the storefront has pages for. `lib/menu-kinds.ts` is server-free, so a
-// client form may read it.
-import {
-  MENU_ITEM_KINDS,
-  menuItemHref,
-  type MenuItemKind,
-} from "@/lib/menu-kinds";
+// `lib/menu-paths.ts` is server-free, so a client form may read it.
+import { menuItemHref } from "@/lib/menu-paths";
 import { PricingSection } from "@/components/admin/pricing-section";
 import {
   AdminImageUploader,
@@ -51,13 +45,7 @@ import {
   listBrands,
   listIngredients,
   checkSlug,
-  getSystem,
 } from "@/lib/admin-api";
-import {
-  kindLabels,
-  kindLabelWithOverride,
-  type KindLabels,
-} from "@/lib/kind-labels";
 import { buildSlug } from "@/lib/slug-utils";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
@@ -109,7 +97,6 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     compare_price: "",
     cost_price: "",
     currency: "USD",
-    kind: "food",
     category: "",
     brand: "",
     is_available: true,
@@ -152,6 +139,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
   const [categoryOptions, setCategoryOptions] = useState<
     { value: string | number; label: string }[]
   >([]);
+  const [categorySlugs, setCategorySlugs] = useState<Record<number, string>>({});
   const [brandOptions, setBrandOptions] = useState<
     { value: string | number; label: string }[]
   >([]);
@@ -160,9 +148,6 @@ export default function AdminMenuItemFormPage({ params }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [slugError, setSlugError] = useState<string | null>(null);
-  // What this tenant calls each kind, for the Kind dropdown's annotation.
-  const [tenantKindLabels, setTenantKindLabels] = useState<KindLabels>({});
-
   const systemId = useSession()?.systemId ?? 0;
 
   if (isNew) {
@@ -190,17 +175,12 @@ export default function AdminMenuItemFormPage({ params }: Props) {
 
   const loadMeta = useCallback(async () => {
     try {
-      const [cats, brands, ingredients, menuItems, system] = await Promise.all([
+      const [cats, brands, ingredients, menuItems] = await Promise.all([
         listMenuCategories(systemId),
         listBrands(systemId),
         listIngredients(systemId),
         listMenuItems(systemId),
-        getSystem(systemId),
       ]);
-      // Only to *annotate* the Kind options with what this tenant calls each
-      // kind ("Food (Pizzas)"). Non-critical, like the rest of this loader: the
-      // dropdown still works on the built-in names if the call fails.
-      setTenantKindLabels(kindLabels(system, locale));
       setVariantCatalog(
         menuItems.map((m) => ({
           id: m.id as number,
@@ -214,6 +194,13 @@ export default function AdminMenuItemFormPage({ params }: Props) {
           value: c.id as number,
           label: String(c.name ?? c.id),
         })),
+      );
+      // The category's *slug* is the first segment of the item's public URL, so
+      // "view live" needs it alongside the id the select stores.
+      setCategorySlugs(
+        Object.fromEntries(
+          cats.map((c) => [c.id as number, String(c.slug ?? "")]),
+        ),
       );
       setBrandOptions(
         brands.map((b) => ({
@@ -238,7 +225,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     } catch {
       /* non-critical */
     }
-  }, [systemId, locale]);
+  }, [systemId]);
 
   useEffect(() => {
     void (async () => {
@@ -265,7 +252,6 @@ export default function AdminMenuItemFormPage({ params }: Props) {
             compare_price: item.compare_price ?? "",
             cost_price: item.cost_price ?? "",
             currency: item.currency ?? "USD",
-            kind: item.kind ?? "food",
             category: item.category ?? "",
             brand: item.brand ?? "",
             is_available: item.is_available ?? true,
@@ -465,16 +451,14 @@ export default function AdminMenuItemFormPage({ params }: Props) {
         "allergens",
         "href",
         "video_link",
-        "category",
         "brand",
       ].forEach((k) => {
         if (payload[k] === "") payload[k] = null;
       });
-      // AdminForm prepends a blank option to every select, but `kind` is a
-      // required enum with no "none" - picking that option would POST "" and
-      // the serializer's ChoiceField would reject it. Fall back to the model
-      // default instead of surfacing a 400.
-      if (!payload.kind) payload.kind = "food";
+      // `category` is deliberately NOT in that list: it is required on a menu
+      // item (it sections the menu and is a segment of the item's URL), so a
+      // blank must reach the API as a blank and be refused, not be quietly
+      // nulled into a row the storefront then cannot address.
       // Symmetrical sibling variants, sent as a list of MenuItem ids. The write
       // serializer strips any self-reference; an empty list clears them all.
       payload.variants = variantIds;
@@ -527,16 +511,6 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     router.push(`/admin/menu-items/${created.id as number}`);
   };
 
-  // Declared above `fields` because the Kind select reads it (a `const` is not
-  // hoisted, unlike `toggleLabels` below, which only the JSX uses).
-  const canonicalKindLabels: Record<MenuItemKind, string> = {
-    food: t("kindFood"),
-    drink: t("kindDrink"),
-    dessert: t("kindDessert"),
-    side: t("kindSide"),
-    appetizer: t("kindAppetizer"),
-  };
-
   const fields: FieldDef[] = [
     { key: "name", label: t("name"), required: true, onBlur: handleNameBlur },
     { key: "en_name", label: "Name (EN)" },
@@ -548,32 +522,17 @@ export default function AdminMenuItemFormPage({ params }: Props) {
       fieldError: slugError,
     },
     { key: "sku", label: "SKU" },
-    // What the item is (drink, dessert, side...). Sits above Category on
-    // purpose: the category is the tenant's own free-form menu section, while
-    // this is the structural field the storefront filters on.
-    {
-      key: "kind",
-      label: t("menuItemKind"),
-      type: "select",
-      // Both names, deliberately - "Food (Pizzas)". This field is structural
-      // (it drives the item's route and the storefront's filters), so the
-      // canonical name has to stay readable; but a menu of Food/Drink/Side is
-      // unrecognisable to an operator whose whole site says Pizzas and Bebidas.
-      options: MENU_ITEM_KINDS.map((k) => ({
-        value: k,
-        label: kindLabelWithOverride(
-          tenantKindLabels,
-          k,
-          canonicalKindLabels[k],
-        ),
-      })),
-    },
+    // Required, unlike on the product and service forms: the category is the
+    // only sectioning a menu has - it groups the menu page, fills the navbar's
+    // Menu dropdown and is the first segment of the item's public URL, none of
+    // which has an answer for an item filed under nothing.
     {
       key: "category",
       label: t("category") ?? "Category",
       type: "select",
+      required: true,
       options: categoryOptions,
-      placeholder: "- None -",
+      placeholder: t("selectCategory"),
     },
     {
       key: "brand",
@@ -663,13 +622,13 @@ export default function AdminMenuItemFormPage({ params }: Props) {
         error={error}
         success={success}
         productionHref={
-          !isNew && values.slug
+          !isNew && values.slug && categorySlugs[Number(values.category)]
             ? menuItemHref(
-                // The kind currently selected in the form, so "view live" follows
-                // the dropdown. It only reaches a real page once saved - each
-                // route serves only its own kind - which is the same caveat the
-                // slug field already has.
-                (values.kind as MenuItemKind | undefined) ?? "food",
+                // The category currently selected in the form, so "view live"
+                // follows the dropdown. It only reaches a real page once saved -
+                // the route serves an item only under its own category - which
+                // is the same caveat the slug field already has.
+                categorySlugs[Number(values.category)] as string,
                 String(values.slug),
               )
             : undefined

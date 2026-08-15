@@ -21,7 +21,6 @@ from django.utils import timezone
 from PIL import Image
 
 from catalog.models import (
-    MENU_ITEM_KIND_CHOICES,
     Ingredient,
     MenuCategory,
     MenuItem,
@@ -959,27 +958,28 @@ class SystemMapSettingsTests(TestCase):
 
 
 class SystemKindLabelTests(TestCase):
-    """What a tenant calls each kind of thing it sells.
+    """What a tenant calls the two Buyable families it sells.
 
     Display-only overrides, so the tests that matter are about the seams: the
-    three hand-written lists that have to agree with `KIND_LABEL_FIELDS`, and the
-    fact that a blank value clears an override rather than storing an empty
-    heading on the storefront.
+    hand-written serializer lists that have to agree with `KIND_LABEL_FIELDS`,
+    and the fact that a blank value clears an override rather than storing an
+    empty heading on the storefront.
+
+    A menu carries no labels here - it is sectioned by the tenant's own
+    `MenuCategory` rows, which are already their own copy. The five
+    `MenuItem.kind` columns that used to sit alongside these two are gone
+    (`core.0066`).
     """
 
     def setUp(self):
         cache.clear()
         self.system = System.objects.create(site_name="Piccolo", host="piccolo.test")
 
-    def test_every_menu_kind_is_renameable(self):
-        """`CATALOG_KINDS` is a hand-kept copy of the menu kinds plus the other
-        two Buyable families - it cannot import them without closing a loop. A
-        kind added to the menu with no label column here would silently be the
-        one section of the site a tenant could not rename."""
-        for kind, _label in MENU_ITEM_KIND_CHOICES:
-            self.assertIn(kind, CATALOG_KINDS)
-        self.assertIn("product", CATALOG_KINDS)
-        self.assertIn("service", CATALOG_KINDS)
+    def test_only_the_two_buyable_families_are_renameable(self):
+        """A menu is sectioned by MenuCategory rows, so a menu label here would
+        be a second name for a section the tenant has already named - which is
+        exactly the two-sources-of-truth problem `MenuItem.kind` was."""
+        self.assertEqual(set(CATALOG_KINDS), {"product", "service"})
 
     def test_every_label_column_is_writable_and_public(self):
         """The write serializer declares its fields by hand, and the read one is
@@ -1001,32 +1001,32 @@ class SystemKindLabelTests(TestCase):
 
     def test_a_label_round_trips_in_both_languages(self):
         serializer = SystemWriteSerializer(data={
-            "kind_label_food": "Pizzas",
-            "en_kind_label_food": "Our pizzas",
+            "kind_label_product": "Nuestra tienda",
+            "en_kind_label_product": "Our shop",
         })
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save(self.system)
 
         self.system.refresh_from_db()
-        self.assertEqual(self.system.kind_label_food, "Pizzas")
-        self.assertEqual(self.system.en_kind_label_food, "Our pizzas")
+        self.assertEqual(self.system.kind_label_product, "Nuestra tienda")
+        self.assertEqual(self.system.en_kind_label_product, "Our shop")
 
-    def test_clearing_a_label_hands_the_kind_back_to_the_translation(self):
+    def test_clearing_a_label_hands_the_family_back_to_the_translation(self):
         """Blank has to be storable, not refused: it is the only way back to the
         built-in label once a tenant has typed one."""
-        self.system.kind_label_food = "Pizzas"
+        self.system.kind_label_product = "Nuestra tienda"
         self.system.save()
 
-        serializer = SystemWriteSerializer(data={"kind_label_food": ""})
+        serializer = SystemWriteSerializer(data={"kind_label_product": ""})
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save(self.system)
 
         self.system.refresh_from_db()
-        self.assertEqual(self.system.kind_label_food, "")
+        self.assertEqual(self.system.kind_label_product, "")
 
     def test_labels_travel_with_a_published_site(self):
-        self.system.kind_label_food = "Pizzas"
-        self.system.en_kind_label_food = "Pizzas"
+        self.system.kind_label_product = "Nuestra tienda"
+        self.system.en_kind_label_product = "Our shop"
         self.system.kind_label_service = "Lo que hacemos"
         self.system.save()
 
@@ -1035,8 +1035,8 @@ class SystemKindLabelTests(TestCase):
         apply_payload(payload)
 
         target = System.objects.get(host="piccolo-prod.test")
-        self.assertEqual(target.kind_label_food, "Pizzas")
-        self.assertEqual(target.en_kind_label_food, "Pizzas")
+        self.assertEqual(target.kind_label_product, "Nuestra tienda")
+        self.assertEqual(target.en_kind_label_product, "Our shop")
         self.assertEqual(target.kind_label_service, "Lo que hacemos")
 
 
