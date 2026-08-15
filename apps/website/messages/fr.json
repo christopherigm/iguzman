@@ -133,6 +133,15 @@
       "gettingThereText": "Aucune route n'y mène : on rejoint l'arche en bateau depuis la baie de Cabo San Lucas, et la traversée est courte. Consultez les excursions pour les horaires, la durée et ce que chaque sortie comprend, ou écrivez-nous pour composer la vôtre."
     }
   },
+  "PiccoloSite": {
+    "hero": {
+      "viewMenu": "Voir le menu"
+    },
+    "intro": {
+      "eyebrow": "Depuis 1985",
+      "order": "Commander en livraison"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

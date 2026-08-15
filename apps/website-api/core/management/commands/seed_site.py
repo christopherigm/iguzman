@@ -43,6 +43,7 @@ from catalog.models import (
     MenuItem,
     MenuItemImage,
     MenuItemIngredient,
+    MenuItemIngredientOption,
     Product,
     ProductCategory,
     ProductImage,
@@ -430,7 +431,7 @@ class Command(BaseCommand):
     # ------------------------------------------------------------------ #
 
     def _seed_menu(self, system: System, categories: list) -> None:
-        n_cat = n_item = n_ing = 0
+        n_cat = n_item = n_ing = n_opt = 0
         # The brief lists ingredients inline per dish; create one reusable
         # Ingredient per distinct name and reference it, so a "butter" shared by
         # two dishes is the same catalog row. `nutrition_basis_quantity` is set to
@@ -502,9 +503,11 @@ class Command(BaseCommand):
                     self._attach(img, "image", g)
                     img.save()
                 for ii, ing in enumerate(m.get("ingredients") or []):
-                    MenuItemIngredient.objects.create(
+                    row = MenuItemIngredient.objects.create(
                         menu_item=item,
                         ingredient=_get_ingredient(ing),
+                        group_name=ing.get("group_name"),
+                        group_en_name=ing.get("group_en_name"),
                         quantity=self._price(ing["quantity"]) if ing.get("quantity") is not None else None,
                         unit=ing.get("unit"),
                         price=self._price(ing.get("price", 0)),
@@ -515,7 +518,21 @@ class Command(BaseCommand):
                         sort_order=ing.get("sort_order", ii),
                     )
                     n_ing += 1
+                    # A single-select choice group: the row above is the *default*
+                    # option and these are the alternatives the customer may swap
+                    # in (see MenuItemIngredient's docstring). Each option is an
+                    # `Ingredient` in its own right, so it goes through the same
+                    # cache and a "Familiar 40 cm" shared by 41 pizzas is one row.
+                    for oi, opt in enumerate(ing.get("options") or []):
+                        MenuItemIngredientOption.objects.create(
+                            menu_item_ingredient=row,
+                            ingredient=_get_ingredient(opt),
+                            price=self._price(opt.get("price", 0)),
+                            sort_order=opt.get("sort_order", oi),
+                        )
+                        n_opt += 1
         if categories:
             self.stdout.write(
-                f"  Seeded {n_cat} menu categories / {n_item} menu items / {n_ing} ingredients"
+                f"  Seeded {n_cat} menu categories / {n_item} menu items / "
+                f"{n_ing} ingredients / {n_opt} choice options"
             )

@@ -133,6 +133,15 @@
       "gettingThereText": "No hay camino por tierra: al Arco se llega navegando desde la bahía de Cabo San Lucas, y el recorrido toma poco tiempo. Revisa los tours para ver los horarios, la duración y qué incluye cada salida, o escríbenos si prefieres armar el recorrido a tu medida."
     }
   },
+  "PiccoloSite": {
+    "hero": {
+      "viewMenu": "Ver el menú"
+    },
+    "intro": {
+      "eyebrow": "Desde 1985",
+      "order": "Pedir a domicilio"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

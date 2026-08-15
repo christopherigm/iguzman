@@ -42,6 +42,7 @@ from catalog.models import (
     MenuCategory,
     MenuItem,
     MenuItemIngredient,
+    MenuItemIngredientOption,
     Product,
     ProductCategory,
     Service,
@@ -317,11 +318,22 @@ def _ingredient_catalog_dict(i: Ingredient) -> dict:
 def _ingredient_dict(i: MenuItemIngredient) -> dict:
     """One menu-item ingredient: a reference to a reusable Ingredient (by slug)
     plus the recipe portion and pricing. Identity/nutrition are not repeated
-    here - they live on the referenced Ingredient."""
+    here - they live on the referenced Ingredient.
+
+    A row may be a **single-select choice group** (`group_name` + `options`), in
+    which case its own `ingredient` is the default option and each option is
+    another reusable Ingredient with its own per-unit price. The group has to
+    travel: it is how a dish sold in several sizes is priced, so dropping it on
+    publish would leave production with only the base-price variant.
+    """
     d = {
         "sort_order": i.sort_order,
         "ingredient": i.ingredient.slug if i.ingredient_id else None,
     }
+    if i.group_name:
+        d["group_name"] = i.group_name
+    if i.group_en_name:
+        d["group_en_name"] = i.group_en_name
     if i.quantity is not None:
         d["quantity"] = str(i.quantity)
     if i.unit:
@@ -331,6 +343,16 @@ def _ingredient_dict(i: MenuItemIngredient) -> dict:
     d["max_quantity"] = i.max_quantity
     d["number_of_free_portions"] = i.number_of_free_portions
     d["default_quantity"] = i.default_quantity
+    options = [
+        {
+            "ingredient": o.ingredient.slug if o.ingredient_id else None,
+            "price": str(o.price),
+            "sort_order": o.sort_order,
+        }
+        for o in i.options.all()
+    ]
+    if options:
+        d["options"] = options
     return d
 
 
@@ -390,6 +412,7 @@ def serialize_system(system: System) -> dict:
         "menu_categories": [
             _menu_category_dict(c)
             for c in system.menu_categories.all().prefetch_related(
+                "menu_items__ingredients__options__ingredient",
                 "menu_items__ingredients__ingredient"
             )
         ],
@@ -675,11 +698,32 @@ def _apply_menu(system, categories) -> dict:
                 ing_defaults["max_quantity"] = ing.get("max_quantity", 1)
                 ing_defaults["number_of_free_portions"] = ing.get("number_of_free_portions", 0)
                 ing_defaults["default_quantity"] = ing.get("default_quantity", 0)
-                MenuItemIngredient.objects.update_or_create(
+                ing_defaults["group_name"] = ing.get("group_name") or None
+                ing_defaults["group_en_name"] = ing.get("group_en_name") or None
+                row, _ = MenuItemIngredient.objects.update_or_create(
                     menu_item=item,
                     sort_order=ing.get("sort_order", k),
                     defaults=ing_defaults,
                 )
+                # A choice group's options are replaced wholesale, not upserted:
+                # unlike the group itself they carry no identity of their own
+                # (an option *is* its ingredient reference), so replacing is
+                # indistinguishable from editing - and nothing points at an
+                # option row the way `Booking.resource` points at a resource.
+                # An option whose ingredient is unknown is skipped, like the
+                # group's own reference above.
+                options = ing.get("options") or []
+                row.options.all().delete()
+                for oi, opt in enumerate(options):
+                    opt_ingredient = ingredient_by_slug.get(opt.get("ingredient"))
+                    if opt_ingredient is None:
+                        continue
+                    MenuItemIngredientOption.objects.create(
+                        menu_item_ingredient=row,
+                        ingredient=opt_ingredient,
+                        price=_decimal(opt.get("price", 0)),
+                        sort_order=opt.get("sort_order", oi),
+                    )
     return counts
 
 

@@ -133,6 +133,15 @@
       "gettingThereText": "Es führt keine Straße dorthin: Den Bogen erreicht man per Boot aus der Bucht von Cabo San Lucas, die Überfahrt ist kurz. In den Touren finden Sie Abfahrtszeiten, Dauer und Leistungen – oder schreiben Sie uns, wenn Sie Ihre Tour lieber selbst zusammenstellen."
     }
   },
+  "PiccoloSite": {
+    "hero": {
+      "viewMenu": "Zur Speisekarte"
+    },
+    "intro": {
+      "eyebrow": "Seit 1985",
+      "order": "Lieferung bestellen"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

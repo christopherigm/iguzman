@@ -91,7 +91,8 @@ fields at any new file you drop in here.
   "product_categories": [ { "name", "image?", "products":  [ { "name","description","price","currency?","is_featured?","image?","gallery?":[] } ] } ],
   "service_categories": [ { "name", "image?", "services":  [ { "name","description","price","currency?","modality?","duration?","is_featured?","image?" } ] } ],
   "menu_categories":    [ { "name", "image?", "menu_items": [ { "name","description","price","currency?","kind?","is_featured?","is_organic?","is_vegetarian?","is_vegan?","is_gluten_free?","allergens?","portions?","image?","gallery?":[],
-                            "ingredients": [ { "name","price","calories?","is_removable?","max_quantity?","quantity?","unit?","sort_order?" } ] } ] } ]
+                            "ingredients": [ { "name","price","calories?","is_removable?","max_quantity?","quantity?","unit?","sort_order?",
+                                              "group_name?","group_en_name?","options?": [ { "name","en_name?","price","sort_order?" } ] } ] } ] } ]
 }
 ```
 
@@ -116,6 +117,18 @@ Notes:
   only) and never affect price. A `menu_item`'s optional `portions` (servings the
   dish yields) drives the per-serving figures on the nutrition label. See
   `catalog/models.py` → MenuItem / MenuItemIngredient.
+- **An ingredient row with `options` is a single-select choice group**, which is
+  how a dish sold in several **sizes** is priced: the row's own `name` is the
+  *default* option (usually the one the base `price` already buys) and each
+  `options[]` entry is an alternative the customer may swap in, charged its own
+  `price`. Give the group a customer-facing `group_name` ("Tamaño", "Elige tu
+  proteína"), leave it `is_removable: false` so it is one locked choice rather
+  than a stepper, and price each option as the **delta from the base**, not as
+  the absolute menu price — `upcharge_for_quantity` adds it on top of
+  `menu_item.price`. Every option name goes through the same reusable
+  `Ingredient` cache as a plain ingredient, so a "Familiar 40 cm" shared by 41
+  pizzas is one catalog row. Groups and their options travel through
+  `publish-site` with the rest of the catalog.
 - **`menu_items[].kind`** says what the item *is* — `"food"` (the default),
   `"drink"`, `"dessert"`, `"side"` or `"appetizer"`. Set it rather than relying on
   the category's name: it is the structural field the storefront filters on (a

@@ -133,6 +133,15 @@
       "gettingThereText": "There is no road: you reach the Arch by boat from Cabo San Lucas bay, and the crossing is short. Check the tours for departure times, duration and what each trip includes, or message us if you would rather put together your own."
     }
   },
+  "PiccoloSite": {
+    "hero": {
+      "viewMenu": "View the menu"
+    },
+    "intro": {
+      "eyebrow": "Since 1985",
+      "order": "Order delivery"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

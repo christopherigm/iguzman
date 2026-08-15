@@ -19,6 +19,7 @@ import cafedealturaConfig from "./cafedealtura/site.config";
 import supertortaselchinoConfig from "./supertortaselchino/site.config";
 import santofishrestaurantConfig from "./santofishrestaurant/site.config";
 import tamaratoursConfig from "./tamaratours/site.config";
+import piccolopizzasConfig from "./piccolopizzas/site.config";
 // <new-site:import> - the CLI inserts new `import <slug>Config from ...` lines above this marker.
 
 /**
@@ -41,6 +42,7 @@ const SITES: SiteEntry[] = [
   { config: supertortaselchinoConfig, load: () => import("./supertortaselchino") },
   { config: santofishrestaurantConfig, load: () => import("./santofishrestaurant") },
   { config: tamaratoursConfig, load: () => import("./tamaratours") },
+  { config: piccolopizzasConfig, load: () => import("./piccolopizzas") },
   // <new-site:entry> - the CLI inserts new `{ config, load }` entries above this marker.
   { config: defaultConfig, load: () => import("./_default") },
 ];

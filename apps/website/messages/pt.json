@@ -133,6 +133,15 @@
       "gettingThereText": "Não há estrada: chega-se ao Arco navegando da baía de Cabo San Lucas, e a travessia é curta. Veja os passeios para conferir horários, duração e o que cada saída inclui, ou fale com a gente para montar o seu."
     }
   },
+  "PiccoloSite": {
+    "hero": {
+      "viewMenu": "Ver o cardápio"
+    },
+    "intro": {
+      "eyebrow": "Desde 1985",
+      "order": "Pedir entrega"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""
