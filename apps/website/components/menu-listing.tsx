@@ -162,7 +162,7 @@ export async function MenuListing({ locale }: MenuListingProps) {
          *  cell of its own so it is `hidden` below `md` with no media query, and
          *  so it stretches to the full height of the sections column - which is
          *  what its `position: sticky` travels inside. */}
-        <Grid container spacing={3}>
+        <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: 3 }} hidden={{ xs: true, sm: true }}>
             <MenuCategoryNav
               title={t("categoryNav")}
