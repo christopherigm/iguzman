@@ -34,12 +34,11 @@ export default async function CartPage({ params }: Props) {
   // An anonymous visitor's cart lives in their browser, so the server has
   // nothing to render for them: `getCart()` returns empty and the page hands off
   // to `GuestCartView`, which resolves localStorage after hydration.
-  const [session, cart, system, t, itemT] = await Promise.all([
+  const [session, cart, system, t] = await Promise.all([
     getSession(),
     getCart(),
     getSystem(),
     getTranslations("Cart"),
-    getTranslations("CatalogItems"),
   ]);
 
   const breadcrumbs: BreadcrumbItem[] = [
@@ -63,9 +62,6 @@ export default async function CartPage({ params }: Props) {
       {session === null ? (
         <GuestCartView
           locale={locale}
-          productLabel={itemT("productLabel")}
-          serviceLabel={itemT("serviceLabel")}
-          menuLabel={itemT("menuLabel")}
           stripeConfigured={system?.stripe_configured ?? false}
           payInStoreEnabled={system?.pay_in_store_enabled ?? false}
           payOnDeliveryEnabled={system?.pay_on_delivery_enabled ?? false}
@@ -77,13 +73,7 @@ export default async function CartPage({ params }: Props) {
       ) : cart.items.length > 0 ? (
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, sm: 7 }}>
-            <CartLines
-              lines={cart.items}
-              locale={locale}
-              productLabel={itemT("productLabel")}
-              serviceLabel={itemT("serviceLabel")}
-              menuLabel={itemT("menuLabel")}
-            />
+            <CartLines lines={cart.items} locale={locale} />
           </Grid>
           <Grid size={{ xs: 12, sm: 5 }}>
             <CartSummary totals={cart.totals} count={cart.count} />

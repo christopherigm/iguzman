@@ -794,6 +794,32 @@ Tests: `OrderQrTests` in `orders/tests.py`, plus the admin-read cases in
 temp dir via `setUpModule` - every checkout in it writes a real file, and
 unisolated they scatter a PNG per order through the developer's own `media/`.
 
+## Catalog kind labels - fourteen columns on `System`
+
+`kind_label_<kind>` / `en_kind_label_<kind>` hold what a tenant calls each of the
+seven things it can sell - the five `MENU_ITEM_KIND_CHOICES` plus `product` and
+`service`. `core.models.CATALOG_KINDS` is the list and `KIND_LABEL_FIELDS` the
+derived column pairs, imported by the read serializer, the write serializer,
+`SystemAdmin` and `SYSTEM_TEXT_FIELDS` so those four cannot list different sets.
+The frontend resolution rules are in `apps/website/CLAUDE.md`.
+
+- ⚠ **They rename a label and nothing else.** `MenuItem.kind`, the `?kind=`
+  filter and every storefront URL are structural - never derive one from a label,
+  and never validate a kind against one.
+- **Public by design**, unlike the credentials they sit near: they are on
+  `SystemSerializer` because every storefront heading is painted from them.
+- **Nullable with no default, and blank is meaningful** - it is how a tenant
+  hands a kind back to the frontend's own translation. A default would have to be
+  written in one language and would be wrong on the four locales the model stores
+  no copy for.
+- **`CATALOG_KINDS` is a hand-kept copy of the menu kinds** (importing
+  `catalog.models` from `core.models` closes an import loop). `SystemKindLabelTests`
+  in `core/tests.py` pins the two lists together, and pins the write serializer's
+  hand-declared fields against `KIND_LABEL_FIELDS`.
+- They are in `SYSTEM_TEXT_FIELDS`, so they travel with `export_site` /
+  `publish-site` and can be set from a `seed_site` brief - they are copy decided
+  once when a site is written, with no per-environment id in them.
+
 ## Maps - the basemap is four columns on `System`
 
 `map_style` / `map_tile_url` / `map_attribution` / `map_attribution_url` decide

@@ -12,6 +12,7 @@ import { toShareDescription } from "@/lib/metadata";
 import { discountPercent } from "@/lib/price";
 import { nutritionRows } from "@/lib/nutrition";
 import { enabledIngredients } from "@/lib/menu-selection";
+import { menuEtaLabel } from "@/lib/menu-eta";
 import { menuItemHref } from "@/lib/menu-kinds";
 import { MenuItemCustomizer } from "./menu-item-customizer";
 import { FavoriteButton } from "./favorite-button";
@@ -71,6 +72,10 @@ export async function MenuDetailHeader({ item, locale }: MenuDetailProps) {
   else if (item.is_vegetarian) dietary.push(tMenu("vegetarian"));
   if (item.is_gluten_free) dietary.push(tMenu("glutenFree"));
 
+  // How long the kitchen says it takes, as its own chip under the category -
+  // null when the CMS left it blank, which is most items.
+  const etaLabel = menuEtaLabel(tMenu, item.eta_minutes);
+
   return (
     <Box flexDirection="column" gap={8} marginBottom={18}>
       <Box alignItems="flex-start" justifyContent="space-between" gap={12}>
@@ -114,6 +119,14 @@ export async function MenuDetailHeader({ item, locale }: MenuDetailProps) {
         <Typography as="span" variant="caption" color="var(--foreground)">
           {t("category")}: <strong>{item.category_name}</strong>
         </Typography>
+      )}
+
+      {etaLabel && (
+        <Box alignItems="center">
+          <Badge variant="subtle" size="lg" color="var(--accent)">
+            {etaLabel}
+          </Badge>
+        </Box>
       )}
 
       {/* Dietary badges - one per matching boolean flag */}

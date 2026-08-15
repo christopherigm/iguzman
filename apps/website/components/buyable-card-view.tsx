@@ -17,9 +17,6 @@ import type { BuyableItem } from "./buyable-card";
 export interface BuyableCardViewProps {
   item: BuyableItem;
   locale: string;
-  productLabel: string;
-  serviceLabel: string;
-  menuLabel?: string;
   fromLabel?: string;
   /** "per person" suffix for a service whose booking is priced per head. The
    *  symmetric case to `fromLabel`: the number on the card is not the whole
@@ -52,9 +49,6 @@ export interface BuyableCardViewProps {
 export function BuyableCardView({
   item,
   locale,
-  productLabel,
-  serviceLabel,
-  menuLabel,
   fromLabel,
   perPersonLabel,
   origin,
@@ -67,11 +61,12 @@ export function BuyableCardView({
   const { kind, data } = item;
   const tMenu = useTranslations("Menu");
 
-  // A food card advertises its dietary flags instead of the generic kind badge,
-  // since "which of these can I eat" is the only question a diner scanning a
-  // grid is asking. Vegan is the stronger claim, so it supersedes vegetarian
-  // rather than both showing for the same dish - same rule as `menu-detail`.
-  // With no flag set the kind badge stays, so the corner is never empty.
+  // A food card advertises its dietary flags, since "which of these can I eat"
+  // is the only question a diner scanning a grid is asking. Vegan is the
+  // stronger claim, so it supersedes vegetarian rather than both showing for the
+  // same dish - same rule as `menu-detail`. With no flag set the corner is
+  // simply empty: the grid a card sits in already says what family it belongs
+  // to, so a "Product"/"Service"/"Menu" badge only repeated the page's own title.
   const dietary: { label: string; color: string }[] = [];
   if (item.kind === "food") {
     const food = item.data;
@@ -205,16 +200,16 @@ export function BuyableCardView({
           />
         )}
 
-        <Box
-          alignItems="flex-start"
-          flexWrap="wrap"
-          gap={4}
-          // Leave the top-right corner clear when the admin edit button is there.
-          maxWidth={isAdmin ? "calc(100% - 60px)" : "calc(100% - 16px)"}
-          styles={{ position: "absolute", top: 8, left: 8, zIndex: 1 }}
-        >
-          {dietary.length > 0 ? (
-            dietary.map((d) => (
+        {dietary.length > 0 && (
+          <Box
+            alignItems="flex-start"
+            flexWrap="wrap"
+            gap={4}
+            // Leave the top-right corner clear when the admin edit button is there.
+            maxWidth={isAdmin ? "calc(100% - 60px)" : "calc(100% - 16px)"}
+            styles={{ position: "absolute", top: 8, left: 8, zIndex: 1 }}
+          >
+            {dietary.map((d) => (
               <Badge
                 key={d.label}
                 variant="filled"
@@ -224,28 +219,9 @@ export function BuyableCardView({
               >
                 {d.label}
               </Badge>
-            ))
-          ) : (
-            <Badge
-              variant="filled"
-              size="md"
-              color={
-                kind === "product"
-                  ? "rgb(34, 181, 32)"
-                  : kind === "service"
-                    ? "rgba(99,102,241)"
-                    : "rgba(234,88,12)"
-              }
-              textColor="#fff"
-            >
-              {kind === "product"
-                ? productLabel
-                : kind === "service"
-                  ? serviceLabel
-                  : menuLabel}
-            </Badge>
-          )}
-        </Box>
+            ))}
+          </Box>
+        )}
 
         {/* Admin-only edit shortcut, riding the top-right of the image. */}
         {isAdmin && (

@@ -5,6 +5,7 @@ import { Container } from "@repo/ui/core-elements/container";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { getService } from "@/lib/catalog";
 import { getSystem } from "@/lib/system";
+import { kindLabel, kindLabels } from "@/lib/kind-labels";
 import { getRequestOrigin, toShareDescription } from "@/lib/metadata";
 import type { ServiceDetail } from "@/lib/catalog";
 import type { GalleryImage } from "@/components/item-gallery-client";
@@ -124,7 +125,11 @@ export default async function ServicePage({ params }: Props) {
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },
-    { label: tNav("services"), href: "/categories/services" },
+    // The tenant's own name for the family; the href never moves.
+    {
+      label: kindLabel(kindLabels(system, locale), "service", tNav("services")),
+      href: "/categories/services",
+    },
     ...(service.category_name && service.category_slug
       ? [
           {

@@ -8,9 +8,6 @@ import { CartLine } from "./cart-line";
 interface CartLinesProps {
   lines: CartItem[];
   locale: string;
-  productLabel: string;
-  serviceLabel: string;
-  menuLabel: string;
 }
 
 /**
@@ -21,13 +18,7 @@ interface CartLinesProps {
  * real numbers (the summary and the navbar count). The guest half of this lives
  * in `guest-cart-view.tsx`; the row itself is the same component either way.
  */
-export function CartLines({
-  lines,
-  locale,
-  productLabel,
-  serviceLabel,
-  menuLabel,
-}: CartLinesProps) {
+export function CartLines({ lines, locale }: CartLinesProps) {
   const router = useRouter();
 
   const write = async (id: number, init: RequestInit): Promise<boolean> => {
@@ -48,9 +39,6 @@ export function CartLines({
           key={line.id}
           line={line}
           locale={locale}
-          productLabel={productLabel}
-          serviceLabel={serviceLabel}
-          menuLabel={menuLabel}
           onQuantityChange={(quantity) =>
             write(line.id, {
               method: "PATCH",

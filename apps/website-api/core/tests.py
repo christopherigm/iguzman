@@ -21,6 +21,7 @@ from django.utils import timezone
 from PIL import Image
 
 from catalog.models import (
+    MENU_ITEM_KIND_CHOICES,
     Ingredient,
     MenuCategory,
     MenuItem,
@@ -31,6 +32,8 @@ from catalog.models import (
 from core import storage as storage_module
 from core.backup import BackupError, restore_archive, write_archive
 from core.models import (
+    CATALOG_KINDS,
+    KIND_LABEL_FIELDS,
     BookingResource,
     Branch,
     ContactMessage,
@@ -953,6 +956,88 @@ class SystemMapSettingsTests(TestCase):
 
         self.system.refresh_from_db()
         self.assertEqual(self.system.map_style, "carto-light")
+
+
+class SystemKindLabelTests(TestCase):
+    """What a tenant calls each kind of thing it sells.
+
+    Display-only overrides, so the tests that matter are about the seams: the
+    three hand-written lists that have to agree with `KIND_LABEL_FIELDS`, and the
+    fact that a blank value clears an override rather than storing an empty
+    heading on the storefront.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Piccolo", host="piccolo.test")
+
+    def test_every_menu_kind_is_renameable(self):
+        """`CATALOG_KINDS` is a hand-kept copy of the menu kinds plus the other
+        two Buyable families - it cannot import them without closing a loop. A
+        kind added to the menu with no label column here would silently be the
+        one section of the site a tenant could not rename."""
+        for kind, _label in MENU_ITEM_KIND_CHOICES:
+            self.assertIn(kind, CATALOG_KINDS)
+        self.assertIn("product", CATALOG_KINDS)
+        self.assertIn("service", CATALOG_KINDS)
+
+    def test_every_label_column_is_writable_and_public(self):
+        """The write serializer declares its fields by hand, and the read one is
+        what the storefront paints from - a column missing from either is a
+        setting the CMS silently drops or never shows."""
+        declared = SystemWriteSerializer().fields
+        for field in KIND_LABEL_FIELDS:
+            self.assertIn(field, declared)
+
+        res = self.client.get("/api/system/", HTTP_X_WEBSITE_HOST="piccolo.test")
+        self.assertEqual(res.status_code, 200)
+        for field in KIND_LABEL_FIELDS:
+            self.assertIn(field, res.json())
+
+    def test_a_fresh_tenant_overrides_nothing(self):
+        res = self.client.get("/api/system/", HTTP_X_WEBSITE_HOST="piccolo.test")
+        for field in KIND_LABEL_FIELDS:
+            self.assertIn(res.json()[field], (None, ""))
+
+    def test_a_label_round_trips_in_both_languages(self):
+        serializer = SystemWriteSerializer(data={
+            "kind_label_food": "Pizzas",
+            "en_kind_label_food": "Our pizzas",
+        })
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save(self.system)
+
+        self.system.refresh_from_db()
+        self.assertEqual(self.system.kind_label_food, "Pizzas")
+        self.assertEqual(self.system.en_kind_label_food, "Our pizzas")
+
+    def test_clearing_a_label_hands_the_kind_back_to_the_translation(self):
+        """Blank has to be storable, not refused: it is the only way back to the
+        built-in label once a tenant has typed one."""
+        self.system.kind_label_food = "Pizzas"
+        self.system.save()
+
+        serializer = SystemWriteSerializer(data={"kind_label_food": ""})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save(self.system)
+
+        self.system.refresh_from_db()
+        self.assertEqual(self.system.kind_label_food, "")
+
+    def test_labels_travel_with_a_published_site(self):
+        self.system.kind_label_food = "Pizzas"
+        self.system.en_kind_label_food = "Pizzas"
+        self.system.kind_label_service = "Lo que hacemos"
+        self.system.save()
+
+        payload = serialize_system(self.system)
+        payload["system"]["host"] = "piccolo-prod.test"
+        apply_payload(payload)
+
+        target = System.objects.get(host="piccolo-prod.test")
+        self.assertEqual(target.kind_label_food, "Pizzas")
+        self.assertEqual(target.en_kind_label_food, "Pizzas")
+        self.assertEqual(target.kind_label_service, "Lo que hacemos")
 
 
 class BranchMapImageTests(IsolatedMediaTestCase):

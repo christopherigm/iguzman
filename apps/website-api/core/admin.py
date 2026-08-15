@@ -3,6 +3,7 @@ from django.core.cache import cache
 
 from .cache import invalidate_pattern as _invalidate_pattern
 from .models import (
+    KIND_LABEL_FIELDS,
     BookingResource,
     Branch,
     BranchHours,
@@ -412,6 +413,17 @@ class SystemAdmin(admin.ModelAdmin):
             "fields": (
                 "catalog_items_bg",
                 "catalog_top_divider", "catalog_bottom_divider",
+            ),
+        }),
+        ("Catalog Kind Labels", {
+            "fields": KIND_LABEL_FIELDS,
+            "classes": ("collapse",),
+            "description": (
+                "What this site calls each kind of thing it sells - a pizzeria "
+                'renames "Food" to "Pizzas". The bare field is the Spanish copy '
+                "and 'en_' the English one; either left blank falls back to the "
+                "storefront's own translation. Display only: the kind values and "
+                "every URL are unaffected."
             ),
         }),
         ("Spotlight Section", {

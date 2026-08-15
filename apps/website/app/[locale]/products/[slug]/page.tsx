@@ -5,6 +5,7 @@ import { Container } from "@repo/ui/core-elements/container";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { getProduct } from "@/lib/catalog";
 import { getSystem } from "@/lib/system";
+import { kindLabel, kindLabels } from "@/lib/kind-labels";
 import { getRequestOrigin, toShareDescription } from "@/lib/metadata";
 import type { ProductDetail } from "@/lib/catalog";
 import type { GalleryImage } from "@/components/item-gallery-client";
@@ -124,7 +125,11 @@ export default async function ProductPage({ params }: Props) {
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },
-    { label: tNav("products"), href: "/categories/products" },
+    // The tenant's own name for the family; the href never moves.
+    {
+      label: kindLabel(kindLabels(system, locale), "product", tNav("products")),
+      href: "/categories/products",
+    },
     ...(product.category_name && product.category_slug
       ? [
           {

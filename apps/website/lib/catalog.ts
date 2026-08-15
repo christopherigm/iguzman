@@ -560,6 +560,9 @@ export interface MenuItemDetail {
   category_slug: string | null;
   brand: number | null;
   brand_name: string | null;
+  /** Minutes until the item is ready - the customer-facing "Ready in ..."
+   *  badge. Not the internal prep/cook times below. */
+  eta_minutes: number | null;
   spice_level: number | null;
   servings: number | null;
   portions: number | null;

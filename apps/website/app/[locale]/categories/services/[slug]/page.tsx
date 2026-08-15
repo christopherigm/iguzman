@@ -10,6 +10,8 @@ import { SectionHero } from "@/components/section-hero";
 import { getSession } from "@repo/auth/session";
 import { getServiceCategory, getServicesByCategory } from "@/lib/catalog";
 import { CategoryDetail } from "@/components/category-detail";
+import { kindLabel } from "@/lib/kind-labels";
+import { getKindLabels } from "@/lib/system";
 import { AdminEditButton } from "@/components/admin-edit-button";
 
 type Props = {
@@ -52,11 +54,12 @@ export default async function ServiceCategoryPage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const [category, t, tAdmin, session] = await Promise.all([
+  const [category, t, tAdmin, session, labels] = await Promise.all([
     getServiceCategory(slug),
     getTranslations("CategoryDetail"),
     getTranslations("Admin"),
     getSession(),
+    getKindLabels(locale),
   ]);
 
   if (!category) notFound();
@@ -77,7 +80,10 @@ export default async function ServiceCategoryPage({ params }: Props) {
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },
-    { label: t("services"), href: "/categories/services" },
+    {
+      label: kindLabel(labels, "service", t("services")),
+      href: "/categories/services",
+    },
     { label: name },
   ];
 

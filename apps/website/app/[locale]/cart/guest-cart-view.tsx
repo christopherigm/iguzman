@@ -11,9 +11,6 @@ import { GuestCartSummary } from "./guest-cart-summary";
 
 interface GuestCartViewProps {
   locale: string;
-  productLabel: string;
-  serviceLabel: string;
-  menuLabel: string;
   /** Whether this tenant can take payments at all - `stripe_configured`, read
    *  on the server so the checkout button never flickers from enabled to
    *  disabled after hydration. */
@@ -43,9 +40,6 @@ interface GuestCartViewProps {
  */
 export function GuestCartView({
   locale,
-  productLabel,
-  serviceLabel,
-  menuLabel,
   stripeConfigured,
   payInStoreEnabled,
   payOnDeliveryEnabled,
@@ -109,9 +103,6 @@ export function GuestCartView({
               key={line.id}
               line={line}
               locale={locale}
-              productLabel={productLabel}
-              serviceLabel={serviceLabel}
-              menuLabel={menuLabel}
               // `line.id` is the reference's index in localStorage - the guest
               // equivalent of a row id. Both writes are synchronous, so they
               // always "stick": the re-resolve above is what repaints.

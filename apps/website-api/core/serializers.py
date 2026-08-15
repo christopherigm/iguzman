@@ -11,6 +11,7 @@ from . import image_sizes
 from .image_sizes import REGULAR, SMALL, MEDIUM, STANDARD, image_cfg
 from .models import (
     DIVIDER_CHOICES,
+    KIND_LABEL_FIELDS,
     BookingResource,
     Branch,
     BranchHours,
@@ -819,6 +820,10 @@ class SystemSerializer(serializers.ModelSerializer):
             "spotlight_text", "en_spotlight_text",
             "spotlight_button_label", "en_spotlight_button_label",
             "spotlight_button_link", "spotlight_items",
+            # What this tenant calls each kind of thing it sells. Public by
+            # design - every storefront heading, breadcrumb and navbar entry for
+            # a kind is painted from these.
+            *KIND_LABEL_FIELDS,
             "product_count", "service_count", "menu_item_count",
             "menu_item_kind_counts",
             "branch_count",
@@ -955,6 +960,7 @@ _TEXT_FIELDS = [
     "spotlight_text", "en_spotlight_text",
     "spotlight_button_label", "en_spotlight_button_label",
     "spotlight_button_link", "spotlight_items",
+    *KIND_LABEL_FIELDS,
 ]
 
 # Written through a System.set_*() method rather than setattr, because the column
@@ -1165,6 +1171,25 @@ class SystemWriteSerializer(serializers.Serializer):
     en_spotlight_button_label  = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     spotlight_button_link      = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     spotlight_items            = serializers.JSONField(required=False)
+
+    # Catalog kind labels - what this tenant calls each thing it sells. Blank
+    # clears the override and hands the label back to the frontend's own
+    # translation, which is why every one of them allows a blank string.
+    # `SystemKindLabelTests` pins these declarations against `KIND_LABEL_FIELDS`.
+    kind_label_food            = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
+    en_kind_label_food         = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
+    kind_label_drink           = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
+    en_kind_label_drink        = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
+    kind_label_dessert         = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
+    en_kind_label_dessert      = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
+    kind_label_side            = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
+    en_kind_label_side         = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
+    kind_label_appetizer       = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
+    en_kind_label_appetizer    = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
+    kind_label_product         = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
+    en_kind_label_product      = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
+    kind_label_service         = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
+    en_kind_label_service      = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
 
     # Base64 image fields
     img_logo          = serializers.CharField(required=False, allow_null=True, allow_blank=True)

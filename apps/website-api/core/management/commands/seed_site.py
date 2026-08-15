@@ -486,6 +486,7 @@ class Command(BaseCommand):
                     kind=m.get("kind") or "food",
                     is_featured=m.get("is_featured", True),
                     is_available=m.get("is_available", True),
+                    eta_minutes=m.get("eta_minutes"),
                     spice_level=m.get("spice_level"),
                     portions=m.get("portions"),
                     is_organic=m.get("is_organic", False),

@@ -4,16 +4,34 @@ import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import { ContactSection } from "./contact-section";
+import { KindLabelsSection } from "./kind-labels-section";
 import { MapSection } from "./map-section";
 import { StorageSection } from "./storage-section";
 import { BackupSection } from "./backup-section";
 import { RestoreSection } from "./restore-section";
 import { getSystem, updateSystem } from "@/lib/admin-api";
+import { CATALOG_KINDS } from "@/lib/kind-labels";
 import type { SocialLink } from "@/lib/contact";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+
+/**
+ * The 14 kind-label columns, read off an API payload (or blank on first render).
+ *
+ * Derived from `CATALOG_KINDS` rather than typed out twice: a kind added there
+ * would otherwise get inputs from `KindLabelsSection` whose values this page
+ * never loads and never sends, which looks exactly like a lost save.
+ */
+function kindLabelValues(data: Record<string, unknown> = {}) {
+  return Object.fromEntries(
+    CATALOG_KINDS.flatMap((kind) => [
+      [`kind_label_${kind}`, data[`kind_label_${kind}`] ?? ""],
+      [`en_kind_label_${kind}`, data[`en_kind_label_${kind}`] ?? ""],
+    ]),
+  );
+}
 
 export default function AdminSystemPage() {
   const t = useTranslations("Admin");
@@ -34,6 +52,9 @@ export default function AdminSystemPage() {
     map_tile_url: "",
     map_attribution: "",
     map_attribution_url: "",
+    // What this tenant calls each kind it sells; blank means "use the site's own
+    // translation", which is every tenant's starting state.
+    ...kindLabelValues(),
   });
 
   const [loading, setLoading] = useState(true);
@@ -64,6 +85,7 @@ export default function AdminSystemPage() {
           map_tile_url: data.map_tile_url ?? "",
           map_attribution: data.map_attribution ?? "",
           map_attribution_url: data.map_attribution_url ?? "",
+          ...kindLabelValues(data),
         });
       })
       .catch(() => setError(t("errorLoad")))
@@ -164,6 +186,15 @@ export default function AdminSystemPage() {
             panel on /admin/featured-spotlight; Stripe and the offline payment
             methods on /admin/payments.) */}
         <ContactSection
+          values={values}
+          onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
+        />
+
+        {/* What the tenant calls each kind of thing it sells. On this page
+            rather than beside the catalog: one rename retitles the navbar, the
+            listings and the breadcrumbs across the whole site, which is a
+            site-wide setting, not a property of any one product or dish. */}
+        <KindLabelsSection
           values={values}
           onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
         />

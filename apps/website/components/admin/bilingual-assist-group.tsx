@@ -30,6 +30,9 @@ export interface BilingualPair {
   /** `textarea` also gets Speech + Enhance; `text` gets Translate only. */
   type: "text" | "textarea";
   rows?: number;
+  /** Mirrors the column's own `max_length` so a value can't be typed past what
+   *  the API will store (e.g. the 64-char catalog kind labels). */
+  maxLength?: number;
 }
 
 type Props = {
@@ -260,6 +263,7 @@ export function BilingualAssistGroup({ pairs, values, onChange }: Props) {
           onChange={(v) => onChange(fieldKey, v)}
           multirow={isTextarea}
           rows={isTextarea ? (pair.rows ?? 5) : undefined}
+          maxLength={pair.maxLength}
         />
 
         {/* Enhance preview */}

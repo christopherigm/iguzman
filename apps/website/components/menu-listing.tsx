@@ -19,6 +19,8 @@ import {
   MENU_ITEM_KINDS,
   type MenuItemKind,
 } from "@/lib/menu-kinds";
+import { kindLabel } from "@/lib/kind-labels";
+import { getKindLabels } from "@/lib/system";
 
 /**
  * The menu listing, in its two shapes - shared by all six routes so they cannot
@@ -43,7 +45,7 @@ interface MenuListingProps {
 }
 
 export async function MenuListing({ locale, kind }: MenuListingProps) {
-  const [categories, items, t, detailT, kindT, menuT, catalogT] =
+  const [categories, items, t, detailT, kindT, menuT, labels] =
     await Promise.all([
       kind === null ? getMenuCategories() : Promise.resolve([]),
       kind === null ? getAllMenuItems() : getMenuItemsByKind(kind),
@@ -51,10 +53,15 @@ export async function MenuListing({ locale, kind }: MenuListingProps) {
       getTranslations("CategoryDetail"),
       getTranslations("MenuKinds"),
       getTranslations("Menu"),
-      getTranslations("CatalogItems"),
+      getKindLabels(locale),
     ]);
 
-  const heading = kind === null ? t("heading") : kindT(kind);
+  /** This tenant's name for a kind ("Pizzas"), or ours. */
+  const label = (k: MenuItemKind) => kindLabel(labels, k, kindT(k));
+
+  // The whole-menu page is titled by the *menu*, not by a kind, so it keeps its
+  // own heading - there is no one kind for a tenant to have renamed there.
+  const heading = kind === null ? t("heading") : label(kind);
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: detailT("home"), href: "/" },
@@ -62,7 +69,7 @@ export async function MenuListing({ locale, kind }: MenuListingProps) {
       ? [{ label: detailT("food") }]
       : [
           { label: detailT("food"), href: MENU_ALL_PATH },
-          { label: kindT(kind) },
+          { label: label(kind) },
         ]),
   ];
 
@@ -78,7 +85,7 @@ export async function MenuListing({ locale, kind }: MenuListingProps) {
     kind === null
       ? MENU_ITEM_KINDS.map((k) => ({
           key: k,
-          heading: kindT(k),
+          heading: label(k),
           items: items.filter((item) => item.kind === k),
         })).filter((section) => section.items.length > 0)
       : items.length > 0
@@ -193,9 +200,6 @@ export async function MenuListing({ locale, kind }: MenuListingProps) {
                   <BuyableCard
                     item={{ kind: "food", data: item }}
                     locale={locale}
-                    productLabel={catalogT("productLabel")}
-                    serviceLabel={catalogT("serviceLabel")}
-                    menuLabel={catalogT("menuLabel")}
                     fromLabel={menuT("from")}
                   />
                 </Grid>

@@ -6,6 +6,11 @@ import type {
 } from "@repo/ui/hero";
 import type { ShapeDividerMask } from "@repo/ui/shape-divider";
 import type { MenuItemKind } from "./catalog";
+import {
+  kindLabels,
+  type KindLabelOverrides,
+  type KindLabels,
+} from "./kind-labels";
 import { getTenantHost } from "./resolve-site";
 import { API_URL } from "./config";
 import logger from "./logger";
@@ -21,7 +26,7 @@ export interface SpotlightRef {
   id: number;
 }
 
-export interface System {
+export interface System extends KindLabelOverrides {
   id: number;
   enabled: boolean;
   created: string;
@@ -237,3 +242,17 @@ export const getSystem = cache(async (): Promise<System | null> => {
     return null;
   }
 });
+
+/**
+ * What this tenant calls each kind of thing it sells, resolved for one locale.
+ *
+ * A thin read over the System payload the request has already fetched -
+ * `getSystem` is `cache()`d, so a page that asks for the labels and one that
+ * asks for the System itself share the same call. Every public surface that
+ * prints a kind's name (the navbar, the listing headings, the breadcrumbs) goes
+ * through here; see `lib/kind-labels.ts` for the fallback rules.
+ */
+export const getKindLabels = cache(
+  async (locale: string): Promise<KindLabels> =>
+    kindLabels(await getSystem(), locale),
+);

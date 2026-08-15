@@ -331,6 +331,57 @@ Six things that will bite:
   count on `SystemSerializer` it needs a signal clearing the System payload on
   write - `core/signals.py` has one; the payload is cached for an hour.
 
+## Catalog kind labels - what a tenant calls what it sells
+
+A pizzeria's "Food" section is *Pizzas*; a workshop's "Services" are *Lo que
+hacemos*. `System` carries a bilingual label pair (`kind_label_<kind>` /
+`en_kind_label_<kind>`) for each of the **seven** catalog kinds - the five
+`MenuItemKind`s plus the two other Buyable families - authored in the CMS at
+`/admin/system` → Catalog names (`admin/system/kind-labels-section.tsx`).
+`lib/kind-labels.ts` resolves them; `getKindLabels(locale)` in `lib/system.ts` is
+the server-side read (a thin, `cache()`d view over the System payload the request
+already fetched).
+
+- ⚠ **A label is a label. Nothing routes off one.** `/categories/food`,
+  `/food/<slug>`, the API's `?kind=` filter and the `kind` values themselves are
+  structural and must not move when a tenant renames a kind - a customer's
+  bookmark and a search result have to keep working. Never build a path from a
+  label, and never store one as a kind.
+- **Blank means "use our translation".** `kindLabels()` drops empty overrides, so
+  an un-renamed site renders exactly as it did before the feature existed and
+  clearing both fields is how a rename is undone. English reads `en_*` and falls
+  back to the Spanish copy; every other locale reads the Spanish copy and falls
+  back to English - the same rule `metadata.ts` and the catalog cards follow, so
+  a tenant who fills one language is renamed everywhere rather than on half the
+  site.
+- **Where the override applies**: the navbar (its Menu dropdown and the
+  Products/Services links), each listing page's `<h1>`, hero slogan and tab
+  title, the per-kind section headings on `/categories/menu`, and the kind step
+  of a product/service/menu-item breadcrumb.
+- ⚠ **Three "food" surfaces deliberately keep the built-in word**, because they
+  name the *whole menu* rather than the food kind: the `/categories/menu` page
+  heading, the menu step of a menu-category breadcrumb (it links to
+  `MENU_ALL_PATH`), and `CategoryDetail`'s food heading. A menu category may hold
+  drinks and desserts too, so titling one "Pizzas" would promise one course and
+  list five.
+- **Composed sentences are left alone** - `CatalogItems`' "See more products",
+  the listing pages' "All Products" / "Product Categories". Substituting a label
+  into a translated sentence is not safe across five locales (French elides
+  before a vowel, German puts the noun mid-clause), and the destination page the
+  CTA leads to carries the tenant's own name anyway.
+- **The CMS shows both**: the menu-item form's Kind dropdown reads
+  "Food (Pizzas)" via `kindLabelWithOverride`. An operator picking a kind is
+  setting a structural field, so the canonical name has to stay visible - but a
+  menu of Food/Drink/Side is unrecognisable to someone whose whole site says
+  Pizzas and Bebidas. The POS kind tabs and an order line's kind chip keep the
+  canonical label for a different reason: both are **family**-level ("menu item"
+  covers all five kinds), so no single kind's label is the right word there.
+- **The navbar takes them as a prop.** It is a client component, so
+  `[locale]/layout.tsx` resolves `kindLabels(system, locale)` from the System it
+  already holds. `lib/kind-labels.ts` is plain data with no server import for the
+  same reason `lib/menu-kinds.ts` is - and that is why `KindLabelOverrides` is
+  declared there and `System` extends it, rather than the reverse.
+
 ## Maps - one component, one basemap, one credit
 
 Every map on this site is `components/place-map.tsx` (`PlaceMap`), a thin client

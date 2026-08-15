@@ -34,12 +34,11 @@ export default async function FavoritesPage({ params }: Props) {
   // A guest's saved items live in their browser, so the server has none to
   // render: `getFavorites()` comes back empty and `GuestFavorites` resolves
   // localStorage after hydration.
-  const [session, favorites, origin, t, itemT, menuT] = await Promise.all([
+  const [session, favorites, origin, t, menuT] = await Promise.all([
     getSession(),
     getFavorites(),
     getRequestOrigin(),
     getTranslations("Favorites"),
-    getTranslations("CatalogItems"),
     getTranslations("Menu"),
   ]);
 
@@ -83,9 +82,6 @@ export default async function FavoritesPage({ params }: Props) {
         {isGuest ? (
           <GuestFavorites
             locale={locale}
-            productLabel={itemT("productLabel")}
-            serviceLabel={itemT("serviceLabel")}
-            menuLabel={itemT("menuLabel")}
             fromLabel={menuT("from")}
             origin={origin}
             // Built here because it is a server component (it renders the async
@@ -111,9 +107,6 @@ export default async function FavoritesPage({ params }: Props) {
                     } as BuyableItem
                   }
                   locale={locale}
-                  productLabel={itemT("productLabel")}
-                  serviceLabel={itemT("serviceLabel")}
-                  menuLabel={itemT("menuLabel")}
                   fromLabel={menuT("from")}
                 />
               </Grid>

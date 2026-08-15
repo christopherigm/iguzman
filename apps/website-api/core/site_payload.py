@@ -49,6 +49,7 @@ from catalog.models import (
     ServiceCategory,
 )
 from core.models import (
+    KIND_LABEL_FIELDS,
     CompanyHighlight,
     CompanyHighlightItem,
     Event,
@@ -136,6 +137,10 @@ SYSTEM_TEXT_FIELDS = (
     "en_terms_and_conditions",
     "user_data",
     "en_user_data",
+    # What the site calls each kind of thing it sells ("Pizzas" for food, …).
+    # Copy, like the spotlight labels above it - decided once when the site is
+    # written and travels with it, unlike anything holding a per-environment id.
+    *KIND_LABEL_FIELDS,
 )
 
 # Plain text/URL fields per child model (image fields are intentionally excluded).
@@ -189,6 +194,7 @@ BUYABLE_TEXT_FIELDS = (
 # Menu-item dietary/serving flags carried only when truthy (they default False /
 # null on the target, so a lean payload never needs the falsy case).
 MENU_ITEM_FLAG_FIELDS = (
+    "eta_minutes",
     "spice_level",
     "portions",
     "is_organic",

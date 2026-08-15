@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { MenuListing } from "@/components/menu-listing";
+import { kindLabel } from "@/lib/kind-labels";
+import { getKindLabels } from "@/lib/system";
 
 /**
  * The dishes - menu items whose `kind` is `food`. One of the five per-kind
@@ -19,7 +21,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = (await getTranslations({ locale, namespace: "MenuKinds" })) as (
     key: string,
   ) => string;
-  return { title: t("food") };
+  // The tenant's own name for this kind titles the tab too - a page
+  // headed "Pizzas" that a bookmark calls "Food" reads as two pages.
+  const labels = await getKindLabels(locale);
+  return { title: kindLabel(labels, "food", t("food")) };
 }
 
 export default async function FoodPage({ params }: Props) {

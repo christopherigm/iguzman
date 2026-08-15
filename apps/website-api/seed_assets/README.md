@@ -75,6 +75,13 @@ fields at any new file you drop in here.
     "spotlight_enabled": true, "spotlight_label": "...", "spotlight_title": "...",
     "spotlight_text": "...", "spotlight_button_label": "...", "spotlight_button_link": "/...",
 
+    // --- what this site calls each kind it sells (blank = the site's own word) ---
+    // Seven kinds: food, drink, dessert, side, appetizer, product, service.
+    // Renames the label everywhere the storefront names that kind (navbar,
+    // listing titles, breadcrumbs); URLs and kind values are unaffected.
+    "kind_label_food": "Pizzas", "en_kind_label_food": "Pizzas",
+    "kind_label_service": "...", "kind_label_product": "...",
+
     // --- legal copy the footer links ---
     "privacy_policy": "...", "terms_and_conditions": "...", "user_data": "...",
 

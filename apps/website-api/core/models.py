@@ -131,6 +131,33 @@ DIVIDER_CHOICES = (
 )
 
 
+# The seven things a tenant can sell and may rename in the CMS: the five
+# MenuItem kinds (catalog.MENU_ITEM_KIND_CHOICES) plus the two other Buyable
+# families, Product and Service.
+#
+# Spelled out here rather than imported from `catalog.models`, which points at
+# `core.System` and would close an import loop. `SystemKindLabelTests` pins this
+# tuple against the menu kinds so the two cannot drift apart in silence.
+CATALOG_KINDS = (
+    "food",
+    "drink",
+    "dessert",
+    "side",
+    "appetizer",
+    "product",
+    "service",
+)
+
+# The bilingual `System` column pair each of those kinds carries. Derived once so
+# the read serializer, the write serializer, the publish payload and the Django
+# admin cannot end up listing different sets of columns from one another.
+KIND_LABEL_FIELDS = tuple(
+    field
+    for kind in CATALOG_KINDS
+    for field in (f"kind_label_{kind}", f"en_kind_label_{kind}")
+)
+
+
 class BasePicture(Common):
     """
     Abstract base for all picture models.
@@ -1107,6 +1134,40 @@ class System(Common):
         blank=True,
         help_text='Ordered refs of the featured items, e.g. [{"kind": "product", "id": 12}]. Max 3.',
     )
+
+    # ── Catalog kind labels ───────────────────────────────────────────────────
+    # What this tenant *calls* each of the seven things it can sell: the five
+    # MenuItem kinds (see catalog.MENU_ITEM_KIND_CHOICES) plus the two other
+    # Buyable families, Product and Service. A pizzeria renames "Food" to
+    # "Pizzas"; a workshop renames "Services" to "Lo que hacemos".
+    #
+    # These are *display* overrides and nothing else. The kind values, the
+    # `?kind=` filter and every URL (`/categories/food`, `/food/<slug>`) are
+    # structural and stay as they are - renaming a label must not move a page a
+    # customer has bookmarked or a search engine has indexed. Blank means "use
+    # the frontend's own translation", which is why they are nullable with no
+    # default: a default would have to be written in one language and would then
+    # be wrong on the four locales the site does not store copy for.
+    #
+    # Bilingual in the same shape as every other pair on this model: the bare
+    # column is the Spanish copy and `en_*` the English one. `max_length=64`
+    # rather than the 255 its siblings carry - the string lands in a navbar
+    # dropdown item as well as a page heading, and a paragraph pasted here would
+    # break the bar rather than the sentence.
+    kind_label_food = models.CharField(max_length=64, null=True, blank=True)
+    en_kind_label_food = models.CharField(max_length=64, null=True, blank=True)
+    kind_label_drink = models.CharField(max_length=64, null=True, blank=True)
+    en_kind_label_drink = models.CharField(max_length=64, null=True, blank=True)
+    kind_label_dessert = models.CharField(max_length=64, null=True, blank=True)
+    en_kind_label_dessert = models.CharField(max_length=64, null=True, blank=True)
+    kind_label_side = models.CharField(max_length=64, null=True, blank=True)
+    en_kind_label_side = models.CharField(max_length=64, null=True, blank=True)
+    kind_label_appetizer = models.CharField(max_length=64, null=True, blank=True)
+    en_kind_label_appetizer = models.CharField(max_length=64, null=True, blank=True)
+    kind_label_product = models.CharField(max_length=64, null=True, blank=True)
+    en_kind_label_product = models.CharField(max_length=64, null=True, blank=True)
+    kind_label_service = models.CharField(max_length=64, null=True, blank=True)
+    en_kind_label_service = models.CharField(max_length=64, null=True, blank=True)
 
     class Meta:
         verbose_name = "System"

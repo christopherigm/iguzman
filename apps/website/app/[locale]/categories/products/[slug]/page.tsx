@@ -10,6 +10,8 @@ import { SectionHero } from "@/components/section-hero";
 import { getSession } from "@repo/auth/session";
 import { getProductCategory, getProductsByCategory } from "@/lib/catalog";
 import { CategoryDetail } from "@/components/category-detail";
+import { kindLabel } from "@/lib/kind-labels";
+import { getKindLabels } from "@/lib/system";
 import { AdminEditButton } from "@/components/admin-edit-button";
 
 type Props = {
@@ -52,11 +54,12 @@ export default async function ProductCategoryPage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const [category, t, tAdmin, session] = await Promise.all([
+  const [category, t, tAdmin, session, labels] = await Promise.all([
     getProductCategory(slug),
     getTranslations("CategoryDetail"),
     getTranslations("Admin"),
     getSession(),
+    getKindLabels(locale),
   ]);
 
   if (!category) notFound();
@@ -77,7 +80,10 @@ export default async function ProductCategoryPage({ params }: Props) {
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },
-    { label: t("products"), href: "/categories/products" },
+    {
+      label: kindLabel(labels, "product", t("products")),
+      href: "/categories/products",
+    },
     { label: name },
   ];
 

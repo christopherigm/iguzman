@@ -12,15 +12,13 @@ import { Badge } from "@repo/ui/core-elements/badge";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
 import type { CartItem } from "@/lib/cart";
 import { formatPrice } from "@/lib/price";
+import { menuEtaLabel } from "@/lib/menu-eta";
 import { menuItemHref } from "@/lib/menu-kinds";
 import "./cart-line.css";
 
 interface CartLineProps {
   line: CartItem;
   locale: string;
-  productLabel: string;
-  serviceLabel: string;
-  menuLabel: string;
   /**
    * Persist a new quantity for this line, resolving to whether it stuck. Owned
    * by the parent because the two carts are addressed differently: a customer's
@@ -48,18 +46,16 @@ const MAX_QUANTITY = 99;
 export function CartLine({
   line,
   locale,
-  productLabel,
-  serviceLabel,
-  menuLabel,
   onQuantityChange,
   onRemove,
 }: CartLineProps) {
   const t = useTranslations("Cart");
+  const tMenu = useTranslations("Menu");
   const [quantity, setQuantity] = useState(line.quantity);
   const [isPending, startTransition] = useTransition();
   const [removed, setRemoved] = useState(false);
 
-  const { kind, item } = line;
+  const { item } = line;
 
   const name =
     (locale === "en" ? item.en_name : item.name) ??
@@ -74,19 +70,14 @@ export function CartLine({
         ? `/services/${line.item.slug}`
         : menuItemHref(line.item.kind, line.item.slug);
 
-  const kindLabel =
-    kind === "product"
-      ? productLabel
-      : kind === "service"
-        ? serviceLabel
-        : menuLabel;
-
-  const kindColor =
-    kind === "product"
-      ? "rgb(34, 181, 32)"
-      : kind === "service"
-        ? "rgba(99,102,241,0.8)"
-        : "rgba(234,88,12,0.85)";
+  // A dish says how long it will take instead of naming its family: the customer
+  // already knows what they put in their basket, and "ready in 20 min" is the
+  // thing they cannot read off the row otherwise. Product and service lines
+  // simply carry no chip - the item type was never news either.
+  const etaLabel =
+    line.kind === "menu_item"
+      ? menuEtaLabel(tMenu, line.item.eta_minutes)
+      : null;
 
   const image = item.image;
   const changeQuantity = (next: number) => {
@@ -170,26 +161,25 @@ export function CartLine({
                 </Typography>
               </Link>
 
-              <Box alignItems="center" gap={6} flexWrap="wrap">
-                <Badge
-                  variant="filled"
-                  size="sm"
-                  color={kindColor}
-                  textColor="#fff"
-                >
-                  {kindLabel}
-                </Badge>
-                {!line.in_stock && (
-                  <Badge
-                    variant="filled"
-                    size="sm"
-                    color="#ef4444"
-                    textColor="#fff"
-                  >
-                    {t("outOfStock")}
-                  </Badge>
-                )}
-              </Box>
+              {(etaLabel || !line.in_stock) && (
+                <Box alignItems="center" gap={6} flexWrap="wrap">
+                  {etaLabel && (
+                    <Badge variant="subtle" size="sm" color="var(--accent)">
+                      {etaLabel}
+                    </Badge>
+                  )}
+                  {!line.in_stock && (
+                    <Badge
+                      variant="filled"
+                      size="sm"
+                      color="#ef4444"
+                      textColor="#fff"
+                    >
+                      {t("outOfStock")}
+                    </Badge>
+                  )}
+                </Box>
+              )}
 
               {line.customization.length > 0 && (
                 <Box flexDirection="column" gap={2}>

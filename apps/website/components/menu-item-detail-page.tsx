@@ -17,6 +17,7 @@ import type { GalleryImage } from "@/components/item-gallery-client";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
 import { ItemHeroVideo } from "@/components/item-hero-video";
 import { getSystem } from "@/lib/system";
+import { kindLabel, kindLabels } from "@/lib/kind-labels";
 import {
   MenuDetailHeader,
   MenuDetailVariantsMobile,
@@ -138,7 +139,12 @@ export async function MenuItemDetailPage({
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },
     { label: tMenu("menu"), href: MENU_ALL_PATH },
-    { label: tKind(item.kind), href: MENU_KIND_PATHS[item.kind] },
+    {
+      // The tenant's own name for the kind, so the trail reads the way their
+      // menu does; the href is structural and stays as it is.
+      label: kindLabel(kindLabels(system, locale), item.kind, tKind(item.kind)),
+      href: MENU_KIND_PATHS[item.kind],
+    },
     ...(item.category_name && item.category_slug
       ? [
           {

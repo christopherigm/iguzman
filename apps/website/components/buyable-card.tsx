@@ -29,17 +29,10 @@ export type BuyableItem =
 export async function BuyableCard({
   item,
   locale,
-  productLabel,
-  serviceLabel,
-  menuLabel,
   fromLabel,
 }: {
   item: BuyableItem;
   locale: string;
-  productLabel: string;
-  serviceLabel: string;
-  /** Corner badge label for a `food` item; required when a food card renders. */
-  menuLabel?: string;
   /**
    * "from" prefix for a `food` item's price - add-ons raise it, so the card
    * price is a starting point. Required when a food card renders.
@@ -77,9 +70,6 @@ export async function BuyableCard({
     <BuyableCardView
       item={item}
       locale={locale}
-      productLabel={productLabel}
-      serviceLabel={serviceLabel}
-      menuLabel={menuLabel}
       fromLabel={fromLabel}
       perPersonLabel={tBooking("perPerson")}
       origin={origin}

@@ -11,6 +11,8 @@ import type {
   MenuItemDetail,
 } from "@/lib/catalog";
 import { BuyableCard, type BuyableItem } from "./buyable-card";
+import { kindLabel } from "@/lib/kind-labels";
+import { getKindLabels } from "@/lib/system";
 
 type CategoryDetailProps =
   | {
@@ -43,10 +45,10 @@ export async function CategoryDetail({
   locale,
   showTitle = false,
 }: CategoryDetailProps) {
-  const [t, tCatalog, tMenu] = await Promise.all([
+  const [t, tMenu, labels] = await Promise.all([
     getTranslations("CategoryDetail"),
-    getTranslations("CatalogItems"),
     getTranslations("Menu"),
+    getKindLabels(locale),
   ]);
 
   const name =
@@ -59,11 +61,15 @@ export async function CategoryDetail({
   // a food card just drops the add-to-cart control (it links to its customiser).
   // `items` is cast per branch because destructuring `kind` off the union loses
   // its correlation with `items`.
+  // The section is titled with whatever the tenant calls this family. The food
+  // branch deliberately keeps its own label ("Menu"): a menu category may hold
+  // drinks and desserts as well as food, so naming it after the food *kind*
+  // would promise a section of one course and list five.
   const heading =
     kind === "product"
-      ? t("products")
+      ? kindLabel(labels, "product", t("products"))
       : kind === "service"
-        ? t("services")
+        ? kindLabel(labels, "service", t("services"))
         : t("food");
   const count = items.length;
 
@@ -117,9 +123,6 @@ export async function CategoryDetail({
               <BuyableCard
                 item={item}
                 locale={locale}
-                productLabel={tCatalog("productLabel")}
-                serviceLabel={tCatalog("serviceLabel")}
-                menuLabel={tCatalog("menuLabel")}
                 fromLabel={tMenu("from")}
               />
             </Grid>

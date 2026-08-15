@@ -93,9 +93,6 @@ export async function CatalogItems() {
             <BuyableCard
               item={item}
               locale={locale}
-              productLabel={t("productLabel")}
-              serviceLabel={t("serviceLabel")}
-              menuLabel={t("menuLabel")}
               fromLabel={tMenu("from")}
             />
           </Grid>

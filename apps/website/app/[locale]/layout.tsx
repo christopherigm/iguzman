@@ -28,6 +28,7 @@ import { LogoWatermark } from "@/components/logo-watermark";
 import packageJson from "@/package.json";
 import { getCartCount } from "@/lib/cart";
 import { EMPTY_MENU_KIND_COUNTS } from "@/lib/menu-kinds";
+import { kindLabels } from "@/lib/kind-labels";
 import { getSystem } from "@/lib/system";
 import { basemapFor } from "@/lib/basemap";
 import { BasemapProvider } from "@/components/basemap-provider";
@@ -266,6 +267,10 @@ export default async function LocaleLayout({ children, params }: Props) {
                           system?.menu_item_kind_counts ??
                           EMPTY_MENU_KIND_COUNTS
                         }
+                        // Resolved here, from the System payload this layout
+                        // already holds, because the navbar is a client
+                        // component and the labels are per-locale content.
+                        kindLabels={kindLabels(system, locale)}
                         showContact={
                           !!system?.contact_email ||
                           (system?.branch_count ?? 0) > 0

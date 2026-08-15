@@ -570,6 +570,16 @@ class MenuItem(Buyable):
     )
 
     # Dietary / serving metadata (all optional, public).
+    #
+    # `eta_minutes` is the promise made to the customer - "ready in 30 min" on
+    # the detail page and in the cart - and is deliberately not derived from the
+    # internal `prep_time_minutes`/`cook_time_minutes` below: those are kitchen
+    # recipe metadata that never leave the admin API, and their sum is what one
+    # cook takes from scratch, not what the counter quotes for an order.
+    eta_minutes = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text='Estimated time until this item is ready, in minutes.',
+    )
     spice_level = models.PositiveSmallIntegerField(
         null=True, blank=True, help_text='0-5, where 0 is not spicy.'
     )

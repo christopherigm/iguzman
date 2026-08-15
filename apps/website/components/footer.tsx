@@ -12,6 +12,7 @@ import { LocaleSwitcher } from "@repo/ui/core-elements/locale-switcher";
 import { routing } from "@repo/i18n/routing";
 import { type System } from "@/lib/system";
 import { MENU_ALL_PATH } from "@/lib/menu-kinds";
+import { kindLabel, kindLabels } from "@/lib/kind-labels";
 import { getSite } from "@/lib/resolve-site";
 import "./footer.css";
 
@@ -31,13 +32,27 @@ export async function Footer({ logo, system }: Props) {
   // actually has records of that kind, so a services-only business never shows
   // an empty Products page. The listing routes live under /categories/* - the
   // bare /products and /services paths are detail-only ([slug]) and 404.
+  // Each family wears whatever the tenant calls it, as in the navbar. The menu
+  // link keeps our own word: it leads to the *whole* menu, which is every kind
+  // at once and so is nobody's single label.
+  const labels = kindLabels(system, locale);
   const navLinks = [
     { label: t("home"), href: "/" },
     ...((system?.product_count ?? 0) > 0
-      ? [{ label: t("products"), href: "/categories/products" }]
+      ? [
+          {
+            label: kindLabel(labels, "product", t("products")),
+            href: "/categories/products",
+          },
+        ]
       : []),
     ...((system?.service_count ?? 0) > 0
-      ? [{ label: t("services"), href: "/categories/services" }]
+      ? [
+          {
+            label: kindLabel(labels, "service", t("services")),
+            href: "/categories/services",
+          },
+        ]
       : []),
     ...((system?.menu_item_count ?? 0) > 0
       ? [{ label: t("food"), href: MENU_ALL_PATH }]

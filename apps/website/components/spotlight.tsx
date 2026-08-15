@@ -53,11 +53,10 @@ export async function Spotlight() {
   // Nothing to show without a title AND at least one picked item.
   if (!title || refs.length === 0) return null;
 
-  const [products, services, menuItems, t, tMenu] = await Promise.all([
+  const [products, services, menuItems, tMenu] = await Promise.all([
     getAllProducts(),
     getAllServices(),
     getAllMenuItems(),
-    getTranslations("CatalogItems"),
     getTranslations("Menu"),
   ]);
 
@@ -146,9 +145,6 @@ export async function Spotlight() {
                   <BuyableCard
                     item={item}
                     locale={locale}
-                    productLabel={t("productLabel")}
-                    serviceLabel={t("serviceLabel")}
-                    menuLabel={t("menuLabel")}
                     fromLabel={tMenu("from")}
                   />
                 </Grid>

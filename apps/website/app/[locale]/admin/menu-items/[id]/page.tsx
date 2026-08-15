@@ -51,7 +51,13 @@ import {
   listBrands,
   listIngredients,
   checkSlug,
+  getSystem,
 } from "@/lib/admin-api";
+import {
+  kindLabels,
+  kindLabelWithOverride,
+  type KindLabels,
+} from "@/lib/kind-labels";
 import { buildSlug } from "@/lib/slug-utils";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
@@ -110,6 +116,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     is_featured: false,
     show_nutrition_label: true,
     enabled: true,
+    eta_minutes: "",
     spice_level: "",
     portions: "",
     allergens: "",
@@ -153,6 +160,8 @@ export default function AdminMenuItemFormPage({ params }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [slugError, setSlugError] = useState<string | null>(null);
+  // What this tenant calls each kind, for the Kind dropdown's annotation.
+  const [tenantKindLabels, setTenantKindLabels] = useState<KindLabels>({});
 
   const systemId = useSession()?.systemId ?? 0;
 
@@ -181,12 +190,17 @@ export default function AdminMenuItemFormPage({ params }: Props) {
 
   const loadMeta = useCallback(async () => {
     try {
-      const [cats, brands, ingredients, menuItems] = await Promise.all([
+      const [cats, brands, ingredients, menuItems, system] = await Promise.all([
         listMenuCategories(systemId),
         listBrands(systemId),
         listIngredients(systemId),
         listMenuItems(systemId),
+        getSystem(systemId),
       ]);
+      // Only to *annotate* the Kind options with what this tenant calls each
+      // kind ("Food (Pizzas)"). Non-critical, like the rest of this loader: the
+      // dropdown still works on the built-in names if the call fails.
+      setTenantKindLabels(kindLabels(system, locale));
       setVariantCatalog(
         menuItems.map((m) => ({
           id: m.id as number,
@@ -224,7 +238,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     } catch {
       /* non-critical */
     }
-  }, [systemId]);
+  }, [systemId, locale]);
 
   useEffect(() => {
     void (async () => {
@@ -258,6 +272,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
             is_featured: item.is_featured ?? false,
             show_nutrition_label: item.show_nutrition_label ?? true,
             enabled: item.enabled ?? true,
+            eta_minutes: item.eta_minutes ?? "",
             spice_level: item.spice_level ?? "",
             portions: item.portions ?? "",
             allergens: item.allergens ?? "",
@@ -443,6 +458,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
       [
         "compare_price",
         "cost_price",
+        "eta_minutes",
         "spice_level",
         "portions",
         "sku",
@@ -513,7 +529,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
 
   // Declared above `fields` because the Kind select reads it (a `const` is not
   // hoisted, unlike `toggleLabels` below, which only the JSX uses).
-  const kindLabels: Record<MenuItemKind, string> = {
+  const canonicalKindLabels: Record<MenuItemKind, string> = {
     food: t("kindFood"),
     drink: t("kindDrink"),
     dessert: t("kindDessert"),
@@ -539,7 +555,18 @@ export default function AdminMenuItemFormPage({ params }: Props) {
       key: "kind",
       label: t("menuItemKind"),
       type: "select",
-      options: MENU_ITEM_KINDS.map((k) => ({ value: k, label: kindLabels[k] })),
+      // Both names, deliberately - "Food (Pizzas)". This field is structural
+      // (it drives the item's route and the storefront's filters), so the
+      // canonical name has to stay readable; but a menu of Food/Drink/Side is
+      // unrecognisable to an operator whose whole site says Pizzas and Bebidas.
+      options: MENU_ITEM_KINDS.map((k) => ({
+        value: k,
+        label: kindLabelWithOverride(
+          tenantKindLabels,
+          k,
+          canonicalKindLabels[k],
+        ),
+      })),
     },
     {
       key: "category",
@@ -555,6 +582,9 @@ export default function AdminMenuItemFormPage({ params }: Props) {
       options: brandOptions,
       placeholder: "- None -",
     },
+    // The customer-facing "Ready in ..." badge, always authored in minutes; the
+    // storefront is what splits it into hours.
+    { key: "eta_minutes", label: t("etaMinutes"), type: "number" },
     { key: "spice_level", label: t("spiceLevel"), type: "number" },
     { key: "portions", label: t("portions"), type: "number" },
     { key: "allergens", label: t("allergens") },

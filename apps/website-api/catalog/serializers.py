@@ -1471,6 +1471,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
             'price', 'compare_price', 'cost_price', 'currency',
             'is_available', 'is_featured', 'is_ai_generated', 'is_verified',
             'show_nutrition_label',
+            'eta_minutes',
             'spice_level', 'servings', 'portions',
             'prep_time_minutes', 'cook_time_minutes',
             'is_organic', 'is_vegetarian', 'is_vegan', 'is_gluten_free', 'allergens',
@@ -1534,6 +1535,7 @@ class MenuItemWriteSerializer(serializers.Serializer):
     is_verified = serializers.BooleanField(required=False)
     show_nutrition_label = serializers.BooleanField(required=False)
 
+    eta_minutes = serializers.IntegerField(min_value=0, required=False, allow_null=True)
     spice_level = serializers.IntegerField(min_value=0, max_value=5, required=False, allow_null=True)
     servings = serializers.IntegerField(min_value=0, required=False, allow_null=True)
     portions = serializers.IntegerField(min_value=0, required=False, allow_null=True)

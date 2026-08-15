@@ -78,6 +78,9 @@ export default async function MenuCategoryPage({ params }: Props) {
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },
+    // Deliberately NOT a kind label: this step is the whole menu (it links to
+    // `MENU_ALL_PATH`), and a category may hold drinks and desserts as well as
+    // food. Renaming it to the food kind's label would mislabel the trail.
     { label: t("food"), href: MENU_ALL_PATH },
     { label: name },
   ];

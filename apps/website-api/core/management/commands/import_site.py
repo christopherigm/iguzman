@@ -152,7 +152,7 @@ MENU_ITEM_FIELDS = (
     "sku", "href", "fit", "background_color",
     "price", "compare_price", "cost_price", "currency",
     "is_available", "is_featured", "is_ai_generated", "is_verified",
-    "spice_level", "servings", "portions",
+    "eta_minutes", "spice_level", "servings", "portions",
     "is_organic", "is_vegetarian", "is_vegan", "is_gluten_free", "allergens",
 )
 # The menu-item ingredient carries only the portion + pricing now; its identity

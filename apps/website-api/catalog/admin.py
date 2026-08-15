@@ -307,7 +307,7 @@ class MenuItemAdmin(admin.ModelAdmin):
             'fields': ('price', 'compare_price', 'cost_price', 'currency', 'sku'),
         }),
         ('Dietary & Serving', {
-            'fields': ('spice_level', 'servings', 'portions', 'is_organic', 'is_vegetarian', 'is_vegan', 'is_gluten_free', 'allergens'),
+            'fields': ('eta_minutes', 'spice_level', 'servings', 'portions', 'is_organic', 'is_vegetarian', 'is_vegan', 'is_gluten_free', 'allergens'),
         }),
         ('Variants', {
             'fields': ('variants',),

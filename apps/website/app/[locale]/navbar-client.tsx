@@ -12,6 +12,7 @@ import {
   MENU_KIND_PATHS,
   type MenuItemKind,
 } from "@/lib/menu-kinds";
+import { kindLabel, type KindLabels } from "@/lib/kind-labels";
 
 interface NavbarClientProps {
   logo: string;
@@ -23,6 +24,12 @@ interface NavbarClientProps {
    * items gets no link, and a tenant with no menu at all gets nothing.
    */
   menuKindCounts: Record<MenuItemKind, number>;
+  /**
+   * What the tenant calls each kind it sells, already resolved for the rendered
+   * locale (`getKindLabels`). A kind the tenant has not renamed is absent and
+   * keeps this app's own translation - so an un-renamed site's bar is unchanged.
+   */
+  kindLabels: KindLabels;
   /**
    * Whether to show the Contact link: true when the tenant has a contact email
    * or at least one branch, i.e. when the public contact page has something to
@@ -49,6 +56,7 @@ export function NavbarClient({
   productCount,
   serviceCount,
   menuKindCounts,
+  kindLabels,
   showContact,
   eventCount,
   cartCount,
@@ -121,8 +129,10 @@ export function NavbarClient({
   const stockedKinds = MENU_ITEM_KINDS.filter(
     (kind) => (menuKindCounts[kind] ?? 0) > 0,
   );
+  // The tenant's own name for each kind wins over ours ("Pizzas", not "Food");
+  // the href is untouched, since a label rename must never move a page.
   const kindItems = stockedKinds.map((kind) => ({
-    label: kindT(kind),
+    label: kindLabel(kindLabels, kind, kindT(kind)),
     href: MENU_KIND_PATHS[kind],
   }));
   // With a single kind there is nothing to choose between: the dropdown would
@@ -154,10 +164,20 @@ export function NavbarClient({
   const navItems = [
     { label: t("home"), href: "/" },
     ...(productCount > 0
-      ? [{ label: t("products"), href: "/categories/products" }]
+      ? [
+          {
+            label: kindLabel(kindLabels, "product", t("products")),
+            href: "/categories/products",
+          },
+        ]
       : []),
     ...(serviceCount > 0
-      ? [{ label: t("services"), href: "/categories/services" }]
+      ? [
+          {
+            label: kindLabel(kindLabels, "service", t("services")),
+            href: "/categories/services",
+          },
+        ]
       : []),
     ...menuItems,
     // After the catalog and before Orders: events are something to browse, like

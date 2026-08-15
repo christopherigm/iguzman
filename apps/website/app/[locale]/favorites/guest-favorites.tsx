@@ -9,9 +9,6 @@ import type { BuyableItem } from "@/components/buyable-card";
 
 interface GuestFavoritesProps {
   locale: string;
-  productLabel: string;
-  serviceLabel: string;
-  menuLabel: string;
   fromLabel: string;
   /** The request origin, for each card's share link - only the server knows it. */
   origin: string;
@@ -36,9 +33,6 @@ interface GuestFavoritesProps {
  */
 export function GuestFavorites({
   locale,
-  productLabel,
-  serviceLabel,
-  menuLabel,
   fromLabel,
   origin,
   emptyState,
@@ -106,9 +100,6 @@ export function GuestFavorites({
               } as BuyableItem
             }
             locale={locale}
-            productLabel={productLabel}
-            serviceLabel={serviceLabel}
-            menuLabel={menuLabel}
             fromLabel={fromLabel}
             origin={origin}
             isAdmin={false}

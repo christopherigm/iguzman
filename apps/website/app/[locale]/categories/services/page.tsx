@@ -11,6 +11,8 @@ import { getServiceCategories, getAllServices } from "@/lib/catalog";
 import { CategoryCard } from "@/components/catalog-categories";
 import { BuyableCard } from "@/components/buyable-card";
 import type { BuyableItem } from "@/components/buyable-card";
+import { kindLabel } from "@/lib/kind-labels";
+import { getKindLabels } from "@/lib/system";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -25,23 +27,31 @@ export async function generateMetadata({
   const t = (await getTranslations({ locale, namespace: "ServicesPage" })) as (
     key: string,
   ) => string;
-  return { title: t("heading") };
+  // Titled by whatever the tenant calls this family, so the tab matches
+  // the heading on the page.
+  const labels = await getKindLabels(locale);
+  return { title: kindLabel(labels, "service", t("heading")) };
 }
 
 export default async function ServicesPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const [categories, services, t, detailT] = await Promise.all([
+  const [categories, services, t, detailT, labels] = await Promise.all([
     getServiceCategories(),
     getAllServices(),
     getTranslations("ServicesPage"),
     getTranslations("CategoryDetail"),
+    getKindLabels(locale),
   ]);
+
+  const heading = kindLabel(labels, "service", t("heading"));
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: detailT("home"), href: "/" },
-    { label: detailT("services") },
+    // What this tenant calls the family, on the trail and in the title
+    // below - the page is theirs to name, the URL is not.
+    { label: heading },
   ];
 
   const images = [
@@ -59,7 +69,7 @@ export default async function ServicesPage({ params }: Props) {
       {heroImage && (
         <SectionHero
           backgroundImage={heroImage}
-          slogan={t("heading")}
+          slogan={heading}
           style={{ height: "clamp(220px, 30vw, 400px)" }}
         />
       )}
@@ -76,7 +86,7 @@ export default async function ServicesPage({ params }: Props) {
             className="section-title"
             marginBottom={24}
           >
-            {t("heading")}
+            {heading}
           </Typography>
         )}
         {categories.length > 0 && (
@@ -144,8 +154,6 @@ export default async function ServicesPage({ params }: Props) {
                     <BuyableCard
                       item={item}
                       locale={locale}
-                      productLabel={t("productLabel")}
-                      serviceLabel={t("serviceLabel")}
                     />
                   </Grid>
                 );
