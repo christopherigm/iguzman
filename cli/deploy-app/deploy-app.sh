@@ -273,6 +273,8 @@ parse_env_keys() {
       [[ "${k}" == "NAMESPACE" || "${k}" == "DOCKER_REGISTRY" ]] && continue
       # Bootstrap-only vars consumed at container startup, never stored in k8s secrets
       [[ "${k}" == "DJANGO_ADMIN_USER" || "${k}" == "DJANGO_ADMIN_PASSWORD" ]] && continue
+      # Local-dev-only vars: in production the tenant comes from the request host
+      [[ "${k}" == "DEV_SITE" ]] && continue
       [[ "${k}" == NEXT_PUBLIC_* ]] && continue
       [[ "${k}" == *_FILE ]] && k="${k%_FILE}"
       ENV_KEYS+=("${k}")
