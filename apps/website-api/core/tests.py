@@ -1,13 +1,14 @@
 import base64
 import json
 import os
+import pathlib
 import shutil
 import tempfile
 import zipfile
 from datetime import datetime, timedelta
 from unittest import mock
 from decimal import Decimal
-from io import BytesIO
+from io import BytesIO, StringIO
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
@@ -1261,3 +1262,377 @@ class ContactChannelTests(TestCase):
 
         msg.refresh_from_db()
         self.assertIsNone(msg.replied_at)
+
+
+class StockImageAttributionTests(IsolatedMediaTestCase):
+    """The credit a bank photo carries, and the count the footer is gated on.
+
+    `attribution` is on `BasePicture`, so every picture model in the schema has
+    it; `stock_image_count` derives its model list from `core.backup.MODEL_SPECS`
+    rather than a hand-written tuple. Both of those are the kind of thing that
+    silently stops covering a model somebody adds later, so they are pinned here.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+
+    def test_every_picture_model_carries_the_credit_columns(self):
+        from core.stock_images import attributed_specs
+
+        labels = {spec.label for spec in attributed_specs()}
+        # One from each family: content, catalog, category, and a gallery child.
+        for expected in (
+            "core.SuccessStory",
+            "core.CompanyHighlight",
+            "catalog.Product",
+            "catalog.MenuItem",
+            "catalog.MenuCategory",
+            "catalog.MenuItemImage",
+        ):
+            self.assertIn(expected, labels)
+
+    def test_the_count_sees_system_images_and_child_rows(self):
+        from core.stock_images import stock_image_count
+
+        self.assertEqual(stock_image_count(self.system), 0)
+
+        self.system.img_hero_attribution = "Photo by A on Pexels"
+        self.system.save()
+        self.assertEqual(stock_image_count(self.system), 1)
+
+        SuccessStory.objects.create(
+            system=self.system, slug="s1", name="One",
+            attribution="Photo by B on Pexels",
+        )
+        # An uncredited row is our own placeholder and must not be counted.
+        SuccessStory.objects.create(system=self.system, slug="s2", name="Two")
+        self.assertEqual(stock_image_count(self.system), 2)
+
+    def test_the_count_is_scoped_to_one_tenant(self):
+        from core.stock_images import stock_image_count
+
+        other = System.objects.create(site_name="Other", host="other.test")
+        SuccessStory.objects.create(
+            system=other, slug="o1", name="Theirs",
+            attribution="Photo by C on Pexels",
+        )
+        self.assertEqual(stock_image_count(self.system), 0)
+
+    def test_writing_an_attributed_row_clears_the_cached_system_payload(self):
+        """The footer's credit is gated on a payload cached for an hour, so the
+        receiver registered for every attributed model is what stops a site
+        crediting a bank whose last photo was replaced fifty minutes ago."""
+        cache.set(f"system:host:{self.system.host}", {"stale": True}, 3600)
+        SuccessStory.objects.create(
+            system=self.system, slug="s3", name="Three",
+            attribution="Photo by D on Pexels",
+        )
+        self.assertIsNone(cache.get(f"system:host:{self.system.host}"))
+
+
+class PublishImageTransportTests(IsolatedMediaTestCase):
+    """`export_site --images` -> `apply_payload(images=...)`.
+
+    The rule under test is fill-don't-clobber: a published photo lands only
+    where the target has none, so a customer who replaced a seeded image with
+    their own keeps it through the next content publish.
+    """
+
+    def _jpeg(self, colour="white"):
+        buffer = BytesIO()
+        Image.new("RGB", (4, 4), colour).save(buffer, format="JPEG")
+        return ContentFile(buffer.getvalue(), name="shot.jpg")
+
+    def setUp(self):
+        cache.clear()
+        self.source = System.objects.create(site_name="Acme", host="acme.test")
+        self.story = SuccessStory.objects.create(
+            system=self.source, slug="acme-story", name="A win",
+            attribution="Photo by A on Pexels",
+            attribution_url="https://www.pexels.com/photo/1/",
+        )
+        self.story.image.save("shot.jpg", self._jpeg(), save=True)
+
+    def _export(self, *, drop_source=True):
+        """Serialize the source site, then stand the source down.
+
+        Publishing normally crosses two databases. Here there is one, and every
+        content slug is **globally** unique - so leaving the source rows in place
+        would make `update_or_create(slug=...)` find them and re-file them under
+        the target host instead of creating anything. Dropping the source first
+        is what makes this a faithful dev -> prod rehearsal rather than a move.
+        """
+        from core.site_payload import media_names, serialize_system
+
+        payload = serialize_system(self.source)
+        buffer = BytesIO()
+        with zipfile.ZipFile(buffer, "w") as archive:
+            for name in media_names(payload):
+                with default_storage.open(name, "rb") as fh:
+                    archive.writestr(name, fh.read())
+        buffer.seek(0)
+        if drop_source:
+            self.source.delete()
+        payload["system"]["host"] = "target.test"
+        return payload, buffer
+
+    def test_the_payload_names_the_file_without_carrying_its_bytes(self):
+        payload, _ = self._export(drop_source=False)
+        story = payload["success_stories"][0]
+        self.assertEqual(story["image_file"], self.story.image.name)
+        self.assertNotIn("image_data", story)
+        # The credit travels as ordinary text alongside it.
+        self.assertEqual(story["attribution"], "Photo by A on Pexels")
+
+    def test_an_archive_fills_an_empty_image_on_the_target(self):
+        from core.site_payload import ImageArchive, apply_payload
+
+        payload, buffer = self._export()
+        apply_payload(payload, images=ImageArchive(zipfile.ZipFile(buffer)))
+
+        published = SuccessStory.objects.get(slug="acme-story")
+        self.assertTrue(published.image)
+        self.assertEqual(published.attribution, "Photo by A on Pexels")
+        # Filed under the basename, not the source tenant's `t/<id>/…` prefix.
+        self.assertNotIn("acme.test", published.image.name)
+
+    def test_a_publish_without_an_archive_writes_no_image(self):
+        from core.site_payload import apply_payload
+
+        payload, _ = self._export()
+        apply_payload(payload)
+
+        published = SuccessStory.objects.get(slug="acme-story")
+        self.assertFalse(published.image)
+        # The credit still travels - it is text, and it has to be there the
+        # moment an image is.
+        self.assertEqual(published.attribution, "Photo by A on Pexels")
+
+    def test_an_existing_image_on_the_target_is_never_clobbered(self):
+        from core.site_payload import ImageArchive, apply_payload
+
+        payload, buffer = self._export()
+
+        # The customer's own site, with their own photo already in place.
+        target = System.objects.create(site_name="Acme", host="target.test")
+        theirs = SuccessStory.objects.create(
+            system=target, slug="acme-story", name="A win"
+        )
+        theirs.image.save("customer.jpg", self._jpeg("black"), save=True)
+        kept = theirs.image.name
+
+        apply_payload(payload, images=ImageArchive(zipfile.ZipFile(buffer)))
+
+        theirs.refresh_from_db()
+        self.assertEqual(theirs.image.name, kept)
+
+    def test_a_missing_member_is_skipped_rather_than_raising(self):
+        """Storage is remote in production and an archive can be short a file;
+        publishing the other fifty-nine photos beats a 500."""
+        from core.site_payload import ImageArchive, apply_payload
+
+        payload, _ = self._export()
+        empty = BytesIO()
+        with zipfile.ZipFile(empty, "w"):
+            pass
+        empty.seek(0)
+        apply_payload(payload, images=ImageArchive(zipfile.ZipFile(empty)))
+
+        published = SuccessStory.objects.get(slug="acme-story")
+        self.assertFalse(published.image)
+
+
+class SeedImageFetchTests(IsolatedMediaTestCase):
+    """`fetch_seed_images` -> brief -> `seed_site`, with the network stubbed.
+
+    The chain has three joints and each one is silent when it breaks: the brief
+    has to come back rewritten, the credits sidecar has to be keyed by the same
+    string the brief now holds, and `seed_site` has to find the credit from that
+    string alone. A break anywhere shows up as a seeded site whose photos are
+    right and whose attribution is empty - which reads as working right up until
+    someone checks whether the site may legally use them.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.dir = tempfile.mkdtemp(prefix="seed-assets-")
+        self.addCleanup(shutil.rmtree, self.dir, ignore_errors=True)
+        # `_resolve_asset` needs a pool to fall back to, exactly as the real
+        # seed_assets/ directory has.
+        buffer = BytesIO()
+        Image.new("RGB", (4, 4), "grey").save(buffer, format="JPEG")
+        (pathlib.Path(self.dir) / "placeholder-1.jpg").write_bytes(buffer.getvalue())
+
+        self.brief = pathlib.Path(self.dir) / "brief.json"
+        self.brief.write_text(json.dumps({
+            "system": {"host": "tortas.test", "site_name": "Tortas"},
+            "menu_categories": [{
+                "name": "Las Tradicionales",
+                "image_query": "mexican sandwich shop counter",
+                "menu_items": [{
+                    "name": "Hawaiana",
+                    # The whole point of the field: the dish is a ham-and-
+                    # pineapple torta, and its name is a place.
+                    "image_query": "ham and pineapple sandwich",
+                    "price": "65.00",
+                }],
+            }],
+        }))
+
+    def _photo(self, n):
+        from core.services.image_banks import Photo
+
+        return Photo(
+            bank="pexels", bank_id=str(n),
+            download_url=f"https://example.test/{n}.jpg",
+            attribution=f"Photo by P{n} on Pexels",
+            attribution_url=f"https://www.pexels.com/photo/{n}/",
+            alt="a sandwich",
+        )
+
+    def _fake_download(self, photo, dest):
+        buffer = BytesIO()
+        Image.new("RGB", (8, 8), "white").save(buffer, format="JPEG")
+        pathlib.Path(dest).write_bytes(buffer.getvalue())
+
+    def _run_fetch(self):
+        from django.core.management import call_command
+
+        seen = []
+
+        def fake_search(query, **kwargs):
+            seen.append(query)
+            return self._photo(len(seen))
+
+        with mock.patch(
+            "core.management.commands.fetch_seed_images.search_photo", fake_search
+        ), mock.patch(
+            "core.management.commands.fetch_seed_images.download", self._fake_download
+        ), mock.patch(
+            "core.management.commands.fetch_seed_images.configured_banks",
+            lambda: ["pexels"],
+        ):
+            call_command(
+                "fetch_seed_images",
+                brief=str(self.brief), assets_dir=self.dir,
+                bank=None, force=False, dry_run=False,
+                stdout=StringIO(), stderr=StringIO(),
+            )
+        return seen
+
+    def test_the_query_comes_from_the_brief_not_the_record_name(self):
+        seen = self._run_fetch()
+        self.assertIn("ham and pineapple sandwich", seen)
+        self.assertNotIn("Hawaiana", seen)
+
+    def test_the_brief_is_rewritten_and_the_credits_line_up(self):
+        self._run_fetch()
+        brief = json.loads(self.brief.read_text())
+        item = brief["menu_categories"][0]["menu_items"][0]
+        self.assertTrue(item["image"].startswith("fetched/tortas.test/"))
+        self.assertTrue((pathlib.Path(self.dir) / item["image"]).is_file())
+
+        credits = json.loads(
+            (pathlib.Path(self.dir) / "fetched/tortas.test/credits.json").read_text()
+        )
+        # Keyed by exactly the string the brief now carries - the join that
+        # lets `_attach` find a credit from a filename alone.
+        self.assertIn(item["image"], credits)
+        self.assertEqual(
+            credits[item["image"]]["query"], "ham and pineapple sandwich"
+        )
+
+    def test_seed_site_copies_the_credit_onto_the_record(self):
+        from django.core.management import call_command
+
+        self._run_fetch()
+        call_command(
+            "seed_site", brief=str(self.brief), assets_dir=self.dir,
+            reset=False, stdout=StringIO(), stderr=StringIO(),
+        )
+        item = MenuItem.objects.get(name="Hawaiana")
+        self.assertTrue(item.image)
+        self.assertTrue(item.attribution.endswith("on Pexels"))
+        self.assertTrue(item.attribution_url.startswith("https://www.pexels.com/"))
+
+        system = System.objects.get(host="tortas.test")
+        from core.stock_images import stock_image_count
+        # The dish and its category both got a photo, so both are credited.
+        self.assertEqual(stock_image_count(system), 2)
+
+    def test_a_pool_fallback_is_never_credited(self):
+        """A brief naming a file that is not there falls back to our own
+        placeholder, and crediting a photographer for that would put a false
+        credit on the page."""
+        from django.core.management import call_command
+
+        self.brief.write_text(json.dumps({
+            "system": {"host": "tortas.test", "site_name": "Tortas"},
+            "menu_categories": [{
+                "name": "Las Tradicionales",
+                "menu_items": [
+                    {"name": "Hawaiana", "image": "gone.jpg", "price": "65.00"}
+                ],
+            }],
+        }))
+        call_command(
+            "seed_site", brief=str(self.brief), assets_dir=self.dir,
+            reset=False, stdout=StringIO(), stderr=StringIO(),
+        )
+        item = MenuItem.objects.get(name="Hawaiana")
+        self.assertTrue(item.image)          # the pool filled it
+        self.assertEqual(item.attribution, "")
+
+
+class AttributionClearedOnUploadTests(IsolatedMediaTestCase):
+    """A customer's own photo must not stay credited to a stranger.
+
+    This is what makes `stock_image_count` fall to zero on its own as a site is
+    filled in - and therefore what eventually takes the bank credit out of the
+    footer with nothing for anyone to remember to tick.
+    """
+
+    def _b64(self):
+        buffer = BytesIO()
+        Image.new("RGB", (6, 6), "blue").save(buffer, format="JPEG")
+        return "data:image/jpeg;base64," + base64.b64encode(buffer.getvalue()).decode()
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.story = SuccessStory.objects.create(
+            system=self.system, slug="s1", name="One",
+            attribution="Photo by A on Pexels",
+            attribution_url="https://www.pexels.com/photo/1/",
+        )
+
+    def test_uploading_over_a_seeded_photo_clears_its_credit(self):
+        from core.serializers import ImageProcessingSerializer
+
+        proc = ImageProcessingSerializer(data={"base64_image": self._b64()})
+        self.assertTrue(proc.is_valid(), proc.errors)
+        proc.save_to_field(self.story.image, f"story_{self.story.pk}.jpg")
+        self.story.save(update_fields=["image"])
+
+        # Persisted, not just cleared in memory: every caller saves with
+        # `update_fields=["image"]`, which would discard an in-memory change.
+        self.story.refresh_from_db()
+        self.assertEqual(self.story.attribution, "")
+        self.assertEqual(self.story.attribution_url, "")
+
+        from core.stock_images import stock_image_count
+        self.assertEqual(stock_image_count(self.system), 0)
+
+    def test_an_uncredited_upload_writes_nothing_extra(self):
+        """The clear costs a query, so it must not run on the ordinary case of a
+        site that was never seeded from a bank."""
+        from core.serializers import ImageProcessingSerializer
+
+        plain = SuccessStory.objects.create(
+            system=self.system, slug="s2", name="Two"
+        )
+        proc = ImageProcessingSerializer(data={"base64_image": self._b64()})
+        self.assertTrue(proc.is_valid(), proc.errors)
+        with self.assertNumQueries(0):
+            proc.save_to_field(plain.image, f"story_{plain.pk}.jpg")

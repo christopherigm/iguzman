@@ -162,6 +162,53 @@ class ImageProcessingSerializer(serializers.Serializer):
         base = filename.rsplit(".", 1)[0]
         name = f"{base}.{_EXTENSIONS.get(fmt, 'jpg')}"
         image_field.save(name, ContentFile(output.read()), save=False)
+        _clear_attribution(image_field)
+
+
+def _clear_attribution(image_field) -> None:
+    """Drop the stock-bank credit when a customer uploads their own photo.
+
+    Every CMS image upload in this API funnels through `save_to_field`, so this
+    is the one place that can make "the credit describes the file that is
+    actually there" true for all of them - `attribution` is on `BasePicture`, so
+    a hand-written clear would have to be repeated in a dozen serializers and
+    would drift the first time one was added.
+
+    ⚠ **It persists itself with its own UPDATE** rather than leaving the fields
+    to the caller. Every caller saves with `update_fields=["image"]`, which would
+    silently discard an in-memory change to any other column - and the symptom
+    would be a customer's own photograph still credited to a stranger. The write
+    only happens when there is actually a credit to clear, which is never the
+    case for a site that was not seeded from a bank.
+
+    Removing an image entirely is deliberately **not** covered here: it leaves a
+    credit attached to nothing, which over-credits (the footer thanks a bank the
+    site no longer uses). That is the harmless direction; failing to credit a
+    bank whose photo is on the page is the one that is not.
+    """
+    instance = getattr(image_field, "instance", None)
+    field_name = getattr(getattr(image_field, "field", None), "name", None)
+    if instance is None or not field_name or not instance.pk:
+        return
+    base = "attribution" if field_name == "image" else f"{field_name}_attribution"
+    url = f"{base}_url"
+    if not hasattr(instance, base):
+        return
+    if not getattr(instance, base) and not getattr(instance, url):
+        return
+    setattr(instance, base, "")
+    setattr(instance, url, "")
+    # `_default_manager`, not `.objects`: a model with a filtered default manager
+    # would otherwise fail to match its own row and clear nothing.
+    #
+    # The cached System payload (which carries `stock_image_count`) is left to
+    # the caller's own `instance.save(update_fields=["image"])` a line later -
+    # that fires post_save, which the receivers in `core/signals.py` are
+    # listening for. This UPDATE deliberately does not, since two invalidations
+    # per upload buy nothing.
+    type(instance)._default_manager.filter(pk=instance.pk).update(
+        **{base: "", url: ""}
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -761,6 +808,7 @@ class SystemSerializer(serializers.ModelSerializer):
     menu_item_count = serializers.SerializerMethodField()
     branch_count = serializers.SerializerMethodField()
     event_count = serializers.SerializerMethodField()
+    stock_image_count = serializers.SerializerMethodField()
     stripe_configured = serializers.BooleanField(read_only=True)
     stripe_webhook_url = serializers.SerializerMethodField()
     storage_configured = serializers.BooleanField(read_only=True)
@@ -826,6 +874,13 @@ class SystemSerializer(serializers.ModelSerializer):
             "product_count", "service_count", "menu_item_count",
             "branch_count",
             "event_count",
+            # How many images on this site are still credited to a stock bank.
+            # Public because the footer's bank credit is gated on it - the site
+            # owes Pexels a visible link for exactly as long as this is > 0, and
+            # nothing else on the page knows when that stops being true.
+            "stock_image_count",
+            "img_hero_attribution", "img_hero_attribution_url",
+            "img_about_attribution", "img_about_attribution_url",
         ]
 
     def _image_url(self, obj, field_name):
@@ -898,6 +953,16 @@ class SystemSerializer(serializers.ModelSerializer):
         cannot express. The landing slider does its own upcoming/past split.
         """
         return obj.events.filter(enabled=True).count()
+
+    def get_stock_image_count(self, obj):
+        """Images still credited to a stock bank - see `core/stock_images.py`.
+
+        It runs one COUNT per picture model, which is only affordable because
+        this payload is cached for an hour and invalidated on write like every
+        other derived count here.
+        """
+        from core.stock_images import stock_image_count
+        return stock_image_count(obj)
 
 
 _TEXT_FIELDS = [

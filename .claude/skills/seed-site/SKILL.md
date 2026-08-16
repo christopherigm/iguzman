@@ -1,6 +1,6 @@
 ---
 name: seed-site
-description: Populate a customer site's INITIAL CONTENT (the backend data the landing page renders) after /new-site has scaffolded the frontend. Runs a business-strategist discovery interview - challenging the operator's assumptions one question at a time until the concept is sharp - then writes a JSON brief and runs the website-api `seed_site` command to create the System copy + success stories + highlights + catalog (products, services, OR menu items for food businesses), with placeholder images and YouTube/links from seed_assets/. Use when the user asks to populate/seed a new site, fill in landing content, or "make the landing look complete" for a customer in the website app (e.g. "/seed-site acme.com").
+description: Populate a customer site's INITIAL CONTENT (the backend data the landing page renders) after /new-site has scaffolded the frontend. Runs a business-strategist discovery interview - challenging the operator's assumptions one question at a time until the concept is sharp - then writes a JSON brief, fetches real per-item photography from a free stock bank (`fetch_seed_images`, Pexels/Pixabay), and runs the website-api `seed_site` command to create the System copy + success stories + highlights + catalog (products, services, OR menu items for food businesses). Use when the user asks to populate/seed a new site, fill in landing content, find/seed images for a site, or "make the landing look complete" for a customer in the website app (e.g. "/seed-site acme.com").
 ---
 
 # seed-site — interview-to-populated landing
@@ -11,7 +11,9 @@ fills the **content** it renders. The `website` landing is 100 % backend-driven:
 `CatalogItems` all read the Django `System` record + its stories/highlights/
 catalog by request host. Your job: through a sharp strategy interview, produce a
 **brief** and run the `seed_site` command so the page renders full and alive —
-real copy, placeholder images, working YouTube/links — instead of an empty shell.
+real copy, **real per-item photography** (fetched from a free stock bank, see
+"Fetch the photography" in Part 2), working YouTube/links — instead of an empty
+shell.
 
 **Run this in its own Claude session** (separate from `/new-site`) so the long
 interview transcript never competes with the frontend build for context. The
@@ -111,7 +113,12 @@ to sell.** A landing page seeded from mushy positioning is worthless.
      body — rather than asking the operator to name fonts cold. See the
      typography note under Part 2.
    - **Assets** — do they have a hero video (YouTube), logo, real photos? If not,
-     confirm you'll use the `seed_assets/` placeholder pool and they swap later.
+     say that you'll fetch **real stock photography** per item (Pexels/Pixabay,
+     free and commercially licensed) rather than generic placeholders, and that
+     the customer may keep those photos on the live site or swap them later.
+     Ask only what you can't infer: the visual register (bright and casual? dark
+     and moody? clean studio shots?), since that steers every search term you
+     write in Part 2.
 4. **Know when to stop.** When you can state the positioning in one sentence, name
    the ICP, list 3 quantified proof points, and 4–6 highlights and a real
    catalog — **stop interviewing and summarize the concept back** in a short brief
@@ -156,8 +163,9 @@ a product and you silently throw away ingredient customisation.
    - Copy is **customer-specific and concrete** — real slogans, quantified
      stories, benefit-led highlight text. This is the whole point; do not ship
      the example's Acme text.
-   - Leave every `image` field pointing at pool files (`placeholder-N.jpg`) or
-     omit it (the command round-robins the pool). Only set a named asset if the
+   - **Write an `image_query` on every record that will carry a photo** — see
+     "Fetch the photography" below. Leave `image` itself unset (the fetcher
+     fills it, and the pool is the fallback). Only set a named asset if the
      operator actually provided a file in `seed_assets/`.
    - Prices realistic; `is_featured` stays true so items surface in `CatalogItems`.
    - **Write the catalog section the food rule picked** — `product_categories`,
@@ -240,6 +248,59 @@ gradient soup. Match it to the brand: `wave`/`arches` read soft and organic
 right. **A straight edge is a legitimate answer** — leave the fields out for a
 site whose calm is the point.
 
+### Fetch the photography — `image_query` is your job, not the command's
+
+A landing seeded from the eight generic `placeholder-*` files cannot be shown to
+a customer: the same stock office desk appears under every dish. Before seeding,
+run the fetcher, which pulls a real photo per record from **Pexels** (falling
+back to **Pixabay**) — both free, both licensed for commercial use, so the
+customer may keep the photos on the live site.
+
+**The search term comes from the brief, and writing it well is the entire
+point of this step.** A record with no `image_query` falls back to its `name`,
+which is exactly where it goes wrong: a torta called `Hawaiana`, `Rusa`, `Indú`
+or `Jalisco` searches as a *place*, and a highlight called
+`Nuestro Compromiso` searches as nothing at all. You have just spent an
+interview learning that the first is a ham-and-pineapple torta and the second is
+about same-day delivery — so **you** are the only thing in this pipeline that
+can write `"image_query": "ham and pineapple sandwich"`. Rules:
+
+- **Write every query in English**, whatever language the site is in. Both banks
+  index in English and answer a Spanish query with a much thinner, more literal
+  result set.
+- **Describe the subject, not the brand.** `"grilled steak taco"`, not
+  `"La Chapulina"`. For an abstract highlight, describe the *photo you want*:
+  `"delivery scooter city street"` for same-day delivery.
+- **Add the register you agreed in the interview** — `"dark moody"`,
+  `"bright airy"`, `"rustic wooden table"` — so forty dishes read as one shoot
+  rather than forty unrelated stock photos. This is the single biggest
+  difference between a seeded site that looks designed and one that looks
+  scraped.
+- **Prefer things over people.** A bank photo of an identifiable person carries
+  no model release, and these images can go live on the customer's real site.
+- `image_orientation` (`landscape` | `portrait` | `square`) defaults to
+  `landscape`; set `square` for catalog tiles if the site's cards are square.
+- `system.image_queries` carries `img_hero` and `img_about`. The logo, favicon,
+  brandmark and manifest are the customer's own mark — never fetched.
+
+Then, from `apps/website-api`:
+
+```bash
+python manage.py fetch_seed_images --brief seed_assets/briefs/<host>.json --dry-run
+python manage.py fetch_seed_images --brief seed_assets/briefs/<host>.json
+```
+
+Run `--dry-run` first and **read the query list back** — it is far cheaper to fix
+a bad term there than to look at 60 downloaded photos. The real run downloads
+into `seed_assets/fetched/<host>/`, writes the filenames into the brief, and
+records each photo's credit in `credits.json`; `seed_site` copies those credits
+onto every record's `attribution`. Re-run a single bad pick by editing that
+record's `image_query` and passing `--force`.
+
+If neither `PEXELS_API_KEY` nor `PIXABAY_API_KEY` is in `apps/website-api/.env`,
+the command says so and seeding still works off the placeholder pool — tell the
+operator both keys are free and instant rather than working around it.
+
 6. **Run the seeder** from `apps/website-api`:
    ```bash
    python manage.py seed_site --brief seed_assets/briefs/<host>.json --reset
@@ -260,21 +321,28 @@ site whose calm is the point.
 - **This seeds the _local_ DB only.** Once the operator has verified the site
   locally, publishing it to production is a separate step: `pnpm publish-site
 <host>` serializes this content out of the local DB and upserts it into the prod
-  Django (placeholder images skipped — the customer uploads real ones via the
-  CMS). See `apps/website/sites/CLAUDE.md` → "Publishing to production". Not part
-  of this skill; just point the operator to it when the seed looks good.
+  Django. **Add `--images` to send the fetched photography too** — the bank
+  licences allow it, so the customer's site can launch with the imagery the
+  proposal was approved with. It fills only image fields that are still empty in
+  prod, so nothing the customer has uploaded is ever overwritten. See
+  `apps/website/sites/CLAUDE.md` → "Publishing to production". Not part of this
+  skill; just point the operator to it when the seed looks good.
 - If the operator later drops real images into `seed_assets/`, point the relevant
-  brief `image` fields at them and re-run with `--reset` — no code change.
+  brief `image` fields at them and re-run with `--reset` — no code change. Their
+  own photo carries no `attribution`, which is what takes the bank credit out of
+  the footer once the last fetched image is gone.
 - **The design settings publish with the content.** `publish-site` serializes the
   same `SYSTEM_TEXT_FIELDS`, so the fonts, hero overlay/divider, band dividers,
   watermark, page backgrounds, contact details and legal copy all reach prod —
   the customer does not re-tune them by hand. Two exceptions to warn about:
   `spotlight_items` (per-database ids — re-pick the trio in the prod CMS) and
   `Branch` locations (per-environment; re-enter in `/admin/branches`).
-- **Three things the brief cannot do**, so hand them to the operator as to-dos
-  when you finish: pick the Spotlight's three items, add the physical branches,
-  and upload real images (the seed uses the placeholder pool, and both a
-  re-publish and the CMS preserve whatever they upload).
+- **Two things the brief cannot do**, so hand them to the operator as to-dos when
+  you finish: pick the Spotlight's three items, and add the physical branches.
+  Images are no longer on this list — the fetcher fills them and `--images`
+  publishes them — but do tell the customer which photos are stock, since the
+  CMS counts them (`stock_image_count`) and the footer credits the bank until
+  the last one is replaced.
 - Do not create Django models/endpoints or edit the frontend here. Content only.
   If the composition itself needs to change to show this content well, that is a
   `/new-site` task — but check first whether a **brief field** does it (a hard

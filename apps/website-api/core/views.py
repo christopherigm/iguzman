@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import tempfile
+import zipfile
 
 from django.conf import settings
 from django.core.cache import cache
@@ -60,7 +61,7 @@ from .serializers import (
 )
 from core.services.contact import send_contact_message_notification, send_contact_message_reply
 from core.services.llm import stream_chat
-from core.site_payload import apply_payload
+from core.site_payload import ImageArchive, apply_payload
 
 logger = logging.getLogger(__name__)
 
@@ -99,9 +100,18 @@ class PublishSiteView(APIView):
 
     The production counterpart to the local ``export_site`` command: ``pnpm
     publish-site`` POSTs an exported payload here to publish a tested site into
-    this database. Image files are not transported - image fields are left
-    untouched on update, so customer-uploaded CMS images survive a re-publish.
-    Send ``{"reset": true}`` for an exact replace of the System's prior content.
+    this database. Send ``{"reset": true}`` for an exact replace of the System's
+    prior content.
+
+    **Two body shapes**, because images are optional:
+
+    * ``application/json`` - the payload alone. Every image field on the target
+      is left untouched, which is what this endpoint has always done.
+    * ``multipart/form-data`` with a ``payload`` part (the same JSON) and an
+      ``images`` part (the zip from ``export_site --images``). A record with no
+      image yet is given the photograph it had in the source database; one that
+      already has an image keeps it, so a customer's CMS upload is never
+      clobbered. See ``core/site_payload.apply_payload``.
 
     Uses BasicAuthentication so the deploy script can authenticate without a
     per-tenant JWT flow (mirrors SystemListView).
@@ -109,21 +119,62 @@ class PublishSiteView(APIView):
 
     authentication_classes = [BasicAuthentication]
     permission_classes = [IsAdminUser]
+    parser_classes = [JSONParser, MultiPartParser]
 
     def post(self, request):
-        payload = request.data
+        try:
+            payload, upload = self._unpack(request)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
         if not isinstance(payload, dict) or not (payload.get("system") or {}).get("host"):
             return Response(
                 {"detail": "A JSON body with system.host is required."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        archive = None
         try:
-            summary = apply_payload(payload, reset=bool(payload.get("reset")))
+            if upload is not None:
+                try:
+                    archive = ImageArchive(zipfile.ZipFile(upload))
+                except zipfile.BadZipFile:
+                    return Response(
+                        {"detail": "The `images` part is not a readable zip."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+            summary = apply_payload(
+                payload, reset=bool(payload.get("reset")), images=archive
+            )
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         self._invalidate(summary["host"])
         return Response(summary, status=status.HTTP_200_OK)
+
+    @staticmethod
+    def _unpack(request):
+        """Return ``(payload, images_or_None)`` for either body shape."""
+        if "payload" not in request.data:
+            # Plain JSON body - the historical shape.
+            return request.data, None
+        raw = request.data["payload"]
+        # A multipart `payload` arrives as a string when sent as a field and as
+        # an uploaded file when sent as `-F payload=@file.json`; the deploy
+        # script uses the latter because a 20MB catalog does not belong in a
+        # form field.
+        if hasattr(raw, "read"):
+            raw = raw.read()
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8")
+        if isinstance(raw, str):
+            try:
+                payload = json.loads(raw)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"The `payload` part is not valid JSON: {exc}") from exc
+        else:
+            payload = raw
+        return payload, request.data.get("images")
 
     @staticmethod
     def _invalidate(host):

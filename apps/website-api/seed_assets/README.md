@@ -17,6 +17,7 @@ links — instead of an empty shell.
 | File                                                                                | Purpose                                                                                                                                  |
 | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `placeholder-1.jpg … placeholder-8.jpg`                                             | **Generic image pool.** Any record whose `image` is omitted round-robins through these, so nothing is ever blank.                        |
+| `fetched/<host>/`                                                                   | Photos pulled from a stock bank by `fetch_seed_images`, plus the `credits.json` that says who each one is owed to. Git-ignored.          |
 | `hero.jpg`, `about.jpg`, `logo.png`, `logo-hero.png`, `favicon.png`, `manifest.png` | Named `System` branding assets (referenced from `system.assets` in the brief). `manifest.png` (1080²) fills all five PWA manifest sizes. |
 | `links.json`                                                                        | URL pool: `video_link` (hero YouTube) + `href[]` (story/product outbound links). Used when the brief omits them.                         |
 | `brief.example.json`                                                                | A complete, filled example brief — the schema by example.                                                                                |
@@ -26,6 +27,63 @@ links — instead of an empty shell.
 **Swap the placeholders for your own dummies at will** — keep the same filenames
 (`placeholder-1.jpg` … or add more `placeholder-*`), or point brief `image`
 fields at any new file you drop in here.
+
+## Real photography: `fetch_seed_images`
+
+The eight placeholders are enough to check a layout and useless for a customer
+proposal — a taquería's landing shows the same stock office desk under every
+dish. **`fetch_seed_images` fills the brief from a free stock bank first**, and
+then `seed_site` runs exactly as it always did:
+
+```bash
+python manage.py fetch_seed_images --brief seed_assets/briefs/acme.com.json
+python manage.py seed_site        --brief seed_assets/briefs/acme.com.json --reset
+```
+
+It searches **Pexels**, falling back to **Pixabay**, downloads into
+`fetched/<host>/`, writes each filename back into the brief, and records the
+credit for each photo in `fetched/<host>/credits.json`. `seed_site` reads that
+sidecar and copies the credit onto every record's `attribution` /
+`attribution_url`. Both keys are free and instant
+([Pexels](https://www.pexels.com/api/), [Pixabay](https://pixabay.com/api/docs/));
+put them in `.env` as `PEXELS_API_KEY` / `PIXABAY_API_KEY`. With neither set,
+seeding falls back to the placeholder pool as before.
+
+Useful flags: `--dry-run` (print the queries, touch nothing), `--force`
+(refetch records that already have an image), `--bank pexels|pixabay`.
+
+### `image_query` is the whole accuracy mechanism
+
+**The search term comes from the brief, not from the record's name**, and the
+`/seed-site` skill fills it during the interview. A menu of tortas is the case
+that proves why: `Hawaiana`, `Rusa`, `Indú`, `Jalisco` and `Argentina` are all
+real dishes on a real seeded site, and every one of them searches as a *place*.
+`"image_query": "ham and pineapple sandwich"` is what makes the result a torta.
+
+- **Write queries in English.** Both banks index in English and answer a Spanish
+  query with a much thinner, more literal result set — so a Spanish-language
+  site still has its photos searched in English. The stored credit is
+  language-neutral.
+- A record with **no** `image_query` falls back to its `name` and warns. That is
+  the case that produces an off-subject photo; the warning is there so you fix
+  the brief rather than the result.
+- `"image_orientation"` (`landscape` | `portrait` | `square`) is optional and
+  defaults to `landscape`.
+
+### Why these two banks, and not a watermarked one
+
+Pexels and Pixabay both license their content for **commercial use**, which is
+what lets a seeded photo survive `pnpm publish-site --images` and go live on the
+customer's real site — the customer keeps it, free, for as long as they like. A
+watermarked-comp bank (Shutterstock, Adobe Stock) could be searched the same
+way, but its comp licence covers evaluation only and forbids public display, so
+its images could never leave a local preview.
+
+⚠ **Attribution is not optional even though the licences say it is.** Both
+*content* licences waive credit; both *API* terms require it. Downloading the
+same photo by hand would owe nothing — pulling it through the API does. That is
+what `BasePicture.attribution` is for, and why the storefront footer carries a
+bank credit for as long as `System.stock_image_count` is above zero.
 
 ## Brief schema (by example: `brief.example.json`)
 
@@ -91,7 +149,18 @@ fields at any new file you drop in here.
       "img_logo": "logo.png", "img_logo_hero": "logo-hero.png",
       "img_favicon": "favicon.png", "img_manifest": "manifest.png",
       "img_hero": "hero.jpg", "img_about": "about.jpg"
-    }
+    },
+    // What `fetch_seed_images` should search for, for the only two System
+    // images that can be a photograph. The logo/favicon/brandmark/manifest are
+    // the customer's own mark and are never fetched.
+    "image_queries": {
+      "img_hero": "busy taqueria kitchen at night",
+      "img_about": "hands making tortillas"
+    },
+    // Filled by seed_site from the fetcher's credits sidecar - you don't write
+    // these by hand, but they travel with `publish-site` like any other copy.
+    "img_hero_attribution": "Photo by … on Pexels",
+    "img_hero_attribution_url": "https://www.pexels.com/photo/…/"
   },
   "success_stories": [ { "name", "short_description", "description", "href?", "image?", "gallery?": [] } ],
   "highlights":      [ { "name", "category", "description", "icon?", "size?", "image?", "items?": [ { "name","description","icon?","image?" } ] } ],
@@ -102,6 +171,12 @@ fields at any new file you drop in here.
                                               "group_name?","group_en_name?","options?": [ { "name","en_name?","price","sort_order?" } ] } ] } ] } ]
 }
 ```
+
+**Every record above also takes `"image_query"` and `"image_orientation"`**
+(what `fetch_seed_images` searches for — see above), and gains
+`"attribution"` / `"attribution_url"` once it has been fetched. They are
+omitted from the block to keep it readable; write `image_query` on every record
+that will carry a photo.
 
 Notes:
 
@@ -162,6 +237,16 @@ the `System` record itself is upserted (created if missing, else updated).
 
 `seed_site` populates the **local** DB. Once a site is tested, push its content
 to production with `pnpm publish-site <host>`, which runs `export_site` (serialize
-the System + content from the local DB into `exports/<host>.json`, images omitted)
-and POSTs it to the prod `/api/publish-site/` endpoint. See `core/site_payload.py`
-and `apps/website/sites/CLAUDE.md` → "Publishing to production".
+the System + content from the local DB into `exports/<host>.json`) and POSTs it
+to the prod `/api/publish-site/` endpoint.
+
+**Add `--images` to send the photographs too.** `export_site --images` writes
+every referenced file into `exports/<host>-images.zip`, which rides alongside the
+JSON as a multipart part; the endpoint fills only image fields that are **still
+empty** on production, so a customer's own CMS upload is never clobbered. That is
+what lets a site seeded from Pexels/Pixabay launch with the imagery it was
+approved with, instead of the customer re-uploading forty files by hand. Without
+the flag, publishing is text-only exactly as before.
+
+See `core/site_payload.py` and `apps/website/sites/CLAUDE.md` → "Publishing to
+production".

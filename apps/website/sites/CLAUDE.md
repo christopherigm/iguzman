@@ -415,6 +415,16 @@ python manage.py seed_site --brief seed_assets/briefs/<host>.json --reset
   `System.video_link` (YouTube) and `href` are true URLs. `seed_site` copies
   files from `seed_assets/` into `MEDIA_ROOT` and links each record; unset image
   fields round-robin the pool, so a seeded page never shows a blank slot.
+- **The photos are fetched, not placeholders.** `fetch_seed_images` (run by
+  `/seed-site` before the seed) pulls a real photo per record from **Pexels**,
+  falling back to **Pixabay**, using an `image_query` the skill writes on each
+  record during the interview — because a dish named "Hawaiana" or a highlight
+  named "Nuestro Compromiso" is not a searchable term, but "ham and pineapple
+  sandwich" is. Both banks license commercially, so these can be the site's real
+  imagery, and each record stores the credit it owes in `attribution` /
+  `attribution_url`. The storefront footer carries one bank credit for as long as
+  `System.stock_image_count > 0`, and it disappears by itself as the customer
+  replaces the photos in the CMS. Full guidance: `seed_assets/README.md`.
 - **What it creates:** upserts the `System` (by host) + its copy/colors/video,
   then success stories, highlights, and any of the three catalog families the
   brief includes: `product_categories` → products, `service_categories` →
@@ -455,8 +465,9 @@ python manage.py seed_site --brief seed_assets/briefs/<host>.json --reset
 site. Once it's tested, **publish its content to production** with:
 
 ```bash
-pnpm publish-site <host>          # e.g. pnpm publish-site bdrone.com.mx
-pnpm publish-site <host> --reset  # exact replace of the System's prior content
+pnpm publish-site <host>           # e.g. pnpm publish-site bdrone.com.mx
+pnpm publish-site <host> --images  # send the photographs too
+pnpm publish-site <host> --reset   # exact replace of the System's prior content
 ```
 
 `publish-site` serializes the site's `System` + success stories + highlights +
@@ -471,11 +482,24 @@ which **upserts** it by host + slug. Key properties:
   works in prod. The **internal `recipe_steps` are kitchen IP** and are neither
   seeded nor published — the customer maintains them in the prod CMS.
 
-- **Images are not transported.** Every image is a Django `ImageField` (a file),
-  not portable data — so the placeholder pool stays in dev. The customer uploads
-  real images in the prod CMS. A re-publish **never clobbers** an image already
-  set on an existing record (image fields are left untouched on update); `--reset`
-  wipes the System's prior content first for a clean replace.
+- **Images travel only with `--images`, and only into empty fields.** By default
+  the payload is text and every image field in prod is left alone — the historical
+  behaviour. With `--images`, `export_site` writes every referenced file into
+  `exports/<host>-images.zip` (the same shape `core/backup.py` uses) and it rides
+  alongside the JSON as a multipart part. On the far side a record with **no
+  image yet** is given the one it had locally; a record that **already has one
+  keeps it**. That fill-don't-clobber rule is the whole safety story: a customer
+  who replaced a seeded photo with their own must not lose it because somebody
+  re-published a typo fix. ⚠ `--reset` is the exception, and it is louder than it
+  used to be — it deletes the rows first, so a reset publish replaces the
+  customer's uploaded images too.
+- **This is what makes the seeded photography worth publishing.** `/seed-site`
+  fills a brief from Pexels/Pixabay, both of which license commercially, so the
+  site can launch with the imagery the customer approved instead of forty
+  hand-uploads. The credit each photo owes (`attribution` / `attribution_url` on
+  every record, `img_hero_attribution` on `System`) is ordinary text and travels
+  in the payload **whether or not** `--images` is passed — a published bank photo
+  with its credit left behind in dev is the one failure mode this feature has.
 - **The design settings travel with the content.** The same
   `SYSTEM_TEXT_FIELDS` the brief fills are what `export_site` serializes, so the
   hero composition/overlay/dividers, band dividers, watermark, page backgrounds,
@@ -627,8 +651,9 @@ Build & verify locally, then publish to prod:
    `127.0.0.1:3000`) — the landing **and** the free `/contact` page, in light and
    dark.
 8. **Publish content to prod:** redeploy `website-api`, then
-   `pnpm publish-site <host>` (creates the prod `System` + content; images
-   skipped). See "Publishing to production" above.
+   `pnpm publish-site <host> --images` (creates the prod `System` + content, and
+   carries the seeded photography into any image field still empty there). Drop
+   `--images` to publish text only. See "Publishing to production" above.
 9. `pnpm sync-website-hosts` (now that the `System` exists in prod, its `host`
    lands in ingress + API CORS).
 10. Redeploy `website`; verify at the real host once live.

@@ -1243,7 +1243,8 @@
     "favorites": "Favoritos",
     "cart": "Carrinho",
     "about": "Sobre nós",
-    "copyright": "© {year} {name}. Todos os direitos reservados."
+    "copyright": "© {year} {name}. Todos os direitos reservados.",
+    "stockPhotos": "Algumas fotos são fornecidas por <pexels>Pexels</pexels> e <pixabay>Pixabay</pixabay>."
   },
   "AdminImageUploader": {
     "dropzoneLabel": "Enviar imagens",

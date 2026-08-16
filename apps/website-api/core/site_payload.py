@@ -10,16 +10,29 @@ seeded or published - the customer maintains them in the production CMS.
 
 `serialize_system` turns a `System` (and its children) into a plain, brief-shaped
 dict - the same schema `seed_site` consumes (see `seed_assets/README.md`) but with
-each record's real **slug** so the target can upsert deterministically. Image
-files are ImageFields under MEDIA_ROOT and are **not portable**, so they are
-omitted; only true URLs (`video_link`, `href`) travel. The customer uploads real
-images in the production CMS.
+each record's real **slug** so the target can upsert deterministically.
+
+**Images travel beside the payload, not inside it.** Each record carries only
+`image_file` - the storage-relative *name* of the photo it is using - and
+`export_site --images` writes those files into a companion zip, the same shape
+`core/backup.py` uses for the same reason (a base64 blob per image would inflate
+a JSON document that is meant to stay readable, and hold every photo in memory
+twice). A payload sent without an archive publishes text alone, exactly as this
+module did before images were transportable at all.
+
+That became worth doing when seeded images stopped being ours: `/seed-site` now
+fills a brief from a free stock bank (Pexels/Pixabay), whose licences let the
+customer keep the photo commercially - so the picture a site was approved with
+can be the picture it launches with, instead of the customer re-uploading forty
+files by hand. The credit that makes it legal (`BasePicture.attribution`) rides
+in the text payload with everything else.
 
 `apply_payload` ingests that dict on the other side: it **upserts** the System by
-host and every child by slug, and - crucially - **never touches image fields on
-update**, so a customer's CMS-uploaded images are not clobbered by a re-publish.
-`reset=True` wipes the System's prior stories/highlights/catalog first for an
-exact replace.
+host and every child by slug, and - crucially - **fills an image only where the
+target has none**, so a customer's CMS-uploaded photo is never clobbered by a
+re-publish. `reset=True` wipes the System's prior stories/highlights/catalog
+first for an exact replace - which is also the only way a published image is
+ever replaced, since it deletes the row rather than overwriting the file.
 
 Consumers: the `export_site` management command (serialize, run locally) and the
 `PublishSiteView` API endpoint (apply, on production). The `seed_site` command
@@ -29,9 +42,12 @@ of System field truth.
 
 from __future__ import annotations
 
+import zipfile
+from contextvars import ContextVar
 from datetime import timezone as dt_timezone
 from decimal import Decimal, InvalidOperation
 
+from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone as django_timezone
 from django.utils.dateparse import parse_datetime
@@ -72,6 +88,14 @@ SYSTEM_TEXT_FIELDS = (
     "en_mission",
     "vision",
     "en_vision",
+    # The credits owed for the hero and about photographs when they came from a
+    # stock bank. They are text, so they travel like any other copy - and they
+    # have to travel with the images they describe, or a published site shows a
+    # bank photo with no credit while `stock_image_count` reads zero.
+    "img_hero_attribution",
+    "img_hero_attribution_url",
+    "img_about_attribution",
+    "img_about_attribution_url",
     # Site-wide contact details - portable (no per-environment ids). Physical
     # `Branch` locations are NOT published here; they are per-environment content.
     "contact_email",
@@ -144,6 +168,14 @@ SYSTEM_TEXT_FIELDS = (
 )
 
 # Plain text/URL fields per child model (image fields are intentionally excluded).
+#
+# The credit `BasePicture` carries for its `image`. Every tuple below splices it
+# in, because it is text about an image rather than an image - and because the
+# credit is worthless in the environment the photo is not in. A published bank
+# photo with its credit left behind in dev is the one failure mode this feature
+# has, so these travel wherever an image can.
+ATTRIBUTION_FIELDS = ("attribution", "attribution_url")
+
 STORY_FIELDS = (
     "name",
     "en_name",
@@ -152,6 +184,7 @@ STORY_FIELDS = (
     "description",
     "en_description",
     "href",
+    *ATTRIBUTION_FIELDS,
 )
 HIGHLIGHT_FIELDS = (
     "name",
@@ -162,8 +195,9 @@ HIGHLIGHT_FIELDS = (
     "en_description",
     "short_description",
     "icon",
+    *ATTRIBUTION_FIELDS,
 )
-HIGHLIGHT_ITEM_FIELDS = ("name", "en_name", "description", "icon")
+HIGHLIGHT_ITEM_FIELDS = ("name", "en_name", "description", "icon", *ATTRIBUTION_FIELDS)
 # An event's copy and its place-as-typed. The `branch` FK is deliberately absent
 # for the same reason `spotlight_items` is: a branch id is per-environment, so
 # publishing one would point a production event at whatever row happens to hold
@@ -181,8 +215,9 @@ EVENT_FIELDS = (
     "venue_name",
     "en_venue_name",
     "address",
+    *ATTRIBUTION_FIELDS,
 )
-CATEGORY_FIELDS = ("name", "en_name", "description", "short_description")
+CATEGORY_FIELDS = ("name", "en_name", "description", "short_description", *ATTRIBUTION_FIELDS)
 BUYABLE_TEXT_FIELDS = (
     "name",
     "en_name",
@@ -190,6 +225,7 @@ BUYABLE_TEXT_FIELDS = (
     "en_description",
     "short_description",
     "href",
+    *ATTRIBUTION_FIELDS,
 )
 # Menu-item dietary/serving flags carried only when truthy (they default False /
 # null on the target, so a lean payload never needs the falsy case).
@@ -216,12 +252,24 @@ INGREDIENT_NUTRIENT_FIELDS = Ingredient.NUTRIENT_FIELDS
 
 def _pick(obj, fields):
     """Truthy-only projection: skip None/empty so a lean payload never blanks a
-    populated target field on update."""
+    populated target field on update.
+
+    Also emits ``image_file`` - the storage-relative *name* of this row's image,
+    never its bytes. It is always written, even when no archive is being built,
+    for two reasons: it costs one short string, and it makes the exported JSON
+    say which photo each record was carrying, which is otherwise unknowable from
+    a payload that has never transported one. The apply side ignores it unless
+    an archive arrives alongside, so a payload exported without `--images`
+    behaves exactly as it did before this existed.
+    """
     out = {}
     for f in fields:
         v = getattr(obj, f, None)
         if v not in (None, ""):
             out[f] = v
+    image = getattr(obj, "image", None)
+    if image:
+        out["image_file"] = image.name
     return out
 
 
@@ -387,11 +435,35 @@ def _menu_category_dict(c: MenuCategory) -> dict:
     }
 
 
+def _system_image_files(system: System) -> dict:
+    """System's two photographic images, as ``<field>_file`` name refs.
+
+    Named per field rather than through `_pick`'s single `image_file` because
+    System carries several images and only these two can be a photograph - the
+    rest are the customer's own mark (see `img_hero_attribution` on the model).
+    """
+    out = {}
+    for field in ("img_hero", "img_about"):
+        image = getattr(system, field, None)
+        if image:
+            out[f"{field}_file"] = image.name
+    return out
+
+
 def serialize_system(system: System) -> dict:
-    """Serialize a System + its content into a portable, brief-shaped dict
-    (image files omitted)."""
+    """Serialize a System + its content into a portable, brief-shaped dict.
+
+    Image **bytes** are not in here - each record carries only `image_file`, the
+    storage-relative name of the file it is using. `export_site --images` writes
+    those files into a companion zip, which `apply_payload` reads if it is given
+    one; see this module's docstring.
+    """
     return {
-        "system": {"host": system.host, **_pick(system, SYSTEM_TEXT_FIELDS)},
+        "system": {
+            "host": system.host,
+            **_pick(system, SYSTEM_TEXT_FIELDS),
+            **_system_image_files(system),
+        },
         "success_stories": [
             _story_dict(s) for s in system.success_stories.all()
         ],
@@ -483,8 +555,97 @@ def _reset(system: System) -> None:
     system.menu_categories.all().delete()
 
 
-def _upsert(counts: dict, was_created: bool) -> None:
+def _upsert(counts: dict, was_created: bool, obj=None, item=None) -> None:
     counts["created" if was_created else "updated"] += 1
+    if obj is not None and item is not None:
+        attach_image(obj, item)
+
+
+# The image archive for the publish currently being applied, if one was sent.
+# A ContextVar rather than a module global because gunicorn runs `gthread`
+# workers: two tenants publishing at the same instant would otherwise read each
+# other's zip, and the failure mode is a customer's site wearing another
+# customer's photographs.
+_ARCHIVE: ContextVar = ContextVar("site_payload_archive", default=None)
+
+
+def attach_image(obj, item: dict, key: str = "image_file", field: str = "image") -> bool:
+    """Give `obj` the image named in `item[key]`, if it has none already.
+
+    **Fill, never clobber.** A record that already carries an image keeps it, so
+    a customer who replaced a seeded photo with their own in the CMS does not
+    lose it on the next content publish - the same guarantee `_defaults` gives
+    for image fields, extended to the case where we now *do* have bytes to
+    write. `--reset` still replaces everything, because it deletes the rows
+    first and a recreated row has no image to protect.
+
+    Returns True when a file was actually written.
+    """
+    archive = _ARCHIVE.get()
+    if archive is None:
+        return False
+    name = item.get(key)
+    if not name or getattr(obj, field, None):
+        return False
+    data = archive.read_member(name)
+    if data is None:
+        return False
+    # Store under the basename only: the source path is namespaced by the *dev*
+    # tenant's id (`t/<system_id>/…`), and reusing it here would file the photo
+    # under whatever system happens to hold that id in production. The upload_to
+    # callable re-derives the correct prefix from the target row.
+    getattr(obj, field).save(name.rsplit("/", 1)[-1], ContentFile(data), save=True)
+    return True
+
+
+class ImageArchive:
+    """Read-only view over the zip `export_site --images` builds.
+
+    Wraps `zipfile.ZipFile` so `attach_image` can ask for a member by its
+    storage-relative name and get `None` - rather than an exception - for one
+    that is missing. A publish whose archive is short a few files must still
+    publish the rest: the images are a bonus on top of the content, and half a
+    catalog of photos beats a 500.
+    """
+
+    def __init__(self, zf):
+        self._zf = zf
+        self._names = set(zf.namelist())
+
+    def read_member(self, name: str) -> bytes | None:
+        if name not in self._names:
+            return None
+        try:
+            return self._zf.read(name)
+        except (KeyError, zipfile.BadZipFile, OSError):
+            return None
+
+
+def media_names(payload: dict) -> set[str]:
+    """Every storage-relative image name referenced anywhere in a payload.
+
+    Walks the whole structure rather than mirroring its shape, so a section
+    added to `serialize_system` is picked up here with no edit - the drift this
+    module's own docstring warns about.
+    """
+    found: set[str] = set()
+
+    def walk(node):
+        if isinstance(node, dict):
+            for k, v in node.items():
+                if k.endswith("image_file") or (
+                    k.startswith("img_") and k.endswith("_file")
+                ):
+                    if isinstance(v, str) and v:
+                        found.add(v)
+                else:
+                    walk(v)
+        elif isinstance(node, list):
+            for v in node:
+                walk(v)
+
+    walk(payload)
+    return found
 
 
 def _apply_stories(system, items) -> dict:
@@ -493,10 +654,10 @@ def _apply_stories(system, items) -> dict:
         slug = _slug_of(it)
         if not slug:
             continue
-        _, created = SuccessStory.objects.update_or_create(
+        obj, created = SuccessStory.objects.update_or_create(
             slug=slug, defaults=_defaults(system, it, STORY_FIELDS)
         )
-        _upsert(counts, created)
+        _upsert(counts, created, obj, it)
     return counts
 
 
@@ -528,8 +689,8 @@ def _apply_events(system, items) -> dict:
         for coord in ("latitude", "longitude"):
             if it.get(coord) is not None:
                 defaults[coord] = _decimal(it[coord])
-        _, created = Event.objects.update_or_create(slug=slug, defaults=defaults)
-        _upsert(counts, created)
+        obj, created = Event.objects.update_or_create(slug=slug, defaults=defaults)
+        _upsert(counts, created, obj, it)
     return counts
 
 
@@ -547,7 +708,7 @@ def _apply_highlights(system, items) -> dict:
         hl, created = CompanyHighlight.objects.update_or_create(
             slug=slug, defaults=defaults
         )
-        _upsert(counts, created)
+        _upsert(counts, created, hl, it)
         # Sub-items have no global slug; key them by (highlight, sort_order) so a
         # re-publish updates in place rather than duplicating.
         for j, sub in enumerate(it.get("items") or []):
@@ -555,11 +716,12 @@ def _apply_highlights(system, items) -> dict:
             for f in HIGHLIGHT_ITEM_FIELDS:
                 if sub.get(f) is not None:
                     item_defaults[f] = sub[f]
-            CompanyHighlightItem.objects.update_or_create(
+            sub_obj, _ = CompanyHighlightItem.objects.update_or_create(
                 highlight=hl,
                 sort_order=sub.get("sort_order", j),
                 defaults=item_defaults,
             )
+            attach_image(sub_obj, sub)
     return counts
 
 
@@ -572,6 +734,7 @@ def _apply_products(system, categories) -> dict:
         cat, _ = ProductCategory.objects.update_or_create(
             slug=cslug, defaults=_defaults(system, c, CATEGORY_FIELDS)
         )
+        attach_image(cat, c)
         counts["categories"] += 1
         for p in c.get("products") or []:
             pslug = _slug_of(p)
@@ -588,10 +751,10 @@ def _apply_products(system, categories) -> dict:
             defaults["in_stock"] = p.get("in_stock", True)
             if p.get("stock_count") is not None:
                 defaults["stock_count"] = p["stock_count"]
-            _, created = Product.objects.update_or_create(
+            obj, created = Product.objects.update_or_create(
                 slug=pslug, defaults=defaults
             )
-            _upsert(counts, created)
+            _upsert(counts, created, obj, p)
     return counts
 
 
@@ -604,6 +767,7 @@ def _apply_services(system, categories) -> dict:
         cat, _ = ServiceCategory.objects.update_or_create(
             slug=cslug, defaults=_defaults(system, c, CATEGORY_FIELDS)
         )
+        attach_image(cat, c)
         counts["categories"] += 1
         for s in c.get("services") or []:
             sslug = _slug_of(s)
@@ -621,10 +785,10 @@ def _apply_services(system, categories) -> dict:
                 defaults["duration"] = s["duration"]
             if s.get("modality"):
                 defaults["modality"] = s["modality"]
-            _, created = Service.objects.update_or_create(
+            obj, created = Service.objects.update_or_create(
                 slug=sslug, defaults=defaults
             )
-            _upsert(counts, created)
+            _upsert(counts, created, obj, s)
     return counts
 
 
@@ -643,10 +807,10 @@ def _apply_ingredients(system, items) -> dict:
         for f in INGREDIENT_NUTRIENT_FIELDS:
             if ing.get(f) is not None:
                 defaults[f] = _decimal(ing[f])
-        _, created = Ingredient.objects.update_or_create(
+        obj, created = Ingredient.objects.update_or_create(
             slug=slug, defaults=defaults
         )
-        _upsert(counts, created)
+        _upsert(counts, created, obj, ing)
     return counts
 
 
@@ -662,6 +826,7 @@ def _apply_menu(system, categories) -> dict:
         cat, _ = MenuCategory.objects.update_or_create(
             slug=cslug, defaults=_defaults(system, c, CATEGORY_FIELDS)
         )
+        attach_image(cat, c)
         counts["categories"] += 1
         for m in c.get("menu_items") or []:
             mslug = _slug_of(m)
@@ -682,7 +847,7 @@ def _apply_menu(system, categories) -> dict:
             item, created = MenuItem.objects.update_or_create(
                 slug=mslug, defaults=defaults
             )
-            _upsert(counts, created)
+            _upsert(counts, created, item, m)
             # Menu-item ingredients reference a reusable Ingredient by slug and
             # have no global slug themselves; key them by (menu_item, sort_order)
             # so a re-publish updates in place rather than duplicating - the same
@@ -731,20 +896,48 @@ def _apply_menu(system, categories) -> dict:
     return counts
 
 
-def apply_payload(payload: dict, *, reset: bool = False) -> dict:
+def apply_payload(payload: dict, *, reset: bool = False, images=None) -> dict:
     """Upsert a System + its content from a serialized payload into THIS database.
 
-    Matches the System by host and every child by slug. Image fields are left
-    untouched on update (never clobbers customer-uploaded images). `reset=True`
-    deletes the System's prior stories/highlights/catalog (product, service and
-    menu) first. Returns a
-    per-section created/updated summary.
+    Matches the System by host and every child by slug. `reset=True` deletes the
+    System's prior stories/highlights/catalog (product, service and menu) first.
+    Returns a per-section created/updated summary.
+
+    `images` is the optional companion archive built by `export_site --images`
+    (a `zipfile.ZipFile`, or anything with a `read_member(name)`). With one, a
+    record that has **no image yet** is given the photograph it was carrying in
+    the source database; a record that already has one keeps it. Without one,
+    every image field is left alone exactly as before - which is still what a
+    plain `pnpm publish-site` does.
+
+    The fill-don't-clobber rule is the whole safety story: a customer who
+    replaced a seeded stock photo with their own must not lose it because
+    somebody re-published a typo fix. `--reset` is the deliberate exception, and
+    it works by deleting the rows rather than by overwriting files.
+
+    ⚠ **With an archive, the file writes happen inside the transaction**, so a
+    publish carrying sixty photos holds it open for however long sixty uploads to
+    object storage take. That is a deliberate trade rather than an oversight:
+    unlike `_open_order`'s QR write - which is kept outside its transaction
+    because it holds a *contended row lock* every checkout at that branch queues
+    behind - this upserts one tenant's own content from an admin-only endpoint
+    that runs a handful of times per site, and a half-published catalog would be
+    worse than a slow one. If it ever needs to change, the shape is: upsert the
+    rows in the transaction, attach the files after it commits.
     """
     sys_data = payload.get("system") or {}
     host = (sys_data.get("host") or "").strip().lower()
     if not host:
         raise ValueError('payload["system"]["host"] is required.')
 
+    token = _ARCHIVE.set(images)
+    try:
+        return _apply(payload, sys_data, host, reset=reset)
+    finally:
+        _ARCHIVE.reset(token)
+
+
+def _apply(payload: dict, sys_data: dict, host: str, *, reset: bool) -> dict:
     with transaction.atomic():
         system, created = System.objects.get_or_create(
             host=host,
@@ -755,6 +948,10 @@ def apply_payload(payload: dict, *, reset: bool = False) -> dict:
                 setattr(system, f, sys_data[f])
         system.enabled = True
         system.save()
+        # The hero and about photographs, under their own per-field refs. Same
+        # fill-don't-clobber rule as every other image.
+        for field in ("img_hero", "img_about"):
+            attach_image(system, sys_data, key=f"{field}_file", field=field)
 
         if reset:
             _reset(system)

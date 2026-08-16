@@ -1,6 +1,5 @@
 {
-  "//": "Example brief for `python manage.py seed_site --brief <this>`. The /seed-site skill produces a filled copy per customer under seed_assets/briefs/<host>.json. Every `image` value is a filename in seed_assets/ (omit it to auto-use the placeholder-* pool). Only video_link + href are real URLs. Fill en_* fields for the English mirror; leave them out to skip.",
-
+  "//": "Example brief for `python manage.py seed_site --brief <this>`. The /seed-site skill produces a filled copy per customer under seed_assets/briefs/<host>.json. Run `manage.py fetch_seed_images --brief <this>` FIRST: it searches each record's `image_query` on Pexels (falling back to Pixabay), downloads into seed_assets/fetched/<host>/, writes the filenames back into `image`, and records each photo's credit so seed_site can store it. Write every image_query in ENGLISH and describe the SUBJECT plus a shared visual register - never the record's own name, which for a product like 'Acme Mover M1' or a dish like 'Hawaiana' searches as nothing useful. Any `image` value is a filename relative to seed_assets/ (omit it and, with no fetch, the placeholder-* pool fills in). Only video_link + href are real URLs. Fill en_* fields for the English mirror; leave them out to skip.",
   "system": {
     "host": "acme.com",
     "site_name": "Acme Robotics",
@@ -25,79 +24,177 @@
       "img_manifest": "manifest.png",
       "img_hero": "hero.jpg",
       "img_about": "about.jpg"
+    },
+    "image_queries": {
+      "img_hero": "modern robotics factory floor wide",
+      "img_about": "engineers working on a robot prototype"
     }
   },
-
   "success_stories": [
     {
       "name": "Meridian Foods cut pick time 38%",
       "short_description": "Four robots, one weekend install, payback in 11 months.",
       "description": "Meridian's Ohio DC was capped by labor availability. Acme deployed four AMRs over a weekend; within a quarter pick time fell 38% and overtime dropped to near zero.",
       "href": "https://example.com/story",
-      "image": "placeholder-1.jpg",
-      "gallery": ["placeholder-2.jpg"]
+      "gallery": [
+        "placeholder-2.jpg"
+      ],
+      "image_query": "food distribution warehouse aisle clean industrial"
     },
     {
       "name": "Coastal Parts scaled to 3 shifts",
       "short_description": "From bottleneck to 24/7 fulfillment without new hires.",
       "description": "Coastal added a night shift they couldn't staff. Acme's fleet ran the floor autonomously, unlocking 24/7 throughput on the existing headcount.",
-      "image": "placeholder-3.jpg"
+      "image_query": "night shift warehouse workers clean industrial"
     },
     {
       "name": "Northwind hit 99.7% accuracy",
       "short_description": "Mispicks down 6x in the first month.",
       "description": "Barcode-verified putaway and picking drove Northwind's order accuracy to 99.7%, slashing returns and re-ship costs.",
-      "image": "placeholder-4.jpg"
+      "image_query": "barcode scanner inventory check clean industrial"
     }
   ],
-
   "highlights": [
-    { "name": "Weekend install", "category": "Deployment", "description": "Go live in 48 hours with no floor reconfiguration.", "icon": "rocket", "size": "lg", "image": "placeholder-5.jpg" },
-    { "name": "Sub-year payback", "category": "ROI", "description": "Most sites recover the investment in under 12 months.", "icon": "trending-up", "size": "md", "image": "placeholder-6.jpg" },
-    { "name": "Fleet AI navigation", "category": "Technology", "description": "Robots re-route in real time around people and pallets.", "icon": "cpu", "size": "md", "image": "placeholder-7.jpg" },
-    { "name": "24/7 uptime", "category": "Reliability", "description": "99.9% fleet availability backed by remote monitoring.", "icon": "shield", "size": "md", "image": "placeholder-8.jpg" }
+    {
+      "name": "Weekend install",
+      "category": "Deployment",
+      "description": "Go live in 48 hours with no floor reconfiguration.",
+      "icon": "rocket",
+      "size": "lg",
+      "image_query": "technicians installing equipment clean industrial"
+    },
+    {
+      "name": "Sub-year payback",
+      "category": "ROI",
+      "description": "Most sites recover the investment in under 12 months.",
+      "icon": "trending-up",
+      "size": "md",
+      "image_query": "business charts on a laptop clean industrial"
+    },
+    {
+      "name": "Fleet AI navigation",
+      "category": "Technology",
+      "description": "Robots re-route in real time around people and pallets.",
+      "icon": "cpu",
+      "size": "md",
+      "image_query": "robot sensor lidar closeup clean industrial"
+    },
+    {
+      "name": "24/7 uptime",
+      "category": "Reliability",
+      "description": "99.9% fleet availability backed by remote monitoring.",
+      "icon": "shield",
+      "size": "md",
+      "image_query": "control room monitors clean industrial"
+    }
   ],
-
   "product_categories": [
     {
       "name": "Autonomous Robots",
       "description": "The AMR fleet that moves your goods.",
-      "image": "placeholder-1.jpg",
       "products": [
-        { "name": "Acme Mover M1", "description": "500 kg payload AMR for pallet transport.", "price": "24000", "currency": "USD", "is_featured": true, "image": "placeholder-2.jpg" },
-        { "name": "Acme Picker P2", "description": "Goods-to-person picking robot.", "price": "31000", "currency": "USD", "is_featured": true, "image": "placeholder-3.jpg" },
-        { "name": "Acme Sorter S3", "description": "High-speed parcel sortation unit.", "price": "18500", "currency": "USD", "is_featured": true, "image": "placeholder-4.jpg" }
-      ]
+        {
+          "name": "Acme Mover M1",
+          "description": "500 kg payload AMR for pallet transport.",
+          "price": "24000",
+          "currency": "USD",
+          "is_featured": true,
+          "image_query": "autonomous warehouse robot pallet clean industrial"
+        },
+        {
+          "name": "Acme Picker P2",
+          "description": "Goods-to-person picking robot.",
+          "price": "31000",
+          "currency": "USD",
+          "is_featured": true,
+          "image_query": "robotic arm picking boxes clean industrial"
+        },
+        {
+          "name": "Acme Sorter S3",
+          "description": "High-speed parcel sortation unit.",
+          "price": "18500",
+          "currency": "USD",
+          "is_featured": true,
+          "image_query": "parcel sorting conveyor clean industrial"
+        }
+      ],
+      "image_query": "warehouse robot clean industrial"
     },
     {
       "name": "Fleet Software",
       "description": "The brain that orchestrates the fleet.",
-      "image": "placeholder-5.jpg",
       "products": [
-        { "name": "Acme Orchestrator", "description": "Fleet management + WMS integration.", "price": "600", "currency": "USD", "is_featured": true, "image": "placeholder-6.jpg" },
-        { "name": "Acme Insights", "description": "Throughput analytics dashboard.", "price": "300", "currency": "USD", "is_featured": true, "image": "placeholder-7.jpg" }
-      ]
+        {
+          "name": "Acme Orchestrator",
+          "description": "Fleet management + WMS integration.",
+          "price": "600",
+          "currency": "USD",
+          "is_featured": true,
+          "image_query": "logistics software dashboard screen clean industrial"
+        },
+        {
+          "name": "Acme Insights",
+          "description": "Throughput analytics dashboard.",
+          "price": "300",
+          "currency": "USD",
+          "is_featured": true,
+          "image_query": "data analytics charts on screen clean industrial"
+        }
+      ],
+      "image_query": "software dashboard on monitors clean industrial"
     }
   ],
-
   "service_categories": [
     {
       "name": "Deployment & Onboarding",
       "description": "We install, integrate, and train your team.",
-      "image": "placeholder-8.jpg",
       "services": [
-        { "name": "Site Assessment", "description": "On-site throughput + layout audit.", "price": "2500", "currency": "USD", "modality": "in_person", "duration": 480, "is_featured": true, "image": "placeholder-1.jpg" },
-        { "name": "Fleet Installation", "description": "Turnkey weekend deployment.", "price": "9000", "currency": "USD", "modality": "in_person", "is_featured": true, "image": "placeholder-2.jpg" }
-      ]
+        {
+          "name": "Site Assessment",
+          "description": "On-site throughput + layout audit.",
+          "price": "2500",
+          "currency": "USD",
+          "modality": "in_person",
+          "duration": 480,
+          "is_featured": true,
+          "image_query": "engineer with tablet surveying warehouse clean industrial"
+        },
+        {
+          "name": "Fleet Installation",
+          "description": "Turnkey weekend deployment.",
+          "price": "9000",
+          "currency": "USD",
+          "modality": "in_person",
+          "is_featured": true,
+          "image_query": "technician assembling machinery clean industrial"
+        }
+      ],
+      "image_query": "engineers planning warehouse layout clean industrial"
     },
     {
       "name": "Support & Optimization",
       "description": "Keep the fleet running at peak.",
-      "image": "placeholder-3.jpg",
       "services": [
-        { "name": "24/7 Remote Monitoring", "description": "Proactive fleet health + incident response.", "price": "1200", "currency": "USD", "modality": "online", "is_featured": true, "image": "placeholder-4.jpg" },
-        { "name": "Quarterly Tuning", "description": "Route + throughput optimization visit.", "price": "1800", "currency": "USD", "modality": "hybrid", "is_featured": true, "image": "placeholder-5.jpg" }
-      ]
+        {
+          "name": "24/7 Remote Monitoring",
+          "description": "Proactive fleet health + incident response.",
+          "price": "1200",
+          "currency": "USD",
+          "modality": "online",
+          "is_featured": true,
+          "image_query": "operations dashboard screens clean industrial"
+        },
+        {
+          "name": "Quarterly Tuning",
+          "description": "Route + throughput optimization visit.",
+          "price": "1800",
+          "currency": "USD",
+          "modality": "hybrid",
+          "is_featured": true,
+          "image_query": "engineer adjusting robot clean industrial"
+        }
+      ],
+      "image_query": "remote support operations desk clean industrial"
     }
   ]
 }

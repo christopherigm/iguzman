@@ -164,14 +164,74 @@ content (stories, highlights, product/service catalog). It backs the **publish**
 flow that moves a locally-seeded, tested site into production:
 
 - `export_site <host>` (management command) → `serialize_system` dumps the System
-  - children to a brief-shaped JSON payload with real slugs. **Image files are
-    omitted** — every image is an `ImageField` (a file), not portable data.
+  - children to a brief-shaped JSON payload with real slugs. Each record carries
+    `image_file` — the storage-relative **name** of its image, never the bytes.
+    `--images <zip>` additionally writes those files into a companion archive.
 - `POST /api/publish-site/` (`PublishSiteView`, `BasicAuthentication` +
   `IsAdminUser`, mirroring `SystemListView`) → `apply_payload` upserts the System
-  by host and every child by slug. It **never touches image fields on update**, so
-  a customer's CMS-uploaded images survive a re-publish; `{"reset": true}` wipes
-  the System's prior content first. The view invalidates the system + catalog +
-  stories/highlights cache namespaces afterward (see the Caching Rule above).
+  by host and every child by slug. `{"reset": true}` wipes the System's prior
+  content first. The view invalidates the system + catalog + stories/highlights
+  cache namespaces afterward (see the Caching Rule above).
+
+**Images: two body shapes, one rule.** The endpoint takes plain JSON (text only —
+every image field on the target is left untouched, the historical behaviour) or
+`multipart/form-data` with a `payload` part and an `images` part (the zip from
+`export_site --images`). With an archive, `attach_image` **fills an image only
+where the target has none**; a record that already has one keeps it. That is
+what stops a customer's CMS upload being clobbered by a re-published typo fix,
+and it is why `--reset` is the only way a published image is ever replaced (it
+deletes the row rather than overwriting the file).
+
+- ⚠ **The stored file is re-named to its basename on the way in.** The source
+  path is namespaced by the *dev* tenant's id (`t/<system_id>/…`), and reusing it
+  would file the photo under whatever System happens to hold that id in
+  production. `upload_to` re-derives the right prefix from the target row.
+- **A missing archive member is skipped, not raised.** Storage is remote and a
+  row can outrun its upload; publishing 58 of 60 photos and saying so beats a 500.
+- **`_ARCHIVE` is a `ContextVar`, not a module global** — gunicorn runs `gthread`
+  workers, and two tenants publishing at the same instant would otherwise read
+  each other's zip. The failure mode is one customer's site wearing another's
+  photographs, which is the worst thing this feature could do.
+
+## Stock photography and the credit it owes
+
+`/seed-site` fills a new customer's brief from a free stock bank
+(`fetch_seed_images` → `core/services/image_banks.py`: Pexels, falling back to
+Pixabay). Both license commercially, which is what lets a seeded photo publish
+and go live rather than being a placeholder the customer must replace.
+
+- **`BasePicture.attribution` / `attribution_url`** hold the credit, on every
+  picture model in the schema in one migration. Two fields for the same reason
+  `map_attribution` / `map_attribution_url` are two: a bank's terms ask for a
+  visible credit **and** that it point back at them, so one string could only be
+  plain text or anchored at a guessed href. `System` spells out its own pair for
+  `img_hero` / `img_about` — its other images are the customer's own mark and can
+  never come from a bank.
+- ⚠ **The content licences waive attribution; the API terms do not.** Downloading
+  the same photo by hand would owe nothing. Pulling it through the API owes a
+  credit, which is why this is stored rather than discarded at seed time.
+- **A non-empty `attribution` is the marker for "still a stock photo."**
+  `core/stock_images.py` counts them into `SystemSerializer.stock_image_count`,
+  which gates the storefront footer's bank credit and drives the CMS's
+  replace-these nudge. Its model list is derived from `core.backup.MODEL_SPECS`
+  (the one registry that already states every model's ORM path to its System),
+  never hand-listed — and `core/signals.py` registers the payload-invalidating
+  receiver against every one of those models the same way.
+- **`_clear_attribution` in `core/serializers.py` drops the credit when a
+  customer uploads their own photo**, from inside `save_to_field` — the one place
+  every CMS image upload passes through. ⚠ It persists itself with its own
+  `UPDATE` because every caller saves with `update_fields=["image"]`, which would
+  silently discard an in-memory change; the symptom would be a customer's own
+  photograph still credited to a stranger. Removing an image entirely is
+  deliberately not covered: it over-credits, which is the harmless direction.
+- **Keys are local-only.** `PEXELS_API_KEY` / `PIXABAY_API_KEY` live in a
+  developer's `.env` and are deliberately **not** in `website-api-secrets` —
+  seeding never runs in the cluster, and a key in production would only invite
+  someone to wire a bank search into a view.
+
+Tests: `StockImageAttributionTests`, `SeedImageFetchTests`,
+`AttributionClearedOnUploadTests` and `PublishImageTransportTests` in
+`core/tests.py`.
 
 Driven by `pnpm publish-site <host>` (`cli/website/website.sh publish`). `seed_site`
 imports `SYSTEM_TEXT_FIELDS` from `site_payload` so seeding and publishing agree

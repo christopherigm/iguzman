@@ -157,8 +157,9 @@ class BasePicture(Common):
     """
     Abstract base for all picture models.
 
-    Provides display metadata (name, description, href) and CSS-layout hints
-    (fit, background_color). Concrete size variants are produced by
+    Provides display metadata (name, description, href), the credit owed for a
+    stock ``image`` (attribution), and CSS-layout hints (fit,
+    background_color). Concrete size variants are produced by
     ``picture_mixin()``.
     """
 
@@ -169,6 +170,19 @@ class BasePicture(Common):
     short_description = models.TextField(null=True, blank=True)
     en_short_description = models.TextField(null=True, blank=True)
     href = models.URLField(max_length=255, null=True, blank=True)
+    # Who this row's `image` is owed to, when it came from a stock bank rather
+    # than the customer's camera. `seed_site` fills the pair from the fetcher's
+    # credits sidecar; a customer who uploads their own photo in the CMS clears
+    # them, which is what makes a NON-EMPTY `attribution` the marker for "this
+    # is still a stock placeholder" (see `System.stock_image_count`).
+    #
+    # Two fields rather than one, for the reason `map_attribution` /
+    # `map_attribution_url` are two: a bank's terms ask for a visible credit AND
+    # (separately) that it point back at them, so a single string could only be
+    # rendered as plain text or anchored at a guessed href. Blank url = the
+    # credit is plain text.
+    attribution = models.CharField(max_length=255, blank=True, default="")
+    attribution_url = models.URLField(max_length=500, blank=True, default="")
     fit = models.CharField(
         max_length=16,
         choices=FIT_CHOICES,
@@ -624,6 +638,14 @@ class System(Common):
     img_brandmark = models.ImageField(null=True, blank=True, upload_to=picture)
 
     img_hero = models.ImageField(null=True, blank=True, upload_to=picture)
+    # The credit owed for `img_hero`, in the shape `BasePicture` carries for
+    # every other image in the schema. System's images are plain ImageFields
+    # rather than a BasePicture row, so the pair has to be spelled out here -
+    # and only for the two that are ever a photograph. A logo, favicon,
+    # brandmark or manifest icon is the customer's own mark by definition and
+    # can never come from a stock bank, so it is owed no credit.
+    img_hero_attribution = models.CharField(max_length=255, blank=True, default="")
+    img_hero_attribution_url = models.URLField(max_length=500, blank=True, default="")
     video_link = models.URLField(max_length=255, null=True, blank=True)
     slogan = models.CharField(max_length=255, null=True, blank=True, default="Company slogan")
     primary_color = models.CharField(max_length=16, null=False, blank=False, default="#2196f3")
@@ -657,6 +679,9 @@ class System(Common):
     vision = models.TextField(null=True, blank=True)
     en_vision = models.TextField(null=True, blank=True)
     img_about = models.ImageField(null=True, blank=True, upload_to=picture)
+    # The credit owed for `img_about` - see `img_hero_attribution` above.
+    img_about_attribution = models.CharField(max_length=255, blank=True, default="")
+    img_about_attribution_url = models.URLField(max_length=500, blank=True, default="")
 
     highlights_bg = models.CharField(
         max_length=512,

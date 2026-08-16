@@ -223,6 +223,52 @@ export async function Footer({ logo, system }: Props) {
               name: system?.site_name ?? "",
             })}
           </Typography>
+          {/*
+            The stock-bank credit. Rendered only while this site still shows at
+            least one bank photo, and it disappears on its own once the customer
+            has replaced them all - `stock_image_count` is what knows.
+
+            It is here, once, rather than over each image: Pexels' API terms ask
+            for "a prominent link to Pexels", which a footer line satisfies,
+            while a chip on every card would stamp forty catalog tiles with text
+            the customer did not write. The per-image credit is still stored
+            (`attribution` on every record) - this is a rendering decision, not a
+            data one, so a per-image caption can be added later with no
+            migration.
+          */}
+          {(system?.stock_image_count ?? 0) > 0 && (
+            <Typography
+              as="p"
+              variant="caption"
+              textAlign="center"
+              color="var(--muted-foreground)"
+              marginTop={8}
+              styles={{ lineHeight: 1.6 }}
+            >
+              {t.rich("stockPhotos", {
+                pexels: (chunks) => (
+                  <a
+                    href="https://www.pexels.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="footer__link"
+                  >
+                    {chunks}
+                  </a>
+                ),
+                pixabay: (chunks) => (
+                  <a
+                    href="https://pixabay.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="footer__link"
+                  >
+                    {chunks}
+                  </a>
+                ),
+              })}
+            </Typography>
+          )}
         </Box>
       </Container>
     </footer>

@@ -201,6 +201,20 @@ export interface System extends KindLabelOverrides {
    * way back into the site. The landing band does its own upcoming/past split.
    */
   event_count: number;
+  /**
+   * How many images on this site still came from a stock bank (Pexels /
+   * Pixabay) rather than the customer's own camera - i.e. how many records
+   * carry a non-empty `attribution`.
+   *
+   * It gates the footer's bank credit. Both banks license their content for
+   * commercial use with no credit required, but their **API terms** do require
+   * one, and `/seed-site` pulls through the API - so the site owes a visible
+   * link for exactly as long as this is above zero, and owes nothing the moment
+   * the customer has replaced the last one. Nothing else on the page knows when
+   * that flips, which is why it is a count on the System payload rather than
+   * something each surface works out for itself.
+   */
+  stock_image_count: number;
 }
 
 /**

@@ -1,0 +1,6 @@
+# Stock photos pulled per customer by `manage.py fetch_seed_images`, plus the
+# credits.json that records who each one is owed to. Local inputs to a seed, not
+# source: they are re-fetchable from the brief's own `image_query` fields, and a
+# whole catalog of JPEGs has no business in git history.
+*
+!.gitignore

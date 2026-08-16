@@ -35,7 +35,11 @@ def _invalidate_event_cache(pk):
 class CompanyHighlightItemInline(admin.TabularInline):
     model = CompanyHighlightItem
     extra = 0
-    fields = ("name", "en_name", "description", "icon", "image", "href", "sort_order", "enabled")
+    # `attribution` is the credit owed when this row's image came from a stock
+    # bank (see BasePicture). Shown here because a gallery row is only editable
+    # through this inline - the parent admins pick both columns up automatically.
+    fields = ("name", "en_name", "description", "icon", "image", "attribution",
+              "attribution_url", "href", "sort_order", "enabled")
     readonly_fields = ("created", "modified", "version")
 
 
@@ -83,7 +87,10 @@ class CompanyHighlightAdmin(admin.ModelAdmin):
 class SuccessStoryImageInline(admin.TabularInline):
     model = SuccessStoryImage
     extra = 0
-    fields = ("image", "name", "sort_order", "enabled")
+    # `attribution` is the credit owed when this row's image came from a stock
+    # bank (see BasePicture). Shown here because a gallery row is only editable
+    # through this inline - the parent admins pick both columns up automatically.
+    fields = ("image", "attribution", "attribution_url", "name", "sort_order", "enabled")
     readonly_fields = ("created", "modified")
 
 
@@ -128,7 +135,10 @@ class SuccessStoryAdmin(admin.ModelAdmin):
 class EventImageInline(admin.TabularInline):
     model = EventImage
     extra = 0
-    fields = ("image", "name", "sort_order", "enabled")
+    # `attribution` is the credit owed when this row's image came from a stock
+    # bank (see BasePicture). Shown here because a gallery row is only editable
+    # through this inline - the parent admins pick both columns up automatically.
+    fields = ("image", "attribution", "attribution_url", "name", "sort_order", "enabled")
     readonly_fields = ("created", "modified")
 
 

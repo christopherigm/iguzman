@@ -3,18 +3,26 @@
 #
 # Three subcommands (formerly scripts/publish-site.mjs + scripts/sync-website-hosts.mjs):
 #
-#   pnpm publish-site <host> [--reset] [-y]      -> website.sh publish ...
+#   pnpm publish-site <host> [--reset] [--images] [-y]  -> website.sh publish ...
 #   pnpm sync-website-hosts [-y]                 -> website.sh sync
 #   pnpm pull-site [host] [-y]                    -> website.sh pull ...
 #
 # publish  Serializes a locally-seeded site's System + success stories +
 #          highlights + product/service/menu catalog out of the LOCAL database (via
 #          `manage.py export_site`), then POSTs that payload to the production
-#          `/api/publish-site/` endpoint, which upserts it. Image files are NOT
-#          transported - the customer uploads real images in the production CMS;
-#          existing images are never clobbered on re-publish. Pass `--reset` for
+#          `/api/publish-site/` endpoint, which upserts it. Pass `--reset` for
 #          an exact replace of the System's prior content. Because it writes to
 #          production, it confirms before POSTing (skip with -y).
+#
+#          By default the payload is text only and every image field on
+#          production is left untouched. Pass `--images` to send the photos too,
+#          as a zip riding alongside the JSON: a record that has no image yet is
+#          given the one it had locally, and a record that already has one keeps
+#          it - so a customer's own CMS upload is never clobbered. That is what
+#          makes a /seed-site run using free-bank photography (Pexels/Pixabay,
+#          both commercially licensed) publishable as the site's real imagery
+#          instead of something the customer has to replace by hand. The credit
+#          each photo owes travels in the text payload either way.
 #
 # sync     Fetches all enabled System hosts from the website-api and rewrites the
 #          ingress block of apps/website/helm/values.yaml (so nginx routes every
@@ -95,7 +103,7 @@ setup_strings() {
     CB_MORE_BELOW="más abajo"
     RB_PROMPT="Usa ↑↓ para navegar · Enter para seleccionar"
     USAGE_TITLE="Uso:"
-    USAGE_LINE_PUBLISH="pnpm publish-site <host> [--reset] [-y]   (website.sh publish ...)"
+    USAGE_LINE_PUBLISH="pnpm publish-site <host> [--reset] [--images] [-y]   (website.sh publish ...)"
     USAGE_LINE_SYNC="pnpm sync-website-hosts [-y]              (website.sh sync)"
     USAGE_LINE_PULL="pnpm pull-site [host] [-y]                (website.sh pull ...)"
     EXPORTING="Exportando '%s' desde la base de datos local ..."
@@ -108,6 +116,7 @@ setup_strings() {
     MSG_PUBLISHING="Publicando '%s' en %s"
     SUMMARY_COUNTS="%s historias, %s destacados, %s cat. de productos, %s cat. de servicios, %s cat. de menú."
     MSG_RESET_NOTE="--reset: reemplaza el contenido existente de este Sistema"
+    MSG_IMAGES_NOTE="--images: envia tambien las fotos (solo llena campos vacios; nunca reemplaza las del cliente)"
     CONFIRM_PUBLISH="Escribe '%s' para publicar: "
     MSG_ABORTED="Cancelado."
     ERR_REACH_API="Error: no se pudo conectar con la API"
@@ -158,7 +167,7 @@ setup_strings() {
     CB_MORE_BELOW="more below"
     RB_PROMPT="Use ↑↓ to navigate · Enter to select"
     USAGE_TITLE="Usage:"
-    USAGE_LINE_PUBLISH="pnpm publish-site <host> [--reset] [-y]   (website.sh publish ...)"
+    USAGE_LINE_PUBLISH="pnpm publish-site <host> [--reset] [--images] [-y]   (website.sh publish ...)"
     USAGE_LINE_SYNC="pnpm sync-website-hosts [-y]              (website.sh sync)"
     USAGE_LINE_PULL="pnpm pull-site [host] [-y]                (website.sh pull ...)"
     EXPORTING="Exporting '%s' from the local database ..."
@@ -171,6 +180,7 @@ setup_strings() {
     MSG_PUBLISHING="Publishing '%s' to %s"
     SUMMARY_COUNTS="%s stories, %s highlights, %s product cat., %s service cat., %s menu cat."
     MSG_RESET_NOTE="--reset: replaces this System's existing content"
+    MSG_IMAGES_NOTE="--images: sends the photos too (fills empty fields only; never replaces the customer's own)"
     CONFIRM_PUBLISH="Type '%s' to publish: "
     MSG_ABORTED="Aborted."
     ERR_REACH_API="Error: failed to reach API"
@@ -484,10 +494,11 @@ resolve_creds() {
 # ── publish ───────────────────────────────────────────────────────────────────
 
 cmd_publish() {
-  local host="" reset=0 a
+  local host="" reset=0 images=0 a
   for a in "$@"; do
     case "$a" in
       --reset) reset=1 ;;
+      --images) images=1 ;;
       -*) ;;                                   # unknown flags ignored (as before)
       *) [[ -z "$host" ]] && host="$(printf '%s' "$a" | tr '[:upper:]' '[:lower:]')" ;;
     esac
@@ -497,12 +508,21 @@ cmd_publish() {
   fi
 
   # 1. Build the payload from the LOCAL database.
-  local python="${API_DIR}/venv/bin/python" payload="" errfile
+  local python="${API_DIR}/venv/bin/python" payload="" errfile imgzip=""
   if [[ -x "$python" ]]; then
     info "\n  $(printf "${EXPORTING}" "$host")"
     errfile="$(mktemp)"
-    if payload="$(cd "$API_DIR" && "$python" manage.py export_site "$host" 2>"$errfile")"; then
-      rm -f "$errfile"
+    # With --images, export_site also writes every referenced photo into a zip
+    # that rides alongside the JSON as a multipart part. Without it the publish
+    # is text-only and every image field on production is left untouched.
+    local export_args=("$host")
+    if [[ "$images" == "1" ]]; then
+      imgzip="${API_DIR}/seed_assets/exports/${host}-images.zip"
+      mkdir -p "$(dirname "$imgzip")"
+      export_args+=(--images "$imgzip")
+    fi
+    if payload="$(cd "$API_DIR" && "$python" manage.py export_site "${export_args[@]}" 2>"$errfile")"; then
+      cat "$errfile" >&2; rm -f "$errfile"
     else
       local msg; msg="$(cat "$errfile")"; rm -f "$errfile"
       err "\n  ${ERR_EXPORT_FAILED}"; printf '%s\n\n' "$msg" >&2; exit 1
@@ -543,6 +563,7 @@ cmd_publish() {
   info "\n  $(printf "${MSG_PUBLISHING}" "$host" "$API_URL")"
   info "    $(printf "${SUMMARY_COUNTS}" "$stories" "$highlights" "$prodcat" "$servcat" "$menucat")"
   [[ "$reset" == "1" ]] && info "    ${MSG_RESET_NOTE}"
+  [[ "$images" == "1" ]] && info "    ${MSG_IMAGES_NOTE}"
 
   if [[ "$AUTO_YES" != "1" ]]; then
     if ! confirm_word "${CONFIRM_PUBLISH}"; then info "\n  ${MSG_ABORTED}\n"; exit 0; fi
@@ -550,7 +571,20 @@ cmd_publish() {
 
   # 4. POST to the production endpoint.
   local resp code body detail
-  if ! resp="$(printf '%s' "$payload" | curl -sS -w $'\n%{http_code}' \
+  if [[ -n "$imgzip" && -f "$imgzip" ]]; then
+    # Multipart: the payload as a file part (a large catalog does not belong in
+    # a form field) plus the image archive. The endpoint fills only image fields
+    # that are still empty on production, so a customer's own uploads survive.
+    local payfile; payfile="$(mktemp)"
+    printf '%s' "$payload" > "$payfile"
+    resp="$(curl -sS -w $'\n%{http_code}' \
+      -X POST \
+      -u "${ADMIN_USER}:${ADMIN_PASS}" \
+      -F "payload=@${payfile};type=application/json" \
+      -F "images=@${imgzip};type=application/zip" \
+      "${API_URL}/api/publish-site/")" || { rm -f "$payfile"; err "\n  ${ERR_REACH_API}\n"; exit 1; }
+    rm -f "$payfile"
+  elif ! resp="$(printf '%s' "$payload" | curl -sS -w $'\n%{http_code}' \
       -X POST \
       -u "${ADMIN_USER}:${ADMIN_PASS}" \
       -H 'Content-Type: application/json' \

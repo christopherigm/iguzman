@@ -41,7 +41,8 @@ const NEWSITE_CONFIG =
 const NEWSITE_SEED =
   "/seed-site acme.com          # run in a NEW Claude session\n" +
   "# or directly, from apps/website-api:\n" +
-  "python manage.py seed_site --brief seed_assets/briefs/acme.com.json --reset";
+  "python manage.py fetch_seed_images --brief seed_assets/briefs/acme.com.json\n" +
+  "python manage.py seed_site        --brief seed_assets/briefs/acme.com.json --reset";
 
 // ── Verify locally ────────────────────────────────────────────────────────────
 
@@ -55,8 +56,9 @@ const NEWSITE_VERIFY =
 
 const NEWSITE_PUBLISH =
   "# Redeploy website-api FIRST (it ships the /api/publish-site/ endpoint).\n" +
-  "pnpm publish-site acme.com          # upsert the prod System + content\n" +
-  "pnpm publish-site acme.com --reset  # exact replace of prior content";
+  "pnpm publish-site acme.com           # upsert the prod System + content\n" +
+  "pnpm publish-site acme.com --images  # ...and the photos, into empty fields only\n" +
+  "pnpm publish-site acme.com --reset   # exact replace (also replaces images)";
 
 const NEWSITE_DEPLOY =
   "pnpm sync-website-hosts    # ingress + API CORS pick up the new System.host\n" +

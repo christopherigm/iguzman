@@ -16,6 +16,7 @@ from django.dispatch import receiver
 
 from .cache import invalidate_pattern, invalidate_system_payload
 from .models import Branch, BranchHours, Brand, Event, SiteBackup, System
+from .stock_images import attributed_specs
 from .storage import forget_system
 
 
@@ -73,6 +74,36 @@ def invalidate_system_on_event_change(sender, instance, **kwargs):
     write rather than as a stale cache.
     """
     invalidate_system_payload()
+
+
+def _invalidate_system_on_attribution_change(sender, instance, **kwargs):
+    """``stock_image_count`` rides in the cached System payload, and it is what
+    gates the footer's stock-bank credit.
+
+    Registered below against **every** model that carries an ``attribution``
+    column rather than as a hand-written receiver per model, for the same reason
+    ``core/stock_images.py`` derives its model list: there are a dozen picture
+    models and a hand-listed set here would drift from the one in that module,
+    leaving the footer crediting a bank whose last photo was replaced an hour
+    ago - or, worse, dropping the credit while a photo is still on the page.
+
+    The three Buyable models are already covered by ``catalog/signals.py``; the
+    duplicate delete is free and this is what covers the other nine.
+    """
+    invalidate_system_payload()
+
+
+for _spec in attributed_specs():
+    post_save.connect(
+        _invalidate_system_on_attribution_change,
+        sender=_spec.model,
+        dispatch_uid=f"stock_images:{_spec.label}",
+    )
+    post_delete.connect(
+        _invalidate_system_on_attribution_change,
+        sender=_spec.model,
+        dispatch_uid=f"stock_images:{_spec.label}:delete",
+    )
 
 
 @receiver(post_save, sender=System)

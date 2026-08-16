@@ -1147,6 +1147,31 @@ landing, which is exactly what the preview shows.
   Keep that variable: it is what makes the disc read as a hole through the video
   onto the page, in either theme, without a reload.
 
+## The footer's stock-photo credit
+
+`/seed-site` fills a new site's images from a free stock bank (Pexels, falling
+back to Pixabay), and those photos can now go live — both banks license
+commercially, so `pnpm publish-site --images` carries them into production
+rather than leaving the customer forty uploads to do. The credit that makes that
+legal is one line in the footer's bottom bar (`components/footer.tsx`).
+
+- **Gated on `system.stock_image_count`**, a count on the System payload of how
+  many records still carry a non-empty `attribution`. It appears when the site
+  has at least one bank photo and **disappears by itself** once the customer has
+  replaced the last one — the API clears a record's credit whenever a new image
+  is uploaded over it. Nothing else on the page knows when that flips, which is
+  why it is a payload count rather than something each surface derives.
+- ⚠ **The banks' _content_ licences waive attribution; their _API_ terms require
+  it.** `/seed-site` pulls through the API, so the credit is owed even though a
+  hand-downloaded copy of the same photo would owe nothing. Don't "simplify" it
+  away on the strength of the licence page.
+- **One footer line, not a chip on every image** — Pexels asks for "a prominent
+  link to Pexels", which this satisfies, while a badge on each card would stamp
+  forty catalog tiles with text the customer never wrote. The per-image credit
+  **is** stored (`attribution` / `attribution_url` on every record, via
+  `BasePicture`), so a caption under a detail-page gallery can be added later
+  with no migration — this is a rendering decision, not a data one.
+
 ## The footer's cradled brandmark
 
 `System.hero_text_frame` ("Framed heading") does one more thing than frame a

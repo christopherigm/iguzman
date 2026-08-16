@@ -134,6 +134,8 @@ class Command(BaseCommand):
         if not host:
             raise CommandError('brief["system"]["host"] is required.')
 
+        self._credits = self._load_credits(host)
+
         # A short token derived from the host, used to namespace globally-unique
         # slugs so two seeded sites never collide (product/service/category/story
         # slugs are unique across the whole DB).
@@ -199,13 +201,63 @@ class Command(BaseCommand):
             return next(self._pool)
         return None
 
+    def _load_credits(self, host: str) -> dict:
+        """The credits sidecar `fetch_seed_images` wrote for this host, if any.
+
+        Keyed by the same brief-relative path the command wrote into each
+        record's `image` field, so `_attach` can look a credit up from the one
+        thing it already has. Absent (nobody ran the fetcher) it is empty and
+        every image is an uncredited local placeholder, which is correct - the
+        `placeholder-*` pool is ours and owes nobody.
+        """
+        path = self.assets_dir / "fetched" / host / "credits.json"
+        if not path.is_file():
+            return {}
+        try:
+            return json.loads(path.read_text())
+        except json.JSONDecodeError:
+            self.stderr.write(
+                self.style.WARNING(f"{path} is invalid JSON; images will be uncredited.")
+            )
+            return {}
+
     def _attach(self, instance, field_name: str, filename: str | None) -> None:
-        """Copy an asset into media and link it to `instance.<field_name>`."""
+        """Copy an asset into media, link it, and carry over any credit it owes.
+
+        The credit travels with the file rather than being a per-record brief
+        field, because it is a property of the photograph and not of the dish:
+        the `/seed-site` skill writes an `image_query`, and who the result turns
+        out to belong to is only known after the search has run.
+        """
         path = self._resolve_asset(filename)
         if path is None:
             return
         with path.open("rb") as fh:
             getattr(instance, field_name).save(path.name, File(fh), save=False)
+        # Only credit when the named file is the one actually used. A brief
+        # naming a file that has since been deleted falls back to the generic
+        # pool, and crediting a photographer for our own placeholder would put a
+        # false credit on the page and inflate `stock_image_count`.
+        if filename and path == (self.assets_dir / filename):
+            self._credit(instance, field_name, filename)
+
+    def _credit(self, instance, field_name: str, filename: str | None) -> None:
+        """Copy the bank credit for `filename` onto the instance, if it has one.
+
+        `image` is the BasePicture field, whose columns are plain `attribution` /
+        `attribution_url`; System's two photographic images namespace theirs
+        (`img_hero_attribution`). A field with no columns at all - System's logo,
+        favicon, brandmark and manifest icons - is silently skipped, since the
+        customer's own mark is never owed a credit.
+        """
+        credit = self._credits.get(filename or "")
+        if not credit:
+            return
+        base = "attribution" if field_name == "image" else f"{field_name}_attribution"
+        if not hasattr(instance, base):
+            return
+        setattr(instance, base, credit.get("attribution") or "")
+        setattr(instance, f"{base}_url", credit.get("attribution_url") or "")
 
     def _href(self, explicit: str | None) -> str | None:
         if explicit:

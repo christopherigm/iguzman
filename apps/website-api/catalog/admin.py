@@ -19,7 +19,9 @@ from .models import (
 class ProductImageInline(admin.TabularInline):
     model = ProductImage
     extra = 0
-    fields = ('image', 'name', 'sort_order', 'enabled')
+    # The credit owed when this image came from a stock bank (BasePicture);
+    # a gallery row is only editable through this inline.
+    fields = ('image', 'attribution', 'attribution_url', 'name', 'sort_order', 'enabled')
     readonly_fields = ('created', 'modified')
 
 
@@ -27,7 +29,9 @@ class ProductImageInline(admin.TabularInline):
 class ServiceImageInline(admin.TabularInline):
     model = ServiceImage
     extra = 0
-    fields = ('image', 'name', 'sort_order', 'enabled')
+    # The credit owed when this image came from a stock bank (BasePicture);
+    # a gallery row is only editable through this inline.
+    fields = ('image', 'attribution', 'attribution_url', 'name', 'sort_order', 'enabled')
     readonly_fields = ('created', 'modified')
 
 
@@ -224,7 +228,9 @@ class ServiceAdmin(admin.ModelAdmin):
 class MenuItemImageInline(admin.TabularInline):
     model = MenuItemImage
     extra = 0
-    fields = ('image', 'name', 'sort_order', 'enabled')
+    # The credit owed when this image came from a stock bank (BasePicture);
+    # a gallery row is only editable through this inline.
+    fields = ('image', 'attribution', 'attribution_url', 'name', 'sort_order', 'enabled')
     readonly_fields = ('created', 'modified')
 
 

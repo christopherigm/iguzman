@@ -343,6 +343,17 @@ LLM_REQUEST_TIMEOUT = float(os.environ.get('LLM_REQUEST_TIMEOUT', '20'))
 SCRAPER_BASE_URL = os.environ.get('SCRAPER_BASE_URL', 'https://scraper.iguzman.com.mx')
 SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
 
+# Stock image banks
+# -----------------
+# Read by `core.services.image_banks`, whose only caller is the
+# `fetch_seed_images` management command - the seeding step that fills a new
+# customer's brief with real photography. Nothing in the request path touches
+# these, so they belong in a developer's `.env` and are deliberately NOT in the
+# cluster's `website-api-secrets`: seeding happens locally, and a key present in
+# production would only invite someone to wire a bank search into a view.
+PEXELS_API_KEY = os.environ.get('PEXELS_API_KEY', '')
+PIXABAY_API_KEY = os.environ.get('PIXABAY_API_KEY', '')
+
 # Stripe
 # ------
 # There is deliberately no STRIPE_SECRET_KEY here: this is a multi-tenant API and
