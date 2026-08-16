@@ -9,6 +9,7 @@ import { SectionHero } from "@/components/section-hero";
 import { CategoryCard } from "@/components/catalog-categories";
 import { BuyableCard } from "@/components/buyable-card";
 import { MenuCategoryNav } from "@/components/menu-category-nav";
+import { MenuCategoryNavMobile } from "@/components/menu-category-nav-mobile";
 import { ScrollToSectionLink } from "@/components/scroll-to-section-link";
 import {
   getMenuCategories,
@@ -80,6 +81,14 @@ export async function MenuListing({ locale }: MenuListingProps) {
   /** The `id` the category rail scrolls to - the section's own heading, so the
    *  reader lands on the title rather than mid-grid. */
   const sectionHeadingId = (key: string) => `menu-section-${key}`;
+
+  /** The entries both category indexes list - the sticky rail from `md` up and
+   *  the floating button below it. One array, so the two cannot come to offer
+   *  different sections. */
+  const navItems = sections.map((section) => ({
+    targetId: sectionHeadingId(section.key),
+    label: section.heading,
+  }));
 
   /** Which categories have a section on this page - i.e. which category cards
    *  can scroll to their dishes instead of leading to the category's own page.
@@ -201,10 +210,7 @@ export async function MenuListing({ locale }: MenuListingProps) {
               // The rail's lead spacer drops the same top padding the first
               // section drops, so both columns start level either way.
               flushTop={!hasCategories}
-              items={sections.map((section) => ({
-                targetId: sectionHeadingId(section.key),
-                label: section.heading,
-              }))}
+              items={navItems}
             />
           </Grid>
           <Grid size={{ xs: 12, md: 9 }}>
@@ -252,6 +258,18 @@ export async function MenuListing({ locale }: MenuListingProps) {
             ))}
           </Grid>
         </Grid>
+        {/* The same index on a phone, where the rail's cell is hidden: a pill
+         *  fixed above the bottom edge, raising the same entries in a card. It
+         *  is `position: fixed` and so belongs to no grid cell - it is rendered
+         *  here only because this is the page it addresses. The brandmark is
+         *  ungated, unlike the rail's cradled one: this is the site's icon on
+         *  its own button, not a piece of the "Framed heading" design. */}
+        <MenuCategoryNavMobile
+          title={t("categoryNav")}
+          label={heading}
+          brandmark={system?.img_brandmark ?? null}
+          items={navItems}
+        />
         {items.length === 0 && (
           <Typography variant="none" className="section-subtitle">
             {menuT("empty")}

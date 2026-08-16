@@ -4,6 +4,10 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { BrandmarkCradle } from "@repo/ui/hero";
 import { MenuCategoryNavItems } from "./menu-category-nav-items";
 import type { MenuCategoryNavItem } from "./menu-category-nav-items";
+import {
+  MENU_NAV_BACKGROUND,
+  MENU_NAV_FOREGROUND,
+} from "./menu-category-nav-colors";
 import "./menu-category-nav.css";
 
 export type { MenuCategoryNavItem };
@@ -50,13 +54,6 @@ const CATALOG_SECTION_PADDING_TOP = 48;
 const CATALOG_SECTION_PADDING_BOTTOM = 56;
 
 /**
- * The rail's own surface, which is also what the cradle's shoulders enclose -
- * one constant so the swell above the edge cannot end up a different colour
- * from the card it rises out of.
- */
-const NAV_BACKGROUND = "var(--accent, #06b6d4)";
-
-/**
  * The cradle's arch, as multiples of the badge - `BrandmarkCradle`'s `height`
  * and `width`, whose defaults are 0.7 and 2.1.
  *
@@ -75,7 +72,7 @@ const NAV_BACKGROUND = "var(--accent, #06b6d4)";
  * of the two is ~1.5 badges at the widest viewport, where the badge is at its
  * 50px ceiling and the heading block is at its own.
  */
-const CRADLE_ARCH_HEIGHT = 1.3;
+const CRADLE_ARCH_HEIGHT = 1;
 const CRADLE_ARCH_WIDTH = 2.8;
 
 /**
@@ -91,7 +88,7 @@ const CRADLE_ARCH_WIDTH = 2.8;
  * ⚠ Raising it does **not** move the mark up - it sinks it. The ring's top is
  * the arch's crest, so a wider ring means a lower mark inside the same arch.
  */
-const CRADLE_ENCLOSE = 0.14;
+const CRADLE_ENCLOSE = 0.05;
 
 /**
  * The menu's category rail - the list of category names beside the item grids,
@@ -113,8 +110,11 @@ const CRADLE_ENCLOSE = 0.14;
  * says, and it was the one thing between the cradled brandmark and the list.
  *
  * **Rendered from `md` up only.** Its `Grid` cell carries the `hidden` prop, so
- * there is no media query here; a phone-sized index is a different control and
- * is not built yet.
+ * there is no media query here. Below that the index is
+ * `MenuCategoryNavMobile` - a floating button raising the same list, because a
+ * phone has no column beside the grids to give a rail. ⚠ The two boundaries
+ * (this cell's `hidden={{ xs: true, sm: true }}` and that file's one media
+ * query) are the same breakpoint on purpose - keep them in step.
  */
 export function MenuCategoryNav({
   title,
@@ -193,8 +193,8 @@ export function MenuCategoryNav({
               // enclose take the card's own background and the swell reads as one
               // shape; the disc is a page-background plate, as in the footer, so
               // it follows the theme.
-              color={NAV_BACKGROUND}
-              fill={NAV_BACKGROUND}
+              color={MENU_NAV_BACKGROUND}
+              fill={MENU_NAV_BACKGROUND}
               circleBackground="var(--page-background, var(--background))"
               // ⚠ No straight flanks. They are the parent's top border, and this
               // parent is a `Card` with rounded top corners: a square rule drawn
@@ -211,8 +211,8 @@ export function MenuCategoryNav({
             />
           )}
           <Card
-            backgroundColor={NAV_BACKGROUND}
-            color="var(--accent-foreground, #ffffff)"
+            backgroundColor={MENU_NAV_BACKGROUND}
+            color={MENU_NAV_FOREGROUND}
             border="none"
             elevation={6}
             padding={12}

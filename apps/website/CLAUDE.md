@@ -392,8 +392,8 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   beside the first grid, pinned from there on) and stops travelling when its grid
   column ends, so the rail cannot outlive the sections it addresses. Its cell
   carries `hidden={{ xs: true, sm: true }}`, so it is `md`-and-up only and no
-  media query decides that - a phone-sized index is a different control and isn't
-  built yet. Clicking an entry goes through `scrollToElement` (never a bare
+  media query decides that - below `md` the index is the floating control in the
+  next bullet. Clicking an entry goes through `scrollToElement` (never a bare
   `scrollIntoView`) at the section heading's own `id`; the heading carries the
   `scroll-margin-top` that clears the navbar. The rail claims 3 of 12 columns
   from `md`, which is why the item cards go three-across there (`md: 4`).
@@ -417,6 +417,33 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   without it the rail's last resting position sat that far below the grid it
   addresses. Those two numbers (48 / 56) are the only ones copied from
   `catalog-categories.css` - keep them in step.
+- **Below `md` the index is a floating button, not a shrunken rail**
+  (`components/menu-category-nav-mobile.tsx`): a pill fixed just above the
+  bottom edge - the tenant's `img_brandmark` and the page's own "Menu" heading -
+  which raises a card of the same entries out of itself. On a phone there is no
+  column to give a rail, and a full-width bar of category names would cost more
+  of the screen than the dishes it exists to reach, so the list is on screen only
+  while it is being used. ⚠ **The two controls are one feature split at one
+  breakpoint**: the rail's cell is `hidden={{ xs: true, sm: true }}` and this one
+  is taken out from `md` up by the single `@media (--md)` in its CSS - move one
+  without the other and the page has two indexes or none. It is a media query
+  here (and a prop there) only because a `position: fixed` control belongs to no
+  grid cell. **The entries are the rail's own `MenuCategoryNavItems`** at
+  `size="lg"` for a thumb - the same one-prop difference POS makes to the
+  ingredient picker - so a jump behaves identically on both and the card closes
+  itself on the way, being over the content just asked for.
+  ⚠ **The card is never unmounted**: it is folded down into the button with
+  `visibility`/`opacity`/`transform`, so it animates in _and_ out, and
+  `visibility` is what takes the entries out of the tab order while they are
+  invisible. ⚠ **The container takes `pointer-events: none` and its two children
+  take them back** - it still covers the closed card's footprint, and a
+  transparent box swallows taps exactly as an opaque one does. Dismissal is an
+  outside press or `Escape`, deliberately with **no scrim**: this is a jump list,
+  not a dialog. Its brandmark is **not** gated on `hero_text_frame`, unlike the
+  rail's cradled one - a cradle is part of the frame's design language, a button
+  icon is just the site's mark. Both controls read their accent and foreground
+  from `menu-category-nav-colors.ts`, which is plain data importing nothing so
+  that the client control and the server rail can share it.
 - **The rail wears the tenant's cradled brandmark**, on the same "Framed
   heading" switch (`hero_text_frame` + `img_brandmark`) that frames a hero
   heading and cradles the footer's edge - the shared `BrandmarkCradle`, so the

@@ -15,10 +15,25 @@ export interface MenuCategoryNavItem {
 
 interface MenuCategoryNavItemsProps {
   items: MenuCategoryNavItem[];
+  /**
+   * Called once an entry has scrolled its section into view. The floating phone
+   * control closes its card on it; the rail passes nothing, since it is on
+   * screen the whole time and has nothing to close.
+   */
+  onSelect?: () => void;
+  /**
+   * `"lg"` grows the hit targets for a thumb - the same one-prop difference the
+   * POS till makes to the ingredient picker, and for the same reason: the two
+   * lists must not become two implementations of one control. Defaults to
+   * `"sm"`, the rail's.
+   */
+  size?: "sm" | "lg";
 }
 
 /**
- * The rail's list of category buttons - the **only** part of the rail that
+ * The list of category buttons shared by both menu indexes - the sticky rail
+ * (`menu-category-nav.tsx`) and the floating phone control
+ * (`menu-category-nav-mobile.tsx`) - and the **only** part of the rail that
  * needs the browser, split out so the card around it (and the brandmark cradle
  * on its edge) can stay server-rendered. ⚠ That split is not cosmetic:
  * `@repo/ui/hero`, which the cradle comes from, imports `HeroVideo` at module
@@ -26,7 +41,13 @@ interface MenuCategoryNavItemsProps {
  * `"use client"` module would drag `react-player` into this page's browser
  * bundle for the sake of one `<svg>`.
  */
-export function MenuCategoryNavItems({ items }: MenuCategoryNavItemsProps) {
+export function MenuCategoryNavItems({
+  items,
+  onSelect,
+  size = "sm",
+}: MenuCategoryNavItemsProps) {
+  const large = size === "lg";
+
   return (
     <Box flexDirection="column" gap={2}>
       {items.map((item) => (
@@ -35,10 +56,13 @@ export function MenuCategoryNavItems({ items }: MenuCategoryNavItemsProps) {
           unstyled
           text={item.label}
           className="menu-category-nav__item"
-          onClick={() => scrollToElement(`#${item.targetId}`)}
+          onClick={() => {
+            scrollToElement(`#${item.targetId}`);
+            onSelect?.();
+          }}
           width="100%"
-          paddingX={8}
-          paddingY={6}
+          paddingX={large ? 12 : 8}
+          paddingY={large ? 10 : 6}
           borderRadius={6}
           border="none"
           backgroundColor="transparent"
@@ -47,7 +71,9 @@ export function MenuCategoryNavItems({ items }: MenuCategoryNavItemsProps) {
             cursor: "pointer",
             textAlign: "left",
             fontWeight: 600,
-            fontSize: "0.875rem",
+            // Sub-scale sizes with no matching Typography variant - a `Button`'s
+            // label is not rendered through one.
+            fontSize: large ? "1rem" : "0.875rem",
             // A `button` does not inherit the page's font - left alone it
             // renders in the UA's own face, which is neither of the tenant's.
             // `inherit` takes the Card's, i.e. `--font-body`.
