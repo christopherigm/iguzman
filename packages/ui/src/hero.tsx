@@ -265,32 +265,138 @@ const HERO_FRAME_BLUR = "blur(8px)";
 
 /**
  * The cradle's box, derived from the (responsive) badge diameter so the whole
- * thing scales with it. Shared by `BrandmarkCradle` and by the glass pane
- * `HeroTextFrame` slips underneath it - two boxes that must line up exactly.
+ * thing scales with it, times the caller's own multiples. Shared by
+ * `BrandmarkCradle` and by the glass pane `HeroTextFrame` slips underneath it -
+ * two boxes that must line up exactly.
  */
-const cradleWidth = (size: string) => `calc((${size}) * 2.1)`;
-const cradleHeight = (size: string) => `calc((${size}) * 0.7)`;
+const CRADLE_WIDTH = 2.1;
+const CRADLE_HEIGHT = 0.7;
+const cradleWidth = (size: string, width = CRADLE_WIDTH) =>
+  `calc((${size}) * ${width})`;
+const cradleHeight = (size: string, height = CRADLE_HEIGHT) =>
+  `calc((${size}) * ${height})`;
 
 /**
- * The area the two shoulders enclose - the same two curves joined across the
- * top by the chord between their tips, closed along the bottom - in the cradle
- * SVG's own coordinates. The bottom runs 2 units *past* the 60-unit box so no
- * antialiasing seam can open between it and whatever meets it at the line.
+ * The cradle's own coordinate system: **one unit is a hundredth of the badge**,
+ * in both axes. That is what lets the arch be drawn at any height without
+ * re-deriving the shape - the viewBox is `100 * width` by `100 * height`, which
+ * is the same ratio as the CSS box, so `preserveAspectRatio: none` scales the
+ * two axes by the same factor and the disc stays a disc.
  *
- * One path, used twice: `BrandmarkCradle` paints it (its `fill`), and
- * `HeroTextFrame` masks its glass pane with it. A second copy could only drift.
+ * In those units the badge has radius 50, and (when the cradle is open) its
+ * centre - like both shoulder tips - sits {@link CRADLE_TIP_Y} below the top of
+ * the viewBox whatever the height is, so a taller arch is a longer shoulder
+ * rather than a moved circle.
  */
-const CRADLE_FILL_PATH =
-  "M0,60 Q26,36 66,30 L144,30 Q184,36 210,60 L210,62 L0,62 Z";
+const CRADLE_TIP_Y = 35;
+/** The badge's radius in those units - half of the 100 a badge measures. */
+const CRADLE_BADGE_RADIUS = 50;
+/**
+ * How far each tip sits from the badge's centre, horizontally. Comfortably
+ * inside the badge's own 50-unit radius, so the tip tucks *under* the disc
+ * (drawn on top) and the join cannot open a seam at any arch height.
+ */
+const CRADLE_TIP_INSET = 39;
+/** The quadratic control point, as a fraction of the run and of the rise. */
+const CRADLE_CONTROL_RUN = 0.394;
+const CRADLE_CONTROL_RISE = 0.8;
+/**
+ * How far the painted fill runs *past* the bottom of the box, so no antialiasing
+ * seam can open between it and whatever meets it at the line.
+ */
+const CRADLE_OVERSHOOT = 2;
 
 /**
- * That same area as a CSS mask, on a 62-unit-tall viewBox so the extra 2 units
- * are drawn rather than clipped: at `preserveAspectRatio: none` the 0-60 band
- * still maps onto the cradle's own height, so the curve lands on the shoulders
- * and only the overshoot extends below.
+ * The shoulders and the area they enclose, in the units above - in either of the
+ * cradle's two arrangements.
+ *
+ * **Open** (`enclose` omitted, the historical shape): two separate arcs, and a
+ * fill that joins their tips with a chord and closes along the bottom. The chord
+ * sits at the badge's own centre height and is narrower than the badge is there,
+ * so the opaque disc (drawn after it) hides it - at every height, since neither
+ * the chord nor the tips move in these coordinates. The disc's top half rises
+ * clear of the shape.
+ *
+ * **Enclosed** (`enclose` set): the two shoulders climb to the flanks of a
+ * *ring* that carries over the top of the badge and joins them, so the mark is
+ * set into the arch with `enclose` of clearance all round rather than perched on
+ * it. That ring is a real circular arc concentric with the badge - which is only
+ * possible because these units are square: at `preserveAspectRatio: none` a
+ * viewBox of a different ratio to its box would draw it as an ellipse.
+ *
+ * One geometry, used twice: `BrandmarkCradle` paints it, and `HeroTextFrame`
+ * masks its glass pane with it. A second copy could only drift.
+ */
+function cradleGeometry(
+  width: number,
+  height: number,
+  enclose: number | null = null,
+) {
+  // Rounded, not raw: `1.15 * 100` is 114.99999999999999 in binary floating
+  // point, and that lands verbatim in a `d=` attribute and in the mask's URL.
+  const round = (n: number) => Math.round(n * 100) / 100;
+  const w = round(width * 100);
+  const h = round(height * 100);
+  // The ring's radius, and with it where the badge sits: its top is the top of
+  // the box, so raising `enclose` sinks the mark into the arch rather than
+  // pushing the arch up past it.
+  const ring =
+    enclose === null ? null : round(CRADLE_BADGE_RADIUS + enclose * 100);
+  const badgeCentre = ring ?? CRADLE_TIP_Y;
+  // Open: the tip is tucked inside the badge, under the disc drawn over it.
+  // Enclosed: it is where the ring meets the shoulder, on the ring's own flank.
+  const tipY = ring === null ? CRADLE_TIP_Y : badgeCentre;
+  const tipX = round(w / 2 - (ring ?? CRADLE_TIP_INSET));
+  const cx = round(tipX * CRADLE_CONTROL_RUN);
+  const cy = round(h - CRADLE_CONTROL_RISE * (h - tipY));
+  // The right shoulder is the left one mirrored about the centre line.
+  const mirrorCx = round(w - cx);
+  const mirrorTipX = round(w - tipX);
+  const left = `M0,${h} Q${cx},${cy} ${tipX},${tipY}`;
+  const right = `M${w},${h} Q${mirrorCx},${cy} ${mirrorTipX},${tipY}`;
+  // Over the top, left tip to right: on screen that is the clockwise half of the
+  // ring, hence the sweep flag.
+  const crest =
+    ring === null
+      ? `L${mirrorTipX},${tipY}`
+      : `A${ring},${ring} 0 0,1 ${mirrorTipX},${tipY}`;
+  const closed = `${left} ${crest} Q${mirrorCx},${cy} ${w},${h} L${w},${round(
+    h + CRADLE_OVERSHOOT,
+  )} L0,${round(h + CRADLE_OVERSHOOT)} Z`;
+  return {
+    width: w,
+    height: h,
+    viewBox: `0 0 ${w} ${h}`,
+    /** The stroked outline: two arcs when open, one unbroken run when enclosed. */
+    outline:
+      ring === null
+        ? [left, right]
+        : [`${left} ${crest} Q${mirrorCx},${cy} ${w},${h}`],
+    fill: closed,
+    /**
+     * How far the badge's top sits above the parent's edge, as a multiple of the
+     * badge - what the disc is positioned by, and half of what the parent has to
+     * reserve above itself (the other half being the arch's own `height`, which
+     * is the taller of the two once the ring closes over the mark).
+     */
+    badgeTop: round((h - badgeCentre + CRADLE_BADGE_RADIUS) / 100),
+  };
+}
+
+/** The default cradle - the one `HeroTextFrame` cuts its glass pane to. */
+const CRADLE_DEFAULT = cradleGeometry(CRADLE_WIDTH, CRADLE_HEIGHT);
+
+/**
+ * That enclosed area as a CSS mask, on a viewBox the overshoot's 2 units taller
+ * than the shape so they are drawn rather than clipped: at
+ * `preserveAspectRatio: none` the shape's own band still maps onto the cradle's
+ * height, so the curve lands on the shoulders and only the overshoot extends
+ * below.
  */
 const CRADLE_FILL_MASK = `url("data:image/svg+xml,${encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 62" preserveAspectRatio="none"><path d="${CRADLE_FILL_PATH}" fill="#fff"/></svg>`,
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CRADLE_DEFAULT.width} ${
+    CRADLE_DEFAULT.height + CRADLE_OVERSHOOT
+  }" preserveAspectRatio="none"><path d="${CRADLE_DEFAULT.fill}" fill="#fff"/></svg>`,
 )}")`;
 
 /**
@@ -300,9 +406,12 @@ const CRADLE_FILL_MASK = `url("data:image/svg+xml,${encodeURIComponent(
  *
  * Absolutely positioned against the **top edge** of its parent, which must be
  * `position: relative` and must not draw a top border of its own - these flanks
- * are that border. The parent also has to reserve `size * 0.85 + 8px` of space
- * above itself (a margin), or the circle and shoulders hang over whatever is
- * there.
+ * are that border (a parent with rounded top corners passes `flanks={false}`
+ * instead, since a straight rule cannot follow a curve and would leave a stub
+ * hanging past each corner). The parent also has to reserve whichever of the
+ * disc and the arch reaches higher above itself (a margin) - that is
+ * `size * (0.15 + height) + 8px` for an open cradle and `size * height + 8px`
+ * for an enclosed one - or they hang over whatever is there.
  *
  * Shared so every surface that cradles the tenant's brandmark draws the same
  * object: the hero's `HeroTextFrame` below, and the website footer's top edge.
@@ -317,6 +426,10 @@ export function BrandmarkCradle({
   circleBackground = "#fff",
   fill = null,
   overhang = 0,
+  flanks = true,
+  width = CRADLE_WIDTH,
+  height = CRADLE_HEIGHT,
+  enclose = null,
   strokeWidth = HERO_CRADLE_STROKE,
 }: {
   /** The brandmark drawn inside the circle. */
@@ -350,47 +463,93 @@ export function BrandmarkCradle({
    * @default 0
    */
   overhang?: number;
+  /**
+   * Draws the two straight flanks either side of the cradle - the parent's top
+   * border. Turn them **off** for a parent with rounded top corners: the flanks
+   * are square rules on the corner's chord, so they leave a stub of colour
+   * hanging past each curve. Without them the arch rises straight out of the
+   * parent's own surface and the corners stay round.
+   * @default true
+   */
+  flanks?: boolean;
+  /**
+   * The cradle's width, as a multiple of `size`. @default 2.1
+   */
+  width?: number;
+  /**
+   * How tall the arch is, as a multiple of `size` - and so how far the disc
+   * floats above the edge, since the shoulders carry it: the reserve the parent
+   * owes above itself is `size * (0.15 + height) + 8px`. Raise it where the
+   * cradle has to span a bigger gap than the badge itself (the menu rail lifts
+   * its mark clear of the fixed navbar this way); the shape is drawn in units of
+   * the badge, so a taller arch is a longer shoulder into the same disc rather
+   * than a stretched picture of the default one. @default 0.7
+   */
+  height?: number;
+  /**
+   * Closes the arch **over** the mark instead of cradling it from below, leaving
+   * this much clearance all round it - a ring, as a multiple of `size`. The mark
+   * is then set into the arch like a medallion in a niche rather than perched on
+   * its crest, and sits lower: the ring's top is the top of the arch, so the
+   * badge's own top is `size * (height - enclose)` above the parent's edge while
+   * the reserve the parent owes rises to `size * height + 8px` (the crest is now
+   * the topmost thing, not the disc).
+   *
+   * It only makes sense on a *tall* arch - there has to be arch above the mark
+   * for the mark to sit inside. `null` keeps the open cradle, which is what the
+   * hero's framed heading and the footer's edge want: theirs is a rule broken by
+   * a mark, and a closed ring on a 0.7-badge arch would swallow it.
+   * @default null
+   */
+  enclose?: number | null;
 }) {
-  // Widths derive from the (responsive) badge diameter so the cradle scales
-  // with it; the SVG keeps a fixed 210×60 viewBox (same 3.5 ratio as its box,
-  // so `preserveAspectRatio: none` doesn't distort it) and a non-scaling stroke
-  // so the shoulders keep their weight at every badge size.
-  const cradleW = cradleWidth(size);
-  const cradleH = cradleHeight(size);
+  // Both lengths derive from the (responsive) badge diameter so the cradle
+  // scales with it, and the viewBox is the same pair in hundredths of a badge -
+  // so `preserveAspectRatio: none` scales both axes alike and the shape is drawn
+  // undistorted at any height. The stroke is non-scaling, so the shoulders keep
+  // their weight at every badge size.
+  const cradleW = cradleWidth(size, width);
+  const cradleH = cradleHeight(size, height);
+  const geometry = cradleGeometry(width, height, enclose);
   // Each flank runs from the outer corner to the edge of the centred gap.
   const flankW = `calc(50% - (${cradleW}) / 2 + ${overhang}px)`;
 
   return (
     <>
-      {/* Straight flanks, gapped in the centre for the cradle. */}
-      <div
-        style={{
-          position: "absolute",
-          top: -1,
-          left: -overhang,
-          width: flankW,
-          height: 2,
-          background: color,
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          top: -1,
-          right: -overhang,
-          width: flankW,
-          height: 2,
-          background: color,
-        }}
-      />
-      {/* The two rising shoulders that cradle the circle. Each is a convex
-          arc (bulging up) that rises off the flank and eases into the circle's
-          lower flank; its viewBox coords in the 210×60 box correspond to a
-          circle centred at (105, 25) with radius 50 (the badge), and the arc
-          ends a few units *inside* that circle so its tip tucks under the
-          badge (drawn on top), guaranteeing a seamless join. */}
+      {/* Straight flanks, gapped in the centre for the cradle - the parent's own
+          top border, which is why a parent with rounded corners draws none. */}
+      {flanks && (
+        <>
+          <div
+            style={{
+              position: "absolute",
+              top: -1,
+              left: -overhang,
+              width: flankW,
+              height: 2,
+              background: color,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: -1,
+              right: -overhang,
+              width: flankW,
+              height: 2,
+              background: color,
+            }}
+          />
+        </>
+      )}
+      {/* The rising shoulders. Open, each is a convex arc (bulging up) that
+          rises off the edge and eases into the circle's lower flank, ending a
+          few units *inside* the badge so its tip tucks under the disc drawn over
+          it - a seamless join at every arch height. Enclosed, the two are one
+          run: they climb to the flanks of a ring around the badge and that ring
+          carries them over its top. */}
       <svg
-        viewBox="0 0 210 60"
+        viewBox={geometry.viewBox}
         preserveAspectRatio="none"
         aria-hidden
         style={{
@@ -403,39 +562,38 @@ export function BrandmarkCradle({
           overflow: "visible",
         }}
       >
-        {/* The area the shoulders enclose, painted under them: the same two
-            curves joined across the top by the chord between their tips and
-            closed along the bottom. The chord sits at the circle's own centre
-            height and is narrower than the circle is there, so the opaque disc
-            (drawn after this) hides it. The bottom runs 2 units *past* the box
-            (`overflow: visible`) so no antialiasing seam can open between this
-            and the parent's own background at the line. */}
-        {fill && <path d={CRADLE_FILL_PATH} fill={fill} stroke="none" />}
+        {/* The area the shoulders enclose, painted under them: the same curves,
+            joined across the top (by a chord between their tips when open, by
+            the ring itself when enclosed) and closed along the bottom. An open
+            cradle's chord sits at the circle's own centre height and is narrower
+            than the circle is there, so the opaque disc (drawn after this) hides
+            it. The bottom runs 2 units *past* the box (`overflow: visible`) so no
+            antialiasing seam can open between this and the parent's own
+            background at the line. */}
+        {fill && <path d={geometry.fill} fill={fill} stroke="none" />}
         {/* The weight rides in `style`, not the `stroke-width` attribute: the
             attribute takes a plain length and would discard the clamp() that
             keeps the arcs from reading heavy at phone widths. */}
-        <path
-          d="M0,60 Q26,36 66,30"
-          fill="none"
-          stroke={color}
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-          style={{ strokeWidth }}
-        />
-        <path
-          d="M210,60 Q184,36 144,30"
-          fill="none"
-          stroke={color}
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-          style={{ strokeWidth }}
-        />
+        {geometry.outline.map((d) => (
+          <path
+            key={d}
+            d={d}
+            fill="none"
+            stroke={color}
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+            style={{ strokeWidth }}
+          />
+        ))}
       </svg>
-      {/* The brandmark circle, sitting in the cradle above the line. */}
+      {/* The brandmark circle. It rides on the shoulders, so a taller arch
+          carries it exactly that much higher - unless the arch closes over it
+          (`enclose`), where the ring's top is the crest and the mark sits inside
+          instead. Either way `badgeTop` is where the geometry puts it. */}
       <div
         style={{
           position: "absolute",
-          top: `calc((${size}) * -0.85)`,
+          top: `calc((${size}) * -${geometry.badgeTop})`,
           left: "50%",
           transform: "translateX(-50%)",
           width: size,
@@ -563,13 +721,13 @@ export function HeroTextFrame({
           WebkitBackdropFilter: HERO_FRAME_BLUR,
           // Layer 1: the arch, top-centred, in its own box. Layer 2: the
           // frame's own rectangle, filling what is left beneath it. The arch's
-          // 62-unit mask over a 60-unit shape overshoots the frame's top edge
-          // by the same hair the painted fill does, so the two layers overlap
-          // there rather than meeting on a line.
+          // mask is the overshoot's 2 units taller than the shape it carries, so
+          // it overhangs the frame's top edge by the same hair the painted fill
+          // does and the two layers overlap there rather than meeting on a line.
           maskImage: `${CRADLE_FILL_MASK}, linear-gradient(#fff, #fff)`,
           WebkitMaskImage: `${CRADLE_FILL_MASK}, linear-gradient(#fff, #fff)`,
-          maskSize: `${cradleWidth(badge)} calc((${cradleHeight(badge)}) * 62 / 60), 100% calc(100% - (${cradleHeight(badge)}))`,
-          WebkitMaskSize: `${cradleWidth(badge)} calc((${cradleHeight(badge)}) * 62 / 60), 100% calc(100% - (${cradleHeight(badge)}))`,
+          maskSize: `${cradleWidth(badge)} calc((${cradleHeight(badge)}) * ${CRADLE_DEFAULT.height + CRADLE_OVERSHOOT} / ${CRADLE_DEFAULT.height}), 100% calc(100% - (${cradleHeight(badge)}))`,
+          WebkitMaskSize: `${cradleWidth(badge)} calc((${cradleHeight(badge)}) * ${CRADLE_DEFAULT.height + CRADLE_OVERSHOOT} / ${CRADLE_DEFAULT.height}), 100% calc(100% - (${cradleHeight(badge)}))`,
           maskPosition: "top center, bottom center",
           WebkitMaskPosition: "top center, bottom center",
           maskRepeat: "no-repeat, no-repeat",

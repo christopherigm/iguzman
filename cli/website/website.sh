@@ -138,6 +138,7 @@ setup_strings() {
     SEC_SYSTEM="Sistema"
     SEC_STORIES="Casos de éxito"
     SEC_HIGHLIGHTS="Destacados"
+    SEC_EVENTS="Eventos"
     SEC_PRODUCTS="Productos"
     SEC_SERVICES="Servicios"
     SEC_MENU="Menú"
@@ -200,6 +201,7 @@ setup_strings() {
     SEC_SYSTEM="System"
     SEC_STORIES="Success stories"
     SEC_HIGHLIGHTS="Highlights"
+    SEC_EVENTS="Events"
     SEC_PRODUCTS="Products"
     SEC_SERVICES="Services"
     SEC_MENU="Menu"
@@ -681,6 +683,14 @@ cmd_sync() {
 
 # ── pull ──────────────────────────────────────────────────────────────────────
 
+# ⚠ Must stay in the same order as `_CB_LABELS` below, and must match
+# `ALL_SECTIONS` in core/management/commands/import_site.py. The checkbox
+# returns *indices*, which are looked up in this array - so a key added here
+# without its label (or in a different position) does not merely mislabel a box,
+# it silently shifts every section after it onto the wrong key and drops the
+# last one off the end entirely. That is exactly what happened when `events` was
+# added here and not to `_CB_LABELS`: the box reading "Menu" pulled `services`
+# and `menu` could not be selected at all.
 PULL_SECTIONS=(system stories highlights events products services menu)
 
 # select_sections : interactive checklist (all checked by default). Sets the
@@ -691,8 +701,20 @@ select_sections() {
     CHOSEN="$(IFS=,; echo "${PULL_SECTIONS[*]}")"; return
   fi
 
-  _CB_LABELS=("${SEC_SYSTEM}" "${SEC_STORIES}" "${SEC_HIGHLIGHTS}" "${SEC_PRODUCTS}" "${SEC_SERVICES}" "${SEC_MENU}")
-  _CB_SEL=(1 1 1 1 1 1)
+  # One label per PULL_SECTIONS entry, in the same order - see the warning above.
+  _CB_LABELS=("${SEC_SYSTEM}" "${SEC_STORIES}" "${SEC_HIGHLIGHTS}" "${SEC_EVENTS}" "${SEC_PRODUCTS}" "${SEC_SERVICES}" "${SEC_MENU}")
+
+  # Fail loudly instead of silently pulling the wrong sections: a mismatch here
+  # is invisible at runtime (the checklist just looks a row short).
+  if [[ "${#_CB_LABELS[@]}" -ne "${#PULL_SECTIONS[@]}" ]]; then
+    err "Error: PULL_SECTIONS (${#PULL_SECTIONS[@]}) and _CB_LABELS (${#_CB_LABELS[@]}) are out of sync in ${BASH_SOURCE[0]}."
+    exit 1
+  fi
+
+  # All checked by default, derived from the array so it cannot drift either.
+  _CB_SEL=()
+  local _i
+  for ((_i = 0; _i < ${#PULL_SECTIONS[@]}; _i++)); do _CB_SEL+=(1); done
 
   info "\n  ${LBL_SECTIONS_TO_IMPORT}"
   printf "  %s\n" "$(clr_dim "${CB_PROMPT}")"

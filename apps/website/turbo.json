@@ -11,6 +11,17 @@
         "SCRAPER_API_KEY",
         "TAVILY_API_KEY"
       ]
+    },
+    "dev": {
+      "passThroughEnv": [
+        "API_URL",
+        "DEV_SITE",
+        "LOG_LEVEL",
+        "MEDIA_PROXY_HOSTS",
+        "SCRAPER_URL",
+        "SCRAPER_API_KEY",
+        "TAVILY_API_KEY"
+      ]
     }
   }
 }
