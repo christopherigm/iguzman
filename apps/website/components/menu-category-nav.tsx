@@ -1,22 +1,19 @@
-"use client";
-
 import { Box } from "@repo/ui/core-elements/box";
-import { Button } from "@repo/ui/core-elements/button";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { scrollToElement } from "@repo/ui/core-elements/scroll-to";
+import { BrandmarkCradle } from "@repo/ui/hero";
+import { MenuCategoryNavItems } from "./menu-category-nav-items";
+import type { MenuCategoryNavItem } from "./menu-category-nav-items";
+import {
+  MENU_NAV_BACKGROUND,
+  MENU_NAV_FOREGROUND,
+} from "./menu-category-nav-colors";
 import "./menu-category-nav.css";
 
-/** One entry of the menu's category rail. */
-export interface MenuCategoryNavItem {
-  /** The `id` of the section heading this entry brings into view. */
-  targetId: string;
-  /** The category's own name, already resolved for the rendered locale. */
-  label: string;
-}
+export type { MenuCategoryNavItem };
 
 interface MenuCategoryNavProps {
-  /** Names the rail for a screen reader and titles the card. */
+  /** Names the rail for a screen reader. It is not printed - see below. */
   title: string;
   items: MenuCategoryNavItem[];
   /**
@@ -25,6 +22,13 @@ interface MenuCategoryNavProps {
    * The lead spacer drops the same padding, so the two columns stay level.
    */
   flushTop?: boolean;
+  /**
+   * The tenant's brandmark, cradled on the rail's top edge - passed only when
+   * the tenant's "Framed heading" setting (`hero_text_frame`) is on, exactly as
+   * the footer's cradle is gated. `null` keeps the plain card.
+   */
+  brandmark?: string | null;
+  brandmarkAlt?: string;
 }
 
 /**
@@ -35,6 +39,56 @@ interface MenuCategoryNavProps {
  * the two in step.
  */
 const CATALOG_SECTION_PADDING_TOP = 48;
+
+/**
+ * `.catalog-section`'s own **bottom** padding, the other half of that pair.
+ *
+ * The rail's grid cell is as tall as the whole sections column, which ends 56px
+ * below the last item card - so a sticky rail that travelled its cell to the
+ * end came to rest with its bottom edge that far past the grid it addresses.
+ * Given back as the rail's own bottom margin (a sticky box is constrained to
+ * its containing block *minus its margins*), the last resting position lines
+ * the rail's bottom edge up with the last card instead. ⚠ Keep in step with
+ * `catalog-categories.css`.
+ */
+const CATALOG_SECTION_PADDING_BOTTOM = 56;
+
+/**
+ * The cradle's arch, as multiples of the badge - `BrandmarkCradle`'s `height`
+ * and `width`, whose defaults are 0.7 and 2.1.
+ *
+ * The arch is raised here because the pinned rail's card sits a whole section
+ * heading below the navbar (see the spacer in the markup), so an arch the height
+ * of the hero's would leave the mark that far down the screen, reading as a
+ * brandmark adrift in the page rather than one holding the top of the rail.
+ *
+ * The width grows with it, and has to: a shoulder that climbs 1.3 badges over
+ * the default's short run comes out as a steep peak rather than the swell the
+ * shorter arch reads as.
+ *
+ * ⚠ The height cannot go much further. The arch's crest stands `height * badge`
+ * above the card, and two things bound that: pinned, it must stay clear of the
+ * fixed navbar, and in flow it must stay inside the spacer above it. The tighter
+ * of the two is ~1.5 badges at the widest viewport, where the badge is at its
+ * 50px ceiling and the heading block is at its own.
+ */
+const CRADLE_ARCH_HEIGHT = 1;
+const CRADLE_ARCH_WIDTH = 2.8;
+
+/**
+ * The clearance between the mark and the arch that closes over it, as a multiple
+ * of the badge - so the mark is set *into* the arch like a medallion in a niche
+ * rather than perched on its crest.
+ *
+ * This is the arrangement a tall arch wants and a short one cannot have. With
+ * the hero's 0.7-badge arch there is no room above the mark to close over it,
+ * which is why the shared default leaves the cradle open; with 1.3 there is arch
+ * to spare, and a mark perched on that much of it reads as small and stranded.
+ *
+ * ⚠ Raising it does **not** move the mark up - it sinks it. The ring's top is
+ * the arch's crest, so a wider ring means a lower mark inside the same arch.
+ */
+const CRADLE_ENCLOSE = 0.05;
 
 /**
  * The menu's category rail - the list of category names beside the item grids,
@@ -51,93 +105,127 @@ const CATALOG_SECTION_PADDING_TOP = 48;
  * the navbar from there on - and, unlike `fixed`, it stops travelling when its
  * column ends, so the rail cannot outlive the sections it addresses.
  *
+ * **It has no printed title.** `title` names it for a screen reader and nothing
+ * else: a heading over a column of category names says what the column already
+ * says, and it was the one thing between the cradled brandmark and the list.
+ *
  * **Rendered from `md` up only.** Its `Grid` cell carries the `hidden` prop, so
- * there is no media query here; a phone-sized index is a different control and
- * is not built yet.
+ * there is no media query here. Below that the index is
+ * `MenuCategoryNavMobile` - a floating button raising the same list, because a
+ * phone has no column beside the grids to give a rail. ⚠ The two boundaries
+ * (this cell's `hidden={{ xs: true, sm: true }}` and that file's one media
+ * query) are the same breakpoint on purpose - keep them in step.
  */
 export function MenuCategoryNav({
   title,
   items,
   flushTop = false,
+  brandmark = null,
+  brandmarkAlt = "",
 }: MenuCategoryNavProps) {
   if (items.length === 0) return null;
 
   return (
     <>
-      {/* The rail starts level with the first item **card**, not with the
-       *  section heading above it - so the two columns read as one row. The
-       *  offset is the section's top padding plus its heading block, which this
-       *  spacer reproduces by being that heading: the same `Box` + `Typography`
-       *  markup carrying one blank line, so a change to the heading's type or
-       *  rhythm moves both columns together instead of only one. */}
-      <Box
-        aria-hidden
-        flexDirection="column"
-        gap={10}
-        marginBottom={32}
-        paddingTop={flushTop ? 0 : CATALOG_SECTION_PADDING_TOP}
+      {/* `.catalog-section`'s top padding, which the sections column contributes
+       *  above its first heading and this column does not. It is deliberately
+       *  *outside* the sticky box: a click on the rail parks the target heading
+       *  at the navbar and leaves that padding above the viewport, so a pinned
+       *  rail must not carry it. */}
+      {!flushTop && <Box aria-hidden height={CATALOG_SECTION_PADDING_TOP} />}
+      <nav
+        aria-label={title}
+        className="menu-category-nav"
+        style={{ marginBottom: CATALOG_SECTION_PADDING_BOTTOM }}
       >
-        {/* A non-breaking space, not an empty element: an empty heading has
-         *  no line box, and the spacer would collapse to nothing. */}
-        <Typography as="p" variant="h2" className="section-title">
-          {"\u00a0"}
-        </Typography>
-      </Box>
-      <nav aria-label={title} className="menu-category-nav">
-        <Card
-          backgroundColor="var(--accent, #06b6d4)"
-          color="var(--accent-foreground, #ffffff)"
-          border="none"
-          elevation={6}
-          padding={12}
-          gap={8}
-          // A tenant with more categories than fit the viewport scrolls the rail
-          // itself rather than pushing its own tail off the bottom of the screen.
-          styles={{
-            overflowY: "auto",
-            maxHeight: "calc(100vh - var(--ui-navbar-height, 57px) - 32px)",
-          }}
+        {/* ⚠ **This spacer is what keeps the two columns level, in both of the
+         *  rail's states, and it is inside the sticky box for the pinned one.**
+         *
+         *  The rail starts level with the first item **card**, not with the
+         *  section heading above it - so the two columns read as one row. The
+         *  offset is that heading block, which this spacer reproduces by *being*
+         *  it: the same `Box` + `Typography` markup carrying one blank line, so
+         *  a change to the heading's type or rhythm moves both columns together
+         *  instead of only one.
+         *
+         *  Pinned, the sticky box's own top edge comes to rest at the navbar +
+         *  16px - which is exactly the `scroll-margin-top` the section headings
+         *  carry, i.e. where the heading of the section just scrolled to is
+         *  sitting. So the spacer puts the card's top edge on that section's
+         *  first item card, whichever section the reader jumped to. A hand-
+         *  computed `top` offset could only restate this heading's height in
+         *  pixels and then go stale the moment it changed.
+         *
+         *  It is also the room the cradled brandmark hangs up into. */}
+        <Box
+          aria-hidden
+          flex="0 0 auto"
+          flexDirection="column"
+          gap={10}
+          marginBottom={32}
         >
-          <Typography
-            as="h2"
-            variant="label"
-            color="inherit"
-            fontWeight={700}
-            styles={{ letterSpacing: "0.06em", textTransform: "uppercase" }}
-          >
-            {title}
+          {/* A non-breaking space, not an empty element: an empty heading has
+           *  no line box, and the spacer would collapse to nothing. */}
+          <Typography as="p" variant="h2" className="section-title">
+            {"\u00a0"}
           </Typography>
-          <Box flexDirection="column" gap={2}>
-            {items.map((item) => (
-              <Button
-                key={item.targetId}
-                unstyled
-                text={item.label}
-                className="menu-category-nav__item"
-                onClick={() => scrollToElement(`#${item.targetId}`)}
-                width="100%"
-                paddingX={8}
-                paddingY={6}
-                borderRadius={6}
-                border="none"
-                backgroundColor="transparent"
-                color="inherit"
-                styles={{
-                  cursor: "pointer",
-                  textAlign: "left",
-                  fontWeight: 600,
-                  fontSize: "0.875rem",
-                  // A `button` does not inherit the page's font - left alone it
-                  // renders in the UA's own face, which is neither of the
-                  // tenant's. `inherit` takes the Card's, i.e. `--font-body`;
-                  // the rail's title is a real `h2` and keeps `--font-display`,
-                  // like every other section title on the page.
-                  fontFamily: "inherit",
-                }}
-              />
-            ))}
-          </Box>
-        </Card>
+        </Box>
+        {/* The card and the mark cradled on its top edge. This box is what the
+         *  cradle is positioned against - not the `nav`, whose top edge is the
+         *  spacer's - and it is the one that shrinks when the list is longer
+         *  than the viewport, hence `minHeight: 0` on both it and the card. */}
+        <Box
+          flexDirection="column"
+          styles={{ position: "relative", minHeight: 0 }}
+        >
+          {/* The tenant's brandmark cradled on the rail's top edge, drawn by the
+           *  same component the hero's framed heading and the footer's edge use -
+           *  so the three brand moments are one object rather than three that can
+           *  drift. It hangs off this box rather than off the `Card` because the
+           *  card scrolls its own overflow (a tenant with more categories than
+           *  fit the viewport), and `overflow: auto` would clip the disc away. */}
+          {brandmark && (
+            <BrandmarkCradle
+              image={brandmark}
+              imageAlt={brandmarkAlt}
+              // The hero draws its cradle in white over a video. Here the arches
+              // rise out of the rail itself, so both they and the area they
+              // enclose take the card's own background and the swell reads as one
+              // shape; the disc is a page-background plate, as in the footer, so
+              // it follows the theme.
+              color={MENU_NAV_BACKGROUND}
+              fill={MENU_NAV_BACKGROUND}
+              circleBackground="var(--page-background, var(--background))"
+              // ⚠ No straight flanks. They are the parent's top border, and this
+              // parent is a `Card` with rounded top corners: a square rule drawn
+              // on the corner's chord leaves a stub of accent hanging past each
+              // curve. Without them the arch rises straight out of the card's own
+              // surface and the corners stay round.
+              flanks={false}
+              height={CRADLE_ARCH_HEIGHT}
+              width={CRADLE_ARCH_WIDTH}
+              // The arch closes over the mark rather than cradling it - see the
+              // constant. The disc is a page-background plate either way, so on
+              // this one the ring of accent around it is what reads as the niche.
+              enclose={CRADLE_ENCLOSE}
+            />
+          )}
+          <Card
+            backgroundColor={MENU_NAV_BACKGROUND}
+            color={MENU_NAV_FOREGROUND}
+            border="none"
+            elevation={6}
+            padding={12}
+            gap={8}
+            // A tenant with more categories than fit the viewport scrolls the
+            // rail itself rather than pushing its own tail off the bottom of the
+            // screen. The height budget is the `nav`'s (see the CSS); this only
+            // has to be shrinkable inside it.
+            styles={{ overflowY: "auto", minHeight: 0 }}
+          >
+            <MenuCategoryNavItems items={items} />
+          </Card>
+        </Box>
       </nav>
     </>
   );

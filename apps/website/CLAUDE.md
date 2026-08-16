@@ -152,7 +152,7 @@ Cloud API, no WABA, no webhook and no provider credential anywhere in the stack.
 - **The upgrade path is inbound-first, not outbound-first.** If this ever becomes
   a real Cloud API integration, the piece to build is the **webhook** that turns
   an inbound WhatsApp message into a `ContactMessage` - not a send call. Meta's
-  24-hour customer service window only opens on a message *from* the customer, so
+  24-hour customer service window only opens on a message _from_ the customer, so
   a reply to a web-form submission would be template-gated and the free-text box
   in the CMS would be unusable. Per-tenant credentials would follow the Stripe
   pattern (Fernet on `System`, blank-means-unchanged in the CMS) and the webhook
@@ -336,13 +336,13 @@ Six things that will bite:
 A menu is sectioned by the tenant's own `MenuCategory` rows and by nothing else,
 and `MenuItem.category` is **required**. Everything follows from that:
 
-| Surface                    | Path                        | File                                            |
-| -------------------------- | --------------------------- | ----------------------------------------------- |
-| The whole menu             | `/categories/menu`          | `components/menu-listing.tsx`                   |
-| One category               | `/categories/menu/<slug>`   | `app/[locale]/categories/menu/[slug]/page.tsx`  |
-| One item                   | `/menu/<category>/<slug>`   | `components/menu-item-detail-page.tsx`          |
-| One item, stable permalink | `/menu/<slug>`              | `app/[locale]/menu/[category]/page.tsx`         |
-| Paths                      | —                           | `lib/menu-paths.ts`                             |
+| Surface                    | Path                      | File                                           |
+| -------------------------- | ------------------------- | ---------------------------------------------- |
+| The whole menu             | `/categories/menu`        | `components/menu-listing.tsx`                  |
+| One category               | `/categories/menu/<slug>` | `app/[locale]/categories/menu/[slug]/page.tsx` |
+| One item                   | `/menu/<category>/<slug>` | `components/menu-item-detail-page.tsx`         |
+| One item, stable permalink | `/menu/<slug>`            | `app/[locale]/menu/[category]/page.tsx`        |
+| Paths                      | —                         | `lib/menu-paths.ts`                            |
 
 This replaced a `MenuItem.kind` enum (food/drink/dessert/side/appetizer) that sat
 beside the category and drove five listing pages
@@ -359,12 +359,12 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   is globally unique, so the category segment addresses nothing extra - it is
   there because the URL is meant to read that way. `/menu/<slug>` is the
   category-independent permalink that resolves and `permanentRedirect`s to the
-  current URL; hand *that* out for anything printed. `next.config.js` redirects
+  current URL; hand _that_ out for anything printed. `next.config.js` redirects
   all ten pre-category paths (and `/categories/food/<slug>`) permanently.
 - ⚠ **Both menu routes live under `app/[locale]/menu/[category]/`** - the
   permalink is that folder's own `page.tsx` and the detail page is `[slug]/`
-  inside it. The two *URLs* don't collide (Next matches on segment count), but
-  the *folders* would: giving one dynamic level two different slug names
+  inside it. The two _URLs_ don't collide (Next matches on segment count), but
+  the _folders_ would: giving one dynamic level two different slug names
   (`menu/[slug]` beside `menu/[category]/…`) makes Next refuse to start with
   "You cannot use different slug names for the same dynamic path". So the
   permalink page reads its item slug out of the `category` param, and says so.
@@ -392,17 +392,101 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   beside the first grid, pinned from there on) and stops travelling when its grid
   column ends, so the rail cannot outlive the sections it addresses. Its cell
   carries `hidden={{ xs: true, sm: true }}`, so it is `md`-and-up only and no
-  media query decides that - a phone-sized index is a different control and isn't
-  built yet. Clicking an entry goes through `scrollToElement` (never a bare
+  media query decides that - below `md` the index is the floating control in the
+  next bullet. Clicking an entry goes through `scrollToElement` (never a bare
   `scrollIntoView`) at the section heading's own `id`; the heading carries the
   `scroll-margin-top` that clears the navbar. The rail claims 3 of 12 columns
   from `md`, which is why the item cards go three-across there (`md: 4`).
   ⚠ **It starts level with the first item _card_, and the way it does that is a
   spacer that _is_ the section heading** - the same `Box` + `Typography` markup
-  carrying one non-breaking space, above `.catalog-section`'s own 48px top
+  carrying one non-breaking space, below `.catalog-section`'s own 48px top
   padding. A hard-coded offset would be wrong the moment the heading's type or
-  rhythm changed; this moves both columns together. The 48 is the one number
-  copied from `catalog-categories.css` - keep the two in step.
+  rhythm changed; this moves both columns together. ⚠ **That spacer lives
+  _inside_ the sticky `nav`, and the 48px padding lives outside it** - which is
+  what keeps the two columns level in the _pinned_ state too, not just the
+  in-flow one. The sticky `top` is `navbar + 16px`, i.e. exactly the
+  `scroll-margin-top` the section headings carry, so the box comes to rest with
+  its first child - the heading replica - sitting where the jumped-to section's
+  own heading is, and the card's top edge therefore lands on that section's first
+  item card. (The 48px stays outside because a jump parks the heading at the
+  navbar and leaves the section's top padding above the viewport; carried inside,
+  the pinned rail would sit 48px low.) It **ends** level with the last item card
+  for the mirror-image reason: the rail's cell is as tall as the sections column,
+  which runs 56px past that card, so the rail carries a 56px bottom margin - a
+  sticky box is constrained to its containing block _minus its margins_, and
+  without it the rail's last resting position sat that far below the grid it
+  addresses. Those two numbers (48 / 56) are the only ones copied from
+  `catalog-categories.css` - keep them in step.
+- **Below `md` the index is a floating button, not a shrunken rail**
+  (`components/menu-category-nav-mobile.tsx`): a pill fixed just above the
+  bottom edge - the tenant's `img_brandmark` and the page's own "Menu" heading -
+  which raises a card of the same entries out of itself. On a phone there is no
+  column to give a rail, and a full-width bar of category names would cost more
+  of the screen than the dishes it exists to reach, so the list is on screen only
+  while it is being used. ⚠ **The two controls are one feature split at one
+  breakpoint**: the rail's cell is `hidden={{ xs: true, sm: true }}` and this one
+  is taken out from `md` up by the single `@media (--md)` in its CSS - move one
+  without the other and the page has two indexes or none. It is a media query
+  here (and a prop there) only because a `position: fixed` control belongs to no
+  grid cell. **The entries are the rail's own `MenuCategoryNavItems`** at
+  `size="lg"` for a thumb - the same one-prop difference POS makes to the
+  ingredient picker - so a jump behaves identically on both and the card closes
+  itself on the way, being over the content just asked for.
+  ⚠ **The card is never unmounted**: it is folded down into the button with
+  `visibility`/`opacity`/`transform`, so it animates in _and_ out, and
+  `visibility` is what takes the entries out of the tab order while they are
+  invisible. ⚠ **The container takes `pointer-events: none` and its two children
+  take them back** - it still covers the closed card's footprint, and a
+  transparent box swallows taps exactly as an opaque one does. Dismissal is an
+  outside press or `Escape`, deliberately with **no scrim**: this is a jump list,
+  not a dialog. Its brandmark is **not** gated on `hero_text_frame`, unlike the
+  rail's cradled one - a cradle is part of the frame's design language, a button
+  icon is just the site's mark. Both controls read their accent and foreground
+  from `menu-category-nav-colors.ts`, which is plain data importing nothing so
+  that the client control and the server rail can share it.
+- **The rail wears the tenant's cradled brandmark**, on the same "Framed
+  heading" switch (`hero_text_frame` + `img_brandmark`) that frames a hero
+  heading and cradles the footer's edge - the shared `BrandmarkCradle`, so the
+  three brand moments cannot drift. It hangs off the box wrapping the `Card`,
+  **not** the `Card` itself: the card scrolls its own overflow for a tenant with
+  more categories than fit the viewport, and `overflow: auto` would clip the disc
+  away. (Not off the `nav` either, any more - the `nav`'s top edge is the
+  spacer's, a whole heading above the card.) The arches and the area they
+  enclose are painted in the rail's own `--accent`, so the swell reads as the
+  card rising to meet the mark; the card's top edge does not move, because the
+  cradle is absolutely positioned and hangs up into the lead spacer.
+  ⚠ **No straight flanks here** (`flanks={false}`): they are the parent's top
+  border, and this parent is a `Card` with rounded top corners, so the square
+  rules left a stub of accent hanging past each curve. ⚠ **The arch is taller
+  and wider than the default** (`2.8 × 1.3` badges, against `2.1 × 0.7`): the
+  pinned card sits a whole section heading below the navbar and the disc is
+  carried by the shoulders, so at the stock height the mark came to rest that far
+  down the screen. The height is bounded at both ends - pinned the crest must
+  clear the navbar, in flow it must stay inside the spacer - and the width has to
+  grow with it or the shoulders read as a peak instead of a swell. ⚠ **And the
+  arch _closes over_ the mark here** (`enclose={0.14}`), which the hero's and the
+  footer's do not: on an arch this tall a mark perched on the crest reads as
+  small and stranded, so it is set into it with a ring of accent all round, like
+  a medallion in a niche. Raising that number sinks the mark further rather than
+  lifting it - the ring's top is the crest. **There is no printed
+  rail title** - `title` names it for a screen reader only; a heading over a
+  column of category names said what the column says, and it was the one thing
+  between the cradled mark and the list.
+- ⚠ **`menu-category-nav.tsx` is a _server_ component and its buttons are a
+  separate `"use client"` file** (`menu-category-nav-items.tsx`). The split is
+  the cradle: `@repo/ui/hero` imports `HeroVideo` at module scope and the
+  package is not marked side-effect-free, so importing `BrandmarkCradle` from a
+  client module drags `react-player` into this page's browser bundle for one
+  `<svg>`. Don't merge them back.
+- **A category _card_ on `/categories/menu` scrolls to its section** rather than
+  leading to `/categories/menu/<slug>`, since the dishes are further down the
+  same page - `components/scroll-to-section-link.tsx`, wrapping the card the
+  page already renders. ⚠ It listens on the **capture** phase: the card is a
+  `Link`, which `preventDefault`s and pushes the route in its own `onClick`, so
+  a bubbling handler above it would fire after the navigation had started. The
+  href stays on the card - it is the category's real address, it is what an
+  empty category (a card with no section) still needs, and a ⌘/middle click
+  still opens it in a new tab.
 - ⚠ **In the CMS, Category is a required field on the menu-item form and is
   deliberately excluded from the "blank → null" list** in `handleSubmit`. A blank
   must reach the API and be refused, not be nulled into a row the storefront
@@ -413,7 +497,7 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
 
 ## Catalog kind labels - what a tenant calls its products and services
 
-A workshop's "Services" are *Lo que hacemos*. `System` carries a bilingual label
+A workshop's "Services" are _Lo que hacemos_. `System` carries a bilingual label
 pair (`kind_label_<kind>` / `en_kind_label_<kind>`) for each of the **two**
 Buyable families, authored in the CMS at `/admin/system` → Catalog names
 (`admin/system/kind-labels-section.tsx`). `lib/kind-labels.ts` resolves them;
@@ -694,8 +778,8 @@ edge. **Everything else is returned untouched too**, including relative
   stored is what is served. Commit `/public` art at roughly its drawn size and
   give large images an explicit `sizes` rather than reaching for the optimizer.
 - **The same-origin door is `app/api/media/route.ts`** (`/api/media?url=…`), a
-  byte-for-byte passthrough this app owns. The features that need *same-origin
-  pixels* rather than a fast image go through it via
+  byte-for-byte passthrough this app owns. The features that need _same-origin
+  pixels_ rather than a fast image go through it via
   `lib/same-origin-image.ts`: the flyer exports (`html-to-image` taints the
   canvas on a cross-origin fetch) and the branch map capture. It allowlists by
   **request host** — the site's own domain and any subdomain of it (so
@@ -787,14 +871,14 @@ and a customer who scans that QR lands on `/coupon/<code>` and shops with the
 code already applied. The API owns every rule; read website-api's CLAUDE.md →
 "Coupons" first.
 
-| Piece                    | Where                                            |
-| ------------------------ | ------------------------------------------------ |
-| The CMS list / one coupon | `app/[locale]/admin/coupons/`, `.../[id]/`       |
-| The four flyer templates | `components/admin/coupon-templates/`             |
-| The "have a coupon?" box | `components/coupon-field.tsx`                    |
-| Formatting, client-safe  | `lib/coupon-shared.ts`                           |
-| The scanned-code carrier | `lib/coupon-stash.ts`                            |
-| The public landing       | `app/[locale]/coupon/[code]/`                    |
+| Piece                     | Where                                      |
+| ------------------------- | ------------------------------------------ |
+| The CMS list / one coupon | `app/[locale]/admin/coupons/`, `.../[id]/` |
+| The four flyer templates  | `components/admin/coupon-templates/`       |
+| The "have a coupon?" box  | `components/coupon-field.tsx`              |
+| Formatting, client-safe   | `lib/coupon-shared.ts`                     |
+| The scanned-code carrier  | `lib/coupon-stash.ts`                      |
+| The public landing        | `app/[locale]/coupon/[code]/`              |
 
 - ⚠ **Nothing in the browser ever computes a discount.** The amounts
   `CouponField` shows come from `POST /api/coupons/validate/`, and even those are
@@ -855,8 +939,8 @@ entry, no migration**. `DEFAULT_COUPON_TEMPLATE_ID` must stay in step with
 `Coupon.template_id`'s model default.
 
 - **Kept separate from the social registry, not merged into it.** A social
-  template composes an *item* (photo, price, compare price); a coupon template
-  composes an *offer* (a code, a QR, an expiry). Neither can render the other's
+  template composes an _item_ (photo, price, compare price); a coupon template
+  composes an _offer_ (a code, a QR, an expiry). Neither can render the other's
   data, so one list would be a picker where most entries are wrong for whatever
   you are making. The pure helpers (`contrastText`, `tint`, `FORMAT_DIMENSIONS`)
   **are** imported from the social types rather than re-declared - per the shared
@@ -879,7 +963,7 @@ entry, no migration**. `DEFAULT_COUPON_TEMPLATE_ID` must stay in step with
   `SocialPost` carries) - it is part of how this coupon looks every time it is
   re-downloaded, which is the same reason `template_id` is a column.
 - ⚠ **`CouponLogo`'s plate constants are deliberately not the social flyer's
-  3.5 / 0.9.** There the base height is a small design token and the *bare* logo
+  3.5 / 0.9.** There the base height is a small design token and the _bare_ logo
   is scaled up off it too; here the base height is the drawn logo height itself,
   so reusing those numbers triples the logo on every existing coupon. The pair
   in `coupon-parts.tsx` are **equal** (2 / 2), so both sliders at 100% draw the
@@ -959,6 +1043,35 @@ bottom-**right** so it clears the fixed sidebar), that gap is closed by
 its only action logs out and returns home. Keep the guard if you touch the
 switcher - without it the CMS silently paints one customer's branding while
 saving to another's data.
+
+### `DEV_SITE` - naming the tenant before there is a cookie to name it with
+
+⚠ **`localhost` matches no `System.host`, so a local `pnpm dev --filter=website`
+has no tenant until you give it one.** Set **`DEV_SITE`** in `apps/website/.env`
+to a site slug (`piccolopizzas`, `supertortaselchino`, …); `getSite()` reads it
+in development, _below_ the `__dev_site` cookie so the switcher still wins, and
+`turbo.json`'s `dev` task passes it through. It is ignored in production, where
+the host is by definition one the ingress routed here.
+
+**The cookie alone cannot do this job, because the request that matters most
+happens before any cookie exists: the login.** `systemId` is a claim minted from
+the request's resolved System, and Django's login builds the _username_ from
+what it is sent (`build_username(system_id, email)`) - so an unresolved tenant
+does not merely mislabel the session, it signs you in as a **different
+customer's admin account**.
+
+⚠ **That is why `getSystemId()` returns `null` rather than a number when the
+host resolves to nothing, and why all five auth route handlers refuse with
+`unresolvedTenantResponse()` (503).** It used to fall back to `1`, which is not
+a neutral default - it is a real customer. On `localhost` that fallback fired on
+_every_ login, and the symptom was not an error: the CMS saved happily onto
+System 1 while the storefront, which resolves by host, never showed the rows -
+so it read as "my menu items aren't saving to the local DB". Never reintroduce a
+default here, in either direction: guessing a tenant is worse than refusing.
+
+`DevTenantGuard` does not cover this case and cannot - it fires only when the
+previewed site has a `System` **and** it differs from the session's, and an
+unresolved host yields `null`, which it deliberately leaves alone.
 
 **Interaction language.** The site skills (`/new-site`, `/seed-site`, and
 `/site-design` when entered directly) each begin by asking the operator whether
@@ -1326,9 +1439,9 @@ Before defining a constant, type, or pure utility function in a component file, 
 | `apps/website/components/admin/paragraph-options.ts`       | `PARAGRAPH_WORD_COUNTS`, `PARAGRAPH_LENGTH_STEPS`, `PARAGRAPH_COUNT_STEPS` - used by `admin-form.tsx` and `ai-interviewer/ai-interviewer.tsx`                                                                                                                                                                 |
 | `apps/website/components/admin/logo-background-options.ts` | `LOGO_BACKGROUND_SHAPES`, `LOGO_BACKGROUND_LABEL_KEY`, `SCALE_STEPS` - the badge shapes and size stops, used by `admin/logos-and-styles/hero-video-section.tsx` and `admin/social-posts/[id]/page.tsx`                                                                                                        |
 | `apps/website/components/admin/divider-options.ts`         | `DIVIDER_OPTIONS`, `DIVIDER_LABEL_KEY`, `toDividerOption`, `DividerOption` - the shape-divider shapes every CMS divider picker offers (the hero's bottom edge, both section bands' top/bottom edges), used by `admin/logos-and-styles/hero-video-section.tsx` and `components/admin/section-band-section.tsx` |
-| `apps/website/lib/maps.ts`                                 | `directionsHref` - the Google Maps hand-off, built from **coordinates, never an address**. Used by the contact page's locations, an event's venue and an order's location; website-api builds the same URL for the order email                                                                          |
-| `apps/website/lib/same-origin-image.ts`                    | `toSameOriginDataUrl` - routes a remote image through `/api/media` (this app's own passthrough proxy) so a canvas that draws it is not tainted. Used by both flyer exports and by `lib/map-capture.ts`                                                                                                                        |
-| `apps/website/lib/contact.ts`                              | `whatsappHref` - the wa.me click-to-chat URL, with the number stripped to digits (wa.me rejects the spaces and dashes people type) and an optional prefilled message. Used both directions: a **branch's** number on the contact page, a **customer's** in the admin inbox                              |
+| `apps/website/lib/maps.ts`                                 | `directionsHref` - the Google Maps hand-off, built from **coordinates, never an address**. Used by the contact page's locations, an event's venue and an order's location; website-api builds the same URL for the order email                                                                                |
+| `apps/website/lib/same-origin-image.ts`                    | `toSameOriginDataUrl` - routes a remote image through `/api/media` (this app's own passthrough proxy) so a canvas that draws it is not tainted. Used by both flyer exports and by `lib/map-capture.ts`                                                                                                        |
+| `apps/website/lib/contact.ts`                              | `whatsappHref` - the wa.me click-to-chat URL, with the number stripped to digits (wa.me rejects the spaces and dashes people type) and an optional prefilled message. Used both directions: a **branch's** number on the contact page, a **customer's** in the admin inbox                                    |
 
 **How to apply:**
 

@@ -37,6 +37,14 @@ export interface BoxProps extends UIComponentProps {
   tabIndex?: number;
   /** Click handler. */
   onClick?: React.MouseEventHandler<HTMLDivElement>;
+  /**
+   * Click handler on the **capture** phase - it runs before the handlers of
+   * anything inside the Box, so it is the only place a wrapper can take a click
+   * away from an interactive descendant (`stopPropagation` + `preventDefault`).
+   * `onClick` is too late for that: a `Link` inside has already cancelled the
+   * event and navigated by the time a bubbling handler sees it.
+   */
+  onClickCapture?: React.MouseEventHandler<HTMLDivElement>;
   /** Key-down handler. */
   onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>;
   /** Animation end handler. */
@@ -111,6 +119,7 @@ export const Box = React.forwardRef<HTMLDivElement, BoxProps>(
       id,
       role,
       onClick,
+      onClickCapture,
       onKeyDown,
       onAnimationEnd,
       onDragOver,
@@ -173,6 +182,9 @@ export const Box = React.forwardRef<HTMLDivElement, BoxProps>(
           onClick={
             onClick as unknown as React.MouseEventHandler<HTMLAnchorElement>
           }
+          onClickCapture={
+            onClickCapture as unknown as React.MouseEventHandler<HTMLAnchorElement>
+          }
           onKeyDown={
             onKeyDown as unknown as React.KeyboardEventHandler<HTMLAnchorElement>
           }
@@ -194,6 +206,7 @@ export const Box = React.forwardRef<HTMLDivElement, BoxProps>(
         aria-labelledby={props["aria-labelledby"]}
         aria-describedby={props["aria-describedby"]}
         onClick={onClick}
+        onClickCapture={onClickCapture}
         onKeyDown={onKeyDown}
         onAnimationEnd={onAnimationEnd}
         onDragOver={onDragOver}

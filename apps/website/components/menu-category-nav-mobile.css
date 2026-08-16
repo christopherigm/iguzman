@@ -1,0 +1,124 @@
+/*
+ * The phone-sized category index: a pill fixed just above the bottom edge of the
+ * viewport, and the card of category entries that rises out of it.
+ *
+ * Everything static about the two children (fill, radius, padding, elevation) is
+ * a component prop - what is here is what props cannot express: the fixed
+ * placement of the container, the open/closed transition, the pseudo-class
+ * states, and the one media query that hands the job back to the sticky rail.
+ */
+.menu-category-nav-mobile {
+  position: fixed;
+  left: 50%;
+  /*
+   * The gap to the bottom edge is `@repo/ui`'s own FAB offset, so this control
+   * and any floating action button an app adds sit on the same line, and an app
+   * moves both at once from its `globals.css`. The safe-area inset keeps it
+   * clear of an iPhone's home indicator rather than tucked behind it.
+   */
+  bottom: calc(var(--ui-fab-offset, 20px) + env(safe-area-inset-bottom, 0px));
+  /*
+   * Centred by translation rather than `left: 0; right: 0; margin: auto`, so the
+   * box is only as wide as the card it holds. A full-width strip would swallow
+   * every tap along the bottom of the page.
+   */
+  transform: translateX(-50%);
+  /* `FloatingActionButton`'s own layer: above the page and the fixed navbar,
+     below Toast (1000) and ConfirmationModal (1100). */
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  /* The button is narrower than the card, and hangs from its middle. */
+  align-items: center;
+  gap: 10px;
+  /*
+   * ⚠ The container still covers the card's whole footprint while the card is
+   * invisible, and a transparent box swallows taps just as an opaque one does -
+   * so it takes none, and the two children take them back below. Without this,
+   * a closed control blocks a strip of item cards a reader can see.
+   */
+  pointer-events: none;
+}
+
+/*
+ * ⚠ From `md` up the sticky rail (`menu-category-nav.tsx`) is the index, and
+ * this control must not double it. That boundary is the same one the rail's own
+ * grid cell carries (`hidden={{ xs: true, sm: true }}` in `menu-listing.tsx`) -
+ * keep the two in step, or the page ends up with two indexes or none.
+ *
+ * It is a media query rather than a `hidden` prop because the control is
+ * `position: fixed` and belongs to no grid cell.
+ */
+@media (--md) {
+  .menu-category-nav-mobile {
+    display: none;
+  }
+}
+
+.menu-category-nav-mobile__trigger,
+.menu-category-nav-mobile__panel {
+  pointer-events: auto;
+}
+
+.menu-category-nav-mobile__panel {
+  /*
+   * Closed: folded down into the button it comes out of. `visibility` is what
+   * takes the entries out of the tab order and off a screen reader while they
+   * are invisible - and it animates discretely, so it flips at the *end* of the
+   * closing transition and at the *start* of the opening one, which is exactly
+   * when it should.
+   */
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(10px) scale(0.96);
+  /* The card grows out of its own bottom edge, i.e. out of the button. */
+  transform-origin: bottom center;
+  transition:
+    opacity 180ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 220ms;
+}
+
+.menu-category-nav-mobile__panel--open {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.menu-category-nav-mobile__trigger {
+  transition: filter 160ms ease;
+}
+
+.menu-category-nav-mobile__trigger:hover {
+  /* Brightens rather than changing colour: the fill is the tenant's accent, and
+     a second accent would need a token no palette defines. */
+  filter: brightness(1.08);
+}
+
+.menu-category-nav-mobile__trigger:focus-visible {
+  outline: 2px solid var(--foreground, #111);
+  outline-offset: 3px;
+}
+
+/* Turns over while the card is up, so the button says which way it goes next. */
+.menu-category-nav-mobile__chevron {
+  transition: transform 200ms ease;
+}
+
+.menu-category-nav-mobile__chevron--open {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-category-nav-mobile__panel,
+  .menu-category-nav-mobile__panel--open,
+  .menu-category-nav-mobile__chevron--open {
+    /* The card still fades and still takes itself out of the tab order; only the
+       travel goes. */
+    transform: none;
+  }
+
+  .menu-category-nav-mobile__chevron {
+    transition: none;
+  }
+}

@@ -5,14 +5,29 @@
  * its column (beside the first item grid) until the page scrolls it up to the
  * fixed navbar, then stays there - and stops when its grid column ends, so it
  * never floats over the sections that follow the menu.
- *
- * The offset is the navbar's own height variable, never a copied pixel value.
  */
 .menu-category-nav {
   position: sticky;
+  /*
+   * ⚠ This is the section headings' own `scroll-margin-top` (set in
+   * `menu-listing.tsx`), and it has to stay that value: the sticky box's first
+   * child is a spacer that *is* a section heading, so coming to rest here puts
+   * the rail's card on the first item card of whichever section was jumped to.
+   * The offset used to carry an extra term for the cradled brandmark's overhang;
+   * the mark now hangs into the spacer instead, which is both taller and always
+   * there.
+   */
   top: calc(var(--ui-navbar-height, 57px) + 16px);
   display: flex;
   flex-direction: column;
+  /*
+   * A tenant with more categories than fit the viewport scrolls the card itself
+   * (`overflow-y: auto` on it) rather than pushing its own tail off the bottom
+   * of the screen. The budget is the viewport less the navbar and the pinned
+   * offset's own 16px top and bottom; the spacer above the card takes its share
+   * out of it on its own, which is why no term for it appears here.
+   */
+  max-height: calc(100vh - var(--ui-navbar-height, 57px) - 32px);
 }
 
 /* Hover/focus tint mixed from the card's own text colour, so it reads on a
