@@ -418,7 +418,7 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   addresses. Those two numbers (48 / 56) are the only ones copied from
   `catalog-categories.css` - keep them in step.
 - **Below `md` the index is a floating button, not a shrunken rail**
-  (`components/menu-category-nav-mobile.tsx`): a pill fixed just above the
+  (`components/menu-category-nav-mobile.tsx`): a pill floating just above the
   bottom edge - the tenant's `img_brandmark` and the page's own "Menu" heading -
   which raises a card of the same entries out of itself. On a phone there is no
   column to give a rail, and a full-width bar of category names would cost more
@@ -427,11 +427,39 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   breakpoint**: the rail's cell is `hidden={{ xs: true, sm: true }}` and this one
   is taken out from `md` up by the single `@media (--md)` in its CSS - move one
   without the other and the page has two indexes or none. It is a media query
-  here (and a prop there) only because a `position: fixed` control belongs to no
+  here (and a prop there) only because a self-positioned control belongs to no
   grid cell. **The entries are the rail's own `MenuCategoryNavItems`** at
-  `size="lg"` for a thumb - the same one-prop difference POS makes to the
-  ingredient picker - so a jump behaves identically on both and the card closes
-  itself on the way, being over the content just asked for.
+  `size="lg"` for a thumb, plus `align="center"` (a free-floating panel hanging
+  off the middle of a pill, where the rail's ranged-left column would read as
+  offset) - the same one-prop difference POS makes to the ingredient picker - so
+  a jump behaves identically on both and the card closes itself on the way,
+  being over the content just asked for.
+  ⚠ **It is `position: sticky`, not `fixed`, and the card is lifted out of its
+  flow** to make that possible. Sticky with a `bottom` offset floats the pill
+  for as long as its own flow position is below the fold and settles into that
+  position when the page scrolls down to it - and its flow position is the end
+  of the menu, after the last item grid and above the footer, so the control
+  parks under the dishes instead of covering the page's last row for good.
+  `fixed` can only ever be one of those two. The **button alone** is what sits
+  in flow (the card is `position: absolute`, hung off `bottom: 100%`): in flow
+  the card is ~360px tall and a parked control reserving that much would open a
+  hole above the footer. ⚠ Its **chevron points up while the card is closed**
+  and turns over to point down when the card is up - the arrow says where the
+  card will go next, not where it is; the glyph is `chevron-down.svg` drawn
+  rotated, so the closed state is the one carrying the `rotate(180deg)`.
+  ⚠ Every state of the card's `transform` keeps its centring
+  `translateX(-50%)`, the reduced-motion one included - drop it and the card
+  lands half its own width to the right.
+  **Its card wears the same cradled brandmark the rail's does**, and on the same
+  `hero_text_frame` gate - the arch is a piece of the frame's design language,
+  where the button's own icon is not (that one stays ungated). Both draw the
+  rail's `MenuNavCradle`, which is exported from `menu-category-nav.tsx` so the
+  arch's three tuning numbers live in one place. ⚠ **`menu-listing.tsx` renders
+  it and passes it down as a node**, because this control is a client component
+  and `@repo/ui/hero` pulls `react-player` into the browser bundle at module
+  scope - the same reason `menu-category-nav-items.tsx` is split out. It hangs
+  off the wrapper around the `Card`, not the `Card`, whose `overflow: auto`
+  would clip the disc away.
   ⚠ **The card is never unmounted**: it is folded down into the button with
   `visibility`/`opacity`/`transform`, so it animates in _and_ out, and
   `visibility` is what takes the entries out of the tab order while they are
@@ -444,6 +472,31 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   icon is just the site's mark. Both controls read their accent and foreground
   from `menu-category-nav-colors.ts`, which is plain data importing nothing so
   that the client control and the server rail can share it.
+- **One entry is lit at a time - the section the reader is in** - filled with the
+  tenant's **secondary** colour, whether they got there by pressing it or by
+  scrolling to it. It lives in the shared `MenuCategoryNavItems`, so the rail and
+  the phone card cannot come to disagree about where the reader is.
+  ⚠ **The line the scroll spy measures against is each heading's own
+  `scroll-margin-top`**, read off `getComputedStyle` rather than restated - that
+  is the offset a jump parks the heading at, so "the heading crossed the line"
+  and "the entry I pressed has arrived" are one event decided by one number, and
+  the navbar's height moves both together. The lit entry is the **last** heading
+  at or above that line, plus one special case: at the foot of the document the
+  **last** entry wins, since a short final section can never bring its own
+  heading up to the line. ⚠ **A press lights its entry immediately and holds it
+  until the travel lands** (`SETTLE_MS` is a ceiling, released early the moment
+  the target arrives) - without the hold, a smooth scroll past four sections runs
+  the highlight down the list like a slot machine.
+- **`--secondary` / `--secondary-foreground` are published by
+  `[locale]/layout.tsx`**, beside `--accent`, from `System.secondary_color` -
+  so a component can reach for the second brand colour without a prop threaded
+  down from whichever page holds the System. The foreground is picked
+  server-side with `contrastText` (now `lib/colors.ts`, re-exported from the
+  social templates' `types.ts` for its nine importers): CSS has no contrast
+  function, and the tenant's hex can be light or dark. ⚠ Both are left **unset**
+  for a tenant with no secondary colour rather than falling back to the accent -
+  on a card already painted in the accent that is no highlight at all, so the
+  consumer's own fallback (a tint of the card's text) has to answer instead.
 - **The rail wears the tenant's cradled brandmark**, on the same "Framed
   heading" switch (`hero_text_frame` + `img_brandmark`) that frames a hero
   heading and cradles the footer's edge - the shared `BrandmarkCradle`, so the

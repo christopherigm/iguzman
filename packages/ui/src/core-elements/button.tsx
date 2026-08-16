@@ -137,6 +137,13 @@ export interface ButtonProps extends UIComponentProps {
   "aria-expanded"?: boolean;
   /** IDs of elements whose contents are controlled by this button. */
   "aria-controls"?: string;
+  /**
+   * Marks this button as the current item of a set - `"location"` for the entry
+   * of an in-page jump list the reader is standing in, `"page"` for the current
+   * page of a pagination row. Prefer it over `aria-pressed`, which announces a
+   * toggle.
+   */
+  "aria-current"?: React.AriaAttributes["aria-current"];
   /** Shows a loading spinner and disables the button while true. */
   isLoading?: boolean;
   /**
@@ -190,6 +197,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
   const ariaPressed = props["aria-pressed"];
   const ariaExpanded = props["aria-expanded"];
   const ariaControls = props["aria-controls"];
+  const ariaCurrent = props["aria-current"];
 
   const isDisabled = disabled || isLoading;
 
@@ -318,6 +326,9 @@ export const Button: React.FC<ButtonProps> = (props) => {
           {...(ariaExpanded !== undefined
             ? { "aria-expanded": ariaExpanded }
             : {})}
+          {...(ariaCurrent !== undefined
+            ? { "aria-current": ariaCurrent }
+            : {})}
         >
           {contentWithIcon}
           {showWave && <span aria-hidden className="ui-wave" />}
@@ -347,6 +358,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
       aria-controls={ariaControls}
       {...(ariaPressed !== undefined ? { "aria-pressed": ariaPressed } : {})}
       {...(ariaExpanded !== undefined ? { "aria-expanded": ariaExpanded } : {})}
+      {...(ariaCurrent !== undefined ? { "aria-current": ariaCurrent } : {})}
     >
       {contentWithIcon}
       {showWave && <span aria-hidden className="ui-wave" />}

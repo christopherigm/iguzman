@@ -8,7 +8,7 @@ import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { SectionHero } from "@/components/section-hero";
 import { CategoryCard } from "@/components/catalog-categories";
 import { BuyableCard } from "@/components/buyable-card";
-import { MenuCategoryNav } from "@/components/menu-category-nav";
+import { MenuCategoryNav, MenuNavCradle } from "@/components/menu-category-nav";
 import { MenuCategoryNavMobile } from "@/components/menu-category-nav-mobile";
 import { ScrollToSectionLink } from "@/components/scroll-to-section-link";
 import {
@@ -259,15 +259,31 @@ export async function MenuListing({ locale }: MenuListingProps) {
           </Grid>
         </Grid>
         {/* The same index on a phone, where the rail's cell is hidden: a pill
-         *  fixed above the bottom edge, raising the same entries in a card. It
-         *  is `position: fixed` and so belongs to no grid cell - it is rendered
-         *  here only because this is the page it addresses. The brandmark is
-         *  ungated, unlike the rail's cradled one: this is the site's icon on
-         *  its own button, not a piece of the "Framed heading" design. */}
+         *  floating above the bottom edge, raising the same entries in a card.
+         *  It is `position: sticky` and so belongs to no grid cell - and it is
+         *  rendered *here*, after the last item grid, because that flow position
+         *  is where it parks once the reader reaches the end of the menu.
+         *
+         *  Two brandmarks, on two different switches, and that is deliberate:
+         *  the **button's** is ungated (the site's icon on its own button), the
+         *  **cradle** on the card's top edge is the rail's own `MenuNavCradle`
+         *  and so rides the tenant's "Framed heading" setting exactly as the
+         *  rail's does - a cradle is a piece of that frame's design language.
+         *  ⚠ It is rendered here and passed down as a node rather than imported
+         *  by the phone control, which is a client component: `@repo/ui/hero`
+         *  pulls `react-player` into the browser bundle at module scope. */}
         <MenuCategoryNavMobile
           title={t("categoryNav")}
           label={heading}
           brandmark={system?.img_brandmark ?? null}
+          cradle={
+            railBrandmark ? (
+              <MenuNavCradle
+                brandmark={railBrandmark}
+                brandmarkAlt={system?.site_name ?? ""}
+              />
+            ) : null
+          }
           items={navItems}
         />
         {items.length === 0 && (

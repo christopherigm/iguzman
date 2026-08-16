@@ -31,6 +31,7 @@ import { kindLabels } from "@/lib/kind-labels";
 import { getSystem } from "@/lib/system";
 import { getMenuCategories, type MenuCategory } from "@/lib/catalog";
 import { basemapFor } from "@/lib/basemap";
+import { contrastText } from "@/lib/colors";
 import { BasemapProvider } from "@/components/basemap-provider";
 import { isGoogleFontUrl, cssFontFamily } from "@/lib/fonts";
 import { DEV_SITE_COOKIE, SITE_CONFIGS } from "@/sites/registry";
@@ -164,6 +165,23 @@ export default async function LocaleLayout({ children, params }: Props) {
     Object.entries(paletteVars),
   ) as React.CSSProperties;
   (bodyStyle as Record<string, string>)["--accent"] = accent;
+  // The tenant's *second* brand colour, published beside the accent so a
+  // component can reach for it (`var(--secondary)`) without a prop threaded
+  // down from whichever page holds the System - currently the menu's category
+  // indexes, which light the section the reader is in with it. Its foreground
+  // travels with it, because only the server knows the hex well enough to pick
+  // black or white against it; CSS has no contrast function.
+  //
+  // ⚠ Deliberately left *unset* when the tenant has no secondary colour, rather
+  // than falling back to the accent: on a surface already painted in the accent
+  // an accent highlight is no highlight at all, so the consumer's own fallback
+  // has to be the one that answers.
+  const secondaryBrand = system?.secondary_color ?? "";
+  if (secondaryBrand) {
+    (bodyStyle as Record<string, string>)["--secondary"] = secondaryBrand;
+    (bodyStyle as Record<string, string>)["--secondary-foreground"] =
+      contrastText(secondaryBrand);
+  }
   // Both page backgrounds are published as variables and globals.css picks one
   // per `data-theme`, so the switch still works after hydration - an inline
   // `background` here would be whatever the server resolved and would go stale

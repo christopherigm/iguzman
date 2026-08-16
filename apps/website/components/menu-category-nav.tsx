@@ -91,6 +91,56 @@ const CRADLE_ARCH_WIDTH = 2.8;
 const CRADLE_ENCLOSE = 0.05;
 
 /**
+ * The tenant's brandmark cradled on the top edge of a menu index - the rail's
+ * card below, and the phone control's card (`menu-category-nav-mobile.tsx`),
+ * which takes it as a **node** rather than importing it.
+ *
+ * ⚠ That is the reason this is a component rather than four props spread twice:
+ * `@repo/ui/hero` imports `HeroVideo` at module scope and the package is not
+ * marked side-effect-free, so a `"use client"` module importing `BrandmarkCradle`
+ * drags `react-player` into this page's browser bundle for one `<svg>` - the same
+ * split `menu-category-nav-items.tsx` exists for. The phone control is a client
+ * component, so `menu-listing.tsx` (a server one) renders this and hands it down.
+ *
+ * Both indexes wear the identical arch: they are one feature at two widths, and
+ * a second set of numbers here could only drift from the first.
+ */
+export function MenuNavCradle({
+  brandmark,
+  brandmarkAlt = "",
+}: {
+  brandmark: string;
+  brandmarkAlt?: string;
+}) {
+  return (
+    <BrandmarkCradle
+      image={brandmark}
+      imageAlt={brandmarkAlt}
+      // The hero draws its cradle in white over a video. Here the arches
+      // rise out of the card itself, so both they and the area they
+      // enclose take the card's own background and the swell reads as one
+      // shape; the disc is a page-background plate, as in the footer, so
+      // it follows the theme.
+      color={MENU_NAV_BACKGROUND}
+      fill={MENU_NAV_BACKGROUND}
+      circleBackground="var(--page-background, var(--background))"
+      // ⚠ No straight flanks. They are the parent's top border, and this
+      // parent is a `Card` with rounded top corners: a square rule drawn
+      // on the corner's chord leaves a stub of accent hanging past each
+      // curve. Without them the arch rises straight out of the card's own
+      // surface and the corners stay round.
+      flanks={false}
+      height={CRADLE_ARCH_HEIGHT}
+      width={CRADLE_ARCH_WIDTH}
+      // The arch closes over the mark rather than cradling it - see the
+      // constant. The disc is a page-background plate either way, so on
+      // this one the ring of accent around it is what reads as the niche.
+      enclose={CRADLE_ENCLOSE}
+    />
+  );
+}
+
+/**
  * The menu's category rail - the list of category names beside the item grids,
  * which sticks below the fixed navbar once the page has scrolled past it.
  *
@@ -185,30 +235,7 @@ export function MenuCategoryNav({
            *  card scrolls its own overflow (a tenant with more categories than
            *  fit the viewport), and `overflow: auto` would clip the disc away. */}
           {brandmark && (
-            <BrandmarkCradle
-              image={brandmark}
-              imageAlt={brandmarkAlt}
-              // The hero draws its cradle in white over a video. Here the arches
-              // rise out of the rail itself, so both they and the area they
-              // enclose take the card's own background and the swell reads as one
-              // shape; the disc is a page-background plate, as in the footer, so
-              // it follows the theme.
-              color={MENU_NAV_BACKGROUND}
-              fill={MENU_NAV_BACKGROUND}
-              circleBackground="var(--page-background, var(--background))"
-              // ⚠ No straight flanks. They are the parent's top border, and this
-              // parent is a `Card` with rounded top corners: a square rule drawn
-              // on the corner's chord leaves a stub of accent hanging past each
-              // curve. Without them the arch rises straight out of the card's own
-              // surface and the corners stay round.
-              flanks={false}
-              height={CRADLE_ARCH_HEIGHT}
-              width={CRADLE_ARCH_WIDTH}
-              // The arch closes over the mark rather than cradling it - see the
-              // constant. The disc is a page-background plate either way, so on
-              // this one the ring of accent around it is what reads as the niche.
-              enclose={CRADLE_ENCLOSE}
-            />
+            <MenuNavCradle brandmark={brandmark} brandmarkAlt={brandmarkAlt} />
           )}
           <Card
             backgroundColor={MENU_NAV_BACKGROUND}

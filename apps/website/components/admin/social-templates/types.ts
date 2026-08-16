@@ -129,17 +129,11 @@ export function tint(hex: string | undefined, alpha: number): string {
 }
 
 /**
- * Pick black or white for legible text over a solid background color, via
- * relative luminance. Used so a headline stays readable whatever brand color the
- * tenant chose.
+ * Pick black or white for legible text over a solid background color.
+ *
+ * It lives in `@/lib/colors` now - the locale layout needs the same answer to
+ * publish `--secondary-foreground`, and a page-wide layout has no business
+ * importing from the admin CMS's flyer templates. Re-exported here so every
+ * template keeps reading it off the module it already imports.
  */
-export function contrastText(hex: string | undefined): string {
-  const m = /^#?([0-9a-f]{6})$/i.exec((hex ?? "").trim());
-  if (!m || !m[1]) return "#ffffff";
-  const int = parseInt(m[1], 16);
-  const r = (int >> 16) & 255;
-  const g = (int >> 8) & 255;
-  const b = int & 255;
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.6 ? "#111111" : "#ffffff";
-}
+export { contrastText } from "@/lib/colors";

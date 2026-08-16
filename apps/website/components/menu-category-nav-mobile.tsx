@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import { Button } from "@repo/ui/core-elements/button";
 import { Card } from "@repo/ui/core-elements/card";
@@ -28,18 +28,39 @@ interface MenuCategoryNavMobileProps {
    * wear it there. `null` falls back to a generic menu glyph.
    */
   brandmark?: string | null;
+  /**
+   * The cradled brandmark hung on the card's top edge - the rail's own
+   * `MenuNavCradle`, rendered by `menu-listing.tsx` and passed down as a
+   * **node**.
+   *
+   * ⚠ It is a prop rather than an import because this is a client component and
+   * `@repo/ui/hero` (where the cradle lives) pulls `HeroVideo` - and so
+   * `react-player` - into the browser bundle at module scope. Rendered by the
+   * server component above and handed over, none of that crosses the boundary.
+   *
+   * Unlike the button's `brandmark` this **is** gated on the tenant's "Framed
+   * heading" setting, exactly as the rail's is: a cradle is a piece of that
+   * frame's design language, where a button icon is just the site's own mark.
+   */
+  cradle?: ReactNode;
 }
 
 /** The fallback icon for a tenant with no brandmark of its own. */
 const FALLBACK_ICON = "/icons/hamburger.svg";
 
-/** The chevron that turns over when the card is up. */
+/**
+ * The chevron on the button. ⚠ It is a chevron-*down* drawn rotated: closed, it
+ * points **up** (where the card will come from), and it turns over to point down
+ * when the card is up (where it will go). See `menu-category-nav-mobile.css` -
+ * the rotation is not a decorative flourish, it is which way the arrow faces.
+ */
 const CHEVRON_ICON = "/icons/chevron-down.svg";
 
 /**
- * The menu's category index on a phone: a floating pill just above the bottom
+ * The menu's category index on a phone: a pill floating just above the bottom
  * edge of the viewport which raises a card of the same category entries the
- * sticky rail lists.
+ * sticky rail lists - and which **parks itself under the last item grid** once
+ * the reader reaches the end of the menu.
  *
  * It is the `xs`/`sm` half of one feature. `MenuCategoryNav` - the rail beside
  * the item grids - is `md` and up, and the two are mutually exclusive: the rail
@@ -65,12 +86,20 @@ const CHEVRON_ICON = "/icons/chevron-down.svg";
  * ⚠ **The card is never unmounted** - it is folded down into the button with
  * `visibility`/`opacity`/`transform`, so both directions animate. A card that
  * mounted on open could only animate on the way in, and would pop out.
+ *
+ * ⚠ **The control is `position: sticky`, and the card is lifted out of its
+ * flow** (see the CSS). Sticky is what gives the parking behaviour for free -
+ * the pill floats while its own flow position is below the fold and returns to
+ * it when the page scrolls that far - and it only works because the box in flow
+ * is the button alone. In flow the card is ~360px tall, and a parked control
+ * reserving that much would open a hole between the last dish and the footer.
  */
 export function MenuCategoryNavMobile({
   title,
   label,
   items,
   brandmark = null,
+  cradle = null,
 }: MenuCategoryNavMobileProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLElement>(null);
@@ -110,32 +139,49 @@ export function MenuCategoryNavMobile({
 
   return (
     <nav ref={rootRef} aria-label={title} className="menu-category-nav-mobile">
-      <Card
+      {/* The card, plus whatever hangs off its top edge. A plain `div` rather
+       *  than a `Box`: everything it carries is the lift out of the flow and the
+       *  open/close transition, which are the CSS file's business, and the width
+       *  goes with them because the card's own centring translate is part of the
+       *  same transform. ⚠ The cradle hangs off *this* box and not off the
+       *  `Card`, exactly as on the rail - the card scrolls its own overflow for a
+       *  tenant with more categories than fit, and `overflow: auto` would clip
+       *  the disc away. */}
+      <div
         id={panelId}
         className={`menu-category-nav-mobile__panel${
           open ? " menu-category-nav-mobile__panel--open" : ""
         }`}
-        backgroundColor={MENU_NAV_BACKGROUND}
-        color={MENU_NAV_FOREGROUND}
-        border="none"
-        // A step above the button's own shadow: the card is the thing that has
-        // just come off the page, and it is read over the item cards.
-        elevation={12}
-        padding={10}
-        gap={8}
-        // Wide enough for a category name, never wider than the screen it floats
-        // over. A tenant with more categories than fit scrolls the card rather
-        // than pushing its own tail off the top of the viewport.
-        width="min(320px, calc(100vw - 32px))"
-        maxHeight="min(52vh, 360px)"
-        styles={{ overflowY: "auto" }}
       >
-        <MenuCategoryNavItems
-          items={items}
-          size="lg"
-          onSelect={() => setOpen(false)}
-        />
-      </Card>
+        {cradle}
+        <Card
+          backgroundColor={MENU_NAV_BACKGROUND}
+          color={MENU_NAV_FOREGROUND}
+          border="none"
+          // A step above the button's own shadow: the card is the thing that has
+          // just come off the page, and it is read over the item cards.
+          elevation={12}
+          padding={10}
+          gap={8}
+          // The measure is the panel's (see the CSS) - wide enough for a category
+          // name, never wider than the screen it floats over. A tenant with more
+          // categories than fit scrolls the card rather than pushing its own tail
+          // off the top of the viewport.
+          width="100%"
+          maxHeight="min(52vh, 360px)"
+          styles={{ overflowY: "auto" }}
+        >
+          <MenuCategoryNavItems
+            items={items}
+            size="lg"
+            // Centred, unlike the rail's: this card is a free-floating panel
+            // hanging off the middle of a pill, and a column of names ranged
+            // left inside it reads as offset from the button that raised it.
+            align="center"
+            onSelect={() => setOpen(false)}
+          />
+        </Card>
+      </div>
       <Button
         id={triggerId}
         unstyled
@@ -145,6 +191,7 @@ export function MenuCategoryNavMobile({
         aria-controls={panelId}
         display="inline-flex"
         alignItems="center"
+        justifyContent="center"
         gap={10}
         paddingX={16}
         paddingY={10}

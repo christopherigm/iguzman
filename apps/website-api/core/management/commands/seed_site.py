@@ -320,6 +320,15 @@ class Command(BaseCommand):
             "service_categories": system.service_categories.all().delete()[0],
             "menu_items": MenuItem.objects.filter(system=system).delete()[0],
             "menu_categories": system.menu_categories.all().delete()[0],
+            # Ingredients last: `MenuItemIngredient.ingredient` and
+            # `MenuItemIngredientOption.ingredient` are both PROTECT, so the
+            # dishes referencing them have to go first (the dict literal is
+            # evaluated top to bottom). Only rows nothing else points at are
+            # dropped - an ingredient a dish outside this reset still uses is
+            # left alone rather than raising ProtectedError.
+            "ingredients": Ingredient.objects.filter(
+                system=system, menu_uses__isnull=True, menu_option_uses__isnull=True
+            ).delete()[0],
         }
         self.stdout.write(f"  Reset prior content: {counts}")
 
@@ -497,14 +506,20 @@ class Command(BaseCommand):
             if cached is not None:
                 return cached
             qty = self._price(ing["quantity"]) if ing.get("quantity") is not None else None
-            obj = Ingredient.objects.create(
-                system=system,
-                name=name,
-                en_name=ing.get("en_name"),
-                unit=ing.get("unit") or "g",
-                nutrition_basis_quantity=qty if qty else Decimal("1"),
-                calories=ing.get("calories"),
+            # `slug` is globally unique and `_uslug` is deterministic per host, so
+            # a blind create is an IntegrityError as soon as a row survives from
+            # an earlier run - a seed without `--reset`, a reset that left an
+            # ingredient a dish still uses, or two names that slugify the same.
+            obj, _ = Ingredient.objects.get_or_create(
                 slug=self._uslug(name, "ingredient"),
+                defaults={
+                    "system": system,
+                    "name": name,
+                    "en_name": ing.get("en_name"),
+                    "unit": ing.get("unit") or "g",
+                    "nutrition_basis_quantity": qty if qty else Decimal("1"),
+                    "calories": ing.get("calories"),
+                },
             )
             ingredient_cache[key] = obj
             return obj

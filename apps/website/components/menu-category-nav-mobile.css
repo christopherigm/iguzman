@@ -1,15 +1,30 @@
 /*
- * The phone-sized category index: a pill fixed just above the bottom edge of the
- * viewport, and the card of category entries that rises out of it.
+ * The phone-sized category index: a pill that floats above the bottom edge of
+ * the viewport while the reader is working through the menu, and parks itself
+ * under the last item grid once they reach the end of it - plus the card of
+ * category entries that rises out of that pill.
  *
  * Everything static about the two children (fill, radius, padding, elevation) is
- * a component prop - what is here is what props cannot express: the fixed
- * placement of the container, the open/closed transition, the pseudo-class
- * states, and the one media query that hands the job back to the sticky rail.
+ * a component prop - what is here is what props cannot express: the placement of
+ * the container, the lift of the card out of its flow, the open/closed
+ * transition, the pseudo-class states, and the one media query that hands the
+ * job back to the sticky rail.
  */
 .menu-category-nav-mobile {
-  position: fixed;
-  left: 50%;
+  /*
+   * ⚠ `sticky`, not `fixed`, and that is the whole "parks at the end" half of
+   * the behaviour. A sticky box with a `bottom` offset floats that far above the
+   * viewport's bottom edge for exactly as long as its own flow position is below
+   * the fold, and settles into that flow position when the page finally scrolls
+   * down to it. Its flow position is the end of the menu - after the last item
+   * grid, above the footer (`menu-listing.tsx` renders it there) - so the
+   * control sees the reader through the dishes and then comes to rest under
+   * them, instead of covering the page's last row for good.
+   *
+   * `fixed` could only ever be one of those two, and faking the other means
+   * re-deriving "the end of the content" from scroll offsets on every frame.
+   */
+  position: sticky;
   /*
    * The gap to the bottom edge is `@repo/ui`'s own FAB offset, so this control
    * and any floating action button an app adds sit on the same line, and an app
@@ -17,25 +32,25 @@
    * clear of an iPhone's home indicator rather than tucked behind it.
    */
   bottom: calc(var(--ui-fab-offset, 20px) + env(safe-area-inset-bottom, 0px));
-  /*
-   * Centred by translation rather than `left: 0; right: 0; margin: auto`, so the
-   * box is only as wide as the card it holds. A full-width strip would swallow
-   * every tap along the bottom of the page.
-   */
-  transform: translateX(-50%);
   /* `FloatingActionButton`'s own layer: above the page and the fixed navbar,
      below Toast (1000) and ConfirmationModal (1100). */
   z-index: 900;
-  display: flex;
-  flex-direction: column;
-  /* The button is narrower than the card, and hangs from its middle. */
-  align-items: center;
-  gap: 10px;
   /*
-   * ⚠ The container still covers the card's whole footprint while the card is
-   * invisible, and a transparent box swallows taps just as an opaque one does -
-   * so it takes none, and the two children take them back below. Without this,
-   * a closed control blocks a strip of item cards a reader can see.
+   * ⚠ The only thing in flow here is the **button** - the card is lifted out of
+   * it (see `__panel`), which is what makes the sticky box one pill tall. In
+   * flow the card is ~360px, and a parked control reserving that much would open
+   * a hole between the last dish and the footer.
+   */
+  display: flex;
+  justify-content: center;
+  /* Parked, it reads as a control under the last row of dishes rather than one
+     stuck to it. */
+  margin-top: 16px;
+  /*
+   * ⚠ The container spans the column's full width, and a transparent box
+   * swallows taps just as an opaque one does - so it takes none, and the two
+   * children take them back below. Without this, the floating control blocks a
+   * strip of item cards a reader can see.
    */
   pointer-events: none;
 }
@@ -47,7 +62,7 @@
  * keep the two in step, or the page ends up with two indexes or none.
  *
  * It is a media query rather than a `hidden` prop because the control is
- * `position: fixed` and belongs to no grid cell.
+ * positioned by itself and belongs to no grid cell.
  */
 @media (--md) {
   .menu-category-nav-mobile {
@@ -62,6 +77,18 @@
 
 .menu-category-nav-mobile__panel {
   /*
+   * Hung off the button's top edge and out of the flow - see the container's
+   * note. `bottom: 100%` is the container's own height, i.e. the button's, so
+   * the card clears it whatever the tenant's font does to the label.
+   */
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  /* Wide enough for a category name, never wider than the screen it floats
+     over. It lives here rather than on the `Card` because the centring
+     translate below is part of the same box. */
+  width: min(320px, calc(100vw - 32px));
+  /*
    * Closed: folded down into the button it comes out of. `visibility` is what
    * takes the entries out of the tab order and off a screen reader while they
    * are invisible - and it animates discretely, so it flips at the *end* of the
@@ -70,7 +97,13 @@
    */
   visibility: hidden;
   opacity: 0;
-  transform: translateY(10px) scale(0.96);
+  /*
+   * ⚠ Every state keeps the `translateX(-50%)` that centres the card on the
+   * button - it is positioning, not animation, and a state that drops it (the
+   * reduced-motion block included) throws the card half its own width to the
+   * right.
+   */
+  transform: translateX(-50%) translateY(10px) scale(0.96);
   /* The card grows out of its own bottom edge, i.e. out of the button. */
   transform-origin: bottom center;
   transition:
@@ -82,7 +115,7 @@
 .menu-category-nav-mobile__panel--open {
   visibility: visible;
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: translateX(-50%);
 }
 
 .menu-category-nav-mobile__trigger {
@@ -100,24 +133,33 @@
   outline-offset: 3px;
 }
 
-/* Turns over while the card is up, so the button says which way it goes next. */
+/*
+ * ⚠ The glyph is a chevron-**down**, and it is drawn rotated while the card is
+ * closed: the arrow says where the card will go next, not where it is - so it
+ * points *up* at a hidden card (which rises out of the button) and turns over to
+ * point *down* once the card is up. Reversing the two states makes the button
+ * describe its current state instead, which on a control that only ever moves
+ * one way is no information at all.
+ */
 .menu-category-nav-mobile__chevron {
+  transform: rotate(180deg);
   transition: transform 200ms ease;
 }
 
 .menu-category-nav-mobile__chevron--open {
-  transform: rotate(180deg);
+  transform: rotate(0deg);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .menu-category-nav-mobile__panel,
-  .menu-category-nav-mobile__panel--open,
-  .menu-category-nav-mobile__chevron--open {
+  .menu-category-nav-mobile__panel--open {
     /* The card still fades and still takes itself out of the tab order; only the
-       travel goes. */
-    transform: none;
+       travel goes - the centring translate stays, see above. */
+    transform: translateX(-50%);
   }
 
+  /* The chevron keeps both of its states - which way it faces is meaning, not
+     motion - and loses only the turn between them. */
   .menu-category-nav-mobile__chevron {
     transition: none;
   }

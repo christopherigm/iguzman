@@ -31,12 +31,25 @@
 }
 
 /* Hover/focus tint mixed from the card's own text colour, so it reads on a
- * light accent (dark `--accent-foreground`) as well as a dark one. */
+ * light accent (dark `--accent-foreground`) as well as a dark one.
+ *
+ * ⚠ The *lit* entry - the section the reader is in - is painted from props in
+ * `menu-category-nav-items.tsx`, i.e. inline, so it wins over this rule and a
+ * hover cannot wash the highlight out. The colour is in the transition because
+ * the lit entry changes its foreground too. */
 .menu-category-nav__item {
-  transition: background-color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
 .menu-category-nav__item:hover,
 .menu-category-nav__item:focus-visible {
   background-color: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-category-nav__item {
+    transition: none;
+  }
 }

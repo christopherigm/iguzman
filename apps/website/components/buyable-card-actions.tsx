@@ -99,7 +99,7 @@ export function BuyableCardActions({
         label={t("share")}
         copiedLabel={t("linkCopied")}
         url={shareUrl}
-        size="sm"
+        size="md"
         stopPropagation
       />
       <FavoriteButton
@@ -107,7 +107,7 @@ export function BuyableCardActions({
         id={id}
         initialFavorite={initialFavorite}
         isLoggedIn={isLoggedIn}
-        size="sm"
+        size="md"
         stopPropagation
       />
       {bookingSlug ? (
@@ -116,7 +116,7 @@ export function BuyableCardActions({
           aria-label={tBooking("bookNow")}
           title={tBooking("bookNow")}
           kind="primary"
-          size="sm"
+          size="md"
           onClick={handleBook}
         />
       ) : (
@@ -126,7 +126,7 @@ export function BuyableCardActions({
           cartLineId={cartLineId}
           isLoggedIn={isLoggedIn}
           disabled={!inStock}
-          size="sm"
+          size="md"
           stopPropagation
           customize={customize}
         />
