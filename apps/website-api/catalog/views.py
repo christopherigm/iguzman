@@ -12,6 +12,13 @@ from rest_framework.views import APIView
 
 from core.models import System
 from core.services.llm import LlmNotConfigured
+from core.tenancy import user_system
+from .recommendations import (
+    CATEGORY_RECOMMENDATION_PREFETCH,
+    ITEM_SOURCES,
+    OWN_RECOMMENDATION_PREFETCH,
+    SOURCE_MODELS,
+)
 from .services.clone import clone_menu_item, clone_product, clone_service
 from .services.nutrition_lookup import lookup_nutrition
 from .services.price_lookup import lookup_price
@@ -82,6 +89,8 @@ from .serializers import (
     MenuItemRecipeSerializer,
     IngredientSerializer,
     IngredientWriteSerializer,
+    category_recommendation_refs,
+    own_recommendation_refs,
 )
 
 
@@ -1611,3 +1620,76 @@ class MenuItemCloneView(_BaseCloneView):
         # the two rows involved.
         _invalidate_pattern('catalog:menu_item:*')
         _invalidate_pattern('catalog:menu_items:*')
+
+
+class RecommendationListView(APIView):
+    """
+    GET /api/catalog/recommendations/?source=<kind>&id=<pk>
+
+    A source's **own** checkout-recommendation rows, as `{kind, id, ...}` refs.
+    `source` is one of `product`, `service`, `menu_item`, `product_category`,
+    `service_category`, `menu_category` - the same three item kinds the cart and
+    favorites endpoints already speak, plus their categories.
+
+    ⚠ **Own rows, and for an item that is not the same thing as what a customer
+    sees.** An empty answer for an item means "offer whatever my category
+    recommends", which is the state the CMS editor has to bind to: loading the
+    resolved list would show an operator ticks they never made, and the first save
+    would freeze them into an override. What the customer is offered is resolved
+    server-side and delivered on the cart payload; see
+    `catalog/recommendations.py`.
+
+    Admin only, and read-only: writes go through the source's own form (the
+    `recommendations` field on each write serializer), so a save is one request
+    and one transaction with the rest of the record.
+
+    Uncached, deliberately - it is small, admin-only, and read immediately after
+    a save, where a stale answer would read as a lost edit. Same exception the
+    coupon endpoints carry.
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    def get(self, request):
+        source_kind = request.query_params.get('source')
+        model = SOURCE_MODELS.get(source_kind)
+        if model is None:
+            return Response(
+                {'detail': 'Unknown source.'}, status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            source_id = int(request.query_params.get('id') or 0)
+        except (TypeError, ValueError):
+            source_id = 0
+        if not source_id:
+            return Response(
+                {'detail': 'A source id is required.'}, status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Scoped to the caller's own tenant, which is stricter than the catalog
+        # endpoints around it: those are public reads of a published catalog,
+        # while this is one operator's merchandising configuration. The System
+        # comes from the profile, never from the request (see `core.tenancy`).
+        system = user_system(request)
+        if system is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        prefetch = (
+            OWN_RECOMMENDATION_PREFETCH if source_kind in ITEM_SOURCES
+            else CATEGORY_RECOMMENDATION_PREFETCH
+        )
+        source = (
+            model.objects
+            .filter(pk=source_id, system=system)
+            .prefetch_related(*prefetch)
+            .first()
+        )
+        if source is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        refs = (
+            own_recommendation_refs(source, request)
+            if source_kind in ITEM_SOURCES
+            else category_recommendation_refs(source, request)
+        )
+        return Response(refs)

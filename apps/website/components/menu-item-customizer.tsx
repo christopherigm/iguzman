@@ -175,6 +175,7 @@ export function MenuItemCustomizer({
       {hasSizeChoice(sizes) && (
         <MenuSizePicker
           sizes={sizes}
+          basePrice={basePrice}
           value={sizeId}
           onChange={setSizeId}
           currency={currency}

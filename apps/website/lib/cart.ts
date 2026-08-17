@@ -34,6 +34,16 @@ export interface CartCustomizationRow {
   name: string;
   en_name: string | null;
   quantity: number;
+  /**
+   * The alternative swapped in from a choice group (an `Ingredient` id), null
+   * when the group's default was kept.
+   *
+   * The row's `name` is what the cart *prints*; this is what the picker
+   * *selects on*, and a name cannot be turned back into an id - so without it
+   * re-opening the customiser on this line would offer the default in place of
+   * the option the customer actually chose.
+   */
+  option: number | null;
   unit_price: string;
   line_upcharge: string;
   removed: boolean;
@@ -70,11 +80,40 @@ export interface CartTotal {
   subtotal: string;
 }
 
+/**
+ * One "don't forget this" card under the cart's lines.
+ *
+ * A **full** item payload, not a reference, because the strip is drawn with the
+ * ordinary catalog card - the add button, the heart, the customiser and the
+ * price all have to behave exactly as they do in a grid, since adding one of
+ * these to the cart is the whole point.
+ *
+ * ⚠ Nothing here is filtered on the client. The API has already deduped across
+ * lines, dropped anything already in the cart, dropped what cannot be bought,
+ * and dropped anything in a currency this basket cannot check out in - see
+ * website-api's `catalog/recommendations.py`. Re-deriving any of that in the
+ * browser is how the strip comes to disagree with the cart it sits under.
+ */
+export type CartRecommendation =
+  | { kind: "product"; item: FeaturedProduct }
+  | { kind: "service"; item: FeaturedService }
+  | { kind: "menu_item"; item: MenuItemDetail };
+
 export interface Cart {
   items: CartItem[];
   /** Total quantity, not line count - what the navbar shows. */
   count: number;
   totals: CartTotal[];
+  /**
+   * The extras to offer beneath the lines. Empty for an empty cart, and empty
+   * whenever the tenant has configured none.
+   *
+   * It rides on the cart payload rather than having its own endpoint, which is
+   * what makes it self-maintaining: every cart write invalidates this payload,
+   * so adding a recommended item drops it from the next render with no
+   * client-side bookkeeping at all.
+   */
+  recommendations: CartRecommendation[];
 }
 
 /**
@@ -99,7 +138,12 @@ export interface CartLineRef {
   customized: boolean;
 }
 
-const EMPTY_CART: Cart = { items: [], count: 0, totals: [] };
+const EMPTY_CART: Cart = {
+  items: [],
+  count: 0,
+  totals: [],
+  recommendations: [],
+};
 
 export const getCart = cache(async (): Promise<Cart> => {
   if ((await getSession()) === null) return EMPTY_CART;

@@ -14,6 +14,8 @@ import {
   VariantsEditor,
   type VariantOption,
 } from "@/components/admin/variants-editor";
+import { RecommendationsEditor } from "@/components/admin/recommendations-editor";
+import { useRecommendationsEditor } from "@/hooks/use-recommendations-editor";
 import {
   ServiceBookingSection,
   type BookingBranchOption,
@@ -119,6 +121,17 @@ export default function AdminServiceFormPage({ params }: Props) {
   const [slugError, setSlugError] = useState<string | null>(null);
 
   const systemId = useSession()?.systemId ?? 0;
+
+  // Checkout recommendations. `categoryId` follows the *form's* category field
+  // rather than the saved row, so re-filing this item updates the "inheriting
+  // these" readout before the save - and an empty selection here means it
+  // inherits, never that it recommends nothing.
+  const recommendations = useRecommendationsEditor({
+    systemId,
+    source: "service",
+    sourceId: isNew ? null : Number(id),
+    categoryId: values.category ? Number(values.category) : null,
+  });
 
   // Auto-populate slug from name for new records (the slug field is read-only).
   // Derived during render rather than in an effect; the guard stops it looping
@@ -303,6 +316,9 @@ export default function AdminServiceFormPage({ params }: Props) {
       // Symmetrical sibling variants, sent as a list of Service ids. The write
       // serializer strips any self-reference; an empty list clears them all.
       payload.variants = variantIds;
+      // Always sent, like `variants`: an empty list clears this record's own
+      // rows, which is how it is handed back to inheriting its category's.
+      payload.recommendations = recommendations.value;
       // Always sent, like `variants`: an empty list means "every branch" and has
       // to actually clear the relation, so it cannot be omitted when empty.
       payload.booking_branches = bookingBranchIds;
@@ -517,6 +533,17 @@ export default function AdminServiceFormPage({ params }: Props) {
                 ? variantCatalog
                 : variantCatalog.filter((s) => s.id !== Number(id))
             }
+            locale={locale}
+          />
+          {/* Checkout recommendations sit directly under the variants picker:
+              both answer "what else should the customer see?", one on the detail
+              page and one in the cart. */}
+          <RecommendationsEditor
+            value={recommendations.value}
+            onChange={recommendations.setValue}
+            catalog={recommendations.catalog}
+            inherited={recommendations.inherited}
+            scope={recommendations.scope}
             locale={locale}
           />
 

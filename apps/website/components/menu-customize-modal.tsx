@@ -11,12 +11,36 @@ import {
   defaultSize,
   hasSizeChoice,
   menuItemTotal,
+  type CustomizationRow,
   type SelectionOptions,
   type SelectionQuantities,
 } from "@/lib/menu-selection";
 import { addGuestCartLine } from "@/lib/guest-cart";
 import { MenuIngredientPicker } from "./menu-ingredient-picker";
 import { MenuSizePicker } from "./menu-size-picker";
+
+/**
+ * The line being re-configured, when this modal is opened from the cart rather
+ * than from a card.
+ *
+ * `customization` is the selection as `buildCustomization` emits it - only what
+ * differs from the dish as listed - which is also exactly what the API stores
+ * and hands back, so a cart line's rows drop straight in here.
+ */
+export interface MenuCustomizeEditing {
+  /** The chosen size (a `MenuSize` id), null for a dish sold in one size. */
+  size: number | null;
+  customization: CustomizationRow[];
+  /**
+   * Persist the new selection, resolving to whether it stuck. Owned by the
+   * caller for the same reason `CartLine`'s writes are: a customer's line is a
+   * row behind `/api/auth/cart/[id]`, a guest's is an index in localStorage.
+   */
+  onSave: (selection: {
+    size?: number;
+    customization: CustomizationRow[];
+  }) => Promise<boolean>;
+}
 
 interface Props {
   menuItemId: number;
@@ -32,6 +56,12 @@ interface Props {
   sizes: MenuSize[];
   isLoggedIn: boolean;
   locale: string;
+  /**
+   * Set when the modal is **editing** a line already in the cart instead of
+   * adding a new one: the pickers open on that line's selection, OK saves it
+   * through the caller's own write, and `isLoggedIn` is not consulted.
+   */
+  editing?: MenuCustomizeEditing;
   /** Dismissed without adding. */
   onCancel: () => void;
   /** The line was written (or the write failed) - the caller owns the toast and,
@@ -40,7 +70,8 @@ interface Props {
 }
 
 /**
- * The catalog card's add-to-cart step for a configurable dish.
+ * The catalog card's add-to-cart step for a configurable dish - and, with
+ * `editing`, the cart page's "change my mind" step for one already in it.
  *
  * A food card used to post the base line straight from its icon button, which
  * silently chose the defaults for a customer who may well have wanted the dish
@@ -55,7 +86,9 @@ interface Props {
  *
  * Deliberately **one** dish per confirm: unlike the POS modal there is no
  * quantity stepper here, because the detail page's customiser adds one too and
- * the cart page is where a customer changes how many they want.
+ * the cart page is where a customer changes how many they want. That holds while
+ * editing too - the row's own stepper is right behind the modal, and a second
+ * one inside it could only disagree with it.
  *
  * As everywhere else, nothing here is trusted about money: the rows name
  * ingredients and quantities, and the server re-prices them.
@@ -69,6 +102,7 @@ export function MenuCustomizeModal({
   sizes,
   isLoggedIn,
   locale,
+  editing,
   onCancel,
   onResult,
 }: Props) {
@@ -81,16 +115,39 @@ export function MenuCustomizeModal({
     [ingredients],
   );
 
-  // Every group starts where the menu says it does; the customer only moves what
-  // they want changed.
-  const [quantities, setQuantities] = useState<SelectionQuantities>(() =>
-    Object.fromEntries(visible.map((ing) => [ing.id, ing.default_units])),
+  // Adding: every group starts where the menu says it does and the customer only
+  // moves what they want changed. Editing: it starts where *their line* is, since
+  // the modal opens over a dish they already configured - anything else would ask
+  // them to re-make every choice to change one of them. The stored selection
+  // carries only the rows that differ, so the rest still fall back to the menu's.
+  const edited = useMemo(
+    () =>
+      new Map(
+        (editing?.customization ?? []).map((row) => [row.ingredient, row]),
+      ),
+    [editing],
   );
-  const [options, setOptions] = useState<SelectionOptions>({});
-  // Seeded from the dish's default so the OK label names a real price before the
-  // customer touches anything.
+  const [quantities, setQuantities] = useState<SelectionQuantities>(() =>
+    Object.fromEntries(
+      visible.map((ing) => [
+        ing.id,
+        edited.get(ing.id)?.quantity ?? ing.default_units,
+      ]),
+    ),
+  );
+  const [options, setOptions] = useState<SelectionOptions>(() =>
+    Object.fromEntries(
+      visible
+        .map((ing) => [ing.id, edited.get(ing.id)?.option] as const)
+        .filter(
+          (entry): entry is readonly [number, number] => entry[1] != null,
+        ),
+    ),
+  );
+  // Seeded from the line's size, else the dish's default, so the OK label names a
+  // real price before the customer touches anything.
   const [sizeId, setSizeId] = useState<number | undefined>(
-    () => defaultSize(sizes)?.id,
+    () => editing?.size ?? defaultSize(sizes)?.id,
   );
 
   const total = menuItemTotal(
@@ -102,8 +159,18 @@ export function MenuCustomizeModal({
     options,
   );
 
-  const handleAdd = () => {
+  const handleConfirm = () => {
     const customization = buildCustomization(ingredients, quantities, options);
+
+    // Editing an existing line: the caller owns the write, because the same
+    // change is a PATCH on a row for a signed-in customer and a localStorage
+    // splice for a guest. The line's quantity is not ours to touch.
+    if (editing) {
+      startTransition(async () => {
+        onResult(await editing.onSave({ size: sizeId, customization }));
+      });
+      return;
+    }
 
     // A guest's cart is localStorage: synchronous, with nothing to await and no
     // failure to report.
@@ -144,12 +211,12 @@ export function MenuCustomizeModal({
       title={name}
       text={t("customize", { name })}
       panelMaxWidth="560px"
-      okLabel={t("addToCartWithPrice", {
+      okLabel={t(editing ? "saveChangesWithPrice" : "addToCartWithPrice", {
         price: formatPrice(total.toFixed(2), currency),
       })}
       cancelLabel={tCommon("cancel")}
       okDisabled={isPending}
-      okCallback={handleAdd}
+      okCallback={handleConfirm}
       cancelCallback={onCancel}
     >
       {/* Size first: it is what the customer is choosing between, and it moves
@@ -157,6 +224,7 @@ export function MenuCustomizeModal({
       {hasSizeChoice(sizes) && (
         <MenuSizePicker
           sizes={sizes}
+          basePrice={basePrice}
           value={sizeId}
           onChange={setSizeId}
           currency={currency}

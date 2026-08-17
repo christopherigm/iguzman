@@ -112,6 +112,49 @@ Examples requiring confirmation before exposure:
 - `email`, `phone_number`, `date_of_birth`, or other PII
 - `token`, `secret`, `api_key`, `refresh_token`
 
+## Tests - keep the suite small
+
+**Do not write a test per assertion, and do not add a test class per feature.**
+The suite is a safety net, not a specification. In August 2026 it had grown to
+**520 tests across 8,355 lines** — one case per assertion, a class per feature —
+and the cost had stopped being the runtime and become the *authoring*: every
+small change came with a dozen near-identical tests to write and then to keep
+passing. It was condensed to ~135, and it must stay near that.
+
+**The default for a new feature is _one_ test.** A second only when the feature
+has a genuinely separate failure mode. Ask "what breaks, and would this test
+notice?" — not "is every branch covered?".
+
+Where a new test does belong:
+
+| Add a test when…                                | Not when…                                             |
+| ----------------------------------------------- | ----------------------------------------------------- |
+| Money can be wrong (a price, a total, a refusal) | A field round-trips through a serializer              |
+| One tenant could reach another's rows            | A getter returns what was just set                    |
+| A permission or ownership check exists           | The happy path already asserts it two lines earlier   |
+| A cached payload can go stale after a write      | The framework already guarantees it (a `ChoiceField`) |
+| A bug was found in production                    | You want to "document" how the code works             |
+
+**Merge, don't multiply.** A single test may make many assertions and walk
+through several states — that is the intended shape here, and every existing
+class is written that way. Read one before adding to it: the pattern is a long
+test with commented sections, not five short ones. If you are about to write
+`test_x_when_a` and `test_x_when_b`, they are one test with two assertions, or a
+loop over `(input, expected)` pairs.
+
+**Two areas keep full fidelity, and thinning them is not a cleanup:**
+
+- **Money** — `orders/tests.py`: checkout, the Stripe webhook's idempotency,
+  deposits, the coupon redemption ceiling, the stock draw-down. Every distinct
+  failure mode still has an assertion, because each one is a real charge.
+- **The tenant boundary** — every "another tenant's X is a 404 / is not linked /
+  cannot be bought". These are security boundaries; they are collapsed into
+  fewer test *methods*, never into fewer *cases*.
+
+Each module's docstring restates this. Run the whole suite with
+`REDIS_URL='' python manage.py test` (the local `.env` points Redis at the
+cluster); it should stay under about half a minute.
+
 ## Image sizes - the serializer decides, not the model
 
 **`core/image_sizes.py` is the single source of truth for stored dimensions.**
@@ -229,9 +272,8 @@ and go live rather than being a placeholder the customer must replace.
   seeding never runs in the cluster, and a key in production would only invite
   someone to wire a bank search into a view.
 
-Tests: `StockImageAttributionTests`, `SeedImageFetchTests`,
-`AttributionClearedOnUploadTests` and `PublishImageTransportTests` in
-`core/tests.py`.
+Tests: `StockImageTests` in `core/tests.py` (one test each for the count, the
+publish-image transport, and the fetch -> seed -> upload chain).
 
 Driven by `pnpm publish-site <host>` (`cli/website/website.sh publish`). `seed_site`
 imports `SYSTEM_TEXT_FIELDS` from `site_payload` so seeding and publishing agree
@@ -381,8 +423,7 @@ Endpoints (all `IsSystemAdmin`, all scoped to the caller's own `System`):
 `GET/POST /api/backups/`, `DELETE /api/backups/<pk>/`,
 `GET /api/backups/<pk>/download/`, `POST /api/backups/restore/` (multipart).
 Building and restoring are synchronous, which is why the ingress carries
-`proxy-body-size: 0` and 600s read/send timeouts and gunicorn's `--timeout` is 600. Tests are in `core/tests.py` (`SiteBackupRoundTripTests`,
-`SiteBackupApiTests`) — they inherit `IsolatedMediaTestCase`, which redirects
+`proxy-body-size: 0` and 600s read/send timeouts and gunicorn's `--timeout` is 600. Tests are in `core/tests.py` (`SiteBackupTests`, `SiteBackupApiTests`) — they inherit `IsolatedMediaTestCase`, which redirects
 `MEDIA_ROOT` to a temp dir so test fixtures and archives do not scatter through
 the developer's own `media/`.
 
@@ -876,7 +917,7 @@ four cannot list different sets. The frontend resolution rules are in
   hands a family back to the frontend's own translation. A default would have to
   be written in one language and would be wrong on the four locales the model
   stores no copy for.
-- `SystemKindLabelTests` in `core/tests.py` pins `CATALOG_KINDS` to the two
+- `SystemSettingsTests` in `core/tests.py` pins `CATALOG_KINDS` to the two
   families, and pins the write serializer's hand-declared fields against
   `KIND_LABEL_FIELDS`.
 - They are in `SYSTEM_TEXT_FIELDS`, so they travel with `export_site` /
@@ -1012,6 +1053,132 @@ Tests: `MenuSizeTests` / `MenuSizeEndpointTests` (`catalog/tests.py`),
 `CartMenuSizeTests` (`users/tests.py`), `OrderLineSizeSnapshotTests`
 (`orders/tests.py`), and the publish round-trips in `core/tests.py`.
 
+## Checkout recommendations - "don't forget these"
+
+`catalog.CatalogRecommendation` is the strip of extras a customer is offered
+under their own cart lines: a pizzeria that never mentions a drink sells fewer
+drinks. One model backs all of it.
+
+| Piece                    | Where                                                             |
+| ------------------------ | ----------------------------------------------------------------- |
+| Model + inherit/override | `catalog/models.py` (`CatalogRecommendation`, `RecommendationSource`) |
+| The cart strip           | `catalog/recommendations.py` (`cart_recommendations`)              |
+| Refs + replace-all write | `catalog/serializers.py` (`recommendation_refs`, `set_recommendations`) |
+| The CMS read             | `catalog/views.py` (`RecommendationListView`)                      |
+| Cache invalidation       | `catalog/signals.py` (`invalidate_on_recommendation_change`)       |
+| On the payload           | `users/views.py::_cart_payload` + `users/guest.py::cart_payload`   |
+
+It deliberately resembles `variants` and is shaped differently in three ways,
+each of which is the point:
+
+- ⚠ **Directional, not symmetrical.** A pizza recommends a soda; a soda does not
+  recommend a pizza. `variants` is symmetrical because *being an alternative
+  version of* is mutual, and *being a suggested extra* is not - a symmetrical
+  relation here would fill every drink's checkout strip with the food it was
+  offered beside.
+- **Cross-family.** A dish may recommend a `Product` (a bottle of wine, a branded
+  mug) and a product may recommend a `Service`, so the source is one of **six**
+  things (three items + their three categories) and the target one of three
+  families - exactly one column of each, both enforced by a `CheckConstraint`
+  built with `_exactly_one` rather than typed out as thirty-six clauses. It is a
+  real model rather than nine M2M fields because the pairing carries a
+  `sort_order` and an `enabled` switch, and one table is one editor, one
+  serializer and one cache receiver instead of nine.
+- **Authored per category, overridable per item** (`RecommendationSource`), the
+  same rule `MenuItem.effective_sizes` follows: a tenant states "with a pizza,
+  offer a soda" **once**, on the Pizzas category. Own rows *replace* the
+  category's entirely and never merge - a merge could only ever add, and could
+  not express "this dish recommends nothing".
+
+Six things that will bite:
+
+- ⚠ **The fallback is decided on the presence of _rows_, never on whether their
+  targets are buyable today.** A dish whose single own recommendation is out of
+  stock recommends nothing; it must not silently start showing its category's
+  list, which would read as a lost edit. `offerable_recommendations` filters
+  *after* the choice of list is made.
+- ⚠ **What rides on an item's payload is nothing at all - and that is on
+  purpose.** `own_recommendations` was briefly a field on the three buyable read
+  serializers, which put an N+1 on every cart line and every favorite (those
+  payloads nest the full item serializer). The CMS reads its selection from
+  `GET /api/catalog/recommendations/?source=<kind>&id=<pk>` instead, exactly as
+  `MenuSize` serves a dish's *own* rows from its own endpoint, and the customer's
+  strip is resolved on the cart payload. **Do not add a recommendations field to
+  `ProductSerializer` / `ServiceSerializer` / `MenuItemSerializer`** without
+  attaching `OWN_RECOMMENDATION_PREFETCH` at every one of their call sites.
+- ⚠ **That endpoint answers with *own* rows, and for an item that is not what the
+  customer sees.** An empty answer means "offer whatever my category
+  recommends". Serving the resolved list there would show an operator ticks they
+  never made, and the first save would freeze them into an override - the trap
+  `MenuItem.own_sizes` is named around. It also reports a row whose target is
+  out of stock: that row is a record of what the operator chose, and hiding it
+  would look like the CMS lost the tick.
+- **The strip is four decisions no client could make**, all in
+  `recommendations_for_cart`: union-then-dedupe across lines (three pizzas that
+  all recommend the same soda offer it once), drop anything already in the cart
+  (matched on the **item alone** - a customer holding a Coca in any size has
+  taken the "add a Coca" prompt), drop the unbuyable, and drop anything in a
+  currency the basket cannot check out in (checkout refuses a mixed-currency
+  cart with `MIXED_CURRENCY`, so offering one would invite the customer into a
+  basket that cannot be paid for). Capped at `MAX_CART_RECOMMENDATIONS`.
+- **It rides on the cart payload rather than having its own endpoint**, which is
+  what makes it self-maintaining: every cart write invalidates that payload, so
+  adding a recommended item drops it from the next render with no bookkeeping
+  anywhere. `users/guest.py`'s copy works on **unsaved** `CartItem` instances
+  because `recommendations_for_cart` reads only `kind` / `target`, both model
+  properties that never touch the database - the same reason
+  `CartItemSerializer` renders both carts.
+- ⚠ **A recommendation write clears `users:cart:*`, i.e. every cached cart.**
+  Which carts hold a matching line is exactly what the receiver cannot know, and
+  a tenant adding a drink to its Pizzas category has to reach everyone currently
+  holding a pizza. Only *recommendation* writes do this: a recommended item going
+  out of stock leaves a dead card on a cached strip for up to `CART_CACHE_TTL`,
+  the same staleness a cached cart already carries for a price change.
+
+`system` is derived from the source in `save()` for `MenuSize`'s reason (six
+possible paths up to a tenant cannot be the one `ModelSpec.scope`). The write
+layer replaces a source's whole set and **skips** a target owned by another
+System rather than linking it, plus any self-reference; there is deliberately no
+unique constraint, because in Postgres a unique index over mostly-NULL columns
+enforces nothing. In `core/backup.py` the spec is **last in `MODEL_SPECS`** so
+every one of its nine FKs is already in the idmap - see the note there for the
+one partial-restore hole that leaves.
+
+Tests: `CatalogRecommendationTests`, `RecommendationEndpointTests`
+(`catalog/tests.py`) and `CartRecommendationTests`
+(`users/tests.py`).
+
+## Editing a cart line (`PATCH /api/auth/cart/<id>/`)
+
+The cart page lets a customer re-open a dish's customiser on a line that is
+already in their basket, so this endpoint takes `size` and `customization`
+beside `quantity`. **Every field is optional and only what is sent is applied** -
+the quantity stepper and the customiser share the endpoint, and neither may
+reset the other's half of the line.
+
+- **It edits in place rather than delete-and-re-add.** A dropped-then-re-added
+  line loses its position (`CartItem` is ordered by `-created_at`) and cannot be
+  atomic: a failed re-add leaves the customer with no line at all.
+- ⚠ **Size and selection are re-resolved exactly as on the add path**
+  (`_menu_size` / `_menu_selection`), so an edit naming another dish's size or a
+  bogus option prices as the **default**, never at its own. Nothing about this
+  path is more trusted for being an edit.
+- ⚠ **An edit can collide with a line already in the cart**, since a line's
+  identity is the dish plus its size and selection. `_resave_menu_line` is the
+  mirror of `_add_menu_line`'s merge: it folds the edited row into its twin and
+  deletes it, keeping (and returning) the row the customer did not touch, which
+  is the one holding its place in the cart. Without it, editing a large into a
+  small while a small is in the basket leaves two lines printing the same thing.
+- **`size`/`customization` are ignored on a product or service line** - neither
+  has anything to configure.
+- ⚠ **`CartItemSerializer.get_customization` carries the chosen `option` id**
+  (null when the group's default was kept) alongside the resolved name. The name
+  is what the cart *prints*; the id is what the picker *selects on*, and a name
+  cannot be turned back into one - without it a re-opened customiser would show
+  the customer the default in place of the alternative they actually bought.
+
+Tests: `CartLineEditTests` (`users/tests.py`).
+
 ## Maps - the basemap is four columns on `System`
 
 `map_style` / `map_tile_url` / `map_attribution` / `map_attribution_url` decide
@@ -1037,7 +1204,7 @@ resolves them once per request; see `apps/website/CLAUDE.md` → "Maps".
   Restrict it by origin at the provider. This is why it is on `SystemSerializer`
   at all, unlike the Stripe and R2 credentials it sits near in the model.
 
-Tests: `SystemMapSettingsTests` in `core/tests.py`.
+Tests: `SystemSettingsTests` in `core/tests.py`.
 
 ### `Branch.map_image` - the one map this API does not draw
 
@@ -1072,7 +1239,7 @@ comes from.
   the one thing they may have to hold up at a counter.
 
 Tests: `BookingLocationTests` in `orders/tests.py` (both consumers) and
-`BranchMapImageTests` in `core/tests.py` (the PATCH semantics).
+`BranchWriteTests` in `core/tests.py` (the PATCH semantics).
 
 ## LLM calls - always through `core/services/llm.py`
 

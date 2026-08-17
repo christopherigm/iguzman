@@ -8,6 +8,7 @@ from .models import (
     ServiceCategory, Service, ServiceImage,
     MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient,
     MenuItemIngredientOption, MenuSize, RecipeStep,
+    CatalogRecommendation,
     Ingredient, IngredientProvider,
 )
 
@@ -15,6 +16,37 @@ from .models import (
 # ---------------------------------------------------------------------------
 # Shared inlines
 # ---------------------------------------------------------------------------
+
+def recommendation_inline(source_field, *, label='Checkout recommendation'):
+    """A "Checkout recommendations" inline for one of the six possible sources.
+
+    A factory because Django needs a distinct inline class per ``fk_name``, and
+    six near-identical hand-written classes is six places for the field list to
+    drift.
+
+    ⚠ On an **item** an empty inline does not mean "recommends nothing" - it means
+    "offer whatever my category recommends" (`RecommendationSource`). The `label`
+    is what says so, since a Django inline has nowhere to put a description.
+    """
+
+    class _RecommendationInline(admin.TabularInline):
+        model = CatalogRecommendation
+        extra = 0
+        verbose_name = label
+        verbose_name_plural = f'{label}s'
+        # All three target columns are shown because the relation is cross-family;
+        # fill exactly one per row (a CheckConstraint enforces it).
+        fields = (
+            'recommended_product', 'recommended_service', 'recommended_menu_item',
+            'sort_order', 'enabled',
+        )
+        raw_id_fields = (
+            'recommended_product', 'recommended_service', 'recommended_menu_item',
+        )
+
+    _RecommendationInline.fk_name = source_field
+    return _RecommendationInline
+
 
 class ProductImageInline(admin.TabularInline):
     model = ProductImage
@@ -48,6 +80,7 @@ class ProductCategoryAdmin(admin.ModelAdmin):
     search_fields = ('name', 'en_name', 'slug')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
+    inlines = [recommendation_inline('product_category')]
 
     fieldsets = (
         ('Identity', {
@@ -83,6 +116,7 @@ class ServiceCategoryAdmin(admin.ModelAdmin):
     search_fields = ('name', 'en_name', 'slug')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
+    inlines = [recommendation_inline('service_category')]
 
     fieldsets = (
         ('Identity', {
@@ -123,7 +157,7 @@ class ProductAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
     filter_horizontal = ('variants',)
-    inlines = [ProductImageInline]
+    inlines = [ProductImageInline, recommendation_inline('product', label="Checkout recommendation (overrides the category's)")]
 
     fieldsets = (
         ('Identity', {
@@ -178,7 +212,7 @@ class ServiceAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
     filter_horizontal = ('variants',)
-    inlines = [ServiceImageInline]
+    inlines = [ServiceImageInline, recommendation_inline('service', label="Checkout recommendation (overrides the category's)")]
 
     fieldsets = (
         ('Identity', {
@@ -282,7 +316,7 @@ class MenuCategoryAdmin(admin.ModelAdmin):
     search_fields = ('name', 'en_name', 'slug')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
-    inlines = [MenuCategorySizeInline]
+    inlines = [MenuCategorySizeInline, recommendation_inline('menu_category')]
 
     fieldsets = (
         ('Identity', {
@@ -319,7 +353,10 @@ class MenuItemAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
     filter_horizontal = ('variants',)
-    inlines = [MenuItemImageInline, MenuItemSizeInline, MenuItemIngredientInline, RecipeStepInline]
+    inlines = [
+        MenuItemImageInline, MenuItemSizeInline, MenuItemIngredientInline,
+        recommendation_inline('menu_item', label="Checkout recommendation (overrides the category's)"), RecipeStepInline,
+    ]
 
     fieldsets = (
         ('Identity', {
@@ -455,3 +492,54 @@ class MenuItemIngredientAdmin(admin.ModelAdmin):
         cache.delete(f'catalog:menu_item:{obj.menu_item_id}')
         _invalidate_pattern('catalog:menu_items:*')
         super().delete_model(request, obj)
+
+
+# ---------------------------------------------------------------------------
+# Checkout recommendations
+# ---------------------------------------------------------------------------
+
+@admin.register(CatalogRecommendation)
+class CatalogRecommendationAdmin(admin.ModelAdmin):
+    """The flat view over every "don't forget this" pairing on the site.
+
+    The six inlines above are where a pairing is normally authored (beside the
+    item or category it hangs off); this exists to audit them all at once -
+    "which of my dishes still recommend the discontinued soda?" is a question no
+    per-item inline can answer.
+
+    Cache invalidation is deliberately **not** duplicated here: the
+    `post_save`/`post_delete` receivers in `catalog/signals.py` cover this admin,
+    the six inlines, the API and any cascade alike.
+    """
+
+    list_display = ('source', 'target', 'target_kind', 'system', 'sort_order', 'enabled', 'modified')
+    list_filter = ('enabled', 'system')
+    readonly_fields = ('created', 'modified', 'version', 'system')
+    raw_id_fields = (
+        'product', 'service', 'menu_item',
+        'product_category', 'service_category', 'menu_category',
+        'recommended_product', 'recommended_service', 'recommended_menu_item',
+    )
+
+    fieldsets = (
+        ('Source - exactly one', {
+            'fields': (
+                'product', 'service', 'menu_item',
+                'product_category', 'service_category', 'menu_category',
+            ),
+            'description': 'What the customer is buying. An item overrides its '
+                           "category's list entirely; a category applies to every "
+                           'item in it that has no rows of its own.',
+        }),
+        ('Recommendation - exactly one', {
+            'fields': (
+                'recommended_product', 'recommended_service', 'recommended_menu_item',
+            ),
+            'description': 'What to offer alongside it at checkout. The relation is '
+                           'one-way: this does not make the source show up under the '
+                           'target.',
+        }),
+        ('Display', {
+            'fields': ('sort_order', 'enabled', 'system', 'version', 'created', 'modified'),
+        }),
+    )

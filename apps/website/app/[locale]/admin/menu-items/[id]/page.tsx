@@ -25,6 +25,8 @@ import {
   VariantsEditor,
   type VariantOption,
 } from "@/components/admin/variants-editor";
+import { RecommendationsEditor } from "@/components/admin/recommendations-editor";
+import { useRecommendationsEditor } from "@/hooks/use-recommendations-editor";
 import {
   MenuSizesEditor,
   persistMenuSizes,
@@ -161,7 +163,9 @@ export default function AdminMenuItemFormPage({ params }: Props) {
   const [categoryOptions, setCategoryOptions] = useState<
     { value: string | number; label: string }[]
   >([]);
-  const [categorySlugs, setCategorySlugs] = useState<Record<number, string>>({});
+  const [categorySlugs, setCategorySlugs] = useState<Record<number, string>>(
+    {},
+  );
   const [brandOptions, setBrandOptions] = useState<
     { value: string | number; label: string }[]
   >([]);
@@ -171,6 +175,17 @@ export default function AdminMenuItemFormPage({ params }: Props) {
   const [success, setSuccess] = useState<string | null>(null);
   const [slugError, setSlugError] = useState<string | null>(null);
   const systemId = useSession()?.systemId ?? 0;
+
+  // Checkout recommendations. `categoryId` follows the *form's* category field
+  // rather than the saved row, so re-filing this item updates the "inheriting
+  // these" readout before the save - and an empty selection here means it
+  // inherits, never that it recommends nothing.
+  const recommendations = useRecommendationsEditor({
+    systemId,
+    source: "menu_item",
+    sourceId: isNew ? null : Number(id),
+    categoryId: values.category ? Number(values.category) : null,
+  });
 
   if (isNew) {
     const derivedSlug = buildSlug(String(values.name ?? ""), systemId);
@@ -522,6 +537,9 @@ export default function AdminMenuItemFormPage({ params }: Props) {
       // Symmetrical sibling variants, sent as a list of MenuItem ids. The write
       // serializer strips any self-reference; an empty list clears them all.
       payload.variants = variantIds;
+      // Always sent, like `variants`: an empty list clears this record's own
+      // rows, which is how it is handed back to inheriting its category's.
+      payload.recommendations = recommendations.value;
 
       let menuItemId: number;
       if (isNew) {
@@ -726,6 +744,17 @@ export default function AdminMenuItemFormPage({ params }: Props) {
                 ? variantCatalog
                 : variantCatalog.filter((m) => m.id !== Number(id))
             }
+            locale={locale}
+          />
+          {/* Checkout recommendations sit directly under the variants picker:
+              both answer "what else should the customer see?", one on the detail
+              page and one in the cart. */}
+          <RecommendationsEditor
+            value={recommendations.value}
+            onChange={recommendations.setValue}
+            catalog={recommendations.catalog}
+            inherited={recommendations.inherited}
+            scope={recommendations.scope}
             locale={locale}
           />
 

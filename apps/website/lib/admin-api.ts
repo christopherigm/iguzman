@@ -1480,3 +1480,44 @@ export async function reassignBooking(
   });
   return parseResponse<AdminBooking>(res);
 }
+
+// ---- Checkout recommendations ----
+/**
+ * One source's **own** recommendation rows.
+ *
+ * ⚠ For an *item* this is not what a customer is offered: an empty answer means
+ * "offer whatever my category recommends", and loading the resolved list into
+ * the editor instead would show an operator ticks they never made - which the
+ * first save would then freeze into an override. The category's list is fetched
+ * separately, for display only. Writes go through the source's own form (the
+ * `recommendations` field), so there is no setter here.
+ */
+export type RecommendationSourceKind =
+  | "product"
+  | "service"
+  | "menu_item"
+  | "product_category"
+  | "service_category"
+  | "menu_category";
+
+export interface RecommendationRow {
+  kind: "product" | "service" | "menu_item";
+  id: number;
+  slug: string;
+  name: string | null;
+  en_name: string | null;
+  image: string | null;
+  price: string;
+  currency: string;
+  sort_order: number;
+}
+
+export async function listRecommendations(
+  source: RecommendationSourceKind,
+  sourceId: number,
+) {
+  const res = await adminFetch(
+    `/api/catalog/recommendations/?source=${source}&id=${sourceId}`,
+  );
+  return parseResponse<RecommendationRow[]>(res);
+}

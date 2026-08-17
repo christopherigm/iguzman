@@ -156,6 +156,7 @@ export function PosCustomizerModal({
         {hasSizeChoice(item.sizes) && (
           <MenuSizePicker
             sizes={item.sizes}
+            basePrice={item.price}
             value={sizeId}
             onChange={setSizeId}
             currency={item.currency}

@@ -24,7 +24,13 @@ admin single + bulk delete, the API views, and any cascade uniformly:
    not something this receiver can enumerate cheaply, and a dish showing a size
    the tenant just retired is a price the customer can still select.
 
-4. **Items -> the System payload.** ``SystemSerializer`` embeds
+4. **Recommendations -> the source, and every cart.** A
+   ``CatalogRecommendation`` is nested on its source's payload (``own_recommendations``
+   on an item, ``recommendations`` on a category) *and*, resolved through
+   ``RecommendationSource.effective_recommendations``, on the **cart** payload of
+   anyone holding a matching line. See ``invalidate_on_recommendation_change``.
+
+5. **Items -> the System payload.** ``SystemSerializer`` embeds
    ``product_count``, ``service_count`` and ``menu_item_count``, and that
    payload is cached for a whole hour. The storefront navbar builds its links
    from those numbers, so an item write - creating the tenant's first menu item,
@@ -38,8 +44,8 @@ from django.dispatch import receiver
 from core.cache import invalidate_pattern, invalidate_system_payload
 
 from .models import (
-    MenuCategory, MenuItem, MenuSize, Product, ProductCategory, Service,
-    ServiceCategory,
+    CatalogRecommendation, MenuCategory, MenuItem, MenuSize, Product,
+    ProductCategory, Service, ServiceCategory,
 )
 
 
@@ -109,3 +115,44 @@ def invalidate_menu_on_size_change(sender, instance, **kwargs):
     # Both owners land here: an item-level override changes that dish's payload,
     # and a category-level row changes every dish that has none of its own.
     _invalidate_family("menu_item")
+
+
+# ── Recommendations -> the source's payload, and every cached cart ────────────
+
+@receiver(post_save, sender=CatalogRecommendation)
+@receiver(post_delete, sender=CatalogRecommendation)
+def invalidate_on_recommendation_change(sender, instance, **kwargs):
+    """Clear the source's own namespace and **every** cached cart.
+
+    Two directions, and the second is the one that would be missed:
+
+    1. The row is nested on its source's payload (``own_recommendations`` on an
+       item, ``recommendations`` on a category). The whole family is cleared, not
+       just the one pk, because a *category*-level row changes the effective list
+       of every item that has none of its own - which is not something this
+       receiver can enumerate cheaply. Same reasoning, and same bluntness, as
+       ``invalidate_menu_on_size_change``.
+    2. ``users:cart:*`` - the cart payload carries the resolved "don't forget
+       these" strip (``catalog/recommendations.py``), so a tenant adding a drink
+       to its Pizzas category has to reach the cart of everyone currently holding
+       a pizza. That is every cached cart, since which of them hold a matching
+       line is exactly what this receiver cannot know.
+
+    ⚠ Only *recommendation* writes are covered. A recommended item going out of
+    stock leaves it on a cached cart strip for up to ``CART_CACHE_TTL``, the same
+    staleness a cached cart already carries for a price change - clearing every
+    cart on every catalog save would cost far more than the dead card it saves.
+    """
+    for family in ('product', 'service', 'menu_item'):
+        if getattr(instance, f'{family}_id'):
+            _invalidate_family(family)
+    if instance.product_category_id:
+        _invalidate_family("product")
+        _invalidate_categories("product")
+    if instance.service_category_id:
+        _invalidate_family("service")
+        _invalidate_categories("service")
+    if instance.menu_category_id:
+        _invalidate_family("menu_item")
+        _invalidate_categories("menu")
+    invalidate_pattern("users:cart:*")

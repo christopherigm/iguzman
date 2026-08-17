@@ -9,7 +9,9 @@ import { getSession } from "@repo/auth/session";
 import { getCart } from "@/lib/cart";
 import { getSystem } from "@/lib/system";
 import { EmptyCatalogState } from "@/components/empty-catalog-state";
+import { getRequestOrigin } from "@/lib/metadata";
 import { CartLines } from "./cart-lines";
+import { CartRecommendations } from "./cart-recommendations";
 import { CartSummary } from "./cart-summary";
 import { GuestCartView } from "./guest-cart-view";
 
@@ -34,11 +36,14 @@ export default async function CartPage({ params }: Props) {
   // An anonymous visitor's cart lives in their browser, so the server has
   // nothing to render for them: `getCart()` returns empty and the page hands off
   // to `GuestCartView`, which resolves localStorage after hydration.
-  const [session, cart, system, t] = await Promise.all([
+  const [session, cart, system, t, origin] = await Promise.all([
     getSession(),
     getCart(),
     getSystem(),
     getTranslations("Cart"),
+    // Only the server knows the request host, and the guest strip's cards need it
+    // for their share links - the same reason `guest-favorites.tsx` takes it.
+    getRequestOrigin(),
   ]);
 
   const breadcrumbs: BreadcrumbItem[] = [
@@ -62,6 +67,7 @@ export default async function CartPage({ params }: Props) {
       {session === null ? (
         <GuestCartView
           locale={locale}
+          origin={origin}
           stripeConfigured={system?.stripe_configured ?? false}
           payInStoreEnabled={system?.pay_in_store_enabled ?? false}
           payOnDeliveryEnabled={system?.pay_on_delivery_enabled ?? false}
@@ -74,6 +80,13 @@ export default async function CartPage({ params }: Props) {
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, sm: 7 }}>
             <CartLines lines={cart.items} locale={locale} />
+            {/* Under the lines, inside their column: the strip is a nudge about
+                this basket, so it belongs beside the list rather than across the
+                page under the summary. */}
+            <CartRecommendations
+              recommendations={cart.recommendations}
+              locale={locale}
+            />
           </Grid>
           <Grid size={{ xs: 12, sm: 5 }}>
             <CartSummary totals={cart.totals} count={cart.count} />

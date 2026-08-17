@@ -39,6 +39,7 @@ export function CartLines({ lines, locale }: CartLinesProps) {
           key={line.id}
           line={line}
           locale={locale}
+          isLoggedIn
           onQuantityChange={(quantity) =>
             write(line.id, {
               method: "PATCH",
@@ -47,6 +48,18 @@ export function CartLines({ lines, locale }: CartLinesProps) {
             })
           }
           onRemove={() => write(line.id, { method: "DELETE" })}
+          // The same endpoint as the quantity write, deliberately: it applies
+          // only the fields it is sent, so re-configuring the dish leaves the
+          // quantity alone and vice versa. The API re-resolves both against what
+          // the dish actually offers, and folds the line into an identical one
+          // already in the cart if this edit created one.
+          onEditSelection={(selection) =>
+            write(line.id, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(selection),
+            })
+          }
         />
       ))}
     </Box>

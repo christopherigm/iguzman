@@ -277,6 +277,61 @@ export function setGuestCartQuantity(index: number, quantity: number): void {
   });
 }
 
+/**
+ * Re-configure one line by its handle: a new size and a new ingredient
+ * selection, keeping the quantity the customer already chose.
+ *
+ * The mirror of the signed-in cart's `PATCH .../cart/<id>` with a `size` +
+ * `customization`, and it has to merge for the same reason that endpoint does:
+ * a line's identity *is* its dish plus its configuration, so editing a large
+ * into a small while a small is already in the cart must leave one line of two
+ * rather than two lines printing the same thing. The row the customer did not
+ * touch is the one that stays, keeping its place in the list.
+ */
+export function setGuestCartSelection(
+  index: number,
+  selection: { size?: number; customization: GuestCustomizationRow[] },
+): void {
+  update((state) => {
+    const existing = state.cart[index];
+    if (!existing) return state;
+
+    const edited: GuestCartLine = {
+      ...existing,
+      size: selection.size,
+      customization: selection.customization,
+    };
+
+    const key = lineKey(edited);
+    const twin = state.cart.findIndex(
+      (line, i) => i !== index && lineKey(line) === key,
+    );
+
+    if (twin === -1) {
+      const cart = [...state.cart];
+      cart[index] = edited;
+      return { ...state, cart };
+    }
+
+    return {
+      ...state,
+      cart: state.cart
+        .map((line, i) =>
+          i === twin
+            ? {
+                ...line,
+                quantity: Math.min(
+                  line.quantity + edited.quantity,
+                  MAX_GUEST_QUANTITY,
+                ),
+              }
+            : line,
+        )
+        .filter((_, i) => i !== index),
+    };
+  });
+}
+
 export function removeGuestCartLine(index: number): void {
   update((state) => ({
     ...state,

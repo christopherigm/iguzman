@@ -1,4 +1,6 @@
+import operator
 from decimal import Decimal
+from functools import reduce
 
 from colorfield.fields import ColorField
 from django.core.exceptions import ValidationError
@@ -33,6 +35,70 @@ WEIGHT_UNIT_CHOICES = [
 ]
 
 
+class RecommendationSource:
+    """Checkout-recommendation resolution, shared by the three buyable families.
+
+    A plain (non-model) mixin rather than a field on ``Buyable``: everything it
+    reads is a *reverse* relation declared by ``CatalogRecommendation`` at the
+    bottom of this module, and ``core`` has no business knowing those names.
+    Product, Service and MenuItem all mix it in, because all three are sold
+    through the same cart and all three carry a ``category``.
+
+    The inherit/override rule is the one ``MenuItem.effective_sizes`` already
+    follows, for the same reason: a tenant states "with a pizza, offer a soda"
+    once on the *Pizzas category* rather than on every pizza, and an edge-case
+    dish overrides that list. Own rows **replace** the category's entirely and
+    never merge - a merge could only ever add, and could not express "this dish
+    recommends nothing".
+
+    ⚠ The fallback is decided on the **presence of rows**, not on whether their
+    targets are currently offerable. An item whose single own recommendation is
+    out of stock recommends nothing today; it must not silently start showing
+    its category's list, which would read as a lost edit.
+    """
+
+    @property
+    def own_recommendation_rows(self):
+        """This item's own rows, in display order.
+
+        Empty is the normal state and *means* "offer whatever my category
+        recommends" - which is why the relation is named ``own_recommendations``
+        and not ``recommendations``, the same trap ``MenuItem.own_sizes`` is
+        named around.
+        """
+        return sorted(
+            (r for r in self.own_recommendations.all() if r.enabled),
+            key=lambda r: (r.sort_order, r.id),
+        )
+
+    @property
+    def category_recommendation_rows(self):
+        """What this item's category recommends, in display order. Empty when the
+        item is filed under nothing (Product and Service allow that; MenuItem
+        does not)."""
+        if not self.category_id:
+            return []
+        return sorted(
+            (r for r in self.category.recommendations.all() if r.enabled),
+            key=lambda r: (r.sort_order, r.id),
+        )
+
+    @property
+    def effective_recommendation_rows(self):
+        """Own rows if it has any, else its category's."""
+        return self.own_recommendation_rows or self.category_recommendation_rows
+
+    @property
+    def effective_recommendations(self):
+        """``[(kind, buyable)]`` this item may actually be offered alongside.
+
+        The single answer every consumer reads - the cart strip, the item
+        payload's ``recommendations`` - so the storefront, the API and the till
+        cannot come to disagree about what goes with what.
+        """
+        return offerable_recommendations(self.effective_recommendation_rows)
+
+
 class ProductCategory(RegularPicture):
     system = models.ForeignKey(
         'core.System',
@@ -64,7 +130,7 @@ class ProductCategory(RegularPicture):
         return self.name
 
 
-class Product(Buyable):
+class Product(RecommendationSource, Buyable):
     """
     Concrete product model.
 
@@ -178,7 +244,7 @@ class ServiceCategory(RegularPicture):
         return self.name
 
 
-class Service(Buyable):
+class Service(RecommendationSource, Buyable):
     """
     Concrete service model.
 
@@ -505,7 +571,7 @@ class MenuCategory(RegularPicture):
         return self.name
 
 
-class MenuItem(Buyable):
+class MenuItem(RecommendationSource, Buyable):
     """
     A purchasable meal, dish, or drink.
 
@@ -899,9 +965,17 @@ class MenuSize(SmallPicture):
         if self.portion is None or not self.unit:
             return None
         # Trim a trailing ".00" - a 12-inch pizza is not a 12.00-inch pizza.
-        amount = self.portion.normalize()
-        if amount == amount.to_integral_value():
-            amount = amount.to_integral_value()
+        #
+        # ⚠ `normalize()` alone is not enough, and its failure is invisible until
+        # a tenant types a round ten: it strips trailing zeros from the *exponent*
+        # too, so Decimal("10.00") becomes Decimal("1E+1") and prints as "1E+1 cm".
+        # `quantize(Decimal(1))` is what brings an integral value back to a plain
+        # exponent-0 string; a fractional one is safe to normalize (12.50 -> 12.5).
+        portion = self.portion
+        if portion == portion.to_integral_value():
+            amount = portion.quantize(Decimal(1))
+        else:
+            amount = portion.normalize()
         return f"{amount} {self.unit}"
 
 
@@ -1310,6 +1384,243 @@ class RecipeStep(Common):
 
     def __str__(self):
         return f"Step {self.step_number} for {self.menu_item}"
+
+
+# ---------------------------------------------------------------------------
+# Checkout recommendations
+# ---------------------------------------------------------------------------
+#
+# "Don't forget these" - the strip of extras a customer is offered under their
+# cart lines, because a pizzeria that never mentions a drink sells fewer drinks.
+#
+# It is deliberately *not* shaped like `variants`, which it otherwise resembles:
+#
+#   * **Directional, not symmetrical.** A pizza recommends a soda; a soda does
+#     not recommend a pizza. `variants` is a symmetrical M2M because being an
+#     alternative version of something is mutual, and being a suggested extra is
+#     not - a symmetrical relation here would fill every drink's checkout strip
+#     with the food it was offered beside.
+#   * **Cross-family.** A dish may recommend a Product (a bottle of wine, a
+#     branded mug) and a product may recommend a Service (installation), so the
+#     source and the target are each one of three families rather than a
+#     `ManyToManyField('self')`.
+#   * **Authored per category, overridable per item** - see
+#     `RecommendationSource`. A tenant states "with a pizza, offer a soda" once.
+#
+# Which is why this is a real model with its own rows rather than nine M2M
+# fields: the pairing carries a `sort_order` and an `enabled` switch, and one
+# table is one editor, one serializer and one cache receiver instead of nine.
+
+# The six columns a recommendation can hang off, and the three it can point at.
+# Named once here so the constraints, the write layer and the admin cannot come
+# to disagree about the set.
+RECOMMENDATION_SOURCE_FIELDS = (
+    'product', 'service', 'menu_item',
+    'product_category', 'service_category', 'menu_category',
+)
+RECOMMENDATION_TARGET_FIELDS = (
+    'recommended_product', 'recommended_service', 'recommended_menu_item',
+)
+
+# Which source column a buyable family's item and category live in.
+RECOMMENDATION_ITEM_FIELD = {
+    'product': 'product',
+    'service': 'service',
+    'menu_item': 'menu_item',
+}
+RECOMMENDATION_CATEGORY_FIELD = {
+    'product': 'product_category',
+    'service': 'service_category',
+    'menu_item': 'menu_category',
+}
+RECOMMENDATION_TARGET_FIELD = {
+    'product': 'recommended_product',
+    'service': 'recommended_service',
+    'menu_item': 'recommended_menu_item',
+}
+
+
+def _exactly_one(*fields):
+    """A ``Q`` matching rows where exactly one of ``fields`` is non-null.
+
+    Built rather than typed out because the source side is six columns, which
+    spelled by hand is thirty-six clauses nobody would read - and one typo in
+    which is a constraint that lets a malformed row through.
+    """
+    terms = []
+    for chosen in fields:
+        term = models.Q(**{f'{chosen}__isnull': False})
+        for other in fields:
+            if other != chosen:
+                term &= models.Q(**{f'{other}__isnull': True})
+        terms.append(term)
+    return reduce(operator.or_, terms)
+
+
+def offerable_recommendations(rows):
+    """``[(kind, buyable)]`` for the rows whose target a customer can add today.
+
+    Filters out what the customer could only be frustrated by: a disabled item, a
+    product with no stock, a dish that is off the menu today. Recommending
+    something unbuyable is worse than recommending nothing - the whole strip is a
+    prompt to add one more thing, and a dead card in it is a prompt to give up.
+
+    Sorted in Python rather than re-queried so a ``prefetch_related`` on the
+    source's rows is not thrown away; `rows` arrives already ordered.
+    """
+    resolved = []
+    for row in rows:
+        target = row.target
+        if target is None or not target.enabled:
+            continue
+        kind = row.target_kind
+        # A service is always orderable, food follows its availability flag, and
+        # only a product carries stock - the same per-family rule the cart's
+        # `in_stock` and the catalog card apply.
+        if kind == 'product' and not target.in_stock:
+            continue
+        if kind == 'menu_item' and not target.is_available:
+            continue
+        resolved.append((kind, target))
+    return resolved
+
+
+class CatalogRecommendation(Common):
+    """One "don't forget this" pairing: a source, and a buyable to offer with it.
+
+    Exactly one of the six source columns and exactly one of the three target
+    columns is set (both enforced by a ``CheckConstraint``), which is the same
+    shape ``users.CartItem`` uses to point at one of three families - and the
+    same "exactly one owner" rule ``MenuSize`` carries, widened.
+
+    Inherits ``Common``: ``enabled`` lets a tenant retire a pairing for a season
+    without losing it, and ``created`` is what a tenant backup keys the row by
+    (it has no slug, and it hangs off nine possible parents, so
+    ``_restore_children``'s single named parent cannot serve it - exactly
+    ``MenuSize``'s situation).
+
+    There is deliberately **no unique constraint** on the nine columns. In
+    Postgres a unique index over mostly-NULL columns enforces nothing (NULL is
+    never equal to NULL), so it would be a comforting no-op; the write layer
+    replaces a source's whole set and dedupes there instead.
+    """
+
+    # Derived from the source in `save()`, never authored - the same rule, and the
+    # same reason, as `MenuSize.system`: every mechanism that scopes a model to
+    # its tenant (`core.backup`'s `ModelSpec.scope`, and through it
+    # `core.tenant_paths.system_id_for`) takes exactly **one** ORM path, and this
+    # row has six possible ways up to a System.
+    system = models.ForeignKey(
+        'core.System',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='catalog_recommendations',
+    )
+
+    # ── The source: what the customer is buying (exactly one) ────────────────
+    #
+    # CASCADE throughout: a pairing has no meaning once either end of it is gone.
+    # `own_recommendations` rather than `recommendations` on the item side is
+    # load-bearing - see `RecommendationSource.own_recommendation_rows`.
+    product = models.ForeignKey(
+        Product, null=True, blank=True, on_delete=models.CASCADE,
+        related_name='own_recommendations',
+    )
+    service = models.ForeignKey(
+        Service, null=True, blank=True, on_delete=models.CASCADE,
+        related_name='own_recommendations',
+    )
+    menu_item = models.ForeignKey(
+        'MenuItem', null=True, blank=True, on_delete=models.CASCADE,
+        related_name='own_recommendations',
+    )
+    product_category = models.ForeignKey(
+        ProductCategory, null=True, blank=True, on_delete=models.CASCADE,
+        related_name='recommendations',
+    )
+    service_category = models.ForeignKey(
+        ServiceCategory, null=True, blank=True, on_delete=models.CASCADE,
+        related_name='recommendations',
+    )
+    menu_category = models.ForeignKey(
+        'MenuCategory', null=True, blank=True, on_delete=models.CASCADE,
+        related_name='recommendations',
+    )
+
+    # ── The target: what to offer alongside it (exactly one) ─────────────────
+    recommended_product = models.ForeignKey(
+        Product, null=True, blank=True, on_delete=models.CASCADE,
+        related_name='recommended_by',
+    )
+    recommended_service = models.ForeignKey(
+        Service, null=True, blank=True, on_delete=models.CASCADE,
+        related_name='recommended_by',
+    )
+    recommended_menu_item = models.ForeignKey(
+        'MenuItem', null=True, blank=True, on_delete=models.CASCADE,
+        related_name='recommended_by',
+    )
+
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Checkout Recommendation'
+        verbose_name_plural = 'Checkout Recommendations'
+        ordering = ['sort_order', 'id']
+        constraints = [
+            models.CheckConstraint(
+                condition=_exactly_one(*RECOMMENDATION_SOURCE_FIELDS),
+                name='catalog_recommendation_exactly_one_source',
+            ),
+            models.CheckConstraint(
+                condition=_exactly_one(*RECOMMENDATION_TARGET_FIELDS),
+                name='catalog_recommendation_exactly_one_target',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        # `system` follows the source, exactly as `MenuSize.system` follows its
+        # owner: a row whose tenant disagreed with its source's would be backed
+        # up with one site's data and rendered on another's.
+        source = self.source
+        if source is not None and self.system_id != source.system_id:
+            self.system_id = source.system_id
+            update_fields = kwargs.get('update_fields')
+            if update_fields is not None:
+                kwargs['update_fields'] = list(update_fields) + ['system']
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.source} → {self.target}"
+
+    @property
+    def source(self):
+        """The item or category this recommendation hangs off."""
+        return (
+            self.product or self.service or self.menu_item
+            or self.product_category or self.service_category or self.menu_category
+        )
+
+    @property
+    def target(self):
+        """The buyable being recommended."""
+        return (
+            self.recommended_product
+            or self.recommended_service
+            or self.recommended_menu_item
+        )
+
+    @property
+    def target_kind(self):
+        """``'product'`` | ``'service'`` | ``'menu_item'`` - the family the
+        target belongs to, and the ``kind`` every cart and favorites endpoint
+        already speaks."""
+        if self.recommended_product_id:
+            return 'product'
+        if self.recommended_service_id:
+            return 'service'
+        return 'menu_item'
 
 
 def normalize_selection(selection, ingredients):

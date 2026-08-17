@@ -32,6 +32,7 @@ from webauthn.helpers.structs import (
 from catalog.models import (
     Product, Service, MenuItem, normalize_selection,
 )
+from catalog.recommendations import cart_recommendations
 from core.media import absolute_media_url
 from core.models import System
 from core.permissions import IsSystemAdmin
@@ -1010,13 +1011,60 @@ def _add_menu_line(user, system, menu_item, selection, quantity, size=None):
         ), True
 
 
+def _resave_menu_line(item, update_fields):
+    """Persist a re-configured menu line, folding it into the identical line
+    already in the cart when the edit has just created one. Returns whichever
+    row survived.
+
+    The mirror of `_add_menu_line`'s merge, and there for the same reason: a
+    line's identity is the dish *plus* its size and selection, so a customer who
+    edits their large into a small while a small is already in the basket must
+    end up with one line of two, not two lines printing the same thing. The
+    *edited* row is the one that goes: the row it folds into is the one the
+    customer did not touch, and it keeps its place in the cart.
+    """
+    with transaction.atomic():
+        twin = next(
+            (
+                row for row in CartItem.objects
+                .select_for_update()
+                .filter(
+                    user=item.user,
+                    system=item.system,
+                    menu_item=item.menu_item,
+                )
+                .exclude(pk=item.pk)
+                if row.customization == item.customization
+                and row.menu_size_id == item.menu_size_id
+            ),
+            None,
+        )
+        if twin is None:
+            item.save(update_fields=[*update_fields, "updated_at"])
+            return item
+
+        twin.quantity = min(twin.quantity + item.quantity, 99)
+        twin.save(update_fields=["quantity", "updated_at"])
+        item.delete()
+        return twin
+
+
 def _cart_payload(request, system):
-    """The whole cart: lines, total quantity, and a subtotal per currency.
+    """The whole cart: lines, total quantity, a subtotal per currency, and the
+    "don't forget these" strip.
 
     Totals are grouped by currency because `Buyable.currency` is per item, so a
     System can hold a USD product and an MXN one; summing them into a single
     number would be arithmetic on incomparable units. The summary card renders
     one row per group.
+
+    `recommendations` rides on this payload rather than living behind its own
+    endpoint for the reason `guest.cart_payload` exists at all: the cart page
+    already fetches this, the strip is a pure function of these lines, and one
+    payload means the signed-in cart and the guest cart cannot be offered
+    different extras for the same basket. It is also what makes the strip
+    self-maintaining - adding a recommended item invalidates this cache, and the
+    item drops out of the next render because it is now in the cart.
     """
     items = list(_cart_qs(request, system))
     data = CartItemSerializer(items, many=True, context={"request": request}).data
@@ -1033,6 +1081,7 @@ def _cart_payload(request, system):
             {"currency": currency, "subtotal": str(subtotal)}
             for currency, subtotal in sorted(totals.items())
         ],
+        "recommendations": cart_recommendations(items, {"request": request}),
     }
 
 
@@ -1103,7 +1152,10 @@ class CartListView(APIView):
 
 class CartItemDetailView(APIView):
     """
-    PATCH  /api/auth/cart/<id>/ - set a line's quantity, body {"quantity": N}.
+    PATCH  /api/auth/cart/<id>/ - change a line, body {"quantity"?, "size"?,
+           "customization"?}. Every field is optional and only what is sent is
+           applied, so the cart's quantity stepper and its customiser can share
+           one endpoint without either resetting the other's half of the line.
     DELETE /api/auth/cart/<id>/ - drop the line.
 
     Keyed by the CartItem row's id, unlike the favorites detail view: a menu line
@@ -1128,13 +1180,42 @@ class CartItemDetailView(APIView):
     def patch(self, request, pk):
         serializer = CartItemUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
 
         item = self._get_item(request, pk)
         if item is None:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        item.quantity = serializer.validated_data["quantity"]
-        item.save(update_fields=["quantity", "updated_at"])
+        # Only what was sent is applied: the cart's quantity stepper and its
+        # customiser share this endpoint, and neither may reset the other's half
+        # of the line.
+        fields = []
+        if "quantity" in data:
+            item.quantity = data["quantity"]
+            fields.append("quantity")
+
+        # Re-configuring the dish. Guarded on `menu_item_id` because a product or
+        # a service has neither a size nor a selection to change; both values are
+        # re-resolved against what the dish actually offers, exactly as on the add
+        # path, so a stale or forged id prices as the default rather than at its
+        # own.
+        reconfigured = bool(item.menu_item_id) and (
+            "size" in data or "customization" in data
+        )
+        if reconfigured:
+            if "customization" in data:
+                item.customization = _menu_selection(
+                    item.menu_item, data["customization"],
+                )
+                fields.append("customization")
+            if "size" in data:
+                item.menu_size = _menu_size(item.menu_item, data["size"])
+                fields.append("menu_size")
+
+            item = self._get_item(request, _resave_menu_line(item, fields).pk)
+        elif fields:
+            item.save(update_fields=[*fields, "updated_at"])
+
         invalidate_cart(request.user.id, item.system_id or 0)
 
         return Response(CartItemSerializer(item, context={"request": request}).data)

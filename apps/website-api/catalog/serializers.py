@@ -11,10 +11,141 @@ from .models import (
     ServiceCategory, Service, ServiceImage,
     MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient,
     MenuItemIngredientOption, MenuSize, RecipeStep,
+    CatalogRecommendation,
     Ingredient, IngredientProvider,
     DIMENSION_UNIT_CHOICES, WEIGHT_UNIT_CHOICES, MODALITY_CHOICES,
     QUANTITY_UNIT_CHOICES, SIZE_UNIT_CHOICES,
+    RECOMMENDATION_TARGET_FIELD,
 )
+
+
+# ---------------------------------------------------------------------------
+# Checkout recommendations - the read refs and the replace-all write
+# ---------------------------------------------------------------------------
+#
+# ⚠ **What rides on an item's payload is its OWN rows, not its effective list.**
+# `own_recommendations` is empty for the ordinary item that inherits its
+# category's list, and that emptiness is the state the CMS editor must bind to:
+# loading the *resolved* list would show an operator ticks they never made, and
+# the first save would freeze them into an override that silently detaches the
+# item from its category. The exact trap `MenuItem.own_sizes` is named around.
+#
+# What a *customer* is offered is resolved server-side in
+# `catalog/recommendations.py` and delivered on the cart payload - the cart is
+# its only consumer, so no catalog listing pays for it.
+
+RECOMMENDATION_KINDS = ('product', 'service', 'menu_item')
+
+
+class RecommendationRefSerializer(serializers.Serializer):
+    """One ``{kind, id}`` reference, as the CMS sends them.
+
+    A cross-family relation cannot be a `PrimaryKeyRelatedField` list the way
+    `variants` is: an id alone does not say which of the three tables it is in.
+    """
+
+    kind = serializers.ChoiceField(choices=RECOMMENDATION_KINDS)
+    id = serializers.IntegerField(min_value=1)
+
+
+def recommendation_refs(rows, request):
+    """``[{kind, id, slug, name, en_name, image, price, currency}]`` for `rows`.
+
+    Deliberately shallow, for `ProductVariantSerializer`'s reason: the target is
+    itself a buyable that carries recommendations of its own, so a nested full
+    payload could recurse through the relation.
+
+    **Every** row, including one whose target is out of stock or off the menu
+    today - this is a record of what the operator chose, and quietly dropping a
+    row here would make the CMS look like it lost the tick (and the next save
+    would really lose it). The customer-facing filtering is
+    `offerable_recommendations`, applied in `catalog/recommendations.py`.
+    """
+    payload = []
+    for row in rows:
+        target = row.target
+        if target is None:
+            continue
+        payload.append({
+            'kind': row.target_kind,
+            'id': target.pk,
+            'slug': target.slug,
+            'name': target.name,
+            'en_name': target.en_name,
+            'image': _buyable_image_url(target, request),
+            'price': target.price,
+            'currency': target.currency,
+            'sort_order': row.sort_order,
+        })
+    return payload
+
+
+def own_recommendation_refs(obj, request):
+    """An item's own rows as refs, in display order (see the note above: own, not
+    effective)."""
+    return recommendation_refs(obj.own_recommendation_rows, request)
+
+
+def category_recommendation_refs(obj, request):
+    """A category's rows as refs, in display order. A category has nothing to
+    inherit from, so there is one list here rather than an own/effective pair."""
+    rows = sorted(
+        (r for r in obj.recommendations.all() if r.enabled),
+        key=lambda r: (r.sort_order, r.id),
+    )
+    return recommendation_refs(rows, request)
+
+
+def set_recommendations(owner, source_field, refs):
+    """Replace `owner`'s recommendation rows with `refs` (``[{kind, id}]``).
+
+    Replace-all rather than an upsert, unlike `MenuSize`'s CMS editor: a
+    recommendation row carries nothing an operator authored - no name, no image,
+    no price - so there is no identity worth reconciling, and the ids the API
+    assigned are of no interest to anyone. `sort_order` is the position in the
+    list that was sent, so dragging the picker is what arranges the strip.
+
+    ⚠ **A target belonging to another tenant is skipped, never linked.** The CMS
+    only ever offers same-System items, so such a ref is a bug or a probe; the
+    rule is `core/backup.py`'s - never take over a row another System owns.
+    A self-reference is dropped for `validate_variants`' reason: an item that
+    recommends itself would offer the customer what is already in their basket.
+    """
+    CatalogRecommendation.objects.filter(**{source_field: owner}).delete()
+    if not refs:
+        return
+
+    models_by_kind = {'product': Product, 'service': Service, 'menu_item': MenuItem}
+    # One query per family named, not one per ref.
+    wanted = {}
+    for ref in refs:
+        wanted.setdefault(ref['kind'], set()).add(ref['id'])
+    resolved = {}
+    for kind, ids in wanted.items():
+        for target in models_by_kind[kind].objects.filter(
+            pk__in=ids, system_id=owner.system_id,
+        ):
+            resolved[(kind, target.pk)] = target
+
+    seen = set()
+    order = 0
+    for ref in refs:
+        key = (ref['kind'], ref['id'])
+        if key in seen:
+            continue
+        target = resolved.get(key)
+        if target is None:
+            continue
+        if type(target) is type(owner) and target.pk == owner.pk:
+            continue
+        seen.add(key)
+        row = CatalogRecommendation(**{
+            source_field: owner,
+            RECOMMENDATION_TARGET_FIELD[ref['kind']]: target,
+            'sort_order': order,
+        })
+        row.save()
+        order += 1
 
 
 # ---------------------------------------------------------------------------
@@ -49,13 +180,17 @@ class ProductCategorySerializer(serializers.ModelSerializer):
 
 class ProductCategoryWriteSerializer(serializers.ModelSerializer):
     image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    # The checkout recommendations every product in this category inherits unless
+    # it carries its own. `write_only` because the read serializer resolves the
+    # same relation into refs itself.
+    recommendations = RecommendationRefSerializer(many=True, required=False, write_only=True)
 
     class Meta:
         model = ProductCategory
         fields = [
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'enabled', 'image',
-            'sort_order',
+            'recommendations', 'sort_order',
         ]
 
     def validate_slug(self, value):
@@ -76,7 +211,10 @@ class ProductCategoryWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         image_data = validated_data.pop('image', None)
+        recommendations = validated_data.pop('recommendations', None)
         instance = super().create(validated_data)
+        if recommendations is not None:
+            set_recommendations(instance, 'product_category', recommendations)
         if image_data:
             self._save_image(instance, image_data)
         return instance
@@ -84,7 +222,10 @@ class ProductCategoryWriteSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         clear_image = 'image' in validated_data and not validated_data.get('image')
         image_data = validated_data.pop('image', None)
+        recommendations = validated_data.pop('recommendations', None)
         instance = super().update(instance, validated_data)
+        if recommendations is not None:
+            set_recommendations(instance, 'product_category', recommendations)
         if image_data:
             self._save_image(instance, image_data)
         elif clear_image:
@@ -258,6 +399,10 @@ class ProductWriteSerializer(serializers.Serializer):
     variants = serializers.PrimaryKeyRelatedField(
         queryset=Product.objects.all(), many=True, required=False,
     )
+    # Checkout recommendations, as `{kind, id}` refs because the relation is
+    # cross-family (a product may recommend a service). Replace-all: an empty
+    # list clears the product's own rows, which hands it back to its category's.
+    recommendations = RecommendationRefSerializer(many=True, required=False)
 
     # Product-specific fields
     slug = serializers.SlugField(max_length=255)
@@ -340,10 +485,13 @@ class ProductWriteSerializer(serializers.Serializer):
     def create(self, validated_data):
         image_data = validated_data.pop('image', None)
         variants = validated_data.pop('variants', None)
+        recommendations = validated_data.pop('recommendations', None)
         product = Product(**validated_data)
         product.save()
         if variants is not None:
             product.variants.set(variants)
+        if recommendations is not None:
+            set_recommendations(product, 'product', recommendations)
         if image_data:
             self._save_image(product, image_data)
         return product
@@ -352,6 +500,7 @@ class ProductWriteSerializer(serializers.Serializer):
         clear_image = 'image' in validated_data and not validated_data.get('image')
         image_data = validated_data.pop('image', None)
         variants = validated_data.pop('variants', None)
+        recommendations = validated_data.pop('recommendations', None)
         for field_name, value in validated_data.items():
             setattr(instance, field_name, value)
         if clear_image:
@@ -359,6 +508,8 @@ class ProductWriteSerializer(serializers.Serializer):
         instance.save()
         if variants is not None:
             instance.variants.set(variants)
+        if recommendations is not None:
+            set_recommendations(instance, 'product', recommendations)
         if image_data:
             self._save_image(instance, image_data)
         return instance
@@ -461,13 +612,16 @@ class ServiceCategorySerializer(serializers.ModelSerializer):
 
 class ServiceCategoryWriteSerializer(serializers.ModelSerializer):
     image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    # The checkout recommendations every service in this category inherits unless
+    # it carries its own.
+    recommendations = RecommendationRefSerializer(many=True, required=False, write_only=True)
 
     class Meta:
         model = ServiceCategory
         fields = [
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'enabled', 'image',
-            'sort_order',
+            'recommendations', 'sort_order',
         ]
 
     def validate_slug(self, value):
@@ -488,7 +642,10 @@ class ServiceCategoryWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         image_data = validated_data.pop('image', None)
+        recommendations = validated_data.pop('recommendations', None)
         instance = super().create(validated_data)
+        if recommendations is not None:
+            set_recommendations(instance, 'service_category', recommendations)
         if image_data:
             self._save_image(instance, image_data)
         return instance
@@ -496,7 +653,10 @@ class ServiceCategoryWriteSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         clear_image = 'image' in validated_data and not validated_data.get('image')
         image_data = validated_data.pop('image', None)
+        recommendations = validated_data.pop('recommendations', None)
         instance = super().update(instance, validated_data)
+        if recommendations is not None:
+            set_recommendations(instance, 'service_category', recommendations)
         if image_data:
             self._save_image(instance, image_data)
         elif clear_image:
@@ -655,6 +815,10 @@ class ServiceWriteSerializer(serializers.Serializer):
     variants = serializers.PrimaryKeyRelatedField(
         queryset=Service.objects.all(), many=True, required=False,
     )
+    # Checkout recommendations, as `{kind, id}` refs because the relation is
+    # cross-family. Replace-all: an empty list clears this service's own rows,
+    # which hands it back to its category's.
+    recommendations = RecommendationRefSerializer(many=True, required=False)
 
     # Service-specific fields
     slug = serializers.SlugField(max_length=255)
@@ -811,12 +975,15 @@ class ServiceWriteSerializer(serializers.Serializer):
     def create(self, validated_data):
         image_data = validated_data.pop('image', None)
         variants = validated_data.pop('variants', None)
+        recommendations = validated_data.pop('recommendations', None)
         booking_branches = validated_data.pop('booking_branches', None)
         booking_pools = validated_data.pop('booking_pools', None)
         service = Service(**validated_data)
         service.save()
         if variants is not None:
             service.variants.set(variants)
+        if recommendations is not None:
+            set_recommendations(service, 'service', recommendations)
         # After save: an M2M cannot be assigned before the row has a pk.
         if booking_branches is not None:
             service.booking_branches.set(booking_branches)
@@ -830,6 +997,7 @@ class ServiceWriteSerializer(serializers.Serializer):
         clear_image = 'image' in validated_data and not validated_data.get('image')
         image_data = validated_data.pop('image', None)
         variants = validated_data.pop('variants', None)
+        recommendations = validated_data.pop('recommendations', None)
         booking_branches = validated_data.pop('booking_branches', None)
         booking_pools = validated_data.pop('booking_pools', None)
         for field_name, value in validated_data.items():
@@ -839,6 +1007,8 @@ class ServiceWriteSerializer(serializers.Serializer):
         instance.save()
         if variants is not None:
             instance.variants.set(variants)
+        if recommendations is not None:
+            set_recommendations(instance, 'service', recommendations)
         # `None` means the key was absent (PATCH: leave alone); an empty list
         # means "every branch" and must actually clear the relation.
         if booking_branches is not None:
@@ -1007,13 +1177,16 @@ class MenuCategorySerializer(serializers.ModelSerializer):
 
 class MenuCategoryWriteSerializer(serializers.ModelSerializer):
     image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    # The checkout recommendations every dish in this category inherits unless it
+    # carries its own - "with a pizza, offer a soda", said once.
+    recommendations = RecommendationRefSerializer(many=True, required=False, write_only=True)
 
     class Meta:
         model = MenuCategory
         fields = [
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'enabled', 'image',
-            'sort_order',
+            'recommendations', 'sort_order',
         ]
 
     def validate_slug(self, value):
@@ -1034,7 +1207,10 @@ class MenuCategoryWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         image_data = validated_data.pop('image', None)
+        recommendations = validated_data.pop('recommendations', None)
         instance = super().create(validated_data)
+        if recommendations is not None:
+            set_recommendations(instance, 'menu_category', recommendations)
         if image_data:
             self._save_image(instance, image_data)
         return instance
@@ -1042,7 +1218,10 @@ class MenuCategoryWriteSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         clear_image = 'image' in validated_data and not validated_data.get('image')
         image_data = validated_data.pop('image', None)
+        recommendations = validated_data.pop('recommendations', None)
         instance = super().update(instance, validated_data)
+        if recommendations is not None:
+            set_recommendations(instance, 'menu_category', recommendations)
         if image_data:
             self._save_image(instance, image_data)
         elif clear_image:
@@ -1648,6 +1827,10 @@ class MenuItemWriteSerializer(serializers.Serializer):
     variants = serializers.PrimaryKeyRelatedField(
         queryset=MenuItem.objects.all(), many=True, required=False,
     )
+    # Checkout recommendations, as `{kind, id}` refs because the relation is
+    # cross-family (a dish may recommend a Product). Replace-all: an empty list
+    # clears this dish's own rows, which hands it back to its category's.
+    recommendations = RecommendationRefSerializer(many=True, required=False)
 
     # Menu-item-specific fields
     slug = serializers.SlugField(max_length=255)
@@ -1724,10 +1907,13 @@ class MenuItemWriteSerializer(serializers.Serializer):
     def create(self, validated_data):
         image_data = validated_data.pop('image', None)
         variants = validated_data.pop('variants', None)
+        recommendations = validated_data.pop('recommendations', None)
         menu_item = MenuItem(**validated_data)
         menu_item.save()
         if variants is not None:
             menu_item.variants.set(variants)
+        if recommendations is not None:
+            set_recommendations(menu_item, 'menu_item', recommendations)
         if image_data:
             self._save_image(menu_item, image_data)
         return menu_item
@@ -1736,6 +1922,7 @@ class MenuItemWriteSerializer(serializers.Serializer):
         clear_image = 'image' in validated_data and not validated_data.get('image')
         image_data = validated_data.pop('image', None)
         variants = validated_data.pop('variants', None)
+        recommendations = validated_data.pop('recommendations', None)
         for field_name, value in validated_data.items():
             setattr(instance, field_name, value)
         if clear_image:
@@ -1743,6 +1930,8 @@ class MenuItemWriteSerializer(serializers.Serializer):
         instance.save()
         if variants is not None:
             instance.variants.set(variants)
+        if recommendations is not None:
+            set_recommendations(instance, 'menu_item', recommendations)
         if image_data:
             self._save_image(instance, image_data)
         return instance

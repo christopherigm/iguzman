@@ -7,7 +7,7 @@ import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import type { MenuSize } from "@/lib/catalog";
 import { formatPrice } from "@/lib/price";
-import { hasSizeChoice, resolveSize } from "@/lib/menu-selection";
+import { hasSizeChoice, priceForSize, resolveSize } from "@/lib/menu-selection";
 
 /**
  * `sm` is the storefront's density (detail page, catalog card modal); `lg` grows
@@ -22,15 +22,33 @@ const SIZES = {
   lg: { image: 64, paddingX: 16, paddingY: 12, nameFontSize: "1rem", gap: 12 },
 } as const;
 
+// The selected card is painted in `--accent`, which on this app is the *tenant's*
+// brand colour published by the locale layout - it does not change with the
+// theme. The palette's `--accent-foreground` does (near-black on the dark
+// theme), so it is only the fallback here: taken literally it would put dark
+// text on the brand colour for every visitor reading in dark mode.
+//
+// These are spelled out per line because `.ui-typography` sets
+// `color: var(--foreground)`, so nothing inside the card inherits the Button's
+// own colour.
+const ACTIVE_TEXT = "#fff";
+/** The measurement and price lines, a shade down from the name so the card still
+ *  has a hierarchy once every line on it is white. */
+const ACTIVE_TEXT_MUTED = "rgba(255, 255, 255, 0.86)";
+
 interface Props {
   /** The dish's **effective** sizes, exactly as the API returned them. Never the
    *  category's list re-resolved on the client - the server owns that rule. */
   sizes: MenuSize[];
+  /** The item's own list price. Each card prints `base + its delta`, so the
+   *  customer compares the prices of the sizes rather than a set of deltas
+   *  against a number printed somewhere else on the page. */
+  basePrice: string;
   /** The chosen size's id. `undefined` means "whatever the default is", which is
    *  what this renders as selected. */
   value: number | undefined;
   onChange: (sizeId: number) => void;
-  /** The dish's currency - every delta is quoted in it. */
+  /** The dish's currency - every price is quoted in it. */
   currency: string;
   locale: string;
   size?: MenuSizePickerSize;
@@ -38,8 +56,8 @@ interface Props {
 
 /**
  * The size a dish is ordered in: one row of single-select cards, each carrying
- * the size's picture, its name, its measurement ("12 in") and what it does to the
- * price.
+ * the size's picture, its name, its measurement ("12 in") and what the dish
+ * costs in it.
  *
  * **One component for every place a dish is configured** - the detail page, the
  * catalog card's add-to-cart modal and the POS till - for the reason
@@ -52,11 +70,13 @@ interface Props {
  * shared customisation context (so the live total and nutrition label mirror it)
  * while the two modals hold it locally.
  *
- * Nothing here names a price that is charged. The delta shown comes off the
- * catalog and the server re-prices every selection.
+ * Nothing here names a price that is charged. The figure on each card is the
+ * catalog's own base plus that size's delta, and the server re-prices every
+ * selection.
  */
 export function MenuSizePicker({
   sizes,
+  basePrice,
   value,
   onChange,
   currency,
@@ -87,10 +107,20 @@ export function MenuSizePicker({
         {t("chooseSize")}
       </Typography>
 
-      <Box flexWrap="wrap" gap={s.gap} role="group" aria-label={t("chooseSize")}>
+      {/* Centred, and spread apart rather than packed left: with two or three
+          sizes the row is a set of choices to weigh against each other, which a
+          left-ranged clump beside a wide empty gutter does not read as. */}
+      <Box
+        flexWrap="wrap"
+        justifyContent="space-around"
+        alignItems="stretch"
+        gap={s.gap}
+        role="group"
+        aria-label={t("chooseSize")}
+      >
         {sizes.map((option) => {
           const active = selected?.id === option.id;
-          const delta = parseFloat(option.price_delta);
+          const price = priceForSize(basePrice, option);
           return (
             <Button
               key={option.id}
@@ -109,7 +139,7 @@ export function MenuSizePicker({
               borderRadius={12}
               minWidth={96}
               backgroundColor={active ? "var(--accent)" : "var(--surface-2)"}
-              color={active ? "var(--accent-foreground, #fff)" : "var(--foreground)"}
+              color={active ? ACTIVE_TEXT : "var(--foreground)"}
               border={
                 active
                   ? "1px solid var(--accent)"
@@ -140,6 +170,7 @@ export function MenuSizePicker({
                 variant="none"
                 margin={0}
                 fontWeight={600}
+                color={active ? ACTIVE_TEXT : "var(--foreground)"}
                 styles={{ fontSize: s.nameFontSize }}
               >
                 {label(option.name, option.en_name)}
@@ -149,21 +180,30 @@ export function MenuSizePicker({
                   trailing-zero trim lives in one place. Absent for a size that
                   carries none - "Individual" says everything it needs to. */}
               {option.measurement && (
-                <Typography as="span" variant="label" margin={0}>
+                <Typography
+                  as="span"
+                  variant="label"
+                  margin={0}
+                  color={active ? ACTIVE_TEXT_MUTED : "var(--foreground)"}
+                >
                   {option.measurement}
                 </Typography>
               )}
 
-              {/* A signed delta, printed as one: the smallest size usually
-                  discounts the base, and showing "-40" as "40" would read as a
-                  surcharge on the cheapest option. Zero prints nothing - the size
-                  that costs the list price should not shout about it. */}
-              {delta !== 0 && (
-                <Typography as="span" variant="label" margin={0} fontWeight={600}>
-                  {delta > 0 ? "+" : "−"}
-                  {formatPrice(Math.abs(delta).toFixed(2), currency)}
-                </Typography>
-              )}
+              {/* What the dish costs in this size, not what the size does to the
+                  price: a signed delta is only half a figure, and the customer is
+                  choosing between the prices themselves. Printed on every card,
+                  including the size sold at the list price - with totals there is
+                  no "no change" to leave unsaid. */}
+              <Typography
+                as="span"
+                variant="label"
+                margin={0}
+                fontWeight={600}
+                color={active ? ACTIVE_TEXT_MUTED : "var(--foreground)"}
+              >
+                {formatPrice(price.toFixed(2), currency)}
+              </Typography>
             </Button>
           );
         })}

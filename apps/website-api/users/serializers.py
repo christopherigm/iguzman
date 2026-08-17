@@ -474,6 +474,12 @@ class CartItemSerializer(serializers.Serializer):
                 'name': chosen_ing.name,
                 'en_name': chosen_ing.en_name,
                 'quantity': qty,
+                # The alternative the customer swapped in (an Ingredient id), null
+                # when they kept the group's default. Carried so the cart page can
+                # re-open its customiser on the selection that is actually in the
+                # cart - the resolved *name* above cannot be turned back into the
+                # id the picker selects on.
+                'option': chosen_ing.id if chosen_ing.id != ingredient.ingredient_id else None,
                 'unit_price': str(option_price),
                 'line_upcharge': str(ingredient.upcharge_for_quantity(qty, option_price)),
                 'removed': ingredient.included_units > 0 and qty == 0,
@@ -532,7 +538,22 @@ class CartItemWriteSerializer(serializers.Serializer):
 
 
 class CartItemUpdateSerializer(serializers.Serializer):
-    quantity = serializers.IntegerField(min_value=1, max_value=99)
+    """A change to a line already in the cart.
+
+    Every field is optional and only what is *sent* is applied, which is what
+    lets the cart's quantity stepper and its customiser share one endpoint: the
+    stepper sends `quantity` alone and must not reset the dish's ingredients,
+    while the customiser sends `size` + `customization` and must not disturb how
+    many of them the customer wanted.
+
+    `size`/`customization` are menu-only and ignored on a product or service line
+    - and, exactly as on the add path, they are only a *request*: the server
+    re-resolves both against what the dish actually offers before pricing.
+    """
+
+    quantity = serializers.IntegerField(required=False, min_value=1, max_value=99)
+    size = serializers.IntegerField(required=False, allow_null=True)
+    customization = CartCustomizationRowSerializer(many=True, required=False)
 
 
 class GuestCartSerializer(serializers.Serializer):

@@ -26,6 +26,7 @@ from .views import (
     MenuItemSizeListCreateView,
     MenuItemSizeDetailView,
     MenuItemRecipeView,
+    RecommendationListView,
     IngredientListCreateView,
     IngredientDetailView,
     IngredientNutritionLookupView,
@@ -95,6 +96,11 @@ urlpatterns = [
     # menu item payload, not this.
     path('catalog/menu-items/<int:pk>/sizes/', MenuItemSizeListCreateView.as_view(), name='menu-item-size-list'),
     path('catalog/menu-items/<int:pk>/sizes/<int:size_pk>/', MenuItemSizeDetailView.as_view(), name='menu-item-size-detail'),
+
+    # Checkout recommendations - one source's OWN rows, for the CMS editor.
+    # A single generic endpoint rather than one per family: the source is any of
+    # six things and the answer has the same shape for all of them.
+    path('catalog/recommendations/', RecommendationListView.as_view(), name='catalog-recommendations'),
 
     # Menu item recipe (internal, admin only)
     path('catalog/menu-items/<int:pk>/recipe/', MenuItemRecipeView.as_view(), name='menu-item-recipe'),

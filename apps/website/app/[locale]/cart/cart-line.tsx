@@ -10,15 +10,26 @@ import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
+import { Toast } from "@repo/ui/core-elements/toast";
 import type { CartItem } from "@/lib/cart";
 import { formatPrice } from "@/lib/price";
 import { menuEtaLabel } from "@/lib/menu-eta";
 import { menuItemHref } from "@/lib/menu-paths";
+import {
+  customizableIngredients,
+  enabledIngredients,
+  hasSizeChoice,
+  type CustomizationRow,
+} from "@/lib/menu-selection";
+import { MenuCustomizeModal } from "@/components/menu-customize-modal";
 import "./cart-line.css";
 
 interface CartLineProps {
   line: CartItem;
   locale: string;
+  /** Whether this row belongs to a signed-in customer's cart or a guest's -
+   *  which is the only thing the customiser cannot work out for itself. */
+  isLoggedIn: boolean;
   /**
    * Persist a new quantity for this line, resolving to whether it stuck. Owned
    * by the parent because the two carts are addressed differently: a customer's
@@ -29,6 +40,15 @@ interface CartLineProps {
   onQuantityChange: (quantity: number) => Promise<boolean>;
   /** Drop the line entirely, resolving to whether it stuck. */
   onRemove: () => Promise<boolean>;
+  /**
+   * Re-configure the dish - a new size and a new ingredient selection, leaving
+   * the quantity alone. Owned by the parent for the same reason the two writes
+   * above are; a menu row only offers the button when this is given.
+   */
+  onEditSelection?: (selection: {
+    size?: number;
+    customization: CustomizationRow[];
+  }) => Promise<boolean>;
 }
 
 const MAX_QUANTITY = 99;
@@ -46,14 +66,18 @@ const MAX_QUANTITY = 99;
 export function CartLine({
   line,
   locale,
+  isLoggedIn,
   onQuantityChange,
   onRemove,
+  onEditSelection,
 }: CartLineProps) {
   const t = useTranslations("Cart");
   const tMenu = useTranslations("Menu");
   const [quantity, setQuantity] = useState(line.quantity);
   const [isPending, startTransition] = useTransition();
   const [removed, setRemoved] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editFailed, setEditFailed] = useState(0);
 
   const { item } = line;
 
@@ -79,6 +103,17 @@ export function CartLine({
       ? menuEtaLabel(tMenu, line.item.eta_minutes)
       : null;
 
+  // Only a dish can be re-configured, and only one that actually offers a
+  // choice - a size to pick or an add-on to move. The same test the catalog card
+  // makes before asking instead of adding: with nothing to change, a pencil
+  // opens a modal that says nothing.
+  const canEdit =
+    line.kind === "menu_item" &&
+    onEditSelection !== undefined &&
+    (hasSizeChoice(line.item.sizes) ||
+      customizableIngredients(enabledIngredients(line.item.ingredients))
+        .length > 0);
+
   const image = item.image;
   const changeQuantity = (next: number) => {
     if (next < 1 || next > MAX_QUANTITY || next === quantity) return;
@@ -89,6 +124,15 @@ export function CartLine({
     startTransition(async () => {
       if (!(await onQuantityChange(next))) setQuantity(previous);
     });
+  };
+
+  // The modal owns the write and reports back here; on success the parent's own
+  // refresh (or re-resolve) is what repaints the row with its new size, add-ons
+  // and price - there is nothing to update optimistically, since every one of
+  // those numbers is the server's to recompute.
+  const handleEditResult = (ok: boolean) => {
+    setEditing(false);
+    if (!ok) setEditFailed((count) => count + 1);
   };
 
   const handleRemove = () => {
@@ -110,195 +154,265 @@ export function CartLine({
   );
 
   return (
-    <Card
-      padding={0}
-      border="none"
-      elevation={3}
-      backgroundColor="var(--surface-1)"
-      styles={{ opacity: isPending ? 0.7 : 1 }}
-    >
-      <Box gap={14} padding={12} alignItems="flex-start" width="100%">
-        <Link href={href} prefetch className="cart-line__image-link">
-          <Box
-            width={88}
-            height={88}
-            flex="0 0 auto"
-            borderRadius={8}
-            backgroundColor={
-              item.background_color ?? "var(--surface-3, #e5e7eb)"
-            }
-            styles={{ position: "relative", overflow: "hidden" }}
-          >
-            {image && (
-              <Image
-                fill
-                src={image}
-                alt={name}
-                sizes="88px"
-                style={{ objectFit: "cover" }}
-              />
-            )}
-          </Box>
-        </Link>
-
-        <Box flexDirection="column" gap={6} flex={1} minWidth={0}>
-          <Box alignItems="flex-start" justifyContent="space-between" gap={8}>
-            <Box flexDirection="column" gap={4} flex={1} minWidth={0}>
-              <Link href={href} prefetch className="cart-line__title-link">
-                <Typography
-                  as="h2"
-                  variant="h6"
-                  margin={0}
-                  color="var(--on-surface)"
-                  styles={{
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
-                  }}
-                >
-                  {name}
-                </Typography>
-              </Link>
-
-              {(etaLabel || !line.in_stock) && (
-                <Box alignItems="center" gap={6} flexWrap="wrap">
-                  {etaLabel && (
-                    <Badge variant="subtle" size="sm" color="var(--accent)">
-                      {etaLabel}
-                    </Badge>
-                  )}
-                  {!line.in_stock && (
-                    <Badge
-                      variant="filled"
-                      size="sm"
-                      color="#ef4444"
-                      textColor="#fff"
-                    >
-                      {t("outOfStock")}
-                    </Badge>
-                  )}
-                </Box>
+    <>
+      <Card
+        padding={0}
+        border="none"
+        elevation={3}
+        backgroundColor="var(--surface-1)"
+        styles={{ opacity: isPending ? 0.7 : 1 }}
+      >
+        {/* `stretch`, not `flex-start`: the 110px thumbnail is what sets a bare
+          line's height, and the text column has to be that tall for the stepper
+          row below to have a bottom to sit on. */}
+        <Box gap={14} padding={12} alignItems="stretch" width="100%">
+          <Link href={href} prefetch className="cart-line__image-link">
+            <Box
+              width={110}
+              height={110}
+              flex="0 0 auto"
+              borderRadius={8}
+              backgroundColor={
+                item.background_color ?? "var(--surface-3, #e5e7eb)"
+              }
+              styles={{ position: "relative", overflow: "hidden" }}
+            >
+              {image && (
+                <Image
+                  fill
+                  src={image}
+                  alt={name}
+                  sizes="110px"
+                  style={{ objectFit: "cover" }}
+                />
               )}
+            </Box>
+          </Link>
 
-              {/* The size, above the add-on list: it is which dish this line is,
+          <Box flexDirection="column" gap={6} flex={1} minWidth={0}>
+            <Box alignItems="flex-start" justifyContent="space-between" gap={8}>
+              <Box flexDirection="column" gap={4} flex={1} minWidth={0}>
+                <Link href={href} prefetch className="cart-line__title-link">
+                  <Typography
+                    as="h2"
+                    variant="h6"
+                    margin={0}
+                    color="var(--on-surface)"
+                    styles={{
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {name}
+                  </Typography>
+                </Link>
+
+                {(etaLabel || !line.in_stock) && (
+                  <Box alignItems="center" gap={6} flexWrap="wrap">
+                    {etaLabel && (
+                      <Badge variant="subtle" size="sm" color="var(--accent)">
+                        {etaLabel}
+                      </Badge>
+                    )}
+                    {!line.in_stock && (
+                      <Badge
+                        variant="filled"
+                        size="sm"
+                        color="#ef4444"
+                        textColor="#fff"
+                      >
+                        {t("outOfStock")}
+                      </Badge>
+                    )}
+                  </Box>
+                )}
+
+                {/* The size, above the add-on list: it is which dish this line is,
                   not a change made to one, and it is already priced into
                   `unit_price` - so no delta is repeated here. */}
-              {line.size && (
-                <Typography
-                  variant="caption"
-                  margin={0}
-                  fontWeight={600}
-                  color="var(--foreground)"
-                >
-                  {((locale === "en" ? line.size.en_name : line.size.name) ??
-                    line.size.name)}
-                  {line.size.measurement ? ` · ${line.size.measurement}` : ""}
-                </Typography>
-              )}
+                {line.size && (
+                  <Typography
+                    variant="caption"
+                    margin={0}
+                    fontWeight={600}
+                    color="var(--foreground)"
+                  >
+                    {(locale === "en" ? line.size.en_name : line.size.name) ??
+                      line.size.name}
+                    {line.size.measurement ? ` · ${line.size.measurement}` : ""}
+                  </Typography>
+                )}
 
-              {line.customization.length > 0 && (
-                <Box flexDirection="column" gap={2}>
-                  {line.customization.map((row) => {
-                    const rowName =
-                      (locale === "en" ? row.en_name : row.name) ?? row.name;
-                    const upcharge = parseFloat(row.line_upcharge);
-                    return (
-                      <Typography
-                        key={row.ingredient}
-                        variant="caption"
-                        margin={0}
-                        color="var(--foreground)"
-                      >
-                        {row.removed
-                          ? `− ${rowName}`
-                          : `${row.quantity}× ${rowName}`}
-                        {upcharge > 0 &&
-                          ` (+${formatPrice(row.line_upcharge, line.currency)})`}
-                      </Typography>
-                    );
-                  })}
-                </Box>
-              )}
-            </Box>
-
-            <IconButton
-              icon="/icons/remove-from-cart.svg"
-              aria-label={t("remove")}
-              title={t("remove")}
-              kind="error"
-              size="sm"
-              disabled={isPending}
-              onClick={handleRemove}
-            />
-          </Box>
-
-          <Box
-            alignItems="center"
-            justifyContent="space-between"
-            gap={10}
-            flexWrap="wrap"
-            marginTop={4}
-          >
-            <Box alignItems="center" gap={8}>
-              {/* Text rather than icons: there is no plus/minus in public/icons,
-                  and the glyphs carry the meaning better than a stand-in would.
-                  aria-label gives each button its real name. */}
-              <Box
-                alignItems="center"
-                gap={4}
-                padding={2}
-                borderRadius={8}
-                border="1px solid var(--border)"
-              >
-                <Button
-                  text="−"
-                  aria-label={t("decrease")}
-                  title={t("decrease")}
-                  size="sm"
-                  minWidth={30}
-                  disabled={isPending || quantity <= 1}
-                  onClick={() => changeQuantity(quantity - 1)}
-                />
-                <Typography
-                  as="span"
-                  variant="h6"
-                  margin={0}
-                  minWidth={28}
-                  color="var(--on-surface)"
-                  styles={{ textAlign: "center" }}
-                  aria-live="polite"
-                >
-                  {quantity}
-                </Typography>
-                <Button
-                  text="+"
-                  aria-label={t("increase")}
-                  title={t("increase")}
-                  size="sm"
-                  minWidth={30}
-                  disabled={isPending || quantity >= MAX_QUANTITY}
-                  onClick={() => changeQuantity(quantity + 1)}
-                />
+                {line.customization.length > 0 && (
+                  <Box flexDirection="column" gap={2}>
+                    {line.customization.map((row) => {
+                      const rowName =
+                        (locale === "en" ? row.en_name : row.name) ?? row.name;
+                      const upcharge = parseFloat(row.line_upcharge);
+                      return (
+                        <Typography
+                          key={row.ingredient}
+                          variant="caption"
+                          margin={0}
+                          color="var(--foreground)"
+                        >
+                          {row.removed
+                            ? `− ${rowName}`
+                            : `${row.quantity}× ${rowName}`}
+                          {upcharge > 0 &&
+                            ` (+${formatPrice(row.line_upcharge, line.currency)})`}
+                        </Typography>
+                      );
+                    })}
+                  </Box>
+                )}
               </Box>
 
-              <Typography as="span" variant="caption" color="var(--foreground)">
-                {formatPrice(line.unit_price, line.currency)} {t("each")}
-              </Typography>
+              <Box alignItems="center" gap={4} flex="0 0 auto">
+                {/* Beside remove rather than under the add-on list: the two are
+                  what a customer does to a line they got wrong, and one of them
+                  should not be the destructive one by default. */}
+                {canEdit && (
+                  <IconButton
+                    icon="/icons/edit.svg"
+                    aria-label={t("edit")}
+                    title={t("edit")}
+                    kind="primary"
+                    size="md"
+                    disabled={isPending}
+                    onClick={() => setEditing(true)}
+                  />
+                )}
+
+                <IconButton
+                  icon="/icons/remove-from-cart.svg"
+                  aria-label={t("remove")}
+                  title={t("remove")}
+                  kind="error"
+                  size="md"
+                  disabled={isPending}
+                  onClick={handleRemove}
+                />
+              </Box>
             </Box>
 
-            <Typography
-              as="span"
-              variant="h6"
-              fontWeight={700}
-              margin={0}
-              color="var(--on-surface)"
+            {/* `auto`, not a fixed gap: the stepper and the line total sit on
+              the bottom edge of every row, whatever is above them. A dish with
+              no size and no add-ons has nothing to fill the thumbnail's height,
+              and the row otherwise floated up under the title. Content above
+              pushes it back down - the column's own `gap` is the floor. */}
+            <Box
+              alignItems="center"
+              justifyContent="space-between"
+              gap={10}
+              flexWrap="wrap"
+              marginTop="auto"
             >
-              {lineTotal}
-            </Typography>
+              <Box alignItems="center" gap={8}>
+                {/* Text rather than icons: there is no plus/minus in public/icons,
+                  and the glyphs carry the meaning better than a stand-in would.
+                  aria-label gives each button its real name. */}
+                <Box
+                  alignItems="center"
+                  gap={4}
+                  padding={2}
+                  borderRadius={8}
+                  border="1px solid var(--border)"
+                >
+                  <Button
+                    text="−"
+                    aria-label={t("decrease")}
+                    title={t("decrease")}
+                    size="sm"
+                    minWidth={30}
+                    disabled={isPending || quantity <= 1}
+                    onClick={() => changeQuantity(quantity - 1)}
+                  />
+                  <Typography
+                    as="span"
+                    variant="h6"
+                    margin={0}
+                    minWidth={28}
+                    color="var(--on-surface)"
+                    styles={{ textAlign: "center" }}
+                    aria-live="polite"
+                  >
+                    {quantity}
+                  </Typography>
+                  <Button
+                    text="+"
+                    aria-label={t("increase")}
+                    title={t("increase")}
+                    size="sm"
+                    minWidth={30}
+                    disabled={isPending || quantity >= MAX_QUANTITY}
+                    onClick={() => changeQuantity(quantity + 1)}
+                  />
+                </Box>
+
+                <Typography
+                  as="span"
+                  variant="caption"
+                  color="var(--foreground)"
+                >
+                  {formatPrice(line.unit_price, line.currency)} {t("each")}
+                </Typography>
+              </Box>
+
+              <Typography
+                as="span"
+                variant="h6"
+                fontWeight={700}
+                margin={0}
+                color="var(--on-surface)"
+              >
+                {lineTotal}
+              </Typography>
+            </Box>
           </Box>
         </Box>
-      </Box>
-    </Card>
+      </Card>
+
+      {/* Rendered from the cart itself, so changing your mind about the pizza you
+          already chose does not mean going back to its page and starting again.
+          The line's stored selection seeds the pickers - `line.customization`
+          carries only what differs from the dish as listed, which is exactly the
+          shape `buildCustomization` produces on the way in. */}
+      {editing && line.kind === "menu_item" && onEditSelection && (
+        <MenuCustomizeModal
+          menuItemId={line.item.id}
+          name={name}
+          basePrice={line.item.price}
+          currency={line.currency}
+          ingredients={enabledIngredients(line.item.ingredients)}
+          sizes={line.item.sizes}
+          isLoggedIn={isLoggedIn}
+          locale={locale}
+          editing={{
+            size: line.size?.id ?? null,
+            customization: line.customization.map((row) => ({
+              ingredient: row.ingredient,
+              quantity: row.quantity,
+              ...(row.option !== null ? { option: row.option } : {}),
+            })),
+            onSave: onEditSelection,
+          }}
+          onCancel={() => setEditing(false)}
+          onResult={handleEditResult}
+        />
+      )}
+
+      {editFailed > 0 && (
+        <Toast
+          key={editFailed}
+          message={t("editFailed")}
+          variant="error"
+          position="top-center"
+          duration={3}
+        />
+      )}
+    </>
   );
 }

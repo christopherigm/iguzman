@@ -163,14 +163,22 @@ def resolve_guest_favorites(system, refs):
 
 
 def cart_payload(items, context):
-    """Lines, total quantity and a subtotal per currency - the cart page's shape.
+    """Lines, total quantity, a subtotal per currency, and the checkout
+    recommendation strip - the cart page's shape.
 
     Deliberately the same payload `_cart_payload` builds for a signed-in cart,
     including the per-currency grouping (`Buyable.currency` is per item, so
     summing across currencies would be arithmetic on incomparable units). The
     frontend renders one `Cart` type either way.
+
+    The strip works on the *unsaved* lines this module produces because
+    `recommendations_for_cart` only reads `kind` / `target`, which are model
+    properties that never touch the database - the same reason
+    `CartItemSerializer` can render a guest's cart and an account's alike.
     """
     from decimal import Decimal
+
+    from catalog.recommendations import cart_recommendations
 
     from .serializers import CartItemSerializer
 
@@ -188,4 +196,5 @@ def cart_payload(items, context):
             {"currency": currency, "subtotal": str(subtotal)}
             for currency, subtotal in sorted(totals.items())
         ],
+        "recommendations": cart_recommendations(items, context),
     }

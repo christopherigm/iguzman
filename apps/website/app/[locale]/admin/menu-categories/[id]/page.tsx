@@ -28,6 +28,8 @@ import {
 } from "@/components/admin/menu-sizes-editor";
 import { menuCategoryHref } from "@/lib/menu-paths";
 import { buildSlug } from "@/lib/slug-utils";
+import { RecommendationsEditor } from "@/components/admin/recommendations-editor";
+import { useRecommendationsEditor } from "@/hooks/use-recommendations-editor";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -36,7 +38,7 @@ import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 type Props = { params: Promise<{ locale: string; id: string }> };
 
 export default function AdminMenuCategoryFormPage({ params }: Props) {
-  const { id } = use(params);
+  const { locale, id } = use(params);
   const isNew = id === "new";
   const t = useTranslations("Admin");
   const router = useRouter();
@@ -69,6 +71,15 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
   const [slugError, setSlugError] = useState<string | null>(null);
 
   const systemId = useSession()?.systemId ?? 0;
+
+  // What every item in this category is recommended alongside at checkout - said
+  // once here rather than on each item, which is the whole point of authoring it
+  // at the category level. An item may still override the list on its own form.
+  const recommendations = useRecommendationsEditor({
+    systemId,
+    source: "menu_category",
+    sourceId: isNew ? null : Number(id),
+  });
 
   if (isNew) {
     const derivedSlug = buildSlug(String(values.name ?? ""), systemId);
@@ -147,7 +158,8 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
 
   const persistSizes = async (categoryId: number) => {
     const { rows, ids } = await persistMenuSizes(sizes, originalSizeIds, {
-      create: (payload) => createMenuSize("menu-categories", categoryId, payload),
+      create: (payload) =>
+        createMenuSize("menu-categories", categoryId, payload),
       update: (sizeId, payload) =>
         updateMenuSize("menu-categories", categoryId, sizeId, payload),
       remove: (sizeId) => deleteMenuSize("menu-categories", categoryId, sizeId),
@@ -168,6 +180,9 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
         payload.image = null;
       }
       if (payload.parent === "") payload.parent = null;
+      // Always sent: an empty list clears the category's rows, so it cannot be
+      // omitted when the operator has just unticked the last one.
+      payload.recommendations = recommendations.value;
       if (isNew) {
         const created = await createMenuCategory(payload);
         await persistSizes(created.id as number);
@@ -275,6 +290,13 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
           styles={{ borderTop: "1px solid var(--border, #e5e7eb)" }}
         >
           <MenuSizesEditor value={sizes} onChange={setSizes} scope="category" />
+          <RecommendationsEditor
+            value={recommendations.value}
+            onChange={recommendations.setValue}
+            catalog={recommendations.catalog}
+            scope={recommendations.scope}
+            locale={locale}
+          />
         </Box>
       </AdminForm>
     </>

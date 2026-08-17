@@ -17,6 +17,8 @@ import {
   checkSlug,
 } from "@/lib/admin-api";
 import { buildSlug } from "@/lib/slug-utils";
+import { RecommendationsEditor } from "@/components/admin/recommendations-editor";
+import { useRecommendationsEditor } from "@/hooks/use-recommendations-editor";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -25,7 +27,7 @@ import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 type Props = { params: Promise<{ locale: string; id: string }> };
 
 export default function AdminProductCategoryFormPage({ params }: Props) {
-  const { id } = use(params);
+  const { locale, id } = use(params);
   const isNew = id === "new";
   const t = useTranslations("Admin");
   const router = useRouter();
@@ -53,6 +55,15 @@ export default function AdminProductCategoryFormPage({ params }: Props) {
   const [slugError, setSlugError] = useState<string | null>(null);
 
   const systemId = useSession()?.systemId ?? 0;
+
+  // What every item in this category is recommended alongside at checkout - said
+  // once here rather than on each item, which is the whole point of authoring it
+  // at the category level. An item may still override the list on its own form.
+  const recommendations = useRecommendationsEditor({
+    systemId,
+    source: "product_category",
+    sourceId: isNew ? null : Number(id),
+  });
 
   // Auto-populate slug from name for new records (the slug field is read-only).
   // Derived during render rather than in an effect; the guard stops it looping
@@ -134,6 +145,9 @@ export default function AdminProductCategoryFormPage({ params }: Props) {
       // Clear with an explicit null. Updates are PATCH, so an omitted key means
       // "leave unchanged" - it cannot clear a value.
       if (payload.parent === "") payload.parent = null;
+      // Always sent: an empty list clears the category's rows, so it cannot be
+      // omitted when the operator has just unticked the last one.
+      payload.recommendations = recommendations.value;
       if (isNew) {
         const created = await createProductCategory(payload);
         setSuccess(t("saved"));
@@ -226,7 +240,25 @@ export default function AdminProductCategoryFormPage({ params }: Props) {
             />
           </Box>
         }
-      />
+      >
+        {/* What every item in this category is offered alongside in the cart. */}
+        <Box
+          display="flex"
+          flexDirection="column"
+          gap="28px"
+          marginTop="12px"
+          paddingTop="20px"
+          styles={{ borderTop: "1px solid var(--border, #e5e7eb)" }}
+        >
+          <RecommendationsEditor
+            value={recommendations.value}
+            onChange={recommendations.setValue}
+            catalog={recommendations.catalog}
+            scope={recommendations.scope}
+            locale={locale}
+          />
+        </Box>
+      </AdminForm>
     </>
   );
 }

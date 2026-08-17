@@ -128,6 +128,22 @@ export function lowestPrice(basePrice: string, sizes: MenuSize[]): number {
   return Math.max(0, base + cheapest);
 }
 
+/**
+ * What the dish costs in **one specific size**: base plus that size's delta,
+ * floored at zero exactly as the server floors it.
+ *
+ * This is what the size picker prints on each card. A signed delta ("+40") only
+ * says what the size does to a number the customer has to find elsewhere on the
+ * page and add up themselves; the price of the pizza in that size is the figure
+ * they are actually choosing between. Add-ons are deliberately not folded in -
+ * the cards compare sizes, and the configured total is printed once, below.
+ *
+ * Display only, like every other figure here.
+ */
+export function priceForSize(basePrice: string, size: MenuSize): number {
+  return Math.max(0, parseFloat(basePrice) + parseFloat(size.price_delta));
+}
+
 /** True when the dish offers a real choice of size - one size is not a choice,
  *  and rendering a single locked chip for it is noise. */
 export function hasSizeChoice(sizes: MenuSize[]): boolean {

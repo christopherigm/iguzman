@@ -238,6 +238,29 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         "menu_item_ingredient__menu_item__system", parent="menu_item_ingredient",
     ),
     ModelSpec("catalog.RecipeStep", SECTION_MENU, "menu_item__system", parent="menu_item"),
+    # **Last in the list, deliberately.** A checkout recommendation links a source
+    # (a product, a service, a dish, or one of their categories) to a target in
+    # any of the three families, so every one of its nine FKs must already be in
+    # the idmap when it is written - and only the very end of the walk guarantees
+    # that. Deleting happens in reverse, so replace mode drops these first, before
+    # the rows they point at.
+    #
+    # Keyed by `created` and scoped by its own `system` column for `MenuSize`'s
+    # reasons: it has no slug, and six possible parents cannot be one `scope`
+    # path or one `parent=`.
+    #
+    # ⚠ Filed under SECTION_SYSTEM because a link *between* the three families
+    # belongs to none of them - it is a merchandising decision about the site,
+    # like a `SocialPost` or a `Coupon`. The cost is a hole in one partial
+    # restore: **system-only, replace mode** wipes these and then cannot rebuild
+    # them, because their targets are not in that selection (the same class of gap
+    # `_field_values`' docstring describes for menu items restored without their
+    # brand). A selection that includes the catalog sections - which is what
+    # "All", the CMS default, does - resolves everything.
+    ModelSpec(
+        "catalog.CatalogRecommendation", SECTION_SYSTEM, "system",
+        natural_key=("created",),
+    ),
 )
 
 SPECS_BY_LABEL = {s.label.lower(): s for s in MODEL_SPECS}

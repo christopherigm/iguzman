@@ -744,18 +744,79 @@ quantity}` and nothing else. Everything displayable comes back
   there is no profile to take the tenant from, so Django falls back to the host.
   An _owned_ order stays 404 to anyone but its owner.
 
-## Customising a dish - two pickers, three surfaces
+## The cart's "don't forget these" strip
+
+Under the cart lines - inside their column, not across the page - sits a strip of
+extras the tenant has said go with what is in the basket. The API owns every
+rule; read website-api's CLAUDE.md → "Checkout recommendations" first.
+
+| Piece                     | Where                                          |
+| ------------------------- | ---------------------------------------------- |
+| Signed-in (server)        | `app/[locale]/cart/cart-recommendations.tsx`    |
+| Guest (client)            | `app/[locale]/cart/guest-recommendations.tsx`   |
+| The shared heading + grid | `app/[locale]/cart/recommendations-shell.tsx`   |
+| The type                  | `lib/cart.ts` (`CartRecommendation`)            |
+| The CMS picker            | `components/admin/recommendations-editor.tsx`   |
+| Its state, ×6 forms       | `hooks/use-recommendations-editor.ts`           |
+
+- ⚠ **Nothing here filters anything.** Deduping across lines, dropping what is
+  already in the cart, dropping the unbuyable and dropping a currency the basket
+  cannot pay in all happen server-side, where the whole cart is visible at once.
+  Re-deriving any of it in the browser is how the strip comes to disagree with
+  the cart it sits under.
+- **It arrives on the cart payload**, which is what makes "added it, so stop
+  offering it" free: a signed-in add already calls `router.refresh()`, and a
+  guest add writes `localStorage`, which re-resolves through
+  `/api/guest/resolve`. There is no second fetch and no client-side bookkeeping.
+- **Two renderers, one shell**, the same split `favorites/page.tsx` and
+  `favorites/guest-favorites.tsx` carry: the signed-in strip is a **server**
+  component drawing `BuyableCard`, so hearts and the admin shortcut resolve the
+  way they do in every other grid; the guest one draws `BuyableCardView` because
+  its items only exist after hydration and an async server component cannot be
+  called from there. `RecommendationsShell` holds the markup they would otherwise
+  each own, and takes its heading as a **prop** - `useTranslations` and
+  `getTranslations` are not the same hook, and that one module compiles into both
+  graphs.
+- **The cards are the ordinary catalog card**, deliberately - not a cut-down
+  "recommendation card". Adding one to the cart is the entire point, so the add
+  button, the customiser modal, the heart and the price all have to behave
+  exactly as they do in a grid. That is also why the API sends a **full** item
+  payload rather than a reference. `fromLabel` is `Menu.from`, the key every
+  other grid uses.
+- Cards go `{ xs: 6, sm: 4 }`: the strip lives inside the cart's 7-of-12 column,
+  so it has less width than a catalog grid.
+- **In the CMS the picker is on all six forms** - product, service, menu item and
+  their three categories - because all six author the same relation. It differs
+  from `VariantsEditor` in the two ways the relation does: the list is **grouped
+  by family** and a selection is a `{kind, id}` ref (an id alone cannot say which
+  table it is in), and there is no "this also appears on the other item" caveat,
+  because the link is one-way.
+- ⚠ **On an item form, an empty picker means "inherits", not "recommends
+  nothing"** - so the editor prints what is currently being inherited
+  (`recommendationsInherited`), for the reason `menu-sizes-editor.tsx` says what
+  a dish is inheriting rather than "no sizes yet": otherwise an operator goes off
+  to re-tick rows the category already defines. `categoryId` follows the *form's*
+  category field, not the saved row, so re-filing a dish updates the readout
+  before the save.
+- **Selection order is the strip's order** - the API stores each ref's position
+  as its `sort_order`, so the picker appends on select rather than sorting.
+- **`recommendations` is always sent on save**, like `variants` and
+  `booking_branches`: an empty list has to actually clear the record's own rows,
+  which is how an item is handed back to inheriting its category's.
+
+## Customising a dish - two pickers, four surfaces
 
 A menu item is configured by **`components/menu-size-picker.tsx`** (which size)
 above **`components/menu-ingredient-picker.tsx`** (what goes on it), and by
-nothing else. Three places ask the same questions of the same data, and each one
+nothing else. Four places ask the same questions of the same data, and each one
 is a thin shell around those two components:
 
-| Surface          | Shell                                              | Selection lives in          |
-| ---------------- | -------------------------------------------------- | --------------------------- |
-| Item detail page | `menu-item-customizer.tsx`                         | `MenuCustomizationProvider` |
-| Catalog card     | `menu-customize-modal.tsx` (a `ConfirmationModal`) | local state                 |
-| POS till         | `pos/_components/pos-customizer-modal.tsx`         | local state                 |
+| Surface          | Shell                                              | Selection lives in                |
+| ---------------- | -------------------------------------------------- | --------------------------------- |
+| Item detail page | `menu-item-customizer.tsx`                         | `MenuCustomizationProvider`       |
+| Catalog card     | `menu-customize-modal.tsx` (a `ConfirmationModal`) | local state                       |
+| Cart line        | the same modal, with its `editing` prop            | local state, seeded from the line |
+| POS till         | `pos/_components/pos-customizer-modal.tsx`         | local state                       |
 
 - **Both pickers are fully controlled and own no state**, because the detail
   page's nutrition label has to mirror the customer's selection from a different
@@ -780,6 +841,22 @@ is a thin shell around those two components:
   already in the cart deletes the line, with no modal. A choice of size is on its
   own enough to ask: adding the default silently would pick the pizza's diameter,
   and its price, on the customer's behalf.
+- **A cart row re-opens that same modal rather than growing its own editor**
+  (`cart/cart-line.tsx`, the pencil beside remove). It is the add modal with
+  `editing` set: the pickers open on the line's stored selection, and OK calls
+  the caller's write instead of adding a line - a `PATCH` on the row for a
+  signed-in customer, `setGuestCartSelection` for a guest. There is still no
+  quantity stepper inside it; the row's own is right behind the modal, and a
+  second one could only disagree with it.
+  ⚠ **The pencil needs `CartCustomizationRow.option`**, which is the chosen
+  alternative's id. The row's `name` is what the cart *prints* and cannot be
+  turned back into the id the picker selects on, so without it a re-opened
+  customiser would silently offer the default in place of what was bought.
+  ⚠ **An edit can merge two lines** - identity is the dish plus its size and
+  selection - so the guest list is keyed by that identity rather than by the
+  line's index: on a merge every later index shifts, and a row's optimistic
+  quantity would otherwise stay attached to its neighbour. The API side is in
+  website-api's CLAUDE.md → "Editing a cart line".
 - ⚠ **A sized cart line always reads as `customized` in `/api/auth/cart/ids/`**,
   so a card never offers "remove" for it. With a small *and* a large of one dish
   in the cart, a card that offered to remove one could not say which.

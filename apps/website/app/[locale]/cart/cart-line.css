@@ -1,11 +1,20 @@
 /* Both classes sit on a next/link `<a>`, not on a @repo/ui component, and carry
-   only link-decoration state - the props-first rule is untouched. */
+   only link-decoration state (plus, on the image, the one flex-child property
+   that keeps the anchor the size of the thumbnail) - the props-first rule is
+   untouched. */
 
 .cart-line__image-link,
 .cart-line__title-link {
   text-decoration: none;
   color: inherit;
   min-width: 0;
+}
+
+/* The row stretches its children so the text column can bottom-align its
+   stepper; the thumbnail's anchor must opt out, or a tall line gives it an
+   invisible click target running the whole height of the card. */
+.cart-line__image-link {
+  align-self: flex-start;
 }
 
 .cart-line__title-link:hover h2 {

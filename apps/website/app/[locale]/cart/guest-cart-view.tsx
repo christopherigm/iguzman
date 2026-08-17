@@ -4,13 +4,31 @@ import { useEffect, useState } from "react";
 import { Box } from "@repo/ui/core-elements/box";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { useGuestState } from "@/hooks/use-guest-cart";
-import { removeGuestCartLine, setGuestCartQuantity } from "@/lib/guest-cart";
-import type { Cart } from "@/lib/cart";
+import {
+  removeGuestCartLine,
+  setGuestCartQuantity,
+  setGuestCartSelection,
+} from "@/lib/guest-cart";
+import type { Cart, CartItem } from "@/lib/cart";
 import { CartLine } from "./cart-line";
 import { GuestCartSummary } from "./guest-cart-summary";
+import { GuestRecommendations } from "./guest-recommendations";
+
+/** What makes a resolved guest line *that* line: the item plus, for a dish, the
+ *  size and ingredient selection it was configured with - the browser-side
+ *  `lineKey`, read off the payload the server sent back. */
+function guestLineKey(line: CartItem): string {
+  const customization = line.customization
+    .map((row) => `${row.ingredient}:${row.quantity}:${row.option ?? ""}`)
+    .join(",");
+  return `${line.kind}:${line.item.id}:${line.size?.id ?? ""}:${customization}`;
+}
 
 interface GuestCartViewProps {
   locale: string;
+  /** The request origin, for the recommendation cards' share links - only the
+   *  server knows it. */
+  origin: string;
   /** Whether this tenant can take payments at all - `stripe_configured`, read
    *  on the server so the checkout button never flickers from enabled to
    *  disabled after hydration. */
@@ -40,6 +58,7 @@ interface GuestCartViewProps {
  */
 export function GuestCartView({
   locale,
+  origin,
   stripeConfigured,
   payInStoreEnabled,
   payOnDeliveryEnabled,
@@ -100,11 +119,17 @@ export function GuestCartView({
         <Box flexDirection="column" gap={12}>
           {cart.items.map((line) => (
             <CartLine
-              key={line.id}
+              // Keyed by what the line *is*, not by its index: an edit can merge
+              // two lines into one and every later index then shifts, which by
+              // position alone would leave a row's optimistic quantity attached
+              // to its neighbour. Guest lines are deduped on this same identity,
+              // so it is unique by construction.
+              key={guestLineKey(line)}
               line={line}
               locale={locale}
+              isLoggedIn={false}
               // `line.id` is the reference's index in localStorage - the guest
-              // equivalent of a row id. Both writes are synchronous, so they
+              // equivalent of a row id. Every write is synchronous, so they
               // always "stick": the re-resolve above is what repaints.
               onQuantityChange={(quantity) => {
                 setGuestCartQuantity(line.id, quantity);
@@ -114,9 +139,21 @@ export function GuestCartView({
                 removeGuestCartLine(line.id);
                 return Promise.resolve(true);
               }}
+              onEditSelection={(selection) => {
+                setGuestCartSelection(line.id, selection);
+                return Promise.resolve(true);
+              }}
             />
           ))}
         </Box>
+        {/* Same payload, same position as the signed-in strip: it came back with
+            the resolve above, so adding one of these re-resolves and the card
+            drops out on its own. */}
+        <GuestRecommendations
+          recommendations={cart.recommendations}
+          locale={locale}
+          origin={origin}
+        />
       </Grid>
       <Grid size={{ xs: 12, sm: 5 }}>
         <GuestCartSummary
