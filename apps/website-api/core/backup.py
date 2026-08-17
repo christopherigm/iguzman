@@ -225,6 +225,13 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
     ModelSpec("catalog.IngredientProvider", SECTION_MENU, "ingredient__system", parent="ingredient"),
     ModelSpec("catalog.MenuItem", SECTION_MENU, "system", natural_key=("slug",)),
     ModelSpec("catalog.MenuItemImage", SECTION_MENU, "menu_item__system", parent="menu_item"),
+    # Keyed by `created`, like Branch and SocialPost, rather than ridden as a
+    # `parent=` child: a size hangs off a *category or* a menu item, and
+    # `_restore_children` replaces one named parent's rows wholesale. It is
+    # scoped by its own `system` column for the reason stated on the model - the
+    # two owner paths cannot both be `scope`. Listed after both owners so the
+    # idmap can resolve whichever one a row carries.
+    ModelSpec("catalog.MenuSize", SECTION_MENU, "system", natural_key=("created",)),
     ModelSpec("catalog.MenuItemIngredient", SECTION_MENU, "menu_item__system", parent="menu_item"),
     ModelSpec(
         "catalog.MenuItemIngredientOption", SECTION_MENU,

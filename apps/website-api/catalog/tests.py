@@ -11,7 +11,7 @@ from core.models import Branch, Brand, System
 
 from .models import (
     Product, ProductImage, MenuCategory, MenuItem, MenuItemIngredient,
-    MenuItemIngredientOption, Ingredient, RecipeStep, Service,
+    MenuItemIngredientOption, MenuSize, Ingredient, RecipeStep, Service,
     normalize_selection,
 )
 
@@ -914,3 +914,292 @@ class ServiceSlugReadTests(TestCase):
         self.assertIn("booking_party_enabled", rows[0])
         self.assertNotIn("booking_party_limit", rows[0])
         self.assertNotIn("booking_party_min", rows[0])
+
+
+class MenuSizeTests(TestCase):
+    """Sizes are the second axis of a menu item's price, so the resolution rules
+    (inherit / override / off) and the arithmetic are pinned here - the cart, the
+    till and the storefront all read them through `price_for_selection`."""
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Piccolo", host="piccolo.test")
+        self.category = MenuCategory.objects.create(
+            system=self.system, name="Pizzas", slug="size-pizzas",
+        )
+        self.item = MenuItem.objects.create(
+            system=self.system, category=self.category, name="Margarita",
+            slug="size-margarita", price=Decimal("200.00"),
+        )
+        self.small = MenuSize.objects.create(
+            category=self.category, name="Chica", portion=Decimal("4"), unit="in",
+            price_delta=Decimal("-40.00"), sort_order=0,
+        )
+        self.medium = MenuSize.objects.create(
+            category=self.category, name="Mediana", portion=Decimal("8"), unit="in",
+            price_delta=Decimal("0.00"), is_default=True, sort_order=1,
+        )
+        self.large = MenuSize.objects.create(
+            category=self.category, name="Grande", portion=Decimal("12"), unit="in",
+            price_delta=Decimal("40.00"), sort_order=2,
+        )
+
+    # ── resolution ───────────────────────────────────────────────────────────
+
+    def test_dish_inherits_its_category_sizes(self):
+        self.assertEqual(
+            [s.name for s in self.item.effective_sizes],
+            ["Chica", "Mediana", "Grande"],
+        )
+
+    def test_own_rows_replace_the_category_list_entirely(self):
+        # The point of "replace, not merge": an edge-case dish can *drop* a size.
+        MenuSize.objects.create(
+            menu_item=self.item, name="Individual", price_delta=Decimal("0.00"),
+        )
+        self.assertEqual([s.name for s in self.item.effective_sizes], ["Individual"])
+
+    def test_switch_off_sells_the_dish_in_one_size(self):
+        self.item.sizes_enabled = False
+        self.item.save()
+        self.assertEqual(self.item.effective_sizes, [])
+        self.assertIsNone(self.item.default_size)
+        self.assertEqual(self.item.price_for_selection([]), Decimal("200.00"))
+
+    def test_disabled_rows_never_reach_a_customer(self):
+        self.large.enabled = False
+        self.large.save()
+        self.assertEqual(
+            [s.name for s in self.item.effective_sizes], ["Chica", "Mediana"],
+        )
+
+    def test_default_is_the_flagged_row(self):
+        self.assertEqual(self.item.default_size, self.medium)
+
+    def test_default_falls_back_to_the_first_in_display_order(self):
+        self.medium.is_default = False
+        self.medium.save()
+        self.assertEqual(self.item.default_size, self.small)
+
+    def test_system_is_derived_from_the_owner(self):
+        # Never authored: it is what scopes the row for backup and for which R2
+        # bucket its image is written to.
+        self.assertEqual(self.small.system_id, self.system.pk)
+        own = MenuSize.objects.create(menu_item=self.item, name="Individual")
+        self.assertEqual(own.system_id, self.system.pk)
+
+    # ── pricing ──────────────────────────────────────────────────────────────
+
+    def test_no_size_named_prices_at_the_default(self):
+        self.assertEqual(self.item.price_for_selection([]), Decimal("200.00"))
+
+    def test_a_small_size_discounts_the_base(self):
+        self.assertEqual(
+            self.item.price_for_selection([], self.small), Decimal("160.00"),
+        )
+
+    def test_a_large_size_adds_to_the_base(self):
+        self.assertEqual(
+            self.item.price_for_selection([], self.large), Decimal("240.00"),
+        )
+
+    def test_size_does_not_scale_ingredient_upcharges(self):
+        cheese_ing = Ingredient.objects.create(
+            system=self.system, name="Queso", slug="size-queso", unit="g",
+        )
+        cheese = MenuItemIngredient.objects.create(
+            menu_item=self.item, ingredient=cheese_ing, price=Decimal("25.00"),
+            is_removable=True, max_quantity=2,
+        )
+        selection = [{"ingredient": cheese.id, "quantity": 1}]
+        # +25 on the small and on the large alike: one pricing axis.
+        self.assertEqual(
+            self.item.price_for_selection(selection, self.small), Decimal("185.00"),
+        )
+        self.assertEqual(
+            self.item.price_for_selection(selection, self.large), Decimal("265.00"),
+        )
+
+    def test_a_delta_bigger_than_the_base_floors_at_zero(self):
+        self.small.price_delta = Decimal("-500.00")
+        self.small.save()
+        self.assertEqual(
+            self.item.price_for_selection([], self.small), Decimal("0.00"),
+        )
+
+    # ── resolve_size never trusts an id ──────────────────────────────────────
+
+    def test_resolve_size_falls_back_to_the_default(self):
+        self.assertEqual(self.item.resolve_size(None), self.medium)
+        self.assertEqual(self.item.resolve_size(999999), self.medium)
+
+    def test_a_size_from_another_dish_prices_as_the_default(self):
+        other_category = MenuCategory.objects.create(
+            system=self.system, name="Bebidas", slug="size-bebidas",
+        )
+        foreign = MenuSize.objects.create(
+            category=other_category, name="Litro", price_delta=Decimal("500.00"),
+        )
+        self.assertEqual(self.item.resolve_size(foreign.id), self.medium)
+        self.assertEqual(
+            self.item.price_for_selection([], self.item.resolve_size(foreign.id)),
+            Decimal("200.00"),
+        )
+
+    def test_an_overridden_dish_refuses_its_categorys_sizes(self):
+        own = MenuSize.objects.create(
+            menu_item=self.item, name="Individual", price_delta=Decimal("-100.00"),
+        )
+        self.assertEqual(self.item.resolve_size(self.large.id), own)
+
+    # ── measurement ──────────────────────────────────────────────────────────
+
+    def test_measurement_trims_the_trailing_zeros(self):
+        self.assertEqual(self.large.measurement, "12 in")
+
+    def test_measurement_is_none_without_both_halves(self):
+        self.assertIsNone(
+            MenuSize.objects.create(category=self.category, name="Familiar").measurement,
+        )
+        self.assertIsNone(
+            MenuSize.objects.create(
+                category=self.category, name="Chico", portion=Decimal("4"),
+            ).measurement,
+        )
+
+    # ── the payload the storefront reads ─────────────────────────────────────
+
+    def test_menu_item_payload_carries_the_effective_sizes(self):
+        res = self.client.get(
+            f"/api/catalog/menu-items/{self.item.pk}/", HTTP_X_WEBSITE_HOST="piccolo.test",
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(
+            [s["name"] for s in res.json()["sizes"]], ["Chica", "Mediana", "Grande"],
+        )
+        self.assertTrue(res.json()["sizes_enabled"])
+
+    def test_category_payload_carries_its_own_sizes(self):
+        res = self.client.get(
+            f"/api/catalog/menu-categories/{self.category.pk}/",
+            HTTP_X_WEBSITE_HOST="piccolo.test",
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(len(res.json()["sizes"]), 3)
+
+
+class MenuSizeEndpointTests(TestCase):
+    """The two CRUD surfaces, which share one implementation - so the tests that
+    matter are the ones about *which* owner a row lands under."""
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Piccolo", host="piccolo.test")
+        self.category = MenuCategory.objects.create(
+            system=self.system, name="Pizzas", slug="ep-pizzas",
+        )
+        self.item = MenuItem.objects.create(
+            system=self.system, category=self.category, name="Margarita",
+            slug="ep-margarita", price=Decimal("200.00"),
+        )
+        self.admin = User.objects.create_user("chef", password="pw")
+        self.admin.profile.system = self.system
+        self.admin.profile.is_admin = True
+        self.admin.profile.save()
+
+    def _login(self):
+        self.client.force_login(self.admin)
+
+    def test_create_on_a_category(self):
+        self._login()
+        res = self.client.post(
+            f"/api/catalog/menu-categories/{self.category.pk}/sizes/",
+            {"name": "Chica", "portion": "4", "unit": "in", "price_delta": "-40.00"},
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 201, res.content)
+        size = MenuSize.objects.get(pk=res.json()["id"])
+        self.assertEqual(size.category_id, self.category.pk)
+        self.assertIsNone(size.menu_item_id)
+        self.assertEqual(size.system_id, self.system.pk)
+
+    def test_create_on_a_menu_item(self):
+        self._login()
+        res = self.client.post(
+            f"/api/catalog/menu-items/{self.item.pk}/sizes/",
+            {"name": "Individual"},
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 201, res.content)
+        size = MenuSize.objects.get(pk=res.json()["id"])
+        self.assertEqual(size.menu_item_id, self.item.pk)
+        self.assertIsNone(size.category_id)
+
+    def test_an_item_size_is_not_reachable_through_its_category(self):
+        # The detail views scope by the owner in the URL, so a size id lifted from
+        # one owner is a 404 on the other rather than an edit.
+        size = MenuSize.objects.create(menu_item=self.item, name="Individual")
+        self._login()
+        res = self.client.patch(
+            f"/api/catalog/menu-categories/{self.category.pk}/sizes/{size.pk}/",
+            {"name": "Hijacked"}, content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 404)
+
+    def test_flagging_a_default_clears_its_siblings(self):
+        first = MenuSize.objects.create(
+            category=self.category, name="Chica", is_default=True,
+        )
+        second = MenuSize.objects.create(category=self.category, name="Grande")
+        self._login()
+        res = self.client.patch(
+            f"/api/catalog/menu-categories/{self.category.pk}/sizes/{second.pk}/",
+            {"is_default": True}, content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 200, res.content)
+        first.refresh_from_db()
+        self.assertFalse(first.is_default)
+        self.assertTrue(MenuSize.objects.get(pk=second.pk).is_default)
+
+    def test_a_default_on_one_owner_does_not_clear_the_others(self):
+        category_default = MenuSize.objects.create(
+            category=self.category, name="Mediana", is_default=True,
+        )
+        self._login()
+        self.client.post(
+            f"/api/catalog/menu-items/{self.item.pk}/sizes/",
+            {"name": "Individual", "is_default": True},
+            content_type="application/json",
+        )
+        category_default.refresh_from_db()
+        self.assertTrue(category_default.is_default)
+
+    def test_writes_require_an_admin(self):
+        res = self.client.post(
+            f"/api/catalog/menu-categories/{self.category.pk}/sizes/",
+            {"name": "Chica"}, content_type="application/json",
+        )
+        self.assertIn(res.status_code, (401, 403))
+
+    def test_a_size_write_invalidates_the_menu_item_payload(self):
+        url = f"/api/catalog/menu-items/{self.item.pk}/"
+        self.client.get(url, HTTP_X_WEBSITE_HOST="piccolo.test")
+        self._login()
+        self.client.post(
+            f"/api/catalog/menu-categories/{self.category.pk}/sizes/",
+            {"name": "Grande", "price_delta": "40.00"},
+            content_type="application/json",
+        )
+        self.client.logout()
+        res = self.client.get(url, HTTP_X_WEBSITE_HOST="piccolo.test")
+        self.assertEqual([s["name"] for s in res.json()["sizes"]], ["Grande"])
+
+    def test_disabled_rows_are_hidden_from_the_public_list(self):
+        MenuSize.objects.create(category=self.category, name="Chica", enabled=False)
+        res = self.client.get(f"/api/catalog/menu-categories/{self.category.pk}/sizes/")
+        self.assertEqual(res.json(), [])
+        self._login()
+        res = self.client.get(
+            f"/api/catalog/menu-categories/{self.category.pk}/sizes/?include_disabled=true",
+        )
+        self.assertEqual(len(res.json()), 1)

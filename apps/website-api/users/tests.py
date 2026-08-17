@@ -13,6 +13,7 @@ from catalog.models import (
     MenuCategory,
     MenuItem,
     MenuItemIngredient,
+    MenuSize,
     Product,
     Service,
 )
@@ -587,3 +588,150 @@ class VerifyEmailSignsInTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertNotIn("access", response.data)
+
+
+class CartMenuSizeTests(TestCase):
+    """A menu line's size is part of its identity and of its price, so both the
+    merge rule and the "never trust the id" rule are pinned here."""
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Piccolo", host="piccolo.test")
+        self.category = MenuCategory.objects.create(
+            system=self.system, name="Pizzas", slug="cart-pizzas",
+        )
+        self.item = MenuItem.objects.create(
+            system=self.system, category=self.category, name="Margarita",
+            slug="cart-margarita", price=Decimal("200.00"), currency="MXN",
+        )
+        self.medium = MenuSize.objects.create(
+            category=self.category, name="Mediana", price_delta=Decimal("0.00"),
+            is_default=True, sort_order=0,
+        )
+        self.large = MenuSize.objects.create(
+            category=self.category, name="Grande", price_delta=Decimal("40.00"),
+            sort_order=1,
+        )
+        self.user = User.objects.create_user(f"{self.system.id}_a@piccolo.test", password="x")
+        self.user.profile.system = self.system
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    def _add(self, **body):
+        return self.client.post("/api/auth/cart/", body, content_type="application/json")
+
+    def test_a_line_is_priced_at_its_chosen_size(self):
+        res = self._add(kind="menu_item", id=self.item.id, size=self.large.id)
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(res.json()["unit_price"], "240.00")
+        self.assertEqual(res.json()["size"]["name"], "Grande")
+
+    def test_no_size_named_takes_the_default(self):
+        res = self._add(kind="menu_item", id=self.item.id)
+        self.assertEqual(res.json()["unit_price"], "200.00")
+        self.assertEqual(res.json()["size"]["name"], "Mediana")
+
+    def test_two_sizes_of_one_dish_are_two_lines(self):
+        first = self._add(kind="menu_item", id=self.item.id, size=self.medium.id)
+        second = self._add(kind="menu_item", id=self.item.id, size=self.large.id)
+        self.assertEqual(second.status_code, 201)
+        self.assertNotEqual(first.json()["id"], second.json()["id"])
+        self.assertEqual(CartItem.objects.filter(user=self.user).count(), 2)
+
+    def test_the_same_size_twice_increments_one_line(self):
+        self._add(kind="menu_item", id=self.item.id, size=self.large.id)
+        res = self._add(kind="menu_item", id=self.item.id, size=self.large.id)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["quantity"], 2)
+        self.assertEqual(CartItem.objects.filter(user=self.user).count(), 1)
+
+    def test_a_size_from_another_dish_prices_at_the_default(self):
+        other_category = MenuCategory.objects.create(
+            system=self.system, name="Bebidas", slug="cart-bebidas",
+        )
+        foreign = MenuSize.objects.create(
+            category=other_category, name="Litro", price_delta=Decimal("500.00"),
+        )
+        res = self._add(kind="menu_item", id=self.item.id, size=foreign.id)
+        self.assertEqual(res.json()["unit_price"], "200.00")
+
+    def test_withdrawing_a_size_takes_its_cart_lines_with_it(self):
+        # CASCADE, like `menu_item`: a cart reflects today's catalog, and silently
+        # re-pricing the line at another size is the alternative.
+        self._add(kind="menu_item", id=self.item.id, size=self.large.id)
+        self.large.delete()
+        self.assertEqual(CartItem.objects.filter(user=self.user).count(), 0)
+
+    def test_a_sized_line_reads_as_customised_in_the_ids_feed(self):
+        # The catalog card manages one line per dish; with a small and a large in
+        # the cart it cannot say which one a remove press would delete.
+        self._add(kind="menu_item", id=self.item.id, size=self.large.id)
+        res = self.client.get("/api/auth/cart/ids/")
+        self.assertTrue(res.json()["lines"][0]["customized"])
+
+    def test_a_guest_cart_prices_and_dedupes_by_size(self):
+        self.client.logout()
+        res = self.client.post(
+            "/api/guest/resolve/",
+            {
+                "cart": [
+                    {"kind": "menu_item", "id": self.item.id, "size": self.large.id},
+                    {"kind": "menu_item", "id": self.item.id, "size": self.large.id},
+                    {"kind": "menu_item", "id": self.item.id, "size": self.medium.id},
+                ],
+            },
+            content_type="application/json",
+            HTTP_X_WEBSITE_HOST="piccolo.test",
+        )
+        self.assertEqual(res.status_code, 200, res.content)
+        lines = res.json()["cart"]["items"]
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(
+            {(line["size"]["name"], line["quantity"], line["unit_price"]) for line in lines},
+            {("Grande", 2, "240.00"), ("Mediana", 1, "200.00")},
+        )
+
+
+class FavoritesMenuItemTests(TestCase):
+    """The favorites list, rendered for a menu item.
+
+    It had no coverage at all, which is how a `prefetch_related('menu_size')` -
+    valid on a cart line, meaningless on a `Favorite` - reached this queryset
+    without a single test noticing. A favorite is a *dish*, not a configured
+    line: it carries no chosen size, but the dish it points at still serializes
+    its size list.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Piccolo", host="piccolo.test")
+        category = MenuCategory.objects.create(
+            system=self.system, name="Pizzas", slug="fav-pizzas",
+        )
+        self.item = MenuItem.objects.create(
+            system=self.system, category=category, name="Margarita",
+            slug="fav-margarita", price=Decimal("200.00"), currency="MXN",
+        )
+        MenuSize.objects.create(
+            category=category, name="Grande", price_delta=Decimal("40.00"),
+        )
+        self.user = User.objects.create_user(f"{self.system.id}_a@piccolo.test", password="x")
+        self.user.profile.system = self.system
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    def test_a_saved_dish_lists_with_its_sizes(self):
+        saved = self.client.post(
+            "/api/auth/favorites/",
+            {"kind": "menu_item", "id": self.item.id},
+            content_type="application/json",
+        )
+        self.assertIn(saved.status_code, (200, 201), saved.content)
+
+        listed = self.client.get("/api/auth/favorites/")
+        self.assertEqual(listed.status_code, 200, listed.content)
+        rows = listed.json()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(
+            [s["name"] for s in rows[0]["item"]["sizes"]], ["Grande"],
+        )

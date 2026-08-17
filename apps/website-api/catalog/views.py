@@ -52,7 +52,7 @@ def _resolve_system(request):
 from .models import (
     ProductCategory, Product, ProductImage,
     ServiceCategory, Service, ServiceImage,
-    MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient, RecipeStep,
+    MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient, MenuSize, RecipeStep,
     Ingredient,
 )
 from .serializers import (
@@ -77,6 +77,8 @@ from .serializers import (
     MenuItemImageWriteSerializer,
     MenuItemIngredientSerializer,
     MenuItemIngredientWriteSerializer,
+    MenuSizeSerializer,
+    MenuSizeWriteSerializer,
     MenuItemRecipeSerializer,
     IngredientSerializer,
     IngredientWriteSerializer,
@@ -1057,7 +1059,7 @@ class MenuItemListCreateView(APIView):
         if cached is not None:
             return Response(cached)
 
-        qs = MenuItem.objects.filter(system_id=system_id).select_related('brand', 'category', 'system').prefetch_related('images', 'ingredients__ingredient', 'ingredients__options__ingredient', 'variants', 'variants__images')
+        qs = MenuItem.objects.filter(system_id=system_id).select_related('brand', 'category', 'system').prefetch_related('images', 'ingredients__ingredient', 'ingredients__options__ingredient', 'own_sizes', 'category__sizes', 'variants', 'variants__images')
         if not disabled_visible:
             qs = qs.filter(enabled=True)
 
@@ -1117,7 +1119,7 @@ class MenuItemDetailView(APIView):
 
     def _get_object(self, pk):
         try:
-            return MenuItem.objects.select_related('brand', 'category', 'system').prefetch_related('images', 'ingredients__ingredient', 'ingredients__options__ingredient', 'variants', 'variants__images').get(pk=pk)
+            return MenuItem.objects.select_related('brand', 'category', 'system').prefetch_related('images', 'ingredients__ingredient', 'ingredients__options__ingredient', 'own_sizes', 'category__sizes', 'variants', 'variants__images').get(pk=pk)
         except MenuItem.DoesNotExist:
             return None
 
@@ -1333,6 +1335,152 @@ class MenuItemIngredientDetailView(APIView):
         cache.delete(f'catalog:menu_item:{pk}')
         _invalidate_pattern('catalog:menu_items:*')
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# Menu size views (a category's size list, and a menu item's override list)
+# ---------------------------------------------------------------------------
+#
+# Both owners get the same four operations over the same model and serializer,
+# so the two pairs below differ only in which FK they set and what they
+# invalidate. Splitting them into separate implementations would be two copies of
+# the pricing-critical write path, which is exactly the drift this feature exists
+# to remove from the frontend.
+
+# Cache invalidation for a size write lives in `catalog.signals`, not here: a
+# size is nested on its category's payload AND on every dish that inherits it,
+# and the Django admin's two inlines write rows this view never sees.
+
+
+class _BaseMenuSizeListCreateView(APIView):
+    """GET lists an owner's sizes (public); POST creates one (admin only)."""
+
+    owner_model = None
+    owner_field = None
+    cache_prefix = None
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def _get_owner(self, pk):
+        return self.owner_model.objects.filter(pk=pk).first()
+
+    def get(self, request, pk):
+        # System admins may see disabled sizes (so the CMS editor can re-enable
+        # one it turned off); the resolved flag scopes the key so an admin
+        # response is never replayed to the public.
+        disabled_visible = show_disabled(request)
+        cache_key = f'{self.cache_prefix}:{pk}:{int(disabled_visible)}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        owner = self._get_owner(pk)
+        if owner is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        qs = MenuSize.objects.filter(**{self.owner_field: owner})
+        if not disabled_visible:
+            qs = qs.filter(enabled=True)
+        data = MenuSizeSerializer(qs, many=True, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
+
+    def post(self, request, pk):
+        owner = self._get_owner(pk)
+        if owner is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = MenuSizeWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        size = serializer.create(serializer.validated_data, **{self.owner_field: owner})
+        return Response(
+            MenuSizeSerializer(size, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class _BaseMenuSizeDetailView(APIView):
+    """GET one size (public); PATCH / DELETE it (admin only)."""
+
+    owner_field = None
+    cache_prefix = None
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def _get_object(self, pk, size_pk):
+        # Scoped to the owner in the URL, so a size id from another category (or
+        # another tenant) is a 404 rather than an edit.
+        return MenuSize.objects.filter(pk=size_pk, **{f'{self.owner_field}_id': pk}).first()
+
+    def get(self, request, pk, size_pk):
+        size = self._get_object(pk, size_pk)
+        if size is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(MenuSizeSerializer(size, context={'request': request}).data)
+
+    def patch(self, request, pk, size_pk):
+        size = self._get_object(pk, size_pk)
+        if size is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = MenuSizeWriteSerializer(size, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        size = serializer.save()
+        return Response(MenuSizeSerializer(size, context={'request': request}).data)
+
+    def delete(self, request, pk, size_pk):
+        size = self._get_object(pk, size_pk)
+        if size is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        size.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MenuCategorySizeListCreateView(_BaseMenuSizeListCreateView):
+    """
+    GET  /api/catalog/menu-categories/<pk>/sizes/  - the category's sizes (public).
+    POST /api/catalog/menu-categories/<pk>/sizes/  - add one (admin only).
+    """
+
+    owner_model = MenuCategory
+    owner_field = 'category'
+    cache_prefix = 'catalog:menu_category_sizes'
+
+
+class MenuCategorySizeDetailView(_BaseMenuSizeDetailView):
+    """
+    GET/PATCH/DELETE /api/catalog/menu-categories/<pk>/sizes/<size_pk>/
+    """
+
+    owner_field = 'category'
+    cache_prefix = 'catalog:menu_category_sizes'
+
+
+class MenuItemSizeListCreateView(_BaseMenuSizeListCreateView):
+    """
+    GET  /api/catalog/menu-items/<pk>/sizes/  - the item's *own* override rows.
+    POST /api/catalog/menu-items/<pk>/sizes/  - add one (admin only).
+
+    ⚠ This is the item's override list, **not** what a customer is offered -
+    it is empty for the ordinary dish that inherits its category's sizes. The
+    effective list is `sizes` on the menu item payload; only the CMS editor reads
+    this one.
+    """
+
+    owner_model = MenuItem
+    owner_field = 'menu_item'
+    cache_prefix = 'catalog:menu_item_sizes'
+
+
+class MenuItemSizeDetailView(_BaseMenuSizeDetailView):
+    """
+    GET/PATCH/DELETE /api/catalog/menu-items/<pk>/sizes/<size_pk>/
+    """
+
+    owner_field = 'menu_item'
+    cache_prefix = 'catalog:menu_item_sizes'
 
 
 # ---------------------------------------------------------------------------

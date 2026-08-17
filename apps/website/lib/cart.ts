@@ -20,6 +20,7 @@ import type {
   FeaturedProduct,
   FeaturedService,
   MenuItemDetail,
+  MenuSize,
 } from "./catalog";
 import logger from "./logger";
 
@@ -47,6 +48,10 @@ export type CartItem = {
   id: number;
   quantity: number;
   created_at: string;
+  /** The chosen size, resolved server-side. Null for a product, a service, or a
+   *  dish sold in one size. Read live through the FK, unlike an *order* line's,
+   *  which is snapshotted - a cart reflects today's catalog. */
+  size: MenuSize | null;
   customization: CartCustomizationRow[];
   unit_price: string;
   line_total: string;
@@ -85,9 +90,11 @@ export interface CartLineRef {
   kind: "product" | "service" | "menu_item";
   id: number;
   /**
-   * A menu line with a non-default ingredient selection. Always false for
-   * product/service. The card adds/removes only the base (default) line, so it
-   * matches on `!customized` and leaves customised siblings alone.
+   * A menu line with a non-default ingredient selection **or** a chosen size.
+   * Always false for product/service. The card adds/removes only the base
+   * (default) line, so it matches on `!customized` and leaves customised siblings
+   * alone - a sized line always counts, because a card offering "remove" could
+   * not say which size it would take out of the cart.
    */
   customized: boolean;
 }

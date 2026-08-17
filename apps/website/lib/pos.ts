@@ -13,7 +13,7 @@
  * localStorage would mostly serve to resurrect a half-finished sale from
  * yesterday's shift onto today's screen.
  */
-import type { MenuItemIngredient } from "./catalog";
+import type { MenuItemIngredient, MenuSize } from "./catalog";
 import type { CustomizationRow } from "./menu-selection";
 
 export type PosKind = "product" | "service" | "menu_item";
@@ -38,6 +38,9 @@ export interface PosCatalogItem {
    *  products and services carry none. */
   category: string | null;
   ingredients: MenuItemIngredient[];
+  /** A menu item's effective sizes, as the API resolved them (own rows else its
+   *  category's). Empty for products, services, and dishes sold in one size. */
+  sizes: MenuSize[];
 }
 
 /**
@@ -53,12 +56,17 @@ export interface PosLine {
   id: number;
   name: string;
   image: string | null;
-  /** The item's own list price. Add-on deltas are in `upcharge`, not folded in
-   *  here, so the basket can show what the customisation added. */
+  /** The item's own list price. The chosen size's delta and the add-on deltas are
+   *  in `upcharge`, not folded in here, so the basket can show what the
+   *  customisation added. */
   basePrice: number;
   upcharge: number;
   currency: string;
   quantity: number;
+  /** The chosen size's id, for the API payload, and its name for the basket row.
+   *  Both absent for a dish sold in one size. */
+  size?: number;
+  sizeName?: string;
   /** The API payload: which ingredients, in what quantity - never a price. */
   customization: CustomizationRow[];
   /** Human-readable add-on summary for the basket row, e.g. ["Extra queso ×2"].
@@ -95,9 +103,10 @@ export function basketCurrencies(lines: PosLine[]): string[] {
 }
 
 /**
- * What makes two rung-up lines the same basket row: the item plus its exact
- * customisation. Two identically configured items merge into one row with
- * quantity 2; the same item with different add-ons stays two rows.
+ * What makes two rung-up lines the same basket row: the item plus its exact size
+ * and customisation. Two identically configured items merge into one row with
+ * quantity 2; the same item in a different size, or with different add-ons, stays
+ * two rows - they are two different things at two different prices.
  *
  * The customisation is sorted before stringifying because the rows are built by
  * iterating the ingredient list, and a reordered but equal selection must not
@@ -107,12 +116,13 @@ export function lineKey(
   kind: PosKind,
   id: number,
   customization: CustomizationRow[],
+  size?: number,
 ): string {
   const normalized = [...customization]
     .sort((a, b) => a.ingredient - b.ingredient)
     .map((row) => `${row.ingredient}:${row.quantity}:${row.option ?? ""}`)
     .join(",");
-  return `${kind}:${id}:${normalized}`;
+  return `${kind}:${id}:${size ?? ""}:${normalized}`;
 }
 
 /** Add a line, merging it into an identical existing row rather than stacking a
@@ -143,6 +153,7 @@ export function toCartPayload(lines: PosLine[]) {
     kind: line.kind,
     id: line.id,
     quantity: line.quantity,
+    size: line.size,
     customization: line.customization,
   }));
 }

@@ -44,6 +44,10 @@ export interface GuestCartLine {
   kind: BuyableKind;
   /** The catalog item's id. */
   id: number;
+  /** A menu line's chosen size (a `MenuSize` id). Absent means "the dish's
+   *  default", which is what the server resolves it to - a stored id is only a
+   *  request, re-checked against what the dish still offers on every resolve. */
+  size?: number;
   customization?: GuestCustomizationRow[];
   quantity: number;
 }
@@ -62,7 +66,8 @@ export const EMPTY_GUEST_STATE: GuestState = { cart: [], favorites: [] };
 
 /**
  * What makes two guest lines the same line: the item and - for a menu line -
- * the ingredient selection, which is part of that line's identity.
+ * the chosen size and the ingredient selection, both of which are part of that
+ * line's identity (a small and a large are two lines at two prices).
  *
  * Only an approximation of the server's `normalize_selection`, which also knows
  * each group's defaults. That is fine: this decides whether *the browser* merges
@@ -74,7 +79,7 @@ function lineKey(line: GuestCartLine): string {
     .sort((a, b) => a.ingredient - b.ingredient)
     .map((row) => `${row.ingredient}:${row.quantity}:${row.option ?? ""}`)
     .join(",");
-  return `${line.kind}:${line.id}:${customization}`;
+  return `${line.kind}:${line.id}:${line.size ?? ""}:${customization}`;
 }
 
 /** Whether two references point at the same catalog item. */

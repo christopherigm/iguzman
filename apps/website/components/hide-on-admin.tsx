@@ -18,19 +18,27 @@ export function HideOnAdmin({ children }: Props) {
 }
 
 /**
- * Renders its children everywhere except the POS.
+ * The staff screens that own the whole viewport and draw their own slim bar:
+ * the till and the order board. Both are one-purpose tools used on a tablet at
+ * a counter, and neither has any use for the site's chrome.
+ */
+const FULL_SCREEN_TOOL_SEGMENTS = ["pos", "order-board"];
+
+/**
+ * Renders its children everywhere except the full-screen staff tools.
  *
- * A second gate rather than another clause inside `HideOnAdmin`, because the two
- * routes want opposite things from the same chrome: the CMS keeps the site
- * navbar (its layout even reserves the height), while the till - a full-screen
- * single-purpose tool with its own slim bar - drops it. Composed with
- * `HideOnAdmin` where a piece of chrome belongs on neither.
+ * A second gate rather than another clause inside `HideOnAdmin`, because the
+ * two kinds of route want opposite things from the same chrome: the CMS keeps
+ * the site navbar (its layout even reserves the height), while a till or a
+ * board drops it. Composed with `HideOnAdmin` where a piece of chrome belongs
+ * on neither.
  *
  * Matched on the path *segment*, not `includes("/pos")`, which would also
  * swallow a customer page such as `/es/products/pos-terminal-stand`.
  */
-export function HideOnPos({ children }: Props) {
+export function HideOnFullScreenTool({ children }: Props) {
   const pathname = usePathname();
-  if (pathname.split("/").includes("pos")) return null;
+  const segments = pathname.split("/");
+  if (FULL_SCREEN_TOOL_SEGMENTS.some((s) => segments.includes(s))) return null;
   return <>{children}</>;
 }

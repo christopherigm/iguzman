@@ -2,6 +2,7 @@ import type {
   Ingredient,
   MenuItemIngredient,
   MenuItemIngredientOption,
+  MenuSize,
 } from "./catalog";
 
 /**
@@ -66,6 +67,71 @@ export function resolveChoice(
     (optionId != null && choices.find((c) => c.ingredient === optionId)) ||
     choices[0]!
   );
+}
+
+// ---------------------------------------------------------------------------
+// Sizes
+// ---------------------------------------------------------------------------
+//
+// A dish's `sizes` array is *already* the effective list (own rows else the
+// category's, empty when the switch is off) - the server resolves that, so
+// nothing below re-derives it. What lives here is only the arithmetic and the
+// default, which the customiser, the card modal and the till all share for the
+// same reason they share `selectionUpcharge`: a pizza configured at the counter
+// and the same pizza configured on the site must not quote different numbers.
+
+/**
+ * The size a customer starts on: the row flagged `is_default`, else the first in
+ * the API's order. `null` when the dish is sold in one size.
+ *
+ * Mirrors the server's `MenuItem.default_size`, so a line added without touching
+ * the picker is priced identically wherever it was added from.
+ */
+export function defaultSize(sizes: MenuSize[]): MenuSize | null {
+  return sizes.find((s) => s.is_default) ?? sizes[0] ?? null;
+}
+
+/** The chosen size, falling back to the default - the client half of the
+ *  server's `resolve_size`. Never returns a size the dish does not offer. */
+export function resolveSize(
+  sizes: MenuSize[],
+  sizeId: number | undefined,
+): MenuSize | null {
+  if (sizeId != null) {
+    const match = sizes.find((s) => s.id === sizeId);
+    if (match) return match;
+  }
+  return defaultSize(sizes);
+}
+
+/** What the chosen size adds to (or takes off) the base price. Signed. */
+export function sizeDelta(
+  sizes: MenuSize[],
+  sizeId: number | undefined,
+): number {
+  const size = resolveSize(sizes, sizeId);
+  return size ? parseFloat(size.price_delta) : 0;
+}
+
+/**
+ * The lowest price the dish can be had at - base plus the cheapest size's delta,
+ * floored at zero exactly as the server floors it.
+ *
+ * This is what a catalog card's "from" price must show: with a small size that
+ * discounts the base, quoting the base alone names a price the customer can beat,
+ * and quoting it as a "from" would be simply wrong.
+ */
+export function lowestPrice(basePrice: string, sizes: MenuSize[]): number {
+  const base = parseFloat(basePrice);
+  if (sizes.length === 0) return base;
+  const cheapest = Math.min(...sizes.map((s) => parseFloat(s.price_delta)));
+  return Math.max(0, base + cheapest);
+}
+
+/** True when the dish offers a real choice of size - one size is not a choice,
+ *  and rendering a single locked chip for it is noise. */
+export function hasSizeChoice(sizes: MenuSize[]): boolean {
+  return sizes.length > 1;
 }
 
 /** Per-ingredient chosen quantity, keyed by `MenuItemIngredient.id`. */
@@ -135,6 +201,35 @@ export function selectionUpcharge(
     sum += Math.max(0, selectedValue - includedValue);
   }
   return sum;
+}
+
+/**
+ * What the configured dish costs: base + the chosen size's delta + every add-on
+ * up-charge, floored at zero.
+ *
+ * The one figure all three customising surfaces print, mirroring the server's
+ * `price_for_selection` term for term. Note what it does **not** do: the size
+ * does not scale the add-on up-charges. Extra cheese costs the same on a small
+ * as on a large - one pricing axis, deliberately, because a multiplier would have
+ * to be applied identically here, in the till and in Django, and the first
+ * disagreement between them is a price on screen that is not the price charged.
+ *
+ * Display only. The server re-prices every selection at checkout and its answer
+ * is what is stored and charged.
+ */
+export function menuItemTotal(
+  basePrice: string,
+  sizes: MenuSize[],
+  sizeId: number | undefined,
+  ingredients: MenuItemIngredient[],
+  quantities: SelectionQuantities,
+  options: SelectionOptions,
+): number {
+  const total =
+    parseFloat(basePrice) +
+    sizeDelta(sizes, sizeId) +
+    selectionUpcharge(ingredients, quantities, options);
+  return Math.max(0, total);
 }
 
 /** One chosen ingredient, in the shape the API's `customization` payload takes. */

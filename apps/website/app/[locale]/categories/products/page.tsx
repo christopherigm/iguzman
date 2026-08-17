@@ -108,17 +108,11 @@ export default async function ProductsPage({ params }: Props) {
                   cat.name ??
                   cat.en_name ??
                   "";
-                const description =
-                  (locale === "en" ? cat.en_description : cat.description) ??
-                  cat.description ??
-                  cat.en_description ??
-                  "";
                 return (
                   <Grid key={cat.id} size={{ xs: 6, sm: 4, lg: 3 }}>
                     <CategoryCard
                       id={cat.id}
                       name={name}
-                      description={description}
                       image={cat.image}
                       itemCount={cat.item_count}
                       type="product"

@@ -74,7 +74,9 @@ class OrderLineSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderLine
         fields = [
-            "id", "kind", "name", "sku", "customization",
+            "id", "kind", "name", "sku",
+            "size_name", "size_en_name", "size_price_delta",
+            "customization",
             "unit_price", "quantity", "line_total", "currency",
             "image", "item_id", "item_slug", "item_menu_category_slug",
             "item_booking_enabled",

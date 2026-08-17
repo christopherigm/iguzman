@@ -506,6 +506,59 @@ export async function deleteMenuItemIngredient(
   return parseResponse<void>(res);
 }
 
+// ---- Menu Sizes ----
+//
+// One model, two owners: a category's list (which every dish in it inherits) and
+// a dish's own override rows. The four calls below take the owner as a
+// `{ owner, id }` pair rather than coming in two families, which is what lets
+// `MenuSizesEditor` serve both forms unchanged.
+
+/** Which side of the pair a size list belongs to. The URL segment matches. */
+export type MenuSizeOwner = "menu-categories" | "menu-items";
+
+export async function listMenuSizes(owner: MenuSizeOwner, ownerId: number) {
+  // include_disabled is admin-gated server-side, so the CMS editor still sees
+  // (and can re-enable) a size whose `enabled` switch was turned off.
+  const res = await adminFetch(
+    `/api/catalog/${owner}/${ownerId}/sizes/?include_disabled=true`,
+  );
+  return parseResponse<Record<string, unknown>[]>(res);
+}
+export async function createMenuSize(
+  owner: MenuSizeOwner,
+  ownerId: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(`/api/catalog/${owner}/${ownerId}/sizes/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function updateMenuSize(
+  owner: MenuSizeOwner,
+  ownerId: number,
+  sizeId: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(
+    `/api/catalog/${owner}/${ownerId}/sizes/${sizeId}/`,
+    { method: "PATCH", body: JSON.stringify(data) },
+  );
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function deleteMenuSize(
+  owner: MenuSizeOwner,
+  ownerId: number,
+  sizeId: number,
+) {
+  const res = await adminFetch(
+    `/api/catalog/${owner}/${ownerId}/sizes/${sizeId}/`,
+    { method: "DELETE" },
+  );
+  return parseResponse<void>(res);
+}
+
 // ---- Menu Item Recipe (internal) ----
 export async function getMenuItemRecipe(menuItemId: number) {
   const res = await adminFetch(`/api/catalog/menu-items/${menuItemId}/recipe/`);

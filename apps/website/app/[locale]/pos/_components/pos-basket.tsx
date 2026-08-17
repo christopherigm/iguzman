@@ -102,6 +102,10 @@ export function PosBasket({
               <Box justifyContent="space-between" gap={10} alignItems="flex-start">
                 <Typography variant="body" margin={0} fontWeight={600}>
                   {line.name}
+                  {/* The size sits on the name rather than in the add-on summary
+                      below: it is which dish this row is, not a change made to
+                      one, and the person assembling the order reads it first. */}
+                  {line.sizeName ? ` · ${line.sizeName}` : ""}
                 </Typography>
                 <Typography variant="body" margin={0} fontWeight={700}>
                   {formatPrice(lineTotal(line).toFixed(2), line.currency)}

@@ -7,7 +7,7 @@ from .models import (
     ProductCategory, Product, ProductImage,
     ServiceCategory, Service, ServiceImage,
     MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient,
-    MenuItemIngredientOption, RecipeStep,
+    MenuItemIngredientOption, MenuSize, RecipeStep,
     Ingredient, IngredientProvider,
 )
 
@@ -247,6 +247,28 @@ class MenuItemIngredientInline(admin.TabularInline):
     )
 
 
+class MenuCategorySizeInline(admin.TabularInline):
+    """The sizes every dish in this category inherits."""
+
+    model = MenuSize
+    fk_name = 'category'
+    extra = 0
+    fields = ('name', 'en_name', 'image', 'portion', 'unit', 'price_delta', 'is_default', 'sort_order', 'enabled')
+
+
+class MenuItemSizeInline(admin.TabularInline):
+    """A dish's OWN size rows, which *replace* its category's list.
+
+    Empty is the normal state - it means the dish is offered in whatever sizes
+    its category defines. Adding a row here overrides that list entirely.
+    """
+
+    model = MenuSize
+    fk_name = 'menu_item'
+    extra = 0
+    fields = ('name', 'en_name', 'image', 'portion', 'unit', 'price_delta', 'is_default', 'sort_order', 'enabled')
+
+
 class RecipeStepInline(admin.StackedInline):
     model = RecipeStep
     extra = 0
@@ -260,6 +282,7 @@ class MenuCategoryAdmin(admin.ModelAdmin):
     search_fields = ('name', 'en_name', 'slug')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
+    inlines = [MenuCategorySizeInline]
 
     fieldsets = (
         ('Identity', {
@@ -291,16 +314,16 @@ class MenuCategoryAdmin(admin.ModelAdmin):
 @admin.register(MenuItem)
 class MenuItemAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug', 'category', 'brand', 'price', 'currency', 'is_available', 'is_featured', 'is_ai_generated', 'is_verified', 'enabled', 'modified')
-    list_filter = ('enabled', 'is_available', 'show_nutrition_label', 'is_featured', 'is_organic', 'is_vegetarian', 'is_vegan', 'is_gluten_free', 'is_ai_generated', 'is_verified', 'currency', 'system', 'category', 'brand')
+    list_filter = ('enabled', 'is_available', 'sizes_enabled', 'show_nutrition_label', 'is_featured', 'is_organic', 'is_vegetarian', 'is_vegan', 'is_gluten_free', 'is_ai_generated', 'is_verified', 'currency', 'system', 'category', 'brand')
     search_fields = ('name', 'en_name', 'slug', 'sku')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
     filter_horizontal = ('variants',)
-    inlines = [MenuItemImageInline, MenuItemIngredientInline, RecipeStepInline]
+    inlines = [MenuItemImageInline, MenuItemSizeInline, MenuItemIngredientInline, RecipeStepInline]
 
     fieldsets = (
         ('Identity', {
-            'fields': ('system', 'category', 'brand', 'enabled', 'is_available', 'show_nutrition_label', 'is_featured', 'is_ai_generated', 'is_verified', 'version', 'created', 'modified'),
+            'fields': ('system', 'category', 'brand', 'enabled', 'is_available', 'sizes_enabled', 'show_nutrition_label', 'is_featured', 'is_ai_generated', 'is_verified', 'version', 'created', 'modified'),
         }),
         ('Content (ES)', {
             'fields': ('name', 'slug', 'description', 'short_description', 'image', 'fit', 'background_color', 'href', 'video_link'),

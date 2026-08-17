@@ -193,7 +193,7 @@ def clone_service(service, name, en_name):
 @transaction.atomic
 def clone_menu_item(menu_item, name, en_name):
     """Copy a MenuItem, its gallery, its priced ingredients (with their choice
-    options) and its internal recipe steps.
+    options), its size overrides and its internal recipe steps.
 
     Ingredients themselves are *not* copied: `Ingredient` is a System-scoped,
     deliberately shared catalog record, so the clone's rows point at the same
@@ -207,7 +207,7 @@ def clone_menu_item(menu_item, name, en_name):
     """
     from catalog.models import (
         MenuItem, MenuItemImage, MenuItemIngredient,
-        MenuItemIngredientOption, RecipeStep,
+        MenuItemIngredientOption, MenuSize, RecipeStep,
     )
 
     clone = _clone_row(
@@ -233,6 +233,13 @@ def clone_menu_item(menu_item, name, en_name):
                 MenuItemIngredientOption,
                 overrides={'menu_item_ingredient_id': row_clone.pk},
             )
+
+    # The dish's *own* size rows, i.e. its override of the category list. A dish
+    # that inherits has none, and the clone inherits the same way - copying the
+    # resolved list would silently turn an inheriting dish into an overriding
+    # one, and it would then stop following the category it was filed under.
+    for size in menu_item.own_sizes.all():
+        _clone_row(size, MenuSize, overrides={'menu_item_id': clone.pk, 'category_id': None})
 
     for step in menu_item.recipe_steps.all():
         _clone_row(step, RecipeStep, overrides={'menu_item_id': clone.pk})

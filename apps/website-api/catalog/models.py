@@ -456,6 +456,26 @@ QUANTITY_UNIT_CHOICES = [
     ('scoop', 'Scoops'),
 ]
 
+# How a *size* is measured, which is deliberately not QUANTITY_UNIT_CHOICES: a
+# size is a dimension of the finished dish (a 12-inch pizza, a 355 ml soda, a
+# 6-piece box), never a recipe portion, so the cooking measures that only make
+# sense against an ingredient - cups, tablespoons, teaspoons, scoops - have no
+# meaning here. The overlap with the quantity list is the units a size genuinely
+# can be stated in.
+SIZE_UNIT_CHOICES = [
+    ('in', 'Inches'),
+    ('cm', 'Centimeters'),
+    ('mm', 'Millimeters'),
+    ('ml', 'Milliliters'),
+    ('l', 'Liters'),
+    ('oz', 'Ounces'),
+    ('g', 'Grams'),
+    ('kg', 'Kilograms'),
+    ('lb', 'Pounds'),
+    ('pc', 'Pieces'),
+    ('slice', 'Slices'),
+]
+
 
 class MenuCategory(RegularPicture):
     system = models.ForeignKey(
@@ -495,7 +515,8 @@ class MenuItem(Buyable):
       - StandardPicture: image (max 900px)
       - Buyable: system (FK), brand (FK), price, compare_price, cost_price, currency
 
-    ``price`` is the *base* price; the customer's ingredient choices (see
+    ``price`` is the *base* price; the chosen size (see ``MenuSize``) shifts it
+    up or down by a signed delta, and the customer's ingredient choices (see
     ``MenuItemIngredient``) add up-charges on top. ``price_for_selection`` is the
     single source of truth for that arithmetic and is used by the cart, checkout,
     and storefront alike so a customised price can never drift between them.
@@ -526,6 +547,17 @@ class MenuItem(Buyable):
         null=True,
         blank=True,
         help_text='YouTube, Vimeo or direct video URL rendered as a hero above the detail page.',
+    )
+
+    # Whether this dish is sold in several sizes at all. On (the default) it
+    # offers whatever `effective_sizes` resolves to - its own MenuSize rows if it
+    # has any, otherwise its category's. Off, it is sold in one size and no size
+    # picker is shown, which is how an edge-case dish opts out of a category that
+    # sizes everything else (a dessert on a pizza menu).
+    sizes_enabled = models.BooleanField(
+        default=True,
+        help_text='Offer this dish in several sizes (its own if it has any, '
+                  'otherwise its category\'s). Off: sold in one size.',
     )
 
     # Availability / display. Food is not stock-counted like a product; a dish is
@@ -605,8 +637,79 @@ class MenuItem(Buyable):
     def __str__(self):
         return self.name or self.slug
 
-    def price_for_selection(self, selection) -> Decimal:
-        """Base price plus every up-charge implied by ``selection``.
+    # ── Sizes ────────────────────────────────────────────────────────────────
+
+    @property
+    def effective_sizes(self):
+        """The sizes a customer may pick from, in display order, or ``[]``.
+
+        Own rows **replace** the category's entirely rather than merging with
+        them - that is the only rule that lets an edge-case dish *drop* a size
+        its category offers (a personal-only calzone on a menu whose pizzas come
+        in five sizes). A merge could only ever add.
+
+        Sorted in Python rather than re-queried so a ``prefetch_related`` on
+        ``own_sizes`` / ``category__sizes`` is not thrown away - this is read
+        once per card on a menu page of a few hundred dishes.
+        """
+        if not self.sizes_enabled:
+            return []
+        own = sorted(
+            (s for s in self.own_sizes.all() if s.enabled),
+            key=lambda s: (s.sort_order, s.id),
+        )
+        if own:
+            return own
+        if not self.category_id:
+            return []
+        return sorted(
+            (s for s in self.category.sizes.all() if s.enabled),
+            key=lambda s: (s.sort_order, s.id),
+        )
+
+    @property
+    def default_size(self):
+        """The size a customer gets without choosing: the one flagged
+        ``is_default``, else the first in display order. ``None`` when the dish
+        is sold in one size."""
+        sizes = self.effective_sizes
+        if not sizes:
+            return None
+        return next((s for s in sizes if s.is_default), sizes[0])
+
+    def resolve_size(self, size_id):
+        """Resolve a chosen size id to its ``MenuSize``, falling back to the
+        default.
+
+        Same contract as ``MenuItemIngredient.resolve_option``: an id that is
+        stale (the size was deleted), forged, or belongs to another dish can
+        never crash pricing - it simply prices as the default.
+        """
+        sizes = self.effective_sizes
+        if not sizes:
+            return None
+        if size_id:
+            for size in sizes:
+                if size.id == size_id:
+                    return size
+        return self.default_size
+
+    def price_for_selection(self, selection, size=None) -> Decimal:
+        """Base price, the chosen size's delta, plus every up-charge implied by
+        ``selection``.
+
+        ``size`` is a ``MenuSize`` (or ``None``, which means *the default size* -
+        a dish sold in several sizes always has one, and a line that names none
+        is the line that took what it was offered). Its ``price_delta`` is
+        signed, so a small size discounts the base and a large one adds to it;
+        the total is floored at zero, because a delta bigger than the base is a
+        misconfiguration, not a refund.
+
+        Size does **not** scale the ingredient up-charges: extra cheese costs the
+        same on a small as on a large. One pricing axis, deliberately - a
+        multiplier would have to be applied identically in the customiser, the
+        cart, the till and here, and the first disagreement between them would be
+        a price on screen that is not the price charged.
 
         ``selection`` is a normalised list of ``{"ingredient": <id>, "quantity":
         <int>}`` dicts (see ``normalize_selection``). Internal ingredients are
@@ -631,13 +734,17 @@ class MenuItem(Buyable):
                 continue
             chosen[ingredient.id] = row
         total = self.price
+        if size is None:
+            size = self.default_size
+        if size is not None:
+            total += size.price_delta
         for ingredient in by_id.values():
             row = chosen.get(ingredient.id)
             qty = row.get('quantity', ingredient.default_units) if row else ingredient.default_units
             option_id = row.get('option') if row else None
             _, unit_price = ingredient.resolve_option(option_id)
             total += ingredient.upcharge_for_quantity(qty, unit_price)
-        return total
+        return total if total > Decimal('0.00') else Decimal('0.00')
 
 
 class MenuItemImage(StandardPicture):
@@ -657,6 +764,145 @@ class MenuItemImage(StandardPicture):
 
     def __str__(self):
         return f"Image for {self.menu_item} (#{self.sort_order})"
+
+
+class MenuSize(SmallPicture):
+    """One size a dish is offered in, priced as a signed delta off the base.
+
+    Sizes are **per category** first - a pizzeria's pizzas come in five sizes
+    while its drinks come in two, and neither list belongs on the individual
+    dish. A ``MenuItem`` may then carry its own rows to *override* that list for
+    an edge case. One model serves both, distinguished by which owner FK is set
+    (exactly one, enforced below), so the API, the CMS editor and the customer's
+    picker are one implementation rather than a category copy and an item copy
+    that would drift.
+
+    ``price_delta`` is what makes this a size rather than a separate dish: a
+    pizzeria prices "pizza" once at its regular size and states that small is
+    -2.00 and large is +2.00. Signed on purpose - a size list with only additions
+    forces the tenant to price its *smallest* size as the base and quote every
+    real size as an up-charge, which is not how a menu is written.
+
+    ``portion`` + ``unit`` are the size's own measurement ("Small (4 in)",
+    "Grande (1 l)"), shown beside the name. They are descriptive: nothing is
+    computed from them, unlike ``MenuItemIngredient.quantity``, which scales
+    nutrition. A size with no measurement is perfectly ordinary - "Individual" /
+    "Familiar" says everything some menus need to.
+
+    Inherits from SmallPicture (256 px): a size's picture is a thumbnail in a
+    chip beside its name, the same role an ``Ingredient``'s picture plays.
+    """
+
+    # Derived from the owner below, never authored - see `save`. It is stored
+    # rather than reached through `category__system` / `menu_item__system`
+    # because those are *two* paths to one tenant, and every piece of machinery
+    # that scopes a model to its System takes exactly one: `core.backup`'s
+    # `ModelSpec.scope`, and through it `core.tenant_paths.system_id_for`, which
+    # decides which R2 bucket this row's image is written to. With a two-way
+    # path, an item-level override resolves to None on the category branch and
+    # its picture silently lands in the platform bucket instead of the tenant's.
+    system = models.ForeignKey(
+        'core.System',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='menu_sizes',
+    )
+
+    # Exactly one of these is set. CASCADE both ways: a category's sizes have no
+    # meaning without the category, and an override has none without its dish.
+    category = models.ForeignKey(
+        MenuCategory,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='sizes',
+    )
+    menu_item = models.ForeignKey(
+        MenuItem,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        # Not `sizes`: that name belongs to the *effective* list a dish offers
+        # (see ``MenuItem.effective_sizes``), which is usually its category's.
+        # A property and a related manager sharing one name is how a caller ends
+        # up reading an empty override and concluding the dish has no sizes.
+        related_name='own_sizes',
+    )
+
+    # `name` is required here, overriding BasePicture's nullable `name`: a size
+    # the customer cannot name is not a choice. `en_name`, `description` and
+    # `image` come from SmallPicture.
+    name = models.CharField(max_length=255)
+
+    portion = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='How big this size is, in `unit` (e.g. 12 for a 12-inch '
+                  'pizza). Descriptive - nothing is computed from it.',
+    )
+    unit = models.CharField(
+        max_length=8, choices=SIZE_UNIT_CHOICES, null=True, blank=True,
+    )
+
+    price_delta = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('0.00'),
+        help_text='Added to the item base price when this size is chosen. '
+                  'Negative discounts it (a small size), positive adds to it.',
+    )
+
+    # The size a customer gets without choosing. At most one row per owner should
+    # carry it; more than one simply means the first in display order wins, which
+    # is also the fallback when none does - so this can never leave a dish with
+    # no resolvable size.
+    is_default = models.BooleanField(
+        default=False,
+        help_text='Pre-selected for the customer. With none flagged, the first '
+                  'size in display order is used.',
+    )
+
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Menu Size'
+        verbose_name_plural = 'Menu Sizes'
+        ordering = ['sort_order', 'id']
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(category__isnull=False, menu_item__isnull=True)
+                    | models.Q(category__isnull=True, menu_item__isnull=False)
+                ),
+                name='menu_size_exactly_one_owner',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        # `system` follows the owner rather than being set by the caller: a size
+        # whose tenant disagreed with its category's would render on one site and
+        # be backed up with another's. Kept out of `update_fields` trouble by
+        # only ever moving when the owner does, which is at creation.
+        owner = self.menu_item or self.category
+        if owner is not None and self.system_id != owner.system_id:
+            self.system_id = owner.system_id
+            update_fields = kwargs.get('update_fields')
+            if update_fields is not None:
+                kwargs['update_fields'] = list(update_fields) + ['system']
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        owner = self.menu_item or self.category
+        return f"{self.name} ({owner})" if owner else self.name
+
+    @property
+    def measurement(self):
+        """``"12 in"``, or None when the size carries no measurement."""
+        if self.portion is None or not self.unit:
+            return None
+        # Trim a trailing ".00" - a 12-inch pizza is not a 12.00-inch pizza.
+        amount = self.portion.normalize()
+        if amount == amount.to_integral_value():
+            amount = amount.to_integral_value()
+        return f"{amount} {self.unit}"
 
 
 class Ingredient(SmallPicture):

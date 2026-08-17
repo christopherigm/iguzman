@@ -159,16 +159,10 @@ export async function MenuListing({ locale }: MenuListingProps) {
             </Box>
             <Grid container spacing={2}>
               {categories.map((cat) => {
-                const description =
-                  (locale === "en" ? cat.en_description : cat.description) ??
-                  cat.description ??
-                  cat.en_description ??
-                  "";
                 const card = (
                   <CategoryCard
                     id={cat.id}
                     name={categoryName(cat)}
-                    description={description}
                     image={cat.image}
                     itemCount={cat.item_count}
                     type="food"

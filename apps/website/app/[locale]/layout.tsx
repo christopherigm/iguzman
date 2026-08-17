@@ -22,7 +22,7 @@ import { SessionProvider } from "@repo/auth/session-provider";
 import { NavbarClient } from "./navbar-client";
 import { DevSiteSwitcher } from "./dev-site-switcher";
 import { Footer } from "@/components/footer";
-import { HideOnAdmin, HideOnPos } from "@/components/hide-on-admin";
+import { HideOnAdmin, HideOnFullScreenTool } from "@/components/hide-on-admin";
 import { GuestMerge } from "@/components/guest-merge";
 import { LogoWatermark } from "@/components/logo-watermark";
 import packageJson from "@/package.json";
@@ -279,7 +279,7 @@ export default async function LocaleLayout({ children, params }: Props) {
                         if (!primary) return null;
                         return (
                           <HideOnAdmin>
-                            <HideOnPos>
+                            <HideOnFullScreenTool>
                               <LogoWatermark
                                 logo={primary}
                                 secondaryLogo={secondary}
@@ -289,15 +289,16 @@ export default async function LocaleLayout({ children, params }: Props) {
                                 intercalated={system.watermark_intercalated}
                                 opacity={system.watermark_opacity}
                               />
-                            </HideOnPos>
+                            </HideOnFullScreenTool>
                           </HideOnAdmin>
                         );
                       })()}
-                    {/* The till renders its own slim bar instead - a full-screen
-                      single-purpose tool has no use for a Favorites link
-                      mid-sale. The CMS keeps the navbar (its layout reserves
-                      the height), which is why this is not `HideOnAdmin`. */}
-                    <HideOnPos>
+                    {/* The till and the order board render their own slim bar
+                      instead - a full-screen single-purpose tool has no use for
+                      a Favorites link mid-sale. The CMS keeps the navbar (its
+                      layout reserves the height), which is why this is not
+                      `HideOnAdmin`. */}
+                    <HideOnFullScreenTool>
                       <NavbarClient
                         logo={system?.img_logo ?? "/logo.png"}
                         version={`v${packageJson.version}`}
@@ -315,14 +316,14 @@ export default async function LocaleLayout({ children, params }: Props) {
                         eventCount={system?.event_count ?? 0}
                         cartCount={cartCount}
                       />
-                    </HideOnPos>
+                    </HideOnFullScreenTool>
                     {/* Renders nothing; folds a guest's localStorage cart and
                       favorites into their account as soon as a session exists. */}
                     <GuestMerge />
                     {children}
                     {isDev && (
                       <HideOnAdmin>
-                        <HideOnPos>
+                        <HideOnFullScreenTool>
                           <DevSiteSwitcher
                             sites={SITE_CONFIGS.map((c) => ({
                               slug: c.slug,
@@ -331,16 +332,16 @@ export default async function LocaleLayout({ children, params }: Props) {
                             current={devSite}
                             cookieName={DEV_SITE_COOKIE}
                           />
-                        </HideOnPos>
+                        </HideOnFullScreenTool>
                       </HideOnAdmin>
                     )}
                     <HideOnAdmin>
-                      <HideOnPos>
+                      <HideOnFullScreenTool>
                         <Footer
                           logo={system?.img_logo ?? "/logo.png"}
                           system={system}
                         />
-                      </HideOnPos>
+                      </HideOnFullScreenTool>
                     </HideOnAdmin>
                   </BasemapProvider>
                 </PaletteProvider>

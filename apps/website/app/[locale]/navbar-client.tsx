@@ -187,9 +187,14 @@ export function NavbarClient({
     // cart are in `fixedItems` below.)
     ...(isLoggedIn ? [{ label: t("orders"), href: "/orders" }] : []),
     ...(showContact ? [{ label: t("contact"), href: "/contact" }] : []),
-    // Admin-only, exactly like the CMS link. Both only drive what is rendered -
-    // `/pos` is in `proxy.ts`'s protected prefixes, the page re-checks `isAdmin`,
-    // and Django re-derives it from the token on every call.
+    // Admin-only, exactly like the CMS link. These only drive what is rendered -
+    // `/pos` and `/order-board` are in `proxy.ts`'s protected prefixes, each
+    // page re-checks `isAdmin`, and Django re-derives it from the token on
+    // every call.
+    //
+    // The board sits before the till because it is the one an operator opens
+    // and leaves open for a shift, where the till is reached per sale.
+    ...(isAdmin ? [{ label: t("orderBoard"), href: "/order-board" }] : []),
     ...(isAdmin ? [{ label: t("pos"), href: "/pos" }] : []),
     ...(isAdmin ? [{ label: t("admin"), href: "/admin" }] : []),
   ];

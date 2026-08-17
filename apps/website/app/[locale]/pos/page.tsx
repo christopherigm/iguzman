@@ -54,6 +54,7 @@ export default async function PosPage({ params }: Props) {
         available: p.in_stock,
         category: null,
         ingredients: [],
+        sizes: [],
       }),
     ),
     ...services.map(
@@ -69,6 +70,7 @@ export default async function PosPage({ params }: Props) {
         available: true,
         category: null,
         ingredients: [],
+        sizes: [],
       }),
     ),
     ...menuItems.map(
@@ -83,6 +85,9 @@ export default async function PosPage({ params }: Props) {
         // The list endpoint carries one category label, not a bilingual pair.
         category: m.category_name,
         ingredients: m.ingredients ?? [],
+        // Already the effective list (own rows else the category's), resolved by
+        // the API - the till must never re-derive that rule.
+        sizes: m.sizes ?? [],
       }),
     ),
   ];

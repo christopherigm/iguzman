@@ -424,6 +424,7 @@ class CartItemSerializer(serializers.Serializer):
     quantity = serializers.IntegerField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
     item = serializers.SerializerMethodField()
+    size = serializers.SerializerMethodField()
     customization = serializers.SerializerMethodField()
     unit_price = serializers.SerializerMethodField()
     line_total = serializers.SerializerMethodField()
@@ -441,6 +442,16 @@ class CartItemSerializer(serializers.Serializer):
             'menu_item': MenuItemSerializer,
         }[obj.kind]
         return serializer(obj.target, context=self.context).data
+
+    def get_size(self, obj):
+        """The chosen size, or null for a product, a service, or a dish sold in
+        one size. Read live through the FK - a cart reflects today's catalog, so
+        a renamed size renames on the cart line; the *order* snapshots it."""
+        if not obj.menu_size_id:
+            return None
+        from catalog.serializers import MenuSizeSerializer
+
+        return MenuSizeSerializer(obj.menu_size, context=self.context).data
 
     def get_customization(self, obj):
         """The chosen ingredients for a menu line, resolved to labels + up-charges
@@ -511,7 +522,11 @@ class CartCustomizationRowSerializer(serializers.Serializer):
 class CartItemWriteSerializer(serializers.Serializer):
     kind = serializers.ChoiceField(choices=["product", "service", "menu_item"])
     id = serializers.IntegerField()
-    # Menu items only: the chosen ingredient selection. Ignored for product/service.
+    # Menu items only: the chosen size (a MenuSize id) and ingredient selection.
+    # Both ignored for product/service. `size` is only a *request* - the server
+    # resolves it against what the dish actually offers and falls back to the
+    # default, so naming another dish's size buys nothing but the default.
+    size = serializers.IntegerField(required=False, allow_null=True)
     customization = CartCustomizationRowSerializer(many=True, required=False)
     quantity = serializers.IntegerField(required=False, min_value=1, max_value=99, default=1)
 

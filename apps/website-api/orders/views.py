@@ -490,6 +490,11 @@ def _open_order(system, user, items, *, order_status, payment_method, email, def
                 menu_item=item.menu_item,
                 name=item.target.name or "",
                 sku=getattr(item.target, "sku", "") or "",
+                size_name=(item.menu_size.name if item.menu_size_id else ""),
+                size_en_name=(item.menu_size.en_name or "" if item.menu_size_id else ""),
+                size_price_delta=(
+                    item.menu_size.price_delta if item.menu_size_id else Decimal("0.00")
+                ),
                 customization=_customization_snapshot(item),
                 unit_price=item.unit_price,
                 quantity=item.quantity,

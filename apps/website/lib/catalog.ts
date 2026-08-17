@@ -393,6 +393,38 @@ export interface MenuCategory {
   en_description: string | null;
   image: string | null;
   item_count: number;
+  /** The sizes every dish in this category is offered in unless it carries its
+   *  own. Empty for a category whose dishes are sold in one size. */
+  sizes: MenuSize[];
+}
+
+/**
+ * One size a dish is offered in, priced as a signed delta off the item's base.
+ *
+ * Authored per **category** (a pizzeria's pizzas come in five sizes, its drinks
+ * in two) and optionally *replaced* on an individual dish. Which of the two a
+ * given dish uses is resolved on the server - `MenuItemDetail.sizes` is already
+ * the effective list, so nothing here re-derives it.
+ */
+export interface MenuSize {
+  id: number;
+  enabled: boolean;
+  name: string;
+  en_name: string | null;
+  description: string | null;
+  en_description: string | null;
+  image: string | null;
+  /** How big this size is, in `unit`. Descriptive; nothing is computed from it. */
+  portion: string | null;
+  unit: string | null;
+  /** `"12 in"`, pre-composed by the API, or null when the size carries no
+   *  measurement ("Individual" / "Familiar" needs none). */
+  measurement: string | null;
+  /** Added to the item's base price. **Signed**: negative on a small size. */
+  price_delta: string;
+  /** Pre-selected for the customer. With none flagged the first row wins. */
+  is_default: boolean;
+  sort_order: number;
 }
 
 /** The 15 FDA "Nutrition Facts" quantities, stated per an ingredient's basis. */
@@ -572,6 +604,13 @@ export interface MenuItemDetail {
   images: MenuItemImageT[];
   ingredients: MenuItemIngredient[];
   variants: MenuItemVariant[];
+  /** Whether this dish is sold in several sizes at all. Off is how an edge-case
+   *  dish opts out of a category that sizes everything else. */
+  sizes_enabled: boolean;
+  /** The sizes a customer picks from - **already resolved** by the API to the
+   *  dish's own rows if it has any, else its category's, and empty when
+   *  `sizes_enabled` is off. Never re-derive that rule on the client. */
+  sizes: MenuSize[];
 }
 
 export const getMenuCategories = cache(async (): Promise<MenuCategory[]> => {

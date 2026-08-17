@@ -122,6 +122,20 @@ export async function OrderLineRow({ line }: OrderLineRowProps) {
               {kindLabel}
             </Badge>
           </Box>
+          {/* The size, above the add-ons: it is which dish was sold, not a change
+              made to one. Printed in the language `name` was snapshotted in
+              (`size_en_name` rides along for the CMS), and with no delta - it is
+              already inside `unit_price`. */}
+          {line.size_name && (
+            <Typography
+              variant="caption"
+              margin={0}
+              fontWeight={600}
+              color="var(--foreground)"
+            >
+              {line.size_name}
+            </Typography>
+          )}
           {line.customization.length > 0 && (
             <Box flexDirection="column" gap={2}>
               {line.customization.map((row, idx) => {

@@ -20,10 +20,15 @@ import "./catalog-categories.css";
 
 type CategoryType = "product" | "service" | "food";
 
+/** A category card carries its **name** and its count, and deliberately no
+ *  description: the cards are an index - a row of them is read as a list of
+ *  names, and two clamped lines of prose under each one turns that into a wall
+ *  of text without helping anyone choose. The description still belongs to the
+ *  category (the CMS keeps authoring it) and the category's own page renders
+ *  it in full. */
 interface CategoryCardProps {
   id: number;
   name: string;
-  description: string;
   image: string | null;
   itemCount: number;
   type: CategoryType;
@@ -33,7 +38,6 @@ interface CategoryCardProps {
 export async function CategoryCard({
   id,
   name,
-  description,
   image,
   itemCount,
   type,
@@ -137,22 +141,6 @@ export async function CategoryCard({
           </Typography>
         )}
 
-        {description && (
-          <Typography
-            variant="body"
-            margin={0}
-            color={hasImage ? "#fff" : "var(--foreground)"}
-            styles={{
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}
-          >
-            {description}
-          </Typography>
-        )}
-
         <Typography
           as="span"
           variant="label"
@@ -196,17 +184,11 @@ export async function CatalogCategories() {
             cat.name ??
             cat.en_name ??
             "";
-          const description =
-            (locale === "en" ? cat.en_description : cat.description) ??
-            cat.description ??
-            cat.en_description ??
-            "";
           return (
             <Grid key={`product-${cat.id}`} size={{ xs: 6, sm: 4, lg: 3 }}>
               <CategoryCard
                 id={cat.id}
                 name={name}
-                description={description}
                 image={cat.image}
                 itemCount={cat.item_count}
                 type="product"
@@ -221,17 +203,11 @@ export async function CatalogCategories() {
             cat.name ??
             cat.en_name ??
             "";
-          const description =
-            (locale === "en" ? cat.en_description : cat.description) ??
-            cat.description ??
-            cat.en_description ??
-            "";
           return (
             <Grid key={`service-${cat.id}`} size={{ xs: 6, sm: 4, lg: 3 }}>
               <CategoryCard
                 id={cat.id}
                 name={name}
-                description={description}
                 image={cat.image}
                 itemCount={cat.item_count}
                 type="service"
@@ -246,17 +222,11 @@ export async function CatalogCategories() {
             cat.name ??
             cat.en_name ??
             "";
-          const description =
-            (locale === "en" ? cat.en_description : cat.description) ??
-            cat.description ??
-            cat.en_description ??
-            "";
           return (
             <Grid key={`food-${cat.id}`} size={{ xs: 6, sm: 4, lg: 3 }}>
               <CategoryCard
                 id={cat.id}
                 name={name}
-                description={description}
                 image={cat.image}
                 itemCount={cat.item_count}
                 type="food"

@@ -105,8 +105,17 @@ export const ADMIN_NAV_ITEMS = [
     descKey: "highlightsDesc",
   },
   { key: "brands", href: "/admin/brands", icon: "🎯", descKey: "brandsDesc" },
-  // Not under /admin: the till is its own full-screen route with no CMS chrome.
-  // Listed here anyway because this menu is where an admin looks for their tools.
+  // Neither is under /admin: both are their own full-screen route with no CMS
+  // chrome. Listed here anyway because this menu is where an admin looks for
+  // their tools. The board is beside the till rather than beside Orders - the
+  // CMS order list is a ledger to look things up in, these two are the screens
+  // a shift is actually run from.
+  {
+    key: "orderBoard",
+    href: "/order-board",
+    icon: "👨‍🍳",
+    descKey: "orderBoardDesc",
+  },
   { key: "pos", href: "/pos", icon: "🧾", descKey: "posDesc" },
   {
     // `paymentsTitle` is the section's existing label ("Payments"), reused here

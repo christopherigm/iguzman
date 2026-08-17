@@ -8,15 +8,17 @@ import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { Toast } from "@repo/ui/core-elements/toast";
-import type { MenuItemIngredient } from "@/lib/catalog";
+import type { MenuItemIngredient, MenuSize } from "@/lib/catalog";
 import { formatPrice } from "@/lib/price";
 import {
   buildCustomization,
   customizableIngredients,
-  selectionUpcharge,
+  hasSizeChoice,
+  menuItemTotal,
 } from "@/lib/menu-selection";
 import { addGuestCartLine } from "@/lib/guest-cart";
 import { MenuIngredientPicker } from "./menu-ingredient-picker";
+import { MenuSizePicker } from "./menu-size-picker";
 import { useMenuCustomization } from "./menu-customization-context";
 
 interface Props {
@@ -27,6 +29,9 @@ interface Props {
   discount: number;
   currency: string;
   ingredients: MenuItemIngredient[];
+  /** The dish's effective sizes, as the API resolved them. Empty for a dish sold
+   *  in one size, in which case no size picker renders and no size is sent. */
+  sizes: MenuSize[];
   isAvailable: boolean;
   isLoggedIn: boolean;
   locale: string;
@@ -35,11 +40,15 @@ interface Props {
 type ToastKind = "added" | "failed";
 
 /**
- * The customer-facing ingredient customiser: base price + add-on deltas.
+ * The customer-facing customiser: base price + the chosen size + add-on deltas.
  *
- * The rows themselves are `MenuIngredientPicker`, shared with the catalog card's
- * add-to-cart modal and the POS till; this component owns the page-level parts
- * around them - the heading, the live total, and the two CTAs.
+ * The controls themselves are `MenuSizePicker` and `MenuIngredientPicker`, shared
+ * with the catalog card's add-to-cart modal and the POS till; this component owns
+ * the page-level parts around them - the heading, the live total, and the two
+ * CTAs.
+ *
+ * **Size comes first**, above the add-ons: it is the first thing a customer
+ * decides about a dish, and it moves the base the add-ons are added to.
  *
  * Each ingredient starts at its included quantity (1 for a default, 0 for an
  * optional add-on). A stepper moves it within `[min, max_quantity]` - defaults
@@ -57,6 +66,7 @@ export function MenuItemCustomizer({
   discount,
   currency,
   ingredients,
+  sizes,
   isAvailable,
   isLoggedIn,
   locale,
@@ -68,9 +78,9 @@ export function MenuItemCustomizer({
     null,
   );
 
-  // Quantity per ingredient id lives in the shared customisation context so the
-  // nutrition label (rendered in a separate page row) mirrors every change.
-  const { quantities, setQuantity, options, setOption } =
+  // Size and quantity-per-ingredient live in the shared customisation context so
+  // the nutrition label (rendered in a separate page row) mirrors every change.
+  const { sizeId, setSizeId, quantities, setQuantity, options, setOption } =
     useMenuCustomization();
 
   const visibleIngredients = useMemo(
@@ -78,14 +88,13 @@ export function MenuItemCustomizer({
     [ingredients],
   );
 
-  // Base plus the selection's up-charge. Both this and the POS read the figure
-  // from `selectionUpcharge`, which mirrors the server's own rule - the server
-  // still recomputes and stores it, so this is display only.
+  // Base, the chosen size's delta, and the selection's up-charge. Every surface
+  // reads this figure from `menuItemTotal`, which mirrors the server's own rule -
+  // the server still recomputes and stores it, so this is display only.
   const total = useMemo(
     () =>
-      parseFloat(basePrice) +
-      selectionUpcharge(ingredients, quantities, options),
-    [basePrice, ingredients, quantities, options],
+      menuItemTotal(basePrice, sizes, sizeId, ingredients, quantities, options),
+    [basePrice, sizes, sizeId, ingredients, quantities, options],
   );
 
   const showToast = (kind: ToastKind) =>
@@ -98,6 +107,7 @@ export function MenuItemCustomizer({
       body: JSON.stringify({
         kind: "menu_item",
         id: menuItemId,
+        size: sizeId,
         customization: buildCustomization(ingredients, quantities, options),
         quantity: 1,
       }),
@@ -109,6 +119,7 @@ export function MenuItemCustomizer({
     addGuestCartLine({
       kind: "menu_item",
       id: menuItemId,
+      size: sizeId,
       customization: buildCustomization(ingredients, quantities, options),
       quantity: 1,
     });
@@ -159,6 +170,18 @@ export function MenuItemCustomizer({
 
   return (
     <Box flexDirection="column" gap={16}>
+      {/* Size before add-ons, and above the heading the add-ons carry: the dish
+          is chosen, then configured. A dish offered in one size renders nothing. */}
+      {hasSizeChoice(sizes) && (
+        <MenuSizePicker
+          sizes={sizes}
+          value={sizeId}
+          onChange={setSizeId}
+          currency={currency}
+          locale={locale}
+        />
+      )}
+
       {visibleIngredients.length > 0 && (
         <Box flexDirection="column" gap={10}>
           <Typography as="h2" variant="none" className="item-section-heading">

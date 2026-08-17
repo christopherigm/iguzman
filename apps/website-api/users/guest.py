@@ -37,15 +37,16 @@ MAX_QUANTITY = 99
 _MODELS = {"product": Product, "service": Service, "menu_item": MenuItem}
 
 
-def _dedupe_key(kind, target_id, selection):
+def _dedupe_key(kind, target_id, selection, size_id=None):
     """What makes two references the same line.
 
-    The same pair a signed-in cart is deduped by: the item and - for a menu
-    line - the ingredient selection, which is part of that line's identity
-    (two of the same dish customised differently are two lines). The selection is
+    The same triple a signed-in cart is deduped by: the item and - for a menu
+    line - the ingredient selection and the chosen size, both of which are part
+    of that line's identity (two of the same dish customised differently, or in
+    different sizes, are two lines at two different prices). The selection is
     already normalised to a sorted list, so equal choices compare equal.
     """
-    return (kind, target_id, repr(selection))
+    return (kind, target_id, repr(selection), size_id)
 
 
 def resolve_guest_cart(system, refs):
@@ -86,16 +87,22 @@ def resolve_guest_cart(system, refs):
             continue
 
         selection = []
+        size = None
 
         if kind == "menu_item":
             ingredients = list(
                 target.ingredients.filter(enabled=True).prefetch_related("options")
             )
             selection = normalize_selection(ref.get("customization") or [], ingredients)
+            # Resolved against what the dish offers, never trusted: a reference
+            # can sit in localStorage for weeks, and a size that has since been
+            # retired (or one lifted from another dish) prices as the default
+            # rather than at whatever the browser remembers.
+            size = target.resolve_size(ref.get("size"))
 
         quantity = min(max(int(ref.get("quantity") or 1), 1), MAX_QUANTITY)
 
-        key = _dedupe_key(kind, target.pk, selection)
+        key = _dedupe_key(kind, target.pk, selection, size.pk if size else None)
         existing = seen.get(key)
         if existing is not None:
             # Two references to the same line are one line of the summed
@@ -107,6 +114,7 @@ def resolve_guest_cart(system, refs):
             system=system,
             quantity=quantity,
             customization=selection,
+            menu_size=size,
             **{kind: target},
         )
         # The guest line's handle: where this reference sits in the browser's

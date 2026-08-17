@@ -21,7 +21,8 @@ interface Props {
  * The POS's own chrome: a slim bar with the screen's name, the way out, and -
  * on xs, where the basket is a sheet - the count of what is rung up.
  *
- * The site navbar is deliberately not rendered on this route (see `HideOnPos` in
+ * The site navbar is deliberately not rendered on this route (see
+ * `HideOnFullScreenTool` in
  * `components/hide-on-admin.tsx`). A till is a full-screen single-purpose tool
  * and the last thing an associate needs mid-sale is a Favorites link; the one
  * affordance kept is the way back to the site.

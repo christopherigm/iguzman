@@ -181,6 +181,22 @@ export function CartLine({
                 </Box>
               )}
 
+              {/* The size, above the add-on list: it is which dish this line is,
+                  not a change made to one, and it is already priced into
+                  `unit_price` - so no delta is repeated here. */}
+              {line.size && (
+                <Typography
+                  variant="caption"
+                  margin={0}
+                  fontWeight={600}
+                  color="var(--foreground)"
+                >
+                  {((locale === "en" ? line.size.en_name : line.size.name) ??
+                    line.size.name)}
+                  {line.size.measurement ? ` · ${line.size.measurement}` : ""}
+                </Typography>
+              )}
+
               {line.customization.length > 0 && (
                 <Box flexDirection="column" gap={2}>
                   {line.customization.map((row) => {

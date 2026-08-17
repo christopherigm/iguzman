@@ -162,6 +162,7 @@
     "cart": "Panier",
     "orders": "Commandes",
     "pos": "PDV",
+    "orderBoard": "Tableau des commandes",
     "events": "Événements"
   },
   "Pos": {
@@ -218,6 +219,33 @@
     "errorGeneric": "Impossible d'enregistrer la vente. Réessayez.",
     "errorCoupon": "Ce code promo n'est plus valide. Retirez-le et réessayez.",
     "couponApplied": "{code} · −{amount}"
+  },
+  "OrderBoard": {
+    "title": "Tableau des commandes",
+    "waitingCount": "{count, plural, =0 {Rien en attente} other {# en attente}}",
+    "soundOn": "Son activé",
+    "soundOff": "Son désactivé",
+    "refresh": "Actualiser",
+    "exit": "Quitter",
+    "exitConfirmTitle": "Quitter le tableau des commandes ?",
+    "exitConfirmText": "Vous ne verrez ni n'entendrez plus les nouvelles commandes à leur arrivée. Vous pouvez revenir à tout moment.",
+    "back": "Retour",
+    "loading": "Chargement…",
+    "emptyTitle": "Tout est à jour",
+    "emptyText": "Les nouvelles commandes apparaissent ici dès leur arrivée.",
+    "nothingSelected": "Choisissez une commande pour voir quoi préparer.",
+    "itemCount": "{count, plural, one {# article} other {# articles}}",
+    "unpaid": "Non payée",
+    "fulfilledSection": "Terminées",
+    "waitMinutes": "{minutes} min",
+    "waitHours": "{hours} h {minutes} min",
+    "newOrder": "Nouvelle commande {ref}",
+    "newOrders": "{count} nouvelles commandes",
+    "fulfilledToast": "{ref} marquée comme préparée.",
+    "placedAt": "Reçue à",
+    "openInAdmin": "Ouvrir dans l'administration",
+    "errorLoad": "Impossible de charger les commandes.",
+    "errorAction": "Impossible de mettre à jour la commande."
   },
   "AuthPage": {
     "tabSignIn": "Connexion",
@@ -1055,6 +1083,8 @@
     "social_website": "Site web",
     "pos": "PDV",
     "posDesc": "Encaisser une vente au comptoir.",
+    "orderBoard": "Tableau des commandes",
+    "orderBoardDesc": "Traitez les commandes entrantes et marquez-les comme préparées.",
     "storageSection": "Stockage",
     "storageSectionDesc": "Où sont stockées les images et les sauvegardes de ce site. Par défaut, elles se trouvent dans le bucket Cloudflare R2 de la plateforme et sont servies depuis son CDN — vous n'avez rien à modifier. Si ce site a son propre domaine et que vous préférez héberger ses fichiers sur votre propre compte Cloudflare, connectez-le ici.",
     "storageEnabled": "Utiliser le bucket Cloudflare R2 propre à ce site",
@@ -1181,7 +1211,23 @@
     "couponExportError": "Le visuel n'a pas pu être exporté.",
     "couponSaveForQr": "Enregistrez le code promo pour générer son QR code, puis téléchargez le visuel.",
     "couponQrPlaceholder": "Le QR code sera généré ici une fois le code promo enregistré.",
-    "selectCategory": "- Choisir une catégorie -"
+    "selectCategory": "- Choisir une catégorie -",
+    "sizes": "Tailles",
+    "sizesEnabled": "Proposer des tailles",
+    "sortSizes": "Trier",
+    "sizesHintCategory": "Chaque article de cette catégorie est proposé dans ces tailles. Chacune décale le prix de base : montant négatif pour une taille plus petite, positif pour une plus grande.",
+    "sizesHintItem": "Laissez vide pour utiliser les tailles de la catégorie. Ajouter des tailles ici remplace entièrement cette liste, pour cet article uniquement.",
+    "sizesInherited": "Tailles de la catégorie utilisées : {names}.",
+    "sizesInheritedNone": "Cette catégorie n’a pas encore de tailles ; cet article est donc vendu en une seule taille.",
+    "noSizes": "Aucune taille pour l’instant. Les articles de cette catégorie sont vendus en une seule taille.",
+    "sizeName": "Nom de la taille",
+    "sizeEnName": "Nom de la taille (EN)",
+    "sizePortion": "Mesure",
+    "sizeUnit": "Unité",
+    "sizePriceDelta": "Variation de prix",
+    "defaultSize": "Par défaut",
+    "deleteSizeTitle": "Supprimer la taille",
+    "deleteSizeText": "Cette taille sera supprimée à l’enregistrement. Les lignes de panier qui l’avaient choisie sont retirées."
   },
   "GradientBuilder": {
     "linear": "Linéaire",
@@ -1320,7 +1366,8 @@
     "calcium": "Calcium",
     "iron": "Fer",
     "potassium": "Potassium",
-    "all": "Menu complet"
+    "all": "Menu complet",
+    "chooseSize": "Choisissez une taille"
   },
   "AdminOrders": {
     "home": "Accueil",

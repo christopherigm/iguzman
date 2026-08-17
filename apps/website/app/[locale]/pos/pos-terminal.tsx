@@ -13,6 +13,7 @@ import {
   lineKey,
   setLineQuantity,
 } from "@/lib/pos";
+import { hasSizeChoice } from "@/lib/menu-selection";
 import { PosTopBar } from "./_components/pos-top-bar";
 import { PosMobileSummary } from "./_components/pos-mobile-summary";
 import { PosCatalog } from "./_components/pos-catalog";
@@ -82,10 +83,14 @@ export function PosTerminal({ items, locale }: Props) {
   };
 
   const handleSelect = (item: PosCatalogItem) => {
-    // Only a menu item the tenant made configurable opens the customiser;
-    // everything else lands in the basket on the first tap, which is what keeps
-    // the common case one touch.
-    if (item.kind === "menu_item" && item.ingredients.length > 0) {
+    // Only a menu item the tenant made configurable opens the customiser - add-ons
+    // to ask about, or a choice of size, which is as much a question as an add-on
+    // is. Everything else lands in the basket on the first tap, which is what
+    // keeps the common case one touch.
+    if (
+      item.kind === "menu_item" &&
+      (item.ingredients.length > 0 || hasSizeChoice(item.sizes))
+    ) {
       setCustomizing(item);
       return;
     }

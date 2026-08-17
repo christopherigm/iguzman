@@ -162,6 +162,7 @@
     "cart": "Carrito",
     "orders": "Pedidos",
     "pos": "PdV",
+    "orderBoard": "Tablero de pedidos",
     "events": "Eventos"
   },
   "Pos": {
@@ -218,6 +219,33 @@
     "errorGeneric": "No se pudo registrar la venta. Inténtalo de nuevo.",
     "errorCoupon": "Ese cupón ya no es válido. Quítalo e inténtalo de nuevo.",
     "couponApplied": "{code} · −{amount}"
+  },
+  "OrderBoard": {
+    "title": "Tablero de pedidos",
+    "waitingCount": "{count, plural, =0 {Nada pendiente} other {# en espera}}",
+    "soundOn": "Sonido activado",
+    "soundOff": "Sonido desactivado",
+    "refresh": "Actualizar",
+    "exit": "Salir",
+    "exitConfirmTitle": "¿Salir del tablero de pedidos?",
+    "exitConfirmText": "Dejarás de ver y escuchar los pedidos nuevos conforme lleguen. Puedes volver cuando quieras.",
+    "back": "Volver",
+    "loading": "Cargando…",
+    "emptyTitle": "Todo al día",
+    "emptyText": "Los pedidos nuevos aparecen aquí en cuanto entran.",
+    "nothingSelected": "Elige un pedido para ver qué preparar.",
+    "itemCount": "{count, plural, one {# artículo} other {# artículos}}",
+    "unpaid": "Sin pagar",
+    "fulfilledSection": "Entregados",
+    "waitMinutes": "{minutes} min",
+    "waitHours": "{hours} h {minutes} min",
+    "newOrder": "Nuevo pedido {ref}",
+    "newOrders": "{count} pedidos nuevos",
+    "fulfilledToast": "{ref} marcado como entregado.",
+    "placedAt": "Recibido a las",
+    "openInAdmin": "Abrir en administración",
+    "errorLoad": "No se pudieron cargar los pedidos.",
+    "errorAction": "No se pudo actualizar el pedido."
   },
   "AuthPage": {
     "tabSignIn": "Iniciar sesión",
@@ -1055,6 +1083,8 @@
     "social_website": "Sitio web",
     "pos": "PdV",
     "posDesc": "Cobra una venta de mostrador.",
+    "orderBoard": "Tablero de pedidos",
+    "orderBoardDesc": "Atiende los pedidos que entran y márcalos como entregados.",
     "storageSection": "Almacenamiento",
     "storageSectionDesc": "Dónde se guardan las imágenes y las copias de seguridad de este sitio. De forma predeterminada están en el bucket de Cloudflare R2 de la plataforma y se sirven desde su CDN: no necesitas cambiar nada. Si este sitio tiene su propio dominio y prefieres alojar sus archivos en tu propia cuenta de Cloudflare, conéctala aquí.",
     "storageEnabled": "Usar el bucket de Cloudflare R2 propio de este sitio",
@@ -1181,7 +1211,23 @@
     "couponExportError": "No se pudo exportar el folleto.",
     "couponSaveForQr": "Guarda el cupón para generar su código QR y luego descarga el folleto.",
     "couponQrPlaceholder": "El código QR se generará aquí cuando guardes el cupón.",
-    "selectCategory": "- Selecciona una categoría -"
+    "selectCategory": "- Selecciona una categoría -",
+    "sizes": "Tamaños",
+    "sizesEnabled": "Ofrecer tamaños",
+    "sortSizes": "Ordenar",
+    "sizesHintCategory": "Todos los productos de esta categoría se ofrecen en estos tamaños. Cada uno ajusta el precio base: usa una cantidad negativa para un tamaño menor y positiva para uno mayor.",
+    "sizesHintItem": "Déjalo vacío para usar los tamaños de la categoría. Si agregas tamaños aquí, reemplazan por completo esa lista solo para este producto.",
+    "sizesInherited": "Usando los tamaños de la categoría: {names}.",
+    "sizesInheritedNone": "Esta categoría todavía no tiene tamaños, así que este producto se vende en un solo tamaño.",
+    "noSizes": "Aún no hay tamaños. Los productos de esta categoría se venden en un solo tamaño.",
+    "sizeName": "Nombre del tamaño",
+    "sizeEnName": "Nombre del tamaño (EN)",
+    "sizePortion": "Medida",
+    "sizeUnit": "Unidad",
+    "sizePriceDelta": "Cambio de precio",
+    "defaultSize": "Predeterminado",
+    "deleteSizeTitle": "Eliminar tamaño",
+    "deleteSizeText": "Este tamaño se eliminará al guardar. Las líneas del carrito que lo eligieron se descartan."
   },
   "GradientBuilder": {
     "linear": "Lineal",
@@ -1320,7 +1366,8 @@
     "calcium": "Calcio",
     "iron": "Hierro",
     "potassium": "Potasio",
-    "all": "Menú completo"
+    "all": "Menú completo",
+    "chooseSize": "Elige un tamaño"
   },
   "AdminOrders": {
     "home": "Inicio",

@@ -744,11 +744,12 @@ quantity}` and nothing else. Everything displayable comes back
   there is no profile to take the tenant from, so Django falls back to the host.
   An _owned_ order stays 404 to anyone but its owner.
 
-## Customising a dish - one picker, three surfaces
+## Customising a dish - two pickers, three surfaces
 
-A menu item's add-ons are rendered by **`components/menu-ingredient-picker.tsx`**
-and by nothing else. Three places ask the same question of the same data, and
-each one is a thin shell around that component:
+A menu item is configured by **`components/menu-size-picker.tsx`** (which size)
+above **`components/menu-ingredient-picker.tsx`** (what goes on it), and by
+nothing else. Three places ask the same questions of the same data, and each one
+is a thin shell around those two components:
 
 | Surface          | Shell                                              | Selection lives in          |
 | ---------------- | -------------------------------------------------- | --------------------------- |
@@ -756,10 +757,13 @@ each one is a thin shell around that component:
 | Catalog card     | `menu-customize-modal.tsx` (a `ConfirmationModal`) | local state                 |
 | POS till         | `pos/_components/pos-customizer-modal.tsx`         | local state                 |
 
-- **The picker is fully controlled and owns no state**, because the detail page's
-  nutrition label has to mirror the customer's selection from a different grid
-  row - so the selection is lifted into the context there, while the two modals
-  keep it locally.
+- **Both pickers are fully controlled and own no state**, because the detail
+  page's nutrition label has to mirror the customer's selection from a different
+  grid row - so the selection is lifted into the context there, while the two
+  modals keep it locally.
+- ⚠ **Size renders first, above the add-ons, on all three.** It is the first thing
+  a customer decides about a dish, and it moves the base price the add-ons are
+  added to.
 - **The arithmetic is `lib/menu-selection.ts`, shared for the same reason.**
   A dish configured at the counter and the same dish configured on the site must
   never quote different numbers. None of it is authoritative: the server
@@ -771,15 +775,57 @@ each one is a thin shell around that component:
 - ⚠ **A food card's add-to-cart icon opens the modal; it does not post the base
   line.** It used to, which silently chose the defaults for a customer who may
   have wanted the dish without onions, and gave no hint the dish was
-  configurable at all. A dish with no customer-facing add-ons still adds in one
-  click, and the **remove** state is unchanged - a click on a dish already in
-  the cart deletes the line, with no modal.
+  configurable at all. A dish with **neither** add-ons nor a choice of size still
+  adds in one click, and the **remove** state is unchanged - a click on a dish
+  already in the cart deletes the line, with no modal. A choice of size is on its
+  own enough to ask: adding the default silently would pick the pizza's diameter,
+  and its price, on the customer's behalf.
+- ⚠ **A sized cart line always reads as `customized` in `/api/auth/cart/ids/`**,
+  so a card never offers "remove" for it. With a small *and* a large of one dish
+  in the cart, a card that offered to remove one could not say which.
 - **`enabledIngredients` lives in `lib/menu-selection.ts`, not beside the detail
   page's components** - the card's customiser is a client component and cannot
   import from a server one. A disabled row is an admin's "not right now" and
   reaches no customer-facing surface. ⚠ The API does **not** filter it: the
   nested `ingredients` on `MenuItemSerializer` carry every row, and
   `price_for_selection` prices a disabled one at its `default_units`.
+
+### Sizes
+
+A dish's `sizes` are authored per **menu category** and optionally *replaced* on
+one dish. The API side owns every rule; read website-api's CLAUDE.md → "Menu
+sizes" first.
+
+- ⚠ **`item.sizes` is already the effective list** - own rows if any, else the
+  category's, empty when `sizes_enabled` is off. The server resolves that; never
+  re-derive "own else category's" on the client, or a dish shows one list on its
+  detail page and another at the till.
+- **The arithmetic is `menuItemTotal` in `lib/menu-selection.ts`**, shared with
+  the ingredient up-charge for the same reason: a pizza configured at the counter
+  and the same pizza configured on the site must not quote different numbers.
+  Display only - the server re-prices every selection.
+- ⚠ **The card's "from" price is `lowestPrice(base, sizes)`**, not the base. With
+  a small size that *discounts* the base, a "from" prefix over the list price
+  names a price the customer can beat. `effectivePrice` stays the list price -
+  it is what the compare-price discount is measured against and what the modal
+  applies its deltas to.
+- **Only the size's delta is printed on a chip, signed** (`−40` / `+40`); a zero
+  delta prints nothing, since the size sold at the list price should not shout
+  about it. The measurement (`"12 in"`) is **pre-composed by the API**, so the
+  trailing-zero trim lives in one place.
+- **In the CMS, `components/admin/menu-sizes-editor.tsx` is one editor for both
+  owners** - the menu-category form and the menu-item form - differing only in
+  its framing (`scope`), which is the whole reason it is one component. A dish's
+  list is its **override**: empty means "inherit", so the editor says what is
+  being inherited rather than "no sizes yet", which would send an operator off to
+  re-type five rows the category already defines. `persistMenuSizes` is shared
+  too, and the subtle part of it is reconciling the ids the API assigns - without
+  that, a second save re-POSTs every new row and the operator ends up with every
+  size twice.
+- ⚠ **The default is a radio, not a switch**, and picking one clears its siblings
+  locally as well as on the API. The API has to do it (rows are PATCHed one at a
+  time); doing it locally too is what stops the operator seeing two filled radios
+  until they reload, which reads as a lost save.
 
 ## POS - the counter-sale till (`/pos`)
 
@@ -809,6 +855,102 @@ route, like `/cart`.
   today's screen. Don't "improve" this by adding persistence.
 - Use `Button size="xl"` for till controls - that size exists for finger-driven
   UIs.
+
+## Order board - the screen orders are worked from (`/order-board`)
+
+`app/[locale]/order-board/` is the till's counterpart: `/pos` **creates** orders
+at a counter, this **works through** them - whatever their source (the
+storefront, a guest checkout, or the till in the next room). It is the screen a
+cook watches on a mounted iPad: a rail of tickets on the left, the open one on
+the right, and one big button that says it is done. Like the till it is a
+platform route with no per-site code and no new backend models, reading the same
+`/api/orders/admin/` the CMS list reads.
+
+| Piece                  | Where                                     |
+| ---------------------- | ----------------------------------------- |
+| Guard + shell          | `order-board/page.tsx`, `order-board.tsx` |
+| Rail, ticket, waiting  | `order-board/_components/`                |
+| Which orders, how late | `lib/order-board.ts`                      |
+| The arrival sound      | `order-board/chime.ts`                    |
+
+- ⚠ **It introduces no order states, and must not.** The board is a _view_ over
+  the two statuses an order can already be in, and its only writes are
+  `mark_fulfilled` / `unmark_fulfilled` - two of the actions `/admin/orders`
+  makes. A kitchen's "accepted" or "in progress" is a model change in
+  website-api, not a third meaning quietly given to `fulfilled`, which the CMS
+  _and_ the customer's own order page both read.
+- ⚠ **It takes no money, and there is no "Mark paid" on it.** This screen
+  _processes_ orders; settling payment is the cashier's, on `/pos` or in the
+  CMS. A payment button on a tablet in a kitchen is a state change made by
+  whoever is not holding the cash. The "Unpaid" chip stays - a cook packing an
+  offline order needs to know the counter has to collect - it is simply not
+  actionable from here.
+- **`paid` and `placed` only.** `pending` is deliberately off the board: it is a
+  Stripe session that has been opened and may never be paid, so showing it asks
+  a cook to make food nobody has bought. `placed` (pay in store / on delivery)
+  **is** on it - the customer committed - which is why a ticket can carry an
+  "Unpaid" chip. **Both statuses are worked from, which is what makes paying an
+  order invisible to the board**: a ticket collected on at the till moves
+  `placed` → `paid`, stays exactly where the cook left it, and only loses its
+  chip on the next poll. Don't "fix" that by filtering the board to one status.
+- **Oldest first**, the opposite of the CMS list's newest-first. That list is a
+  ledger, where the last thing that happened is the interesting one; here the
+  oldest ticket is the customer who has waited longest.
+- ⚠ **A fulfilled ticket is not removed from the rail** - it drops below the
+  waiting ones under a "Fulfilled" divider, dimmed and badged, newest first and
+  capped at `BOARD_FULFILLED_LIMIT` (20). The unfulfilled always come first
+  whatever the clock says: the rail is a queue of work, not a log, so an order
+  still to be made must never be pushed down the screen by one already in the
+  customer's hands. Past twenty, a ticket is `/admin/orders`' business.
+- **It polls; there is no SSE for orders.** Twenty seconds, paused while the tab
+  is hidden and caught up on the way back into view. A chime and a toast fire on
+  a `public_id` the board has never held - a `Set` of every id ever seen, not a
+  diff against the previous poll, so a ticket un-fulfilled by mistake doesn't
+  re-announce itself. ⚠ **The first load seeds that set silently**: announcing a
+  queue of ten as ten new orders is noise, and the chime has to mean "one just
+  came in". ⚠ **Arrivals are decided over the _waiting_ tickets only** - a
+  fulfilled one is not news, and now that it stays on the rail, folding it in
+  would chime for every order the board has ever finished.
+- ⚠ **The chime is synthesised (Web Audio), not an audio file**, and an
+  `AudioContext` made before a user gesture starts `suspended` - so it is
+  created from the shell's capture-phase click handler (the operator's first tap
+  anywhere), never at module load. Nothing throws where Web Audio is missing: a
+  silent board is still a working board.
+- **The open ticket is derived, never defaulted into state**, from a three-way
+  `Selection` rather than a nullable id - because "nothing is open" and
+  "whatever is oldest" are different answers and one `null` cannot hold both.
+  `auto` shows the oldest waiting ticket and hands itself to the next as that
+  one leaves (an order fulfilled on another tablet needs no effect racing to
+  correct a stale selection); `picked` is a tap; `none` is the empty pane.
+- **Marking fulfilled empties the detail pane** (`none`) - what it was showing
+  has been made, so nothing on it is a live instruction any more - and on `xs`
+  closes the sheet, since the operator now needs the rail. Nothing is thrown
+  away: the ticket is still on the rail in the fulfilled group, and **re-opening
+  it is where the undo lives**. That undo is why the group exists; a tap that
+  made a ticket vanish with no way back is the one mistake a busy counter
+  actually makes.
+- **Exit is behind a `ConfirmationModal`, exactly as the till's is.** Nothing
+  unsaved is lost here, but leaving stops the polling and the chime - a stray
+  tap on a screen someone is cooking from is how an order goes unnoticed until
+  the customer asks about it.
+- **The list endpoint carries no lines**, so the rail shows a reference, a
+  waiting time, an item count and a total, and the lines come from one detail
+  fetch per selection. But the list carries **every** order (it does not filter),
+  so a poll is also fresh news about the open ticket: `status` and `fulfilled`
+  are folded in from it rather than costing a second request every twenty
+  seconds. The lines themselves cannot change once an order exists.
+- **The waiting chip's three levels are fixed** (10 / 20 minutes), not
+  per-tenant: they are a presentation nudge, not a promise about prep time. A
+  pizzeria's idea of late belongs in the CMS beside a real prep-time field if it
+  is ever wanted.
+- **Statuses and payment-method labels come from the `AdminOrders` namespace**,
+  not a second copy under `OrderBoard` - that namespace already covers every
+  method an order can carry, and two copies could only drift.
+- **Full-screen, like the till**: `components/hide-on-admin.tsx`'s
+  `HideOnFullScreenTool` (formerly `HideOnPos`) now takes both routes out of the
+  site chrome, and both are in `proxy.ts`'s `protectedPrefixes` **and** re-check
+  `isAdmin` in their `page.tsx` - a prefix cannot tell a signed-in ordinary
+  customer apart from an admin.
 
 ## Media comes from a CDN, not from this pod (`image-loader.ts`)
 

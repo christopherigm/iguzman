@@ -183,7 +183,12 @@ export async function MenuItemDetailPage({
             cell (or null), so absent cards leave no gap. The customiser and the
             nutrition label both read the shared customization context, so both
             sit inside the provider. */}
-        <MenuCustomizationProvider ingredients={enabledIngredients(item.ingredients)}>
+        <MenuCustomizationProvider
+          ingredients={enabledIngredients(item.ingredients)}
+          // Already the effective list (own rows else the category's, empty when
+          // the dish is sold in one size) - resolved by the API, never here.
+          sizes={item.sizes}
+        >
           <Grid container spacing={2}>
             {/* xs: variants above the gallery. sm+: variants move into the
                 customize column, so this cell hides and the gallery leads. */}

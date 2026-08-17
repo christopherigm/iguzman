@@ -175,6 +175,22 @@ class CartItem(models.Model):
         on_delete=models.CASCADE,
         related_name='cart_items',
     )
+    # A menu line's chosen size, when the dish is sold in several. CASCADE like
+    # `menu_item` above and for the same reason: a cart reflects today's catalog,
+    # so a size the tenant has withdrawn takes the lines that chose it with it
+    # rather than silently re-pricing them at another size. Null means the dish
+    # is sold in one size - or that the line took the default, which is what
+    # `price_for_selection` resolves a null to.
+    #
+    # It is part of a menu line's identity alongside `customization`: a small and
+    # a large of the same dish are two lines, not one of quantity 2.
+    menu_size = models.ForeignKey(
+        'catalog.MenuSize',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='cart_items',
+    )
     # A menu item's chosen ingredient selection, normalised to a sorted list of
     # {"ingredient": <id>, "quantity": <int>} (see catalog.normalize_selection).
     # It is part of a menu line's identity - two of the same dish with different
@@ -233,10 +249,10 @@ class CartItem(models.Model):
     @property
     def unit_price(self):
         """What one of this line costs today - the menu item's price for its
-        chosen ingredients when it is a menu line, else the buyable's own base
-        price."""
+        chosen size and ingredients when it is a menu line, else the buyable's
+        own base price."""
         if self.menu_item_id:
-            return self.menu_item.price_for_selection(self.customization)
+            return self.menu_item.price_for_selection(self.customization, self.menu_size)
         return self.target.price
 
     @property

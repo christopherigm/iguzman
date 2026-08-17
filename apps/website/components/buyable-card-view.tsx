@@ -9,7 +9,7 @@ import { Badge } from "@repo/ui/core-elements/badge";
 import { toShareDescription } from "@/lib/share";
 import { menuItemHref } from "@/lib/menu-paths";
 import { formatPrice, discountPercent } from "@/lib/price";
-import { enabledIngredients } from "@/lib/menu-selection";
+import { enabledIngredients, lowestPrice } from "@/lib/menu-selection";
 import { BuyableCardActions } from "./buyable-card-actions";
 import { AdminEditButton } from "./admin-edit-button";
 import type { BuyableItem } from "./buyable-card";
@@ -129,6 +129,16 @@ export function BuyableCardView({
   // ever prices and pictures the item it is for.
   const effectivePrice = data.price;
   const effectiveCompare = data.compare_price;
+  // What the card *prints*, which is not always the list price: a dish offered in
+  // several sizes shows the cheapest one it can be had at, since a small size
+  // discounts the base and a "from" prefix over the base alone would name a price
+  // the customer can beat. The list price stays `effectivePrice` - it is what the
+  // compare-price discount is measured against and what the modal applies its
+  // deltas to.
+  const displayPrice =
+    item.kind === "food"
+      ? lowestPrice(effectivePrice, item.data.sizes).toFixed(2)
+      : effectivePrice;
   const image =
     item.kind === "food"
       ? (item.data.image ??
@@ -319,7 +329,7 @@ export function BuyableCardView({
               fontWeight={700}
               color="var(--foreground)"
             >
-              {formatPrice(effectivePrice, data.currency)}
+              {formatPrice(displayPrice, data.currency)}
             </Typography>
             {kind === "service" &&
               perPersonLabel &&
@@ -334,7 +344,7 @@ export function BuyableCardView({
                 </Typography>
               )}
             {effectiveCompare &&
-              parseFloat(effectiveCompare) > parseFloat(effectivePrice) && (
+              parseFloat(effectiveCompare) > parseFloat(displayPrice) && (
                 <Typography
                   as="span"
                   variant="label"
@@ -372,6 +382,7 @@ export function BuyableCardView({
                     price: effectivePrice,
                     currency: data.currency,
                     ingredients: enabledIngredients(item.data.ingredients),
+                    sizes: item.data.sizes,
                     locale,
                   }
                 : undefined

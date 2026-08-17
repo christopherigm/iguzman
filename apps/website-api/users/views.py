@@ -786,6 +786,10 @@ def _favorites_qs(request, system):
         .prefetch_related(
             'product__images', 'service__images',
             'menu_item__images', 'menu_item__ingredients', 'menu_item__ingredients__options__ingredient',
+            # The size lists the nested MenuItemSerializer resolves. No
+            # `menu_size` here, unlike the cart's: a favorite is a *dish*, not a
+            # configured line, so there is no chosen size on the row.
+            'menu_item__own_sizes', 'menu_item__category__sizes',
         )
     )
 
@@ -896,10 +900,13 @@ def _cart_qs(request, system):
     return (
         CartItem.objects
         .filter(user=request.user, system=system)
-        .select_related('product', 'service', 'menu_item')
+        # `menu_size` is a forward FK, so it joins rather than costing the
+        # second query a prefetch would.
+        .select_related('product', 'service', 'menu_item', 'menu_size')
         .prefetch_related(
             'product__images', 'service__images',
             'menu_item__images', 'menu_item__ingredients', 'menu_item__ingredients__options__ingredient',
+            'menu_item__own_sizes', 'menu_item__category__sizes',
         )
     )
 
@@ -923,6 +930,17 @@ def _menu_selection(menu_item, customization):
         menu_item.ingredients.filter(enabled=True).prefetch_related('options')
     )
     return normalize_selection(customization or [], ingredients)
+
+
+def _menu_size(menu_item, size_id):
+    """The size a menu line is for, resolved against what the dish offers.
+
+    Never trusted from the request: `resolve_size` matches the id against the
+    dish's effective list and falls back to the default, so a size belonging to
+    another dish (or one retired since the page loaded) cannot be bought at its
+    price. None for a dish sold in one size.
+    """
+    return menu_item.resolve_size(size_id)
 
 
 def _add_cart_line(user, system, kind, target, quantity):
@@ -949,21 +967,34 @@ def _add_cart_line(user, system, kind, target, quantity):
     return item, created
 
 
-def _add_menu_line(user, system, menu_item, selection, quantity):
-    """Add a menu line, or raise the quantity of the one with the same selection.
+def _add_menu_line(user, system, menu_item, selection, quantity, size=None):
+    """Add a menu line, or raise the quantity of the one with the same selection
+    **and the same size**.
 
     A database unique constraint cannot express "same selection" over a JSON
     column, so the merge is done here: look for an existing line of this dish
-    whose stored selection matches and bump its quantity, otherwise create a new
-    line. Locked against the same double-click race `_add_cart_line` guards.
+    whose stored selection and size both match and bump its quantity, otherwise
+    create a new line. Locked against the same double-click race `_add_cart_line`
+    guards.
+
+    Size is part of the line's identity for the same reason the selection is: a
+    small and a large of one dish are two different things at two different
+    prices, and merging them would charge one of them at the other's.
     """
+    size_id = size.id if size is not None else None
     with transaction.atomic():
         existing = (
             CartItem.objects
             .select_for_update()
             .filter(user=user, system=system, menu_item=menu_item)
         )
-        match = next((row for row in existing if row.customization == selection), None)
+        match = next(
+            (
+                row for row in existing
+                if row.customization == selection and row.menu_size_id == size_id
+            ),
+            None,
+        )
         if match is not None:
             match.quantity = min(match.quantity + quantity, 99)
             match.save(update_fields=["quantity", "updated_at"])
@@ -973,6 +1004,7 @@ def _add_menu_line(user, system, menu_item, selection, quantity):
             user=user,
             system=system,
             menu_item=menu_item,
+            menu_size=size,
             customization=selection,
             quantity=quantity,
         ), True
@@ -1051,7 +1083,10 @@ class CartListView(APIView):
         """Add (or increment) a menu line, where the ingredient selection is part
         of the line's identity."""
         selection = _menu_selection(menu_item, data.get("customization", []))
-        item, created = _add_menu_line(request.user, system, menu_item, selection, quantity)
+        size = _menu_size(menu_item, data.get("size"))
+        item, created = _add_menu_line(
+            request.user, system, menu_item, selection, quantity, size,
+        )
 
         invalidate_cart(request.user.id, system.id if system else 0)
         return Response(
@@ -1084,9 +1119,10 @@ class CartItemDetailView(APIView):
         return CartItem.objects.filter(
             pk=pk, user=request.user, system=_user_system(request),
         ).select_related(
-            'product', 'service', 'menu_item',
+            'product', 'service', 'menu_item', 'menu_size',
         ).prefetch_related(
-            'menu_item__ingredients', 'menu_item__ingredients__options__ingredient'
+            'menu_item__ingredients', 'menu_item__ingredients__options__ingredient',
+            'menu_item__own_sizes', 'menu_item__category__sizes',
         ).first()
 
     def patch(self, request, pk):
@@ -1161,7 +1197,7 @@ class CartIdsView(APIView):
             return Response(cached)
 
         rows = CartItem.objects.filter(user=request.user, system=system).values_list(
-            "id", "product_id", "service_id", "menu_item_id", "customization",
+            "id", "product_id", "service_id", "menu_item_id", "menu_size_id", "customization",
         )
 
         def _kind(product_id, service_id):
@@ -1177,13 +1213,17 @@ class CartIdsView(APIView):
                     "line_id": line_id,
                     "kind": _kind(product_id, service_id),
                     "id": product_id or service_id or menu_item_id,
-                    # A menu line's ingredient selection is part of its identity,
-                    # but the catalog card only ever adds/removes the base line;
-                    # this flag lets it match that one and ignore customised
-                    # siblings. Always false for product/service.
-                    "customized": bool(customization),
+                    # A menu line's ingredient selection AND its size are both
+                    # part of its identity, but the catalog card only ever
+                    # adds/removes the base line; this flag lets it match that
+                    # one and ignore customised siblings. A sized line always
+                    # counts as customised - with a small and a large of the same
+                    # dish in the cart, a card that offered "remove" could not say
+                    # which one it would take away. Always false for
+                    # product/service.
+                    "customized": bool(customization) or menu_size_id is not None,
                 }
-                for line_id, product_id, service_id, menu_item_id, customization in rows
+                for line_id, product_id, service_id, menu_item_id, menu_size_id, customization in rows
             ],
         }
         cache.set(cache_key, data, CART_CACHE_TTL)
@@ -1293,7 +1333,10 @@ class GuestMergeView(APIView):
 
         for line in resolve_guest_cart(system, serializer.validated_data["cart"]):
             if line.menu_item_id:
-                _add_menu_line(user, system, line.menu_item, line.customization, line.quantity)
+                _add_menu_line(
+                user, system, line.menu_item, line.customization, line.quantity,
+                line.menu_size,
+            )
             else:
                 _add_cart_line(
                     user, system, line.kind, line.target, line.quantity,

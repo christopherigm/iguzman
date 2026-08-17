@@ -26,6 +26,7 @@ from catalog.models import (
     MenuCategory,
     MenuItem,
     MenuItemIngredient,
+    MenuSize,
     Product,
     ProductCategory,
 )
@@ -88,6 +89,80 @@ class SitePayloadIngredientRoundTripTests(TestCase):
         self.assertEqual(mii["ingredient"], "butter")
         self.assertNotIn("name", mii)
 
+    def test_menu_sizes_survive_a_publish(self):
+        """A category's size list and a dish's override both travel, and an
+        inheriting dish arrives still inheriting."""
+        source = self._build_source()
+        category = MenuCategory.objects.get(slug="breads")
+        item = MenuItem.objects.get(slug="banana-bread")
+        MenuSize.objects.create(
+            category=category, name="Chico", portion=Decimal("4"), unit="in",
+            price_delta=Decimal("-1.00"), is_default=True, sort_order=0,
+        )
+        MenuSize.objects.create(
+            category=category, name="Grande", portion=Decimal("8"), unit="in",
+            price_delta=Decimal("1.50"), sort_order=1,
+        )
+
+        payload = serialize_system(source)
+        exported = payload["menu_categories"][0]
+        self.assertEqual([s["name"] for s in exported["sizes"]], ["Chico", "Grande"])
+        # An inheriting dish carries no size list of its own - exporting the
+        # resolved one would detach it from its category on the far side.
+        self.assertNotIn("sizes", exported["menu_items"][0])
+        self.assertTrue(exported["menu_items"][0]["sizes_enabled"])
+
+        MenuSize.objects.all().delete()
+        MenuItemIngredient.objects.all().delete()
+        MenuItem.objects.all().delete()
+        Ingredient.objects.all().delete()
+        MenuCategory.objects.all().delete()
+        System.objects.all().delete()
+
+        apply_payload(payload)
+
+        restored = MenuItem.objects.get(slug="banana-bread")
+        self.assertEqual(
+            [s.name for s in restored.effective_sizes], ["Chico", "Grande"],
+        )
+        self.assertEqual(restored.default_size.name, "Chico")
+        self.assertEqual(restored.price_for_selection([]), Decimal("4.00"))
+        # `system` is derived from the owner, which is what scopes the row for
+        # backup and for which bucket its image lands in.
+        self.assertEqual(
+            MenuSize.objects.filter(system=restored.system_id).count(), 2,
+        )
+
+    def test_a_dish_override_travels_as_an_override(self):
+        source = self._build_source()
+        item = MenuItem.objects.get(slug="banana-bread")
+        MenuSize.objects.create(
+            category=MenuCategory.objects.get(slug="breads"), name="Chico",
+            price_delta=Decimal("-1.00"),
+        )
+        MenuSize.objects.create(
+            menu_item=item, name="Individual", price_delta=Decimal("-2.00"),
+        )
+
+        payload = serialize_system(source)
+        self.assertEqual(
+            [s["name"] for s in payload["menu_categories"][0]["menu_items"][0]["sizes"]],
+            ["Individual"],
+        )
+
+        MenuSize.objects.all().delete()
+        MenuItemIngredient.objects.all().delete()
+        MenuItem.objects.all().delete()
+        Ingredient.objects.all().delete()
+        MenuCategory.objects.all().delete()
+        System.objects.all().delete()
+
+        apply_payload(payload)
+
+        restored = MenuItem.objects.get(slug="banana-bread")
+        # Still an override on the far side: own rows replace the category's.
+        self.assertEqual([s.name for s in restored.effective_sizes], ["Individual"])
+
     def test_apply_into_a_fresh_db_relinks_by_slug(self):
         source = self._build_source()
         payload = serialize_system(source)
@@ -133,6 +208,34 @@ class IsolatedMediaTestCase(TestCase):
         super().tearDownClass()
         cls._media_override.disable()
         shutil.rmtree(cls._media_root, ignore_errors=True)
+
+
+class MenuSizeMediaTests(IsolatedMediaTestCase):
+    """Where a size's picture is stored - isolated because it writes a real file."""
+
+    def test_a_sizes_image_is_stored_under_its_tenant(self):
+        """The upload path is the routing key for per-tenant R2 (see
+        `core.tenant_paths`), so a size's picture must carry `t/<system_id>/`.
+
+        Pinned because `MenuSize.system` is *derived in save()*, while every
+        seed/publish path attaches the file with `save=False` beforehand - an
+        order of operations that resolves the tenant to None and silently files
+        the photo on the platform bucket, where a tenant on its own bucket would
+        never find it.
+        """
+        system = System.objects.create(site_name="Bakery", host="bakery.test")
+        size = MenuSize(
+            category=MenuCategory.objects.create(
+                system=system, name="Breads", slug="breads",
+            ),
+            system=system,
+            name="Chico",
+        )
+        size.image.save("chico.jpg", ContentFile(b"x"), save=False)
+        size.save()
+        self.assertTrue(
+            size.image.name.startswith(f"t/{system.pk}/"), size.image.name,
+        )
 
 
 class SiteBackupRoundTripTests(IsolatedMediaTestCase):

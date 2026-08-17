@@ -17,7 +17,14 @@ admin single + bulk delete, the API views, and any cascade uniformly:
    ``post_save`` fires on create *and* update (covering an ``enabled`` toggle or
    a ``category`` reassignment); ``post_delete`` covers removals.
 
-3. **Items -> the System payload.** ``SystemSerializer`` embeds
+3. **Sizes -> the menu.** A ``MenuSize`` is nested on its category's payload
+   *and*, through ``MenuItem.effective_sizes`` ("own rows else the category's"),
+   on the payload of every dish that inherits it. A category-level size write
+   therefore invalidates the whole menu-item namespace: which dishes inherit is
+   not something this receiver can enumerate cheaply, and a dish showing a size
+   the tenant just retired is a price the customer can still select.
+
+4. **Items -> the System payload.** ``SystemSerializer`` embeds
    ``product_count``, ``service_count`` and ``menu_item_count``, and that
    payload is cached for a whole hour. The storefront navbar builds its links
    from those numbers, so an item write - creating the tenant's first menu item,
@@ -31,7 +38,8 @@ from django.dispatch import receiver
 from core.cache import invalidate_pattern, invalidate_system_payload
 
 from .models import (
-    MenuCategory, MenuItem, Product, ProductCategory, Service, ServiceCategory,
+    MenuCategory, MenuItem, MenuSize, Product, ProductCategory, Service,
+    ServiceCategory,
 )
 
 
@@ -86,3 +94,18 @@ def invalidate_service_categories_on_item_change(sender, instance, **kwargs):
 def invalidate_menu_categories_on_item_change(sender, instance, **kwargs):
     _invalidate_categories("menu")
     invalidate_system_payload()
+
+
+# ── Sizes -> the category and every dish that inherits them ──────────────────
+
+@receiver(post_save, sender=MenuSize)
+@receiver(post_delete, sender=MenuSize)
+def invalidate_menu_on_size_change(sender, instance, **kwargs):
+    if instance.category_id:
+        invalidate_pattern(f"catalog:menu_category_sizes:{instance.category_id}:*")
+        _invalidate_categories("menu")
+    if instance.menu_item_id:
+        invalidate_pattern(f"catalog:menu_item_sizes:{instance.menu_item_id}:*")
+    # Both owners land here: an item-level override changes that dish's payload,
+    # and a category-level row changes every dish that has none of its own.
+    _invalidate_family("menu_item")

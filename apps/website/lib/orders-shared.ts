@@ -61,6 +61,20 @@ export interface OrderLine {
   kind: "product" | "service" | "menu_item";
   name: string;
   sku: string;
+  /**
+   * The size this line was sold in, **snapshotted** at checkout like `name` and
+   * `unit_price` - not read back through a FK. A tenant renames "Grande" or
+   * retires it; the receipt has to keep saying what was bought. Empty string for a
+   * product, a service, and a dish sold in one size.
+   *
+   * Printed as-is, in the language it was captured in - exactly as `name` is; the
+   * `en_` copy rides along for the CMS. `size_price_delta` is already inside
+   * `unit_price`, and is carried so the line can be read back as base + size
+   * rather than as one number that does not reconcile against the catalog.
+   */
+  size_name: string;
+  size_en_name: string;
+  size_price_delta: string;
   customization: OrderLineCustomization[];
   unit_price: string;
   quantity: number;

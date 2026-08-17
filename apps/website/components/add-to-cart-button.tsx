@@ -9,8 +9,8 @@ import { Toast } from "@repo/ui/core-elements/toast";
 import type { IconButtonSize } from "@repo/ui/core-elements/icon-button";
 import type { ButtonSize, ButtonKind } from "@repo/ui/core-elements/button";
 import { useGuestState } from "@/hooks/use-guest-cart";
-import type { MenuItemIngredient } from "@/lib/catalog";
-import { customizableIngredients } from "@/lib/menu-selection";
+import type { MenuItemIngredient, MenuSize } from "@/lib/catalog";
+import { customizableIngredients, hasSizeChoice } from "@/lib/menu-selection";
 import {
   addGuestCartLine,
   findGuestCartLine,
@@ -20,17 +20,21 @@ import { MenuCustomizeModal } from "./menu-customize-modal";
 
 /**
  * Everything the add-to-cart step needs to ask a customer how they want a dish
- * before it goes in the cart. Passed only for a `food` item that has add-ons;
- * without it (or with none) the button posts the base line as it always did.
+ * before it goes in the cart. Passed only for a `food` item that has a choice to
+ * make - add-ons, several sizes, or both; without it (or with neither) the button
+ * posts the base line as it always did.
  */
 export interface AddToCartCustomization {
   /** The dish's name, already resolved to the reader's locale. */
   name: string;
-  /** The item's own list price - the modal adds the selection's up-charge to it. */
+  /** The item's own list price - the modal applies the size delta and the
+   *  selection's up-charge to it. */
   price: string;
   currency: string;
   /** The item's live ingredients (disabled rows already dropped by the caller). */
   ingredients: MenuItemIngredient[];
+  /** The dish's effective sizes, as the API resolved them. */
+  sizes: MenuSize[];
   locale: string;
 }
 
@@ -160,7 +164,10 @@ export function AddToCartButton({
     () => customizableIngredients(customize?.ingredients ?? []).length > 0,
     [customize?.ingredients],
   );
-  const asksFirst = kind === "food" && !inCart && hasAddOns;
+  // A choice of size is on its own enough to ask: adding the default silently
+  // would pick the pizza's diameter, and its price, for the customer.
+  const hasSizes = hasSizeChoice(customize?.sizes ?? []);
+  const asksFirst = kind === "food" && !inCart && (hasAddOns || hasSizes);
 
   const label = inCart ? t("removeFromCart") : t("addToCart");
   const icon = inCart
@@ -205,7 +212,8 @@ export function AddToCartButton({
             method: "POST",
             headers: { "Content-Type": "application/json" },
             // Food posts the base line: kind `menu_item` with no ingredient
-            // changes.
+            // changes and no size named, which the server prices at the dish's
+            // default size. Only reached when there was nothing to ask about.
             body: JSON.stringify(
               kind === "food"
                 ? { kind: "menu_item", id, customization: [], quantity: 1 }
@@ -266,6 +274,7 @@ export function AddToCartButton({
           basePrice={customize.price}
           currency={customize.currency}
           ingredients={customize.ingredients}
+          sizes={customize.sizes}
           isLoggedIn={isLoggedIn}
           locale={customize.locale}
           onCancel={() => setCustomizing(false)}

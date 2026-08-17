@@ -15,7 +15,7 @@ from django.db import transaction
 from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
-from catalog.models import MenuCategory, MenuItem, Product, Service
+from catalog.models import MenuCategory, MenuItem, MenuSize, Product, Service
 from core.crypto import decrypt, encrypt
 from core.models import BookingResource, Branch, BranchHours, ResourcePool, System
 from users.models import CartItem
@@ -3855,3 +3855,80 @@ class CouponTests(TestCase):
         self.assertEqual(order.coupon_code, "SUMMER20")
         self.assertEqual(order.discount_amount, Decimal("20.00"))
         self.assertEqual(order.total, Decimal("80.00"))
+
+
+class OrderLineSizeSnapshotTests(TestCase):
+    """An order line freezes the size it sold, like every other displayable fact
+    on it - the receipt has to keep saying "Grande" after the tenant renames or
+    retires that size."""
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(
+            site_name="Piccolo", host="piccolo.test", pay_in_store_enabled=True,
+        )
+        category = MenuCategory.objects.create(
+            system=self.system, name="Pizzas", slug="snap-pizzas",
+        )
+        self.item = MenuItem.objects.create(
+            system=self.system, category=category, name="Margarita",
+            slug="snap-margarita", price=Decimal("200.00"), currency="MXN",
+        )
+        MenuSize.objects.create(
+            category=category, name="Mediana", price_delta=Decimal("0.00"),
+            is_default=True, sort_order=0,
+        )
+        self.large = MenuSize.objects.create(
+            category=category, name="Grande", en_name="Large",
+            price_delta=Decimal("40.00"), sort_order=1,
+        )
+        self.user = User.objects.create_user("u", password="x", email="a@piccolo.test")
+        self.user.profile.system = self.system
+        self.user.profile.save()
+        self.client.force_login(self.user)
+
+    def _place(self):
+        response = self.client.post(
+            "/api/orders/checkout/",
+            {
+                "locale": "en",
+                "payment_method": "in_store",
+                "contact": {"name": "Jo", "phone": "555-1234"},
+            },
+            content_type="application/json", HTTP_X_WEBSITE_HOST="piccolo.test",
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        return Order.objects.get(public_id=response.json()["order_id"])
+
+    def test_the_line_records_the_size_and_its_delta(self):
+        CartItem.objects.create(
+            user=self.user, system=self.system, menu_item=self.item,
+            menu_size=self.large, quantity=1,
+        )
+        line = self._place().lines.get()
+        self.assertEqual(line.size_name, "Grande")
+        self.assertEqual(line.size_en_name, "Large")
+        self.assertEqual(line.size_price_delta, Decimal("40.00"))
+        self.assertEqual(line.unit_price, Decimal("240.00"))
+
+    def test_the_snapshot_survives_the_size_being_retired(self):
+        CartItem.objects.create(
+            user=self.user, system=self.system, menu_item=self.item,
+            menu_size=self.large, quantity=1,
+        )
+        order = self._place()
+        self.large.delete()
+        line = order.lines.get()
+        self.assertEqual(line.size_name, "Grande")
+        self.assertEqual(line.unit_price, Decimal("240.00"))
+
+    def test_a_dish_sold_in_one_size_records_nothing(self):
+        self.item.sizes_enabled = False
+        self.item.save()
+        CartItem.objects.create(
+            user=self.user, system=self.system, menu_item=self.item, quantity=1,
+        )
+        line = self._place().lines.get()
+        self.assertEqual(line.size_name, "")
+        self.assertEqual(line.size_price_delta, Decimal("0.00"))
+        self.assertEqual(line.unit_price, Decimal("200.00"))

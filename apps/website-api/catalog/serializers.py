@@ -10,10 +10,10 @@ from .models import (
     ProductCategory, Product, ProductImage,
     ServiceCategory, Service, ServiceImage,
     MenuCategory, MenuItem, MenuItemImage, MenuItemIngredient,
-    MenuItemIngredientOption, RecipeStep,
+    MenuItemIngredientOption, MenuSize, RecipeStep,
     Ingredient, IngredientProvider,
     DIMENSION_UNIT_CHOICES, WEIGHT_UNIT_CHOICES, MODALITY_CHOICES,
-    QUANTITY_UNIT_CHOICES,
+    QUANTITY_UNIT_CHOICES, SIZE_UNIT_CHOICES,
 )
 
 
@@ -860,12 +860,128 @@ class ServiceWriteSerializer(serializers.Serializer):
 
 
 # ---------------------------------------------------------------------------
+# MenuSize serializers (shared by the category list and the per-item override)
+# ---------------------------------------------------------------------------
+
+# Aligned to the SmallPicture (256px) mixin backing MenuSize.image - a size's
+# picture is a thumbnail in a chip, the same role an Ingredient's plays.
+_MENU_SIZE_IMAGE_CFG = image_cfg(SMALL)
+
+
+class MenuSizeSerializer(serializers.ModelSerializer):
+    """One size, read. Serves three surfaces unchanged: the category's list in
+    the CMS, a menu item's override list, and the effective list a customer
+    picks from on the storefront."""
+
+    image = serializers.SerializerMethodField()
+    # "12 in", or null when the size carries no measurement. Resolved here rather
+    # than composed per consumer: the detail page, the card modal and the till
+    # all print it, and three copies of the same trailing-zero trim is how they
+    # come to disagree.
+    measurement = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = MenuSize
+        fields = [
+            'id', 'enabled', 'created', 'modified', 'version',
+            'category', 'menu_item',
+            'name', 'en_name', 'description', 'en_description', 'image',
+            'portion', 'unit', 'measurement',
+            'price_delta', 'is_default', 'sort_order',
+        ]
+        read_only_fields = ['id', 'created', 'modified', 'version', 'category', 'menu_item']
+
+    def get_image(self, obj):
+        request = self.context.get('request')
+        if not obj.image:
+            return None
+        return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+
+
+class MenuSizeWriteSerializer(serializers.ModelSerializer):
+    image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
+    class Meta:
+        model = MenuSize
+        fields = [
+            'name', 'en_name', 'description', 'en_description', 'image',
+            'portion', 'unit', 'price_delta', 'is_default', 'sort_order',
+            'enabled',
+        ]
+
+    def validate_unit(self, value):
+        if value in (None, ''):
+            return value
+        if value not in {c[0] for c in SIZE_UNIT_CHOICES}:
+            raise serializers.ValidationError('Invalid unit.')
+        return value
+
+    def validate_image(self, value):
+        if not value:
+            return value
+        sub = ImageProcessingSerializer(data={'base64_image': value}, **_MENU_SIZE_IMAGE_CFG)
+        if not sub.is_valid():
+            raise serializers.ValidationError(sub.errors['base64_image'])
+        return value
+
+    def create(self, validated_data, **owner):
+        """``owner`` is exactly one of ``category=`` / ``menu_item=``; the view
+        supplies it from the URL rather than the body, so a crafted payload
+        cannot file a size under another tenant's category."""
+        image_data = validated_data.pop('image', None)
+        instance = MenuSize.objects.create(**validated_data, **owner)
+        if image_data:
+            self._save_image(instance, image_data)
+        self._sync_default(instance)
+        return instance
+
+    def update(self, instance, validated_data):
+        clear_image = 'image' in validated_data and not validated_data.get('image')
+        image_data = validated_data.pop('image', None)
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        if clear_image:
+            instance.image = None
+        instance.save()
+        if image_data:
+            self._save_image(instance, image_data)
+        self._sync_default(instance)
+        return instance
+
+    def _sync_default(self, instance):
+        """Make ``is_default`` behave like the radio button the CMS renders.
+
+        Rows are written one at a time (the editor PATCHes each), so nothing else
+        would stop two of them claiming the default. The model tolerates that -
+        ``MenuItem.default_size`` takes the first in display order - but the CMS
+        would then show two filled radios, which reads as a lost save.
+        """
+        if not instance.is_default:
+            return
+        siblings = MenuSize.objects.filter(
+            category_id=instance.category_id, menu_item_id=instance.menu_item_id,
+        ).exclude(pk=instance.pk)
+        siblings.update(is_default=False)
+
+    def _save_image(self, instance, image_data):
+        proc = ImageProcessingSerializer(data={'base64_image': image_data}, **_MENU_SIZE_IMAGE_CFG)
+        proc.is_valid()
+        proc.save_to_field(instance.image, f'menu_size_{instance.pk}')
+        instance.save(update_fields=['image'])
+
+
+# ---------------------------------------------------------------------------
 # MenuCategory serializers
 # ---------------------------------------------------------------------------
 
 class MenuCategorySerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
     item_count = serializers.SerializerMethodField()
+    # The sizes every dish in this category is offered in unless it overrides
+    # them. Nested rather than a separate fetch because the storefront reads the
+    # category payload for the menu page anyway, and a size list is a handful of
+    # short rows.
+    sizes = MenuSizeSerializer(many=True, read_only=True)
 
     class Meta:
         model = MenuCategory
@@ -873,7 +989,7 @@ class MenuCategorySerializer(serializers.ModelSerializer):
             'id', 'enabled', 'created', 'modified', 'version',
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'image', 'item_count',
-            'sort_order',
+            'sizes', 'sort_order',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
 
@@ -1454,6 +1570,12 @@ class MenuItemSerializer(serializers.ModelSerializer):
     images = MenuItemImageSerializer(many=True, read_only=True)
     ingredients = MenuItemIngredientSerializer(many=True, read_only=True)
     variants = MenuItemVariantSerializer(many=True, read_only=True)
+    # The sizes this dish is actually offered in - its own override rows if it
+    # has any, otherwise its category's, and empty when `sizes_enabled` is off.
+    # Resolved on the server so the customiser, the catalog card and the till all
+    # read one answer; re-deriving "own else category's" in three clients is how
+    # a dish comes to show one list on its detail page and another at the counter.
+    sizes = serializers.SerializerMethodField()
     brand_name = serializers.CharField(source='brand.name', read_only=True, default=None)
     category_name = serializers.CharField(source='category.name', read_only=True, default=None)
     category_slug = serializers.SlugRelatedField(source='category', slug_field='slug', read_only=True)
@@ -1468,6 +1590,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
             'short_description', 'en_short_description',
             'slug', 'sku',
             'image', 'images', 'ingredients', 'variants',
+            'sizes', 'sizes_enabled',
             'href', 'video_link', 'fit', 'background_color',
             'price', 'compare_price', 'cost_price', 'currency',
             'is_available', 'is_featured', 'is_ai_generated', 'is_verified',
@@ -1481,6 +1604,11 @@ class MenuItemSerializer(serializers.ModelSerializer):
 
     def get_image(self, obj):
         return _buyable_image_url(obj, self.context.get('request'))
+
+    def get_sizes(self, obj):
+        return MenuSizeSerializer(
+            obj.effective_sizes, many=True, context=self.context,
+        ).data
 
 
 class MenuItemWriteSerializer(serializers.Serializer):
@@ -1536,6 +1664,10 @@ class MenuItemWriteSerializer(serializers.Serializer):
     is_ai_generated = serializers.BooleanField(required=False)
     is_verified = serializers.BooleanField(required=False)
     show_nutrition_label = serializers.BooleanField(required=False)
+    # Off means "sold in one size" - it is what an edge-case dish uses to opt out
+    # of a category that sizes everything else. The dish's own override rows are
+    # written through /catalog/menu-items/<pk>/sizes/, not from here.
+    sizes_enabled = serializers.BooleanField(required=False)
 
     eta_minutes = serializers.IntegerField(min_value=0, required=False, allow_null=True)
     spice_level = serializers.IntegerField(min_value=0, max_value=5, required=False, allow_null=True)

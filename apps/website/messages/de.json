@@ -162,6 +162,7 @@
     "cart": "Warenkorb",
     "orders": "Bestellungen",
     "pos": "Kasse",
+    "orderBoard": "Bestelltafel",
     "events": "Veranstaltungen"
   },
   "Pos": {
@@ -218,6 +219,33 @@
     "errorGeneric": "Verkauf konnte nicht erfasst werden. Versuche es erneut.",
     "errorCoupon": "Dieser Gutschein ist nicht mehr gültig. Entferne ihn und versuche es erneut.",
     "couponApplied": "{code} · −{amount}"
+  },
+  "OrderBoard": {
+    "title": "Bestelltafel",
+    "waitingCount": "{count, plural, =0 {Nichts offen} other {# offen}}",
+    "soundOn": "Ton an",
+    "soundOff": "Ton aus",
+    "refresh": "Aktualisieren",
+    "exit": "Beenden",
+    "exitConfirmTitle": "Bestelltafel verlassen?",
+    "exitConfirmText": "Neue Bestellungen werden dann nicht mehr angezeigt oder angekündigt. Du kannst jederzeit zurückkehren.",
+    "back": "Zurück",
+    "loading": "Wird geladen…",
+    "emptyTitle": "Alles erledigt",
+    "emptyText": "Neue Bestellungen erscheinen hier, sobald sie eingehen.",
+    "nothingSelected": "Wähle eine Bestellung, um zu sehen, was zuzubereiten ist.",
+    "itemCount": "{count, plural, one {# Artikel} other {# Artikel}}",
+    "unpaid": "Unbezahlt",
+    "fulfilledSection": "Erledigt",
+    "waitMinutes": "{minutes} Min.",
+    "waitHours": "{hours} Std. {minutes} Min.",
+    "newOrder": "Neue Bestellung {ref}",
+    "newOrders": "{count} neue Bestellungen",
+    "fulfilledToast": "{ref} als erledigt markiert.",
+    "placedAt": "Eingegangen um",
+    "openInAdmin": "In der Verwaltung öffnen",
+    "errorLoad": "Bestellungen konnten nicht geladen werden.",
+    "errorAction": "Die Bestellung konnte nicht aktualisiert werden."
   },
   "AuthPage": {
     "tabSignIn": "Anmelden",
@@ -1055,6 +1083,8 @@
     "social_website": "Webseite",
     "pos": "Kasse",
     "posDesc": "Einen Verkauf am Tresen abwickeln.",
+    "orderBoard": "Bestelltafel",
+    "orderBoardDesc": "Eingehende Bestellungen abarbeiten und als erledigt markieren.",
     "storageSection": "Speicher",
     "storageSectionDesc": "Wo die Bilder und Sicherungen dieser Website gespeichert werden. Standardmäßig liegen sie im Cloudflare-R2-Bucket der Plattform und werden über deren CDN ausgeliefert – Sie müssen nichts ändern. Wenn diese Website eine eigene Domain hat und Sie die Dateien lieber in Ihrem eigenen Cloudflare-Konto hosten möchten, verbinden Sie es hier.",
     "storageEnabled": "Eigenen Cloudflare-R2-Bucket dieser Website verwenden",
@@ -1181,7 +1211,23 @@
     "couponExportError": "Der Flyer konnte nicht exportiert werden.",
     "couponSaveForQr": "Speichere den Gutschein, um seinen QR-Code zu erzeugen, und lade dann den Flyer herunter.",
     "couponQrPlaceholder": "Der QR-Code wird hier erzeugt, sobald der Gutschein gespeichert ist.",
-    "selectCategory": "- Kategorie wählen -"
+    "selectCategory": "- Kategorie wählen -",
+    "sizes": "Größen",
+    "sizesEnabled": "Größen anbieten",
+    "sortSizes": "Sortieren",
+    "sizesHintCategory": "Jeder Artikel dieser Kategorie wird in diesen Größen angeboten. Jede verschiebt den Grundpreis: negativer Betrag für eine kleinere, positiver für eine größere Größe.",
+    "sizesHintItem": "Leer lassen, um die Größen der Kategorie zu verwenden. Größen hier ersetzen diese Liste vollständig – nur für diesen Artikel.",
+    "sizesInherited": "Es gelten die Größen der Kategorie: {names}.",
+    "sizesInheritedNone": "Diese Kategorie hat noch keine Größen, dieser Artikel wird also in einer Größe verkauft.",
+    "noSizes": "Noch keine Größen. Artikel dieser Kategorie werden in einer Größe verkauft.",
+    "sizeName": "Name der Größe",
+    "sizeEnName": "Name der Größe (EN)",
+    "sizePortion": "Maß",
+    "sizeUnit": "Einheit",
+    "sizePriceDelta": "Preisänderung",
+    "defaultSize": "Standard",
+    "deleteSizeTitle": "Größe löschen",
+    "deleteSizeText": "Diese Größe wird beim Speichern entfernt. Warenkorbzeilen, die sie gewählt haben, entfallen."
   },
   "GradientBuilder": {
     "linear": "Linear",
@@ -1320,7 +1366,8 @@
     "calcium": "Kalzium",
     "iron": "Eisen",
     "potassium": "Kalium",
-    "all": "Gesamte Speisekarte"
+    "all": "Gesamte Speisekarte",
+    "chooseSize": "Größe wählen"
   },
   "AdminOrders": {
     "home": "Startseite",

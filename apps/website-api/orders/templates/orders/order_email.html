@@ -44,7 +44,7 @@ the full receipt (items, add-ons, summary, link) is written once. Bilingual
         {% endif %}
       </td>
       <td valign="top" style="padding:12px 0; font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#1f2933; line-height:1.5;">
-        <strong>{{ item.name }}</strong><br>
+        <strong>{{ item.name }}</strong>{% if item.size %} <span style="color:#52606d;">· {{ item.size }}</span>{% endif %}<br>
         <span style="color:#8a94a6; font-size:13px;">Cant. / Qty: {{ item.quantity }} · {{ item.unit_price }}</span>
         {% if item.addons %}
           <div style="margin-top:4px; font-size:12px; color:#8a94a6; line-height:1.5;">

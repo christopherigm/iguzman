@@ -454,6 +454,18 @@ class OrderLine(models.Model):
     )
     name = models.CharField(max_length=255)
     sku = models.CharField(max_length=128, blank=True, default="")
+    # The chosen size, snapshotted like every other displayable fact on this
+    # row - not read back through a FK. A tenant renames "Grande" or retires it
+    # entirely; the receipt must keep saying what was sold. Blank for products,
+    # services, and dishes sold in one size. `size_price_delta` is already folded
+    # into `unit_price`; it is kept so the line can be read back as
+    # "Pizza 200.00 + Grande 40.00" rather than as one number that does not
+    # reconcile against the catalog.
+    size_name = models.CharField(max_length=255, blank=True, default="")
+    size_en_name = models.CharField(max_length=255, blank=True, default="")
+    size_price_delta = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal("0.00"),
+    )
     # A menu line's chosen customisation, snapshotted as a human-readable list of
     # {"name", "quantity", "unit_price", "line_upcharge", "removed"} at checkout,
     # so the order still reads back in full after the ingredient rows are gone.

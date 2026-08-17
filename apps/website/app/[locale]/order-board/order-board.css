@@ -1,0 +1,112 @@
+/**
+ * Order board layout.
+ *
+ * Only what component props cannot express lives here: the viewport-locked
+ * shell, the responsive rail/sheet switch, and the touch affordances on a
+ * ticket. Every static colour, spacing and border on a `@repo/ui` component is
+ * a prop - see packages/ui/CLAUDE.md.
+ *
+ * The shape is `pos.css`'s on purpose, mirrored: there the fixed-width pane is
+ * the basket on the right, here it is the ticket rail on the left. The two
+ * screens are used on the same tablet, often in the same shift.
+ */
+
+/* The board owns the viewport. `100dvh` rather than `100vh` so an iOS Safari
+   address bar sliding in cannot push the fulfil button off-screen. */
+.order-board-shell {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.order-board-top-bar {
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.order-board-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.order-board-list-pane {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Below sm the open ticket is a full-screen sheet over the list. The same node
+   is the second column from sm up, so the two layouts cannot render different
+   tickets. */
+.order-board-detail-pane {
+  display: none;
+  background: var(--background, #fff);
+}
+
+.order-board-detail-pane--open {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+/* From sm, which is where an iPad in portrait already sits (768px), the board
+   is the two panes the screen exists for. */
+@media (--sm) {
+  .order-board-list-pane {
+    flex: 0 0 clamp(260px, 32%, 380px);
+    border-right: 1px solid var(--border, #e5e7eb);
+  }
+
+  .order-board-detail-pane,
+  .order-board-detail-pane--open {
+    display: block;
+    position: static;
+    z-index: auto;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  /* xs-only affordance: from sm up the ticket is always on screen. */
+  .order-board-detail__back {
+    display: none;
+  }
+}
+
+.order-board-ticket {
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease,
+    opacity 120ms ease;
+}
+
+/* Touch feedback rather than a hover lift - the same call `pos.css` makes: on a
+   mounted tablet the finger is already on the glass. */
+.order-board-ticket:active {
+  transform: scale(0.99);
+}
+
+.order-board-ticket:hover {
+  border-color: var(--accent);
+}
+
+/* A ticket that has gone out is history, not work: it stays legible (and
+   tappable, since re-opening it is where the undo lives) but stops competing
+   with the queue above it for a glance across the counter. */
+.order-board-ticket--fulfilled {
+  opacity: 0.6;
+}
+
+.order-board-ticket--fulfilled:hover,
+.order-board-ticket--fulfilled:focus-visible {
+  opacity: 1;
+}
+
+.order-board-ticket:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

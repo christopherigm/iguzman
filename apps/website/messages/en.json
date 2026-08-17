@@ -162,6 +162,7 @@
     "cart": "Cart",
     "orders": "Orders",
     "pos": "POS",
+    "orderBoard": "Order board",
     "events": "Events"
   },
   "Pos": {
@@ -218,6 +219,33 @@
     "errorGeneric": "Could not record the sale. Try again.",
     "errorCoupon": "That coupon is no longer valid. Remove it and try again.",
     "couponApplied": "{code} · −{amount}"
+  },
+  "OrderBoard": {
+    "title": "Order board",
+    "waitingCount": "{count, plural, =0 {Nothing waiting} other {# waiting}}",
+    "soundOn": "Sound on",
+    "soundOff": "Sound off",
+    "refresh": "Refresh",
+    "exit": "Exit",
+    "exitConfirmTitle": "Leave the order board?",
+    "exitConfirmText": "You will stop seeing and hearing new orders as they come in. You can come back at any time.",
+    "back": "Back",
+    "loading": "Loading…",
+    "emptyTitle": "All caught up",
+    "emptyText": "New orders appear here as they come in.",
+    "nothingSelected": "Pick an order to see what to prepare.",
+    "itemCount": "{count, plural, one {# item} other {# items}}",
+    "unpaid": "Unpaid",
+    "fulfilledSection": "Fulfilled",
+    "waitMinutes": "{minutes}m",
+    "waitHours": "{hours}h {minutes}m",
+    "newOrder": "New order {ref}",
+    "newOrders": "{count} new orders",
+    "fulfilledToast": "{ref} marked fulfilled.",
+    "placedAt": "Placed at",
+    "openInAdmin": "Open in admin",
+    "errorLoad": "Could not load orders.",
+    "errorAction": "Could not update the order."
   },
   "AuthPage": {
     "tabSignIn": "Sign In",
@@ -1055,6 +1083,8 @@
     "social_website": "Website",
     "pos": "POS",
     "posDesc": "Ring up a walk-in sale at the counter.",
+    "orderBoard": "Order board",
+    "orderBoardDesc": "Work through incoming orders and mark them fulfilled.",
     "storageSection": "Storage",
     "storageSectionDesc": "Where this site's images and backups are stored. By default they live in the platform's Cloudflare R2 bucket and are served from its CDN — you don't need to change anything. If this site has its own domain and you'd rather host its files in your own Cloudflare account, connect it here.",
     "storageEnabled": "Use this site's own Cloudflare R2 bucket",
@@ -1181,7 +1211,23 @@
     "couponExportError": "The flyer could not be exported.",
     "couponSaveForQr": "Save the coupon to generate its QR code, then download the flyer.",
     "couponQrPlaceholder": "The QR code will be generated here once the coupon is saved.",
-    "selectCategory": "- Select a category -"
+    "selectCategory": "- Select a category -",
+    "sizes": "Sizes",
+    "sizesEnabled": "Offer sizes",
+    "sortSizes": "Sort",
+    "sizesHintCategory": "Every item in this category is offered in these sizes. Each one shifts the item base price: use a negative amount for a smaller size and a positive one for a larger.",
+    "sizesHintItem": "Leave empty to use this category’s sizes. Adding sizes here replaces that list entirely for this item only.",
+    "sizesInherited": "Using the category’s sizes: {names}.",
+    "sizesInheritedNone": "This category has no sizes yet, so this item is sold in one size.",
+    "noSizes": "No sizes yet. Items in this category are sold in one size.",
+    "sizeName": "Size name",
+    "sizeEnName": "Size name (EN)",
+    "sizePortion": "Measure",
+    "sizeUnit": "Unit",
+    "sizePriceDelta": "Price change",
+    "defaultSize": "Default",
+    "deleteSizeTitle": "Delete size",
+    "deleteSizeText": "This size will be removed when you save. Any cart line that chose it is dropped."
   },
   "GradientBuilder": {
     "linear": "Linear",
@@ -1320,7 +1366,8 @@
     "calcium": "Calcium",
     "iron": "Iron",
     "potassium": "Potassium",
-    "all": "Full menu"
+    "all": "Full menu",
+    "chooseSize": "Choose a size"
   },
   "AdminOrders": {
     "home": "Home",

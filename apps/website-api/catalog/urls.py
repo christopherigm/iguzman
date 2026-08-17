@@ -21,6 +21,10 @@ from .views import (
     MenuItemImageDetailView,
     MenuItemIngredientListCreateView,
     MenuItemIngredientDetailView,
+    MenuCategorySizeListCreateView,
+    MenuCategorySizeDetailView,
+    MenuItemSizeListCreateView,
+    MenuItemSizeDetailView,
     MenuItemRecipeView,
     IngredientListCreateView,
     IngredientDetailView,
@@ -69,6 +73,10 @@ urlpatterns = [
     path('catalog/menu-categories/', MenuCategoryListCreateView.as_view(), name='menu-category-list'),
     path('catalog/menu-categories/<int:pk>/', MenuCategoryDetailView.as_view(), name='menu-category-detail'),
 
+    # Menu category sizes - the list every dish in the category inherits.
+    path('catalog/menu-categories/<int:pk>/sizes/', MenuCategorySizeListCreateView.as_view(), name='menu-category-size-list'),
+    path('catalog/menu-categories/<int:pk>/sizes/<int:size_pk>/', MenuCategorySizeDetailView.as_view(), name='menu-category-size-detail'),
+
     # Menu items
     path('catalog/menu-items/', MenuItemListCreateView.as_view(), name='menu-item-list'),
     path('catalog/menu-items/<int:pk>/', MenuItemDetailView.as_view(), name='menu-item-detail'),
@@ -81,6 +89,12 @@ urlpatterns = [
     # Menu item ingredients (priced customisation)
     path('catalog/menu-items/<int:pk>/ingredients/', MenuItemIngredientListCreateView.as_view(), name='menu-item-ingredient-list'),
     path('catalog/menu-items/<int:pk>/ingredients/<int:ing_pk>/', MenuItemIngredientDetailView.as_view(), name='menu-item-ingredient-detail'),
+
+    # Menu item sizes - a dish's OWN override rows, empty for a dish that
+    # inherits its category's list. What a customer is offered is `sizes` on the
+    # menu item payload, not this.
+    path('catalog/menu-items/<int:pk>/sizes/', MenuItemSizeListCreateView.as_view(), name='menu-item-size-list'),
+    path('catalog/menu-items/<int:pk>/sizes/<int:size_pk>/', MenuItemSizeDetailView.as_view(), name='menu-item-size-detail'),
 
     # Menu item recipe (internal, admin only)
     path('catalog/menu-items/<int:pk>/recipe/', MenuItemRecipeView.as_view(), name='menu-item-recipe'),

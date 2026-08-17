@@ -12,7 +12,8 @@ import { FavoriteButton } from "./favorite-button";
 interface BuyableCardActionsProps {
   /**
    * A `food` item's card add-to-cart opens the customiser modal when the dish
-   * has add-ons (see `customize`), and posts the base line when it has none.
+   * has something to ask about - add-ons or a choice of size (see `customize`) -
+   * and posts the base line when it has neither.
    * Its favorite and its cart line are both keyed `menu_item`, the kind those
    * APIs know it by.
    */

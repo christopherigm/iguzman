@@ -167,6 +167,10 @@ def _order_items(order):
         ]
         items.append({
             "name": line.name,
+            # The size the dish was sold in, from the line's own snapshot - a
+            # receipt for a large pizza has to keep saying "large" after the
+            # tenant renames or retires that size.
+            "size": line.size_name,
             "quantity": line.quantity,
             "image": _line_image(line),
             "unit_price": _money(line.unit_price, line.currency),

@@ -26,6 +26,12 @@ import {
   type VariantOption,
 } from "@/components/admin/variants-editor";
 import {
+  MenuSizesEditor,
+  persistMenuSizes,
+  toMenuSizeRow,
+  type MenuSizeRow,
+} from "@/components/admin/menu-sizes-editor";
+import {
   getMenuItem,
   cloneMenuItem,
   createMenuItem,
@@ -44,6 +50,10 @@ import {
   listMenuCategories,
   listBrands,
   listIngredients,
+  listMenuSizes,
+  createMenuSize,
+  updateMenuSize,
+  deleteMenuSize,
   checkSlug,
 } from "@/lib/admin-api";
 import { buildSlug } from "@/lib/slug-utils";
@@ -102,6 +112,9 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     is_available: true,
     is_featured: false,
     show_nutrition_label: true,
+    // On by default, so a dish filed under a category that has sizes offers them
+    // without the operator doing anything; off is the edge-case opt-out.
+    sizes_enabled: true,
     enabled: true,
     eta_minutes: "",
     spice_level: "",
@@ -121,6 +134,15 @@ export default function AdminMenuItemFormPage({ params }: Props) {
   const [pendingNewImages, setPendingNewImages] = useState<NewImage[]>([]);
   const [pendingDeletedIds, setPendingDeletedIds] = useState<number[]>([]);
   const [pendingOrder, setPendingOrder] = useState<number[]>([]);
+
+  // The dish's OWN size rows, which *replace* its category's list when there are
+  // any. Empty is the normal state and means "inherit"; `categorySizes` below is
+  // what it is inheriting, shown so an empty list does not read as unconfigured.
+  const [sizes, setSizes] = useState<MenuSizeRow[]>([]);
+  const [originalSizeIds, setOriginalSizeIds] = useState<number[]>([]);
+  const [categorySizes, setCategorySizes] = useState<Record<number, string[]>>(
+    {},
+  );
 
   const [ingredients, setIngredients] = useState<IngredientRow[]>([]);
   const [originalIngredientIds, setOriginalIngredientIds] = useState<number[]>(
@@ -195,6 +217,20 @@ export default function AdminMenuItemFormPage({ params }: Props) {
           label: String(c.name ?? c.id),
         })),
       );
+      // Read off the category payload's nested `sizes` rather than a call per
+      // category: this is a read-only note about what the dish inherits, and the
+      // public list (enabled rows only) is exactly what a customer would be
+      // offered - which is what the note is describing.
+      setCategorySizes(
+        Object.fromEntries(
+          cats.map((c) => [
+            c.id as number,
+            ((c.sizes as { name?: string }[] | undefined) ?? []).map((s) =>
+              String(s.name ?? ""),
+            ),
+          ]),
+        ),
+      );
       // The category's *slug* is the first segment of the item's public URL, so
       // "view live" needs it alongside the id the select stores.
       setCategorySlugs(
@@ -232,6 +268,18 @@ export default function AdminMenuItemFormPage({ params }: Props) {
       await loadMeta();
     })();
     if (!isNew) {
+      // Separate from the item payload's `sizes`, which is the *effective*
+      // (public, enabled-only) list a customer sees. This is the dish's own
+      // override rows, which is what the editor writes.
+      listMenuSizes("menu-items", Number(id))
+        .then((rows) => {
+          const mapped = rows.map(toMenuSizeRow);
+          setSizes(mapped);
+          setOriginalSizeIds(mapped.map((r) => r.id as number));
+        })
+        .catch(() => {
+          /* non-critical: the rest of the form still loads and saves */
+        });
       Promise.all([
         getMenuItem(Number(id)),
         listMenuItemImages(Number(id)),
@@ -257,6 +305,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
             is_available: item.is_available ?? true,
             is_featured: item.is_featured ?? false,
             show_nutrition_label: item.show_nutrition_label ?? true,
+            sizes_enabled: item.sizes_enabled ?? true,
             enabled: item.enabled ?? true,
             eta_minutes: item.eta_minutes ?? "",
             spice_level: item.spice_level ?? "",
@@ -417,6 +466,17 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     );
   };
 
+  const persistSizes = async (menuItemId: number) => {
+    const { rows, ids } = await persistMenuSizes(sizes, originalSizeIds, {
+      create: (payload) => createMenuSize("menu-items", menuItemId, payload),
+      update: (sizeId, payload) =>
+        updateMenuSize("menu-items", menuItemId, sizeId, payload),
+      remove: (sizeId) => deleteMenuSize("menu-items", menuItemId, sizeId),
+    });
+    setSizes(rows);
+    setOriginalSizeIds(ids);
+  };
+
   const persistRecipe = async (menuItemId: number) => {
     const steps = recipe.steps
       .filter((s) => s.instruction.trim())
@@ -487,6 +547,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
         }).catch(() => null);
       }
 
+      await persistSizes(menuItemId);
       await persistIngredients(menuItemId);
       await persistRecipe(menuItemId);
 
@@ -688,6 +749,17 @@ export default function AdminMenuItemFormPage({ params }: Props) {
               </Box>
             ))}
           </Box>
+
+          {/* Sizes above the ingredients, mirroring the customer's own order of
+              decisions: which size, then what goes on it. */}
+          <MenuSizesEditor
+            value={sizes}
+            onChange={setSizes}
+            scope="item"
+            sizesEnabled={Boolean(values.sizes_enabled)}
+            onSizesEnabledChange={(v) => handleChange("sizes_enabled", v)}
+            inheritedSizes={categorySizes[Number(values.category)] ?? []}
+          />
 
           <MenuIngredientsEditor
             value={ingredients}

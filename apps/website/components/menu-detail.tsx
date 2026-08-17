@@ -254,6 +254,7 @@ export async function MenuDetailPanel({ item, locale }: MenuDetailProps) {
             discount={discount}
             currency={item.currency}
             ingredients={enabledIngredients(item.ingredients)}
+            sizes={item.sizes}
             isAvailable={item.is_available}
             isLoggedIn={session !== null}
             locale={locale}

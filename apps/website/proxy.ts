@@ -6,11 +6,12 @@ import { createAuthProxy } from "@repo/auth/proxy";
 // with no session at all. The order *history* list at `/orders` is still
 // signed-in only - it guards itself in the page, since a prefix cannot tell the
 // list apart from one public order underneath it.
-// `/pos` is the till. The prefix keeps anonymous visitors out; the page itself
-// also checks `isAdmin`, which a prefix cannot - a signed-in ordinary customer
-// would otherwise walk straight through this guard.
+// `/pos` is the till and `/order-board` is the screen the orders are worked
+// from. The prefix keeps anonymous visitors out; each page itself also checks
+// `isAdmin`, which a prefix cannot - a signed-in ordinary customer would
+// otherwise walk straight through this guard.
 export default createAuthProxy({
-  protectedPrefixes: ["/admin", "/account", "/pos"],
+  protectedPrefixes: ["/admin", "/account", "/pos", "/order-board"],
 });
 
 // The matcher must be an inline literal: Next.js statically analyses it at build

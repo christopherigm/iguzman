@@ -14,8 +14,18 @@ import {
   createMenuCategory,
   updateMenuCategory,
   listMenuCategories,
+  listMenuSizes,
+  createMenuSize,
+  updateMenuSize,
+  deleteMenuSize,
   checkSlug,
 } from "@/lib/admin-api";
+import {
+  MenuSizesEditor,
+  persistMenuSizes,
+  toMenuSizeRow,
+  type MenuSizeRow,
+} from "@/components/admin/menu-sizes-editor";
 import { menuCategoryHref } from "@/lib/menu-paths";
 import { buildSlug } from "@/lib/slug-utils";
 import { useSession } from "@repo/auth/session-provider";
@@ -47,6 +57,11 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
   const [parentOptions, setParentOptions] = useState<
     { value: string | number; label: string }[]
   >([]);
+  // The category's size list - what every dish filed under it is offered in,
+  // unless the dish carries its own rows. Loaded and saved beside the form's own
+  // fields, exactly as the menu-item form does with its ingredients.
+  const [sizes, setSizes] = useState<MenuSizeRow[]>([]);
+  const [originalSizeIds, setOriginalSizeIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,6 +114,18 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
       await loadMeta();
     })();
     if (!isNew) {
+      // Sizes are loaded separately rather than read off the category payload's
+      // nested `sizes`: that list is the *public* one and drops disabled rows,
+      // which the CMS has to be able to see and switch back on.
+      listMenuSizes("menu-categories", Number(id))
+        .then((rows) => {
+          const mapped = rows.map(toMenuSizeRow);
+          setSizes(mapped);
+          setOriginalSizeIds(mapped.map((r) => r.id as number));
+        })
+        .catch(() => {
+          /* non-critical: the form still saves its own fields */
+        });
       getMenuCategory(Number(id))
         .then((data) => {
           setValues({
@@ -118,6 +145,17 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
     }
   }, [id, isNew, loadMeta, t]);
 
+  const persistSizes = async (categoryId: number) => {
+    const { rows, ids } = await persistMenuSizes(sizes, originalSizeIds, {
+      create: (payload) => createMenuSize("menu-categories", categoryId, payload),
+      update: (sizeId, payload) =>
+        updateMenuSize("menu-categories", categoryId, sizeId, payload),
+      remove: (sizeId) => deleteMenuSize("menu-categories", categoryId, sizeId),
+    });
+    setSizes(rows);
+    setOriginalSizeIds(ids);
+  };
+
   const handleSubmit = async () => {
     setSaving(true);
     setError(null);
@@ -132,10 +170,12 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
       if (payload.parent === "") payload.parent = null;
       if (isNew) {
         const created = await createMenuCategory(payload);
+        await persistSizes(created.id as number);
         setSuccess(t("saved"));
         router.replace(`/admin/menu-categories/${created.id}`);
       } else {
         await updateMenuCategory(Number(id), payload);
+        await persistSizes(Number(id));
         setSuccess(t("saved"));
       }
     } catch {
@@ -222,7 +262,21 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
             />
           </Box>
         }
-      />
+      >
+        {/* The sizes every dish in this category is offered in, below the
+            category's own fields - the same position (and the same editor) the
+            menu-item form gives its own override list. */}
+        <Box
+          display="flex"
+          flexDirection="column"
+          gap="28px"
+          marginTop="12px"
+          paddingTop="20px"
+          styles={{ borderTop: "1px solid var(--border, #e5e7eb)" }}
+        >
+          <MenuSizesEditor value={sizes} onChange={setSizes} scope="category" />
+        </Box>
+      </AdminForm>
     </>
   );
 }

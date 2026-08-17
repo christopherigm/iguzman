@@ -917,6 +917,101 @@ the enum is gone (`catalog.0037`).
   refuses `SET NOT NULL` otherwise. Deliberately *not* derived from the old
   `kind`; operators re-file from the CMS.
 
+## Menu sizes - one model, two owners, a signed delta
+
+`catalog.MenuSize` is a size a dish is offered in ("Chica 4 in", "Grande 12 in"),
+priced as a **signed** `price_delta` off the item's base price. It replaced the
+older workaround of modelling sizes as a `MenuItemIngredient` single-select
+choice group, which could only ever *add* to the price and put a diameter in the
+same list as extra cheese.
+
+Sizes are authored per **`MenuCategory`** - a pizzeria's pizzas come in five and
+its drinks in two, and neither list belongs on the individual dish - and a
+`MenuItem` may carry its own rows to **replace** that list. One model serves both,
+distinguished by which owner FK is set (exactly one, `CheckConstraint`), so the
+API, the CMS editor and the customer's picker are one implementation rather than
+a category copy and an item copy that would drift.
+
+| Piece                | Where                                                                             |
+| -------------------- | --------------------------------------------------------------------------------- |
+| Model + resolution   | `catalog/models.py` (`MenuSize`, `MenuItem.effective_sizes` / `resolve_size`)     |
+| Serializers          | `catalog/serializers.py` (`MenuSizeSerializer`, `MenuSizeWriteSerializer`)        |
+| Endpoints            | `catalog/views.py` (`_BaseMenuSize*View` + the two owner pairs)                   |
+| Cache invalidation   | `catalog/signals.py` (`invalidate_menu_on_size_change`)                           |
+| The chosen size      | `users.CartItem.menu_size` (live) -> `orders.OrderLine.size_*` (snapshot)         |
+
+- ⚠ **`MenuItem.effective_sizes` is the only place the inherit/override rule
+  lives, and it is resolved server-side.** `sizes` on the menu-item payload is
+  *already* "own rows if any, else the category's, empty when `sizes_enabled` is
+  off" - the storefront, the catalog card and the POS till all read that one
+  answer. Re-deriving it in three clients is how a dish comes to show one list on
+  its detail page and another at the counter.
+- **Own rows *replace* the category's entirely, never merge.** That is the only
+  rule that lets an edge-case dish **drop** a size its category offers (a
+  personal-only calzone on a menu whose pizzas come in five sizes); a merge could
+  only ever add. It is also why `MenuItem.own_sizes` is deliberately *not* named
+  `sizes`: a property and a related manager sharing one name is how a caller ends
+  up reading an empty override and concluding the dish has no sizes.
+- ⚠ **`MenuSize.system` is derived in `save()`, never authored** - and it is not
+  denormalisation for speed. Every mechanism that scopes a model to its System
+  takes exactly **one** ORM path (`core.backup`'s `ModelSpec.scope`, and through
+  it `core.tenant_paths.system_id_for`, which decides which R2 bucket a row's
+  image is written to). A two-way `category__system` / `menu_item__system` cannot
+  be that one path: an item-level override resolves to None on the category branch
+  and its picture silently lands in the platform bucket instead of the tenant's.
+- **`price_delta` is signed, and the total is floored at zero.** Signed so a
+  tenant prices "pizza" once at its regular size and states that small is −40 and
+  large is +40; a size list that could only add would force the *smallest* size to
+  be the base and quote every real size as an up-charge, which is not how a menu is
+  written. Floored because a delta bigger than the base is a misconfiguration, not
+  a refund.
+- ⚠ **Size does not scale the ingredient up-charges.** Extra cheese costs the same
+  on a small as on a large. One pricing axis, deliberately: a multiplier would have
+  to be applied identically in `price_for_selection`, in the storefront customiser
+  and in the till, and the first disagreement between them is a price on screen
+  that is not the price charged. A dish that genuinely needs per-size add-on
+  pricing is two dishes.
+- **`resolve_size` never trusts an id**, exactly like
+  `MenuItemIngredient.resolve_option`: a size that is stale, forged, or belongs to
+  another dish prices as the **default**, so a crafted request buys nothing.
+  `default_size` is the row flagged `is_default`, falling back to the first in
+  display order - which is what keeps a list where nobody set the flag resolvable
+  rather than sizeless.
+- **The write serializer clears `is_default` on the row's siblings.** Rows are
+  PATCHed one at a time by the CMS editor, so nothing else could; the model
+  tolerates two (first in order wins) but the CMS would then show two filled
+  radios, which reads as a lost save.
+- ⚠ **A size is part of a cart line's *identity*.** `CartItem.menu_size` is
+  CASCADE like `menu_item` (a cart reflects today's catalog; silently re-pricing a
+  withdrawn size at another one is the alternative), and `_add_menu_line` merges on
+  size **and** customization - a small and a large are two lines, not one of
+  quantity 2. `users/guest.py`'s `_dedupe_key` carries the same rule for a guest.
+- **`OrderLine` snapshots `size_name` / `size_en_name` / `size_price_delta`**, like
+  every other displayable fact on it. The delta is already inside `unit_price`; it
+  is stored so the line reads back as base + size rather than as one number that
+  does not reconcile against the catalog.
+- **The list endpoints are the *own* rows, not the effective list.**
+  `GET /api/catalog/menu-items/<pk>/sizes/` is empty for the ordinary dish that
+  inherits - only the CMS editor reads it. What a customer is offered is `sizes` on
+  the menu item payload.
+- ⚠ **A category-level size write invalidates the whole `catalog:menu_item*`
+  namespace**, because which dishes inherit it is not something the receiver can
+  enumerate cheaply - and a dish still offering a size the tenant just retired is a
+  price the customer can still select. That lives in `catalog/signals.py`, not in
+  each write path, so the API views and the admin's two inlines are covered alike.
+- **Sizes travel** with `export_site` / `publish-site` (`core/site_payload.py`,
+  keyed by owner + `sort_order` like a menu-item ingredient, since a size has no
+  slug), with a tenant backup (`core/backup.py`, keyed by `created` like
+  `core.Branch` - it hangs off two possible parents, so `_restore_children`'s
+  single named parent cannot serve it), and from a `/seed-site` brief
+  (`_seed_sizes`). ⚠ In all three an **inheriting dish must arrive still
+  inheriting**: exporting the resolved list would turn every dish into an
+  overriding one and detach it from its category on the far side.
+
+Tests: `MenuSizeTests` / `MenuSizeEndpointTests` (`catalog/tests.py`),
+`CartMenuSizeTests` (`users/tests.py`), `OrderLineSizeSnapshotTests`
+(`orders/tests.py`), and the publish round-trips in `core/tests.py`.
+
 ## Maps - the basemap is four columns on `System`
 
 `map_style` / `map_tile_url` / `map_attribution` / `map_attribution_url` decide

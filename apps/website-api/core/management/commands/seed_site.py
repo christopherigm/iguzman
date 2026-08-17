@@ -44,6 +44,7 @@ from catalog.models import (
     MenuItemImage,
     MenuItemIngredient,
     MenuItemIngredientOption,
+    MenuSize,
     Product,
     ProductCategory,
     ProductImage,
@@ -413,6 +414,9 @@ class Command(BaseCommand):
             self._attach(cat, "image", c.get("image"))
             cat.save()
             n_cat += 1
+            # The sizes every dish in this category is offered in. A brief that
+            # names none leaves the category unsized, which is the ordinary case.
+            n_size += self._seed_sizes("category", cat, c.get("sizes"))
             for pi, p in enumerate(c.get("products") or []):
                 product = Product(
                     system=system,
@@ -459,6 +463,9 @@ class Command(BaseCommand):
             self._attach(cat, "image", c.get("image"))
             cat.save()
             n_cat += 1
+            # The sizes every dish in this category is offered in. A brief that
+            # names none leaves the category unsized, which is the ordinary case.
+            n_size += self._seed_sizes("category", cat, c.get("sizes"))
             for si, s in enumerate(c.get("services") or []):
                 service = Service(
                     system=system,
@@ -491,8 +498,45 @@ class Command(BaseCommand):
     # Catalog - menu (food)
     # ------------------------------------------------------------------ #
 
+    def _seed_sizes(self, owner_field, owner, sizes) -> int:
+        """Create one owner's size rows - a category's list, or a dish's override.
+
+        One helper for both because a size is one model with two possible owners;
+        the brief's shape is identical either way, and a second copy here would be
+        the first place the two could disagree.
+        """
+        count = 0
+        for index, entry in enumerate(sizes or []):
+            name = entry.get("name")
+            if not name:
+                continue
+            size = MenuSize(
+                **{owner_field: owner},
+                # `save()` derives this from the owner anyway, but `_attach`
+                # below writes the file *before* that runs - and the upload path
+                # is namespaced by `system_id`, so an unset one would file a
+                # seeded size's picture on the platform bucket instead of the
+                # tenant's. Setting it here is the same value, early enough.
+                system=owner.system,
+                name=name,
+                en_name=entry.get("en_name"),
+                description=entry.get("description"),
+                en_description=entry.get("en_description"),
+                portion=self._price(entry["portion"]) if entry.get("portion") is not None else None,
+                unit=entry.get("unit"),
+                price_delta=self._price(entry.get("price_delta", 0)),
+                # Nothing flagged leaves the first row as the default (see
+                # `MenuItem.default_size`), so a brief need not say which.
+                is_default=entry.get("is_default", False),
+                sort_order=entry.get("sort_order", index),
+            )
+            self._attach(size, "image", entry.get("image"))
+            size.save()
+            count += 1
+        return count
+
     def _seed_menu(self, system: System, categories: list) -> None:
-        n_cat = n_item = n_ing = n_opt = 0
+        n_cat = n_item = n_ing = n_opt = n_size = 0
         # The brief lists ingredients inline per dish; create one reusable
         # Ingredient per distinct name and reference it, so a "butter" shared by
         # two dishes is the same catalog row. `nutrition_basis_quantity` is set to
@@ -536,6 +580,9 @@ class Command(BaseCommand):
             self._attach(cat, "image", c.get("image"))
             cat.save()
             n_cat += 1
+            # The sizes every dish in this category is offered in. A brief that
+            # names none leaves the category unsized, which is the ordinary case.
+            n_size += self._seed_sizes("category", cat, c.get("sizes"))
             for mi, m in enumerate(c.get("menu_items") or []):
                 item = MenuItem(
                     system=system,
@@ -560,11 +607,16 @@ class Command(BaseCommand):
                     is_vegan=m.get("is_vegan", False),
                     is_gluten_free=m.get("is_gluten_free", False),
                     allergens=m.get("allergens"),
+                    sizes_enabled=m.get("sizes_enabled", True),
                     slug=self._uslug(m.get("slug") or m.get("name") or f"menu-item-{ci}-{mi}", f"menu-item-{ci}-{mi}"),
                 )
                 self._attach(item, "image", m.get("image"))
                 item.save()
                 n_item += 1
+                # A dish's OWN sizes, which *replace* its category's list. Almost
+                # never in a brief - it is the edge-case override - but a brief
+                # that does carry them means exactly that.
+                n_size += self._seed_sizes("menu_item", item, m.get("sizes"))
                 for gi, g in enumerate(m.get("gallery") or []):
                     img = MenuItemImage(menu_item=item, sort_order=gi)
                     self._attach(img, "image", g)
@@ -601,5 +653,5 @@ class Command(BaseCommand):
         if categories:
             self.stdout.write(
                 f"  Seeded {n_cat} menu categories / {n_item} menu items / "
-                f"{n_ing} ingredients / {n_opt} choice options"
+                f"{n_size} sizes / {n_ing} ingredients / {n_opt} choice options"
             )

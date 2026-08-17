@@ -59,6 +59,7 @@ from catalog.models import (
     MenuItem,
     MenuItemIngredient,
     MenuItemIngredientOption,
+    MenuSize,
     Product,
     ProductCategory,
     Service,
@@ -410,6 +411,30 @@ def _ingredient_dict(i: MenuItemIngredient) -> dict:
     return d
 
 
+# A size's own fields. `portion`/`unit`/`price_delta`/`is_default` are handled
+# separately below: the first two may legitimately be null and the last two are
+# meaningful when falsy, which `_pick`'s truthy-only projection would drop.
+MENU_SIZE_TEXT_FIELDS = ("name", "en_name", "description", "en_description", *ATTRIBUTION_FIELDS)
+
+
+def _menu_size_dict(s) -> dict:
+    """One size, for either owner - a category's list or a dish's override rows.
+
+    Keyed on apply by (owner, sort_order), like a menu-item ingredient, because a
+    size has no slug of its own.
+    """
+    d = {"sort_order": s.sort_order, **_pick(s, MENU_SIZE_TEXT_FIELDS)}
+    if s.portion is not None:
+        d["portion"] = str(s.portion)
+    if s.unit:
+        d["unit"] = s.unit
+    # Always carried, unlike the text fields: 0.00 is the *normal* delta (the
+    # size sold at the list price) and a default of False is a real state.
+    d["price_delta"] = str(s.price_delta)
+    d["is_default"] = s.is_default
+    return d
+
+
 def _menu_item_dict(m: MenuItem) -> dict:
     d = {"slug": m.slug, **_pick(m, BUYABLE_TEXT_FIELDS)}
     d["price"] = str(m.price)
@@ -424,15 +449,30 @@ def _menu_item_dict(m: MenuItem) -> dict:
         if v not in (None, "", False):
             d[f] = v
     d["ingredients"] = [_ingredient_dict(i) for i in m.ingredients.all()]
+    # Carried unconditionally: False is the meaningful state (this dish opts out
+    # of a category that sizes everything else), and the flag list above drops
+    # falsy values.
+    d["sizes_enabled"] = m.sizes_enabled
+    # The dish's OWN rows only - its override. A dish that inherits its
+    # category's sizes carries none, and must arrive inheriting too; exporting
+    # the resolved list would turn every dish into an overriding one and detach
+    # it from the category on the far side.
+    own_sizes = [_menu_size_dict(s) for s in m.own_sizes.all()]
+    if own_sizes:
+        d["sizes"] = own_sizes
     return d
 
 
 def _menu_category_dict(c: MenuCategory) -> dict:
-    return {
+    d = {
         "slug": c.slug,
         **_pick(c, CATEGORY_FIELDS),
         "menu_items": [_menu_item_dict(m) for m in c.menu_items.all()],
     }
+    sizes = [_menu_size_dict(s) for s in c.sizes.all()]
+    if sizes:
+        d["sizes"] = sizes
+    return d
 
 
 def _system_image_files(system: System) -> dict:
@@ -489,6 +529,8 @@ def serialize_system(system: System) -> dict:
         "menu_categories": [
             _menu_category_dict(c)
             for c in system.menu_categories.all().prefetch_related(
+                "sizes",
+                "menu_items__own_sizes",
                 "menu_items__ingredients__options__ingredient",
                 "menu_items__ingredients__ingredient"
             )
@@ -735,6 +777,7 @@ def _apply_products(system, categories) -> dict:
             slug=cslug, defaults=_defaults(system, c, CATEGORY_FIELDS)
         )
         attach_image(cat, c)
+        _apply_sizes("category", cat, c.get("sizes"))
         counts["categories"] += 1
         for p in c.get("products") or []:
             pslug = _slug_of(p)
@@ -768,6 +811,7 @@ def _apply_services(system, categories) -> dict:
             slug=cslug, defaults=_defaults(system, c, CATEGORY_FIELDS)
         )
         attach_image(cat, c)
+        _apply_sizes("category", cat, c.get("sizes"))
         counts["categories"] += 1
         for s in c.get("services") or []:
             sslug = _slug_of(s)
@@ -814,6 +858,36 @@ def _apply_ingredients(system, items) -> dict:
     return counts
 
 
+def _apply_sizes(owner_field, owner, sizes) -> None:
+    """Upsert one owner's size rows, keyed by (owner, sort_order).
+
+    Same shape as a menu-item ingredient, and for the same reason: a size has no
+    slug, so position is the only identity a second database can match on. A
+    re-publish therefore updates in place rather than duplicating the list.
+    """
+    for index, entry in enumerate(sizes or []):
+        name = entry.get("name")
+        if not name:
+            continue
+        defaults = {
+            f: entry[f]
+            for f in MENU_SIZE_TEXT_FIELDS
+            if entry.get(f) is not None
+        }
+        defaults["portion"] = (
+            _decimal(entry["portion"]) if entry.get("portion") is not None else None
+        )
+        defaults["unit"] = entry.get("unit") or None
+        defaults["price_delta"] = _decimal(entry.get("price_delta", 0))
+        defaults["is_default"] = entry.get("is_default", False)
+        row, _ = MenuSize.objects.update_or_create(
+            **{owner_field: owner},
+            sort_order=entry.get("sort_order", index),
+            defaults=defaults,
+        )
+        attach_image(row, entry)
+
+
 def _apply_menu(system, categories) -> dict:
     counts = {"created": 0, "updated": 0, "categories": 0}
     # Menu-item ingredients link to reusable Ingredients by slug (applied just
@@ -827,6 +901,7 @@ def _apply_menu(system, categories) -> dict:
             slug=cslug, defaults=_defaults(system, c, CATEGORY_FIELDS)
         )
         attach_image(cat, c)
+        _apply_sizes("category", cat, c.get("sizes"))
         counts["categories"] += 1
         for m in c.get("menu_items") or []:
             mslug = _slug_of(m)
@@ -841,6 +916,7 @@ def _apply_menu(system, categories) -> dict:
             defaults["currency"] = m.get("currency") or "USD"
             defaults["is_featured"] = m.get("is_featured", True)
             defaults["is_available"] = m.get("is_available", True)
+            defaults["sizes_enabled"] = m.get("sizes_enabled", True)
             for f in MENU_ITEM_FLAG_FIELDS:
                 if m.get(f) is not None:
                     defaults[f] = m[f]
@@ -848,6 +924,7 @@ def _apply_menu(system, categories) -> dict:
                 slug=mslug, defaults=defaults
             )
             _upsert(counts, created, item, m)
+            _apply_sizes("menu_item", item, m.get("sizes"))
             # Menu-item ingredients reference a reusable Ingredient by slug and
             # have no global slug themselves; key them by (menu_item, sort_order)
             # so a re-publish updates in place rather than duplicating - the same

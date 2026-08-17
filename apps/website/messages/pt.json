@@ -162,6 +162,7 @@
     "cart": "Carrinho",
     "orders": "Encomendas",
     "pos": "PDV",
+    "orderBoard": "Painel de pedidos",
     "events": "Eventos"
   },
   "Pos": {
@@ -218,6 +219,33 @@
     "errorGeneric": "Não foi possível registrar a venda. Tente de novo.",
     "errorCoupon": "Esse cupom não é mais válido. Remova-o e tente novamente.",
     "couponApplied": "{code} · −{amount}"
+  },
+  "OrderBoard": {
+    "title": "Painel de pedidos",
+    "waitingCount": "{count, plural, =0 {Nada pendente} other {# na fila}}",
+    "soundOn": "Som ligado",
+    "soundOff": "Som desligado",
+    "refresh": "Atualizar",
+    "exit": "Sair",
+    "exitConfirmTitle": "Sair do painel de pedidos?",
+    "exitConfirmText": "Você deixará de ver e ouvir os novos pedidos conforme chegarem. Pode voltar quando quiser.",
+    "back": "Voltar",
+    "loading": "Carregando…",
+    "emptyTitle": "Tudo em dia",
+    "emptyText": "Os pedidos novos aparecem aqui assim que chegam.",
+    "nothingSelected": "Escolha um pedido para ver o que preparar.",
+    "itemCount": "{count, plural, one {# item} other {# itens}}",
+    "unpaid": "Não pago",
+    "fulfilledSection": "Entregues",
+    "waitMinutes": "{minutes} min",
+    "waitHours": "{hours} h {minutes} min",
+    "newOrder": "Novo pedido {ref}",
+    "newOrders": "{count} pedidos novos",
+    "fulfilledToast": "{ref} marcado como entregue.",
+    "placedAt": "Recebido às",
+    "openInAdmin": "Abrir na administração",
+    "errorLoad": "Não foi possível carregar os pedidos.",
+    "errorAction": "Não foi possível atualizar o pedido."
   },
   "AuthPage": {
     "tabSignIn": "Entrar",
@@ -1055,6 +1083,8 @@
     "social_website": "Site",
     "pos": "PDV",
     "posDesc": "Registre uma venda no balcão.",
+    "orderBoard": "Painel de pedidos",
+    "orderBoardDesc": "Atenda os pedidos que chegam e marque-os como entregues.",
     "storageSection": "Armazenamento",
     "storageSectionDesc": "Onde ficam as imagens e os backups deste site. Por padrão eles ficam no bucket Cloudflare R2 da plataforma e são servidos pelo CDN dela — você não precisa mudar nada. Se este site tem domínio próprio e você prefere hospedar os arquivos na sua própria conta da Cloudflare, conecte-a aqui.",
     "storageEnabled": "Usar o bucket Cloudflare R2 próprio deste site",
@@ -1181,7 +1211,23 @@
     "couponExportError": "Não foi possível exportar o panfleto.",
     "couponSaveForQr": "Salve o cupom para gerar o código QR e depois baixe o panfleto.",
     "couponQrPlaceholder": "O código QR será gerado aqui depois que o cupom for salvo.",
-    "selectCategory": "- Selecione uma categoria -"
+    "selectCategory": "- Selecione uma categoria -",
+    "sizes": "Tamanhos",
+    "sizesEnabled": "Oferecer tamanhos",
+    "sortSizes": "Ordenar",
+    "sizesHintCategory": "Todos os itens desta categoria são oferecidos nestes tamanhos. Cada um altera o preço base: use um valor negativo para um tamanho menor e positivo para um maior.",
+    "sizesHintItem": "Deixe vazio para usar os tamanhos da categoria. Adicionar tamanhos aqui substitui essa lista por completo, apenas para este item.",
+    "sizesInherited": "Usando os tamanhos da categoria: {names}.",
+    "sizesInheritedNone": "Esta categoria ainda não tem tamanhos, então este item é vendido em um único tamanho.",
+    "noSizes": "Ainda não há tamanhos. Os itens desta categoria são vendidos em um único tamanho.",
+    "sizeName": "Nome do tamanho",
+    "sizeEnName": "Nome do tamanho (EN)",
+    "sizePortion": "Medida",
+    "sizeUnit": "Unidade",
+    "sizePriceDelta": "Alteração de preço",
+    "defaultSize": "Padrão",
+    "deleteSizeTitle": "Excluir tamanho",
+    "deleteSizeText": "Este tamanho será removido ao salvar. As linhas do carrinho que o escolheram são descartadas."
   },
   "GradientBuilder": {
     "linear": "Linear",
@@ -1320,7 +1366,8 @@
     "calcium": "Cálcio",
     "iron": "Ferro",
     "potassium": "Potássio",
-    "all": "Cardápio completo"
+    "all": "Cardápio completo",
+    "chooseSize": "Escolha um tamanho"
   },
   "AdminOrders": {
     "home": "Início",
