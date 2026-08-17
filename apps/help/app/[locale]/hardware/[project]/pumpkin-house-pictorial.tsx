@@ -1,5 +1,6 @@
 import {
   breadboardLayout,
+  breakoutFootprint,
   picoFootprint,
 } from "@repo/ui/hardware/breadboard-geometry";
 import { Breadboard, PictorialFigure } from "@repo/ui/hardware/breadboard";
@@ -8,22 +9,26 @@ import { Callout, Wire } from "@repo/ui/hardware/wire";
 import { Led, RgbLed } from "@repo/ui/hardware/led";
 import {
   Buzzer,
+  Capacitor,
   Diode,
   Pushbutton,
   Resistor,
   Transistor,
 } from "@repo/ui/hardware/discretes";
+import { BreakoutModule, breakoutTerminals } from "@repo/ui/hardware/modules";
 import {
   BatteryPack,
   SlideSwitch,
+  Speaker,
   batteryPackLeads,
   slideSwitchTerminals,
+  speakerTerminals,
 } from "@repo/ui/hardware/power-parts";
 
 /**
- * The beginner view of the four Pumpkin House wiring drawings.
+ * The beginner view of the five Pumpkin House wiring drawings.
  *
- * These are the *same four circuits* as `pumpkin-house-figures.tsx`, drawn as
+ * These are the *same five circuits* as `pumpkin-house-figures.tsx`, drawn as
  * parts on a solderless breadboard instead of as schematic symbols. Neither
  * view replaces the other and both stay in the document: a schematic says what
  * is connected to what and is the faster read once you can read one, while this
@@ -52,7 +57,11 @@ import {
  *    returns.
  * 3. **Build each stage on the side its pin is on.** GP0-GP12 are lower-row
  *    pins, GP16 is an upper-row pin. Following that keeps jumpers short and
- *    stops a stage's wiring having to cross over the Pico.
+ *    stops a stage's wiring having to cross over the Pico. The amplifier in
+ *    Fig 5 is where that rule runs out: its three I2S lines are lower-row pins
+ *    but every GPIO left over for its enable line is on the far edge, so one
+ *    jumper has to cross - drawn on top of the Pico, because that is where it
+ *    lies.
  *
  * The prose, values and pin assignments are the build sheet's; nothing here is a
  * new claim about the circuit.
@@ -475,6 +484,135 @@ export function PicoPinoutPictorial() {
       label="The Raspberry Pi Pico's full 40-pin map, drawn on the board itself. Pins 1 to 20 run along the lower edge starting from GP0 beside the USB connector; pins 21 to 40 run back along the upper edge, ending with VSYS and VBUS at the USB end. Chips are coloured by function: green for GPIO, dark for ground, red for power, dark green for the ADC reference and pink for system control."
     >
       <PicoBoard footprint={pico} labels="all" labelStandoff={14} />
+    </PictorialFigure>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Fig 5 - the I2S amplifier stage
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/** The MAX98357A header, in the order it is printed on the board. */
+const AMP_PINS = ["LRC", "BCLK", "DIN", "GAIN", "SD", "GND", "VIN"] as const;
+
+export function AmpStagePictorial() {
+  const board = breadboardLayout({ columns: 42, x: 40, y: 76 });
+  const pico = picoFootprint({ layout: board, column: 3 });
+  // Row `a` because a single-row module has to go in the outermost row of a
+  // bank or its own PCB covers every hole you were about to wire to. The
+  // consequence is that it overhangs the bottom rails, which is why RAW and
+  // ground are taken off the *top* pair in this figure.
+  const amp = breakoutFootprint({
+    layout: board,
+    column: 27,
+    pins: AMP_PINS,
+    row: "a",
+    depth: 6,
+  });
+  const { hole } = board;
+
+  const outputs = breakoutTerminals(amp, 2);
+  const speaker = { x: 846, y: 380 };
+  const speakerLeads = speakerTerminals(speaker);
+
+  return (
+    <PictorialFigure
+      width={990}
+      height={510}
+      label="Breadboard view of the amplifier stage. A seven-pin MAX98357A module plugs into the outermost row of the lower bank, its PCB overhanging the bottom edge of the board, with the pin names LRC, BCLK, DIN, GAIN, SD, GND and VIN printed along its header. Three jumpers run from GP13, GP14 and GP15 to BCLK, LRC and DIN — the first two crossing, because the header's order is not the Pico's — and a fourth from GP22 on the far edge of the Pico, over the board, to SD. VIN and GND go up to the top red and blue rails, with a 470 microfarad electrolytic across them, and the module's two output pads run to an 8 ohm speaker sitting off the board."
+    >
+      <Breadboard layout={board} />
+
+      {/* Both captions on one line, above the rails. The row below them is C1's
+          lane - the capacitor stands on the top pair, and its value label needs
+          the space a second caption line would have taken. */}
+      <text className="hw-label" x={board.x + 6} y={board.y - 34}>
+        top red rail = RAW 4.0–5.6 V, upstream of D1 · top blue rail = common
+        ground
+      </text>
+      <text className="hw-label" x={board.columnX(29)} y={board.y - 34}>
+        SPEAKER · GP13/14/15 + GP22 · lower bank
+      </text>
+
+      {/* ── the three I2S lines ─────────────────────────────────────────── */}
+      {/* Each lands in its own row so the two that have to cross stay legible.
+          Wire colour means nothing here - read the silkscreen. */}
+      <Wire
+        from={pico.tap(17, "b")}
+        to={hole(28, "b")}
+        color="yellow"
+        bow={0.1}
+      />
+      <Wire
+        from={pico.tap(19, "a")}
+        to={hole(27, "c")}
+        color="green"
+        bow={0.1}
+        bowDirection={-1}
+      />
+      <Wire
+        from={pico.tap(20, "b")}
+        to={hole(29, "d")}
+        color="blue"
+        bow={0.06}
+      />
+
+      {/* ── power and ground, off the top rails ─────────────────────────── */}
+      <Wire from={amp.tap("VIN", "b")} to={hole(33, "+t")} color="red" flow />
+      <Wire from={amp.tap("GND", "c")} to={hole(32, "-t")} color="black" flow />
+      <Wire from={pico.tap(23, "i")} to={hole(24, "-t")} color="black" flow />
+
+      {/* The bulk capacitor sits across the rails beside the module rather than
+          across its two pins: a 470 µF radial has 5 mm legs, which is two holes,
+          and the rails are where it can actually reach. */}
+      <Capacitor
+        positive={hole(37, "+t")}
+        negative={hole(37, "-t")}
+        label="C1 · 470 µF"
+      />
+
+      <BreakoutModule
+        footprint={amp}
+        label="MAX98357A"
+        sublabel="I²S class-D amp"
+        highlight={["BCLK", "LRC", "DIN", "SD"]}
+        terminals={["OUT+", "OUT−"]}
+      />
+
+      {/* ── the speaker, off the board on flying leads ──────────────────── */}
+      <Wire from={outputs[0]!} to={speakerLeads.positive} color="grey" />
+      <Wire from={outputs[1]!} to={speakerLeads.negative} color="grey" />
+      <Speaker {...speaker} label="SPK1" sublabel="8 Ω · 3 W · 40 mm" />
+
+      <PicoBoard
+        footprint={pico}
+        highlight={[17, 19, 20, 29, 23]}
+        labels="used"
+      />
+
+      {/* Drawn AFTER the Pico, and that is not a layering trick - this jumper
+          genuinely lies across the board. Every GPIO still free after the LEDs,
+          the flood, the buzzer and the buttons is on the Pico's far edge, so the
+          amp's enable line is the one wire in this build that has nowhere else
+          to go. */}
+      <Wire
+        from={pico.tap(29, "i")}
+        to={hole(31, "e")}
+        color="purple"
+        bow={0.22}
+        bowDirection={-1}
+      />
+
+      <Callout at={hole(31, "e")} to={hole(35, "g")} anchor="start">
+        GP22 → SD, over the Pico
+      </Callout>
+      <Callout
+        at={outputs[1]!}
+        to={{ x: board.columnX(20), y: board.y + board.height + 84 }}
+        anchor="middle"
+      >
+        neither output is ground — do not tie one to the blue rail
+      </Callout>
     </PictorialFigure>
   );
 }

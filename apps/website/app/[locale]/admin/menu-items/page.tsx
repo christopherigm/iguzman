@@ -1,14 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import {
   AdminEntityList,
   CellText,
   EmptyCell,
 } from "@/components/admin/admin-entity-list";
+import type { EntityGroup } from "@/components/admin/admin-entity-list";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
-import { listMenuItems, deleteMenuItem, updateMenuItem } from "@/lib/admin-api";
+import {
+  listMenuItems,
+  listMenuCategories,
+  deleteMenuItem,
+  updateMenuItem,
+} from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
 import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
 import { useReorder } from "@/hooks/use-reorder";
@@ -16,6 +22,7 @@ import { useReorder } from "@/hooks/use-reorder";
 export default function AdminMenuItemsPage() {
   const t = useTranslations("Admin");
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
+  const [categories, setCategories] = useState<EntityGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +32,22 @@ export default function AdminMenuItemsPage() {
     setLoading(true);
     setError(null);
     try {
-      setItems(await listMenuItems(systemId));
+      // The categories are fetched for their **order** as much as their names:
+      // the sections read in the arrangement the CMS gives the categories
+      // themselves - the same order the storefront's `/categories/menu` sections
+      // follow - which is the order the API already returns them in
+      // (`sort_order`, then name).
+      const [data, cats] = await Promise.all([
+        listMenuItems(systemId),
+        listMenuCategories(systemId),
+      ]);
+      setItems(data);
+      setCategories(
+        cats.map((c) => ({
+          id: c.id as number,
+          label: String(c.name ?? c.id),
+        })),
+      );
     } catch {
       setError(t("errorLoad"));
     } finally {
@@ -53,6 +75,18 @@ export default function AdminMenuItemsPage() {
       setError(t("errorDelete"));
     }
   };
+
+  // A menu item's category is required, so the uncategorized section is only
+  // ever reached by a row written before that rule (or one whose category has
+  // since gone) - it exists so such a dish is still editable, not as a bucket.
+  const grouping = useMemo(
+    () => ({
+      key: "category",
+      groups: categories,
+      uncategorizedLabel: t("uncategorized"),
+    }),
+    [categories, t],
+  );
 
   const columns = [
     { key: "image", label: t("image") ?? "Image", compact: true },
@@ -84,6 +118,7 @@ export default function AdminMenuItemsPage() {
         title={t("menuItems")}
         items={items}
         columns={columns}
+        grouping={grouping}
         basePath="/admin/menu-items"
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}

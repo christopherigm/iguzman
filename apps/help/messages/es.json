@@ -310,7 +310,7 @@
     "hardwareBackToList": "Todos los proyectos de hardware",
     "hardwareSourceLabel": "Código del firmware",
     "hwPumpkinHouseName": "Linterna Casa Calabaza",
-    "hwPumpkinHouseDesc": "Una casa de calabaza de cerámica iluminada desde dentro por una Raspberry Pi Pico: cuatro LEDs RGB con un motor de parpadeo de vela, una tira de luz blanca y un zumbador activo cuya expresión viene del ritmo y no del tono.",
+    "hwPumpkinHouseDesc": "Una casa de calabaza de cerámica iluminada desde dentro por una Raspberry Pi Pico: cuatro LEDs RGB con un motor de parpadeo de vela, una tira de luz blanca, un zumbador activo cuya expresión viene del ritmo y no del tono, y un amplificador I\u00b2S opcional que reproduce audio grabado desde la memoria flash de la placa.",
     "mobForgeTitle": "Mob Forge",
     "mobForgeSubtitle": "Configura el pipeline de modding de Minecraft con IA y crea un mob de GeckoLib de principio a fin: desde una instrucción en lenguaje natural hasta un huevo generador en el cliente 1.20.2.",
     "mobForgeUnixGroup": "Instalación - Linux y macOS",

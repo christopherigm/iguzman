@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useMemo, useState } from "react";
 import type { DragEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@repo/i18n/navigation";
@@ -12,6 +12,7 @@ import { Button } from "@repo/ui/core-elements/button";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { MoveHandle } from "@repo/ui/core-elements/move-handle";
 import { Badge } from "@repo/ui/core-elements/badge";
+import { Icon } from "@repo/ui/core-elements/icon";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
@@ -27,11 +28,42 @@ export interface Column {
   compact?: boolean;
 }
 
+export interface EntityGroup {
+  /** Matched against each row's `grouping.key` field. */
+  id: number | string;
+  label: string;
+}
+
+export interface EntityGrouping {
+  /** The row field holding the group's id (e.g. `"category"`). */
+  key: string;
+  /**
+   * The groups, in the order their sections are rendered - i.e. the categories
+   * in their own CMS order, which is what the list is expected to read as.
+   * Groups with no rows are dropped rather than shown empty, as the storefront's
+   * own category sections are.
+   */
+  groups: EntityGroup[];
+  /**
+   * Heading for the trailing section holding every row whose group field is
+   * empty - and any row pointing at a group that is not in `groups`, so that a
+   * row can never fall off the list.
+   */
+  uncategorizedLabel: string;
+}
+
 interface AdminEntityListProps {
   title: string;
   items: Record<string, unknown>[];
   columns: Column[];
   basePath: string;
+  /**
+   * Splits the table into one collapsible section per group instead of listing
+   * every record together. Only takes effect once the rows actually fall into
+   * more than one section - a list whose records all share a category has
+   * nothing to group, so it stays the plain single table.
+   */
+  grouping?: EntityGrouping;
   onDelete?: (id: number) => void;
   /**
    * Enables the inline Enabled toggle: the `enabled` column renders a Switch that
@@ -77,6 +109,7 @@ export function AdminEntityList({
   items,
   columns,
   basePath,
+  grouping,
   onDelete,
   onToggleEnabled,
   onReorder,
@@ -88,8 +121,15 @@ export function AdminEntityList({
 }: AdminEntityListProps) {
   const t = useTranslations("Admin");
   const tCommon = useTranslations("Common");
+  const sectionId = useId();
   // The row awaiting delete confirmation; null when the modal is closed.
   const [pendingDelete, setPendingDelete] = useState<number | null>(null);
+  // The sections the admin has folded away, by section key. Collapsed rather
+  // than expanded keys, so every section - including a category added after the
+  // page was opened - starts open.
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(
+    () => new Set<string>(),
+  );
   // Sort mode's working copy of the list. Non-null only while the switch is on:
   // dragging mutates this rather than `items`, so the parent's state stays the
   // saved order until the reorder is actually persisted.
@@ -106,9 +146,28 @@ export function AdminEntityList({
     ? columns.filter((c) => c.key === "image" || c.key === "name")
     : columns;
 
+  // Each row keeps its index in `rows`, because that is what the drag handlers
+  // splice against - a section renders a subset, never a list of its own.
+  const sections = useMemo(
+    () => buildSections(rows, grouping),
+    [rows, grouping],
+  );
+  const grouped = grouping !== undefined && sections.length > 1;
+
   const toggleSortMode = async (next: boolean) => {
     if (next) {
-      setDraft(items);
+      // A grouped list is dragged in the order it is *read*, so sort mode opens
+      // on the flattened section order rather than the stored one. Turning the
+      // switch back off therefore also brings `sort_order` into line with what
+      // is on screen, which is what keeps the storefront's flat listings in the
+      // same arrangement as the CMS.
+      setDraft(
+        grouped
+          ? buildSections(items, grouping).flatMap((s) =>
+              s.rows.map((r) => r.row),
+            )
+          : items,
+      );
       return;
     }
     const ordered = draft;
@@ -129,7 +188,21 @@ export function AdminEntityList({
   };
 
   // Drag-to-reorder: the handle is the drag source, each row a drop target.
+  // A grouped list only accepts a drop inside the dragged row's own section: a
+  // row's section is decided by its category, so a cross-section drop would
+  // re-arrange nothing and simply snap the row back where it came from.
+  const acceptsDrop = (index: number) => {
+    if (dragIndex === null) return false;
+    if (!grouped || !draft) return true;
+    return (
+      groupKeyOf(draft[dragIndex], grouping) ===
+      groupKeyOf(draft[index], grouping)
+    );
+  };
+
   const handleDragOver = (e: DragEvent, index: number) => {
+    // No preventDefault when the drop is refused, so the cursor says so.
+    if (!acceptsDrop(index)) return;
     e.preventDefault();
     setDragOverIndex(index);
   };
@@ -139,7 +212,12 @@ export function AdminEntityList({
   };
   const handleDrop = (e: DragEvent, dropIndex: number) => {
     e.preventDefault();
-    if (dragIndex === null || dragIndex === dropIndex || !draft) {
+    if (
+      dragIndex === null ||
+      dragIndex === dropIndex ||
+      !draft ||
+      !acceptsDrop(dropIndex)
+    ) {
       handleDragEnd();
       return;
     }
@@ -151,6 +229,105 @@ export function AdminEntityList({
     }
     handleDragEnd();
   };
+
+  const toggleSection = (key: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
+
+  // The table, for one section's rows or for the whole list. Every entry carries
+  // its index in `rows` rather than its position in the section, because that is
+  // the index the drag handlers splice against.
+  const renderTable = (entries: IndexedRow[]) => (
+    <table className="ael__table">
+      <thead>
+        <tr>
+          {visibleColumns.map((col) => (
+            <th
+              key={col.key}
+              className={`ael__th${col.compact ? " ael__th--compact" : ""}`}
+            >
+              {col.label}
+            </th>
+          ))}
+          <th className="ael__th ael__th--actions">
+            {sortMode ? t("order") : t("actions")}
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {entries.map(({ row: item, index }) => (
+          <tr
+            key={String(item.id)}
+            className={`ael__row${
+              sortMode && dragOverIndex === index && dragIndex !== index
+                ? " ael__row--drop"
+                : ""
+            }${sortMode && dragIndex === index ? " ael__row--dragging" : ""}`}
+            onDragOver={sortMode ? (e) => handleDragOver(e, index) : undefined}
+            onDragEnter={sortMode ? (e) => e.preventDefault() : undefined}
+            onDrop={sortMode ? (e) => handleDrop(e, index) : undefined}
+          >
+            {visibleColumns.map((col) => (
+              <td
+                key={col.key}
+                className={`ael__td${col.compact ? " ael__td--compact" : ""}`}
+              >
+                {col.render ? (
+                  col.render(item[col.key], item)
+                ) : onToggleEnabled && col.key === "enabled" ? (
+                  <EnabledSwitch
+                    id={item.id as number}
+                    enabled={Boolean(item.enabled)}
+                    onToggle={onToggleEnabled}
+                    label={t("toggleEnabled")}
+                  />
+                ) : (
+                  renderCell(item[col.key])
+                )}
+              </td>
+            ))}
+            <td className="ael__td ael__td--actions">
+              <Box display="flex" gap={8} justifyContent="flex-end">
+                {sortMode ? (
+                  <MoveHandle
+                    size="sm"
+                    onDragStart={() => setDragIndex(index)}
+                    onDragEnd={handleDragEnd}
+                    aria-label={t("dragToReorder")}
+                    title={t("dragToReorder")}
+                  />
+                ) : (
+                  <>
+                    <IconButton
+                      icon="/icons/edit.svg"
+                      kind="warning"
+                      size="sm"
+                      href={`${basePath}/${item.id}`}
+                      aria-label={t("edit")}
+                      title={t("edit")}
+                    />
+                    {onDelete && (
+                      <IconButton
+                        icon="/icons/delete-trash-icon.svg"
+                        kind="error"
+                        size="sm"
+                        aria-label={t("delete")}
+                        title={t("delete")}
+                        onClick={() => setPendingDelete(item.id as number)}
+                      />
+                    )}
+                  </>
+                )}
+              </Box>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 
   return (
     <Box flexDirection="column" gap={20}>
@@ -191,7 +368,7 @@ export function AdminEntityList({
 
       {sortMode && (
         <Typography variant="caption" color="var(--muted, #6b7280)">
-          {t("sortRowsHint")}
+          {grouped ? t("sortRowsHintGrouped") : t("sortRowsHint")}
         </Typography>
       )}
 
@@ -231,7 +408,9 @@ export function AdminEntityList({
         </Box>
       )}
 
-      {!loading && !error && items.length > 0 && (
+      {/* One table, when there is nothing to group by (or every record falls in
+          the same section). */}
+      {!loading && !error && items.length > 0 && !grouped && (
         <Box
           borderRadius={8}
           styles={{
@@ -240,96 +419,65 @@ export function AdminEntityList({
               "1px solid color-mix(in srgb, var(--foreground) 10%, transparent)",
           }}
         >
-          <table className="ael__table">
-            <thead>
-              <tr>
-                {visibleColumns.map((col) => (
-                  <th
-                    key={col.key}
-                    className={`ael__th${col.compact ? " ael__th--compact" : ""}`}
-                  >
-                    {col.label}
-                  </th>
-                ))}
-                <th className="ael__th ael__th--actions">
-                  {sortMode ? t("order") : t("actions")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((item, index) => (
-                <tr
-                  key={String(item.id)}
-                  className={`ael__row${
-                    sortMode && dragOverIndex === index && dragIndex !== index
-                      ? " ael__row--drop"
-                      : ""
-                  }${sortMode && dragIndex === index ? " ael__row--dragging" : ""}`}
-                  onDragOver={
-                    sortMode ? (e) => handleDragOver(e, index) : undefined
-                  }
-                  onDragEnter={sortMode ? (e) => e.preventDefault() : undefined}
-                  onDrop={sortMode ? (e) => handleDrop(e, index) : undefined}
+          {renderTable(sections[0]?.rows ?? [])}
+        </Box>
+      )}
+
+      {/* One collapsible table per group, in the groups' own order. */}
+      {!loading && !error && grouped && (
+        <Box flexDirection="column" gap={12}>
+          {sections.map((section) => {
+            const open = !collapsed.has(section.key);
+            const panelId = `${sectionId}-${section.key}`;
+            return (
+              <Box
+                key={section.key}
+                borderRadius={8}
+                styles={{
+                  overflow: "hidden",
+                  border:
+                    "1px solid color-mix(in srgb, var(--foreground) 10%, transparent)",
+                }}
+              >
+                <Button
+                  unstyled
+                  className="ael__group"
+                  onClick={() => toggleSection(section.key)}
+                  aria-expanded={open}
+                  aria-controls={panelId}
                 >
-                  {visibleColumns.map((col) => (
-                    <td
-                      key={col.key}
-                      className={`ael__td${col.compact ? " ael__td--compact" : ""}`}
-                    >
-                      {col.render ? (
-                        col.render(item[col.key], item)
-                      ) : onToggleEnabled && col.key === "enabled" ? (
-                        <EnabledSwitch
-                          id={item.id as number}
-                          enabled={Boolean(item.enabled)}
-                          onToggle={onToggleEnabled}
-                          label={t("toggleEnabled")}
-                        />
-                      ) : (
-                        renderCell(item[col.key])
-                      )}
-                    </td>
-                  ))}
-                  <td className="ael__td ael__td--actions">
-                    <Box display="flex" gap={8} justifyContent="flex-end">
-                      {sortMode ? (
-                        <MoveHandle
-                          size="sm"
-                          onDragStart={() => setDragIndex(index)}
-                          onDragEnd={handleDragEnd}
-                          aria-label={t("dragToReorder")}
-                          title={t("dragToReorder")}
-                        />
-                      ) : (
-                        <>
-                          <IconButton
-                            icon="/icons/edit.svg"
-                            kind="warning"
-                            size="sm"
-                            href={`${basePath}/${item.id}`}
-                            aria-label={t("edit")}
-                            title={t("edit")}
-                          />
-                          {onDelete && (
-                            <IconButton
-                              icon="/icons/delete-trash-icon.svg"
-                              kind="error"
-                              size="sm"
-                              aria-label={t("delete")}
-                              title={t("delete")}
-                              onClick={() =>
-                                setPendingDelete(item.id as number)
-                              }
-                            />
-                          )}
-                        </>
-                      )}
-                    </Box>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  <Icon
+                    icon="/icons/chevron-down.svg"
+                    size={16}
+                    color="var(--foreground)"
+                    className={`ael__group-chevron${
+                      open ? "" : " ael__group-chevron--closed"
+                    }`}
+                  />
+                  <Typography as="span" variant="h6" margin={0}>
+                    {section.label}
+                  </Typography>
+                  {/* The row count, so a folded section still says how much is
+                      inside it. Painted from `--foreground` rather than a named
+                      colour, since it carries no status - unlike the ✓/✗ badge a
+                      boolean cell renders. */}
+                  <Badge
+                    variant="subtle"
+                    size="sm"
+                    color="var(--foreground)"
+                    circular
+                  >
+                    {String(section.rows.length)}
+                  </Badge>
+                </Button>
+                {open && (
+                  <Box id={panelId} styles={{ overflowX: "auto" }}>
+                    {renderTable(section.rows)}
+                  </Box>
+                )}
+              </Box>
+            );
+          })}
         </Box>
       )}
 
@@ -352,6 +500,78 @@ export function AdminEntityList({
       )}
     </Box>
   );
+}
+
+/** A row together with its index in the list the drag handlers splice against. */
+interface IndexedRow {
+  row: Record<string, unknown>;
+  index: number;
+}
+
+interface Section {
+  key: string;
+  label: string;
+  rows: IndexedRow[];
+}
+
+/** The section key for a row with no group, and for the section holding them. */
+const UNGROUPED = "__ungrouped__";
+
+function groupKeyOf(
+  row: Record<string, unknown> | undefined,
+  grouping: EntityGrouping | undefined,
+): string {
+  if (!row || !grouping) return UNGROUPED;
+  const raw = row[grouping.key];
+  return raw === null || raw === undefined || raw === ""
+    ? UNGROUPED
+    : String(raw);
+}
+
+/**
+ * Splits `rows` into the sections to render: one per group that has rows, in the
+ * caller's group order, then everything left over under `uncategorizedLabel` -
+ * rows with no group **and** rows pointing at a group the caller did not list, so
+ * that no record can drop off the page. Ungrouped lists come back as one
+ * section, which is what keeps the plain table on a single code path.
+ */
+function buildSections(
+  rows: Record<string, unknown>[],
+  grouping: EntityGrouping | undefined,
+): Section[] {
+  const indexed: IndexedRow[] = rows.map((row, index) => ({ row, index }));
+  if (!grouping) return [{ key: UNGROUPED, label: "", rows: indexed }];
+
+  const known = new Set(grouping.groups.map((g) => String(g.id)));
+  const byGroup = new Map<string, IndexedRow[]>();
+  const leftover: IndexedRow[] = [];
+  for (const entry of indexed) {
+    const key = groupKeyOf(entry.row, grouping);
+    if (!known.has(key)) {
+      leftover.push(entry);
+      continue;
+    }
+    const bucket = byGroup.get(key);
+    if (bucket) bucket.push(entry);
+    else byGroup.set(key, [entry]);
+  }
+
+  const sections = grouping.groups
+    .map((group) => ({
+      key: String(group.id),
+      label: group.label,
+      rows: byGroup.get(String(group.id)) ?? [],
+    }))
+    .filter((section) => section.rows.length > 0);
+
+  if (leftover.length > 0) {
+    sections.push({
+      key: UNGROUPED,
+      label: grouping.uncategorizedLabel,
+      rows: leftover,
+    });
+  }
+  return sections;
 }
 
 /**

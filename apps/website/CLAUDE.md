@@ -548,6 +548,37 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   FK). Far more destructive than deleting a product category, whose items merely
   lose their FK.
 
+## The three catalog CMS lists are grouped by category
+
+`/admin/products`, `/admin/services` and `/admin/menu-items` render one
+collapsible table **per category** instead of one list with every record in it,
+through `AdminEntityList`'s `grouping` prop. The sections follow the categories'
+own CMS order, and the trailing "Uncategorized" one holds whatever has no
+category. Nothing else in the CMS is grouped - it is the three lists a tenant
+actually fills in the hundreds.
+
+- **The pages fetch their category list for its _order_.** Grouping off the rows
+  alone can only sort the sections by whichever item happens to come first, which
+  is not the arrangement the storefront reads in. The heading is the category's
+  `name` (the primary-language one), exactly as the category `<select>` on the
+  item form labels its options - the CMS does not localise tenant copy.
+- **It only takes effect once the rows fall into more than one section.** A
+  catalog whose records all share a category has nothing to group, so it stays
+  the plain single table it was, with no header to collapse.
+- **A category with no items gets no section**, the same rule the storefront's
+  menu sections follow - an empty table under a heading reads as a broken page.
+  A row pointing at a category the list did not carry falls in with the
+  uncategorized ones, so a record can never drop off the page.
+- ⚠ **Sort mode is per section, and leaving it normalises `sort_order`.**
+  Turning the switch on re-seeds the drag draft with the **flattened section
+  order**, so what is dragged is what is stored, and a drop outside the dragged
+  row's own section is refused (its category decides which section it is in, so
+  such a drop could only snap back). The trade is that switching sort on and off
+  can write rows nobody dragged - it is what keeps the stored order, and so the
+  storefront's flat listings, in the arrangement the CMS shows.
+- **Sections start expanded and the collapsed ones are the state that is kept**,
+  so a category added while the page is open is open too.
+
 ## Catalog kind labels - what a tenant calls its products and services
 
 A workshop's "Services" are _Lo que hacemos_. `System` carries a bilingual label

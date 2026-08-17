@@ -7,14 +7,15 @@
       "descKey": "hwPumpkinHouseDesc",
       "board": "Raspberry Pi Pico",
       "language": "MicroPython",
-      "revision": "Build sheet · rev A",
+      "revision": "Build sheet · rev B",
       "sourcePath": "hardware/pumpkin-house",
       "specs": [
         { "label": "Enclosure", "value": "⌀120 × 110 mm" },
         { "label": "Pack", "value": "4 × NiMH AA" },
         { "label": "Rail", "value": "4.0 – 5.6 V" },
-        { "label": "Draw", "value": "≈ 93 mA" },
-        { "label": "Runtime", "value": "≈ 20 h" }
+        { "label": "Sound", "value": "Buzzer + I²S speaker" },
+        { "label": "Draw", "value": "≈ 93 mA · ~300 mA playing" },
+        { "label": "Runtime", "value": "≈ 20 h · 6–8 h with audio" }
       ]
     }
   ]

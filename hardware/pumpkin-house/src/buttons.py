@@ -89,10 +89,19 @@ class Controls:
     button, not to the show, and no scene should have to know about it.
     """
 
-    def __init__(self, bz, lamps=(), flood=None, power_pin=None, scene_pin=None):
+    def __init__(
+        self,
+        bz,
+        lamps=(),
+        flood=None,
+        speaker=None,
+        power_pin=None,
+        scene_pin=None,
+    ):
         self._bz = bz
         self._lamps = lamps
         self._flood = flood
+        self._speaker = speaker
         self._power = Button(config.POWER_PIN if power_pin is None else power_pin)
         self._scene = Button(config.SCENE_PIN if scene_pin is None else scene_pin)
         self._scene_pending = False
@@ -117,7 +126,20 @@ class Controls:
             # toggle_mute() blips the buzzer on the way back to audible, which
             # is worth keeping even now that there is a light for it: the blip
             # proves the sound path still works, and the light does not.
+            #
+            # The Buzzer owns the mute state for both devices, including on a
+            # build with no buzzer soldered to that pin - see `_carrier` in
+            # `buzzer.py`. One flag, so this button cannot leave the lantern
+            # half silent, and so "sound off" survives an off-and-on for the
+            # speaker exactly as it always has for the buzzer.
             muted = self._bz.toggle_mute()
+            if self._speaker is not None:
+                self._speaker.mute(muted)
+                if not muted and not self._bz.is_enabled():
+                    # Nothing blipped: there is no buzzer. The speaker says it
+                    # instead, or the sound leg of the cycle would be the one
+                    # press that answers with a colour and nothing else.
+                    self._speaker.blip()
             colour = config.SOUND_OFF_RGB if muted else config.SOUND_ON_RGB
             self._confirm(colour, config.CONFIRM_MS)
         else:
@@ -167,6 +189,12 @@ class Controls:
         if self._flood is not None:
             self._flood.off()
         self._bz.off()
+        if self._speaker is not None:
+            # The amplifier especially: a track left running into a lantern
+            # that has just gone dark is the one thing someone reaching for
+            # that button is definitely trying to stop, and it is also the
+            # part drawing 300 mA while it does it.
+            self._speaker.off()
 
     # -- the scene button ------------------------------------------------
 

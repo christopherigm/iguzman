@@ -392,6 +392,124 @@ export function picoFootprint({
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   Breakout modules
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * A single-row breakout board plugged into one bank.
+ *
+ * The shape of the problem is different from the Pico's. A Pico straddles the
+ * ravine and covers the four rows between its two pin rows; a little breakout -
+ * an amplifier, a sensor, a real-time clock - has **one** header, so it plugs
+ * into a single row and its PCB overhangs the edge of the breadboard rather
+ * than lying across it. That is not a drawing convenience, it is how the part
+ * is actually fitted: put the header in an inner row and the board lies over
+ * every hole you were going to wire to.
+ *
+ * So `row` defaults to the outermost row of the upper bank, and `tap` returns
+ * holes on the **ravine side** of the header, which are the ones still visible.
+ */
+export interface BreakoutFootprint {
+  /** Leftmost column the header occupies. */
+  column: number;
+  /** The row the header pins are in. */
+  row: BreadboardRow;
+  /** Which bank that row belongs to. */
+  bank: "upper" | "lower";
+  /** Pin names, left to right as fitted. */
+  pins: readonly string[];
+  /** Absolute body rectangle, for drawing. */
+  body: { x: number; y: number; width: number; height: number };
+  /** Where a named pin's hole is. */
+  pin: (name: string) => Point;
+  pinHole: (name: string) => { column: number; row: BreadboardRow };
+  /** The free hole in that pin's node a wire actually plugs into. */
+  tap: (name: string, row?: BreadboardRow) => Point;
+  /** Reachable rows in the same bank, nearest the header first. */
+  freeRows: BreadboardRow[];
+}
+
+const UPPER_BANK: readonly BreadboardRow[] = ["f", "g", "h", "i", "j"];
+const LOWER_BANK: readonly BreadboardRow[] = ["e", "d", "c", "b", "a"];
+
+/**
+ * Place a breakout with its header starting at `column`, one pin per column.
+ *
+ * `depth` is how far the PCB reaches **outward** from its header, in hole
+ * pitches - these little boards are typically 12-18 mm across, which is five to
+ * seven. It only affects the drawing; nothing electrical depends on it.
+ */
+export function breakoutFootprint({
+  layout,
+  column,
+  pins,
+  row,
+  depth = 5,
+}: {
+  layout: BreadboardLayout;
+  column: number;
+  pins: readonly string[];
+  row?: BreadboardRow;
+  depth?: number;
+}): BreakoutFootprint {
+  const pinRow: BreadboardRow = row ?? "j";
+  const upperIndex = UPPER_BANK.indexOf(pinRow);
+  const bank: "upper" | "lower" = upperIndex >= 0 ? "upper" : "lower";
+  const order = bank === "upper" ? UPPER_BANK : LOWER_BANK;
+  const index = order.indexOf(pinRow);
+  if (index < 0) throw new Error(`Not a terminal row: ${pinRow}`);
+
+  // Nearest first, so `tap` with no row argument picks the hole immediately
+  // beside the header - the short jumper somebody would actually fit.
+  const freeRows = order
+    .filter((candidate) => candidate !== pinRow)
+    .sort(
+      (a, b) =>
+        Math.abs(order.indexOf(a) - index) - Math.abs(order.indexOf(b) - index),
+    );
+
+  const pinHole = (name: string): { column: number; row: BreadboardRow } => {
+    const offset = pins.indexOf(name);
+    if (offset < 0) throw new Error(`Unknown breakout pin: ${name}`);
+    return { column: column + offset, row: pinRow };
+  };
+
+  const headerY = layout.rowY(pinRow);
+  const leftX = layout.columnX(column);
+  const rightX = layout.columnX(column + pins.length - 1);
+  // Outward is away from the ravine: up in the upper bank, down in the lower.
+  const outward = bank === "upper" ? -1 : 1;
+  const overhang = 0.6 * HOLE_PITCH;
+  const reach = depth * HOLE_PITCH;
+
+  return {
+    column,
+    row: pinRow,
+    bank,
+    pins,
+    body: {
+      x: leftX - overhang,
+      y: outward < 0 ? headerY - reach : headerY - overhang,
+      width: rightX - leftX + overhang * 2,
+      height: reach + overhang,
+    },
+    pin: (name) => {
+      const { column: c, row: r } = pinHole(name);
+      return layout.hole(c, r);
+    },
+    pinHole,
+    tap: (name, tapRow) => {
+      const { column: c } = pinHole(name);
+      const chosen = tapRow ?? freeRows[0];
+      if (!chosen)
+        throw new Error("This breakout placement leaves no free rows");
+      return layout.hole(c, chosen);
+    },
+    freeRows,
+  };
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    Resistor colour code
    ══════════════════════════════════════════════════════════════════════════ */
 

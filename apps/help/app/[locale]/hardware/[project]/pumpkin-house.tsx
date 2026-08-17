@@ -11,12 +11,14 @@ import {
   PowerPathFigure,
   RgbGroupFigure,
   NpnStagesFigure,
+  AmpStageFigure,
   ButtonsFigure,
 } from "./pumpkin-house-figures";
 import {
   PowerPathPictorial,
   RgbGroupPictorial,
   NpnStagesPictorial,
+  AmpStagePictorial,
   ButtonsPictorial,
   PicoPinoutPictorial,
 } from "./pumpkin-house-pictorial";
@@ -35,13 +37,15 @@ import { DocDualFigure } from "./doc-dual-figure";
  * merged onto this page and are now condensed into it. The engineering rationale
  * that filled most of the merged version survives as callouts attached to the
  * step it affects: why four cells and a Schottky (step 02), why the RGB anodes
- * hang off GPIO instead of transistors (step 03), why the buttons are read from
- * an interrupt (step 05), why the pads need 12 mA drive (the reference tail).
+ * hang off GPIO instead of transistors (step 03), why the amplifier goes on the
+ * pack rail and what that costs the runtime (step 05), why the buttons are read
+ * from an interrupt (step 06), why the pads need 12 mA drive (the reference
+ * tail).
  * The dropped material was the long-form argument around those conclusions,
  * plus a catalogue of buzzer gate patterns that `buzzer.py` already implements.
  *
  * Only **one** numbered section sequence exists here, per `apps/help/CLAUDE.md`:
- * the build steps carry 01-08 and everything around them is titled but
+ * the build steps carry 01-09 and everything around them is titled but
  * unnumbered, so a bare "step 03" in the prose is unambiguous.
  */
 
@@ -97,6 +101,58 @@ const BUTTON_TEST =
   "stage.controls.poll()           # serve whatever the interrupts latched\n" +
   "stage.interrupted()             # True if a press is waiting to be served";
 
+const AUDIO_ENCODE =
+  "# The one-liner. -ac 1 mono, -ar 11025 sample rate, pcm_u8 8-bit.\n" +
+  "ffmpeg -i thunder.mp3 -ac 1 -ar 11025 -c:a pcm_u8 10-thunder.wav\n" +
+  "\n" +
+  "# Better: normalise first. 8-bit has 48 dB of range in total, so a quiet\n" +
+  "# recording spends most of it on hiss. The limiter stops the loud parts\n" +
+  "# clipping once the gain is up.\n" +
+  "ffmpeg -i thunder.mp3 -ac 1 -ar 11025 \\\n" +
+  '  -af "highpass=f=90,loudnorm=I=-14:TP=-1.5,alimiter=limit=0.95" \\\n' +
+  "  -c:a pcm_u8 10-thunder.wav\n" +
+  "\n" +
+  "# Take a slice rather than the whole track: -ss start, -t length.\n" +
+  "ffmpeg -ss 00:00:12 -t 8 -i howl.mp3 -ac 1 -ar 11025 -c:a pcm_u8 20-howl.wav";
+
+const AUDIO_BATCH =
+  "# Everything in a folder, in one go.\n" +
+  "for f in raw/*.mp3; do\n" +
+  '  ffmpeg -i "$f" -ac 1 -ar 11025 \\\n' +
+  '    -af "highpass=f=90,loudnorm=I=-14:TP=-1.5,alimiter=limit=0.95" \\\n' +
+  '    -c:a pcm_u8 "hardware/pumpkin-house/audio/$(basename "${f%.*}").wav"\n' +
+  "done\n" +
+  "\n" +
+  "# What you actually just made, and how big it is.\n" +
+  "ffprobe -hide_banner hardware/pumpkin-house/audio/10-thunder.wav\n" +
+  "du -ch hardware/pumpkin-house/audio/*.wav | tail -1";
+
+const AUDIO_UPLOAD =
+  "mpremote mkdir :audio                                   # once\n" +
+  "mpremote cp hardware/pumpkin-house/audio/*.wav :audio/\n" +
+  "mpremote ls :audio\n" +
+  "mpremote reset\n" +
+  "\n" +
+  "# How much room is left. Do this before copying, not after.\n" +
+  "mpremote exec \"import os; s=os.statvfs('/'); print(s[0]*s[3], 'bytes free')\"";
+
+const SPEAKER_TEST =
+  "# Is the amp wired up at all? This synthesises its own tone, so it works\n" +
+  "# before a single file has been copied onto the board.\n" +
+  "stage.speaker.blip()\n" +
+  "\n" +
+  "import audio_scenes\n" +
+  "audio_scenes.discover()          # what the firmware can see in /audio\n" +
+  "audio_scenes.play(stage, '/audio/10-thunder.wav')\n" +
+  "\n" +
+  "# The show this particular lantern will run - buzzer scenes and tracks\n" +
+  "# interleaved, filtered by what config.py says is fitted.\n" +
+  "sequence, rotation = main.show(stage)\n" +
+  "[s.__name__ for s in sequence]\n" +
+  "\n" +
+  "stage.speaker.mute(True)         # what press 2 of the cycle does to it\n" +
+  "stage.speaker.off()              # drop SD; the hiss should stop dead";
+
 const PAD_DRIVE =
   "import machine\n" +
   "\n" +
@@ -124,6 +180,14 @@ export function PumpkinHouseDoc() {
           under an amber pulse, green crickets between them.
         </P>
         <P>
+          <strong>There is an optional second voice.</strong> A MAX98357A
+          amplifier and a small speaker (step 05) play recorded audio off the
+          Pico&rsquo;s own flash - a real crow, thunder, a door - taking their
+          turn in the same rotation as the buzzer scenes. Either device can be
+          switched off in <code>config.py</code>, so the build is the same
+          whether you fit one, both or neither.
+        </P>
+        <P>
           Two buttons on the outside of the case drive it.{" "}
           <strong>Power</strong> is a three-press cycle - on, sound on/off, off
           - and answers every press with a colour before it acts: white for
@@ -144,7 +208,10 @@ export function PumpkinHouseDoc() {
           <strong>20 hours</strong> - several nights - on 1900 mAh cells. Total
           dissipation is under a watt, so heat inside the sealed ceramic is a
           non-issue. Expect two evenings: one to wire and test on the bench, one
-          to fit it into the enclosure.
+          to fit it into the enclosure.{" "}
+          <strong>Fitting the speaker changes that number</strong>: an amplifier
+          pulling two to three hundred milliamps while it plays brings the pack
+          down to six or eight hours, which step 05 goes into.
         </P>
         <P>
           There is <strong>no compile step</strong> anywhere in this build.
@@ -176,7 +243,7 @@ export function PumpkinHouseDoc() {
               <td>RGB LED, 5 mm, common cathode</td>
               <td>
                 <strong>Common cathode specifically</strong> - common anode will
-                not work with this circuit. Verify before wiring, see step 08.
+                not work with this circuit. Verify before wiring, see step 09.
               </td>
             </tr>
             <tr>
@@ -188,6 +255,31 @@ export function PumpkinHouseDoc() {
               <td className="mono">1</td>
               <td>CYT1036 active buzzer</td>
               <td>Polarised. Any 3&ndash;5 V active buzzer substitutes.</td>
+            </tr>
+            <tr>
+              <td className="mono">1</td>
+              <td>MAX98357A I²S amplifier module</td>
+              <td>
+                <strong>Optional</strong> — step 05. Adds recorded audio
+                alongside the buzzer. Any breakout of this chip works; they all
+                carry the same seven-pin header.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">1</td>
+              <td>Speaker, 8 Ω, 3 W, ⌀40 mm</td>
+              <td>
+                With the amplifier. 4 Ω also works and is louder, at more
+                current; anything above 8 Ω is quieter for no saving.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">1</td>
+              <td>470 µF electrolytic, 10 V or better</td>
+              <td>
+                C1, across the amplifier&rsquo;s supply. 220 µF will do; this is
+                what stops a bass note browning out the Pico.
+              </td>
             </tr>
             <tr>
               <td className="mono">1</td>
@@ -260,7 +352,7 @@ export function PumpkinHouseDoc() {
               <td>
                 SW2 power, SW3 scene. Any normally-open momentary switch works -
                 the firmware supplies the pull-up. Panel-mount buttons are
-                easier to fit through ceramic; see step 05.
+                easier to fit through ceramic; see step 06.
               </td>
             </tr>
             <tr>
@@ -273,7 +365,7 @@ export function PumpkinHouseDoc() {
             <tr>
               <td className="mono">—</td>
               <td>Perfboard, hookup wire, heatshrink</td>
-              <td>Plus a multimeter with a diode-test mode for step 07.</td>
+              <td>Plus a multimeter with a diode-test mode for step 08.</td>
             </tr>
           </tbody>
         </DocTable>
@@ -518,13 +610,138 @@ export function PumpkinHouseDoc() {
           stops being heard as rhythm and starts being heard as tone colour,
           which is what makes a raspy crow call possible on a one-note device.{" "}
           <code>buzzer.py</code> ships the effect library. If the fixed pitch
-          starts to feel limiting, a passive piezo disc turns pitch into a
-          variable; it wires to a PWM pin through 100 Ω and needs no transistor,
-          and spare GP13 is already sitting there.
+          starts to feel limiting, the answer in this build is no longer a
+          passive piezo on a spare PWM channel - there are no spare channels
+          left once step 05 is fitted, and a real speaker beats a second
+          one-note device anyway.
         </P>
       </DocSection>
 
-      <DocSection num="05" title="Wire the two buttons">
+      <DocSection num="05" title="Wire the amplifier and speaker">
+        <P>
+          <strong>Optional, and it is the only optional stage here.</strong> The
+          buzzer is a fixed 2.3 kHz whose <em>rhythm</em> does all the work;
+          this is a MAX98357A class-D amplifier playing recorded audio - a real
+          crow, a door that actually creaks - off the Pico&rsquo;s own flash.
+          Both can be fitted, and <code>config.py</code> has a switch for each.
+          Skip this step entirely and set{" "}
+          <code>
+            SPEAKER_ENABLED = <span className="mono">False</span>
+          </code>
+          ; everything else in the build is unchanged.
+        </P>
+        <P>
+          The MAX98357A is an <strong>I&sup2;S</strong> part, which means it
+          contains the DAC as well as the amplifier: the Pico sends it digital
+          samples, not an analogue signal, so there is no filtering, no coupling
+          capacitor and nothing to get wrong between the two. What it does need
+          is{" "}
+          <strong>
+            three clock and data lines whose pins are not free choices
+          </strong>{" "}
+          - the RP2040 generates I&sup2;S in a PIO state machine that requires
+          word select to be <em>the pin immediately after</em> the bit clock.
+          GP13/GP14/GP15 are the last consecutive trio on the board, which is
+          why the three spare PWM channels the reference used to promise are
+          spent here.
+        </P>
+        <ul>
+          <li>
+            <strong>BCLK:</strong> GP13 (pin 17) → the module&rsquo;s{" "}
+            <code>BCLK</code>.
+          </li>
+          <li>
+            <strong>LRC:</strong> GP14 (pin 19) → <code>LRC</code>. This one{" "}
+            <strong>must</strong> be BCLK + 1.
+          </li>
+          <li>
+            <strong>DIN:</strong> GP15 (pin 20) → <code>DIN</code>.
+          </li>
+          <li>
+            <strong>SD:</strong> GP22 (pin 29) → <code>SD</code>. Not a data
+            line despite the name - it is the amp&rsquo;s <em>shutdown</em> pin,
+            and the firmware drops it between tracks.
+          </li>
+          <li>
+            <strong>VIN and GND:</strong> the <strong>raw pack rail</strong>,
+            upstream of D1, and the common ground.{" "}
+            <strong>Not the Pico&rsquo;s 3V3 pin</strong> - see the warning
+            below.
+          </li>
+          <li>
+            <strong>C1:</strong> a 470 µF electrolytic across VIN and GND, as
+            close to the module as it will reach. Stripe to ground.
+          </li>
+          <li>
+            <strong>Speaker:</strong> the module&rsquo;s two output pads to the
+            8 Ω cone. Either way round.
+          </li>
+        </ul>
+
+        <DocDualFigure
+          captionLabel="Fig 5"
+          caption="The amplifier stage. The outputs are bridge-tied — the speaker floats between them and neither side is ground — which is why there is no return wire to the blue rail here, and why grounding one output destroys half the amplifier rather than simply halving the volume."
+          pictorialCaption="The same stage on a breadboard. A single-row module has to go in the outermost row of a bank or its own PCB covers the holes you were about to wire to, so it plugs into row a and overhangs the bottom edge — which is why power comes off the top rails. Note the first two jumpers crossing: the header reads LRC before BCLK, and the Pico's pins run the other way. Read the silkscreen, not the wire colours."
+          schematic={<AmpStageFigure />}
+          pictorial={<AmpStagePictorial />}
+        />
+
+        <DocNote
+          kind="warn"
+          tag="Power it from the pack, and know what it costs"
+        >
+          <P>
+            <strong>Never off the Pico&rsquo;s 3V3 pin.</strong> That rail comes
+            from an onboard buck-boost good for a few hundred milliamps, and a
+            music peak asks for six hundred - the Pico browns out and reboots
+            mid-caw, which presents as random resets you will spend an evening
+            blaming on the firmware. VIN goes to the raw pack rail, the same one
+            the flood and buzzer tap, upstream of D1.
+          </P>
+          <P>
+            <strong>And it is not free.</strong> The lantern draws ~93 mA with
+            the amp idle; loud material pulls two to three hundred milliamps
+            average and peaks near six hundred. Reckon on{" "}
+            <strong>6&ndash;8 hours</strong> instead of twenty if audio plays
+            through the evening. Three things buy most of it back, in this
+            order: play audio sparingly (lower <code>AUDIO_WEIGHT</code>), leave
+            the module&rsquo;s <code>GAIN</code> pad open at 9 dB rather than
+            bridging it, and let the firmware drop <code>SD</code> between
+            tracks - which is what GP22 is for, and is worth a couple of
+            milliamps and all of the idle hiss.
+          </P>
+          <P>
+            While you are here: 4.8 V into 8 Ω is about <strong>1.4 W</strong>,
+            not the 3 W on the packaging, which assumes a stiff 5 V supply.
+            Inside a ceramic pot on a porch it is plenty.
+          </P>
+        </DocNote>
+
+        <P>
+          <strong>Give it its own ground lead.</strong> Everything else in this
+          build draws a steady few milliamps; this draws an audio waveform, and
+          if its return current shares a thin daisy-chained ground with the RGB
+          anodes you will hear the flame flicker as a buzz in the speaker. Run
+          one lead from the module&rsquo;s GND straight back to the pack
+          negative, and let the LEDs keep theirs.
+        </P>
+
+        <DocNote tag="What the SD pin is really doing">
+          <P>
+            It is a mode selector as well as an on/off, and the voltage picks
+            the channel: above ~1.4 V it plays (L+R)/2, lower bands select left
+            or right, and below ~0.16 V it shuts down. A 3.3 V GPIO high
+            therefore lands squarely in the averaging mode, which is what{" "}
+            <code>audio.py</code> assumes - and it is the reason the firmware
+            writes every sample to <strong>both</strong> I&sup2;S channels
+            rather than using the driver&rsquo;s mono format, which would arrive
+            6 dB down. Some breakout boards carry a 1 MΩ pull-up on this pin;
+            driving it from a GPIO overrides that harmlessly.
+          </P>
+        </DocNote>
+      </DocSection>
+
+      <DocSection num="06" title="Wire the two buttons">
         <P>
           This is the cheapest stage on the board: two switches, two jumpers, a
           shared ground, and <strong>no other components at all</strong>. Each
@@ -650,7 +867,7 @@ export function PumpkinHouseDoc() {
         </DocNote>
       </DocSection>
 
-      <DocSection num="06" title="Upload the firmware">
+      <DocSection num="07" title="Upload the firmware">
         <P>From the repo root, with the Pico on USB:</P>
         <CodeBlock language="bash" code={UPLOAD} />
         <P>
@@ -673,11 +890,25 @@ export function PumpkinHouseDoc() {
         <P>
           Expect <code>main.py</code>, <code>config.py</code>,{" "}
           <code>leds.py</code>, <code>buzzer.py</code>, <code>scenes.py</code>,{" "}
-          <code>pads.py</code>, <code>buttons.py</code>. All seven, in the root.
+          <code>pads.py</code>, <code>buttons.py</code>, <code>audio.py</code>,{" "}
+          <code>audio_scenes.py</code>. All nine, in the root.
+        </P>
+        <P>
+          If you fitted the speaker, the audio files go in a{" "}
+          <strong>separate folder</strong>, not the root - see &ldquo;Audio
+          files&rdquo; in the reference below for the encoding recipe and the
+          flash budget. The short version:
+        </P>
+        <CodeBlock language="bash" code={AUDIO_UPLOAD} />
+        <P>
+          Nothing breaks if that folder is missing or empty. The firmware finds
+          no tracks, contributes none to the rotation, and runs the buzzer
+          scenes exactly as it did before - which is also the state to leave it
+          in while you are still wiring.
         </P>
       </DocSection>
 
-      <DocSection num="07" title="Test on the bench">
+      <DocSection num="08" title="Test on the bench">
         <P>
           <code>main.py</code> guards its entry point, so importing it does{" "}
           <strong>not</strong> start the show. Connect with{" "}
@@ -689,6 +920,19 @@ export function PumpkinHouseDoc() {
           Bring the flood channel up on its own first. If Q1 gets warm, your
           base resistor is too small or one of the flood resistors is missing -
           stop and fix that before running the full demo.
+        </P>
+
+        <DocH3>Then the speaker, if you fitted one</DocH3>
+        <CodeBlock language="python" code={SPEAKER_TEST} />
+        <P>
+          <code>blip()</code> is the one to start with, because it isolates the
+          wiring from everything else: it synthesises its own tone, so it does
+          not care whether a single file has been copied onto the board. Silence
+          from it means the four jumpers, the supply or the speaker leads -{" "}
+          <strong>not</strong> the audio. A tone from it followed by silence
+          from <code>play()</code> means the file, and{" "}
+          <code>audio_scenes.discover()</code> returning <code>()</code> means
+          the folder.
         </P>
 
         <DocH3>Then the buttons</DocH3>
@@ -730,7 +974,7 @@ export function PumpkinHouseDoc() {
         </P>
       </DocSection>
 
-      <DocSection num="08" title="Assemble it in the pumpkin">
+      <DocSection num="09" title="Assemble it in the pumpkin">
         <DocH3>Check these five things before powering up</DocH3>
         <ol>
           <li>
@@ -794,6 +1038,17 @@ export function PumpkinHouseDoc() {
             Don&rsquo;t glue the battery holder in - it has to come out to
             recharge.
           </li>
+          <li>
+            <strong>
+              Point the speaker at an opening, and leave it a gap.
+            </strong>{" "}
+            A cone facing sealed ceramic loses most of what little bass it has,
+            and one glued flat to a wall turns the whole pot into a resonant box
+            that rattles on every low note. Aim it at a window or the base
+            cut-out and stand it off the surface a couple of millimetres. Keep
+            the module and its wiring away from the battery leads while you are
+            at it - the amp is the one part here that will hear them.
+          </li>
         </ul>
 
         <DocNote tag="The thing that actually sells it">
@@ -822,8 +1077,19 @@ export function PumpkinHouseDoc() {
           software, so it never fights the LEDs over a shared slice frequency.
           This is why the RGB pins cannot be reassigned freely if you rewire.
           The two buttons are inputs and so care about none of this - GP17 and
-          GP18 were picked for the GND on pin 23 sitting between them, and to
-          leave GP13&ndash;GP15 free.
+          GP18 were picked for the GND on pin 23 sitting between them.
+        </P>
+        <P>
+          <strong>
+            GP13&ndash;GP15 were the three spare channels and are now the
+            I&sup2;S bus.
+          </strong>{" "}
+          Not a free choice: the RP2040 generates I&sup2;S in PIO and requires
+          word select to be the pin immediately after the bit clock, and those
+          three are the only consecutive run left. That leaves the amplifier
+          enable line with nowhere on the near edge to go, which is why it is
+          GP22 on the far one - and why, in the breadboard view of Fig 5, it is
+          the one jumper drawn lying across the Pico.
         </P>
 
         <DocFigure
@@ -903,9 +1169,16 @@ export function PumpkinHouseDoc() {
             <tr>
               <td className="mono">GP13 / GP14 / GP15</td>
               <td className="mono">17 / 19 / 20</td>
-              <td className="mono">6B 7A 7B</td>
-              <td>Spare independent PWM</td>
-              <td>—</td>
+              <td className="mono">—</td>
+              <td>Amplifier — BCLK / LRC / DIN</td>
+              <td>I²S (PIO)</td>
+            </tr>
+            <tr>
+              <td className="mono">GP22</td>
+              <td className="mono">29</td>
+              <td className="mono">—</td>
+              <td>Amplifier — SD / enable</td>
+              <td>Digital out</td>
             </tr>
             <tr>
               <td className="mono">VSYS</td>
@@ -996,6 +1269,30 @@ export function PumpkinHouseDoc() {
               <td className="mono">1N4148</td>
               <td className="mono">cathode to RAW</td>
             </tr>
+            <tr>
+              <td className="mono">U1</td>
+              <td>I²S amplifier — step 05</td>
+              <td className="mono">MAX98357A</td>
+              <td className="mono">
+                ≈1.4 W into 8 Ω off 4.8 V · peaks ~600 mA
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">C1</td>
+              <td>Bulk across U1&rsquo;s supply</td>
+              <td className="mono">470 µF</td>
+              <td className="mono">
+                stripe = −, to GND, as close to U1 as it reaches
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">SPK1</td>
+              <td>Cone speaker</td>
+              <td className="mono">8 Ω · 3 W</td>
+              <td className="mono">
+                bridge-tied — neither lead goes to ground
+              </td>
+            </tr>
           </tbody>
         </DocTable>
 
@@ -1052,6 +1349,29 @@ export function PumpkinHouseDoc() {
               </td>
             </tr>
             <tr>
+              <td className="mono">audio.py</td>
+              <td>
+                <code>Speaker</code> — the I²S device. Walks a WAV&rsquo;s RIFF
+                chunks, streams it off flash in ~23 ms slices, and converts
+                8-bit unsigned mono to the signed 16-bit stereo the amp wants
+                through a lookup table built once at construction (which is also
+                where <code>AUDIO_ATTENUATION</code> rides along for free). Owns
+                the <code>SD</code> line, so it can shut the amplifier up
+                between tracks.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">audio_scenes.py</td>
+              <td>
+                <code>discover()</code>, <code>Track</code> and{" "}
+                <code>Playlist</code>. Deliberately dull, and deliberately not
+                in <code>scenes.py</code>: a buzzer scene is <em>composed</em>{" "}
+                against a fixed pitch, a recording is simply played. Tracks
+                advance in filename order rather than at random, and they leave
+                the flame burning rather than taking the idle slot over.
+              </td>
+            </tr>
+            <tr>
               <td className="mono">buttons.py</td>
               <td>
                 <code>Button</code> (one debounced switch, latched from a pin
@@ -1091,6 +1411,108 @@ export function PumpkinHouseDoc() {
           <P>
             Leave GP12 and GP16 alone - they only ever drive transistor bases
             through a resistor, and 4 mA is more than enough for that.
+          </P>
+        </DocNote>
+
+        <DocH3>Audio files</DocH3>
+        <P>
+          Only if you fitted step 05. The firmware plays{" "}
+          <strong>8-bit unsigned mono PCM WAV</strong> and rejects anything else
+          by name, because the entire reason for this format is what fits: a
+          plain Pico has roughly <strong>1.3 MB</strong> of filesystem left once
+          MicroPython has taken its share, and 16-bit would halve that for a
+          difference nobody hears through a 3 W cone inside a ceramic pot.
+          Sample rate is read from each file&rsquo;s own header, so a long
+          ambience at 8 kHz and a short stab at 16 kHz can sit in the same
+          folder.
+        </P>
+
+        <DocTable>
+          <thead>
+            <tr>
+              <th className="mono">Rate</th>
+              <th className="mono">Bytes/s</th>
+              <th>Sounds like</th>
+              <th className="mono">Fits in 1.3 MB</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="mono">8 000 Hz</td>
+              <td className="mono">8 KB</td>
+              <td>Telephone. Fine for wind, rumble, a distant howl.</td>
+              <td className="mono">≈ 2 min 45 s</td>
+            </tr>
+            <tr>
+              <td className="mono">11 025 Hz</td>
+              <td className="mono">11 KB</td>
+              <td>
+                The default here — creaks and calls keep their edge, thunder
+                keeps its weight.
+              </td>
+              <td className="mono">≈ 2 min</td>
+            </tr>
+            <tr>
+              <td className="mono">16 000 Hz</td>
+              <td className="mono">16 KB</td>
+              <td>Noticeably crisper on anything with consonants or hiss.</td>
+              <td className="mono">≈ 1 min 20 s</td>
+            </tr>
+          </tbody>
+        </DocTable>
+        <P>
+          On a <strong>Pico 2</strong>, with 4 MB of flash, roughly triple all
+          three. Check before you copy rather than after — the{" "}
+          <code>statvfs</code> line below is the honest number, and a full
+          filesystem fails the copy rather than the boot.
+        </P>
+
+        <DocH3>Encoding with ffmpeg</DocH3>
+        <CodeBlock language="bash" code={AUDIO_ENCODE} />
+        <P>
+          <strong>
+            The <code>loudnorm</code> pass matters more than the sample rate.
+          </strong>{" "}
+          Eight bits is 48 dB of range in total, so a recording mastered quietly
+          spends most of its bits on nothing and arrives as hiss with a sound
+          effect somewhere inside it. Normalising first — and limiting so the
+          loud parts do not clip once the gain is up — is the single biggest
+          difference between &ldquo;that&rsquo;s a crow&rdquo; and &ldquo;why is
+          the pumpkin frying&rdquo;. The high-pass throws away bass the 40 mm
+          cone cannot reproduce anyway and which only eats headroom.
+        </P>
+        <CodeBlock language="bash" code={AUDIO_BATCH} />
+        <P>
+          <strong>Filenames are the playlist.</strong> Tracks play in filename
+          order, so prefix them <code>10-</code>, <code>20-</code>,{" "}
+          <code>30-</code> and leave room to slot something between two of them
+          later. Drop the finished files in{" "}
+          <code>hardware/pumpkin-house/audio/</code> and copy the folder to the
+          board:
+        </P>
+        <CodeBlock language="bash" code={AUDIO_UPLOAD} />
+
+        <DocNote tag="How the two kinds of sound share the show">
+          <P>
+            <code>main.show()</code> assembles the rotation from whatever{" "}
+            <code>config.py</code> says is fitted. Buzzer scenes go in at their
+            own weights; the whole audio folder goes in as{" "}
+            <strong>one entry</strong> at <code>AUDIO_WEIGHT</code>, and each
+            time it is picked the <em>next</em> file plays. That is the
+            difference between the two on purpose: a cricket chirp is filler and
+            is meant to recur, while a recording is something you chose, and
+            shuffling six of them would repeat one before it had played the
+            others. The scene button is the exception — it walks every scene{" "}
+            <em>and</em> every track individually, which is how you audition a
+            file you copied on a minute ago.
+          </P>
+          <P>
+            Switching the buzzer off removes its scenes rather than playing them
+            silently, and that is not an oversight: a buzzer scene is the
+            envelope its lighting is driven from, so a muted one is a light show
+            with a hole where the reason for its timing used to be. With both
+            devices off the lantern simply burns, which is a perfectly good
+            thing for it to do.
           </P>
         </DocNote>
 
@@ -1186,6 +1608,50 @@ export function PumpkinHouseDoc() {
                 so a press is unmissable from across a porch.
               </td>
             </tr>
+            <tr>
+              <td className="mono">
+                BUZZER_ENABLED
+                <br />
+                SPEAKER_ENABLED
+              </td>
+              <td>
+                What is actually soldered on. Turning one off takes its scenes
+                out of the show rather than playing them silently. Both off is
+                legal — you get the flame.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">AUDIO_WEIGHT</td>
+              <td>
+                How heavily the audio folder is weighted against the buzzer
+                scenes. <strong>The battery knob</strong>: the amplifier is the
+                single biggest draw in this build, so this is what decides
+                whether the pack lasts an evening or three.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">AUDIO_ATTENUATION</td>
+              <td>
+                Volume, in halvings — <code>1</code> is −6 dB. Try the
+                module&rsquo;s <code>GAIN</code> pad first; this throws away
+                bits, and 8-bit audio has only 48 dB of them.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">AUDIO_CHUNK_SAMPLES</td>
+              <td>
+                Samples per I²S write — a latency knob, not a quality one. It is
+                how often the flame ticks and the buttons are served during
+                playback. 256 is 23 ms at 11 kHz; raising it makes the buttons
+                feel sticky.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">AUDIO_GAP_MS</td>
+              <td>
+                Silence after a track, before the ambient stretch resumes.
+              </td>
+            </tr>
           </tbody>
         </DocTable>
 
@@ -1252,6 +1718,68 @@ export function PumpkinHouseDoc() {
               </td>
             </tr>
             <tr>
+              <td>Speaker silent, buzzer fine</td>
+              <td>
+                Run <code>stage.speaker.blip()</code> first — it makes its own
+                tone, so silence there is wiring and not the files. Then LRC: it
+                must be GP14, the pin straight after BCLK.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <code>blip()</code> works, a file does not
+              </td>
+              <td>
+                <code>audio_scenes.discover()</code> returning <code>()</code>{" "}
+                is the folder; a <code>ValueError</code> naming the file is the
+                format. Re-encode with <code>-ac 1 -ar 11025 -c:a pcm_u8</code>.
+              </td>
+            </tr>
+            <tr>
+              <td>Pico reboots the moment audio starts</td>
+              <td>
+                The amp is on the 3V3 pin, or C1 is missing. VIN belongs on the
+                raw pack rail — step 05.
+              </td>
+            </tr>
+            <tr>
+              <td>Audio is distorted, or crackles on peaks</td>
+              <td>
+                Too loud for the rail. Leave <code>GAIN</code> open at 9 dB and
+                raise <code>AUDIO_ATTENUATION</code> to <code>1</code>; if it
+                only started when the cells got low, that is the pack.
+              </td>
+            </tr>
+            <tr>
+              <td>Audio stutters, or the flame stalls under it</td>
+              <td>
+                <code>AUDIO_IBUF</code> too small, or{" "}
+                <code>AUDIO_CHUNK_SAMPLES</code> raised past the point where the
+                idle callback gets its turn.
+              </td>
+            </tr>
+            <tr>
+              <td>Steady hiss between tracks</td>
+              <td>
+                <code>SD</code> not wired, or <code>AMP_ENABLE_PIN = None</code>
+                . Without it the amplifier never shuts down.
+              </td>
+            </tr>
+            <tr>
+              <td>Buzz in the speaker in time with the flicker</td>
+              <td>
+                Shared ground return. Run the module&rsquo;s GND straight to the
+                pack negative instead of daisy-chaining it through the LEDs.
+              </td>
+            </tr>
+            <tr>
+              <td>One channel of the amplifier gets hot</td>
+              <td>
+                A speaker lead tied to ground. The outputs are bridge-tied —
+                neither of them is a return.
+              </td>
+            </tr>
+            <tr>
               <td>Flicker looks like stepping, not flame</td>
               <td>
                 <code>FLAME_STEP</code> too high, or gamma correction bypassed.
@@ -1261,7 +1789,7 @@ export function PumpkinHouseDoc() {
               <td>A button does nothing at all</td>
               <td>
                 Wired to the wrong pin, or its ground leg never reached GND.
-                Check with the snippet in step 07 before suspecting the
+                Check with the snippet in step 08 before suspecting the
                 firmware.
               </td>
             </tr>
@@ -1269,7 +1797,7 @@ export function PumpkinHouseDoc() {
               <td>A button behaves as if permanently held</td>
               <td>
                 The switch is a quarter turn out, so its already-connected pair
-                is across the circuit. It must straddle the ravine - step 05.
+                is across the circuit. It must straddle the ravine - step 06.
               </td>
             </tr>
             <tr>
@@ -1290,7 +1818,7 @@ export function PumpkinHouseDoc() {
             <tr>
               <td>Dead on power-up, but the power button wakes it</td>
               <td>
-                Not a fault. It boots asleep on purpose - see step 05. Wire the
+                Not a fault. It boots asleep on purpose - see step 06. Wire the
                 slide switch as the real cut-off.
               </td>
             </tr>

@@ -57,6 +57,45 @@
   white-space: nowrap;
 }
 
+/* A group section's header, which is the collapse toggle. An `unstyled` Button,
+   so everything it looks like is here - the layout is a full-width row rather
+   than the Button's inline-flex pill, and the hover/open states are exactly the
+   kind of rule a CSS class is for. */
+.ael__group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  color: var(--foreground);
+  text-align: left;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+  transition: background 0.1s;
+}
+
+.ael__group:hover {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+/* The chevron points down while the section is open (where it will fold to) and
+   turns over when it is closed - the arrow says where the panel is going next. */
+.ael__group-chevron {
+  transition: transform 0.15s;
+}
+
+.ael__group-chevron--closed {
+  transform: rotate(-90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ael__group,
+  .ael__group-chevron {
+    transition: none;
+  }
+}
+
 /* Sort mode. The handle itself is @repo/ui's MoveHandle; only the row states,
    which are driven by drag events, live here. */
 .ael__row--dragging {

@@ -510,6 +510,91 @@ class IngredientTests(TestCase):
         self.assertEqual(blocked.status_code, 409)
         self.assertTrue(Ingredient.objects.filter(pk=self.butter.id).exists())
 
+    def test_a_blocked_delete_names_its_usages_and_is_resolved_by_a_mode(self):
+        """The 409 says *what* is holding the ingredient down, and re-issuing the
+        delete with a mode is the admin's answer: `detach` keeps the dishes,
+        `groups` takes the whole choice group with it."""
+        client = admin_client(self, self.system, username="chef")
+        margarine = Ingredient.objects.create(
+            system=self.system, name="Margarine", slug="margarine", unit="g",
+        )
+        lard = Ingredient.objects.create(
+            system=self.system, name="Lard", slug="lard", unit="g",
+        )
+
+        plain = MenuItemIngredient.objects.create(
+            menu_item=self.item, ingredient=self.butter,
+        )
+        led = MenuItemIngredient.objects.create(
+            menu_item=self.item, ingredient=self.butter,
+            group_name="Fat", price=Decimal("2.00"),
+        )
+        MenuItemIngredientOption.objects.create(
+            menu_item_ingredient=led, ingredient=margarine, price=Decimal("3.00"),
+        )
+        joined = MenuItemIngredient.objects.create(
+            menu_item=self.item, ingredient=lard, group_name="Spread",
+        )
+        MenuItemIngredientOption.objects.create(
+            menu_item_ingredient=joined, ingredient=self.butter,
+        )
+
+        body = client.delete(
+            f"/api/catalog/ingredients/{self.butter.id}/", **self.host,
+        ).json()
+        self.assertEqual(body["code"], "INGREDIENT_IN_USE")
+        self.assertEqual(
+            sorted(u["role"] for u in body["usages"]),
+            ["group_default", "group_option", "plain"],
+        )
+        default = next(u for u in body["usages"] if u["role"] == "group_default")
+        self.assertTrue(default["can_promote"])
+        self.assertEqual(default["group_name"], "Fat")
+
+        # An unknown mode is refused rather than quietly read as "no mode" - that
+        # would delete on a typo the caller meant as an instruction.
+        self.assertEqual(
+            client.delete(
+                f"/api/catalog/ingredients/{self.butter.id}/?mode=nope", **self.host,
+            ).status_code,
+            400,
+        )
+
+        # detach: the plain row and the alternative go; the group the ingredient
+        # led survives by promoting margarine, which brings its own price with it.
+        detached = client.delete(
+            f"/api/catalog/ingredients/{self.butter.id}/?mode=detach", **self.host,
+        )
+        self.assertEqual(detached.status_code, 204, detached.content)
+        self.assertFalse(Ingredient.objects.filter(pk=self.butter.id).exists())
+        self.assertFalse(MenuItemIngredient.objects.filter(pk=plain.id).exists())
+        led.refresh_from_db()
+        self.assertEqual(led.ingredient_id, margarine.id)
+        self.assertEqual(led.price, Decimal("3.00"))
+        self.assertEqual(led.options.count(), 0)
+        self.assertEqual(joined.options.count(), 0)
+        # The alternatives point at shared catalog records, which are untouched.
+        self.assertTrue(Ingredient.objects.filter(pk=margarine.id).exists())
+
+        # groups: every row referencing the ingredient goes, whole - as its
+        # default here, and it is the only ingredient `joined` has left.
+        also_lard = MenuItemIngredient.objects.create(
+            menu_item=self.item, ingredient=lard, group_name="Fat",
+        )
+        MenuItemIngredientOption.objects.create(
+            menu_item_ingredient=also_lard, ingredient=margarine,
+        )
+        removed = client.delete(
+            f"/api/catalog/ingredients/{lard.id}/?mode=groups", **self.host,
+        )
+        self.assertEqual(removed.status_code, 204, removed.content)
+        self.assertFalse(
+            MenuItemIngredient.objects.filter(
+                pk__in=[also_lard.id, joined.id]
+            ).exists()
+        )
+        self.assertTrue(Ingredient.objects.filter(pk=margarine.id).exists())
+
 
 class CloneTests(TestCase):
     """The CMS "Clone" button, which is a deep copy - not a second row pointing

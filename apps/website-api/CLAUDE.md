@@ -79,12 +79,12 @@ Those cases live in `core/signals.py` and `catalog/signals.py` as
 Django admin (single _and_ bulk delete), any cascade, and a shell script alike.
 Current pairings, each documented at its receiver:
 
-| Writing this                   | Also invalidates                                                    |
-| ------------------------------ | ------------------------------------------------------------------- |
-| `Brand`                        | `catalog:*` (items embed `brand_name`)                              |
-| `*Category`                    | `catalog:<family>*` (items embed `category_name/slug`)              |
+| Writing this                   | Also invalidates                                                      |
+| ------------------------------ | --------------------------------------------------------------------- |
+| `Brand`                        | `catalog:*` (items embed `brand_name`)                                |
+| `*Category`                    | `catalog:<family>*` (items embed `category_name/slug`)                |
 | `Product`/`Service`/`MenuItem` | `catalog:<family>_categor*` (`item_count`) **and** the System payload |
-| `Branch`                       | the System payload (`branch_count`)                                 |
+| `Branch`                       | the System payload (`branch_count`)                                   |
 
 **The System payload is the one that bites.** `GET /api/system/` is cached for an
 hour (`SYSTEM_CACHE_TTL`), and `SystemSerializer` carries `product_count`,
@@ -117,7 +117,7 @@ Examples requiring confirmation before exposure:
 **Do not write a test per assertion, and do not add a test class per feature.**
 The suite is a safety net, not a specification. In August 2026 it had grown to
 **520 tests across 8,355 lines** — one case per assertion, a class per feature —
-and the cost had stopped being the runtime and become the *authoring*: every
+and the cost had stopped being the runtime and become the _authoring_: every
 small change came with a dozen near-identical tests to write and then to keep
 passing. It was condensed to ~135, and it must stay near that.
 
@@ -127,8 +127,8 @@ notice?" — not "is every branch covered?".
 
 Where a new test does belong:
 
-| Add a test when…                                | Not when…                                             |
-| ----------------------------------------------- | ----------------------------------------------------- |
+| Add a test when…                                 | Not when…                                             |
+| ------------------------------------------------ | ----------------------------------------------------- |
 | Money can be wrong (a price, a total, a refusal) | A field round-trips through a serializer              |
 | One tenant could reach another's rows            | A getter returns what was just set                    |
 | A permission or ownership check exists           | The happy path already asserts it two lines earlier   |
@@ -149,7 +149,7 @@ loop over `(input, expected)` pairs.
   failure mode still has an assertion, because each one is a real charge.
 - **The tenant boundary** — every "another tenant's X is a 404 / is not linked /
   cannot be bought". These are security boundaries; they are collapsed into
-  fewer test *methods*, never into fewer *cases*.
+  fewer test _methods_, never into fewer _cases_.
 
 Each module's docstring restates this. Run the whole suite with
 `REDIS_URL='' python manage.py test` (the local `.env` points Redis at the
@@ -226,7 +226,7 @@ and it is why `--reset` is the only way a published image is ever replaced (it
 deletes the row rather than overwriting the file).
 
 - ⚠ **The stored file is re-named to its basename on the way in.** The source
-  path is namespaced by the *dev* tenant's id (`t/<system_id>/…`), and reusing it
+  path is namespaced by the _dev_ tenant's id (`t/<system_id>/…`), and reusing it
   would file the photo under whatever System happens to hold that id in
   production. `upload_to` re-derives the right prefix from the target row.
 - **A missing archive member is skipped, not raised.** Storage is remote and a
@@ -302,7 +302,7 @@ bucket and serve from its CDN hostname.
   else: `FileField.storage` is resolved **once at model-class load**, so a
   `storage=` callable can never be per-row, and `url()` is called from
   serializers, management commands, email builders and the Django admin - most
-  with no request, some rendering *another* tenant's rows, so a thread-local
+  with no request, some rendering _another_ tenant's rows, so a thread-local
   "current tenant" would be right most of the time and silently wrong exactly
   where a wrong answer writes a real file into someone else's bucket. A path
   with no prefix is legacy and resolves to the platform bucket.
@@ -316,7 +316,7 @@ bucket and serve from its CDN hostname.
   in `core/signals.py`. **The memo holds the secret still encrypted** - it
   outlives the request, and a plaintext R2 key in a long-lived process dict buys
   nothing over decrypting once per backend build.
-- **An incomplete config is *no* config.** All of enabled + account + key +
+- **An incomplete config is _no_ config.** All of enabled + account + key +
   secret + bucket must be present or the tenant stays on the platform bucket; a
   half-filled form must not start writing somewhere unreachable. Undecryptable
   ciphertext (another environment's, or after a key rotation) also falls back
@@ -343,7 +343,7 @@ absent from `env:` in `values.yaml` (see "Production env & secrets" below).
 **Connecting a tenant's own bucket still moves nothing**, and there is no longer
 a tool that would. Stored paths are strings: an unprefixed legacy name resolves
 to the platform bucket forever, and a `t/<system_id>/…` name written before the
-switch stays in whichever bucket it was written to. Only *future* uploads land in
+switch stays in whichever bucket it was written to. Only _future_ uploads land in
 the newly connected bucket, so a tenant that switches has its media split across
 two buckets - both serving, nothing broken. Moving them is a manual `rclone`
 job plus a database repoint, not a CMS button.
@@ -479,7 +479,7 @@ if you find yourself reaching for one, the design has been misread.
   paying. It charges the order's own frozen lines - no cart, no amount in the
   body - and only the webhook still marks anything paid, so an abandoned second
   attempt costs nothing. Two rules hold it together: **only a `pending` online
-  order qualifies** (a `canceled` one is also what a *tenant* refusing an order
+  order qualifies** (a `canceled` one is also what a _tenant_ refusing an order
   writes, and what the webhook writes on expiry - neither may be undone from a
   browser), and **an order must never carry two payable sessions at once**. The
   second is why `_existing_session` reuses a still-open session rather than
@@ -563,7 +563,7 @@ accepted being refused at the moment of payment.
   one. `_checkout` deletes the order, releases the redemption and returns
   `COUPON_ERROR`.
 - ⚠ **`discount_coupon` is ignored alongside `charge_amount`.** That path
-  collapses the basket into a single amount for a booking *deposit*, and a
+  collapses the basket into a single amount for a booking _deposit_, and a
   discount on top of a partial charge takes it off the deposit rather than the
   order - discounting the same money twice once the remainder is collected.
   Bookings do not take coupons today, and this is what keeps that explicit rather
@@ -589,12 +589,12 @@ accepted being refused at the moment of payment.
   the delete every save orphans the previous PNG in the bucket.
 - **The QR is named after `public_id`, not `code`** - a tenant fixing a typo in
   the code would otherwise orphan the file that is already on a printed flyer.
-  Unlike an order's QR this file is *meant* to be public; there is nothing here
+  Unlike an order's QR this file is _meant_ to be public; there is nothing here
   to guess your way into.
 - **`brand_logo_background` + its two scales are stored** alongside
   `template_id`, mirroring `SocialPost`'s trio (same choices, same 30-100
   bounds, same "none draws it bare" default) so a flyer and a post stay
-  recognisably one brand. They are columns while the flyer's *backdrop* upload
+  recognisably one brand. They are columns while the flyer's _backdrop_ upload
   deliberately is not: a backdrop decorates one exported JPG, but the logo
   lockup is how the coupon looks every time it is re-downloaded.
 
@@ -606,7 +606,7 @@ is scoped by `X-Website-Host`); `/api/coupons/admin/` and
 checkout, so a cached "still available" outliving the last redemption is the one
 wrong answer that costs a customer a wasted trip to the cart. Same exception an
 individual order already carries. The public landing serves the narrow
-`CouponPublicSerializer` - what the offer *is*, never how the campaign is
+`CouponPublicSerializer` - what the offer _is_, never how the campaign is
 performing - and answers 200 with `valid: false` for an expired coupon rather
 than 404, so the page can say "this offer has ended" for a code the tenant really
 did print.
@@ -634,12 +634,12 @@ have needed a second implementation of every one of those.
   set `Order.fulfilled`, because for an appointment the work and the handover are
   the same moment.
 - ⚠ **The one direction that must not stay independent: an order that dies has to
-  release its appointment.** The booking is written *before* the redirect to
+  release its appointment.** The booking is written _before_ the redirect to
   Stripe and is born `pending`, which is in `ACTIVE_STATUSES` - so it occupies its
   hour from the moment checkout starts (deliberately: two customers must not be
   sent to Stripe for the same slot). But `_occupancy` reads `Booking.status`
   alone and never looks at the order, so `checkout.session.expired`,
-  `async_payment_failed` and the CMS's order-level `cancel` release *nothing* on
+  `async_payment_failed` and the CMS's order-level `cancel` release _nothing_ on
   their own. All three call `_release_booking(order)` in `orders/views.py`; drop
   it and a customer who backs out of the Stripe page leaves that hour blocked
   forever - blocked hardest for themselves, since the slot they wanted is the one
@@ -663,7 +663,7 @@ have needed a second implementation of every one of those.
   same reason `OrderLine` snapshots its price - re-rendering a past appointment
   through a branch that has since moved zones would be rewriting history.
 - **A weekday with no `BranchHours` row is closed.** There is deliberately no
-  `is_closed` flag: absence *is* the closure, so there is one state where there
+  `is_closed` flag: absence _is_ the closure, so there is one state where there
   could be two. `BranchWriteSerializer` takes the whole week under `hours` and
   **replaces** it; a per-day endpoint would let a save half-fail and leave a
   branch open on days the operator had just closed.
@@ -694,18 +694,18 @@ is sold per person at all.
   "clean it up" into a data migration that gives every branch a real pool**: the
   implicit case has to keep working for a branch created tomorrow too.
 - **One row per resource that differs in capacity or that a customer can pick by
-  name.** Six identical eight-seat tables are *one* row with `capacity=48`, not
+  name.** Six identical eight-seat tables are _one_ row with `capacity=48`, not
   six - the engine only tells parties apart from each other, and six rows would
   refuse a party of ten that four of those tables could seat together. Two boats
   of different sizes are two rows, because which one a party of six lands on is a
   real question.
 - **Assignment is automatic, best fit, at write time.** Of the resources that can
-  take the whole party, `assign_resource` picks the one with the *least* room
+  take the whole party, `assign_resource` picks the one with the _least_ room
   left. That consolidates (two half-full boats become one) and so preserves the
   large free blocks large parties need; first fit does the precise opposite.
   Staff may reassign afterwards from the CMS.
 - **A party never splits across two resources.** `seats_left` in the availability
-  payload is therefore the largest free block on a *single* resource, never the
+  payload is therefore the largest free block on a _single_ resource, never the
   sum - two boats with three seats each answer "no" to a party of six.
 - ⚠ **A booking with a null `resource` is charged to _every_ resource.** Rows
   written before pools existed carry no assignment and there is no way to know
@@ -722,7 +722,7 @@ is sold per person at all.
   The card only needs the `booking_party_enabled` boolean, which is why that is
   the one party field on `ServiceSerializer`. **But which serializer runs is
   decided by the query, not by the endpoint**: `?slug=` on
-  `/api/catalog/services/` is the storefront's *detail* read - `getService(slug)`
+  `/api/catalog/services/` is the storefront's _detail_ read - `getService(slug)`
   has no other route to one service - so it matches at most one row and gets
   `ServiceDetailSerializer`. Served with the list one it dropped the party
   bounds, and the booking page's counter (gated on `max > min`) never rendered
@@ -736,7 +736,7 @@ is sold per person at all.
   charge a customer for a different number of people than they asked for. Party
   off forces 1 whatever the body says. `resource` is only honoured when its pool
   is `customer_selectable` and reachable from the resolved branch, and is a
-  *preference*: a pick that has since filled up falls through to best fit rather
+  _preference_: a pick that has since filled up falls through to best fit rather
   than failing the booking.
 - ⚠ **Checkout holds a row lock.** `assign_for_slot` and the `Booking` write run
   inside one `transaction.atomic()` with a `select_for_update` on the Branch (the
@@ -751,9 +751,9 @@ is sold per person at all.
   scheduling primitive.
 - ⚠ **The old "2 x haircut at 10:00 is two bookings, not a quantity" reasoning is
   reversed for party services, and the comment at the `CartItem` line says why.**
-  Both readings are right, for different things: an *appointment* is one person's
+  Both readings are right, for different things: an _appointment_ is one person's
   turn in a chair, and booking two of them is two separate slots a single quantity
-  cannot express. A *departure* - a boat, a tour, a table - is one slot several
+  cannot express. A _departure_ - a boat, a tour, a table - is one slot several
   people share, priced per head. `booking_party_enabled` is which of the two a
   service is.
 - **`core/backup.py` keys pools and resources rather than riding them as
@@ -790,7 +790,7 @@ is sold per person at all.
   branch on UTC opens at 02:00 local, labels every slot in the wrong zone, and
   loses same-day booking for most of the working day (its "now" is seven hours
   ahead of the shop's). Nothing 500s and nothing warns; the calendar just looks
-  oddly empty. The CMS branch form now seeds a *new* branch with the operator's
+  oddly empty. The CMS branch form now seeds a _new_ branch with the operator's
   own zone for exactly this reason - check this field first whenever a tenant
   reports missing or wrongly-timed slots.
 - ⚠ **A branchless tenant has one implicit seat.** `_branch_settings(None)` returns
@@ -799,7 +799,7 @@ is sold per person at all.
   seat cannot hold four people - but it is a configuration dead end: creating a
   Branch and setting its capacity is the fix, and the CMS's party section shows
   the ceiling it is working from.
-- **`Service.booking_branches` empty means *every* branch**, not none - see
+- **`Service.booking_branches` empty means _every_ branch**, not none - see
   `branches_for`. An unconfigured bookable service must still be bookable. A
   tenant with no `Branch` rows at all is the home-business case: the booking
   carries `branch=None` and follows the defaults in `_branch_settings`.
@@ -849,13 +849,13 @@ validate it.
 - ⚠ **The code points at the customer page, never at
   `/admin/orders/<public_id>`.** A QR carries exactly one URL and it is printed
   on paper the customer keeps, so it has to be the address that works for
-  whoever holds it. Admin validation is a *permission* on that page, not a
+  whoever holds it. Admin validation is a _permission_ on that page, not a
   second code - which is why `_may_read` grew its third rule (below) and why the
   frontend puts a "See in admin" button on the customer page.
 - **`_may_read` lets a tenant's admin read any order of their own System.**
   They can already see every one of them through `AdminOrderDetailView`, so this
   grants no new data; it only lets the customer-facing endpoint answer for them.
-  The tenant boundary is enforced *upstream*, not here: every caller filters on
+  The tenant boundary is enforced _upstream_, not here: every caller filters on
   `request_system(request)` first and a signed-in user's System always comes from
   their profile (`core/tenancy.py`), so an admin cannot reach another tenant's
   order at all.
@@ -872,7 +872,7 @@ validate it.
   a storage failure logs and leaves `qr_code` blank rather than costing the sale,
   so **every render site must handle a null code**. Fill gaps (and every order
   placed before the field existed) with `python manage.py backfill_order_qr
-  [--host <host>] [--force] [--dry-run]`.
+[--host <host>] [--force] [--dry-run]`.
 - **The order email embeds the code as an inline `cid:` attachment**, unlike the
   logo and the product thumbnails in the same message: most clients block remote
   images by default and a blocked QR is a blank box, which for the one thing the
@@ -906,7 +906,7 @@ four cannot list different sets. The frontend resolution rules are in
 
 - **A menu has no labels here.** It is sectioned by the tenant's own
   `MenuCategory` rows, which are already their own copy - renaming a menu section
-  is editing the category. This used to be *fourteen* columns: the two families
+  is editing the category. This used to be _fourteen_ columns: the two families
   plus the five `MenuItem.kind` values. `catalog.0037` removed the enum and
   `core.0066` removed its ten columns; see "Menu sectioning" below.
 - ⚠ **They rename a label and nothing else.** Every storefront URL is structural -
@@ -955,7 +955,7 @@ the enum is gone (`catalog.0037`).
   edit.
 - **The `catalog.0037` migration files every previously-uncategorized item into a
   per-System "Otros" category** before setting the column `NOT NULL` - Postgres
-  refuses `SET NOT NULL` otherwise. Deliberately *not* derived from the old
+  refuses `SET NOT NULL` otherwise. Deliberately _not_ derived from the old
   `kind`; operators re-file from the CMS.
 
 ## Menu sizes - one model, two owners, a signed delta
@@ -963,7 +963,7 @@ the enum is gone (`catalog.0037`).
 `catalog.MenuSize` is a size a dish is offered in ("Chica 4 in", "Grande 12 in"),
 priced as a **signed** `price_delta` off the item's base price. It replaced the
 older workaround of modelling sizes as a `MenuItemIngredient` single-select
-choice group, which could only ever *add* to the price and put a diameter in the
+choice group, which could only ever _add_ to the price and put a diameter in the
 same list as extra cheese.
 
 Sizes are authored per **`MenuCategory`** - a pizzeria's pizzas come in five and
@@ -973,24 +973,24 @@ distinguished by which owner FK is set (exactly one, `CheckConstraint`), so the
 API, the CMS editor and the customer's picker are one implementation rather than
 a category copy and an item copy that would drift.
 
-| Piece                | Where                                                                             |
-| -------------------- | --------------------------------------------------------------------------------- |
-| Model + resolution   | `catalog/models.py` (`MenuSize`, `MenuItem.effective_sizes` / `resolve_size`)     |
-| Serializers          | `catalog/serializers.py` (`MenuSizeSerializer`, `MenuSizeWriteSerializer`)        |
-| Endpoints            | `catalog/views.py` (`_BaseMenuSize*View` + the two owner pairs)                   |
-| Cache invalidation   | `catalog/signals.py` (`invalidate_menu_on_size_change`)                           |
-| The chosen size      | `users.CartItem.menu_size` (live) -> `orders.OrderLine.size_*` (snapshot)         |
+| Piece              | Where                                                                         |
+| ------------------ | ----------------------------------------------------------------------------- |
+| Model + resolution | `catalog/models.py` (`MenuSize`, `MenuItem.effective_sizes` / `resolve_size`) |
+| Serializers        | `catalog/serializers.py` (`MenuSizeSerializer`, `MenuSizeWriteSerializer`)    |
+| Endpoints          | `catalog/views.py` (`_BaseMenuSize*View` + the two owner pairs)               |
+| Cache invalidation | `catalog/signals.py` (`invalidate_menu_on_size_change`)                       |
+| The chosen size    | `users.CartItem.menu_size` (live) -> `orders.OrderLine.size_*` (snapshot)     |
 
 - ⚠ **`MenuItem.effective_sizes` is the only place the inherit/override rule
   lives, and it is resolved server-side.** `sizes` on the menu-item payload is
-  *already* "own rows if any, else the category's, empty when `sizes_enabled` is
+  _already_ "own rows if any, else the category's, empty when `sizes_enabled` is
   off" - the storefront, the catalog card and the POS till all read that one
   answer. Re-deriving it in three clients is how a dish comes to show one list on
   its detail page and another at the counter.
-- **Own rows *replace* the category's entirely, never merge.** That is the only
+- **Own rows _replace_ the category's entirely, never merge.** That is the only
   rule that lets an edge-case dish **drop** a size its category offers (a
   personal-only calzone on a menu whose pizzas come in five sizes); a merge could
-  only ever add. It is also why `MenuItem.own_sizes` is deliberately *not* named
+  only ever add. It is also why `MenuItem.own_sizes` is deliberately _not_ named
   `sizes`: a property and a related manager sharing one name is how a caller ends
   up reading an empty override and concluding the dish has no sizes.
 - ⚠ **`MenuSize.system` is derived in `save()`, never authored** - and it is not
@@ -1002,7 +1002,7 @@ a category copy and an item copy that would drift.
   and its picture silently lands in the platform bucket instead of the tenant's.
 - **`price_delta` is signed, and the total is floored at zero.** Signed so a
   tenant prices "pizza" once at its regular size and states that small is −40 and
-  large is +40; a size list that could only add would force the *smallest* size to
+  large is +40; a size list that could only add would force the _smallest_ size to
   be the base and quote every real size as an up-charge, which is not how a menu is
   written. Floored because a delta bigger than the base is a misconfiguration, not
   a refund.
@@ -1022,7 +1022,7 @@ a category copy and an item copy that would drift.
   PATCHed one at a time by the CMS editor, so nothing else could; the model
   tolerates two (first in order wins) but the CMS would then show two filled
   radios, which reads as a lost save.
-- ⚠ **A size is part of a cart line's *identity*.** `CartItem.menu_size` is
+- ⚠ **A size is part of a cart line's _identity_.** `CartItem.menu_size` is
   CASCADE like `menu_item` (a cart reflects today's catalog; silently re-pricing a
   withdrawn size at another one is the alternative), and `_add_menu_line` merges on
   size **and** customization - a small and a large are two lines, not one of
@@ -1031,7 +1031,7 @@ a category copy and an item copy that would drift.
   every other displayable fact on it. The delta is already inside `unit_price`; it
   is stored so the line reads back as base + size rather than as one number that
   does not reconcile against the catalog.
-- **The list endpoints are the *own* rows, not the effective list.**
+- **The list endpoints are the _own_ rows, not the effective list.**
   `GET /api/catalog/menu-items/<pk>/sizes/` is empty for the ordinary dish that
   inherits - only the CMS editor reads it. What a customer is offered is `sizes` on
   the menu item payload.
@@ -1053,27 +1053,64 @@ Tests: `MenuSizeTests` / `MenuSizeEndpointTests` (`catalog/tests.py`),
 `CartMenuSizeTests` (`users/tests.py`), `OrderLineSizeSnapshotTests`
 (`orders/tests.py`), and the publish round-trips in `core/tests.py`.
 
+## Deleting a shared ingredient a dish still uses
+
+`MenuItemIngredient.ingredient` and `MenuItemIngredientOption.ingredient` are both
+PROTECT, so `DELETE /api/catalog/ingredients/<pk>/` is refused while any dish
+still points at the row. That refusal is right - pulling an ingredient out from
+under a dish changes what is being sold - but on its own it was a dead end: the
+CMS could only say "still in use" and leave the admin to find every dish by hand.
+`catalog/services/ingredient_usage.py` turns it into a question.
+
+- **The 409 _names_ the blockers.** `{code: "INGREDIENT_IN_USE", usages: [...]}`,
+  one entry per referencing row, each carrying the dish, the choice group and the
+  `role` the ingredient plays in it: `plain`, `group_default` (the row's own
+  ingredient, on a row that has options) or `group_option`. The frontend modal is
+  built entirely from that payload - don't collapse it back to a count.
+- **The admin's answer is a `?mode=`, and the same DELETE is re-issued with it.**
+  `detach` removes the ingredient and keeps the dishes; `groups` deletes every
+  `MenuItemIngredient` row that touches it, taking the whole choice group (and its
+  other options) with it. No mode is the plain refusal above, so an existing
+  caller is unchanged and a delete can never resolve conflicts it was not asked
+  to. ⚠ An unrecognised mode is a **400**, not a fall-through to the refusal - a
+  typo in an instruction must not be read as "do nothing special and delete".
+- ⚠ **`detach` on a group's _default_ promotes, it does not detach.** A choice
+  group cannot exist without a default, so the group's first remaining
+  alternative moves into the slot, **carrying its own `price`** (price travels
+  with the ingredient being charged for, or a premium alternative silently
+  inherits the cheap one's up-charge). A group with nothing left to promote is
+  deleted - which is why `can_promote` rides on every usage: the CMS says so up
+  front rather than surprising the admin with a lost group.
+- **Alternatives are deleted; the ingredients behind them are not.** A
+  `MenuItemIngredientOption` is a link, and the `Ingredient` it points at is a
+  shared catalog record other dishes may use.
+- **The view invalidates the affected menu items**, and collects their ids
+  **before** running a resolver - afterwards nothing points at the ingredient to
+  derive them from.
+
+Tests: `IngredientTests` in `catalog/tests.py`.
+
 ## Checkout recommendations - "don't forget these"
 
 `catalog.CatalogRecommendation` is the strip of extras a customer is offered
 under their own cart lines: a pizzeria that never mentions a drink sells fewer
 drinks. One model backs all of it.
 
-| Piece                    | Where                                                             |
-| ------------------------ | ----------------------------------------------------------------- |
-| Model + inherit/override | `catalog/models.py` (`CatalogRecommendation`, `RecommendationSource`) |
-| The cart strip           | `catalog/recommendations.py` (`cart_recommendations`)              |
+| Piece                    | Where                                                                   |
+| ------------------------ | ----------------------------------------------------------------------- |
+| Model + inherit/override | `catalog/models.py` (`CatalogRecommendation`, `RecommendationSource`)   |
+| The cart strip           | `catalog/recommendations.py` (`cart_recommendations`)                   |
 | Refs + replace-all write | `catalog/serializers.py` (`recommendation_refs`, `set_recommendations`) |
-| The CMS read             | `catalog/views.py` (`RecommendationListView`)                      |
-| Cache invalidation       | `catalog/signals.py` (`invalidate_on_recommendation_change`)       |
-| On the payload           | `users/views.py::_cart_payload` + `users/guest.py::cart_payload`   |
+| The CMS read             | `catalog/views.py` (`RecommendationListView`)                           |
+| Cache invalidation       | `catalog/signals.py` (`invalidate_on_recommendation_change`)            |
+| On the payload           | `users/views.py::_cart_payload` + `users/guest.py::cart_payload`        |
 
 It deliberately resembles `variants` and is shaped differently in three ways,
 each of which is the point:
 
 - ⚠ **Directional, not symmetrical.** A pizza recommends a soda; a soda does not
-  recommend a pizza. `variants` is symmetrical because *being an alternative
-  version of* is mutual, and *being a suggested extra* is not - a symmetrical
+  recommend a pizza. `variants` is symmetrical because _being an alternative
+  version of_ is mutual, and _being a suggested extra_ is not - a symmetrical
   relation here would fill every drink's checkout strip with the food it was
   offered beside.
 - **Cross-family.** A dish may recommend a `Product` (a bottle of wine, a branded
@@ -1086,7 +1123,7 @@ each of which is the point:
   serializer and one cache receiver instead of nine.
 - **Authored per category, overridable per item** (`RecommendationSource`), the
   same rule `MenuItem.effective_sizes` follows: a tenant states "with a pizza,
-  offer a soda" **once**, on the Pizzas category. Own rows *replace* the
+  offer a soda" **once**, on the Pizzas category. Own rows _replace_ the
   category's entirely and never merge - a merge could only ever add, and could
   not express "this dish recommends nothing".
 
@@ -1096,17 +1133,17 @@ Six things that will bite:
   targets are buyable today.** A dish whose single own recommendation is out of
   stock recommends nothing; it must not silently start showing its category's
   list, which would read as a lost edit. `offerable_recommendations` filters
-  *after* the choice of list is made.
+  _after_ the choice of list is made.
 - ⚠ **What rides on an item's payload is nothing at all - and that is on
   purpose.** `own_recommendations` was briefly a field on the three buyable read
   serializers, which put an N+1 on every cart line and every favorite (those
   payloads nest the full item serializer). The CMS reads its selection from
   `GET /api/catalog/recommendations/?source=<kind>&id=<pk>` instead, exactly as
-  `MenuSize` serves a dish's *own* rows from its own endpoint, and the customer's
+  `MenuSize` serves a dish's _own_ rows from its own endpoint, and the customer's
   strip is resolved on the cart payload. **Do not add a recommendations field to
   `ProductSerializer` / `ServiceSerializer` / `MenuItemSerializer`** without
   attaching `OWN_RECOMMENDATION_PREFETCH` at every one of their call sites.
-- ⚠ **That endpoint answers with *own* rows, and for an item that is not what the
+- ⚠ **That endpoint answers with _own_ rows, and for an item that is not what the
   customer sees.** An empty answer means "offer whatever my category
   recommends". Serving the resolved list there would show an operator ticks they
   never made, and the first save would freeze them into an override - the trap
@@ -1131,7 +1168,7 @@ Six things that will bite:
 - ⚠ **A recommendation write clears `users:cart:*`, i.e. every cached cart.**
   Which carts hold a matching line is exactly what the receiver cannot know, and
   a tenant adding a drink to its Pizzas category has to reach everyone currently
-  holding a pizza. Only *recommendation* writes do this: a recommended item going
+  holding a pizza. Only _recommendation_ writes do this: a recommended item going
   out of stock leaves a dead card on a cached strip for up to `CART_CACHE_TTL`,
   the same staleness a cached cart already carries for a price change.
 
@@ -1173,7 +1210,7 @@ reset the other's half of the line.
   has anything to configure.
 - ⚠ **`CartItemSerializer.get_customization` carries the chosen `option` id**
   (null when the group's default was kept) alongside the resolved name. The name
-  is what the cart *prints*; the id is what the picker *selects on*, and a name
+  is what the cart _prints_; the id is what the picker _selects on_, and a name
   cannot be turned back into one - without it a re-opened customiser would show
   the customer the default in place of the alternative they actually bought.
 
@@ -1189,13 +1226,13 @@ resolves them once per request; see `apps/website/CLAUDE.md` → "Maps".
 - ⚠ **The credit travels with the URL, and neither is decoration.** Every tile
   provider requires a specific attribution string, and it changes with the tiles
   - so these are stored as a set, and `map_attribution_url` is separate from the
-  string because most providers also require the credit to *link* back at them.
-  Blank means unlinked, not "default to OpenStreetMap", which is what the
-  frontend used to do for every provider alike.
+    string because most providers also require the credit to _link_ back at them.
+    Blank means unlinked, not "default to OpenStreetMap", which is what the
+    frontend used to do for every provider alike.
 - **The three custom fields are deliberately not validated conditionally on the
   style.** A leftover URL under a built-in style is the normal state of a row
   somebody experimented with, and refusing the save would make the CMS picker
-  feel broken for a change that has no effect. The style itself *is* a
+  feel broken for a change that has no effect. The style itself _is_ a
   `ChoiceField`: an unknown id falls back to OSM's standard tiles on the
   frontend, which reads as the setting having been ignored.
 - ⚠ **`map_tile_url` is not a secret and cannot be made one.** A provider key

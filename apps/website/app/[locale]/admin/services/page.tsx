@@ -1,14 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import {
   AdminEntityList,
   CellText,
   EmptyCell,
 } from "@/components/admin/admin-entity-list";
+import type { EntityGroup } from "@/components/admin/admin-entity-list";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
-import { listServices, deleteService, updateService } from "@/lib/admin-api";
+import {
+  listServices,
+  listServiceCategories,
+  deleteService,
+  updateService,
+} from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
 import { useToggleEnabled } from "@/hooks/use-toggle-enabled";
 import { useReorder } from "@/hooks/use-reorder";
@@ -16,6 +22,7 @@ import { useReorder } from "@/hooks/use-reorder";
 export default function AdminServicesPage() {
   const t = useTranslations("Admin");
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
+  const [categories, setCategories] = useState<EntityGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const systemId = useSession()?.systemId ?? 0;
@@ -24,7 +31,22 @@ export default function AdminServicesPage() {
     setLoading(true);
     setError(null);
     try {
-      setItems(await listServices(systemId));
+      // The categories are fetched for their **order** as much as their names:
+      // the sections read in the arrangement the CMS gives the categories
+      // themselves, which is the order the API already returns them in
+      // (`sort_order`, then name). Grouping by the rows alone could only order
+      // the sections by whichever item happens to come first.
+      const [data, cats] = await Promise.all([
+        listServices(systemId),
+        listServiceCategories(systemId),
+      ]);
+      setItems(data);
+      setCategories(
+        cats.map((c) => ({
+          id: c.id as number,
+          label: String(c.name ?? c.id),
+        })),
+      );
     } catch {
       setError(t("errorLoad"));
     } finally {
@@ -52,6 +74,15 @@ export default function AdminServicesPage() {
       setError(t("errorDelete"));
     }
   };
+
+  const grouping = useMemo(
+    () => ({
+      key: "category",
+      groups: categories,
+      uncategorizedLabel: t("uncategorized"),
+    }),
+    [categories, t],
+  );
 
   const columns = [
     { key: "image", label: "Image", compact: true },
@@ -83,6 +114,7 @@ export default function AdminServicesPage() {
         title={t("services")}
         items={items}
         columns={columns}
+        grouping={grouping}
         basePath="/admin/services"
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}

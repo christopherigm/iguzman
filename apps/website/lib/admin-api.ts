@@ -407,10 +407,41 @@ export async function updateIngredient(
   });
   return parseResponse<Record<string, unknown>>(res);
 }
-export async function deleteIngredient(pk: number) {
-  const res = await adminFetch(`/api/catalog/ingredients/${pk}/`, {
-    method: "DELETE",
-  });
+/**
+ * One menu-item row still referencing a shared ingredient, and so blocking its
+ * delete. `role` says what the ingredient is to that row: an ordinary
+ * single-ingredient row (`plain`), the *default* of a single-select choice group
+ * (`group_default`), or one of that group's alternatives (`group_option`).
+ * `can_promote` is whether a `group_default` has another alternative to take its
+ * place - without one, detaching takes the group with it.
+ */
+export interface IngredientUsage {
+  menu_item_ingredient: number;
+  menu_item: number;
+  menu_item_name: string | null;
+  role: "plain" | "group_default" | "group_option";
+  group_name: string | null;
+  group_en_name: string | null;
+  option_count: number;
+  can_promote: boolean;
+}
+
+/**
+ * How a delete should resolve the rows above. `detach` keeps the dishes and only
+ * removes this ingredient from them (promoting a group's first alternative where
+ * it was the default); `groups` deletes the whole choice group each usage belongs
+ * to. Omitted, the API refuses with a 409 naming the usages.
+ */
+export type IngredientDeleteMode = "detach" | "groups";
+
+export async function deleteIngredient(
+  pk: number,
+  mode?: IngredientDeleteMode,
+) {
+  const res = await adminFetch(
+    `/api/catalog/ingredients/${pk}/${mode ? `?mode=${mode}` : ""}`,
+    { method: "DELETE" },
+  );
   return parseResponse<void>(res);
 }
 /**

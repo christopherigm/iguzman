@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { Container } from "@repo/ui/core-elements/container";
 import { Box } from "@repo/ui/core-elements/box";
+import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
@@ -53,9 +54,10 @@ export default async function MenuCategoryPage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const [category, t, tAdmin, session] = await Promise.all([
+  const [category, t, tCatalog, tAdmin, session] = await Promise.all([
     getMenuCategory(slug),
     getTranslations("CategoryDetail"),
+    getTranslations("CatalogItems"),
     getTranslations("Admin"),
     getSession(),
   ]);
@@ -138,6 +140,17 @@ export default async function MenuCategoryPage({ params }: Props) {
           locale={locale}
           showTitle={!hasImage}
         />
+        {/* Same CTA the landing's featured grid ends with - a reader who has
+            reached the bottom of one category is looking for the rest of the
+            menu, and it is also the way out of an empty category. */}
+        <Box justifyContent="center">
+          <Button
+            text={tCatalog("seeMoreMenuItems")}
+            href={MENU_ALL_PATH}
+            kind="primary"
+            size="lg"
+          />
+        </Box>
       </Container>
     </>
   );

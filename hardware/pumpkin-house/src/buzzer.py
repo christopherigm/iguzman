@@ -25,6 +25,12 @@ in `buttons.py`: `mute()` gates the carrier without altering a single
 duration, and `set_abort()` installs a predicate that lets the blocking
 primitives give up early. Neither is checked in the tight switching loops,
 so the timing that carries the timbre is unaffected by either.
+
+`enabled=False` (from `config.BUZZER_ENABLED`) is a third, and a different
+kind: it means no buzzer is soldered to that pin at all, on a build where
+`audio.py`'s speaker is doing the sound. It holds the carrier down for good
+without disturbing `_muted`, which stays the one flag saying whether this
+lantern is audible - both devices read it.
 """
 
 from machine import Pin
@@ -36,7 +42,7 @@ _IDLE_THRESHOLD_US = 20_000
 
 
 class Buzzer:
-    def __init__(self, pin, idle=None, rng=None):
+    def __init__(self, pin, idle=None, rng=None, enabled=True):
         import urandom
 
         self._pin = Pin(pin, Pin.OUT, value=0)
@@ -44,6 +50,13 @@ class Buzzer:
         self._rng = rng or urandom
         self._muted = False
         self._abort = None
+        # `enabled` is "is there a buzzer soldered to this pin at all", which
+        # is not the same question as mute. It never changes and it does not
+        # touch `_muted`, so the mute state stays the one global "is this
+        # lantern audible" flag even on a build where the only sound device
+        # is the speaker - see `_carrier` below.
+        self._enabled = bool(enabled)
+        self._carrier = 1 if self._enabled else 0
 
     # -- primitives ------------------------------------------------------
 
@@ -70,19 +83,29 @@ class Buzzer:
 
     def mute(self, on=True):
         self._muted = bool(on)
+        # One value the switching loops read, so "muted" and "not fitted"
+        # cost the same as they did when muting was the only reason to be
+        # quiet - the timing that carries the timbre is untouched by either.
+        self._carrier = 0 if (self._muted or not self._enabled) else 1
         if self._muted:
             self._pin.value(0)  # drop mid-pulse rather than at the next gap
 
     def toggle_mute(self):
         self.mute(not self._muted)
-        if not self._muted:
+        if not self._muted and self._enabled:
             # Unmuting blips; muting is self-evident. Without this a press
             # during a quiet ambient stretch gives no sign it registered.
+            # With no buzzer fitted the speaker answers instead - see
+            # `buttons.Controls._advance`.
             self.pulse(40)
         return self._muted
 
     def is_muted(self):
         return self._muted
+
+    def is_enabled(self):
+        """False when `config.BUZZER_ENABLED` says nothing is soldered on."""
+        return self._enabled
 
     # -- interruption ----------------------------------------------------
 
@@ -103,7 +126,7 @@ class Buzzer:
         """One flat blip of carrier."""
         if self.aborting():
             return
-        self._pin.value(0 if self._muted else 1)
+        self._pin.value(self._carrier)
         sleep_ms(on_ms)
         self._pin.value(0)
         if off_ms:
@@ -131,7 +154,7 @@ class Buzzer:
         end = ticks_add(ticks_ms(), duration_ms)
         allow_idle = period_us > _IDLE_THRESHOLD_US
         while ticks_diff(end, ticks_ms()) > 0:
-            self._pin.value(0 if self._muted else 1)
+            self._pin.value(self._carrier)
             sleep_us(on_us)
             self._pin.value(0)
             sleep_us(off_us)
@@ -161,7 +184,7 @@ class Buzzer:
                 break
             period_us = int(1_000_000 / rate)
             on_us = int(period_us * duty)
-            self._pin.value(0 if self._muted else 1)
+            self._pin.value(self._carrier)
             sleep_us(on_us)
             self._pin.value(0)
             sleep_us(period_us - on_us)

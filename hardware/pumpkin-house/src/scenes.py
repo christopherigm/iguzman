@@ -11,6 +11,13 @@ in every gap between pulses. Normally it ticks the flame. A scene calls
 `take_over()` to borrow that slot for its own animation, and `release()` to
 give it back. That same slot is where the front-panel buttons get served,
 because it is the only code that keeps running while a scene blocks.
+
+Recorded audio is **not** here. `audio_scenes.py` holds it, and the split is
+deliberate: everything below is composed against a buzzer's single fixed
+pitch, and a .wav file has nothing to offer that composition. A track is a
+scene only in the sense the loop cares about - hand it a Stage, it blocks,
+it hands it back - and it leaves the flame burning underneath rather than
+taking the idle slot over. `main.show()` is what interleaves the two.
 """
 
 from time import sleep_ms, ticks_add, ticks_diff, ticks_ms
@@ -80,17 +87,30 @@ class Wash:
 class Stage:
     """Everything a scene needs, plus ownership of the idle slot."""
 
-    def __init__(self, lamps, flood, flame, bz, controls=None):
+    def __init__(self, lamps, flood, flame, bz, controls=None, speaker=None):
         self.lamps = lamps
         self.flood = flood
         self.flame = flame
         self.buzzer = bz
+        # None on a build with no amplifier fitted. `audio_scenes` is the
+        # only thing that reads it, and it checks - nothing in this file
+        # needs a speaker, because a buzzer scene is composed against a
+        # fixed pitch and has nothing to say to a recording.
+        self.speaker = speaker
         self.controls = controls
         self.wash = Wash(lamps)
         self._idle_fn = flame.tick
         bz.set_idle(self.idle)
+        if speaker is not None:
+            # The same two hooks, for the same two reasons: a thirty-second
+            # recording is far longer than any buzzer effect, so without
+            # these the flame would freeze and the buttons would go dead for
+            # the whole of it.
+            speaker.set_idle(self.idle)
         if controls is not None:
             bz.set_abort(self.interrupted)
+            if speaker is not None:
+                speaker.set_abort(self.interrupted)
 
     def idle(self):
         """The one callback that runs whatever is currently blocking.
@@ -176,6 +196,8 @@ class Stage:
             lamp.off()
         self.flood.off()
         self.buzzer.off()
+        if self.speaker is not None:
+            self.speaker.off()
 
 
 # =========================================================================

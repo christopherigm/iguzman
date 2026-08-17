@@ -310,7 +310,7 @@
     "hardwareBackToList": "All hardware projects",
     "hardwareSourceLabel": "Firmware source",
     "hwPumpkinHouseName": "Pumpkin House Lantern",
-    "hwPumpkinHouseDesc": "A ceramic pumpkin house lit from inside by a Raspberry Pi Pico - four RGB LEDs on a candle-flicker engine, a white flood string, and an active buzzer that gets its expression from rhythm rather than pitch.",
+    "hwPumpkinHouseDesc": "A ceramic pumpkin house lit from inside by a Raspberry Pi Pico - four RGB LEDs on a candle-flicker engine, a white flood string, an active buzzer that gets its expression from rhythm rather than pitch, and an optional I\u00b2S amplifier playing recorded audio off the board's own flash.",
     "mobForgeTitle": "Mob Forge",
     "mobForgeSubtitle": "Set up the AI-driven Minecraft modding pipeline, then author a GeckoLib mob end-to-end - from a natural-language prompt to a spawn egg in the 1.20.2 client.",
     "mobForgeUnixGroup": "Setup - Linux & macOS",

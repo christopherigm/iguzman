@@ -12,13 +12,15 @@ import "./hardware.css";
 
 /**
  * The small two-, three- and four-legged parts: resistors, diodes,
- * transistors, the active buzzer, and the tactile pushbutton.
+ * transistors, the active buzzer, the electrolytic capacitor, and the tactile
+ * pushbutton.
  *
  * Each takes the holes its legs go into and works out its own body position and
  * angle, so a figure never places a body by hand - move the holes and the part
  * follows. Every one of them draws the marking you have to read off the real
  * component to fit it correctly: a resistor's colour bands, a diode's cathode
- * stripe, a transistor's flat face and pinout, the buzzer's `+`.
+ * stripe, a transistor's flat face and pinout, the buzzer's `+`, and the
+ * capacitor's stripe - which, alone among these, marks the *negative* side.
  */
 
 /**
@@ -438,6 +440,117 @@ export function Buzzer({
         </text>
         <text x={minus.x} y={minus.y + 16}>
           −
+        </text>
+      </g>
+    </g>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Capacitor
+   ══════════════════════════════════════════════════════════════════════════ */
+
+export interface CapacitorProps {
+  /** The hole under the **long** leg. */
+  positive: Point;
+  /** The hole under the short leg - the one the stripe points at. */
+  negative: Point;
+  /** Printed value, e.g. `470 µF`. */
+  label?: string;
+  radius?: number;
+}
+
+/**
+ * A radial electrolytic, drawn from above with its polarity stripe.
+ *
+ * The stripe is the reason this is worth drawing rather than describing. It is
+ * printed down one side of the can and it marks the **negative** leg - the
+ * opposite convention to every other polarised part in this family, where the
+ * marking (a diode's band, a buzzer's `+`) is either the cathode or the
+ * positive. Fitting one backwards across a supply rail is the one mistake here
+ * that ends with the can venting, so the drawing puts the stripe, the `−` on
+ * the short leg and the `+` on the long one all in the same picture.
+ */
+export function Capacitor({
+  positive,
+  negative,
+  label,
+  radius = 17,
+}: CapacitorProps) {
+  const centre = midpoint(positive, negative);
+  // The can stands above its own legs, as the buzzer's does, so both holes and
+  // both polarity marks stay visible under it.
+  const body = { x: centre.x, y: centre.y - radius * 0.8 };
+  const stripeOnLeft = negative.x < positive.x;
+  const stripeX = body.x + (stripeOnLeft ? -1 : 1) * radius * 0.62;
+
+  return (
+    <g>
+      <Lead from={positive} to={body} bow={0.08} bowDirection={1} />
+      <Lead from={negative} to={body} bow={0.08} bowDirection={-1} />
+
+      <circle
+        cx={body.x}
+        cy={body.y}
+        r={radius}
+        fill="#2f3a52"
+        stroke="rgba(0,0,0,0.55)"
+        strokeWidth={1.4}
+      />
+      {/* the light stripe down the negative side, clipped to the can */}
+      <clipPath id={`cap-${Math.round(body.x)}-${Math.round(body.y)}`}>
+        <circle cx={body.x} cy={body.y} r={radius} />
+      </clipPath>
+      <g clipPath={`url(#cap-${Math.round(body.x)}-${Math.round(body.y)})`}>
+        <rect
+          x={stripeX - radius * 0.19}
+          y={body.y - radius}
+          width={radius * 0.38}
+          height={radius * 2}
+          fill="#d6dbe6"
+        />
+        <text
+          className="hw-label-chip"
+          x={stripeX}
+          y={body.y + 4}
+          textAnchor="middle"
+          fill="#2f3a52"
+        >
+          −
+        </text>
+      </g>
+      {/* the pressure-relief cross scored into the top of the can */}
+      <g stroke="#4a566f" strokeWidth={1.4} fill="none">
+        <line
+          x1={body.x - radius * 0.42}
+          y1={body.y}
+          x2={body.x + radius * 0.42}
+          y2={body.y}
+        />
+        <line
+          x1={body.x}
+          y1={body.y - radius * 0.42}
+          x2={body.x}
+          y2={body.y + radius * 0.42}
+        />
+      </g>
+
+      {label ? (
+        <text
+          className="hw-label"
+          x={body.x}
+          y={body.y - radius - 8}
+          textAnchor="middle"
+        >
+          {label}
+        </text>
+      ) : null}
+      <g className="hw-label-sm" textAnchor="middle">
+        <text x={positive.x} y={positive.y + 16}>
+          + long
+        </text>
+        <text x={negative.x} y={negative.y + 16}>
+          − stripe
         </text>
       </g>
     </g>

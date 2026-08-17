@@ -29,7 +29,9 @@ has a real Gradle build worth wiring into Turborepo. Firmware does not.
 
 ## The documentation lives in `apps/help`, not here
 
-**This folder holds firmware and nothing else.** Every schematic, wiring
+**This folder holds what goes on the board and nothing else** — firmware,
+plus any assets that ship alongside it (`pumpkin-house/audio/`). Every
+schematic, wiring
 table, toolchain instruction, tuning note and troubleshooting table for a
 hardware project belongs to the **Hardware section of the help app**, as a
 menu item plus its own detail page at `/hardware/<project-name>`:
@@ -37,7 +39,8 @@ menu item plus its own detail page at `/hardware/<project-name>`:
 ```
 hardware/
   <project-name>/
-    src/              what gets copied to the board — that is all
+    src/              firmware — what gets copied to the board
+    <assets>/         anything else the board carries (pumpkin-house/audio/)
 
 apps/help/
   lib/hardware-projects.json                            the registry entry

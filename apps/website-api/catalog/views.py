@@ -20,6 +20,12 @@ from .recommendations import (
     SOURCE_MODELS,
 )
 from .services.clone import clone_menu_item, clone_product, clone_service
+from .services.ingredient_usage import (
+    affected_menu_item_ids,
+    delete_ingredient_groups,
+    detach_ingredient,
+    ingredient_usages,
+)
 from .services.nutrition_lookup import lookup_nutrition
 from .services.price_lookup import lookup_price
 
@@ -918,18 +924,53 @@ class IngredientDetailView(APIView):
         return Response(IngredientSerializer(ingredient, context={'request': request}).data)
 
     def delete(self, request, pk):
+        """Delete an ingredient, optionally resolving what is holding it down.
+
+        With no ``mode``, an ingredient a dish still references is refused with a
+        409 that *names* every blocking usage, so the CMS can put the choice in
+        front of the admin instead of a dead end. Re-issuing the delete with
+        ``?mode=detach`` removes the ingredient from those dishes (promoting a
+        choice group's first alternative where it was the default), and
+        ``?mode=groups`` deletes the whole choice group each usage belongs to.
+        """
         ingredient = self._get_object(pk)
         if ingredient is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        mode = request.query_params.get('mode') or ''
+        if mode and mode not in ('detach', 'groups'):
+            return Response(
+                {'detail': 'Invalid mode.'}, status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Collected before the resolver runs - afterwards there is nothing left
+        # pointing at the ingredient to derive them from.
+        menu_item_ids = affected_menu_item_ids(ingredient) if mode else set()
+        if mode == 'detach':
+            detach_ingredient(ingredient)
+        elif mode == 'groups':
+            delete_ingredient_groups(ingredient)
+
         try:
             ingredient.delete()
         except ProtectedError:
+            usages = ingredient_usages(ingredient)
             return Response(
-                {'detail': 'This ingredient is still used by one or more menu items.'},
+                {
+                    'detail': 'This ingredient is still used by one or more menu items.',
+                    'code': 'INGREDIENT_IN_USE',
+                    'usages': usages,
+                },
                 status=status.HTTP_409_CONFLICT,
             )
+
         cache.delete(f'catalog:ingredient:{pk}')
         _invalidate_pattern('catalog:ingredients:*')
+        for menu_item_id in menu_item_ids:
+            _invalidate_pattern(f'catalog:menu_item_ingredients:{menu_item_id}:*')
+            cache.delete(f'catalog:menu_item:{menu_item_id}')
+        if menu_item_ids:
+            _invalidate_pattern('catalog:menu_items:*')
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

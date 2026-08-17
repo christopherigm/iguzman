@@ -1,0 +1,8 @@
+Drop 8-bit unsigned mono .wav files here, then copy them to the board:
+
+    mpremote mkdir :audio
+    mpremote cp hardware/pumpkin-house/audio/*.wav :audio/
+
+Filename order is the playing order, so prefix them 10-, 20-, 30-.
+The ffmpeg encoding recipe and the flash budget are in the help app,
+under Hardware -> /hardware/pumpkin-house -> "Audio files".
