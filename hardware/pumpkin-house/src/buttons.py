@@ -20,18 +20,26 @@ The power button is a three-position cycle rather than a toggle, because one
 button has to carry three jobs and the lantern has no display to explain
 which one you are about to get:
 
-    press 1   wake up          flood 100% + white
-    press 2   sound on/off     flood 100% + green (audible) or red (silent)
+    press 1   on, with sound   flood 100% + white
+    press 2   mute             flood 100% + red
     press 3   go to sleep      flood 100% + purple, held 2 s, then dark
-    press 4   wake up again    ... and round
+    press 4   on, with sound   ... and round
 
-Two consequences worth knowing before you change it. The lantern boots into
-the *off* leg, so plugging the pack in does nothing until someone presses -
-that is deliberate, a decoration you have to switch on is a decoration that
-does not run its pack down in a cupboard. And there is exactly one sound
-toggle per cycle, so the mute state has to survive going off and coming back
-or the second press of every cycle would be the only one that ever silenced
-it; `_muted` lives on the Buzzer and nothing here resets it.
+Every leg is unconditional: press 2 always silences and never unsilences,
+and the wake leg is what brings the sound back. The mute state therefore
+does *not* survive an off-and-on any more, which is the deliberate opposite
+of what this file used to do - it is what makes the cycle mean the same
+thing on every lap instead of depending on where the last one stopped.
+
+`config.BOOT_POWERED` decides whether the lantern is already burning when the
+pack goes in. It does not change the cycle: press 1 is the wake leg either
+way, which on a lantern that booted lit is a white flash confirming what you
+can already see. That is deliberate - see `__init__` for why the first press
+must not be the mute leg.
+
+The other button is the track button: one press plays the next file in
+`AUDIO_DIR`, and a press during one skips to the file after it. Nothing else
+starts a track, so the folder is only ever walked in order, by hand.
 """
 
 from machine import Pin
@@ -40,7 +48,7 @@ from time import sleep_ms, ticks_add, ticks_diff, ticks_ms
 import config
 
 # Where a press lands us, in order. The cycle is positional, not derived from
-# the current state: "off, on, sound" is what the hand learns, and inferring
+# the current state: "on, mute, off" is what the hand learns, and inferring
 # the next action from whether sound happens to be muted would make the same
 # press do different things on different nights.
 _PHASE_OFF = 0
@@ -97,6 +105,7 @@ class Controls:
         speaker=None,
         power_pin=None,
         scene_pin=None,
+        powered=None,
     ):
         self._bz = bz
         self._lamps = lamps
@@ -105,8 +114,21 @@ class Controls:
         self._power = Button(config.POWER_PIN if power_pin is None else power_pin)
         self._scene = Button(config.SCENE_PIN if scene_pin is None else scene_pin)
         self._scene_pending = False
+        powered = config.BOOT_POWERED if powered is None else powered
+        self._powered = bool(powered)
+        # The phase stays at OFF even when we boot lit, and that is not an
+        # inconsistency: it records what the last *press* did, and nobody has
+        # pressed. So the first press is always the wake leg, which on an
+        # already-lit lantern is a white flash and nothing else.
+        #
+        # Starting at _PHASE_ON instead - which is the obvious reading of
+        # "boots powered" and was the first attempt - makes the first press
+        # the *sound* leg. Somebody who plugs the pack in and presses the
+        # power button once to check the thing is alive would silence it, get
+        # a red light for their trouble, and then need three more presses to
+        # get the sound back. The cycle the hand learns is worth more than
+        # the internal tidiness.
         self._phase = _PHASE_OFF
-        self._powered = False
 
     def poll(self):
         """Serve whatever the interrupts latched. Safe to call constantly."""
@@ -121,31 +143,39 @@ class Controls:
         self._phase = (self._phase + 1) % _PHASES
         if self._phase == _PHASE_ON:
             self._powered = True
+            # Waking always comes back audible, so the cycle is positional in
+            # the *sound* as well as in the lighting: press 1 is on, press 2
+            # is mute, press 3 is off, every time round. It used to be a
+            # toggle, which meant the second press silenced or unsilenced
+            # depending on what the previous cycle happened to leave behind -
+            # one button with three legs and only two of them predictable.
+            self._set_muted(False)
             self._confirm(config.POWER_ON_RGB, config.CONFIRM_MS)
         elif self._phase == _PHASE_SOUND:
-            # toggle_mute() blips the buzzer on the way back to audible, which
-            # is worth keeping even now that there is a light for it: the blip
-            # proves the sound path still works, and the light does not.
-            #
-            # The Buzzer owns the mute state for both devices, including on a
-            # build with no buzzer soldered to that pin - see `_carrier` in
-            # `buzzer.py`. One flag, so this button cannot leave the lantern
-            # half silent, and so "sound off" survives an off-and-on for the
-            # speaker exactly as it always has for the buzzer.
-            muted = self._bz.toggle_mute()
-            if self._speaker is not None:
-                self._speaker.mute(muted)
-                if not muted and not self._bz.is_enabled():
-                    # Nothing blipped: there is no buzzer. The speaker says it
-                    # instead, or the sound leg of the cycle would be the one
-                    # press that answers with a colour and nothing else.
-                    self._speaker.blip()
-            colour = config.SOUND_OFF_RGB if muted else config.SOUND_ON_RGB
-            self._confirm(colour, config.CONFIRM_MS)
+            # Always mute, never unmute: coming back from silence is the wake
+            # leg's job now. Red, because this press only ever means silent.
+            self._set_muted(True)
+            self._confirm(config.SOUND_OFF_RGB, config.CONFIRM_MS)
         else:
             self._powered = False
             self._confirm(config.POWER_OFF_RGB, config.POWER_OFF_CONFIRM_MS)
             self._blackout()
+
+    def _set_muted(self, muted):
+        """Silence or unsilence both sound devices together.
+
+        The Buzzer owns the flag for both, including on a build with no
+        buzzer soldered to that pin - see `_carrier` in `buzzer.py`. One
+        flag, so this button cannot leave the lantern half silent.
+
+        Nothing blips here. `toggle_mute()` did, as proof the sound path
+        still worked, but that made sense when unmuting was a press somebody
+        chose; now it is a side effect of waking up and a chirp on every
+        power-on is a tic, not a confirmation. The white flash says it.
+        """
+        self._bz.mute(muted)
+        if self._speaker is not None:
+            self._speaker.mute(muted)
 
     def powered(self):
         """False while the lantern is asleep. `main.run` parks on this."""
@@ -154,7 +184,13 @@ class Controls:
     def set_power(self, on=True):
         """Force the power leg without a press - for the REPL, where there is
         nobody to hold the button down and every scene would otherwise abort
-        instantly against `Stage.interrupted()`."""
+        instantly against `Stage.interrupted()`.
+
+        Mute is left exactly as it is, unlike the real wake leg: at a REPL
+        `set_power(True)` is scaffolding for whatever you are about to test,
+        and having it undo a `mute()` you typed two lines earlier would be a
+        surprise in the one place surprises are expensive.
+        """
         self._phase = _PHASE_ON if on else _PHASE_OFF
         self._powered = bool(on)
         if not self._powered:

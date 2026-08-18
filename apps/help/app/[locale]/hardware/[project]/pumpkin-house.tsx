@@ -120,21 +120,54 @@ const AUDIO_BATCH =
   "for f in raw/*.mp3; do\n" +
   '  ffmpeg -i "$f" -ac 1 -ar 11025 \\\n' +
   '    -af "highpass=f=90,loudnorm=I=-14:TP=-1.5,alimiter=limit=0.95" \\\n' +
-  '    -c:a pcm_u8 "hardware/pumpkin-house/audio/$(basename "${f%.*}").wav"\n' +
+  '    -c:a pcm_u8 "hardware/pumpkin-house/tracks/$(basename "${f%.*}").wav"\n' +
   "done\n" +
   "\n" +
   "# What you actually just made, and how big it is.\n" +
-  "ffprobe -hide_banner hardware/pumpkin-house/audio/10-thunder.wav\n" +
-  "du -ch hardware/pumpkin-house/audio/*.wav | tail -1";
+  "ffprobe -hide_banner hardware/pumpkin-house/tracks/10-thunder.wav\n" +
+  "du -ch hardware/pumpkin-house/tracks/*.wav | tail -1";
 
 const AUDIO_UPLOAD =
-  "mpremote mkdir :audio                                   # once\n" +
-  "mpremote cp hardware/pumpkin-house/audio/*.wav :audio/\n" +
-  "mpremote ls :audio\n" +
+  "# The folder is `tracks` and NOT `audio` - see the warning below.\n" +
+  "mpremote mkdir :tracks                                   # once\n" +
+  "mpremote cp hardware/pumpkin-house/tracks/*.wav :tracks/\n" +
+  "mpremote ls :tracks\n" +
   "mpremote reset\n" +
   "\n" +
   "# How much room is left. Do this before copying, not after.\n" +
   "mpremote exec \"import os; s=os.statvfs('/'); print(s[0]*s[3], 'bytes free')\"";
+
+const MIDI_UPLOAD =
+  "# Same folder as the recordings, same rotation - the extension is the\n" +
+  "# only thing that decides which player runs.\n" +
+  "cp ~/Downloads/dirge.mid hardware/pumpkin-house/tracks/\n" +
+  "mpremote cp hardware/pumpkin-house/tracks/*.mid :tracks/\n" +
+  "mpremote ls :tracks\n" +
+  "\n" +
+  "# What the folder costs now. A score is normally well under 1% of the\n" +
+  "# recording of the same music.\n" +
+  "du -ch hardware/pumpkin-house/tracks/* | tail -1";
+
+const MIDI_PREVIEW =
+  "# On your laptop, not the board: the same parser, the same synth and the\n" +
+  "# same mixing loop, writing a WAV instead of driving an amplifier. Listen\n" +
+  "# to this before copying anything - it is what the speaker will play.\n" +
+  "cd hardware/pumpkin-house/src\n" +
+  "python3 -c \"import midi; midi.render_wav('../tracks/dirge.mid', '/tmp/d.wav')\"\n" +
+  "ffplay -autoexit /tmp/d.wav";
+
+const MIDI_REPL =
+  "import midi\n" +
+  "midi.describe('/tracks/dirge.mid')   # format, chunks, notes, channels, length\n" +
+  "midi.bench('/tracks/dirge.mid')      # can this board keep up? want well over 1x\n" +
+  "\n" +
+  "import audio_scenes\n" +
+  "audio_scenes.play(stage, '/tracks/dirge.mid')\n" +
+  "\n" +
+  "# Voices are the first knob if bench() comes back near 1x, sample rate\n" +
+  "# the second. Both live in config.py; these just try them.\n" +
+  "import config; config.MIDI_VOICES = 4\n" +
+  "midi.bench('/tracks/dirge.mid')";
 
 const SPEAKER_TEST =
   "# Is the amp wired up at all? This synthesises its own tone, so it works\n" +
@@ -142,8 +175,9 @@ const SPEAKER_TEST =
   "stage.speaker.blip()\n" +
   "\n" +
   "import audio_scenes\n" +
-  "audio_scenes.discover()          # what the firmware can see in /audio\n" +
-  "audio_scenes.play(stage, '/audio/10-thunder.wav')\n" +
+  "audio_scenes.discover()          # what the firmware can see in /tracks\n" +
+  "audio_scenes.play(stage, '/tracks/10-thunder.wav')\n" +
+  "audio_scenes.play(stage, '/tracks/dirge.mid')     # synthesised, not streamed\n" +
   "\n" +
   "# The show this particular lantern will run - buzzer scenes and tracks\n" +
   "# interleaved, filtered by what config.py says is fitted.\n" +
@@ -152,6 +186,31 @@ const SPEAKER_TEST =
   "\n" +
   "stage.speaker.mute(True)         # what press 2 of the cycle does to it\n" +
   "stage.speaker.off()              # drop SD; the hiss should stop dead";
+
+const SELFTEST_RUN =
+  "# Runs from your machine - it is never copied to the board, so it costs\n" +
+  "# no flash next to a 900 KB wav. This interrupts main.py on the way in.\n" +
+  "mpremote run hardware/pumpkin-house/src/selftest.py";
+
+const SELFTEST_ONE =
+  "# One test at a time, once you know roughly where the fault is.\n" +
+  "mpremote cp hardware/pumpkin-house/src/selftest.py :\n" +
+  'mpremote exec "import selftest; selftest.tone()"\n' +
+  "\n" +
+  "# ...or from a REPL you are already sitting in:\n" +
+  "import selftest\n" +
+  "selftest.leds()      # every RGB channel alone, announced by GPIO\n" +
+  "selftest.flood()     # the white string through Q1\n" +
+  "selftest.buzzer()    # GP16 driven straight, no envelopes\n" +
+  "selftest.amp()       # the SD line only - no audio at all\n" +
+  "selftest.tone()      # 3 s of loud continuous square wave\n" +
+  "selftest.noise()     # 3 s of full-scale hiss\n" +
+  "selftest.swap()      # the same tone on both legal pin orders\n" +
+  "selftest.wav()       # dark.wav, streamed raw\n" +
+  "\n" +
+  "# Too loud? Two constants at the top of the file, and nothing else.\n" +
+  "selftest.LEVEL = 0x10        # synthesised tests; 0x7F is full scale\n" +
+  "selftest.WAV_VOLUME = 4      # wav() only, same 1-10 as config.AUDIO_VOLUME";
 
 const PAD_DRIVE =
   "import machine\n" +
@@ -197,11 +256,19 @@ export function PumpkinHouseDoc() {
           fastest way to audition the whole show while you are still tuning it.
         </P>
         <P>
-          <strong>The lantern boots asleep.</strong> Flick the pack&rsquo;s
-          slide switch and nothing lights until someone presses power - a
-          decoration you have to switch on is a decoration that does not run its
-          cells down in a cupboard. The slide switch is still the real cut-off;
-          the power button leaves the Pico running at a few milliamps.
+          <strong>
+            Whether it boots lit is one line of <code>config.py</code>
+          </strong>{" "}
+          - <code>BOOT_POWERED</code>. Left <code>False</code>, flicking the
+          pack&rsquo;s slide switch lights nothing until someone presses power,
+          which is the frugal setting: a decoration you have to switch on is a
+          decoration that does not run its cells down in a cupboard. Set{" "}
+          <code>True</code> - the default now - it starts burning as soon as it
+          has power, which is what you want on a switched socket, on a timer, or
+          on the bench where &ldquo;did it boot?&rdquo; and &ldquo;is the button
+          wired right?&rdquo; are worth asking separately. Either way the slide
+          switch is the real cut-off; the power button leaves the Pico running
+          at a few milliamps.
         </P>
         <P>
           It draws about <strong>93 mA</strong>, which is roughly{" "}
@@ -729,14 +796,21 @@ export function PumpkinHouseDoc() {
         <DocNote tag="What the SD pin is really doing">
           <P>
             It is a mode selector as well as an on/off, and the voltage picks
-            the channel: above ~1.4 V it plays (L+R)/2, lower bands select left
-            or right, and below ~0.16 V it shuts down. A 3.3 V GPIO high
-            therefore lands squarely in the averaging mode, which is what{" "}
-            <code>audio.py</code> assumes - and it is the reason the firmware
-            writes every sample to <strong>both</strong> I&sup2;S channels
-            rather than using the driver&rsquo;s mono format, which would arrive
-            6 dB down. Some breakout boards carry a 1 MΩ pull-up on this pin;
-            driving it from a GPIO overrides that harmlessly.
+            the channel — but not in the order you would guess. Below ~0.16 V it
+            shuts down; <strong>0.16&ndash;0.77 V is (L+R)/2</strong>;
+            0.77&ndash;1.4 V is right; and <strong>above ~1.4 V is left</strong>
+            . A 3.3 V GPIO high therefore selects the <em>left channel</em>, not
+            the average — averaging needs a divider, which is what the 1 MΩ
+            resistor to VDD on some breakouts is for.
+          </P>
+          <P>
+            It makes no audible difference here, and that is deliberate: the
+            firmware writes every sample to <strong>both</strong> I&sup2;S
+            channels rather than using the driver&rsquo;s mono format, so the
+            same audio comes out whichever band <code>SD</code> lands in. (The
+            mono format would arrive 6 dB down in averaging mode, which is the
+            other reason.) Driving the pin from a GPIO overrides a breakout
+            board&rsquo;s own pull-up harmlessly.
           </P>
         </DocNote>
       </DocSection>
@@ -891,7 +965,11 @@ export function PumpkinHouseDoc() {
           Expect <code>main.py</code>, <code>config.py</code>,{" "}
           <code>leds.py</code>, <code>buzzer.py</code>, <code>scenes.py</code>,{" "}
           <code>pads.py</code>, <code>buttons.py</code>, <code>audio.py</code>,{" "}
-          <code>audio_scenes.py</code>. All nine, in the root.
+          <code>audio_scenes.py</code>. All nine, in the root.{" "}
+          <code>selftest.py</code> is deliberately <em>not</em> among them: it
+          is a bench tool, it runs fine straight off your machine with{" "}
+          <code>mpremote run</code>, and flash is the one resource this build is
+          actually short of.
         </P>
         <P>
           If you fitted the speaker, the audio files go in a{" "}
@@ -909,6 +987,114 @@ export function PumpkinHouseDoc() {
       </DocSection>
 
       <DocSection num="08" title="Test on the bench">
+        <DocH3>Start with the self-test</DocH3>
+        <P>
+          <code>src/selftest.py</code> is the fastest way to find out whether a
+          wire is on the pin you think it is. It imports none of the lantern -
+          no <code>main</code>, no <code>scenes</code>, no <code>audio</code> -
+          and opens the peripherals itself, at full volume, printing what it is
+          about to do before it does it. Every extra moving part is one more
+          candidate for why you heard nothing, so it has none.
+        </P>
+        <CodeBlock language="bash" code={SELFTEST_RUN} />
+        <P>
+          About a minute, in the order that narrows a fault fastest: all twelve
+          RGB channels one at a time by GPIO number, the flood, the buzzer, the
+          amp&rsquo;s <code>SD</code> line on its own, then a loud tone, hiss,
+          both legal pin orders, and finally <code>dark.wav</code> streamed raw.
+          Lights first on purpose - once the LEDs walk you know the board is
+          running your code and the pin map is real, which turns every later
+          silence into a statement about the amplifier rather than about the
+          upload.
+        </P>
+        <CodeBlock language="python" code={SELFTEST_ONE} />
+        <P>
+          <strong>It is loud on purpose, and turned down in one place.</strong>{" "}
+          <code>LEVEL</code> at the top of the file sets every synthesised test
+          (the high byte of a signed 16-bit sample, so <code>0x7F</code> is full
+          scale), and <code>WAV_VOLUME</code> sets <code>wav()</code> on the
+          same <code>1</code>–<code>10</code> scale as{" "}
+          <code>config.AUDIO_VOLUME</code>. The shipped defaults —{" "}
+          <code>0x20</code> and <code>6</code> — are comfortable beside your
+          head; the first pass at this file used <code>0x60</code> and no
+          attenuation at all, on the theory that &ldquo;is this amplifier alive
+          at all&rdquo; is not a question a polite tone can settle, which is
+          true right up until the answer is yes. Raise them for one stubborn
+          amp, then put them back.
+        </P>
+        <P>
+          None of that touches how loud the <em>lantern</em> is. That is{" "}
+          <code>AUDIO_VOLUME</code> in <code>config.py</code>, a plain{" "}
+          <code>1</code>–<code>10</code> applied through the same lookup table
+          that converts the samples, so it costs nothing per sample and covers
+          tracks and the confirmation blip alike.{" "}
+          <code>selftest.WAV_VOLUME</code> is on the identical scale on purpose:
+          a level you settle on at the bench is a number you can type straight
+          into <code>config.py</code>.
+        </P>
+        <DocNote tag="Why the steps are 3 dB and not a tenth each">
+          <P>
+            Loudness follows the <em>logarithm</em> of amplitude. A dial that
+            multiplied by <code>v/10</code> would put every setting worth using
+            in the top two notches — <code>5</code> would already be a
+            barely-noticeable −6 dB, and <code>1</code> through <code>3</code>{" "}
+            would be eight-bit mush indistinguishable from each other. Three
+            decibels a step is roughly the smallest change a listener calls
+            &ldquo;a bit louder&rdquo;, which is the whole job of a 1–10
+            control.
+          </P>
+          <P>
+            The gain lives in <code>audio._VOLUME_GAIN</code> as ten integer
+            numerators over 256 —{" "}
+            <code>(11, 16, 23, 32, 45, 64, 91, 128, 181, 256)</code> — rather
+            than a <code>pow()</code>, so the arithmetic stays in
+            MicroPython&rsquo;s arbitrary-precision ints instead of its
+            single-precision floats, and so the ten numbers can be checked by
+            eye against the table in <code>config.py</code>. The even settings
+            are bit-for-bit identical to the halvings this replaced:{" "}
+            <code>10</code>, <code>8</code>, <code>6</code>, <code>4</code>,{" "}
+            <code>2</code> are the old <code>0</code>–<code>4</code>. Unsigned
+            128 still maps to exactly 0, so no setting introduces a DC offset
+            for the amplifier to thump on.
+          </P>
+          <P>
+            <strong>What the bottom of the dial costs you.</strong> This is
+            digital attenuation on an 8-bit source, so volume <code>1</code>{" "}
+            leaves about eleven distinct output levels out of 256 and sounds
+            like it. If the lantern needs to be that quiet, take it out of the
+            amplifier instead: <code>GAIN</code> floating is +9 dB, tied to{" "}
+            <code>VDD</code> is +6 dB, and that costs no resolution at all.
+          </P>
+        </DocNote>
+        <DocNote tag="Why its tone is three seconds and not ninety milliseconds">
+          <P>
+            A short blip fits entirely inside the I2S driver&rsquo;s ring
+            buffer, so whether you hear it depends on shutdown timing as much as
+            on wiring - see the note further down. That bug is fixed, but{" "}
+            <strong>
+              a test whose outcome depends on the fix cannot be used to check
+              the fix
+            </strong>
+            . A tone long enough to hold the buffer full for seconds is clocked
+            out regardless: <code>write()</code> blocking on a full buffer is
+            the definition of audio leaving at the sample rate. Silence from{" "}
+            <code>selftest.tone()</code> means the signal is not reaching the
+            amplifier, with no timing asterisk attached.
+          </P>
+          <P>
+            <code>selftest.swap()</code> exists because the RP2040&rsquo;s
+            PIO-based I2S needs <code>ws = sck + 1</code>, which leaves three
+            adjacent GPIOs exactly <em>two</em> legal assignments - whichever of
+            the outer two is <code>DIN</code>. That is the whole search space
+            and it walks it in four seconds. If combination 2 is the one you
+            hear, <code>DIN</code> and <code>BCLK</code> are swapped. A true{" "}
+            <code>BCLK</code>/<code>LRC</code> swap cannot appear there at all,
+            because <code>ws = sck + 1</code> makes it unbuildable - that one
+            you fix with tweezers, against the silkscreen.
+          </P>
+        </DocNote>
+
+        <DocH3>Then the show itself</DocH3>
         <P>
           <code>main.py</code> guards its entry point, so importing it does{" "}
           <strong>not</strong> start the show. Connect with{" "}
@@ -934,6 +1120,26 @@ export function PumpkinHouseDoc() {
           <code>audio_scenes.discover()</code> returning <code>()</code> means
           the folder.
         </P>
+        <DocNote tag="Why a correctly wired amp can still be silent">
+          <P>
+            MicroPython&rsquo;s <code>I2S.write()</code> returns when the bytes
+            reach the <strong>driver&rsquo;s ring buffer</strong>, not when the
+            amplifier has played them, and there is no drain call in the API.
+            Anything that drops the amp&rsquo;s <code>SD</code> line straight
+            after a write therefore throws away up to <code>AUDIO_IBUF</code>{" "}
+            bytes the driver had already accepted — about 186 ms at 11 kHz.
+          </P>
+          <P>
+            A <code>blip()</code> is <em>shorter</em> than that buffer, so all
+            90 ms of it went in and none of it came out: the tone was clocked
+            into an amplifier that had already been shut down. That is a
+            perfectly wired speaker looking stone dead, and it is worth knowing
+            before you re-seat four jumpers. <code>Speaker._drain()</code> now
+            waits out the outstanding buffer before <code>SD</code> goes low,
+            which is also what stops every track losing its last fifth of a
+            second.
+          </P>
+        </DocNote>
 
         <DocH3>Then the buttons</DocH3>
         <CodeBlock language="python" code={BUTTON_TEST} />
@@ -956,12 +1162,12 @@ export function PumpkinHouseDoc() {
         </P>
         <DocNote tag="Nothing happens when you call a scene by hand">
           <P>
-            Expected: a Stage built at the REPL is <em>asleep</em>, exactly as
-            the lantern is at boot, and every effect aborts against{" "}
-            <code>Stage.interrupted()</code> the instant it starts. Call{" "}
-            <code>stage.controls.set_power(True)</code> first - there is no
-            button to press up there. <code>main.demo(stage)</code> does it for
-            you.
+            Expected under <code>BOOT_POWERED = False</code>: a Stage built at
+            the REPL is <em>asleep</em>, exactly as the lantern is at boot, and
+            every effect aborts against <code>Stage.interrupted()</code> the
+            instant it starts. Call <code>stage.controls.set_power(True)</code>{" "}
+            first - there is no button to press up there.{" "}
+            <code>main.demo(stage)</code> does it for you either way.
           </P>
         </DocNote>
         <P>
@@ -1355,9 +1561,9 @@ export function PumpkinHouseDoc() {
                 chunks, streams it off flash in ~23 ms slices, and converts
                 8-bit unsigned mono to the signed 16-bit stereo the amp wants
                 through a lookup table built once at construction (which is also
-                where <code>AUDIO_ATTENUATION</code> rides along for free). Owns
-                the <code>SD</code> line, so it can shut the amplifier up
-                between tracks.
+                where <code>AUDIO_VOLUME</code> rides along for free). Owns the{" "}
+                <code>SD</code> line, so it can shut the amplifier up between
+                tracks.
               </td>
             </tr>
             <tr>
@@ -1487,10 +1693,165 @@ export function PumpkinHouseDoc() {
           order, so prefix them <code>10-</code>, <code>20-</code>,{" "}
           <code>30-</code> and leave room to slot something between two of them
           later. Drop the finished files in{" "}
-          <code>hardware/pumpkin-house/audio/</code> and copy the folder to the
+          <code>hardware/pumpkin-house/tracks/</code> and copy the folder to the
           board:
         </P>
         <CodeBlock language="bash" code={AUDIO_UPLOAD} />
+
+        <DocNote kind="warn" tag="Never call that folder /audio">
+          <P>
+            MicroPython&rsquo;s import namespace is <strong>flat</strong>, and a
+            directory outranks a file of the same name. Put a folder called{" "}
+            <code>/audio</code> in the board&rsquo;s root next to{" "}
+            <code>audio.py</code> and <code>import audio</code> returns{" "}
+            <em>the directory</em> — imported as a package, finding no{" "}
+            <code>__init__.py</code>, handing back an empty module.{" "}
+            <code>audio.Speaker</code> stops existing.
+          </P>
+          <P>
+            What makes it genuinely nasty is how well the firmware handles it.{" "}
+            <code>build_speaker()</code> catches the AttributeError and carries
+            on with no amplifier — correct for a lantern that never had one
+            soldered to it, and a perfect disguise here. The speaker is{" "}
+            <code>None</code>, so <code>main.show()</code> contributes no
+            tracks, and the &ldquo;no .wav files&rdquo; warning does not print
+            either, because that branch only runs when a speaker exists. The
+            lantern burns in silence with flawless wiring, a valid file, a
+            correct pin map and a working amplifier. <code>dir(audio)</code>{" "}
+            coming back empty is what finally says so.
+          </P>
+          <P>
+            Hence <code>AUDIO_DIR = &quot;/tracks&quot;</code>, which is also
+            the word the code already uses — <code>Track</code>,{" "}
+            <code>Playlist.tracks()</code>. If you meet a board with the old
+            layout, <code>build_speaker()</code> now names the problem at boot
+            rather than shrugging at it.
+          </P>
+        </DocNote>
+
+        <DocH3>MIDI files</DocH3>
+        <P>
+          The same folder takes <code>.mid</code> files, and the extension is
+          the only thing that decides which player runs. A <code>.wav</code> is
+          a recording streamed off flash by <code>audio.py</code>; a{" "}
+          <code>.mid</code> is a <em>score</em>, synthesised note by note as it
+          plays by <code>midi.py</code>. Everything downstream treats them
+          identically — same rotation, same <code>AUDIO_WEIGHT</code>, same
+          scene button, same mute.
+        </P>
+        <P>
+          The reason to want the second kind is arithmetic. The committed
+          example, <code>tracks/dirge.mid</code>, is{" "}
+          <strong>557 bytes for 15.6 seconds</strong>; the same music recorded
+          at 11 kHz would be about 170 KB. On a filesystem with room for two
+          minutes of audio in total, scores are effectively free and recordings
+          are rationed.
+        </P>
+
+        <DocTable>
+          <thead>
+            <tr>
+              <th className="mono">Format</th>
+              <th className="mono">15 s costs</th>
+              <th>What it sounds like</th>
+              <th>Use it for</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="mono">.wav</td>
+              <td className="mono">≈ 165 KB</td>
+              <td>
+                Exactly what you encoded, within 8-bit&rsquo;s 48 dB of range.
+              </td>
+              <td>
+                Thunder, wind, a door, a crow — anything that is a{" "}
+                <em>sound</em> rather than a tune.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">.mid</td>
+              <td className="mono">≈ 0.5 KB</td>
+              <td>
+                A six-voice square-wave chiptune. Not your soundfont, and no
+                setting will make it one.
+              </td>
+              <td>Anything with a melody in it, and long pieces generally.</td>
+            </tr>
+          </tbody>
+        </DocTable>
+
+        <P>
+          <strong>What the synth actually is:</strong> six oscillators, one
+          shared noise register, and an envelope stepped once per output chunk —
+          which is what fits in the time between flame ticks. It reads note-ons,
+          note-offs and tempo changes and steps over everything else, so program
+          changes, pitch bend, aftertouch and controllers are parsed and
+          ignored. GM percussion on channel 10 becomes noise bursts above note
+          44 and low thuds below it (<code>MIDI_DRUMS</code> turns it off
+          entirely). Output is 22 050 Hz rather than the recordings&rsquo; 11
+          kHz, because a square wave is nearly all harmonics and half of them
+          would fold back down the spectrum as a metallic buzz following the
+          melody around.
+        </P>
+        <CodeBlock language="bash" code={MIDI_UPLOAD} />
+        <P>
+          Preview on your laptop before you copy anything.{" "}
+          <code>render_wav()</code> runs the same parser, the same voices and
+          the same mixing loop the board runs, so the WAV it writes is what the
+          speaker will play:
+        </P>
+        <CodeBlock language="bash" code={MIDI_PREVIEW} />
+        <P>Then on the board, where the interesting question is different:</P>
+        <CodeBlock language="python" code={MIDI_REPL} />
+        <DocNote tag="The one question a laptop cannot answer">
+          <P>
+            Whether an RP2040 can produce 22 050 samples a second <em>while</em>{" "}
+            running the flame depends on the board, the voice count and how
+            dense the score is — and the failure mode is not an error. It is the
+            I²S ring buffer running dry, which comes out as the piece breaking
+            up into clicks. <code>midi.bench()</code> renders into a scratch
+            buffer with no amplifier attached and reports the ratio to real
+            time; anything comfortably above <code>1.0x</code> has room for the
+            rest of the lantern. Measured on the rev A build — plain Pico, six
+            voices, 22 050 Hz, the four-part <code>dirge.mid</code> — it comes
+            back <strong>5.88x</strong>, and the same score plays through the
+            amplifier in 15 690 ms against a 15 600 ms score.
+          </P>
+          <P>
+            If it is close, the knobs in order are <code>MIDI_VOICES</code> (the
+            mixer runs per voice per sample) and then <code>MIDI_RATE</code>.
+            The mixing loop itself is <code>@micropython.viper</code> — compiled
+            to machine code rather than interpreted — which is the only reason a
+            per-sample loop is affordable here at all.
+          </P>
+        </DocNote>
+        <DocNote kind="warn" tag="Files this firmware refuses, and why">
+          <P>
+            <strong>Format 2</strong> is a bag of independent sequences with no
+            shared timeline; there is no correct way to play it as one piece, so
+            re-export as format 0 or 1. <strong>SMPTE division</strong> (frames
+            per second rather than ticks per quarter) is refused for the same
+            reason nothing emits it for music. A{" "}
+            <strong>
+              truncated <code>MTrk</code>
+            </strong>{" "}
+            is what a half-finished <code>mpremote cp</code> looks like —
+            re-copy it.
+          </P>
+          <P>
+            Two more limits are taste rather than capability.{" "}
+            <code>MIDI_MAX_BYTES</code> (24 KB) refuses full orchestral
+            arrangements, because six square waves picking six arbitrary parts
+            out of sixteen sounds worse than a clear error does.{" "}
+            <code>MIDI_MAX_MS</code> (90 s) is the one way a <code>.mid</code>{" "}
+            differs from a <code>.wav</code> that matters to the show: three
+            kilobytes can be ten minutes long, and a lantern that vanishes into
+            one for ten minutes has stopped being a lantern. The piece is{" "}
+            <em>released</em> at that point rather than cut, so it ends on a
+            fade instead of a click.
+          </P>
+        </DocNote>
 
         <DocNote tag="How the two kinds of sound share the show">
           <P>
@@ -1602,6 +1963,19 @@ export function PumpkinHouseDoc() {
               </td>
             </tr>
             <tr>
+              <td className="mono">BOOT_POWERED</td>
+              <td>
+                Where in the power button&rsquo;s cycle the lantern starts.{" "}
+                <code>True</code> burns the moment the pack is plugged in;{" "}
+                <code>False</code> is the frugal original, dark until somebody
+                presses. It does not reorder the cycle: press 1 is the wake leg
+                either way, so on a lantern that booted lit it is a white flash
+                confirming what you can already see. That matters — landing on
+                the sound leg instead would let one idle press silence the
+                thing.
+              </td>
+            </tr>
+            <tr>
               <td className="mono">CONFIRM_FLOOD</td>
               <td>
                 Flood level behind a confirmation, 0&ndash;255. Full by default
@@ -1630,11 +2004,17 @@ export function PumpkinHouseDoc() {
               </td>
             </tr>
             <tr>
-              <td className="mono">AUDIO_ATTENUATION</td>
+              <td className="mono">AUDIO_VOLUME</td>
               <td>
-                Volume, in halvings — <code>1</code> is −6 dB. Try the
-                module&rsquo;s <code>GAIN</code> pad first; this throws away
-                bits, and 8-bit audio has only 48 dB of them.
+                Speaker volume, <code>1</code>–<code>10</code>, covering −27 dB
+                to 0 dB in <strong>3 dB steps</strong> — not tenths, so that
+                every notch is about the smallest change you would call &ldquo;a
+                bit louder&rdquo; instead of eight settings that all sound like
+                silence. <code>10</code> is the file as encoded, <code>6</code>{" "}
+                is the shipped default. Tracks and the confirmation blip both go
+                through it. Try the module&rsquo;s <code>GAIN</code> pad before
+                coming below about <code>4</code>; this throws away bits, and
+                8-bit audio has only 48 dB of them.
               </td>
             </tr>
             <tr>
@@ -1650,6 +2030,79 @@ export function PumpkinHouseDoc() {
               <td className="mono">AUDIO_GAP_MS</td>
               <td>
                 Silence after a track, before the ambient stretch resumes.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">
+                MIDI_VOICES
+                <br />
+                MIDI_RATE
+              </td>
+              <td>
+                What the synth costs. The mixer runs per voice per sample, so
+                these two are the CPU budget — lower them, in that order, if{" "}
+                <code>midi.bench()</code> comes back near <code>1.0x</code>. Six
+                voices is already more counterpoint than a lantern needs.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">MIDI_DUTY</td>
+              <td>
+                Pulse width in eighths, and the one knob that changes{" "}
+                <em>timbre</em> rather than envelope. <code>4</code> is a square
+                — hollow, clarinet-ish; <code>1</code> or <code>7</code> is the
+                same narrow pulse, reedy and nasal. Free to try.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">
+                MIDI_DECAY
+                <br />
+                MIDI_RELEASE
+              </td>
+              <td>
+                The envelope, as a multiplier over 256 applied once per output
+                chunk. <code>MIDI_DECAY = 256</code> is a true organ — no decay
+                at all; <code>255</code> is a plucked string still ringing;{" "}
+                <code>250</code> is a music box. <code>MIDI_RELEASE</code> is
+                the fade after a key lifts: <code>180</code> is 40 ms, short
+                enough to be an ending and long enough not to click.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">MIDI_HEADROOM</td>
+              <td>
+                How many voices reach full scale together before the mix clips.
+                Deliberately smaller than <code>MIDI_VOICES</code>: dividing the
+                ceiling six ways would make a two-note passage far quieter than
+                the <code>.wav</code> beside it, and a clipped sum of square
+                waves is flatter rather than crackly. Lower it if a dense
+                passage sounds hard.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">
+                MIDI_DRUMS
+                <br />
+                MIDI_DRUM_RELEASE
+              </td>
+              <td>
+                GM channel 10 as noise bursts and low thuds, and how fast a hit
+                falls silent. Off is the right setting for a piece whose drum
+                track was written for a kit and rattles without one.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">
+                MIDI_MAX_BYTES
+                <br />
+                MIDI_MAX_MS
+              </td>
+              <td>
+                Taste guards, not memory ones — see the warning under{" "}
+                &ldquo;MIDI files&rdquo;. 24 KB of score is a full arrangement
+                this synth cannot do justice to; 90 seconds is how long a
+                lantern may disappear into one piece.
               </td>
             </tr>
           </tbody>
@@ -1722,7 +2175,28 @@ export function PumpkinHouseDoc() {
               <td>
                 Run <code>stage.speaker.blip()</code> first — it makes its own
                 tone, so silence there is wiring and not the files. Then LRC: it
-                must be GP14, the pin straight after BCLK.
+                must be GP14, the pin straight after BCLK. Also check the sound
+                leg of the power button hasn&rsquo;t been pressed:{" "}
+                <code>stage.speaker.is_muted()</code> — a muted speaker does not
+                play quietly, it returns without playing, and{" "}
+                <code>blip()</code> goes quiet with it.
+              </td>
+            </tr>
+            <tr>
+              <td>Everything on the bench works, the show is silent</td>
+              <td>
+                Ask the board what <code>import audio</code> actually got:{" "}
+                <code>
+                  mpremote exec &quot;import audio; print(dir(audio))&quot;
+                </code>
+                . An empty list means a <strong>directory</strong> named{" "}
+                <code>audio</code> in the root is shadowing{" "}
+                <code>audio.py</code> — see the warning under &ldquo;Audio
+                files&rdquo;. Rename it to <code>tracks</code>. Confirm with{" "}
+                <code>stage = main.build(); main.show(stage)</code>: an empty
+                sequence and a <code>None</code> speaker are the signature, and
+                a lantern in that state is working exactly as designed — there
+                is simply nothing in its show.
               </td>
             </tr>
             <tr>
@@ -1733,21 +2207,59 @@ export function PumpkinHouseDoc() {
                 <code>audio_scenes.discover()</code> returning <code>()</code>{" "}
                 is the folder; a <code>ValueError</code> naming the file is the
                 format. Re-encode with <code>-ac 1 -ar 11025 -c:a pcm_u8</code>.
+                An empty folder also prints{" "}
+                <code>
+                  audio: speaker fitted but no .wav/.mid files in /tracks
+                </code>{" "}
+                at boot, so check the USB console first. The commonest cause is
+                the copy running out of flash — see the budget table above, and
+                halve it again if this is a <strong>Pico W</strong>, whose Wi-Fi
+                firmware takes a much larger bite out of the same 2 MB than the
+                plain Pico the table assumes.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <code>blip()</code> silent, wiring checked twice
+              </td>
+              <td>
+                Call it louder first — <code>blip(level=0x60)</code> is roughly
+                full scale against the default&rsquo;s deliberately quiet −14
+                dB. Then take GP22 out of the picture: jumper <code>SD</code>{" "}
+                straight to <strong>3V3</strong> and set{" "}
+                <code>AMP_ENABLE_PIN = None</code>, which the firmware supports
+                as a first-class build. Sound appearing means the GP22 jumper or
+                the pin, not the amplifier. Still nothing, and it is the module,
+                the speaker leads, or the two crossing jumpers in Fig 5 — the
+                header reads LRC before BCLK while the Pico&rsquo;s pins run the
+                other way.
+              </td>
+            </tr>
+            <tr>
+              <td>One amplifier output wired to ground</td>
+              <td>
+                The outputs are <strong>bridge-tied</strong>: the cone floats
+                between them and neither side is ground. Grounding one does not
+                halve the volume, it destroys that half of the amplifier. Check
+                this before replacing anything.
               </td>
             </tr>
             <tr>
               <td>Pico reboots the moment audio starts</td>
               <td>
                 The amp is on the 3V3 pin, or C1 is missing. VIN belongs on the
-                raw pack rail — step 05.
+                raw pack rail — step 05. With <code>BOOT_POWERED = True</code> a
+                brownout reset looks like the lights simply coming back on
+                rather than like a crash, so watch them at the instant a track
+                should start.
               </td>
             </tr>
             <tr>
               <td>Audio is distorted, or crackles on peaks</td>
               <td>
                 Too loud for the rail. Leave <code>GAIN</code> open at 9 dB and
-                raise <code>AUDIO_ATTENUATION</code> to <code>1</code>; if it
-                only started when the cells got low, that is the pack.
+                drop <code>AUDIO_VOLUME</code> a notch or two; if it only
+                started when the cells got low, that is the pack.
               </td>
             </tr>
             <tr>
@@ -1756,6 +2268,34 @@ export function PumpkinHouseDoc() {
                 <code>AUDIO_IBUF</code> too small, or{" "}
                 <code>AUDIO_CHUNK_SAMPLES</code> raised past the point where the
                 idle callback gets its turn.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                Only <code>.mid</code> files break up into clicks
+              </td>
+              <td>
+                Different fault from the row above: a recording is read off
+                flash, a score is <em>computed</em>, so this one is CPU rather
+                than buffering. <code>midi.bench()</code> gives the number —
+                below about <code>1.5x</code> there is no room left for the
+                flame. Drop <code>MIDI_VOICES</code> first, then{" "}
+                <code>MIDI_RATE</code>.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                A <code>.mid</code> plays, but sounds nothing like the file
+              </td>
+              <td>
+                Expected. Six square waves, no instruments: program changes and
+                pitch bend are parsed and ignored, and channel 10 becomes noise.
+                Render it with <code>midi.render_wav()</code> on your laptop to
+                hear the same thing without the drive to the porch — and if the
+                arrangement is the point, encode it as a <code>.wav</code>{" "}
+                instead. Notes vanishing from a dense chord is the voice
+                allocator stealing the quietest one, which is what{" "}
+                <code>MIDI_VOICES</code> is for.
               </td>
             </tr>
             <tr>
@@ -1818,8 +2358,22 @@ export function PumpkinHouseDoc() {
             <tr>
               <td>Dead on power-up, but the power button wakes it</td>
               <td>
-                Not a fault. It boots asleep on purpose - see step 06. Wire the
-                slide switch as the real cut-off.
+                Not a fault, it is <code>BOOT_POWERED = False</code> - see step
+                06. Wire the slide switch as the real cut-off, or set it{" "}
+                <code>True</code>.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                It ran, then went dark and stopped answering the power button
+              </td>
+              <td>
+                Something raised out of a scene and unwound the whole loop -
+                almost always a <code>.wav</code> that is the wrong format or
+                went missing mid-show. <code>main.run()</code> now catches that
+                and prints <code>scene failed:</code> over USB, so plug{" "}
+                <code>mpremote</code> in and read the name. The flame carries on
+                either way.
               </td>
             </tr>
             <tr>

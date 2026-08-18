@@ -1,0 +1,34 @@
+Two kinds of file live here, and the lantern plays both out of the same
+rotation:
+
+    *.wav   8-bit unsigned mono recordings, streamed off flash by audio.py
+    *.mid   scores, synthesised as they play by midi.py
+
+Copy them to the board:
+
+    mpremote mkdir :tracks
+    mpremote cp hardware/pumpkin-house/tracks/*.wav :tracks/
+    mpremote cp hardware/pumpkin-house/tracks/*.mid :tracks/
+
+A .wav is the arrangement you actually rendered and costs about 20 KB a
+second; a .mid is a few KB for the whole piece but comes out as a six-voice
+square-wave chiptune, because synthesising it is what the board can do in
+the time between flame ticks. Roughly: recordings for atmosphere - thunder,
+wind, a door - and scores for anything with a tune in it.
+
+The folder is called `tracks` and NOT `audio` on purpose. MicroPython's
+import namespace is flat and a directory beats a module of the same name:
+with a `/audio` folder in the board's root, `import audio` silently returns
+an empty namespace package instead of `audio.py`, `audio.Speaker` stops
+existing, and the lantern runs with no speaker and no sound at all. It
+degrades quietly because `main.build_speaker()` catches it, which is right
+for a missing amplifier and very confusing for this. Do not rename it back.
+
+`dirge.mid` is here as the one committed example - an original eight-bar
+waltz in D minor, 557 bytes for 15.6 seconds. The same music as a .wav at
+11 kHz would be about 170 KB, which is the whole argument for the format on
+a board with 1.3 MB of flash.
+
+Filename order is the playing order, so prefix them 10-, 20-, 30-.
+The ffmpeg encoding recipe and the flash budget are in the help app,
+under Hardware -> /hardware/pumpkin-house -> "Audio files".

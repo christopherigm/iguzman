@@ -362,25 +362,33 @@ def haunting(stage):
 # it: the button is how you walk the whole show at the bench or on the
 # doorstep, and it has to reach a scene that is currently commented out of
 # the random rotation - which is the normal state while you are tuning one.
+#
+# **Everything is commented out on purpose.** This lantern is currently the
+# candle and the speaker: `leds.Flame` burns continuously and the track
+# button walks `AUDIO_DIR`, and nothing above takes the idle slot away from
+# the flame. The scenes are kept in full - they are composed against the
+# buzzer's fixed pitch and they still work - so putting one back is
+# uncommenting a line here, and putting the whole set back is uncommenting
+# all of them plus `config.BUZZER_ENABLED`.
 SEQUENCE = (
-    crow,
-    pulse_of_the_house,
-    the_hinge,
-    night_crickets,
-    bat_flit,
-    witching_hour,
-    seance,
-    ballroom,
-    haunting,
+    # crow,
+    # pulse_of_the_house,
+    # the_hinge,
+    # night_crickets,
+    # bat_flit,
+    # witching_hour,
+    # seance,
+    # ballroom,
+    # haunting,
 )
 
 # Scenes the ambient loop picks from, with relative weight. Crickets are
 # heavier because ambient filler should outnumber set pieces - a lantern
 # that performs constantly stops being atmospheric.
 ROTATION = (
-    (night_crickets, 5),
-    (crow, 3),
-    (bat_flit, 3),
+    # (night_crickets, 5),
+    # (crow, 3),
+    # (bat_flit, 3),
     # (pulse_of_the_house, 2),
     # (the_hinge, 2),
     # (ballroom, 2),

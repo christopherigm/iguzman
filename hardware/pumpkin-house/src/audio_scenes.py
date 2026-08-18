@@ -24,11 +24,40 @@ import os
 
 import config
 
-_SUFFIX = ".wav"
+try:
+    import midi
+except ImportError:
+    # `midi.py` not copied to the board. Every .wav still plays, which is
+    # the whole reason this is guarded: a deployment that dropped one file
+    # should lose the feature that file is, not the sound.
+    midi = None
+
+# Two kinds of file, one folder, one rotation. A .wav is a recording
+# streamed off flash; a .mid is a score synthesised by `midi.py` as it
+# plays. From here the difference is one branch in `play()` - what the show
+# wants is "a file that makes a noise for a while", and both are that.
+_WAV = ".wav"
+_MID = ".mid"
+_SUFFIXES = (_WAV, _MID)
+
+
+def _playable(name):
+    """Is this filename one of ours?
+
+    A loop rather than `name.endswith(_SUFFIXES)`, which is CPython only:
+    MicroPython's `endswith` takes a single string, and handed a tuple it
+    raises - so the folder scan dies on the first file and the lantern comes
+    up with no sound at all.
+    """
+    lowered = name.lower()
+    for suffix in _SUFFIXES:
+        if lowered.endswith(suffix):
+            return True
+    return False
 
 
 def discover(directory=None):
-    """Every .wav in the audio folder, in filename order.
+    """Every .wav and .mid in the audio folder, in filename order.
 
     Ordering is what makes the folder the playlist editor: prefix a file
     with `10-`, `20-`, `30-` and that is the running order, with room to
@@ -46,16 +75,28 @@ def discover(directory=None):
     return tuple(
         root + "/" + name
         for name in sorted(names)
-        if name.lower().endswith(_SUFFIX)
+        if _playable(name)
     )
 
 
 def play(stage, path):
-    """One file, then a beat of silence before the show carries on."""
+    """One file, then a beat of silence before the show carries on.
+
+    The extension is the only thing that decides which player runs, and it
+    decides it here rather than in `Track` so that the REPL line in
+    `main.py`'s docstring - `audio_scenes.play(stage, path)` - works for
+    either kind.
+    """
     speaker = stage.speaker
     if speaker is None:
         return
-    speaker.play(path)
+    if path.lower().endswith(_MID):
+        if midi is None:
+            print("midi: midi.py is not on the board -", path)
+            return
+        midi.play(speaker, path)
+    else:
+        speaker.play(path)
     speaker.rest(config.AUDIO_GAP_MS)
 
 

@@ -19,14 +19,16 @@ simply `i2s.write(file.read())`:
     unsigned 8 -> signed 16    the format I2S wants. It is a subtraction of
                                128 and a shift into the high byte, so it is
                                done with a 256-entry lookup table built once
-                               at construction - which is also where the
-                               volume attenuation rides along for free.
+                               at construction - which is also where
+                               `config.AUDIO_VOLUME` rides along for free.
 
-    mono -> stereo             the amp's SD pin held high puts it in
-                               (L+R)/2 mode, so a sample sent to one channel
-                               only arrives 6 dB down. Writing each sample
-                               to both channels costs one extra store and
-                               gets that back.
+    mono -> stereo             SD is a three-level *mode* pin, not just an
+                               enable: 0.16-0.77 V is (L+R)/2, above ~1.4 V
+                               is left only. A GPIO high lands in the second
+                               band, so writing each sample to both channels
+                               is what makes the output independent of which
+                               band the board's own resistors put it in - and
+                               it costs one store per sample.
 
 The even bytes of the output buffer are the low halves of those 16-bit
 samples and are always zero, so they are written once at allocation and
@@ -39,8 +41,19 @@ press cut one short. A chunk is ~23 ms at 11 kHz, so both happen at about
 the rate the flame ticks anyway.
 """
 
-from machine import I2S, Pin
+from machine import Pin
 from time import sleep_ms, ticks_add, ticks_diff, ticks_ms
+
+try:
+    from machine import I2S
+except ImportError:
+    # A MicroPython build without I2S. `main.py` imports this module
+    # unconditionally, so an ImportError raised out here would happen before a
+    # single LED is configured and would take the lights down along with the
+    # sound. Failing at `Speaker()` instead puts it where `build_speaker()`
+    # already handles it - a lantern with no amplifier, which is a state this
+    # firmware supports.
+    I2S = None
 
 import config
 
@@ -101,17 +114,50 @@ def read_wav_header(f):
             f.seek(size + (size & 1), 1)
 
 
-def _level_table(shift):
+# `config.AUDIO_VOLUME` 1-10 -> linear gain, as a numerator over 256.
+#
+# Three decibels a step, so 10 is the file untouched and every notch below
+# is a factor of ~1.414 down. A linear tenth-per-step would put every useful
+# setting in the top two notches, because loudness tracks the logarithm of
+# amplitude - the eight below would all sound like silence and the dial
+# would be a switch.
+#
+# 1/256ths rather than floats because this is arrived at through integer
+# arithmetic on every one of 256 table entries, and MicroPython's ints are
+# arbitrary precision while its floats are single. A tuple rather than a
+# `pow()` because ten numbers written down are ten numbers anybody can check
+# against the table in `config.py`.
+_VOLUME_GAIN = (11, 16, 23, 32, 45, 64, 91, 128, 181, 256)
+
+
+def volume_gain(volume):
+    """Linear gain over 256 for a 1-10 volume, clamped rather than refused.
+
+    Clamped because the alternative is a lantern that will not boot over a
+    typo in a settings file - and a `config.py` edited on a phone at the
+    bench is exactly where that typo happens. Out of range is a mistake
+    worth surviving loudly, not dying over.
+    """
+    volume = int(volume)
+    if volume < 1:
+        volume = 1
+    elif volume > len(_VOLUME_GAIN):
+        volume = len(_VOLUME_GAIN)
+    return _VOLUME_GAIN[volume - 1]
+
+
+def _level_table(gain):
     """u8 sample -> the high byte of its signed 16-bit equivalent.
 
-    Attenuation is folded in here rather than applied per sample: `shift` is
-    a number of halvings, so 1 is -6 dB. Python's `>>` on a negative int is
-    arithmetic, which is what makes this a volume control rather than a
-    waveform mangler.
+    Volume is folded in here rather than applied per sample: `gain` is a
+    numerator over 256, so the multiply and the shift happen 256 times at
+    construction and never once in the streaming loop. Python's `>>` on a
+    negative int is arithmetic, which is what makes this a volume control
+    rather than a waveform mangler.
     """
     table = bytearray(256)
     for i in range(256):
-        table[i] = ((i - 128) >> shift) & 0xFF
+        table[i] = (((i - 128) * gain) >> 8) & 0xFF
     return bytes(table)
 
 
@@ -129,8 +175,10 @@ class Speaker:
         din=None,
         enable=None,
         idle=None,
-        attenuation=None,
+        volume=None,
     ):
+        if I2S is None:
+            raise ValueError("this MicroPython build has no machine.I2S")
         self._bclk = config.I2S_BCLK_PIN if bclk is None else bclk
         self._lrc = config.I2S_LRC_PIN if lrc is None else lrc
         self._din = config.I2S_DIN_PIN if din is None else din
@@ -145,8 +193,11 @@ class Speaker:
         self._abort = None
         self._muted = False
 
-        shift = config.AUDIO_ATTENUATION if attenuation is None else attenuation
-        self._table = _level_table(shift)
+        volume = config.AUDIO_VOLUME if volume is None else volume
+        # Kept as well as the table because `blip()` synthesises its own
+        # waveform and never passes through it.
+        self._gain = volume_gain(volume)
+        self._table = _level_table(self._gain)
 
         samples = config.AUDIO_CHUNK_SAMPLES
         self._samples = samples
@@ -159,6 +210,10 @@ class Speaker:
 
         self._i2s = None
         self._rate = 0
+        # Bytes handed to the driver that it may not have clocked out yet.
+        # See `_drain()` - this is the difference between a working amp and
+        # one that appears to be wired wrong.
+        self._written = 0
 
     # -- the device ------------------------------------------------------
 
@@ -204,12 +259,54 @@ class Speaker:
             self._sd.value(0)
             self._awake = False
 
+    def _write(self, buf):
+        """Every I2S write goes through here, so `_drain()` knows how much
+        audio the driver has taken but not yet clocked out."""
+        self._i2s.write(buf)
+        self._written += len(buf)
+
+    def _drain(self):
+        """Block until what has been written has actually been heard.
+
+        **`write()` returns when the bytes reach the driver's ring buffer,
+        not when the amplifier has played them**, and MicroPython's I2S has
+        no drain call. So shutting the amp down straight after a write
+        silences up to `AUDIO_IBUF` bytes that the driver had already
+        accepted - and a `blip()` is *shorter* than that buffer, so the
+        entire tone went into the ring buffer, SD dropped microseconds
+        later, and the whole thing was clocked into a dead amplifier. A
+        correctly wired speaker looks stone dead, which is a long way to
+        chase a missing `sleep_ms`.
+
+        Waiting the outstanding buffer's own playing time is the fix, and it
+        is bounded and small - 8192 bytes at 11 kHz is 186 ms, and it only
+        happens where the sound was about to stop anyway.
+
+        Deliberately a bare `sleep_ms` rather than `rest()`: `_silence()` is
+        reached from `Controls._blackout()`, which is running inside
+        `poll()`, and `rest()` calls the idle callback, which calls `poll()`.
+        """
+        if self._i2s is None or self._rate <= 0:
+            return
+        outstanding = self._written
+        if outstanding > config.AUDIO_IBUF:
+            # Anything longer than the buffer has been pacing itself against
+            # a full one for a while, so a full one is what is left.
+            outstanding = config.AUDIO_IBUF
+        self._written = 0
+        if outstanding <= 0:
+            return
+        sleep_ms(outstanding * 1000 // (self._rate * _BYTES_PER_SAMPLE) + 1)
+
     def _silence(self):
-        """A short run of zeros, then shut down.
+        """A short run of zeros, let it play, then shut down.
 
         Dropping SD while the last sample was somewhere other than zero
         steps the output, and a class-D amp answers a step with a click. The
-        cheapest fix is to end every track on silence it has actually played.
+        cheapest fix is to end every track on silence it has actually played
+        - which is also why `_drain()` is here and not optional: zeros that
+        are still sitting in the ring buffer when SD goes low are exactly as
+        unplayed as the music in front of them.
 
         Keyed on I2S being open rather than on the amp being awake, because
         the click is not really about SD: a build with `AMP_ENABLE_PIN = None`
@@ -224,9 +321,10 @@ class Speaker:
                 # The odd bytes still hold the tail of the last chunk, so
                 # this cannot reuse `_out`.
                 try:
-                    self._i2s.write(bytearray(frames * _BYTES_PER_SAMPLE))
+                    self._write(bytearray(frames * _BYTES_PER_SAMPLE))
                 except OSError:
                     pass
+            self._drain()
         self.enable(False)
 
     def off(self):
@@ -237,6 +335,9 @@ class Speaker:
             self._i2s.deinit()
             self._i2s = None
             self._rate = 0
+            # The ring buffer went with it, so there is nothing left to wait
+            # for and `_drain()` must not sleep on the next device's behalf.
+            self._written = 0
 
     # -- mute ------------------------------------------------------------
     #
@@ -278,7 +379,65 @@ class Speaker:
                 return
             sleep_ms(remaining if remaining < 8 else 8)
 
+    # -- what the synth needs to know ------------------------------------
+
+    def chunk_samples(self):
+        """Samples per write, so a generator can size its buffer to ours."""
+        return self._samples
+
+    def gain(self):
+        """`config.AUDIO_VOLUME` as a numerator over 256.
+
+        The streaming path never needs this - volume is baked into the
+        lookup table at construction and applied for free. Anything that
+        *makes* its samples rather than reading them has no table to hide in
+        and has to scale them itself, which is the only reason this is
+        public.
+        """
+        return self._gain
+
     # -- playback --------------------------------------------------------
+
+    def play_stream(self, rate, fill, on_chunk=None):
+        """Play whatever `fill` writes into the output buffer, until it stops.
+
+        The seam `midi.py` hangs off. `fill(buf)` is handed this Speaker's
+        own output buffer - already the right size, already zeroed in the
+        even bytes - and returns how many *samples* it put there, or 0 when
+        there is nothing left to play.
+
+        Everything a Speaker exists to get right is on this side of that
+        callback: the amp is woken before the first write and shut down
+        through `_silence()` after the last one, the idle slot runs between
+        chunks so the flame keeps moving through a two-minute piece, and a
+        button press aborts it exactly where it aborts a recording.
+
+        `play()` predates this and keeps its own copy of the loop. Folding
+        the two together is a real tidy-up and deliberately not made in the
+        same change as a new synth: that loop is the one part of this
+        firmware whose failure mode is a lantern that looks perfectly wired
+        and plays nothing.
+        """
+        if self._muted:
+            return False
+
+        self._open(rate)
+        self.enable(True)
+        try:
+            while True:
+                frames = fill(self._out)
+                if frames <= 0:
+                    break
+                self._write(self._out_mv[0 : frames * _BYTES_PER_SAMPLE])
+                if on_chunk is not None:
+                    on_chunk(frames)
+                self._idle()
+                if self._muted or self.aborting():
+                    break
+        finally:
+            self._silence()
+        return True
+
 
     def play(self, path, on_chunk=None):
         """Stream one file. Blocks for its length; returns False if muted.
@@ -325,7 +484,7 @@ class Speaker:
                     out[j + 2] = value
                     j += _BYTES_PER_SAMPLE
 
-                self._i2s.write(self._out_mv[0 : read * _BYTES_PER_SAMPLE])
+                self._write(self._out_mv[0 : read * _BYTES_PER_SAMPLE])
 
                 if on_chunk is not None:
                     on_chunk(read)
@@ -337,26 +496,45 @@ class Speaker:
             self._silence()
         return True
 
-    def blip(self, hz=660, ms=90):
+    def blip(self, hz=660, ms=90, level=None):
         """A short tone, synthesised rather than read from a file.
 
         The buzzer answers an unmute with a blip - proof that the sound path
         works, which no confirmation colour can give you. With no buzzer
         fitted this is what says the same thing, so it must not depend on
         anything having been copied onto the board.
+
+        `level` is the square wave's amplitude as the high byte of a signed
+        16-bit sample, and by default it is half of full scale scaled by
+        `config.AUDIO_VOLUME` - so turning the lantern down turns its
+        confirmation down with it. A blip that stayed put while the music
+        dropped 18 dB would end up being the loudest thing the lantern does,
+        which is a strange fate for a noise that only ever means "your press
+        registered".
+
+        Floored well above zero all the same: at volume 1 the honest
+        arithmetic lands on 2, and a confirmation nobody can hear is not a
+        quieter confirmation, it is a broken one.
+
+        Pass it explicitly at the REPL when the question is "is this
+        amplifier alive at all" rather than "did my press register" -
+        `blip(level=0x60)` is roughly full scale and much harder to miss
+        across a bench.
         """
         if self._muted:
             return
+        if level is None:
+            level = (0x40 * self._gain) >> 8
+            if level < 4:
+                level = 4
         rate = 8000
         frames = rate * ms // 1000
         half = rate // (hz * 2)
         if half < 1:
             half = 1
 
-        # Quiet on purpose: this is a confirmation, not a scene, and it lands
-        # while somebody's hand is on the lantern.
-        high = 0x18
-        low = 0x100 - high
+        high = level & 0x7F
+        low = 0x100 - high if high else 0
         buf = bytearray(frames * _BYTES_PER_SAMPLE)
         value = high
         j = 1
@@ -369,5 +547,9 @@ class Speaker:
 
         self._open(rate)
         self.enable(True)
-        self._i2s.write(buf)
+        self._write(buf)
+        # `_silence()` drains before dropping SD, which for a tone this short
+        # is the only reason any of it is heard at all - 90 ms of audio fits
+        # inside the ring buffer with room to spare, so without the drain the
+        # amp is shut down holding the whole blip.
         self._silence()
