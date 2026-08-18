@@ -23,6 +23,8 @@ import {
   AdminImageUploader,
   type NewImage,
 } from "@/components/admin-image-uploader/admin-image-uploader";
+import { SiblingArrow } from "@/components/admin/sibling-arrows";
+import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import { toSameOriginDataUrl } from "@/lib/same-origin-image";
 import {
   LOGO_BACKGROUND_SHAPES,
@@ -33,6 +35,7 @@ import {
   getSocialPost,
   createSocialPost,
   updateSocialPost,
+  listSocialPosts,
   getSystem,
   listProducts,
   listServices,
@@ -135,6 +138,13 @@ export default function AdminSocialPostFormPage({ params }: Props) {
   const tCommon = useTranslations("Common");
   const router = useRouter();
   const systemId = useSession()?.systemId ?? 0;
+  // Prev/next through the CMS list, for the arrows beside Save.
+  const siblings = useAdminSiblings({
+    basePath: "/admin/social-posts",
+    id,
+    systemId,
+    list: listSocialPosts,
+  });
 
   const [values, setValues] = useState<Record<string, unknown>>({
     name: "",
@@ -1091,6 +1101,7 @@ export default function AdminSocialPostFormPage({ params }: Props) {
           zIndex: 100,
         }}
       >
+        <SiblingArrow direction="prev" siblings={siblings} />
         <Button
           text={saving ? t("saving") : t("save")}
           kind="primary"
@@ -1098,6 +1109,7 @@ export default function AdminSocialPostFormPage({ params }: Props) {
           onClick={() => void handleSubmit()}
           disabled={saving}
         />
+        <SiblingArrow direction="next" siblings={siblings} />
       </Box>
 
       {error && <Toast message={error} variant="error" />}

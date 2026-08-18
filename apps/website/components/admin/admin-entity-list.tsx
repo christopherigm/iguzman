@@ -16,6 +16,18 @@ import { Icon } from "@repo/ui/core-elements/icon";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import {
+  buildSections,
+  groupKeyOf,
+  type EntityGroup,
+  type EntityGrouping,
+  type IndexedRow,
+} from "./entity-order";
+
+// Re-exported so the list pages keep importing the grouping types from the
+// component they configure; the ordering itself lives in `entity-order.ts`,
+// which the detail pages' prev/next arrows read too.
+export type { EntityGroup, EntityGrouping };
 
 export interface Column {
   key: string;
@@ -26,30 +38,6 @@ export interface Column {
    * Use for image/icon columns, whose cell is a fixed-size square.
    */
   compact?: boolean;
-}
-
-export interface EntityGroup {
-  /** Matched against each row's `grouping.key` field. */
-  id: number | string;
-  label: string;
-}
-
-export interface EntityGrouping {
-  /** The row field holding the group's id (e.g. `"category"`). */
-  key: string;
-  /**
-   * The groups, in the order their sections are rendered - i.e. the categories
-   * in their own CMS order, which is what the list is expected to read as.
-   * Groups with no rows are dropped rather than shown empty, as the storefront's
-   * own category sections are.
-   */
-  groups: EntityGroup[];
-  /**
-   * Heading for the trailing section holding every row whose group field is
-   * empty - and any row pointing at a group that is not in `groups`, so that a
-   * row can never fall off the list.
-   */
-  uncategorizedLabel: string;
 }
 
 interface AdminEntityListProps {
@@ -500,78 +488,6 @@ export function AdminEntityList({
       )}
     </Box>
   );
-}
-
-/** A row together with its index in the list the drag handlers splice against. */
-interface IndexedRow {
-  row: Record<string, unknown>;
-  index: number;
-}
-
-interface Section {
-  key: string;
-  label: string;
-  rows: IndexedRow[];
-}
-
-/** The section key for a row with no group, and for the section holding them. */
-const UNGROUPED = "__ungrouped__";
-
-function groupKeyOf(
-  row: Record<string, unknown> | undefined,
-  grouping: EntityGrouping | undefined,
-): string {
-  if (!row || !grouping) return UNGROUPED;
-  const raw = row[grouping.key];
-  return raw === null || raw === undefined || raw === ""
-    ? UNGROUPED
-    : String(raw);
-}
-
-/**
- * Splits `rows` into the sections to render: one per group that has rows, in the
- * caller's group order, then everything left over under `uncategorizedLabel` -
- * rows with no group **and** rows pointing at a group the caller did not list, so
- * that no record can drop off the page. Ungrouped lists come back as one
- * section, which is what keeps the plain table on a single code path.
- */
-function buildSections(
-  rows: Record<string, unknown>[],
-  grouping: EntityGrouping | undefined,
-): Section[] {
-  const indexed: IndexedRow[] = rows.map((row, index) => ({ row, index }));
-  if (!grouping) return [{ key: UNGROUPED, label: "", rows: indexed }];
-
-  const known = new Set(grouping.groups.map((g) => String(g.id)));
-  const byGroup = new Map<string, IndexedRow[]>();
-  const leftover: IndexedRow[] = [];
-  for (const entry of indexed) {
-    const key = groupKeyOf(entry.row, grouping);
-    if (!known.has(key)) {
-      leftover.push(entry);
-      continue;
-    }
-    const bucket = byGroup.get(key);
-    if (bucket) bucket.push(entry);
-    else byGroup.set(key, [entry]);
-  }
-
-  const sections = grouping.groups
-    .map((group) => ({
-      key: String(group.id),
-      label: group.label,
-      rows: byGroup.get(String(group.id)) ?? [],
-    }))
-    .filter((section) => section.rows.length > 0);
-
-  if (leftover.length > 0) {
-    sections.push({
-      key: UNGROUPED,
-      label: grouping.uncategorizedLabel,
-      rows: leftover,
-    });
-  }
-  return sections;
 }
 
 /**

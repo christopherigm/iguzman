@@ -66,6 +66,13 @@ export interface NavbarProps extends UIComponentProps {
    */
   searchValue?: string;
   /**
+   * Optional node rendered immediately *before* the fixed items - so it leads
+   * the always-visible controls rather than trailing them. For an action that
+   * belongs with them but outranks them (a labelled cart button beside the
+   * favorites and account icons); `rightSlot` is the trailing counterpart.
+   */
+  actionSlot?: React.ReactNode;
+  /**
    * Optional node rendered to the right of the search box and to the left
    * of the hamburger icon (e.g. an action button).
    */
@@ -405,6 +412,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
     themeSwitch = true,
     translucent = false,
     searchValue,
+    actionSlot,
     rightSlot,
     hiddenPaths,
     ...uiProps
@@ -536,6 +544,9 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
           );
         })}
       </div>
+
+      {/* Action slot (caller-supplied, leads the fixed items) */}
+      {actionSlot}
 
       {/* Fixed menu items (always visible) */}
       {fixedItems.length > 0 && (

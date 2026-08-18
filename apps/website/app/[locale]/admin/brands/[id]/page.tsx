@@ -9,7 +9,14 @@ import {
   AdminImageUploader,
   type NewImage,
 } from "@/components/admin-image-uploader/admin-image-uploader";
-import { getBrand, createBrand, updateBrand, checkSlug } from "@/lib/admin-api";
+import {
+  getBrand,
+  createBrand,
+  updateBrand,
+  checkSlug,
+  listBrands,
+} from "@/lib/admin-api";
+import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import { buildSlug } from "@/lib/slug-utils";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
@@ -39,6 +46,13 @@ export default function AdminBrandFormPage({ params }: Props) {
   const [success, setSuccess] = useState<string | null>(null);
   const [slugError, setSlugError] = useState<string | null>(null);
   const systemId = useSession()?.systemId ?? 0;
+  // Prev/next through the CMS list, for the arrows beside Save.
+  const siblings = useAdminSiblings({
+    basePath: "/admin/brands",
+    id,
+    systemId,
+    list: listBrands,
+  });
 
   // Auto-populate slug from name for new records (the slug field is read-only).
   // Derived during render rather than in an effect; the guard stops it looping
@@ -152,6 +166,7 @@ export default function AdminBrandFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
+        siblings={siblings}
         imagesSlot={
           <Box display="flex" flexDirection="column" gap="8px">
             <Typography variant="label">{t("logo") ?? "Logo"}</Typography>

@@ -4,16 +4,16 @@ import { useState, useEffect, useCallback, use } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@repo/i18n/navigation";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
-import {
-  AdminImageUploader,
-  type NewImage,
-} from "@/components/admin-image-uploader/admin-image-uploader";
+import { AdminImageField } from "@/components/admin/admin-image-field";
+import { useAdminImageField } from "@/hooks/use-admin-image-field";
 import {
   getIngredient,
   createIngredient,
   updateIngredient,
   checkSlug,
+  listIngredients,
 } from "@/lib/admin-api";
+import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import { buildSlug } from "@/lib/slug-utils";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
@@ -95,10 +95,12 @@ export default function AdminIngredientFormPage({ params }: Props) {
     enabled: true,
     ...emptyNutrition,
   });
-  const [existingImage, setExistingImage] = useState<
-    { id: number; url: string }[]
-  >([]);
-  const [pendingImage, setPendingImage] = useState<NewImage[]>([]);
+  // The uploader and the stock-image picker, which are one field with two doors.
+  const image = useAdminImageField();
+  // Pulled out because the load effect below depends on it: this one callback is
+  // stable, where `image` itself changes with every pick and keystroke - and an
+  // effect keyed on the object would re-fetch the record each time.
+  const loadImage = image.load;
   // Purchasing sources for this ingredient (name/link/price/currency). Edited in
   // the form's local state and persisted (nested) on submit; the web price search
   // appends to it.
@@ -110,6 +112,13 @@ export default function AdminIngredientFormPage({ params }: Props) {
   const [slugError, setSlugError] = useState<string | null>(null);
 
   const systemId = useSession()?.systemId ?? 0;
+  // Prev/next through the CMS list, for the arrows beside Save.
+  const siblings = useAdminSiblings({
+    basePath: "/admin/ingredients",
+    id,
+    systemId,
+    list: listIngredients,
+  });
 
   if (isNew) {
     const derivedSlug = buildSlug(String(values.name ?? ""), systemId);
@@ -160,13 +169,12 @@ export default function AdminIngredientFormPage({ params }: Props) {
               }))
             : [];
           setProviders(loadedProviders);
-          if (data.image)
-            setExistingImage([{ id: Number(id), url: String(data.image) }]);
+          loadImage(data.image, Number(id));
         })
         .catch(() => setError(t("errorLoad")))
         .finally(() => setLoading(false));
     }
-  }, [id, isNew, t]);
+  }, [id, isNew, loadImage, t]);
 
   const handleSubmit = async () => {
     setSaving(true);
@@ -191,18 +199,18 @@ export default function AdminIngredientFormPage({ params }: Props) {
           price: p.price === "" || p.price == null ? null : p.price,
           currency: String(values.currency ?? "USD"),
         }));
-      if (pendingImage.length > 0) {
-        payload.image = pendingImage[0]?.base64;
-      } else if (existingImage.length === 0) {
-        payload.image = null;
-      }
+      // The image, and - when it came from a bank - the credit it owes, which
+      // has to be in the same write as the file it describes.
+      Object.assign(payload, image.payload());
       if (isNew) {
         const created = await createIngredient(payload);
         setSuccess(t("saved"));
+        image.settle(created.image, created.id as number);
         router.replace(`/admin/ingredients/${created.id}`);
       } else {
-        await updateIngredient(Number(id), payload);
+        const updated = await updateIngredient(Number(id), payload);
         setSuccess(t("saved"));
+        image.settle(updated.image, Number(id));
       }
     } catch {
       setError(t("errorSave"));
@@ -330,6 +338,7 @@ export default function AdminIngredientFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
+        siblings={siblings}
         slots={[
           {
             // Renders full-width right below the Price field: the web price search
@@ -367,19 +376,14 @@ export default function AdminIngredientFormPage({ params }: Props) {
           },
         ]}
         imagesSlot={
-          <Box display="flex" flexDirection="column" gap="8px">
-            <Typography variant="label">{t("image") ?? "Image"}</Typography>
-            <AdminImageUploader
-              existingImages={existingImage}
-              onChange={(n, _d, o) => {
-                setPendingImage(n);
-                setExistingImage((prev) =>
-                  prev.filter((img) => o.includes(img.id)),
-                );
-              }}
-              maxImages={1}
-            />
-          </Box>
+          <AdminImageField
+            label={t("image") ?? "Image"}
+            field={image}
+            query={
+              String(values.name ?? "").trim() ||
+              String(values.en_name ?? "").trim()
+            }
+          />
         }
       />
     </>

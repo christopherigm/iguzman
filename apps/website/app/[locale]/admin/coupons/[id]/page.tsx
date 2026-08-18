@@ -16,6 +16,8 @@ import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { Toast } from "@repo/ui/core-elements/toast";
 import type { HeroLogoBackground } from "@repo/ui/hero";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
+import { SiblingArrow } from "@/components/admin/sibling-arrows";
+import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import {
   AdminImageUploader,
   type NewImage,
@@ -34,6 +36,7 @@ import {
   updateCoupon,
   getSystem,
   type CouponKind,
+  listCoupons,
 } from "@/lib/admin-api";
 import {
   COUPON_TEMPLATES,
@@ -96,6 +99,13 @@ export default function AdminCouponFormPage({ params }: Props) {
   const format = useFormatter();
   const router = useRouter();
   const systemId = useSession()?.systemId ?? 0;
+  // Prev/next through the CMS list, for the arrows beside Save.
+  const siblings = useAdminSiblings({
+    basePath: "/admin/coupons",
+    id,
+    systemId,
+    list: listCoupons,
+  });
 
   const [values, setValues] = useState<Record<string, unknown>>({
     code: "",
@@ -704,6 +714,7 @@ export default function AdminCouponFormPage({ params }: Props) {
           zIndex: 100,
         }}
       >
+        <SiblingArrow direction="prev" siblings={siblings} />
         <Button
           text={saving ? t("saving") : t("save")}
           kind="primary"
@@ -711,6 +722,7 @@ export default function AdminCouponFormPage({ params }: Props) {
           onClick={() => void handleSubmit()}
           disabled={saving}
         />
+        <SiblingArrow direction="next" siblings={siblings} />
       </Box>
 
       {error && <Toast message={error} variant="error" />}

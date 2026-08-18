@@ -2,12 +2,15 @@
 
 import { useTranslations } from "next-intl";
 import { Navbar } from "@repo/ui/core-elements/navbar";
+import { Badge } from "@repo/ui/core-elements/badge";
+import { Button } from "@repo/ui/core-elements/button";
 import { useSession } from "@repo/auth/session-provider";
 import { useAuthActions } from "@repo/auth/use-auth-actions";
 import { useGuestState } from "@/hooks/use-guest-cart";
 import { guestCartCount } from "@/lib/guest-cart";
 import { MENU_ALL_PATH, menuCategoryHref } from "@/lib/menu-paths";
 import { kindLabel, type KindLabels } from "@/lib/kind-labels";
+import "./navbar-client.css";
 
 /** One entry of the Menu dropdown: a tenant menu category, with its name
  *  already resolved for the rendered locale by the server layout. */
@@ -86,10 +89,10 @@ export function NavbarClient({
   const handleSignOut = () => void signOut("/");
 
   // Favorites and the cart are shown to everyone: a guest has both, kept in
-  // their browser and merged into their account when they sign in. They live in
-  // `fixedItems` rather than `items` so they stay reachable at every width -
-  // they are actions on the current visit, not places to navigate to, and a
-  // customer mid-purchase should never have to open the drawer to find them.
+  // their browser and merged into their account when they sign in. Both stay
+  // out of the drawer so they are reachable at every width - they are actions
+  // on the current visit, not places to navigate to, and a customer
+  // mid-purchase should never have to open a menu to find them.
   const favoritesItem = {
     label: "",
     href: "/favorites",
@@ -97,14 +100,38 @@ export function NavbarClient({
     ariaLabel: t("favorites"),
   };
 
-  const cartItem = {
-    label: "",
-    href: "/cart",
-    icon: "/icons/add-to-cart.svg",
-    ariaLabel: t("cart"),
-    // 0 renders no badge at all, so an empty cart is just the icon.
-    badge: count,
-  };
+  // The cart is the one named, filled control in the bar, where favorites and
+  // the account are bare icons: it is the end of the path every catalog page is
+  // pushing a customer down, and an unlabelled trolley beside two other glyphs
+  // asks them to recognise it. It rides in `actionSlot` rather than
+  // `fixedItems` so it *leads* that icon cluster - a `MenuItem` renders as a
+  // bar link, and this has to read as a button.
+  const cartButton = (
+    <Button
+      href="/cart"
+      icon="/icons/add-to-cart.svg"
+      kind="primary"
+      size="md"
+      paddingX={12}
+      // Names the button for a screen reader at every width - below `sm` the
+      // visible label is display:none and the accessible name would otherwise
+      // fall back to the count chip alone.
+      aria-label={t("myCart")}
+    >
+      {/* Hidden below `sm`, where the label plus two icons, the logo and the
+          hamburger no longer share a phone's width - the filled button still
+          reads as one. */}
+      <span className="navbar-cart-label">{t("myCart")}</span>
+      {count > 0 && (
+        // White on the accent fill: the Badge's own default is the accent
+        // itself, which is invisible here. Past 99 the count stops being a
+        // number worth reading and the chip stops growing.
+        <Badge size="sm" circular color="#ffffff" textColor="var(--accent)">
+          {count > 99 ? "99+" : count}
+        </Badge>
+      )}
+    </Button>
+  );
 
   const authItem = isLoggedIn
     ? {
@@ -203,7 +230,8 @@ export function NavbarClient({
     <Navbar
       logo={logo}
       items={navItems}
-      fixedItems={[favoritesItem, cartItem, authItem]}
+      actionSlot={cartButton}
+      fixedItems={[favoritesItem, authItem]}
       version={version}
       translucent
     />

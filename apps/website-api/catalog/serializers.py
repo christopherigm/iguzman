@@ -5,7 +5,7 @@ from rest_framework import serializers
 
 from core.models import Branch, Brand, ResourcePool, System, CURRENCY_CHOICES
 from core.image_sizes import REGULAR, SMALL, STANDARD, image_cfg
-from core.serializers import ImageProcessingSerializer
+from core.serializers import ImageProcessingSerializer, StockCreditWriteMixin
 from .models import (
     ProductCategory, Product, ProductImage,
     ServiceCategory, Service, ServiceImage,
@@ -178,7 +178,7 @@ class ProductCategorySerializer(serializers.ModelSerializer):
         return obj.products.filter(enabled=True).count()
 
 
-class ProductCategoryWriteSerializer(serializers.ModelSerializer):
+class ProductCategoryWriteSerializer(StockCreditWriteMixin, serializers.ModelSerializer):
     image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     # The checkout recommendations every product in this category inherits unless
     # it carries its own. `write_only` because the read serializer resolves the
@@ -190,6 +190,7 @@ class ProductCategoryWriteSerializer(serializers.ModelSerializer):
         fields = [
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'enabled', 'image',
+            *StockCreditWriteMixin.CREDIT_FIELDS,
             'recommendations', 'sort_order',
         ]
 
@@ -211,32 +212,38 @@ class ProductCategoryWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         image_data = validated_data.pop('image', None)
+        # The credit a photo picked from a stock bank owes; None for an upload,
+        # which owes nobody and clears whatever the row was carrying.
+        credit = self.pop_credit(validated_data, bool(image_data))
         recommendations = validated_data.pop('recommendations', None)
         instance = super().create(validated_data)
         if recommendations is not None:
             set_recommendations(instance, 'product_category', recommendations)
         if image_data:
-            self._save_image(instance, image_data)
+            self._save_image(instance, image_data, credit)
         return instance
 
     def update(self, instance, validated_data):
         clear_image = 'image' in validated_data and not validated_data.get('image')
         image_data = validated_data.pop('image', None)
+        # The credit a photo picked from a stock bank owes; None for an upload,
+        # which owes nobody and clears whatever the row was carrying.
+        credit = self.pop_credit(validated_data, bool(image_data))
         recommendations = validated_data.pop('recommendations', None)
         instance = super().update(instance, validated_data)
         if recommendations is not None:
             set_recommendations(instance, 'product_category', recommendations)
         if image_data:
-            self._save_image(instance, image_data)
+            self._save_image(instance, image_data, credit)
         elif clear_image:
             instance.image = None
             instance.save(update_fields=['image'])
         return instance
 
-    def _save_image(self, instance, image_data):
+    def _save_image(self, instance, image_data, credit=None):
         proc = ImageProcessingSerializer(data={'base64_image': image_data}, **image_cfg(REGULAR))
         proc.is_valid()
-        proc.save_to_field(instance.image, f'product_category_{instance.pk}.jpg')
+        proc.save_to_field(instance.image, f'product_category_{instance.pk}.jpg', credit)
         instance.save(update_fields=['image'])
 
 
@@ -260,7 +267,7 @@ class ProductImageSerializer(serializers.ModelSerializer):
         return obj.image.url
 
 
-class ProductImageWriteSerializer(serializers.Serializer):
+class ProductImageWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
     image = serializers.CharField()
     name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
@@ -276,6 +283,10 @@ class ProductImageWriteSerializer(serializers.Serializer):
 
     def save(self, product):
         image_data = self.validated_data['image']
+        # The credit a photo picked from a stock bank owes; None for an upload,
+        # which owes nobody. It travels into `save_to_field` because that call is
+        # what settles the row's attribution - see `core.serializers`.
+        credit = self.pop_credit(self.validated_data)
         # Atomic so a failed image write (e.g. unwritable MEDIA_ROOT) rolls back
         # the row insert instead of leaving an orphan with an empty image field.
         with transaction.atomic():
@@ -291,7 +302,7 @@ class ProductImageWriteSerializer(serializers.Serializer):
                 **image_cfg(STANDARD),
             )
             proc.is_valid()
-            proc.save_to_field(instance.image, f'product_{product.pk}_img_{instance.pk}.jpg')
+            proc.save_to_field(instance.image, f'product_{product.pk}_img_{instance.pk}.jpg', credit)
             instance.save(update_fields=['image'])
         return instance
 
@@ -366,7 +377,7 @@ class ProductSerializer(serializers.ModelSerializer):
         return _buyable_image_url(obj, self.context.get('request'))
 
 
-class ProductWriteSerializer(serializers.Serializer):
+class ProductWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
     # BasePicture fields
     name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     en_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
@@ -484,6 +495,9 @@ class ProductWriteSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         image_data = validated_data.pop('image', None)
+        # The credit a photo picked from a stock bank owes; None for an upload,
+        # which owes nobody and clears whatever the row was carrying.
+        credit = self.pop_credit(validated_data, bool(image_data))
         variants = validated_data.pop('variants', None)
         recommendations = validated_data.pop('recommendations', None)
         product = Product(**validated_data)
@@ -493,12 +507,15 @@ class ProductWriteSerializer(serializers.Serializer):
         if recommendations is not None:
             set_recommendations(product, 'product', recommendations)
         if image_data:
-            self._save_image(product, image_data)
+            self._save_image(product, image_data, credit)
         return product
 
     def update(self, instance, validated_data):
         clear_image = 'image' in validated_data and not validated_data.get('image')
         image_data = validated_data.pop('image', None)
+        # The credit a photo picked from a stock bank owes; None for an upload,
+        # which owes nobody and clears whatever the row was carrying.
+        credit = self.pop_credit(validated_data, bool(image_data))
         variants = validated_data.pop('variants', None)
         recommendations = validated_data.pop('recommendations', None)
         for field_name, value in validated_data.items():
@@ -511,16 +528,16 @@ class ProductWriteSerializer(serializers.Serializer):
         if recommendations is not None:
             set_recommendations(instance, 'product', recommendations)
         if image_data:
-            self._save_image(instance, image_data)
+            self._save_image(instance, image_data, credit)
         return instance
 
-    def _save_image(self, product, image_data):
+    def _save_image(self, product, image_data, credit=None):
         proc = ImageProcessingSerializer(
             data={'base64_image': image_data},
             **image_cfg(STANDARD),
         )
         proc.is_valid()
-        proc.save_to_field(product.image, f'product_{product.pk}.jpg')
+        proc.save_to_field(product.image, f'product_{product.pk}.jpg', credit)
         product.save(update_fields=['image'])
 
 
@@ -544,7 +561,7 @@ class ServiceImageSerializer(serializers.ModelSerializer):
         return obj.image.url
 
 
-class ServiceImageWriteSerializer(serializers.Serializer):
+class ServiceImageWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
     image = serializers.CharField()
     name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
@@ -560,6 +577,10 @@ class ServiceImageWriteSerializer(serializers.Serializer):
 
     def save(self, service):
         image_data = self.validated_data['image']
+        # The credit a photo picked from a stock bank owes; None for an upload,
+        # which owes nobody. It travels into `save_to_field` because that call is
+        # what settles the row's attribution - see `core.serializers`.
+        credit = self.pop_credit(self.validated_data)
         # Atomic so a failed image write (e.g. unwritable MEDIA_ROOT) rolls back
         # the row insert instead of leaving an orphan with an empty image field.
         with transaction.atomic():
@@ -575,7 +596,7 @@ class ServiceImageWriteSerializer(serializers.Serializer):
                 **image_cfg(STANDARD),
             )
             proc.is_valid()
-            proc.save_to_field(instance.image, f'service_{service.pk}_img_{instance.pk}.jpg')
+            proc.save_to_field(instance.image, f'service_{service.pk}_img_{instance.pk}.jpg', credit)
             instance.save(update_fields=['image'])
         return instance
 
@@ -610,7 +631,7 @@ class ServiceCategorySerializer(serializers.ModelSerializer):
         return obj.services.filter(enabled=True).count()
 
 
-class ServiceCategoryWriteSerializer(serializers.ModelSerializer):
+class ServiceCategoryWriteSerializer(StockCreditWriteMixin, serializers.ModelSerializer):
     image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     # The checkout recommendations every service in this category inherits unless
     # it carries its own.
@@ -621,6 +642,7 @@ class ServiceCategoryWriteSerializer(serializers.ModelSerializer):
         fields = [
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'enabled', 'image',
+            *StockCreditWriteMixin.CREDIT_FIELDS,
             'recommendations', 'sort_order',
         ]
 
@@ -642,32 +664,38 @@ class ServiceCategoryWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         image_data = validated_data.pop('image', None)
+        # The credit a photo picked from a stock bank owes; None for an upload,
+        # which owes nobody and clears whatever the row was carrying.
+        credit = self.pop_credit(validated_data, bool(image_data))
         recommendations = validated_data.pop('recommendations', None)
         instance = super().create(validated_data)
         if recommendations is not None:
             set_recommendations(instance, 'service_category', recommendations)
         if image_data:
-            self._save_image(instance, image_data)
+            self._save_image(instance, image_data, credit)
         return instance
 
     def update(self, instance, validated_data):
         clear_image = 'image' in validated_data and not validated_data.get('image')
         image_data = validated_data.pop('image', None)
+        # The credit a photo picked from a stock bank owes; None for an upload,
+        # which owes nobody and clears whatever the row was carrying.
+        credit = self.pop_credit(validated_data, bool(image_data))
         recommendations = validated_data.pop('recommendations', None)
         instance = super().update(instance, validated_data)
         if recommendations is not None:
             set_recommendations(instance, 'service_category', recommendations)
         if image_data:
-            self._save_image(instance, image_data)
+            self._save_image(instance, image_data, credit)
         elif clear_image:
             instance.image = None
             instance.save(update_fields=['image'])
         return instance
 
-    def _save_image(self, instance, image_data):
+    def _save_image(self, instance, image_data, credit=None):
         proc = ImageProcessingSerializer(data={'base64_image': image_data}, **image_cfg(REGULAR))
         proc.is_valid()
-        proc.save_to_field(instance.image, f'service_category_{instance.pk}.jpg')
+        proc.save_to_field(instance.image, f'service_category_{instance.pk}.jpg', credit)
         instance.save(update_fields=['image'])
 
 
@@ -782,7 +810,7 @@ class ServiceDetailSerializer(ServiceSerializer):
         return max(low, min(high, party_capacity_ceiling(obj)))
 
 
-class ServiceWriteSerializer(serializers.Serializer):
+class ServiceWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
     # BasePicture fields
     name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     en_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
@@ -974,6 +1002,9 @@ class ServiceWriteSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         image_data = validated_data.pop('image', None)
+        # The credit a photo picked from a stock bank owes; None for an upload,
+        # which owes nobody and clears whatever the row was carrying.
+        credit = self.pop_credit(validated_data, bool(image_data))
         variants = validated_data.pop('variants', None)
         recommendations = validated_data.pop('recommendations', None)
         booking_branches = validated_data.pop('booking_branches', None)
@@ -990,12 +1021,15 @@ class ServiceWriteSerializer(serializers.Serializer):
         if booking_pools is not None:
             service.booking_pools.set(booking_pools)
         if image_data:
-            self._save_image(service, image_data)
+            self._save_image(service, image_data, credit)
         return service
 
     def update(self, instance, validated_data):
         clear_image = 'image' in validated_data and not validated_data.get('image')
         image_data = validated_data.pop('image', None)
+        # The credit a photo picked from a stock bank owes; None for an upload,
+        # which owes nobody and clears whatever the row was carrying.
+        credit = self.pop_credit(validated_data, bool(image_data))
         variants = validated_data.pop('variants', None)
         recommendations = validated_data.pop('recommendations', None)
         booking_branches = validated_data.pop('booking_branches', None)
@@ -1016,16 +1050,16 @@ class ServiceWriteSerializer(serializers.Serializer):
         if booking_pools is not None:
             instance.booking_pools.set(booking_pools)
         if image_data:
-            self._save_image(instance, image_data)
+            self._save_image(instance, image_data, credit)
         return instance
 
-    def _save_image(self, service, image_data):
+    def _save_image(self, service, image_data, credit=None):
         proc = ImageProcessingSerializer(
             data={'base64_image': image_data},
             **image_cfg(STANDARD),
         )
         proc.is_valid()
-        proc.save_to_field(service.image, f'service_{service.pk}.jpg')
+        proc.save_to_field(service.image, f'service_{service.pk}.jpg', credit)
         service.save(update_fields=['image'])
 
 
@@ -1175,7 +1209,7 @@ class MenuCategorySerializer(serializers.ModelSerializer):
         return obj.menu_items.filter(enabled=True).count()
 
 
-class MenuCategoryWriteSerializer(serializers.ModelSerializer):
+class MenuCategoryWriteSerializer(StockCreditWriteMixin, serializers.ModelSerializer):
     image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     # The checkout recommendations every dish in this category inherits unless it
     # carries its own - "with a pizza, offer a soda", said once.
@@ -1186,6 +1220,7 @@ class MenuCategoryWriteSerializer(serializers.ModelSerializer):
         fields = [
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'enabled', 'image',
+            *StockCreditWriteMixin.CREDIT_FIELDS,
             'recommendations', 'sort_order',
         ]
 
@@ -1207,32 +1242,38 @@ class MenuCategoryWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         image_data = validated_data.pop('image', None)
+        # The credit a photo picked from a stock bank owes; None for an upload,
+        # which owes nobody and clears whatever the row was carrying.
+        credit = self.pop_credit(validated_data, bool(image_data))
         recommendations = validated_data.pop('recommendations', None)
         instance = super().create(validated_data)
         if recommendations is not None:
             set_recommendations(instance, 'menu_category', recommendations)
         if image_data:
-            self._save_image(instance, image_data)
+            self._save_image(instance, image_data, credit)
         return instance
 
     def update(self, instance, validated_data):
         clear_image = 'image' in validated_data and not validated_data.get('image')
         image_data = validated_data.pop('image', None)
+        # The credit a photo picked from a stock bank owes; None for an upload,
+        # which owes nobody and clears whatever the row was carrying.
+        credit = self.pop_credit(validated_data, bool(image_data))
         recommendations = validated_data.pop('recommendations', None)
         instance = super().update(instance, validated_data)
         if recommendations is not None:
             set_recommendations(instance, 'menu_category', recommendations)
         if image_data:
-            self._save_image(instance, image_data)
+            self._save_image(instance, image_data, credit)
         elif clear_image:
             instance.image = None
             instance.save(update_fields=['image'])
         return instance
 
-    def _save_image(self, instance, image_data):
+    def _save_image(self, instance, image_data, credit=None):
         proc = ImageProcessingSerializer(data={'base64_image': image_data}, **image_cfg(REGULAR))
         proc.is_valid()
-        proc.save_to_field(instance.image, f'menu_category_{instance.pk}.jpg')
+        proc.save_to_field(instance.image, f'menu_category_{instance.pk}.jpg', credit)
         instance.save(update_fields=['image'])
 
 
@@ -1300,7 +1341,7 @@ class IngredientSerializer(serializers.ModelSerializer):
         return request.build_absolute_uri(obj.image.url) if request else obj.image.url
 
 
-class IngredientWriteSerializer(serializers.ModelSerializer):
+class IngredientWriteSerializer(StockCreditWriteMixin, serializers.ModelSerializer):
     # base64 string on the way in: unchanged when omitted, cleared when null/blank.
     image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     # Purchasing sources (store/link/price). Full-replace on write: whatever list
@@ -1311,7 +1352,7 @@ class IngredientWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ingredient
         fields = [
-            'enabled', 'image',
+            'enabled', 'image', *StockCreditWriteMixin.CREDIT_FIELDS,
             *_INGREDIENT_CORE_FIELDS,
             *Ingredient.NUTRIENT_FIELDS,
             'providers',
@@ -1339,11 +1380,18 @@ class IngredientWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(sub.errors['base64_image'])
         return value
 
-    def _apply_image(self, instance, image_data):
+    def _apply_image(self, instance, image_data, credit=None):
+        """Store `image_data`, with the credit it owes when it came from a bank.
+
+        The credit rides into `save_to_field` rather than being set here: that
+        call is what clears a stale attribution on every upload, so a pair set
+        alongside it would be wiped by the very write that stores the file it
+        describes (see `core.serializers._apply_attribution`).
+        """
         if image_data:
             proc = ImageProcessingSerializer(data={'base64_image': image_data}, **_INGREDIENT_IMAGE_CFG)
             proc.is_valid()
-            proc.save_to_field(instance.image, f'ingredient_{instance.pk}.jpg')
+            proc.save_to_field(instance.image, f'ingredient_{instance.pk}.jpg', credit)
         else:
             instance.image = None
         instance.save(update_fields=['image'])
@@ -1366,10 +1414,11 @@ class IngredientWriteSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         has_image = 'image' in validated_data
         image_data = validated_data.pop('image', None)
+        credit = self.pop_credit(validated_data, has_image)
         providers = validated_data.pop('providers', None)
         instance = super().create(validated_data)
         if has_image:
-            self._apply_image(instance, image_data)
+            self._apply_image(instance, image_data, credit)
         if providers is not None:
             self._sync_providers(instance, providers)
         return instance
@@ -1377,10 +1426,11 @@ class IngredientWriteSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         has_image = 'image' in validated_data
         image_data = validated_data.pop('image', None)
+        credit = self.pop_credit(validated_data, has_image)
         providers = validated_data.pop('providers', _PROVIDERS_UNSET)
         instance = super().update(instance, validated_data)
         if has_image:
-            self._apply_image(instance, image_data)
+            self._apply_image(instance, image_data, credit)
         if providers is not _PROVIDERS_UNSET:
             self._sync_providers(instance, providers)
         return instance
@@ -1582,7 +1632,7 @@ class MenuItemImageSerializer(serializers.ModelSerializer):
         return obj.image.url
 
 
-class MenuItemImageWriteSerializer(serializers.Serializer):
+class MenuItemImageWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
     image = serializers.CharField()
     name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
@@ -1597,6 +1647,10 @@ class MenuItemImageWriteSerializer(serializers.Serializer):
         return value
 
     def save(self, menu_item):
+        # The credit a photo picked from a stock bank owes; None for an upload,
+        # which owes nobody. It travels into `save_to_field` because that call is
+        # what settles the row's attribution - see `core.serializers`.
+        credit = self.pop_credit(self.validated_data)
         # Atomic so a failed image write (e.g. unwritable MEDIA_ROOT) rolls back
         # the row insert instead of leaving an orphan with an empty image field.
         with transaction.atomic():
@@ -1611,7 +1665,7 @@ class MenuItemImageWriteSerializer(serializers.Serializer):
                 **image_cfg(STANDARD),
             )
             proc.is_valid()
-            proc.save_to_field(instance.image, f'menu_item_{menu_item.pk}_img_{instance.pk}.jpg')
+            proc.save_to_field(instance.image, f'menu_item_{menu_item.pk}_img_{instance.pk}.jpg', credit)
             instance.save(update_fields=['image'])
         return instance
 
@@ -1790,7 +1844,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
         ).data
 
 
-class MenuItemWriteSerializer(serializers.Serializer):
+class MenuItemWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
     # BasePicture fields
     name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     en_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
@@ -1906,6 +1960,9 @@ class MenuItemWriteSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         image_data = validated_data.pop('image', None)
+        # The credit a photo picked from a stock bank owes; None for an upload,
+        # which owes nobody and clears whatever the row was carrying.
+        credit = self.pop_credit(validated_data, bool(image_data))
         variants = validated_data.pop('variants', None)
         recommendations = validated_data.pop('recommendations', None)
         menu_item = MenuItem(**validated_data)
@@ -1915,12 +1972,15 @@ class MenuItemWriteSerializer(serializers.Serializer):
         if recommendations is not None:
             set_recommendations(menu_item, 'menu_item', recommendations)
         if image_data:
-            self._save_image(menu_item, image_data)
+            self._save_image(menu_item, image_data, credit)
         return menu_item
 
     def update(self, instance, validated_data):
         clear_image = 'image' in validated_data and not validated_data.get('image')
         image_data = validated_data.pop('image', None)
+        # The credit a photo picked from a stock bank owes; None for an upload,
+        # which owes nobody and clears whatever the row was carrying.
+        credit = self.pop_credit(validated_data, bool(image_data))
         variants = validated_data.pop('variants', None)
         recommendations = validated_data.pop('recommendations', None)
         for field_name, value in validated_data.items():
@@ -1933,14 +1993,14 @@ class MenuItemWriteSerializer(serializers.Serializer):
         if recommendations is not None:
             set_recommendations(instance, 'menu_item', recommendations)
         if image_data:
-            self._save_image(instance, image_data)
+            self._save_image(instance, image_data, credit)
         return instance
 
-    def _save_image(self, menu_item, image_data):
+    def _save_image(self, menu_item, image_data, credit=None):
         proc = ImageProcessingSerializer(
             data={'base64_image': image_data},
             **image_cfg(STANDARD),
         )
         proc.is_valid()
-        proc.save_to_field(menu_item.image, f'menu_item_{menu_item.pk}.jpg')
+        proc.save_to_field(menu_item.image, f'menu_item_{menu_item.pk}.jpg', credit)
         menu_item.save(update_fields=['image'])

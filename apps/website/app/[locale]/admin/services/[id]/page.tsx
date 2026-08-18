@@ -10,6 +10,12 @@ import {
   AdminImageUploader,
   type NewImage,
 } from "@/components/admin-image-uploader/admin-image-uploader";
+import { AdminImageField } from "@/components/admin/admin-image-field";
+import { ImageWebSearch } from "@/components/admin/image-web-search";
+import {
+  remainingGallerySlots,
+  useAdminImageField,
+} from "@/hooks/use-admin-image-field";
 import {
   VariantsEditor,
   type VariantOption,
@@ -28,6 +34,8 @@ import {
   listServices,
   listServiceImages,
   createServiceImage,
+  createStockGalleryRows,
+  type StockImageFile,
   deleteServiceImage,
   updateServiceImage,
   listServiceCategories,
@@ -35,11 +43,15 @@ import {
   listBranches,
   checkSlug,
 } from "@/lib/admin-api";
+import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import { buildSlug } from "@/lib/slug-utils";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+
+/** How many photos one service's gallery holds, uploads and picks together. */
+const GALLERY_MAX = 10;
 
 type Props = { params: Promise<{ locale: string; id: string }> };
 
@@ -92,16 +104,22 @@ export default function AdminServiceFormPage({ params }: Props) {
   const [bookingBranchIds, setBookingBranchIds] = useState<number[]>([]);
   const [bookingPoolIds, setBookingPoolIds] = useState<number[]>([]);
   const [branchOptions, setBranchOptions] = useState<BookingBranchOption[]>([]);
-  const [existingImage, setExistingImage] = useState<
-    { id: number; url: string }[]
-  >([]);
-  const [pendingImage, setPendingImage] = useState<NewImage[]>([]);
+  // The main image's uploader and stock picker: one field with two doors.
+  const image = useAdminImageField();
+  // Pulled out because the load effect below depends on it: this one callback is
+  // stable, where `image` itself changes with every pick and keystroke - and an
+  // effect keyed on the object would re-fetch the record each time.
+  const loadImage = image.load;
   const [existingImages, setExistingImages] = useState<
     { id: number; url: string; sort_order?: number }[]
   >([]);
   const [pendingNewImages, setPendingNewImages] = useState<NewImage[]>([]);
   const [pendingDeletedIds, setPendingDeletedIds] = useState<number[]>([]);
   const [pendingOrder, setPendingOrder] = useState<number[]>([]);
+  // Photos picked from a stock bank for the *gallery*. They become rows of their
+  // own on save, after the operator's uploads - the picker and the uploader both
+  // fill the same ten slots, so neither replaces the other.
+  const [stockImages, setStockImages] = useState<StockImageFile[]>([]);
 
   // Sibling variants: the ids currently linked, and the pool of other services
   // to pick from (self is excluded where the picker is rendered).
@@ -121,6 +139,15 @@ export default function AdminServiceFormPage({ params }: Props) {
   const [slugError, setSlugError] = useState<string | null>(null);
 
   const systemId = useSession()?.systemId ?? 0;
+  // Prev/next through the CMS list, for the arrows beside Save.
+  const siblings = useAdminSiblings({
+    basePath: "/admin/services",
+    id,
+    systemId,
+    list: listServices,
+    groupKey: "category",
+    groupList: listServiceCategories,
+  });
 
   // Checkout recommendations. `categoryId` follows the *form's* category field
   // rather than the saved row, so re-filing this item updates the "inheriting
@@ -269,9 +296,7 @@ export default function AdminServiceFormPage({ params }: Props) {
           setBookingBranchIds(
             ((data.booking_branches as number[] | undefined) ?? []).map(Number),
           );
-          if (data.image) {
-            setExistingImage([{ id: Number(id), url: String(data.image) }]);
-          }
+          loadImage(data.image, Number(id));
           const imgs = (images as Record<string, unknown>[]).map((i) => ({
             id: i.id as number,
             url: String(i.image ?? ""),
@@ -287,7 +312,7 @@ export default function AdminServiceFormPage({ params }: Props) {
         .catch(() => setError(t("errorLoad")))
         .finally(() => setLoading(false));
     }
-  }, [id, isNew, loadMeta, t]);
+  }, [id, isNew, loadImage, loadMeta, t]);
 
   const handleChange = (key: string, value: unknown) =>
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -331,19 +356,19 @@ export default function AdminServiceFormPage({ params }: Props) {
       // blank field means the tenant cleared it rather than chose zero.
       payload.booking_deposit_percent =
         Number(values.booking_deposit_percent) || 30;
-      if (pendingImage.length > 0) {
-        payload.image = pendingImage[0]?.base64;
-      } else if (existingImage.length === 0) {
-        payload.image = null;
-      }
+      // The main image, and - when it came from a bank - the credit it owes,
+      // which has to be in the same write as the file it describes.
+      Object.assign(payload, image.payload());
 
       let serviceId: number;
       if (isNew) {
         const created = await createService(payload);
         serviceId = created.id as number;
+        image.settle(created.image, serviceId);
       } else {
-        await updateService(Number(id), payload);
+        const updated = await updateService(Number(id), payload);
         serviceId = Number(id);
+        image.settle(updated.image, serviceId);
       }
       // Handle deleted images
       for (const imgId of pendingDeletedIds) {
@@ -356,6 +381,15 @@ export default function AdminServiceFormPage({ params }: Props) {
           sort_order: pendingOrder.length + i,
         }).catch(() => null);
       }
+      // ⚠ Each picked photo's credit goes in the same create call as its file:
+      // storing an image clears any attribution, so a second write would lose
+      // the credit that makes the photo legal to publish.
+      await createStockGalleryRows(
+        stockImages,
+        pendingOrder.length + pendingNewImages.length,
+        (payload) => createServiceImage(serviceId, payload),
+      );
+      setStockImages([]);
       // Update sort orders for existing
       for (let i = 0; i < pendingOrder.length; i++) {
         await updateServiceImage(serviceId, pendingOrder[i] ?? 0, {
@@ -448,6 +482,11 @@ export default function AdminServiceFormPage({ params }: Props) {
     { key: "enabled", label: t("enabled"), type: "boolean" },
   ];
 
+  // Both stock-image pickers on this form look for the same thing, so they open
+  // on one query - the service's own name, until the operator edits it.
+  const imageQuery =
+    String(values.name ?? "").trim() || String(values.en_name ?? "").trim();
+
   if (loading)
     return (
       <Box padding="24px">
@@ -481,26 +520,17 @@ export default function AdminServiceFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
+        siblings={siblings}
         productionHref={
           !isNew && values.slug ? `/services/${String(values.slug)}` : undefined
         }
         imagesSlot={
           <>
-            <Box display="flex" flexDirection="column" gap="8px">
-              <Typography variant="label">
-                {t("image") ?? "Main Image"}
-              </Typography>
-              <AdminImageUploader
-                existingImages={existingImage}
-                onChange={(n, _d, o) => {
-                  setPendingImage(n);
-                  setExistingImage((prev) =>
-                    prev.filter((img) => o.includes(img.id)),
-                  );
-                }}
-                maxImages={1}
-              />
-            </Box>
+            <AdminImageField
+              label={t("image") ?? "Main Image"}
+              field={image}
+              query={imageQuery}
+            />
             <Box display="flex" flexDirection="column" gap="8px">
               <Typography variant="label">{t("images") ?? "Images"}</Typography>
               <AdminImageUploader
@@ -510,7 +540,18 @@ export default function AdminServiceFormPage({ params }: Props) {
                   setPendingDeletedIds(d);
                   setPendingOrder(o);
                 }}
-                maxImages={10}
+                maxImages={GALLERY_MAX}
+              />
+              <ImageWebSearch
+                defaultQuery={imageQuery}
+                value={stockImages}
+                onChange={setStockImages}
+                slots={remainingGallerySlots(
+                  GALLERY_MAX,
+                  existingImages,
+                  pendingDeletedIds,
+                  pendingNewImages,
+                )}
               />
             </Box>
           </>

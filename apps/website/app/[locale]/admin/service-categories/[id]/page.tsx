@@ -5,10 +5,8 @@ import { useTranslations } from "next-intl";
 import { use } from "react";
 import { useRouter } from "@repo/i18n/navigation";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
-import {
-  AdminImageUploader,
-  type NewImage,
-} from "@/components/admin-image-uploader/admin-image-uploader";
+import { AdminImageField } from "@/components/admin/admin-image-field";
+import { useAdminImageField } from "@/hooks/use-admin-image-field";
 import {
   getServiceCategory,
   createServiceCategory,
@@ -16,6 +14,7 @@ import {
   listServiceCategories,
   checkSlug,
 } from "@/lib/admin-api";
+import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import { buildSlug } from "@/lib/slug-utils";
 import { RecommendationsEditor } from "@/components/admin/recommendations-editor";
 import { useRecommendationsEditor } from "@/hooks/use-recommendations-editor";
@@ -41,10 +40,12 @@ export default function AdminServiceCategoryFormPage({ params }: Props) {
     parent: "",
     enabled: true,
   });
-  const [existingImage, setExistingImage] = useState<
-    { id: number; url: string }[]
-  >([]);
-  const [pendingImage, setPendingImage] = useState<NewImage[]>([]);
+  // The uploader and the stock-image picker, which are one field with two doors.
+  const image = useAdminImageField();
+  // Pulled out because the load effect below depends on it: this one callback is
+  // stable, where `image` itself changes with every pick and keystroke - and an
+  // effect keyed on the object would re-fetch the record each time.
+  const loadImage = image.load;
   const [parentOptions, setParentOptions] = useState<
     { value: string | number; label: string }[]
   >([]);
@@ -54,6 +55,13 @@ export default function AdminServiceCategoryFormPage({ params }: Props) {
   const [success, setSuccess] = useState<string | null>(null);
   const [slugError, setSlugError] = useState<string | null>(null);
   const systemId = useSession()?.systemId ?? 0;
+  // Prev/next through the CMS list, for the arrows beside Save.
+  const siblings = useAdminSiblings({
+    basePath: "/admin/service-categories",
+    id,
+    systemId,
+    list: listServiceCategories,
+  });
 
   // What every item in this category is recommended alongside at checkout - said
   // once here rather than on each item, which is the whole point of authoring it
@@ -122,13 +130,12 @@ export default function AdminServiceCategoryFormPage({ params }: Props) {
             parent: data.parent ?? "",
             enabled: data.enabled ?? true,
           });
-          if (data.image)
-            setExistingImage([{ id: Number(id), url: String(data.image) }]);
+          loadImage(data.image, Number(id));
         })
         .catch(() => setError(t("errorLoad")))
         .finally(() => setLoading(false));
     }
-  }, [id, isNew, loadMeta, t]);
+  }, [id, isNew, loadImage, loadMeta, t]);
 
   const handleSubmit = async () => {
     setSaving(true);
@@ -136,11 +143,9 @@ export default function AdminServiceCategoryFormPage({ params }: Props) {
     setSuccess(null);
     try {
       const payload: Record<string, unknown> = { ...values, system: systemId };
-      if (pendingImage.length > 0) {
-        payload.image = pendingImage[0]?.base64;
-      } else if (existingImage.length === 0) {
-        payload.image = null;
-      }
+      // The image, and - when it came from a bank - the credit it owes, which
+      // has to be in the same write as the file it describes.
+      Object.assign(payload, image.payload());
       // Clear with an explicit null. Updates are PATCH, so an omitted key means
       // "leave unchanged" - it cannot clear a value.
       if (payload.parent === "") payload.parent = null;
@@ -150,10 +155,12 @@ export default function AdminServiceCategoryFormPage({ params }: Props) {
       if (isNew) {
         const c = await createServiceCategory(payload);
         setSuccess(t("saved"));
+        image.settle(c.image, c.id as number);
         router.replace(`/admin/service-categories/${c.id}`);
       } else {
-        await updateServiceCategory(Number(id), payload);
+        const updated = await updateServiceCategory(Number(id), payload);
         setSuccess(t("saved"));
+        image.settle(updated.image, Number(id));
       }
     } catch {
       setError(t("errorSave"));
@@ -219,25 +226,21 @@ export default function AdminServiceCategoryFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
+        siblings={siblings}
         productionHref={
           !isNew && values.slug
             ? `/categories/services/${String(values.slug)}`
             : undefined
         }
         imagesSlot={
-          <Box display="flex" flexDirection="column" gap="8px">
-            <Typography variant="label">{t("image") ?? "Image"}</Typography>
-            <AdminImageUploader
-              existingImages={existingImage}
-              onChange={(n, _d, o) => {
-                setPendingImage(n);
-                setExistingImage((prev) =>
-                  prev.filter((img) => o.includes(img.id)),
-                );
-              }}
-              maxImages={1}
-            />
-          </Box>
+          <AdminImageField
+            label={t("image") ?? "Image"}
+            field={image}
+            query={
+              String(values.name ?? "").trim() ||
+              String(values.en_name ?? "").trim()
+            }
+          />
         }
       >
         {/* What every item in this category is offered alongside in the cart. */}

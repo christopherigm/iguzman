@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 import os
@@ -31,6 +32,7 @@ from .backup import (
     write_archive,
 )
 from .cache import invalidate_pattern as _invalidate_pattern
+from .services import image_banks
 from .storage import test_credentials
 from .models import ALL_DAY_GRACE, Branch, Brand, CompanyHighlight, CompanyHighlightItem, ContactMessage, Event, EventImage, SiteBackup, SocialPost, SuccessStory, SuccessStoryImage, System
 from .serializers import (
@@ -1808,6 +1810,172 @@ class AiChatView(APIView):
             logger.exception("AI chat stream failed")
             yield _sse_data({"error": {"message": "The AI provider is unavailable. Please try again."}})
         yield "data: [DONE]\n\n"
+
+
+# --------------------------------------------------------------------------- #
+# Stock images (the CMS's image picker)
+# --------------------------------------------------------------------------- #
+
+# A picker grid, not a seed: enough to scroll through without paying for a
+# second round-trip, and small enough that one query is one screen of thumbnails.
+STOCK_IMAGE_LIMIT = 24
+# A bank's largest render is ~1280px; anything past this is not a photo we asked
+# for and has no business being base64'd into a JSON body.
+STOCK_IMAGE_MAX_BYTES = 15 * 1024 * 1024
+
+
+class StockImageSearchView(APIView):
+    """
+    POST /api/stock-images/search/ - search the free stock banks for a photo.
+
+    Admin-only, and read-only: it returns what Pexels (then Pixabay) have for a
+    query so the CMS can show a grid to choose from. Nothing is downloaded or
+    stored here - `StockImageFetchView` does that for the one photo picked.
+
+    The keys live in this API, beside the ones `fetch_seed_images` already uses,
+    so the CMS never holds a bank credential and a tenant frontend never needs
+    one. Every result carries the credit the bank's API terms require; see
+    `core.services.image_banks`.
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    def post(self, request):
+        query = str(request.data.get("query") or "").strip()
+        if not query:
+            return Response(
+                {"detail": "A query is required to search."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        banks = image_banks.configured_banks()
+        if not banks:
+            return Response(
+                {
+                    "detail": "No image bank is configured. Set PEXELS_API_KEY "
+                              "(and/or PIXABAY_API_KEY) on the API.",
+                    "code": "NO_IMAGE_BANK",
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        bank = str(request.data.get("bank") or "").strip() or None
+        if bank and bank not in banks:
+            return Response(
+                {"detail": f"Unknown or unconfigured image bank {bank!r}."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        orientation = str(request.data.get("orientation") or "").strip() or None
+
+        try:
+            photos = image_banks.search_photos(
+                query,
+                orientation=orientation,
+                banks=[bank] if bank else None,
+                limit=STOCK_IMAGE_LIMIT,
+            )
+        except Exception:
+            # A bank that is down must not 500 the CMS, and its error body is not
+            # something to forward to a browser.
+            logger.exception("Stock image search failed for %r", query)
+            return Response(
+                {"detail": "The image search service is unavailable. Please try again."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        return Response(
+            {
+                "banks": banks,
+                "results": [
+                    {
+                        "bank": photo.bank,
+                        "bank_id": photo.bank_id,
+                        "thumbnail": photo.thumbnail_url or photo.download_url,
+                        "alt": photo.alt,
+                        "attribution": photo.attribution,
+                        "attribution_url": photo.attribution_url,
+                    }
+                    for photo in photos
+                ],
+            }
+        )
+
+
+class StockImageFetchView(APIView):
+    """
+    POST /api/stock-images/fetch/ - download one chosen photo, as base64.
+
+    Admin-only. Returns the photo as a data URL plus the credit it carries, so
+    the CMS form can hand both to the record's own write serializer exactly as a
+    manual upload is handed over - nothing is persisted here, and the operator
+    still saves the form.
+
+    ⚠ **It takes a bank and an id, never a URL.** Fetching a client-supplied URL
+    would make this an open proxy into the pod's network, and would let whoever
+    chose the image also choose the credit that goes with it. Both are re-read
+    from the bank instead.
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    def post(self, request):
+        bank = str(request.data.get("bank") or "").strip()
+        bank_id = str(request.data.get("bank_id") or "").strip()
+        if not bank or not bank_id:
+            return Response(
+                {"detail": "A bank and bank_id are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            photo = image_banks.photo_by_id(bank, bank_id)
+        except image_banks.ImageBankError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception("Stock image lookup failed for %s:%s", bank, bank_id)
+            return Response(
+                {"detail": "The image service is unavailable. Please try again."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        if photo is None:
+            return Response(
+                {"detail": "That image is no longer available from the bank."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            content, content_type = image_banks.download_bytes(photo)
+        except Exception:
+            logger.exception("Stock image download failed for %s", photo.key)
+            return Response(
+                {"detail": "The image could not be downloaded. Please try again."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        if len(content) > STOCK_IMAGE_MAX_BYTES:
+            return Response(
+                {"detail": "That image is too large to import."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        if not content_type.startswith("image/"):
+            return Response(
+                {"detail": "That link did not return an image."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        encoded = base64.b64encode(content).decode("ascii")
+        return Response(
+            {
+                "bank": photo.bank,
+                "bank_id": photo.bank_id,
+                # A data URL, the same shape the CMS uploader produces from a
+                # file, so every write serializer takes it with no special case.
+                "image": f"data:{content_type};base64,{encoded}",
+                "attribution": photo.attribution,
+                "attribution_url": photo.attribution_url,
+                "alt": photo.alt,
+            }
+        )
 
 
 # --------------------------------------------------------------------------- #

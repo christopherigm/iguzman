@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { use } from "react";
 import { updateAdminUser, listAdminUsers } from "@/lib/admin-api";
+import { SiblingArrow } from "@/components/admin/sibling-arrows";
+import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Button } from "@repo/ui/core-elements/button";
@@ -28,6 +30,16 @@ export default function AdminUserFormPage({ params }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Prev/next through the CMS list, for the arrows beside Save. `systemId` is 0
+  // because the users list is not tenant-scoped by a query param - the token
+  // already decides whose users these are - and `listAdminUsers` ignores it.
+  const siblings = useAdminSiblings({
+    basePath: "/admin/users",
+    id,
+    systemId: 0,
+    list: listAdminUsers,
+  });
 
   useEffect(() => {
     listAdminUsers()
@@ -93,6 +105,9 @@ export default function AdminUserFormPage({ params }: Props) {
           </Typography>
           <Box display="flex" alignItems="center" gap={8}>
             <Button text={t("cancel")} size="md" onClick={() => router.back()} />
+            {/* This form has no fixed bottom bar, so the arrows flank the
+                header's Save rather than a floating one. */}
+            <SiblingArrow direction="prev" siblings={siblings} size="md" />
             <Button
               text={saving ? t("saving") : t("save")}
               onClick={handleSave}
@@ -100,6 +115,7 @@ export default function AdminUserFormPage({ params }: Props) {
               kind="primary"
               size="md"
             />
+            <SiblingArrow direction="next" siblings={siblings} size="md" />
           </Box>
         </Box>
 

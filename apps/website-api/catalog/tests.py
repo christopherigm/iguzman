@@ -510,6 +510,56 @@ class IngredientTests(TestCase):
         self.assertEqual(blocked.status_code, 409)
         self.assertTrue(Ingredient.objects.filter(pk=self.butter.id).exists())
 
+    def test_an_image_picked_from_a_bank_keeps_its_credit_and_an_upload_drops_it(self):
+        """The CMS image picker sends a stock photo with the credit its bank's
+        API terms require, and `save_to_field` clears any stored credit on every
+        upload - so the credit has to be applied *after* the file, or the footer
+        thanks nobody for a photo that is on the page. The mirror case matters
+        just as much: a customer's own photograph must not stay credited to a
+        stranger."""
+        client = admin_client(self, self.system, username="chef")
+        png = (
+            "data:image/png;base64,"
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8"
+            "z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+        )
+
+        created = client.post(
+            "/api/catalog/ingredients/",
+            data={
+                "system": self.system.id, "name": "Lemon", "slug": "lemon",
+                "unit": "pc", "nutrition_basis_quantity": "1",
+                "image": png,
+                "attribution": "Photo by P on Pexels",
+                "attribution_url": "https://www.pexels.com/photo/7/",
+            },
+            content_type="application/json", **self.host,
+        )
+        self.assertEqual(created.status_code, 201, created.content)
+        lemon = Ingredient.objects.get(slug="lemon")
+        self.assertTrue(lemon.image)
+        self.assertEqual(lemon.attribution, "Photo by P on Pexels")
+        self.assertEqual(lemon.attribution_url, "https://www.pexels.com/photo/7/")
+
+        # An edit that does not touch the image leaves the credit alone.
+        client.patch(
+            f"/api/catalog/ingredients/{lemon.id}/",
+            data={"name": "Lemon (organic)"},
+            content_type="application/json", **self.host,
+        )
+        lemon.refresh_from_db()
+        self.assertEqual(lemon.attribution, "Photo by P on Pexels")
+
+        # The operator's own photograph, uploaded over it, owes nobody.
+        client.patch(
+            f"/api/catalog/ingredients/{lemon.id}/",
+            data={"image": png},
+            content_type="application/json", **self.host,
+        )
+        lemon.refresh_from_db()
+        self.assertEqual(lemon.attribution, "")
+        self.assertEqual(lemon.attribution_url, "")
+
     def test_a_blocked_delete_names_its_usages_and_is_resolved_by_a_mode(self):
         """The 409 says *what* is holding the ingredient down, and re-issuing the
         delete with a mode is the admin's answer: `detach` keeps the dishes,
@@ -1256,3 +1306,101 @@ class RecommendationEndpointTests(TestCase):
             ).status_code,
             400,
         )
+
+
+class StockImageCreditTests(TestCase):
+    """Every CMS image field now carries the stock-image picker, so every write
+    serializer behind one has to keep the credit its bank is owed.
+
+    One test rather than one per model: the three shapes below are the only
+    three the CMS has (a `ModelSerializer` on a category, a plain `Serializer` on
+    a buyable, and a gallery row created from its parent), and each of them
+    reaches `StockCreditWriteMixin` -> `save_to_field(..., credit)` by a
+    different route. What must hold on all of them is the pair of rules the
+    footer's credit line depends on: a bank photo keeps its credit, and a
+    photograph the customer uploaded over it owes nobody.
+    """
+
+    PNG = (
+        "data:image/png;base64,"
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8"
+        "z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    )
+    CREDIT = {
+        "attribution": "Photo by P on Pexels",
+        "attribution_url": "https://www.pexels.com/photo/7/",
+    }
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.host = {"HTTP_X_WEBSITE_HOST": "acme.test"}
+        self.client = admin_client(self, self.system)
+
+    def _post(self, url, **data):
+        response = self.client.post(
+            url, data=data, content_type="application/json", **self.host,
+        )
+        self.assertIn(response.status_code, (200, 201), response.content)
+        return response
+
+    def _assert_credited(self, row):
+        row.refresh_from_db()
+        self.assertTrue(row.image)
+        self.assertEqual(row.attribution, self.CREDIT["attribution"])
+        self.assertEqual(row.attribution_url, self.CREDIT["attribution_url"])
+
+    def test_a_picked_photo_keeps_its_credit_on_every_write_shape(self):
+        # A category: ModelSerializer.create -> _save_image.
+        self._post(
+            "/api/catalog/product-categories/",
+            system=self.system.id, name="Tools", slug="tools",
+            image=self.PNG, **self.CREDIT,
+        )
+        self._assert_credited(ProductCategory.objects.get(slug="tools"))
+
+        # A buyable: a plain Serializer, whose create() feeds `validated_data`
+        # straight into the model - so the credit has to be popped out of it.
+        self._post(
+            "/api/catalog/products/",
+            system=self.system.id, name="Hammer", slug="hammer", price="10.00",
+            image=self.PNG, **self.CREDIT,
+        )
+        hammer = Product.objects.get(slug="hammer")
+        self._assert_credited(hammer)
+
+        # A gallery row, created from its parent rather than from a payload of
+        # its own.
+        self._post(
+            f"/api/catalog/products/{hammer.pk}/images/",
+            image=self.PNG, **self.CREDIT,
+        )
+        self._assert_credited(hammer.images.get())
+
+    def test_the_operators_own_upload_clears_the_credit(self):
+        """The mirror rule, and the reason the pair travels *with* the file: a
+        customer's own photograph must never stay credited to a stranger, and an
+        edit that does not touch the image must not silently drop a credit that
+        is still owed."""
+        self._post(
+            "/api/catalog/products/",
+            system=self.system.id, name="Hammer", slug="hammer", price="10.00",
+            image=self.PNG, **self.CREDIT,
+        )
+        hammer = Product.objects.get(slug="hammer")
+
+        self.client.patch(
+            f"/api/catalog/products/{hammer.pk}/",
+            data={"name": "Hammer (steel)"},
+            content_type="application/json", **self.host,
+        )
+        self._assert_credited(hammer)
+
+        self.client.patch(
+            f"/api/catalog/products/{hammer.pk}/",
+            data={"image": self.PNG},
+            content_type="application/json", **self.host,
+        )
+        hammer.refresh_from_db()
+        self.assertEqual(hammer.attribution, "")
+        self.assertEqual(hammer.attribution_url, "")

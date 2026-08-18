@@ -10,6 +10,8 @@ import {
   AdminImageUploader,
   type NewImage,
 } from "@/components/admin-image-uploader/admin-image-uploader";
+import { ImageWebSearch } from "@/components/admin/image-web-search";
+import { remainingGallerySlots } from "@/hooks/use-admin-image-field";
 import {
   VariantsEditor,
   type VariantOption,
@@ -23,6 +25,8 @@ import {
   updateProduct,
   listProducts,
   listProductImages,
+  createStockGalleryRows,
+  type StockImageFile,
   createProductImage,
   deleteProductImage,
   updateProductImage,
@@ -30,11 +34,15 @@ import {
   listBrands,
   checkSlug,
 } from "@/lib/admin-api";
+import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import { buildSlug } from "@/lib/slug-utils";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+
+/** How many photos one product's gallery holds, uploads and picks together. */
+const GALLERY_MAX = 10;
 
 type Props = { params: Promise<{ locale: string; id: string }> };
 
@@ -95,6 +103,10 @@ export default function AdminProductFormPage({ params }: Props) {
   const [pendingNewImages, setPendingNewImages] = useState<NewImage[]>([]);
   const [pendingDeletedIds, setPendingDeletedIds] = useState<number[]>([]);
   const [pendingOrder, setPendingOrder] = useState<number[]>([]);
+  // Photos picked from a stock bank. They become gallery rows of their own on
+  // save, after the operator's uploads - the picker and the uploader both fill
+  // the same ten slots, so neither replaces the other.
+  const [stockImages, setStockImages] = useState<StockImageFile[]>([]);
 
   // Sibling variants: the ids currently linked, and the pool of other products
   // to pick from (self is excluded where the picker is rendered).
@@ -114,6 +126,15 @@ export default function AdminProductFormPage({ params }: Props) {
   const [slugError, setSlugError] = useState<string | null>(null);
 
   const systemId = useSession()?.systemId ?? 0;
+  // Prev/next through the CMS list, for the arrows beside Save.
+  const siblings = useAdminSiblings({
+    basePath: "/admin/products",
+    id,
+    systemId,
+    list: listProducts,
+    groupKey: "category",
+    groupList: listProductCategories,
+  });
 
   // Checkout recommendations. `categoryId` follows the *form's* category field
   // rather than the saved row, so re-filing this item updates the "inheriting
@@ -306,6 +327,15 @@ export default function AdminProductFormPage({ params }: Props) {
           sort_order: pendingOrder.length + i,
         }).catch(() => null);
       }
+      // ⚠ Each picked photo's credit goes in the same create call as its file:
+      // storing an image clears any attribution, so a second write would lose
+      // the credit that makes the photo legal to publish.
+      await createStockGalleryRows(
+        stockImages,
+        pendingOrder.length + pendingNewImages.length,
+        (payload) => createProductImage(productId, payload),
+      );
+      setStockImages([]);
       // Update sort orders for existing
       for (let i = 0; i < pendingOrder.length; i++) {
         await updateProductImage(productId, pendingOrder[i] ?? 0, {
@@ -444,6 +474,7 @@ export default function AdminProductFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
+        siblings={siblings}
         productionHref={
           !isNew && values.slug ? `/products/${String(values.slug)}` : undefined
         }
@@ -453,7 +484,21 @@ export default function AdminProductFormPage({ params }: Props) {
             <AdminImageUploader
               existingImages={existingImages}
               onChange={handleImagesChange}
-              maxImages={10}
+              maxImages={GALLERY_MAX}
+            />
+            <ImageWebSearch
+              defaultQuery={
+                String(values.name ?? "").trim() ||
+                String(values.en_name ?? "").trim()
+              }
+              value={stockImages}
+              onChange={setStockImages}
+              slots={remainingGallerySlots(
+                GALLERY_MAX,
+                existingImages,
+                pendingDeletedIds,
+                pendingNewImages,
+              )}
             />
           </Box>
         }

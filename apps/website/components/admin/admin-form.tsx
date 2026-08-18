@@ -21,6 +21,8 @@ import {
   PARAGRAPH_COUNT_STEPS,
 } from "./paragraph-options";
 import { buildEnhanceMessages, buildTranslateMessages } from "./field-assist";
+import { SiblingArrow } from "./sibling-arrows";
+import type { AdminSiblings } from "@/hooks/use-admin-siblings";
 
 // ── Pair group label ───────────────────────────────────────────────────────
 
@@ -142,6 +144,17 @@ interface AdminFormProps {
    */
   productionHref?: string;
   /**
+   * The records either side of this one in the CMS list, from
+   * `useAdminSiblings`. When set, the fixed action bar flanks Save with a prev
+   * and a next arrow, so a run of records can be worked through without going
+   * back to the table. Each arrow is disabled at its end of the list - and both
+   * are while the list is still loading, or on a record the list does not carry.
+   *
+   * Leave undefined for a new record and for a form that edits a singleton
+   * (system settings), which has no list to walk.
+   */
+  siblings?: AdminSiblings;
+  /**
    * Image uploaders, rendered directly below the record's name (and its EN
    * counterpart, when paired) rather than at the bottom with `children` - they
    * are central to the record and shouldn't sit behind a scroll of text fields.
@@ -178,6 +191,7 @@ export function AdminForm({
   error,
   success,
   productionHref,
+  siblings,
   imagesSlot,
   slots,
   children,
@@ -907,7 +921,8 @@ export function AdminForm({
 
           {/* Fixed action bar, centered at the bottom of the viewport: the
               production-view shortcut (when the record has a public page) sits
-              beside the primary Save button. */}
+              beside the primary Save button, which is itself flanked by the
+              prev/next arrows through the CMS list. */}
           {!embedded && (
             <Box
               display="flex"
@@ -940,6 +955,7 @@ export function AdminForm({
                   size="lg"
                 />
               )}
+              <SiblingArrow direction="prev" siblings={siblings} />
               <Button
                 type="submit"
                 text={saving ? t("saving") : t("save")}
@@ -947,6 +963,7 @@ export function AdminForm({
                 kind="primary"
                 size="lg"
               />
+              <SiblingArrow direction="next" siblings={siblings} />
             </Box>
           )}
         </form>

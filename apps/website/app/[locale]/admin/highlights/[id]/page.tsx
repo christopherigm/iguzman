@@ -5,16 +5,16 @@ import { useTranslations } from "next-intl";
 import { use } from "react";
 import { useRouter } from "@repo/i18n/navigation";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
-import {
-  AdminImageUploader,
-  type NewImage,
-} from "@/components/admin-image-uploader/admin-image-uploader";
+import { AdminImageField } from "@/components/admin/admin-image-field";
+import { useAdminImageField } from "@/hooks/use-admin-image-field";
 import {
   getHighlight,
   createHighlight,
   updateHighlight,
   checkSlug,
+  listHighlights,
 } from "@/lib/admin-api";
+import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import { buildSlug } from "@/lib/slug-utils";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
@@ -52,16 +52,25 @@ export default function AdminHighlightFormPage({ params }: Props) {
     href: "",
     enabled: true,
   });
-  const [pendingImage, setPendingImage] = useState<NewImage[]>([]);
-  const [existingImage, setExistingImage] = useState<
-    { id: number; url: string }[]
-  >([]);
+  // The uploader and the stock-image picker, which are one field with two doors.
+  const image = useAdminImageField();
+  // Pulled out because the load effect below depends on it: this one callback is
+  // stable, where `image` itself changes with every pick and keystroke - and an
+  // effect keyed on the object would re-fetch the record each time.
+  const loadImage = image.load;
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [slugError, setSlugError] = useState<string | null>(null);
   const systemId = useSession()?.systemId ?? 0;
+  // Prev/next through the CMS list, for the arrows beside Save.
+  const siblings = useAdminSiblings({
+    basePath: "/admin/highlights",
+    id,
+    systemId,
+    list: listHighlights,
+  });
 
   // Auto-populate slug from name for new records (the slug field is read-only).
   // Derived during render rather than in an effect; the guard stops it looping
@@ -109,13 +118,12 @@ export default function AdminHighlightFormPage({ params }: Props) {
             href: data.href ?? "",
             enabled: data.enabled ?? true,
           });
-          if (data.image)
-            setExistingImage([{ id: Number(id), url: String(data.image) }]);
+          loadImage(data.image, Number(id));
         })
         .catch(() => setError(t("errorLoad")))
         .finally(() => setLoading(false));
     }
-  }, [id, isNew, t]);
+  }, [id, isNew, loadImage, t]);
 
   const handleSubmit = async () => {
     setSaving(true);
@@ -129,18 +137,18 @@ export default function AdminHighlightFormPage({ params }: Props) {
       if (!payload.icon) payload.icon = null;
       // The slug is read-only and derived server-side; omit it when empty.
       if (!payload.slug) delete payload.slug;
-      if (pendingImage.length > 0) {
-        payload.image = pendingImage[0]?.base64;
-      } else if (existingImage.length === 0) {
-        payload.image = null;
-      }
+      // The image, and - when it came from a bank - the credit it owes, which
+      // has to be in the same write as the file it describes.
+      Object.assign(payload, image.payload());
       if (isNew) {
         const c = await createHighlight(payload);
         setSuccess(t("saved"));
+        image.settle(c.image, c.id as number);
         router.replace(`/admin/highlights/${c.id}`);
       } else {
-        await updateHighlight(Number(id), payload);
+        const updated = await updateHighlight(Number(id), payload);
         setSuccess(t("saved"));
+        image.settle(updated.image, Number(id));
       }
     } catch {
       setError(t("errorSave"));
@@ -220,25 +228,21 @@ export default function AdminHighlightFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
+        siblings={siblings}
         productionHref={
           !isNew && values.slug
             ? `/highlights/${String(values.slug)}`
             : undefined
         }
         imagesSlot={
-          <Box display="flex" flexDirection="column" gap="8px">
-            <Typography variant="label">{t("image") ?? "Image"}</Typography>
-            <AdminImageUploader
-              existingImages={existingImage}
-              onChange={(n, _d, o) => {
-                setPendingImage(n);
-                setExistingImage((prev) =>
-                  prev.filter((img) => o.includes(img.id)),
-                );
-              }}
-              maxImages={1}
-            />
-          </Box>
+          <AdminImageField
+            label={t("image") ?? "Image"}
+            field={image}
+            query={
+              String(values.name ?? "").trim() ||
+              String(values.en_name ?? "").trim()
+            }
+          />
         }
       />
     </>

@@ -1037,7 +1037,7 @@ class StockImageTests(IsolatedMediaTestCase):
         """`fetch_seed_images` -> brief -> `seed_site` -> a customer's own upload.
 
         The credits sidecar has to be keyed by exactly the string the rewritten
-        brief now holds, and `_clear_attribution` has to persist itself with its
+        brief now holds, and `_apply_attribution` has to persist itself with its
         own UPDATE - every caller saves with `update_fields=["image"]`, which
         would silently discard an in-memory change.
         """
@@ -1158,3 +1158,112 @@ class StockImageTests(IsolatedMediaTestCase):
         fallback = MenuItem.objects.get(name="Cubana")
         self.assertTrue(fallback.image)   # the pool filled it
         self.assertEqual(fallback.attribution, "")
+
+
+# --------------------------------------------------------------------------- #
+# The CMS image picker
+# --------------------------------------------------------------------------- #
+
+class StockImagePickerApiTests(TestCase):
+    """`/api/stock-images/…` - what the CMS's "Find an image" grid runs on.
+
+    The keys stay here (beside the ones `fetch_seed_images` uses) and the credit
+    is re-read from the bank at download time, so neither can be chosen by the
+    browser. Both properties are what these tests are actually guarding.
+    """
+
+    def setUp(self):
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+        self.client.force_login(make_admin("admin", self.system))
+
+    def _photo(self, bank_id="7"):
+        from core.services.image_banks import Photo
+
+        return Photo(
+            bank="pexels",
+            bank_id=bank_id,
+            download_url="https://images.pexels.test/7-large.jpg",
+            attribution="Photo by P on Pexels",
+            attribution_url="https://www.pexels.com/photo/7/",
+            alt="a lemon",
+            thumbnail_url="https://images.pexels.test/7-medium.jpg",
+        )
+
+    def _post(self, path, **body):
+        return self.client.post(
+            path, data=json.dumps(body), content_type="application/json"
+        )
+
+    def test_search_returns_the_grid_and_never_the_download_url(self):
+        with mock.patch(
+            "core.views.image_banks.configured_banks", lambda: ["pexels"]
+        ), mock.patch(
+            "core.views.image_banks.search_photos",
+            lambda query, **kwargs: [self._photo()],
+        ):
+            res = self._post("/api/stock-images/search/", query="lemon")
+
+        self.assertEqual(res.status_code, 200, res.content)
+        body = res.json()
+        self.assertEqual(body["banks"], ["pexels"])
+        hit = body["results"][0]
+        self.assertEqual(hit["bank_id"], "7")
+        self.assertEqual(hit["thumbnail"], "https://images.pexels.test/7-medium.jpg")
+        self.assertEqual(hit["attribution"], "Photo by P on Pexels")
+        # The browser picks by id; a URL it could hand back is a URL this pod
+        # would then fetch.
+        self.assertNotIn("download_url", hit)
+
+    def test_search_says_so_when_no_bank_is_configured(self):
+        with mock.patch("core.views.image_banks.configured_banks", lambda: []):
+            res = self._post("/api/stock-images/search/", query="lemon")
+        self.assertEqual(res.status_code, 503)
+        self.assertEqual(res.json()["code"], "NO_IMAGE_BANK")
+
+    def test_fetch_downloads_by_id_and_carries_the_credit(self):
+        asked = {}
+
+        def fake_by_id(bank, bank_id):
+            asked["bank"], asked["bank_id"] = bank, bank_id
+            return self._photo(bank_id)
+
+        buffer = BytesIO()
+        Image.new("RGB", (4, 4), "yellow").save(buffer, format="JPEG")
+
+        with mock.patch("core.views.image_banks.photo_by_id", fake_by_id), mock.patch(
+            "core.views.image_banks.download_bytes",
+            lambda photo: (buffer.getvalue(), "image/jpeg"),
+        ):
+            res = self._post(
+                "/api/stock-images/fetch/", bank="pexels", bank_id="7",
+                # A URL sent by the client is ignored: the photo is re-read from
+                # the bank by id, and so is the credit that goes with it.
+                url="https://evil.test/private.png",
+                attribution="Photo by Nobody",
+            )
+
+        self.assertEqual(res.status_code, 200, res.content)
+        body = res.json()
+        self.assertEqual(asked, {"bank": "pexels", "bank_id": "7"})
+        self.assertTrue(body["image"].startswith("data:image/jpeg;base64,"))
+        self.assertEqual(body["attribution"], "Photo by P on Pexels")
+        self.assertEqual(body["attribution_url"], "https://www.pexels.com/photo/7/")
+
+    def test_fetch_reports_a_photo_the_bank_no_longer_has(self):
+        with mock.patch(
+            "core.views.image_banks.photo_by_id", lambda bank, bank_id: None
+        ):
+            res = self._post("/api/stock-images/fetch/", bank="pexels", bank_id="7")
+        self.assertEqual(res.status_code, 404)
+
+    def test_both_endpoints_are_admin_only(self):
+        self.client.force_login(make_admin("shopper", self.system, is_admin=False))
+        self.assertEqual(
+            self._post("/api/stock-images/search/", query="lemon").status_code, 403
+        )
+        self.assertEqual(
+            self._post(
+                "/api/stock-images/fetch/", bank="pexels", bank_id="7"
+            ).status_code,
+            403,
+        )

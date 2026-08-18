@@ -1,8 +1,12 @@
 """image_banks - search a free stock bank for one photo, and say who it is owed to.
 
-Used by the `fetch_seed_images` management command to fill a `/seed-site` brief
-with real, on-subject photography instead of the eight generic `placeholder-*`
-files, so a landing can be shown to a customer the day it is seeded.
+Two consumers. The `fetch_seed_images` management command fills a `/seed-site`
+brief with real, on-subject photography instead of the eight generic
+`placeholder-*` files, so a landing can be shown to a customer the day it is
+seeded - it picks one photo per record, unattended (`search_photo`). The CMS's
+image picker (`/api/stock-images/*`) puts the same search in front of an operator
+editing one record, so the choice is theirs (`search_photos`, then
+`photo_by_id` + `download_bytes` for the one they pick).
 
 **Only free-license banks live here, deliberately.** Pexels and Pixabay both
 license their content for commercial use, which is what lets a seeded image
@@ -69,6 +73,9 @@ class Photo:
     # The bank's own description, shown to the operator so a bad match can be
     # spotted without opening the file. Pixabay has no alt text and sends tags.
     alt: str = ""
+    # A small render of the same photo, for a picker grid. Never downloaded into
+    # an ImageField - `download_url` is what a chosen photo is stored from.
+    thumbnail_url: str = ""
 
     @property
     def key(self) -> str:
@@ -84,6 +91,31 @@ class ImageBankError(RuntimeError):
 # Pexels
 # --------------------------------------------------------------------------- #
 
+def _pexels_photo(hit: dict) -> Photo | None:
+    """One Pexels API hit as a `Photo`, or None if it carries no usable render."""
+    src = hit.get("src") or {}
+    url = src.get(_PEXELS_SIZE) or src.get("large") or src.get("original")
+    if not url:
+        return None
+    photographer = (hit.get("photographer") or "").strip()
+    return Photo(
+        bank=PEXELS,
+        bank_id=str(hit.get("id")),
+        download_url=url,
+        # The exact wording Pexels' own guidelines ask for.
+        attribution=(
+            f"Photo by {photographer} on Pexels" if photographer
+            else "Photo on Pexels"
+        ),
+        # The photo's page, not the photographer's profile: the credit
+        # has to lead to the image being credited, which is also where a
+        # customer goes to check the licence for themselves.
+        attribution_url=hit.get("url") or "",
+        alt=(hit.get("alt") or "").strip(),
+        thumbnail_url=src.get("medium") or src.get("small") or url,
+    )
+
+
 def _search_pexels(query: str, orientation: str | None) -> list[Photo]:
     if not settings.PEXELS_API_KEY:
         raise ImageBankError("PEXELS_API_KEY is not set")
@@ -97,36 +129,47 @@ def _search_pexels(query: str, orientation: str | None) -> list[Photo]:
         timeout=_SEARCH_TIMEOUT,
     )
     resp.raise_for_status()
-    photos = []
-    for hit in resp.json().get("photos") or []:
-        src = hit.get("src") or {}
-        url = src.get(_PEXELS_SIZE) or src.get("large") or src.get("original")
-        if not url:
-            continue
-        photographer = (hit.get("photographer") or "").strip()
-        photos.append(
-            Photo(
-                bank=PEXELS,
-                bank_id=str(hit.get("id")),
-                download_url=url,
-                # The exact wording Pexels' own guidelines ask for.
-                attribution=(
-                    f"Photo by {photographer} on Pexels" if photographer
-                    else "Photo on Pexels"
-                ),
-                # The photo's page, not the photographer's profile: the credit
-                # has to lead to the image being credited, which is also where a
-                # customer goes to check the licence for themselves.
-                attribution_url=hit.get("url") or "",
-                alt=(hit.get("alt") or "").strip(),
-            )
-        )
-    return photos
+    photos = [_pexels_photo(hit) for hit in resp.json().get("photos") or []]
+    return [photo for photo in photos if photo]
+
+
+def _get_pexels(bank_id: str) -> Photo | None:
+    if not settings.PEXELS_API_KEY:
+        raise ImageBankError("PEXELS_API_KEY is not set")
+    resp = requests.get(
+        f"https://api.pexels.com/v1/photos/{bank_id}",
+        headers={"Authorization": settings.PEXELS_API_KEY},
+        timeout=_SEARCH_TIMEOUT,
+    )
+    if resp.status_code == 404:
+        return None
+    resp.raise_for_status()
+    return _pexels_photo(resp.json())
 
 
 # --------------------------------------------------------------------------- #
 # Pixabay
 # --------------------------------------------------------------------------- #
+
+def _pixabay_photo(hit: dict) -> Photo | None:
+    """One Pixabay API hit as a `Photo`, or None if it carries no usable render."""
+    # `largeImageURL` is the 1280px render. Pixabay's terms forbid permanent
+    # hotlinking and ask that you download to your own server - which is
+    # exactly what the caller does, since these land in an ImageField.
+    url = hit.get("largeImageURL") or hit.get("webformatURL")
+    if not url:
+        return None
+    user = (hit.get("user") or "").strip()
+    return Photo(
+        bank=PIXABAY,
+        bank_id=str(hit.get("id")),
+        download_url=url,
+        attribution=(f"Image by {user} on Pixabay" if user else "Image on Pixabay"),
+        attribution_url=hit.get("pageURL") or "",
+        alt=(hit.get("tags") or "").strip(),
+        thumbnail_url=hit.get("previewURL") or hit.get("webformatURL") or url,
+    )
+
 
 def _search_pixabay(query: str, orientation: str | None) -> list[Photo]:
     if not settings.PIXABAY_API_KEY:
@@ -144,31 +187,30 @@ def _search_pixabay(query: str, orientation: str | None) -> list[Photo]:
         "https://pixabay.com/api/", params=params, timeout=_SEARCH_TIMEOUT
     )
     resp.raise_for_status()
-    photos = []
-    for hit in resp.json().get("hits") or []:
-        # `largeImageURL` is the 1280px render. Pixabay's terms forbid permanent
-        # hotlinking and ask that you download to your own server - which is
-        # exactly what the caller does, since these land in an ImageField.
-        url = hit.get("largeImageURL") or hit.get("webformatURL")
-        if not url:
-            continue
-        user = (hit.get("user") or "").strip()
-        photos.append(
-            Photo(
-                bank=PIXABAY,
-                bank_id=str(hit.get("id")),
-                download_url=url,
-                attribution=(
-                    f"Image by {user} on Pixabay" if user else "Image on Pixabay"
-                ),
-                attribution_url=hit.get("pageURL") or "",
-                alt=(hit.get("tags") or "").strip(),
-            )
-        )
-    return photos
+    photos = [_pixabay_photo(hit) for hit in resp.json().get("hits") or []]
+    return [photo for photo in photos if photo]
+
+
+def _get_pixabay(bank_id: str) -> Photo | None:
+    if not settings.PIXABAY_API_KEY:
+        raise ImageBankError("PIXABAY_API_KEY is not set")
+    resp = requests.get(
+        "https://pixabay.com/api/",
+        params={"key": settings.PIXABAY_API_KEY, "id": bank_id},
+        timeout=_SEARCH_TIMEOUT,
+    )
+    # Pixabay answers an id it does not have with a 400, where Pexels 404s. Both
+    # mean the same thing here - the photo is gone - and the caller has a clearer
+    # answer for that than for "the bank is unavailable".
+    if resp.status_code == 400:
+        return None
+    resp.raise_for_status()
+    hits = resp.json().get("hits") or []
+    return _pixabay_photo(hits[0]) if hits else None
 
 
 _BANKS = {PEXELS: _search_pexels, PIXABAY: _search_pixabay}
+_BANKS_BY_ID = {PEXELS: _get_pexels, PIXABAY: _get_pixabay}
 
 
 # --------------------------------------------------------------------------- #
@@ -213,6 +255,68 @@ def search_photo(
             if photo.key not in spent:
                 return photo
     return None
+
+
+def search_photos(
+    query: str,
+    *,
+    orientation: str | None = None,
+    banks: list[str] | None = None,
+    limit: int = _PER_PAGE,
+) -> list[Photo]:
+    """Every hit for `query`, across the banks, for an operator to choose from.
+
+    The counterpart to `search_photo` (which picks one for an unattended seed):
+    here a person is looking at the results, so nothing is de-duplicated against
+    an earlier run and nothing is ranked beyond the banks' own order - the
+    primary bank's hits first, the fallback's after them. A bank that is down or
+    unconfigured is skipped rather than failing the search, exactly as above.
+    """
+    results: list[Photo] = []
+    seen: set[str] = set()
+    for name in banks or configured_banks():
+        if len(results) >= limit:
+            break
+        try:
+            hits = _BANKS[name](query, orientation)
+        except (requests.RequestException, ImageBankError, ValueError) as exc:
+            logger.warning("image_banks: %s failed for %r (%s)", name, query, exc)
+            continue
+        for photo in hits:
+            if photo.key in seen:
+                continue
+            seen.add(photo.key)
+            results.append(photo)
+            if len(results) >= limit:
+                break
+    return results
+
+
+def photo_by_id(bank: str, bank_id: str) -> Photo | None:
+    """Re-read one hit from its bank, or None if the bank no longer has it.
+
+    ⚠ **This is what keeps a download from taking a URL off the client.** A
+    caller that let the browser name the file to fetch would be an open proxy
+    into this pod's network, and would let the credit be chosen by whoever chose
+    the image. Both come from the bank instead, addressed by an id.
+    """
+    fetch = _BANKS_BY_ID.get(bank)
+    if fetch is None:
+        raise ImageBankError(f"Unknown image bank {bank!r}")
+    return fetch(bank_id)
+
+
+def download_bytes(photo: Photo) -> tuple[bytes, str]:
+    """The photo's own bytes and its content type. Raises on any HTTP failure.
+
+    The content type travels with the bytes because the caller that hands a
+    photo to a browser has to name the format in the data URL, and the banks
+    serve JPEG, PNG and WebP from the same field.
+    """
+    resp = requests.get(photo.download_url, timeout=_DOWNLOAD_TIMEOUT)
+    resp.raise_for_status()
+    content_type = (resp.headers.get("Content-Type") or "image/jpeg").split(";")[0]
+    return resp.content, content_type.strip()
 
 
 def download(photo: Photo, dest) -> None:

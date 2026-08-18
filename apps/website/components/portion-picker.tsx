@@ -1,8 +1,13 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
+import {
+  prefersReducedMotion,
+  scrollToElement,
+} from "@repo/ui/core-elements/scroll-to";
 import { Slider, type SliderStep } from "@repo/ui/core-elements/slider";
 import { Typography } from "@repo/ui/core-elements/typography";
 import "./portion-picker.css";
@@ -36,6 +41,14 @@ const SIZES = {
 
 /** The apply glyph. Kept here so both halves of the control name it once. */
 export const PORTION_APPLY_ICON = "/icons/ok.svg";
+
+/**
+ * How long the panel takes to unfold, in ms - **the `grid-template-rows`
+ * transition in `portion-picker.css`**. Keep the two in step: it is how long
+ * {@link PortionSlider} waits before scrolling itself into view, and a scroll
+ * aimed at the panel while it is still a zero-height row lands short of it.
+ */
+const PORTION_FOLD_MS = 260;
 
 /**
  * How many of the three circles are lit for `value`.
@@ -190,9 +203,30 @@ export function PortionSlider({
   size = "sm",
 }: SliderProps) {
   const s = SIZES[size];
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Bring the panel into view when it opens. The gauge for the last ingredient
+  // in a long list sits at the bottom of the modal (or the page), so the slider
+  // it unfolds lands below the fold and the press reads as having done nothing.
+  //
+  // `block: "nearest"` is what makes this "a little bit": a panel already fully
+  // visible does not move the page at all, and one that is not is scrolled by
+  // exactly the amount that reveals it - keeping the gauge that was pressed on
+  // screen above it.
+  useEffect(() => {
+    if (!open) return;
+    // Wait for the fold: until it finishes the panel is a zero-height row, and
+    // scrolling to it would aim at the line it used to occupy.
+    const timer = window.setTimeout(
+      () => scrollToElement(panelRef.current, { block: "nearest" }),
+      prefersReducedMotion() ? 0 : PORTION_FOLD_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [open]);
 
   return (
     <Box
+      ref={panelRef}
       id={id}
       display="grid"
       className={["portion-slider", open ? "portion-slider--open" : ""]

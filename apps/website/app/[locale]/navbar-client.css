@@ -1,0 +1,9 @@
+/* The cart button's label. Below `sm` the bar has to fit a logo, this button,
+   two icons and the hamburger on a phone's width, and the label is the part
+   that gives - the filled accent button still reads as a button without it.
+   Nothing else here: everything the button can express as a prop, it does. */
+@media (--below-sm) {
+  .navbar-cart-label {
+    display: none;
+  }
+}

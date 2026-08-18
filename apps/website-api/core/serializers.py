@@ -147,12 +147,19 @@ class ImageProcessingSerializer(serializers.Serializer):
         output.seek(0)
         return output, fmt
 
-    def save_to_field(self, image_field, filename):
+    def save_to_field(self, image_field, filename, credit=None):
         """
         Process the image and save it to a Django ImageField / FileField.
 
         The caller's extension is advisory: it is rewritten to match the format
         actually written, since that now depends on what was uploaded.
+
+        ``credit`` is the ``(attribution, attribution_url)`` pair a photo picked
+        from a stock bank owes, or ``None`` for a file the customer uploaded
+        themselves - which owes nobody, and so clears whatever credit the row was
+        carrying. Either way the pair is written here rather than by the caller,
+        because it has to be settled by the same call that stores the file it
+        describes (see ``_apply_attribution``).
 
         Usage:
             serializer.save_to_field(instance.avatar, "avatar_42.jpg")
@@ -162,24 +169,31 @@ class ImageProcessingSerializer(serializers.Serializer):
         base = filename.rsplit(".", 1)[0]
         name = f"{base}.{_EXTENSIONS.get(fmt, 'jpg')}"
         image_field.save(name, ContentFile(output.read()), save=False)
-        _clear_attribution(image_field)
+        _apply_attribution(image_field, credit)
 
 
-def _clear_attribution(image_field) -> None:
-    """Drop the stock-bank credit when a customer uploads their own photo.
+def _apply_attribution(image_field, credit=None) -> None:
+    """Settle the stock-bank credit for the file just written to ``image_field``.
+
+    ``credit`` is the ``(attribution, attribution_url)`` pair the photo owes, or
+    ``None`` when the customer uploaded their own photo - which owes nobody, so
+    the row's credit is dropped.
 
     Every CMS image upload in this API funnels through `save_to_field`, so this
     is the one place that can make "the credit describes the file that is
     actually there" true for all of them - `attribution` is on `BasePicture`, so
-    a hand-written clear would have to be repeated in a dozen serializers and
-    would drift the first time one was added.
+    a hand-written version would have to be repeated in a dozen serializers and
+    would drift the first time one was added. It is also why the two halves are
+    one call rather than the serializer setting the pair itself afterwards: a
+    write that stored a photo and *then* credited it would be one ordering
+    mistake away from crediting a stranger for the customer's own camera roll.
 
     ⚠ **It persists itself with its own UPDATE** rather than leaving the fields
     to the caller. Every caller saves with `update_fields=["image"]`, which would
     silently discard an in-memory change to any other column - and the symptom
     would be a customer's own photograph still credited to a stranger. The write
-    only happens when there is actually a credit to clear, which is never the
-    case for a site that was not seeded from a bank.
+    only happens when the stored pair actually changes, which for a plain upload
+    on a site that was not seeded from a bank is never.
 
     Removing an image entirely is deliberately **not** covered here: it leaves a
     credit attached to nothing, which over-credits (the footer thanks a bank the
@@ -194,12 +208,13 @@ def _clear_attribution(image_field) -> None:
     url = f"{base}_url"
     if not hasattr(instance, base):
         return
-    if not getattr(instance, base) and not getattr(instance, url):
+    text, href = credit or ("", "")
+    if getattr(instance, base) == text and getattr(instance, url) == href:
         return
-    setattr(instance, base, "")
-    setattr(instance, url, "")
+    setattr(instance, base, text)
+    setattr(instance, url, href)
     # `_default_manager`, not `.objects`: a model with a filtered default manager
-    # would otherwise fail to match its own row and clear nothing.
+    # would otherwise fail to match its own row and write nothing.
     #
     # The cached System payload (which carries `stock_image_count`) is left to
     # the caller's own `instance.save(update_fields=["image"])` a line later -
@@ -207,8 +222,60 @@ def _clear_attribution(image_field) -> None:
     # listening for. This UPDATE deliberately does not, since two invalidations
     # per upload buy nothing.
     type(instance)._default_manager.filter(pk=instance.pk).update(
-        **{base: "", url: ""}
+        **{base: text, url: href}
     )
+
+
+class StockCreditWriteMixin(serializers.Serializer):
+    """The optional ``attribution`` / ``attribution_url`` pair a write
+    serializer accepts beside a base64 ``image``.
+
+    ⚠ It subclasses ``Serializer`` rather than being a plain mixin, which it
+    looks like it should be: DRF's ``SerializerMetaclass`` collects inherited
+    fields only from bases that already carry ``_declared_fields``, so on a plain
+    mixin the two fields below are silently ignored by every ``Serializer``
+    subclass (a ``ModelSerializer`` still builds them from the model, which is
+    exactly the sort of half-working that hides the mistake). It goes *first* in
+    the bases so its fields survive the MRO.
+
+    Every CMS form with an image uploader also carries the stock-image picker
+    (`components/admin/image-web-search.tsx`), and a photo picked from a bank
+    arrives with the credit its bank's API terms are owed. That credit is not a
+    field an operator types: it is minted by `/api/stock-images/fetch/` from the
+    bank's own response and travels back untouched, in the same write as the
+    file - see `_apply_attribution` for why the two cannot be split.
+
+    A serializer opts in by mixing this in (a `ModelSerializer` also listing
+    ``*StockCreditWriteMixin.CREDIT_FIELDS`` in its ``Meta.fields``) and passing
+    ``pop_credit(...)``'s result to `ImageProcessingSerializer.save_to_field`.
+    """
+
+    attribution = serializers.CharField(
+        max_length=255, required=False, allow_blank=True
+    )
+    attribution_url = serializers.URLField(
+        max_length=500, required=False, allow_blank=True
+    )
+
+    #: For a ``ModelSerializer``'s ``Meta.fields``, which does not inherit
+    #: declared fields the way a plain ``Serializer`` does.
+    CREDIT_FIELDS = ("attribution", "attribution_url")
+
+    @staticmethod
+    def pop_credit(validated_data, has_image=True):
+        """The ``(attribution, url)`` pair to store with this write, or None.
+
+        ``None`` means "this file owes nobody", which is what clears the row's
+        credit - the right answer for a plain upload. A credit sent *without* an
+        image is dropped for the same reason: there is no new file for it to
+        describe, and honouring it would let a caller re-credit a photo it did
+        not supply.
+        """
+        attribution = validated_data.pop("attribution", None)
+        attribution_url = validated_data.pop("attribution_url", None)
+        if not has_image or (attribution is None and attribution_url is None):
+            return None
+        return (attribution or "", attribution_url or "")
 
 
 # ---------------------------------------------------------------------------
@@ -269,7 +336,7 @@ _STORY_IMAGE_CFG = image_cfg(REGULAR)
 _STORY_GALLERY_IMAGE_CFG = image_cfg(STANDARD)
 
 
-class SuccessStoryWriteSerializer(serializers.Serializer):
+class SuccessStoryWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
     """Write serializer for SuccessStory - accepts base64 image, all fields optional (PATCH semantics)."""
 
     system      = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), required=False, allow_null=True)
@@ -310,10 +377,13 @@ class SuccessStoryWriteSerializer(serializers.Serializer):
 
         if "image" in self.validated_data:
             image_value = self.validated_data["image"]
+            # The credit a photo picked from a stock bank owes; None for an
+            # upload, which owes nobody and clears whatever the row carried.
+            credit = self.pop_credit(self.validated_data, bool(image_value))
             if image_value:
                 proc = ImageProcessingSerializer(data={"base64_image": image_value}, **_STORY_IMAGE_CFG)
                 proc.is_valid()
-                proc.save_to_field(instance.image, f"story_{instance.pk}.jpg")
+                proc.save_to_field(instance.image, f"story_{instance.pk}.jpg", credit)
             else:
                 instance.image = None
             update_fields.append("image")
@@ -324,7 +394,7 @@ class SuccessStoryWriteSerializer(serializers.Serializer):
         return instance
 
 
-class SuccessStoryImageWriteSerializer(serializers.Serializer):
+class SuccessStoryImageWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
     """Create a gallery image linked to a story - accepts base64 image."""
 
     image      = serializers.CharField()
@@ -339,6 +409,10 @@ class SuccessStoryImageWriteSerializer(serializers.Serializer):
 
     def save(self, story):
         image_data = self.validated_data["image"]
+        # The credit a photo picked from a stock bank owes; None for an upload,
+        # which owes nobody. It rides into `save_to_field` because that call is
+        # what settles the row's attribution - see `_apply_attribution`.
+        credit = self.pop_credit(self.validated_data)
         instance = SuccessStoryImage(
             story=story,
             name=self.validated_data.get("name"),
@@ -347,7 +421,7 @@ class SuccessStoryImageWriteSerializer(serializers.Serializer):
         instance.save()
         proc = ImageProcessingSerializer(data={"base64_image": image_data}, **_STORY_GALLERY_IMAGE_CFG)
         proc.is_valid()
-        proc.save_to_field(instance.image, f"storyimage_{instance.pk}.jpg")
+        proc.save_to_field(instance.image, f"storyimage_{instance.pk}.jpg", credit)
         instance.save(update_fields=["image"])
         return instance
 
@@ -408,7 +482,7 @@ class CompanyHighlightSerializer(serializers.ModelSerializer):
         return obj.image.url
 
 
-class CompanyHighlightWriteSerializer(serializers.Serializer):
+class CompanyHighlightWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
     """Write serializer for CompanyHighlight - all fields optional (PATCH semantics)."""
 
     system       = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), required=False, allow_null=True)
@@ -453,10 +527,13 @@ class CompanyHighlightWriteSerializer(serializers.Serializer):
 
         if "image" in self.validated_data:
             image_value = self.validated_data["image"]
+            # The credit a photo picked from a stock bank owes; None for an
+            # upload, which owes nobody and clears whatever the row carried.
+            credit = self.pop_credit(self.validated_data, bool(image_value))
             if image_value:
                 proc = ImageProcessingSerializer(data={"base64_image": image_value}, **_HIGHLIGHT_IMAGE_CFG)
                 proc.is_valid()
-                proc.save_to_field(instance.image, f"highlight_{instance.pk}.jpg")
+                proc.save_to_field(instance.image, f"highlight_{instance.pk}.jpg", credit)
             else:
                 instance.image = None
             update_fields.append("image")
@@ -624,7 +701,7 @@ class EventSerializer(serializers.ModelSerializer):
         return obj.image.url
 
 
-class EventWriteSerializer(serializers.Serializer):
+class EventWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
     """Write serializer for Event - base64 image, every field optional (PATCH semantics).
 
     ``starts_at`` is required on the model but optional here, because this same
@@ -717,10 +794,13 @@ class EventWriteSerializer(serializers.Serializer):
 
         if "image" in self.validated_data:
             image_value = self.validated_data["image"]
+            # The credit a photo picked from a stock bank owes; None for an
+            # upload, which owes nobody and clears whatever the row carried.
+            credit = self.pop_credit(self.validated_data, bool(image_value))
             if image_value:
                 proc = ImageProcessingSerializer(data={"base64_image": image_value}, **_EVENT_IMAGE_CFG)
                 proc.is_valid()
-                proc.save_to_field(instance.image, f"event_{instance.pk}.jpg")
+                proc.save_to_field(instance.image, f"event_{instance.pk}.jpg", credit)
             else:
                 instance.image = None
             update_fields.append("image")
@@ -731,7 +811,7 @@ class EventWriteSerializer(serializers.Serializer):
         return instance
 
 
-class EventImageWriteSerializer(serializers.Serializer):
+class EventImageWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
     """Create a gallery image linked to an event - accepts base64 image."""
 
     image      = serializers.CharField()
@@ -746,6 +826,10 @@ class EventImageWriteSerializer(serializers.Serializer):
 
     def save(self, event):
         image_data = self.validated_data["image"]
+        # The credit a photo picked from a stock bank owes; None for an upload,
+        # which owes nobody. It rides into `save_to_field` because that call is
+        # what settles the row's attribution - see `_apply_attribution`.
+        credit = self.pop_credit(self.validated_data)
         instance = EventImage(
             event=event,
             name=self.validated_data.get("name"),
@@ -754,7 +838,7 @@ class EventImageWriteSerializer(serializers.Serializer):
         instance.save()
         proc = ImageProcessingSerializer(data={"base64_image": image_data}, **_EVENT_GALLERY_IMAGE_CFG)
         proc.is_valid()
-        proc.save_to_field(instance.image, f"eventimage_{instance.pk}.jpg")
+        proc.save_to_field(instance.image, f"eventimage_{instance.pk}.jpg", credit)
         instance.save(update_fields=["image"])
         return instance
 

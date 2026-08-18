@@ -5,10 +5,8 @@ import { useTranslations } from "next-intl";
 import { use } from "react";
 import { useRouter } from "@repo/i18n/navigation";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
-import {
-  AdminImageUploader,
-  type NewImage,
-} from "@/components/admin-image-uploader/admin-image-uploader";
+import { AdminImageField } from "@/components/admin/admin-image-field";
+import { useAdminImageField } from "@/hooks/use-admin-image-field";
 import {
   getMenuCategory,
   createMenuCategory,
@@ -20,6 +18,7 @@ import {
   deleteMenuSize,
   checkSlug,
 } from "@/lib/admin-api";
+import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import {
   MenuSizesEditor,
   persistMenuSizes,
@@ -52,10 +51,12 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
     parent: "",
     enabled: true,
   });
-  const [existingImage, setExistingImage] = useState<
-    { id: number; url: string }[]
-  >([]);
-  const [pendingImage, setPendingImage] = useState<NewImage[]>([]);
+  // The uploader and the stock-image picker, which are one field with two doors.
+  const image = useAdminImageField();
+  // Pulled out because the load effect below depends on it: this one callback is
+  // stable, where `image` itself changes with every pick and keystroke - and an
+  // effect keyed on the object would re-fetch the record each time.
+  const loadImage = image.load;
   const [parentOptions, setParentOptions] = useState<
     { value: string | number; label: string }[]
   >([]);
@@ -71,6 +72,13 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
   const [slugError, setSlugError] = useState<string | null>(null);
 
   const systemId = useSession()?.systemId ?? 0;
+  // Prev/next through the CMS list, for the arrows beside Save.
+  const siblings = useAdminSiblings({
+    basePath: "/admin/menu-categories",
+    id,
+    systemId,
+    list: listMenuCategories,
+  });
 
   // What every item in this category is recommended alongside at checkout - said
   // once here rather than on each item, which is the whole point of authoring it
@@ -148,13 +156,12 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
             parent: data.parent ?? "",
             enabled: data.enabled ?? true,
           });
-          if (data.image)
-            setExistingImage([{ id: Number(id), url: String(data.image) }]);
+          loadImage(data.image, Number(id));
         })
         .catch(() => setError(t("errorLoad")))
         .finally(() => setLoading(false));
     }
-  }, [id, isNew, loadMeta, t]);
+  }, [id, isNew, loadImage, loadMeta, t]);
 
   const persistSizes = async (categoryId: number) => {
     const { rows, ids } = await persistMenuSizes(sizes, originalSizeIds, {
@@ -174,11 +181,9 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
     setSuccess(null);
     try {
       const payload: Record<string, unknown> = { ...values, system: systemId };
-      if (pendingImage.length > 0) {
-        payload.image = pendingImage[0]?.base64;
-      } else if (existingImage.length === 0) {
-        payload.image = null;
-      }
+      // The image, and - when it came from a bank - the credit it owes, which
+      // has to be in the same write as the file it describes.
+      Object.assign(payload, image.payload());
       if (payload.parent === "") payload.parent = null;
       // Always sent: an empty list clears the category's rows, so it cannot be
       // omitted when the operator has just unticked the last one.
@@ -187,11 +192,13 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
         const created = await createMenuCategory(payload);
         await persistSizes(created.id as number);
         setSuccess(t("saved"));
+        image.settle(created.image, created.id as number);
         router.replace(`/admin/menu-categories/${created.id}`);
       } else {
-        await updateMenuCategory(Number(id), payload);
+        const updated = await updateMenuCategory(Number(id), payload);
         await persistSizes(Number(id));
         setSuccess(t("saved"));
+        image.settle(updated.image, Number(id));
       }
     } catch {
       setError(t("errorSave"));
@@ -257,25 +264,21 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
+        siblings={siblings}
         productionHref={
           !isNew && values.slug
             ? menuCategoryHref(String(values.slug))
             : undefined
         }
         imagesSlot={
-          <Box display="flex" flexDirection="column" gap="8px">
-            <Typography variant="label">{t("image") ?? "Image"}</Typography>
-            <AdminImageUploader
-              existingImages={existingImage}
-              onChange={(n, _d, o) => {
-                setPendingImage(n);
-                setExistingImage((prev) =>
-                  prev.filter((img) => o.includes(img.id)),
-                );
-              }}
-              maxImages={1}
-            />
-          </Box>
+          <AdminImageField
+            label={t("image") ?? "Image"}
+            field={image}
+            query={
+              String(values.name ?? "").trim() ||
+              String(values.en_name ?? "").trim()
+            }
+          />
         }
       >
         {/* The sizes every dish in this category is offered in, below the

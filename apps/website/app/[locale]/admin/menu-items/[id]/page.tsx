@@ -12,6 +12,8 @@ import {
   AdminImageUploader,
   type NewImage,
 } from "@/components/admin-image-uploader/admin-image-uploader";
+import { ImageWebSearch } from "@/components/admin/image-web-search";
+import { remainingGallerySlots } from "@/hooks/use-admin-image-field";
 import {
   MenuIngredientsEditor,
   type IngredientRow,
@@ -40,6 +42,8 @@ import {
   updateMenuItem,
   listMenuItems,
   listMenuItemImages,
+  createStockGalleryRows,
+  type StockImageFile,
   createMenuItemImage,
   deleteMenuItemImage,
   updateMenuItemImage,
@@ -58,12 +62,16 @@ import {
   deleteMenuSize,
   checkSlug,
 } from "@/lib/admin-api";
+import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import { buildSlug } from "@/lib/slug-utils";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+
+/** How many photos one dish's gallery holds, uploads and picks together. */
+const GALLERY_MAX = 10;
 
 type Props = { params: Promise<{ locale: string; id: string }> };
 
@@ -136,6 +144,10 @@ export default function AdminMenuItemFormPage({ params }: Props) {
   const [pendingNewImages, setPendingNewImages] = useState<NewImage[]>([]);
   const [pendingDeletedIds, setPendingDeletedIds] = useState<number[]>([]);
   const [pendingOrder, setPendingOrder] = useState<number[]>([]);
+  // Photos picked from a stock bank. They become gallery rows of their own on
+  // save, after the operator's uploads - the picker and the uploader both fill
+  // the same ten slots, so neither replaces the other.
+  const [stockImages, setStockImages] = useState<StockImageFile[]>([]);
 
   // The dish's OWN size rows, which *replace* its category's list when there are
   // any. Empty is the normal state and means "inherit"; `categorySizes` below is
@@ -175,6 +187,15 @@ export default function AdminMenuItemFormPage({ params }: Props) {
   const [success, setSuccess] = useState<string | null>(null);
   const [slugError, setSlugError] = useState<string | null>(null);
   const systemId = useSession()?.systemId ?? 0;
+  // Prev/next through the CMS list, for the arrows beside Save.
+  const siblings = useAdminSiblings({
+    basePath: "/admin/menu-items",
+    id,
+    systemId,
+    list: listMenuItems,
+    groupKey: "category",
+    groupList: listMenuCategories,
+  });
 
   // Checkout recommendations. `categoryId` follows the *form's* category field
   // rather than the saved row, so re-filing this item updates the "inheriting
@@ -559,6 +580,15 @@ export default function AdminMenuItemFormPage({ params }: Props) {
           sort_order: pendingOrder.length + i,
         }).catch(() => null);
       }
+      // ⚠ Each picked photo's credit goes in the same create call as its file:
+      // storing an image clears any attribution, so a second write would lose
+      // the credit that makes the photo legal to publish.
+      await createStockGalleryRows(
+        stockImages,
+        pendingOrder.length + pendingNewImages.length,
+        (payload) => createMenuItemImage(menuItemId, payload),
+      );
+      setStockImages([]);
       for (let i = 0; i < pendingOrder.length; i++) {
         await updateMenuItemImage(menuItemId, pendingOrder[i] ?? 0, {
           sort_order: i,
@@ -700,6 +730,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
+        siblings={siblings}
         productionHref={
           !isNew && values.slug && categorySlugs[Number(values.category)]
             ? menuItemHref(
@@ -722,7 +753,21 @@ export default function AdminMenuItemFormPage({ params }: Props) {
                 setPendingDeletedIds(d);
                 setPendingOrder(o);
               }}
-              maxImages={10}
+              maxImages={GALLERY_MAX}
+            />
+            <ImageWebSearch
+              defaultQuery={
+                String(values.name ?? "").trim() ||
+                String(values.en_name ?? "").trim()
+              }
+              value={stockImages}
+              onChange={setStockImages}
+              slots={remainingGallerySlots(
+                GALLERY_MAX,
+                existingImages,
+                pendingDeletedIds,
+                pendingNewImages,
+              )}
             />
           </Box>
         }

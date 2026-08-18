@@ -260,20 +260,57 @@ and go live rather than being a placeholder the customer must replace.
   (the one registry that already states every model's ORM path to its System),
   never hand-listed — and `core/signals.py` registers the payload-invalidating
   receiver against every one of those models the same way.
-- **`_clear_attribution` in `core/serializers.py` drops the credit when a
-  customer uploads their own photo**, from inside `save_to_field` — the one place
-  every CMS image upload passes through. ⚠ It persists itself with its own
-  `UPDATE` because every caller saves with `update_fields=["image"]`, which would
-  silently discard an in-memory change; the symptom would be a customer's own
-  photograph still credited to a stranger. Removing an image entirely is
-  deliberately not covered: it over-credits, which is the harmless direction.
-- **Keys are local-only.** `PEXELS_API_KEY` / `PIXABAY_API_KEY` live in a
-  developer's `.env` and are deliberately **not** in `website-api-secrets` —
-  seeding never runs in the cluster, and a key in production would only invite
-  someone to wire a bank search into a view.
+- **`_apply_attribution` in `core/serializers.py` settles the credit for the file
+  just written**, from inside `save_to_field` — the one place every CMS image
+  upload passes through. It takes the `(attribution, url)` pair a bank photo owes,
+  or `None` for a customer's own upload, which owes nobody and so **clears** the
+  row's credit. ⚠ It persists itself with its own `UPDATE` because every caller
+  saves with `update_fields=["image"]`, which would silently discard an in-memory
+  change; the symptom would be a customer's own photograph still credited to a
+  stranger. Removing an image entirely is deliberately not covered: it
+  over-credits, which is the harmless direction.
+- **The CMS searches the same banks, through this API** —
+  `POST /api/stock-images/search/` returns the hits for a query and
+  `POST /api/stock-images/fetch/` downloads the one that was picked, as a
+  base64 data URL plus its credit (`StockImageSearchView` /
+  `StockImageFetchView`, both `IsSystemAdmin`). The frontend holds no bank
+  credential, exactly as it holds no LLM or Stripe key.
+  - ⚠ **Fetch takes a bank and an id, never a URL.** A view that fetched a
+    client-supplied URL would be an open proxy into the pod's network, and would
+    let whoever chose the image also choose the credit that goes with it. Both
+    are re-read from the bank instead.
+  - **Every write serializer behind a CMS image field takes the credit**, via
+    `StockCreditWriteMixin` (`core/serializers.py`): the categories, the three
+    buyables, the four gallery-row serializers, the two editorial ones and
+    `Ingredient`. A serializer opts in by mixing it in — a `ModelSerializer` also
+    listing `*StockCreditWriteMixin.CREDIT_FIELDS` in its `Meta.fields` — and
+    passing `pop_credit(...)` straight into `save_to_field`.
+  - ⚠ **The credit rides _into_ `save_to_field`; it is never set beside it.**
+    That call is what clears a stale attribution (see the bullet above), so a
+    pair the serializer wrote itself would be wiped by the very write that stores
+    the file it describes. `pop_credit` also drops a credit sent **without** an
+    image — there is no new file for it to describe, and honouring it would let a
+    caller re-credit a photo it did not supply.
+  - ⚠ **The mixin subclasses `Serializer`, which it looks like it should not.**
+    DRF's `SerializerMetaclass` inherits declared fields only from bases that
+    already carry `_declared_fields`, so as a plain mixin its two fields are
+    silently ignored by every `Serializer` subclass — while a `ModelSerializer`
+    still builds them from the model, which is exactly the sort of half-working
+    that hides the mistake. It goes **first** in the bases so its fields survive
+    the MRO.
+- ⚠ **The keys are no longer local-only.** They were, while `fetch_seed_images`
+  was the only consumer and seeding never ran in the cluster. The CMS picker does
+  run there, so `PEXELS_API_KEY` / `PIXABAY_API_KEY` belong in
+  `website-api-secrets` (`pnpm secrets`) as well as in a developer's `.env`.
+  With neither set, the search endpoint answers **503 `NO_IMAGE_BANK`** and the
+  CMS tells the operator which key is missing rather than looking broken.
 
 Tests: `StockImageTests` in `core/tests.py` (one test each for the count, the
-publish-image transport, and the fetch -> seed -> upload chain).
+publish-image transport, and the fetch -> seed -> upload chain),
+`StockImagePickerApiTests` beside it for the two picker endpoints, and
+`StockImageCreditTests` in `catalog/tests.py` — one test over the three *write
+shapes* a CMS image field has (a category's `ModelSerializer`, a buyable's plain
+`Serializer`, a gallery row created from its parent) rather than one per model.
 
 Driven by `pnpm publish-site <host>` (`cli/website/website.sh publish`). `seed_site`
 imports `SYSTEM_TEXT_FIELDS` from `site_payload` so seeding and publishing agree

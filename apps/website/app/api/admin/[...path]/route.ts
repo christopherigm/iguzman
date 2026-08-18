@@ -18,6 +18,10 @@ const ALLOWED_PREFIXES = [
   "events/",
   "social-posts/",
   "check-slug/",
+  // The CMS image picker: searching the free stock banks and downloading the
+  // one photo an operator picked. Both are admin-only on the API side, and the
+  // bank keys stay there - this app holds none.
+  "stock-images/",
   "auth/admin/users/",
   "orders/admin/",
   // The CMS bookings screen. Only the admin sub-tree: the public availability

@@ -28,6 +28,8 @@ from .views import (
     SlugCheckView,
     SocialPostDetailView,
     SocialPostListCreateView,
+    StockImageFetchView,
+    StockImageSearchView,
     SuccessStoryBySlugView,
     SuccessStoryDetailView,
     SuccessStoryImageDetailView,
@@ -94,4 +96,10 @@ urlpatterns = [
     path("check-slug/", SlugCheckView.as_view(), name="check-slug"),
 
     path("ai/chat/", AiChatView.as_view(), name="ai-chat"),
+
+    # The CMS image picker. Search returns the banks' hits (URLs only); fetch
+    # downloads the one that was picked and hands it back as base64 with its
+    # credit, so the keys never leave this API.
+    path("stock-images/search/", StockImageSearchView.as_view(), name="stock-image-search"),
+    path("stock-images/fetch/", StockImageFetchView.as_view(), name="stock-image-fetch"),
 ]

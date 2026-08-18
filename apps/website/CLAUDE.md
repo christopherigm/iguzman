@@ -583,6 +583,52 @@ actually fills in the hundreds.
 - **Sections start expanded and the collapsed ones are the state that is kept**,
   so a category added while the page is open is open too.
 
+## Stepping through a CMS list from a detail form
+
+Every editable record's form flanks its Save button with a prev and a next
+arrow, so a run of records - re-photographing forty dishes, say - is worked
+through without going back to the table between each one.
+
+| Piece                | Where                                 |
+| -------------------- | ------------------------------------- |
+| The two arrows       | `components/admin/sibling-arrows.tsx` |
+| Which record is next | `hooks/use-admin-siblings.ts`         |
+| The order itself     | `components/admin/entity-order.ts`    |
+
+- ⚠ **The arrows walk the order the list _reads in_, not the order the API
+  returns rows in.** For products, services and menu items those differ - the
+  CMS groups them into one collapsible table per category - so the flattening
+  was split out of `admin-entity-list.tsx` into `entity-order.ts` and both
+  consumers share it. Those three forms are the only ones passing `groupKey` /
+  `groupList`; re-deriving the sequence anywhere else is how "next" comes to
+  mean something different from the row below.
+- **An end of the list is a disabled `<button>`, not a link.** `IconButton`
+  only renders a `Link` when it is given an `href`, so passing none is what
+  makes the last record's next arrow inert - and its `type` defaults to
+  `"button"`, so an arrow sitting inside `AdminForm`'s `<form>` never submits
+  it, the same trap the "view in production" button documents.
+- **Both arrows are disabled while the list loads**, rather than appearing once
+  it lands: the bar would otherwise grow two buttons under the operator's
+  cursor. A record the list does not carry gets the same treatment - there is no
+  known neighbour, and saying so is better than guessing one.
+- **A new record has no arrows at all.** `useAdminSiblings` returns `undefined`
+  for `id === "new"`, and `AdminForm` renders nothing for an undefined
+  `siblings` - which is also how a singleton form (system settings) opts out.
+- **Navigating discards unsaved edits, deliberately unguarded** - the Back /
+  Cancel button beside the title has always done the same, and a confirm on one
+  and not the other would be the confusing half-measure.
+- ⚠ **`groupKey`/`groupList` and `list` are effect deps**, so they must be the
+  module-level `list*` functions from `lib/admin-api.ts`. An inline arrow would
+  re-fetch the whole list on every render.
+- **The hook fetches the list itself rather than reusing rows a page may already
+  hold.** Two forms (menu items, users) therefore load the same list twice. That
+  is the accepted cost of one wiring shape across fifteen forms, on admin pages
+  whose reads are cached in Django.
+- **Three forms hand-roll their own action bar** - coupons and social posts
+  (their own fixed bars) and users (no fixed bar at all, so the arrows flank the
+  Save in its header row). They draw `SiblingArrow` directly; only the twelve
+  `AdminForm` forms get it from the `siblings` prop.
+
 ## Catalog kind labels - what a tenant calls its products and services
 
 A workshop's "Services" are _Lo que hacemos_. `System` carries a bilingual label
@@ -891,6 +937,15 @@ is a thin shell around those two components:
   tab order meanwhile - the same pattern the phone menu index uses.
   **The apply button only puts the control away**: the quantity is already
   written, since the slider fires on every move.
+  ⚠ **The panel scrolls itself into view when it opens**, through
+  `scrollToElement` at `block: "nearest"` (never a bare `scrollIntoView`) - the
+  gauge of the last ingredient in a long list sits at the bottom of the modal, so
+  the slider it unfolds landed below the fold and the press read as having done
+  nothing. `"nearest"` is what keeps it to "a little bit": an already-visible
+  panel does not move the page at all. It waits `PORTION_FOLD_MS` first, which
+  **is the `grid-template-rows` transition in `portion-picker.css`** - keep the
+  two in step, since a scroll aimed at the panel while it is still a zero-height
+  row lands short of it.
 - ⚠ **A food card's add-to-cart icon opens the modal; it does not post the base
   line.** It used to, which silently chose the defaults for a customer who may
   have wanted the dish without onions, and gave no hint the dish was
@@ -1501,6 +1556,71 @@ legal is one line in the footer's bottom bar (`components/footer.tsx`).
   **is** stored (`attribution` / `attribution_url` on every record, via
   `BasePicture`), so a caption under a detail-page gallery can be added later
   with no migration — this is a rendering decision, not a data one.
+
+## Finding an image in the CMS (the stock-image picker)
+
+**Every CMS image field can be filled from a free stock bank.**
+`components/admin/image-web-search.tsx` (`ImageWebSearch`) searches the same
+banks `/seed-site` pulls from and sets the record's image from the results — so
+an operator who does not like the seeded photo, or who is adding a record by
+hand, is not left hunting for a file. It sits under the uploader it fills, and on
+the ingredient form it is the third member of the web-search family beside the
+nutrition and price searches: a prefilled query, a search, a preview, and nothing
+written until the form is saved.
+
+| Piece                           | Where                                                             |
+| ------------------------------- | ----------------------------------------------------------------- |
+| The picker                      | `components/admin/image-web-search.tsx`                           |
+| A single-image field's state    | `hooks/use-admin-image-field.ts`                                  |
+| Uploader + picker, as one field | `components/admin/admin-image-field.tsx`                          |
+| The payload fragments           | `lib/admin-api.ts` (`stockImageFields`, `createStockGalleryRows`) |
+
+Which forms carry one, and in which of its two shapes:
+
+| Shape                        | Forms                                                                                          |
+| ---------------------------- | ---------------------------------------------------------------------------------------------- |
+| **Single** (a pick replaces) | ingredient, the three catalog categories, a service's Main Image, highlight, story/event cover |
+| **Gallery** (picks append)   | product, service, menu item (10 slots); success story, event (20)                              |
+
+- **Both calls go through website-api** (`searchStockImages` / `fetchStockImage`
+  in `lib/admin-api.ts` → `/api/stock-images/*`, allowlisted in the admin proxy).
+  This app holds no bank credential, the same split the LLM and Stripe calls
+  make. The API side owns the rules — read website-api's CLAUDE.md → "Stock
+  photography and the credit it owes" before changing either half.
+- ⚠ **The photo and its credit are saved in one write.** Storing an image clears
+  any attribution the record had (a customer's own photo owes nobody), so
+  `handleSubmit` sends `image` + `attribution` + `attribution_url` together.
+  Splitting them into two saves silently loses the credit, and the credit is what
+  makes the photo legal to publish — it is what the footer's line is counted
+  from.
+- **The browser never fetches the photo.** The grid shows the bank's thumbnails
+  and a pick is sent as `{bank, bank_id}`; the API downloads the file and hands
+  it back as a base64 data URL, the same shape `AdminImageUploader` produces from
+  a file, so the form's existing save path takes it unchanged.
+- **The uploader and the picker are one field with two doors, never two
+  pending images.** Picking a photo clears any queued upload (and remounts the
+  uploader, whose file list is its own state); uploading a file clears the
+  picked photo. Whichever was chosen last is the one being asked for.
+- **The query is prefilled from the name and then left alone.** It follows the
+  name field until the operator types in it, because the better search is often
+  not the record's own label ("queso Oaxaca", not "Queso"). A form with two
+  pickers (a service, a story, an event) gives both the **same** query — they are
+  looking for the same thing, and two boxes to retype would be busywork.
+- ⚠ **`slots` is what decides the picker's shape, and it is what the uploader
+  has _left_, not the gallery's size.** Undefined is the single-image field; a
+  number is a gallery, where picks append and are numbered in the order they will
+  be written. `remainingGallerySlots` counts the **deletions** rather than
+  trusting the uploader's last reported order — that order is empty until the
+  operator touches the control, and "empty because nothing changed" and "empty
+  because they removed everything" are different answers. At `0` the picker says
+  so rather than letting an operator pick a photo the save would drop.
+- **On a gallery the picker and the uploader are peers**, unlike on a single-image
+  field: both fill the same slots, picks land _after_ the uploads, and neither
+  clears the other. It is only the single-image field where they are two doors to
+  one slot.
+- **`useAdminImageField` is destructured for the load effect** (`const loadImage
+= image.load`). The callback is stable; the object is not — an effect keyed on
+  it would re-fetch the record on every pick and keystroke.
 
 ## The footer's cradled brandmark
 

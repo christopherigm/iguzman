@@ -496,6 +496,104 @@ export async function lookupIngredientPrice(data: {
   }>(res);
 }
 
+// ---- Stock images (the CMS image picker) ----
+
+/** One hit from a free stock bank, as the picker grid renders it. */
+export type StockImageResult = {
+  bank: string;
+  bank_id: string;
+  /** A small render, for the grid. The full photo is never fetched by the browser. */
+  thumbnail: string;
+  alt: string;
+  attribution: string;
+  attribution_url: string;
+};
+
+/** The chosen photo, downloaded by the API and handed over as a data URL. */
+export type StockImageFile = {
+  bank: string;
+  bank_id: string;
+  /** `data:image/…;base64,…` - the same shape the uploader produces from a file. */
+  image: string;
+  attribution: string;
+  attribution_url: string;
+  alt: string;
+};
+
+/**
+ * Search the free stock banks (Pexels, then Pixabay) for a photo.
+ *
+ * The keys live in website-api beside the ones `fetch_seed_images` uses, so this
+ * app holds no bank credential - the same split the LLM and Stripe calls make.
+ * Read-only: nothing is downloaded or stored until `fetchStockImage`.
+ */
+export async function searchStockImages(data: {
+  query: string;
+  orientation?: string;
+  bank?: string;
+}) {
+  const res = await adminFetch(`/api/stock-images/search/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<{ banks: string[]; results: StockImageResult[] }>(res);
+}
+
+/**
+ * Download one chosen photo, as base64, with the credit its bank is owed.
+ *
+ * ⚠ Addressed by **bank + id, never by URL**: the API re-reads both the file and
+ * the credit from the bank, so neither can be chosen by the browser. Feed the
+ * result to the form's own save as `image` + `attribution` / `attribution_url` -
+ * an upload clears any stored credit, so the pair has to travel with the file.
+ */
+/**
+ * The `image` + credit keys one picked photo contributes to a form's save
+ * payload.
+ *
+ * ⚠ **The three travel together, always in the same write.** Storing an image
+ * clears whatever credit the record was carrying (a customer's own photo owes
+ * nobody), so a credit sent in a second request is wiped by the first - see
+ * website-api's `_apply_attribution`.
+ */
+export function stockImageFields(picked: StockImageFile) {
+  return {
+    image: picked.image,
+    attribution: picked.attribution,
+    attribution_url: picked.attribution_url,
+  };
+}
+
+/**
+ * Write each photo picked from a bank as a row in a record's gallery, after
+ * whatever the operator uploaded themselves.
+ *
+ * `create` is the record's own gallery endpoint (`createProductImage` and its
+ * siblings). Failures are swallowed per row, exactly as the upload loops beside
+ * it do: one photo the bank could not deliver must not lose the operator the
+ * save they just made.
+ */
+export async function createStockGalleryRows(
+  picked: StockImageFile[],
+  firstSortOrder: number,
+  create: (payload: Record<string, unknown>) => Promise<unknown>,
+) {
+  for (let i = 0; i < picked.length; i++) {
+    await create({
+      ...stockImageFields(picked[i]!),
+      sort_order: firstSortOrder + i,
+    }).catch(() => null);
+  }
+}
+
+export async function fetchStockImage(data: { bank: string; bank_id: string }) {
+  const res = await adminFetch(`/api/stock-images/fetch/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<StockImageFile>(res);
+}
+
 // ---- Menu Item Ingredients ----
 export async function listMenuItemIngredients(menuItemId: number) {
   // include_disabled is admin-gated server-side, so the CMS editor still sees

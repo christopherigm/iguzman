@@ -44,7 +44,8 @@ export interface MenuCustomizeEditing {
 
 interface Props {
   menuItemId: number;
-  /** The dish's name, already resolved to the reader's locale - the modal's title. */
+  /** The dish's name, already resolved to the reader's locale - it names the
+   *  dish in the modal's title ("Customize your <name>"). */
   name: string;
   /** The item's own list price; the chosen size's delta and the add-on deltas are
    *  applied on top for the OK label. */
@@ -208,8 +209,11 @@ export function MenuCustomizeModal({
 
   return (
     <ConfirmationModal
-      title={name}
-      text={t("customize", { name })}
+      // The dish's name alone said what the customer was already looking at;
+      // the instruction is what the dialog is for, so it is the heading and the
+      // body text below it would only repeat it.
+      title={t("customize", { name })}
+      text=""
       panelMaxWidth="560px"
       okLabel={t(editing ? "saveChangesWithPrice" : "addToCartWithPrice", {
         price: formatPrice(total.toFixed(2), currency),

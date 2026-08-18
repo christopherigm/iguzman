@@ -9,20 +9,33 @@ import {
   AdminImageUploader,
   type NewImage,
 } from "@/components/admin-image-uploader/admin-image-uploader";
+import { AdminImageField } from "@/components/admin/admin-image-field";
+import { ImageWebSearch } from "@/components/admin/image-web-search";
+import {
+  remainingGallerySlots,
+  useAdminImageField,
+} from "@/hooks/use-admin-image-field";
 import {
   getSuccessStory,
   createSuccessStory,
   updateSuccessStory,
   createSuccessStoryImage,
+  createStockGalleryRows,
+  type StockImageFile,
   updateSuccessStoryImage,
   deleteSuccessStoryImage,
   checkSlug,
+  listSuccessStories,
 } from "@/lib/admin-api";
+import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import { buildSlug } from "@/lib/slug-utils";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+
+/** How many photos one story's gallery holds, uploads and picks together. */
+const GALLERY_MAX = 20;
 
 type Props = { params: Promise<{ locale: string; id: string }> };
 
@@ -43,10 +56,12 @@ export default function AdminSuccessStoryFormPage({ params }: Props) {
     href: "",
     enabled: true,
   });
-  const [pendingImage, setPendingImage] = useState<NewImage[]>([]);
-  const [existingImage, setExistingImage] = useState<
-    { id: number; url: string }[]
-  >([]);
+  // The cover image's uploader and stock picker: one field with two doors.
+  const image = useAdminImageField();
+  // Pulled out because the load effect below depends on it: this one callback is
+  // stable, where `image` itself changes with every pick and keystroke - and an
+  // effect keyed on the object would re-fetch the record each time.
+  const loadImage = image.load;
   const [existingGallery, setExistingGallery] = useState<
     { id: number; url: string; sort_order?: number }[]
   >([]);
@@ -55,12 +70,23 @@ export default function AdminSuccessStoryFormPage({ params }: Props) {
     number[]
   >([]);
   const [pendingGalleryOrder, setPendingGalleryOrder] = useState<number[]>([]);
+  // Photos picked from a stock bank for the *gallery*. They become rows of their
+  // own on save, after the operator's uploads - the picker and the uploader both
+  // fill the same slots, so neither replaces the other.
+  const [stockImages, setStockImages] = useState<StockImageFile[]>([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [slugError, setSlugError] = useState<string | null>(null);
   const systemId = useSession()?.systemId ?? 0;
+  // Prev/next through the CMS list, for the arrows beside Save.
+  const siblings = useAdminSiblings({
+    basePath: "/admin/success-stories",
+    id,
+    systemId,
+    list: listSuccessStories,
+  });
 
   // Auto-populate slug from name for new records (the slug field is read-only).
   // Derived during render rather than in an effect; the guard stops it looping
@@ -103,8 +129,7 @@ export default function AdminSuccessStoryFormPage({ params }: Props) {
             href: data.href ?? "",
             enabled: data.enabled ?? true,
           });
-          if (data.image)
-            setExistingImage([{ id: Number(id), url: String(data.image) }]);
+          loadImage(data.image, Number(id));
           const imgs = ((data.images as Record<string, unknown>[]) ?? []).map(
             (i) => ({
               id: i.id as number,
@@ -117,7 +142,7 @@ export default function AdminSuccessStoryFormPage({ params }: Props) {
         .catch(() => setError(t("errorLoad")))
         .finally(() => setLoading(false));
     }
-  }, [id, isNew, t]);
+  }, [id, isNew, loadImage, t]);
 
   const handleSubmit = async () => {
     setSaving(true);
@@ -130,19 +155,19 @@ export default function AdminSuccessStoryFormPage({ params }: Props) {
       if (!payload.href) payload.href = null;
       // The slug is read-only and derived server-side; omit it when empty.
       if (!payload.slug) delete payload.slug;
-      if (pendingImage.length > 0) {
-        payload.image = pendingImage[0]?.base64;
-      } else if (existingImage.length === 0) {
-        payload.image = null;
-      }
+      // The cover, and - when it came from a bank - the credit it owes, which
+      // has to be in the same write as the file it describes.
+      Object.assign(payload, image.payload());
 
       let storyId: number;
       if (isNew) {
         const c = await createSuccessStory(payload);
         storyId = c.id as number;
+        image.settle(c.image, storyId);
       } else {
-        await updateSuccessStory(Number(id), payload);
+        const updated = await updateSuccessStory(Number(id), payload);
         storyId = Number(id);
+        image.settle(updated.image, storyId);
       }
 
       // Handle deleted gallery images
@@ -156,6 +181,15 @@ export default function AdminSuccessStoryFormPage({ params }: Props) {
           sort_order: pendingGalleryOrder.length + i,
         }).catch(() => null);
       }
+      // ⚠ Each picked photo's credit goes in the same create call as its file:
+      // storing an image clears any attribution, so a second write would lose
+      // the credit that makes the photo legal to publish.
+      await createStockGalleryRows(
+        stockImages,
+        pendingGalleryOrder.length + pendingNewGallery.length,
+        (payload) => createSuccessStoryImage(storyId, payload),
+      );
+      setStockImages([]);
       // Update sort orders for existing gallery images
       for (let i = 0; i < pendingGalleryOrder.length; i++) {
         await updateSuccessStoryImage(storyId, pendingGalleryOrder[i] ?? 0, {
@@ -202,6 +236,11 @@ export default function AdminSuccessStoryFormPage({ params }: Props) {
     { key: "enabled", label: t("enabled"), type: "boolean" },
   ];
 
+  // Both stock-image pickers on this form look for the same thing, so they open
+  // on one query - the record's own name, until the operator edits it.
+  const imageQuery =
+    String(values.name ?? "").trim() || String(values.en_name ?? "").trim();
+
   if (loading)
     return (
       <Box padding="24px">
@@ -233,26 +272,17 @@ export default function AdminSuccessStoryFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
+        siblings={siblings}
         productionHref={
           !isNew && values.slug ? `/blog/${String(values.slug)}` : undefined
         }
         imagesSlot={
           <>
-            <Box display="flex" flexDirection="column" gap="8px">
-              <Typography variant="label">
-                {t("coverImage") ?? "Cover Image"}
-              </Typography>
-              <AdminImageUploader
-                existingImages={existingImage}
-                onChange={(n, _d, o) => {
-                  setPendingImage(n);
-                  setExistingImage((prev) =>
-                    prev.filter((img) => o.includes(img.id)),
-                  );
-                }}
-                maxImages={1}
-              />
-            </Box>
+            <AdminImageField
+              label={t("coverImage") ?? "Cover Image"}
+              field={image}
+              query={imageQuery}
+            />
             <Box display="flex" flexDirection="column" gap="8px">
               <Typography variant="label">
                 {t("images") ?? "Gallery Images"}
@@ -264,7 +294,18 @@ export default function AdminSuccessStoryFormPage({ params }: Props) {
                   setPendingDeletedGalleryIds(d);
                   setPendingGalleryOrder(o);
                 }}
-                maxImages={20}
+                maxImages={GALLERY_MAX}
+              />
+              <ImageWebSearch
+                defaultQuery={imageQuery}
+                value={stockImages}
+                onChange={setStockImages}
+                slots={remainingGallerySlots(
+                  GALLERY_MAX,
+                  existingGallery,
+                  pendingDeletedGalleryIds,
+                  pendingNewGallery,
+                )}
               />
             </Box>
           </>

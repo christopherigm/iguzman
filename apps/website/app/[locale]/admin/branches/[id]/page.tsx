@@ -20,7 +20,9 @@ import {
   updateBranch,
   getSystem,
   AdminApiError,
+  listBranches,
 } from "@/lib/admin-api";
+import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -106,6 +108,13 @@ export default function AdminBranchFormPage({ params }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const systemId = useSession()?.systemId ?? 0;
+  // Prev/next through the CMS list, for the arrows beside Save.
+  const siblings = useAdminSiblings({
+    basePath: "/admin/branches",
+    id,
+    systemId,
+    list: listBranches,
+  });
 
   // ── The map screenshot ──────────────────────────────────────────────────
   //
@@ -339,6 +348,7 @@ export default function AdminBranchFormPage({ params }: Props) {
         saving={saving}
         error={error}
         success={success}
+        siblings={siblings}
         slots={[
           {
             // Between the contact details and the booking group: the pin is
