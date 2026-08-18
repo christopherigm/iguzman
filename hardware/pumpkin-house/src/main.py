@@ -106,6 +106,7 @@ def build_speaker():
     button that does nothing, and every remaining exception out of this call
     means the same thing anyway - there is no usable amplifier, carry on
     without one.
+
     """
     if not config.SPEAKER_ENABLED:
         return None

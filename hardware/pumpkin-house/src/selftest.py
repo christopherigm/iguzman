@@ -34,6 +34,7 @@ clocked out regardless, so silence here means the signal is not reaching the
 amplifier - no timing asterisk attached.
 """
 
+import micropython
 from machine import I2S, Pin
 from time import sleep_ms
 
@@ -42,35 +43,26 @@ import config
 # Two 16-bit samples leave per input sample, one per channel.
 _BYTES_PER_SAMPLE = 4
 
-# How loud every synthesised test is, as the high byte of a signed 16-bit
-# sample: 0x7F is full scale, 0x40 is half, 0x18 is about -14 dB.
-#
-# Deliberately loud by default, and deliberately in *one* place so it can be
-# turned down without editing five signatures. The default answers "is this
-# amplifier alive at all", which is a question a polite tone cannot settle -
-# but once the answer is yes it is much louder than you want beside your
-# head, so drop it here and run again. Every test below reads this unless
-# you pass `level=` explicitly.
-#
-# This does not touch how loud the *lantern* is. That is
-# `config.AUDIO_VOLUME`, and better still the amp's own GAIN pad - see the
-# build sheet.
-LEVEL = 0x20
 
-# The same idea for `wav()`, which plays real material rather than a
-# synthesised wave, on the same 1-10 scale as `config.AUDIO_VOLUME` so that
-# a level you liked here is a number you can type straight into `config.py`.
-WAV_VOLUME = 6
+@micropython.viper
+def _convert(out: ptr8, raw: ptr8, count: int):
+    """u8 samples -> 16-bit stereo frames; `audio._convert()`'s twin.
 
-# Deliberately a second copy of `audio._VOLUME_GAIN` rather than an import.
-# Nothing in this module touches the lantern's own code, and that is not
-# fastidiousness: the fault that took longest to find on this build was a
-# `/audio` directory shadowing `audio.py`, which left `import audio` handing
-# back an empty module. A self-test that imports the module under suspicion
-# fails in the same breath as the thing it was meant to diagnose. Ten
-# numbers are a cheap price for a tool that still runs when the firmware
-# does not. If you retune the scale, retune it in both places.
-_VOLUME_GAIN = (11, 16, 23, 32, 45, 64, 91, 128, 181, 256)
+    Viper for the same reason the original is: as bytecode this loop costs
+    40 us a sample, which is most of a core at 11 kHz and enough to make a
+    perfectly wired amplifier stutter - a self-test that invents its own
+    fault is worse than no self-test.
+    """
+    i = 0
+    j = 0
+    while i < count:
+        hi = int(raw[i]) ^ 0x80
+        out[j] = 0
+        out[j + 1] = hi
+        out[j + 2] = 0
+        out[j + 3] = hi
+        j = j + 4
+        i = i + 1
 
 
 # -- lights ---------------------------------------------------------------
@@ -164,41 +156,39 @@ def _open_i2s(rate, sck, ws, din):
     )
 
 
-def _square(rate, hz, frames, level):
-    """One buffer of square wave, ready to hand to I2S over and over.
+def _square(rate, hz, frames):
+    """One buffer of full-scale square wave, to hand to I2S over and over.
 
     Only the odd bytes are filled: they are the high halves of the 16-bit
-    samples. Both channels get the same value because the MAX98357A's SD pin
-    selects a channel by voltage *band*, and a bare GPIO high does not land
-    in the averaging one.
+    samples, and at full scale the low halves are zero, which a fresh
+    bytearray already is. Both channels get the same value because the
+    MAX98357A's SD pin selects a channel by voltage *band*, and a bare GPIO
+    high does not land in the averaging one.
     """
     half = rate // (hz * 2)
     if half < 1:
         half = 1
-    high = level & 0x7F
-    low = 0x100 - high if high else 0
     buf = bytearray(frames * _BYTES_PER_SAMPLE)
-    value = high
+    value = 0x7F
     j = 1
     for i in range(frames):
         if i and i % half == 0:
-            value = low if value == high else high
+            value = 0x81 if value == 0x7F else 0x7F
         buf[j] = value
         buf[j + 2] = value
         j += _BYTES_PER_SAMPLE
     return buf
 
 
-def _noise(frames, level):
-    """A short loop of hiss. It repeats, which nobody can hear and which
-    keeps the generator out of the streaming loop entirely."""
+def _noise(frames):
+    """A short loop of full-scale hiss. It repeats, which nobody can hear
+    and which keeps the generator out of the streaming loop entirely."""
     import urandom
 
-    span = (level & 0x7F) * 2
     buf = bytearray(frames * _BYTES_PER_SAMPLE)
     j = 1
     for _ in range(frames):
-        value = (urandom.getrandbits(8) % span - span // 2) & 0xFF
+        value = (urandom.getrandbits(8) - 128) & 0xFF
         buf[j] = value
         buf[j + 2] = value
         j += _BYTES_PER_SAMPLE
@@ -234,27 +224,28 @@ def _play_buffer(buf, rate, seconds, sck, ws, din, label):
             sd.value(0)
 
 
-def tone(seconds=3, hz=440, level=None, rate=8000, sck=None, ws=None, din=None):
-    """A loud continuous square wave on the configured pins.
+def tone(seconds=3, hz=440, rate=8000, sck=None, ws=None, din=None):
+    """A continuous full-scale square wave on the configured pins.
 
-    `level` defaults to the module-level `LEVEL`, which is loud on purpose.
-    Turn `LEVEL` down once the amp has proved it works, or pass this for a
-    single call.
+    Full scale on purpose, and there is nowhere here to turn it down: how
+    loud the lantern gets is the resistor on the amp's GAIN pad, which is
+    hardware and is the same for this test as for the show. A square wave is
+    also the least musical thing this board can make, so if it is painful
+    beside your head the strap is the answer - see step 05 of the build
+    sheet.
     """
-    level = LEVEL if level is None else level
     sck = config.I2S_BCLK_PIN if sck is None else sck
     ws = config.I2S_LRC_PIN if ws is None else ws
     din = config.I2S_DIN_PIN if din is None else din
     print("Tone:")
-    _play_buffer(_square(rate, hz, 512, level), rate, seconds, sck, ws, din, "square")
+    _play_buffer(_square(rate, hz, 512), rate, seconds, sck, ws, din, "square")
 
 
-def noise(seconds=3, level=None, rate=8000):
+def noise(seconds=3, rate=8000):
     """Hiss. Harder to mistake for mains hum than a pure tone is."""
-    level = LEVEL if level is None else level
     print("Noise:")
     _play_buffer(
-        _noise(1024, level),
+        _noise(1024),
         rate,
         seconds,
         config.I2S_BCLK_PIN,
@@ -264,7 +255,7 @@ def noise(seconds=3, level=None, rate=8000):
     )
 
 
-def swap(seconds=2, hz=440, level=None, rate=8000):
+def swap(seconds=2, hz=440, rate=8000):
     """The same tone on both pin orders the RP2040 will actually accept.
 
     Its I2S is PIO-based and needs the word-select line to be **the pin
@@ -280,8 +271,7 @@ def swap(seconds=2, hz=440, level=None, rate=8000):
     BCLK/LRC swap cannot show up here at all, because ws = sck + 1 makes it
     unbuildable. That one you fix with tweezers, against the silkscreen.
     """
-    level = LEVEL if level is None else level
-    buf = _square(rate, hz, 512, level)
+    buf = _square(rate, hz, 512)
     print("Pin order: two combinations,", seconds, "s each, with a gap")
     for label, pins in (
         ("combination 1 (as configured)", (13, 14, 15)),
@@ -291,15 +281,13 @@ def swap(seconds=2, hz=440, level=None, rate=8000):
         sleep_ms(800)
 
 
-def wav(path=None, volume=None):
-    """Stream a file with no Speaker and no Stage.
+def wav(path=None):
+    """Stream a file at full scale, with no Speaker and no Stage.
 
     Reaching for this after `tone()` has worked separates "the amplifier is
     not wired up" from "that file is not what this firmware can play". The
     two produce identical silence and have nothing else in common.
     """
-    volume = WAV_VOLUME if volume is None else volume
-    gain = _VOLUME_GAIN[min(max(int(volume), 1), len(_VOLUME_GAIN)) - 1]
     path = config.AUDIO_DIR + "/dark.wav" if path is None else path
     print("WAV:", path)
     f = open(path, "rb")
@@ -337,9 +325,6 @@ def wav(path=None, volume=None):
             print("  wrong format - re-encode as 8-bit mono")
             return
 
-        table = bytearray(256)
-        for i in range(256):
-            table[i] = (((i - 128) * gain) >> 8) & 0xFF
         raw = bytearray(512)
         raw_mv = memoryview(raw)
         out = bytearray(512 * _BYTES_PER_SAMPLE)
@@ -359,12 +344,7 @@ def wav(path=None, volume=None):
                 if not read:
                     break
                 remaining -= read
-                j = 1
-                for i in range(read):
-                    value = table[raw[i]]
-                    out[j] = value
-                    out[j + 2] = value
-                    j += _BYTES_PER_SAMPLE
+                _convert(out, raw, read)
                 i2s.write(out_mv[0 : read * _BYTES_PER_SAMPLE])
             sleep_ms(config.AUDIO_IBUF * 1000 // (rate * _BYTES_PER_SAMPLE) + 20)
         finally:
@@ -387,10 +367,7 @@ def run():
     a statement about the amplifier rather than about the deployment.
     """
     print("--- pumpkin-house self test ---")
-    print(
-        "level 0x%02X, wav volume %d/10 - edit LEVEL / WAV_VOLUME to change"
-        % (LEVEL, WAV_VOLUME)
-    )
+    print("everything below plays at full scale - loudness is the GAIN strap")
     leds()
     flood()
     buzzer()

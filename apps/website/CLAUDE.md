@@ -263,8 +263,12 @@ covers a whole party. The API owns every rule; read website-api's CLAUDE.md →
 - **`components/quantity-stepper.tsx` is the shared `− n +` control**, extracted
   from `menu-ingredient-picker.tsx` when the party counter became its second
   consumer. Fully controlled and owns no state: both consumers need the number
-  elsewhere (a customization context, the availability request key), and a
-  stepper holding its own copy would be a second source of truth.
+  elsewhere (the booking page's search params, the availability request key), and
+  a stepper holding its own copy would be a second source of truth. ⚠ **The two
+  booking counters are all that is left of it** - a menu ingredient is counted by
+  `PortionGauge` + `PortionSlider` now (see "Customising a dish"), which draw
+  _how much_ lands on the dish; a party of four is just four and has nothing to
+  draw. Don't re-unify them.
 - **A branch's resources are edited in
   `components/admin/resource-pools-editor.tsx`**, on the branch form beside the
   hours. ⚠ Unlike the hours it is **not** replace-all: each row carries its `id`
@@ -781,14 +785,14 @@ Under the cart lines - inside their column, not across the page - sits a strip o
 extras the tenant has said go with what is in the basket. The API owns every
 rule; read website-api's CLAUDE.md → "Checkout recommendations" first.
 
-| Piece                     | Where                                          |
-| ------------------------- | ---------------------------------------------- |
-| Signed-in (server)        | `app/[locale]/cart/cart-recommendations.tsx`    |
-| Guest (client)            | `app/[locale]/cart/guest-recommendations.tsx`   |
-| The shared heading + grid | `app/[locale]/cart/recommendations-shell.tsx`   |
-| The type                  | `lib/cart.ts` (`CartRecommendation`)            |
-| The CMS picker            | `components/admin/recommendations-editor.tsx`   |
-| Its state, ×6 forms       | `hooks/use-recommendations-editor.ts`           |
+| Piece                     | Where                                         |
+| ------------------------- | --------------------------------------------- |
+| Signed-in (server)        | `app/[locale]/cart/cart-recommendations.tsx`  |
+| Guest (client)            | `app/[locale]/cart/guest-recommendations.tsx` |
+| The shared heading + grid | `app/[locale]/cart/recommendations-shell.tsx` |
+| The type                  | `lib/cart.ts` (`CartRecommendation`)          |
+| The CMS picker            | `components/admin/recommendations-editor.tsx` |
+| Its state, ×6 forms       | `hooks/use-recommendations-editor.ts`         |
 
 - ⚠ **Nothing here filters anything.** Deduping across lines, dropping what is
   already in the cart, dropping the unbuyable and dropping a currency the basket
@@ -826,7 +830,7 @@ rule; read website-api's CLAUDE.md → "Checkout recommendations" first.
   nothing"** - so the editor prints what is currently being inherited
   (`recommendationsInherited`), for the reason `menu-sizes-editor.tsx` says what
   a dish is inheriting rather than "no sizes yet": otherwise an operator goes off
-  to re-tick rows the category already defines. `categoryId` follows the *form's*
+  to re-tick rows the category already defines. `categoryId` follows the _form's_
   category field, not the saved row, so re-filing a dish updates the readout
   before the save.
 - **Selection order is the strip's order** - the API stores each ref's position
@@ -864,6 +868,29 @@ is a thin shell around those two components:
   over a counter. Don't fork the markup to change the till's look - the three
   copies this replaced had already drifted (only the detail page showed the
   ingredient's photo and explained the free-portion allowance).
+- **How much of an add-on goes on the dish is `components/portion-picker.tsx`**,
+  not a stepper: `PortionGauge` prints the amount ("40 g") over three circles
+  that grow with it, and pressing it unfolds `PortionSlider` beneath the row -
+  every portion the kitchen allows as a mark, the amount over the money it adds.
+  A `− n +` stated the number and nothing else, so "2" said neither how much
+  pineapple that is nor how much the dish can take.
+  ⚠ **The circles are a proportional gauge, not a count** (`gaugeLevel`): an
+  ingredient may allow one portion or six and three circles have to read as
+  low/medium/high for both, so the lit count is `ceil((qty − min) / (max − min) ×
+3)` and an ingredient at its floor lights none.
+  ⚠ **A mark's price line is the up-charge, and only when there is one.** It
+  mirrors `selectionUpcharge` term for term (the base has already paid for
+  `included_units`), so the free portions carry no price line at all - printing
+  "+0" under three marks says nothing and crowds a label that is 11px wide. It
+  carries **no currency** either: the row above already quotes the per-unit price
+  in it.
+  ⚠ **Only one slider is open at a time** - `MenuIngredientPicker` owns `openId`,
+  not the control - or a dish with six add-ons unfolds into a column of sliders.
+  The panel is **folded, never unmounted** (a zero-height grid row), so it
+  animates closed as well as open, and `visibility` is what takes it out of the
+  tab order meanwhile - the same pattern the phone menu index uses.
+  **The apply button only puts the control away**: the quantity is already
+  written, since the slider fires on every move.
 - ⚠ **A food card's add-to-cart icon opens the modal; it does not post the base
   line.** It used to, which silently chose the defaults for a customer who may
   have wanted the dish without onions, and gave no hint the dish was
@@ -880,7 +907,7 @@ is a thin shell around those two components:
   quantity stepper inside it; the row's own is right behind the modal, and a
   second one could only disagree with it.
   ⚠ **The pencil needs `CartCustomizationRow.option`**, which is the chosen
-  alternative's id. The row's `name` is what the cart *prints* and cannot be
+  alternative's id. The row's `name` is what the cart _prints_ and cannot be
   turned back into the id the picker selects on, so without it a re-opened
   customiser would silently offer the default in place of what was bought.
   ⚠ **An edit can merge two lines** - identity is the dish plus its size and
@@ -889,7 +916,7 @@ is a thin shell around those two components:
   quantity would otherwise stay attached to its neighbour. The API side is in
   website-api's CLAUDE.md → "Editing a cart line".
 - ⚠ **A sized cart line always reads as `customized` in `/api/auth/cart/ids/`**,
-  so a card never offers "remove" for it. With a small *and* a large of one dish
+  so a card never offers "remove" for it. With a small _and_ a large of one dish
   in the cart, a card that offered to remove one could not say which.
 - **`enabledIngredients` lives in `lib/menu-selection.ts`, not beside the detail
   page's components** - the card's customiser is a client component and cannot
@@ -900,7 +927,7 @@ is a thin shell around those two components:
 
 ### Sizes
 
-A dish's `sizes` are authored per **menu category** and optionally *replaced* on
+A dish's `sizes` are authored per **menu category** and optionally _replaced_ on
 one dish. The API side owns every rule; read website-api's CLAUDE.md → "Menu
 sizes" first.
 
@@ -913,7 +940,7 @@ sizes" first.
   and the same pizza configured on the site must not quote different numbers.
   Display only - the server re-prices every selection.
 - ⚠ **The card's "from" price is `lowestPrice(base, sizes)`**, not the base. With
-  a small size that *discounts* the base, a "from" prefix over the list price
+  a small size that _discounts_ the base, a "from" prefix over the list price
   names a price the customer can beat. `effectivePrice` stays the list price -
   it is what the compare-price discount is measured against and what the modal
   applies its deltas to.

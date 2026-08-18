@@ -23,12 +23,15 @@ not its species. If you want the arrangement you heard in the DAW, render it
 there and copy over a .wav; that is what the other module is for, and the
 two live in the same folder precisely so you can choose per piece.
 
-The output format is the one `audio.py` already writes: the odd bytes of a
-16-bit stereo frame, with the even bytes left at the zero they were
-allocated with. That caps the synth at 8 bits, which sounds like a
-constraint and mostly is not - a square wave of amplitude 7 is an *exact*
-square wave, quantisation takes nothing from it, and every voice here is
-either a square or a noise bit.
+The output format is the one `audio.py` already writes: full 16-bit stereo
+frames, both bytes of both channels. It used to write only the high bytes,
+on the reasoning that a square wave of amplitude 7 is an *exact* square wave
+and quantisation takes nothing from it. That is true of one voice held at
+one level and false of everything else this does: `MIDI_HEADROOM` divides
+the ceiling before a note is even struck, and then `MIDI_DECAY` walks each
+voice down toward zero every 12 ms. In eight bits that left a voice a
+handful of levels to decay through, so notes ended in a few audible steps
+and a click instead of fading.
 
 **The mixing loop is `@micropython.viper`**, because it is the one piece of
 this firmware that runs per *sample* rather than per chunk: six voices at
@@ -399,7 +402,7 @@ class Synth:
     pad happened to start first.
     """
 
-    def __init__(self, rate, gain=256, voices=None):
+    def __init__(self, rate, voices=None):
         self._voices = config.MIDI_VOICES if voices is None else voices
         self._inc = increments(rate)
         self._state = array("i", [0] * (_HEADER + self._voices * _SLOTS))
@@ -419,7 +422,13 @@ class Synth:
         # reach the ceiling with MIDI_HEADROOM voices sounding and clips
         # above that - see config.py for why clipping is the cheap direction
         # to be wrong in when everything is a square wave.
-        peak = 127 * gain // 256 // max(1, config.MIDI_HEADROOM)
+        #
+        # In sixteen bits, not eight: MIDI_HEADROOM divides this, and then
+        # the envelope divides what is left once per chunk, so a small
+        # ceiling is not a quiet synth - it is a coarse one. 32767 leaves
+        # every voice ~10,000 levels to decay through, where 8 bits left it
+        # a handful.
+        peak = 32767 // max(1, config.MIDI_HEADROOM)
         self._peak = peak if peak > 0 else 1
 
         duty = config.MIDI_DUTY
@@ -524,8 +533,9 @@ class Synth:
         The arithmetic is deliberately multiplicative in 8.8 fixed point. A
         subtraction would make every note decay at the same *rate* rather
         than over the same *time*, so quiet notes would vanish instantly and
-        loud ones would ring - and with peak amplitudes down around 7 at
-        normal volumes, an integer subtraction has nowhere to land at all.
+        loud ones would ring - and back when the ceiling was eight bits and
+        a peak amplitude was around 7, an integer subtraction had nowhere to
+        land at all.
         """
         state = self._state
         amps = self._amp
@@ -554,12 +564,17 @@ def _mix(out: ptr8, state: ptr32, first: int, frames: int):
     touches is a raw pointer into an `array('i')` or a `bytearray`, and every
     local is a machine int - viper has no other kinds.
 
-    Only the odd bytes are written, twice per frame. That is the same
-    contract `audio.py`'s streaming loop keeps: the even bytes are the low
-    halves of 16-bit samples, they were zeroed at allocation, and an 8-bit
-    source never has anything to put in them. Writing the value to both
-    channels is what makes the output independent of which mode the amp's SD
-    divider puts it in.
+    All four bytes of every frame are written - low half then high half,
+    once per channel - which is the same contract `audio.py`'s streaming loop
+    keeps, and for the same reason: everything that attenuates a voice does
+    it below the top eight bits. Writing the sample to both channels is what
+    makes the output independent of which mode the amp's SD divider puts it
+    in.
+
+    `acc` is masked to 16 bits before it is split rather than shifted while
+    still signed, because viper's ints are machine words and its `>>` on a
+    negative one is not something to have an opinion about at 130,000
+    samples a second.
 
     The indices are literals rather than the `_VOICES` / `_DUTY` / `_LFSR` /
     `_HEADER` names used everywhere else, because a global read inside a
@@ -573,7 +588,7 @@ def _mix(out: ptr8, state: ptr32, first: int, frames: int):
     duty = state[1]
     lfsr = state[2]
     i = 0
-    j = first * 4 + 1
+    j = first * 4
     while i < frames:
         acc = 0
         base = 4
@@ -602,13 +617,17 @@ def _mix(out: ptr8, state: ptr32, first: int, frames: int):
                         acc = acc - amp
             base = base + 4
             v = v + 1
-        if acc > 127:
-            acc = 127
-        elif acc < -127:
-            acc = -127
-        acc = acc & 0xFF
-        out[j] = acc
-        out[j + 2] = acc
+        if acc > 32767:
+            acc = 32767
+        elif acc < -32767:
+            acc = -32767
+        acc = acc & 0xFFFF
+        lo = acc & 0xFF
+        hi = acc >> 8
+        out[j] = lo
+        out[j + 1] = hi
+        out[j + 2] = lo
+        out[j + 3] = hi
         j = j + 4
         i = i + 1
     state[2] = lfsr
@@ -626,11 +645,11 @@ class Player:
     piece gradually falling apart.
     """
 
-    def __init__(self, song, rate, chunk, gain=256, voices=None):
+    def __init__(self, song, rate, chunk, voices=None):
         self._song = song
         self._rate = rate
         self._chunk = chunk
-        self._synth = Synth(rate, gain=gain, voices=voices)
+        self._synth = Synth(rate, voices=voices)
         self._events = song.events()
         self._division = song.division
         self._tick = 0
@@ -738,14 +757,11 @@ def play(speaker, path, on_chunk=None):
     if speaker is None:
         return False
     song = Song.from_file(path)
-    player = Player(
-        song,
-        config.MIDI_RATE,
-        speaker.chunk_samples(),
-        gain=speaker.gain(),
-    )
+    player = Player(song, config.MIDI_RATE, speaker.chunk_samples())
     try:
-        return speaker.play_stream(config.MIDI_RATE, player.fill, on_chunk=on_chunk)
+        return speaker.play_stream(
+            config.MIDI_RATE, player.fill, on_chunk=on_chunk
+        )
     finally:
         # A press that cut the piece short left voices holding amplitude,
         # and the next .mid would inherit them mid-decay.
@@ -757,7 +773,7 @@ def describe(path):
 
     The question this answers is "is this file the problem", and it is worth
     a function because the alternative on a board with no screen is a
-    silence that could equally well be the amp, the volume, or a file the
+    silence that could equally well be the amp, the wiring, or a file the
     exporter wrote in format 2.
     """
     song = Song.from_file(path)
@@ -810,7 +826,7 @@ def describe(path):
     )
 
 
-def bench(path, seconds=10, gain=256, voices=None):
+def bench(path, seconds=10, voices=None):
     """How much faster than real time this board synthesises a file.
 
     The one question a laptop cannot answer about this module. Everything
@@ -844,7 +860,7 @@ def bench(path, seconds=10, gain=256, voices=None):
 
     rate = config.MIDI_RATE
     chunk = config.AUDIO_CHUNK_SAMPLES
-    player = Player(Song.from_file(path), rate, chunk, gain=gain, voices=voices)
+    player = Player(Song.from_file(path), rate, chunk, voices=voices)
     buf = bytearray(chunk * _BYTES_PER_SAMPLE)
     limit = rate * seconds
     frames = 0
@@ -865,7 +881,7 @@ def bench(path, seconds=10, gain=256, voices=None):
     return audio_ms * 100 // spent
 
 
-def render_wav(path, out_path, rate=None, gain=256, voices=None):
+def render_wav(path, out_path, rate=None, voices=None):
     """Render a .mid to an 8-bit mono WAV. For a laptop, not for the board.
 
     The same parser, the same synth and the same mixing loop the lantern
@@ -873,20 +889,17 @@ def render_wav(path, out_path, rate=None, gain=256, voices=None):
     of this is what will come out of the speaker, and it can be listened to,
     looked at in an editor, and diffed after a change to any of it.
 
-    Rendered at full scale by default rather than at `config.AUDIO_VOLUME`,
-    and it does not import `audio.py` to find out what that would be - that
-    module opens with `from machine import Pin` and cannot be imported off
-    the board at all. No loss: volume is a single multiplier over the whole
-    mix, so the only thing it changes here is how much of the 8-bit range
-    the preview uses, and using all of it is what you want when the question
-    is what the synth did.
+    Rendered at full scale, which is also what the lantern plays: loudness
+    on this build is one resistor on the amplifier's GAIN pad and nothing in
+    the samples. So this preview is the mix itself, not an approximation of
+    it.
 
     On the board this is pointless and slow: the point of a .mid there is
     that it is *not* 800 KB of WAV.
     """
     rate = config.MIDI_RATE if rate is None else rate
     chunk = config.AUDIO_CHUNK_SAMPLES
-    player = Player(Song.from_file(path), rate, chunk, gain=gain, voices=voices)
+    player = Player(Song.from_file(path), rate, chunk, voices=voices)
 
     buf = bytearray(chunk * _BYTES_PER_SAMPLE)
     body = bytearray()
@@ -895,8 +908,11 @@ def render_wav(path, out_path, rate=None, gain=256, voices=None):
         if not frames:
             break
         for i in range(frames):
-            # Back the other way: the mixer wrote the high byte of a signed
-            # 16-bit sample, and a WAV wants unsigned 8-bit.
+            # Back the other way: the mixer wrote a little-endian signed
+            # 16-bit sample and a WAV here wants unsigned 8-bit, so this is
+            # the high byte with its sign flipped. The low byte the mixer
+            # now also writes is real resolution and the preview throws it
+            # away, which is the preview's business and not the board's.
             body.append((buf[i * _BYTES_PER_SAMPLE + 1] + 128) & 0xFF)
 
     f = open(out_path, "wb")

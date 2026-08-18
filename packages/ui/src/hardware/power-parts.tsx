@@ -3,7 +3,7 @@ import "./hardware.css";
 
 /**
  * The parts that do not live on the breadboard: the cell holder, the slide
- * switch and the loudspeaker.
+ * switch, the loudspeaker and the volume pot.
  *
  * Everything else in this family is placed by the holes its legs go into. These
  * are placed by a plain `x`/`y`, because on a real build they sit off the board
@@ -388,6 +388,163 @@ export function Speaker({
           y={y + size + 15}
           textAnchor="middle"
         >
+          {sublabel}
+        </text>
+      ) : null}
+    </g>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Potentiometer
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const POT_SIZE = 76;
+
+export interface PotentiometerProps {
+  /** Top-left corner of the body, knob side up. */
+  x: number;
+  y: number;
+  /** Body width. A 16 mm panel pot is roughly square. */
+  size?: number;
+  label?: string;
+  /** Printed under it, e.g. the track value and taper. */
+  sublabel?: string;
+  /** Where the shaft points, in degrees clockwise from straight up. */
+  angle?: number;
+}
+
+/**
+ * Where a potentiometer's three solder tags are, left to right.
+ *
+ * Named for what they *do* rather than 1/2/3, because the numbering is the one
+ * thing about a pot nobody remembers and the roles are the thing a figure
+ * actually wires: the wiper is always the middle tag, and which outer tag is
+ * which end of the track is decided by how you mount it, not by the part.
+ */
+export function potentiometerTerminals(
+  props: Pick<PotentiometerProps, "x" | "y" | "size">,
+): { ccw: Point; wiper: Point; cw: Point } {
+  const size = props.size ?? POT_SIZE;
+  const y = props.y + size * 0.86;
+  return {
+    ccw: { x: props.x + size * 0.22, y },
+    wiper: { x: props.x + size * 0.5, y },
+    cw: { x: props.x + size * 0.78, y },
+  };
+}
+
+/**
+ * A 16 mm panel potentiometer, drawn shaft-on with its three tags below it.
+ *
+ * Face-on rather than in profile because the thing a reader needs to match
+ * against the part in their hand is the **order of the three tags**, and that
+ * is what disappears in a side view. The shaft is drawn with its flat pointing
+ * somewhere off-centre for the same reason the LEDs are drawn lit: a knob
+ * parked dead upright reads as a symbol, and a knob turned part way reads as a
+ * control somebody has already been using.
+ *
+ * It carries no polarity mark, and that is not an omission. A pot has no
+ * correct way round - swapping the outer tags reverses which way is louder,
+ * which is a setting (`VOLUME_POT_REVERSED` in the pumpkin lantern) rather
+ * than a fault. Only the middle tag is fixed, and it is fixed by the part.
+ */
+export function Potentiometer({
+  x,
+  y,
+  size = POT_SIZE,
+  label = "RV1",
+  sublabel,
+  angle = -38,
+}: PotentiometerProps) {
+  const terminals = potentiometerTerminals({ x, y, size });
+  const bodyHeight = size * 0.68;
+  const bodyBottom = y + bodyHeight;
+  const centre = { x: x + size / 2, y: y + bodyHeight / 2 };
+  const knob = size * 0.3;
+  const radians = (angle * Math.PI) / 180;
+  const pointer = {
+    x: centre.x + Math.sin(radians) * knob * 0.82,
+    y: centre.y - Math.cos(radians) * knob * 0.82,
+  };
+
+  return (
+    <g>
+      {/* the can */}
+      <rect
+        x={x}
+        y={y}
+        width={size}
+        height={bodyHeight}
+        rx={size * 0.1}
+        fill="var(--hw-metal-dark)"
+        stroke="rgba(0,0,0,0.5)"
+        strokeWidth={1.2}
+      />
+
+      {/* the shaft, and the flat you line a knob up against */}
+      <circle
+        cx={centre.x}
+        cy={centre.y}
+        r={knob}
+        fill="var(--hw-plastic-dark)"
+      />
+      <circle
+        cx={centre.x}
+        cy={centre.y}
+        r={knob * 0.78}
+        fill="none"
+        stroke="var(--hw-metal)"
+        strokeWidth={1.3}
+      />
+      <line
+        x1={centre.x}
+        y1={centre.y}
+        x2={pointer.x}
+        y2={pointer.y}
+        stroke="var(--hw-silk)"
+        strokeWidth={2.4}
+        strokeLinecap="round"
+      />
+
+      {[
+        { at: terminals.ccw, mark: "1" },
+        { at: terminals.wiper, mark: "2" },
+        { at: terminals.cw, mark: "3" },
+      ].map(({ at, mark }) => (
+        <g key={mark}>
+          <rect
+            x={at.x - 3}
+            y={bodyBottom - 3}
+            width={6}
+            height={at.y - bodyBottom + 3}
+            rx={1}
+            fill="var(--hw-metal)"
+            stroke="var(--hw-metal-dark)"
+            strokeWidth={0.8}
+          />
+          <circle
+            cx={at.x}
+            cy={at.y}
+            r={3.2}
+            fill="var(--hw-plastic-dark)"
+          />
+          <text
+            className="hw-silk"
+            x={at.x}
+            y={bodyBottom - 7}
+            textAnchor="middle"
+          >
+            {mark}
+          </text>
+        </g>
+      ))}
+
+      <text className="hw-label" x={centre.x} y={y - 22} textAnchor="middle">
+        {label}
+      </text>
+      {sublabel ? (
+        <text className="hw-label-sm" x={centre.x} y={y - 8} textAnchor="middle">
           {sublabel}
         </text>
       ) : null}

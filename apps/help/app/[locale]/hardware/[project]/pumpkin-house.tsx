@@ -208,9 +208,8 @@ const SELFTEST_ONE =
   "selftest.swap()      # the same tone on both legal pin orders\n" +
   "selftest.wav()       # dark.wav, streamed raw\n" +
   "\n" +
-  "# Too loud? Two constants at the top of the file, and nothing else.\n" +
-  "selftest.LEVEL = 0x10        # synthesised tests; 0x7F is full scale\n" +
-  "selftest.WAV_VOLUME = 4      # wav() only, same 1-10 as config.AUDIO_VOLUME";
+  "# Every test above plays at full scale, and there is no constant here to\n" +
+  "# turn it down. Too loud is a soldering-iron question - see step 05.";
 
 const PAD_DRIVE =
   "import machine\n" +
@@ -242,7 +241,11 @@ export function PumpkinHouseDoc() {
           <strong>There is an optional second voice.</strong> A MAX98357A
           amplifier and a small speaker (step 05) play recorded audio off the
           Pico&rsquo;s own flash - a real crow, thunder, a door - taking their
-          turn in the same rotation as the buzzer scenes. Either device can be
+          turn in the same rotation as the buzzer scenes.{" "}
+          <strong>How loud it is, is one resistor.</strong> The Pico always
+          sends full scale and the amplifier&rsquo;s <code>GAIN</code> pad
+          decides the rest — 100 kΩ to <code>VIN</code> on this build, the
+          quietest of that pad&rsquo;s five states. Either device can be
           switched off in <code>config.py</code>, so the build is the same
           whether you fit one, both or neither.
         </P>
@@ -338,6 +341,17 @@ export function PumpkinHouseDoc() {
               <td>
                 With the amplifier. 4 Ω also works and is louder, at more
                 current; anything above 8 Ω is quieter for no saving.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono">1</td>
+              <td>100 kΩ resistor, ¼ W</td>
+              <td>
+                R7, and the whole volume control — step 05. It straps the
+                amplifier&rsquo;s <code>GAIN</code> pad to <code>VIN</code>, the
+                quietest of that pad&rsquo;s five states. The same resistor
+                moved to ground is its <em>loudest</em>, so buy one and decide
+                at the bench.
               </td>
             </tr>
             <tr>
@@ -743,12 +757,19 @@ export function PumpkinHouseDoc() {
             <strong>Speaker:</strong> the module&rsquo;s two output pads to the
             8 Ω cone. Either way round.
           </li>
+          <li>
+            <strong>R7:</strong> a 100 kΩ resistor from the module&rsquo;s{" "}
+            <code>GAIN</code> pad to its <code>VIN</code>. That is the volume
+            control, and it is the whole of it — the Pico always sends full
+            scale. Either way round; a resistor has no polarity. The five states
+            of that pad, and what each one is worth, are the table below.
+          </li>
         </ul>
 
         <DocDualFigure
           captionLabel="Fig 5"
-          caption="The amplifier stage. The outputs are bridge-tied — the speaker floats between them and neither side is ground — which is why there is no return wire to the blue rail here, and why grounding one output destroys half the amplifier rather than simply halving the volume."
-          pictorialCaption="The same stage on a breadboard. A single-row module has to go in the outermost row of a bank or its own PCB covers the holes you were about to wire to, so it plugs into row a and overhangs the bottom edge — which is why power comes off the top rails. Note the first two jumpers crossing: the header reads LRC before BCLK, and the Pico's pins run the other way. Read the silkscreen, not the wire colours."
+          caption="The amplifier stage, with R7 drawn as a second drop off the same raw rail VIN hangs from — which is exactly what a strap is. The outputs are bridge-tied — the speaker floats between them and neither side is ground — which is why there is no return wire to the blue rail here, and why grounding one output destroys half the amplifier rather than simply halving the volume. The table under the drawing is the full five states of the GAIN pad; nothing on the Pico's side of the I²S bus touches level at all."
+          pictorialCaption="The same stage on a breadboard. A single-row module has to go in the outermost row of a bank or its own PCB covers the holes you were about to wire to, so it plugs into row a and overhangs the bottom edge — which is why power comes off the top rails. Note the first two jumpers crossing: the header reads LRC before BCLK, and the Pico's pins run the other way. R7 lies in the lower bank with one leg in GAIN's own column, and the red jumper off its far end goes to the same top rail as VIN — brown-black-yellow bands, so you can check it without a meter."
           schematic={<AmpStageFigure />}
           pictorial={<AmpStagePictorial />}
         />
@@ -771,11 +792,12 @@ export function PumpkinHouseDoc() {
             average and peaks near six hundred. Reckon on{" "}
             <strong>6&ndash;8 hours</strong> instead of twenty if audio plays
             through the evening. Three things buy most of it back, in this
-            order: play audio sparingly (lower <code>AUDIO_WEIGHT</code>), leave
-            the module&rsquo;s <code>GAIN</code> pad open at 9 dB rather than
-            bridging it, and let the firmware drop <code>SD</code> between
-            tracks - which is what GP22 is for, and is worth a couple of
-            milliamps and all of the idle hiss.
+            order: play audio sparingly (lower <code>AUDIO_WEIGHT</code>), keep{" "}
+            <code>GAIN</code> strapped low (R7 to <code>VIN</code> is 3 dB, and
+            current follows loudness — a quiet lantern is a long-lived one), and
+            let the firmware drop <code>SD</code> between tracks - which is what
+            GP22 is for, and is worth a couple of milliamps and all of the idle
+            hiss.
           </P>
           <P>
             While you are here: 4.8 V into 8 Ω is about <strong>1.4 W</strong>,
@@ -792,6 +814,145 @@ export function PumpkinHouseDoc() {
           one lead from the module&rsquo;s GND straight back to the pack
           negative, and let the LEDs keep theirs.
         </P>
+
+        <DocH3>Setting the volume: five states, one resistor</DocH3>
+        <P>
+          <code>GAIN</code> is a <strong>five-state strap</strong>, not an
+          analogue input: the part decodes <em>where the pad is tied</em>, not
+          what voltage sits on it. Two of the five need a resistor and three do
+          not, which is why one 100 kΩ part buys you both ends of the range.
+        </P>
+        <DocTable>
+          <thead>
+            <tr>
+              <th>Tie GAIN to</th>
+              <th className="mono">Gain</th>
+              <th className="mono">vs. bare</th>
+              <th className="mono">≈ 8 Ω @ 4.8 V</th>
+              <th>What you get</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>100 kΩ to GND</td>
+              <td className="mono">15 dB</td>
+              <td className="mono">+6 dB</td>
+              <td className="mono">≈1.4 W</td>
+              <td>
+                Everything the pack has. The rail runs out before the gain does,
+                so a loud passage at full scale clips — this is the setting to
+                reach for only if the lantern is genuinely too quiet.
+              </td>
+            </tr>
+            <tr>
+              <td>GND, no resistor</td>
+              <td className="mono">12 dB</td>
+              <td className="mono">+3 dB</td>
+              <td className="mono">≈0.7 W</td>
+              <td>Loud for a porch. Half the power of the row above.</td>
+            </tr>
+            <tr>
+              <td>
+                nothing — <strong>leave it open</strong>
+              </td>
+              <td className="mono">9 dB</td>
+              <td className="mono">—</td>
+              <td className="mono">≈0.35 W</td>
+              <td>
+                What a bare module does out of the bag, and what this build used
+                to run at behind a software dial.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <code>VIN</code>, no resistor
+              </td>
+              <td className="mono">6 dB</td>
+              <td className="mono">−3 dB</td>
+              <td className="mono">≈0.18 W</td>
+              <td>
+                Comfortable at conversational distance. The middle option if 3
+                dB turns out to be too polite for your doorstep.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <strong>
+                  100 kΩ to <code>VIN</code>
+                </strong>
+              </td>
+              <td className="mono">3 dB</td>
+              <td className="mono">−6 dB</td>
+              <td className="mono">≈0.09 W</td>
+              <td>
+                <strong>R7 — what this build fits.</strong> A quarter the power
+                of a bare module, and the amp&rsquo;s own hiss comes down with
+                it. Plenty inside a ceramic pot with someone standing at the
+                gate.
+              </td>
+            </tr>
+          </tbody>
+        </DocTable>
+        <P>
+          The steps are <strong>3 dB apart</strong>, which is roughly the
+          smallest change a listener calls &ldquo;a bit louder&rdquo;, so the
+          five of them span a genuinely useful 12 dB rather than five names for
+          the same thing. The wattages are against the ≈1.4 W ceiling the
+          warning above gives for 4.8 V into 8 Ω, not the 3 W on the
+          module&rsquo;s packaging: each row down halves the power and drops the
+          voltage swing to about 71% of the row above.
+        </P>
+        <P>
+          <strong>Changing your mind costs one joint.</strong> Every state is
+          reachable from every other with the same part: move R7&rsquo;s far leg
+          from <code>VIN</code> to <code>GND</code> for the loudest, lift it out
+          entirely for 9 dB, or replace it with a plain jumper for 6 or 12.
+          Nothing in <code>config.py</code> changes, because there is nothing in{" "}
+          <code>config.py</code> to change.
+        </P>
+
+        <DocNote tag="Why volume is a resistor and not a knob or a number">
+          <P>
+            The obvious places for a volume control are a potentiometer on the
+            Pico&rsquo;s ADC and a multiplier in the sample loop. This build has
+            neither, and both were tried.
+          </P>
+          <P>
+            <strong>A pot on that pad does not work at all.</strong>{" "}
+            <code>GAIN</code> decodes where it is tied, not what voltage is on
+            it, so a wiper spends most of its sweep in states that resolve to
+            nothing in particular and the parts that do resolve arrive as abrupt
+            3 dB jumps with a click at each one. The honest knob for this pad is
+            a <strong>three-position rotary switch</strong> — 100 kΩ to GND,
+            open, 100 kΩ to <code>VIN</code> — which is a range selector you set
+            once for the room, not a volume control. And{" "}
+            <strong>never put a pot in series with the speaker</strong>: this is
+            a filterless class-D output, a differential switching waveform
+            rather than a line-level signal, so a pot there dissipates real
+            power, changes the damping the cone sees, and cooks itself. There is
+            nothing to tap between DAC and amplifier either — the link is I²S,
+            digital all the way to the voice coil.
+          </P>
+          <P>
+            <strong>Attenuating the samples works, and costs hiss.</strong> That
+            is what this firmware used to do: a 10 kΩ pot on GP26 read between
+            chunks, folded into the lookup table that converts each sample. It
+            was cheap and it was lossless. But scaling the samples lowers the{" "}
+            <em>music</em>, and leaves the amplifier running wide open, so its
+            own noise floor stays exactly where it was — most audible at
+            precisely the settings you reach for when the lantern is too loud.
+            The strap turns the part itself down and takes the hiss with it,
+            which no arithmetic on the Pico&rsquo;s side can do.
+          </P>
+          <P>
+            So the Pico now writes full scale and nothing else, and the whole of
+            loudness is R7. What that costs is a soldering iron to change, which
+            for a decoration that lives in one porch is a price paid once — and
+            it buys back three GPIO-side settings, an ADC channel, a 512-byte
+            table rebuild and the failure mode where a floating ADC pin made the
+            volume wander on its own.
+          </P>
+        </DocNote>
 
         <DocNote tag="What the SD pin is really doing">
           <P>
@@ -1001,69 +1162,62 @@ export function PumpkinHouseDoc() {
           About a minute, in the order that narrows a fault fastest: all twelve
           RGB channels one at a time by GPIO number, the flood, the buzzer, the
           amp&rsquo;s <code>SD</code> line on its own, then a loud tone, hiss,
-          both legal pin orders, and finally <code>dark.wav</code> streamed raw.
-          Lights first on purpose - once the LEDs walk you know the board is
-          running your code and the pin map is real, which turns every later
-          silence into a statement about the amplifier rather than about the
-          upload.
+          both legal pin orders, and <code>dark.wav</code> streamed raw. Lights
+          first on purpose - once the LEDs walk you know the board is running
+          your code and the pin map is real, which turns every later silence
+          into a statement about the amplifier rather than about the upload.
         </P>
         <CodeBlock language="python" code={SELFTEST_ONE} />
         <P>
-          <strong>It is loud on purpose, and turned down in one place.</strong>{" "}
-          <code>LEVEL</code> at the top of the file sets every synthesised test
-          (the high byte of a signed 16-bit sample, so <code>0x7F</code> is full
-          scale), and <code>WAV_VOLUME</code> sets <code>wav()</code> on the
-          same <code>1</code>–<code>10</code> scale as{" "}
-          <code>config.AUDIO_VOLUME</code>. The shipped defaults —{" "}
-          <code>0x20</code> and <code>6</code> — are comfortable beside your
-          head; the first pass at this file used <code>0x60</code> and no
-          attenuation at all, on the theory that &ldquo;is this amplifier alive
-          at all&rdquo; is not a question a polite tone can settle, which is
-          true right up until the answer is yes. Raise them for one stubborn
-          amp, then put them back.
+          <strong>It is loud on purpose, and there is no knob in it.</strong>{" "}
+          Every test here plays at full scale, because that is what the lantern
+          itself does — loudness on this build is R7 on the amp&rsquo;s{" "}
+          <code>GAIN</code> pad and nothing else, so a self-test with its own
+          level control would be answering a question the hardware has already
+          settled. If <code>selftest.tone()</code> is painful beside your head,
+          that is the strap talking, and step 05 has the five states it can
+          take. It is also a square wave, which is the least musical thing this
+          board can produce and reads several decibels louder than any recording
+          at the same scale.
         </P>
-        <P>
-          None of that touches how loud the <em>lantern</em> is. That is{" "}
-          <code>AUDIO_VOLUME</code> in <code>config.py</code>, a plain{" "}
-          <code>1</code>–<code>10</code> applied through the same lookup table
-          that converts the samples, so it costs nothing per sample and covers
-          tracks and the confirmation blip alike.{" "}
-          <code>selftest.WAV_VOLUME</code> is on the identical scale on purpose:
-          a level you settle on at the bench is a number you can type straight
-          into <code>config.py</code>.
-        </P>
-        <DocNote tag="Why the steps are 3 dB and not a tenth each">
+        <DocNote tag="Why the Pico writes full scale, and why that loop is compiled">
           <P>
-            Loudness follows the <em>logarithm</em> of amplitude. A dial that
-            multiplied by <code>v/10</code> would put every setting worth using
-            in the top two notches — <code>5</code> would already be a
-            barely-noticeable −6 dB, and <code>1</code> through <code>3</code>{" "}
-            would be eight-bit mush indistinguishable from each other. Three
-            decibels a step is roughly the smallest change a listener calls
-            &ldquo;a bit louder&rdquo;, which is the whole job of a 1–10
-            control.
+            The one job on this side of the I²S bus is format, not level: 8-bit
+            unsigned mono in the file, 16-bit signed stereo on the wire. At full
+            scale that conversion is a single <code>^ 0x80</code> — an unsigned
+            byte with its top bit flipped <em>is</em> the same number read as
+            signed — sitting in the high half of each sample with a zero below
+            it. Unsigned 128 maps to exactly 0, so there is no DC offset for the
+            amplifier to thump on.
           </P>
           <P>
-            The gain lives in <code>audio._VOLUME_GAIN</code> as ten integer
-            numerators over 256 —{" "}
-            <code>(11, 16, 23, 32, 45, 64, 91, 128, 181, 256)</code> — rather
-            than a <code>pow()</code>, so the arithmetic stays in
-            MicroPython&rsquo;s arbitrary-precision ints instead of its
-            single-precision floats, and so the ten numbers can be checked by
-            eye against the table in <code>config.py</code>. The even settings
-            are bit-for-bit identical to the halvings this replaced:{" "}
-            <code>10</code>, <code>8</code>, <code>6</code>, <code>4</code>,{" "}
-            <code>2</code> are the old <code>0</code>–<code>4</code>. Unsigned
-            128 still maps to exactly 0, so no setting introduces a DC offset
-            for the amplifier to thump on.
+            <strong>The zero halves are written anyway</strong>, which looks
+            like waste and is not: the output buffer is shared with{" "}
+            <code>midi.py</code>, whose synthesised samples use both halves, so
+            a loop that only touched the odd bytes would clock out the tail of
+            the last <code>.mid</code> underneath the next recording at a level
+            nobody can predict. Four stores a sample instead of two.
           </P>
           <P>
-            <strong>What the bottom of the dial costs you.</strong> This is
-            digital attenuation on an 8-bit source, so volume <code>1</code>{" "}
-            leaves about eleven distinct output levels out of 256 and sounds
-            like it. If the lantern needs to be that quiet, take it out of the
-            amplifier instead: <code>GAIN</code> floating is +9 dB, tied to{" "}
-            <code>VDD</code> is +6 dB, and that costs no resolution at all.
+            <strong>
+              And four stores had to be compiled to be affordable.
+            </strong>{" "}
+            Measured on the board, the plain-bytecode version cost 40 µs a
+            sample — 44% of a core at 11 kHz doing nothing but moving bytes —
+            and that was the two-store form; four took it to 73%, which does not
+            fit inside a 16 kHz file at all, and <code>fire.wav</code> is 16
+            kHz. So <code>audio._convert()</code> is{" "}
+            <code>@micropython.viper</code>, like the MIDI mixer next to it: 262
+            µs per 256-sample chunk, or 1.1% of a core at 11 kHz. Correct
+            arithmetic was affordable here; the obvious way of spelling it was
+            not.
+          </P>
+          <P>
+            <code>MIDI_HEADROOM</code> and the per-chunk decay envelope still
+            divide the synth&rsquo;s ceiling, which is why the mixer works in
+            sixteen bits rather than eight — 32767 leaves every voice about ten
+            thousand levels to fade through, where eight bits left it a handful
+            and notes ended in audible steps and a click.
           </P>
         </DocNote>
         <DocNote tag="Why its tone is three seconds and not ninety milliseconds">
@@ -1241,6 +1395,13 @@ export function PumpkinHouseDoc() {
             buttons attached.
           </li>
           <li>
+            <strong>There is nothing else on the outside of the case.</strong>{" "}
+            Volume is R7 on the amplifier, which lives on the board and is set
+            before it goes in — so settle it at the bench, with the lid on and
+            the lantern where it will actually stand. A pumpkin absorbs more
+            than you expect.
+          </li>
+          <li>
             Don&rsquo;t glue the battery holder in - it has to come out to
             recharge.
           </li>
@@ -1297,7 +1458,6 @@ export function PumpkinHouseDoc() {
           GP22 on the far one - and why, in the breadboard view of Fig 5, it is
           the one jumper drawn lying across the Pico.
         </P>
-
         <DocFigure
           captionLabel="Fig 5"
           caption="The whole 40-pin map on the board, for when the table below is not the thing you want. Pins 1–20 run along one long edge starting at GP0 beside the USB connector, and 21–40 back along the other, so pin 21 (GP16) sits directly opposite pin 20 (GP15)."
@@ -1395,9 +1555,9 @@ export function PumpkinHouseDoc() {
             </tr>
             <tr>
               <td className="mono">GND</td>
-              <td className="mono">38 · 3 · 8 · 13 · 18 · 23 · 28</td>
+              <td className="mono">38 · 3 · 8 · 13 · 18 · 23 · 28 · 33</td>
               <td className="mono">—</td>
-              <td>Common return</td>
+              <td>Common return — 23 sits between the two buttons</td>
               <td>—</td>
             </tr>
           </tbody>
@@ -1559,11 +1719,10 @@ export function PumpkinHouseDoc() {
               <td>
                 <code>Speaker</code> — the I²S device. Walks a WAV&rsquo;s RIFF
                 chunks, streams it off flash in ~23 ms slices, and converts
-                8-bit unsigned mono to the signed 16-bit stereo the amp wants
-                through a lookup table built once at construction (which is also
-                where <code>AUDIO_VOLUME</code> rides along for free). Owns the{" "}
-                <code>SD</code> line, so it can shut the amplifier up between
-                tracks.
+                8-bit unsigned mono to the signed 16-bit stereo the amp wants —
+                one compiled <code>^ 0x80</code> per sample, at full scale, with
+                no level control anywhere in it. Owns the <code>SD</code> line,
+                so it can shut the amplifier up between tracks.
               </td>
             </tr>
             <tr>
@@ -2004,20 +2163,6 @@ export function PumpkinHouseDoc() {
               </td>
             </tr>
             <tr>
-              <td className="mono">AUDIO_VOLUME</td>
-              <td>
-                Speaker volume, <code>1</code>–<code>10</code>, covering −27 dB
-                to 0 dB in <strong>3 dB steps</strong> — not tenths, so that
-                every notch is about the smallest change you would call &ldquo;a
-                bit louder&rdquo; instead of eight settings that all sound like
-                silence. <code>10</code> is the file as encoded, <code>6</code>{" "}
-                is the shipped default. Tracks and the confirmation blip both go
-                through it. Try the module&rsquo;s <code>GAIN</code> pad before
-                coming below about <code>4</code>; this throws away bits, and
-                8-bit audio has only 48 dB of them.
-              </td>
-            </tr>
-            <tr>
               <td className="mono">AUDIO_CHUNK_SAMPLES</td>
               <td>
                 Samples per I²S write — a latency knob, not a quality one. It is
@@ -2257,9 +2402,23 @@ export function PumpkinHouseDoc() {
             <tr>
               <td>Audio is distorted, or crackles on peaks</td>
               <td>
-                Too loud for the rail. Leave <code>GAIN</code> open at 9 dB and
-                drop <code>AUDIO_VOLUME</code> a notch or two; if it only
-                started when the cells got low, that is the pack.
+                Too loud for the rail. Move R7 down a state — step 05 has the
+                table, and <code>VIN</code> through 100 kΩ is the quietest there
+                is. If it only started when the cells got low, that is the pack,
+                not the strap.
+              </td>
+            </tr>
+            <tr>
+              <td>It plays, but far too quietly for the room</td>
+              <td>
+                R7 is the only thing that sets level, so this is a soldering
+                question and not a settings one. Lift its far leg off{" "}
+                <code>VIN</code> and move it to <code>GND</code> for the loudest
+                of the five states, or take R7 out altogether for the
+                module&rsquo;s own 9 dB — step 05 has all five. Check first that{" "}
+                <code>GAIN</code> is not accidentally shorted to a neighbouring
+                pad: the header runs DIN, GAIN, SD, so a solder bridge there
+                reads as a gain state you did not choose.
               </td>
             </tr>
             <tr>

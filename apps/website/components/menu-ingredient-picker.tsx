@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useId, useMemo, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { QuantityStepper } from "@/components/quantity-stepper";
+import { PortionGauge, PortionSlider } from "@/components/portion-picker";
 import type { MenuItemIngredient } from "@/lib/catalog";
 import { formatPrice } from "@/lib/price";
 import { formatPortion } from "@/lib/nutrition";
@@ -25,7 +25,7 @@ import {
  * over a counter. Only sizes change - every surface shows the same rows, the
  * same portions and the same "Included" / up-charge wording.
  *
- * Shares its names with `QuantityStepper`'s own size scale, which is what lets
+ * Shares its names with `PortionPicker`'s own size scale, which is what lets
  * this pass `size` straight through to it.
  */
 export type MenuIngredientPickerSize = "sm" | "lg";
@@ -65,8 +65,10 @@ interface Props {
 
 /**
  * The add-on list a customer configures a dish with: image, name, portion,
- * "Included" or per-unit up-charge, a stepper, and the chips of a single-select
- * choice group.
+ * "Included" or per-unit up-charge, a `PortionGauge`, and the chips of a
+ * single-select choice group. Pressing the gauge unfolds a `PortionSlider`
+ * beneath the row - one mark per portion the kitchen allows, each labelled with
+ * the amount it puts on the dish and what that adds to the price.
  *
  * **One component for all three places a dish is customised** - the menu item
  * detail page, the catalog card's add-to-cart modal, and the POS till - because
@@ -94,10 +96,22 @@ export function MenuIngredientPicker({
 }: Props) {
   const t = useTranslations("Menu");
   const s = SIZES[size];
+  const baseId = useId();
+  // Which ingredient's slider is open - one at a time, so a list of add-ons
+  // never unfolds into a column of sliders the customer has to scroll past.
+  const [openId, setOpenId] = useState<number | null>(null);
 
   const visible = useMemo(
     () => customizableIngredients(ingredients),
     [ingredients],
+  );
+
+  // The up-charge printed on a slider mark, with **no currency**: the row above
+  // already quotes the per-unit price in it, and a currency on every one of six
+  // marks is noise on a control that has to stay readable at 11px.
+  const money = useMemo(
+    () => new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }),
+    [locale],
   );
 
   if (visible.length === 0) return null;
@@ -127,9 +141,43 @@ export function MenuIngredientPicker({
         const name = label(choice.name, choice.en_name);
         const price = parseFloat(choice.price);
         // Non-removable ingredients are included by default: locked, in the base
-        // price, shown as an "Included" line with no stepper (a premium option
+        // price, shown as an "Included" line with no gauge (a premium option
         // still shows its up-charge).
         const included = !ing.is_removable;
+        const max = ing.max_quantity;
+        const panelId = `${baseId}-portion-${ing.id}`;
+        const open = openId === ing.id;
+        // The amount as a person reads it: the recipe portion scaled by the
+        // number of portions chosen, or a bare count where the dish states no
+        // portion at all (many ingredients carry neither quantity nor unit).
+        const amountLabel = (q: number) =>
+          ing.quantity
+            ? formatPortion(q * parseFloat(ing.quantity), ing.unit ?? "").trim()
+            : t("portionUnits", { count: q });
+        // What that many portions adds, mirroring `selectionUpcharge`: the base
+        // has already paid for the included units, so only the value the chosen
+        // option exceeds them by is charged, and it never goes negative.
+        const includedValue = parseFloat(ing.price) * ing.included_units;
+        const steps = Array.from(
+          { length: Math.max(1, max - min + 1) },
+          (_, i) => {
+            const q = min + i;
+            const upcharge = Math.max(
+              0,
+              parseFloat(choice.price) * q - includedValue,
+            );
+            return {
+              value: q,
+              // Two lines - the amount, and the money it adds beneath it. A mark
+              // that costs nothing extra carries no price line: only what is
+              // actually charged is printed.
+              label:
+                upcharge > 0
+                  ? `${amountLabel(q)}\n+${money.format(upcharge)}`
+                  : amountLabel(q),
+            };
+          },
+        );
         // The admin's label for a choice group (e.g. "Sweetener"), shown as a
         // heading above the options so the customer knows what they're picking.
         const groupLabel = isChoice
@@ -220,34 +268,39 @@ export function MenuIngredientPicker({
                 </Box>
               </Box>
 
-              {/* A horizontal stepper (− qty +) kept on the right, with the
-                  running portion total beneath it; a non-removable ingredient is
-                  locked, so it has no stepper. */}
+              {/* The chosen amount over three circles that grow with it, kept
+                  on the right where the stepper was; a non-removable ingredient
+                  is locked, so it gets no control at all. */}
               {!included && (
-                <Box flexDirection="column" alignItems="flex-end" gap={4}>
-                  <QuantityStepper
-                    value={qty}
-                    onChange={(next) => setQty(ing, next)}
-                    min={min}
-                    max={ing.max_quantity}
-                    size={size}
-                    decreaseLabel={t("decrease")}
-                    increaseLabel={t("increase")}
-                    ariaLabel={name}
-                  />
-                  {ing.quantity && ing.unit && (
-                    <Typography
-                      variant="caption"
-                      margin={0}
-                      color="var(--foreground)"
-                      aria-live="polite"
-                    >
-                      {formatPortion(qty * parseFloat(ing.quantity), ing.unit)}
-                    </Typography>
-                  )}
-                </Box>
+                <PortionGauge
+                  value={qty}
+                  min={min}
+                  max={max}
+                  label={amountLabel(qty)}
+                  open={open}
+                  onToggle={() => setOpenId(open ? null : ing.id)}
+                  ariaLabel={name}
+                  controls={panelId}
+                  size={size}
+                />
               )}
             </Box>
+
+            {/* The slider the gauge opens: one mark per portion the kitchen
+                allows, each labelled with the amount it puts on the dish and
+                what that adds to the price. */}
+            {!included && (
+              <PortionSlider
+                id={panelId}
+                steps={steps}
+                value={qty}
+                onChange={(next) => setQty(ing, next)}
+                onApply={() => setOpenId(null)}
+                applyLabel={t("applyPortion")}
+                open={open}
+                size={size}
+              />
+            )}
 
             {/* Single-select option chips: pick exactly one; the chosen chip
                 drives the name/image/price above and the live nutrition. */}

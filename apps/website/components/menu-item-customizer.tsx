@@ -51,7 +51,7 @@ type ToastKind = "added" | "failed";
  * decides about a dish, and it moves the base the add-ons are added to.
  *
  * Each ingredient starts at its included quantity (1 for a default, 0 for an
- * optional add-on). A stepper moves it within `[min, max_quantity]` - defaults
+ * optional add-on). A portion gauge moves it within `[min, max_quantity]` - defaults
  * that can't be removed start at 1, everything else can go to 0. The live total
  * mirrors the server's `price_for_selection`: only units beyond what the base
  * includes are charged, so removing a default never refunds. On add-to-cart the
@@ -184,7 +184,14 @@ export function MenuItemCustomizer({
       )}
 
       {visibleIngredients.length > 0 && (
-        <Box flexDirection="column" gap={10}>
+        /* Set further from the size cards than the column's own 16px rhythm:
+           these are two separate decisions about the dish, and the add-on
+           heading reading as a caption under the size row blurred them. */
+        <Box
+          flexDirection="column"
+          gap={10}
+          marginTop={hasSizeChoice(sizes) ? 12 : 0}
+        >
           <Typography as="h2" variant="none" className="item-section-heading">
             {t("customize", { name: menuItemName })}
           </Typography>

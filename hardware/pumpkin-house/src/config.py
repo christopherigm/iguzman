@@ -1,6 +1,6 @@
 """Pin map and tunables for the pumpkin-house lantern.
 
-Every value here matches the rev A build sheet, which lives in the help app
+Every value here matches the rev C build sheet, which lives in the help app
 under Hardware -> /hardware/pumpkin-house. If you rewire the board, change it
 here and update that page in the same commit.
 """
@@ -92,37 +92,38 @@ AUDIO_CHUNK_SAMPLES = 256
 # firmware that can starve it.
 AUDIO_IBUF = 8192
 
-# Speaker volume, 1 (barely there) to 10 (the file exactly as encoded).
-# Everything the speaker plays goes through it - tracks and the confirmation
-# blip alike - so this is the one number to reach for when the lantern is
-# too loud for the room it ended up in.
-#
-#     10  0 dB    the file as encoded, full scale
-#      8  -6 dB
-#      6  -12 dB  where this build was first heard clearly on the bench
-#      4  -18 dB
-#      2  -24 dB
-#      1  -27 dB  audibly grainy; see below
-#
-# **The steps are 3 dB, not a tenth each.** A linear 1-10 would bunch every
-# useful setting into the top two notches and leave eight that all sound
-# like silence, because loudness follows the logarithm of amplitude and not
-# amplitude itself. At 3 dB a step, each notch is about the smallest change
-# you would call "a bit louder", which is what a 1-10 dial is for.
-#
-# It costs nothing at runtime: the gain is folded into the same 256-entry
-# lookup table that converts unsigned 8-bit to signed 16-bit, built once
-# when the Speaker is constructed. See `audio.volume_gain()`.
-#
-# **Turn the amp's GAIN pad down before you come below about 4.** This is
-# digital attenuation and it throws away bits: 8-bit source has only 48 dB
-# to start with, so volume 1 leaves roughly eleven distinct output levels
-# and sounds like it. The GAIN pad costs nothing at all - floating is +9 dB,
-# tied to VDD is +6, and there is a +3 option with a resistor.
-AUDIO_VOLUME = 4
-
 # Silence after a track, before the ambient stretch resumes.
 AUDIO_GAP_MS = 900
+
+# --- Volume: the amplifier's GAIN strap ----------------------------------
+# There is no volume setting in this firmware, and that is the design. Every
+# sample the Pico writes leaves at full scale - recordings, MIDI and the
+# confirmation blip alike - and how loud that turns out to be is decided by
+# one resistor on the MAX98357A's GAIN pad.
+#
+# GAIN is a five-state strap and not an analogue input: the part decodes
+# where the pad is tied, not what voltage sits on it.
+#
+#     100 kOhm to VIN    3 dB    <- what this build fits
+#     straight to VIN    6 dB
+#     floating           9 dB    the module's own default
+#     straight to GND   12 dB
+#     100 kOhm to GND   15 dB
+#
+# This board wires a 100 kOhm resistor from GAIN to VIN, which is the
+# quietest of the five - 6 dB below a bare module - and is the whole volume
+# control. The full table, with what each state measures into an 8 Ohm cone
+# off a four-cell pack, is on the build sheet: Hardware ->
+# /hardware/pumpkin-house, step 05.
+#
+# **Attenuating in software would be the worse tool even where it is free.**
+# Scaling the samples lowers the music and leaves the amplifier running wide
+# open, so its own hiss stays exactly where it was - which is most audible
+# at precisely the settings you reach for when the lantern is too loud. The
+# strap turns the amplifier down instead and takes the hiss with it. What it
+# costs is a soldering iron to change, which for a decoration that lives in
+# one porch is a price paid once.
+
 
 # --- MIDI ----------------------------------------------------------------
 # A .mid in AUDIO_DIR is played too, synthesised on the fly by `midi.py`
@@ -157,9 +158,9 @@ MIDI_VOICES = 6
 #
 # Deliberately smaller than MIDI_VOICES, which sounds backwards. Dividing
 # the ceiling six ways would make a two-note passage - which is most of any
-# piece - a good 10 dB quieter than the .wav next to it in the folder, so
-# the volume dial would mean two different things depending on which file
-# was playing. Clipping is the cheap direction to be wrong in here: every
+# piece - a good 10 dB quieter than the .wav next to it in the folder, and
+# with loudness now set once in hardware there is nothing to make that up
+# with. Clipping is the cheap direction to be wrong in here: every
 # voice is a square wave, already flat-topped, so a clipped sum is flatter
 # rather than crackly. Lower this if a dense passage sounds hard.
 MIDI_HEADROOM = 3

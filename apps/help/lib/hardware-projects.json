@@ -7,7 +7,7 @@
       "descKey": "hwPumpkinHouseDesc",
       "board": "Raspberry Pi Pico",
       "language": "MicroPython",
-      "revision": "Build sheet · rev B",
+      "revision": "Build sheet · rev C",
       "sourcePath": "hardware/pumpkin-house",
       "specs": [
         { "label": "Enclosure", "value": "⌀120 × 110 mm" },

@@ -1,0 +1,84 @@
+/* ── The gauge button ───────────────────────────────
+   Everything static here is a prop on the component; what is left is the two
+   pointer states and the motion between them. */
+.portion-gauge {
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.portion-gauge:hover {
+  border-color: color-mix(in srgb, var(--accent, #06b6d4) 55%, transparent);
+  background-color: color-mix(in srgb, var(--accent, #06b6d4) 8%, transparent);
+}
+
+.portion-gauge:focus-visible {
+  outline: 2px solid var(--accent, #06b6d4);
+  outline-offset: 2px;
+}
+
+/* The dots grow and light up as the slider moves. */
+.portion-gauge__dot {
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.portion-gauge:hover .portion-gauge__dot {
+  transform: scale(1.08);
+}
+
+/* ── The slider panel ───────────────────────────────
+   Folded into a zero-height grid row rather than unmounted, so it animates open
+   *and* closed; `visibility` is what takes the slider and the apply button out
+   of the tab order while it is folded away, and it is delayed by the length of
+   the fold so the panel is still visible on the way out. */
+.portion-slider {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    grid-template-rows 0.26s ease,
+    opacity 0.18s ease,
+    visibility 0s linear 0.26s;
+}
+
+.portion-slider--open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    grid-template-rows 0.26s ease,
+    opacity 0.22s ease,
+    visibility 0s;
+}
+
+/* Each tick carries two lines - the amount over the up-charge it adds - where
+   the package's own rule keeps a tick label on one. Reached as a descendant
+   because the label is `Slider`'s internal span: there is no prop for it.
+
+   ⚠ `pre`, not `pre-line`: the label is absolutely positioned, so its width is
+   shrink-to-fit, and `pre-line` wraps on any space it contains - which split the
+   amount itself ("100 g") across two lines on top of the price line below it.
+   `pre` breaks on the authored newline and nowhere else, so a mark is exactly as
+   wide as its longest line. */
+.portion-slider__track .ui-slider__tick-label {
+  white-space: pre;
+  text-align: center;
+  line-height: 1.25;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portion-gauge,
+  .portion-gauge__dot,
+  .portion-slider,
+  .portion-slider--open {
+    transition: none;
+  }
+
+  .portion-gauge:hover .portion-gauge__dot {
+    transform: none;
+  }
+}

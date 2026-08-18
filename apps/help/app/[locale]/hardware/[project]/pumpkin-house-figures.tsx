@@ -583,91 +583,117 @@ export function ButtonsFigure() {
   );
 }
 
-/** Fig 5 - the I2S amplifier stage (MAX98357A + 8 Ω cone). */
+/** Fig 5 - the I2S amplifier stage (MAX98357A + 8 Ω cone), and the GAIN strap. */
 export function AmpStageFigure() {
   return (
     <svg
-      viewBox="0 0 960 420"
+      viewBox="0 0 960 600"
       role="img"
-      aria-label="The I2S amplifier stage. GP13, GP14 and GP15 carry bit clock, word select and serial data to a MAX98357A breakout; GP22 drives its SD shutdown pin. The module is powered from the raw pack rail, not the Pico's 3.3 volt regulator, with a 470 microfarad bulk capacitor across its supply, and its bridge-tied outputs drive an 8 ohm speaker with neither side grounded."
+      aria-label="The I2S amplifier stage. GP13, GP14 and GP15 carry bit clock, word select and serial data to a MAX98357A breakout; GP22 drives its SD shutdown pin. The module is powered from the raw pack rail, not the Pico's 3.3 volt regulator, with a 470 microfarad bulk capacitor across its supply, and its bridge-tied outputs drive an 8 ohm speaker with neither side grounded. A second drop from the same rail reaches the module's GAIN pad through a 100 kilohm resistor, which is the only volume control in the build: the table below the drawing lists all five states of that pad - 100 kilohm to ground is 15 decibels, straight to ground 12, floating 9, straight to VIN 6, and 100 kilohm to VIN 3 decibels, which is the state this board fits. Nothing in the firmware attenuates anything."
     >
       <text x="30" y="30" className="lbl-hd">
-        SPEAKER · MAX98357A CLASS-D · I²S
+        SPEAKER · MAX98357A CLASS-D · I²S · GAIN STRAP
+      </text>
+
+      {/* ── power in, off the raw rail rather than 3V3 ──────────────────── */}
+      <path className="wire-raw" d="M300,64 L900,64" />
+      <text x="300" y="52" className="lbl-sm lbl-raw">
+        RAW 4.0 – 5.6 V (pre-diode) — never the Pico&apos;s 3V3 pin
       </text>
 
       {/* ── the Pico's four signals ─────────────────────────────────────── */}
-      <rect x="30" y="58" width="150" height="212" className="box" />
-      <text x="48" y="84" className="lbl-hd">
+      <rect x="30" y="92" width="150" height="336" className="box" />
+      <text x="48" y="118" className="lbl-hd">
         PICO
       </text>
-      <text x="48" y="124" className="lbl">
+      <text x="48" y="158" className="lbl">
         GP13
       </text>
-      <text x="48" y="164" className="lbl">
+      <text x="48" y="198" className="lbl">
         GP14
       </text>
-      <text x="48" y="204" className="lbl">
+      <text x="48" y="238" className="lbl">
         GP15
       </text>
-      <text x="48" y="244" className="lbl">
+      <text x="48" y="278" className="lbl">
         GP22
       </text>
-      <text x="134" y="124" className="lbl-sm">
+      <text x="134" y="158" className="lbl-sm">
         p17
       </text>
-      <text x="134" y="164" className="lbl-sm">
+      <text x="134" y="198" className="lbl-sm">
         p19
       </text>
-      <text x="134" y="204" className="lbl-sm">
+      <text x="134" y="238" className="lbl-sm">
         p20
       </text>
-      <text x="134" y="244" className="lbl-sm">
+      <text x="134" y="278" className="lbl-sm">
         p29
       </text>
+      <text x="48" y="396" className="lbl">
+        GND
+      </text>
+      <text x="134" y="396" className="lbl-sm">
+        p38
+      </text>
 
-      <path className="wire-logic" d="M180,118 L376,118" />
-      <path className="wire-logic" d="M180,158 L376,158" />
-      <path className="wire-logic" d="M180,198 L376,198" />
-      <path className="wire-logic" d="M180,238 L376,238" />
+      <path className="wire-logic" d="M180,152 L376,152" />
+      <path className="wire-logic" d="M180,192 L376,192" />
+      <path className="wire-logic" d="M180,232 L376,232" />
+      <path className="wire-logic" d="M180,272 L376,272" />
 
-      <text x="206" y="110" className="lbl-sm lbl-logic">
+      <text x="206" y="144" className="lbl-sm lbl-logic">
         BCLK — bit clock
       </text>
-      <text x="206" y="150" className="lbl-sm lbl-logic">
+      <text x="206" y="184" className="lbl-sm lbl-logic">
         LRC — word select, and it must be BCLK + 1
       </text>
-      <text x="206" y="190" className="lbl-sm lbl-logic">
+      <text x="206" y="224" className="lbl-sm lbl-logic">
         DIN — serial data
       </text>
-      <text x="206" y="230" className="lbl-sm lbl-logic">
+      <text x="206" y="264" className="lbl-sm lbl-logic">
         SD — shutdown / mode, not the data line
       </text>
 
       {/* ── the module ──────────────────────────────────────────────────── */}
-      <rect x="376" y="88" width="184" height="212" className="box" />
-      <text x="394" y="114" className="lbl-hd">
+      <rect x="376" y="122" width="184" height="212" className="box" />
+      <text x="394" y="148" className="lbl-hd">
         U1 MAX98357A
       </text>
-      <text x="394" y="132" className="lbl-sm">
+      <text x="394" y="166" className="lbl-sm">
         3 W class D, no DAC needed
       </text>
-      <circle cx="376" cy="118" r="3.5" className="node" />
-      <circle cx="376" cy="158" r="3.5" className="node" />
-      <circle cx="376" cy="198" r="3.5" className="node" />
-      <circle cx="376" cy="238" r="3.5" className="node" />
-      <text x="394" y="278" className="lbl-sm">
-        GAIN open = 9 dB
+      <circle cx="376" cy="152" r="3.5" className="node" />
+      <circle cx="376" cy="192" r="3.5" className="node" />
+      <circle cx="376" cy="232" r="3.5" className="node" />
+      <circle cx="376" cy="272" r="3.5" className="node" />
+      <text x="394" y="304" className="lbl-sm">
+        full-scale samples in
+      </text>
+      <text x="394" y="320" className="lbl-sm">
+        R7 sets what comes out
       </text>
 
-      {/* ── power in, off the raw rail rather than 3V3 ──────────────────── */}
-      <path className="wire-raw" d="M300,44 L860,44" />
-      <text x="300" y="34" className="lbl-sm lbl-raw">
-        RAW 4.0 – 5.6 V (pre-diode) — never the Pico&apos;s 3V3 pin
-      </text>
-      <path className="wire-raw" d="M468,44 L468,88" />
-      <circle cx="468" cy="44" r="3.5" className="node" />
-      <text x="474" y="76" className="lbl-sm">
+      {/* VIN: a plain drop off the rail. */}
+      <path className="wire-raw" d="M440,64 L440,122" />
+      <circle cx="440" cy="64" r="3.5" className="node" />
+      <text x="446" y="110" className="lbl-sm">
         VIN
+      </text>
+
+      {/* GAIN: the same rail, through 100 kΩ. Drawn as a second drop beside
+          VIN because that is exactly what it is - the pad is *strapped*, and
+          which rail it is strapped to through which resistor is the whole
+          volume control. */}
+      <path className="wire-raw" d="M530,64 L530,74" />
+      <circle cx="530" cy="64" r="3.5" className="node" />
+      <path className="part" d="M530,74 l-9,5 l18,7 l-18,7 l18,7 l-18,7 l9,5" />
+      <path className="wire-raw" d="M530,112 L530,122" />
+      <text x="548" y="88" className="lbl-hd">
+        R7 100 kΩ
+      </text>
+      <text x="548" y="106" className="lbl-sm">
+        GAIN → VIN = 3 dB
       </text>
 
       {/* Bulk capacitor across the supply. It is drawn out past the speaker
@@ -675,66 +701,149 @@ export function AmpStageFigure() {
           between the rail and the ground bus - everything left of it is either
           a signal line, the module itself or an output. On the board it belongs
           as close to VIN as its legs will reach. */}
-      <path className="wire-raw" d="M810,44 L810,112" />
-      <circle cx="810" cy="44" r="3.5" className="node" />
+      <path className="wire-raw" d="M790,64 L790,132" />
+      <circle cx="790" cy="64" r="3.5" className="node" />
       <g className="part">
-        <line x1="792" y1="112" x2="828" y2="112" />
-        <path d="M792,132 a18,18 0 0 0 36,0" />
+        <line x1="772" y1="132" x2="808" y2="132" />
+        <path d="M772,152 a18,18 0 0 0 36,0" />
       </g>
-      <text x="810" y="90" className="lbl-hd" textAnchor="middle">
+      <text x="818" y="102" className="lbl-hd">
         C1 470 µF
       </text>
-      <text x="810" y="156" className="lbl-sm" textAnchor="middle">
+      <text x="818" y="122" className="lbl-sm">
         stripe = −, to GND
       </text>
-      <text x="810" y="172" className="lbl-sm" textAnchor="middle">
-        fit it beside VIN, not out here
+      <text x="818" y="138" className="lbl-sm">
+        fit it beside VIN
       </text>
-      <path className="wire" d="M810,132 L810,340" />
+      <path className="wire" d="M790,152 L790,390" />
 
       {/* ── the speaker, bridge-tied ────────────────────────────────────── */}
-      <path className="wire" d="M560,150 L646,150" />
-      <path className="wire" d="M560,210 L646,210" />
-      <text x="566" y="142" className="lbl-sm">
+      <path className="wire" d="M560,180 L646,180" />
+      <path className="wire" d="M560,240 L646,240" />
+      <text x="566" y="172" className="lbl-sm">
         OUT+
       </text>
-      <text x="566" y="234" className="lbl-sm">
+      <text x="566" y="264" className="lbl-sm">
         OUT−
       </text>
 
-      <rect x="646" y="120" width="34" height="70" className="box" />
-      <polygon points="680,120 730,92 730,218 680,190" className="part-fill" />
-      <path className="wire" d="M646,190 L646,210" />
-      <text x="666" y="252" className="lbl-hd">
+      <rect x="646" y="150" width="34" height="70" className="box" />
+      <polygon points="680,150 730,122 730,248 680,220" className="part-fill" />
+      <path className="wire" d="M646,220 L646,240" />
+      <text x="666" y="282" className="lbl-hd">
         SPK1
       </text>
-      <text x="646" y="270" className="lbl-sm">
+      <text x="646" y="300" className="lbl-sm">
         8 Ω · 3 W · 40 mm
       </text>
 
       {/* ── ground ──────────────────────────────────────────────────────── */}
-      <path className="wire" d="M376,300 L376,340 L880,340" />
-      <circle cx="376" cy="300" r="3.5" className="node" />
-      <circle cx="810" cy="340" r="4.5" className="node" />
-      <path className="wire" d="M180,340 L376,340" />
-      <circle cx="180" cy="340" r="3.5" className="node" />
-      <text x="188" y="332" className="lbl-sm">
+      <path className="wire" d="M376,334 L376,390 L912,390" />
+      <circle cx="376" cy="334" r="3.5" className="node" />
+      <circle cx="790" cy="390" r="4.5" className="node" />
+      <path className="wire" d="M180,390 L376,390" />
+      <circle cx="180" cy="390" r="3.5" className="node" />
+      <text x="188" y="412" className="lbl-sm">
         Pico GND — one thick lead to the pack, not daisy-chained
       </text>
       <g className="part">
-        <line x1="868" y1="356" x2="892" y2="356" />
-        <line x1="872" y1="363" x2="888" y2="363" />
-        <line x1="877" y1="370" x2="883" y2="370" />
+        <line x1="900" y1="406" x2="924" y2="406" />
+        <line x1="904" y1="413" x2="920" y2="413" />
+        <line x1="909" y1="420" x2="915" y2="420" />
       </g>
-      <path className="wire" d="M880,340 L880,356" />
+      <path className="wire" d="M912,390 L912,406" />
 
-      <text x="30" y="396" className="lbl-sm">
-        Neither speaker lead is ground. The outputs are bridge-tied — tie either
-        one to GND and you short half the amplifier.
+      {/* ── the five states of the pad ──────────────────────────────────── */}
+      <text x="30" y="454" className="lbl-hd">
+        VOLUME IS THIS ONE RESISTOR — THE PAD HAS FIVE STATES
       </text>
-      <text x="30" y="414" className="lbl-sm">
-        At 4.8 V into 8 Ω the honest ceiling is ≈1.4 W, not the 3 W on the box;
-        peaks pull ~600 mA out of the pack.
+      <text x="30" y="478" className="lbl-sm">
+        GAIN tied to
+      </text>
+      <text x="250" y="478" className="lbl-sm">
+        gain
+      </text>
+      <text x="340" y="478" className="lbl-sm">
+        vs. floating
+      </text>
+      <text x="470" y="478" className="lbl-sm">
+        ≈ 8 Ω @ 4.8 V
+      </text>
+      <path className="wire" d="M30,486 L900,486" />
+
+      <text x="30" y="506" className="lbl-sm">
+        100 kΩ → GND
+      </text>
+      <text x="250" y="506" className="lbl-sm">
+        15 dB
+      </text>
+      <text x="340" y="506" className="lbl-sm">
+        +6 dB
+      </text>
+      <text x="470" y="506" className="lbl-sm">
+        ≈1.4 W
+      </text>
+      <text x="600" y="506" className="lbl-sm">
+        the rail&apos;s ceiling — clips at full scale
+      </text>
+
+      <text x="30" y="526" className="lbl-sm">
+        straight to GND
+      </text>
+      <text x="250" y="526" className="lbl-sm">
+        12 dB
+      </text>
+      <text x="340" y="526" className="lbl-sm">
+        +3 dB
+      </text>
+      <text x="470" y="526" className="lbl-sm">
+        ≈0.7 W
+      </text>
+
+      <text x="30" y="546" className="lbl-sm">
+        nothing (floating)
+      </text>
+      <text x="250" y="546" className="lbl-sm">
+        9 dB
+      </text>
+      <text x="340" y="546" className="lbl-sm">
+        —
+      </text>
+      <text x="470" y="546" className="lbl-sm">
+        ≈0.35 W
+      </text>
+      <text x="600" y="546" className="lbl-sm">
+        what a bare module does
+      </text>
+
+      <text x="30" y="566" className="lbl-sm">
+        straight to VIN
+      </text>
+      <text x="250" y="566" className="lbl-sm">
+        6 dB
+      </text>
+      <text x="340" y="566" className="lbl-sm">
+        −3 dB
+      </text>
+      <text x="470" y="566" className="lbl-sm">
+        ≈0.18 W
+      </text>
+
+      <text x="30" y="586" className="lbl-hd">
+        100 kΩ → VIN
+      </text>
+      <text x="250" y="586" className="lbl-hd">
+        3 dB
+      </text>
+      <text x="340" y="586" className="lbl-hd">
+        −6 dB
+      </text>
+      <text x="470" y="586" className="lbl-hd">
+        ≈0.09 W
+      </text>
+      <text x="600" y="586" className="lbl-hd">
+        R7 — what this board fits
       </text>
     </svg>
   );

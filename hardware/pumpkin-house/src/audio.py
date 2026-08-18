@@ -16,11 +16,11 @@ format is rejected by name, with the ffmpeg line that fixes it.
 Two conversions happen on every chunk, and they are the reason this is not
 simply `i2s.write(file.read())`:
 
-    unsigned 8 -> signed 16    the format I2S wants. It is a subtraction of
-                               128 and a shift into the high byte, so it is
-                               done with a 256-entry lookup table built once
-                               at construction - which is also where
-                               `config.AUDIO_VOLUME` rides along for free.
+    unsigned 8 -> signed 16    the format I2S wants, and at full scale it
+                               is one XOR: flipping the top bit of an
+                               unsigned byte is that same number read as
+                               signed, and the 16-bit sample is that byte
+                               sitting in the high half with a zero below.
 
     mono -> stereo             SD is a three-level *mode* pin, not just an
                                enable: 0.16-0.77 V is (L+R)/2, above ~1.4 V
@@ -30,9 +30,27 @@ simply `i2s.write(file.read())`:
                                band the board's own resistors put it in - and
                                it costs one store per sample.
 
-The even bytes of the output buffer are the low halves of those 16-bit
-samples and are always zero, so they are written once at allocation and
-never touched again - the inner loop only ever fills the odd ones.
+**The low half of every sample is written too, as an explicit zero.** At
+full scale it is always zero, so the loop could skip it and be half the
+size - and it must not, because the output buffer is shared. `midi.py`
+fills the same bytearray through `play_stream()` with samples that use both
+halves, so a `play()` that only touched the odd bytes would clock out the
+tail of the last synthesised piece underneath the recording, at a level
+nobody can predict. Two stores a sample is what that costs.
+
+**The conversion loop is `@micropython.viper`**, for the same reason
+`midi.py`'s mixer is: it runs per *sample*. As ordinary bytecode it cost
+40 us a sample - 44% of a core at 11 kHz just to move bytes, and that was
+only two stores of the four it has to make. Compiled, the same loop is 1.1%
+of a core and the whole question goes away.
+
+**There is no volume control here, on purpose.** Everything this module
+writes leaves at full scale, and how loud that is is set once by the
+resistor on the amplifier's GAIN pad - 100 kOhm to VIN on this build, the
+quietest of that pad's five states. Scaling the samples instead would lower
+the music and leave the amplifier wide open, so its own hiss would stay
+exactly where it was; the strap turns the part itself down and takes the
+hiss with it. See `config.py` and step 05 of the build sheet.
 
 `idle` and `abort` mirror the Buzzer's exactly, and for the same reason: the
 callback runs between chunks so the flame keeps moving and the buttons keep
@@ -41,6 +59,7 @@ press cut one short. A chunk is ~23 ms at 11 kHz, so both happen at about
 the rate the flame ticks anyway.
 """
 
+import micropython
 from machine import Pin
 from time import sleep_ms, ticks_add, ticks_diff, ticks_ms
 
@@ -114,51 +133,31 @@ def read_wav_header(f):
             f.seek(size + (size & 1), 1)
 
 
-# `config.AUDIO_VOLUME` 1-10 -> linear gain, as a numerator over 256.
-#
-# Three decibels a step, so 10 is the file untouched and every notch below
-# is a factor of ~1.414 down. A linear tenth-per-step would put every useful
-# setting in the top two notches, because loudness tracks the logarithm of
-# amplitude - the eight below would all sound like silence and the dial
-# would be a switch.
-#
-# 1/256ths rather than floats because this is arrived at through integer
-# arithmetic on every one of 256 table entries, and MicroPython's ints are
-# arbitrary precision while its floats are single. A tuple rather than a
-# `pow()` because ten numbers written down are ten numbers anybody can check
-# against the table in `config.py`.
-_VOLUME_GAIN = (11, 16, 23, 32, 45, 64, 91, 128, 181, 256)
+@micropython.viper
+def _convert(out: ptr8, raw: ptr8, count: int):
+    """`count` u8 samples from `raw` into `count` 16-bit stereo frames.
 
+    The whole conversion is `^ 0x80`: an unsigned byte with its top bit
+    flipped is the same number read as signed, and full scale puts that byte
+    in the high half of the 16-bit sample with nothing below it. Four stores
+    a sample - both halves, each written to both channels. Writing to both
+    is what makes the output independent of which mode the amp's SD divider
+    puts it in, and writing the zeros is what keeps a previous synthesised
+    piece out from under this one; see the module docstring.
 
-def volume_gain(volume):
-    """Linear gain over 256 for a 1-10 volume, clamped rather than refused.
-
-    Clamped because the alternative is a lantern that will not boot over a
-    typo in a settings file - and a `config.py` edited on a phone at the
-    bench is exactly where that typo happens. Out of range is a mistake
-    worth surviving loudly, not dying over.
+    Kept as a module-level function rather than a method because viper wants
+    machine ints and raw pointers, and `self` is neither.
     """
-    volume = int(volume)
-    if volume < 1:
-        volume = 1
-    elif volume > len(_VOLUME_GAIN):
-        volume = len(_VOLUME_GAIN)
-    return _VOLUME_GAIN[volume - 1]
-
-
-def _level_table(gain):
-    """u8 sample -> the high byte of its signed 16-bit equivalent.
-
-    Volume is folded in here rather than applied per sample: `gain` is a
-    numerator over 256, so the multiply and the shift happen 256 times at
-    construction and never once in the streaming loop. Python's `>>` on a
-    negative int is arithmetic, which is what makes this a volume control
-    rather than a waveform mangler.
-    """
-    table = bytearray(256)
-    for i in range(256):
-        table[i] = (((i - 128) * gain) >> 8) & 0xFF
-    return bytes(table)
+    i = 0
+    j = 0
+    while i < count:
+        hi = int(raw[i]) ^ 0x80
+        out[j] = 0
+        out[j + 1] = hi
+        out[j + 2] = 0
+        out[j + 3] = hi
+        j = j + 4
+        i = i + 1
 
 
 def _noop():
@@ -175,7 +174,6 @@ class Speaker:
         din=None,
         enable=None,
         idle=None,
-        volume=None,
     ):
         if I2S is None:
             raise ValueError("this MicroPython build has no machine.I2S")
@@ -193,18 +191,14 @@ class Speaker:
         self._abort = None
         self._muted = False
 
-        volume = config.AUDIO_VOLUME if volume is None else volume
-        # Kept as well as the table because `blip()` synthesises its own
-        # waveform and never passes through it.
-        self._gain = volume_gain(volume)
-        self._table = _level_table(self._gain)
-
         samples = config.AUDIO_CHUNK_SAMPLES
         self._samples = samples
         self._raw = bytearray(samples)
         self._raw_mv = memoryview(self._raw)
-        # Allocated zeroed, and the even bytes stay that way for the life of
-        # the object - see the module docstring.
+        # Shared: `play()` fills it through `_convert()` and `midi.py` fills
+        # it through `play_stream()`. Every byte is rewritten on every chunk,
+        # which is why `_convert()` stores the low halves it knows are zero -
+        # see the module docstring.
         self._out = bytearray(samples * _BYTES_PER_SAMPLE)
         self._out_mv = memoryview(self._out)
 
@@ -318,8 +312,8 @@ class Speaker:
             if frames > self._samples:
                 frames = self._samples
             if frames > 0:
-                # The odd bytes still hold the tail of the last chunk, so
-                # this cannot reuse `_out`.
+                # `_out` still holds the tail of the last chunk, so this
+                # cannot reuse it.
                 try:
                     self._write(bytearray(frames * _BYTES_PER_SAMPLE))
                 except OSError:
@@ -385,26 +379,16 @@ class Speaker:
         """Samples per write, so a generator can size its buffer to ours."""
         return self._samples
 
-    def gain(self):
-        """`config.AUDIO_VOLUME` as a numerator over 256.
-
-        The streaming path never needs this - volume is baked into the
-        lookup table at construction and applied for free. Anything that
-        *makes* its samples rather than reading them has no table to hide in
-        and has to scale them itself, which is the only reason this is
-        public.
-        """
-        return self._gain
-
     # -- playback --------------------------------------------------------
 
     def play_stream(self, rate, fill, on_chunk=None):
         """Play whatever `fill` writes into the output buffer, until it stops.
 
         The seam `midi.py` hangs off. `fill(buf)` is handed this Speaker's
-        own output buffer - already the right size, already zeroed in the
-        even bytes - and returns how many *samples* it put there, or 0 when
-        there is nothing left to play.
+        own output buffer - already the right size, and holding whatever the
+        last chunk left in it - and returns how many *samples* it put there,
+        or 0 when there is nothing left to play. It owns every byte of the
+        frames it claims, low halves included.
 
         Everything a Speaker exists to get right is on this side of that
         callback: the amp is woken before the first write and shut down
@@ -438,7 +422,6 @@ class Speaker:
             self._silence()
         return True
 
-
     def play(self, path, on_chunk=None):
         """Stream one file. Blocks for its length; returns False if muted.
 
@@ -462,7 +445,6 @@ class Speaker:
             self._open(rate)
             self.enable(True)
 
-            table = self._table
             raw = self._raw
             out = self._out
             chunk = self._samples
@@ -474,15 +456,7 @@ class Speaker:
                     break
                 remaining -= read
 
-                # The hot loop. Only the odd bytes are touched; the even ones
-                # were zeroed at allocation and are the low halves of every
-                # sample, which for 8-bit source material are always zero.
-                j = 1
-                for i in range(read):
-                    value = table[raw[i]]
-                    out[j] = value
-                    out[j + 2] = value
-                    j += _BYTES_PER_SAMPLE
+                _convert(out, raw, read)
 
                 self._write(self._out_mv[0 : read * _BYTES_PER_SAMPLE])
 
@@ -496,53 +470,37 @@ class Speaker:
             self._silence()
         return True
 
-    def blip(self, hz=660, ms=90, level=None):
-        """A short tone, synthesised rather than read from a file.
+    def blip(self, hz=660, ms=90):
+        """A short tone at full scale, synthesised rather than read from a file.
 
         The buzzer answers an unmute with a blip - proof that the sound path
         works, which no confirmation colour can give you. With no buzzer
         fitted this is what says the same thing, so it must not depend on
         anything having been copied onto the board.
 
-        `level` is the square wave's amplitude as the high byte of a signed
-        16-bit sample, and by default it is half of full scale scaled by
-        `config.AUDIO_VOLUME` - so turning the lantern down turns its
-        confirmation down with it. A blip that stayed put while the music
-        dropped 18 dB would end up being the loudest thing the lantern does,
-        which is a strange fate for a noise that only ever means "your press
-        registered".
-
-        Floored well above zero all the same: at volume 1 the honest
-        arithmetic lands on 2, and a confirmation nobody can hear is not a
+        Full scale like everything else here: how loud a press sounds is the
+        GAIN strap's business, and a confirmation nobody can hear is not a
         quieter confirmation, it is a broken one.
-
-        Pass it explicitly at the REPL when the question is "is this
-        amplifier alive at all" rather than "did my press register" -
-        `blip(level=0x60)` is roughly full scale and much harder to miss
-        across a bench.
         """
         if self._muted:
             return
-        if level is None:
-            level = (0x40 * self._gain) >> 8
-            if level < 4:
-                level = 4
         rate = 8000
         frames = rate * ms // 1000
         half = rate // (hz * 2)
         if half < 1:
             half = 1
 
-        high = level & 0x7F
-        low = 0x100 - high if high else 0
+        # Only the high halves are touched. A full-scale square alternates
+        # between +0x7F00 and -0x7F00, whose low bytes are both zero, and a
+        # fresh bytearray already holds them.
         buf = bytearray(frames * _BYTES_PER_SAMPLE)
-        value = high
+        hi = 0x7F
         j = 1
         for i in range(frames):
             if i and i % half == 0:
-                value = low if value == high else high
-            buf[j] = value
-            buf[j + 2] = value
+                hi = 0x81 if hi == 0x7F else 0x7F
+            buf[j] = hi
+            buf[j + 2] = hi
             j += _BYTES_PER_SAMPLE
 
         self._open(rate)

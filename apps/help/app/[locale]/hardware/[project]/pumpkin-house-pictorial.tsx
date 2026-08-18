@@ -496,7 +496,7 @@ export function PicoPinoutPictorial() {
 const AMP_PINS = ["LRC", "BCLK", "DIN", "GAIN", "SD", "GND", "VIN"] as const;
 
 export function AmpStagePictorial() {
-  const board = breadboardLayout({ columns: 42, x: 40, y: 76 });
+  const board = breadboardLayout({ columns: 42, x: 40, y: 90 });
   const pico = picoFootprint({ layout: board, column: 3 });
   // Row `a` because a single-row module has to go in the outermost row of a
   // bank or its own PCB covers every hole you were about to wire to. The
@@ -512,26 +512,25 @@ export function AmpStagePictorial() {
   const { hole } = board;
 
   const outputs = breakoutTerminals(amp, 2);
-  const speaker = { x: 846, y: 380 };
+  const speaker = { x: 846, y: 394 };
   const speakerLeads = speakerTerminals(speaker);
 
   return (
     <PictorialFigure
       width={990}
-      height={510}
-      label="Breadboard view of the amplifier stage. A seven-pin MAX98357A module plugs into the outermost row of the lower bank, its PCB overhanging the bottom edge of the board, with the pin names LRC, BCLK, DIN, GAIN, SD, GND and VIN printed along its header. Three jumpers run from GP13, GP14 and GP15 to BCLK, LRC and DIN — the first two crossing, because the header's order is not the Pico's — and a fourth from GP22 on the far edge of the Pico, over the board, to SD. VIN and GND go up to the top red and blue rails, with a 470 microfarad electrolytic across them, and the module's two output pads run to an 8 ohm speaker sitting off the board."
+      height={524}
+      label="Breadboard view of the amplifier stage. A seven-pin MAX98357A module plugs into the outermost row of the lower bank, its PCB overhanging the bottom edge of the board, with the pin names LRC, BCLK, DIN, GAIN, SD, GND and VIN printed along its header. Three jumpers run from GP13, GP14 and GP15 to BCLK, LRC and DIN — the first two crossing, because the header's order is not the Pico's — and a fourth from GP22 on the far edge of the Pico, over the board, to SD. VIN and GND go up to the top red and blue rails, with a 470 microfarad electrolytic across them, and the module's two output pads run to an 8 ohm speaker sitting off the board. A quarter-watt 100 kilohm resistor lies in the lower bank between the GAIN column and a column five along, and a red jumper carries that far end up to the same top red rail VIN is on - strapping GAIN to VIN through 100 kilohms, which is the module's quietest gain setting and the only volume control in the build."
     >
       <Breadboard layout={board} />
 
-      {/* Both captions on one line, above the rails. The row below them is C1's
-          lane - the capacitor stands on the top pair, and its value label needs
-          the space a second caption line would have taken. */}
-      <text className="hw-label" x={board.x + 6} y={board.y - 34}>
+      {/* Stacked rather than side by side: the rail legend is long enough
+          that a second caption on the same line runs into it. */}
+      <text className="hw-label" x={board.x + 6} y={board.y - 56}>
         top red rail = RAW 4.0–5.6 V, upstream of D1 · top blue rail = common
         ground
       </text>
-      <text className="hw-label" x={board.columnX(29)} y={board.y - 34}>
-        SPEAKER · GP13/14/15 + GP22 · lower bank
+      <text className="hw-label" x={board.x + 6} y={board.y - 32}>
+        SPEAKER · GP13/14/15 + GP22 + R7 · lower bank
       </text>
 
       {/* ── the three I2S lines ─────────────────────────────────────────── */}
@@ -575,7 +574,7 @@ export function AmpStagePictorial() {
         footprint={amp}
         label="MAX98357A"
         sublabel="I²S class-D amp"
-        highlight={["BCLK", "LRC", "DIN", "SD"]}
+        highlight={["BCLK", "LRC", "DIN", "GAIN", "SD"]}
         terminals={["OUT+", "OUT−"]}
       />
 
@@ -583,6 +582,28 @@ export function AmpStagePictorial() {
       <Wire from={outputs[0]!} to={speakerLeads.positive} color="grey" />
       <Wire from={outputs[1]!} to={speakerLeads.negative} color="grey" />
       <Speaker {...speaker} label="SPK1" sublabel="8 Ω · 3 W · 40 mm" />
+
+      {/* ── the GAIN strap ──────────────────────────────────────────────
+          The resistor lies across five columns of the lower bank with one leg
+          in GAIN's own column, and a jumper takes the far end up to the same
+          red rail VIN is on. Drawn on the board rather than tacked to the
+          module's pad because that is how it is actually built, and because a
+          resistor sitting in the bank is a thing you can see is 100 kΩ - the
+          bands read brown-black-yellow. */}
+      <Resistor
+        from={hole(30, "c")}
+        to={hole(35, "c")}
+        ohms={100000}
+        showValue={false}
+      />
+      <Wire from={hole(35, "b")} to={hole(35, "+t")} color="red" bow={0.05} />
+      <Callout
+        at={hole(30, "c")}
+        to={{ x: board.columnX(12), y: board.y + board.height + 26 }}
+        anchor="middle"
+      >
+        R7 100 kΩ · GAIN → VIN = 3 dB, the quietest of five states
+      </Callout>
 
       <PicoBoard
         footprint={pico}
