@@ -362,6 +362,8 @@
     "stockCount": "Apenas {count} restantes",
     "stockCount2": "Estoque",
     "addToCart": "Adicionar ao carrinho",
+    "add": "Adicionar",
+    "remove": "Remover",
     "buyNow": "Comprar agora",
     "bookNow": "Reservar agora",
     "addToFavorites": "Adicionar aos favoritos",

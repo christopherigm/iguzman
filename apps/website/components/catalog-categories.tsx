@@ -80,10 +80,18 @@ export async function CategoryCard({
       border="none"
       borderRadius={8}
       elevation={5}
-      minHeight={hasImage ? 280 : 220}
       backgroundColor="var(--surface-2)"
       className="zoom-on-hover"
-      styles={{ position: "relative", textDecoration: "none" }}
+      styles={{
+        // Portrait 4:5 - the same frame `BuyableCardView` gives an item photo,
+        // so a grid of categories and the grid of items below it read as one
+        // catalog rather than two. Here the photo *is* the card (the name and
+        // the count sit over it), so the ratio belongs to the card itself; a
+        // flat, image-less card keeps it too, or a mixed row comes out ragged.
+        position: "relative",
+        aspectRatio: "4 / 5",
+        textDecoration: "none",
+      }}
     >
       {image && (
         <Image fill src={image} alt={name} style={{ objectFit: "cover" }} />
@@ -136,6 +144,15 @@ export async function CategoryCard({
             variant="h3"
             margin={0}
             color={hasImage ? "#fff" : "var(--foreground)"}
+            // The card's height is now the 4:5 frame's, and a Card clips its
+            // own overflow - so a long category name is clamped rather than
+            // pushed out of the bottom of the picture it is written over.
+            styles={{
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
           >
             {name}
           </Typography>

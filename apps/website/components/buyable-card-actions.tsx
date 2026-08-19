@@ -1,9 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useRouter } from "@repo/i18n/navigation";
 import { Box } from "@repo/ui/core-elements/box";
-import { IconButton } from "@repo/ui/core-elements/icon-button";
+import { Button } from "@repo/ui/core-elements/button";
 import { ShareButton } from "@repo/ui/core-elements/share-button";
 import { AddToCartButton } from "./add-to-cart-button";
 import type { AddToCartCustomization } from "./add-to-cart-button";
@@ -60,11 +59,14 @@ interface BuyableCardActionsProps {
 }
 
 /**
- * The card's action row: share, favorite, add to cart.
+ * The card's action row: share and favorite grouped at one end, the cart CTA at
+ * the other.
  *
- * Every button here sits inside a card that is itself a link, so each one has to
- * swallow its click - otherwise it navigates to the item instead of doing its
- * own job.
+ * The two ends are deliberately far apart: the cart button is the row's only
+ * decision, and reading as one of three equal circles is what made a card's
+ * primary action invisible. Nothing here has to swallow its click any more -
+ * only the card's photo and its name are links, so these buttons sit outside
+ * every anchor.
  */
 export function BuyableCardActions({
   kind,
@@ -81,44 +83,34 @@ export function BuyableCardActions({
 }: BuyableCardActionsProps) {
   const t = useTranslations("ItemDetail");
   const tBooking = useTranslations("Booking");
-  const router = useRouter();
-
-  // Pushed rather than rendered as a link: this button sits inside a card that
-  // is itself an anchor, and a nested one is invalid markup. The click is
-  // swallowed for the same reason every other button here swallows it.
-  const handleBook = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    router.push(`/booking/${bookingSlug}`);
-  };
 
   return (
-    <Box justifyContent="space-evenly" alignItems="center" gap={6}>
-      <ShareButton
-        title={name}
-        text={shareText}
-        label={t("share")}
-        copiedLabel={t("linkCopied")}
-        url={shareUrl}
-        size="md"
-        stopPropagation
-      />
-      <FavoriteButton
-        kind={kind === "food" ? "menu_item" : kind}
-        id={id}
-        initialFavorite={initialFavorite}
-        isLoggedIn={isLoggedIn}
-        size="md"
-        stopPropagation
-      />
+    <Box justifyContent="space-between" alignItems="center" gap={6}>
+      <Box alignItems="center" gap={6}>
+        <ShareButton
+          title={name}
+          text={shareText}
+          label={t("share")}
+          copiedLabel={t("linkCopied")}
+          url={shareUrl}
+          size="sm"
+        />
+        <FavoriteButton
+          kind={kind === "food" ? "menu_item" : kind}
+          id={id}
+          initialFavorite={initialFavorite}
+          isLoggedIn={isLoggedIn}
+          size="sm"
+        />
+      </Box>
+
       {bookingSlug ? (
-        <IconButton
+        <Button
+          text={tBooking("bookNow")}
           icon="/icons/calendar.svg"
-          aria-label={tBooking("bookNow")}
-          title={tBooking("bookNow")}
           kind="primary"
           size="md"
-          onClick={handleBook}
+          href={`/booking/${bookingSlug}`}
         />
       ) : (
         <AddToCartButton
@@ -127,8 +119,10 @@ export function BuyableCardActions({
           cartLineId={cartLineId}
           isLoggedIn={isLoggedIn}
           disabled={!inStock}
+          display="button"
+          buttonKind="warning"
+          short
           size="md"
-          stopPropagation
           customize={customize}
         />
       )}

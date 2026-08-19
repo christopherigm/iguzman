@@ -171,44 +171,55 @@ export function BuyableCardView({
       ? item.data.slug
       : null;
 
+  // The card itself is *not* a link: only the photo and the name lead to the
+  // item, so the badges, the admin shortcut and the whole action row below sit
+  // outside any anchor rather than each having to swallow its own click.
   return (
     <Card
-      href={href}
-      prefetch
       padding={0}
       border="none"
       elevation={5}
       height="100%"
       backgroundColor="var(--surface-1)"
       className="zoom-on-hover"
-      styles={{ position: "relative", textDecoration: "none" }}
+      styles={{ position: "relative" }}
     >
       <Box
         width="100%"
         backgroundColor="var(--surface-3, #e5e7eb)"
         flex="0 0 auto"
         styles={{
+          // Portrait 4:5, the frame the detail-page gallery uses - a catalog
+          // photograph is nearly always taller than it is wide.
           position: "relative",
-          aspectRatio: "1 / 1",
+          aspectRatio: "4 / 5",
           overflow: "hidden",
         }}
       >
-        {hasImage ? (
-          <Image
-            fill
-            src={image!}
-            alt={name}
-            sizes="(min-width: 1200px) 16vw, (min-width: 600px) 25vw, 50vw"
-            style={{ objectFit: "cover" }}
-          />
-        ) : (
-          <Box
-            backgroundColor={
-              data.background_color ?? "var(--surface-3, #e5e7eb)"
-            }
-            styles={{ position: "absolute", inset: 0 }}
-          />
-        )}
+        {/* The photo is one half of the link to the item. It fills the frame as
+            its own anchor, so the badges and the admin button remain siblings
+            rather than links nested inside a link. */}
+        <Box
+          href={href}
+          prefetch
+          aria-label={name}
+          backgroundColor={
+            hasImage
+              ? undefined
+              : (data.background_color ?? "var(--surface-3, #e5e7eb)")
+          }
+          styles={{ position: "absolute", inset: 0 }}
+        >
+          {hasImage && (
+            <Image
+              fill
+              src={image!}
+              alt={name}
+              sizes="(min-width: 1200px) 16vw, (min-width: 600px) 25vw, 50vw"
+              style={{ objectFit: "cover" }}
+            />
+          )}
+        </Box>
 
         {dietary.length > 0 && (
           <Box
@@ -283,20 +294,27 @@ export function BuyableCardView({
 
       <Box flexDirection="column" gap={6} flex={1} className="card-content">
         {name && (
-          <Typography
-            as="h3"
-            variant="h4"
-            margin={0}
-            color="var(--foreground)"
-            styles={{
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}
+          <Box
+            href={href}
+            prefetch
+            display="block"
+            styles={{ textDecoration: "none" }}
           >
-            {name}
-          </Typography>
+            <Typography
+              as="h3"
+              variant="h4"
+              margin={0}
+              color="var(--foreground)"
+              styles={{
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              {name}
+            </Typography>
+          </Box>
         )}
 
         {description && (

@@ -70,6 +70,13 @@ interface AddToCartButtonProps {
    * `error` - the red is what tells the two states apart at a glance.
    */
   buttonKind?: ButtonKind;
+  /**
+   * Print the short verb ("Add" / "Remove") instead of the full label on the
+   * `button` display. For the catalog card, where the row has one line to give
+   * the CTA and the item it acts on is the card itself; the full label stays as
+   * the button's `title` and accessible name. Ignored by the `icon` display.
+   */
+  short?: boolean;
   size?: IconButtonSize & ButtonSize;
   /**
    * Stop the click reaching an enclosing link. Set when the button sits on top
@@ -129,6 +136,7 @@ export function AddToCartButton({
   disabled = false,
   display = "icon",
   buttonKind,
+  short = false,
   size = "sm",
   stopPropagation = false,
   flex,
@@ -170,6 +178,9 @@ export function AddToCartButton({
   const asksFirst = kind === "food" && !inCart && (hasAddOns || hasSizes);
 
   const label = inCart ? t("removeFromCart") : t("addToCart");
+  // What the button *prints* when `short`. The accessible name stays `label`:
+  // "Add" alone says nothing about what is being added.
+  const text = short ? (inCart ? t("remove") : t("add")) : label;
   const icon = inCart
     ? "/icons/remove-from-cart.svg"
     : "/icons/add-to-cart.svg";
@@ -256,7 +267,9 @@ export function AddToCartButton({
         />
       ) : (
         <Button
-          text={label}
+          text={text}
+          title={label}
+          aria-label={label}
           icon={icon}
           kind={inCart ? "error" : buttonKind}
           size={size}
