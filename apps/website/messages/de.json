@@ -142,6 +142,20 @@
       "order": "Lieferung bestellen"
     }
   },
+  "RosalindaSite": {
+    "hero": {
+      "viewMenu": "Zur Speisekarte"
+    },
+    "intro": {
+      "eyebrow": "Frühstück und Brunch",
+      "visit": "So finden Sie uns"
+    },
+    "firma": {
+      "eyebrow": "Die Handschrift des Hauses",
+      "title": "Die Gerichte, die ihren Namen tragen",
+      "subtitle": "Über die ganze Karte verteilt, von den Chilaquiles bis zum Botanero: die Gerichte, die Rosalinda mit ihrem eigenen Namen zeichnet."
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

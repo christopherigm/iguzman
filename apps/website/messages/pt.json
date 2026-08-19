@@ -142,6 +142,20 @@
       "order": "Pedir entrega"
     }
   },
+  "RosalindaSite": {
+    "hero": {
+      "viewMenu": "Ver o cardápio"
+    },
+    "intro": {
+      "eyebrow": "Cafés da manhã e almoços",
+      "visit": "Como chegar"
+    },
+    "firma": {
+      "eyebrow": "A assinatura da casa",
+      "title": "Os pratos que levam o nome dela",
+      "subtitle": "Espalhados por todo o cardápio, dos chilaquiles ao botanero: os que Rosalinda assina com o próprio nome."
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

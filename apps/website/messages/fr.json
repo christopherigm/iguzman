@@ -142,6 +142,20 @@
       "order": "Commander en livraison"
     }
   },
+  "RosalindaSite": {
+    "hero": {
+      "viewMenu": "Voir la carte"
+    },
+    "intro": {
+      "eyebrow": "Petits-déjeuners et brunchs",
+      "visit": "Nous trouver"
+    },
+    "firma": {
+      "eyebrow": "La signature de la maison",
+      "title": "Les plats qui portent son nom",
+      "subtitle": "Disséminés dans toute la carte, des chilaquiles au botanero : ceux que Rosalinda signe de son propre nom."
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

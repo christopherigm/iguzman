@@ -142,6 +142,20 @@
       "order": "Pedir a domicilio"
     }
   },
+  "RosalindaSite": {
+    "hero": {
+      "viewMenu": "Ver el menú"
+    },
+    "intro": {
+      "eyebrow": "Desayunos y almuerzos",
+      "visit": "Cómo llegar"
+    },
+    "firma": {
+      "eyebrow": "La firma de la casa",
+      "title": "Los platillos que llevan su nombre",
+      "subtitle": "Repartidos por toda la carta, de los chilaquiles al botanero: los que Rosalinda firma con su propio nombre."
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""

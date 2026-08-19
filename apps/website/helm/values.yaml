@@ -67,6 +67,10 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
+    - host: lacocinaderosalinda.iguzman.com.mx
+      paths:
+        - path: /
+          pathType: Prefix
   tls:
     - secretName: website-tls
       hosts:
@@ -78,6 +82,7 @@ ingress:
         - cafedealtura.iguzman.com.mx
         - tamaratours.iguzman.com.mx
         - piccolopizzas.iguzman.com.mx
+        - lacocinaderosalinda.iguzman.com.mx
 
 # ─── Environment variables ──────────────────────────────────
 # Plain environment variables injected into the container.

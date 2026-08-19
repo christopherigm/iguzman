@@ -142,6 +142,20 @@
       "order": "Order delivery"
     }
   },
+  "RosalindaSite": {
+    "hero": {
+      "viewMenu": "See the menu"
+    },
+    "intro": {
+      "eyebrow": "Breakfast and brunch",
+      "visit": "Find us"
+    },
+    "firma": {
+      "eyebrow": "The house signature",
+      "title": "The dishes that carry her name",
+      "subtitle": "Scattered right across the menu, from the chilaquiles to the botanero: the ones Rosalinda signs with her own name."
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""
