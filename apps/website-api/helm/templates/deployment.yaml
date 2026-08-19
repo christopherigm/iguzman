@@ -71,11 +71,23 @@ spec:
           {{- end }}
 
           {{- /* ── Probes ── */}}
+          {{- with .Values.probes.startupProbe }}
           startupProbe:
-            {{- toYaml .Values.probes.startupProbe | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
 
+          {{- with .Values.probes.livenessProbe }}
           livenessProbe:
-            {{- toYaml .Values.probes.livenessProbe | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          {{- /* Readiness is guarded by `with` like the two above: an older
+                 values.yaml that predates it must render no probe at all rather
+                 than an empty one, which the API server rejects. */}}
+          {{- with .Values.probes.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
 
           {{- /* ── Resources ── */}}
           {{- with .Values.resources }}

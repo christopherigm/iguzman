@@ -66,21 +66,9 @@ ENV DJANGO_SETTINGS_MODULE=website_api.settings
 
 EXPOSE 8000
 
-# 2 workers is appropriate for a 0.5-CPU container.
-#
-# Threaded (gthread) rather than sync workers: /api/ai/chat/ streams an LLM
-# completion, which holds its worker for the whole generation. With 2 sync workers
-# a pair of concurrent enhance requests would block every other API call until they
-# finished; threads keep those waits off the request path.
-#
-# The 600s timeout matches the ingress's proxy read/send timeouts: a tenant
-# backup or restore (/api/backups/) is one synchronous request that zips or
-# unpacks the whole media volume, and being killed part-way through is the worst
-# possible moment for either. It bounds a genuinely wedged worker, nothing more.
+# Workers, threads, timeout and the access log all live in gunicorn.conf.py now -
+# the access log needs a Python logging filter to keep the health probes out of
+# it, and a CMD flag cannot express one. The rationale for each setting is in
+# that file, beside the setting itself.
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["gunicorn", "website_api.wsgi:application", \
-     "--bind", "0.0.0.0:8000", \
-     "--worker-class", "gthread", \
-     "--workers", "2", \
-     "--threads", "8", \
-     "--timeout", "600"]
+CMD ["gunicorn", "website_api.wsgi:application", "-c", "/app/gunicorn.conf.py"]

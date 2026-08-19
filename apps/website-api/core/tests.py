@@ -1267,3 +1267,34 @@ class StockImagePickerApiTests(TestCase):
             ).status_code,
             403,
         )
+
+
+class HealthProbeTests(TestCase):
+    """The container probes, and the one distinction that makes them worth having.
+
+    From a production incident: the probes pointed at ``/admin/`` (which reads the
+    session store and the database) with a 1s timeout, so a slow *dependency*
+    restarted the pod. Restarting Django does not fix Redis, and at the time it
+    meant a full outage. What must hold now is that a dead cache is visible on
+    readiness and invisible to liveness.
+    """
+
+    def test_liveness_ignores_dependencies_while_readiness_reports_them(self):
+        # Healthy: both answer, and readiness names what it checked.
+        self.assertEqual(self.client.get("/healthz/").status_code, 200)
+
+        ready = self.client.get("/readyz/")
+        self.assertEqual(ready.status_code, 200)
+        self.assertEqual(ready.json()["checks"], {"database": "ok", "cache": "ok"})
+
+        # Cache down. Note the cache runs with IGNORE_EXCEPTIONS in production, so
+        # a broken backend returns None rather than raising - which is why /readyz/
+        # compares the round-tripped value instead of just calling get(). A mock
+        # that quietly drops writes reproduces exactly that.
+        with mock.patch("core.health.cache.get", return_value=None):
+            degraded = self.client.get("/readyz/")
+            self.assertEqual(degraded.status_code, 503)
+            self.assertEqual(degraded.json()["checks"]["cache"], "error: unreachable")
+
+            # The whole point: the same outage must NOT restart the process.
+            self.assertEqual(self.client.get("/healthz/").status_code, 200)

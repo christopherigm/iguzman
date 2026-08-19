@@ -460,7 +460,8 @@ Endpoints (all `IsSystemAdmin`, all scoped to the caller's own `System`):
 `GET/POST /api/backups/`, `DELETE /api/backups/<pk>/`,
 `GET /api/backups/<pk>/download/`, `POST /api/backups/restore/` (multipart).
 Building and restoring are synchronous, which is why the ingress carries
-`proxy-body-size: 0` and 600s read/send timeouts and gunicorn's `--timeout` is 600. Tests are in `core/tests.py` (`SiteBackupTests`, `SiteBackupApiTests`) — they inherit `IsolatedMediaTestCase`, which redirects
+`proxy-body-size: 0` and 600s read/send timeouts and gunicorn's `timeout` is 600
+(`gunicorn.conf.py`). Tests are in `core/tests.py` (`SiteBackupTests`, `SiteBackupApiTests`) — they inherit `IsolatedMediaTestCase`, which redirects
 `MEDIA_ROOT` to a temp dir so test fixtures and archives do not scatter through
 the developer's own `media/`.
 
@@ -1347,7 +1348,7 @@ the admin CMS's enhance/translate buttons. Two rules if you touch it:
   browser.
 
 Streaming holds its worker for the whole generation, which is why gunicorn runs
-`gthread` workers (see the `Dockerfile`) - with plain sync workers, two concurrent
+`gthread` workers (see `gunicorn.conf.py`) - with plain sync workers, two concurrent
 enhance requests would block every other API call.
 
 ## Production env & secrets (k8s)
@@ -1417,3 +1418,55 @@ Three things to know before running it against production:
 
 A Secret change does **not** reach running pods on its own: env vars are read at
 container start, so a rollout restart (or redeploy) is required.
+
+## Health probes - liveness must not depend on anything
+
+`/healthz/` and `/readyz/` (`core/health.py`, wired at the root of
+`website_api/urls.py`) are the container's probes, and they are **two** endpoints
+on purpose.
+
+The probes used to point at **`/admin/`** with no `timeoutSeconds`, i.e. the
+Kubernetes default of **1 second**. `/admin/` is a real Django view: it redirects
+to `/admin/login/`, reads the session store (Redis, via `SESSION_ENGINE`) and hits
+the database. So a slow *dependency* - or any burst that pushed one request past
+a second three times running - made the kubelet SIGTERM a healthy pod. The
+signature is the confusing part and worth recognising again: **the container exits
+0 with `Reason: Completed`, no traceback and no OOMKill**, because gunicorn shuts
+down cleanly on the signal. It reads as "the app crashed" and nothing in the app
+crashed.
+
+- **`/healthz/` (liveness) touches nothing** - no database, no cache, no tenant
+  lookup. Django's session and auth middleware are lazy, so a view that never
+  reads `request.session` or `request.user` opens no connection. **Never add a
+  dependency check here.** Failing liveness *restarts the process*, and
+  restarting Django has never fixed Redis; at one replica it was a full outage.
+- **`/readyz/` (readiness) is where dependencies belong.** It checks Postgres and
+  Redis and answers 503 when either is unreachable, which only removes the pod
+  from the Service and heals by itself.
+- ⚠ **`/readyz/` compares the value it round-trips through the cache**, rather
+  than just calling `cache.get`. The cache runs with `IGNORE_EXCEPTIONS: True`
+  (see below), so a dead Redis returns `None` *quietly* instead of raising - a
+  bare get would report a broken cache as healthy.
+- **Every probe states its own `timeoutSeconds`** in `helm/values.yaml`. Omitting
+  it is exactly how the 1-second default got in unnoticed.
+
+### The related rule: no unbounded call in the request path
+
+Three clients defaulted to "block forever", and any one of them hanging produces
+that same exit-0-no-traceback restart:
+
+| Client | Setting                                                  | Default if unset      |
+| ------ | -------------------------------------------------------- | --------------------- |
+| Redis  | `SOCKET_TIMEOUT` / `SOCKET_CONNECT_TIMEOUT`              | `None` - no deadline  |
+| SMTP   | `EMAIL_TIMEOUT`                                          | `None` - no deadline  |
+| Postgres | `OPTIONS.connect_timeout`                              | none - no deadline    |
+
+All three are now set in `settings.py`, each overridable by env var. The SMTP one
+matters more than it looks: registration sends its verification mail
+**synchronously inside the request** (`users/views.py`), so a stalled mail host
+would pin a worker thread until gunicorn's 600s timeout.
+
+Gunicorn's access log is on (`gunicorn.conf.py`) and its format ends in `%(L)s`,
+the request duration. It was off during the incident above, which is why there
+was no way to ask which request was slow - **leave it on**. The two probe paths
+are filtered out of it there, or they would be most of the log.

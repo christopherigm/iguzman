@@ -6,7 +6,15 @@
 revisionHistoryLimit: 2
 
 # -- Number of pod replicas
-replicaCount: 1
+#
+# Two, not one, so that a restart is a degraded moment rather than an outage.
+# At one replica every liveness restart took the whole API down - that is what
+# the flood of 502s on /api/system/ was during the August 2026 restarts - and the
+# pod then came back with a cold cache into the same traffic that had just
+# overwhelmed it. Nothing here holds local state (media is in R2), so replicas are
+# free to scale; the backup/restore endpoints are synchronous but self-contained
+# per request, so either pod can serve one.
+replicaCount: 2
 
 # ─── Container image ────────────────────────────────────────
 image:
@@ -136,28 +144,63 @@ envFromSecret:
   # real env var names in the Secret, so the bundle above delivers them.
 
 # ─── Health probes ──────────────────────────────────────────
+#
+# ⚠ These probes were what kept "crashing" this API, and the shape below is the
+# fix. They used to point at `/admin/` with no `timeoutSeconds`, which means the
+# Kubernetes default of **1 second** - and `/admin/` is a real Django view that
+# redirects to `/admin/login/` and reads the session store (Redis) and the
+# database. So a slow *dependency*, or any burst that pushed one request past a
+# second three times in a row, made the kubelet SIGTERM a perfectly healthy pod.
+# The signature was a container exiting 0 with no traceback and no OOM.
+#
+# Three rules now hold, and none of them should be quietly relaxed:
+#   1. Liveness asks only "is this process alive?" - `/healthz/` touches no
+#      dependency, because restarting Django has never once fixed Redis.
+#   2. Readiness is what is allowed to care about Postgres and Redis. It only
+#      removes the pod from the Service and recovers on its own.
+#   3. Every probe states its own `timeoutSeconds`. Leaving it out is how the
+#      1-second default got in here unnoticed in the first place.
 probes:
+  # Boot: migrate + collectstatic run before gunicorn binds, so allow real time.
   startupProbe:
     httpGet:
-      path: /admin/
+      path: /healthz/
       port: 8000
       httpHeaders:
         - name: Host
           value: 127.0.0.1
-    initialDelaySeconds: 15
+    initialDelaySeconds: 10
     periodSeconds: 5
-    failureThreshold: 30 # allow up to ~150 s for first boot
+    timeoutSeconds: 5
+    failureThreshold: 30 # ~150 s for first boot
 
+  # Liveness: restart only a process that is genuinely wedged. 5s × 5 failures
+  # over 50s is deliberately forgiving - a restart costs a cold cache and, at one
+  # replica, an outage, so it must be the last resort rather than the first.
   livenessProbe:
     httpGet:
-      path: /admin/
+      path: /healthz/
       port: 8000
       httpHeaders:
         - name: Host
           value: 127.0.0.1
-    initialDelaySeconds: 0
     periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5
+
+  # Readiness: this is the one that reacts to load and to a sick dependency, by
+  # taking the pod out of rotation instead of killing it.
+  readinessProbe:
+    httpGet:
+      path: /readyz/
+      port: 8000
+      httpHeaders:
+        - name: Host
+          value: 127.0.0.1
+    periodSeconds: 10
+    timeoutSeconds: 5
     failureThreshold: 3
+    successThreshold: 1
 
 # ─── Node affinity (schedule on specific nodes) ─────────────
 nodeAffinity:

@@ -117,6 +117,21 @@ if _DB_HOST:
             'PASSWORD': os.environ.get('DB_PASSWORD', ''),
             'HOST': _DB_HOST,
             'PORT': os.environ.get('DB_PORT', '5432'),
+            # Reuse a connection for a minute instead of opening a new one per
+            # request. At the request rates the CMS produces while an operator is
+            # editing, per-request connects are pure overhead - and each one is a
+            # chance to block on a database that is busy accepting.
+            'CONN_MAX_AGE': int(os.environ.get('DB_CONN_MAX_AGE', '60')),
+            # Django 4.1+: check a pooled connection is still usable before handing
+            # it to a view, so a connection dropped between requests surfaces as a
+            # retry rather than an error in the middle of a write.
+            'CONN_HEALTH_CHECKS': True,
+            'OPTIONS': {
+                # Never wait indefinitely on the TCP connect. Without this a
+                # database that stops accepting connections hangs every worker
+                # thread until gunicorn's 600s timeout.
+                'connect_timeout': int(os.environ.get('DB_CONNECT_TIMEOUT', '5')),
+            },
         }
     }
 else:
@@ -260,6 +275,22 @@ _REDIS_URL = os.environ.get('REDIS_URL', '')
 if _REDIS_URL:
     _redis_options: dict = {
         'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        # ⚠ redis-py defaults BOTH of these to None, which means a blocking read
+        # with no deadline. Sessions live in this cache (SESSION_ENGINE below), so
+        # without a timeout a Redis that accepts the socket but stops answering
+        # hangs every worker thread that touches a session - including the health
+        # probe, which is how a cache blip used to get the whole pod restarted.
+        'SOCKET_CONNECT_TIMEOUT': int(os.environ.get('REDIS_CONNECT_TIMEOUT', '3')),
+        'SOCKET_TIMEOUT': int(os.environ.get('REDIS_SOCKET_TIMEOUT', '3')),
+        # Reconnect instead of surfacing a stale pooled socket after an idle gap.
+        'RETRY_ON_TIMEOUT': True,
+        'CONNECTION_POOL_KWARGS': {
+            'health_check_interval': 30,
+        },
+        # The cache is an accelerator here, never the source of truth: every cached
+        # payload is rebuilt from Postgres on a miss. Treating a Redis outage as a
+        # miss keeps the site serving (slower) instead of 500ing every request.
+        'IGNORE_EXCEPTIONS': True,
     }
     _redis_password = os.environ.get('REDIS_PASSWORD', '')
     if _redis_password:
@@ -292,6 +323,12 @@ if _EMAIL_HOST_USER:
     EMAIL_HOST_USER = _EMAIL_HOST_USER
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
     DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+    # ⚠ Django passes this straight to smtplib, and its default is None - i.e. a
+    # socket with no deadline. Registration sends its verification mail
+    # synchronously inside the request (users/views.py), so an SMTP host that
+    # accepts the connection and then stalls would pin a worker thread until
+    # gunicorn's 600s timeout. Bound it well under the probe budget instead.
+    EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', '10'))
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
     DEFAULT_FROM_EMAIL = 'noreply@localhost'

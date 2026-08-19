@@ -19,7 +19,15 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from core.health import healthz, readyz
+
 urlpatterns = [
+    # Container probes. Deliberately at the root and outside /api/: they are for
+    # the kubelet, not for a tenant, and they must not be behind anything that
+    # resolves a site or a session. See core/health.py for why liveness and
+    # readiness are two separate endpoints.
+    path('healthz/', healthz),
+    path('readyz/', readyz),
     path('admin/', admin.site.urls),
     path('api-auth/', include('rest_framework.urls')),
     path('api/auth/', include('users.urls')),
