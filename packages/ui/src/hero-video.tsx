@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import ReactPlayer from "react-player";
+import { useHeroRevealSignal } from "./hero-reveal";
 
 type Props = {
   url: string;
@@ -26,6 +27,11 @@ type Props = {
  * (ReactPlayer relies on browser APIs and must not run on the server).
  *
  * Defaults reproduce the muted, controlless, cropped background used by `Hero`.
+ *
+ * Inside a `HeroReveal` it also reports the moment playback genuinely starts, so
+ * the hero can stay closed until then rather than flickering through the
+ * provider's poster frame and chrome. Outside one the signal is `null` and this
+ * behaves exactly as it always did.
  */
 export function HeroVideo({
   url,
@@ -36,6 +42,8 @@ export function HeroVideo({
   fit = "cover",
 }: Props) {
   const [mounted, setMounted] = useState(false);
+  // `null` unless a `HeroReveal` is waiting on this player.
+  const signalPlaying = useHeroRevealSignal();
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -102,6 +110,14 @@ export function HeroVideo({
           playsInline
           width="100%"
           height="100%"
+          // `playing`, not `play`: the provider fires `play` when playback is
+          // *requested* and may still be buffering its poster frame behind it,
+          // which is the exact picture a gated hero must not open on. It fires
+          // again on every loop and unpause; the signal is idempotent.
+          onPlaying={signalPlaying ?? undefined}
+          // A hero that cannot play its video still has a slogan and a call to
+          // action, so a failed load opens it rather than hiding it for good.
+          onError={signalPlaying ?? undefined}
           config={{
             youtube: {
               cc_load_policy: 0, // never auto-show closed captions

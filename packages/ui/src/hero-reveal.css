@@ -1,0 +1,126 @@
+/*
+ * The hero's opening, and the arrival of what sits over it. Driven entirely by
+ * the two classes `HeroReveal` toggles and the two custom properties it sets -
+ * see that file for why the hero waits for its video at all.
+ */
+
+/*
+ * A landing opens with the hero *because* the hero is what runs under the fixed
+ * navbar. With the hero closed there is nothing holding that height, so the next
+ * section (Featured, About) rides up under the bar and loses the top of its
+ * heading. This holds the height until the hero can - and hands it back over
+ * exactly the opening's duration and curve, so the two movements read as one and
+ * the page below never shifts twice.
+ */
+.hero-reveal__navbar-spacer {
+  height: var(--ui-navbar-height, 57px);
+  transition: height var(--hero-reveal-duration, 900ms)
+    cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hero-reveal--revealed .hero-reveal__navbar-spacer,
+.hero-reveal--done .hero-reveal__navbar-spacer {
+  height: 0;
+}
+
+/*
+ * `grid-template-rows`, not `height`: the row resolves to the hero's own
+ * intrinsic height (a `clamp()` here, a hero plus an overhanging logo disc in
+ * the `profile` layout), which `height: auto` cannot be transitioned to.
+ */
+.hero-reveal__box {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--hero-reveal-duration, 900ms)
+    cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hero-reveal__inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.hero-reveal--revealed .hero-reveal__box {
+  grid-template-rows: 1fr;
+}
+
+/*
+ * Once open the wrapper stops constraining the hero entirely. It has to: the
+ * `profile` layout hangs its logo disc *below* the hero's bottom edge, and the
+ * clipping that makes the opening an opening would cut it off.
+ */
+.hero-reveal--done .hero-reveal__box {
+  display: block;
+}
+
+.hero-reveal--done .hero-reveal__inner {
+  overflow: visible;
+}
+
+/*
+ * The logo and the text are held back until the box has finished opening -
+ * hence the `animation-delay` of exactly the opening's duration, and the
+ * `both` fill that keeps them out of sight until it elapses.
+ */
+.hero-reveal:not(.hero-reveal--done) .hero-reveal__logo,
+.hero-reveal:not(.hero-reveal--done) .hero-reveal__text {
+  opacity: 0;
+}
+
+.hero-reveal--revealed .hero-reveal__logo {
+  animation: hero-reveal-fade-in var(--hero-reveal-content-duration, 700ms)
+    ease-out var(--hero-reveal-duration, 900ms) both;
+}
+
+/*
+ * The text arrives with the logo but not like it: it rises the last part of its
+ * own height as it fades, so the headline and its CTA read as settling into
+ * place rather than switching on.
+ */
+.hero-reveal--revealed .hero-reveal__text {
+  animation: hero-reveal-rise-in var(--hero-reveal-content-duration, 700ms)
+    cubic-bezier(0.22, 1, 0.36, 1) var(--hero-reveal-duration, 900ms) both;
+}
+
+@keyframes hero-reveal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes hero-reveal-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(40%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/*
+ * Reduced motion keeps the *wait* - the flicker it removes is a defect, not a
+ * flourish - and drops every animation around it. `HeroReveal` goes straight
+ * from closed to `done` in that case, so these rules only catch the frame in
+ * between.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .hero-reveal__navbar-spacer,
+  .hero-reveal__box {
+    transition: none;
+  }
+
+  .hero-reveal--revealed .hero-reveal__logo,
+  .hero-reveal--revealed .hero-reveal__text {
+    animation: none;
+  }
+
+  .hero-reveal:not(.hero-reveal--done) .hero-reveal__logo,
+  .hero-reveal:not(.hero-reveal--done) .hero-reveal__text {
+    opacity: 1;
+  }
+}

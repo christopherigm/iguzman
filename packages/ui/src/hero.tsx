@@ -1,5 +1,10 @@
 import React, { CSSProperties } from "react";
 import { HeroVideo } from "./hero-video";
+import {
+  HeroReveal,
+  HERO_REVEAL_LOGO_CLASS,
+  HERO_REVEAL_TEXT_CLASS,
+} from "./hero-reveal";
 import { ParallaxLayer } from "./parallax-layer";
 import {
   shapeDividerEdgeInset,
@@ -910,6 +915,13 @@ export type HeroProps = {
    * rather than at real, viewport-derived sizes. @default 1
    */
   contentScale?: number;
+  /**
+   * Hold the hero closed until its video is actually playing, then open it (see
+   * `HeroReveal`). Only a video hero has anything to wait for, so this does
+   * nothing to an image one. Pass `false` for a hero that must be laid out at
+   * its full height from the first paint. @default true
+   */
+  revealOnPlay?: boolean;
   /** Additional styles applied to the outermost container. */
   style?: CSSProperties;
   className?: string;
@@ -920,8 +932,15 @@ export type HeroProps = {
  * bottom-to-mid gradient overlay, and a centred logo.
  *
  * This component is a server component. The video playback is delegated to
- * `HeroVideo` ('use client') and the scroll drift to `ParallaxLayer`
- * ('use client'), so only those subtrees are hydrated on the client.
+ * `HeroVideo` ('use client'), the scroll drift to `ParallaxLayer` ('use client')
+ * and the load choreography to `HeroReveal` ('use client'), so only those
+ * subtrees are hydrated on the client.
+ *
+ * A video hero is not laid out until its video is actually playing: `HeroReveal`
+ * renders it closed, opens it to full height on the player's first `playing`
+ * event, and then fades the logo in while the slogan/CTA rise into place. Pass
+ * `revealOnPlay={false}` where the hero must be at its full height from the
+ * first paint.
  *
  * The background drifts with the page by default (`parallax`); the logo and
  * slogan sit outside that layer and scroll with the hero box, which is what
@@ -965,6 +984,7 @@ export function Hero({
   contentScale = 1,
   profileLogoScale = 1,
   profileBackgroundScale = 1,
+  revealOnPlay = true,
   style,
   className,
 }: HeroProps) {
@@ -1034,6 +1054,7 @@ export function Hero({
   const isLogoShape = logoBackground === "logo";
   const badge = hasBadge ? (
     <Box
+      className={HERO_REVEAL_LOGO_CLASS}
       width={badgeSize}
       height={badgeSize}
       // Geometric shapes are opaque page-background plates; the `logo` shape
@@ -1095,6 +1116,7 @@ export function Hero({
       <img
         src={logoImage}
         alt={logoAlt}
+        className={HERO_REVEAL_LOGO_CLASS}
         style={{
           display: "block",
           width: profileLogoSize,
@@ -1313,6 +1335,7 @@ export function Hero({
               <img
                 src={logoImage}
                 alt={logoAlt}
+                className={HERO_REVEAL_LOGO_CLASS}
                 style={{
                   maxWidth: scaled("min(320px, 50%)"),
                   maxHeight: scaled("45%"),
@@ -1321,7 +1344,11 @@ export function Hero({
               />
             ))}
           {(slogan || subline || actions) && (
-            <Container size="lg" paddingX={16}>
+            <Container
+              size="lg"
+              paddingX={16}
+              className={HERO_REVEAL_TEXT_CLASS}
+            >
               {frame ? (
                 // inline-block frame, centred (or left-aligned) via the parent's
                 // text-align - so the outline hugs the heading rather than the
@@ -1361,15 +1388,15 @@ export function Hero({
     hero
   );
 
-  if (!isProfile) return elevatedHero;
-
-  // The badge bleeds half its height below the hero, so it cannot live inside
-  // the `overflow: hidden` box that crops the video. It hangs off this wrapper
-  // instead, which reserves the overhang as bottom margin so the page content
-  // underneath starts below the badge rather than behind it. A divider lift
-  // shortens that overhang by exactly the lift, so the 16px breathing room
-  // below the disc stays 16px instead of growing into a gap.
-  return (
+  // In the profile layout the badge bleeds half its height below the hero, so it
+  // cannot live inside the `overflow: hidden` box that crops the video. It hangs
+  // off this wrapper instead, which reserves the overhang as bottom margin so the
+  // page content underneath starts below the badge rather than behind it. A
+  // divider lift shortens that overhang by exactly the lift, so the 16px
+  // breathing room below the disc stays 16px instead of growing into a gap.
+  const composed = !isProfile ? (
+    elevatedHero
+  ) : (
     <Box
       width="100%"
       marginBottom={
@@ -1393,6 +1420,14 @@ export function Hero({
       </Box>
     </Box>
   );
+
+  // A video hero is held closed until its video is genuinely playing and then
+  // opened, so the reader never sees the provider's poster frame flicker into
+  // the first real frame; the logo and the text arrive as it finishes opening.
+  // `HeroReveal` hands `children` straight back when there is nothing to wait
+  // for, so an image hero (and a `revealOnPlay={false}` one) is untouched -
+  // including the two reveal classes above, which do nothing outside it.
+  return <HeroReveal enabled={hasVideo && revealOnPlay}>{composed}</HeroReveal>;
 }
 
 export default Hero;

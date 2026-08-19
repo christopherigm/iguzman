@@ -323,6 +323,12 @@ export function HeroVideoSection({
                 bottomDivider={bottomDivider}
                 bottomDividerElevation={dividerElevation}
                 contentScale={0.5}
+                // No load choreography in the preview. This section is about
+                // how the logo and the text are *composed* over the video, and
+                // the live hero's opening would collapse the preview to nothing
+                // every time the operator pastes a different video URL - the one
+                // moment they most need to see the composition.
+                revealOnPlay={false}
                 style={{ height: 240, borderRadius: 10 }}
               />
             </Box>

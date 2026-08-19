@@ -1539,6 +1539,27 @@ hero darker than the preview - reading as "the overlay setting is ignored". The
 tenant's `hero_overlay_*` is now the single source of hero darkening on the
 landing, which is exactly what the preview shows.
 
+- **A video hero is not laid out until its video is actually playing.** The
+  shared `Hero` wraps itself in `@repo/ui`'s `HeroReveal`: the hero is rendered
+  closed, opens to full height on the player's first `playing` event, and then
+  fades the logo in while the slogan/CTA rise into place. A hero video is a
+  poster frame long before it is a video - YouTube paints its thumbnail, then
+  its chrome, then the first frame - and a hero laid out through all of that
+  flickered through three pictures on every landing.
+  ⚠ **A closed hero still reserves the navbar's height.** The landing starts
+  with the hero *because* the hero is what runs under the fixed navbar, so with
+  the hero closed nothing held that height and the next band (Featured, About)
+  rode up under the bar with its heading cut off. `HeroReveal` holds it with a
+  spacer that collapses to nothing over exactly the opening's duration and curve,
+  so the hero grows into the height the spacer gives up and the page below moves
+  once rather than twice.
+  ⚠ **Opening still pushes the rest of the landing down**, which is the effect
+  but is also why the wait is bounded (4 s) rather than open-ended, and why a
+  player error opens the hero rather than hiding it: a landing with no headline
+  and no CTA is worse than a flicker.
+  The **CMS preview passes `revealOnPlay={false}`** - that section is about how
+  the logo and text are *composed* over the video, and the live opening would
+  collapse the preview to nothing every time an operator pastes a new URL.
 - **`profile` bleeds a logo circle half-way below the video**, so both heroes
   wrap themselves in an extra `Box` and hang the disc off it - the video's own
   box keeps `overflow: hidden`. That wrapper's `marginBottom` reserves the
