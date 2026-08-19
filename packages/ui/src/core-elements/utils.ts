@@ -162,4 +162,16 @@ export interface MenuItem {
   children?: MenuItem[];
 }
 
+/**
+ * Identity for React keys and for matching an open dropdown.
+ *
+ * An icon-only item's label is `""`, so several of them in the same list are
+ * neither unique nor truthy - keying on the label alone collides, and an empty
+ * key would read as "no dropdown open". Shared by `Navbar` and `Drawer`, which
+ * key the same list.
+ */
+export function menuItemKey(item: MenuItem, index: number): string {
+  return item.label || item.href || `item-${index}`;
+}
+
 export default {};

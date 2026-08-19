@@ -16,7 +16,28 @@
  * import the other.
  */
 export const MENU_NAV_BACKGROUND = "var(--accent, #06b6d4)";
-export const MENU_NAV_FOREGROUND = "var(--accent-foreground, #ffffff)";
+/**
+ * ⚠ **White, not `var(--accent-foreground)`, and in both themes.**
+ *
+ * `--accent` and `--accent-foreground` come apart on this site. The palette
+ * ships them as a pair (`@repo/ui`'s `palettes.ts`: white on the light accent,
+ * near-black on the *lighter* accent every dark variant uses), but
+ * `[locale]/layout.tsx` overrides only `--accent` - with the tenant's own brand
+ * colour, which is the same hex in both themes - and `PaletteProvider` writes
+ * the palette's untouched `--accent-foreground` onto `document.body` on every
+ * theme change. So a customer whose brand colour is dark got near-black text on
+ * it in dark mode, which is exactly the surface this constant paints: the pill,
+ * the card and the rail are the accent, edge to edge.
+ *
+ * White is what the light theme already resolves to on every one of those
+ * surfaces, so pinning it here changes nothing in light mode and only stops
+ * dark mode from disagreeing with it.
+ *
+ * The real fix is for whoever publishes `--accent` to publish its foreground
+ * with it - `contrastText`, exactly as `layout.tsx` already does for
+ * `--secondary` - and when that lands this can go back to reading the variable.
+ */
+export const MENU_NAV_FOREGROUND = "#ffffff";
 
 /**
  * The entry the reader is currently in - pressed, or scrolled to - painted in

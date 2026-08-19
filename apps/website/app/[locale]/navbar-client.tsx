@@ -214,15 +214,15 @@ export function NavbarClient({
     // cart are in `fixedItems` below.)
     ...(isLoggedIn ? [{ label: t("orders"), href: "/orders" }] : []),
     ...(showContact ? [{ label: t("contact"), href: "/contact" }] : []),
-    // Admin-only, exactly like the CMS link. These only drive what is rendered -
-    // `/pos` and `/order-board` are in `proxy.ts`'s protected prefixes, each
-    // page re-checks `isAdmin`, and Django re-derives it from the token on
+    // Admin-only. It only drives what is rendered - `/admin` is in `proxy.ts`'s
+    // protected prefixes and Django re-derives the claim from the token on
     // every call.
     //
-    // The board sits before the till because it is the one an operator opens
-    // and leaves open for a shift, where the till is reached per sale.
-    ...(isAdmin ? [{ label: t("orderBoard"), href: "/order-board" }] : []),
-    ...(isAdmin ? [{ label: t("pos"), href: "/pos" }] : []),
+    // The two full-screen tools (`/order-board`, `/pos`) are deliberately
+    // *not* here: they are reached from the CMS home, where
+    // `admin-nav-items.ts` lists them beside everything else an operator runs.
+    // A customer-facing bar is not where a shift's tools belong, and on a
+    // phone those two entries pushed the rest of the site into the drawer.
     ...(isAdmin ? [{ label: t("admin"), href: "/admin" }] : []),
   ];
 

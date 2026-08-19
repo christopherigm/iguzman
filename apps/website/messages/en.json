@@ -176,8 +176,6 @@
     "cart": "Cart",
     "myCart": "My Cart",
     "orders": "Orders",
-    "pos": "POS",
-    "orderBoard": "Order board",
     "events": "Events"
   },
   "Pos": {

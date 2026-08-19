@@ -8,6 +8,7 @@ import {
   buildStyleProps,
   MenuItem,
   BREAKPOINTS,
+  menuItemKey,
 } from "./utils";
 import { Badge } from "./badge";
 import { Container } from "./container";
@@ -124,17 +125,6 @@ function useScrollDirection(threshold = 5): "up" | "down" | null {
 }
 
 // ── Item helpers ─────────────────────────────────────────────────────
-
-/**
- * Identity for React keys and for matching the open dropdown.
- *
- * An icon-only item's label is `""`, so several of them in the same list are
- * neither unique nor truthy - keying on the label alone collides, and an empty
- * key would read as "no dropdown open".
- */
-function menuItemKey(item: MenuItem, index: number): string {
-  return item.label || item.href || `item-${index}`;
-}
 
 /** What the item's badge shows, or `null` for nothing. A count of `0` is not
  *  worth a chip, and anything past 99 is capped so the badge stays small. */
@@ -624,7 +614,6 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
         logoWidth={logoWidth}
         logoHeight={logoHeight}
         version={version}
-        chevronIcon={chevronIcon}
         closeIcon={closeIcon}
         searchBox={searchBox}
         onSearch={onSearch}

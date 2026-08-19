@@ -98,29 +98,30 @@
   flex: 1;
 }
 
-/* Chevron rotation */
-.ui-drawer-chevron {
-  transition: transform 200ms ease;
+/* ── Groups (a parent item's children, rendered flat) ─ */
+/* Nothing expands here: the group is a quiet title over a rule, and its
+   entries sit at the same indentation as every other item. */
+.ui-drawer-group {
+  border-top: 1px solid var(--border, #e5e7eb);
+  margin-top: 8px;
+  padding-top: 4px;
 }
 
-.ui-drawer-chevron--open {
-  transform: rotate(180deg);
+/* The group is closed by the rule its *successor* draws, so a group that ends
+   the menu leaves no trailing line, and two groups in a row share one. */
+.ui-drawer-group + .ui-drawer-item {
+  border-top: 1px solid var(--border, #e5e7eb);
+  margin-top: 8px;
 }
 
-/* Sub-menu expand animation */
-.ui-drawer-submenu {
-  animation: ui-drawer-submenu-in 200ms ease-out;
-}
-
-@keyframes ui-drawer-submenu-in {
-  from {
-    opacity: 0;
-    max-height: 0;
-  }
-  to {
-    opacity: 1;
-    max-height: 500px;
-  }
+.ui-drawer-group-title {
+  display: block;
+  padding: 4px 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted, #757575);
 }
 
 /* ── Search ───────────────────────────────────────── */

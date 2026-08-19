@@ -84,6 +84,15 @@ const CHEVRON_ICON = "/icons/chevron-down.svg";
  * it when the page scrolls that far - and it only works because the box in flow
  * is the button alone. In flow the card is ~360px tall, and a parked control
  * reserving that much would open a hole between the last dish and the footer.
+ *
+ * ⚠ **While it floats, a halo is painted behind it** - a radial gradient of the
+ * page's own background, drawn as a dome whose lower half falls off the bottom
+ * edge of the screen (`--floating` in the CSS). Over a grid of dish photographs
+ * a pill of one flat colour has nothing to sit against and reads as part of
+ * whichever card is behind it; the halo is the page clearing a space for it.
+ * It is painted **only** in the floating state, which is why this component
+ * measures one - parked, the pill is already on the page's own background, and
+ * a glow around it there would read as a smudge.
  */
 export function MenuCategoryNavMobile({
   title,
@@ -92,6 +101,10 @@ export function MenuCategoryNavMobile({
   cradle = null,
 }: MenuCategoryNavMobileProps) {
   const [open, setOpen] = useState(false);
+  // Whether the pill is *floating* over the page rather than parked at the end
+  // of the menu - which is the only state the halo below it is painted in. See
+  // the effect that measures it.
+  const [floating, setFloating] = useState(false);
   const rootRef = useRef<HTMLElement>(null);
   const baseId = useId();
   const panelId = `${baseId}-panel`;
@@ -125,10 +138,77 @@ export function MenuCategoryNavMobile({
     };
   }, [open, triggerId]);
 
+  // Floating, or parked? A `position: sticky` box has no state a stylesheet can
+  // select on, and the two situations want different things: floating, the pill
+  // is over the item cards and needs the halo behind it to be legible at all;
+  // parked, it is a control sitting under the last row of dishes on the page's
+  // own background, where a glow around it would only read as a smudge.
+  //
+  // ⚠ The measurement is the definition of sticky, not an approximation of it:
+  // the box is drawn at `min(its flow position, the offset line)`, so it is
+  // stuck exactly while its rendered bottom edge *is* that line, and parked as
+  // soon as its own flow position has risen above it.
+  useEffect(() => {
+    const element = rootRef.current;
+    if (!element) return;
+
+    // ⚠ Read, never restate: the offset is a `calc()` over `--ui-fab-offset`
+    // and `env(safe-area-inset-bottom)` (see the CSS), so the number only
+    // exists once the browser has resolved it - and it moves with the app's own
+    // token and with the device's home indicator.
+    let offset = 0;
+    const readOffset = () => {
+      offset = parseFloat(getComputedStyle(element).bottom) || 0;
+    };
+
+    // One measurement per frame at most: `scroll` fires far more often than the
+    // page paints, and this reads layout.
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      const line = window.innerHeight - offset;
+      // The 1px slack is for a fractional viewport height (a zoomed page, a
+      // device with a non-integer DPR), where the two numbers agree to within
+      // less than a pixel and an exact comparison flickers.
+      setFloating(element.getBoundingClientRect().bottom >= line - 1);
+    };
+    const onScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(measure);
+    };
+    const onResize = () => {
+      readOffset();
+      onScroll();
+    };
+
+    readOffset();
+    measure();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onResize);
+    // ⚠ The boundary also moves without anyone scrolling: every dish photograph
+    // that finishes loading pushes this control further down the page, and a
+    // menu that fit on one screen a moment ago no longer does. Without this the
+    // first paint's answer would stand until the reader's first scroll.
+    const observer = new ResizeObserver(onScroll);
+    observer.observe(document.documentElement);
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
+
   if (items.length === 0) return null;
 
   return (
-    <nav ref={rootRef} aria-label={title} className="menu-category-nav-mobile">
+    <nav
+      ref={rootRef}
+      aria-label={title}
+      className={`menu-category-nav-mobile${
+        floating ? " menu-category-nav-mobile--floating" : ""
+      }`}
+    >
       {/* The card, plus whatever hangs off its top edge. A plain `div` rather
        *  than a `Box`: everything it carries is the lift out of the flow and the
        *  open/close transition, which are the CSS file's business, and the width

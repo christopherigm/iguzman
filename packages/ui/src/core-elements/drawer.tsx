@@ -2,7 +2,12 @@
 
 import React, { useState, useEffect, useRef, CSSProperties } from "react";
 import Image from "next/image";
-import { UIComponentProps, buildStyleProps, type MenuItem } from "./utils";
+import {
+  UIComponentProps,
+  buildStyleProps,
+  menuItemKey,
+  type MenuItem,
+} from "./utils";
 import { Icon } from "./icon";
 import { TextInput } from "./text-input";
 import "./drawer.css";
@@ -31,8 +36,6 @@ export interface DrawerProps extends UIComponentProps {
   logoHeight?: number;
   /** Version text displayed at the bottom. */
   version?: string;
-  /** SVG path for the chevron icon. */
-  chevronIcon?: string;
   /** SVG path for the close icon. */
   closeIcon?: string;
   /** Enable search in drawer. Defaults to `false`. */
@@ -51,70 +54,89 @@ export interface DrawerProps extends UIComponentProps {
 
 // ── DrawerItem ───────────────────────────────────────────────────────
 
+/** One entry. Every entry in the drawer is one of these, at one indentation -
+ *  a child of a parent item is drawn exactly like a top-level one. */
 const DrawerItem: React.FC<{
   item: MenuItem;
-  depth?: number;
   onNavigate: () => void;
-  chevronIcon?: string;
-}> = ({ item, depth = 0, onNavigate, chevronIcon }) => {
-  const [expanded, setExpanded] = useState(false);
-  const hasChildren = item.children && item.children.length > 0;
-
+}> = ({ item, onNavigate }) => {
   const handleClick = () => {
-    if (hasChildren) {
-      setExpanded(!expanded);
-    } else {
-      item.onClick?.();
-      onNavigate();
-    }
+    item.onClick?.();
+    onNavigate();
   };
 
-  const Tag = item.href && !hasChildren ? "a" : "button";
+  const Tag = item.href ? "a" : "button";
   const linkProps =
     Tag === "a" ? { href: item.href } : { type: "button" as const };
 
   return (
+    <Tag
+      className="ui-drawer-item"
+      onClick={handleClick}
+      aria-label={item.ariaLabel}
+      {...linkProps}
+    >
+      {item.icon && (
+        <Icon icon={item.icon} size="20px" color="var(--foreground)" />
+      )}
+      <span className="ui-drawer-item-label">{item.label}</span>
+    </Tag>
+  );
+};
+
+// ── DrawerGroup ──────────────────────────────────────────────────────
+
+/**
+ * A parent item's children, rendered **flat**: a quiet title over a rule, then
+ * the children at the same indentation as every other entry. Nothing here
+ * expands, deliberately - the drawer is a full-height panel with room to show
+ * the whole menu at once, and an accordion put a tap in front of exactly the
+ * entries the reader opened the drawer to reach (a tenant's menu categories,
+ * say), while saying nothing about what was behind it.
+ *
+ * The parent's own `href` is dropped, as the expanding version also dropped it:
+ * a parent with children renders as a toggle in the bar too, and where its own
+ * page matters it is repeated as the group's first child ("All", "Full menu").
+ */
+const DrawerGroup: React.FC<{
+  item: MenuItem;
+  onNavigate: () => void;
+}> = ({ item, onNavigate }) => (
+  <div className="ui-drawer-group">
+    {item.label && <span className="ui-drawer-group-title">{item.label}</span>}
+    <DrawerItems items={item.children!} onNavigate={onNavigate} />
+  </div>
+);
+
+/** A list of entries, each either a leaf or a titled group of its own. A
+ *  function declaration so `DrawerGroup` above can recurse into it. */
+function DrawerItems({
+  items,
+  onNavigate,
+}: {
+  items: MenuItem[];
+  onNavigate: () => void;
+}) {
+  return (
     <>
-      <Tag
-        className="ui-drawer-item"
-        style={{ paddingLeft: 16 + depth * 16 }}
-        onClick={handleClick}
-        {...linkProps}
-      >
-        {item.icon && (
-          <Icon icon={item.icon} size="20px" color="var(--foreground)" />
-        )}
-        <span className="ui-drawer-item-label">{item.label}</span>
-        {hasChildren && (
-          <Icon
-            icon={chevronIcon || "/icons/chevron-down.svg"}
-            size="16px"
-            color="var(--foreground)"
-            className={[
-              "ui-drawer-chevron",
-              expanded ? "ui-drawer-chevron--open" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
+      {items.map((item, index) =>
+        item.children && item.children.length > 0 ? (
+          <DrawerGroup
+            key={menuItemKey(item, index)}
+            item={item}
+            onNavigate={onNavigate}
           />
-        )}
-      </Tag>
-      {hasChildren && expanded && (
-        <div className="ui-drawer-submenu">
-          {item.children!.map((child) => (
-            <DrawerItem
-              key={child.label}
-              item={child}
-              depth={depth + 1}
-              onNavigate={onNavigate}
-              chevronIcon={chevronIcon}
-            />
-          ))}
-        </div>
+        ) : (
+          <DrawerItem
+            key={menuItemKey(item, index)}
+            item={item}
+            onNavigate={onNavigate}
+          />
+        ),
       )}
     </>
   );
-};
+}
 
 // ── DrawerSearch ─────────────────────────────────────────────────────
 
@@ -186,7 +208,6 @@ export const Drawer: React.FC<DrawerProps> = ({
   logoWidth = 120,
   logoHeight = 40,
   version,
-  chevronIcon,
   closeIcon,
   searchBox = false,
   onSearch,
@@ -285,14 +306,7 @@ export const Drawer: React.FC<DrawerProps> = ({
 
         {/* Menu items */}
         <nav className="ui-drawer-nav">
-          {items.map((item) => (
-            <DrawerItem
-              key={item.label}
-              item={item}
-              onNavigate={onClose}
-              chevronIcon={chevronIcon}
-            />
-          ))}
+          <DrawerItems items={items} onNavigate={onClose} />
         </nav>
 
         {themeSwitch && (

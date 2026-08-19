@@ -452,7 +452,25 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   `fixed` can only ever be one of those two. The **button alone** is what sits
   in flow (the card is `position: absolute`, hung off `bottom: 100%`): in flow
   the card is ~360px tall and a parked control reserving that much would open a
-  hole above the footer. ⚠ Its **chevron points up while the card is closed**
+  hole above the footer.
+  ⚠ **While it floats it is backed by a halo** - a radial gradient of
+  `--page-background` (78% in the middle, nothing at the edge), centred on the
+  pill, as wide as the screen and much shallower than it is wide, so its lower
+  half falls off the bottom edge and what is drawn is the top half of a broad
+  flat oval. It is `100vw`, not `100%`: the control sits inside the page
+  `Container`, whose padding would leave the halo narrower than the content it
+  is clearing - safe only because `globals.css` puts `overflow-x: hidden` on
+  `html`, and because a box centred on a centred control can only reach both
+  viewport edges at once. Over a grid of dish photographs a
+  pill of one flat colour has nothing to sit against; the halo is the page
+  clearing a space for it. It is painted **only** in the floating state, and a
+  stuck sticky box is not a state CSS can select on - so the component measures
+  one (`rect.bottom` against `innerHeight − ` the resolved `bottom` offset, one
+  rAF per scroll frame) and sets `--floating`. Parked, the pill is already on
+  that exact colour and the halo would be a smudge around it rather than a
+  clearing behind it. ⚠ The offset is **read** off `getComputedStyle`, never
+  restated: it is a `calc()` over `--ui-fab-offset` and the safe-area inset.
+  ⚠ Its **chevron points up while the card is closed**
   and turns over to point down when the card is up - the arrow says where the
   card will go next, not where it is; the glyph is `chevron-down.svg` drawn
   rotated, so the closed state is the one carrying the `rotate(180deg)`.
@@ -484,6 +502,19 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   the brand still speaks, and that one _is_ gated on `hero_text_frame`. Both controls read their accent and foreground
   from `menu-category-nav-colors.ts`, which is plain data importing nothing so
   that the client control and the server rail can share it.
+  ⚠ **That foreground is a literal white, not `var(--accent-foreground)`.**
+  The two variables come apart on this site: `[locale]/layout.tsx` overrides
+  `--accent` with the tenant's brand colour (one hex, both themes) but leaves
+  `--accent-foreground` alone, and `PaletteProvider` writes the palette's own
+  value onto `document.body` on every theme change - white against the light
+  palette's accent, near-black against the _lighter_ accent each dark variant
+  ships. A customer whose brand colour is dark therefore got near-black text on
+  it in dark mode, across the pill, the card and the rail, which are the accent
+  edge to edge. Light mode already resolved to white on all three, so pinning it
+  only stops dark mode disagreeing. The real fix is to publish the foreground
+  wherever the accent is overridden (`contrastText`, as the layout already does
+  for `--secondary`) - and it belongs in `@repo/ui`, since `PaletteProvider`
+  would otherwise overwrite it on the next theme toggle.
 - **One entry is lit at a time - the section the reader is in** - filled with the
   tenant's **secondary** colour, whether they got there by pressing it or by
   scrolling to it. It lives in the shared `MenuCategoryNavItems`, so the rail and

@@ -56,6 +56,95 @@
 }
 
 /*
+ * The halo behind the floating pill: a radial gradient of the page's own
+ * background, so the button is read against the page rather than against
+ * whichever dish photograph happens to be behind it. The ellipse is centred on
+ * the button, as wide as the screen and much shallower than it is wide, and it
+ * is taller than the strip of screen left below it - so its lower half falls
+ * off the bottom edge and what is on screen is the top half of a broad, flat
+ * oval: the page swelling up under the control.
+ *
+ * ⚠ **`--page-background` is the whole light/dark story.** `globals.css`
+ * resolves it per theme from the tenant's `--page-background-light` /
+ * `--page-background-dark`, so one declaration follows the reader's theme *and*
+ * the customer's chosen page colour, and there is no second copy of this
+ * gradient to keep in step under a `[data-theme]` selector.
+ *
+ * ⚠ It is deliberately **not** painted while the control is parked (see the
+ * `--floating` modifier, and the measurement in the TSX): parked, the pill is
+ * already sitting on this exact colour, so the halo would be a smudge around it
+ * rather than a clearing behind it.
+ */
+.menu-category-nav-mobile::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  /*
+   * The full width of the screen, so the oval spans the whole row of cards the
+   * pill floats over and fades out at the screen's own edges rather than in the
+   * middle of a dish. ⚠ `100vw` and not `100%` - the control lives inside the
+   * page `Container`, whose padding would leave the halo visibly narrower than
+   * the content it is clearing. It is safe here only because `globals.css` puts
+   * `overflow-x: hidden` on `html`, and because the box is centred on a centred
+   * control, so it can only ever reach both viewport edges at once.
+   */
+  width: min(560px, 100vw);
+  /* Roughly a third of the width: wide and shallow, so the half on screen reads
+     as an oval laid on the bottom edge rather than a circle around the pill. */
+  height: 200px;
+  transform: translate(-50%, -30%);
+  /*
+   * Nearly solid in the middle - the pill has to be read against the page and
+   * not against whatever dish is behind it - thinning to nothing exactly at the
+   * ellipse's edge, which is the screen's. ⚠ The falloff needs all four stops:
+   * over a span this wide, two of them put a visible ring where the eye catches
+   * the gradient's own edge, and the outermost pair are what let the colour
+   * reach the screen edges instead of dying out a third of the way there.
+   */
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(
+        in srgb,
+        var(--page-background, var(--surface-2)) 90%,
+        transparent
+      )
+      0%,
+    color-mix(
+        in srgb,
+        var(--page-background, var(--surface-2)) 75%,
+        transparent
+      )
+      40%,
+    color-mix(
+        in srgb,
+        var(--page-background, var(--surface-2)) 0%,
+        transparent
+      )
+      72%,
+    transparent 100%
+  );
+  /* Behind the button and behind the card, which are the container's only other
+     children - the `z-index: 900` above makes this a stacking context of its
+     own, so a negative index here stays above the page's own content. */
+  z-index: -1;
+  /* The container hands taps back to its two real children one rule below; this
+     one is decoration and must never be in the way of a dish card. */
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+/*
+ * Floating - i.e. sticky has clamped the control to its bottom offset, with the
+ * menu still running underneath it. Measured in `menu-category-nav-mobile.tsx`,
+ * because a stuck sticky box is not a state CSS can select on.
+ */
+.menu-category-nav-mobile--floating::before {
+  opacity: 1;
+}
+
+/*
  * ⚠ From `md` up the sticky rail (`menu-category-nav.tsx`) is the index, and
  * this control must not double it. That boundary is the same one the rail's own
  * grid cell carries (`hidden={{ xs: true, sm: true }}` in `menu-listing.tsx`) -
