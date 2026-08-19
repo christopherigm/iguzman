@@ -418,6 +418,7 @@
   },
   "FoodPage": {
     "heading": "Speisekarte",
+    "navButton": "Speisekarte ansehen",
     "categoriesHeading": "Speisekarten-Kategorien",
     "categoryNav": "Zu einer Kategorie springen",
     "itemsHeading": "Alle Gerichte"

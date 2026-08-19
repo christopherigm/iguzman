@@ -39,3 +39,12 @@ export function menuCategoryHref(categorySlug: string): string {
 export function menuItemHref(categorySlug: string, slug: string): string {
   return `/menu/${categorySlug}/${slug}`;
 }
+
+/**
+ * The glyph every "go to the menu" control wears - the landing heroes' menu
+ * CTA, the "see more" and "browse" buttons, and the phone menu index's own
+ * button. It lives here, beside the path those controls point at, because it
+ * is worn by client and server components alike and a path string copied into
+ * nine files is a path string that goes stale in eight of them.
+ */
+export const MENU_ICON = "/icons/food.svg";

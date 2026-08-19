@@ -9,7 +9,7 @@ import { getCoupon } from "@/lib/coupons";
 import { getSystem } from "@/lib/system";
 import { couponValueLabel, hasMinOrder } from "@/lib/coupon-shared";
 import { formatPrice } from "@/lib/price";
-import { MENU_ALL_PATH } from "@/lib/menu-paths";
+import { MENU_ALL_PATH, MENU_ICON } from "@/lib/menu-paths";
 import { CouponClaim, type CouponDestination } from "./coupon-claim";
 
 type Props = { params: Promise<{ locale: string; code: string }> };
@@ -84,7 +84,13 @@ export default async function CouponPage({ params }: Props) {
         ]
       : []),
     ...(system?.menu_item_count
-      ? [{ label: catalogT("browseFood"), href: MENU_ALL_PATH }]
+      ? [
+          {
+            label: catalogT("browseFood"),
+            href: MENU_ALL_PATH,
+            icon: MENU_ICON,
+          },
+        ]
       : []),
   ];
 

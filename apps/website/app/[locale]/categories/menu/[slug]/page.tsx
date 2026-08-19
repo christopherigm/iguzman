@@ -10,7 +10,7 @@ import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { SectionHero } from "@/components/section-hero";
 import { getSession } from "@repo/auth/session";
 import { getMenuCategory, getMenuItemsByCategory } from "@/lib/catalog";
-import { MENU_ALL_PATH } from "@/lib/menu-paths";
+import { MENU_ALL_PATH, MENU_ICON } from "@/lib/menu-paths";
 import { CategoryDetail } from "@/components/category-detail";
 import { AdminEditButton } from "@/components/admin-edit-button";
 
@@ -147,6 +147,7 @@ export default async function MenuCategoryPage({ params }: Props) {
           <Button
             text={tCatalog("seeMoreMenuItems")}
             href={MENU_ALL_PATH}
+            icon={MENU_ICON}
             kind="primary"
             size="lg"
           />

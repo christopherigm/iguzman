@@ -418,6 +418,7 @@
   },
   "FoodPage": {
     "heading": "Cardápio",
+    "navButton": "Ver Cardápio",
     "categoriesHeading": "Categorias do Cardápio",
     "categoryNav": "Ir para uma categoria",
     "itemsHeading": "Todos os Pratos"

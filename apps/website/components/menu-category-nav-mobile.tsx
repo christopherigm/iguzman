@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import Image from "next/image";
 import { Button } from "@repo/ui/core-elements/button";
 import { Card } from "@repo/ui/core-elements/card";
 import { Icon } from "@repo/ui/core-elements/icon";
 import { Typography } from "@repo/ui/core-elements/typography";
+import { MENU_ICON } from "@/lib/menu-paths";
 import { MenuCategoryNavItems } from "./menu-category-nav-items";
 import type { MenuCategoryNavItem } from "./menu-category-nav-items";
 import {
@@ -17,17 +17,11 @@ import "./menu-category-nav-mobile.css";
 interface MenuCategoryNavMobileProps {
   /** Names the control for a screen reader - the rail's `title`, unprinted. */
   title: string;
-  /** The button's visible text - the page's own "Menu" heading. */
+  /** The button's visible text - "See Menu", not the page's own heading: the
+   *  pill is an invitation to open the list, and a button labelled with the
+   *  name of the page it is already on says nothing. */
   label: string;
   items: MenuCategoryNavItem[];
-  /**
-   * The tenant's brandmark (`System.img_brandmark`), drawn as the button's icon.
-   * Unlike the rail's cradled mark this is **not** gated on the "Framed heading"
-   * setting: the cradle is a piece of the frame's design language, while this is
-   * simply the site's icon on its own button, and a tenant that has one should
-   * wear it there. `null` falls back to a generic menu glyph.
-   */
-  brandmark?: string | null;
   /**
    * The cradled brandmark hung on the card's top edge - the rail's own
    * `MenuNavCradle`, rendered by `menu-listing.tsx` and passed down as a
@@ -38,15 +32,12 @@ interface MenuCategoryNavMobileProps {
    * `react-player` - into the browser bundle at module scope. Rendered by the
    * server component above and handed over, none of that crosses the boundary.
    *
-   * Unlike the button's `brandmark` this **is** gated on the tenant's "Framed
-   * heading" setting, exactly as the rail's is: a cradle is a piece of that
-   * frame's design language, where a button icon is just the site's own mark.
+   * It **is** gated on the tenant's "Framed heading" setting, exactly as the
+   * rail's is: a cradle is a piece of that frame's design language, where the
+   * button's own glyph (`MENU_ICON`) simply says what the button does.
    */
   cradle?: ReactNode;
 }
-
-/** The fallback icon for a tenant with no brandmark of its own. */
-const FALLBACK_ICON = "/icons/hamburger.svg";
 
 /**
  * The chevron on the button. ⚠ It is a chevron-*down* drawn rotated: closed, it
@@ -98,7 +89,6 @@ export function MenuCategoryNavMobile({
   title,
   label,
   items,
-  brandmark = null,
   cradle = null,
 }: MenuCategoryNavMobileProps) {
   const [open, setOpen] = useState(false);
@@ -204,20 +194,11 @@ export function MenuCategoryNavMobile({
         elevation={8}
         styles={{ cursor: "pointer" }}
       >
-        {brandmark ? (
-          <Image
-            src={brandmark}
-            // Decorative: the visible label beside it already names the button,
-            // and a screen reader announcing the site's name here would only
-            // read "<tenant> Menu".
-            alt=""
-            width={24}
-            height={24}
-            style={{ borderRadius: "50%", objectFit: "contain" }}
-          />
-        ) : (
-          <Icon icon={FALLBACK_ICON} size={18} color={MENU_NAV_FOREGROUND} />
-        )}
+        {/* The same glyph every "go to the menu" button on the site wears
+         *  (`MENU_ICON`), rather than the tenant's own `img_brandmark` as it
+         *  used to: this control is one of those buttons, and a site's mark
+         *  says which site you are on, not what the button does. */}
+        <Icon icon={MENU_ICON} size={18} color={MENU_NAV_FOREGROUND} />
         <Typography
           as="span"
           variant="h6"

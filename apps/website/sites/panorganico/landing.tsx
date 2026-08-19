@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { Button } from "@repo/ui/core-elements/button";
 import { Container } from "@repo/ui/core-elements/container";
 import { getSystem } from "@/lib/system";
-import { MENU_ALL_PATH } from "@/lib/menu-paths";
+import { MENU_ALL_PATH, MENU_ICON } from "@/lib/menu-paths";
 import { fitSectionBackground } from "@/lib/section-background";
 import { SectionBand } from "@/components/section-band";
 import { Hero } from "@/components/hero";
@@ -67,6 +67,7 @@ export async function Landing() {
             <Button
               text={t("intro.viewBreads")}
               href={MENU_ALL_PATH}
+              icon={MENU_ICON}
               kind="primary"
               size="lg"
             />

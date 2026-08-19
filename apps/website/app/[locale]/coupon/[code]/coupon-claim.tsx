@@ -10,7 +10,14 @@ import { stashCoupon } from "@/lib/coupon-stash";
 
 /** One place this coupon can be spent, resolved by the page from what the
  *  tenant actually sells. Locale-less hrefs - the router applies the prefix. */
-export type CouponDestination = { label: string; href: string };
+export type CouponDestination = {
+  label: string;
+  href: string;
+  /** The glyph this family's button wears, where it has one - only the menu
+   *  does (`MENU_ICON`), so a coupon that leads to the menu is marked the way
+   *  every other "go to the menu" button on the site is. */
+  icon?: string;
+};
 
 /**
  * The call to action on a scanned coupon: keep the code, then go shopping.
@@ -66,6 +73,7 @@ export function CouponClaim({
             text={targets.length === 1 ? t("startShopping") : target.label}
             // Only the first is the primary action; the rest stay neutral -
             // the same rule the empty-catalog state's browse row follows.
+            icon={target.icon}
             kind={index === 0 ? "primary" : undefined}
             size="lg"
             onClick={() => start(target.href)}

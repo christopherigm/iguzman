@@ -3,7 +3,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { getSystem } from "@/lib/system";
-import { MENU_ALL_PATH } from "@/lib/menu-paths";
+import { MENU_ALL_PATH, MENU_ICON } from "@/lib/menu-paths";
 import { CatalogCategories } from "./catalog-categories";
 
 interface EmptyCatalogStateProps {
@@ -32,7 +32,7 @@ export async function EmptyCatalogState({ message }: EmptyCatalogStateProps) {
     getTranslations("CatalogItems"),
   ]);
 
-  const links = [
+  const links: { label: string; href: string; icon?: string }[] = [
     ...(system?.product_count
       ? [{ label: t("browseProducts"), href: "/categories/products" }]
       : []),
@@ -40,7 +40,7 @@ export async function EmptyCatalogState({ message }: EmptyCatalogStateProps) {
       ? [{ label: t("browseServices"), href: "/categories/services" }]
       : []),
     ...(system?.menu_item_count
-      ? [{ label: t("browseFood"), href: MENU_ALL_PATH }]
+      ? [{ label: t("browseFood"), href: MENU_ALL_PATH, icon: MENU_ICON }]
       : []),
   ];
 
@@ -54,6 +54,7 @@ export async function EmptyCatalogState({ message }: EmptyCatalogStateProps) {
               key={link.href}
               text={link.label}
               href={link.href}
+              icon={link.icon}
               // Only the first is the primary action; the rest stay neutral.
               kind={index === 0 ? "primary" : undefined}
             />

@@ -12,8 +12,12 @@ import {
   AdminImageUploader,
   type NewImage,
 } from "@/components/admin-image-uploader/admin-image-uploader";
+import { AdminImageField } from "@/components/admin/admin-image-field";
 import { ImageWebSearch } from "@/components/admin/image-web-search";
-import { remainingGallerySlots } from "@/hooks/use-admin-image-field";
+import {
+  remainingGallerySlots,
+  useAdminImageField,
+} from "@/hooks/use-admin-image-field";
 import {
   MenuIngredientsEditor,
   type IngredientRow,
@@ -138,15 +142,24 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     video_link: "",
   });
 
+  // The main image's uploader and stock picker: one field with two doors. It is
+  // a different photo from the gallery - `MenuItem.image` is what a catalog card
+  // draws, and the API only falls back to the first gallery row when it is
+  // empty - so replacing the gallery alone leaves the card on the old picture.
+  const image = useAdminImageField();
+  // Pulled out because the load effect below depends on it: this one callback is
+  // stable, where `image` itself changes with every pick and keystroke - and an
+  // effect keyed on the object would re-fetch the record each time.
+  const loadImage = image.load;
   const [existingImages, setExistingImages] = useState<
     { id: number; url: string; sort_order?: number }[]
   >([]);
   const [pendingNewImages, setPendingNewImages] = useState<NewImage[]>([]);
   const [pendingDeletedIds, setPendingDeletedIds] = useState<number[]>([]);
   const [pendingOrder, setPendingOrder] = useState<number[]>([]);
-  // Photos picked from a stock bank. They become gallery rows of their own on
-  // save, after the operator's uploads - the picker and the uploader both fill
-  // the same ten slots, so neither replaces the other.
+  // Photos picked from a stock bank for the *gallery*. They become rows of
+  // their own on save, after the operator's uploads - the picker and the
+  // uploader both fill the same ten slots, so neither replaces the other.
   const [stockImages, setStockImages] = useState<StockImageFile[]>([]);
 
   // The dish's OWN size rows, which *replace* its category's list when there are
@@ -354,6 +367,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
             href: item.href ?? "",
             video_link: item.video_link ?? "",
           });
+          loadImage(item.image, Number(id));
           setExistingImages(
             (images as Record<string, unknown>[]).map((i) => ({
               id: i.id as number,
@@ -416,7 +430,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
         .catch(() => setError(t("errorLoad")))
         .finally(() => setLoading(false));
     }
-  }, [id, isNew, loadMeta, t]);
+  }, [id, isNew, loadImage, loadMeta, t]);
 
   const handleChange = (key: string, value: unknown) =>
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -561,14 +575,19 @@ export default function AdminMenuItemFormPage({ params }: Props) {
       // Always sent, like `variants`: an empty list clears this record's own
       // rows, which is how it is handed back to inheriting its category's.
       payload.recommendations = recommendations.value;
+      // The main image, and - when it came from a bank - the credit it owes,
+      // which has to be in the same write as the file it describes.
+      Object.assign(payload, image.payload());
 
       let menuItemId: number;
       if (isNew) {
         const created = await createMenuItem(payload);
         menuItemId = created.id as number;
+        image.settle(created.image, menuItemId);
       } else {
-        await updateMenuItem(Number(id), payload);
+        const updated = await updateMenuItem(Number(id), payload);
         menuItemId = Number(id);
+        image.settle(updated.image, menuItemId);
       }
 
       for (const imgId of pendingDeletedIds) {
@@ -696,6 +715,11 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     show_nutrition_label: t("showNutritionLabel") ?? "Show nutrition label",
   };
 
+  // Both stock-image pickers on this form look for the same thing, so they open
+  // on one query - the dish's own name, until the operator edits it.
+  const imageQuery =
+    String(values.name ?? "").trim() || String(values.en_name ?? "").trim();
+
   if (loading) {
     return (
       <Box padding="24px">
@@ -744,32 +768,36 @@ export default function AdminMenuItemFormPage({ params }: Props) {
             : undefined
         }
         imagesSlot={
-          <Box display="flex" flexDirection="column" gap="8px">
-            <Typography variant="label">{t("images") ?? "Images"}</Typography>
-            <AdminImageUploader
-              existingImages={existingImages}
-              onChange={(n, d, o) => {
-                setPendingNewImages(n);
-                setPendingDeletedIds(d);
-                setPendingOrder(o);
-              }}
-              maxImages={GALLERY_MAX}
+          <>
+            <AdminImageField
+              label={t("image") ?? "Main Image"}
+              field={image}
+              query={imageQuery}
             />
-            <ImageWebSearch
-              defaultQuery={
-                String(values.name ?? "").trim() ||
-                String(values.en_name ?? "").trim()
-              }
-              value={stockImages}
-              onChange={setStockImages}
-              slots={remainingGallerySlots(
-                GALLERY_MAX,
-                existingImages,
-                pendingDeletedIds,
-                pendingNewImages,
-              )}
-            />
-          </Box>
+            <Box display="flex" flexDirection="column" gap="8px">
+              <Typography variant="label">{t("images") ?? "Images"}</Typography>
+              <AdminImageUploader
+                existingImages={existingImages}
+                onChange={(n, d, o) => {
+                  setPendingNewImages(n);
+                  setPendingDeletedIds(d);
+                  setPendingOrder(o);
+                }}
+                maxImages={GALLERY_MAX}
+              />
+              <ImageWebSearch
+                defaultQuery={imageQuery}
+                value={stockImages}
+                onChange={setStockImages}
+                slots={remainingGallerySlots(
+                  GALLERY_MAX,
+                  existingImages,
+                  pendingDeletedIds,
+                  pendingNewImages,
+                )}
+              />
+            </Box>
+          </>
         }
       >
         <Box

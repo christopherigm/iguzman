@@ -258,18 +258,18 @@ export async function MenuListing({ locale }: MenuListingProps) {
          *  rendered *here*, after the last item grid, because that flow position
          *  is where it parks once the reader reaches the end of the menu.
          *
-         *  Two brandmarks, on two different switches, and that is deliberate:
-         *  the **button's** is ungated (the site's icon on its own button), the
-         *  **cradle** on the card's top edge is the rail's own `MenuNavCradle`
-         *  and so rides the tenant's "Framed heading" setting exactly as the
-         *  rail's does - a cradle is a piece of that frame's design language.
+         *  The **button** wears the site-wide menu glyph (`MENU_ICON`), the
+         *  same one every "see the menu" CTA carries - it says what the button
+         *  does. The **cradle** on the card's top edge is the rail's own
+         *  `MenuNavCradle` and so rides the tenant's "Framed heading" setting
+         *  exactly as the rail's does - a cradle is a piece of that frame's
+         *  design language.
          *  ⚠ It is rendered here and passed down as a node rather than imported
          *  by the phone control, which is a client component: `@repo/ui/hero`
          *  pulls `react-player` into the browser bundle at module scope. */}
         <MenuCategoryNavMobile
           title={t("categoryNav")}
-          label={heading}
-          brandmark={system?.img_brandmark ?? null}
+          label={t("navButton")}
           cradle={
             railBrandmark ? (
               <MenuNavCradle

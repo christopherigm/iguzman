@@ -10,7 +10,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Grid } from "@repo/ui/core-elements/grid";
-import { MENU_ALL_PATH } from "@/lib/menu-paths";
+import { MENU_ALL_PATH, MENU_ICON } from "@/lib/menu-paths";
 import { BuyableCard, type BuyableItem } from "./buyable-card";
 import "./catalog-items.css";
 
@@ -65,7 +65,7 @@ export async function CatalogItems() {
   // offers a listing the visitor has just been shown nothing from. A food CTA
   // goes to the whole menu (`MENU_ALL_PATH`), since the featured dishes can be
   // any mix of the five kinds.
-  const seeMore = [
+  const seeMore: { label: string; href: string; icon?: string }[] = [
     ...(services.length > 0
       ? [{ label: t("seeMoreServices"), href: "/categories/services" }]
       : []),
@@ -73,7 +73,7 @@ export async function CatalogItems() {
       ? [{ label: t("seeMoreProducts"), href: "/categories/products" }]
       : []),
     ...(menuItems.length > 0
-      ? [{ label: t("seeMoreMenuItems"), href: MENU_ALL_PATH }]
+      ? [{ label: t("seeMoreMenuItems"), href: MENU_ALL_PATH, icon: MENU_ICON }]
       : []),
   ];
 
@@ -104,6 +104,7 @@ export async function CatalogItems() {
             key={link.href}
             text={link.label}
             href={link.href}
+            icon={link.icon}
             kind="primary"
             size="lg"
           />

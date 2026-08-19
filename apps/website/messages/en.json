@@ -418,6 +418,7 @@
   },
   "FoodPage": {
     "heading": "Menu",
+    "navButton": "See Menu",
     "categoriesHeading": "Menu Categories",
     "categoryNav": "Jump to a category",
     "itemsHeading": "All Dishes"

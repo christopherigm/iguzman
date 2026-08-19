@@ -358,7 +358,10 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   `menuCategoryHref(slug)` and `menuItemHref(categorySlug, slug)` in
   `lib/menu-paths.ts` are the only three. That module is deliberately plain data
   with no server import: the navbar is a **client** component and needs it, while
-  `lib/catalog.ts` reaches `next/headers` through `resolve-site.ts`.
+  `lib/catalog.ts` reaches `next/headers` through `resolve-site.ts`. It also
+  carries **`MENU_ICON`** - the one glyph every "go to the menu" button wears
+  (the landing heroes' CTA, "See more menu items", "Browse food", and the phone
+  index's own pill), beside the path all of them point at.
 - ⚠ **An item's URL moves when an operator re-files the dish.** The slug alone
   is globally unique, so the category segment addresses nothing extra - it is
   there because the URL is meant to read that way. `/menu/<slug>` is the
@@ -423,8 +426,10 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   `catalog-categories.css` - keep them in step.
 - **Below `md` the index is a floating button, not a shrunken rail**
   (`components/menu-category-nav-mobile.tsx`): a pill floating just above the
-  bottom edge - the tenant's `img_brandmark` and the page's own "Menu" heading -
-  which raises a card of the same entries out of itself. On a phone there is no
+  bottom edge - the site-wide menu glyph and "See Menu" (`FoodPage.navButton`,
+  deliberately not the page's own "Menu" heading: a button labelled with the
+  name of the page it is on says nothing) - which raises a card of the same
+  entries out of itself. On a phone there is no
   column to give a rail, and a full-width bar of category names would cost more
   of the screen than the dishes it exists to reach, so the list is on screen only
   while it is being used. ⚠ **The two controls are one feature split at one
@@ -456,7 +461,7 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   lands half its own width to the right.
   **Its card wears the same cradled brandmark the rail's does**, and on the same
   `hero_text_frame` gate - the arch is a piece of the frame's design language,
-  where the button's own icon is not (that one stays ungated). Both draw the
+  where the button's own glyph is not (that one is tenant-independent). Both draw the
   rail's `MenuNavCradle`, which is exported from `menu-category-nav.tsx` so the
   arch's three tuning numbers live in one place. ⚠ **`menu-listing.tsx` renders
   it and passes it down as a node**, because this control is a client component
@@ -471,9 +476,12 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   take them back** - it still covers the closed card's footprint, and a
   transparent box swallows taps exactly as an opaque one does. Dismissal is an
   outside press or `Escape`, deliberately with **no scrim**: this is a jump list,
-  not a dialog. Its brandmark is **not** gated on `hero_text_frame`, unlike the
-  rail's cradled one - a cradle is part of the frame's design language, a button
-  icon is just the site's mark. Both controls read their accent and foreground
+  not a dialog. **The button wears `MENU_ICON`, not the tenant's
+  `img_brandmark`** - the same glyph every "go to the menu" CTA on the site
+  carries (the landing heroes' menu button, "See more menu items", "Browse
+  food"), so the control reads as one of them. A site's own mark says which site
+  you are on, not what the button does; the cradle on the card's edge is where
+  the brand still speaks, and that one _is_ gated on `hero_text_frame`. Both controls read their accent and foreground
   from `menu-category-nav-colors.ts`, which is plain data importing nothing so
   that the client control and the server rail can share it.
 - **One entry is lit at a time - the section the reader is in** - filled with the
@@ -1577,10 +1585,24 @@ written until the form is saved.
 
 Which forms carry one, and in which of its two shapes:
 
-| Shape                        | Forms                                                                                          |
-| ---------------------------- | ---------------------------------------------------------------------------------------------- |
-| **Single** (a pick replaces) | ingredient, the three catalog categories, a service's Main Image, highlight, story/event cover |
-| **Gallery** (picks append)   | product, service, menu item (10 slots); success story, event (20)                              |
+| Shape                        | Forms                                                                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Single** (a pick replaces) | ingredient, the three catalog categories, the Main Image of a product / service / menu item, highlight, story/event cover |
+| **Gallery** (picks append)   | product, service, menu item (10 slots); success story, event (20)                                                         |
+
+⚠ **All three catalog forms carry _both_ shapes, and the Main Image is not the
+gallery's first row.** `Product.image` / `Service.image` / `MenuItem.image` is
+its own stored file, and the API's `_buyable_image_url` reads it **first**,
+falling back to the first gallery row only when it is empty — while every detail
+page's gallery builder does the opposite (gallery first, `image` as the
+fallback). So a record whose gallery is replaced but whose main image is left
+alone shows the **new** photos on its detail page and the **old** one on every
+catalog card, in the OG/share tags, on its variant thumbnails and in the cart's
+recommendation strip. Product and menu item had no Main Image control at all
+until this landed, which made a `/seed-site` photo unreachable from the CMS
+entirely: the form only listed the gallery rows, so the picture the cards were
+drawing was never on screen. Don't remove the field from a catalog form on the
+grounds that "the gallery already has one".
 
 - **Both calls go through website-api** (`searchStockImages` / `fetchStockImage`
   in `lib/admin-api.ts` → `/api/stock-images/*`, allowlisted in the admin proxy).

@@ -418,6 +418,7 @@
   },
   "FoodPage": {
     "heading": "Menu",
+    "navButton": "Voir le Menu",
     "categoriesHeading": "Catégories du Menu",
     "categoryNav": "Aller à une catégorie",
     "itemsHeading": "Tous les Plats"
