@@ -933,6 +933,33 @@ Tests: `OrderQrTests` in `orders/tests.py`, plus the admin-read cases in
 temp dir via `setUpModule` - every checkout in it writes a real file, and
 unisolated they scatter a PNG per order through the developer's own `media/`.
 
+## Homepage flyers (`HomepageFlyer`)
+
+A promo slide on the landing: a photograph, bilingual copy, up to **three**
+hand-picked catalog items, and its own colour band. Read at
+`GET /api/homepage-flyers/` (public, host-scoped, `enabled` only) and written
+from the CMS at `/admin/homepage-flyers`.
+
+- **It is a model rather than more `System.spotlight_*` columns because of the
+  band.** `background` / `top_divider` / `bottom_divider` are columns on the
+  *row*, so every slide is its own `SectionBand` - a set of flyers sharing one
+  band would read as one panel whose contents change, which is what `Spotlight`
+  already is.
+- **`items` is the `{kind, id}` JSON list** every other hand-picked relation here
+  uses (the guest cart, `ContactMessage`, `SocialPost`, `System.spotlight_items`),
+  not an FK - one column points at any of the three Buyable families.
+  `validate_flyer_items` enforces the **shape** and the cap of three, and nothing
+  else: existence is resolved on the frontend against the cached catalog, so a
+  ref whose item was deleted or unpublished drops out of its slide rather than
+  500ing a landing.
+- ⚠ **The ids are per-environment, exactly like `spotlight_items`** - a flyer is
+  therefore not part of `site_payload` / publish, and its items are picked in
+  each environment's own CMS.
+- It is in `MODEL_SPECS` (keyed by `created`, having no slug), which is what puts
+  it in a tenant backup **and** counts its stock-photo credits toward
+  `System.stock_image_count` - `attributed_specs()` derives that list rather than
+  repeating it.
+
 ## Catalog kind labels - four columns on `System`
 
 `kind_label_<kind>` / `en_kind_label_<kind>` hold what a tenant calls the two

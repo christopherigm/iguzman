@@ -472,6 +472,11 @@
     "errorNoDate": "Eine Veranstaltung braucht ein Startdatum.",
     "errorEndBeforeStart": "Das Ende darf nicht vor dem Beginn liegen."
   },
+  "HomepageFlyers": {
+    "previous": "Vorheriger Flyer",
+    "next": "Nächster Flyer",
+    "pagination": "Flyer wählen"
+  },
   "SuccessStoryDetail": {
     "home": "Startseite",
     "successStories": "Erfolgsgeschichten"
@@ -1282,7 +1287,16 @@
     "sizePriceDelta": "Preisänderung",
     "defaultSize": "Standard",
     "deleteSizeTitle": "Größe löschen",
-    "deleteSizeText": "Diese Größe wird beim Speichern entfernt. Warenkorbzeilen, die sie gewählt haben, entfallen."
+    "deleteSizeText": "Diese Größe wird beim Speichern entfernt. Warenkorbzeilen, die sie gewählt haben, entfallen.",
+    "homepageFlyers": "Startseiten-Flyer",
+    "homepageFlyersDesc": "Erstelle Promo-Slides für deine Startseite, jede mit bis zu drei Katalogartikeln.",
+    "homepageFlyersIntro": "Flyer erscheinen auf deiner Startseite zwischen den Erfolgsgeschichten und den Highlights. Ein einzelner Flyer wird für sich dargestellt; ab zwei werden sie zu einem Slider, den Besucher durchblättern. Jeder Flyer hat seinen eigenen Hintergrund und seine eigenen Randformen.",
+    "flyerImageSide": "Bildseite",
+    "flyerImageSideLeft": "Links",
+    "flyerImageSideRight": "Rechts",
+    "flyerItemsLabel": "Ausgewählte Artikel (bis zu 3)",
+    "flyerStyle": "Flyer-Stil",
+    "flyerBg": "Flyer-Hintergrund (CSS)"
   },
   "GradientBuilder": {
     "linear": "Linear",

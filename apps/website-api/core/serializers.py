@@ -21,6 +21,7 @@ from .models import (
     ContactMessage,
     Event,
     EventImage,
+    HomepageFlyer,
     ResourcePool,
     SiteBackup,
     SocialPost,
@@ -583,6 +584,158 @@ class CompanyHighlightItemWriteSerializer(serializers.Serializer):
                 proc = ImageProcessingSerializer(data={"base64_image": image_value}, **_HIGHLIGHT_ITEM_IMAGE_CFG)
                 proc.is_valid()
                 proc.save_to_field(instance.image, f"highlightitem_{instance.pk}.jpg")
+            else:
+                instance.image = None
+            update_fields.append("image")
+
+        if update_fields:
+            instance.save(update_fields=update_fields)
+
+        return instance
+
+
+# ---------------------------------------------------------------------------
+# Homepage flyer serializers
+# ---------------------------------------------------------------------------
+
+# A flyer's photograph is the big picture on its slide, so it is a REGULAR
+# (1200 px) hero exactly like a highlight's or a story's cover.
+_FLYER_IMAGE_CFG = image_cfg(REGULAR)
+
+# The three catalog families a flyer item may reference. "food" is the MenuItem
+# family (the frontend's kind name), matching the guest-cart / spotlight refs.
+FLYER_ITEM_KINDS = {"product", "service", "food"}
+
+# How many items one flyer may feature. Three, the same trio the Featured
+# Spotlight carries: the cards sit two-up in the copy column below `md` (so a
+# third wraps to its own row) and three-across from `md` up, where the column is
+# wide enough to hold them without shrinking all three past legibility.
+MAX_FLYER_ITEMS = 3
+
+
+def validate_flyer_items(value):
+    """A list of at most three {"kind", "id"} refs.
+
+    Existence is resolved on the frontend against the cached catalog (a ref whose
+    item was deleted or disabled simply drops out of the slide), so this enforces
+    only the shape - which is what keeps a malformed blob out of the JSON column.
+    Mirrors `SystemWriteSerializer.validate_spotlight_items`, at this model's own
+    limit.
+    """
+    if value in (None, ""):
+        return []
+    if not isinstance(value, list):
+        raise serializers.ValidationError("Must be a list of item references.")
+    if len(value) > MAX_FLYER_ITEMS:
+        raise serializers.ValidationError(
+            f"At most {MAX_FLYER_ITEMS} items may be featured."
+        )
+    cleaned = []
+    for entry in value:
+        if not isinstance(entry, dict):
+            raise serializers.ValidationError("Each item must be an object.")
+        kind = entry.get("kind")
+        item_id = entry.get("id")
+        if kind not in FLYER_ITEM_KINDS:
+            raise serializers.ValidationError(
+                f"kind must be one of {sorted(FLYER_ITEM_KINDS)}."
+            )
+        try:
+            item_id = int(item_id)
+        except (TypeError, ValueError):
+            raise serializers.ValidationError("id must be an integer.")
+        cleaned.append({"kind": kind, "id": item_id})
+    return cleaned
+
+
+class HomepageFlyerSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = HomepageFlyer
+        fields = [
+            "id", "enabled", "created", "modified", "version",
+            "system",
+            "name", "en_name",
+            "short_description", "en_short_description",
+            "description", "en_description",
+            "image", "fit", "background_color", "href",
+            "items", "image_side",
+            "background", "top_divider", "bottom_divider",
+            "sort_order",
+        ]
+
+    def get_image(self, obj):
+        request = self.context.get("request")
+        if not obj.image:
+            return None
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url
+
+
+class HomepageFlyerWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
+    """Write serializer for HomepageFlyer - all fields optional (PATCH semantics)."""
+
+    system       = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), required=False, allow_null=True)
+    name         = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    en_name      = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    short_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_short_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    description  = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    href         = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    fit          = serializers.CharField(max_length=16, required=False, allow_null=True, allow_blank=True)
+    background_color = serializers.CharField(max_length=32, required=False, allow_null=True, allow_blank=True)
+    items        = serializers.JSONField(required=False)
+    image_side   = serializers.ChoiceField(
+        choices=[HomepageFlyer.SIDE_LEFT, HomepageFlyer.SIDE_RIGHT], required=False
+    )
+    # A blank band means "no band", which is stored as NULL - the same contract
+    # `System.catalog_items_bg` keeps.
+    background   = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    top_divider  = serializers.ChoiceField(choices=[c[0] for c in DIVIDER_CHOICES], required=False)
+    bottom_divider = serializers.ChoiceField(choices=[c[0] for c in DIVIDER_CHOICES], required=False)
+    sort_order   = serializers.IntegerField(min_value=0, required=False)
+    enabled      = serializers.BooleanField(required=False)
+    image        = serializers.CharField(required=False, allow_null=True, allow_blank=True)  # base64
+
+    def validate_items(self, value):
+        return validate_flyer_items(value)
+
+    def validate_image(self, value):
+        if value:
+            sub = ImageProcessingSerializer(data={"base64_image": value}, **_FLYER_IMAGE_CFG)
+            if not sub.is_valid():
+                raise serializers.ValidationError(sub.errors["base64_image"])
+        return value
+
+    def save(self, instance):
+        scalar_fields = [
+            "system",
+            "name", "en_name",
+            "short_description", "en_short_description",
+            "description", "en_description",
+            "href", "fit", "background_color",
+            "items", "image_side",
+            "background", "top_divider", "bottom_divider",
+            "sort_order", "enabled",
+        ]
+        update_fields = []
+        for field_name in scalar_fields:
+            if field_name in self.validated_data:
+                setattr(instance, field_name, self.validated_data[field_name])
+                update_fields.append(field_name)
+
+        if "image" in self.validated_data:
+            image_value = self.validated_data["image"]
+            # The credit a photo picked from a stock bank owes; None for an
+            # upload, which owes nobody and clears whatever the row carried.
+            credit = self.pop_credit(self.validated_data, bool(image_value))
+            if image_value:
+                proc = ImageProcessingSerializer(data={"base64_image": image_value}, **_FLYER_IMAGE_CFG)
+                proc.is_valid()
+                proc.save_to_field(instance.image, f"homepageflyer_{instance.pk}.jpg", credit)
             else:
                 instance.image = None
             update_fields.append("image")

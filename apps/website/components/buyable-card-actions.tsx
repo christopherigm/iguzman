@@ -56,6 +56,14 @@ interface BuyableCardActionsProps {
    * everything else, which keeps the cart button.
    */
   bookingSlug?: string | null;
+  /**
+   * The row as it renders on a compact card: share and favorite are dropped and
+   * the cart CTA is centred on its own. Both of those are secondary actions on
+   * a card that is already only a third of a column wide - and with the button
+   * they flank gone from one end, "space-between" would strand it against the
+   * right edge, so the justification has to move with them.
+   */
+  compact?: boolean;
 }
 
 /**
@@ -80,29 +88,36 @@ export function BuyableCardActions({
   inStock,
   customize,
   bookingSlug = null,
+  compact = false,
 }: BuyableCardActionsProps) {
   const t = useTranslations("ItemDetail");
   const tBooking = useTranslations("Booking");
 
   return (
-    <Box justifyContent="space-between" alignItems="center" gap={6}>
-      <Box alignItems="center" gap={6}>
-        <ShareButton
-          title={name}
-          text={shareText}
-          label={t("share")}
-          copiedLabel={t("linkCopied")}
-          url={shareUrl}
-          size="sm"
-        />
-        <FavoriteButton
-          kind={kind === "food" ? "menu_item" : kind}
-          id={id}
-          initialFavorite={initialFavorite}
-          isLoggedIn={isLoggedIn}
-          size="sm"
-        />
-      </Box>
+    <Box
+      justifyContent={compact ? "center" : "space-between"}
+      alignItems="center"
+      gap={6}
+    >
+      {!compact && (
+        <Box alignItems="center" gap={6}>
+          <ShareButton
+            title={name}
+            text={shareText}
+            label={t("share")}
+            copiedLabel={t("linkCopied")}
+            url={shareUrl}
+            size="sm"
+          />
+          <FavoriteButton
+            kind={kind === "food" ? "menu_item" : kind}
+            id={id}
+            initialFavorite={initialFavorite}
+            isLoggedIn={isLoggedIn}
+            size="sm"
+          />
+        </Box>
+      )}
 
       {bookingSlug ? (
         <Button

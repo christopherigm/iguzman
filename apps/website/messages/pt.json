@@ -472,6 +472,11 @@
     "errorNoDate": "O evento precisa de uma data de início.",
     "errorEndBeforeStart": "O fim não pode ser anterior ao início."
   },
+  "HomepageFlyers": {
+    "previous": "Folheto anterior",
+    "next": "Próximo folheto",
+    "pagination": "Escolher um folheto"
+  },
   "SuccessStoryDetail": {
     "home": "Início",
     "successStories": "Histórias de Sucesso"
@@ -1282,7 +1287,16 @@
     "sizePriceDelta": "Alteração de preço",
     "defaultSize": "Padrão",
     "deleteSizeTitle": "Excluir tamanho",
-    "deleteSizeText": "Este tamanho será removido ao salvar. As linhas do carrinho que o escolheram são descartadas."
+    "deleteSizeText": "Este tamanho será removido ao salvar. As linhas do carrinho que o escolheram são descartadas.",
+    "homepageFlyers": "Folhetos da página inicial",
+    "homepageFlyersDesc": "Crie slides promocionais para a sua página inicial, cada um com até três itens do catálogo.",
+    "homepageFlyersIntro": "Os folhetos aparecem na sua página inicial, entre os casos de sucesso e os destaques. Um único folheto é exibido sozinho; a partir de dois, tornam-se um carrossel que os visitantes podem percorrer. Cada folheto tem o seu próprio fundo e as suas próprias formas de borda.",
+    "flyerImageSide": "Lado da imagem",
+    "flyerImageSideLeft": "Esquerda",
+    "flyerImageSideRight": "Direita",
+    "flyerItemsLabel": "Itens em destaque (até 3)",
+    "flyerStyle": "Estilo do folheto",
+    "flyerBg": "Fundo do folheto (CSS)"
   },
   "GradientBuilder": {
     "linear": "Linear",

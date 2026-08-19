@@ -30,6 +30,7 @@ export async function BuyableCard({
   item,
   locale,
   fromLabel,
+  compact = false,
 }: {
   item: BuyableItem;
   locale: string;
@@ -38,6 +39,12 @@ export async function BuyableCard({
    * price is a starting point. Required when a food card renders.
    */
   fromLabel?: string;
+  /**
+   * The card as it renders in a narrow column - see `BuyableCardView`'s own
+   * `compact`. Passed straight through; nothing the server resolves changes,
+   * because a compact card is the same card with less on it.
+   */
+  compact?: boolean;
 }) {
   const { kind, data } = item;
 
@@ -71,6 +78,7 @@ export async function BuyableCard({
       item={item}
       locale={locale}
       fromLabel={fromLabel}
+      compact={compact}
       perPersonLabel={tBooking("perPerson")}
       origin={origin}
       isAdmin={session?.isAdmin ?? false}

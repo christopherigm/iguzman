@@ -48,6 +48,7 @@ from core.models import (
     Branch,
     ContactMessage,
     Event,
+    HomepageFlyer,
     ResourcePool,
     SiteBackup,
     SuccessStory,
@@ -695,6 +696,80 @@ class EventTests(TestCase):
         self.assertIsNone(data["own_venue_name"])
         self.assertFalse(data["is_past"])
         self.assertEqual(soon.slug, "tomorrow")
+
+
+# --------------------------------------------------------------------------- #
+# Homepage flyers
+# --------------------------------------------------------------------------- #
+
+class HomepageFlyerTests(TestCase):
+    """The one thing a flyer decides for itself: which items it may carry.
+
+    Everything else about the model is the ordinary tenant-scoped picture-list
+    shape `CompanyHighlight` already covers. What is specific is the `items` JSON
+    column - a hand-typed blob is the only way a malformed ref reaches the
+    landing, where the frontend resolves it against the live catalog - and the
+    per-row band, whose three columns are the reason this is a model instead of
+    more `System.spotlight_*` fields.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+
+    def test_a_flyer_carries_at_most_three_items_and_its_own_band(self):
+        self.client.force_login(make_admin("boss", self.system))
+
+        res = self.client.post(
+            "/api/homepage-flyers/",
+            {
+                "system": self.system.id,
+                "name": "Combo",
+                "items": [
+                    {"kind": "product", "id": 3},
+                    {"kind": "food", "id": 7},
+                    {"kind": "service", "id": 9},
+                ],
+                "image_side": "right",
+                "background": "linear-gradient(#fff, #000)",
+                "top_divider": "wave",
+                "bottom_divider": "arches",
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 201, res.content)
+        body = res.json()
+        self.assertEqual(
+            body["items"],
+            [
+                {"kind": "product", "id": 3},
+                {"kind": "food", "id": 7},
+                {"kind": "service", "id": 9},
+            ],
+        )
+        self.assertEqual(body["image_side"], "right")
+        self.assertEqual(body["top_divider"], "wave")
+
+        # A fourth item, and a family that is not one of the three, are the two
+        # ways a hand-typed blob goes wrong.
+        for items in (
+            [{"kind": "product", "id": i} for i in (1, 2, 3, 4)],
+            [{"kind": "widget", "id": 1}],
+        ):
+            res = self.client.post(
+                "/api/homepage-flyers/",
+                {"system": self.system.id, "name": "Bad", "items": items},
+                content_type="application/json",
+            )
+            self.assertEqual(res.status_code, 400, res.content)
+
+        # An unpublished flyer is on the CMS's list and off the public one - the
+        # landing renders whatever this endpoint answers, with no `enabled` check
+        # of its own.
+        HomepageFlyer.objects.create(system=self.system, name="Draft", enabled=False)
+        cache.clear()
+        res = self.client.get("/api/homepage-flyers/", HTTP_X_WEBSITE_HOST="acme.test")
+        self.assertEqual([f["name"] for f in res.json()], ["Combo"])
 
 
 # --------------------------------------------------------------------------- #

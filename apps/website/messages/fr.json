@@ -472,6 +472,11 @@
     "errorNoDate": "Un événement doit avoir une date de début.",
     "errorEndBeforeStart": "La fin ne peut pas précéder le début."
   },
+  "HomepageFlyers": {
+    "previous": "Encart précédent",
+    "next": "Encart suivant",
+    "pagination": "Choisir un encart"
+  },
   "SuccessStoryDetail": {
     "home": "Accueil",
     "successStories": "Histoires de Succès"
@@ -1282,7 +1287,16 @@
     "sizePriceDelta": "Variation de prix",
     "defaultSize": "Par défaut",
     "deleteSizeTitle": "Supprimer la taille",
-    "deleteSizeText": "Cette taille sera supprimée à l’enregistrement. Les lignes de panier qui l’avaient choisie sont retirées."
+    "deleteSizeText": "Cette taille sera supprimée à l’enregistrement. Les lignes de panier qui l’avaient choisie sont retirées.",
+    "homepageFlyers": "Encarts d'accueil",
+    "homepageFlyersDesc": "Créez des encarts promotionnels pour votre page d'accueil, chacun mettant en avant jusqu'à trois articles du catalogue.",
+    "homepageFlyersIntro": "Les encarts s'affichent sur votre page d'accueil, entre les témoignages et les points forts. Un seul encart s'affiche seul ; à partir de deux, ils deviennent un carrousel que vos visiteurs peuvent parcourir. Chaque encart possède son propre fond et ses propres formes de bord.",
+    "flyerImageSide": "Côté de l'image",
+    "flyerImageSideLeft": "Gauche",
+    "flyerImageSideRight": "Droite",
+    "flyerItemsLabel": "Articles mis en avant (3 maximum)",
+    "flyerStyle": "Style de l'encart",
+    "flyerBg": "Fond de l'encart (CSS)"
   },
   "GradientBuilder": {
     "linear": "Linéaire",

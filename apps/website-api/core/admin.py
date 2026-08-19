@@ -13,6 +13,7 @@ from .models import (
     ContactMessage,
     Event,
     EventImage,
+    HomepageFlyer,
     ResourcePool,
     SiteBackup,
     SocialPost,
@@ -81,6 +82,46 @@ class CompanyHighlightAdmin(admin.ModelAdmin):
         cache.delete(f"core:highlight_items:{obj.pk}")
         _invalidate_pattern("core:highlight_item:*")
         _invalidate_pattern("core:highlights:*")
+        super().delete_model(request, obj)
+
+
+@admin.register(HomepageFlyer)
+class HomepageFlyerAdmin(admin.ModelAdmin):
+    list_display = ("name", "system", "image_side", "sort_order", "enabled", "modified")
+    list_filter = ("enabled", "system", "image_side")
+    search_fields = ("name", "en_name")
+    readonly_fields = ("created", "modified", "version")
+    fieldsets = (
+        ("Identity", {
+            "fields": ("system", "enabled", "sort_order", "version", "created", "modified"),
+        }),
+        ("Content (ES)", {
+            "fields": ("name", "short_description", "description"),
+        }),
+        ("Content (EN)", {
+            "fields": ("en_name", "en_short_description", "en_description"),
+        }),
+        ("Media", {
+            "fields": ("image", "attribution", "attribution_url", "fit",
+                       "background_color", "href", "image_side"),
+        }),
+        ("Featured items", {
+            "fields": ("items",),
+            "description": 'Up to two refs, e.g. [{"kind": "product", "id": 12}].',
+        }),
+        ("Band", {
+            "fields": ("background", "top_divider", "bottom_divider"),
+        }),
+    )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        cache.delete(f"core:homepage_flyer:{obj.pk}")
+        _invalidate_pattern("core:homepage_flyers:*")
+
+    def delete_model(self, request, obj):
+        cache.delete(f"core:homepage_flyer:{obj.pk}")
+        _invalidate_pattern("core:homepage_flyers:*")
         super().delete_model(request, obj)
 
 

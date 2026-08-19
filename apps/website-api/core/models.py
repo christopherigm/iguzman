@@ -415,6 +415,99 @@ class CompanyHighlightItem(SmallPicture):
         return self.name or f"Item #{self.pk}"
 
 
+class HomepageFlyer(RegularPicture):
+    """A promotional flyer on the landing page, pairing copy and a photograph
+    with up to three hand-picked catalog items.
+
+    The same idea as ``System.spotlight_*`` - an editorial panel around a few
+    items - with one difference that is the whole reason it is a model rather
+    than more columns on ``System``: a tenant makes **several** of them and the
+    landing pages through them in a slider, so each one carries its own copy,
+    its own photograph, its own colour band and its own edge shapes. The
+    Spotlight's single panel could stay on the System row; a set of them cannot.
+
+    ``items`` is an ordered list of ``{"kind": "product"|"service"|"food",
+    "id": <int>}`` refs - the same shape the guest cart, ``ContactMessage``,
+    ``SocialPost`` and ``System.spotlight_items`` use - resolved to live cards on
+    the frontend rather than here, so a deleted or disabled item simply drops out
+    of its slide. Like ``spotlight_items`` the ids are per-environment and are
+    picked in each environment's CMS; they do not travel in a seed.
+
+    ``background``/``top_divider``/``bottom_divider`` are the per-row twin of
+    ``System.catalog_items_bg`` + its divider pair, and the frontend paints them
+    through the very same ``SectionBand`` component. They are per-flyer because
+    every slide is its own band: a set of flyers sharing one background would
+    make the slider read as one panel whose contents change, which is exactly
+    what a flyer is not.
+
+    Inherits from ``RegularPicture`` (1200 px), which brings ``name``/``en_name``,
+    ``description``/``en_description``, ``image``, ``fit``, ``background_color``
+    and the stock-photo credit pair.
+    """
+
+    # Which side the photograph sits on from `sm` up. Below that the slide always
+    # stacks (title -> image -> description -> items), so this has no effect
+    # there: a phone has one column and no side to choose.
+    SIDE_LEFT = "left"
+    SIDE_RIGHT = "right"
+    IMAGE_SIDE_CHOICES = (
+        (SIDE_LEFT, "Left"),
+        (SIDE_RIGHT, "Right"),
+    )
+
+    system = models.ForeignKey(
+        "core.System",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="homepage_flyers",
+    )
+
+    items = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Ordered refs of the featured items, e.g. [{"kind": "product", "id": 12}]. Max 3.',
+    )
+
+    image_side = models.CharField(
+        max_length=8,
+        choices=IMAGE_SIDE_CHOICES,
+        default=SIDE_LEFT,
+        help_text="Which side the photograph sits on from the sm breakpoint up.",
+    )
+
+    # This flyer's own colour band. A CharField holding raw CSS, exactly like
+    # `System.catalog_items_bg`: it is authored by the CMS gradient builder and
+    # painted straight into a `background` declaration.
+    background = models.TextField(
+        null=True,
+        blank=True,
+        help_text="CSS background painted behind this flyer's slide. Blank = no band.",
+    )
+    top_divider = models.CharField(
+        max_length=16,
+        choices=DIVIDER_CHOICES,
+        default=DIVIDER_NONE,
+        help_text="Shape of the notch cut into the top edge of this flyer's band.",
+    )
+    bottom_divider = models.CharField(
+        max_length=16,
+        choices=DIVIDER_CHOICES,
+        default=DIVIDER_NONE,
+        help_text="Shape of the notch cut into the bottom edge of this flyer's band.",
+    )
+
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Homepage Flyer"
+        verbose_name_plural = "Homepage Flyers"
+        ordering = ["sort_order", "-created"]
+
+    def __str__(self):
+        return self.name or f"Flyer #{self.pk}"
+
+
 # How long an all-day event keeps counting as "on" after the instant stored in
 # `starts_at`/`ends_at`. An all-day row is stored at midnight, so comparing it
 # straight against the clock would retire today's event one minute into the day

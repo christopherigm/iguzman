@@ -12,6 +12,7 @@ import { CatalogCategories } from "@/components/catalog-categories";
 import { CatalogItems } from "@/components/catalog-items";
 import { Events } from "@/components/events";
 import { Spotlight } from "@/components/spotlight";
+import { HomepageFlyers } from "@/components/homepage-flyers";
 import { FindUs } from "@/components/find-us";
 import { Intro } from "./sections/intro";
 
@@ -103,6 +104,11 @@ export async function Landing() {
           Renders nothing until she fills the copy and picks three items in the
           CMS, so it stays out of the way until configured. */}
       <Spotlight />
+
+      {/* Homepage flyers: the tenant's own promo slides, each one a band of its
+          own around a couple of hand-picked items. Renders nothing until they
+          make one, and reads as a plain section until they make a second. */}
+      <HomepageFlyers />
 
       <Container paddingX={10}>
         <CatalogCategories />

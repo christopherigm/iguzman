@@ -1,0 +1,102 @@
+/**
+ * One flyer slide's layout - the only thing about the band that genuinely needs
+ * a media query, which is why it is here rather than in props.
+ *
+ * Three grid areas, the same shape `apps/animals`' journal entry uses, so the
+ * one DOM order reads correctly in both bands:
+ *
+ *     xs           sm and up
+ *     header       media  header
+ *     media        media  body
+ *     body
+ *
+ * On a phone that is title -> photograph -> copy and items, which is the order
+ * asked for; from `sm` up the photograph moves beside the writing and spans both
+ * of its rows.
+ *
+ * ⚠ The templates must stay in CSS rather than moving to the `styles` prop: a
+ * prop is an inline style and would beat every media query below, collapsing the
+ * layout to whichever band was written inline.
+ */
+.homepage-flyer {
+  grid-template-areas:
+    "header"
+    "media"
+    "body";
+  grid-template-columns: minmax(0, 1fr);
+  /* The gap lives here rather than on the `gap` prop for the same reason the
+     templates do: from `sm` up the two text rows have to close up (see below),
+     and an inline style would beat that media query. */
+  gap: 16px;
+}
+
+@media (--sm) {
+  .homepage-flyer {
+    grid-template-areas:
+      "media header"
+      "media body";
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    /* The photograph keeps its own aspect ratio, so it must not be stretched to
+       the height of the two text rows it spans. */
+    align-items: start;
+    /* Beside the photograph the title and the copy under it are one block of
+       writing, so the row that separates them closes up - the heading's own
+       leading is the space between them. The column gap stays: it is what holds
+       the writing off the photograph. On a phone the two are not adjacent (the
+       photograph sits between them) and the gap is a real one, so this is
+       scoped to `sm` up. */
+    row-gap: 0;
+  }
+
+  /* The photograph on the trailing edge instead of the leading one - a per-flyer
+     choice (`HomepageFlyer.image_side`), so a run of slides can alternate rather
+     than march. It has no effect below `sm`, where there is one column and no
+     side to choose. */
+  .homepage-flyer--right {
+    grid-template-areas:
+      "header media"
+      "body media";
+  }
+}
+
+/* A flyer need not carry both halves, and an area with no item in it is still a
+   row: left in the template it would pay for the grid's `gap` twice over and
+   open a hole where the missing piece would have been. Each of the two cases
+   therefore drops its own area - and a flyer with no photograph has no side to
+   put one on, so it collapses to a single column in both bands. */
+.homepage-flyer--no-media {
+  grid-template-areas:
+    "header"
+    "body";
+}
+
+.homepage-flyer--no-header {
+  grid-template-areas:
+    "media"
+    "body";
+}
+
+@media (--sm) {
+  .homepage-flyer--no-media,
+  .homepage-flyer--no-media.homepage-flyer--right {
+    grid-template-areas:
+      "header"
+      "body";
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .homepage-flyer--no-header {
+    grid-template-areas: "media body";
+  }
+
+  .homepage-flyer--no-header.homepage-flyer--right {
+    grid-template-areas: "body media";
+  }
+}
+
+/* Swiper measures the slide, so the band inside it has to fill the track rather
+   than shrink to its content. */
+.homepage-flyers__swiper,
+.homepage-flyers__swiper .swiper-slide {
+  width: 100%;
+}

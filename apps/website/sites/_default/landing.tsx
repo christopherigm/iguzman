@@ -5,6 +5,7 @@ import { SectionBand } from "@/components/section-band";
 import { Hero } from "@/components/hero";
 import { SuccessStories } from "@/components/success-stories";
 import { CompanyHighlights } from "@/components/company-highlights";
+import { HomepageFlyers } from "@/components/homepage-flyers";
 import { CatalogCategories } from "@/components/catalog-categories";
 import { CatalogItems } from "@/components/catalog-items";
 import { Events } from "@/components/events";
@@ -38,6 +39,11 @@ export async function DefaultLanding() {
       <Container paddingX={10}>
         <SuccessStories />
       </Container>
+      {/* Homepage flyers: the tenant's own promo slides, each one a band of its
+          own around a couple of hand-picked items. Renders nothing until they
+          make one, and reads as a plain section until they make a second. */}
+      <HomepageFlyers />
+
       <SectionBand
         background={highlightsBg}
         topDivider={system?.highlights_top_divider}

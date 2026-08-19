@@ -36,6 +36,15 @@ export const ADMIN_NAV_ITEMS = [
     descKey: "spotlightPageDesc",
   },
   {
+    // Directly under the Spotlight: both are landing-page promo surfaces built
+    // out of hand-picked catalog items, and a tenant reaches for them in the
+    // same sitting.
+    key: "homepageFlyers",
+    href: "/admin/homepage-flyers",
+    icon: "🪧",
+    descKey: "homepageFlyersDesc",
+  },
+  {
     key: "productCategories",
     href: "/admin/product-categories",
     icon: "🏷️",

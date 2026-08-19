@@ -11,6 +11,7 @@ import { CatalogCategories } from "@/components/catalog-categories";
 import { CatalogItems } from "@/components/catalog-items";
 import { Events } from "@/components/events";
 import { Spotlight } from "@/components/spotlight";
+import { HomepageFlyers } from "@/components/homepage-flyers";
 import { Intro } from "./sections/intro";
 import { Departure } from "./sections/departure";
 
@@ -121,6 +122,11 @@ export async function Landing() {
           read as a run of card grids. Invisible until the owner fills the copy
           and picks the trio in /admin/featured-spotlight. */}
       <Spotlight />
+
+      {/* Homepage flyers: the tenant's own promo slides, each one a band of its
+          own around a couple of hand-picked items. Renders nothing until they
+          make one, and reads as a plain section until they make a second. */}
+      <HomepageFlyers />
 
       <Container paddingX={10}>
         <SuccessStories />

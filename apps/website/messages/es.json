@@ -472,6 +472,11 @@
     "errorNoDate": "El evento necesita una fecha de inicio.",
     "errorEndBeforeStart": "El final no puede ser anterior al inicio."
   },
+  "HomepageFlyers": {
+    "previous": "Folleto anterior",
+    "next": "Folleto siguiente",
+    "pagination": "Elegir un folleto"
+  },
   "SuccessStoryDetail": {
     "home": "Inicio",
     "successStories": "Historias de Éxito"
@@ -1282,7 +1287,16 @@
     "sizePriceDelta": "Cambio de precio",
     "defaultSize": "Predeterminado",
     "deleteSizeTitle": "Eliminar tamaño",
-    "deleteSizeText": "Este tamaño se eliminará al guardar. Las líneas del carrito que lo eligieron se descartan."
+    "deleteSizeText": "Este tamaño se eliminará al guardar. Las líneas del carrito que lo eligieron se descartan.",
+    "homepageFlyers": "Folletos de portada",
+    "homepageFlyersDesc": "Crea diapositivas promocionales para tu página de inicio, cada una con hasta tres artículos del catálogo.",
+    "homepageFlyersIntro": "Los folletos se muestran en tu página de inicio, entre los casos de éxito y los destacados. Un solo folleto se muestra por sí mismo; a partir de dos se convierten en un carrusel que tus visitantes pueden recorrer. Cada folleto lleva su propio fondo y sus propias formas de borde.",
+    "flyerImageSide": "Lado de la imagen",
+    "flyerImageSideLeft": "Izquierda",
+    "flyerImageSideRight": "Derecha",
+    "flyerItemsLabel": "Artículos destacados (hasta 3)",
+    "flyerStyle": "Estilo del folleto",
+    "flyerBg": "Fondo del folleto (CSS)"
   },
   "GradientBuilder": {
     "linear": "Lineal",

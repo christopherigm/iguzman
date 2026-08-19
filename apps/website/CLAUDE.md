@@ -1547,7 +1547,7 @@ landing, which is exactly what the preview shows.
   its chrome, then the first frame - and a hero laid out through all of that
   flickered through three pictures on every landing.
   ⚠ **A closed hero still reserves the navbar's height.** The landing starts
-  with the hero *because* the hero is what runs under the fixed navbar, so with
+  with the hero _because_ the hero is what runs under the fixed navbar, so with
   the hero closed nothing held that height and the next band (Featured, About)
   rode up under the bar with its heading cut off. `HeroReveal` holds it with a
   spacer that collapses to nothing over exactly the opening's duration and curve,
@@ -1558,7 +1558,7 @@ landing, which is exactly what the preview shows.
   player error opens the hero rather than hiding it: a landing with no headline
   and no CTA is worse than a flicker.
   The **CMS preview passes `revealOnPlay={false}`** - that section is about how
-  the logo and text are *composed* over the video, and the live opening would
+  the logo and text are _composed_ over the video, and the live opening would
   collapse the preview to nothing every time an operator pastes a new URL.
 - **`profile` bleeds a logo circle half-way below the video**, so both heroes
   wrap themselves in an extra `Box` and hang the disc off it - the video's own
@@ -1777,6 +1777,99 @@ Three things came with the move:
 - ⚠ **`public/icons/` must carry all six glyphs the gallery reads** -
   `fullscreen`, `prev`, `next`, `close`, and now `zoom-in`/`zoom-out`, which
   were copied in from `apps/animals` with this change.
+
+## Homepage flyers - promo slides with a band each
+
+A tenant authors any number of **flyers** in `/admin/homepage-flyers`, and the
+landing pages through them between the success stories and the highlights. A
+flyer is a photograph, a bit of bilingual copy, up to **three** hand-picked
+catalog items, and - the part that matters - **its own colour band and edge
+shapes**.
+
+| Piece                   | Where                                                             |
+| ----------------------- | ----------------------------------------------------------------- |
+| The band, server half   | `components/homepage-flyers.tsx`                                  |
+| The slider, client half | `components/homepage-flyers-slider.tsx` (+ its `.css`)            |
+| Fetcher + type          | `lib/homepage-flyers.ts`                                          |
+| The item picker         | `components/admin/catalog-ref-picker.tsx` (shared with Spotlight) |
+| The CMS                 | `app/[locale]/admin/homepage-flyers/`, `.../[id]/`                |
+| Model, API, cache       | website-api `core/` (`HomepageFlyer`)                             |
+
+- **It is a model rather than more `System.spotlight_*` columns because of the
+  band.** Every slide is its own `SectionBand` - `background`,
+  `top_divider`, `bottom_divider` are columns on the row - so the section is a
+  stack of bands, not one band whose contents change. That is also why the CMS
+  page writes **no System field at all**, unlike `/admin/highlights` and
+  `/admin/featured-spotlight`, which own their section's band and heading.
+- **The per-record band controls are the very same `SectionBandSection`** the two
+  System-level bands use, pointed at this row's three columns. It loads
+  `background_light` / `background_dark` for the preview's backdrop only and
+  **deletes them from the payload on save** - the same rule the other two pages
+  follow, so a flyer form can never write back a stale copy of
+  /admin/logos-and-styles' work.
+- ⚠ **A slide's item cards are `BuyableCard`s - async server components - inside
+  a client Swiper.** That works only because the server half resolves each whole
+  slide (locale, catalog, the card's own session/cart/hearts) and hands the
+  finished node to `HomepageFlyersSlider`, which knows nothing but Swiper. Don't
+  "simplify" it by moving `SectionBand` or the cards into the client component;
+  the cards cannot follow.
+- **One flyer is a section, two are a slider.** `SliderControls` renders nothing
+  for a single slide, so a lone flyer carries no dots and no arrows - which is
+  what stops it looking like a broken carousel. The band renders nothing at all
+  with no flyers, the contract every landing block here follows.
+- ⚠ **The slide's layout is grid areas in CSS, and must stay there.** The DOM
+  order is header → media → body; below `sm` that reads straight down, from `sm`
+  up the photograph moves beside the writing and spans both text rows, on the
+  side `image_side` names. Those templates are the one thing that differs across
+  the breakpoint, so a `styles` prop - an inline style - would beat every media
+  query and pin the layout to one band. A flyer missing its title or its
+  photograph drops that area (`--no-header` / `--no-media`): an empty area is
+  still a row, and would pay for the grid's `gap` around a hole. **The gap
+  itself is in there too**, for the same reason: from `sm` up the title and the
+  copy beneath it close into one block (`row-gap: 0`, the heading's own leading
+  being the space between them) while the column gap holding the writing off the
+  photograph stays - and on a phone the two are not even adjacent, since the
+  photograph sits between them.
+- **The photograph keeps its own aspect ratio** - `width`/`height` are the
+  placeholder ratio that reserves the box, and `height: auto` hands the frame
+  back to the file once it loads. No `priority` on any slide, the first included:
+  the band is below the hero, so eager-loading it only competes with the real LCP.
+- **`items` are `{kind, id}` refs, resolved on the frontend** against the cached
+  catalog, exactly like `spotlight_items` - so a picked item that is later
+  deleted or unpublished drops out of its slide instead of breaking the section.
+  A slide that loses every one of them is still a flyer and still renders. Like
+  the spotlight's trio, the ids are per-environment and are picked in each
+  environment's CMS.
+- **Three slots, one card size, and the third card only exists from `md`.**
+  They sit in the copy column, which is half the band from `sm` up, so a trio
+  squeezed in there at `sm` shrinks all three past legibility. `size` is a flat
+  `{ xs: 6, md: 4 }` - deliberately **not** derived from `items.length`, or a
+  slider whose cards changed size from slide to slide would read as three
+  different components instead of one row of the same thing. That leaves the
+  third card with nowhere to go below `md` (it would wrap under a half-empty
+  row), so it carries `hidden={{ xs: true, sm: true }}` and comes back with the
+  column wide enough to hold it. ⚠ It is **hidden, not dropped**: which cards a
+  slide shows is a breakpoint question and this is a server component with no
+  viewport, so slicing the array would pin every band to one answer.
+- **The cards run in `BuyableCard`'s `compact` mode**, which squares the
+  photograph (1:1 rather than the catalog 4:5), drops the blurb, and centres the
+  add button with the share and heart pair gone. At a third of the copy column
+  nothing else fits, and the flyer's own copy is already saying what the items
+  are. ⚠ It is a **reduction of the one card, not a second card** - the price,
+  the badges, the admin shortcut and both links to the item are untouched, so a
+  card is recognisably the same object in either mode. The prop threads
+  `BuyableCard` → `BuyableCardView` → `BuyableCardActions`; nothing the server
+  resolves changes, since a compact card is the same card with less on it.
+- **There is no Sort Order field on the flyer form.** The order is dragged on
+  `/admin/homepage-flyers`, which is the order the slider reads in; a number
+  typed on the form could only be a second way to say the same thing. The column
+  still round-trips through the form's `values`, so saving a flyer never moves
+  it.
+- **`components/admin/catalog-ref-picker.tsx` is the shared picker**, extracted
+  from the spotlight section when this became its second consumer (per "Shared
+  Constants" below): the per-tenant catalog fetch, the `${kind}:${id}` encoding
+  and the compaction of an emptied middle slot live there, and each consumer
+  passes only how many slots it has.
 
 ## Section background bands (`SectionBand`)
 

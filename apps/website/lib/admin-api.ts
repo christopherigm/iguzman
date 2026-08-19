@@ -941,6 +941,41 @@ export async function deleteHighlight(pk: number) {
   return parseResponse<void>(res);
 }
 
+// ---- Homepage flyers ----
+export async function listHomepageFlyers(systemId: number) {
+  const res = await adminFetch(
+    `/api/homepage-flyers/?system=${systemId}&include_disabled=true`,
+  );
+  return parseResponse<Record<string, unknown>[]>(res);
+}
+export async function getHomepageFlyer(pk: number) {
+  const res = await adminFetch(`/api/homepage-flyers/${pk}/`);
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function createHomepageFlyer(data: Record<string, unknown>) {
+  const res = await adminFetch(`/api/homepage-flyers/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function updateHomepageFlyer(
+  pk: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(`/api/homepage-flyers/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function deleteHomepageFlyer(pk: number) {
+  const res = await adminFetch(`/api/homepage-flyers/${pk}/`, {
+    method: "DELETE",
+  });
+  return parseResponse<void>(res);
+}
+
 // ---- Branches (physical locations) ----
 export async function listBranches(systemId: number) {
   const res = await adminFetch(

@@ -18,6 +18,19 @@ export interface BuyableCardViewProps {
   item: BuyableItem;
   locale: string;
   fromLabel?: string;
+  /**
+   * The card as it renders in a narrow column - a flyer's copy column, at a
+   * third of its width. It squares the photograph, drops the blurb and leaves
+   * the add button alone in the middle of the action row.
+   *
+   * It is a *reduction*, not a second card: the price, the badges, the admin
+   * shortcut and both links to the item are exactly what they are on a catalog
+   * grid, so a card in either mode is recognisably the same object. What goes
+   * is what cannot be read at that width - two lines of description - and what
+   * the surrounding block is already saying, which is why the share and heart
+   * buttons go with it and the one decision on the row is left.
+   */
+  compact?: boolean;
   /** "per person" suffix for a service whose booking is priced per head. The
    *  symmetric case to `fromLabel`: the number on the card is not the whole
    *  story, and saying nothing would quote a family of four one quarter of what
@@ -50,6 +63,7 @@ export function BuyableCardView({
   item,
   locale,
   fromLabel,
+  compact = false,
   perPersonLabel,
   origin,
   isAdmin,
@@ -190,9 +204,12 @@ export function BuyableCardView({
         flex="0 0 auto"
         styles={{
           // Portrait 4:5, the frame the detail-page gallery uses - a catalog
-          // photograph is nearly always taller than it is wide.
+          // photograph is nearly always taller than it is wide. A compact card
+          // squares it instead: in a narrow column the tall frame is most of
+          // the card's height, and the name and price it exists to sell get
+          // pushed off the bottom of whatever the card sits beside.
           position: "relative",
-          aspectRatio: "4 / 5",
+          aspectRatio: compact ? "1 / 1" : "4 / 5",
           overflow: "hidden",
         }}
       >
@@ -317,7 +334,7 @@ export function BuyableCardView({
           </Box>
         )}
 
-        {description && (
+        {!compact && description && (
           <Typography
             variant="body"
             margin={0}
@@ -381,6 +398,7 @@ export function BuyableCardView({
           <Box height={1} flex="0 0 auto" backgroundColor="var(--border)" />
 
           <BuyableCardActions
+            compact={compact}
             kind={kind}
             id={data.id}
             name={name}

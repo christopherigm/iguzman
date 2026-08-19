@@ -472,6 +472,11 @@
     "errorNoDate": "An event needs a start date.",
     "errorEndBeforeStart": "The end must not be before the start."
   },
+  "HomepageFlyers": {
+    "previous": "Previous flyer",
+    "next": "Next flyer",
+    "pagination": "Choose a flyer"
+  },
   "SuccessStoryDetail": {
     "home": "Home",
     "successStories": "Success Stories"
@@ -1282,7 +1287,16 @@
     "sizePriceDelta": "Price change",
     "defaultSize": "Default",
     "deleteSizeTitle": "Delete size",
-    "deleteSizeText": "This size will be removed when you save. Any cart line that chose it is dropped."
+    "deleteSizeText": "This size will be removed when you save. Any cart line that chose it is dropped.",
+    "homepageFlyers": "Homepage Flyers",
+    "homepageFlyersDesc": "Build promo slides for your landing page, each one showcasing up to three catalog items.",
+    "homepageFlyersIntro": "Flyers are shown on your landing page between the success stories and the highlights. A single flyer renders on its own; from two upwards they become a slider your visitors page through. Each flyer carries its own background band and edge shapes.",
+    "flyerImageSide": "Image side",
+    "flyerImageSideLeft": "Left",
+    "flyerImageSideRight": "Right",
+    "flyerItemsLabel": "Featured items (up to 3)",
+    "flyerStyle": "Flyer style",
+    "flyerBg": "Flyer background (CSS)"
   },
   "GradientBuilder": {
     "linear": "Linear",

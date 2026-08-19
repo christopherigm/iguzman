@@ -198,6 +198,7 @@ Build a site by composing the shared, already-tenant-aware components in
 | `catalog-categories` (`CatalogCategories`)                                           | Product/service/menu category tiles                                  | `getProductCategories()` / `getServiceCategories()` / `getMenuCategories()`  |
 | `catalog-items` (`CatalogItems`)                                                     | Featured product/service/food cards                                  | `getFeaturedProducts()` / `getFeaturedServices()` / `getFeaturedMenuItems()` |
 | `spotlight` (`Spotlight`)                                                            | Editorial promo panel + a hand-picked trio of items                  | `System.spotlight_*` + `spotlight_items` refs                                |
+| `homepage-flyers` (`HomepageFlyers`)                                                 | The tenant's promo slides, each its own band + up to two items       | `getHomepageFlyers()` (`HomepageFlyer` rows, band and all)                   |
 | `buyable-card`, `product-detail`, `service-detail`, `menu-detail`, `category-detail` | Item/detail rendering                                                | catalog helpers                                                              |
 | `menu-item-customizer`, `nutrition-label`                                            | Priced-ingredient picker + FDA panel                                 | `getMenuItem()` (its `ingredients`, `portions`)                              |
 | `section-band` (`SectionBand`)                                                       | Full-width band behind a section                                     | `System.*_bg` + `System.*_top_divider` / `*_bottom_divider`                  |
@@ -221,6 +222,20 @@ a title and at least one still-live item. So `<Spotlight />` is safe to compose
 into any landing before the content exists — it simply stays invisible.
 `cafedealtura` uses it as a wholesale invitation, `panorganico` as a vegan-bread
 showcase; one component, two completely different sections.
+
+**`HomepageFlyers` is the same idea, several times over — and one band each.**
+Where `Spotlight` is one panel on the `System` row, a flyer is a *record*: a
+tenant authors as many as they like in `/admin/homepage-flyers`, and each carries
+its own photograph, its own copy, its own **background and edge shapes**, and up
+to **two** catalog items. That is the whole reason it is a model — a set of
+slides sharing one band would read as one panel whose contents change. It renders
+nothing until the tenant makes one, and it reads as a plain section until they
+make a second (the shared `SliderControls` draws nothing for a single slide), so
+`<HomepageFlyers />` is safe to compose into any landing before the content
+exists. Every site carries it, upper-middle: after `<Spotlight />` where there is
+one, otherwise just above the highlights band. The photograph sits left or right
+from `sm` up, per flyer — below that the slide always stacks title → photograph →
+copy → the two item cards.
 
 **`<FindUs />` closes every landing, and its cards are the contact page's own.**
 It answers the one question none of the other blocks does — _where are you_ — with

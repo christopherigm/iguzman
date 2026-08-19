@@ -34,7 +34,7 @@ from .backup import (
 from .cache import invalidate_pattern as _invalidate_pattern
 from .services import image_banks
 from .storage import test_credentials
-from .models import ALL_DAY_GRACE, Branch, Brand, CompanyHighlight, CompanyHighlightItem, ContactMessage, Event, EventImage, SiteBackup, SocialPost, SuccessStory, SuccessStoryImage, System
+from .models import ALL_DAY_GRACE, Branch, Brand, CompanyHighlight, CompanyHighlightItem, ContactMessage, Event, EventImage, HomepageFlyer, SiteBackup, SocialPost, SuccessStory, SuccessStoryImage, System
 from .serializers import (
     AiChatSerializer,
     BranchSerializer,
@@ -51,6 +51,8 @@ from .serializers import (
     EventImageWriteSerializer,
     EventSerializer,
     EventWriteSerializer,
+    HomepageFlyerSerializer,
+    HomepageFlyerWriteSerializer,
     SiteBackupSerializer,
     SocialPostSerializer,
     SocialPostWriteSerializer,
@@ -687,6 +689,114 @@ class CompanyHighlightDetailView(APIView):
         cache.delete(f"core:highlight:{pk}")
         cache.delete(f"core:highlight_items:{pk}")
         _invalidate_pattern("core:highlights:*")
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class HomepageFlyerListView(APIView):
+    """
+    GET  /api/homepage-flyers/   - list this system's flyers (public).
+    POST /api/homepage-flyers/   - create a flyer (admin only).
+
+    Same shape as ``CompanyHighlightListView`` - it is the same kind of resource:
+    a tenant-scoped list of landing content, read by every visitor and written
+    only from the CMS.
+    """
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def _resolve_system(self, request):
+        host = (
+            request.META.get("HTTP_X_WEBSITE_HOST") or request.get_host()
+        ).split(":")[0]
+        return System.objects.filter(host=host, enabled=True).first()
+
+    def get(self, request):
+        disabled_visible = show_disabled(request)
+        suffix = _disabled_suffix(disabled_visible)
+        system_id = request.query_params.get("system")
+        if system_id:
+            cache_key = f"core:homepage_flyers:system:{system_id}{suffix}"
+        else:
+            system = self._resolve_system(request)
+            if system is None:
+                return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
+            system_id = system.id
+            cache_key = f"core:homepage_flyers:{system.host}{suffix}"
+
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        qs = HomepageFlyer.objects.filter(system_id=system_id)
+        if not disabled_visible:
+            qs = qs.filter(enabled=True)
+        data = HomepageFlyerSerializer(qs, many=True, context={"request": request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
+
+    def post(self, request):
+        serializer = HomepageFlyerWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = HomepageFlyer()
+        instance.save()
+        instance = serializer.save(instance)
+        _invalidate_pattern("core:homepage_flyers:*")
+        return Response(
+            HomepageFlyerSerializer(instance, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class HomepageFlyerDetailView(APIView):
+    """
+    GET    /api/homepage-flyers/<pk>/   - retrieve a flyer (public).
+    PATCH  /api/homepage-flyers/<pk>/   - partial update (admin only).
+    DELETE /api/homepage-flyers/<pk>/   - delete (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def _get_object(self, pk):
+        try:
+            return HomepageFlyer.objects.get(pk=pk)
+        except HomepageFlyer.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        cache_key = f"core:homepage_flyer:{pk}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        instance = self._get_object(pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        data = HomepageFlyerSerializer(instance, context={"request": request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
+
+    def patch(self, request, pk):
+        instance = self._get_object(pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = HomepageFlyerWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save(instance)
+        cache.delete(f"core:homepage_flyer:{pk}")
+        _invalidate_pattern("core:homepage_flyers:*")
+        return Response(HomepageFlyerSerializer(instance, context={"request": request}).data)
+
+    def delete(self, request, pk):
+        instance = self._get_object(pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        instance.delete()
+        cache.delete(f"core:homepage_flyer:{pk}")
+        _invalidate_pattern("core:homepage_flyers:*")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

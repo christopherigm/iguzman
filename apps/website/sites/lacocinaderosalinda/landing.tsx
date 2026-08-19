@@ -12,6 +12,7 @@ import { CatalogCategories } from "@/components/catalog-categories";
 import { CatalogItems } from "@/components/catalog-items";
 import { Events } from "@/components/events";
 import { Spotlight } from "@/components/spotlight";
+import { HomepageFlyers } from "@/components/homepage-flyers";
 import { FindUs } from "@/components/find-us";
 import { Intro } from "./sections/intro";
 import { Firma } from "./sections/firma";
@@ -116,14 +117,19 @@ export async function Landing() {
 
       <Intro />
 
-      {/* The dishes that carry the cook's name, gathered from across the menu.
-          Renders nothing until the catalog has one - see the file's docstring
-          for why this is a name match and how it fails. */}
-      <Firma />
+      {/* Homepage flyers: the tenant's own promo slides, each one a band of its
+          own around a couple of hand-picked items. Renders nothing until they
+          make one, and reads as a plain section until they make a second. */}
+      <HomepageFlyers />
 
       <Container paddingX={10}>
         <CatalogCategories />
       </Container>
+
+      {/* The dishes that carry the cook's name, gathered from across the menu.
+          Renders nothing until the catalog has one - see the file's docstring
+          for why this is a name match and how it fails. */}
+      <Firma />
 
       {/* Shared, DB-driven Spotlight: the kitchen can push whatever it likes
           here - the chilaquiles line, the almuerzo of the week - as a bordered
