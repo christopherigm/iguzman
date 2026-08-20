@@ -7,10 +7,10 @@ from .models import Booking, Coupon, Order, OrderLine
 @admin.register(Coupon)
 class CouponAdmin(admin.ModelAdmin):
     list_display = (
-        "code", "system", "kind", "value", "currency", "times_redeemed",
+        "code", "system", "kind", "value", "currency", "scope_kind", "times_redeemed",
         "max_redemptions", "starts_at", "expires_at", "enabled",
     )
-    list_filter = ("kind", "enabled", "system", "currency")
+    list_filter = ("kind", "scope_kind", "enabled", "system", "currency")
     search_fields = ("code", "name", "description", "public_id")
     date_hierarchy = "created_at"
     # `times_redeemed` is moved only by `redeem_coupon`'s F() expression, which is
@@ -18,6 +18,12 @@ class CouponAdmin(admin.ModelAdmin):
     # Typing over it here would race with exactly that, so it is a readout - use
     # `max_redemptions` to widen or close a campaign.
     readonly_fields = ("public_id", "qr_code", "times_redeemed", "created_at", "updated_at")
+    # ⚠ `scope_id` is a bare integer here with no widget to pick a row, and
+    # nothing in the admin checks that it names one of this coupon's own
+    # tenant's records - the CMS serializer is what does that
+    # (`CouponSerializer._validate_scope`). A scope typed in here can therefore
+    # point at another tenant's id and discount whichever of *this* tenant's
+    # items happens to share the number. Set a coupon's target from the CMS.
 
 
 class OrderLineInline(admin.TabularInline):

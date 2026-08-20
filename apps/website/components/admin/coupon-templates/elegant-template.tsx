@@ -1,6 +1,12 @@
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { CouponCode, CouponLogo, CouponQr, CouponTerms } from "./coupon-parts";
+import {
+  CouponCode,
+  CouponLogo,
+  CouponQr,
+  CouponTarget,
+  CouponTerms,
+} from "./coupon-parts";
 import { FORMAT_DIMENSIONS, tint, type CouponFlyerData } from "./types";
 
 /**
@@ -106,6 +112,18 @@ export function ElegantTemplate({ data }: { data: CouponFlyerData }) {
             {data.description}
           </Typography>
         ) : null}
+
+        {/* ⚠ Its two colours are passed explicitly here. `CouponTarget`'s
+            default muted tone is a *lightened* version of its ink, which is
+            right on a filled panel and invisible on this template's near-white
+            ground - so the name takes the ink and the label a darkened tint of
+            it, matching the fine print two rows down. */}
+        <CouponTarget
+          target={data.target}
+          color={ink}
+          muted={tint(ink, 0.55)}
+          size={108}
+        />
 
         <CouponCode code={data.code} color={data.primaryColor} fontSize={42} />
 

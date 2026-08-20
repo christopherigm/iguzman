@@ -530,21 +530,24 @@ def _discount_order(order, system, code):
     payment behind it and would otherwise sit in the customer's history as a
     phantom of a checkout they never completed.
 
-    Validated here against `order.subtotal` - the number `_open_order` just
-    computed off the catalog - rather than against anything the caller passed in,
-    so this cannot be handed a subtotal the lines do not add up to. The cart
-    already validated the same code through `CouponValidateView`, and this is not
-    a duplicate of that: that call is advisory and touches nothing, while this one
-    is what actually takes the redemption.
+    Validated here against `order.subtotal` and the order's **own written lines** -
+    the numbers `_open_order` just computed off the catalog - rather than against
+    anything the caller passed in, so this cannot be handed a subtotal the lines
+    do not add up to, nor a basket that does not contain what a scoped coupon is
+    for. The cart already validated the same code through `CouponValidateView`,
+    and this is not a duplicate of that: that call is advisory and touches
+    nothing, while this one is what actually takes the redemption.
     """
     if not code:
         return None
 
+    lines = list(order.lines.all())
     try:
         coupon = validate_coupon(
             system, code, subtotal=order.subtotal, currency=order.currency,
+            lines=lines,
         )
-        apply_coupon_to_order(order, coupon, subtotal=order.subtotal)
+        apply_coupon_to_order(order, coupon, subtotal=order.subtotal, lines=lines)
     except CouponError as exc:
         order.delete()
         return Response(
@@ -1322,9 +1325,16 @@ def _basket_totals(system, request, cart_refs):
     references in the body, re-priced by `resolve_guest_cart`. Either way the
     numbers come off the catalog, never off the request.
 
-    Returns `(subtotal, currency)`, with `currency` None for an empty or
+    Returns `(subtotal, currency, items)`, with `currency` None for an empty or
     mixed-currency basket: a coupon cannot be judged against either, and both are
     refused further up by the time real money is involved.
+
+    ⚠ **The lines come back too, and the caller must pass them on.** A scoped
+    coupon is priced off the part of the basket it applies to, so the subtotal
+    alone is not enough to answer what it takes off - see
+    `orders.services.coupons.eligible_subtotal`. They are `CartItem` instances,
+    saved for a signed-in customer and unsaved for a guest, and both expose the
+    `kind` / `target` / `line_total` properties that function reads.
     """
     if request.user.is_authenticated and not cart_refs:
         items = list(_cart_qs(request.user, system))
@@ -1332,11 +1342,11 @@ def _basket_totals(system, request, cart_refs):
         items = resolve_guest_cart(system, cart_refs or [])
 
     if not items:
-        return Decimal("0.00"), None
+        return Decimal("0.00"), None, []
 
     currencies = {item.target.currency for item in items}
     subtotal = sum((item.line_total for item in items), Decimal("0.00"))
-    return subtotal, currencies.pop() if len(currencies) == 1 else None
+    return subtotal, (currencies.pop() if len(currencies) == 1 else None), items
 
 
 class CouponValidateView(APIView):
@@ -1371,7 +1381,7 @@ class CouponValidateView(APIView):
         serializer = CouponValidateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        subtotal, currency = _basket_totals(
+        subtotal, currency, lines = _basket_totals(
             system, request, serializer.validated_data.get("cart"),
         )
         if currency is None:
@@ -1387,7 +1397,7 @@ class CouponValidateView(APIView):
         try:
             coupon = validate_coupon(
                 system, serializer.validated_data["code"],
-                subtotal=subtotal, currency=currency,
+                subtotal=subtotal, currency=currency, lines=lines,
             )
         except CouponError as exc:
             return Response(
@@ -1395,7 +1405,7 @@ class CouponValidateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        discount = discount_for(coupon, subtotal)
+        discount = discount_for(coupon, subtotal, lines)
         return Response(
             {
                 "code": coupon.code,
@@ -1468,7 +1478,12 @@ class AdminCouponListView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        serializer = CouponSerializer(data=request.data, context={"request": request})
+        serializer = CouponSerializer(
+            data=request.data,
+            # `_validate_scope` needs the tenant this coupon will be saved
+            # against, to check that the targeted item is actually theirs.
+            context={"request": request, "system": system},
+        )
         serializer.is_valid(raise_exception=True)
         try:
             coupon = serializer.save(system=system)
@@ -1521,7 +1536,10 @@ class AdminCouponDetailView(APIView):
 
         previous_code = coupon.code
         serializer = CouponSerializer(
-            coupon, data=request.data, partial=True, context={"request": request},
+            coupon, data=request.data, partial=True,
+            # The row already knows its tenant and a coupon cannot change one,
+            # so this is `_validate_scope`'s answer on the update path too.
+            context={"request": request, "system": coupon.system},
         )
         serializer.is_valid(raise_exception=True)
         try:

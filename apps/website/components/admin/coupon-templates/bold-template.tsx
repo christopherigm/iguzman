@@ -5,6 +5,7 @@ import {
   CouponCode,
   CouponLogo,
   CouponQr,
+  CouponTarget,
   CouponTerms,
 } from "./coupon-parts";
 import { FORMAT_DIMENSIONS, contrastText, type CouponFlyerData } from "./types";
@@ -100,6 +101,17 @@ export function BoldTemplate({ data }: { data: CouponFlyerData }) {
               {data.description}
             </Typography>
           ) : null}
+
+          {/* Ranged left with the rest of this column. On this template the
+              target's photograph is usually also the backdrop, so the thumbnail
+              is what tells the reader the picture is the offer rather than
+              decoration. */}
+          <CouponTarget
+            target={data.target}
+            color={text}
+            size={116}
+            align="start"
+          />
         </Box>
 
         {/* Bottom: the code on the left, the QR on the right */}

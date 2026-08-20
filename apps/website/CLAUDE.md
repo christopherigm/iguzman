@@ -1300,6 +1300,7 @@ code already applied. The API owns every rule; read website-api's CLAUDE.md →
 | The CMS list / one coupon | `app/[locale]/admin/coupons/`, `.../[id]/` |
 | The four flyer templates  | `components/admin/coupon-templates/`       |
 | The "have a coupon?" box  | `components/coupon-field.tsx`              |
+| What a coupon applies to  | `components/admin/coupon-scope-picker.tsx` |
 | Formatting, client-safe   | `lib/coupon-shared.ts`                     |
 | The scanned-code carrier  | `lib/coupon-stash.ts`                      |
 | The public landing        | `app/[locale]/coupon/[code]/`              |
@@ -1310,6 +1311,32 @@ code already applied. The API owns every rule; read website-api's CLAUDE.md →
   server-side. **Only the code travels in the checkout body**, exactly as the
   cart travels as references and never prices: a client that could name a
   discount could name its own price.
+- **A coupon can be aimed at one catalog target**, and the two selects that do
+  it are `CouponScopePicker`: every category on the site, and every buyable on
+  it. **Picking in either clears the other** - a coupon has exactly one target,
+  so a coupon that was "all Pizzas" and is now "the Margherita" is not both, and
+  a select left showing its abandoned pick would be a control saying something
+  the coupon does not. It writes `scope_kind` + `scope_id`, which are **always
+  sent as a pair** (including empty): clearing a target has to write the
+  order-wide scope back, and the API refuses one half without the other.
+  ⚠ It is deliberately **not** `CatalogRefPicker`. That one fills a fixed number
+  of *slots* from the three buyable families and never sees a category; this is a
+  single-value, mutually-exclusive choice over **six**. The `${kind}:${id}`
+  encoding is all they would have shared, and it is two lines.
+- ⚠ **The scope restricts the discount, and only the API decides how.** A scoped
+  coupon is priced off the matching lines alone, and a basket holding none of
+  them is refused with `COUPON_NOT_APPLICABLE` - a new code both `ERROR_MESSAGES`
+  maps have to speak, for the same reason they speak the other `COUPON_*` ones.
+  Nothing in the browser may form an opinion about it; see website-api's
+  CLAUDE.md → "Coupons".
+- ⚠ **The picker reports the picked row, not just its id, and that is
+  load-bearing.** `coupon.scope` is the API's snapshot and cannot know about a
+  pick made a second ago, so a form drawing the preview from it alone would show
+  the *previous* target's photograph until the operator saved and reloaded - on
+  the one screen whose whole job is showing them what they are about to print.
+- **The landing page says what a scoped coupon covers**, with the target's own
+  catalog photograph, above the code and before "Start shopping" - not when the
+  cart refuses a basket the visitor has already filled.
 - ⚠ **Applying a coupon reserves nothing.** The code can be taken by someone else
   between the validate call and checkout, which the API refuses honestly at that
   point (`COUPON_EXHAUSTED`) rather than charging full price. That is why
@@ -1373,6 +1400,36 @@ entry, no migration**. `DEFAULT_COUPON_TEMPLATE_ID` must stay in step with
   included - it is served from R2 on a CDN hostname, so an `<img>` pointed
   straight at `coupon.qr_code` taints the `html-to-image` canvas and every
   download fails. Route it through `toSameOriginDataUrl` like the logo.
+- **A scoped coupon's target is drawn by all four templates**, through the
+  shared `CouponTarget` in `coupon-parts.tsx`: the item's or category's
+  photograph in a round frame with its name beneath, under a "Valid on" /
+  "Valid on all" line composed upstream (so a template never needs a
+  translator). It renders **nothing** for an order-wide coupon, the contract
+  every optional part here follows, and it drops the frame entirely for a target
+  with no photograph - which is the common case for a category, not an edge one.
+  A blank circle beside a name reads as an image that failed to load.
+  ⚠ **That name is `"<category> - <name>"`, composed on the form** - "Pizzas -
+  Margherita" - so the flyer says where on the menu the offer sits rather than
+  naming a dish the reader may not place. Composed upstream like `valueLabel`
+  and the "Valid on" line, so all four templates print the same words; a target
+  with no category (every category scope, and an uncategorized product or
+  service) is drawn as its bare name rather than with a dangling separator. The
+  category reaches the form from two places and needs both:
+  `CouponScopePicker`'s third callback argument for a pick made a second ago,
+  and `scope.category_name` on the API's snapshot for a coupon just loaded.
+  ⚠ **`elegant` and `scan` pass both of its colours explicitly.** Its default
+  muted tone is a *lightened* version of its ink, which is right on a filled
+  panel and invisible on their near-white grounds.
+  ⚠ **`scan` also subtracts the block's height from its QR budget.** That budget
+  is a fixed assumption about the header (`h * 0.42`), not a measurement, so
+  without the subtraction the thumbnail simply grows the header and pushes the
+  symbol off the canvas - on the one template whose entire purpose is the scan.
+- **`CouponBackdrop` falls back to the target's photograph** when no backdrop
+  has been uploaded (so, today, on `bold`). A coupon for one dish over a picture
+  of that dish is the flyer an operator would have built by hand, and it costs
+  them an upload they have already made once in the catalog. The manual upload
+  still wins, and the gradient is still the last resort - so an order-wide
+  coupon with no upload looks exactly as it always did.
 - ⚠ **A QR needs a white ground and its quiet zone.** `CouponQr` puts every code
   on a white tile for exactly that reason; drawn onto a brand-coloured panel it
   photographs badly under shop lighting, which for the one element the flyer
@@ -2081,6 +2138,7 @@ Before defining a constant, type, or pure utility function in a component file, 
 | `apps/website/components/admin/paragraph-options.ts`       | `PARAGRAPH_WORD_COUNTS`, `PARAGRAPH_LENGTH_STEPS`, `PARAGRAPH_COUNT_STEPS` - used by `admin-form.tsx` and `ai-interviewer/ai-interviewer.tsx`                                                                                                                                                                 |
 | `apps/website/components/admin/logo-background-options.ts` | `LOGO_BACKGROUND_SHAPES`, `LOGO_BACKGROUND_LABEL_KEY`, `SCALE_STEPS` - the badge shapes and size stops, used by `admin/logos-and-styles/hero-video-section.tsx` and `admin/social-posts/[id]/page.tsx`                                                                                                        |
 | `apps/website/components/admin/divider-options.ts`         | `DIVIDER_OPTIONS`, `DIVIDER_LABEL_KEY`, `toDividerOption`, `DividerOption` - the shape-divider shapes every CMS divider picker offers (the hero's bottom edge, both section bands' top/bottom edges), used by `admin/logos-and-styles/hero-video-section.tsx` and `components/admin/section-band-section.tsx` |
+| `apps/website/components/admin/catalog-option-label.ts`    | `CATALOG_KIND_ICON`, `catalogRowCategory`, `catalogOptionLabel` - how a catalog record reads in a CMS `<select>`: family glyph, then the **category** it is filed under (the family label only standing in when it has none), then its name. Used by `coupon-scope-picker.tsx`, `catalog-ref-picker.tsx` and `admin/social-posts/[id]/page.tsx`                                              |
 | `apps/website/lib/maps.ts`                                 | `directionsHref` - the Google Maps hand-off, built from **coordinates, never an address**. Used by the contact page's locations, an event's venue and an order's location; website-api builds the same URL for the order email                                                                                |
 | `apps/website/lib/same-origin-image.ts`                    | `toSameOriginDataUrl` - routes a remote image through `/api/media` (this app's own passthrough proxy) so a canvas that draws it is not tainted. Used by both flyer exports and by `lib/map-capture.ts`                                                                                                        |
 | `apps/website/lib/contact.ts`                              | `whatsappHref` - the wa.me click-to-chat URL, with the number stripped to digits (wa.me rejects the spaces and dashes people type) and an optional prefilled message. Used both directions: a **branch's** number on the contact page, a **customer's** in the admin inbox                                    |

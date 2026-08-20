@@ -27,6 +27,10 @@ import { SiblingArrow } from "@/components/admin/sibling-arrows";
 import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import { toSameOriginDataUrl } from "@/lib/same-origin-image";
 import {
+  catalogOptionLabel,
+  catalogRowCategory,
+} from "@/components/admin/catalog-option-label";
+import {
   LOGO_BACKGROUND_SHAPES,
   LOGO_BACKGROUND_LABEL_KEY,
   SCALE_STEPS,
@@ -60,17 +64,13 @@ interface ItemOption {
   kind: SocialItemKind;
   id: number;
   name: string;
+  /** The category the row is filed under, or "" - see `catalogRowCategory`. */
+  category: string;
   image: string | null;
   price: string | null;
   comparePrice: string | null;
   currency: string | null;
 }
-
-const KIND_ICON: Record<SocialItemKind, string> = {
-  product: "📦",
-  service: "🛠️",
-  food: "🍽️",
-};
 
 /**
  * The post's own artwork fields. Tracked outside `values` because each is an
@@ -243,6 +243,7 @@ export default function AdminSocialPostFormPage({ params }: Props) {
             kind,
             id: r.id as number,
             name: String(r.name ?? ""),
+            category: catalogRowCategory(r),
             image: (r.image as string | null) ?? null,
             price: (r.price as string | null) ?? null,
             comparePrice: (r.compare_price as string | null) ?? null,
@@ -320,14 +321,18 @@ export default function AdminSocialPostFormPage({ params }: Props) {
             ) ??
             (post.item
               ? {
-                kind: post.item.kind,
-                id: post.item.id,
-                name: post.item.name ?? "",
-                image: post.item.image,
-                comparePrice: post.item.compare_price,
-                price: post.item.price,
-                currency: post.item.currency,
-              }
+                  kind: post.item.kind,
+                  id: post.item.id,
+                  name: post.item.name ?? "",
+                  // The API's snapshot carries no category, and none is needed:
+                  // this stand-in only ever feeds the preview - it is not in
+                  // `itemOptions`, so no option label is ever built from it.
+                  category: "",
+                  image: post.item.image,
+                  comparePrice: post.item.compare_price,
+                  price: post.item.price,
+                  currency: post.item.currency,
+                }
               : null);
           setSelectedItem(match);
         }
@@ -510,9 +515,22 @@ export default function AdminSocialPostFormPage({ params }: Props) {
     { value: "1x1", label: t("socialFormatSquare") },
     { value: "4x5", label: t("socialFormatPortrait") },
   ];
+  // Family glyph, then the category the item is filed under, then its name -
+  // "🍽️ Pizzas · Margherita". The category is what tells two similarly-named
+  // rows apart in a list of two hundred; the family label only stands in when a
+  // row has no category. See `components/admin/catalog-option-label.ts`.
+  const ITEM_FAMILY_LABEL: Record<SocialItemKind, string> = {
+    product: t("spotlightKindProduct"),
+    service: t("spotlightKindService"),
+    food: t("spotlightKindFood"),
+  };
   const itemSelectOptions = itemOptions.map((o) => ({
     value: `${o.kind}:${o.id}`,
-    label: `${KIND_ICON[o.kind]}  ${o.name}`,
+    label: catalogOptionLabel(
+      o.kind,
+      o.category || ITEM_FAMILY_LABEL[o.kind],
+      o.name,
+    ),
   }));
 
   const onSelectItem = (value: string) => {

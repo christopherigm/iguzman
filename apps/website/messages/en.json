@@ -552,6 +552,7 @@
     "couponExhausted": "That coupon has been fully redeemed.",
     "couponWrongCurrency": "That coupon cannot be used on this order's currency.",
     "couponMinOrder": "Your order is below this coupon's minimum.",
+    "couponNotApplicable": "That coupon does not apply to anything in your cart.",
     "couponError": "That coupon could not be applied."
   },
   "Orders": {
@@ -1267,6 +1268,14 @@
     "couponTemplate_scan": "Scan me",
     "couponBackground": "Background image",
     "couponBackgroundHint": "Only decorates the downloaded image; it is not saved on the coupon.",
+    "couponScope": "What this coupon applies to",
+    "couponScopeCategory": "Category",
+    "couponScopeItem": "Catalog item",
+    "couponScopeWholeOrder": "The whole order",
+    "couponScopeHintOrder": "The discount applies to the whole order. Pick a category or an item to narrow it.",
+    "couponScopeHintScoped": "The discount applies only to this. A cart with none of it is refused at checkout.",
+    "couponValidOn": "Valid on",
+    "couponValidOnAll": "Valid on all",
     "couponDownload": "Download flyer",
     "couponExportError": "The flyer could not be exported.",
     "couponSaveForQr": "Save the coupon to generate its QR code, then download the flyer.",
@@ -1794,6 +1803,8 @@
     "off": "off",
     "minOrder": "Minimum order {amount}",
     "validUntil": "Valid until {date}",
+    "validOn": "Valid on {name}",
+    "validOnAll": "Valid on all {name}",
     "ended": "This offer has ended.",
     "startShopping": "Start shopping",
     "appliedAtCheckout": "The code will be waiting in your cart at checkout."

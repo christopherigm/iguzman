@@ -4,6 +4,7 @@ import {
   CouponCode,
   CouponLogo,
   CouponQrPlaceholder,
+  CouponTarget,
   CouponTerms,
 } from "./coupon-parts";
 import Image from "next/image";
@@ -27,10 +28,17 @@ export function ScanTemplate({ data }: { data: CouponFlyerData }) {
   const { w, h } = FORMAT_DIMENSIONS[data.format];
   const onBrand = contrastText(data.primaryColor);
   const footerHeight = h * 0.2;
+  // ⚠ The target block's height has to come out of the QR's budget, because
+  // that budget is a fixed assumption about the header (`h * 0.42`) rather than
+  // a measurement. Without this the thumbnail simply grows the header and pushes
+  // the symbol off the bottom of the canvas - and on the one template whose
+  // entire purpose is the scan, an overflowing QR is the worst possible bug.
+  // The number is the thumbnail's diameter plus the column's gap.
+  const targetHeight = data.target ? 132 : 0;
   // The QR gets whatever the canvas can spare after the header and footer, so a
   // 4x5 flyer prints a bigger symbol than a square one instead of both being
   // capped at the square's budget.
-  const qrSize = Math.min(w * 0.62, h - footerHeight - h * 0.42);
+  const qrSize = Math.min(w * 0.62, h - footerHeight - h * 0.42 - targetHeight);
 
   return (
     <Box
@@ -84,6 +92,15 @@ export function ScanTemplate({ data }: { data: CouponFlyerData }) {
             {data.description}
           </Typography>
         ) : null}
+
+        {/* On a white ground the default faded label is unreadable, so both
+            colours are stated - the same call `elegant` makes. */}
+        <CouponTarget
+          target={data.target}
+          color="#111111"
+          muted={tint("#111111", 0.55)}
+          size={104}
+        />
       </Box>
 
       {/* ── The QR, as large as the canvas allows ──

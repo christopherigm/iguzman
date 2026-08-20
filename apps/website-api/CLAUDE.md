@@ -563,9 +563,51 @@ and the advisory "is this code good?" call the cart makes. Same reason
 valid?" would eventually disagree, and the first symptom would be a code the cart
 accepted being refused at the moment of payment.
 
-- **The discount is order-level**: a percentage or a fixed amount off the cart
-  subtotal, never a per-item rule. That is also the only shape that maps onto a
-  single session-level Stripe discount without inventing per-line rounding.
+- **The discount is one amount off the basket, and `scope_kind` decides which
+  part of the basket it is measured against.** Order-wide by default; with a
+  scope set, off only the lines matching one product, service, dish, or category
+  of them. Either way what comes out is a single figure, which is what keeps it
+  mappable onto one session-level Stripe discount without inventing per-line
+  rounding - it is still not a per-item rule, it is an order-level discount with
+  a narrower base.
+- ⚠ **A scoped coupon is priced off the lines, so every caller must pass them.**
+  `eligible_subtotal` turns the scope into money, and `validate_coupon` /
+  `discount_for` / `apply_coupon_to_order` all take a `lines` argument.
+  `_scope_base` **raises** rather than guessing when a scoped coupon is handed
+  none: the tempting fallback - use the whole subtotal - would discount a
+  40-item basket because it contained one targeted dish, which is the failure
+  mode this whole feature exists to prevent. Both `CartItem` and `OrderLine`
+  expose the `kind` / `target` / `line_total` trio it reads, so a cart, a
+  guest's resolved references and a written order all price identically.
+- ⚠ **A fixed amount is clamped to the _eligible_ base, not the subtotal** - or
+  a 500-off coupon aimed at one 80-peso dish would take 500 off a large basket
+  that merely contains it.
+- **A basket with none of the target is refused (`COUPON_NOT_APPLICABLE`), never
+  discounted by zero.** A code that appeared to apply and changed nothing has no
+  explanation anywhere on screen. ⚠ `min_order_amount`, by contrast, is judged
+  against the **whole** basket even for a scoped coupon: it is a floor on the
+  order a tenant is willing to discount at all, which is how the CMS labels it.
+- ⚠ **`scope_id` is a plain integer with no FK behind it**, like
+  `SocialPost.related_id` - six nullable FKs plus a constraint keeping five null
+  is a lot of schema for one reference. Two consequences that must not be
+  "fixed": a **dangling** scope (deleted target) matches no line and so refuses,
+  rather than falling back to an order-wide discount; and nothing in the
+  database stops one tenant naming another's id, so
+  `CouponSerializer._validate_scope` checks ownership. Without that check a
+  cross-tenant id would discount whichever of *this* tenant's items shared the
+  number - never relax it to a bare existence check. The Django admin has no
+  such guard, which is why its `readonly_fields` comment says to set a target
+  from the CMS.
+- **`resolve_coupon_scope` is presentation, not pricing** - the `scope` snapshot
+  on both coupon serializers (name, `category_name`, photograph, `is_category`),
+  which the CMS draws the flyer's "Valid on" block from. `category_name` is
+  there because the flyer prints `"<category> - <name>"`; it is null for a
+  category target (filed under nothing - its `parent` is a different question)
+  and for an uncategorized product or service, and primary-language only, like
+  `category_name` on every catalog serializer, since its reader is the CMS.
+  ⚠ **A null snapshot never means "so treat it as order-wide"** - it is also
+  what a deleted target resolves to, and the engine reads `scope_kind` off the
+  row.
 - ⚠ **`redeem_coupon` is the only place `times_redeemed` moves, and it must stay
   a single conditional UPDATE.** Two customers checking out at the same instant
   both pass `validate_coupon`; a read-modify-write would let both take the 50th
@@ -647,7 +689,10 @@ individual order already carries. The public landing serves the narrow
 `CouponPublicSerializer` - what the offer _is_, never how the campaign is
 performing - and answers 200 with `valid: false` for an expired coupon rather
 than 404, so the page can say "this offer has ended" for a code the tenant really
-did print.
+did print. It **does** carry `scope`: a scoped coupon that kept quiet would let a
+visitor scan a poster, fill a basket, and find at the till that the code only
+ever covered one dish. The target's name and photograph are already public on its
+own catalog page, so this discloses nothing the poster did not.
 
 Tests: `CouponTests` in `orders/tests.py`.
 

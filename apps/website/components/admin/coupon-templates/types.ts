@@ -78,10 +78,45 @@ export interface CouponFlyerData {
   /** Size of the logo inside the plate - or of the bare logo - 30-100. */
   brandLogoScale: number;
 
+  /**
+   * What the coupon applies to, when it is not the whole order. Undefined for an
+   * order-wide coupon **and** for a scoped one whose target has been deleted -
+   * a template simply loses the thumbnail rather than failing to render.
+   *
+   * ⚠ Presentation only. What the scope does to a basket is decided server-side
+   * in `orders/services/coupons.py`; nothing a template draws may be read as the
+   * discount rule.
+   */
+  target?: CouponFlyerTarget;
+
   /** Full-bleed backdrop as a data URL, for templates that paint one. */
   backgroundImage?: string;
   /** Draw the logo, name and slogan at all. */
   includeBrand: boolean;
+}
+
+/** The item or category a scoped coupon is for, as a template draws it. */
+export interface CouponFlyerTarget {
+  /**
+   * What the offer is for, composed upstream as `"<category> - <name>"` -
+   * "Pizzas - Margherita" - so the flyer says where on the menu the offer sits
+   * rather than naming a dish the reader may not place. A target with no
+   * category (every category scope, and an uncategorized product or service) is
+   * its bare name. Never empty.
+   */
+  name: string;
+  /**
+   * Its photograph as a **data URL**, resolved same-origin upstream like every
+   * other image here. Undefined when the record has no picture, which is
+   * ordinary - the name alone still says what the offer is for.
+   */
+  image?: string;
+  /**
+   * The line above the name - "Valid on" / "Valid on all". Composed upstream so
+   * the item/category distinction is resolved in one place rather than four, and
+   * so a template never needs a translator.
+   */
+  label: string;
 }
 
 export interface CouponTemplate {

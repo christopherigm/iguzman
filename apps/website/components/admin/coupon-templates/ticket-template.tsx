@@ -1,6 +1,12 @@
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { CouponCode, CouponLogo, CouponQr, CouponTerms } from "./coupon-parts";
+import {
+  CouponCode,
+  CouponLogo,
+  CouponQr,
+  CouponTarget,
+  CouponTerms,
+} from "./coupon-parts";
 import {
   FORMAT_DIMENSIONS,
   contrastText,
@@ -88,6 +94,12 @@ export function TicketTemplate({ data }: { data: CouponFlyerData }) {
             {data.description}
           </Typography>
         ) : null}
+
+        {/* What the offer is for, when it is not the whole order. Between the
+            value and the code deliberately: it qualifies the number above it,
+            and a customer who reads only the top half of a ticket must not walk
+            away thinking the discount covers everything. */}
+        <CouponTarget target={data.target} color={onBrand} size={120} />
 
         <CouponCode code={data.code} color={onBrand} fontSize={48} />
         <CouponTerms data={data} color={onBrand} />

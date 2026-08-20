@@ -60,6 +60,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   COUPON_EXHAUSTED: "couponExhausted",
   COUPON_WRONG_CURRENCY: "couponWrongCurrency",
   COUPON_MIN_ORDER: "couponMinOrder",
+  // A coupon aimed at one item or category, applied to a basket holding none
+  // of it. Refused rather than discounted by zero: a code that appeared to
+  // apply and changed nothing has no explanation anywhere on screen.
+  COUPON_NOT_APPLICABLE: "couponNotApplicable",
   COUPON_ERROR: "couponError",
 };
 

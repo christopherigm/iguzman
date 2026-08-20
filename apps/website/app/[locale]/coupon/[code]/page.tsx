@@ -7,7 +7,12 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { getCoupon } from "@/lib/coupons";
 import { getSystem } from "@/lib/system";
-import { couponValueLabel, hasMinOrder } from "@/lib/coupon-shared";
+import Image from "next/image";
+import {
+  couponScopeName,
+  couponValueLabel,
+  hasMinOrder,
+} from "@/lib/coupon-shared";
 import { formatPrice } from "@/lib/price";
 import { MENU_ALL_PATH, MENU_ICON } from "@/lib/menu-paths";
 import { CouponClaim, type CouponDestination } from "./coupon-claim";
@@ -61,6 +66,10 @@ export default async function CouponPage({ params }: Props) {
 
   const value = couponValueLabel(coupon.kind, coupon.value, coupon.currency);
   const expires = coupon.expires_at ? new Date(coupon.expires_at) : null;
+  // A scoped coupon has to say what it covers, and it has to say it *here* -
+  // before "Start shopping", not when the cart refuses the code over a basket
+  // the visitor has already filled.
+  const scopeName = couponScopeName(coupon.scope, locale);
 
   // Where "Start shopping" leads, decided by what this tenant actually sells -
   // the same three counts `EmptyCatalogState` and the navbar key off. A
@@ -136,6 +145,45 @@ export default async function CouponPage({ params }: Props) {
           >
             {coupon.description}
           </Typography>
+        ) : null}
+
+        {/* What the offer covers. The photograph is the target's own catalog
+            image, already public on its own page - it is here because the
+            visitor is holding a flyer that showed it, and recognising the thing
+            is faster than reading its name. */}
+        {scopeName ? (
+          <Box display="flex" alignItems="center" gap={12}>
+            {coupon.scope?.image ? (
+              <Box
+                width={56}
+                height={56}
+                borderRadius={999}
+                styles={{
+                  position: "relative",
+                  overflow: "hidden",
+                  flexShrink: 0,
+                }}
+              >
+                <Image
+                  src={coupon.scope.image}
+                  alt=""
+                  fill
+                  sizes="56px"
+                  style={{ objectFit: "cover" }}
+                />
+              </Box>
+            ) : null}
+            <Typography
+              variant="body"
+              margin={0}
+              color="var(--foreground)"
+              styles={{ textAlign: "left" }}
+            >
+              {coupon.scope?.is_category
+                ? t("validOnAll", { name: scopeName })
+                : t("validOn", { name: scopeName })}
+            </Typography>
+          </Box>
         ) : null}
 
         {/* The code in a dashed box - the same "type this in" convention the

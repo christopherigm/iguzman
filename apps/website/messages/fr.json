@@ -552,6 +552,7 @@
     "couponExhausted": "Ce code promo a été entièrement utilisé.",
     "couponWrongCurrency": "Ce code promo ne s'applique pas à la devise de cette commande.",
     "couponMinOrder": "Votre commande est inférieure au minimum de ce code promo.",
+    "couponNotApplicable": "Ce coupon ne s'applique à rien dans votre panier.",
     "couponError": "Ce code promo n'a pas pu être appliqué."
   },
   "Orders": {
@@ -1267,6 +1268,14 @@
     "couponTemplate_scan": "Scannez-moi",
     "couponBackground": "Image de fond",
     "couponBackgroundHint": "Décore uniquement l'image téléchargée ; elle n'est pas enregistrée sur le code promo.",
+    "couponScope": "Ce à quoi ce coupon s'applique",
+    "couponScopeCategory": "Catégorie",
+    "couponScopeItem": "Article du catalogue",
+    "couponScopeWholeOrder": "Toute la commande",
+    "couponScopeHintOrder": "La remise s'applique à toute la commande. Choisissez une catégorie ou un article pour la restreindre.",
+    "couponScopeHintScoped": "La remise s'applique uniquement à cela. Un panier qui n'en contient pas est refusé au paiement.",
+    "couponValidOn": "Valable sur",
+    "couponValidOnAll": "Valable sur tous les",
     "couponDownload": "Télécharger le visuel",
     "couponExportError": "Le visuel n'a pas pu être exporté.",
     "couponSaveForQr": "Enregistrez le code promo pour générer son QR code, puis téléchargez le visuel.",
@@ -1794,6 +1803,8 @@
     "off": "de réduction",
     "minOrder": "Commande minimum {amount}",
     "validUntil": "Valable jusqu'au {date}",
+    "validOn": "Valable sur {name}",
+    "validOnAll": "Valable sur tous les {name}",
     "ended": "Cette offre est terminée.",
     "startShopping": "Commencer mes achats",
     "appliedAtCheckout": "Le code vous attendra dans votre panier au moment de payer."

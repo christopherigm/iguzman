@@ -20,6 +20,13 @@ Three things worth knowing before changing anything here:
   between the two.
 * **The discount is recomputed server-side at every step.** The browser sends a
   code and nothing else, exactly as it sends cart references and never prices.
+* **A scoped coupon is priced off part of the basket, and every caller must pass
+  the lines.** `eligible_subtotal` is what turns `Coupon.scope_kind` into money;
+  `validate_coupon` and `discount_for` both take a `lines` argument and both
+  **raise** rather than guess when a scoped coupon is handed none. Falling back
+  to the whole subtotal there would discount a 40-item basket because it
+  contained one targeted dish, which is the one failure mode this whole feature
+  exists to prevent.
 """
 
 import logging
@@ -116,16 +123,85 @@ def find_coupon(system, code):
     )
 
 
-def validate_coupon(system, code, *, subtotal, currency):
+def line_matches_scope(coupon, kind, target, category_id=None):
+    """Whether one basket line falls inside `coupon`'s scope.
+
+    `kind` is the line's family (`"product"` / `"service"` / `"menu_item"`),
+    `target` the buyable it points at, and `category_id` its category when the
+    caller already knows it - an `OrderLine` snapshot may point at a deleted
+    buyable, so the caller is allowed to say "I cannot resolve a category" by
+    leaving it None rather than this reaching through a null FK.
+
+    An order-wide coupon matches everything, which is what lets every caller run
+    the same loop instead of branching on `is_scoped` first.
+    """
+    if not coupon.is_scoped:
+        return True
+    if kind != coupon.scope_family:
+        return False
+
+    if coupon.scopes_a_category:
+        if category_id is None:
+            category_id = getattr(target, "category_id", None)
+        return category_id is not None and category_id == coupon.scope_id
+
+    return target is not None and target.pk == coupon.scope_id
+
+
+def eligible_subtotal(coupon, lines):
+    """How much of `lines` this coupon is allowed to discount.
+
+    `lines` is any iterable of objects carrying `kind`, `target` and
+    `line_total` - which both `CartItem` and `OrderLine` already do, so a cart, a
+    guest's resolved references and a written order all price identically
+    through one function. That is the point: three copies of "which lines does
+    this coupon touch?" would eventually disagree, and the symptom would be a
+    cart quoting one discount and the receipt printing another.
+
+    Returns the whole subtotal for an order-wide coupon and `0.00` when a scoped
+    one matches nothing - which is a refusal upstream, never a zero discount
+    silently applied.
+    """
+    total = Decimal("0.00")
+    for line in lines:
+        if line_matches_scope(coupon, line.kind, line.target):
+            total += line.line_total
+    return total
+
+
+def _scope_base(coupon, subtotal, lines):
+    """The amount `coupon`'s discount is computed off, or raise if it cannot be.
+
+    ⚠ **The raise is deliberate.** A scoped coupon handed no lines has no way to
+    know how much of the basket it may touch, and the tempting fallback - use the
+    whole subtotal - is exactly the overcharge-in-reverse this feature exists to
+    stop. Every caller here has the lines available; a new one that does not is a
+    bug to fix at the call site, not a case to paper over.
+    """
+    if not coupon.is_scoped:
+        return subtotal
+    if lines is None:
+        raise ValueError(
+            f"Coupon {coupon.pk} is scoped to {coupon.scope_kind}, so its discount "
+            "cannot be computed without the basket's lines."
+        )
+    return eligible_subtotal(coupon, lines)
+
+
+def validate_coupon(system, code, *, subtotal, currency, lines=None):
     """The coupon for `code`, or raise `CouponError` explaining the refusal.
 
     `subtotal` and `currency` are the basket's, already priced server-side by
     `resolve_guest_cart` or read off the customer's own cart rows - never sent by
-    the browser.
+    the browser. `lines` is that same basket's lines, and it is **required for a
+    scoped coupon**: without them there is no way to know whether the basket
+    contains the thing the coupon is for.
 
     The order of the checks is deliberate: the ones about the coupon itself come
     before the ones about this particular basket, so a customer with an expired
-    code is told it expired rather than that their cart is too small.
+    code is told it expired rather than that their cart is too small. The scope
+    check is last of all, because "your cart has none of these" is only worth
+    saying about a coupon that is otherwise good.
     """
     coupon = find_coupon(system, code)
     if coupon is None:
@@ -152,32 +228,58 @@ def validate_coupon(system, code, *, subtotal, currency):
             f"That coupon can only be used on orders in {coupon.currency}.",
         )
 
+    # ⚠ Judged against the **whole** basket, not the eligible part of it, even
+    # for a scoped coupon. `min_order_amount` is a floor on the order a tenant is
+    # willing to discount at all ("spend 500 and the pizzas are 20% off"), which
+    # is how the CMS labels it and how an operator reads it. Measuring it against
+    # the eligible lines instead would silently turn every scoped coupon's
+    # minimum into a second, stricter rule about the target.
     if coupon.min_order_amount and subtotal < coupon.min_order_amount:
         raise CouponError(
             "COUPON_MIN_ORDER",
             f"That coupon needs a subtotal of at least {coupon.min_order_amount} {coupon.currency}.",
         )
 
+    # Last, and only for a scoped coupon: does this basket contain any of what
+    # the coupon is actually for? A zero eligible subtotal would otherwise be a
+    # silent zero discount - the customer applies a code, the cart says nothing
+    # changed, and there is nothing on screen to say why.
+    if coupon.is_scoped and _scope_base(coupon, subtotal, lines) <= 0:
+        raise CouponError(
+            "COUPON_NOT_APPLICABLE",
+            "That coupon does not apply to anything in your cart.",
+        )
+
     return coupon
 
 
-def discount_for(coupon, subtotal):
+def discount_for(coupon, subtotal, lines=None):
     """What `coupon` takes off `subtotal`, in the basket's currency.
 
-    **Clamped to the subtotal**, so a 500-off coupon on a 300 basket discounts
-    300 and not a cent more: a negative total is not a refund, it is a Stripe
-    session that cannot be created and an order nobody can reconcile.
+    **Priced off the part of the basket the coupon is allowed to touch.** For an
+    order-wide coupon that is the whole `subtotal`; for a scoped one it is the
+    matching lines only - so "20% off pizzas" on a basket of one pizza and a
+    jacket discounts a fifth of the pizza, not a fifth of both. `lines` is
+    required whenever the coupon is scoped; see `_scope_base`.
+
+    **Clamped to the eligible base**, so a 500-off coupon on 300 of eligible
+    goods discounts 300 and not a cent more: a negative total is not a refund, it
+    is a Stripe session that cannot be created and an order nobody can reconcile.
+    ⚠ Clamping to the *eligible* base rather than the whole subtotal is what
+    stops a fixed-amount coupon aimed at one 80-peso dish taking 500 off a large
+    basket that happens to contain it.
 
     Rounded half-up to two places, matching how every other money value in this
     app is stored. A percentage is the only thing here that can produce more
     decimals than the column holds.
     """
+    base = _scope_base(coupon, subtotal, lines)
     if coupon.kind == Coupon.KIND_PERCENT:
-        raw = subtotal * (coupon.value / Decimal("100"))
+        raw = base * (coupon.value / Decimal("100"))
     else:
         raw = coupon.value
     discount = raw.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    return min(max(discount, Decimal("0.00")), subtotal)
+    return min(max(discount, Decimal("0.00")), base)
 
 
 def redeem_coupon(coupon) -> bool:
@@ -227,7 +329,7 @@ def release_coupon(coupon) -> bool:
 
 
 @transaction.atomic
-def apply_coupon_to_order(order, coupon, *, subtotal):
+def apply_coupon_to_order(order, coupon, *, subtotal, lines=None):
     """Record `coupon`'s discount on `order` and take the redemption.
 
     Returns the discount applied, or raises `CouponError("COUPON_EXHAUSTED")` when
@@ -246,7 +348,13 @@ def apply_coupon_to_order(order, coupon, *, subtotal):
     if not redeem_coupon(coupon):
         raise CouponError("COUPON_EXHAUSTED", "That coupon has been fully redeemed.")
 
-    discount = discount_for(coupon, subtotal)
+    # A scoped coupon is priced off the order's own written lines - the same
+    # objects `_open_order` just created, so what is charged is computed from
+    # what is stored rather than from anything that travelled with the request.
+    # Defaulted rather than required so an order-wide caller need not pass them.
+    if lines is None and coupon.is_scoped:
+        lines = list(order.lines.all())
+    discount = discount_for(coupon, subtotal, lines)
     order.coupon = coupon
     order.coupon_code = coupon.code
     order.discount_amount = discount

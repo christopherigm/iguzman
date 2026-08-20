@@ -1324,6 +1324,48 @@ export async function deleteSocialPost(pk: number) {
 /** How a coupon's `value` is read: a percentage, or an amount in `currency`. */
 export type CouponKind = "percent" | "fixed";
 
+/**
+ * The six things a coupon can be aimed at, plus `""` for the whole order.
+ * Mirrors `Coupon.SCOPE_CHOICES` in `orders/models.py` - a value here that the
+ * API does not know is refused on save.
+ *
+ * Three families times two levels: an id alone cannot say which of six tables it
+ * is in, which is why this rides beside `scope_id` rather than being one number.
+ */
+export const COUPON_SCOPE_ITEM_KINDS = [
+  "product",
+  "service",
+  "menu_item",
+] as const;
+export const COUPON_SCOPE_CATEGORY_KINDS = [
+  "product_category",
+  "service_category",
+  "menu_category",
+] as const;
+export type CouponScopeItemKind = (typeof COUPON_SCOPE_ITEM_KINDS)[number];
+export type CouponScopeCategoryKind =
+  (typeof COUPON_SCOPE_CATEGORY_KINDS)[number];
+export type CouponScopeKind =
+  "" | CouponScopeItemKind | CouponScopeCategoryKind;
+
+/** The resolved target of a scoped coupon, as the API snapshots it. */
+export interface CouponScopeTarget {
+  kind: Exclude<CouponScopeKind, "">;
+  id: number;
+  name: string | null;
+  en_name: string | null;
+  /**
+   * The category the target is filed under, in the tenant's primary language -
+   * what the flyer prefixes its name with. Null for a category target (which is
+   * filed under nothing) and for an uncategorized product or service.
+   */
+  category_name: string | null;
+  /** Primary image, falling back to the first gallery row. Null when it has none. */
+  image: string | null;
+  /** Whether the target is a whole category rather than one item. */
+  is_category: boolean;
+}
+
 export interface Coupon {
   id: number;
   public_id: string;
@@ -1344,6 +1386,24 @@ export interface Coupon {
   starts_at: string | null;
   expires_at: string | null;
   min_order_amount: string;
+  /**
+   * What the discount is allowed to touch. `""` is the whole order - the
+   * default, and what every coupon written before this existed is. Anything else
+   * names exactly one target through `scope_id`, and the API then prices the
+   * discount off **only** the matching cart lines.
+   */
+  scope_kind: CouponScopeKind;
+  /** The target's id within `scope_kind`'s own table. Null when order-wide. */
+  scope_id: number | null;
+  /**
+   * The resolved target - its name and photograph - for the CMS form and the
+   * flyer. Read-only; `scope_kind` + `scope_id` are what is written.
+   *
+   * ⚠ **Null does not mean "order-wide".** It is also what a scope whose target
+   * has since been deleted resolves to. Test `scope_kind` to ask whether a
+   * coupon is scoped; this field only answers what to draw.
+   */
+  scope: CouponScopeTarget | null;
   enabled: boolean;
   template_id: string;
   /**

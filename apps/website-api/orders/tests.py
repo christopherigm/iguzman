@@ -33,7 +33,14 @@ from django.db import transaction
 from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
-from catalog.models import MenuCategory, MenuItem, MenuSize, Product, Service
+from catalog.models import (
+    MenuCategory,
+    MenuItem,
+    MenuSize,
+    Product,
+    ProductCategory,
+    Service,
+)
 from core.crypto import decrypt, encrypt
 from core.models import BookingResource, Branch, BranchHours, ResourcePool, System
 from users.models import CartItem
@@ -45,6 +52,7 @@ from .services.coupons import (
     CouponError,
     attach_coupon_qr,
     discount_for,
+    eligible_subtotal,
     find_coupon,
     redeem_coupon,
     release_coupon,
@@ -2857,6 +2865,165 @@ class CouponTests(TestCase):
         self.assertIsNone(order.coupon)
         self.assertEqual(order.coupon_code, "SUMMER20")
         self.assertEqual(order.discount_amount, Decimal("40.00"))
+
+    def test_a_scoped_coupon_only_discounts_what_it_is_for(self):
+        """⚠ The whole point of `Coupon.scope_kind`: "20% off pizzas" must take a
+        fifth of the pizzas and nothing off the jacket beside them.
+
+        Every assertion here is money. A scope that silently widened to the whole
+        basket would over-discount every mixed order; one that silently narrowed
+        to nothing would charge a customer the full price of an offer they were
+        quoted a discount on."""
+        bakery = ProductCategory.objects.create(
+            system=self.system, name="Bakery", slug="bakery",
+        )
+        Product.objects.filter(pk=self.product.pk).update(category=bakery)
+        self.product.refresh_from_db()
+        jacket = Product.objects.create(
+            system=self.system, name="Jacket", slug="jacket",
+            price=Decimal("300.00"), currency="USD", stock_count=5,
+        )
+
+        basket = [
+            CartItem(product=self.product, quantity=2),   # 200.00, in Bakery
+            CartItem(product=jacket, quantity=1),         # 300.00, uncategorized
+        ]
+        subtotal = Decimal("500.00")
+
+        # Scoped to the item: a fifth of 200, not of 500.
+        on_item = self._coupon(
+            code="LOAF20", scope_kind=Coupon.SCOPE_PRODUCT, scope_id=self.product.pk,
+        )
+        self.assertEqual(eligible_subtotal(on_item, basket), Decimal("200.00"))
+        self.assertEqual(discount_for(on_item, subtotal, basket), Decimal("40.00"))
+
+        # Scoped to the category: the same lines here, but by a different route -
+        # the line is judged on its `category_id` rather than its own id.
+        on_category = self._coupon(
+            code="BAKERY20",
+            scope_kind=Coupon.SCOPE_PRODUCT_CATEGORY, scope_id=bakery.pk,
+        )
+        self.assertEqual(discount_for(on_category, subtotal, basket), Decimal("40.00"))
+
+        # ⚠ A fixed amount is clamped to the *eligible* base, not the subtotal -
+        # or a 500-off coupon aimed at one 200-peso line would take 500 off a
+        # basket that merely contains it.
+        fixed = self._coupon(
+            code="LOAF500", kind=Coupon.KIND_FIXED, value=Decimal("500.00"),
+            scope_kind=Coupon.SCOPE_PRODUCT, scope_id=self.product.pk,
+        )
+        self.assertEqual(discount_for(fixed, subtotal, basket), Decimal("200.00"))
+
+        # A basket with none of the target is refused, never discounted by zero:
+        # a code that appeared to apply and changed nothing has no explanation on
+        # screen.
+        with self.assertRaises(CouponError) as caught:
+            validate_coupon(
+                self.system, "LOAF20", subtotal=Decimal("300.00"), currency="USD",
+                lines=[CartItem(product=jacket, quantity=1)],
+            )
+        self.assertEqual(caught.exception.code, "COUPON_NOT_APPLICABLE")
+
+        # ⚠ And a scoped coupon handed no lines raises rather than falling back
+        # to the whole subtotal - the fallback is the over-discount this feature
+        # exists to prevent, so it must never be reachable by omission.
+        with self.assertRaises(ValueError):
+            discount_for(on_item, subtotal)
+
+        # An order-wide coupon is unaffected by any of it and needs no lines.
+        self.assertEqual(discount_for(self._coupon(code="ALL20"), subtotal), Decimal("100.00"))
+
+        # End to end at the till, which is where the arithmetic is actually
+        # charged: two loaves and a jacket, 20% off the loaves only.
+        self._coupon(
+            code="TILL20", scope_kind=Coupon.SCOPE_PRODUCT, scope_id=self.product.pk,
+        )
+        response = self._sell({
+            "cart": [
+                {"kind": "product", "id": self.product.pk, "quantity": 2},
+                {"kind": "product", "id": jacket.pk, "quantity": 1},
+            ],
+            "payment_method": "cash",
+            "coupon_code": "till20",
+        })
+        self.assertEqual(response.status_code, 201)
+        order = Order.objects.get(public_id=response.json()["public_id"])
+        self.assertEqual(order.subtotal, Decimal("500.00"))
+        self.assertEqual(order.discount_amount, Decimal("40.00"))
+        self.assertEqual(order.total, Decimal("460.00"))
+
+    def test_the_scope_snapshot_names_the_category_the_target_is_filed_under(self):
+        """The flyer prints "Bakery - Sourdough", so the snapshot the CMS draws it
+        from has to carry the category as well as the name - a dish name on its
+        own says nothing about where on the menu the offer sits.
+
+        A category target is filed under nothing (its `parent` is a different
+        question) and an uncategorized product has no answer to give, so both
+        report None rather than a prefix the flyer would draw as a dangling
+        separator."""
+        bakery = ProductCategory.objects.create(
+            system=self.system, name="Bakery", slug="bakery",
+        )
+        Product.objects.filter(pk=self.product.pk).update(category=bakery)
+        loose = Product.objects.create(
+            system=self.system, name="Jacket", slug="jacket",
+            price=Decimal("300.00"), currency="USD",
+        )
+        on_item = self._coupon(
+            code="LOAF10", scope_kind=Coupon.SCOPE_PRODUCT, scope_id=self.product.pk,
+        )
+        on_loose = self._coupon(
+            code="COAT10", scope_kind=Coupon.SCOPE_PRODUCT, scope_id=loose.pk,
+        )
+        on_category = self._coupon(
+            code="BAKERY10",
+            scope_kind=Coupon.SCOPE_PRODUCT_CATEGORY, scope_id=bakery.pk,
+        )
+
+        self.client.force_login(self.admin)
+
+        def scope(coupon):
+            response = self.client.get(f"/api/coupons/admin/{coupon.pk}/")
+            self.assertEqual(response.status_code, 200)
+            return response.json()["scope"]
+
+        self.assertEqual(scope(on_item)["category_name"], "Bakery")
+        self.assertIsNone(scope(on_loose)["category_name"])
+        self.assertIsNone(scope(on_category)["category_name"])
+
+    def test_a_coupon_cannot_be_scoped_to_another_tenants_item(self):
+        """⚠ `scope_id` is a bare integer with no FK behind it, and the pricing
+        engine matches a cart line by id *within its own family* - so a coupon
+        carrying a rival's product id would discount whichever of this tenant's
+        items happened to share the number."""
+        theirs = Product.objects.create(
+            system=self.other_system, name="Theirs", slug="theirs",
+            price=Decimal("10.00"), currency="USD",
+        )
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            "/api/coupons/admin/",
+            {
+                "code": "CROSS", "kind": "percent", "value": "10.00",
+                "scope_kind": "product", "scope_id": theirs.pk,
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("scope_id", response.json())
+
+        # A kind with no id names a table and no row, which would match every
+        # line in that family - refused in the serializer, before the model's
+        # check constraint has to answer with a 500.
+        self.assertEqual(
+            self.client.post(
+                "/api/coupons/admin/",
+                {"code": "HALF", "kind": "percent", "value": "10.00",
+                 "scope_kind": "product"},
+                content_type="application/json",
+            ).status_code,
+            400,
+        )
 
         plain = self._sell({"cart": self._cart(), "payment_method": "cash"})
         untouched = Order.objects.get(public_id=plain.json()["public_id"])

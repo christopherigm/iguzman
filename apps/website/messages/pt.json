@@ -552,6 +552,7 @@
     "couponExhausted": "Esse cupom já foi totalmente resgatado.",
     "couponWrongCurrency": "Esse cupom não pode ser usado na moeda deste pedido.",
     "couponMinOrder": "Seu pedido está abaixo do mínimo deste cupom.",
+    "couponNotApplicable": "Esse cupom não se aplica a nada no seu carrinho.",
     "couponError": "Não foi possível aplicar esse cupom."
   },
   "Orders": {
@@ -1267,6 +1268,14 @@
     "couponTemplate_scan": "Escaneie-me",
     "couponBackground": "Imagem de fundo",
     "couponBackgroundHint": "Apenas decora a imagem baixada; não é salva no cupom.",
+    "couponScope": "A que se aplica este cupom",
+    "couponScopeCategory": "Categoria",
+    "couponScopeItem": "Item do catálogo",
+    "couponScopeWholeOrder": "O pedido inteiro",
+    "couponScopeHintOrder": "O desconto aplica-se ao pedido inteiro. Escolha uma categoria ou um item para limitá-lo.",
+    "couponScopeHintScoped": "O desconto aplica-se apenas a isto. Um carrinho sem esse item é recusado no pagamento.",
+    "couponValidOn": "Válido em",
+    "couponValidOnAll": "Válido em todos os",
     "couponDownload": "Baixar panfleto",
     "couponExportError": "Não foi possível exportar o panfleto.",
     "couponSaveForQr": "Salve o cupom para gerar o código QR e depois baixe o panfleto.",
@@ -1794,6 +1803,8 @@
     "off": "de desconto",
     "minOrder": "Pedido mínimo {amount}",
     "validUntil": "Válido até {date}",
+    "validOn": "Válido em {name}",
+    "validOnAll": "Válido em todos os {name}",
     "ended": "Esta oferta terminou.",
     "startShopping": "Começar a comprar",
     "appliedAtCheckout": "O código estará no seu carrinho ao finalizar a compra."

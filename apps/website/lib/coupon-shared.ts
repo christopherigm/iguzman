@@ -41,6 +41,46 @@ export interface PublicCoupon {
    * a not-found for a code the tenant really did print.
    */
   valid: boolean;
+  /**
+   * What the offer covers, when it is not the whole order.
+   *
+   * ⚠ **The landing page must say this.** A scoped coupon that kept quiet would
+   * be the worst kind of surprise: the visitor scans a poster, fills a basket
+   * and discovers at the till that the code only ever covered one dish. Null for
+   * an order-wide coupon, and also for one whose target has been deleted - the
+   * page then simply says nothing extra, which is honest either way.
+   */
+  scope: PublicCouponScope | null;
+}
+
+/** The item or category a scoped coupon covers, as a visitor may see it. */
+export interface PublicCouponScope {
+  kind: string;
+  id: number;
+  name: string | null;
+  en_name: string | null;
+  image: string | null;
+  /** Whether it covers a whole category rather than one item. */
+  is_category: boolean;
+}
+
+/**
+ * The target's name in the reader's locale, or null when there is nothing to
+ * name.
+ *
+ * Follows the same rule every other piece of tenant copy here does: English
+ * reads `en_name` and falls back to the primary-language one, every other locale
+ * reads the primary and falls back to English - so a tenant who filled one
+ * language is named everywhere rather than on half the site.
+ */
+export function couponScopeName(
+  scope: PublicCouponScope | null | undefined,
+  locale: string,
+): string | null {
+  if (!scope) return null;
+  const primary = scope.name?.trim() || null;
+  const english = scope.en_name?.trim() || null;
+  return (locale === "en" ? english ?? primary : primary ?? english) ?? null;
 }
 
 /** What `POST /api/coupons/validate/` answers for a code against a live cart. */
@@ -69,6 +109,10 @@ export const COUPON_ERROR_MESSAGES: Record<string, string> = {
   COUPON_EXHAUSTED: "couponExhausted",
   COUPON_WRONG_CURRENCY: "couponWrongCurrency",
   COUPON_MIN_ORDER: "couponMinOrder",
+  // A coupon aimed at one item or category, applied to a basket holding none
+  // of it. Refused rather than discounted by zero: a code that appeared to
+  // apply and changed nothing has no explanation anywhere on screen.
+  COUPON_NOT_APPLICABLE: "couponNotApplicable",
   COUPON_ERROR: "couponError",
   CART_EMPTY: "empty",
 };

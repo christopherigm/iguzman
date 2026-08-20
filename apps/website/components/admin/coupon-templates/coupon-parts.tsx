@@ -6,7 +6,7 @@ import {
   heroLogoMaskStyle,
   HERO_BADGE_SHADOW,
 } from "@repo/ui/hero";
-import { tint, type CouponFlyerData } from "./types";
+import { tint, type CouponFlyerData, type CouponFlyerTarget } from "./types";
 
 /**
  * The plate behind the brand logo is always white, for the same reason the
@@ -305,11 +305,17 @@ export function CouponBackdrop({
   data: CouponFlyerData;
   scrim?: number;
 }) {
+  // The operator's own upload wins; a scoped coupon's target photograph fills in
+  // behind it. A coupon for one dish over a picture of that dish is the flyer an
+  // operator would have built by hand, and it costs them an upload they have
+  // already made once in the catalog. The gradient stays the last resort, so an
+  // order-wide coupon with no upload looks exactly as it always did.
+  const backdrop = data.backgroundImage ?? data.target?.image;
   return (
     <>
-      {data.backgroundImage ? (
+      {backdrop ? (
         <Image
-          src={data.backgroundImage}
+          src={backdrop}
           alt=""
           fill
           unoptimized
@@ -321,7 +327,7 @@ export function CouponBackdrop({
         styles={{
           position: "absolute",
           inset: 0,
-          background: data.backgroundImage
+          background: backdrop
             ? `rgba(0,0,0,${scrim})`
             : `linear-gradient(160deg, ${data.primaryColor} 0%, ${tint(
                 data.secondaryColor,
@@ -330,6 +336,119 @@ export function CouponBackdrop({
         }}
       />
     </>
+  );
+}
+
+/**
+ * The thumbnail that says what a scoped coupon is for: the item's or category's
+ * photograph in a round frame, its name beneath, under a "Valid on" line.
+ *
+ * Rendered by all four templates, sized and coloured by each - a coupon for one
+ * dish is a different promise from a coupon for everything, and the flyer has to
+ * say which without the customer reading the terms. It renders **nothing** for
+ * an order-wide coupon, which is the contract every optional part here follows.
+ *
+ * ⚠ It survives a target with no photograph, and that is the common case rather
+ * than an edge one - plenty of categories are never given a picture. The frame
+ * is dropped entirely rather than drawn empty, because a blank circle beside a
+ * name reads as an image that failed to load.
+ */
+export function CouponTarget({
+  target,
+  color,
+  size = 132,
+  align = "center",
+  muted,
+}: {
+  target?: CouponFlyerTarget;
+  /** The ink this sits on, so each template keeps its own contrast decision. */
+  color: string;
+  /** Diameter of the photo frame in canvas px. */
+  size?: number;
+  align?: "center" | "start";
+  /**
+   * Colour of the "Valid on" line. Defaults to a faded `color`, which is right
+   * on a filled panel; a template on a near-white ground passes its own.
+   */
+  muted?: string;
+}) {
+  if (!target) return null;
+  const label = muted ?? tint(color, 0.35);
+
+  return (
+    <Box
+      display="flex"
+      alignItems="center"
+      gap={22}
+      styles={{
+        maxWidth: "100%",
+        justifyContent: align === "center" ? "center" : "flex-start",
+      }}
+    >
+      {target.image ? (
+        <Box
+          width={size}
+          height={size}
+          borderRadius={999}
+          styles={{
+            position: "relative",
+            overflow: "hidden",
+            flexShrink: 0,
+            // A hairline of the surrounding ink, so a photograph whose edges are
+            // near the flyer's own colour still reads as a framed object rather
+            // than a shape bleeding into the panel.
+            boxShadow: `0 0 0 4px ${tint(color, 0.55)}`,
+          }}
+        >
+          <Image
+            src={target.image}
+            alt=""
+            fill
+            unoptimized
+            sizes="200px"
+            style={{ objectFit: "cover" }}
+          />
+        </Box>
+      ) : null}
+
+      <Box
+        display="flex"
+        flexDirection="column"
+        gap={4}
+        styles={{ minWidth: 0, textAlign: align === "center" ? "left" : "left" }}
+      >
+        <Typography
+          variant="none"
+          color={label}
+          styles={{
+            fontSize: 22,
+            fontWeight: 600,
+            letterSpacing: 2,
+            textTransform: "uppercase",
+          }}
+        >
+          {target.label}
+        </Typography>
+        <Typography
+          variant="none"
+          color={color}
+          styles={{
+            fontSize: 34,
+            fontWeight: 700,
+            lineHeight: 1.2,
+            // One line: the name sits under a value label that must stay the
+            // largest thing on the flyer, and a three-line category name would
+            // push it off a 1x1 canvas.
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
+        >
+          {target.name}
+        </Typography>
+      </Box>
+    </Box>
   );
 }
 

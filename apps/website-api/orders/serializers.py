@@ -375,6 +375,84 @@ def resolve_coupon_qr(coupon, request=None):
     return request.build_absolute_uri(url) if request else url
 
 
+# Which catalog model backs each of `Coupon`'s six scope kinds, and whether that
+# kind is a category. Resolved lazily inside the helper below (never at import
+# time) so `orders` does not import `catalog` at module scope - the same rule
+# `core.serializers._SOCIAL_ITEM_MODELS` follows.
+_COUPON_SCOPE_MODELS = {
+    Coupon.SCOPE_PRODUCT: ("catalog", "Product"),
+    Coupon.SCOPE_SERVICE: ("catalog", "Service"),
+    Coupon.SCOPE_MENU_ITEM: ("catalog", "MenuItem"),
+    Coupon.SCOPE_PRODUCT_CATEGORY: ("catalog", "ProductCategory"),
+    Coupon.SCOPE_SERVICE_CATEGORY: ("catalog", "ServiceCategory"),
+    Coupon.SCOPE_MENU_CATEGORY: ("catalog", "MenuCategory"),
+}
+
+
+def coupon_scope_model(kind):
+    """The model class behind one `scope_kind`, or None for the order-wide scope."""
+    ref = _COUPON_SCOPE_MODELS.get(kind)
+    if ref is None:
+        return None
+    from django.apps import apps as django_apps
+
+    return django_apps.get_model(*ref)
+
+
+def resolve_coupon_scope(coupon, request=None):
+    """A snapshot of what `coupon` is aimed at: identity, and a picture of it.
+
+    Returns None for an order-wide coupon **and** for one whose target has since
+    been deleted, which the CMS renders the same way (no thumbnail, no name) -
+    the flyer simply loses the photograph rather than failing to load.
+
+    ⚠ **A None here never means "so treat it as order-wide".** The pricing engine
+    reads `scope_kind` off the row, not this, and a dangling scope deliberately
+    matches no cart line. This is presentation; `orders.services.coupons` is the
+    authority, and the two must not be confused.
+    """
+    model = coupon_scope_model(coupon.scope_kind)
+    if model is None or not coupon.scope_id:
+        return None
+    obj = model.objects.filter(pk=coupon.scope_id).first()
+    if obj is None:
+        return None
+
+    image = obj.image
+    # Buyables carry a gallery behind the primary slot; categories do not. Same
+    # precedence the public catalog serializers use - primary first, then the
+    # first gallery row - so a flyer draws the photograph the catalog card does.
+    if not image and hasattr(obj, "images"):
+        gallery = sorted(obj.images.all(), key=lambda i: i.sort_order)
+        image = gallery[0].image if gallery else None
+    image_url = (
+        request.build_absolute_uri(image.url)
+        if image and request
+        else (image.url if image else None)
+    )
+
+    # The category the target is filed under, so a flyer can print "Pizzas -
+    # Margherita" rather than a bare dish name that says nothing about where it
+    # sits on the menu. `getattr` because only the three buyables have the FK -
+    # a category target has a `parent`, which is a different question - and it
+    # is null on an uncategorized product or service (a menu item's is required).
+    # Primary-language only, like `category_name` on every catalog serializer:
+    # its one reader is the CMS, which does not localize tenant copy.
+    category = getattr(obj, "category", None)
+
+    return {
+        "kind": coupon.scope_kind,
+        "id": obj.pk,
+        "name": obj.name,
+        "en_name": obj.en_name,
+        "category_name": category.name if category else None,
+        "image": image_url,
+        # Whether the target is a whole category, so a consumer can label the
+        # flyer's thumbnail without re-deriving the six-kind vocabulary.
+        "is_category": coupon.scopes_a_category,
+    }
+
+
 class CouponSerializer(serializers.ModelSerializer):
     """A coupon in full, for the tenant's CMS.
 
@@ -393,6 +471,10 @@ class CouponSerializer(serializers.ModelSerializer):
     # without rebuilding the tenant's own origin in the browser - which it cannot
     # do correctly anyway, since `site_base_url` reads the System's `host`.
     landing_url = serializers.SerializerMethodField()
+    # The resolved target, so the CMS form and the flyer preview can draw the
+    # item's or category's photograph from the one payload the page already
+    # fetches. Read-only: `scope_kind` + `scope_id` are what is written.
+    scope = serializers.SerializerMethodField()
 
     class Meta:
         model = Coupon
@@ -401,6 +483,7 @@ class CouponSerializer(serializers.ModelSerializer):
             "kind", "value", "currency",
             "max_redemptions", "times_redeemed", "redemptions_left", "is_exhausted",
             "starts_at", "expires_at", "min_order_amount",
+            "scope_kind", "scope_id", "scope",
             "enabled", "template_id", "qr_code", "landing_url",
             "brand_logo_background", "brand_logo_background_scale", "brand_logo_scale",
             "created_at", "updated_at",
@@ -419,6 +502,9 @@ class CouponSerializer(serializers.ModelSerializer):
 
     def get_qr_code(self, obj):
         return resolve_coupon_qr(obj, self.context.get("request"))
+
+    def get_scope(self, obj):
+        return resolve_coupon_scope(obj, self.context.get("request"))
 
     def get_landing_url(self, obj):
         from .services.coupons import coupon_landing_url
@@ -463,7 +549,57 @@ class CouponSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"expires_at": "The end date must be after the start date."}
             )
+
+        self._validate_scope(current("scope_kind") or "", current("scope_id"))
         return attrs
+
+    def _validate_scope(self, scope_kind, scope_id):
+        """Refuse a target that is half-written, missing, or another tenant's.
+
+        The model carries a check constraint for the first of those, but a
+        constraint can only answer with an `IntegrityError` - a 500 where the CMS
+        needs a field error. The other two it cannot express at all: whether a
+        row exists, and whose it is, are queries.
+
+        ⚠ **The ownership check is the one that matters.** `scope_id` is a plain
+        integer with no FK behind it, so nothing else in the stack would stop one
+        tenant scoping a coupon to another tenant's product id - and since the
+        pricing engine matches a cart line by id within its own family, that
+        coupon would then discount whichever of *this* tenant's items happened to
+        share the number. Never relax this to an existence check.
+        """
+        if not scope_kind:
+            if scope_id:
+                raise serializers.ValidationError(
+                    {"scope_id": "Pick what this coupon applies to, or clear both fields."}
+                )
+            return
+        if not scope_id:
+            raise serializers.ValidationError(
+                {"scope_id": "Pick the item or category this coupon applies to."}
+            )
+
+        model = coupon_scope_model(scope_kind)
+        if model is None:
+            raise serializers.ValidationError(
+                {"scope_kind": "That is not something a coupon can apply to."}
+            )
+
+        # The tenant is the one the view will save against - never one the body
+        # could name. On create it comes from the context the view supplies; on a
+        # PATCH the row already knows, and a coupon cannot change tenant.
+        system = (
+            getattr(self.instance, "system", None)
+            or self.context.get("system")
+        )
+        if system is None:
+            raise serializers.ValidationError(
+                {"scope_kind": "Cannot resolve this site; try again."}
+            )
+        if not model.objects.filter(pk=scope_id, system=system).exists():
+            raise serializers.ValidationError(
+                {"scope_id": "That item or category does not exist on this site."}
+            )
 
 
 class CouponPublicSerializer(serializers.ModelSerializer):
@@ -482,13 +618,23 @@ class CouponPublicSerializer(serializers.ModelSerializer):
     """
 
     valid = serializers.SerializerMethodField()
+    # What the offer applies to, when it is not the whole order. A scoped coupon
+    # that did not say so would be the worst kind of surprise: the customer
+    # scans a poster, fills a basket, and finds at the till that the code only
+    # ever covered one dish. It is the same snapshot the CMS reads - the target's
+    # name and photograph are already public on its own catalog page, so this
+    # discloses nothing the poster did not.
+    scope = serializers.SerializerMethodField()
 
     class Meta:
         model = Coupon
         fields = [
             "code", "description", "kind", "value", "currency",
-            "min_order_amount", "expires_at", "valid",
+            "min_order_amount", "expires_at", "valid", "scope",
         ]
+
+    def get_scope(self, obj):
+        return resolve_coupon_scope(obj, self.context.get("request"))
 
     def get_valid(self, obj):
         now = timezone.now()

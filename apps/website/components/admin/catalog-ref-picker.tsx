@@ -7,11 +7,12 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { Select, type SelectOption } from "@repo/ui/core-elements/select";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { listProducts, listServices, listMenuItems } from "@/lib/admin-api";
+import { catalogOptionLabel, catalogRowCategory } from "./catalog-option-label";
 import type { SpotlightRef } from "@/lib/system";
 
 /**
  * The CMS control for hand-picking catalog items out of all three Buyable
- * families - a row of "None / Product · Espresso / Service · Haircut / …"
+ * families - a row of "None / 📦 Beans · Espresso / 🛠️ Barbering · Haircut / …"
  * selects writing an ordered list of `{kind, id}` refs.
  *
  * Two CMS surfaces author that same relation with the same shape - the Featured
@@ -64,11 +65,17 @@ export function setRefSlot(
   return next.filter((ref): ref is SpotlightRef => ref !== null);
 }
 
-/** Build the option list for one family from an admin catalog listing. */
+/**
+ * Build the option list for one family from an admin catalog listing.
+ *
+ * `familyLabel` is only the **fallback** prefix: a row reads as its category
+ * ("Pizzas · Margherita") and falls back to its family when it has none. See
+ * `catalog-option-label.ts` for why the category is the useful half.
+ */
 function toOptions(
   rows: Record<string, unknown>[],
   kind: SpotlightRef["kind"],
-  prefix: string,
+  familyLabel: string,
 ): SelectOption[] {
   return rows
     .map((row) => {
@@ -77,7 +84,11 @@ function toOptions(
       const name = (row.name as string) || (row.en_name as string) || `#${id}`;
       return {
         value: `${kind}${REF_SEPARATOR}${id}`,
-        label: `${prefix} · ${name}`,
+        label: catalogOptionLabel(
+          kind,
+          catalogRowCategory(row) || familyLabel,
+          name,
+        ),
       };
     })
     .filter((o): o is SelectOption => o !== null);

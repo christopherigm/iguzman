@@ -38,9 +38,14 @@ class Coupon(models.Model):
     different model (a child row per issued code), and this one is deliberately not
     pretending to be both.
 
-    **The discount is order-level.** A percentage or a fixed amount off the cart
-    subtotal, never a per-item rule - which is also the only shape that maps onto
-    a single session-level Stripe discount without inventing per-line rounding.
+    **The discount is one amount off the basket, and `scope_kind` decides which
+    part of the basket it is measured against.** Order-wide by default (a
+    percentage or a fixed amount off the whole subtotal); with a scope set, off
+    the lines matching one product, service, dish, or category of them. Either
+    way what comes out is a single figure, which is what keeps it mappable onto
+    one session-level Stripe discount without inventing per-line rounding - it
+    is still not a per-item rule, it is an order-level discount with a narrower
+    base.
 
     Nothing here is ever trusted from a browser: `orders.services.coupons` re-reads
     the row and re-computes the discount at checkout, and `times_redeemed` is moved
@@ -54,6 +59,43 @@ class Coupon(models.Model):
         (KIND_PERCENT, "Percentage off"),
         (KIND_FIXED, "Fixed amount off"),
     ]
+
+    # ── What the discount is allowed to touch ─────────────────────────────────
+    # A coupon is either order-wide (the historical and default behaviour) or
+    # aimed at **one** catalog target: a single buyable, or a whole category of
+    # them. Six kinds rather than two, because "category" is three different
+    # tables here and an id alone cannot say which one it is in - the same
+    # reason `SocialPost.related_kind` exists beside `related_id`.
+    SCOPE_ORDER = ""
+    SCOPE_PRODUCT = "product"
+    SCOPE_SERVICE = "service"
+    SCOPE_MENU_ITEM = "menu_item"
+    SCOPE_PRODUCT_CATEGORY = "product_category"
+    SCOPE_SERVICE_CATEGORY = "service_category"
+    SCOPE_MENU_CATEGORY = "menu_category"
+    SCOPE_CHOICES = [
+        (SCOPE_ORDER, "The whole order"),
+        (SCOPE_PRODUCT, "One product"),
+        (SCOPE_SERVICE, "One service"),
+        (SCOPE_MENU_ITEM, "One menu item"),
+        (SCOPE_PRODUCT_CATEGORY, "A product category"),
+        (SCOPE_SERVICE_CATEGORY, "A service category"),
+        (SCOPE_MENU_CATEGORY, "A menu category"),
+    ]
+    # Which buyable family each scope kind selects, so `orders.services.coupons`
+    # can match a cart line without a chain of ifs. A category kind matches the
+    # same family as its item kind - it is the same line, judged by its
+    # `category_id` instead of its own.
+    SCOPE_ITEM_KINDS = {
+        SCOPE_PRODUCT: "product",
+        SCOPE_SERVICE: "service",
+        SCOPE_MENU_ITEM: "menu_item",
+    }
+    SCOPE_CATEGORY_KINDS = {
+        SCOPE_PRODUCT_CATEGORY: "product",
+        SCOPE_SERVICE_CATEGORY: "service",
+        SCOPE_MENU_CATEGORY: "menu_item",
+    }
 
     # The coupon's stable handle, used for the QR file name and the CMS detail
     # URL. `code` is the customer-facing key but a tenant may edit it (a typo, a
@@ -101,6 +143,38 @@ class Coupon(models.Model):
     # A floor on the subtotal, in the coupon's own currency. Zero disables it.
     min_order_amount = models.DecimalField(
         max_digits=12, decimal_places=2, default=Decimal("0.00"),
+    )
+
+    # ── The coupon's target ───────────────────────────────────────────────────
+    # Blank `scope_kind` means the whole order, which is what every coupon
+    # written before these columns existed is - so nothing moved when they
+    # landed. Anything else names exactly one target, and the discount is then
+    # computed off *only* the matching cart lines (`orders.services.coupons.
+    # eligible_subtotal`); a basket containing none of them is refused outright
+    # rather than quietly discounted in full.
+    #
+    # `scope_id` is a plain integer, not one of six nullable FKs, for the reason
+    # `SocialPost.related_id` is: it can point at any of six models, and six
+    # columns plus a check constraint to keep five of them null is a lot of
+    # schema for one reference. The cost is no referential integrity - a deleted
+    # product leaves a coupon pointing at nothing.
+    #
+    # ⚠ **That dangling state is the safe failure, and it must stay that way.**
+    # A scope that resolves to nothing matches no cart line, so the coupon is
+    # refused (`COUPON_NOT_APPLICABLE`) instead of falling back to an order-wide
+    # discount - which is the one wrong answer here that costs the tenant money
+    # on every basket. Never "repair" an unresolvable scope by ignoring it.
+    scope_kind = models.CharField(
+        max_length=20,
+        choices=SCOPE_CHOICES,
+        blank=True,
+        default=SCOPE_ORDER,
+        help_text="What the discount applies to. Blank means the whole order.",
+    )
+    scope_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="The id of the targeted item or category, within `scope_kind`'s own table.",
     )
 
     # The tenant's off switch, matching every other content model. Separate from
@@ -169,6 +243,19 @@ class Coupon(models.Model):
             models.CheckConstraint(
                 condition=models.Q(value__gt=0), name="coupon_value_positive",
             ),
+            # The two scope columns are one value and must move together. A kind
+            # with no id names a table and no row (it would match every line in
+            # that family, discounting far more than intended); an id with no
+            # kind names a number in no table at all. Both halves are enforced
+            # in the serializer too - this is what stops a shell or a data
+            # migration writing the contradiction.
+            models.CheckConstraint(
+                condition=(
+                    models.Q(scope_kind="", scope_id__isnull=True)
+                    | (~models.Q(scope_kind="") & models.Q(scope_id__isnull=False))
+                ),
+                name="coupon_scope_kind_and_id_together",
+            ),
         ]
         indexes = [
             models.Index(fields=["system", "enabled"]),
@@ -188,6 +275,28 @@ class Coupon(models.Model):
     @property
     def is_exhausted(self):
         return bool(self.max_redemptions) and self.times_redeemed >= self.max_redemptions
+
+    @property
+    def is_scoped(self):
+        """Whether this coupon is aimed at one catalog target rather than the order."""
+        return bool(self.scope_kind)
+
+    @property
+    def scope_family(self):
+        """Which buyable family this coupon's scope selects, or None when order-wide.
+
+        `"product"` / `"service"` / `"menu_item"` - the same three strings
+        `CartItem.kind` and `OrderLine.kind` speak, so a caller can compare them
+        directly instead of translating between two vocabularies.
+        """
+        return self.SCOPE_ITEM_KINDS.get(self.scope_kind) or self.SCOPE_CATEGORY_KINDS.get(
+            self.scope_kind
+        )
+
+    @property
+    def scopes_a_category(self):
+        """Whether the target is a category (judged by the line's `category_id`)."""
+        return self.scope_kind in self.SCOPE_CATEGORY_KINDS
 
 
 def order_qr_upload_path(instance, filename):
@@ -487,6 +596,23 @@ class OrderLine(models.Model):
 
     def __str__(self):
         return f"{self.quantity} x {self.name} (order #{self.order_id})"
+
+    @property
+    def target(self):
+        """The catalog row this line sold, or None once it has been deleted.
+
+        Mirrors `users.CartItem.target` so both can be handed to
+        `orders.services.coupons.eligible_subtotal` - a cart and a written order
+        must price a scoped coupon identically, and one function over one
+        interface is what guarantees that.
+
+        ⚠ **Nullable here in a way a cart line's never is.** These FKs are
+        SET_NULL provenance, so a line whose product was deleted still reads back
+        in full but can no longer say which product it was. A coupon scoped to
+        that product simply stops matching the line - the safe direction, and the
+        same one an unresolvable `scope_id` already fails in.
+        """
+        return self.product or self.service or self.menu_item
 
 
 class Booking(models.Model):

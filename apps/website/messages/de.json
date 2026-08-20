@@ -552,6 +552,7 @@
     "couponExhausted": "Dieser Gutschein ist bereits vollständig eingelöst.",
     "couponWrongCurrency": "Dieser Gutschein gilt nicht für die Währung dieser Bestellung.",
     "couponMinOrder": "Deine Bestellung liegt unter dem Mindestbetrag dieses Gutscheins.",
+    "couponNotApplicable": "Dieser Gutschein gilt für nichts in deinem Warenkorb.",
     "couponError": "Dieser Gutschein konnte nicht angewendet werden."
   },
   "Orders": {
@@ -1267,6 +1268,14 @@
     "couponTemplate_scan": "Scan mich",
     "couponBackground": "Hintergrundbild",
     "couponBackgroundHint": "Dient nur der heruntergeladenen Grafik und wird nicht am Gutschein gespeichert.",
+    "couponScope": "Wofür dieser Gutschein gilt",
+    "couponScopeCategory": "Kategorie",
+    "couponScopeItem": "Katalogartikel",
+    "couponScopeWholeOrder": "Die gesamte Bestellung",
+    "couponScopeHintOrder": "Der Rabatt gilt für die gesamte Bestellung. Wähle eine Kategorie oder einen Artikel, um ihn einzugrenzen.",
+    "couponScopeHintScoped": "Der Rabatt gilt nur hierfür. Ein Warenkorb ohne diesen Artikel wird an der Kasse abgelehnt.",
+    "couponValidOn": "Gültig für",
+    "couponValidOnAll": "Gültig für alle",
     "couponDownload": "Flyer herunterladen",
     "couponExportError": "Der Flyer konnte nicht exportiert werden.",
     "couponSaveForQr": "Speichere den Gutschein, um seinen QR-Code zu erzeugen, und lade dann den Flyer herunter.",
@@ -1794,6 +1803,8 @@
     "off": "Rabatt",
     "minOrder": "Mindestbestellwert {amount}",
     "validUntil": "Gültig bis {date}",
+    "validOn": "Gültig für {name}",
+    "validOnAll": "Gültig für alle {name}",
     "ended": "Dieses Angebot ist beendet.",
     "startShopping": "Jetzt einkaufen",
     "appliedAtCheckout": "Der Code liegt beim Bezahlen in deinem Warenkorb bereit."

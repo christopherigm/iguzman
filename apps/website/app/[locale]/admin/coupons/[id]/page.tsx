@@ -36,8 +36,10 @@ import {
   updateCoupon,
   getSystem,
   type CouponKind,
+  type CouponScopeKind,
   listCoupons,
 } from "@/lib/admin-api";
+import { CouponScopePicker } from "@/components/admin/coupon-scope-picker";
 import {
   COUPON_TEMPLATES,
   DEFAULT_COUPON_TEMPLATE_ID,
@@ -61,7 +63,15 @@ const PREVIEW_MAX_W = 440;
 
 /** The CURRENCY_CHOICES the API accepts, for the fixed-amount currency picker. */
 const CURRENCIES = [
-  "USD", "EUR", "MXN", "GBP", "CAD", "ARS", "COP", "CLP", "BRL",
+  "USD",
+  "EUR",
+  "MXN",
+  "GBP",
+  "CAD",
+  "ARS",
+  "COP",
+  "CLP",
+  "BRL",
 ] as const;
 
 /**
@@ -118,6 +128,10 @@ export default function AdminCouponFormPage({ params }: Props) {
     starts_at: "",
     expires_at: "",
     min_order_amount: "0",
+    // "" is the whole order - what every coupon is until it is aimed at
+    // something, and what the API defaults a row to.
+    scope_kind: "",
+    scope_id: null,
     template_id: DEFAULT_COUPON_TEMPLATE_ID,
     brand_logo_background: "none",
     brand_logo_background_scale: 100,
@@ -152,6 +166,27 @@ export default function AdminCouponFormPage({ params }: Props) {
   const [brandLogoData, setBrandLogoData] = useState<string>();
   const [qrData, setQrData] = useState<string>();
   const [backgroundData, setBackgroundData] = useState<string>();
+  const [targetImageData, setTargetImageData] = useState<string>();
+
+  /**
+   * The coupon's target as the flyer draws it - its name and the URL of its
+   * photograph.
+   *
+   * Held beside `values` rather than in it because it is **not** part of the
+   * payload: the API stores `scope_kind` + `scope_id` and resolves the rest
+   * itself. It is seeded from the loaded coupon's `scope` snapshot and then
+   * replaced by whatever the picker reports, so the preview follows the operator
+   * rather than the last save.
+   */
+  const [target, setTarget] = useState<{
+    name: string;
+    /**
+     * The category the target is filed under, or `""` - a category target is
+     * filed under nothing, and a product or service may be uncategorized.
+     */
+    category: string;
+    image: string | null;
+  } | null>(null);
 
   const [background, setBackground] = useState<NewImage[]>([]);
   const [format4x5, setFormat4x5] = useState<CouponFormat>("1x1");
@@ -205,6 +240,8 @@ export default function AdminCouponFormPage({ params }: Props) {
             starts_at: toLocalInput(coupon.starts_at),
             expires_at: toLocalInput(coupon.expires_at),
             min_order_amount: coupon.min_order_amount ?? "0",
+            scope_kind: coupon.scope_kind ?? "",
+            scope_id: coupon.scope_id ?? null,
             template_id: coupon.template_id ?? DEFAULT_COUPON_TEMPLATE_ID,
             brand_logo_background: coupon.brand_logo_background ?? "none",
             brand_logo_background_scale:
@@ -217,6 +254,21 @@ export default function AdminCouponFormPage({ params }: Props) {
             qrCode: coupon.qr_code,
             landingUrl: coupon.landing_url ?? "",
           });
+          // Null for an order-wide coupon and for one whose target has been
+          // deleted alike - both draw no thumbnail, which is the honest answer
+          // in either case.
+          setTarget(
+            coupon.scope
+              ? {
+                  name:
+                    coupon.scope.name ||
+                    coupon.scope.en_name ||
+                    `#${coupon.scope.id}`,
+                  category: coupon.scope.category_name ?? "",
+                  image: coupon.scope.image,
+                }
+              : null,
+          );
         }
       } catch {
         if (!cancelled) setError(t("errorLoad"));
@@ -255,6 +307,23 @@ export default function AdminCouponFormPage({ params }: Props) {
     };
   }, [stats.qrCode]);
 
+  // Same rule as the logo and the QR: the photograph is served from R2 on a CDN
+  // hostname, so an <img> pointed straight at it taints the export canvas and
+  // every download fails.
+  const targetImageSrc = target?.image ?? null;
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const resolved = targetImageSrc
+        ? await toSameOriginDataUrl(targetImageSrc)
+        : undefined;
+      if (!cancelled) setTargetImageData(resolved);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [targetImageSrc]);
+
   // A pending upload is already a data URL and needs no round-trip.
   const backgroundSrc = background[0]?.preview;
   useEffect(() => {
@@ -291,6 +360,12 @@ export default function AdminCouponFormPage({ params }: Props) {
       : "none"
   ) as HeroLogoBackground;
 
+  const scopeKind = String(values.scope_kind ?? "") as CouponScopeKind;
+  // Which of the two labels the thumbnail wears. A category is "valid on all
+  // <name>", an item is "valid on <name>" - two different promises, and the
+  // flyer is the only place a customer will read either of them.
+  const isCategoryScope = scopeKind.endsWith("_category");
+
   const flyerData: CouponFlyerData = useMemo(() => {
     const expiresAt = String(values.expires_at ?? "");
     const minOrder = String(values.min_order_amount ?? "0");
@@ -318,6 +393,23 @@ export default function AdminCouponFormPage({ params }: Props) {
       // The landing URL is resolved by the API from the tenant's own `host`; a
       // new coupon has no row yet and so no URL to print.
       landingUrl: stats.landingUrl || undefined,
+      // Undefined for an order-wide coupon, so every template's optional block
+      // simply does not render - the contract each of them already follows.
+      target: scopeKind
+        ? {
+            // "Pizzas - Margherita": the category, then the item, so a flyer
+            // says where on the menu the offer sits rather than naming a dish
+            // the reader may not place. Composed here rather than in the four
+            // templates, exactly as `valueLabel` and the two other labels are,
+            // so every template prints the same words. A target with no
+            // category - every category scope, and an uncategorized product or
+            // service - is drawn as its bare name; there is no prefix to add
+            // and a dangling separator would read as a rendering slip.
+            name: [target?.category, target?.name].filter(Boolean).join(" - "),
+            image: targetImageData,
+            label: isCategoryScope ? t("couponValidOnAll") : t("couponValidOn"),
+          }
+        : undefined,
       brandLogo: brandLogoData ?? undefined,
       brandName: brand.name ?? undefined,
       brandSlogan: brand.slogan ?? undefined,
@@ -332,9 +424,23 @@ export default function AdminCouponFormPage({ params }: Props) {
       brandLogoScale: Number(values.brand_logo_scale ?? 100),
     };
   }, [
-    values, kind, currency, format4x5, qrData, backgroundData,
-    brandLogoData, brand, stats.landingUrl, t, format, isNew,
+    values,
+    kind,
+    currency,
+    format4x5,
+    qrData,
+    backgroundData,
+    brandLogoData,
+    brand,
+    stats.landingUrl,
+    t,
+    format,
+    isNew,
     brandLogoBackground,
+    scopeKind,
+    isCategoryScope,
+    target,
+    targetImageData,
   ]);
 
   const template = getCouponTemplate(String(values.template_id));
@@ -359,6 +465,11 @@ export default function AdminCouponFormPage({ params }: Props) {
         starts_at: fromLocalInput(String(values.starts_at ?? "")),
         expires_at: fromLocalInput(String(values.expires_at ?? "")),
         min_order_amount: values.min_order_amount || "0",
+        // Always sent as a pair, including when both are empty: clearing a
+        // coupon's target has to actually write the order-wide scope back, and
+        // the API refuses one half without the other.
+        scope_kind: values.scope_kind || "",
+        scope_id: values.scope_kind ? values.scope_id : null,
         template_id: values.template_id,
         brand_logo_background: values.brand_logo_background,
         brand_logo_background_scale: values.brand_logo_background_scale,
@@ -530,6 +641,42 @@ export default function AdminCouponFormPage({ params }: Props) {
             onChange={set}
             onSubmit={handleSubmit}
             saving={saving}
+            slots={[
+              {
+                // Directly below Description, above the discount's own terms -
+                // "what this applies to" is part of describing the coupon, not
+                // part of pricing it.
+                //
+                // It is a slot rather than two `FieldDef`s because it needs the
+                // tenant's catalog, which `FieldDef` cannot fetch, and because
+                // the pair is one mutually-exclusive value that no flat field
+                // list can express.
+                beforeKey: "kind",
+                node: (
+                  <CouponScopePicker
+                    scopeKind={scopeKind}
+                    scopeId={
+                      typeof values.scope_id === "number"
+                        ? values.scope_id
+                        : null
+                    }
+                    onChange={(nextKind, nextId, nextTarget) => {
+                      // Both halves move together, always. The API refuses a
+                      // kind without an id, and the model carries a check
+                      // constraint saying the same thing.
+                      setValues((prev) => ({
+                        ...prev,
+                        scope_kind: nextKind,
+                        scope_id: nextId,
+                      }));
+                      setTarget(nextTarget);
+                    }}
+                    systemId={systemId}
+                    t={t}
+                  />
+                ),
+              },
+            ]}
           />
         </Grid>
 
