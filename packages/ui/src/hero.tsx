@@ -1,10 +1,22 @@
-import React, { CSSProperties } from "react";
+import React, { CSSProperties, ReactNode } from "react";
 import { HeroVideo } from "./hero-video";
+import { HeroReveal } from "./hero-reveal";
+// ⚠ From the constants module, never from `./hero-reveal` - that file is
+// `"use client"`, and this one is a server component, so every value it exports
+// arrives here as a client-reference stub rather than the value. Passed straight
+// to a prop a stub survives (the SSR pass resolves it), but `HERO_REVEAL_LOGO_GROW`
+// is *read* here, and interpolating the stub into the loading mark's size
+// produced `calc(168px * function() { throw ... })` - dropped as invalid, which
+// left that mark at the logo's full intrinsic size no matter what the constant
+// was set to.
 import {
-  HeroReveal,
   HERO_REVEAL_LOGO_CLASS,
+  HERO_REVEAL_LOGO_GROW,
+  HERO_REVEAL_SHEEN_CLASS,
+  HERO_REVEAL_SHEEN_MARK_CLASS,
+  HERO_REVEAL_SHEEN_SHADE_CLASS,
   HERO_REVEAL_TEXT_CLASS,
-} from "./hero-reveal";
+} from "./hero-reveal-constants";
 import { ParallaxLayer } from "./parallax-layer";
 import {
   shapeDividerEdgeInset,
@@ -399,8 +411,7 @@ const CRADLE_DEFAULT = cradleGeometry(CRADLE_WIDTH, CRADLE_HEIGHT);
  * below.
  */
 const CRADLE_FILL_MASK = `url("data:image/svg+xml,${encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CRADLE_DEFAULT.width} ${
-    CRADLE_DEFAULT.height + CRADLE_OVERSHOOT
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CRADLE_DEFAULT.width} ${CRADLE_DEFAULT.height + CRADLE_OVERSHOOT
   }" preserveAspectRatio="none"><path d="${CRADLE_DEFAULT.fill}" fill="#fff"/></svg>`,
 )}")`;
 
@@ -922,6 +933,12 @@ export type HeroProps = {
    * its full height from the first paint. @default true
    */
   revealOnPlay?: boolean;
+  /**
+   * Accessible label for the spinner shown while a video hero waits for its
+   * video. English by default, like every other string in this package; a
+   * localised app passes its own. @default "Loading"
+   */
+  loadingLabel?: string;
   /** Additional styles applied to the outermost container. */
   style?: CSSProperties;
   className?: string;
@@ -985,6 +1002,7 @@ export function Hero({
   profileLogoScale = 1,
   profileBackgroundScale = 1,
   revealOnPlay = true,
+  loadingLabel,
   style,
   className,
 }: HeroProps) {
@@ -1042,6 +1060,18 @@ export function Hero({
       : `calc((${badgeBaseSize}) * ${badgeScale})`,
   );
 
+  // The hero's own height, needed well before the box below is built: the
+  // loading placeholder has to reserve exactly it (see `HeroReveal`), and the
+  // mark it centres in that space is sized off it. A caller's `style` wins here
+  // as it does on the box itself - the CMS preview sizes its hero by hand - so
+  // both the reservation and the mark follow whatever is actually drawn.
+  const styleHeight = style?.height;
+  const heroHeight =
+    typeof styleHeight === "number"
+      ? `${styleHeight}px`
+      : (styleHeight ??
+        (hasVideo ? "clamp(350px, 45vw, 600px)" : "clamp(500px, 65vw, 800px)"));
+
   // Fraction of the badge the logo is drawn at. Scaling the `cover` image down
   // about its centre keeps the exact 100% look and reveals a ring of the badge's
   // own background around a shrunk logo.
@@ -1052,59 +1082,65 @@ export function Hero({
   // video onto the page. Positioned by its caller (centred in the content stack
   // for `default`, straddling the bottom edge for `profile`).
   const isLogoShape = logoBackground === "logo";
-  const badge = hasBadge ? (
-    <Box
-      className={HERO_REVEAL_LOGO_CLASS}
-      width={badgeSize}
-      height={badgeSize}
-      // Geometric shapes are opaque page-background plates; the `logo` shape
-      // draws its plate through a mask (below) instead, so the box stays clear.
-      backgroundColor={
-        isLogoShape ? undefined : "var(--page-background, var(--background))"
-      }
-      alignItems="center"
-      justifyContent="center"
-      styles={{
-        position: "relative",
-        overflow: "hidden",
-        // drop-shadow, not box-shadow (elevation): the latter is clipped away by
-        // the polygon clip-paths and ignores the masked `logo` outline.
-        filter: HERO_BADGE_SHADOW,
-        ...(isLogoShape ? {} : heroLogoBackgroundStyle(logoBackground)),
-      }}
-    >
-      {isLogoShape && logoImage && (
-        // The page-background plate, clipped to the logo's own silhouette so the
-        // badge reads as a logo-shaped hole through the video onto the page.
-        <span
-          aria-hidden
-          style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 0,
-            background: "var(--page-background, var(--background))",
-            ...heroLogoMaskStyle(logoImage),
-          }}
-        />
-      )}
-      {/* A geometric badge fills edge to edge (`cover`) so it reads as the logo
+  // Built rather than declared, because the loading placeholder draws the very
+  // same badge with a light sweep inside it - and a sweep has to be *inside* to
+  // be clipped to the badge's own shape.
+  const buildBadge = (sheen?: ReactNode, size: string = badgeSize) =>
+    hasBadge ? (
+      <Box
+        className={HERO_REVEAL_LOGO_CLASS}
+        width={size}
+        height={size}
+        // Geometric shapes are opaque page-background plates; the `logo` shape
+        // draws its plate through a mask (below) instead, so the box stays clear.
+        backgroundColor={
+          isLogoShape ? undefined : "var(--page-background, var(--background))"
+        }
+        alignItems="center"
+        justifyContent="center"
+        styles={{
+          position: "relative",
+          overflow: "hidden",
+          // drop-shadow, not box-shadow (elevation): the latter is clipped away by
+          // the polygon clip-paths and ignores the masked `logo` outline.
+          filter: HERO_BADGE_SHADOW,
+          ...(isLogoShape ? {} : heroLogoBackgroundStyle(logoBackground)),
+        }}
+      >
+        {isLogoShape && logoImage && (
+          // The page-background plate, clipped to the logo's own silhouette so the
+          // badge reads as a logo-shaped hole through the video onto the page.
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 0,
+              background: "var(--page-background, var(--background))",
+              ...heroLogoMaskStyle(logoImage),
+            }}
+          />
+        )}
+        {/* A geometric badge fills edge to edge (`cover`) so it reads as the logo
           itself rather than a plate with a stamp on it; the `logo` shape instead
           `contain`s the whole mark so its outline matches the masked plate. A
           smaller `logoScale` shrinks either about the badge's centre. */}
-      <img
-        src={logoImage ?? ""}
-        alt={logoAlt}
-        style={{
-          position: "relative",
-          zIndex: 1,
-          width: "100%",
-          height: "100%",
-          objectFit: isLogoShape ? "contain" : "cover",
-          transform: logoScale === 1 ? undefined : `scale(${logoScale})`,
-        }}
-      />
-    </Box>
-  ) : null;
+        <img
+          src={logoImage ?? ""}
+          alt={logoAlt}
+          style={{
+            position: "relative",
+            zIndex: 1,
+            width: "100%",
+            height: "100%",
+            objectFit: isLogoShape ? "contain" : "cover",
+            transform: logoScale === 1 ? undefined : `scale(${logoScale})`,
+          }}
+        />
+        {sheen}
+      </Box>
+    ) : null;
+  const badge = buildBadge();
 
   // What straddles the hero's bottom edge in the `profile` layout: the badge
   // when a shape is chosen, otherwise the logo itself, drawn `contain` in a box
@@ -1126,6 +1162,97 @@ export function Hero({
           filter: HERO_BADGE_SHADOW,
         }}
       />
+    );
+
+  // ── The mark the reader waits with ──────────────────────────────
+  // While the video buffers, `HeroReveal` reserves the hero's whole height and
+  // centres this in it under a slow light sweep, then glides it to wherever the
+  // hero's own logo belongs in this layout and swaps the two on arrival. So it
+  // is a *copy* of that logo, not the logo: the hero's own sits inside the box
+  // being opened, which clips its overflow for the whole of the travel.
+  //
+  // Because the copy lands on the real mark's place at the real mark's size,
+  // the logo needs no fade at all - it has been on screen since the first frame.
+  // `none` (and a tenant with no logo) has nowhere for a mark to land, so the
+  // placeholder just holds the space.
+  const sheen = <span className={HERO_REVEAL_SHEEN_CLASS} />;
+  const placeholderLogo =
+    hideLogo || !logoImage ? null : hasBadge ? (
+      // A badge is a plate, so the sweep crosses the plate as one gradient
+      // carrying both of its tones - clipped to the badge's shape by its own
+      // `overflow: hidden`/clip-path. The `logo` shape
+      // has no such clip (it is masked, not clipped), so there the band is
+      // wrapped in the same mask to keep it inside the mark's outline; where
+      // that mask cannot resolve, the sweep is simply not drawn, which is a
+      // better failure than a rectangle of light over a logo-shaped badge.
+      buildBadge(
+        isLogoShape ? (
+          <span
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 2,
+              overflow: "hidden",
+              ...heroLogoMaskStyle(logoImage),
+            }}
+          >
+            {sheen}
+          </span>
+        ) : (
+          sheen
+        ),
+        `calc(${badgeSize} * ${HERO_REVEAL_LOGO_GROW})`,
+      )
+    ) : (
+      // A bare mark, at the size its layout draws it - the profile disc's
+      // diameter, or the centred logo's own max box - times the loading growth. The sweep here is a white
+      // copy of the logo behind a gradient mask, so the light follows the mark's
+      // silhouette instead of glinting over the air around it.
+      <span
+        style={{
+          position: "relative",
+          display: "inline-block",
+          lineHeight: 0,
+        }}
+      >
+        <img
+          src={logoImage}
+          alt=""
+          style={
+            isProfile
+              ? {
+                display: "block",
+                width: `calc(${profileLogoSize} * ${HERO_REVEAL_LOGO_GROW})`,
+                height: `calc(${profileLogoSize} * ${HERO_REVEAL_LOGO_GROW})`,
+                objectFit: "contain",
+                filter: HERO_BADGE_SHADOW,
+              }
+              : {
+                display: "block",
+                // The centred logo's own max box, restated in lengths rather
+                // than the percentages the hero uses. They are the same box -
+                // 50% of the hero's width, 45% of the stack's height, which is
+                // the hero less the navbar inset - but a percentage resolves
+                // against the containing block, and here that is a
+                // shrink-wrapped span with no definite size, where both would
+                // silently resolve to `none` and draw the logo at its full
+                // intrinsic size.
+                maxWidth: scaled(
+                  `calc(min(320px, 50vw) * ${HERO_REVEAL_LOGO_GROW})`,
+                ),
+                maxHeight: scaled(
+                  `calc((${heroHeight} - var(--ui-navbar-height, 57px)) * 0.45 * ${HERO_REVEAL_LOGO_GROW})`,
+                ),
+                objectFit: "contain",
+              }
+          }
+        />
+        {/* The sweep's two tones, one copy of the mark each - a bright core
+            and the darker shoulders that are what make it visible on a light
+            ground (see `HERO_REVEAL_SHEEN_SHADE_CLASS`). */}
+        <img src={logoImage} alt="" className={HERO_REVEAL_SHEEN_SHADE_CLASS} />
+        <img src={logoImage} alt="" className={HERO_REVEAL_SHEEN_MARK_CLASS} />
+      </span>
     );
 
   // The slogan/subline/actions stack, shared between the framed and unframed
@@ -1207,9 +1334,9 @@ export function Hero({
   // Only a `bottom` divider matters here - a `top` notch is nowhere near the disc.
   const profileDividerLift =
     isProfile &&
-    bottomDivider &&
-    bottomDivider !== "none" &&
-    bottomDividerEdge === "bottom"
+      bottomDivider &&
+      bottomDivider !== "none" &&
+      bottomDividerEdge === "bottom"
       ? shapeDividerEdgeInset(bottomDivider, bottomDividerHeight)
       : null;
   // The disc's own overhang below the hero, and the offsets built on it: its
@@ -1226,10 +1353,10 @@ export function Hero({
   const dividerMask: CSSProperties =
     bottomDivider && bottomDivider !== "none"
       ? shapeDividerMaskStyle(
-          bottomDivider,
-          bottomDividerEdge,
-          bottomDividerHeight,
-        )
+        bottomDivider,
+        bottomDividerEdge,
+        bottomDividerHeight,
+      )
       : {};
 
   const hero = (
@@ -1240,9 +1367,7 @@ export function Hero({
       style={{
         position: "relative",
         width: "100%",
-        height: hasVideo
-          ? "clamp(350px, 45vw, 600px)"
-          : "clamp(500px, 65vw, 800px)",
+        height: heroHeight,
         overflow: "hidden",
         backgroundColor: "#000",
         ...dividerMask,
@@ -1311,7 +1436,7 @@ export function Hero({
             right: 0,
             bottom: isProfile
               ? // Follows the disc: a lifted disc lifts its 24px clearance too.
-                profileDividerLift
+              profileDividerLift
                 ? `calc(${profileLogoSize} / 2 + 24px + ${profileDividerLift})`
                 : `calc(${profileLogoSize} / 2 + 24px)`
               : 0,
@@ -1394,16 +1519,15 @@ export function Hero({
   // page content underneath starts below the badge rather than behind it. A
   // divider lift shortens that overhang by exactly the lift, so the 16px
   // breathing room below the disc stays 16px instead of growing into a gap.
+  const profileOverhang = profileDividerLift
+    ? `calc(${profileLogoSize} / 2 + 16px - ${profileDividerLift})`
+    : `calc(${profileLogoSize} / 2 + 16px)`;
   const composed = !isProfile ? (
     elevatedHero
   ) : (
     <Box
       width="100%"
-      marginBottom={
-        profileDividerLift
-          ? `calc(${profileLogoSize} / 2 + 16px - ${profileDividerLift})`
-          : `calc(${profileLogoSize} / 2 + 16px)`
-      }
+      marginBottom={profileOverhang}
       styles={{ position: "relative" }}
     >
       {elevatedHero}
@@ -1423,11 +1547,25 @@ export function Hero({
 
   // A video hero is held closed until its video is genuinely playing and then
   // opened, so the reader never sees the provider's poster frame flicker into
-  // the first real frame; the logo and the text arrive as it finishes opening.
-  // `HeroReveal` hands `children` straight back when there is nothing to wait
-  // for, so an image hero (and a `revealOnPlay={false}` one) is untouched -
-  // including the two reveal classes above, which do nothing outside it.
-  return <HeroReveal enabled={hasVideo && revealOnPlay}>{composed}</HeroReveal>;
+  // the first real frame. Meanwhile the reveal holds the hero's whole height -
+  // the `profile` disc's overhang included, or the page below would jump by that
+  // much when the hero lands - with the mark centred in it, and glides that mark
+  // into place as the hero opens. `HeroReveal` hands `children` straight back
+  // when there is nothing to wait for, so an image hero (and a
+  // `revealOnPlay={false}` one) is untouched - including the reveal classes
+  // above, which do nothing outside it.
+  return (
+    <HeroReveal
+      enabled={hasVideo && revealOnPlay}
+      placeholderHeight={
+        isProfile ? `calc(${heroHeight} + ${profileOverhang})` : heroHeight
+      }
+      placeholderLogo={placeholderLogo}
+      loadingLabel={loadingLabel}
+    >
+      {composed}
+    </HeroReveal>
+  );
 }
 
 export default Hero;

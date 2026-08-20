@@ -10,6 +10,7 @@
     "./core-elements/mercator": "./src/core-elements/mercator.ts",
     "./core-elements/use-scroll-lock": "./src/core-elements/use-scroll-lock.ts",
     "./hardware/breadboard-geometry": "./src/hardware/breadboard-geometry.ts",
+    "./hero-reveal-constants": "./src/hero-reveal-constants.ts",
     "./palettes": "./src/palettes.ts",
     "./use-ffmpeg": "./src/use-ffmpeg.ts",
     "./use-groq": "./src/use-groq.ts",

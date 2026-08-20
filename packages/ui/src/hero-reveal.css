@@ -1,26 +1,256 @@
 /*
- * The hero's opening, and the arrival of what sits over it. Driven entirely by
- * the two classes `HeroReveal` toggles and the two custom properties it sets -
- * see that file for why the hero waits for its video at all.
+ * The hero's opening, the mark that waits for it, and the arrival of what sits
+ * over it. Driven entirely by the classes `HeroReveal` toggles and the custom
+ * properties it sets - see that file for why the hero waits for its video at
+ * all, and why the mark you see travelling is a copy of the hero's own logo.
  */
 
 /*
- * A landing opens with the hero *because* the hero is what runs under the fixed
- * navbar. With the hero closed there is nothing holding that height, so the next
- * section (Featured, About) rides up under the bar and loses the top of its
- * heading. This holds the height until the hero can - and hands it back over
- * exactly the opening's duration and curve, so the two movements read as one and
- * the page below never shifts twice.
+ * The wrapper holds the hero's whole future height while the video buffers, so
+ * the page below is laid out from the first frame and does not move when the
+ * hero arrives - it grows into space that was already reserved. Falls back to
+ * the navbar's height, which is the least a closed hero can hold: a landing
+ * opens with the hero *because* the hero is what runs under the fixed navbar,
+ * and with nothing holding that height the next section rides up under the bar
+ * and loses the top of its heading.
  */
-.hero-reveal__navbar-spacer {
-  height: var(--ui-navbar-height, 57px);
-  transition: height var(--hero-reveal-duration, 900ms)
+.hero-reveal {
+  position: relative;
+}
+
+.hero-reveal:not(.hero-reveal--done) {
+  min-height: var(--hero-reveal-reserved, var(--ui-navbar-height, 57px));
+}
+
+/*
+ * The placeholder itself paints nothing: the page shows through it, and all
+ * there is to see is the mark centred in it. It is out of flow so the opening
+ * box starts at the wrapper's top edge (see `HeroReveal`), and inert so it never
+ * swallows a press meant for the hero underneath.
+ */
+.hero-reveal__placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.hero-reveal--done .hero-reveal__placeholder {
+  display: none;
+}
+
+/*
+ * The travelling mark. While the hero is loading it is *built* half as big again
+ * as the hero will draw it (`HERO_REVEAL_LOGO_GROW`, applied to the mark's own
+ * dimensions in `Hero`), so the waiting state has some presence of its own on an
+ * otherwise empty page - and so the spinner below it has something real to be
+ * laid out beneath. On reveal it both travels and shrinks, settling into the
+ * layout rather than merely sliding across it.
+ *
+ * ⚠ **Nothing is transformed until then.** `--hero-reveal-logo-scale` is the
+ * measured ratio between the two marks - `1 / HERO_REVEAL_LOGO_GROW`, near
+ * enough - so applying it before the reveal would undo the growth on the frame
+ * it was drawn. Held back, it is also what makes the copy exactly the size the
+ * hero's own logo is drawn at *at the end of the travel*, which is what the swap
+ * at `done` needs. The class flip is then what starts the transition, rather
+ * than a mid-flight change of value.
+ */
+.hero-reveal__placeholder-logo {
+  display: inline-flex;
+  will-change: transform;
+}
+
+.hero-reveal--revealed .hero-reveal__placeholder-logo {
+  transform: translate(
+      var(--hero-reveal-logo-dx, 0px),
+      var(--hero-reveal-logo-dy, 0px)
+    )
+    scale(var(--hero-reveal-logo-scale, 1));
+  transition: transform var(--hero-reveal-duration, 900ms)
     cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.hero-reveal--revealed .hero-reveal__navbar-spacer,
-.hero-reveal--done .hero-reveal__navbar-spacer {
-  height: 0;
+/*
+ * The spinner under the mark, saying outright what the sweep only implies.
+ *
+ * ⚠ **Nothing here may put a `transform` on it.** `spinner.css` animates
+ * `transform: rotate(360deg)`, and an animation whose start value is implicit
+ * takes it from the element's own transform - so a `translate(-50%, -50%)` used
+ * to centre it became that start value, and because `rotate(360deg)` decomposes
+ * to the identity matrix the browser interpolated *translate → identity*: the
+ * spinner slid up and to the left, over and over, and never span. That is why it
+ * is laid out in flow rather than positioned, and why "centre it with a
+ * translate" is not an option here.
+ *
+ * ⚠ **The mark still has to sit dead centre**, which a plain column cannot do -
+ * centring mark-plus-spinner centres the *pair* and lifts the logo off the
+ * middle of the reserved space. So the spinner's own block is counterweighted
+ * above the mark (`--balance`), leaving the mark centred and the spinner a fixed
+ * distance below it, with no measuring and nothing to arrive late. With no mark
+ * there is nothing to balance: the spacer is not rendered and the spinner simply
+ * takes the centre.
+ */
+.hero-reveal__placeholder-spinner {
+  margin-top: var(--hero-reveal-spinner-gap, 24px);
+}
+
+.hero-reveal__placeholder-balance {
+  flex: none;
+  height: calc(
+    var(--hero-reveal-spinner-box, 34px) + var(--hero-reveal-spinner-gap, 24px)
+  );
+}
+
+/*
+ * It goes the moment the reveal starts - that moment *is* the video being ready
+ * to play - rather than lingering until the hero has finished opening. Faded
+ * out rather than unmounted, so it leaves with the sweep instead of blinking
+ * out from under a mark that is still travelling, and so its box goes on
+ * balancing the mark for the whole of the travel.
+ */
+.hero-reveal--revealed .hero-reveal__placeholder-spinner {
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+
+/*
+ * The light sweep. Both forms below draw the **same band**: a bright core with a
+ * darker shoulder either side of it, like a highlight crossing a curved surface.
+ *
+ * ⚠ **The shoulders are what make it visible, and they are not decoration.** A
+ * plain white glint - which this was - disappears completely on a light ground,
+ * and a hero mark is very often white artwork over a page whose background is
+ * white in light mode and the badge plate's own colour in dark: exactly the two
+ * cases where a white-on-white band says nothing. A band carrying both tones
+ * reads against anything, in either theme, without knowing the mark's colours -
+ * on a light ground the shoulders are the sweep, on a dark one the core is.
+ */
+
+/*
+ * Over a badge: a band crossing the plate, clipped by whatever shape the badge
+ * is cut to (its own `overflow: hidden` and clip-path), so a circular badge gets
+ * a circular glint and not a square one.
+ */
+.hero-reveal__sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 28%,
+    rgba(0, 0, 0, 0.22) 41%,
+    rgba(255, 255, 255, 0.92) 50%,
+    rgba(0, 0, 0, 0.22) 59%,
+    transparent 72%
+  );
+  background-size: 300% 100%;
+  animation: hero-reveal-sheen 1.9s ease-in-out infinite;
+}
+
+/*
+ * Over a *bare* mark - one with no plate behind it, where a rectangular band
+ * would glint over the transparent air around the logo. Each tone is a copy of
+ * the logo flattened to one colour and swept by a gradient **mask**, so the
+ * light follows the mark's own silhouette; the mask is a gradient rather than
+ * the logo image, which is why this works wherever the logo is served from (an
+ * image mask is bound by the same-origin rule that already breaks the `logo`
+ * badge shape on a CDN).
+ *
+ * ⚠ It takes two elements because a `filter` can only flatten the copy to black
+ * or to white - it cannot paint a gradient of both - so the core and the
+ * shoulders are separate copies wearing separate masks, swept in step.
+ */
+.hero-reveal__sheen-mark,
+.hero-reveal__sheen-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  -webkit-mask-size: 300% 100%;
+  mask-size: 300% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  animation: hero-reveal-sheen-mask 1.9s ease-in-out infinite;
+}
+
+/* The core: black-then-white flattens the copy to pure white. */
+.hero-reveal__sheen-mark {
+  filter: brightness(0) invert(1);
+  opacity: 0.9;
+  -webkit-mask-image: linear-gradient(
+    115deg,
+    transparent 41%,
+    #000 50%,
+    transparent 59%
+  );
+  mask-image: linear-gradient(
+    115deg,
+    transparent 41%,
+    #000 50%,
+    transparent 59%
+  );
+}
+
+/* The two shoulders: the same copy flattened to black, masked either side. */
+.hero-reveal__sheen-shade {
+  filter: brightness(0);
+  opacity: 0.34;
+  -webkit-mask-image: linear-gradient(
+    115deg,
+    transparent 28%,
+    #000 41%,
+    transparent 50%,
+    #000 59%,
+    transparent 72%
+  );
+  mask-image: linear-gradient(
+    115deg,
+    transparent 28%,
+    #000 41%,
+    transparent 50%,
+    #000 59%,
+    transparent 72%
+  );
+}
+
+/*
+ * The sweep is a loading state, so it ends when the loading does: the mark stops
+ * glinting the moment the hero starts arriving, while it is still travelling.
+ */
+.hero-reveal--revealed .hero-reveal__sheen,
+.hero-reveal--revealed .hero-reveal__sheen-mark,
+.hero-reveal--revealed .hero-reveal__sheen-shade {
+  animation: none;
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+
+@keyframes hero-reveal-sheen {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+@keyframes hero-reveal-sheen-mask {
+  from {
+    -webkit-mask-position: 150% 0;
+    mask-position: 150% 0;
+  }
+  to {
+    -webkit-mask-position: -50% 0;
+    mask-position: -50% 0;
+  }
 }
 
 /*
@@ -58,24 +288,35 @@
 }
 
 /*
- * The logo and the text are held back until the box has finished opening -
- * hence the `animation-delay` of exactly the opening's duration, and the
- * `both` fill that keeps them out of sight until it elapses.
+ * The hero's own logo and its text are held back until everything has arrived.
+ * Scoped to the box: the placeholder holds a *copy* of that logo, carrying the
+ * same class, and it is the one thing that must stay visible throughout.
  */
-.hero-reveal:not(.hero-reveal--done) .hero-reveal__logo,
+.hero-reveal:not(.hero-reveal--done) .hero-reveal__box .hero-reveal__logo,
 .hero-reveal:not(.hero-reveal--done) .hero-reveal__text {
   opacity: 0;
 }
 
-.hero-reveal--revealed .hero-reveal__logo {
+/*
+ * With a mark in the placeholder there is no fade here at all: the copy travels
+ * to this exact place at this exact size, and `--done` swaps the two in one
+ * frame. A fade would be the page admitting it drew the logo twice. Without one
+ * (a consumer that passes no `placeholderLogo`) the logo still has to arrive
+ * somehow, so it keeps the fade it always had.
+ */
+.hero-reveal--revealed:not(.hero-reveal--has-mark)
+  .hero-reveal__box
+  .hero-reveal__logo {
   animation: hero-reveal-fade-in var(--hero-reveal-content-duration, 700ms)
     ease-out var(--hero-reveal-duration, 900ms) both;
 }
 
 /*
- * The text arrives with the logo but not like it: it rises the last part of its
- * own height as it fades, so the headline and its CTA read as settling into
- * place rather than switching on.
+ * The text arrives once the box has finished opening - hence the
+ * `animation-delay` of exactly the opening's duration, and the `both` fill that
+ * keeps it out of sight until it elapses. It rises the last part of its own
+ * height as it fades, so the headline and its CTA read as settling into place
+ * rather than switching on.
  */
 .hero-reveal--revealed .hero-reveal__text {
   animation: hero-reveal-rise-in var(--hero-reveal-content-duration, 700ms)
@@ -104,22 +345,25 @@
 
 /*
  * Reduced motion keeps the *wait* - the flicker it removes is a defect, not a
- * flourish - and drops every animation around it. `HeroReveal` goes straight
- * from closed to `done` in that case, so these rules only catch the frame in
- * between.
+ * flourish - and drops every animation around it, the loading sweep included.
+ * `HeroReveal` goes straight from closed to `done` in that case, so these rules
+ * only catch the frame in between.
  */
 @media (prefers-reduced-motion: reduce) {
-  .hero-reveal__navbar-spacer,
-  .hero-reveal__box {
+  .hero-reveal__box,
+  .hero-reveal--revealed .hero-reveal__placeholder-logo {
     transition: none;
   }
 
-  .hero-reveal--revealed .hero-reveal__logo,
+  .hero-reveal__sheen,
+  .hero-reveal__sheen-mark,
+  .hero-reveal__sheen-shade,
+  .hero-reveal--revealed .hero-reveal__box .hero-reveal__logo,
   .hero-reveal--revealed .hero-reveal__text {
     animation: none;
   }
 
-  .hero-reveal:not(.hero-reveal--done) .hero-reveal__logo,
+  .hero-reveal:not(.hero-reveal--done) .hero-reveal__box .hero-reveal__logo,
   .hero-reveal:not(.hero-reveal--done) .hero-reveal__text {
     opacity: 1;
   }
