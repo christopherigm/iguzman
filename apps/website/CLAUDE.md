@@ -402,7 +402,18 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   media query decides that - below `md` the index is the floating control in the
   next bullet. Clicking an entry goes through `scrollToElement` (never a bare
   `scrollIntoView`) at the section heading's own `id`; the heading carries the
-  `scroll-margin-top` that clears the navbar. The rail claims 3 of 12 columns
+  `scroll-margin-top` that clears the navbar.
+  ⚠ **That call passes `revealNavbar: true`, and so does the category card's
+  (`scroll-to-section-link.tsx`)** - the two jumps into this page. Below `sm`
+  the navbar hides on the way down, and a jump into a section _is_ a downward
+  scroll, so a reader who pressed an entry arrived at their dishes with the bar
+  swiped away; the option tells `@repo/ui`'s `Navbar` the scroll was the app's,
+  which leaves the bar alone during the travel and shows it when the page
+  lands. It is the same jump on both indexes, so both must pass it or the phone
+  card and the rail come to behave differently. The two `block: "nearest"`
+  scrolls in this app (the portion picker, the CMS list editors) deliberately
+  do **not**: they nudge the page by a few pixels inside a control the reader
+  is already using, where a bar sliding in is noise rather than a rescue. The rail claims 3 of 12 columns
   from `md`, which is why the item cards go three-across there (`md: 4`).
   ⚠ **It starts level with the first item _card_, and the way it does that is a
   spacer that _is_ the section heading** - the same `Box` + `Typography` markup
@@ -945,6 +956,14 @@ is a thin shell around those two components:
 - ⚠ **Size renders first, above the add-ons, on all three.** It is the first thing
   a customer decides about a dish, and it moves the base price the add-ons are
   added to.
+- **The space between the two is `MENU_CUSTOMIZER_GAP`, one number for all of
+  them** (`components/menu-customizer-spacing.ts`), a step above the rhythm
+  inside the pickers themselves - which size and what goes on it are two
+  separate decisions, and packed to that tighter rhythm the add-on list reads
+  as a caption under the size row. Each shell renders the pair inside its own
+  column so the number _is_ the gap; don't re-express it as a `marginTop` on
+  the add-ons, which lands on top of whatever gap the surrounding column
+  already has and is how the three drifted to 28 / 14 / 0 px.
 - **The arithmetic is `lib/menu-selection.ts`, shared for the same reason.**
   A dish configured at the counter and the same dish configured on the site must
   never quote different numbers. None of it is authoritative: the server
@@ -1320,7 +1339,7 @@ code already applied. The API owns every rule; read website-api's CLAUDE.md →
   sent as a pair** (including empty): clearing a target has to write the
   order-wide scope back, and the API refuses one half without the other.
   ⚠ It is deliberately **not** `CatalogRefPicker`. That one fills a fixed number
-  of *slots* from the three buyable families and never sees a category; this is a
+  of _slots_ from the three buyable families and never sees a category; this is a
   single-value, mutually-exclusive choice over **six**. The `${kind}:${id}`
   encoding is all they would have shared, and it is two lines.
 - ⚠ **The scope restricts the discount, and only the API decides how.** A scoped
@@ -1332,7 +1351,7 @@ code already applied. The API owns every rule; read website-api's CLAUDE.md →
 - ⚠ **The picker reports the picked row, not just its id, and that is
   load-bearing.** `coupon.scope` is the API's snapshot and cannot know about a
   pick made a second ago, so a form drawing the preview from it alone would show
-  the *previous* target's photograph until the operator saved and reloaded - on
+  the _previous_ target's photograph until the operator saved and reloaded - on
   the one screen whose whole job is showing them what they are about to print.
 - **The landing page says what a scoped coupon covers**, with the target's own
   catalog photograph, above the code and before "Start shopping" - not when the
@@ -1402,23 +1421,26 @@ entry, no migration**. `DEFAULT_COUPON_TEMPLATE_ID` must stay in step with
   download fails. Route it through `toSameOriginDataUrl` like the logo.
 - **A scoped coupon's target is drawn by all four templates**, through the
   shared `CouponTarget` in `coupon-parts.tsx`: the item's or category's
-  photograph in a round frame with its name beneath, under a "Valid on" /
+  photograph in a round frame beside a three-line stack - a "Valid on" /
   "Valid on all" line composed upstream (so a template never needs a
-  translator). It renders **nothing** for an order-wide coupon, the contract
+  translator), the category, then the name. It renders **nothing** for an order-wide coupon, the contract
   every optional part here follows, and it drops the frame entirely for a target
   with no photograph - which is the common case for a category, not an edge one.
   A blank circle beside a name reads as an image that failed to load.
-  ⚠ **That name is `"<category> - <name>"`, composed on the form** - "Pizzas -
-  Margherita" - so the flyer says where on the menu the offer sits rather than
-  naming a dish the reader may not place. Composed upstream like `valueLabel`
-  and the "Valid on" line, so all four templates print the same words; a target
-  with no category (every category scope, and an uncategorized product or
-  service) is drawn as its bare name rather than with a dangling separator. The
-  category reaches the form from two places and needs both:
-  `CouponScopePicker`'s third callback argument for a pick made a second ago,
-  and `scope.category_name` on the API's snapshot for a coupon just loaded.
+  ⚠ **The category and the name are two lines, not one composed string** - the
+  category quiet and small (the `muted` tone, 26px) above the name at 40px, so
+  the flyer still says where on the menu the offer sits without burying the dish
+  in that sentence. They used to be joined on the form as `"<category> - <name>"`
+  ("Pizzas - Margherita"), which printed the shelf and the dish at one size in
+  one ink; don't re-compose them. Both travel as their own field on
+  `CouponFlyerTarget`, so all four templates draw the same two lines, and a
+  target with no category (every category scope, and an uncategorized product or
+  service) drops that line rather than leaving a gap. The category reaches the
+  form from two places and needs both: `CouponScopePicker`'s third callback
+  argument for a pick made a second ago, and `scope.category_name` on the API's
+  snapshot for a coupon just loaded.
   ⚠ **`elegant` and `scan` pass both of its colours explicitly.** Its default
-  muted tone is a *lightened* version of its ink, which is right on a filled
+  muted tone is a _lightened_ version of its ink, which is right on a filled
   panel and invisible on their near-white grounds.
   ⚠ **`scan` also subtracts the block's height from its QR budget.** That budget
   is a fixed assumption about the header (`h * 0.42`), not a measurement, so
@@ -2133,15 +2155,16 @@ Before defining a constant, type, or pure utility function in a component file, 
 
 **Current shared files to check first:**
 
-| File                                                       | Contents                                                                                                                                                                                                                                                                                                      |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/website/components/admin/paragraph-options.ts`       | `PARAGRAPH_WORD_COUNTS`, `PARAGRAPH_LENGTH_STEPS`, `PARAGRAPH_COUNT_STEPS` - used by `admin-form.tsx` and `ai-interviewer/ai-interviewer.tsx`                                                                                                                                                                 |
-| `apps/website/components/admin/logo-background-options.ts` | `LOGO_BACKGROUND_SHAPES`, `LOGO_BACKGROUND_LABEL_KEY`, `SCALE_STEPS` - the badge shapes and size stops, used by `admin/logos-and-styles/hero-video-section.tsx` and `admin/social-posts/[id]/page.tsx`                                                                                                        |
-| `apps/website/components/admin/divider-options.ts`         | `DIVIDER_OPTIONS`, `DIVIDER_LABEL_KEY`, `toDividerOption`, `DividerOption` - the shape-divider shapes every CMS divider picker offers (the hero's bottom edge, both section bands' top/bottom edges), used by `admin/logos-and-styles/hero-video-section.tsx` and `components/admin/section-band-section.tsx` |
-| `apps/website/components/admin/catalog-option-label.ts`    | `CATALOG_KIND_ICON`, `catalogRowCategory`, `catalogOptionLabel` - how a catalog record reads in a CMS `<select>`: family glyph, then the **category** it is filed under (the family label only standing in when it has none), then its name. Used by `coupon-scope-picker.tsx`, `catalog-ref-picker.tsx` and `admin/social-posts/[id]/page.tsx`                                              |
-| `apps/website/lib/maps.ts`                                 | `directionsHref` - the Google Maps hand-off, built from **coordinates, never an address**. Used by the contact page's locations, an event's venue and an order's location; website-api builds the same URL for the order email                                                                                |
-| `apps/website/lib/same-origin-image.ts`                    | `toSameOriginDataUrl` - routes a remote image through `/api/media` (this app's own passthrough proxy) so a canvas that draws it is not tainted. Used by both flyer exports and by `lib/map-capture.ts`                                                                                                        |
-| `apps/website/lib/contact.ts`                              | `whatsappHref` - the wa.me click-to-chat URL, with the number stripped to digits (wa.me rejects the spaces and dashes people type) and an optional prefilled message. Used both directions: a **branch's** number on the contact page, a **customer's** in the admin inbox                                    |
+| File                                                       | Contents                                                                                                                                                                                                                                                                                                                                        |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/website/components/admin/paragraph-options.ts`       | `PARAGRAPH_WORD_COUNTS`, `PARAGRAPH_LENGTH_STEPS`, `PARAGRAPH_COUNT_STEPS` - used by `admin-form.tsx` and `ai-interviewer/ai-interviewer.tsx`                                                                                                                                                                                                   |
+| `apps/website/components/admin/logo-background-options.ts` | `LOGO_BACKGROUND_SHAPES`, `LOGO_BACKGROUND_LABEL_KEY`, `SCALE_STEPS` - the badge shapes and size stops, used by `admin/logos-and-styles/hero-video-section.tsx` and `admin/social-posts/[id]/page.tsx`                                                                                                                                          |
+| `apps/website/components/admin/divider-options.ts`         | `DIVIDER_OPTIONS`, `DIVIDER_LABEL_KEY`, `toDividerOption`, `DividerOption` - the shape-divider shapes every CMS divider picker offers (the hero's bottom edge, both section bands' top/bottom edges), used by `admin/logos-and-styles/hero-video-section.tsx` and `components/admin/section-band-section.tsx`                                   |
+| `apps/website/components/admin/catalog-option-label.ts`    | `CATALOG_KIND_ICON`, `catalogRowCategory`, `catalogOptionLabel` - how a catalog record reads in a CMS `<select>`: family glyph, then the **category** it is filed under (the family label only standing in when it has none), then its name. Used by `coupon-scope-picker.tsx`, `catalog-ref-picker.tsx` and `admin/social-posts/[id]/page.tsx` |
+| `apps/website/components/menu-customizer-spacing.ts`       | `MENU_CUSTOMIZER_GAP` - the space between the size choice and the add-ons, on all three surfaces that customise a dish (detail page, card/cart modal, POS till)                                                                                                                                                                                 |
+| `apps/website/lib/maps.ts`                                 | `directionsHref` - the Google Maps hand-off, built from **coordinates, never an address**. Used by the contact page's locations, an event's venue and an order's location; website-api builds the same URL for the order email                                                                                                                  |
+| `apps/website/lib/same-origin-image.ts`                    | `toSameOriginDataUrl` - routes a remote image through `/api/media` (this app's own passthrough proxy) so a canvas that draws it is not tainted. Used by both flyer exports and by `lib/map-capture.ts`                                                                                                                                          |
+| `apps/website/lib/contact.ts`                              | `whatsappHref` - the wa.me click-to-chat URL, with the number stripped to digits (wa.me rejects the spaces and dashes people type) and an optional prefilled message. Used both directions: a **branch's** number on the contact page, a **customer's** in the admin inbox                                                                      |
 
 **How to apply:**
 

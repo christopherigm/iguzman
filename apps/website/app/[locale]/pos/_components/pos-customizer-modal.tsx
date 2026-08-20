@@ -21,6 +21,7 @@ import {
 } from "@/lib/menu-selection";
 import { MenuIngredientPicker } from "@/components/menu-ingredient-picker";
 import { MenuSizePicker } from "@/components/menu-size-picker";
+import { MENU_CUSTOMIZER_GAP } from "@/components/menu-customizer-spacing";
 import { lineKey, type PosCatalogItem, type PosLine } from "@/lib/pos";
 
 interface Props {
@@ -151,34 +152,42 @@ export function PosCustomizerModal({
       cancelCallback={onCancel}
     >
       <Box flexDirection="column" gap={14}>
-        {/* Size first, as on the storefront: it is what the customer at the
-            counter is asked before anything else. */}
-        {hasSizeChoice(item.sizes) && (
-          <MenuSizePicker
-            sizes={item.sizes}
-            basePrice={item.price}
-            value={sizeId}
-            onChange={setSizeId}
-            currency={item.currency}
-            locale={locale}
-            size="lg"
-          />
-        )}
+        {/* The size choice and the add-ons, the shared `MENU_CUSTOMIZER_GAP`
+            apart - the same space the storefront puts between them, rather than
+            this column's own rhythm. One block, so a dish with neither costs no
+            gaps around an empty box. */}
+        {(hasSizeChoice(item.sizes) || ingredients.length > 0) && (
+          <Box flexDirection="column" gap={MENU_CUSTOMIZER_GAP}>
+            {/* Size first, as on the storefront: it is what the customer at the
+                counter is asked before anything else. */}
+            {hasSizeChoice(item.sizes) && (
+              <MenuSizePicker
+                sizes={item.sizes}
+                basePrice={item.price}
+                value={sizeId}
+                onChange={setSizeId}
+                currency={item.currency}
+                locale={locale}
+                size="lg"
+              />
+            )}
 
-        <MenuIngredientPicker
-          ingredients={item.ingredients}
-          quantities={quantities}
-          options={options}
-          onQuantityChange={(id, quantity) =>
-            setQuantities((prev) => ({ ...prev, [id]: quantity }))
-          }
-          onOptionChange={(id, choiceId) =>
-            setOptions((prev) => ({ ...prev, [id]: choiceId }))
-          }
-          currency={item.currency}
-          locale={locale}
-          size="lg"
-        />
+            <MenuIngredientPicker
+              ingredients={item.ingredients}
+              quantities={quantities}
+              options={options}
+              onQuantityChange={(id, quantity) =>
+                setQuantities((prev) => ({ ...prev, [id]: quantity }))
+              }
+              onOptionChange={(id, choiceId) =>
+                setOptions((prev) => ({ ...prev, [id]: choiceId }))
+              }
+              currency={item.currency}
+              locale={locale}
+              size="lg"
+            />
+          </Box>
+        )}
 
         {/* How many of *this* configuration. Separate from the ingredient
             steppers above, which decide what one of them contains. */}

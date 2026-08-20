@@ -206,7 +206,11 @@ export function MenuCategoryNavItems({
             aria-current={isActive ? "location" : undefined}
             onClick={() => {
               select(item.targetId);
-              scrollToElement(`#${item.targetId}`);
+              // `revealNavbar`: the travel is downwards, which is the gesture
+              // the fixed navbar hides on - so the reader would arrive at the
+              // section they picked with the bar swiped away. It is left alone
+              // during the jump and shown again when the page lands.
+              scrollToElement(`#${item.targetId}`, { revealNavbar: true });
               onSelect?.();
             }}
             width="100%"

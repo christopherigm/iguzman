@@ -54,7 +54,10 @@ export function ScrollToSectionLink({
           event.altKey
         )
           return;
-        if (!scrollToElement(`#${targetId}`)) return;
+        // `revealNavbar`, exactly as on the rail's own entries: this scroll is
+        // the app's, not the reader asking for more room, so the fixed navbar
+        // stays put during the travel and is shown again when it lands.
+        if (!scrollToElement(`#${targetId}`, { revealNavbar: true })) return;
         event.preventDefault();
         event.stopPropagation();
       }}

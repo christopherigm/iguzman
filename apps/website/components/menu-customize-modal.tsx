@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { Box } from "@repo/ui/core-elements/box";
 import type { MenuItemIngredient, MenuSize } from "@/lib/catalog";
 import { formatPrice } from "@/lib/price";
 import {
@@ -16,6 +17,7 @@ import {
   type SelectionQuantities,
 } from "@/lib/menu-selection";
 import { addGuestCartLine } from "@/lib/guest-cart";
+import { MENU_CUSTOMIZER_GAP } from "./menu-customizer-spacing";
 import { MenuIngredientPicker } from "./menu-ingredient-picker";
 import { MenuSizePicker } from "./menu-size-picker";
 
@@ -223,32 +225,38 @@ export function MenuCustomizeModal({
       okCallback={handleConfirm}
       cancelCallback={onCancel}
     >
-      {/* Size first: it is what the customer is choosing between, and it moves
-          the base the add-ons below are added to. */}
-      {hasSizeChoice(sizes) && (
-        <MenuSizePicker
-          sizes={sizes}
-          basePrice={basePrice}
-          value={sizeId}
-          onChange={setSizeId}
+      {/* The size choice and the add-ons, held apart by the shared
+          `MENU_CUSTOMIZER_GAP` - the modal's children arrive in a plain block,
+          so without this column the add-on list sat straight against the size
+          cards. */}
+      <Box flexDirection="column" gap={MENU_CUSTOMIZER_GAP}>
+        {/* Size first: it is what the customer is choosing between, and it moves
+            the base the add-ons below are added to. */}
+        {hasSizeChoice(sizes) && (
+          <MenuSizePicker
+            sizes={sizes}
+            basePrice={basePrice}
+            value={sizeId}
+            onChange={setSizeId}
+            currency={currency}
+            locale={locale}
+          />
+        )}
+
+        <MenuIngredientPicker
+          ingredients={ingredients}
+          quantities={quantities}
+          options={options}
+          onQuantityChange={(id, quantity) =>
+            setQuantities((prev) => ({ ...prev, [id]: quantity }))
+          }
+          onOptionChange={(id, choiceId) =>
+            setOptions((prev) => ({ ...prev, [id]: choiceId }))
+          }
           currency={currency}
           locale={locale}
         />
-      )}
-
-      <MenuIngredientPicker
-        ingredients={ingredients}
-        quantities={quantities}
-        options={options}
-        onQuantityChange={(id, quantity) =>
-          setQuantities((prev) => ({ ...prev, [id]: quantity }))
-        }
-        onOptionChange={(id, choiceId) =>
-          setOptions((prev) => ({ ...prev, [id]: choiceId }))
-        }
-        currency={currency}
-        locale={locale}
-      />
+      </Box>
     </ConfirmationModal>
   );
 }

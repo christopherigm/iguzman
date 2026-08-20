@@ -33,8 +33,10 @@ export function ScanTemplate({ data }: { data: CouponFlyerData }) {
   // a measurement. Without this the thumbnail simply grows the header and pushes
   // the symbol off the bottom of the canvas - and on the one template whose
   // entire purpose is the scan, an overflowing QR is the worst possible bug.
-  // The number is the thumbnail's diameter plus the column's gap.
-  const targetHeight = data.target ? 132 : 0;
+  // The number is the taller of the thumbnail and the text column beside it,
+  // plus the header's gap. The column is three lines now ("Valid on", the
+  // category, then the name at 40px), which is what raised this from 132.
+  const targetHeight = data.target ? 150 : 0;
   // The QR gets whatever the canvas can spare after the header and footer, so a
   // 4x5 flyer prints a bigger symbol than a square one instead of both being
   // capped at the square's budget.

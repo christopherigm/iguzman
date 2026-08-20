@@ -98,13 +98,25 @@ export interface CouponFlyerData {
 /** The item or category a scoped coupon is for, as a template draws it. */
 export interface CouponFlyerTarget {
   /**
-   * What the offer is for, composed upstream as `"<category> - <name>"` -
-   * "Pizzas - Margherita" - so the flyer says where on the menu the offer sits
-   * rather than naming a dish the reader may not place. A target with no
-   * category (every category scope, and an uncategorized product or service) is
-   * its bare name. Never empty.
+   * What the offer is for - the record's own name, on its own. Never empty.
+   *
+   * ⚠ It is deliberately **not** composed with the category any more. The two
+   * used to travel as one `"Pizzas - Margherita"` string, which set the dish -
+   * the thing a reader is looking for - in the same ink and the same size as
+   * the shelf it sits on. They are drawn as two lines now (see `category`), so
+   * anything joining them back into one string would undo that.
    */
   name: string;
+  /**
+   * The category the target is filed under, drawn as a quieter line **above**
+   * the name so the flyer still says where on the menu the offer sits without
+   * competing with the dish itself.
+   *
+   * Undefined when there is none to print - every category scope (a category is
+   * filed under nothing) and an uncategorized product or service - in which case
+   * the name is drawn alone. Never a dangling separator.
+   */
+  category?: string;
   /**
    * Its photograph as a **data URL**, resolved same-origin upstream like every
    * other image here. Undefined when the record has no picture, which is

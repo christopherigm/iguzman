@@ -341,7 +341,17 @@ export function CouponBackdrop({
 
 /**
  * The thumbnail that says what a scoped coupon is for: the item's or category's
- * photograph in a round frame, its name beneath, under a "Valid on" line.
+ * photograph in a round frame, and beside it a three-line stack - the "Valid on"
+ * line, the category the target is filed under, then the target's own name.
+ *
+ * ⚠ **The category and the name are two lines, not one composed string.** They
+ * used to be joined upstream as "Pizzas - Margherita", which printed the shelf
+ * and the dish at one size in one ink - so the reader had to parse the line to
+ * find the thing the coupon is actually for. The category now takes the quiet
+ * `muted` tone at a smaller size and the name is the largest thing in the block,
+ * which is the order a reader scans it in. A target with no category (every
+ * category scope, and an uncategorized product or service) simply drops that
+ * line rather than leaving a gap or a dangling separator.
  *
  * Rendered by all four templates, sized and coloured by each - a coupon for one
  * dish is a different promise from a coupon for everything, and the flyer has to
@@ -415,7 +425,10 @@ export function CouponTarget({
         display="flex"
         flexDirection="column"
         gap={4}
-        styles={{ minWidth: 0, textAlign: align === "center" ? "left" : "left" }}
+        styles={{
+          minWidth: 0,
+          textAlign: align === "center" ? "left" : "left",
+        }}
       >
         <Typography
           variant="none"
@@ -429,15 +442,35 @@ export function CouponTarget({
         >
           {target.label}
         </Typography>
+        {target.category ? (
+          <Typography
+            variant="none"
+            color={label}
+            styles={{
+              fontSize: 26,
+              fontWeight: 600,
+              lineHeight: 1.2,
+              // Clamped to one line, and harder than the name is: this line is
+              // the offer's address, not the offer, so a long category name may
+              // be cut where the dish's may not.
+              display: "-webkit-box",
+              WebkitLineClamp: 1,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {target.category}
+          </Typography>
+        ) : null}
         <Typography
           variant="none"
           color={color}
           styles={{
-            fontSize: 34,
-            fontWeight: 700,
-            lineHeight: 1.2,
-            // One line: the name sits under a value label that must stay the
-            // largest thing on the flyer, and a three-line category name would
+            fontSize: 40,
+            fontWeight: 800,
+            lineHeight: 1.15,
+            // Two lines at most: the name sits under a value label that must
+            // stay the largest thing on the flyer, and a three-line name would
             // push it off a 1x1 canvas.
             display: "-webkit-box",
             WebkitLineClamp: 2,

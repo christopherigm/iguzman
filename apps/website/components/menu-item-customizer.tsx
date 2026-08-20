@@ -17,6 +17,7 @@ import {
   menuItemTotal,
 } from "@/lib/menu-selection";
 import { addGuestCartLine } from "@/lib/guest-cart";
+import { MENU_CUSTOMIZER_GAP } from "./menu-customizer-spacing";
 import { MenuIngredientPicker } from "./menu-ingredient-picker";
 import { MenuSizePicker } from "./menu-size-picker";
 import { useMenuCustomization } from "./menu-customization-context";
@@ -47,8 +48,11 @@ type ToastKind = "added" | "failed";
  * the page-level parts around them - the heading, the live total, and the two
  * CTAs.
  *
- * **Size comes first**, above the add-ons: it is the first thing a customer
- * decides about a dish, and it moves the base the add-ons are added to.
+ * **The heading titles the whole customiser**, above both pickers - the question
+ * it asks ("Customize your X") is about the dish, not about the add-on list it
+ * used to sit on top of. **Size then comes first**, above the add-ons: it is the
+ * first thing a customer decides about a dish, and it moves the base the add-ons
+ * are added to.
  *
  * Each ingredient starts at its included quantity (1 for a default, 0 for an
  * optional add-on). A portion gauge moves it within `[min, max_quantity]` - defaults
@@ -170,41 +174,44 @@ export function MenuItemCustomizer({
 
   return (
     <Box flexDirection="column" gap={16}>
-      {/* Size before add-ons, and above the heading the add-ons carry: the dish
-          is chosen, then configured. A dish offered in one size renders nothing. */}
-      {hasSizeChoice(sizes) && (
-        <MenuSizePicker
-          sizes={sizes}
-          basePrice={basePrice}
-          value={sizeId}
-          onChange={setSizeId}
-          currency={currency}
-          locale={locale}
-        />
-      )}
-
-      {visibleIngredients.length > 0 && (
-        /* Set further from the size cards than the column's own 16px rhythm:
-           these are two separate decisions about the dish, and the add-on
-           heading reading as a caption under the size row blurred them. */
-        <Box
-          flexDirection="column"
-          gap={10}
-          marginTop={hasSizeChoice(sizes) ? 12 : 0}
-        >
+      {/* Rendered as one block so an empty one (a dish sold in one size with
+          nothing to add) costs no gaps at all - and so the heading titles the
+          whole customiser rather than just the add-ons under it. */}
+      {(hasSizeChoice(sizes) || visibleIngredients.length > 0) && (
+        <Box flexDirection="column" gap={10}>
           <Typography as="h2" variant="none" className="item-section-heading">
             {t("customize", { name: menuItemName })}
           </Typography>
 
-          <MenuIngredientPicker
-            ingredients={ingredients}
-            quantities={quantities}
-            options={options}
-            onQuantityChange={setQuantity}
-            onOptionChange={setOption}
-            currency={currency}
-            locale={locale}
-          />
+          {/* The two questions, set apart by the shared `MENU_CUSTOMIZER_GAP`
+              rather than by this column's own rhythm - the same space the card
+              modal and the till put between them. */}
+          <Box flexDirection="column" gap={MENU_CUSTOMIZER_GAP}>
+            {/* Size before add-ons: the dish is chosen, then configured. A dish
+                offered in one size renders nothing. */}
+            {hasSizeChoice(sizes) && (
+              <MenuSizePicker
+                sizes={sizes}
+                basePrice={basePrice}
+                value={sizeId}
+                onChange={setSizeId}
+                currency={currency}
+                locale={locale}
+              />
+            )}
+
+            {visibleIngredients.length > 0 && (
+              <MenuIngredientPicker
+                ingredients={ingredients}
+                quantities={quantities}
+                options={options}
+                onQuantityChange={setQuantity}
+                onOptionChange={setOption}
+                currency={currency}
+                locale={locale}
+              />
+            )}
+          </Box>
         </Box>
       )}
 

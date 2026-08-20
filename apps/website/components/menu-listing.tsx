@@ -170,7 +170,7 @@ export async function MenuListing({ locale }: MenuListingProps) {
                   />
                 );
                 return (
-                  <Grid key={cat.id} size={{ xs: 6, sm: 4, lg: 3 }}>
+                  <Grid key={cat.id} size={{ xs: 6, sm: 4, md: 3 }}>
                     {/* The card keeps its href - it is the category's real
                      *  address, and the one an empty category (no section
                      *  below) still needs - but on this page the dishes are

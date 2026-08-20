@@ -202,7 +202,7 @@ export async function CatalogCategories() {
             cat.en_name ??
             "";
           return (
-            <Grid key={`product-${cat.id}`} size={{ xs: 6, sm: 4, lg: 3 }}>
+            <Grid key={`product-${cat.id}`} size={{ xs: 6, sm: 4, md: 3 }}>
               <CategoryCard
                 id={cat.id}
                 name={name}
@@ -221,7 +221,7 @@ export async function CatalogCategories() {
             cat.en_name ??
             "";
           return (
-            <Grid key={`service-${cat.id}`} size={{ xs: 6, sm: 4, lg: 3 }}>
+            <Grid key={`service-${cat.id}`} size={{ xs: 6, sm: 4, md: 3 }}>
               <CategoryCard
                 id={cat.id}
                 name={name}
@@ -240,7 +240,7 @@ export async function CatalogCategories() {
             cat.en_name ??
             "";
           return (
-            <Grid key={`food-${cat.id}`} size={{ xs: 6, sm: 4, lg: 3 }}>
+            <Grid key={`food-${cat.id}`} size={{ xs: 6, sm: 4, md: 3 }}>
               <CategoryCard
                 id={cat.id}
                 name={name}

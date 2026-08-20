@@ -16,6 +16,7 @@ import { Icon } from "./icon";
 import { TextInput } from "./text-input";
 import { Drawer } from "./drawer";
 import getImageDimensionsFromBase64 from "@repo/helpers/get-image-dimensions-from-base64";
+import { subscribeToProgrammaticScroll } from "./scroll-to";
 import "./navbar.css";
 import { Box } from "./box";
 
@@ -90,6 +91,9 @@ export interface NavbarProps extends UIComponentProps {
 function useScrollDirection(threshold = 5): "up" | "down" | null {
   const [direction, setDirection] = useState<"up" | "down" | null>(null);
   const lastScrollY = useRef(0);
+  // True while the *app* is scrolling the page - a jump-list entry pressed, a
+  // page opening on something other than its own top. See the effect below.
+  const programmatic = useRef(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -97,6 +101,28 @@ function useScrollDirection(threshold = 5): "up" | "down" | null {
     setDirection(null);
     lastScrollY.current = 0;
   }, [pathname]);
+
+  // A scroll the app started is not the reader asking for more room. Pressing
+  // an entry in a menu's category index travels *down* the page, which is
+  // exactly the gesture that hides this bar - so the reader landed where they
+  // asked to be with the navigation they were using swiped off the screen. For
+  // the length of such a travel the direction is left alone, and the bar is
+  // shown again once the page has stopped moving (a bar hidden *before* the
+  // press comes back with it, which is the whole point).
+  //
+  // ⚠ Only scrolls that opted in through `scroll-to`'s `revealNavbar` are
+  // announced, so nothing changes for an app that never passes it.
+  useEffect(
+    () =>
+      subscribeToProgrammaticScroll((phase) => {
+        programmatic.current = phase === "start";
+        if (phase === "end") {
+          lastScrollY.current = window.scrollY;
+          setDirection(null);
+        }
+      }),
+    [],
+  );
 
   useEffect(() => {
     const handleScroll = () => {
@@ -106,6 +132,13 @@ function useScrollDirection(threshold = 5): "up" | "down" | null {
         return;
       }
       const currentY = window.scrollY;
+      // The app is driving: follow the page without forming an opinion about
+      // it, so the reader's next real gesture is measured from where they
+      // actually are rather than from where they were before the jump.
+      if (programmatic.current) {
+        lastScrollY.current = currentY;
+        return;
+      }
       // Always show navbar near the top and keep the reference current so that
       // fast upward scrolls past this boundary don't leave lastScrollY stale.
       if (currentY < 300) {

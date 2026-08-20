@@ -397,15 +397,18 @@ export default function AdminCouponFormPage({ params }: Props) {
       // simply does not render - the contract each of them already follows.
       target: scopeKind
         ? {
-            // "Pizzas - Margherita": the category, then the item, so a flyer
-            // says where on the menu the offer sits rather than naming a dish
-            // the reader may not place. Composed here rather than in the four
-            // templates, exactly as `valueLabel` and the two other labels are,
-            // so every template prints the same words. A target with no
-            // category - every category scope, and an uncategorized product or
-            // service - is drawn as its bare name; there is no prefix to add
-            // and a dangling separator would read as a rendering slip.
-            name: [target?.category, target?.name].filter(Boolean).join(" - "),
+            // The category and the name travel as two fields, and every
+            // template draws them as two lines - the category quiet and small
+            // above the name, which is the thing the reader is looking for.
+            // They used to be composed here into one "Pizzas - Margherita"
+            // string, which printed the shelf and the dish at one size in one
+            // ink; splitting them is what lets a flyer still say where on the
+            // menu the offer sits without burying the dish in that sentence.
+            name: target?.name ?? "",
+            // Empty for every category scope (a category is filed under
+            // nothing) and for an uncategorized product or service, in which
+            // case the templates draw the name alone.
+            category: target?.category || undefined,
             image: targetImageData,
             label: isCategoryScope ? t("couponValidOnAll") : t("couponValidOn"),
           }
