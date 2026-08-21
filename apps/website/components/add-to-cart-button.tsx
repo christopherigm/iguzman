@@ -77,6 +77,16 @@ interface AddToCartButtonProps {
    * the button's `title` and accessible name. Ignored by the `icon` display.
    */
   short?: boolean;
+  /**
+   * Draw the cart glyph on the `button` display. Turned off by a caller whose
+   * row is too narrow to hold the glyph *and* the verb - the catalog card's
+   * action row, where the stepper beside it has the other half of the width and
+   * "Add" is "Hinzufügen" in German. The glyph is the half that goes: the verb
+   * is what says whether this button adds or removes, and the button is already
+   * the only cart control on the card. Ignored by the `icon` display, which is
+   * nothing but the glyph. @default true
+   */
+  showIcon?: boolean;
   size?: IconButtonSize & ButtonSize;
   /**
    * Stop the click reaching an enclosing link. Set when the button sits on top
@@ -178,6 +188,7 @@ export function AddToCartButton({
   display = "icon",
   buttonKind,
   short = false,
+  showIcon = true,
   size = "sm",
   stopPropagation = false,
   flex,
@@ -319,7 +330,7 @@ export function AddToCartButton({
           text={text}
           title={label}
           aria-label={label}
-          icon={icon}
+          icon={showIcon ? icon : undefined}
           kind={inCart ? "error" : buttonKind}
           size={size}
           flex={flex}
