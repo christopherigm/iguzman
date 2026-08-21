@@ -555,9 +555,14 @@ export function AdminForm({
             are inert. */}
         {(saving || loading) && <ProgressBar />}
 
-        {error && <Toast message={error} variant="error" />}
+        {error && <Toast message={error} variant="error" primary />}
         {success && (
-          <Toast message={success} variant="success" position="top-center" />
+          <Toast
+            message={success}
+            variant="success"
+            position="top-center"
+            primary
+          />
         )}
 
         <form

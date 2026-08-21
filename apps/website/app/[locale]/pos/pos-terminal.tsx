@@ -181,6 +181,7 @@ export function PosTerminal({ items, locale }: Props) {
           message={toast.message}
           variant={toast.variant}
           position="top-center"
+          primary
           duration={4}
         />
       )}

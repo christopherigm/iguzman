@@ -869,9 +869,14 @@ export default function AdminCouponFormPage({ params }: Props) {
         <SiblingArrow direction="next" siblings={siblings} />
       </Box>
 
-      {error && <Toast message={error} variant="error" />}
+      {error && <Toast message={error} variant="error" primary />}
       {success && (
-        <Toast message={success} variant="success" position="top-center" />
+        <Toast
+          message={success}
+          variant="success"
+          position="top-center"
+          primary
+        />
       )}
     </>
   );

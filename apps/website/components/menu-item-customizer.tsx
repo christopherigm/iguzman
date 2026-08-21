@@ -337,6 +337,7 @@ export function MenuItemCustomizer({
           message={toast.kind === "added" ? t("addedToCart") : t("addFailed")}
           variant={toast.kind === "added" ? "success" : "error"}
           position="top-center"
+          primary
           duration={3}
         />
       )}

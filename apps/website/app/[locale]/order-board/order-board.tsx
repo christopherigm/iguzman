@@ -337,6 +337,7 @@ export function OrderBoard() {
           message={toast.message}
           variant={toast.variant}
           position="top-center"
+          primary
           duration={4}
         />
       )}

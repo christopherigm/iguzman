@@ -20,6 +20,14 @@ interface ToastProps {
   position?: ToastPosition;
   /** Seconds before the toast disappears. Pass 0 to never auto-dismiss. Default: 5 */
   duration?: number;
+  /**
+   * Paints the toast as a solid surface with white text instead of the variant's
+   * translucent tint: `--accent` for a `success` toast - the accent is a *fill*
+   * here, so it keeps the raw `--accent` rather than `--accent-text` (see
+   * `core-elements/contrast`) - and a solid red for an `error` one, since a
+   * failure is a signal and must not be repainted in the brand colour.
+   */
+  primary?: boolean;
 }
 
 export function Toast({
@@ -27,6 +35,7 @@ export function Toast({
   variant,
   position = "bottom-left",
   duration = 5,
+  primary = false,
 }: ToastProps) {
   const [phase, setPhase] = useState<"in" | "out" | "gone">("in");
 
@@ -44,14 +53,17 @@ export function Toast({
 
   return (
     <Box
-      className={`ui-toast ui-toast--${variant} ui-toast--${position} ui-toast--${phase}`}
+      className={`ui-toast ui-toast--${variant} ui-toast--${position} ui-toast--${phase}${primary ? " ui-toast--primary" : ""
+        }`}
       role="alert"
       aria-live="polite"
       onClick={() => setPhase("out")}
       styles={{ pointerEvents: phase === "in" ? "auto" : "none" }}
       onAnimationEnd={handleAnimationEnd}
     >
-      <Typography variant="body">{message}</Typography>
+      <Typography variant="body" color={primary ? "#fff" : undefined} textAlign="center">
+        {message}
+      </Typography>
     </Box>
   );
 }

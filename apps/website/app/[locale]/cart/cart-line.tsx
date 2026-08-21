@@ -516,6 +516,7 @@ export function CartLine({
           message={t("editFailed")}
           variant="error"
           position="top-center"
+          primary
           duration={3}
         />
       )}

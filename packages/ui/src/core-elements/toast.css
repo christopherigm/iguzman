@@ -52,6 +52,32 @@
   border: 1px solid color-mix(in srgb, #43a047 30%, transparent);
 }
 
+/* ─── Primary (solid accent) ─────────────────────────────────────────────────── */
+
+/*
+ * Two classes deep so it beats the variant tint above. The accent is the surface
+ * here, so it stays the raw --accent (not --accent-text), and an opaque surface
+ * has nothing behind it worth blurring.
+ */
+.ui-toast.ui-toast--primary {
+  background: var(--accent, #1976d2);
+  color: #fff;
+  border: 1px solid var(--accent, #1976d2);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/*
+ * A failure stays red even here - the accent is the brand, not a signal - but it
+ * goes opaque with the rest, so a solid success and a translucent error are never
+ * on screen together. Red 800 rather than the tint's 500, which white text cannot
+ * clear AA against.
+ */
+.ui-toast.ui-toast--primary.ui-toast--error {
+  background: #c62828;
+  border-color: #c62828;
+}
+
 /* ─── Positions + translation direction ─────────────────────────────────────── */
 
 .ui-toast--bottom-left {
@@ -63,6 +89,8 @@
 .ui-toast--bottom-center {
   bottom: 24px;
   left: 50%;
+  width: 100%;
+  max-width: min(500px, calc(100% - 48px));
   --_tx: -50%;
   --_ty: 16px;
 }
@@ -82,6 +110,8 @@
 .ui-toast--top-center {
   top: 64px;
   left: 50%;
+  width: 100%;
+  max-width: min(500px, calc(100% - 48px));
   --_tx: -50%;
   --_ty: -16px;
 }

@@ -108,6 +108,7 @@ export function BuyNowButton({
           message={t("addToCartFailed")}
           variant="error"
           position="top-center"
+          primary
           duration={3}
         />
       )}

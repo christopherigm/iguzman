@@ -366,6 +366,7 @@ export function AddToCartButton({
               : "error"
           }
           position="top-center"
+          primary
           duration={3}
         />
       )}
