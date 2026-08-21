@@ -60,6 +60,14 @@ interface Props {
   isLoggedIn: boolean;
   locale: string;
   /**
+   * How many of the configured dish to add, from the stepper on the card that
+   * opened this modal. There is deliberately no stepper *inside* here - see the
+   * component's own note - so this is only ever a number chosen before the
+   * dialog opened, and it is ignored while `editing`: a line's quantity belongs
+   * to the row's own stepper, right behind the modal.
+   */
+  quantity?: number;
+  /**
    * Set when the modal is **editing** a line already in the cart instead of
    * adding a new one: the pickers open on that line's selection, OK saves it
    * through the caller's own write, and `isLoggedIn` is not consulted.
@@ -87,11 +95,12 @@ interface Props {
  * add-ons at all: a card that quietly added the default size would be choosing
  * the pizza's diameter on the customer's behalf, at a price they never saw.
  *
- * Deliberately **one** dish per confirm: unlike the POS modal there is no
- * quantity stepper here, because the detail page's customiser adds one too and
- * the cart page is where a customer changes how many they want. That holds while
- * editing too - the row's own stepper is right behind the modal, and a second
- * one inside it could only disagree with it.
+ * Deliberately **no quantity stepper here**: unlike the POS modal, how many is a
+ * question the surface that opened this dialog has already asked - the catalog
+ * card's own stepper, which hands its count in as `quantity` - and the cart page
+ * is where it is changed afterwards. That holds while editing too: the row's own
+ * stepper is right behind the modal, and a second one inside it could only
+ * disagree with it.
  *
  * As everywhere else, nothing here is trusted about money: the rows name
  * ingredients and quantities, and the server re-prices them.
@@ -105,6 +114,7 @@ export function MenuCustomizeModal({
   sizes,
   isLoggedIn,
   locale,
+  quantity = 1,
   editing,
   onCancel,
   onResult,
@@ -153,14 +163,13 @@ export function MenuCustomizeModal({
     () => editing?.size ?? defaultSize(sizes)?.id,
   );
 
-  const total = menuItemTotal(
-    basePrice,
-    sizes,
-    sizeId,
-    ingredients,
-    quantities,
-    options,
-  );
+  // ⚠ Multiplied by the quantity the card asked for, because that is what OK
+  // puts in the cart. Everything above it - the size deltas, each add-on's
+  // up-charge - is still per dish, which is the unit those controls price in;
+  // only this last figure is the line.
+  const total =
+    menuItemTotal(basePrice, sizes, sizeId, ingredients, quantities, options) *
+    (editing ? 1 : quantity);
 
   const handleConfirm = () => {
     const customization = buildCustomization(ingredients, quantities, options);
@@ -183,7 +192,7 @@ export function MenuCustomizeModal({
         id: menuItemId,
         size: sizeId,
         customization,
-        quantity: 1,
+        quantity,
       });
       onResult(true);
       return;
@@ -199,7 +208,7 @@ export function MenuCustomizeModal({
             id: menuItemId,
             size: sizeId,
             customization,
-            quantity: 1,
+            quantity,
           }),
         });
         onResult(res.ok);

@@ -52,12 +52,14 @@ export async function CatalogItems() {
   const daySeed = Math.floor(Date.now() / 86_400_000);
   const items: BuyableItem[] = [
     ...products.map((data): BuyableItem => ({ kind: "product", data })),
-    ...services.map(
-      (data: FeaturedService): BuyableItem => ({ kind: "service", data }),
-    ),
-    ...menuItems.map(
-      (data: MenuItemDetail): BuyableItem => ({ kind: "food", data }),
-    ),
+    ...services.map((data: FeaturedService): BuyableItem => ({
+      kind: "service",
+      data,
+    })),
+    ...menuItems.map((data: MenuItemDetail): BuyableItem => ({
+      kind: "food",
+      data,
+    })),
   ].sort((a, b) => shuffleKey(a, daySeed) - shuffleKey(b, daySeed));
 
   // One "see more" per family that actually has a card in the grid above -
@@ -86,14 +88,17 @@ export async function CatalogItems() {
       </Box>
       <Grid container spacing={2}>
         {items.map((item) => (
-          <Grid
-            key={`${item.kind}-${item.data.id}`}
-            size={{ xs: 6, sm: 3 }}
-          >
+          <Grid key={`${item.kind}-${item.data.id}`} size={{ xs: 6, sm: 3 }}>
             <BuyableCard
               item={item}
               locale={locale}
               fromLabel={tMenu("from")}
+              // This grid interleaves products, services and dishes in one
+              // shuffled run, so the card wears its own category to say what it
+              // is. It is the tenant's own copy in its own language - the API
+              // carries one name per category, not a per-locale pair - and a
+              // record with no category simply gets no chip.
+              badge={item.data.category_name}
             />
           </Grid>
         ))}

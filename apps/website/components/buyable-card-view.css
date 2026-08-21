@@ -1,0 +1,27 @@
+/*
+ * The concave sweep that joins the share/heart tab to the bottom edge of the
+ * photograph, so the card's surface reads as bleeding up into the picture
+ * rather than as a rounded box sitting on top of it.
+ *
+ * It has to be a pseudo-element: `border-radius` only ever rounds a corner
+ * *inwards*, and this corner turns the other way. So a square of the card's own
+ * colour is hung off the tab's left side with a quarter-circle bitten out of its
+ * top-left by a radial gradient - the arc runs from the bottom edge up to the
+ * tab's left edge, tangent to both.
+ *
+ * The two stops are half a pixel apart rather than identical: a hard stop
+ * aliases into a visible staircase on the curve at this radius.
+ */
+.buyable-card__tab::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  background: radial-gradient(
+    circle at 0 0,
+    transparent 13.5px,
+    var(--surface-1) 14px
+  );
+}

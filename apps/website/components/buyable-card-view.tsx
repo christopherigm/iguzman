@@ -6,13 +6,16 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
+import { ShareButton } from "@repo/ui/core-elements/share-button";
 import { toShareDescription } from "@/lib/share";
 import { menuItemHref } from "@/lib/menu-paths";
 import { formatPrice, discountPercent } from "@/lib/price";
 import { enabledIngredients, lowestPrice } from "@/lib/menu-selection";
 import { BuyableCardActions } from "./buyable-card-actions";
+import { FavoriteButton } from "./favorite-button";
 import { AdminEditButton } from "./admin-edit-button";
 import type { BuyableItem } from "./buyable-card";
+import "./buyable-card-view.css";
 
 export interface BuyableCardViewProps {
   item: BuyableItem;
@@ -28,9 +31,20 @@ export interface BuyableCardViewProps {
    * grid, so a card in either mode is recognisably the same object. What goes
    * is what cannot be read at that width - two lines of description - and what
    * the surrounding block is already saying, which is why the share and heart
-   * buttons go with it and the one decision on the row is left.
+   * tab goes with it, the quantity stepper with it, and the one decision on the
+   * row is left.
    */
   compact?: boolean;
+  /**
+   * A caller-supplied chip for the photograph's top-left corner, painted in the
+   * tenant's primary colour - the landing's catalog grid puts the item's own
+   * category in it, so a shuffled grid of products, services and dishes says
+   * what each card is without the visitor having to open it.
+   *
+   * It leads the corner the dietary flags share, and is dropped when blank: a
+   * caller passing an unset category name must not produce an empty chip.
+   */
+  badge?: string | null;
   /** "per person" suffix for a service whose booking is priced per head. The
    *  symmetric case to `fromLabel`: the number on the card is not the whole
    *  story, and saying nothing would quote a family of four one quarter of what
@@ -73,6 +87,7 @@ export function BuyableCardView({
   locale,
   fromLabel,
   compact = false,
+  badge,
   perPersonLabel,
   rewardsEnabled = false,
   origin,
@@ -85,6 +100,7 @@ export function BuyableCardView({
   const { kind, data } = item;
   const tMenu = useTranslations("Menu");
   const tCart = useTranslations("Cart");
+  const tItem = useTranslations("ItemDetail");
 
   // A food card advertises its dietary flags, since "which of these can I eat"
   // is the only question a diner scanning a grid is asking. Vegan is the
@@ -249,7 +265,7 @@ export function BuyableCardView({
           )}
         </Box>
 
-        {dietary.length > 0 && (
+        {(badge || dietary.length > 0) && (
           <Box
             alignItems="flex-start"
             flexWrap="wrap"
@@ -258,6 +274,22 @@ export function BuyableCardView({
             maxWidth={isAdmin ? "calc(100% - 60px)" : "calc(100% - 16px)"}
             styles={{ position: "absolute", top: 8, left: 8, zIndex: 1 }}
           >
+            {/* The caller's chip leads the corner - it says what the card *is*,
+                where a dietary flag qualifies it. Painted like a `primary`
+                Button: `--accent` (which this app overrides per tenant) under a
+                literal white, since `--accent-foreground` is the palette's own
+                and the two come apart on a tenant-branded accent. */}
+            {badge && (
+              <Badge
+                variant="filled"
+                size="md"
+                color="var(--accent, #06b6d4)"
+                textColor="#fff"
+              >
+                {badge}
+              </Badge>
+            )}
+
             {dietary.map((d) => (
               <Badge
                 key={d.label}
@@ -291,6 +323,12 @@ export function BuyableCardView({
             alignItems="center"
             flexWrap="wrap"
             gap={4}
+            // Keep clear of the share/heart tab in the opposite corner, the way
+            // the dietary row keeps clear of the admin button - a service card
+            // carrying both a duration and a discount is wider than half a
+            // phone's column, and would otherwise run under it. They wrap
+            // upwards instead, since the row is anchored to the bottom.
+            maxWidth={compact ? "calc(100% - 16px)" : "calc(100% - 108px)"}
             styles={{ position: "absolute", bottom: 8, left: 8, zIndex: 1 }}
           >
             {duration != null && (
@@ -316,6 +354,50 @@ export function BuyableCardView({
                 -{discount}%
               </Badge>
             )}
+          </Box>
+        )}
+
+        {/* Share and heart, on a tab of the card's own surface bleeding up out
+            of the photograph's bottom-right corner (the concave sweep on its
+            left is the CSS file's one rule).
+
+            They sit here rather than beside the cart button because they are
+            *about the picture* - the thing a customer shares and the thing they
+            save is the dish they are looking at - and because the action row
+            below now has a quantity to hold as well as its one decision. Three
+            circles and a stepper on one line at a card's width read as four
+            equal controls, which is what made the primary action invisible the
+            last time they shared a row.
+
+            Dropped on a compact card, exactly as they were when they lived in
+            the action row: at a third of a column the photograph has no corner
+            to spare. */}
+        {!compact && (
+          <Box
+            className="buyable-card__tab"
+            alignItems="center"
+            gap={6}
+            paddingY={6}
+            paddingX={8}
+            backgroundColor="var(--surface-1)"
+            borderRadius="14px 0 0 0"
+            styles={{ position: "absolute", bottom: 0, right: 0, zIndex: 2 }}
+          >
+            <ShareButton
+              title={name}
+              text={toShareDescription(description)}
+              label={tItem("share")}
+              copiedLabel={tItem("linkCopied")}
+              url={`${origin}${href}`}
+              size="sm"
+            />
+            <FavoriteButton
+              kind={kind === "food" ? "menu_item" : kind}
+              id={data.id}
+              initialFavorite={initialFavorite}
+              isLoggedIn={isLoggedIn}
+              size="sm"
+            />
           </Box>
         )}
       </Box>
@@ -363,62 +445,96 @@ export function BuyableCardView({
         )}
 
         <Box flexDirection="column" gap={8} marginTop="auto" paddingTop={4}>
-          <Box alignItems="baseline" gap={6} flexWrap="wrap">
+          {/* The price group is its own column so the "from" line sits tight
+              against the number it qualifies, rather than at the 8px rhythm
+              this column holds between the price, the rule and the actions. */}
+          <Box flexDirection="column" gap={2} minWidth={0}>
+            {/* "from" is its own line *above* the number rather than a word in
+              front of it: the row below is a single unbreakable line (see
+              next), and a prefix inside it would be the first thing squeezed
+              out of a narrow card - on the one card whose price is only a
+              starting point. */}
             {kind === "food" && fromLabel && (
-              <Typography as="span" variant="caption" color="var(--foreground)">
+              <Typography
+                as="span"
+                variant="caption"
+                margin={0}
+                color="var(--foreground)"
+              >
                 {fromLabel}
               </Typography>
             )}
-            <Typography
-              as="span"
-              variant="h4"
-              fontWeight={700}
-              color="var(--foreground)"
-            >
-              {formatPrice(displayPrice, data.currency)}
-            </Typography>
-            {kind === "service" &&
-              perPersonLabel &&
-              "booking_party_enabled" in data &&
-              data.booking_party_enabled && (
-                <Typography
-                  as="span"
-                  variant="caption"
-                  color="var(--foreground)"
-                >
-                  {perPersonLabel}
-                </Typography>
-              )}
-            {/* The points price, beside the money one - "MX$120 / 1200 points".
-                It is the item's own `points_price`, not a conversion of the
-                price to its left: points are priced per item, so there is no
-                rate to convert at, and the two numbers are two independent ways
-                to buy the same thing. Absent whenever the item cannot be
-                redeemed, which is every item on a tenant not running the
-                program - so nothing on the card moved for them. */}
-            {rewardsEnabled && data.points_price ? (
+
+            {/* The money price and the points price are one line and stay one
+              line: they are two ways to buy the same thing, and wrapped onto
+              two rows the "or" reads as a second, separate offer. So nothing
+              here wraps, and the points half is the one element allowed to
+              shrink - it ellipsises inside a narrow column while the money
+              price, which is never negotiable, keeps its full width. */}
+            <Box alignItems="baseline" gap={6} flexWrap="nowrap" minWidth={0}>
               <Typography
                 as="span"
-                variant="body"
-                fontWeight={600}
-                color="var(--accent)"
+                variant="h4"
+                fontWeight={700}
+                color="var(--foreground)"
+                flex="0 0 auto"
               >
-                {tCart("pointsPrice", { points: data.points_price })}
+                {formatPrice(displayPrice, data.currency)}
               </Typography>
-            ) : null}
-            {effectiveCompare &&
-              parseFloat(effectiveCompare) > parseFloat(displayPrice) && (
+              {kind === "service" &&
+                perPersonLabel &&
+                "booking_party_enabled" in data &&
+                data.booking_party_enabled && (
+                  <Typography
+                    as="span"
+                    variant="caption"
+                    color="var(--foreground)"
+                    flex="0 0 auto"
+                  >
+                    {perPersonLabel}
+                  </Typography>
+                )}
+              {effectiveCompare &&
+                parseFloat(effectiveCompare) > parseFloat(displayPrice) && (
+                  <Typography
+                    as="span"
+                    variant="label"
+                    fontWeight={400}
+                    color="var(--foreground)"
+                    flex="0 0 auto"
+                    // 11px sub-scale: compare price sits below the label (12px) tier
+                    styles={{ fontSize: 11, textDecoration: "line-through" }}
+                  >
+                    {formatPrice(effectiveCompare, data.currency)}
+                  </Typography>
+                )}
+              {/* The points price, beside the money one - "MX$120 or 1200
+                points". It is the item's own `points_price`, not a conversion
+                of the price to its left: points are priced per item, so there
+                is no rate to convert at, and the two numbers are two
+                independent ways to buy the same thing - which is what the "or"
+                says out loud, and why it is set in the price's own face rather
+                than as a caption hanging off it. Absent whenever the item
+                cannot be redeemed, which is every item on a tenant not running
+                the program - so nothing on the card moved for them. */}
+              {rewardsEnabled && data.points_price ? (
                 <Typography
                   as="span"
-                  variant="label"
-                  fontWeight={400}
-                  color="var(--foreground)"
-                  // 11px sub-scale: compare price sits below the label (12px) tier
-                  styles={{ fontSize: 11, textDecoration: "line-through" }}
+                  variant="h4"
+                  fontWeight={700}
+                  color="var(--accent)"
+                  flex="0 1 auto"
+                  minWidth={0}
+                  styles={{
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
                 >
-                  {formatPrice(effectiveCompare, data.currency)}
+                  {tCart("orPointsPrice", { points: data.points_price })}
                 </Typography>
-              )}
+              ) : null}
+            </Box>
           </Box>
 
           {/* Divider. A 1px filled Box rather than a border, so the rule is
@@ -429,10 +545,6 @@ export function BuyableCardView({
             compact={compact}
             kind={kind}
             id={data.id}
-            name={name}
-            shareText={toShareDescription(description)}
-            shareUrl={`${origin}${href}`}
-            initialFavorite={initialFavorite}
             isLoggedIn={isLoggedIn}
             cartLineId={cartLineId}
             inStock={inStock}

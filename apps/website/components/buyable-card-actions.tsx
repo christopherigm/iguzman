@@ -1,12 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
-import { ShareButton } from "@repo/ui/core-elements/share-button";
-import { AddToCartButton } from "./add-to-cart-button";
+import { MAX_GUEST_QUANTITY } from "@/lib/guest-cart";
+import { AddToCartButton, useInCart } from "./add-to-cart-button";
 import type { AddToCartCustomization } from "./add-to-cart-button";
-import { FavoriteButton } from "./favorite-button";
+import { QuantityStepper } from "./quantity-stepper";
 
 interface BuyableCardActionsProps {
   /**
@@ -19,21 +20,6 @@ interface BuyableCardActionsProps {
   kind: "product" | "service" | "food";
   /** The catalog item's id. */
   id: number;
-  /** Item name - the share sheet's title. */
-  name: string;
-  /**
-   * Share-sheet blurb, already collapsed by `toShareDescription`. The card calls
-   * that helper - it lives in `lib/metadata`, which imports `next/headers` and
-   * so cannot be imported from here.
-   */
-  shareText?: string;
-  /**
-   * Absolute URL of the item. Built on the server: the origin comes from the
-   * request (this app is multi-tenant by host), and ShareButton's default - the
-   * current page - would be the grid rather than the item.
-   */
-  shareUrl: string;
-  initialFavorite: boolean;
   isLoggedIn: boolean;
   /**
    * The cart line for this card's item, when it is already in the cart.
@@ -57,32 +43,36 @@ interface BuyableCardActionsProps {
    */
   bookingSlug?: string | null;
   /**
-   * The row as it renders on a compact card: share and favorite are dropped and
-   * the cart CTA is centred on its own. Both of those are secondary actions on
-   * a card that is already only a third of a column wide - and with the button
-   * they flank gone from one end, "space-between" would strand it against the
-   * right edge, so the justification has to move with them.
+   * The row as it renders on a compact card: the stepper is dropped and the
+   * cart CTA is centred on its own. How many of something to buy is a decision
+   * a flyer's copy column has no width to hold, and with the control gone from
+   * one end "space-between" would strand the button against the right edge - so
+   * the justification has to move with it.
    */
   compact?: boolean;
 }
 
 /**
- * The card's action row: share and favorite grouped at one end, the cart CTA at
- * the other.
+ * The card's action row: how many, at one end, and the cart CTA at the other.
  *
  * The two ends are deliberately far apart: the cart button is the row's only
- * decision, and reading as one of three equal circles is what made a card's
- * primary action invisible. Nothing here has to swallow its click any more -
+ * *decision*, and reading as one of several equal controls is what made a
+ * card's primary action invisible when share and favorite shared this row (they
+ * are on the photograph's own tab now). Nothing here has to swallow its click -
  * only the card's photo and its name are links, so these buttons sit outside
  * every anchor.
+ *
+ * The stepper says how many the next add will put in the cart, and nothing
+ * else: it is **not** a live handle on a line that already exists. Once the item
+ * is in the cart the button flips to "remove" and the stepper goes with it,
+ * because the cart page's own stepper is the one thing that can change a line's
+ * quantity, and a second one on a grid card could only disagree with it. The
+ * count returns to one after a successful add for the same reason - what it
+ * counts is the *next* add, not the last one.
  */
 export function BuyableCardActions({
   kind,
   id,
-  name,
-  shareText,
-  shareUrl,
-  initialFavorite,
   isLoggedIn,
   cartLineId,
   inStock,
@@ -90,33 +80,36 @@ export function BuyableCardActions({
   bookingSlug = null,
   compact = false,
 }: BuyableCardActionsProps) {
-  const t = useTranslations("ItemDetail");
   const tBooking = useTranslations("Booking");
+  const tCart = useTranslations("Cart");
+  const [quantity, setQuantity] = useState(1);
+
+  // The same answer the add button reaches on its own - a signed-in customer's
+  // is the server's `cartLineId`, a guest's is a lookup in localStorage - shared
+  // through one hook so the stepper cannot come to disagree with the button it
+  // sits beside about whether this item is already in the cart.
+  const inCart = useInCart(kind, id, cartLineId, isLoggedIn);
+
+  // No stepper against a booking CTA either: a `/booking/<slug>` link adds
+  // nothing to a cart, so a number beside it would count nothing.
+  const showStepper = !compact && !bookingSlug && !inCart && inStock;
 
   return (
     <Box
-      justifyContent={compact ? "center" : "space-between"}
+      justifyContent={showStepper ? "space-between" : "center"}
       alignItems="center"
-      gap={6}
+      flexWrap="wrap"
+      gap={8}
     >
-      {!compact && (
-        <Box alignItems="center" gap={6}>
-          <ShareButton
-            title={name}
-            text={shareText}
-            label={t("share")}
-            copiedLabel={t("linkCopied")}
-            url={shareUrl}
-            size="sm"
-          />
-          <FavoriteButton
-            kind={kind === "food" ? "menu_item" : kind}
-            id={id}
-            initialFavorite={initialFavorite}
-            isLoggedIn={isLoggedIn}
-            size="sm"
-          />
-        </Box>
+      {showStepper && (
+        <QuantityStepper
+          value={quantity}
+          onChange={setQuantity}
+          max={MAX_GUEST_QUANTITY}
+          decreaseLabel={tCart("decrease")}
+          increaseLabel={tCart("increase")}
+          ariaLabel={tCart("quantity")}
+        />
       )}
 
       {bookingSlug ? (
@@ -138,6 +131,8 @@ export function BuyableCardActions({
           buttonKind="warning"
           short
           size="md"
+          quantity={quantity}
+          onAdded={() => setQuantity(1)}
           customize={customize}
         />
       )}

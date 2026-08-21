@@ -32,6 +32,7 @@ export async function BuyableCard({
   locale,
   fromLabel,
   compact = false,
+  badge,
 }: {
   item: BuyableItem;
   locale: string;
@@ -46,6 +47,12 @@ export async function BuyableCard({
    * because a compact card is the same card with less on it.
    */
   compact?: boolean;
+  /**
+   * A chip for the card's top-left corner, in the tenant's primary colour -
+   * the landing's catalog grid fills it with the item's own category. Passed
+   * straight through to `BuyableCardView`, which drops it when blank.
+   */
+  badge?: string | null;
 }) {
   const { kind, data } = item;
 
@@ -85,6 +92,7 @@ export async function BuyableCard({
       locale={locale}
       fromLabel={fromLabel}
       compact={compact}
+      badge={badge}
       perPersonLabel={tBooking("perPerson")}
       rewardsEnabled={system?.rewards_enabled ?? false}
       origin={origin}

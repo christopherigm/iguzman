@@ -161,6 +161,14 @@ export interface FeaturedProduct {
   points_award: number | null;
   in_stock: boolean;
   is_featured: boolean;
+  /**
+   * The category this item is filed under, as the API's list payload already
+   * carries it (both list endpoints use the full serializer). The landing's
+   * catalog grid prints it on the card, since that grid interleaves the three
+   * buyable families and the card would otherwise not say what it is. Null for
+   * an uncategorized record - unlike a menu item, whose category is required.
+   */
+  category_name: string | null;
   variants: ProductVariant[];
 }
 
@@ -213,6 +221,14 @@ export interface FeaturedService {
    * resources, which is an N+1 across a grid.
    */
   booking_party_enabled: boolean;
+  /**
+   * The category this item is filed under, as the API's list payload already
+   * carries it (both list endpoints use the full serializer). The landing's
+   * catalog grid prints it on the card, since that grid interleaves the three
+   * buyable families and the card would otherwise not say what it is. Null for
+   * an uncategorized record - unlike a menu item, whose category is required.
+   */
+  category_name: string | null;
   variants: ServiceVariant[];
 }
 

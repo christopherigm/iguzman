@@ -48,16 +48,17 @@ interface QuantityStepperProps {
  *
  * Extracted from `menu-ingredient-picker.tsx` when the booking party counter
  * became its second consumer - the threshold `apps/CLAUDE.md` sets for lifting a
- * component out of the route that first needed it. The **booking** surfaces are
- * what is left of that: a menu ingredient is now counted by `PortionGauge` +
- * `PortionSlider`, which say how much of it lands on the dish, where a party of
- * four is just four and has nothing to draw.
+ * component out of the route that first needed it. The **booking** surfaces and
+ * the **catalog card**'s action row are what is left of that: a menu ingredient
+ * is now counted by `PortionGauge` + `PortionSlider`, which say how much of it
+ * lands on the dish, where a party of four - or three of the same pizza - is
+ * just a number and has nothing to draw.
  *
- * **Fully controlled and owns no state.** Both consumers need the value
+ * **Fully controlled and owns no state.** Every consumer needs the value
  * elsewhere - the service page's seeds the booking page's search params, the
- * booking form's is part of the availability request key - and a stepper holding
- * its own copy would give each of them a second source of truth for the same
- * number.
+ * booking form's is part of the availability request key, the card's is what its
+ * add button posts - and a stepper holding its own copy would give each of them
+ * a second source of truth for the same number.
  *
  * `aria-live="polite"` sits on the number rather than on the container so a
  * screen reader announces the new count and not the two buttons around it.

@@ -93,6 +93,47 @@ interface AddToCartButtonProps {
    * remove state, and ignored when the dish has no customer-facing add-ons.
    */
   customize?: AddToCartCustomization;
+  /**
+   * How many to put in the cart in one click, from a stepper the caller owns -
+   * the catalog card's, today. One write rather than N: the cart merges an add
+   * into the line it already has, so posting three times would be three
+   * round-trips for the same row.
+   *
+   * ⚠ It applies to the **add** half only. Remove is all-or-nothing whatever
+   * this says, matching the cart page's own remove button: a customer asking to
+   * take a card's item back out means the line, not three of it.
+   */
+  quantity?: number;
+  /**
+   * The line was written - a guest's synchronously, a customer's once the API
+   * confirmed it, a dish's when the customiser modal reported back. For a caller
+   * whose stepper counts the *next* add and so has to return to one.
+   */
+  onAdded?: () => void;
+}
+
+/**
+ * Whether this catalog item is already in whichever cart the viewer has.
+ *
+ * Exported because the card's action row has to reach the same answer this
+ * button does - it hides its quantity stepper in the remove state - and the two
+ * halves of that answer live in different places: a signed-in customer's is the
+ * server's `cartLineId`, re-read on every render, while a guest's is a lookup in
+ * localStorage that is only true a frame after hydration. Deriving it twice is
+ * how a stepper comes to sit beside a button that disagrees with it.
+ */
+export function useInCart(
+  kind: "product" | "service" | "food",
+  id: number,
+  cartLineId: number | null,
+  isLoggedIn: boolean,
+): boolean {
+  const guest = useGuestState();
+  if (isLoggedIn) return cartLineId !== null;
+  // A guest line's handle is its index in localStorage, which -1 means "absent".
+  return (
+    findGuestCartLine(guest, kind === "food" ? "menu_item" : kind, id) !== -1
+  );
 }
 
 /** What the last click produced, and so which toast to show. */
@@ -141,6 +182,8 @@ export function AddToCartButton({
   stopPropagation = false,
   flex,
   minWidth,
+  quantity = 1,
+  onAdded,
   customize,
 }: AddToCartButtonProps) {
   const t = useTranslations("ItemDetail");
@@ -162,9 +205,12 @@ export function AddToCartButton({
   // calls it `food`.
   const cartKind = kind === "food" ? "menu_item" : kind;
 
-  // A guest line's handle is its index in localStorage, which -1 means "absent".
+  // A guest line's handle is its index in localStorage, which -1 means "absent";
+  // it is what the remove half deletes. Whether the item is in the cart at all
+  // goes through the exported hook, so this button and the stepper beside it on
+  // a card cannot answer that question differently.
   const guestLine = findGuestCartLine(guest, cartKind, id);
-  const inCart = isLoggedIn ? cartLineId !== null : guestLine !== -1;
+  const inCart = useInCart(kind, id, cartLineId, isLoggedIn);
 
   // A dish whose add-ons are all internal (kitchen-only) has nothing to ask
   // about, so it keeps the straight-to-cart click.
@@ -208,9 +254,10 @@ export function AddToCartButton({
           kind: cartKind,
           id,
           ...(cartKind === "menu_item" ? { customization: [] } : {}),
-          quantity: 1,
+          quantity,
         });
         showToast("added");
+        onAdded?.();
       }
       return;
     }
@@ -220,17 +267,17 @@ export function AddToCartButton({
         const res = inCart
           ? await fetch(`/api/auth/cart/${cartLineId}`, { method: "DELETE" })
           : await fetch("/api/auth/cart", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            // Food posts the base line: kind `menu_item` with no ingredient
-            // changes and no size named, which the server prices at the dish's
-            // default size. Only reached when there was nothing to ask about.
-            body: JSON.stringify(
-              kind === "food"
-                ? { kind: "menu_item", id, customization: [], quantity: 1 }
-                : { kind, id },
-            ),
-          });
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              // Food posts the base line: kind `menu_item` with no ingredient
+              // changes and no size named, which the server prices at the dish's
+              // default size. Only reached when there was nothing to ask about.
+              body: JSON.stringify(
+                kind === "food"
+                  ? { kind: "menu_item", id, customization: [], quantity }
+                  : { kind, id, quantity },
+              ),
+            });
 
         if (!res.ok) {
           showToast(inCart ? "removeFailed" : "addFailed");
@@ -238,6 +285,7 @@ export function AddToCartButton({
         }
 
         showToast(inCart ? "removed" : "added");
+        if (!inCart) onAdded?.();
         router.refresh();
       } catch {
         showToast(inCart ? "removeFailed" : "addFailed");
@@ -250,6 +298,7 @@ export function AddToCartButton({
   const handleCustomizeResult = (ok: boolean) => {
     setCustomizing(false);
     showToast(ok ? "added" : "addFailed");
+    if (ok) onAdded?.();
     if (ok && isLoggedIn) router.refresh();
   };
 
@@ -290,6 +339,7 @@ export function AddToCartButton({
           sizes={customize.sizes}
           isLoggedIn={isLoggedIn}
           locale={customize.locale}
+          quantity={quantity}
           onCancel={() => setCustomizing(false)}
           onResult={handleCustomizeResult}
         />
