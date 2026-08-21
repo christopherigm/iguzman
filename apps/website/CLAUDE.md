@@ -35,9 +35,8 @@ the browser, and no user in `localStorage`.
   (`passThroughEnv` in `turbo.json`, plain `env` in `helm/values.yaml`).
 - **AI/LLM calls belong to the backend.** The admin CMS posts to `/api/ai/chat`,
   which is a thin `apiFetch` pass-through to website-api's `/api/ai/chat/`; that
-  endpoint owns provider choice (Groq, falling back to OpenRouter) and holds the
-  keys. There is no `GROQ_API_KEY` in this app any more, and no provider picker in
-  the UI. The route streams Django's SSE body straight through - never buffer it
+  endpoint owns provider choice (OpenRouter) and holds the key. There is no LLM API
+  key in this app any more, and no provider picker in the UI. The route streams Django's SSE body straight through - never buffer it
   (e.g. via `res.json()`), or the live preview turns into one lump at the end.
 
 Passwords: the policy and its live checklist come from `@repo/auth/password-policy`
@@ -2597,9 +2596,11 @@ prefer `kubectl rollout restart deployment/website -n website`. Keep comments in
 `env.example` _below_ the keys: the script reads any comment as the section heading
 for everything that follows.
 
-`GROQ_API_KEY` in `website-secrets` is **obsolete** - LLM calls moved to
-website-api. It can be dropped once nothing else reads it (`pnpm secrets` cannot
-delete keys; that needs a manual `kubectl patch` with a null value).
+`GROQ_API_KEY` in `website-secrets` is **obsolete**, twice over - LLM calls moved
+to website-api, and website-api has since dropped Groq for OpenRouter, so nothing
+in the monorepo reads a Groq key at all. Drop it (`pnpm secrets` cannot delete
+keys; that needs a manual `kubectl patch` with a null value) and revoke the key at
+the Groq console.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

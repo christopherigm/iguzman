@@ -6,9 +6,9 @@ export const dynamic = "force-dynamic";
 /**
  * Streams an LLM completion from website-api back to the browser.
  *
- * All provider logic (Groq first, OpenRouter as fallback) and the API keys live in
- * Django - this handler only attaches the caller's bearer token via `apiFetch` and
- * pipes the SSE body straight through, so the stream is not buffered here.
+ * All provider logic (OpenRouter) and the API key live in Django - this handler only
+ * attaches the caller's bearer token via `apiFetch` and pipes the SSE body straight
+ * through, so the stream is not buffered here.
  */
 export async function POST(req: NextRequest): Promise<Response> {
   const res = await apiFetch("/api/ai/chat/", {

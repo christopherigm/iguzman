@@ -64,7 +64,7 @@ ingress:
 
 # ─── Secrets ────────────────────────────────────────────────
 # Loads every validly-named key of `website-api-secrets` as an env var - this is
-# how GROQ_API_KEY / OPENROUTER_API_KEY reach Django.
+# how OPENROUTER_API_KEY reaches Django.
 #
 # ⚠ This Secret also still holds a stale SCREAMING_SNAKE copy of an old env.example
 # (DEBUG=True, ALLOWED_HOSTS=*, plus a SECRET_KEY and REDIS_PASSWORD that do NOT
@@ -99,9 +99,9 @@ env:
   CSRF_TRUSTED_ORIGINS: 'https://website-api.iguzman.com.mx,https://website.iguzman.com.mx,https://bdrone.com.mx,https://elpanbueno.com,https://supertortaselchino.iguzman.com.mx,https://santofishrestaurant.iguzman.com.mx,https://cafedealtura.iguzman.com.mx,https://tamaratours.iguzman.com.mx,https://piccolopizzas.iguzman.com.mx,https://lacocinaderosalinda.iguzman.com.mx'
   CORS_ALLOWED_ORIGINS: 'https://website.iguzman.com.mx,https://bdrone.com.mx,https://elpanbueno.com,https://supertortaselchino.iguzman.com.mx,https://santofishrestaurant.iguzman.com.mx,https://cafedealtura.iguzman.com.mx,https://tamaratours.iguzman.com.mx,https://piccolopizzas.iguzman.com.mx,https://lacocinaderosalinda.iguzman.com.mx'
   EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: '24'
-  # ── LLM (Groq primary, OpenRouter fallback) ───────────────
-  GROQ_MODEL: 'openai/gpt-oss-120b'
-  OPENROUTER_MODEL: 'meta-llama/llama-3.3-70b-instruct'
+  # ── LLM (OpenRouter) ──────────────────────────────────────
+  # GROQ_MODEL is gone with Groq itself; prune GROQ_API_KEY from the Secret.
+  OPENROUTER_MODEL: 'openai/gpt-oss-120b'
   LLM_REQUEST_TIMEOUT: '20'
   # ── Media storage (Cloudflare R2) ─────────────────────────
   # ⚠ Every R2_* variable is deliberately ABSENT from this block. All five are
@@ -140,8 +140,8 @@ envFromSecret:
   - name: EMAIL_HOST_PASSWORD
     secretName: website-api-secrets
     secretKey: email-host-password
-  # GROQ_API_KEY / OPENROUTER_API_KEY are not listed here: they are keyed by their
-  # real env var names in the Secret, so the bundle above delivers them.
+  # OPENROUTER_API_KEY is not listed here: it is keyed by its real env var name in
+  # the Secret, so the bundle above delivers it.
 
 # ─── Health probes ──────────────────────────────────────────
 #

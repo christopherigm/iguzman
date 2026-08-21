@@ -13,6 +13,7 @@ import { TextInput } from "./text-input";
 import "./drawer.css";
 import getImageDimensionsFromBase64 from "@repo/helpers/get-image-dimensions-from-base64";
 import { ThemeSwitch } from "../theme-switch";
+import { LocaleSwitcher } from "./locale-switcher";
 import { Box } from "./box";
 import { useScrollLock } from "./use-scroll-lock";
 
@@ -50,6 +51,18 @@ export interface DrawerProps extends UIComponentProps {
   searchValue?: string;
   /** Enable theme switch in drawer. Defaults to `false`. */
   themeSwitch?: boolean;
+  /**
+   * All available locale codes. Passed together with `currentLocale`, the
+   * drawer renders a `LocaleSwitcher` beside the theme switch.
+   *
+   * ⚠ **Pass the consuming app's own locale set, never
+   * `@repo/i18n/routing`'s.** `apps/help` deliberately ships two locales where
+   * the shared config ships five, so this package must not reach for that
+   * config itself - the caller is the only one that knows which set applies.
+   */
+  locales?: readonly string[];
+  /** The active locale code. Both it and `locales` are needed to render a switcher. */
+  currentLocale?: string;
 }
 
 // ── DrawerItem ───────────────────────────────────────────────────────
@@ -217,6 +230,8 @@ export const Drawer: React.FC<DrawerProps> = ({
   className,
   id,
   themeSwitch = true,
+  locales,
+  currentLocale,
   ...uiProps
 }) => {
   const [computedLogoWidth, setComputedLogoWidth] = useState(logoWidth);
@@ -257,6 +272,13 @@ export const Drawer: React.FC<DrawerProps> = ({
       onClose();
     }
   };
+
+  // Rendered only when the caller supplied both halves - a switcher that could
+  // name one locale is a control with nothing to switch between.
+  const localeSwitcher =
+    locales && locales.length > 0 && currentLocale ? (
+      <LocaleSwitcher locales={locales} currentLocale={currentLocale} />
+    ) : null;
 
   const safeStyle: CSSProperties = {
     ...buildStyleProps(uiProps as UIComponentProps),
@@ -309,14 +331,18 @@ export const Drawer: React.FC<DrawerProps> = ({
           <DrawerItems items={items} onNavigate={onClose} />
         </nav>
 
-        {themeSwitch && (
+        {/* Theme and language sit on one row, spaced evenly - the two
+            preferences a reader sets about the app rather than navigates to. */}
+        {(themeSwitch || localeSwitcher) && (
           <Box
             display="flex"
-            justifyContent="center"
+            justifyContent="space-evenly"
+            alignItems="center"
             width="100%"
             marginBottom={10}
           >
-            <ThemeSwitch />
+            {themeSwitch && <ThemeSwitch />}
+            {localeSwitcher}
           </Box>
         )}
         {/* Footer: version */}

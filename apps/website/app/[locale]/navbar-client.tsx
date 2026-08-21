@@ -1,6 +1,7 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
+import { routing } from "@repo/i18n/routing";
 import { Navbar } from "@repo/ui/core-elements/navbar";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { Button } from "@repo/ui/core-elements/button";
@@ -70,6 +71,7 @@ export function NavbarClient({
   cartCount,
 }: NavbarClientProps) {
   const t = useTranslations("Navbar");
+  const locale = useLocale();
   const menuT = useTranslations("Menu");
   // Comes from the server via SessionProvider, decoded from the access-token
   // cookie - so the admin link and the account menu are already right in the
@@ -238,6 +240,11 @@ export function NavbarClient({
       actionSlot={cartButton}
       fixedItems={[favoritesItem, authItem]}
       version={version}
+      // The drawer carries the same theme + language pair the footer does, so a
+      // reader on a phone - where the footer is a long scroll away - can reach
+      // both from the menu they already opened.
+      locales={routing.locales}
+      currentLocale={locale}
       translucent
     />
   );

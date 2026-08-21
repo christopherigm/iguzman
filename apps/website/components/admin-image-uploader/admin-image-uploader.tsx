@@ -52,6 +52,20 @@ type ImageEntry =
   | { kind: "existing"; id: number; url: string; sortOrder: number }
   | { kind: "new"; key: string; preview: string; base64: string; file: File };
 
+/** The stored images a parent passed, as the entries the thumbnail grid renders. */
+function toEntries(images: ExistingImage[]): ImageEntry[] {
+  return images
+    .filter((img) => Boolean(img.url))
+    .slice()
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((img, i) => ({
+      kind: "existing",
+      id: img.id,
+      url: img.url,
+      sortOrder: i,
+    }));
+}
+
 export function AdminImageUploader({
   existingImages = [],
   onChange,
@@ -64,20 +78,43 @@ export function AdminImageUploader({
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [entries, setEntries] = useState<ImageEntry[]>(() =>
-    existingImages
-      .filter((img) => Boolean(img.url))
-      .slice()
-      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-      .map((img, i) => ({
-        kind: "existing",
-        id: img.id,
-        url: img.url,
-        sortOrder: i,
-      })),
+    toEntries(existingImages),
   );
   const [deletedIds, setDeletedIds] = useState<number[]>([]);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  /** Whether the operator has changed anything here - queued a file, deleted a
+   *  thumbnail, re-ordered one. Guards the sync below, and so is state rather
+   *  than a ref: it is read while rendering. */
+  const [touched, setTouched] = useState(false);
+
+  /**
+   * Adopt the stored images when they arrive **after** this component mounted.
+   *
+   * ⚠ **A CMS form renders before its record has loaded.** Every admin detail
+   * page mounts the whole form - uploaders included - while its `GET` is still
+   * in flight, so the first `existingImages` this component sees is `[]` and the
+   * row's stored photo only turns up a render later. `entries` is seeded by a
+   * `useState` initializer, which never runs again: without this, a saved main
+   * image and a saved gallery were invisible on every page load, and only
+   * appeared right after a save - which remounts the uploader through its `key`.
+   *
+   * Compared by id+url+order rather than by array identity (the parents build a
+   * fresh literal on every keystroke), and **skipped once the operator has
+   * touched the control**: their pending files, deletions and re-ordering are
+   * the newer truth, and the `existingImages` coming back down is derived from
+   * them. Adjusting state during render is the deliberate pattern here - an
+   * effect would paint the empty grid first.
+   */
+  const signature = existingImages
+    .map((img) => `${img.id}:${img.url}:${img.sort_order ?? 0}`)
+    .join("|");
+  const [syncedSignature, setSyncedSignature] = useState(signature);
+  if (signature !== syncedSignature && !touched) {
+    setSyncedSignature(signature);
+    setEntries(toEntries(existingImages));
+  }
 
   const notify = useCallback(
     (nextEntries: ImageEntry[], nextDeletedIds: number[]) => {
@@ -106,6 +143,7 @@ export function AdminImageUploader({
       const available = maxImages - entries.length;
       const toAdd = fileArray.slice(0, Math.max(0, available));
       if (toAdd.length === 0) return;
+      setTouched(true);
 
       const newEntries: ImageEntry[] = await Promise.all(
         toAdd.map(async (file) => {
@@ -135,6 +173,7 @@ export function AdminImageUploader({
   const handleDelete = (index: number) => {
     const entry = entries[index];
     if (!entry) return;
+    setTouched(true);
     const next = entries.filter((_, i) => i !== index);
     let nextDeleted = deletedIds;
     if (entry.kind === "existing") {
@@ -185,6 +224,7 @@ export function AdminImageUploader({
       setDragOverIndex(null);
       return;
     }
+    setTouched(true);
     const next = [...entries];
     const [moved] = next.splice(dragIndex, 1);
     if (!moved) return;

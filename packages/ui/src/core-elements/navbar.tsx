@@ -60,6 +60,17 @@ export interface NavbarProps extends UIComponentProps {
   chevronIcon?: string;
   /** Enable theme switch in drawer. Defaults to `false`. */
   themeSwitch?: boolean;
+  /**
+   * All available locale codes. Passed together with `currentLocale`, the
+   * drawer renders a `LocaleSwitcher` beside its theme switch.
+   *
+   * ⚠ **Pass the consuming app's own locale set, never `@repo/i18n/routing`'s.**
+   * `apps/help` deliberately ships two locales where the shared config ships
+   * five, so this package must not reach for that config itself.
+   */
+  locales?: readonly string[];
+  /** The active locale code. Both it and `locales` are needed to render a switcher. */
+  currentLocale?: string;
   /** Make the navbar background semi-transparent with a backdrop blur. Defaults to `false`. */
   translucent?: boolean;
   /**
@@ -433,6 +444,8 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
     className,
     id,
     themeSwitch = true,
+    locales,
+    currentLocale,
     translucent = false,
     searchValue,
     actionSlot,
@@ -654,6 +667,8 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
         searchIcon={searchIcon}
         searchValue={searchValue}
         themeSwitch={themeSwitch}
+        locales={locales}
+        currentLocale={currentLocale}
       />
     </>
   );

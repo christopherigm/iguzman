@@ -1604,23 +1604,31 @@ Tests: `BookingLocationTests` in `orders/tests.py` (both consumers) and
 
 ## LLM calls - always through `core/services/llm.py`
 
-Every AI call in the website stack runs here, not in the Next.js app. `stream_chat`
-uses **Groq as primary and OpenRouter as fallback**, mirroring
-`cinelog-api/catalog/services/llm.py`. Never call a provider SDK directly from a
+Every AI call in the website stack runs here, not in the Next.js app. Both entry
+points - `stream_chat` (tokens) and `chat_json` (one structured object) - talk to
+**OpenRouter, and only OpenRouter**. Never call a provider SDK directly from a
 view, and never move an API key back into the frontend.
 
-- **The fallback only covers failures before the first token.** Once Groq has
-  emitted content the user is already reading it, so restarting on OpenRouter would
-  duplicate the output; a mid-stream failure propagates instead. An empty Groq
-  stream counts as a failure and does fall back.
-- Unlike cinelog's rate-limit-only rule, **any** Groq exception falls back here
-  (timeouts and 5xx included), so a Groq outage degrades instead of failing.
-- Config: `GROQ_API_KEY`, `GROQ_MODEL`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`,
-  `LLM_REQUEST_TIMEOUT`. In the cluster both keys come from the
-  `website-api-secrets` Secret; locally they come from `.env`, which
-  `settings.py` loads via `load_dotenv` (as cinelog-api does). With neither key
-  set, `/api/ai/chat/` returns 503 rather than streaming - so a 503 from that
-  endpoint means the key never reached the process, not that the provider is down.
+- ⚠ **Groq is deprecated and its code is gone. Do not re-add it.** It used to be
+  the primary with OpenRouter as the fallback, mirroring
+  `cinelog-api/catalog/services/llm.py`. Its free tier caps at 200k tokens per day
+  per org, and the CMS's enhance/translate buttons exhausted that mid-workday - so
+  every call spent a round-trip earning a 429 (`rate_limit_exceeded`) and then ran
+  on OpenRouter anyway, while the logs filled with warnings for the normal case.
+  Note that `cinelog-api`'s module still has the two-provider shape; this one has
+  deliberately diverged from it.
+- **There is no fallback any more, so a provider error propagates.** For
+  `AiChatView` that means it is reported inside the SSE stream (the 200 is already
+  committed); for `chat_json` it reaches the caller. The old "only fall back before
+  the first token" rule existed because a mid-stream switch would duplicate output
+  the user had already read - if a second provider is ever added back, that rule
+  comes back with it.
+- Config: `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` (default `openai/gpt-oss-120b`,
+  the model Groq used to serve), `LLM_REQUEST_TIMEOUT`. In the cluster the key
+  comes from the `website-api-secrets` Secret; locally from `.env`, which
+  `settings.py` loads via `load_dotenv`. With no key set, `/api/ai/chat/` returns
+  503 rather than streaming - so a 503 from that endpoint means the key never
+  reached the process, not that the provider is down.
 
 `AiChatView` (`POST /api/ai/chat/`, `IsSystemAdmin`) streams OpenAI-shaped SSE for
 the admin CMS's enhance/translate buttons. Two rules if you touch it:
@@ -1642,8 +1650,7 @@ enhance requests would block every other API call.
 Config reaches the pod three ways, and the order matters:
 
 1. `envFromSecretBundle: website-api-secrets` - every **validly-named** key of the
-   Secret becomes an env var. This is how `GROQ_API_KEY` / `OPENROUTER_API_KEY`
-   arrive.
+   Secret becomes an env var. This is how `OPENROUTER_API_KEY` arrives.
 2. `env:` in `helm/values.yaml` - non-sensitive config. **`env` beats `envFrom`**
    ([k8s API ref](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/):
    "Variables defined in the env field take precedence over variables defined in the
@@ -1667,8 +1674,10 @@ They are inert **only** because `env:`/`envFromSecret:` name the same variables 
 win. **Never delete an entry from `env:` to "remove duplication"** - that hands
 production `DEBUG=True`, `ALLOWED_HOSTS=*` and a rotated `SECRET_KEY`. The real fix
 is to prune the stale SCREAMING_SNAKE keys from the Secret (keep only
-`GROQ_API_KEY`, `OPENROUTER_API_KEY`, and the kebab-case ones); do that before
-simplifying the chart.
+`OPENROUTER_API_KEY` and the kebab-case ones); do that before simplifying the
+chart. **`GROQ_API_KEY` is now in that prune list too** - nothing reads it since
+Groq was removed, and the key it holds should be revoked at the Groq console
+rather than left sitting in the Secret.
 
 ⚠ **That same precedence cuts the other way, and it silently disabled R2.** The
 chart renders **every** key of `env:` including empty-valued ones

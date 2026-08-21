@@ -1,45 +1,44 @@
 """Centralized LLM access for website-api.
 
 Every AI call in the website stack goes through here: the admin CMS talks to
-`/api/ai/chat/`, which streams from this module. Groq is the primary provider and
-OpenRouter the fallback, mirroring `cinelog-api/catalog/services/llm.py`.
+`/api/ai/chat/`, which streams from this module.
+
+OpenRouter is the only provider. Groq used to be the primary and OpenRouter the
+fallback, but Groq's free tier kept exhausting its tokens-per-day allowance
+mid-workday (429 `rate_limit_exceeded`), so every call fell through to OpenRouter
+anyway - at the cost of a wasted round-trip and a misleading warning in the logs.
 """
 import json
-import logging
 from collections.abc import Iterator
 
 from django.conf import settings
-from groq import Groq
 from openai import OpenAI
-
-logger = logging.getLogger(__name__)
 
 
 class LlmNotConfigured(Exception):
-    """Neither provider has an API key - a deployment problem, not a runtime one."""
+    """No API key is set - a deployment problem, not a runtime one."""
 
 
-def _groq_stream(messages: list[dict], temperature: float) -> Iterator[str]:
-    client = Groq(api_key=settings.GROQ_API_KEY, timeout=settings.LLM_REQUEST_TIMEOUT)
-    completion = client.chat.completions.create(
-        model=settings.GROQ_MODEL,
-        messages=messages,
-        temperature=temperature,
-        stream=True,
-    )
-    for chunk in completion:
-        token = chunk.choices[0].delta.content
-        if token:
-            yield token
-
-
-def _openrouter_stream(messages: list[dict], temperature: float) -> Iterator[str]:
-    client = OpenAI(
+def _client() -> OpenAI:
+    """An OpenAI-SDK client pointed at OpenRouter's OpenAI-compatible endpoint."""
+    return OpenAI(
         base_url='https://openrouter.ai/api/v1',
         api_key=settings.OPENROUTER_API_KEY,
         timeout=settings.LLM_REQUEST_TIMEOUT,
     )
-    completion = client.chat.completions.create(
+
+
+def stream_chat(messages: list[dict], temperature: float = 0.7) -> Iterator[str]:
+    """Yield text tokens from OpenRouter.
+
+    There is no second provider to fall back to: a provider failure propagates to
+    the caller, which for `AiChatView` means the error is reported inside the SSE
+    stream (the 200 is already committed by then).
+    """
+    if not settings.OPENROUTER_API_KEY:
+        raise LlmNotConfigured('OPENROUTER_API_KEY is unset.')
+
+    completion = _client().chat.completions.create(
         model=settings.OPENROUTER_MODEL,
         messages=messages,
         temperature=temperature,
@@ -54,90 +53,24 @@ def _openrouter_stream(messages: list[dict], temperature: float) -> Iterator[str
             yield token
 
 
-def stream_chat(messages: list[dict], temperature: float = 0.7) -> Iterator[str]:
-    """Yield text tokens from Groq, falling back to OpenRouter on any Groq failure.
+def chat_json(messages: list[dict], temperature: float = 0.0) -> dict:
+    """Return a JSON object from the LLM.
 
-    The fallback only covers failures that happen *before the first token*: once
-    Groq has emitted content the caller has already shown it, so restarting on
-    another provider would duplicate the output. A mid-stream failure therefore
-    propagates to the caller instead.
+    Unlike `stream_chat`, this is a single non-streaming request: the caller wants
+    the whole structured object (e.g. an extracted nutrition table), not tokens.
 
-    An empty Groq stream counts as a failure - it is indistinguishable from a
-    broken response to the caller, and OpenRouter may well have content.
+    The prompt must instruct the model to return a JSON object; `response_format`
+    enforces the shape but not the keys. Raises `LlmNotConfigured` when no key is
+    set, and propagates provider and JSON-parse errors to the caller.
     """
-    if not settings.GROQ_API_KEY and not settings.OPENROUTER_API_KEY:
-        raise LlmNotConfigured('GROQ_API_KEY and OPENROUTER_API_KEY are both unset.')
-
-    first: str | None = None
-    groq_stream: Iterator[str] | None = None
-
-    if settings.GROQ_API_KEY:
-        try:
-            groq_stream = _groq_stream(messages, temperature)
-            first = next(groq_stream, None)
-        except Exception as e:
-            logger.warning('Groq failed before first token (%s); falling back to OpenRouter', e)
-            groq_stream = None
-
-    if groq_stream is not None and first is not None:
-        yield first
-        yield from groq_stream
-        return
-
-    if groq_stream is not None:
-        logger.warning('Groq returned an empty stream; falling back to OpenRouter')
-
     if not settings.OPENROUTER_API_KEY:
-        raise LlmNotConfigured('Groq is unavailable and OPENROUTER_API_KEY is unset.')
+        raise LlmNotConfigured('OPENROUTER_API_KEY is unset.')
 
-    yield from _openrouter_stream(messages, temperature)
-
-
-def _chat_json_once(client, model: str, messages: list[dict], temperature: float) -> dict:
-    """One non-streaming JSON-mode completion, parsed into a dict.
-
-    Both Groq and OpenRouter expose the OpenAI-compatible `response_format`
-    JSON-object mode, so the same call shape works for either client.
-    """
-    completion = client.chat.completions.create(
-        model=model,
+    completion = _client().chat.completions.create(
+        model=settings.OPENROUTER_MODEL,
         messages=messages,
         temperature=temperature,
         response_format={'type': 'json_object'},
     )
     content = completion.choices[0].message.content or '{}'
     return json.loads(content)
-
-
-def chat_json(messages: list[dict], temperature: float = 0.0) -> dict:
-    """Return a JSON object from the LLM, Groq first and OpenRouter as fallback.
-
-    Unlike `stream_chat`, this is a single non-streaming request: the caller wants
-    the whole structured object (e.g. an extracted nutrition table), not tokens.
-    Any Groq failure - a provider error *or* a response that isn't valid JSON -
-    falls back to OpenRouter, since nothing has been shown to the user yet.
-
-    The prompt must instruct the model to return a JSON object; `response_format`
-    enforces the shape but not the keys. Raises `LlmNotConfigured` when neither
-    provider has a key, and propagates the final provider/parse error when the
-    fallback also fails.
-    """
-    if not settings.GROQ_API_KEY and not settings.OPENROUTER_API_KEY:
-        raise LlmNotConfigured('GROQ_API_KEY and OPENROUTER_API_KEY are both unset.')
-
-    if settings.GROQ_API_KEY:
-        try:
-            client = Groq(api_key=settings.GROQ_API_KEY, timeout=settings.LLM_REQUEST_TIMEOUT)
-            return _chat_json_once(client, settings.GROQ_MODEL, messages, temperature)
-        except Exception as e:
-            logger.warning('Groq JSON call failed (%s); falling back to OpenRouter', e)
-
-    if not settings.OPENROUTER_API_KEY:
-        raise LlmNotConfigured('Groq is unavailable and OPENROUTER_API_KEY is unset.')
-
-    client = OpenAI(
-        base_url='https://openrouter.ai/api/v1',
-        api_key=settings.OPENROUTER_API_KEY,
-        timeout=settings.LLM_REQUEST_TIMEOUT,
-    )
-    return _chat_json_once(client, settings.OPENROUTER_MODEL, messages, temperature)

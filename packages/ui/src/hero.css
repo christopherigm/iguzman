@@ -19,3 +19,40 @@
     display: none;
   }
 }
+
+/*
+ * The brandmark cradle's badge diameter, as a **unitless count of CSS pixels**.
+ *
+ * The cradle (`BrandmarkCradle` in `hero.tsx`) is an SVG drawn in a viewBox of
+ * 100 units to the badge and scaled onto a box the badge's own size, so one
+ * user unit is `badge / 100` px and any stroke stated inside it is scaled with
+ * the shape. The arch has to hold the weight of the straight flanks either side
+ * of it - they are one rule, broken by the arch - so it divides that weight by
+ * this number to cancel the scale.
+ *
+ * ⚠ That division is why this is a number rather than a length: CSS cannot
+ * divide by a length. `HERO_FRAME_BADGE_SIZE` is this number times 1px and is
+ * what every layout reads; nothing may state the diameter any other way, or the
+ * arch and the box it is drawn in come apart.
+ *
+ * ⚠ It steps at breakpoints rather than following the `clamp(36px, 4.55vw,
+ * 50px)` it replaced, for the same reason - a clamp on a unitless value cannot
+ * read `vw` without `tan(atan2())`, which is far newer than the browsers this
+ * has to be right in. The clamp was only fluid between 791px and 1099px, and
+ * these steps sit within a few px of it across that band.
+ */
+:root {
+  --ui-cradle-badge: 36;
+}
+
+@media (--md) {
+  :root {
+    --ui-cradle-badge: 44;
+  }
+}
+
+@media (--lg) {
+  :root {
+    --ui-cradle-badge: 50;
+  }
+}

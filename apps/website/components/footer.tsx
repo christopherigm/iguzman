@@ -152,10 +152,12 @@ export async function Footer({ logo, system }: Props) {
                   {system.slogan}
                 </Typography>
               )}
+              {/* Theme and language on one row, spaced evenly - the same pair
+                  the drawer carries, arranged the same way. */}
               <Box
                 display="flex"
                 alignItems="center"
-                gap="12px"
+                justifyContent="space-evenly"
                 flexWrap="wrap"
               >
                 <ThemeSwitch />

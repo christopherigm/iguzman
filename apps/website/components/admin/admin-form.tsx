@@ -228,8 +228,8 @@ export function AdminForm({
   const router = useRouter();
 
   // ── LLM ───────────────────────────────────────────────────────────────────
-  // The provider is website-api's call (Groq, falling back to OpenRouter), so
-  // there is nothing to choose here. No auth headers either: the proxy route
+  // The provider is website-api's call (OpenRouter), so there is nothing to
+  // choose here. No auth headers either: the proxy route
   // authenticates the caller from the HTTP-only cookie the browser sends anyway.
   const {
     streamingText,

@@ -2226,7 +2226,7 @@ class AiChatSerializer(serializers.Serializer):
 
     The client does not choose a provider or a model - `stream`, `model` and `seed`
     arrive from the shared hook and are deliberately ignored, since provider choice
-    (Groq, falling back to OpenRouter) is a backend concern.
+    (OpenRouter) is a backend concern.
     """
 
     messages = AiChatMessageSerializer(many=True, allow_empty=False, max_length=50)

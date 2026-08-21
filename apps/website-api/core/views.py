@@ -1880,8 +1880,8 @@ class AiChatView(APIView):
     POST /api/ai/chat/ - stream an LLM completion back as OpenAI-shaped SSE.
 
     Admin-only: the sole caller is the admin CMS (enhance / translate on the
-    content forms). Provider choice lives in `core.services.llm` - Groq first,
-    OpenRouter as fallback - so no client can pick one.
+    content forms). The provider lives in `core.services.llm` - OpenRouter - so no
+    client can pick one.
     """
 
     permission_classes = [IsSystemAdmin]
@@ -1894,7 +1894,7 @@ class AiChatView(APIView):
 
         # Checked up front: once the first chunk is yielded the 200 is committed and
         # a misconfiguration could only be reported inside the stream.
-        if not settings.GROQ_API_KEY and not settings.OPENROUTER_API_KEY:
+        if not settings.OPENROUTER_API_KEY:
             return Response(
                 {"detail": "No LLM provider is configured."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,

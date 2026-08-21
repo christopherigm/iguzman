@@ -246,11 +246,20 @@ export const HERO_PROFILE_LOGO_SIZE = "clamp(145px, 20vw, 250px)";
 const DEFAULT_LOGO_SIZE = "clamp(96px, 13vw, 160px)";
 
 /**
- * Diameter of the brandmark circle that straddles the top of a hero text frame.
- * Grows a little with the viewport, like the profile disc, so it does not look
- * tiny on a wide hero nor overwhelm a phone-width one.
+ * Diameter of the brandmark circle that straddles the top of a hero text frame,
+ * as a **unitless count of CSS pixels**. `hero.css` steps it up with the
+ * viewport, like the profile disc, so it does not look tiny on a wide hero nor
+ * overwhelm a phone-width one.
+ *
+ * ⚠ It is a bare number rather than a length because the cradle has to *divide*
+ * by it (see `HERO_FRAME_LINE_PX`) and CSS cannot divide by a length. Anything
+ * laying the badge out wants {@link HERO_FRAME_BADGE_SIZE}, which is this
+ * number times 1px - so the two can never disagree about how big a badge is.
  */
-export const HERO_FRAME_BADGE_SIZE = "clamp(36px, 4.55vw, 50px)";
+const HERO_FRAME_BADGE_PX = "var(--ui-cradle-badge, 50)";
+
+/** That same diameter as a CSS length, for anything that lays the badge out. */
+export const HERO_FRAME_BADGE_SIZE = `calc(${HERO_FRAME_BADGE_PX} * 1px)`;
 
 /** The stroke `HeroTextFrame` draws its outline and cradle in, over a video. */
 const HERO_FRAME_BORDER = "rgba(255,255,255,0.9)";
@@ -269,12 +278,25 @@ const HERO_FRAME_BORDER = "rgba(255,255,255,0.9)";
  * came out *thinner* than the rule instead. Don't reintroduce a weight here
  * that the border does not also take.
  *
- * ⚠ It has to be applied as the CSS `stroke-width` **property** rather than the
- * SVG attribute of the same name, together with
- * `vector-effect: non-scaling-stroke` - the arch is drawn in a viewBox scaled
- * by the badge's own `clamp()`, so without the vector effect the browser scales
- * the stroke down with it and the arch lands at a fraction of the flanks'
- * weight.
+ * ⚠ **The arch's stroke is divided by the badge before it is drawn, and that is
+ * the only thing keeping it at this weight.** The cradle is an SVG drawn in a
+ * viewBox of 100 units to the badge and scaled onto a box the badge's own size,
+ * so one user unit is `badge / 100` px and a stroke *stated* in px inside it is
+ * scaled with everything else: a 2px declaration reaches the screen at 1px on a
+ * desktop (50px badge) and 0.72px on a phone (36px badge), beside the 2px rule
+ * it is meant to be a continuation of.
+ *
+ * It used to be held off that scale with `vector-effect: non-scaling-stroke`,
+ * which is **not honoured everywhere** - on Samsung Internet the shoulders came
+ * out hairline-thin while the flanks either side of them stayed 2px, which is
+ * the bug this replaced. `BrandmarkCradle` now cancels the scale arithmetically
+ * (`line * 100 / --ui-cradle-badge` user units), so the number here is what
+ * lands on screen at every viewport and in every browser, with no vector effect
+ * involved. That division is also why the badge diameter is a unitless number.
+ *
+ * ⚠ Still apply it as the CSS `stroke-width` **property** rather than the SVG
+ * attribute of the same name: the attribute takes a plain length and drops the
+ * `calc()` the division is expressed in.
  */
 const HERO_FRAME_LINE_PX = 2;
 export const HERO_CRADLE_STROKE = `${HERO_FRAME_LINE_PX}px`;
@@ -292,13 +314,19 @@ const HERO_FRAME_BLUR = "blur(8px)";
  * thing scales with it, times the caller's own multiples. Shared by
  * `BrandmarkCradle` and by the glass pane `HeroTextFrame` slips underneath it -
  * two boxes that must line up exactly.
+ *
+ * ⚠ Both take the badge as the **unitless** px count `HERO_FRAME_BADGE_PX` is
+ * and hand back a CSS length - the badge has to stay a number for the stroke
+ * division, so the `* 1px` lives here rather than at every call site.
  */
 const CRADLE_WIDTH = 2.1;
 const CRADLE_HEIGHT = 0.7;
-const cradleWidth = (size: string, width = CRADLE_WIDTH) =>
-  `calc((${size}) * ${width})`;
-const cradleHeight = (size: string, height = CRADLE_HEIGHT) =>
-  `calc((${size}) * ${height})`;
+const cradleLength = (badge: string, multiple: number) =>
+  `calc((${badge}) * ${multiple} * 1px)`;
+const cradleWidth = (badge: string, width = CRADLE_WIDTH) =>
+  cradleLength(badge, width);
+const cradleHeight = (badge: string, height = CRADLE_HEIGHT) =>
+  cradleLength(badge, height);
 
 /**
  * The cradle's own coordinate system: **one unit is a hundredth of the badge**,
@@ -445,7 +473,7 @@ const CRADLE_FILL_MASK = `url("data:image/svg+xml,${encodeURIComponent(
 export function BrandmarkCradle({
   image,
   imageAlt = "",
-  size = HERO_FRAME_BADGE_SIZE,
+  size = HERO_FRAME_BADGE_PX,
   color = HERO_FRAME_BORDER,
   circleBackground = "#fff",
   fill = null,
@@ -459,7 +487,13 @@ export function BrandmarkCradle({
   /** The brandmark drawn inside the circle. */
   image: string;
   imageAlt?: string;
-  /** Diameter of the circle; every other length derives from it. @default HERO_FRAME_BADGE_SIZE */
+  /**
+   * Diameter of the circle, as a **unitless count of CSS pixels** (not a
+   * length) - every other length here derives from it, and so does the arch's
+   * stroke, which is divided by it to cancel the viewBox scale. A length would
+   * lay the cradle out correctly and leave the shoulders un-dividable.
+   * @default HERO_FRAME_BADGE_PX
+   */
   size?: string;
   /** Colour of the flanks and the two shoulders. @default the hero's white */
   color?: string;
@@ -532,10 +566,12 @@ export function BrandmarkCradle({
   // Both lengths derive from the (responsive) badge diameter so the cradle
   // scales with it, and the viewBox is the same pair in hundredths of a badge -
   // so `preserveAspectRatio: none` scales both axes alike and the shape is drawn
-  // undistorted at any height. The stroke is non-scaling, so the shoulders keep
-  // their weight at every badge size.
+  // undistorted at any height. The stroke is then divided by that same badge
+  // (see `strokeUnits` below), so the shoulders come out at the flanks' weight
+  // whatever the badge does.
   const cradleW = cradleWidth(size, width);
   const cradleH = cradleHeight(size, height);
+  const badgeSize = cradleLength(size, 1);
   const geometry = cradleGeometry(width, height, enclose);
   // Each flank runs from the outer corner to the edge of the centred gap, and
   // is drawn at the shoulders' own weight - the two are one rule, broken by the
@@ -544,6 +580,13 @@ export function BrandmarkCradle({
   const flankW = `calc(50% - (${cradleW}) / 2 + ${overhang}px)`;
   const line =
     typeof strokeWidth === "number" ? `${strokeWidth}px` : strokeWidth;
+  // The same weight, restated in the cradle's own user units. The viewBox is
+  // 100 units to the badge, so one unit is `badge / 100` CSS px and a stroke of
+  // `line * 100 / badge` units is drawn at exactly `line` once the browser has
+  // scaled it - which is what keeps the arch the same weight as the flanks it
+  // continues at every viewport, with no `non-scaling-stroke` to be honoured or
+  // ignored. See `HERO_FRAME_LINE_PX`.
+  const strokeUnits = `calc((${line}) * 100 / (${size}))`;
   // Centred on the parent's edge, as a border would be.
   const flankTop = `calc((${line}) * -0.5)`;
 
@@ -605,8 +648,8 @@ export function BrandmarkCradle({
             background at the line. */}
         {fill && <path d={geometry.fill} fill={fill} stroke="none" />}
         {/* The weight rides in `style`, not the `stroke-width` attribute: the
-            attribute takes a plain length and would discard the clamp() that
-            keeps the arcs from reading heavy at phone widths. */}
+            attribute takes a plain length and would discard the calc() that
+            divides the flanks' weight down into this viewBox's own units. */}
         {geometry.outline.map((d) => (
           <path
             key={d}
@@ -614,8 +657,7 @@ export function BrandmarkCradle({
             fill="none"
             stroke={color}
             strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-            style={{ strokeWidth: line }}
+            style={{ strokeWidth: strokeUnits }}
           />
         ))}
       </svg>
@@ -626,11 +668,11 @@ export function BrandmarkCradle({
       <div
         style={{
           position: "absolute",
-          top: `calc((${size}) * -${geometry.badgeTop})`,
+          top: cradleLength(size, -geometry.badgeTop),
           left: "50%",
           transform: "translateX(-50%)",
-          width: size,
-          height: size,
+          width: badgeSize,
+          height: badgeSize,
           borderRadius: "50%",
           background: circleBackground,
           display: "flex",
@@ -679,7 +721,14 @@ export function HeroTextFrame({
   scale?: number;
 }) {
   const sized = (v: string) => (scale === 1 ? v : `calc((${v}) * ${scale})`);
-  const badge = sized(HERO_FRAME_BADGE_SIZE);
+  // The badge stays the **unitless** px count the cradle divides its stroke by,
+  // so the preview multiplier is folded into the number itself rather than
+  // wrapped around it in a `calc()` - a nested calc() in the denominator of
+  // that division is a needless thing to ask of a browser.
+  const badge =
+    scale === 1 ? HERO_FRAME_BADGE_PX : `(${HERO_FRAME_BADGE_PX}) * ${scale}`;
+  /** That badge as a length, for the space this frame reserves around itself. */
+  const badgeSize = cradleLength(badge, 1);
   const border = HERO_FRAME_BORDER;
 
   // Bare outline (no brandmark): the original full-border frame, unchanged.
@@ -710,12 +759,12 @@ export function HeroTextFrame({
         display: "inline-block",
         // Reserve the space the circle + shoulders occupy above the frame, so
         // an ancestor never clips them.
-        marginTop: `calc((${badge}) * 0.85 + 8px)`,
+        marginTop: `calc((${badgeSize}) * 0.85 + 8px)`,
         // The top-only reserve pushes the outline box below true centre in the
         // flex column that centres this block. Bump it back up with a matching
         // bottom margin so the framed heading keeps the vertically-centred feel
         // the bare-outline branch already has.
-        marginBottom: `calc((${badge}) * 0.85 + 8px)`,
+        marginBottom: `calc((${badgeSize}) * 0.85 + 8px)`,
       }}
     >
       {/* ONE pane of glass for the whole frame - the heading's box *and* the

@@ -360,16 +360,15 @@ if _CORS_ALLOWED_ORIGINS:
 else:
     CORS_ALLOW_ALL_ORIGINS = DEBUG
 
-# LLM providers
+# LLM provider
 #
-# All AI calls go through core/services/llm.py: Groq is primary, OpenRouter is the
-# fallback for any Groq failure. Mirrors cinelog-api's configuration.
-
-GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
-GROQ_MODEL = os.environ.get('GROQ_MODEL', 'openai/gpt-oss-120b')
+# All AI calls go through core/services/llm.py, which talks to OpenRouter and
+# nothing else. Groq was the primary provider until its free tier's daily token
+# cap started being exhausted mid-workday, at which point every call fell through
+# to OpenRouter anyway.
 
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
-OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-instruct')
+OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'openai/gpt-oss-120b')
 
 LLM_REQUEST_TIMEOUT = float(os.environ.get('LLM_REQUEST_TIMEOUT', '20'))
 
