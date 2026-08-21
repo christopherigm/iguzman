@@ -814,7 +814,7 @@ export default function AdminCouponFormPage({ params }: Props) {
                 {stats.landingUrl ? (
                   <Typography
                     variant="caption"
-                    color="var(--accent, #06b6d4)"
+                    color="var(--accent-text, #06b6d4)"
                     styles={{ overflowWrap: "anywhere" }}
                   >
                     {stats.landingUrl}

@@ -26,20 +26,27 @@
 }
 
 /* ── Variant: outlined ────────────────────────────── */
+/* Unlike `filled`, these two variants paint the colour as INK - the label, and
+   (for outlined) the hairline that reads with it - so their default is
+   `--accent-text`, the accent adjusted for the current theme, rather than the
+   raw `--accent` a fill wants. An explicit `color` prop (`--badge-bg`) still
+   wins; a caller passing the accent to a text-y badge should pass
+   `var(--accent-text)`. */
 .ui-badge--outlined {
   background-color: transparent;
-  border: 1px solid var(--badge-bg, var(--accent, #06b6d4));
-  color: var(--badge-bg, var(--accent, #06b6d4));
+  border: 1px solid var(--badge-bg, var(--accent-text, var(--accent, #06b6d4)));
+  color: var(--badge-bg, var(--accent-text, var(--accent, #06b6d4)));
 }
 
 /* ── Variant: subtle ──────────────────────────────── */
 .ui-badge--subtle {
+  /* The tint is a surface, so it keeps the raw accent; only the label is ink. */
   background-color: color-mix(
     in srgb,
     var(--badge-bg, var(--accent, #06b6d4)) 15%,
     transparent
   );
-  color: var(--badge-bg, var(--accent, #06b6d4));
+  color: var(--badge-bg, var(--accent-text, var(--accent, #06b6d4)));
 }
 
 /* ── Sizes ────────────────────────────────────────── */

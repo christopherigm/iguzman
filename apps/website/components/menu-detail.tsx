@@ -123,7 +123,7 @@ export async function MenuDetailHeader({ item, locale }: MenuDetailProps) {
 
       {etaLabel && (
         <Box alignItems="center">
-          <Badge variant="subtle" size="lg" color="var(--accent)">
+          <Badge variant="subtle" size="lg" color="var(--accent-text)">
             {etaLabel}
           </Badge>
         </Box>

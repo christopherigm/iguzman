@@ -106,7 +106,7 @@
 /* Float the label when the input is focused OR has value */
 .ui-text-input-wrapper--active .ui-text-input-label {
   transform: translateY(-10px) scale(0.75);
-  color: var(--accent, #06b6d4);
+  color: var(--accent-text, var(--accent, #06b6d4));
 }
 
 /* ── Active indicator bar (Material bottom-line animation) ───── */
@@ -187,7 +187,7 @@
 
 .ui-text-input-option[aria-selected="true"] {
   font-weight: 600;
-  color: var(--accent, #06b6d4);
+  color: var(--accent-text, var(--accent, #06b6d4));
 }
 
 .ui-text-input-option--empty {

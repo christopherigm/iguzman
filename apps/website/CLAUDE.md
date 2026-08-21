@@ -2130,6 +2130,62 @@ frame.
   `ShapeDivider` defaults to 24, which is the hero lifting off the page) and
   anything that must escape the band has to live outside it.
 
+## The brand accent as ink (`--accent-text`)
+
+`--accent` in this app is **one tenant hex published for both themes**
+(`[locale]/layout.tsx`, from `System.primary_color`), where the `@repo/ui`
+palettes it overrides ship a _different_ accent per theme (`#06b6d4` light /
+`#22d3ee` dark) precisely so the colour stays readable. Painted as text that
+single hex is legible in one theme only: La Cocina de Rosalinda's `#1B2A6B`
+reads at 10.5:1 on a light card and **1.2:1 on a dark one**, and a brand yellow
+fails the same way in light mode.
+
+So the layout publishes the brand colour a second time, as ink:
+
+| Variable                                     | What it is                                                  |
+| -------------------------------------------- | ----------------------------------------------------------- |
+| `--accent`                                   | The tenant's hex, untouched. Every **fill**.                |
+| `--accent-text`                              | The theme's readable variant. Every **text and icon**.      |
+| `--accent-text-light` / `--accent-text-dark` | The two resolved values; `globals.css` picks one per theme. |
+
+`readableOn` keeps the hue and saturation and walks the lightness toward
+whichever end of the scale the theme's surfaces are furthest from, until it
+clears **4.5:1** against all of them (the palette's `--background` /
+`--surface-1` / `--surface-2` plus the tenant's own page background). `#1B2A6B`
+comes out unchanged in light and `#96a5e5` in dark - the same blue, still
+recognisably the brand, rather than a white that throws it away.
+
+**It lives in `@repo/ui`** (`core-elements/contrast`), not here: the same
+problem exists in every app that hands `PaletteProvider` an `accent`, and every
+core element that paints the accent as ink now reads `--accent-text` with
+`var(--accent)` as its fallback. `lib/colors.ts` re-exports `readableOn` and
+`accentInkVariables` so this app still has one door onto colour arithmetic;
+`[locale]/layout.tsx` publishes the pair inline for the first paint **and**
+passes the same two page backgrounds to `PaletteProvider` as
+`inkSurfaceLight` / `inkSurfaceDark`, so the server-rendered value and the one
+the provider rewrites on a theme toggle cannot disagree.
+
+- ⚠ **`--accent-text` is for ink only.** A primary button, a `filled` Badge, a
+  border, the menu rail and the map pin stay on `var(--accent)`: there the brand
+  hex is the _surface_, and its own foreground answers for the contrast.
+  Adjusting those would repaint the tenant's brand rather than make it readable.
+  A `subtle` or `outlined` Badge **is** ink - `badge.css` paints its `color`
+  prop as the text - so those take `--accent-text`.
+- **It is resolved per theme in CSS, never inline.** Both values are published
+  as variables on `<body>` and `globals.css` picks one per `[data-theme]`,
+  exactly as `--page-background-light` / `-dark` do - an inline resolved colour
+  would be whatever the server picked and would go stale the moment the visitor
+  toggles the theme. `PaletteProvider` rewrites the palette vars on `body` on
+  every toggle and leaves these two alone.
+- ⚠ **A chip that is always white takes `--accent-text-light` explicitly**, not
+  `--accent-text` - the navbar's cart count is accent-on-white in both themes, so
+  the dark variant (lightened for a dark surface) would be the wrong half.
+- **Nothing is published when `primary_color` isn't a six-digit hex**, and every
+  consumer's `var(--accent)` fallback stands.
+- `--secondary` has no ink variant, deliberately: it is fill-only today (the
+  menu category indexes light the current section with it, over
+  `--secondary-foreground`). Add one the same way if it ever becomes text.
+
 ## Logo watermark & page background
 
 The tenant's logo can be tiled faintly behind every **public** page

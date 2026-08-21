@@ -236,7 +236,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
                 negative would invite exactly that subtraction. */}
             {order.points_spent > 0 ? (
               <Box alignItems="baseline" justifyContent="space-between" gap={8}>
-                <Typography as="span" variant="body" color="var(--accent)">
+                <Typography as="span" variant="body" color="var(--accent-text)">
                   {tCart("paidWithPoints", { points: order.points_spent })}
                 </Typography>
               </Box>
@@ -264,7 +264,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
               <Typography
                 variant="caption"
                 margin={0}
-                color="var(--accent)"
+                color="var(--accent-text)"
                 styles={{ textAlign: "right" }}
               >
                 {tCart("pointsEarned", { points: order.points_earned })}

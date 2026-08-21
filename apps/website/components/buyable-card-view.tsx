@@ -522,7 +522,7 @@ export function BuyableCardView({
                   as="span"
                   variant="h4"
                   fontWeight={700}
-                  color="var(--accent)"
+                  color="var(--accent-text)"
                   flex="0 1 auto"
                   minWidth={0}
                   styles={{

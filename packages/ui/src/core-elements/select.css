@@ -88,7 +88,7 @@
 
 .ui-select-wrapper--active .ui-select-label {
   transform: translateY(-10px) scale(0.75);
-  color: var(--accent, #06b6d4);
+  color: var(--accent-text, var(--accent, #06b6d4));
 }
 
 /* ── Active indicator bar (Material bottom-line animation) ───── */

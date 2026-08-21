@@ -21,7 +21,7 @@
 .variant-selector__chip--selected {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 /* ── Color swatch ────────────────────────────────────────────────────────────

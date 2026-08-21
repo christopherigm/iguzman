@@ -22,7 +22,10 @@ import { getRewards, tierName } from "@/lib/rewards";
  * one path to nothing rather than three.
  */
 export async function RewardsCard({ locale }: { locale: string }) {
-  const [rewards, t] = await Promise.all([getRewards(), getTranslations("Cart")]);
+  const [rewards, t] = await Promise.all([
+    getRewards(),
+    getTranslations("Cart"),
+  ]);
 
   if (!rewards.enabled) return null;
 
@@ -41,7 +44,12 @@ export async function RewardsCard({ locale }: { locale: string }) {
       elevation={3}
       border="none"
     >
-      <Box alignItems="center" justifyContent="space-between" gap={12} flexWrap="wrap">
+      <Box
+        alignItems="center"
+        justifyContent="space-between"
+        gap={12}
+        flexWrap="wrap"
+      >
         <Typography as="h2" variant="h5" margin={0} color="var(--on-surface)">
           {t("rewardsHeading")}
         </Typography>
@@ -49,7 +57,12 @@ export async function RewardsCard({ locale }: { locale: string }) {
           // The tenant's own colour for the rung when they set one; the site's
           // accent otherwise, so an untouched field still produces a badge that
           // looks like the site rather than a default blue.
-          <Badge variant="filled" size="sm" color={tier.color || "var(--accent)"} textColor="#fff">
+          <Badge
+            variant="filled"
+            size="sm"
+            color={tier.color || "var(--accent)"}
+            textColor="#fff"
+          >
             {tierName(tier, locale)}
           </Badge>
         )}
@@ -60,7 +73,7 @@ export async function RewardsCard({ locale }: { locale: string }) {
         variant="h2"
         margin={0}
         fontWeight={700}
-        color="var(--accent)"
+        color="var(--accent-text)"
       >
         {t("pointsPrice", { points: rewards.balance })}
       </Typography>

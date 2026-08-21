@@ -114,7 +114,7 @@ export function EventCard({
             as="span"
             variant="label"
             fontWeight={700}
-            color="var(--accent)"
+            color="var(--accent-text)"
             styles={{ letterSpacing: "0.08em", textTransform: "uppercase" }}
           >
             {dateBlock}

@@ -24,3 +24,18 @@ export function contrastText(hex: string | undefined): string {
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   return luminance > 0.6 ? "#111111" : "#ffffff";
 }
+
+// --- Contrast-aware brand ink ------------------------------------------------
+
+/**
+ * Re-exported so this module stays the one door onto colour arithmetic for the
+ * app - the implementation lives in `@repo/ui`, beside `PaletteProvider`, which
+ * publishes what it returns as `--accent-text-light` / `--accent-text-dark` for
+ * every app on the package. Per the shared-constants rule: two copies of a
+ * contrast walk could only drift, and this one decides whether a customer's
+ * brand colour is readable.
+ */
+export {
+  readableOn,
+  accentInkVariables,
+} from "@repo/ui/core-elements/contrast";

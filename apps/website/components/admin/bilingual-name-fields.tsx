@@ -105,7 +105,7 @@ export function BilingualNameFields({
             iconSize="16px"
             iconColor={
               active === source
-                ? "var(--accent, #06b6d4)"
+                ? "var(--accent-text, #06b6d4)"
                 : "var(--foreground, #171717)"
             }
             disabled={isGenerating || !value.trim()}

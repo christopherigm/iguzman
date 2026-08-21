@@ -106,7 +106,7 @@ export function CartSummaryCard({
           <Typography as="span" variant="body" color="var(--foreground)">
             {t("paidWithPoints", { points: rewards.points_used })}
           </Typography>
-          <Typography as="span" variant="body" color="var(--accent)">
+          <Typography as="span" variant="body" color="var(--accent-text)">
             {formatPrice(rewards.points_value, totals[0]?.currency ?? "USD")}
           </Typography>
         </Box>

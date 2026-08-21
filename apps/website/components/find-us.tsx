@@ -78,7 +78,7 @@ export async function FindUs({
           <Typography
             as="span"
             variant="label"
-            color="var(--accent)"
+            color="var(--accent-text)"
             fontWeight={700}
             styles={{ letterSpacing: "0.14em", textTransform: "uppercase" }}
           >

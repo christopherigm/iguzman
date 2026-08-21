@@ -67,7 +67,7 @@ export async function About() {
         <Typography
           as="span"
           variant="label"
-          color="var(--accent)"
+          color="var(--accent-text)"
           fontWeight={700}
           marginBottom={8}
           styles={{

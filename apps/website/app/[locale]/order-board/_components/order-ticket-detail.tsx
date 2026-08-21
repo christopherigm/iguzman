@@ -156,7 +156,7 @@ export function OrderTicketDetail({
                     variant="h5"
                     margin={0}
                     fontWeight={700}
-                    color="var(--accent)"
+                    color="var(--accent-text)"
                   >
                     {line.size_name}
                   </Typography>
@@ -234,7 +234,7 @@ export function OrderTicketDetail({
         {/* The way out of the board and into the full record - refunds,
             cancellation and everything else this screen deliberately cannot do. */}
         <Link href={`/admin/orders/${order.public_id}`} prefetch>
-          <Typography variant="caption" margin={0} color="var(--accent)">
+          <Typography variant="caption" margin={0} color="var(--accent-text)">
             {t("openInAdmin")}
           </Typography>
         </Link>

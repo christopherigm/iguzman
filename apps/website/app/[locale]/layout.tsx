@@ -31,7 +31,7 @@ import { kindLabels } from "@/lib/kind-labels";
 import { getSystem } from "@/lib/system";
 import { getMenuCategories, type MenuCategory } from "@/lib/catalog";
 import { basemapFor } from "@/lib/basemap";
-import { contrastText } from "@/lib/colors";
+import { contrastText, accentInkVariables } from "@/lib/colors";
 import { BasemapProvider } from "@/components/basemap-provider";
 import { isGoogleFontUrl, cssFontFamily } from "@/lib/fonts";
 import { DEV_SITE_COOKIE, SITE_CONFIGS } from "@/sites/registry";
@@ -165,6 +165,32 @@ export default async function LocaleLayout({ children, params }: Props) {
     Object.entries(paletteVars),
   ) as React.CSSProperties;
   (bodyStyle as Record<string, string>)["--accent"] = accent;
+  // The same brand colour again, but as **ink**: `--accent` is one tenant hex
+  // published for both themes, and text painted in it is legible in only one of
+  // them - La Cocina de Rosalinda's navy reads beautifully on a light card and
+  // disappears into a dark one, and a brand yellow does the reverse. So the
+  // layout resolves a per-theme variant that clears WCAG AA against every
+  // surface a page can paint text on (the palette's three, plus the tenant's own
+  // page background), and `globals.css` picks one per `data-theme` - exactly the
+  // shape `--page-background-light` / `-dark` already uses, so a visitor
+  // toggling the theme repaints without a reload.
+  //
+  // ⚠ It is only for text and icons. Every *fill* keeps the raw `--accent`: a
+  // primary button, a filled badge, a border and the menu rail are the brand
+  // colour itself, and their own foreground answers for the contrast there.
+  // Nudging those would repaint the tenant's brand rather than make it readable.
+  //
+  // Published only when the hex parses, so a malformed `primary_color` leaves
+  // the variables unset and every consumer's `var(--accent)` fallback stands.
+  const pageBackgroundLight = system?.background_light ?? "#e5e5e5";
+  const pageBackgroundDark = system?.background_dark ?? "#3c3c3c";
+  Object.assign(
+    bodyStyle,
+    accentInkVariables(accent, palettes["cyan"], {
+      light: [pageBackgroundLight],
+      dark: [pageBackgroundDark],
+    }),
+  );
   // The tenant's *second* brand colour, published beside the accent so a
   // component can reach for it (`var(--secondary)`) without a prop threaded
   // down from whichever page holds the System - currently the menu's category
@@ -187,9 +213,9 @@ export default async function LocaleLayout({ children, params }: Props) {
   // `background` here would be whatever the server resolved and would go stale
   // the moment the visitor toggles the theme.
   (bodyStyle as Record<string, string>)["--page-background-light"] =
-    system?.background_light ?? "#e5e5e5";
+    pageBackgroundLight;
   (bodyStyle as Record<string, string>)["--page-background-dark"] =
-    system?.background_dark ?? "#3c3c3c";
+    pageBackgroundDark;
 
   // The tenant's typefaces. Both variables are optional: `globals.css` falls
   // back to the platform stack, so a tenant that has set no font (or only a
@@ -250,7 +276,16 @@ export default async function LocaleLayout({ children, params }: Props) {
                 initialMode={initialMode}
                 initialResolved={initialResolved}
               >
-                <PaletteProvider palette="cyan" accent={accent}>
+                <PaletteProvider
+                  palette="cyan"
+                  accent={accent}
+                  // The two page backgrounds join the palette's own surfaces
+                  // when the provider re-derives `--accent-text` on a theme
+                  // toggle, so what it writes matches the pair published inline
+                  // above rather than being measured against fewer surfaces.
+                  inkSurfaceLight={pageBackgroundLight}
+                  inkSurfaceDark={pageBackgroundDark}
+                >
                   {/* One basemap for every map on the site - the contact page's
                       locations, an event's pin, the booking page's branch map -
                       resolved here because this layout already reads `getSystem`

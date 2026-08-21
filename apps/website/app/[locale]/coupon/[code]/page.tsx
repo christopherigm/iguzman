@@ -130,7 +130,9 @@ export default async function CouponPage({ params }: Props) {
           as="h1"
           variant="h1"
           margin={0}
-          color={coupon.valid ? "var(--accent, #06b6d4)" : "var(--foreground)"}
+          color={
+            coupon.valid ? "var(--accent-text, #06b6d4)" : "var(--foreground)"
+          }
           styles={{ textAlign: "center" }}
         >
           {value} {t("off")}

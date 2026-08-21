@@ -226,7 +226,7 @@ export default function AdminMessageDetailPage({
               <Badge
                 variant="outlined"
                 size="sm"
-                color="var(--accent, #2196f3)"
+                color="var(--accent-text, #2196f3)"
               >
                 {tm("prefersWhatsapp")}
               </Badge>

@@ -140,7 +140,7 @@ export function PortionGauge({
         variant={s.amountVariant}
         margin={0}
         fontWeight={700}
-        color={level > 0 ? "var(--accent)" : "var(--foreground)"}
+        color={level > 0 ? "var(--accent-text)" : "var(--foreground)"}
         aria-live="polite"
       >
         {label}

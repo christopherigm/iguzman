@@ -126,7 +126,12 @@ export function NavbarClient({
         // White on the accent fill: the Badge's own default is the accent
         // itself, which is invisible here. Past 99 the count stops being a
         // number worth reading and the chip stops growing.
-        <Badge size="sm" circular color="#ffffff" textColor="var(--accent)">
+        <Badge
+          size="sm"
+          circular
+          color="#ffffff"
+          textColor="var(--accent-text-light, var(--accent))"
+        >
           {count > 99 ? "99+" : count}
         </Badge>
       )}

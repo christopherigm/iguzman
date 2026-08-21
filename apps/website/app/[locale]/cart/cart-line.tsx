@@ -261,7 +261,11 @@ export function CartLine({
                 {(etaLabel || !line.in_stock) && (
                   <Box alignItems="center" gap={6} flexWrap="wrap">
                     {etaLabel && (
-                      <Badge variant="subtle" size="sm" color="var(--accent)">
+                      <Badge
+                        variant="subtle"
+                        size="sm"
+                        color="var(--accent-text)"
+                      >
                         {etaLabel}
                       </Badge>
                     )}

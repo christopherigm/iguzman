@@ -770,7 +770,7 @@ export function AdminForm({
                                   iconSize="16px"
                                   iconColor={
                                     activeEnhanceField === field.key
-                                      ? "var(--accent, #06b6d4)"
+                                      ? "var(--accent-text, #06b6d4)"
                                       : "var(--foreground, #171717)"
                                   }
                                   disabled={
@@ -801,7 +801,7 @@ export function AdminForm({
                                   iconSize="16px"
                                   iconColor={
                                     activeTranslateField === field.key
-                                      ? "var(--accent, #06b6d4)"
+                                      ? "var(--accent-text, #06b6d4)"
                                       : "var(--foreground, #171717)"
                                   }
                                   disabled={

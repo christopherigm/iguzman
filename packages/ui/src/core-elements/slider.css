@@ -93,6 +93,6 @@
 }
 
 .ui-slider__tick-label--active {
-  color: var(--accent, #06b6d4);
+  color: var(--accent-text, var(--accent, #06b6d4));
   font-weight: 700;
 }

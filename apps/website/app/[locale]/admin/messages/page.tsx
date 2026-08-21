@@ -80,7 +80,11 @@ export default function AdminMessagesPage() {
       label: tm("preferredChannelLabel"),
       render: (v) =>
         v === "whatsapp" ? (
-          <Badge variant="outlined" size="sm" color="var(--accent, #2196f3)">
+          <Badge
+            variant="outlined"
+            size="sm"
+            color="var(--accent-text, #2196f3)"
+          >
             {tm("channelWhatsapp")}
           </Badge>
         ) : (

@@ -56,14 +56,32 @@ h6 {
    on :root (a parent of <body>) would never see them. `data-theme` lives on
    <html>, hence the `[data-theme="dark"] body` override. Descendants of <body>
    still inherit `--page-background`. */
+/* `--accent-text` is the tenant's brand colour as **ink** - the same accent,
+   walked toward black or white until it is legible against the surfaces this
+   theme paints. `--accent` in this app is one tenant hex published for both
+   themes (see `[locale]/layout.tsx`), where the palettes it replaces ship a
+   different accent per theme for exactly this reason: a brand navy reads on a
+   light card and vanishes into a dark one.
+
+   ⚠ Use it for TEXT and ICONS only. Everything that paints the accent as a
+   *surface* - a primary button, a filled badge, a border, the menu rail - keeps
+   `var(--accent)`, because there the brand hex is the background and its own
+   foreground answers for the contrast.
+
+   Resolved on `body` rather than `:root` for the same reason `--page-background`
+   is: the layout sets its two inputs inline on <body>, and custom properties
+   don't inherit upward. Falls back to the raw accent whenever the tenant's
+   `primary_color` isn't a hex the layout could adjust. */
 body {
   --page-background: var(--page-background-light, var(--surface-2));
+  --accent-text: var(--accent-text-light, var(--accent));
   color: var(--foreground);
   background: var(--page-background);
 }
 
 [data-theme="dark"] body {
   --page-background: var(--page-background-dark, var(--surface-2));
+  --accent-text: var(--accent-text-dark, var(--accent));
 }
 
 * {

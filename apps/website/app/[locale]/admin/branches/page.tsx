@@ -41,7 +41,11 @@ export default function AdminBranchesPage() {
     })();
   }, [load]);
 
-  const handleToggleEnabled = useToggleEnabled(updateBranch, setItems, setError);
+  const handleToggleEnabled = useToggleEnabled(
+    updateBranch,
+    setItems,
+    setError,
+  );
   const handleReorder = useReorder(updateBranch, setItems, setError);
   const handleDelete = async (id: number) => {
     try {
@@ -61,7 +65,11 @@ export default function AdminBranchesPage() {
           {String(v || tc("unnamed"))}
           {row.is_main ? " " : ""}
           {row.is_main ? (
-            <Badge variant="subtle" size="sm" color="var(--accent, #2196f3)">
+            <Badge
+              variant="subtle"
+              size="sm"
+              color="var(--accent-text, #2196f3)"
+            >
               {tc("main")}
             </Badge>
           ) : null}

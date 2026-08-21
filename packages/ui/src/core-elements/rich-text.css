@@ -46,7 +46,7 @@
 }
 
 .rich-text a {
-  color: var(--accent, currentColor);
+  color: var(--accent-text, var(--accent, currentColor));
   text-decoration: underline;
 }
 

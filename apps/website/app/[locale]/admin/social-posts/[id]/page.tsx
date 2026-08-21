@@ -1069,7 +1069,10 @@ export default function AdminSocialPostFormPage({ params }: Props) {
                   </Typography>
                 ) : null}
                 {hashtags ? (
-                  <Typography variant="body" color="var(--accent, #06b6d4)">
+                  <Typography
+                    variant="body"
+                    color="var(--accent-text, #06b6d4)"
+                  >
                     {hashtags}
                   </Typography>
                 ) : null}

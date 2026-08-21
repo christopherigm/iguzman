@@ -37,12 +37,24 @@
  * Links use the brand --accent, but that variable can be overridden with a
  * single customer brand color applied in BOTH themes (see PaletteProvider's
  * `accent` prop), so a dark-blue brand accent would be unreadable on a dark
- * --background. Blending toward --foreground adaptively guarantees contrast:
- * it lightens the accent in dark mode and darkens it in light mode, keeping
- * the brand hue while staying legible against the page background.
+ * --background. `--accent-text` is that accent with its lightness walked until
+ * it clears WCAG AA against this theme's surfaces - the same fix this rule used
+ * to approximate by blending 25% of --foreground into the accent, which kept
+ * the hue but guaranteed no particular ratio and muddied every brand colour it
+ * touched.
+ *
+ * ⚠ The old blend is the FALLBACK rather than the raw accent, which is what
+ * every other rule in this package falls back to. `PaletteProvider` publishes
+ * the token from an effect, so in an app that does not also resolve it per
+ * `[data-theme]` in its own globals.css there is a first paint without it - and
+ * this is the one rule whose pre-token value was not the raw accent, so falling
+ * back to that would flash the unreadable colour this comment exists about.
  */
 .breadcrumbs__link {
-  color: color-mix(in srgb, var(--accent) 75%, var(--foreground));
+  color: var(
+    --accent-text,
+    color-mix(in srgb, var(--accent) 75%, var(--foreground))
+  );
   text-decoration: none;
   transition: opacity 0.15s ease;
 }

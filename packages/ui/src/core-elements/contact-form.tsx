@@ -253,7 +253,7 @@ export function ContactForm({
         <Typography
           as="span"
           variant="label"
-          color="var(--accent, #2196f3)"
+          color="var(--accent-text, var(--accent, #2196f3))"
           fontWeight={600}
         >
           {contextLabel}

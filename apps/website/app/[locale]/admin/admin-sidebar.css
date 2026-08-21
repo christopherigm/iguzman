@@ -74,7 +74,7 @@
 
 .admin-sidebar__link--active {
   background: color-mix(in srgb, var(--accent) 10%, transparent);
-  color: var(--accent);
+  color: var(--accent-text);
   border-left-color: var(--accent);
   font-weight: 600;
 }

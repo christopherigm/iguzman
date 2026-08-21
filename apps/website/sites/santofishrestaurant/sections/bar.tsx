@@ -169,7 +169,7 @@ export async function Bar() {
                   <Typography
                     as="span"
                     variant="label"
-                    color={onImage ? "#fff" : "var(--accent)"}
+                    color={onImage ? "#fff" : "var(--accent-text)"}
                     fontWeight={700}
                     styles={{
                       letterSpacing: "0.14em",
