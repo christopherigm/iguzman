@@ -204,6 +204,11 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
     # would have nothing to resolve their `coupon` FK against and would silently
     # null it out, losing which campaign each sale came from.
     ModelSpec("orders.Coupon", SECTION_SYSTEM, "system", natural_key=("code",)),
+    # A tier is identified by the one thing that must be unique within a tenant
+    # anyway - where on the ladder it starts. Its name is editable copy, so
+    # keying on that would restore "Gold" twice the first time a tenant renamed
+    # a rung.
+    ModelSpec("orders.RewardTier", SECTION_SYSTEM, "system", natural_key=("threshold",)),
     ModelSpec("orders.Order", SECTION_SYSTEM, "system", natural_key=("public_id",)),
     ModelSpec("orders.OrderLine", SECTION_SYSTEM, "order__system", parent="order"),
     # An appointment is part of its order's record and has to survive a restore
@@ -212,6 +217,15 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
     # OrderLine is: a booking has no identity of its own, and there is exactly
     # one per order (OneToOne), so replacing it per parent is exact.
     ModelSpec("orders.Booking", SECTION_SYSTEM, "order__system", parent="order"),
+    # ⚠ Keyed by `created`, and **after** `orders.Order` so its `order` FK is
+    # already in the idmap. A ledger row is the record of a balance and cannot
+    # ride as a `parent="order"` child the way `OrderLine` does: many rows carry
+    # no order at all (a tenant's manual adjustment, an unclaimed guest earning),
+    # and wiping an order's children on restore would delete a customer's points
+    # along with a receipt.
+    ModelSpec(
+        "orders.PointsTransaction", SECTION_SYSTEM, "system", natural_key=("created_at",),
+    ),
     ModelSpec("users.Favorite", SECTION_SYSTEM, "system", natural_key=("created_at",)),
     ModelSpec("users.CartItem", SECTION_SYSTEM, "system", natural_key=("created_at",)),
     # ---- products ---------------------------------------------------------- #

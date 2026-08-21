@@ -79,7 +79,11 @@ export default async function CartPage({ params }: Props) {
       ) : cart.items.length > 0 ? (
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, sm: 7 }}>
-            <CartLines lines={cart.items} locale={locale} />
+            <CartLines
+              lines={cart.items}
+              locale={locale}
+              rewards={cart.rewards}
+            />
             {/* Under the lines, inside their column: the strip is a nudge about
                 this basket, so it belongs beside the list rather than across the
                 page under the summary. */}
@@ -89,7 +93,11 @@ export default async function CartPage({ params }: Props) {
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 5 }}>
-            <CartSummary totals={cart.totals} count={cart.count} />
+            <CartSummary
+              totals={cart.totals}
+              count={cart.count}
+              rewards={cart.rewards}
+            />
           </Grid>
         </Grid>
       ) : (

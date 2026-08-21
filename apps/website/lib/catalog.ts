@@ -141,6 +141,24 @@ export interface FeaturedProduct {
   price: string;
   compare_price: string | null;
   currency: string;
+  /**
+   * What buying one of these costs in points, or null when it cannot be bought
+   * with them - which is the default, and every item on a tenant not running the
+   * program. The card prints it beside the money price; the cart turns it into a
+   * button. **Only meaningful while `System.rewards_enabled`.**
+   *
+   * ⚠ It is the item's **base** points price, unmoved by size or add-ons: there
+   * is no per-size points column to derive a delta from, and inventing one would
+   * quote a number no operator ever typed.
+   */
+  points_price: number | null;
+  /**
+   * What buying one earns, or null meaning "inherit my category's". The
+   * storefront does not read this - the award is resolved server-side at
+   * checkout - but it rides on the payload so the CMS form can tell a blank
+   * (inheriting) apart from a zero (deliberately earning nothing).
+   */
+  points_award: number | null;
   in_stock: boolean;
   is_featured: boolean;
   variants: ProductVariant[];
@@ -158,6 +176,24 @@ export interface FeaturedService {
   price: string;
   compare_price: string | null;
   currency: string;
+  /**
+   * What buying one of these costs in points, or null when it cannot be bought
+   * with them - which is the default, and every item on a tenant not running the
+   * program. The card prints it beside the money price; the cart turns it into a
+   * button. **Only meaningful while `System.rewards_enabled`.**
+   *
+   * ⚠ It is the item's **base** points price, unmoved by size or add-ons: there
+   * is no per-size points column to derive a delta from, and inventing one would
+   * quote a number no operator ever typed.
+   */
+  points_price: number | null;
+  /**
+   * What buying one earns, or null meaning "inherit my category's". The
+   * storefront does not read this - the award is resolved server-side at
+   * checkout - but it rides on the payload so the CMS form can tell a blank
+   * (inheriting) apart from a zero (deliberately earning nothing).
+   */
+  points_award: number | null;
   is_featured: boolean;
   modality: string | null;
   duration: number | null;
@@ -204,6 +240,24 @@ export interface ProductDetail {
   price: string;
   compare_price: string | null;
   currency: string;
+  /**
+   * What buying one of these costs in points, or null when it cannot be bought
+   * with them - which is the default, and every item on a tenant not running the
+   * program. The card prints it beside the money price; the cart turns it into a
+   * button. **Only meaningful while `System.rewards_enabled`.**
+   *
+   * ⚠ It is the item's **base** points price, unmoved by size or add-ons: there
+   * is no per-size points column to derive a delta from, and inventing one would
+   * quote a number no operator ever typed.
+   */
+  points_price: number | null;
+  /**
+   * What buying one earns, or null meaning "inherit my category's". The
+   * storefront does not read this - the award is resolved server-side at
+   * checkout - but it rides on the payload so the CMS form can tell a blank
+   * (inheriting) apart from a zero (deliberately earning nothing).
+   */
+  points_award: number | null;
   in_stock: boolean;
   stock_count: number | null;
   is_featured: boolean;
@@ -244,6 +298,24 @@ export interface ServiceDetail {
   price: string;
   compare_price: string | null;
   currency: string;
+  /**
+   * What buying one of these costs in points, or null when it cannot be bought
+   * with them - which is the default, and every item on a tenant not running the
+   * program. The card prints it beside the money price; the cart turns it into a
+   * button. **Only meaningful while `System.rewards_enabled`.**
+   *
+   * ⚠ It is the item's **base** points price, unmoved by size or add-ons: there
+   * is no per-size points column to derive a delta from, and inventing one would
+   * quote a number no operator ever typed.
+   */
+  points_price: number | null;
+  /**
+   * What buying one earns, or null meaning "inherit my category's". The
+   * storefront does not read this - the award is resolved server-side at
+   * checkout - but it rides on the payload so the CMS form can tell a blank
+   * (inheriting) apart from a zero (deliberately earning nothing).
+   */
+  points_award: number | null;
   is_featured: boolean;
   sku: string | null;
   brand: number | null;
@@ -577,6 +649,24 @@ export interface MenuItemDetail {
   price: string;
   compare_price: string | null;
   currency: string;
+  /**
+   * What buying one of these costs in points, or null when it cannot be bought
+   * with them - which is the default, and every item on a tenant not running the
+   * program. The card prints it beside the money price; the cart turns it into a
+   * button. **Only meaningful while `System.rewards_enabled`.**
+   *
+   * ⚠ It is the item's **base** points price, unmoved by size or add-ons: there
+   * is no per-size points column to derive a delta from, and inventing one would
+   * quote a number no operator ever typed.
+   */
+  points_price: number | null;
+  /**
+   * What buying one earns, or null meaning "inherit my category's". The
+   * storefront does not read this - the award is resolved server-side at
+   * checkout - but it rides on the payload so the CMS form can tell a blank
+   * (inheriting) apart from a zero (deliberately earning nothing).
+   */
+  points_award: number | null;
   is_available: boolean;
   is_featured: boolean;
   show_nutrition_label: boolean;

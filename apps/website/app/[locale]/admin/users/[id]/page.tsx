@@ -75,13 +75,11 @@ export default function AdminUserFormPage({ params }: Props) {
     }
   };
 
-  if (loading)
-    return (
-      <Box padding="24px">
-        <Typography variant="body">{t("loading")}</Typography>
-      </Box>
-    );
-  if (!user)
+  // A failed load is its own answer and replaces the form. A load still in
+  // flight is not: the header and its buttons render from the first paint,
+  // disabled, rather than appearing under the operator's cursor when the
+  // record lands - so everything below reads `user` as possibly absent.
+  if (!loading && !user)
     return (
       <Box padding="24px">
         <Typography variant="body">{t("errorLoad")}</Typography>
@@ -104,14 +102,18 @@ export default function AdminUserFormPage({ params }: Props) {
             {t("edit")} - {t("users")}
           </Typography>
           <Box display="flex" alignItems="center" gap={8}>
-            <Button text={t("cancel")} size="md" onClick={() => router.back()} />
+            <Button
+              text={t("cancel")}
+              size="md"
+              onClick={() => router.back()}
+            />
             {/* This form has no fixed bottom bar, so the arrows flank the
                 header's Save rather than a floating one. */}
             <SiblingArrow direction="prev" siblings={siblings} size="md" />
             <Button
               text={saving ? t("saving") : t("save")}
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || loading}
               kind="primary"
               size="md"
             />
@@ -119,8 +121,8 @@ export default function AdminUserFormPage({ params }: Props) {
           </Box>
         </Box>
 
-        {/* Save progress, directly under the header action row. */}
-        {saving && <ProgressBar />}
+        {/* Save progress - and, on the way in, the record's own load. */}
+        {(saving || loading) && <ProgressBar />}
 
         {error && (
           <Box className="uf__banner uf__banner--error">
@@ -136,33 +138,41 @@ export default function AdminUserFormPage({ params }: Props) {
         <Box className="uf__card">
           <Box className="uf__meta">
             <Typography as="p" variant="body">
-              <strong>Email:</strong> {String(user.email ?? "")}
+              <strong>Email:</strong> {String(user?.email ?? "")}
             </Typography>
             <Typography as="p" variant="body">
               <strong>{t("firstName") ?? "First Name"}:</strong>{" "}
-              {String(user.first_name ?? "")}
+              {String(user?.first_name ?? "")}
             </Typography>
             <Typography as="p" variant="body">
               <strong>{t("lastName") ?? "Last Name"}:</strong>{" "}
-              {String(user.last_name ?? "")}
+              {String(user?.last_name ?? "")}
             </Typography>
             <Typography as="p" variant="body">
               <strong>{t("role") ?? "Role"}:</strong>{" "}
-              <Badge variant="subtle" color={user.is_admin ? "blue" : "gray"}>
-                {user.is_admin ? t("isAdmin") : t("notAdmin")}
+              <Badge variant="subtle" color={user?.is_admin ? "blue" : "gray"}>
+                {user?.is_admin ? t("isAdmin") : t("notAdmin")}
               </Badge>
             </Typography>
           </Box>
 
           <Box className="uf__toggles">
             <Box className="uf__toggle-row">
-              <Switch checked={isAdmin} onChange={setIsAdmin} />
+              <Switch
+                checked={isAdmin}
+                onChange={setIsAdmin}
+                disabled={loading}
+              />
               <Typography as="span" variant="body" fontWeight={500}>
                 {t("isAdmin")}
               </Typography>
             </Box>
             <Box className="uf__toggle-row">
-              <Switch checked={isActive} onChange={setIsActive} />
+              <Switch
+                checked={isActive}
+                onChange={setIsActive}
+                disabled={loading}
+              />
               <Typography as="span" variant="body" fontWeight={500}>
                 {t("active")}
               </Typography>
@@ -173,7 +183,7 @@ export default function AdminUserFormPage({ params }: Props) {
             <Button
               text={saving ? t("saving") : t("save")}
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || loading}
             />
           </Box>
         </Box>

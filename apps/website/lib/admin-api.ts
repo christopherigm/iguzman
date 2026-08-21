@@ -688,6 +688,41 @@ export async function deleteMenuSize(
   return parseResponse<void>(res);
 }
 
+// ---- Reward tiers ----
+//
+// The rungs of the rewards ladder, edited on /admin/system beside the global
+// switch. Rows are written one at a time - the same shape `MenuSizesEditor`
+// uses - because a tier is a real row other reads resolve against, not a
+// replace-all list like a branch's opening hours.
+
+export async function listRewardTiers() {
+  const res = await adminFetch("/api/rewards/tiers/admin/");
+  return parseResponse<Record<string, unknown>[]>(res);
+}
+export async function createRewardTier(data: Record<string, unknown>) {
+  const res = await adminFetch("/api/rewards/tiers/admin/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function updateRewardTier(
+  pk: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(`/api/rewards/tiers/admin/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return parseResponse<Record<string, unknown>>(res);
+}
+export async function deleteRewardTier(pk: number) {
+  const res = await adminFetch(`/api/rewards/tiers/admin/${pk}/`, {
+    method: "DELETE",
+  });
+  return parseResponse<void>(res);
+}
+
 // ---- Menu Item Recipe (internal) ----
 export async function getMenuItemRecipe(menuItemId: number) {
   const res = await adminFetch(`/api/catalog/menu-items/${menuItemId}/recipe/`);

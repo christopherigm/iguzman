@@ -5,7 +5,7 @@ from rest_framework import serializers
 
 from users.serializers import CartItemWriteSerializer
 
-from .models import Booking, Coupon, Order, OrderLine
+from .models import Booking, Coupon, Order, OrderLine, PointsTransaction, RewardTier
 
 
 def resolve_line_image(obj, request=None):
@@ -78,6 +78,11 @@ class OrderLineSerializer(serializers.ModelSerializer):
             "size_name", "size_en_name", "size_price_delta",
             "customization",
             "unit_price", "quantity", "line_total", "currency",
+            # ⚠ On a `paid_with_points` line, `unit_price`/`line_total` are what
+            # the line was **worth**, not what was charged - see
+            # `OrderLine.paid_with_points`. Anything rendering a total from these
+            # has to skip the redeemed ones, exactly as `Order.subtotal` does.
+            "paid_with_points", "points_price",
             "image", "item_id", "item_slug", "item_menu_category_slug",
             "item_booking_enabled",
         ]
@@ -271,6 +276,11 @@ class OrderSerializer(serializers.ModelSerializer):
             # summary honestly: with only the total, an order placed with a
             # coupon shows a number that does not add up from its own lines.
             "currency", "subtotal", "discount_amount", "coupon_code", "total",
+            # Both needed for the same reason `discount_amount` is: an order with
+            # a redeemed line shows a total that does not add up from its lines
+            # unless the page can say which of them were paid in points, and what
+            # the purchase earned back.
+            "points_spent", "points_earned",
             "email", "phone", "shipping_name", "shipping_line1", "shipping_line2",
             "shipping_city", "shipping_state", "shipping_postal_code", "shipping_country",
             "created_at", "paid_at", "item_count", "lines", "booking", "qr_code",
@@ -353,6 +363,11 @@ class AdminOrderSerializer(serializers.ModelSerializer):
             # summary honestly: with only the total, an order placed with a
             # coupon shows a number that does not add up from its own lines.
             "currency", "subtotal", "discount_amount", "coupon_code", "total",
+            # Both needed for the same reason `discount_amount` is: an order with
+            # a redeemed line shows a total that does not add up from its lines
+            # unless the page can say which of them were paid in points, and what
+            # the purchase earned back.
+            "points_spent", "points_earned",
             "email", "phone", "shipping_name", "shipping_line1", "shipping_line2",
             "shipping_city", "shipping_state", "shipping_postal_code", "shipping_country",
             "created_at", "paid_at", "fulfilled_at", "item_count", "lines", "qr_code",
@@ -1014,3 +1029,90 @@ class AdminBookingActionSerializer(serializers.Serializer):
                 {"resource": "Reassigning needs a resource (or an explicit null)."}
             )
         return attrs
+
+
+class RewardTierSerializer(serializers.ModelSerializer):
+    """One rung of the rewards ladder, as the CMS and the storefront read it.
+
+    One serializer for both, unlike the coupon pair: there is nothing private on
+    a tier. What it is called, what it takes to reach, and what it earns you are
+    all things a program has to publish or nobody can aim at it - the same
+    reasoning that puts `CouponPublicSerializer`'s offer fields on a public
+    endpoint while keeping the campaign's performance off it. A tier has no
+    performance half.
+    """
+
+    class Meta:
+        model = RewardTier
+        fields = [
+            "id", "name", "en_name", "threshold", "period_months",
+            "earn_multiplier", "color", "enabled",
+        ]
+        read_only_fields = ["id"]
+
+
+class RewardTierWriteSerializer(serializers.ModelSerializer):
+    """A tier as the CMS writes it. `system` is set by the view, never sent.
+
+    Rows are PATCHed one at a time by the editor on `/admin/system`, exactly as
+    `MenuSizeWriteSerializer`'s are - so this validates one row and the view owns
+    the tenant.
+    """
+
+    class Meta:
+        model = RewardTier
+        fields = [
+            "name", "en_name", "threshold", "period_months",
+            "earn_multiplier", "color", "enabled",
+        ]
+
+    def validate_earn_multiplier(self, value):
+        # Bounded rather than merely positive. Below 100 a tier would *penalise*
+        # the customers who reached it, which is never what an operator meant to
+        # type, and an unbounded ceiling turns a slipped keypress into a tenant
+        # minting ten times the points they intended on every order.
+        if not (100 <= value <= 500):
+            raise serializers.ValidationError(
+                "The earn multiplier must be between 100% and 500%."
+            )
+        return value
+
+    def validate_period_months(self, value):
+        if not (1 <= value <= 60):
+            raise serializers.ValidationError(
+                "The qualifying period must be between 1 and 60 months."
+            )
+        return value
+
+    def validate_threshold(self, value):
+        # Scoped to the tenant, mirroring the model's own unique constraint, so
+        # the CMS shows a sentence rather than a 500 from an IntegrityError.
+        system = self.context.get("system")
+        if system is None:
+            return value
+        clash = RewardTier.objects.filter(system=system, threshold=value)
+        if self.instance:
+            clash = clash.exclude(pk=self.instance.pk)
+        if clash.exists():
+            raise serializers.ValidationError(
+                "Another tier already starts at that number of points."
+            )
+        return value
+
+
+class PointsTransactionSerializer(serializers.ModelSerializer):
+    """One line of the customer's points statement.
+
+    `order_id` is the order's **public** handle, not its pk - it is what the
+    statement links to, and the sequential id never leaves the database (see
+    `Order.public_id`).
+    """
+
+    order_id = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PointsTransaction
+        fields = ["id", "kind", "points", "note", "order_id", "created_at"]
+
+    def get_order_id(self, obj):
+        return str(obj.order.public_id) if obj.order_id else None

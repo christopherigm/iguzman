@@ -200,6 +200,19 @@ class CartItem(models.Model):
     # instead. Empty list = the dish exactly as listed.
     customization = models.JSONField(default=list, blank=True)
     quantity = models.PositiveIntegerField(default=1)
+    # Whether the customer has chosen to pay for this line with points rather
+    # than money. A **toggle on the line, not part of its identity**: a small and
+    # a large are two different things to buy, but "the same pizza, paid a
+    # different way" is one line the customer changed their mind about - so the
+    # unique constraints below are untouched and adding a dish already in the
+    # cart still merges.
+    #
+    # Nothing here checks that the customer can afford it. The balance moves
+    # while the cart sits (another tab, another order), so what is affordable is
+    # re-derived on every read (`users/views.py::_cart_payload`) and re-checked
+    # under a lock at checkout. A line left on points that has become unaffordable
+    # is quietly priced in money again rather than refusing the whole cart.
+    pay_with_points = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -258,6 +271,31 @@ class CartItem(models.Model):
     @property
     def line_total(self):
         return self.unit_price * self.quantity
+
+    @property
+    def points_price(self):
+        """What one of this line costs in points, or None when it cannot be
+        bought with them.
+
+        Read live off the catalog like `unit_price` - a cart reflects today's
+        catalog, and `OrderLine.points_price` is where the snapshot happens.
+
+        ⚠ **The item's base points price, unadjusted by size or add-ons.** A
+        dish's money price moves with both; its points price does not, because
+        `points_price` is a single number the tenant sets per item and there is
+        no per-size or per-ingredient points column to derive a delta from.
+        Inventing one (scaling by the money ratio, say) would put a number on the
+        cart that no operator ever typed.
+        """
+        return self.target.points_price
+
+    @property
+    def points_total(self):
+        """What this whole line costs in points, or 0 when it is a money line."""
+        price = self.points_price
+        if not self.pay_with_points or not price:
+            return 0
+        return price * self.quantity
 
     def __str__(self):
         return f"{self.user.email} 🛒 {self.quantity}× {self.target}"

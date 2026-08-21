@@ -46,7 +46,14 @@ from core.models import BookingResource, Branch, BranchHours, ResourcePool, Syst
 from users.models import CartItem
 
 from . import views as orders_views
-from .models import Booking, Coupon, Order, OrderLine
+from .models import (
+    Booking,
+    Coupon,
+    Order,
+    OrderLine,
+    PointsTransaction,
+    RewardTier,
+)
 from .services.booking import branches_for, is_slot_available, slots_for_day
 from .services.coupons import (
     CouponError,
@@ -59,6 +66,18 @@ from .services.coupons import (
     validate_coupon,
 )
 from .services.qr import order_detail_url
+from .services.rewards import (
+    RewardsError,
+    award_points,
+    balance_for,
+    claim_points_for_email,
+    earn_multiplier_for,
+    points_award_for,
+    release_points,
+    revoke_points,
+    spend_points,
+    tier_for,
+)
 from .services.stripe_gateway import StripeGatewayError, to_minor_units
 from .views import _booking_amounts
 
@@ -3248,3 +3267,273 @@ class OrderLineSizeSnapshotTests(TestCase):
         self.assertEqual(plain.size_name, "")
         self.assertEqual(plain.size_price_delta, Decimal("0.00"))
         self.assertEqual(plain.unit_price, Decimal("200.00"))
+
+
+class RewardsTests(TestCase):
+    """Points: what a purchase is worth, what a redemption costs, and who owns it.
+
+    Money, so this keeps full fidelity per the module docstring - every distinct
+    way the arithmetic can be wrong has an assertion, because each one is either
+    a customer charged for something they redeemed or a tenant giving away stock.
+
+    Collapsed into four long tests rather than twenty short ones, which is the
+    shape the rest of this file uses: earning, spending, the guest's claim, and
+    the tier ladder.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = stripe_system(rewards_enabled=True)
+        self.other_system = System.objects.create(
+            site_name="Beta", host="beta.test", rewards_enabled=True,
+        )
+        self.category = ProductCategory.objects.create(
+            system=self.system, name="Bread", slug="bread", points_award=50,
+        )
+        # Inherits the category's 50, and costs 1200 points to redeem.
+        self.loaf = Product.objects.create(
+            system=self.system, category=self.category, name="Loaf", slug="loaf",
+            price=Decimal("120.00"), currency="USD", stock_count=50,
+            points_price=1200,
+        )
+        self.user = make_user("a@acme.test", self.system)
+
+    def _grant(self, points, user=None, system=None):
+        """Put points in an account the way an earned order would."""
+        return PointsTransaction.objects.create(
+            system=system or self.system, user=user or self.user,
+            email=(user or self.user).email,
+            kind=PointsTransaction.KIND_EARN, points=points,
+        )
+
+    def _order(self, *, redeemed=False, quantity=1, user=None, email=""):
+        order = Order.objects.create(
+            system=self.system, user=user, currency="USD", email=email,
+            subtotal=Decimal("0.00") if redeemed else Decimal("120.00") * quantity,
+            total=Decimal("0.00") if redeemed else Decimal("120.00") * quantity,
+        )
+        OrderLine.objects.create(
+            order=order, kind="product", product=self.loaf, name="Loaf",
+            unit_price=Decimal("120.00"), quantity=quantity,
+            line_total=Decimal("120.00") * quantity, currency="USD",
+            paid_with_points=redeemed, points_price=1200 if redeemed else 0,
+            points_award=0 if redeemed else 50,
+        )
+        return order
+
+    # ── Earning ──────────────────────────────────────────────────────────────
+
+    def test_what_a_purchase_earns(self):
+        # An item with no award of its own inherits its category's.
+        self.assertEqual(points_award_for(self.loaf), 50)
+
+        # ⚠ Zero is not blank. An item set to zero earns nothing however generous
+        # its category is - which is the whole point of the nullable column, and
+        # the one place a naive `or` would silently pay out 50.
+        self.loaf.points_award = 0
+        self.assertEqual(points_award_for(self.loaf), 0)
+        self.loaf.points_award = 200
+        self.assertEqual(points_award_for(self.loaf), 200)
+        self.loaf.points_award = None
+
+        # An award is per unit, so two loaves earn twice.
+        order = self._order(quantity=2, user=self.user)
+        self.assertEqual(award_points(order), 100)
+        self.assertEqual(balance_for(self.user, self.system), 100)
+
+        # Idempotent: Stripe re-delivers on any non-2xx, and a second delivery
+        # must not pay twice.
+        self.assertEqual(award_points(order), 0)
+        self.assertEqual(balance_for(self.user, self.system), 100)
+
+        # ⚠ A redeemed line earns nothing - otherwise points mint themselves.
+        redeemed = self._order(redeemed=True, user=self.user)
+        self.assertEqual(award_points(redeemed), 0)
+
+        # Off at the tenant switch, nothing earns at all.
+        self.system.rewards_enabled = False
+        self.system.save()
+        self.assertEqual(award_points(self._order(user=self.user)), 0)
+
+    def test_revoking_an_award_when_the_order_is_called_off(self):
+        order = self._order(user=self.user)
+        award_points(order)
+        self.assertEqual(balance_for(self.user, self.system), 50)
+
+        self.assertTrue(revoke_points(order))
+        self.assertEqual(balance_for(self.user, self.system), 0)
+        # Idempotent for `award_points`' reason: a double-delivered webhook must
+        # not take the points away twice and leave the customer in the red.
+        self.assertFalse(revoke_points(order))
+        self.assertEqual(balance_for(self.user, self.system), 0)
+
+    # ── Spending ─────────────────────────────────────────────────────────────
+
+    def test_spending_is_refused_released_and_never_crosses_a_tenant(self):
+        order = self._order(redeemed=True, user=self.user)
+
+        # A balance that does not cover it is a refusal, not a silent re-pricing
+        # in money: a customer quoted one total and charged another is a dispute.
+        self._grant(800)
+        with self.assertRaises(RewardsError) as caught:
+            spend_points(order, self.user, self.system, 1200)
+        self.assertEqual(caught.exception.code, "INSUFFICIENT_POINTS")
+        self.assertEqual(balance_for(self.user, self.system), 800)
+
+        # ⚠ Points earned on another tenant are invisible here. The catalog is
+        # per-System, so a balance can no more cross between them than a coupon.
+        self._grant(5000, system=self.other_system)
+        self.assertEqual(balance_for(self.user, self.system), 800)
+
+        self._grant(400)
+        spend_points(order, self.user, self.system, 1200)
+        order.refresh_from_db()
+        self.assertEqual(order.points_spent, 1200)
+        self.assertEqual(balance_for(self.user, self.system), 0)
+
+        # An abandoned order hands the redemption back, exactly as a dead order
+        # hands back a coupon redemption and a booking slot.
+        self.assertTrue(release_points(order))
+        self.assertEqual(balance_for(self.user, self.system), 1200)
+        # And only once, or a re-delivered expiry mints points out of a refund.
+        self.assertFalse(release_points(order))
+        self.assertEqual(balance_for(self.user, self.system), 1200)
+
+        # A guest cannot spend: there is no account to hold a balance.
+        with self.assertRaises(RewardsError) as caught:
+            spend_points(self._order(redeemed=True), None, self.system, 1200)
+        self.assertEqual(caught.exception.code, "POINTS_REQUIRE_ACCOUNT")
+
+    # The discount object is a real API call in `_checkout` - stubbed here, since
+    # what is under test is the arithmetic that decides what Stripe is *asked*
+    # for, not the asking.
+    @patch("orders.views.create_discount_coupon", return_value="di_test_123")
+    @patch("orders.views.create_checkout_session", return_value=_StubSession())
+    def test_a_redeemed_line_is_not_charged_and_not_discounted(self, _session, _discount):
+        """The whole arithmetic, end to end through the real checkout."""
+        self._grant(1200)
+        soda = Product.objects.create(
+            system=self.system, category=self.category, name="Soda", slug="soda",
+            price=Decimal("30.00"), currency="USD", stock_count=50,
+        )
+        CartItem.objects.create(
+            user=self.user, system=self.system, product=self.loaf, quantity=1,
+            pay_with_points=True,
+        )
+        CartItem.objects.create(
+            user=self.user, system=self.system, product=soda, quantity=1,
+        )
+        # 50% off everything, so the difference between discounting the whole
+        # basket and discounting only the money half is 60 dollars.
+        Coupon.objects.create(
+            system=self.system, code="HALF", kind=Coupon.KIND_PERCENT,
+            value=Decimal("50.00"), currency="USD",
+        )
+
+        self.client.force_login(self.user)
+        response = self.client.post(
+            "/api/orders/checkout/",
+            {"locale": "en", "coupon_code": "HALF"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 201)
+
+        order = Order.objects.get(public_id=response.json()["order_id"])
+        # ⚠ The redeemed loaf is out of the subtotal entirely - only the soda is
+        # owed - and the coupon is priced off that money half alone.
+        self.assertEqual(order.subtotal, Decimal("30.00"))
+        self.assertEqual(order.discount_amount, Decimal("15.00"))
+        self.assertEqual(order.total, Decimal("15.00"))
+        self.assertEqual(order.points_spent, 1200)
+        self.assertEqual(balance_for(self.user, self.system), 0)
+
+        # The line still carries its money price: that is what it was worth, and
+        # what the receipt reads back.
+        line = order.lines.get(paid_with_points=True)
+        self.assertEqual(line.line_total, Decimal("120.00"))
+        self.assertEqual(line.points_price, 1200)
+        # Nothing is earned yet - the webhook has not paid for it.
+        self.assertEqual(order.points_earned, 0)
+
+    @patch("orders.views.create_checkout_session", return_value=_StubSession())
+    def test_checkout_refuses_a_balance_that_does_not_cover_the_basket(self, _session):
+        self._grant(400)
+        CartItem.objects.create(
+            user=self.user, system=self.system, product=self.loaf, quantity=1,
+            pay_with_points=True,
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            "/api/orders/checkout/", {"locale": "en"}, content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "INSUFFICIENT_POINTS")
+        # The half-built order is gone rather than left in the history as a
+        # phantom, and the balance is untouched.
+        self.assertFalse(Order.objects.filter(system=self.system).exists())
+        self.assertEqual(balance_for(self.user, self.system), 400)
+
+    # ── The guest's claim ────────────────────────────────────────────────────
+
+    def test_a_guest_earns_into_an_unclaimed_row_and_claims_it_on_signup(self):
+        order = self._order(email="Guest@Acme.test")
+        self.assertEqual(award_points(order), 50)
+
+        row = PointsTransaction.objects.get(order=order)
+        # Held against the address, owned by nobody, and so in nobody's balance -
+        # which is what makes the email's "create an account to claim" honest.
+        self.assertIsNone(row.user_id)
+        self.assertEqual(row.email, "guest@acme.test")
+
+        newcomer = make_user("guest@acme.test", self.system)
+        self.assertEqual(balance_for(newcomer, self.system), 0)
+
+        # ⚠ Scoped to the tenant as well as the address: the same address on two
+        # sites is two customers, and sweeping both would move one tenant's
+        # liability onto the other's books.
+        self.assertEqual(claim_points_for_email(newcomer, self.other_system, newcomer.email), 0)
+        self.assertEqual(claim_points_for_email(newcomer, self.system, newcomer.email), 50)
+        self.assertEqual(balance_for(newcomer, self.system), 50)
+
+    # ── Tiers ────────────────────────────────────────────────────────────────
+
+    def test_the_ladder_is_walked_on_earnings_not_on_the_balance(self):
+        silver = RewardTier.objects.create(
+            system=self.system, name="Silver", threshold=0, period_months=12,
+            earn_multiplier=100,
+        )
+        gold = RewardTier.objects.create(
+            system=self.system, name="Gold", threshold=500, period_months=6,
+            earn_multiplier=150,
+        )
+        # Everyone starts on the bottom rung.
+        self.assertEqual(tier_for(self.user, self.system), silver)
+        self.assertEqual(earn_multiplier_for(self.user, self.system), 100)
+
+        self._grant(600)
+        self.assertEqual(tier_for(self.user, self.system), gold)
+        self.assertEqual(earn_multiplier_for(self.user, self.system), 150)
+
+        # ⚠ **Spending must not demote.** A program that took a customer's status
+        # away for using the reward it gave them is one they stop using.
+        order = self._order(redeemed=True, user=self.user)
+        spend_points(order, self.user, self.system, 600)
+        self.assertEqual(balance_for(self.user, self.system), 0)
+        self.assertEqual(tier_for(self.user, self.system), gold)
+
+        # Old earnings age out of the qualifying window and the customer slides
+        # back down - which is what a tier is supposed to mean.
+        PointsTransaction.objects.filter(kind=PointsTransaction.KIND_EARN).update(
+            created_at=timezone.now() - timedelta(days=400),
+        )
+        self.assertEqual(tier_for(self.user, self.system), silver)
+
+        # And the multiplier is applied to what an order earns.
+        self._grant(600)
+        earned = self._order(user=self.user)
+        self.assertEqual(award_points(earned), 75)  # 50 x 150%
+
+        # A tenant with no ladder gives everyone the plain rate.
+        RewardTier.objects.all().delete()
+        self.assertIsNone(tier_for(self.user, self.system))
+        self.assertEqual(earn_multiplier_for(self.user, self.system), 100)

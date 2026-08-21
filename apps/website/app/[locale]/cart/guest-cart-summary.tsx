@@ -1,6 +1,6 @@
 "use client";
 
-import type { CartTotal } from "@/lib/cart";
+import type { CartRewards, CartTotal } from "@/lib/cart";
 import { CartSummaryCard } from "./cart-summary-card";
 
 interface GuestCartSummaryProps {
@@ -11,6 +11,9 @@ interface GuestCartSummaryProps {
   /** `pay_in_store_enabled` / `pay_on_delivery_enabled`, likewise server-read. */
   payInStoreEnabled: boolean;
   payOnDeliveryEnabled: boolean;
+  /** Always the "off" shape for a guest - there is no account to hold a balance -
+   *  but passed through so `CartSummaryCard` reads one prop set for both carts. */
+  rewards: CartRewards;
 }
 
 /**
@@ -27,6 +30,7 @@ export function GuestCartSummary({
   stripeConfigured,
   payInStoreEnabled,
   payOnDeliveryEnabled,
+  rewards,
 }: GuestCartSummaryProps) {
   return (
     <CartSummaryCard
@@ -38,6 +42,7 @@ export function GuestCartSummary({
         onDelivery: payOnDeliveryEnabled,
       }}
       mixedCurrency={totals.length > 1}
+      rewards={rewards}
       isGuest
     />
   );

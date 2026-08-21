@@ -486,6 +486,23 @@ class Order(models.Model):
         max_digits=12, decimal_places=2, default=Decimal("0.00"),
     )
 
+    # ── Rewards ───────────────────────────────────────────────────────────────
+    # Two snapshots, for the same reason `discount_amount` is one: the ledger
+    # (`PointsTransaction`) is the authority on a balance, but an order has to
+    # read back as what it was without walking it - and the award rate, the
+    # tier multiplier and an item's points price all move underneath.
+    #
+    # `points_spent` is taken the moment checkout opens - optimistically, exactly
+    # like a coupon redemption and a booking's slot - so two tabs cannot spend
+    # the same balance twice. An order that dies hands it back
+    # (`_release_order_points`).
+    #
+    # `points_earned` is written when the order becomes real (the webhook for an
+    # online order, placement for an offline one), never at checkout: an
+    # abandoned Stripe page must not have paid out.
+    points_spent = models.PositiveIntegerField(default=0)
+    points_earned = models.PositiveIntegerField(default=0)
+
     # Stripe's ids. `stripe_session_id` is unique so a replayed webhook cannot
     # produce a second paid order, and it is how the confirmation page proves the
     # session it was redirected with belongs to this order.
@@ -584,6 +601,34 @@ class OrderLine(models.Model):
     quantity = models.PositiveIntegerField(default=1)
     line_total = models.DecimalField(max_digits=12, decimal_places=2)
     currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default="USD")
+
+    # ── Rewards ───────────────────────────────────────────────────────────────
+    # Whether this line was bought with points instead of money.
+    #
+    # ⚠ **`unit_price` and `line_total` still carry the money price of a
+    # points-paid line, and that is deliberate.** They are what the line was
+    # worth, which is what makes the receipt read "Pizza MX$120 - paid with
+    # 1200 points" rather than "Pizza $0.00", and what the tenant reconciles a
+    # redemption against. What the customer is actually charged is
+    # `Order.subtotal`, which is summed over the **money** lines only - see
+    # `_open_order`. Every place that turns lines into money (the coupon
+    # engine's `eligible_subtotal` above all) must therefore skip these
+    # explicitly; a reader that assumes `line_total` is always payable will
+    # charge for a line that was already paid for in points.
+    paid_with_points = models.BooleanField(default=False)
+    # What it cost in points, snapshotted like every other fact on this row: the
+    # catalog's `points_price` is a number the tenant re-tunes, and a redemption
+    # has to keep reading back at the rate it was actually taken at. Zero on
+    # every money line.
+    points_price = models.PositiveIntegerField(default=0)
+    # What buying this line earns, per unit, snapshotted at checkout for the
+    # reason every other displayable number here is: the catalog's award rate is
+    # a dial the tenant turns, the FK is SET_NULL and may be gone by the time
+    # anyone reads the row, and what the customer was told they would earn is
+    # what they must actually be given. `award_points` multiplies this by the
+    # quantity and the customer's tier - the tier is *not* folded in here, so a
+    # line still reads as the catalog's own rate.
+    points_award = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ["id"]
@@ -785,3 +830,193 @@ class Booking(models.Model):
     @property
     def local_starts_at(self):
         return self.starts_at.astimezone(self.tzinfo)
+
+
+class RewardTier(models.Model):
+    """One rung of a tenant's rewards program - "Silver", "Gold", "Platinum".
+
+    A tier is **earned by earning**, and kept the same way. `threshold` is how
+    many points a customer has to have earned inside the trailing
+    `period_months` to sit on this rung, so the same number that promotes a
+    customer is the one that keeps them there - there is no separate "maintain"
+    figure that could disagree with the "reach" one, and no anniversary date to
+    reason about. A customer who stops buying slides back down as their old
+    earnings age out of the window, which is what a tier is supposed to mean.
+
+    ⚠ **Tiers are judged on points *earned*, never on the balance.** Spending
+    points must not demote anyone: a program that took a customer's status away
+    for using the reward it gave them is one they stop using. The ledger is what
+    makes this answerable at all - `PointsTransaction` rows are timestamped, so
+    "earned in the last six months" is a query rather than a counter somebody has
+    to remember to reset.
+
+    What a tier *does* is `earn_multiplier`: the one number applied to points
+    awarded on a purchase. One effect, applied in one place
+    (`orders.services.rewards.award_points`), so a tier cannot come to mean
+    different things on different surfaces. It deliberately does **not** move
+    what an item costs in points - `Buyable.points_price` is printed on every
+    catalog card, and a per-tier discount would make that number wrong for
+    everyone but one rung.
+    """
+
+    system = models.ForeignKey(
+        "core.System", on_delete=models.CASCADE, related_name="reward_tiers",
+    )
+
+    # Bilingual like every other tenant-authored label here. `en_name` blank
+    # falls back to `name`, the rule the whole storefront follows.
+    name = models.CharField(max_length=64)
+    en_name = models.CharField(max_length=64, blank=True, default="")
+
+    # Points earned within the trailing window to hold this tier. The lowest
+    # tier is normally 0 - the rung every customer starts on.
+    threshold = models.PositiveIntegerField(
+        default=0,
+        help_text="Points earned within the period below to reach and keep this tier.",
+    )
+    # The length of that trailing window, in months. Per tier rather than per
+    # System because a tenant may reasonably want a short qualifying window on an
+    # entry rung and a longer one at the top; it costs nothing to allow and
+    # cannot be added later without re-teaching operators the field.
+    period_months = models.PositiveSmallIntegerField(
+        default=12,
+        help_text="How many months of earnings count toward the threshold.",
+    )
+    # Whole percent, so 125 means "earns 1.25x". An integer rather than a decimal
+    # for the reason every other scale field here is one: it is a slider in the
+    # CMS, and 125 is what an operator types.
+    earn_multiplier = models.PositiveSmallIntegerField(
+        default=100,
+        help_text="Points earned as a whole percent of the item's award (100 = normal).",
+    )
+
+    # Painted behind the tier's name wherever it is shown. Blank falls back to
+    # the tenant's accent, so a tenant who never opens this field still gets a
+    # badge that looks like their site.
+    color = models.CharField(max_length=32, blank=True, default="")
+
+    enabled = models.BooleanField(default=True)
+
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Reward Tier"
+        verbose_name_plural = "Reward Tiers"
+        # Ascending, so the list reads bottom rung first and `tier_for` can walk
+        # it backwards to find the highest one a customer qualifies for.
+        ordering = ["threshold", "id"]
+        constraints = [
+            # Two tiers at the same threshold cannot both be "the" tier at that
+            # number of points, and whichever the query returned would silently
+            # own it.
+            models.UniqueConstraint(
+                fields=["system", "threshold"], name="reward_tier_threshold_unique_per_system",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.threshold}+ pts / {self.period_months}mo)"
+
+
+class PointsTransaction(models.Model):
+    """One movement of a customer's points balance. The ledger, and the authority.
+
+    **A balance is a sum of these, never a column somebody increments.** Two
+    things force it: a tier is defined as points *earned* inside a trailing
+    window, which only timestamped rows can answer, and a redemption has to be
+    reversible when the order it was taken for dies - which a counter can only do
+    by trusting that the reversal is not applied twice. Every row here is
+    append-only; a correction is another row, never an edit.
+
+    ⚠ **A guest's earnings live here with `user` NULL and `email` set, and they
+    are deliberately not spendable.** `balance_for` sums rows by user, so an
+    unclaimed row contributes to nobody's balance - it is a promise held against
+    an address until someone verifies an account on it, at which point
+    `claim_points_for_email` fills in `user` and the points appear. That is the
+    same handle `claim_guest_orders` already uses, and the two run together.
+    """
+
+    KIND_EARN = "earn"
+    KIND_SPEND = "spend"
+    KIND_RELEASE = "release"
+    KIND_REVOKE = "revoke"
+    KIND_ADJUST = "adjust"
+    KIND_CHOICES = [
+        (KIND_EARN, "Earned on a purchase"),
+        (KIND_SPEND, "Spent on a purchase"),
+        # The mirror of a spend, when the order it was taken for never completed.
+        (KIND_RELEASE, "Returned from an abandoned order"),
+        # The mirror of an earn, when a completed order is later canceled.
+        (KIND_REVOKE, "Taken back from a canceled order"),
+        # A tenant's manual correction from the CMS.
+        (KIND_ADJUST, "Manual adjustment"),
+    ]
+
+    system = models.ForeignKey(
+        "core.System", on_delete=models.CASCADE, related_name="points_transactions",
+    )
+    # Null only for an unclaimed guest earning; see the class docstring. CASCADE
+    # unlike `Order.user`: a deleted account's ledger is not financial history,
+    # it is a balance that no longer belongs to anyone.
+    user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="points_transactions",
+    )
+    # The address an unclaimed row is held against, and a record of who earned it
+    # on every other row. Lower-cased on write so a claim cannot miss on case.
+    email = models.EmailField(blank=True, default="")
+
+    # SET_NULL for `Order.coupon`'s reason: deleting an order must not erase the
+    # record that its points moved, and the row reads back in full without it.
+    order = models.ForeignKey(
+        "orders.Order",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="points_transactions",
+    )
+
+    kind = models.CharField(max_length=8, choices=KIND_CHOICES)
+    # **Signed**, and the sign is the whole arithmetic: an earn is positive, a
+    # spend negative, and a balance is one SUM with no CASE in it. The kinds
+    # exist to explain a row to a human, never to decide its direction.
+    points = models.IntegerField()
+    # What to show the customer on their statement ("Order #A1B2", "Welcome
+    # bonus"). Never translated - it is written once, by whoever moved the
+    # points, and a tenant's own words are better than a key we would have to
+    # guess the language of.
+    note = models.CharField(max_length=255, blank=True, default="")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Points Transaction"
+        verbose_name_plural = "Points Transactions"
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            # The two reads that matter: a customer's balance and statement, and
+            # the claim sweep over an address at verification.
+            models.Index(fields=["system", "user", "-created_at"]),
+            models.Index(fields=["system", "email"]),
+        ]
+        constraints = [
+            # A row that moves nothing is noise in a statement the customer
+            # reads.
+            models.CheckConstraint(
+                condition=~models.Q(points=0), name="points_transaction_nonzero",
+            ),
+            # Every row must be attributable to someone, or it can never be
+            # claimed and can never be explained.
+            models.CheckConstraint(
+                condition=models.Q(user__isnull=False) | ~models.Q(email=""),
+                name="points_transaction_has_owner",
+            ),
+        ]
+
+    def __str__(self):
+        who = self.user.email if self.user_id else f"{self.email} (unclaimed)"
+        return f"{self.points:+d} pts {who} [{self.kind}]"

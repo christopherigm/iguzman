@@ -1098,6 +1098,11 @@ class SystemSerializer(serializers.ModelSerializer):
             "stripe_enabled", "stripe_configured", "stripe_webhook_url",
             "storage_configured",
             "pay_in_store_enabled", "pay_on_delivery_enabled",
+            # The global rewards switch. Public by design, like the payment
+            # flags beside it: every storefront surface that shows a points
+            # price gates on it, and it says nothing a customer cannot see by
+            # looking at a product card.
+            "rewards_enabled",
             "spotlight_enabled",
             "spotlight_label", "en_spotlight_label",
             "spotlight_title", "en_spotlight_title",
@@ -1230,7 +1235,7 @@ _TEXT_FIELDS = [
     "stripe_enabled", "stripe_publishable_key",
     "storage_enabled", "storage_account_id", "storage_access_key_id",
     "storage_bucket_name", "storage_public_domain",
-    "pay_in_store_enabled", "pay_on_delivery_enabled",
+    "pay_in_store_enabled", "pay_on_delivery_enabled", "rewards_enabled",
     "spotlight_enabled",
     "spotlight_label", "en_spotlight_label",
     "spotlight_title", "en_spotlight_title",
@@ -1407,6 +1412,7 @@ class SystemWriteSerializer(serializers.Serializer):
     # Offline payment toggles - no credentials, just switches (see the model).
     pay_in_store_enabled    = serializers.BooleanField(required=False)
     pay_on_delivery_enabled = serializers.BooleanField(required=False)
+    rewards_enabled         = serializers.BooleanField(required=False)
 
     # Storage - this tenant's own Cloudflare R2 bucket. The secret follows the
     # same rule as the Stripe pair: write_only, no read path, "" clears it, and

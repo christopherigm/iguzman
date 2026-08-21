@@ -16,7 +16,6 @@ import {
 import { getSystem, updateSystem } from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
-import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import logoToAssets from "@repo/helpers/logo-to-assets";
@@ -306,13 +305,6 @@ export default function AdminLogosAndStylesPage() {
       },
     }));
 
-  if (loading)
-    return (
-      <Box padding="24px">
-        <Typography variant="body">{t("loading")}</Typography>
-      </Box>
-    );
-
   return (
     <>
       <Breadcrumbs
@@ -329,6 +321,7 @@ export default function AdminLogosAndStylesPage() {
         values={values}
         onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
         onSubmit={handleSubmit}
+        loading={loading}
         saving={saving}
         error={error}
         success={success}

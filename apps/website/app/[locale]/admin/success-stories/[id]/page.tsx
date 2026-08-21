@@ -241,13 +241,6 @@ export default function AdminSuccessStoryFormPage({ params }: Props) {
   const imageQuery =
     String(values.name ?? "").trim() || String(values.en_name ?? "").trim();
 
-  if (loading)
-    return (
-      <Box padding="24px">
-        <Typography variant="body">{t("loading")}</Typography>
-      </Box>
-    );
-
   return (
     <>
       <Breadcrumbs
@@ -269,12 +262,17 @@ export default function AdminSuccessStoryFormPage({ params }: Props) {
         values={values}
         onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
         onSubmit={handleSubmit}
+        loading={loading}
         saving={saving}
         error={error}
         success={success}
         siblings={siblings}
         productionHref={
-          !isNew && values.slug ? `/blog/${String(values.slug)}` : undefined
+          isNew
+            ? undefined
+            : values.slug
+              ? `/blog/${String(values.slug)}`
+              : null
         }
         imagesSlot={
           <>

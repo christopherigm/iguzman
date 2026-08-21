@@ -633,6 +633,42 @@ actually fills in the hundreds.
 - **Sections start expanded and the collapsed ones are the state that is kept**,
   so a category added while the page is open is open too.
 
+## A detail form's buttons are there before its record is
+
+**Every button in a CMS form's header and in its fixed action bar renders from
+the first paint, disabled while the record loads - never hidden and then
+revealed.** A form used to be replaced wholesale by a "Loading..." line, so the
+bar arrived a fetch later, under the cursor of an operator already reaching for
+Save; the same reasoning the sibling arrows have always followed (below) now
+covers the bar they sit in.
+
+- **`AdminForm` takes `loading`**, which disables Save, Clone and the
+  production-view button, shows the `ProgressBar` the way `saving` does, and
+  marks the `<form>` `aria-busy`. The three pages that hand-roll their own bar
+  (coupons, social posts, users) pass the same flag to the same buttons
+  themselves.
+- ⚠ **`productionHref` has three states, and `null` is the load-bearing one**:
+  `undefined` is "no public page" (a new record, `/admin/system`), a string is
+  the live address, and **`null` is "it has one, but the slug hasn't arrived
+  yet"** - which renders the button disabled instead of dropping it. So a form
+  writes `isNew ? undefined : values.slug ? href : null`, never
+  `!isNew && values.slug ? href : undefined`, which is what made the button pop
+  into the bar mid-load and shift Save sideways.
+- ⚠ **While it is disabled the button is given no `href` at all.** `Button`'s
+  link mode wraps a _type-less_ `<button>` in an anchor, so a disabled one is
+  still keyboard-reachable, still navigates on Enter, and would submit the form
+  on the way - the same trap the "same-tab navigation on purpose" comment beside
+  it documents. With no `href` it is a plain `<button type="button">`.
+- **The fields go inert with the buttons**, via a single `disabled` `<fieldset>`
+  around the grid _and_ whatever editors a page passes as `children` - the one
+  thing in HTML that disables a subtree, so no `disabled` prop has to be
+  threaded through every field type and every sub-editor. It is what keeps the
+  old guarantee that the early return gave for free: nothing typed into a
+  default value is silently overwritten when the record lands. The action bar is
+  deliberately outside it.
+- **A failed load still replaces the form** (`/admin/users/[id]`'s `errorLoad`).
+  That is an answer, not a wait - only the waiting renders the form.
+
 ## Stepping through a CMS list from a detail form
 
 Every editable record's form flanks its Save button with a prev and a next
@@ -1306,6 +1342,105 @@ The engine, the archive format and the tenancy rules live in `website-api`
 - **"All" is derived from the selection, never its own state**, so the row cannot
   show All-on beside a half-empty selection; it locks the individual switches
   while on.
+
+## Rewards - points on a card, a choice in the cart
+
+With `System.rewards_enabled` on, a catalog card prints an item's points price
+beside its money one ("MX$120 / 1200 points"), a cart row offers the two as a
+pair of buttons, and the summary says what the points covered. The API owns every
+rule; read website-api's CLAUDE.md → "Rewards" first.
+
+| Piece                       | Where                                                               |
+| --------------------------- | ------------------------------------------------------------------- |
+| The points price on a card  | `components/buyable-card-view.tsx`                                  |
+| The money/points buttons    | `app/[locale]/cart/cart-line.tsx`                                   |
+| The summary's points rows   | `app/[locale]/cart/cart-summary-card.tsx`                           |
+| Balance, tier, statement    | `lib/rewards.ts`, `app/[locale]/account/rewards-card.tsx`           |
+| The CMS switch + the ladder | `app/[locale]/admin/system/rewards-section.tsx`                     |
+| The catalog numbers         | `components/admin/pricing-section.tsx` (+ the three category forms) |
+| Types                       | `lib/cart.ts` (`CartRewards`), `lib/rewards.ts`                     |
+
+- ⚠ **Nothing in the browser ever computes a balance, an award or an
+  affordability.** `cart.rewards` is resolved server-side over the **whole**
+  basket, because whether a redemption fits is a question about every redeemed
+  line against one balance at once - a row deciding for itself would let three
+  separately affordable lines add up to an unaffordable cart. The row is still
+  the thing that has to _say_ it, which is why `CartLine` measures `linePoints`
+  against `balance − (points_used − this line's own share)` rather than against
+  the raw balance.
+- ⚠ **`cart.totals` already excludes every redeemed line.** It is what checkout
+  will actually charge, so the summary's points row is a **statement** of what
+  the points covered, never a deduction still to be applied - which is why it
+  prints as a plain figure rather than a signed one. The same rule governs the
+  order page's `points_spent` line. Subtracting `points_value` from a subtotal
+  again is the one arithmetic mistake these blocks invite.
+- **"Its equivalent in money" is the sum of the displaced line totals, never a
+  conversion rate.** Points are priced per item, so there is no single rate to
+  convert at, and inventing one would put a number on the summary that no
+  operator ever typed.
+- **The two buttons are `Button`s, not a switch or a radio pair**, because each
+  one has to _state a price_: the choice is between two amounts, not two
+  settings. The scale is `primary`/`success`/`error`/`warning` - there is no
+  `"secondary"` - so the selected one is `kind="primary"` and the unselected one
+  is the default button. ⚠ The points button is **disabled, not hidden**, when
+  the balance falls short: hiding it removes the only hint that the dish is
+  redeemable at all, which is exactly what makes a customer want to earn more.
+- **A guest gets the card's points price and none of the cart's buttons.**
+  `cart.rewards.enabled` is false for a guest whatever the tenant switched on -
+  there is no account to hold a balance - and `CartLine` is given no
+  `onPayWithPointsChange`, so there is no choice for the row to offer. The
+  invitation to sign up lives in the confirmation email, where the points they
+  just earned are waiting.
+- ⚠ **`line.pay_with_points` is safe to paint a selected button from.** The API
+  reports it false whenever the line could not actually be redeemed - the tenant
+  may have cleared the item's points price while it sat in the basket - so it
+  never says "points" for a line checkout would charge in money. The **stored**
+  flag is left as the customer set it, so their choice comes back if the item
+  returns to the program.
+- **The toggle is a third writer of the one cart endpoint**, on the same "only
+  what is sent is applied" contract the quantity stepper and the customiser
+  share: flipping a line to points must not disturb its quantity or its
+  ingredients, and the stepper must not reset the payment choice.
+- **`INSUFFICIENT_POINTS` has to be sayable in `checkout-section.tsx`**, beside
+  the `COUPON_*` codes and for the same reason: the balance can move between the
+  cart painting its buttons and checkout re-checking it under a lock, and a
+  refusal only the cart could explain would surface at checkout as an
+  unexplained failure.
+- ⚠ **`rewardsEnabled` reaches the card from its _server_ half.** `BuyableCard`
+  resolves `getSystem()` (request-`cache()`d, so a grid of twenty costs one
+  fetch) and passes it down; a client card that fetched it would do so once per
+  card.
+- **In the CMS the switch and the ladder are saved by one button** -
+  `/admin/system`'s own. `rewards_enabled` is an ordinary `System` key in the
+  page's `values`; the tiers are **rows**, so the page holds them in state and
+  `handleSubmit` runs `persistRewardTiers` after the System write, exactly as the
+  menu-item form runs `persistMenuSizes`. `RewardsSection` is pure and controlled
+  and owns no request. ⚠ `persistRewardTiers` reconciles the id the API assigns,
+  like `persistMenuSizes`: without it a second Save re-POSTs the tier and the API
+  refuses the duplicate threshold, making a working form look broken. It reports
+  a `failed` flag rather than throwing, so a tier the API refuses is said so of
+  _itself_ - the System fields above it did save.
+- **A tier card carries its ES/EN name pair in its top row, beside delete**, and
+  that pair is `components/admin/bilingual-name-fields.tsx` - the same control an
+  ingredient row's choice-group label uses, with its per-field AI translate
+  button. Two-up from `sm`, like the ingredient cards.
+- ⚠ **Both catalog fields are blank-means-something, and the meanings differ.**
+  A blank _award_ inherits the item's category; a blank _points price_ means the
+  item cannot be redeemed. So every form sends `null` for an empty box - listing
+  both keys in its blank-to-null sweep - and never coerces to 0, which on the
+  award is the different claim "earns nothing". The item fields live in the
+  shared `PricingSection`, so all three catalog forms get them at once; the
+  category field is an ordinary `FieldDef` on each of the three category forms,
+  using the `helperText` this added to `FieldDef`.
+- **`/account` shows the balance, the tier and a short statement**
+  (`RewardsCard`), because the confirmation email's "See my points" button leads
+  there - without it that button is a dead end. It renders **nothing** when the
+  tenant runs no program, so every other site's account page is unchanged.
+  `AccountForm` is shared with cinelog and edge-folio through `@repo/auth`, which
+  is why the card sits beside it rather than inside it.
+- ⚠ **`lib/rewards.ts` is not `cache()`d**, matching the API: a balance moves on
+  every checkout and is what a customer is about to decide on. Same exception
+  `getOrder` carries while `getOrders` is cached.
 
 ## Coupons - a discount code, its QR, and its flyer
 
@@ -2165,16 +2300,17 @@ Before defining a constant, type, or pure utility function in a component file, 
 
 **Current shared files to check first:**
 
-| File                                                       | Contents                                                                                                                                                                                                                                                                                                                                        |
-| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/website/components/admin/paragraph-options.ts`       | `PARAGRAPH_WORD_COUNTS`, `PARAGRAPH_LENGTH_STEPS`, `PARAGRAPH_COUNT_STEPS` - used by `admin-form.tsx` and `ai-interviewer/ai-interviewer.tsx`                                                                                                                                                                                                   |
-| `apps/website/components/admin/logo-background-options.ts` | `LOGO_BACKGROUND_SHAPES`, `LOGO_BACKGROUND_LABEL_KEY`, `SCALE_STEPS` - the badge shapes and size stops, used by `admin/logos-and-styles/hero-video-section.tsx` and `admin/social-posts/[id]/page.tsx`                                                                                                                                          |
-| `apps/website/components/admin/divider-options.ts`         | `DIVIDER_OPTIONS`, `DIVIDER_LABEL_KEY`, `toDividerOption`, `DividerOption` - the shape-divider shapes every CMS divider picker offers (the hero's bottom edge, both section bands' top/bottom edges), used by `admin/logos-and-styles/hero-video-section.tsx` and `components/admin/section-band-section.tsx`                                   |
-| `apps/website/components/admin/catalog-option-label.ts`    | `CATALOG_KIND_ICON`, `catalogRowCategory`, `catalogOptionLabel` - how a catalog record reads in a CMS `<select>`: family glyph, then the **category** it is filed under (the family label only standing in when it has none), then its name. Used by `coupon-scope-picker.tsx`, `catalog-ref-picker.tsx` and `admin/social-posts/[id]/page.tsx` |
-| `apps/website/components/menu-customizer-spacing.ts`       | `MENU_CUSTOMIZER_GAP` - the space between the size choice and the add-ons, on all three surfaces that customise a dish (detail page, card/cart modal, POS till)                                                                                                                                                                                 |
-| `apps/website/lib/maps.ts`                                 | `directionsHref` - the Google Maps hand-off, built from **coordinates, never an address**. Used by the contact page's locations, an event's venue and an order's location; website-api builds the same URL for the order email                                                                                                                  |
-| `apps/website/lib/same-origin-image.ts`                    | `toSameOriginDataUrl` - routes a remote image through `/api/media` (this app's own passthrough proxy) so a canvas that draws it is not tainted. Used by both flyer exports and by `lib/map-capture.ts`                                                                                                                                          |
-| `apps/website/lib/contact.ts`                              | `whatsappHref` - the wa.me click-to-chat URL, with the number stripped to digits (wa.me rejects the spaces and dashes people type) and an optional prefilled message. Used both directions: a **branch's** number on the contact page, a **customer's** in the admin inbox                                                                      |
+| File                                                       | Contents                                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/website/components/admin/paragraph-options.ts`       | `PARAGRAPH_WORD_COUNTS`, `PARAGRAPH_LENGTH_STEPS`, `PARAGRAPH_COUNT_STEPS` - used by `admin-form.tsx` and `ai-interviewer/ai-interviewer.tsx`                                                                                                                                                                                                                             |
+| `apps/website/components/admin/logo-background-options.ts` | `LOGO_BACKGROUND_SHAPES`, `LOGO_BACKGROUND_LABEL_KEY`, `SCALE_STEPS` - the badge shapes and size stops, used by `admin/logos-and-styles/hero-video-section.tsx` and `admin/social-posts/[id]/page.tsx`                                                                                                                                                                    |
+| `apps/website/components/admin/divider-options.ts`         | `DIVIDER_OPTIONS`, `DIVIDER_LABEL_KEY`, `toDividerOption`, `DividerOption` - the shape-divider shapes every CMS divider picker offers (the hero's bottom edge, both section bands' top/bottom edges), used by `admin/logos-and-styles/hero-video-section.tsx` and `components/admin/section-band-section.tsx`                                                             |
+| `apps/website/components/admin/catalog-option-label.ts`    | `CATALOG_KIND_ICON`, `catalogRowCategory`, `catalogOptionLabel` - how a catalog record reads in a CMS `<select>`: family glyph, then the **category** it is filed under (the family label only standing in when it has none), then its name. Used by `coupon-scope-picker.tsx`, `catalog-ref-picker.tsx` and `admin/social-posts/[id]/page.tsx`                           |
+| `apps/website/components/admin/bilingual-name-fields.tsx`  | `BilingualNameFields` - one short ES/EN name pair with a per-field AI translate button (its own `useLlmProxy`, the shared `buildTranslateMessages` prompts). Used by a reward tier's name and a menu ingredient's choice-group label; extracted from `menu-ingredients-editor.tsx`, which carried its own copy of the prompts because `group_en_name` has no `en_` prefix |
+| `apps/website/components/menu-customizer-spacing.ts`       | `MENU_CUSTOMIZER_GAP` - the space between the size choice and the add-ons, on all three surfaces that customise a dish (detail page, card/cart modal, POS till)                                                                                                                                                                                                           |
+| `apps/website/lib/maps.ts`                                 | `directionsHref` - the Google Maps hand-off, built from **coordinates, never an address**. Used by the contact page's locations, an event's venue and an order's location; website-api builds the same URL for the order email                                                                                                                                            |
+| `apps/website/lib/same-origin-image.ts`                    | `toSameOriginDataUrl` - routes a remote image through `/api/media` (this app's own passthrough proxy) so a canvas that draws it is not tainted. Used by both flyer exports and by `lib/map-capture.ts`                                                                                                                                                                    |
+| `apps/website/lib/contact.ts`                              | `whatsappHref` - the wa.me click-to-chat URL, with the number stripped to digits (wa.me rejects the spaces and dashes people type) and an optional prefilled message. Used both directions: a **branch's** number on the contact page, a **customer's** in the admin inbox                                                                                                |
 
 **How to apply:**
 

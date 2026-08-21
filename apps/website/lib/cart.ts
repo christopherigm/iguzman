@@ -67,6 +67,22 @@ export type CartItem = {
   line_total: string;
   currency: string;
   in_stock: boolean;
+  /**
+   * What this line costs in points, or null when it cannot be redeemed - which
+   * is also what every line reads on a tenant with the program off, so the
+   * cart's money/points button pair simply never appears.
+   */
+  points_price: number | null;
+  /**
+   * Whether the customer has chosen to pay for this line with points.
+   *
+   * ⚠ Reported false whenever the line could not actually be redeemed, even if
+   * the stored flag says otherwise - the tenant may have cleared the item's
+   * points price while the line sat in the basket. So this is safe to paint a
+   * selected button from; it never says "points" for a line checkout will charge
+   * in money.
+   */
+  pay_with_points: boolean;
 } & (
   | { kind: "product"; item: FeaturedProduct }
   | { kind: "service"; item: FeaturedService }
@@ -99,6 +115,36 @@ export type CartRecommendation =
   | { kind: "service"; item: FeaturedService }
   | { kind: "menu_item"; item: MenuItemDetail };
 
+/**
+ * The cart's points position: the balance, what the current selection costs, and
+ * the money it displaces.
+ *
+ * ⚠ Resolved server-side over the **whole** basket, because affordability is a
+ * question about every redeemed line against one balance and no single line can
+ * answer it. Re-deriving `affordable` in the browser is how the cart comes to
+ * disagree with the checkout it sits above.
+ *
+ * `enabled` is false for a guest whatever the tenant has switched on: there is
+ * no account to hold a balance, which is exactly what the disabled points button
+ * says.
+ */
+export interface CartRewards {
+  enabled: boolean;
+  balance: number;
+  /** Points the current selection would spend. */
+  points_used: number;
+  /**
+   * The money those lines would otherwise have cost - the "equivalent in money"
+   * the summary prints. It is the sum of the displaced line totals and **never a
+   * conversion rate**: points are priced per item, so there is no single rate to
+   * convert at.
+   */
+  points_value: string;
+  /** Whether the balance covers `points_used`. Advisory - checkout re-checks it
+   *  under a lock, since the balance moves while the page is open. */
+  affordable: boolean;
+}
+
 export interface Cart {
   items: CartItem[];
   /** Total quantity, not line count - what the navbar shows. */
@@ -114,6 +160,13 @@ export interface Cart {
    * client-side bookkeeping at all.
    */
   recommendations: CartRecommendation[];
+  /**
+   * ⚠ **`totals` above already excludes every redeemed line**, matching what
+   * checkout will charge. Don't subtract `rewards.points_value` from a subtotal
+   * again - the summary prints it as a *statement* of what the points covered,
+   * not as a deduction still to be applied.
+   */
+  rewards: CartRewards;
 }
 
 /**
@@ -143,6 +196,16 @@ const EMPTY_CART: Cart = {
   count: 0,
   totals: [],
   recommendations: [],
+  // The "off" shape, matching what a guest's resolved cart carries, so every
+  // consumer reads one type and no caller has to guard against a missing block
+  // on the degraded path.
+  rewards: {
+    enabled: false,
+    balance: 0,
+    points_used: 0,
+    points_value: "0.00",
+    affordable: true,
+  },
 };
 
 export const getCart = cache(async (): Promise<Cart> => {

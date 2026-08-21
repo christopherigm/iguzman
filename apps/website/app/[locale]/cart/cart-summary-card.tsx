@@ -4,7 +4,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { useTranslations } from "next-intl";
-import type { CartTotal } from "@/lib/cart";
+import type { CartRewards, CartTotal } from "@/lib/cart";
 import { formatPrice } from "@/lib/price";
 import { CheckoutSection, type AvailableMethods } from "./checkout-section";
 
@@ -16,6 +16,8 @@ export interface CartSummaryCardProps {
   methods: AvailableMethods;
   /** The cart spans more than one currency, so no method can charge it. */
   mixedCurrency: boolean;
+  /** The basket's points position, resolved by the API over every line at once. */
+  rewards: CartRewards;
   /** Check out from localStorage rather than from the customer's rows. */
   isGuest: boolean;
 }
@@ -40,6 +42,7 @@ export function CartSummaryCard({
   count,
   methods,
   mixedCurrency,
+  rewards,
   isGuest,
 }: CartSummaryCardProps) {
   const t = useTranslations("Cart");
@@ -89,6 +92,33 @@ export function CartSummaryCard({
           </Typography>
         </Box>
       ))}
+
+      {/* What the points covered, and what is left in the balance.
+
+          ⚠ **A statement, not a deduction.** `totals` above already excludes
+          every redeemed line - it is what checkout will actually charge - so
+          this row is saying "and 1200 points covered MX$120 of what you put in
+          the basket", never "subtract this next". Subtracting it again is the
+          one arithmetic mistake this block invites, which is why it prints as a
+          plain figure rather than a signed one. */}
+      {rewards.enabled && rewards.points_used > 0 && (
+        <Box alignItems="baseline" justifyContent="space-between" gap={8}>
+          <Typography as="span" variant="body" color="var(--foreground)">
+            {t("paidWithPoints", { points: rewards.points_used })}
+          </Typography>
+          <Typography as="span" variant="body" color="var(--accent)">
+            {formatPrice(rewards.points_value, totals[0]?.currency ?? "USD")}
+          </Typography>
+        </Box>
+      )}
+
+      {rewards.enabled && (
+        <Typography variant="caption" margin={0} color="var(--foreground)">
+          {t("pointsBalance", {
+            points: rewards.balance - rewards.points_used,
+          })}
+        </Typography>
+      )}
 
       <Typography variant="caption" margin={0} color="var(--foreground)">
         {t("taxesNote")}

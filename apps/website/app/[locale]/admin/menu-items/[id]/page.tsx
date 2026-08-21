@@ -119,6 +119,11 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     en_short_description: "",
     price: "0.00",
     compare_price: "",
+    // Rewards. Blank is meaningful on both and must stay blank rather than
+    // becoming 0 - a blank award inherits the category's, a blank points price
+    // means the item cannot be redeemed. `handleSubmit` sends null for either.
+    points_award: "",
+    points_price: "",
     cost_price: "",
     currency: "USD",
     category: "",
@@ -347,6 +352,8 @@ export default function AdminMenuItemFormPage({ params }: Props) {
             en_short_description: item.en_short_description ?? "",
             price: item.price ?? "0.00",
             compare_price: item.compare_price ?? "",
+            points_award: item.points_award ?? "",
+            points_price: item.points_price ?? "",
             cost_price: item.cost_price ?? "",
             currency: item.currency ?? "USD",
             category: item.category ?? "",
@@ -553,6 +560,12 @@ export default function AdminMenuItemFormPage({ params }: Props) {
       const payload: Record<string, unknown> = { ...values, system: systemId };
       [
         "compare_price",
+        // ⚠ Both must reach the API as null, never as 0 or "". A blank award
+        // means "inherit my category's" and a blank points price means "not
+        // redeemable"; coercing either to zero would silently say "earns
+        // nothing" and "free", which are different claims entirely.
+        "points_award",
+        "points_price",
         "cost_price",
         "eta_minutes",
         "spice_level",
@@ -720,14 +733,6 @@ export default function AdminMenuItemFormPage({ params }: Props) {
   const imageQuery =
     String(values.name ?? "").trim() || String(values.en_name ?? "").trim();
 
-  if (loading) {
-    return (
-      <Box padding="24px">
-        <Typography variant="body">{t("loading")}</Typography>
-      </Box>
-    );
-  }
-
   return (
     <>
       <Breadcrumbs
@@ -751,21 +756,28 @@ export default function AdminMenuItemFormPage({ params }: Props) {
         values={values}
         onChange={handleChange}
         onSubmit={handleSubmit}
+        loading={loading}
         saving={saving}
         error={error}
         success={success}
         siblings={siblings}
         productionHref={
-          !isNew && values.slug && categorySlugs[Number(values.category)]
-            ? menuItemHref(
-                // The category currently selected in the form, so "view live"
-                // follows the dropdown. It only reaches a real page once saved -
-                // the route serves an item only under its own category - which
-                // is the same caveat the slug field already has.
-                categorySlugs[Number(values.category)] as string,
-                String(values.slug),
-              )
-            : undefined
+          isNew
+            ? undefined
+            : values.slug && categorySlugs[Number(values.category)]
+              ? menuItemHref(
+                  // The category currently selected in the form, so "view live"
+                  // follows the dropdown. It only reaches a real page once
+                  // saved - the route serves an item only under its own
+                  // category - which is the same caveat the slug field already
+                  // has.
+                  categorySlugs[Number(values.category)] as string,
+                  String(values.slug),
+                )
+              : // A saved dish always has both, so this is the gap before the
+                // fetch (and `loadMeta`, which is a separate call) lands: the
+                // button is there, disabled, rather than appearing later.
+                null
         }
         imagesSlot={
           <>

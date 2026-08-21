@@ -33,6 +33,11 @@ const ALLOWED_PREFIXES = [
   // landing endpoints are reached from the storefront by their own handlers, and
   // proxying them here would put a customer-facing read behind an admin token.
   "coupons/admin/",
+  // The rewards ladder, edited on /admin/system. Only the admin sub-tree, for
+  // the same reason as coupons and bookings: `/api/rewards/` itself is the
+  // *customer's* own balance and is reached through its own handler, and routing
+  // it here would put a customer-facing read behind an admin token.
+  "rewards/tiers/admin/",
   // Listing, creating and deleting restore points only. Downloading an archive
   // and uploading one to restore are binary/multipart and cannot come through
   // here (this proxy re-encodes every body and response as JSON) - they have

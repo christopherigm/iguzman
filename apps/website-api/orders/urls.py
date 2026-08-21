@@ -5,6 +5,8 @@ from .views import (
     AdminBookingListView,
     AdminOrderDetailView,
     AdminOrderListView,
+    AdminRewardTierDetailView,
+    AdminRewardTierListView,
     BookingAvailabilityView,
     BookingCheckoutView,
     AdminCouponDetailView,
@@ -16,6 +18,7 @@ from .views import (
     OrderListView,
     OrderPayView,
     PosCheckoutView,
+    RewardsSummaryView,
     StripeWebhookView,
 )
 
@@ -40,6 +43,16 @@ urlpatterns = [
     # `/coupon/<code>` page. `str` rather than `slug` so a code is matched exactly
     # as it was printed and an unknown one 404s here instead of failing to route.
     path("coupons/<str:code>/", CouponPublicDetailView.as_view(), name="coupon-detail"),
+    # Rewards. Their own top-level prefix for the reason coupons have one: a
+    # tier and a points balance exist independently of any order, and some orders
+    # happen to move them.
+    path("rewards/", RewardsSummaryView.as_view(), name="rewards-summary"),
+    path("rewards/tiers/admin/", AdminRewardTierListView.as_view(), name="admin-reward-tier-list"),
+    path(
+        "rewards/tiers/admin/<int:pk>/",
+        AdminRewardTierDetailView.as_view(),
+        name="admin-reward-tier-detail",
+    ),
     # Tenant order management. Ahead of the customer routes below, though the
     # `<uuid>` converter would not match "admin" anyway.
     path("orders/admin/", AdminOrderListView.as_view(), name="admin-order-list"),

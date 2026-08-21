@@ -296,6 +296,36 @@ class Buyable(StandardPicture):
     cost_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default="USD")
 
+    # ── Rewards ───────────────────────────────────────────────────────────────
+    # Both are read only while `System.rewards_enabled`, and both are **nullable
+    # with a meaningful null** rather than zero-defaulted.
+    #
+    # `points_award` is what buying one of these earns. Null means "inherit
+    # whatever my category awards" - the same inherit/override rule
+    # `MenuItem.effective_sizes` and `CatalogRecommendation` follow, and for the
+    # same reason: a tenant states "every pizza earns 120" once, on the Pizzas
+    # category, and only says it again on the dish that differs. **Zero is not
+    # the same as null**: zero is an explicit "this item earns nothing", which is
+    # how a loss-leader is excluded from a category that otherwise earns.
+    #
+    # `points_price` is what buying one of these *with points* costs. Null means
+    # this item cannot be bought with points at all, which is the default and
+    # what every row written before this landed is - so turning the program on
+    # does not silently make the whole catalog redeemable. It is deliberately
+    # **not** inherited from a category: an award is a rate the tenant sets once
+    # for a family, while a points price is a per-item decision that has to be
+    # weighed against that item's own money price.
+    points_award = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Points earned per unit bought. Blank inherits the category's.",
+    )
+    points_price = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Points needed to buy one of these. Blank means it cannot be bought with points.",
+    )
+
     # Manual display order set by dragging rows in the admin CMS list. Concrete
     # subclasses put it first in their `ordering` so the CMS arrangement is what
     # the customer sees; their old ordering field stays as the tiebreak, which
@@ -1184,6 +1214,19 @@ class System(Common):
     pay_on_delivery_enabled = models.BooleanField(
         default=False,
         help_text="Let customers place an order to pay on delivery (collects a delivery address).",
+    )
+
+    # ── Rewards (loyalty points) ────────────────────────────────────────────────
+    # The **global** switch for the whole program. With it off nothing anywhere
+    # earns, shows or spends a point - the catalog's own `points_award` /
+    # `points_price` columns keep their values but are never read, so a tenant
+    # can turn the program off for a season and back on without re-entering the
+    # numbers. Every surface gates on this one flag rather than on "does this
+    # item have points set", which is why an item that a tenant forgot to price
+    # in points is simply not redeemable rather than free.
+    rewards_enabled = models.BooleanField(
+        default=False,
+        help_text="Turn the rewards program on. Off, nothing earns or spends points.",
     )
 
     # ── Storage (Cloudflare R2) ───────────────────────────────────────────────

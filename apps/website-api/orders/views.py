@@ -32,7 +32,7 @@ from .cache import (
     invalidate_orders,
     orders_key,
 )
-from .models import Booking, Coupon, Order, OrderLine
+from .models import Booking, Coupon, Order, OrderLine, PointsTransaction, RewardTier
 from .serializers import (
     AdminBookingActionSerializer,
     AdminBookingSerializer,
@@ -46,7 +46,10 @@ from .serializers import (
     CouponValidateSerializer,
     OrderSerializer,
     OrderSummarySerializer,
+    PointsTransactionSerializer,
     PosCheckoutSerializer,
+    RewardTierSerializer,
+    RewardTierWriteSerializer,
 )
 from .services.booking import (
     assign_for_slot,
@@ -72,6 +75,20 @@ from .services.coupons import (
     validate_coupon,
 )
 from .services.qr import attach_order_qr, site_base_url
+from .services.rewards import (
+    RewardsError,
+    award_points,
+    balance_for,
+    next_tier_for,
+    tier_for,
+    order_points_cost,
+    points_award_for,
+    points_price_for,
+    release_points,
+    revoke_points,
+    rewards_enabled,
+    spend_points,
+)
 from .services.stripe_gateway import (
     StripeGatewayError,
     StripeNotConfigured,
@@ -295,11 +312,30 @@ class CheckoutView(APIView):
         if error is not None:
             return error
 
+        # Before the coupon, because a coupon is priced off the **money**
+        # subtotal and which lines are money was already settled by
+        # `_open_order`. Taken optimistically here - exactly like a coupon
+        # redemption and a booking's slot - so two tabs cannot spend one balance
+        # twice; every path that abandons this order below hands it back.
+        refusal = _spend_order_points(order, system, user)
+        if refusal is not None:
+            return refusal
+
         # Before the offline branch and before Stripe: both charge `order.total`,
         # so the discount has to be on the order by the time either reads it.
         refusal = _discount_order(order, system, data.get("coupon_code", "").strip())
         if refusal is not None:
             return refusal
+
+        # Nothing is owed in money - every line was redeemed, or a coupon covered
+        # the remainder. There is no Stripe session to create for a zero total
+        # (Stripe refuses one) and no offline payment to collect, so the order is
+        # already settled and is recorded as such. Handled before both branches
+        # because it is true of either.
+        if order.total <= 0:
+            return self._finalize_settled(
+                order, user, system, locale, contact, data.get("shipping") or {},
+            )
 
         if is_offline:
             return self._finalize_offline(
@@ -316,6 +352,7 @@ class CheckoutView(APIView):
         if order.discount_amount > 0 and discount_coupon is None:
             if order.coupon_id:
                 release_coupon(order.coupon)
+            release_points(order)
             order.delete()
             return Response(
                 {"detail": "Could not apply that coupon. Please try again.", "code": "COUPON_ERROR"},
@@ -340,6 +377,7 @@ class CheckoutView(APIView):
             # campaign quietly loses a redemption to a checkout that never opened.
             if order.coupon_id:
                 release_coupon(order.coupon)
+            release_points(order)
             order.delete()
             return Response(
                 {"detail": "This site is not set up to take payments.", "code": "PAYMENTS_UNAVAILABLE"},
@@ -351,6 +389,7 @@ class CheckoutView(APIView):
             # with the upstream detail, which is not for the browser.
             if order.coupon_id:
                 release_coupon(order.coupon)
+            release_points(order)
             order.delete()
             return Response(
                 {"detail": "Could not start checkout. Please try again.", "code": "STRIPE_ERROR"},
@@ -366,6 +405,65 @@ class CheckoutView(APIView):
 
         logger.info("Checkout session %s created for order %s", session.id, order.pk)
         return Response({"url": session.url, "order_id": str(order.public_id)}, status=status.HTTP_201_CREATED)
+
+    def _finalize_settled(self, order, user, system, locale, contact, shipping):
+        """Complete an order with nothing left to charge - fully paid in points.
+
+        Reached when every line was redeemed (or a coupon covered whatever money
+        was left), which is a real and ordinary outcome the moment a tenant sells
+        a single redeemable item. Stripe refuses a zero-amount session, and an
+        offline order would ask the customer to hand over nothing at the counter,
+        so neither branch can serve it.
+
+        Recorded **`paid`**, not `placed`: the customer has settled in full, in
+        points, and there is nothing for the tenant to collect. `payment_method`
+        stays whatever they chose - it is a record of what they picked, and the
+        absent `stripe_session_id` is what says no money moved.
+
+        The two things the Stripe webhook would have done - drawing down stock
+        and clearing the cart - happen here, at placement, exactly as
+        `_finalize_offline` does them.
+        """
+        order.status = Order.STATUS_PAID
+        order.paid_at = timezone.now()
+        # An offline-style contact form may or may not have been shown; take what
+        # is there so a points-only order is still reachable about a pickup.
+        if contact:
+            order.email = (contact.get("email") or order.email or "").strip()
+            order.phone = (contact.get("phone") or "").strip()
+            order.shipping_name = (contact.get("name") or "").strip()
+        if shipping:
+            order.shipping_line1 = (shipping.get("line1") or "").strip()
+            order.shipping_line2 = (shipping.get("line2") or "").strip()
+            order.shipping_city = (shipping.get("city") or "").strip()
+            order.shipping_state = (shipping.get("state") or "").strip()
+            order.shipping_postal_code = (shipping.get("postal_code") or "").strip()
+            order.shipping_country = (shipping.get("country") or "").strip()
+
+        with transaction.atomic():
+            order.save()
+            _decrement_order_stock(order)
+            if user is not None:
+                CartItem.objects.filter(user=user, system=system).delete()
+
+        # After the order is real, never before: an award is payment for a
+        # purchase that happened.
+        award_points(order)
+
+        if user is not None:
+            invalidate_cart(user.id, system.id)
+            invalidate_orders(user.id, system.id)
+
+        send_order_email(order, kind=CONFIRMATION)
+
+        logger.info("Order %s settled in full with %s points", order.pk, order.points_spent)
+        return Response(
+            {
+                "order_id": str(order.public_id),
+                "redirect": f"/{locale}/orders/{order.public_id}",
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
     def _finalize_offline(self, order, user, system, method, locale, contact, shipping):
         """Complete a pay-in-store / pay-on-delivery order without Stripe.
@@ -395,6 +493,11 @@ class CheckoutView(APIView):
             # cart to clear.
             if user is not None:
                 CartItem.objects.filter(user=user, system=system).delete()
+
+        # At placement, mirroring where stock is drawn down for an offline order:
+        # the customer has committed and the tenant is preparing the goods. A
+        # later cancellation from the CMS takes it back (`revoke_points`).
+        award_points(order)
 
         if user is not None:
             invalidate_cart(user.id, system.id)
@@ -472,6 +575,24 @@ def _open_order(system, user, items, *, order_status, payment_method, email, def
             status=status.HTTP_409_CONFLICT,
         )
 
+    # Which lines are being redeemed, decided once here rather than re-asked per
+    # line inside the write below. A guest is never redeeming - there is no
+    # account to hold a balance - which is what makes `pay_with_points` on an
+    # unsaved guest `CartItem` simply never true.
+    earning = rewards_enabled(system)
+    # ⚠ A parallel list, deliberately not a dict keyed by the item: a guest's
+    # `CartItem`s are **unsaved**, and Django raises `TypeError: Model instances
+    # without primary key value are unhashable` the moment one is used as a key.
+    redeemed = [
+        bool(
+            earning
+            and getattr(item, "pay_with_points", False)
+            and user is not None
+            and points_price_for(item.target) > 0
+        )
+        for item in items
+    ]
+
     with transaction.atomic():
         order = Order.objects.create(
             system=system,
@@ -500,10 +621,31 @@ def _open_order(system, user, items, *, order_status, payment_method, email, def
                 quantity=item.quantity,
                 line_total=item.line_total,
                 currency=currency,
+                # Re-derived here rather than trusted from the cart flag alone:
+                # the program may have been switched off, or the item's points
+                # price cleared, while the line sat in the basket. A line that
+                # can no longer be redeemed is charged in money rather than
+                # refusing the whole checkout - the customer still gets what they
+                # put in their cart, at a price the site is showing.
+                paid_with_points=is_points,
+                points_price=points_price_for(item.target) if is_points else 0,
+                # Snapshotted on every line, points-paid or not: what the line
+                # earns is a fact about this purchase, and `award_points` is what
+                # later decides that a points-paid line earns nothing.
+                points_award=points_award_for(item.target) if earning else 0,
             )
-            for item in items
+            for item, is_points in zip(items, redeemed)
         ]
-        subtotal = sum((line.line_total for line in lines), Decimal("0.00"))
+        # ⚠ **Money lines only.** A points-paid line keeps its money price on the
+        # row (it is what the line was worth, and what the receipt reads back),
+        # but it is not owed - so folding it in here would charge the customer for
+        # something they just redeemed. Every other reader of these lines that
+        # turns them into money owes the same filter; the coupon engine's
+        # `eligible_subtotal` is the one that matters most.
+        subtotal = sum(
+            (line.line_total for line in lines if not line.paid_with_points),
+            Decimal("0.00"),
+        )
         order.subtotal = subtotal
         # No tax or shipping is modelled yet, so the total is the subtotal. They
         # get their own columns when they exist rather than being folded in here,
@@ -519,6 +661,63 @@ def _open_order(system, user, items, *, order_status, payment_method, email, def
         attach_order_qr(order)
 
     return order, lines, None
+
+
+def _spend_order_points(order, system, user):
+    """Take the points `order`'s redeemed lines cost, or return the 4xx refusing it.
+
+    Returns `None` when there is nothing to spend or the spend landed; a
+    `Response` when the balance does not cover it. **On a refusal the order is
+    deleted**, exactly as `_discount_order` deletes one - it has no payment
+    behind it and would otherwise sit in the customer's history as a phantom of a
+    checkout they never completed.
+
+    Priced off the order's **own written lines**, never off anything that
+    travelled with the request: `_open_order` has already decided which lines are
+    redeemable and snapshotted what each costs, so this cannot be handed a points
+    total the lines do not add up to.
+
+    A refusal here is honest rather than tidy. Silently re-pricing the line in
+    money would charge a customer who asked to redeem, and quietly dropping the
+    line would hand them a smaller order than the one they reviewed.
+    """
+    cost = order_points_cost(order)
+    if not cost:
+        return None
+    try:
+        spend_points(order, user, system, cost)
+    except RewardsError as exc:
+        # The coupon has not been applied yet at this point in `_checkout`, so
+        # there is no redemption to hand back - only the order to discard.
+        order.delete()
+        return Response(
+            {
+                "detail": exc.detail,
+                "code": exc.code,
+                # What they actually have, so the cart can correct itself rather
+                # than leaving the customer to guess why the total moved.
+                "balance": balance_for(user, system),
+                "required": cost,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    return None
+
+
+def _release_order_points(order) -> bool:
+    """Hand back the points an order took, and take back what it paid out.
+
+    The points counterpart of `_release_order_coupon`, called from the same
+    places - an expired or failed Stripe session, a tenant cancelling from the
+    CMS - and it settles **both** directions, because an order being called off
+    can owe them at once: the customer's redemption has to come back, and an
+    award already paid out on a placed offline order has to be taken away again.
+    Each half is individually idempotent, so a double-delivered webhook cannot
+    refund or revoke twice.
+    """
+    released = release_points(order)
+    revoked = revoke_points(order)
+    return released or revoked
 
 
 def _discount_order(order, system, code):
@@ -549,6 +748,10 @@ def _discount_order(order, system, code):
         )
         apply_coupon_to_order(order, coupon, subtotal=order.subtotal, lines=lines)
     except CouponError as exc:
+        # The points were spent a step earlier in `_checkout`, so discarding the
+        # order here has to give them back - otherwise a mistyped coupon code
+        # costs the customer their balance.
+        release_points(order)
         order.delete()
         return Response(
             {"detail": exc.detail, "code": exc.code},
@@ -1210,6 +1413,10 @@ class AdminOrderDetailView(APIView):
                 # refused was never a sale, so it must not have cost the campaign
                 # one of its uses.
                 _release_order_coupon(order)
+                # Points, both ways: the customer's redemption comes back, and an
+                # award already paid out on a placed offline order is taken away
+                # again - an order the tenant refused earned nothing.
+                _release_order_points(order)
 
         elif action == Action.MARK_FULFILLED:
             order.fulfilled = True
@@ -1345,8 +1552,44 @@ def _basket_totals(system, request, cart_refs):
         return Decimal("0.00"), None, []
 
     currencies = {item.target.currency for item in items}
-    subtotal = sum((item.line_total for item in items), Decimal("0.00"))
+
+    # ⚠ **Normalise the redemption flag onto the name the coupon engine reads.**
+    # A `CartItem` carries the customer's *request* (`pay_with_points`) while an
+    # `OrderLine` carries the *decision* (`paid_with_points`), and only the
+    # second is authoritative - it has already been checked against the program
+    # being on and the item having a points price. Stamping the resolved answer
+    # here is what lets `eligible_subtotal` read one attribute on either type
+    # instead of learning about carts; without it a scoped coupon would quietly
+    # discount a line the customer is redeeming.
+    for item in items:
+        item.paid_with_points = _redeeming(system, request.user, item)
+
+    # Money lines only, matching what `_open_order` will actually charge. A
+    # coupon quoted against a subtotal that included redeemed lines would clear a
+    # minimum-order rule the customer's real basket does not meet, and would then
+    # be refused at the moment of payment with nothing on screen to explain it.
+    subtotal = sum(
+        (item.line_total for item in items if not item.paid_with_points),
+        Decimal("0.00"),
+    )
     return subtotal, (currencies.pop() if len(currencies) == 1 else None), items
+
+
+def _redeeming(system, user, item) -> bool:
+    """Whether this cart line is currently set to be paid with points.
+
+    The same conditions `_open_order` applies, in one place so the coupon quote
+    and the order it is quoting for cannot disagree: the program is on, the
+    customer has flagged the line, they have an account to hold a balance, and
+    the item actually has a points price.
+    """
+    return bool(
+        rewards_enabled(system)
+        and getattr(item, "pay_with_points", False)
+        and user is not None
+        and getattr(user, "is_authenticated", False)
+        and points_price_for(item.target) > 0
+    )
 
 
 class CouponValidateView(APIView):
@@ -1693,6 +1936,12 @@ class StripeWebhookView(APIView):
             # full would invite the customer to pay for the same thing twice.
             CartItem.objects.filter(user=order.user, system=order.system).delete()
 
+        # Outside the transaction above and after the money is recorded: this is
+        # the first moment the order is real. `award_points` is idempotent on
+        # `order.points_earned`, which is what makes a re-delivered webhook - the
+        # thing Stripe does on any non-2xx - unable to pay twice.
+        award_points(order)
+
         invalidate_cart(order.user_id, order.system_id or 0)
         invalidate_orders(order.user_id, order.system_id or 0)
         logger.info("Order %s paid (payment_intent %s)", order.pk, order.stripe_payment_intent_id)
@@ -1717,6 +1966,10 @@ class StripeWebhookView(APIView):
             # order was opened, and an abandoned checkout must not burn one the
             # tenant meant to sell with.
             _release_order_coupon(order)
+            # And for the points, which were taken at the same moment and for the
+            # same reason. An abandoned Stripe page must not cost a customer
+            # their balance.
+            _release_order_points(order)
         if released:
             logger.info("Booking on expired order %s canceled, slot released", order.pk)
         invalidate_orders(order.user_id, order.system_id or 0)
@@ -1734,6 +1987,7 @@ class StripeWebhookView(APIView):
             # holds its slot - and its redemption - in exactly the same way.
             released = _release_booking(order)
             _release_order_coupon(order)
+            _release_order_points(order)
         if released:
             logger.info("Booking on failed order %s canceled, slot released", order.pk)
         invalidate_orders(order.user_id, order.system_id or 0)
@@ -2429,3 +2683,147 @@ class AdminBookingDetailView(APIView):
         invalidate_availability()
 
         return Response(AdminBookingSerializer(booking, context={"request": request}).data)
+
+
+# ─────────────────────────────────── Rewards ─────────────────────────────────
+
+
+class RewardsSummaryView(APIView):
+    """GET /api/rewards/ - what this customer has, and where they stand.
+
+    Everything the account page and the cart need in one read: the balance, the
+    tier they hold, the rung above it, the whole ladder, and a short statement.
+
+    ⚠ **Not cached, deliberately.** A balance moves on every checkout and every
+    redemption, and it is the number a customer is about to make a purchasing
+    decision on - the same exception `GET /api/orders/<public_id>/` and the
+    coupon endpoints already carry, for the same reason: a stale "you have 1200
+    points" that turns into a refusal at the till is the one wrong answer here.
+    """
+
+    permission_classes = (IsAuthenticated,)
+
+    # A statement, not an archive. The account page shows recent activity and
+    # nothing paginates it yet; the ledger keeps everything either way.
+    STATEMENT_LIMIT = 25
+
+    def get(self, request):
+        system = user_system(request)
+        if system is None:
+            return Response(
+                {"detail": "No system for this user.", "code": "NO_SYSTEM"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not rewards_enabled(system):
+            # An honest "off", not a 404: the frontend renders nothing for it,
+            # and a 404 would be indistinguishable from a routing mistake.
+            return Response({"enabled": False, "balance": 0, "tier": None,
+                             "next_tier": None, "tiers": [], "transactions": []})
+
+        tier = tier_for(request.user, system)
+        upcoming = next_tier_for(request.user, system)
+        transactions = PointsTransaction.objects.filter(
+            user=request.user, system=system,
+        ).select_related("order")[: self.STATEMENT_LIMIT]
+
+        return Response({
+            "enabled": True,
+            "balance": balance_for(request.user, system),
+            "tier": RewardTierSerializer(tier).data if tier else None,
+            "next_tier": RewardTierSerializer(upcoming).data if upcoming else None,
+            # The whole ladder, so the account page can draw where the customer
+            # sits on it without a second request and without re-deriving the
+            # ordering the engine already applied.
+            "tiers": RewardTierSerializer(
+                RewardTier.objects.filter(system=system, enabled=True), many=True,
+            ).data,
+            "transactions": PointsTransactionSerializer(transactions, many=True).data,
+        })
+
+
+class AdminRewardTierListView(APIView):
+    """GET/POST /api/rewards/tiers/admin/ - the tenant's tiers, and creating one.
+
+    Scoped to the caller's own System, which is also what a new tier is written
+    against - the body cannot name a tenant, exactly as it cannot on any other
+    admin write here. Shaped like `AdminCouponListView` because the CMS editor on
+    `/admin/system` writes rows one at a time, the way the menu-size editor does.
+    """
+
+    permission_classes = (IsSystemAdmin,)
+
+    def get(self, request):
+        system = user_system(request)
+        if system is None:
+            return Response([], status=status.HTTP_200_OK)
+        return Response(
+            RewardTierSerializer(
+                RewardTier.objects.filter(system=system), many=True,
+            ).data
+        )
+
+    def post(self, request):
+        system = user_system(request)
+        if system is None:
+            return Response(
+                {"detail": "No system for this user.", "code": "NO_SYSTEM"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer = RewardTierWriteSerializer(
+            data=request.data,
+            # `validate_threshold` needs the tenant to check its uniqueness rule.
+            context={"request": request, "system": system},
+        )
+        serializer.is_valid(raise_exception=True)
+        try:
+            tier = serializer.save(system=system)
+        except IntegrityError:
+            # The model's own unique constraint, reached when two operators save
+            # the same threshold at once - the serializer check cannot close that
+            # window, only narrow it.
+            return Response(
+                {"threshold": ["Another tier already starts at that number of points."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(RewardTierSerializer(tier).data, status=status.HTTP_201_CREATED)
+
+
+class AdminRewardTierDetailView(APIView):
+    """PATCH/DELETE /api/rewards/tiers/admin/<pk>/ - edit or drop one tier."""
+
+    permission_classes = (IsSystemAdmin,)
+
+    def _get_tier(self, request, pk):
+        system = user_system(request)
+        if system is None:
+            return None, None
+        return RewardTier.objects.filter(system=system, pk=pk).first(), system
+
+    def patch(self, request, pk):
+        tier, system = self._get_tier(request, pk)
+        if tier is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = RewardTierWriteSerializer(
+            tier, data=request.data, partial=True,
+            context={"request": request, "system": system},
+        )
+        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.save()
+        except IntegrityError:
+            return Response(
+                {"threshold": ["Another tier already starts at that number of points."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(RewardTierSerializer(tier).data)
+
+    def delete(self, request, pk):
+        tier, _ = self._get_tier(request, pk)
+        if tier is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        # Nothing points at a tier - it is re-derived from the ledger on every
+        # read (`tier_for`), never stored on a customer - so deleting one only
+        # changes where the rungs are. A customer sitting on it simply resolves
+        # to the next one down on their next page load.
+        tier.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

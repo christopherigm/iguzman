@@ -5,8 +5,6 @@ import { useTranslations } from "next-intl";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import { getSystem, updateSystem } from "@/lib/admin-api";
 import { useSession } from "@repo/auth/session-provider";
-import { Box } from "@repo/ui/core-elements/box";
-import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 
 /**
@@ -109,13 +107,6 @@ export default function AdminAboutPage() {
     { key: "en_user_data", label: "User Data Policy (EN)", type: "textarea" },
   ];
 
-  if (loading)
-    return (
-      <Box padding="24px">
-        <Typography variant="body">{t("loading")}</Typography>
-      </Box>
-    );
-
   return (
     <>
       <Breadcrumbs
@@ -132,6 +123,7 @@ export default function AdminAboutPage() {
         values={values}
         onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
         onSubmit={handleSubmit}
+        loading={loading}
         saving={saving}
         error={error}
         success={success}

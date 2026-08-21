@@ -21,9 +21,7 @@ import {
 } from "@/lib/admin-api";
 import type { SpotlightRef } from "@/lib/system";
 import { useSession } from "@repo/auth/session-provider";
-import { Box } from "@repo/ui/core-elements/box";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
-import { Typography } from "@repo/ui/core-elements/typography";
 
 type Props = { params: Promise<{ locale: string; id: string }> };
 
@@ -194,13 +192,6 @@ export default function AdminHomepageFlyerFormPage({ params }: Props) {
     { key: "enabled", label: t("enabled"), type: "boolean" },
   ];
 
-  if (loading)
-    return (
-      <Box padding="24px">
-        <Typography variant="body">{t("loading")}</Typography>
-      </Box>
-    );
-
   return (
     <>
       <Breadcrumbs
@@ -222,6 +213,7 @@ export default function AdminHomepageFlyerFormPage({ params }: Props) {
         values={values}
         onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
         onSubmit={handleSubmit}
+        loading={loading}
         saving={saving}
         error={error}
         success={success}

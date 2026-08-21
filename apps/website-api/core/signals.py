@@ -107,6 +107,26 @@ for _spec in attributed_specs():
 
 
 @receiver(post_save, sender=System)
+def invalidate_carts_on_system_change(sender, instance, **kwargs):
+    """Drop every cached cart when the tenant's own settings are written.
+
+    A cart payload embeds `rewards_enabled` (as `rewards.enabled`, and as the
+    `points_price` on each line), and the subtotal it quotes depends on it: with
+    the program off, a line the customer had flagged for points is charged in
+    money again. So switching rewards off has to reach carts that are already
+    sitting in the cache, or a customer keeps being shown a points total that
+    checkout will no longer honour.
+
+    ⚠ It clears **every** cart on every System write, not just a rewards one -
+    which cart holds a redeemed line is exactly what this receiver cannot know,
+    the same reasoning `catalog.signals.invalidate_on_recommendation_change`
+    records. System writes are a CMS operator pressing Save, so this is a handful
+    of keys a day, not a hot path.
+    """
+    invalidate_pattern("users:cart*")
+
+
+@receiver(post_save, sender=System)
 def forget_storage_config(sender, instance, **kwargs):
     """Drop this worker's memoised R2 config so the next upload re-reads it.
 

@@ -2,12 +2,22 @@
 
 import { useRouter } from "@repo/i18n/navigation";
 import { Box } from "@repo/ui/core-elements/box";
-import type { CartItem } from "@/lib/cart";
+import type { CartItem, CartRewards } from "@/lib/cart";
 import { CartLine } from "./cart-line";
 
 interface CartLinesProps {
   lines: CartItem[];
   locale: string;
+  /**
+   * The customer's points balance and what the current selection already spends
+   * of it - so a row can say whether *this* line can be flipped to points.
+   *
+   * ⚠ It is a whole-basket question, which is why it arrives resolved rather
+   * than being derived per row: the balance has to cover every redeemed line at
+   * once, so a row deciding on its own would let three affordable lines add up
+   * to an unaffordable cart.
+   */
+  rewards: CartRewards;
 }
 
 /**
@@ -38,7 +48,7 @@ function oldestFirst(lines: CartItem[]): CartItem[] {
  * real numbers (the summary and the navbar count). The guest half of this lives
  * in `guest-cart-view.tsx`; the row itself is the same component either way.
  */
-export function CartLines({ lines, locale }: CartLinesProps) {
+export function CartLines({ lines, locale, rewards }: CartLinesProps) {
   const router = useRouter();
   const ordered = oldestFirst(lines);
 
@@ -69,6 +79,18 @@ export function CartLines({ lines, locale }: CartLinesProps) {
             })
           }
           onRemove={() => write(line.id, { method: "DELETE" })}
+          rewards={rewards}
+          // A third writer of the one cart endpoint, on the same "only what is
+          // sent is applied" contract the quantity stepper and the customiser
+          // share - flipping a line to points must not disturb its quantity or
+          // its ingredients.
+          onPayWithPointsChange={(pay) =>
+            write(line.id, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ pay_with_points: pay }),
+            })
+          }
           // The same endpoint as the quantity write, deliberately: it applies
           // only the fields it is sent, so re-configuring the dish leaves the
           // quantity alone and vice versa. The API re-resolves both against what

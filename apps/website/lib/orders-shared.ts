@@ -80,6 +80,18 @@ export interface OrderLine {
   quantity: number;
   line_total: string;
   currency: string;
+  /**
+   * Whether this line was redeemed rather than bought.
+   *
+   * ⚠ **`unit_price` and `line_total` above are what the line was *worth* on a
+   * redeemed line, not what was charged.** They are kept so the receipt reads
+   * "Loaf MX$120 — paid with 1200 points" instead of showing nothing where a
+   * price belongs. Anything summing these into a payable total must skip these
+   * lines, exactly as `Order.subtotal` already does.
+   */
+  paid_with_points: boolean;
+  /** What one unit cost in points, snapshotted at checkout. `0` on a money line. */
+  points_price: number;
   image: string | null;
   item_id: number | null;
   item_slug: string | null;
@@ -125,6 +137,18 @@ export interface Order {
    * campaign's orders still read back in full. Empty when none was used.
    */
   coupon_code: string;
+  /**
+   * Points redeemed on this order, and points it earned. Both `0` on every order
+   * placed without the rewards program on, so a summary tests the number.
+   *
+   * ⚠ `points_spent` is **already reflected in `subtotal`** - a redeemed line's
+   * money never entered it. The order page prints it as a statement of what the
+   * points covered, never as another deduction to apply. `points_earned` is
+   * written when the order becomes real (payment for an online order, placement
+   * for an offline one), so it is `0` on a `pending` one.
+   */
+  points_spent: number;
+  points_earned: number;
   total: string;
   email: string;
   phone: string;

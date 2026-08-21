@@ -197,4 +197,16 @@ def cart_payload(items, context):
             for currency, subtotal in sorted(totals.items())
         ],
         "recommendations": cart_recommendations(items, context),
+        # Always the "off" shape, whatever the tenant has switched on: a guest
+        # has no account and so no balance, which is exactly what the cart's
+        # points button being disabled says. Sent rather than omitted so the
+        # frontend reads one `Cart` type for both carts - the same reason the
+        # per-currency grouping is duplicated here.
+        "rewards": {
+            "enabled": False,
+            "balance": 0,
+            "points_used": 0,
+            "points_value": "0.00",
+            "affordable": True,
+        },
     }

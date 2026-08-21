@@ -11,7 +11,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { Toast } from "@repo/ui/core-elements/toast";
-import type { CartItem } from "@/lib/cart";
+import type { CartItem, CartRewards } from "@/lib/cart";
 import { formatPrice } from "@/lib/price";
 import { menuEtaLabel } from "@/lib/menu-eta";
 import { menuItemHref } from "@/lib/menu-paths";
@@ -49,6 +49,19 @@ interface CartLineProps {
     size?: number;
     customization: CustomizationRow[];
   }) => Promise<boolean>;
+  /**
+   * The whole basket's points position - balance, what is already committed,
+   * and whether that fits. Resolved by the API over every line at once, because
+   * affordability is a question no single row can answer for itself.
+   */
+  rewards: CartRewards;
+  /**
+   * Flip this line between money and points, resolving to whether it stuck.
+   * Owned by the parent for the reason the other two writes are - the two carts
+   * are addressed differently. Absent for a guest, who has no account to hold a
+   * balance and therefore no choice to make.
+   */
+  onPayWithPointsChange?: (payWithPoints: boolean) => Promise<boolean>;
 }
 
 const MAX_QUANTITY = 99;
@@ -70,10 +83,16 @@ export function CartLine({
   onQuantityChange,
   onRemove,
   onEditSelection,
+  rewards,
+  onPayWithPointsChange,
 }: CartLineProps) {
   const t = useTranslations("Cart");
   const tMenu = useTranslations("Menu");
   const [quantity, setQuantity] = useState(line.quantity);
+  // Optimistic like the quantity stepper, and for the same reason: the choice
+  // repaints on click and rolls back if the write fails, because a pair of
+  // buttons that waits for a round-trip before moving reads as broken.
+  const [payWithPoints, setPayWithPoints] = useState(line.pay_with_points);
   const [isPending, startTransition] = useTransition();
   const [removed, setRemoved] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -135,6 +154,17 @@ export function CartLine({
     if (!ok) setEditFailed((count) => count + 1);
   };
 
+  const choosePayment = (next: boolean) => {
+    if (!onPayWithPointsChange || next === payWithPoints) return;
+
+    const previous = payWithPoints;
+    setPayWithPoints(next);
+
+    startTransition(async () => {
+      if (!(await onPayWithPointsChange(next))) setPayWithPoints(previous);
+    });
+  };
+
   const handleRemove = () => {
     setRemoved(true);
 
@@ -152,6 +182,25 @@ export function CartLine({
     (parseFloat(line.unit_price) * quantity).toFixed(2),
     line.currency,
   );
+
+  // ── How this line is being paid for ────────────────────────────────────────
+  // Only offered when the tenant runs a program, the item has a points price,
+  // and the parent gave us a way to write the choice - which is what takes a
+  // guest out of it, since they have no account to hold a balance.
+  const pointsPrice = line.points_price;
+  const canChoosePayment =
+    rewards.enabled && !!pointsPrice && onPayWithPointsChange !== undefined;
+  const linePoints = (pointsPrice ?? 0) * quantity;
+
+  // ⚠ **What this line would cost *on top of* what the basket already commits.**
+  // `rewards.points_used` includes this line when it is already selected, so
+  // comparing `linePoints` against the raw balance would ask "can I afford this
+  // line alone?" - and three separately affordable lines can add up to a basket
+  // the balance cannot cover. Subtracting the other lines' commitment is what
+  // makes the button say something true about the basket as a whole.
+  const committedElsewhere =
+    rewards.points_used - (payWithPoints ? linePoints : 0);
+  const affordable = linePoints <= rewards.balance - committedElsewhere;
 
   return (
     <>
@@ -361,16 +410,69 @@ export function CartLine({
                 </Typography>
               </Box>
 
-              <Typography
-                as="span"
-                variant="h6"
-                fontWeight={700}
-                margin={0}
-                color="var(--on-surface)"
-              >
-                {lineTotal}
-              </Typography>
+              {/* With a choice to make, the two buttons below *are* the line
+                  total - printing it a third time here would say the same
+                  number twice and make the row harder to read, not easier. */}
+              {!canChoosePayment && (
+                <Typography
+                  as="span"
+                  variant="h6"
+                  fontWeight={700}
+                  margin={0}
+                  color="var(--on-surface)"
+                >
+                  {lineTotal}
+                </Typography>
+              )}
             </Box>
+
+            {/* How this line is paid for: money (the default) or points.
+                Two `Button`s rather than a switch or a radio pair, because each
+                one has to *state a price* - the choice is between two amounts,
+                not between two settings, and the amounts are what the customer
+                is actually comparing.
+
+                ⚠ The points button is disabled, not hidden, when the balance
+                cannot cover it: hiding it would leave no way to discover that
+                the dish is redeemable at all, which is exactly the thing that
+                makes a customer want to earn more. */}
+            {canChoosePayment && (
+              <Box
+                gap={8}
+                flexWrap="wrap"
+                marginTop={10}
+                role="group"
+                aria-label={t("payWith")}
+              >
+                {/* Selected is `kind="primary"`; unselected is the default
+                    button, which is the only other kind available here (the
+                    scale is primary/success/error/warning - there is no
+                    "secondary"). The pair reads as one choice because only one
+                    of them is ever filled. */}
+                <Button
+                  text={lineTotal}
+                  kind={payWithPoints ? undefined : "primary"}
+                  size="sm"
+                  aria-pressed={!payWithPoints}
+                  disabled={isPending}
+                  onClick={() => choosePayment(false)}
+                />
+                <Button
+                  text={t("pointsPrice", { points: linePoints })}
+                  kind={payWithPoints ? "primary" : undefined}
+                  size="sm"
+                  aria-pressed={payWithPoints}
+                  // `isPending` covers the in-flight write; `!affordable` is the
+                  // real refusal, and it is measured against the rest of the
+                  // basket rather than against this line alone.
+                  disabled={isPending || (!payWithPoints && !affordable)}
+                  title={
+                    !affordable && !payWithPoints ? t("pointsShort") : undefined
+                  }
+                  onClick={() => choosePayment(true)}
+                />
+              </Box>
+            )}
           </Box>
         </Box>
       </Card>

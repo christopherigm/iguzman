@@ -696,6 +696,134 @@ own catalog page, so this discloses nothing the poster did not.
 
 Tests: `CouponTests` in `orders/tests.py`.
 
+## Rewards - points a customer earns and spends
+
+A tenant switches on `System.rewards_enabled` and its customers start earning
+points on what they buy and spending them on catalog items. The engine is
+**`orders/services/rewards.py`**, and every path that can move a balance goes
+through it - the same rule `orders/services/coupons.py` follows, for the same
+reason: two copies of "how many points is this worth?" would eventually
+disagree, and the first symptom would be a cart promising an award the
+confirmation email did not pay out.
+
+| Piece                     | Where                                                    |
+| ------------------------- | -------------------------------------------------------- |
+| The engine                | `orders/services/rewards.py`                             |
+| The ledger + the ladder   | `orders/models.py` (`PointsTransaction`, `RewardTier`)   |
+| What an item is worth     | `core.Buyable.points_award` / `points_price`             |
+| What a family is worth    | `catalog.*Category.points_award`                         |
+| The customer's choice     | `users.CartItem.pay_with_points`                         |
+| The frozen record         | `orders.OrderLine.paid_with_points` / `points_price`     |
+| Endpoints                 | `/api/rewards/`, `/api/rewards/tiers/admin/`             |
+
+- ⚠ **The ledger is the balance.** `PointsTransaction` rows are append-only and
+  **signed** - an earn is positive, a spend negative - so a balance is one `SUM`
+  with no `CASE` in it, and the `kind` exists to explain a row to a human, never
+  to decide its direction. Two things force this shape over a counter: a tier is
+  defined as points *earned inside a trailing window*, which only timestamped
+  rows can answer, and a redemption has to be reversible exactly once, which a
+  counter can only manage by trusting its caller. A correction is a **new** row
+  (`kind="adjust"`), which is why `PointsTransactionAdmin` is read-only in every
+  direction, add included.
+- ⚠ **Spending is taken optimistically at checkout; earning is paid out only
+  when the order becomes real.** Both are deliberate and they are not symmetric.
+  The spend is the coupon-redemption and booking-slot pattern - two tabs must not
+  spend one balance twice - so `_spend_order_points` runs in `_checkout` before
+  the coupon, and **every** path that abandons the order hands it back
+  (`release_points`, called from the three `order.delete()` branches, from
+  `_discount_order`'s refusal, from the expired/failed webhooks and from the CMS
+  cancel). The award runs from `_handle_completed` (online) and
+  `_finalize_offline` / `_finalize_settled` (offline), so an abandoned Stripe
+  page pays nothing.
+- ⚠ **`spend_points` holds a `select_for_update` on the customer's `UserProfile`,
+  and that lock is the whole safety story.** A balance is a `SUM` over rows, so
+  checking it and then inserting a spend is a read-modify-write with a window in
+  it - and the window is exactly wide enough for a customer with two tabs open to
+  spend the same 1200 points on two orders. `UserProfile` is the lock because it
+  is the one row per account that always exists, so two checkouts by one customer
+  serialise while two different customers never wait on each other.
+- ⚠ **`OrderLine.line_total` still carries the money price of a redeemed line.**
+  That is what the line was *worth*, what the receipt reads back, and what a
+  tenant reconciles a redemption against - so `Order.subtotal` is summed over the
+  **money** lines only, and every other reader that turns lines into money owes
+  the same filter. The one that matters most is `coupons.eligible_subtotal`,
+  which skips `paid_with_points` explicitly: without it a 50%-off coupon takes
+  half off a pizza nobody is paying for and hands the discount to the rest of the
+  basket. `_basket_totals` stamps the resolved flag onto each `CartItem` under
+  the **same attribute name** so that one function reads one attribute on both
+  types - a `CartItem` carries the customer's *request* (`pay_with_points`) while
+  an `OrderLine` carries the *decision*, and only the second has been checked
+  against the program being on and the item having a points price.
+- ⚠ **A fully redeemed basket has nothing to charge, and Stripe refuses a
+  zero-amount session.** `_finalize_settled` is that path: the order is recorded
+  **`paid`** (the customer settled in full, in points, and there is nothing to
+  collect), stock is drawn down and the cart cleared exactly as the offline
+  branch does them, and the absent `stripe_session_id` is what says no money
+  moved. It is handled before both the offline and the Stripe branches because it
+  is true of either.
+- **`points_award` is inherited; `points_price` is not.** An item's blank award
+  defers to its category's - the same inherit/override rule
+  `MenuItem.effective_sizes` and `CatalogRecommendation` follow, because a tenant
+  states "every pizza earns 120" once. ⚠ **Zero is not blank**: an item set to 0
+  earns nothing however generous its category is, which is how a loss-leader is
+  excluded, so every CMS form must send `null` for an empty box and never coerce
+  it. A points *price* is deliberately per-item only: it has to be weighed
+  against that one item's own money price, and a blank means "not redeemable",
+  which is what every row written before this landed is.
+- ⚠ **A points-paid line earns nothing.** Earning on a line bought with points is
+  a loop that mints points out of itself. The tier multiplier is applied to the
+  **whole order's** award once rather than per line, so the total cannot drift
+  from the figure the cart quoted.
+- **A guest earns into a row with `user` NULL and `email` set, and it is not
+  spendable.** `balance_for` sums by user, so an unclaimed row is in nobody's
+  balance - it is a promise held against an address until someone verifies an
+  account on it, at which point `claim_points_for_email` fills in `user`. It runs
+  from `orders/claims.py` beside `claim_guest_orders`, on the same handle and at
+  the same two moments (verification and login), and **unconditionally** rather
+  than inside that function's `if claimed:` - an order claimed at an earlier
+  login leaves nothing for `claimed` to count while a ledger row written since
+  still has to find its way home. ⚠ Scoped to `system` as well as the address:
+  the same address on two tenants' sites is two customers, and sweeping both
+  would move one tenant's liability onto the other's books.
+- ⚠ **Tiers are judged on points *earned*, never on the balance.** Spending must
+  not demote anyone - a program that took a customer's status away for using the
+  reward it gave them is one they stop using. `RewardTier.threshold` is both the
+  reach *and* the maintain figure, so there is no second number that could
+  disagree with the first, and a customer who stops buying slides back down as
+  their old earnings age out of `period_months`. The window is counted in 30-day
+  blocks, deliberately approximate: a qualifying window is a marketing promise,
+  not an accounting period.
+- **What a tier does is `earn_multiplier`, and only that.** It deliberately does
+  not move `points_price`: that number is printed on every catalog card, and a
+  per-tier discount would make the card wrong for everyone but one rung. The
+  write serializer bounds it to 100-500 - below 100 a tier would *penalise* the
+  customers who reached it, and an open ceiling turns a slipped keypress into a
+  tenant minting ten times what it meant to.
+- **POS and bookings are out of scope for now, and nothing breaks for them.**
+  Both call `_open_order`, where an unsaved basket simply never carries
+  `pay_with_points`, and neither calls `award_points`. A counter sale has no
+  customer attached to earn for; a booking's deposit split would discount the
+  deposit rather than the order, which is the trap `create_checkout_session`'s
+  `charge_amount` branch already refuses coupons over.
+- **`/api/rewards/` is not cached, and must not become so** - `GET` on it is the
+  balance a customer is about to make a purchasing decision on. Same exception an
+  individual order and the coupon endpoints already carry. A **cart** payload is
+  cached, which is why writing a `System` or a buyable sweeps `users:cart*`
+  (`core/signals.py`, `catalog/signals.py`): a cart line embeds the item's
+  `points_price` and the payload's `rewards` block is summed from those prices.
+- Both models are in `core/backup.py`'s `MODEL_SPECS`. A tier is keyed by
+  `threshold` (its name is editable copy, so keying on that restores "Gold" twice
+  the first time a tenant renames a rung); a ledger row is keyed by `created_at`
+  and sits **after** `orders.Order` so its FK is already in the idmap. ⚠ It is
+  deliberately **not** a `parent="order"` child like `OrderLine`: many rows carry
+  no order at all, and wiping an order's children on restore would delete a
+  customer's points along with a receipt.
+
+Tests: `RewardsTests` in `orders/tests.py` - four long tests covering earning
+(including the zero-vs-blank rule and idempotency), spending (refusal, release,
+the tenant boundary, and the full checkout arithmetic against a coupon), the
+guest's claim, and the tier ladder.
+
 ## Bookings - a Service sold as an appointment
 
 A `Service` with `booking_enabled` is sold as a scheduled appointment instead of

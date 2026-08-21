@@ -1066,12 +1066,26 @@ def _cart_payload(request, system):
     self-maintaining - adding a recommended item invalidates this cache, and the
     item drops out of the next render because it is now in the cart.
     """
+    from orders.services.rewards import (
+        cart_points_summary,
+        points_price_for,
+        rewards_enabled,
+    )
+
     items = list(_cart_qs(request, system))
     data = CartItemSerializer(items, many=True, context={"request": request}).data
 
+    redeeming = rewards_enabled(system)
     totals = {}
     for item in items:
         currency = item.target.currency
+        # ⚠ **Money lines only, matching what checkout will charge.** A cart
+        # whose subtotal counted a line the customer is redeeming would quote a
+        # number the Stripe page then contradicts - the same rule `_open_order`
+        # applies when it writes `Order.subtotal`, and the reason
+        # `_basket_totals` applies it to a coupon quote.
+        if redeeming and item.pay_with_points and points_price_for(item.target):
+            continue
         totals[currency] = totals.get(currency, Decimal("0")) + item.line_total
 
     return {
@@ -1082,6 +1096,11 @@ def _cart_payload(request, system):
             for currency, subtotal in sorted(totals.items())
         ],
         "recommendations": cart_recommendations(items, {"request": request}),
+        # The balance, what this selection costs, and what money it displaces -
+        # resolved once here rather than per line, because affordability is a
+        # question about the whole basket against one balance and no single line
+        # can answer it.
+        "rewards": cart_points_summary(items, request.user, system),
     }
 
 
@@ -1193,6 +1212,15 @@ class CartItemDetailView(APIView):
         if "quantity" in data:
             item.quantity = data["quantity"]
             fields.append("quantity")
+
+        # The money/points toggle. Stored as asked even when the line cannot
+        # currently be redeemed - the serializer reports it as false and checkout
+        # ignores it - so a customer who flags a dish the tenant has temporarily
+        # taken out of the program gets their choice back when it returns, rather
+        # than a silent refusal now.
+        if "pay_with_points" in data:
+            item.pay_with_points = data["pay_with_points"]
+            fields.append("pay_with_points")
 
         # Re-configuring the dish. Guarded on `menu_item_id` because a product or
         # a service has neither a size nor a selection to change; both values are

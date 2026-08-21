@@ -143,6 +143,12 @@ export function GuestCartView({
                 setGuestCartSelection(line.id, selection);
                 return Promise.resolve(true);
               }}
+              // Always the "off" shape the API sends back for a guest, and no
+              // write handler at all - a visitor with no account has no balance
+              // to spend, so there is no choice for the row to offer. The points
+              // price still shows on the item's card, which is where the
+              // invitation to sign up belongs.
+              rewards={cart.rewards}
             />
           ))}
         </Box>
@@ -162,6 +168,7 @@ export function GuestCartView({
           stripeConfigured={stripeConfigured}
           payInStoreEnabled={payInStoreEnabled}
           payOnDeliveryEnabled={payOnDeliveryEnabled}
+          rewards={cart.rewards}
         />
       </Grid>
     </Grid>

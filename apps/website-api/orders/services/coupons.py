@@ -161,9 +161,24 @@ def eligible_subtotal(coupon, lines):
     Returns the whole subtotal for an order-wide coupon and `0.00` when a scoped
     one matches nothing - which is a refusal upstream, never a zero discount
     silently applied.
+
+    ⚠ **Lines paid with points are skipped entirely**, whatever the scope. They
+    are not money, so there is nothing there to discount - and the `subtotal`
+    every caller passes alongside excludes them for the same reason. A scoped
+    coupon whose only matching line was redeemed is therefore refused
+    (`COUPON_NOT_APPLICABLE`), which is the honest answer: the customer is not
+    paying for the thing the coupon is for.
     """
     total = Decimal("0.00")
     for line in lines:
+        # ⚠ A line the customer redeemed with points is not money and must not be
+        # discounted. Its `line_total` still carries the money price - that is
+        # what the line was worth and what the receipt reads back (see
+        # `OrderLine.paid_with_points`) - so a loop that trusted `line_total`
+        # alone would take 20% off a pizza nobody is paying for, and hand the
+        # discount to the rest of the basket.
+        if getattr(line, "paid_with_points", False):
+            continue
         if line_matches_scope(coupon, line.kind, line.target):
             total += line.line_total
     return total

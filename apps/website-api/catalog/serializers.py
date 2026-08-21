@@ -162,6 +162,8 @@ class ProductCategorySerializer(serializers.ModelSerializer):
             'id', 'enabled', 'created', 'modified', 'version',
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'image', 'item_count',
+            # The award every item filed here inherits unless it states its own.
+            'points_award',
             'sort_order',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
@@ -191,6 +193,7 @@ class ProductCategoryWriteSerializer(StockCreditWriteMixin, serializers.ModelSer
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'enabled', 'image',
             *StockCreditWriteMixin.CREDIT_FIELDS,
+            'points_award',
             'recommendations', 'sort_order',
         ]
 
@@ -363,6 +366,13 @@ class ProductSerializer(serializers.ModelSerializer):
             'image', 'images', 'variants',
             'href', 'video_link', 'fit', 'background_color',
             'price', 'compare_price', 'cost_price', 'currency',
+            # Rewards. Both are the item's **own** values, unresolved: a null
+            # `points_award` means "inherit my category's" and only
+            # `orders.services.rewards.points_award_for` knows what that is.
+            # Sent raw so the CMS form can tell "blank, inheriting" from "zero,
+            # deliberately earning nothing" - the storefront never reads the
+            # award, only `points_price`, which is not inherited.
+            'points_award', 'points_price',
             'in_stock', 'stock_count', 'is_featured',
             'is_ai_generated', 'is_verified',
             'length', 'width', 'height', 'weight',
@@ -424,6 +434,12 @@ class ProductWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
     compare_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
     cost_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
     currency = serializers.ChoiceField(choices=[c[0] for c in CURRENCY_CHOICES], required=False, default='USD')
+    # Rewards. `allow_null` on both, and null is meaningful on both - see
+    # `Buyable.points_award` / `points_price`: a blank award inherits the
+    # category's, a blank price means "not redeemable". Neither may be coerced to
+    # zero on the way in, which is why the CMS sends `null` rather than `""`.
+    points_award = serializers.IntegerField(required=False, allow_null=True, min_value=0)
+    points_price = serializers.IntegerField(required=False, allow_null=True, min_value=0)
 
     enabled = serializers.BooleanField(required=False)
     in_stock = serializers.BooleanField(required=False)
@@ -488,6 +504,7 @@ class ProductWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
         'background_color', 'system', 'brand', 'category',
         'slug', 'sku', 'barcode',
         'price', 'compare_price', 'cost_price', 'currency',
+        'points_award', 'points_price',
         'enabled', 'in_stock', 'stock_count', 'is_featured',
         'is_ai_generated', 'is_verified',
         'length', 'width', 'height', 'weight', 'dimension_unit', 'weight_unit',
@@ -615,6 +632,8 @@ class ServiceCategorySerializer(serializers.ModelSerializer):
             'id', 'enabled', 'created', 'modified', 'version',
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'image', 'item_count',
+            # The award every item filed here inherits unless it states its own.
+            'points_award',
             'sort_order',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
@@ -643,6 +662,7 @@ class ServiceCategoryWriteSerializer(StockCreditWriteMixin, serializers.ModelSer
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'enabled', 'image',
             *StockCreditWriteMixin.CREDIT_FIELDS,
+            'points_award',
             'recommendations', 'sort_order',
         ]
 
@@ -752,6 +772,13 @@ class ServiceSerializer(serializers.ModelSerializer):
             'image', 'images', 'variants',
             'href', 'video_link', 'fit', 'background_color',
             'price', 'compare_price', 'cost_price', 'currency',
+            # Rewards. Both are the item's **own** values, unresolved: a null
+            # `points_award` means "inherit my category's" and only
+            # `orders.services.rewards.points_award_for` knows what that is.
+            # Sent raw so the CMS form can tell "blank, inheriting" from "zero,
+            # deliberately earning nothing" - the storefront never reads the
+            # award, only `points_price`, which is not inherited.
+            'points_award', 'points_price',
             'is_featured', 'is_ai_generated', 'is_verified',
             'duration', 'modality',
             'booking_enabled', 'booking_in_branch', 'booking_on_premises',
@@ -856,6 +883,12 @@ class ServiceWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
     compare_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
     cost_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
     currency = serializers.ChoiceField(choices=[c[0] for c in CURRENCY_CHOICES], required=False, default='USD')
+    # Rewards. `allow_null` on both, and null is meaningful on both - see
+    # `Buyable.points_award` / `points_price`: a blank award inherits the
+    # category's, a blank price means "not redeemable". Neither may be coerced to
+    # zero on the way in, which is why the CMS sends `null` rather than `""`.
+    points_award = serializers.IntegerField(required=False, allow_null=True, min_value=0)
+    points_price = serializers.IntegerField(required=False, allow_null=True, min_value=0)
 
     enabled = serializers.BooleanField(required=False)
     is_featured = serializers.BooleanField(required=False)
@@ -992,6 +1025,7 @@ class ServiceWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
         'background_color', 'system', 'brand', 'category',
         'slug', 'sku',
         'price', 'compare_price', 'cost_price', 'currency',
+        'points_award', 'points_price',
         'enabled', 'is_featured', 'is_ai_generated', 'is_verified',
         'duration', 'modality',
         'booking_enabled', 'booking_in_branch', 'booking_on_premises',
@@ -1193,6 +1227,8 @@ class MenuCategorySerializer(serializers.ModelSerializer):
             'id', 'enabled', 'created', 'modified', 'version',
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'image', 'item_count',
+            # The award every dish filed here inherits unless it states its own.
+            'points_award',
             'sizes', 'sort_order',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
@@ -1221,6 +1257,7 @@ class MenuCategoryWriteSerializer(StockCreditWriteMixin, serializers.ModelSerial
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'enabled', 'image',
             *StockCreditWriteMixin.CREDIT_FIELDS,
+            'points_award',
             'recommendations', 'sort_order',
         ]
 
@@ -1826,6 +1863,13 @@ class MenuItemSerializer(serializers.ModelSerializer):
             'sizes', 'sizes_enabled',
             'href', 'video_link', 'fit', 'background_color',
             'price', 'compare_price', 'cost_price', 'currency',
+            # Rewards. Both are the item's **own** values, unresolved: a null
+            # `points_award` means "inherit my category's" and only
+            # `orders.services.rewards.points_award_for` knows what that is.
+            # Sent raw so the CMS form can tell "blank, inheriting" from "zero,
+            # deliberately earning nothing" - the storefront never reads the
+            # award, only `points_price`, which is not inherited.
+            'points_award', 'points_price',
             'is_available', 'is_featured', 'is_ai_generated', 'is_verified',
             'show_nutrition_label',
             'eta_minutes',
@@ -1894,6 +1938,12 @@ class MenuItemWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
     compare_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
     cost_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
     currency = serializers.ChoiceField(choices=[c[0] for c in CURRENCY_CHOICES], required=False, default='USD')
+    # Rewards. `allow_null` on both, and null is meaningful on both - see
+    # `Buyable.points_award` / `points_price`: a blank award inherits the
+    # category's, a blank price means "not redeemable". Neither may be coerced to
+    # zero on the way in, which is why the CMS sends `null` rather than `""`.
+    points_award = serializers.IntegerField(required=False, allow_null=True, min_value=0)
+    points_price = serializers.IntegerField(required=False, allow_null=True, min_value=0)
 
     enabled = serializers.BooleanField(required=False)
     is_available = serializers.BooleanField(required=False)

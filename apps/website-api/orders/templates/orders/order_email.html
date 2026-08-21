@@ -54,8 +54,21 @@ the full receipt (items, add-ons, summary, link) is written once. Bilingual
           </div>
         {% endif %}
       </td>
+      {% comment %}
+      A redeemed line still prints its money value, struck through, above what it
+      actually cost in points. `line_total` on such a line is what the line was
+      *worth*, not what was charged (see `OrderLine.paid_with_points`) - and a
+      receipt showing nothing where a price belongs reads as an error, while the
+      struck figure is exactly what the customer wants to see the redemption was
+      worth.
+      {% endcomment %}
       <td valign="top" align="right" style="padding:12px 0 12px 12px; font-family:Arial,Helvetica,sans-serif; font-size:14px; font-weight:700; color:#1f2933; white-space:nowrap;">
-        {{ item.line_total }}
+        {% if item.paid_with_points %}
+          <span style="color:#8a94a6; font-weight:400; text-decoration:line-through;">{{ item.line_total }}</span><br>
+          <span style="color:#16a34a;">{{ item.points_price }} pts</span>
+        {% else %}
+          {{ item.line_total }}
+        {% endif %}
       </td>
     </tr>
     {% endfor %}
@@ -67,6 +80,12 @@ the full receipt (items, add-ons, summary, link) is written once. Bilingual
       <td style="padding:14px 0 4px 0; font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#52606d;">Subtotal ({{ item_count }})</td>
       <td align="right" style="padding:14px 0 4px 0; font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#52606d;">{{ subtotal_display }}</td>
     </tr>
+    {% if points_spent %}
+    <tr>
+      <td style="padding:4px 0; font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#16a34a;">Pagado con puntos / Paid with points</td>
+      <td align="right" style="padding:4px 0; font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#16a34a;">−{{ points_spent }} pts</td>
+    </tr>
+    {% endif %}
     <tr>
       <td style="padding:4px 0 0 0; font-family:Arial,Helvetica,sans-serif; font-size:16px; font-weight:700; color:#1f2933;">Total</td>
       <td align="right" style="padding:4px 0 0 0; font-family:Arial,Helvetica,sans-serif; font-size:16px; font-weight:700; color:#1f2933;">{{ total_display }}</td>
@@ -139,6 +158,53 @@ the full receipt (items, add-ons, summary, link) is written once. Bilingual
           Escanea este código para ver tu pedido o mostrarlo en tienda.<br>
           Scan this code to open your order or show it in store.
         </div>
+      </td>
+    </tr>
+  </table>
+  {% endif %}
+
+  {% comment %}
+  --- Points earned (shared, bilingual in one block) ---
+  Skipped entirely unless this purchase actually earned something, so nothing
+  changed for a tenant not running a rewards program.
+
+  ⚠ **The two halves say different things and must not be merged.** A signed-in
+  customer's points are already in their account, so the call to action is "go
+  and spend them". A guest's are held against the address this email was sent to
+  and are **not spendable until they create an account** - see
+  `PointsTransaction` and `claim_points_for_email` - so telling them they have a
+  balance would be a promise the site cannot keep when they go looking for it.
+  `points_claimable` is what distinguishes them.
+  {% endcomment %}
+  {% if points_earned %}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 4px 0; background-color:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px;">
+    <tr>
+      <td style="padding:20px; font-family:Arial,Helvetica,sans-serif; text-align:center;">
+        <div style="font-size:28px; font-weight:700; color:#16a34a; line-height:1.2;">+{{ points_earned }}</div>
+        <div style="margin-top:4px; font-size:13px; color:#15803d; letter-spacing:0.06em; text-transform:uppercase;">
+          Puntos ganados / Points earned
+        </div>
+        <div style="margin-top:12px; font-size:14px; color:#52606d; line-height:1.6;">
+          {% if points_claimable %}
+            Estos puntos te están esperando. Crea una cuenta con este mismo correo
+            para reclamarlos y usarlos en tu próxima compra.<br>
+            <span style="color:#8a94a6;">These points are waiting for you. Create an account with this
+            same email to claim them and spend them on your next order.</span>
+          {% else %}
+            Ya están en tu cuenta. Úsalos para pagar tus próximas compras.<br>
+            <span style="color:#8a94a6;">They are already in your account. Use them to pay for your
+            next orders.</span>
+          {% endif %}
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding:0 20px 16px 20px;">
+        {% if points_claimable %}
+          {% include "users/_email_button.html" with url=points_url label="Crear cuenta y reclamar / Create account" primary_color=primary_color %}
+        {% else %}
+          {% include "users/_email_button.html" with url=points_url label="Ver mis puntos / See my points" primary_color=primary_color %}
+        {% endif %}
       </td>
     </tr>
   </table>

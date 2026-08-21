@@ -81,11 +81,28 @@ def invalidate_menu_items_on_category_change(sender, instance, **kwargs):
 
 # ── Item -> category caches (item_count) ─────────────────────────────────────
 
+def _invalidate_carts():
+    """Drop every cached cart.
+
+    A cart line embeds the item's `points_price` (and the payload's `rewards`
+    block is summed from those prices), so re-pricing an item in points, or
+    taking it out of the program, has to reach the carts already holding it -
+    otherwise a customer keeps being offered a redemption at yesterday's rate,
+    and checkout charges today's.
+
+    ⚠ Every cart, not the ones holding this item: which carts those are is
+    exactly what a receiver cannot know cheaply, the same trade
+    `invalidate_on_recommendation_change` makes and for the same reason.
+    """
+    invalidate_pattern("users:cart*")
+
+
 @receiver(post_save, sender=Product)
 @receiver(post_delete, sender=Product)
 def invalidate_product_categories_on_item_change(sender, instance, **kwargs):
     _invalidate_categories("product")
     invalidate_system_payload()
+    _invalidate_carts()
 
 
 @receiver(post_save, sender=Service)
@@ -93,6 +110,7 @@ def invalidate_product_categories_on_item_change(sender, instance, **kwargs):
 def invalidate_service_categories_on_item_change(sender, instance, **kwargs):
     _invalidate_categories("service")
     invalidate_system_payload()
+    _invalidate_carts()
 
 
 @receiver(post_save, sender=MenuItem)
@@ -100,6 +118,7 @@ def invalidate_service_categories_on_item_change(sender, instance, **kwargs):
 def invalidate_menu_categories_on_item_change(sender, instance, **kwargs):
     _invalidate_categories("menu")
     invalidate_system_payload()
+    _invalidate_carts()
 
 
 # ── Sizes -> the category and every dish that inherits them ──────────────────

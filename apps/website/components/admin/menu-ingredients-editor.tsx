@@ -16,7 +16,7 @@ import { Select } from "@repo/ui/core-elements/select";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { scrollToElement } from "@repo/ui/core-elements/scroll-to";
-import { useLlmProxy, type LlmMessage } from "@repo/ui/use-llm";
+import { BilingualNameFields } from "@/components/admin/bilingual-name-fields";
 import "./menu-ingredients-editor.css";
 
 /** One editable ingredient row. `id` is present once persisted; `key` is a
@@ -165,181 +165,6 @@ function IngredientThumb({ image }: { image: string | null }) {
           sizes="40px"
           style={{ objectFit: "cover" }}
         />
-      )}
-    </Box>
-  );
-}
-
-/** Translate a group name between the two languages. Mirrors `admin-form.tsx`'s
- *  translate prompts so the CMS reads consistently: ES→EN and EN→ES, text only. */
-function buildGroupTranslateMessages(
-  text: string,
-  source: "es" | "en",
-): LlmMessage[] {
-  if (source === "en") {
-    return [
-      {
-        role: "system",
-        content:
-          "You are a professional translator. Translate the following text from English to Spanish. Return only the translated text - no explanations, labels, or formatting marks.",
-      },
-      { role: "user", content: text },
-    ];
-  }
-  return [
-    {
-      role: "system",
-      content:
-        "Eres un traductor profesional. Traduce el siguiente texto del español al inglés. Devuelve únicamente el texto traducido - sin explicaciones, etiquetas ni marcas de formato.",
-    },
-    { role: "user", content: text },
-  ];
-}
-
-/**
- * The choice-group name pair (ES + EN) with a per-field AI translate button.
- *
- * A self-contained slice of `admin-form.tsx`'s translate flow, scoped to one
- * ingredient row: each field's button streams a translation of its own value
- * into a preview, which the user accepts into the *other* language or discards.
- * Its own `useLlmProxy` instance keeps each row's generation independent.
- */
-function GroupNameFields({
-  groupName,
-  groupEnName,
-  onChange,
-}: {
-  groupName: string;
-  groupEnName: string;
-  onChange: (patch: Partial<IngredientRow>) => void;
-}) {
-  const t = useTranslations("Admin");
-  // `streamingText` is the live preview (it holds the full translation once the
-  // stream ends, and `reset`/`abort` clear it), so no mirrored state is needed.
-  const { streamingText, isGenerating, generate, abort, reset } = useLlmProxy({
-    temperature: 0.3,
-  });
-  // Which field is being translated ("es" = group_name, "en" = group_en_name).
-  const [active, setActive] = useState<"es" | "en" | null>(null);
-
-  const translate = async (source: "es" | "en") => {
-    const text = (source === "es" ? groupName : groupEnName).trim();
-    if (!text) return;
-    setActive(source);
-    reset();
-    await generate(buildGroupTranslateMessages(text, source));
-  };
-
-  const accept = () => {
-    if (active && streamingText) {
-      onChange(
-        active === "es"
-          ? { group_en_name: streamingText }
-          : { group_name: streamingText },
-      );
-    }
-    setActive(null);
-    reset();
-  };
-
-  const discard = () => {
-    if (isGenerating) abort();
-    setActive(null);
-    reset();
-  };
-
-  const field = (source: "es" | "en") => {
-    const value = source === "es" ? groupName : groupEnName;
-    const key = source === "es" ? "group_name" : "group_en_name";
-    return (
-      <Box display="flex" flexDirection="column" gap="6px">
-        <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="space-between"
-          minHeight={24}
-        >
-          <Typography variant="label" color="var(--foreground)">
-            {source === "es" ? t("groupName") : t("groupEnName")}
-          </Typography>
-          <Button
-            icon="/icons/translate.svg"
-            iconSize="16px"
-            iconColor={
-              active === source
-                ? "var(--accent, #06b6d4)"
-                : "var(--foreground, #171717)"
-            }
-            disabled={isGenerating || !value.trim()}
-            onClick={() => translate(source)}
-            aria-label={t("translateLabel")}
-            title={t("translateLabel")}
-            type="button"
-          />
-        </Box>
-        <TextInput
-          value={value}
-          onChange={(v) => onChange({ [key]: v } as Partial<IngredientRow>)}
-          minWidth={0}
-        />
-      </Box>
-    );
-  };
-
-  return (
-    <Box display="flex" flexDirection="column" gap="10px">
-      <Box
-        display="grid"
-        gap="10px"
-        alignItems="start"
-        styles={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}
-      >
-        {field("es")}
-        {field("en")}
-      </Box>
-
-      {/* Translate preview: accept writes it into the other language, discard
-          (or stop, mid-stream) drops it. */}
-      {active && (
-        <Box
-          display="flex"
-          flexDirection="column"
-          gap="10px"
-          padding="12px 14px"
-          borderRadius={8}
-          border="1px solid var(--border, #e5e7eb)"
-          backgroundColor="var(--surface-2)"
-        >
-          <Typography variant="body" margin={0}>
-            {streamingText || "…"}
-          </Typography>
-          <Box display="flex" alignItems="center" gap="8px">
-            {isGenerating ? (
-              <Button
-                text={t("enhanceStop")}
-                onClick={discard}
-                size="sm"
-                type="button"
-              />
-            ) : (
-              <>
-                <Button
-                  text={t("enhanceDiscard")}
-                  onClick={discard}
-                  size="sm"
-                  type="button"
-                />
-                <Button
-                  text={t("enhanceAccept")}
-                  onClick={accept}
-                  kind="primary"
-                  size="sm"
-                  type="button"
-                />
-              </>
-            )}
-          </Box>
-        </Box>
       )}
     </Box>
   );
@@ -616,10 +441,21 @@ export function MenuIngredientsEditor({ value, onChange, catalog }: Props) {
                 the default picker as the group's heading, with per-field AI
                 translation; hidden for a plain single-ingredient row. */}
                 {!sortMode && row.options.length > 0 && (
-                  <GroupNameFields
-                    groupName={row.group_name}
-                    groupEnName={row.group_en_name}
-                    onChange={(patch) => update(row.key, patch)}
+                  <BilingualNameFields
+                    esLabel={t("groupName")}
+                    enLabel={t("groupEnName")}
+                    esValue={row.group_name}
+                    enValue={row.group_en_name}
+                    onChange={(patch) =>
+                      update(row.key, {
+                        ...(patch.es !== undefined
+                          ? { group_name: patch.es }
+                          : {}),
+                        ...(patch.en !== undefined
+                          ? { group_en_name: patch.en }
+                          : {}),
+                      })
+                    }
                   />
                 )}
 

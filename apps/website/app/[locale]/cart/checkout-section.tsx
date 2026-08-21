@@ -65,6 +65,12 @@ const ERROR_MESSAGES: Record<string, string> = {
   // apply and changed nothing has no explanation anywhere on screen.
   COUPON_NOT_APPLICABLE: "couponNotApplicable",
   COUPON_ERROR: "couponError",
+  // The balance moved between the cart painting its buttons and checkout
+  // re-checking it under a lock - another tab, or another order settled in
+  // between. Refused rather than quietly re-priced in money, so it has to be
+  // sayable here: a customer who chose to redeem must not be charged instead.
+  INSUFFICIENT_POINTS: "pointsInsufficient",
+  POINTS_REQUIRE_ACCOUNT: "pointsRequireAccount",
 };
 
 /** The methods in the order they are offered, with the flag that gates each. */

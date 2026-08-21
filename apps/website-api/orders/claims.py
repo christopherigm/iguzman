@@ -8,6 +8,7 @@ with it.
 
 from .cache import invalidate_orders
 from .models import Order
+from .services.rewards import claim_points_for_email
 
 
 def claim_guest_orders(user, system):
@@ -35,6 +36,14 @@ def claim_guest_orders(user, system):
     claimed = Order.objects.filter(
         user__isnull=True, system=system, email__iexact=user.email,
     ).update(user=user)
+
+    # The points those orders earned are held against the same address, waiting
+    # for exactly this moment - see `PointsTransaction`. Run unconditionally
+    # rather than inside the `if` above: an order claimed on an earlier login
+    # leaves nothing for `claimed` to count, while a ledger row written since (a
+    # tenant's manual goodwill adjustment on a guest's address) still has to
+    # find its way home.
+    claim_points_for_email(user, system, user.email)
 
     if claimed:
         # The history list is cached per user+system, and it was cached before

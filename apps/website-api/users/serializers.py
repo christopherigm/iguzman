@@ -430,6 +430,32 @@ class CartItemSerializer(serializers.Serializer):
     line_total = serializers.SerializerMethodField()
     currency = serializers.SerializerMethodField()
     in_stock = serializers.SerializerMethodField()
+    # ── Rewards ───────────────────────────────────────────────────────────────
+    # `points_price` is what this line costs in points, or null when the item
+    # cannot be redeemed - which is also what a tenant with the program switched
+    # off sends for every line, so the cart's two-button row simply never
+    # appears. `pay_with_points` is the customer's own choice on this line.
+    #
+    # ⚠ **Neither says the line is affordable.** That depends on the whole
+    # basket against one balance, which no single line can see - the cart payload
+    # answers it once, in `rewards`.
+    points_price = serializers.SerializerMethodField()
+    pay_with_points = serializers.SerializerMethodField()
+
+    def get_points_price(self, obj):
+        from orders.services.rewards import points_price_for, rewards_enabled
+
+        system = getattr(obj, "system", None)
+        if not rewards_enabled(system):
+            return None
+        return points_price_for(obj.target) or None
+
+    def get_pay_with_points(self, obj):
+        # Reported false whenever the line could not actually be redeemed, so the
+        # cart never paints a selected points button on a line checkout would
+        # charge in money - the tenant may have switched the program off, or
+        # cleared the item's points price, while the line sat in the basket.
+        return bool(obj.pay_with_points and self.get_points_price(obj))
 
     def get_item(self, obj):
         # Imported here for the same reason as FavoriteSerializer.get_item: a
@@ -554,6 +580,16 @@ class CartItemUpdateSerializer(serializers.Serializer):
     quantity = serializers.IntegerField(required=False, min_value=1, max_value=99)
     size = serializers.IntegerField(required=False, allow_null=True)
     customization = CartCustomizationRowSerializer(many=True, required=False)
+    # The cart's money/points toggle. A third writer of this one endpoint, on the
+    # same "only what is sent is applied" contract - flipping a line to points
+    # must not disturb its quantity or its ingredients, and the stepper must not
+    # reset the payment choice.
+    #
+    # ⚠ It is only a *request*, exactly like `size`: the server re-checks the
+    # program is on and the item has a points price before honouring it, and
+    # checkout re-checks the balance under a lock. A `true` here buys nothing on
+    # its own.
+    pay_with_points = serializers.BooleanField(required=False)
 
 
 class GuestCartSerializer(serializers.Serializer):

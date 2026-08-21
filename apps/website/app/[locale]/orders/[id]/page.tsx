@@ -57,7 +57,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
 
   // `id` is the order's public UUID. A malformed one is simply not found: the
   // Django lookup is scoped to the caller, so a bad or foreign id is a 404 here.
-  const [order, query, session, system, t] = await Promise.all([
+  const [order, query, session, system, t, tCart] = await Promise.all([
     getOrder(id),
     searchParams,
     getSession(),
@@ -65,6 +65,11 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
     // layout above has already asked for it, so this costs nothing.
     getSystem(),
     getTranslations("Orders"),
+    // The two points lines below. Reused from `Cart` rather than copied into
+    // `Orders`, the same call `OrderBoard` makes for the status labels it shares
+    // with `AdminOrders`: one wording for one thing, and two copies could only
+    // drift.
+    getTranslations("Cart"),
   ]);
 
   // Django scopes the lookup to the caller, so another user's order id is a 404
@@ -180,7 +185,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
                 that does not add up from its own lines. `discount_amount` is the
                 frozen amount that was actually taken off - never the coupon's
                 percentage re-applied, which would drift from what was charged. */}
-            {Number(order.discount_amount) > 0 ? (
+            {Number(order.discount_amount) > 0 || order.points_spent > 0 ? (
               <>
                 <Box
                   alignItems="baseline"
@@ -225,6 +230,18 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
               </>
             ) : null}
 
+            {/* ⚠ A **statement**, not a deduction: a redeemed line's money never
+                entered `subtotal`, so this says what the points covered rather
+                than naming an amount still to come off. Printing it as a
+                negative would invite exactly that subtraction. */}
+            {order.points_spent > 0 ? (
+              <Box alignItems="baseline" justifyContent="space-between" gap={8}>
+                <Typography as="span" variant="body" color="var(--accent)">
+                  {tCart("paidWithPoints", { points: order.points_spent })}
+                </Typography>
+              </Box>
+            ) : null}
+
             <Box alignItems="baseline" justifyContent="space-between" gap={8}>
               <Typography as="span" variant="body" color="var(--on-surface)">
                 {t("total")}
@@ -239,6 +256,20 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
                 {formatPrice(order.total, order.currency)}
               </Typography>
             </Box>
+
+            {/* Written when the order became real - payment for an online order,
+                placement for an offline one - so it is absent on a `pending` one
+                rather than promising points nothing has paid for yet. */}
+            {order.points_earned > 0 ? (
+              <Typography
+                variant="caption"
+                margin={0}
+                color="var(--accent)"
+                styles={{ textAlign: "right" }}
+              >
+                {tCart("pointsEarned", { points: order.points_earned })}
+              </Typography>
+            ) : null}
 
             {hasShipping ? (
               <>

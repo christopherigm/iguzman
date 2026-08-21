@@ -167,6 +167,14 @@ def _order_items(order):
         ]
         items.append({
             "name": line.name,
+            # ⚠ `unit_price`/`line_total` below are what the line was **worth**,
+            # not what was charged, on a redeemed line - see
+            # `OrderLine.paid_with_points`. The template prints them struck
+            # through beside the points figure rather than dropping them: a
+            # receipt that showed nothing where a price belongs reads as an error,
+            # and the customer wants to see what the redemption was worth.
+            "paid_with_points": line.paid_with_points,
+            "points_price": line.points_price * line.quantity,
             # The size the dish was sold in, from the line's own snapshot - a
             # receipt for a large pizza has to keep saying "large" after the
             # tenant renames or retires that size.
@@ -227,6 +235,32 @@ def send_order_email(order, *, kind):
             "item_count": order.item_count,
             "subtotal_display": _money(order.subtotal, order.currency),
             "total_display": _money(order.total, order.currency),
+            # What this purchase earned and what it spent. Both are `0` on every
+            # order placed without the program on, which is what the template
+            # tests to skip the whole block - so nothing changed for a tenant not
+            # running rewards.
+            "points_earned": order.points_earned,
+            "points_spent": order.points_spent,
+            # ⚠ **Whether the points are actually in an account yet.** A guest's
+            # earning is held against their address until someone verifies an
+            # account on it (`PointsTransaction`, `claim_points_for_email`), so
+            # the email must invite them to create one rather than tell them to
+            # go and spend a balance they cannot reach. Judged on the order's
+            # owner, which is the same thing the ledger row was written with.
+            "points_claimable": order.points_earned > 0 and order.user_id is None,
+            # Where that invitation leads: the sign-in/sign-up form for a guest,
+            # the account page for a customer who already has one.
+            #
+            # ⚠ **No query string.** `/auth` renders the shared `AuthForm`, which
+            # takes no params - a `?mode=signup&email=` would look prefilled in
+            # the email and do nothing on arrival. The address is not needed
+            # anyway: the claim matches on whatever address the account verifies,
+            # which is the same handle `claim_guest_orders` uses.
+            "points_url": (
+                f"{brand['base_url']}/auth"
+                if order.user_id is None
+                else f"{brand['base_url']}/account"
+            ),
             # The order detail page on the tenant's own domain. Unprefixed by
             # locale on purpose - the storefront middleware redirects to the
             # default locale, exactly as the account emails' links do - because

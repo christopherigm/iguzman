@@ -82,6 +82,11 @@ export default function AdminProductFormPage({ params }: Props) {
     en_short_description: "",
     price: "0.00",
     compare_price: "",
+    // Rewards. Blank is meaningful on both and must stay blank rather than
+    // becoming 0 - a blank award inherits the category's, a blank points price
+    // means the item cannot be redeemed. `handleSubmit` sends null for either.
+    points_award: "",
+    points_price: "",
     cost_price: "",
     currency: "USD",
     category: "",
@@ -237,6 +242,8 @@ export default function AdminProductFormPage({ params }: Props) {
             en_short_description: product.en_short_description ?? "",
             price: product.price ?? "0.00",
             compare_price: product.compare_price ?? "",
+            points_award: product.points_award ?? "",
+            points_price: product.points_price ?? "",
             cost_price: product.cost_price ?? "",
             currency: product.currency ?? "USD",
             category: product.category ?? "",
@@ -297,6 +304,12 @@ export default function AdminProductFormPage({ params }: Props) {
       // an omitted key means "leave unchanged" - it cannot clear a value.
       [
         "compare_price",
+        // ⚠ Both must reach the API as null, never as 0 or "". A blank award
+        // means "inherit my category's" and a blank points price means "not
+        // redeemable"; coercing either to zero would silently say "earns
+        // nothing" and "free", which are different claims entirely.
+        "points_award",
+        "points_price",
         "cost_price",
         "stock_count",
         "length",
@@ -464,14 +477,6 @@ export default function AdminProductFormPage({ params }: Props) {
   const imageQuery =
     String(values.name ?? "").trim() || String(values.en_name ?? "").trim();
 
-  if (loading) {
-    return (
-      <Box padding="24px">
-        <Typography variant="body">{t("loading")}</Typography>
-      </Box>
-    );
-  }
-
   return (
     <>
       <Breadcrumbs
@@ -495,12 +500,17 @@ export default function AdminProductFormPage({ params }: Props) {
         values={values}
         onChange={handleChange}
         onSubmit={handleSubmit}
+        loading={loading}
         saving={saving}
         error={error}
         success={success}
         siblings={siblings}
         productionHref={
-          !isNew && values.slug ? `/products/${String(values.slug)}` : undefined
+          isNew
+            ? undefined
+            : values.slug
+              ? `/products/${String(values.slug)}`
+              : null
         }
         imagesSlot={
           <>

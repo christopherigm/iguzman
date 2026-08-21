@@ -5,10 +5,8 @@ import { useTranslations } from "next-intl";
 import { AdminEntityList } from "@/components/admin/admin-entity-list";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import { SectionBandSection } from "@/components/admin/section-band-section";
-import { Box } from "@repo/ui/core-elements/box";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { Button } from "@repo/ui/core-elements/button";
-import { Typography } from "@repo/ui/core-elements/typography";
 import {
   listHighlights,
   deleteHighlight,
@@ -217,40 +215,37 @@ export default function AdminHighlightsPage() {
         loading={loading}
         error={error}
       >
-        {/* Rendered below the table (see AdminEntityList's `children`). Waits for
-            the System record rather than rendering blank inputs:
-            `getSystem` landing mid-edit would overwrite whatever the operator
-            had already typed. */}
-        {settingsLoading ? (
-          <Box padding="24px">
-            <Typography variant="body">{t("loading")}</Typography>
-          </Box>
-        ) : (
-          <AdminForm
-            title={t("highlights")}
-            embedded
-            fields={fields}
+        {/* Rendered below the table (see AdminEntityList's `children`). It is
+            on screen from the first paint but disabled until the System record
+            lands - `getSystem` arriving mid-edit would overwrite whatever the
+            operator had already typed, and a section that appears late moves
+            the page under them. Its Save is the list's `headerActions` button,
+            which is disabled on the same flag. */}
+        <AdminForm
+          title={t("highlights")}
+          embedded
+          fields={fields}
+          values={values}
+          onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
+          onSubmit={handleSave}
+          loading={settingsLoading}
+          saving={saving}
+          error={saveError}
+          success={success}
+        >
+          <SectionBandSection
+            title={t("highlightsStyle")}
+            // The header names the controls, so the mock band keeps the
+            // section's own name - it stands in for the real one.
+            previewHeading={t("sectionBackgroundsHighlights")}
+            gradientLabel={t("highlightsBg")}
+            backgroundKey="highlights_bg"
+            topDividerKey="highlights_top_divider"
+            bottomDividerKey="highlights_bottom_divider"
             values={values}
             onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
-            onSubmit={handleSave}
-            saving={saving}
-            error={saveError}
-            success={success}
-          >
-            <SectionBandSection
-              title={t("highlightsStyle")}
-              // The header names the controls, so the mock band keeps the
-              // section's own name - it stands in for the real one.
-              previewHeading={t("sectionBackgroundsHighlights")}
-              gradientLabel={t("highlightsBg")}
-              backgroundKey="highlights_bg"
-              topDividerKey="highlights_top_divider"
-              bottomDividerKey="highlights_bottom_divider"
-              values={values}
-              onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
-            />
-          </AdminForm>
-        )}
+          />
+        </AdminForm>
       </AdminEntityList>
     </>
   );

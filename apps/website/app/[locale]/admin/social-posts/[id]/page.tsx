@@ -706,13 +706,6 @@ export default function AdminSocialPostFormPage({ params }: Props) {
   const captionText = String(values.caption ?? "");
   const showCaptionBlock = captionText !== "" || hashtags !== "";
 
-  if (loading)
-    return (
-      <Box padding="24px">
-        <Typography variant="body">{t("loading")}</Typography>
-      </Box>
-    );
-
   return (
     <>
       <Breadcrumbs
@@ -744,14 +737,14 @@ export default function AdminSocialPostFormPage({ params }: Props) {
             kind="primary"
             size="md"
             onClick={() => void handleSubmit()}
-            disabled={saving}
+            disabled={saving || loading}
           />
         </Box>
       </Box>
 
       {/* Save progress, directly under the header action row — mirrors the
           standard AdminForm so a save shows the same feedback everywhere. */}
-      {saving && <ProgressBar />}
+      {(saving || loading) && <ProgressBar />}
 
       {/* Enabled status toggle, above the form — matches the CMS inner pages. */}
       <Box
@@ -993,7 +986,7 @@ export default function AdminSocialPostFormPage({ params }: Props) {
                 size="md"
                 icon="/icons/enhance.svg"
                 onClick={() => void handleGenerate()}
-                disabled={!selectedItem || isGenerating}
+                disabled={!selectedItem || isGenerating || loading}
               />
               {isGenerating && (
                 <Spinner size={18} label={t("socialGenerating")} />
@@ -1090,7 +1083,7 @@ export default function AdminSocialPostFormPage({ params }: Props) {
                 size="lg"
                 icon="/icons/download.svg"
                 onClick={() => void handleDownload()}
-                disabled={exporting || !selectedItem}
+                disabled={exporting || !selectedItem || loading}
               />
             </Box>
           </Box>
@@ -1125,7 +1118,7 @@ export default function AdminSocialPostFormPage({ params }: Props) {
           kind="primary"
           size="lg"
           onClick={() => void handleSubmit()}
-          disabled={saving}
+          disabled={saving || loading}
         />
         <SiblingArrow direction="next" siblings={siblings} />
       </Box>

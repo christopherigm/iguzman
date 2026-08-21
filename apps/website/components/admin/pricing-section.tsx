@@ -282,6 +282,50 @@ export function PricingSection({
         />
       </Box>
 
+      {/* Rewards, under the money fields it sits beside on the storefront card
+          ("MX$120 / 1200 points").
+
+          ⚠ **Both are blank-means-something, and the two meanings differ.** A
+          blank *award* inherits the item's category, so clearing it is how a
+          dish is handed back to the family rate - which is why the hint says so
+          rather than the field defaulting to 0. A blank *points price* means the
+          item cannot be bought with points at all, which is every item's
+          starting state; there is deliberately no category-level points price to
+          inherit, because that number has to be weighed against this one item's
+          own money price.
+
+          ⚠ **Zero is not blank on the award.** An item set to 0 earns nothing
+          however generous its category is - that is how a loss-leader is taken
+          out of a family that earns - so the form must send `null` for an empty
+          box and never coerce it. Each item form's `handleSubmit` lists both keys
+          in its blank-to-null sweep for exactly this reason.
+
+          Rendered whatever the tenant's global switch says: these are catalog
+          numbers, and a tenant setting the program up will fill them in before
+          going live. The switch on /admin/system is the only thing that decides
+          whether any of it is read. */}
+      <Box
+        display="grid"
+        gap="16px"
+        alignItems="start"
+        styles={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}
+      >
+        <TextInput
+          label={t("pointsAward")}
+          format="number"
+          value={String(values.points_award ?? "")}
+          onChange={(v) => onChange("points_award", v)}
+          helperText={t("pointsAwardHint")}
+        />
+        <TextInput
+          label={t("pointsPrice")}
+          format="number"
+          value={String(values.points_price ?? "")}
+          onChange={(v) => onChange("points_price", v)}
+          helperText={t("pointsPriceHint")}
+        />
+      </Box>
+
       {/* Stripe payout estimate, rendered as a card to match the cost card. */}
       <Card>
         <StripeNetEstimate

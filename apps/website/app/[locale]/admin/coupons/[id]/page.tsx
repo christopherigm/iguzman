@@ -588,13 +588,6 @@ export default function AdminCouponFormPage({ params }: Props) {
     { key: "enabled", label: t("enabled"), type: "boolean" },
   ];
 
-  if (loading)
-    return (
-      <Box padding="24px">
-        <Typography variant="body">{t("loading")}</Typography>
-      </Box>
-    );
-
   return (
     <>
       <Breadcrumbs
@@ -626,12 +619,12 @@ export default function AdminCouponFormPage({ params }: Props) {
             kind="primary"
             size="md"
             onClick={() => void handleSubmit()}
-            disabled={saving}
+            disabled={saving || loading}
           />
         </Box>
       </Box>
 
-      {saving && <ProgressBar />}
+      {(saving || loading) && <ProgressBar />}
 
       <Grid container spacing={3}>
         {/* ── Controls ── */}
@@ -643,6 +636,7 @@ export default function AdminCouponFormPage({ params }: Props) {
             values={values}
             onChange={set}
             onSubmit={handleSubmit}
+            loading={loading}
             saving={saving}
             slots={[
               {
@@ -836,7 +830,7 @@ export default function AdminCouponFormPage({ params }: Props) {
                 size="lg"
                 icon="/icons/download.svg"
                 onClick={() => void handleDownload()}
-                disabled={exporting || isNew}
+                disabled={exporting || isNew || loading}
               />
             </Box>
           </Box>
@@ -870,7 +864,7 @@ export default function AdminCouponFormPage({ params }: Props) {
           kind="primary"
           size="lg"
           onClick={() => void handleSubmit()}
-          disabled={saving}
+          disabled={saving || loading}
         />
         <SiblingArrow direction="next" siblings={siblings} />
       </Box>

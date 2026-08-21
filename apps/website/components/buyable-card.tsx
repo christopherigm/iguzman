@@ -8,6 +8,7 @@ import type {
 import { findCartLineId } from "@/lib/cart";
 import { isFavorite } from "@/lib/favorites";
 import { getRequestOrigin } from "@/lib/metadata";
+import { getSystem } from "@/lib/system";
 import { BuyableCardView } from "./buyable-card-view";
 
 export type BuyableItem =
@@ -52,17 +53,22 @@ export async function BuyableCard({
   // their own kind. This is the only place the two names diverge.
   const favoriteKind = kind === "food" ? "menu_item" : kind;
 
-  const [session, favorite, origin, tAdmin, tBooking] = await Promise.all([
-    getSession(),
-    isFavorite(favoriteKind, data.id),
-    getRequestOrigin(),
-    getTranslations("Admin"),
-    // Resolved here rather than threaded through every grid that renders a
-    // card: this half is already a server component with the request's locale,
-    // and adding a required prop to a dozen call sites for one word would be
-    // the worse trade.
-    getTranslations("Booking"),
-  ]);
+  const [session, favorite, origin, system, tAdmin, tBooking] =
+    await Promise.all([
+      getSession(),
+      isFavorite(favoriteKind, data.id),
+      getRequestOrigin(),
+      // The global rewards switch, so the card may print a points price beside the
+      // money one. `getSystem` is `cache()`d per request like the three reads
+      // above it, so a grid of twenty cards costs one fetch between them.
+      getSystem(),
+      getTranslations("Admin"),
+      // Resolved here rather than threaded through every grid that renders a
+      // card: this half is already a server component with the request's locale,
+      // and adding a required prop to a dozen call sites for one word would be
+      // the worse trade.
+      getTranslations("Booking"),
+    ]);
 
   // Whether this card's item is already a line, and which line it is - the
   // button turns into "remove" and needs the row's id to delete it. A food card
@@ -80,6 +86,7 @@ export async function BuyableCard({
       fromLabel={fromLabel}
       compact={compact}
       perPersonLabel={tBooking("perPerson")}
+      rewardsEnabled={system?.rewards_enabled ?? false}
       origin={origin}
       isAdmin={session?.isAdmin ?? false}
       editLabel={tAdmin("edit")}

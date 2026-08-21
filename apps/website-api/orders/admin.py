@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils import timezone
 
-from .models import Booking, Coupon, Order, OrderLine
+from .models import Booking, Coupon, Order, OrderLine, PointsTransaction, RewardTier
 
 
 @admin.register(Coupon)
@@ -154,4 +154,58 @@ class BookingAdmin(admin.ModelAdmin):
         # A booking only exists because a checkout created it - and one typed in
         # here would have no order behind it, which is where its price, its
         # customer and its payment all live.
+        return False
+
+
+@admin.register(RewardTier)
+class RewardTierAdmin(admin.ModelAdmin):
+    """The rewards ladder. Normally edited from the CMS on `/admin/system`.
+
+    Read-mostly here, like every other tenant-configuration model: this exists so
+    an operator can see a tenant's ladder without a shell, not as a second place
+    to author one.
+    """
+
+    list_display = (
+        "name", "system", "threshold", "period_months", "earn_multiplier", "enabled",
+    )
+    list_filter = ("system", "enabled")
+    search_fields = ("name", "en_name")
+    ordering = ("system", "threshold")
+
+
+@admin.register(PointsTransaction)
+class PointsTransactionAdmin(admin.ModelAdmin):
+    """The points ledger - append-only, and read-only here.
+
+    ⚠ **Every field is read-only on purpose.** A balance is the sum of these
+    rows, so editing one silently rewrites a customer's balance with nothing to
+    say it happened, and deleting one un-does a redemption the customer already
+    took delivery of. A correction is a **new** row (`kind="adjust"`), which is
+    the whole reason the ledger is append-only.
+
+    Adding is disabled here too: a row written by hand would carry no order and
+    no explanation, and `orders.services.rewards` is the one place that knows how
+    to attribute one.
+    """
+
+    list_display = ("created_at", "system", "_owner", "kind", "points", "note")
+    list_filter = ("system", "kind")
+    search_fields = ("email", "note", "user__email")
+    date_hierarchy = "created_at"
+    readonly_fields = (
+        "system", "user", "email", "order", "kind", "points", "note", "created_at",
+    )
+
+    @admin.display(description="Owner")
+    def _owner(self, obj):
+        return obj.user.email if obj.user_id else f"{obj.email} (unclaimed)"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
         return False

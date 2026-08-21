@@ -6,15 +6,19 @@ import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import { ContactSection } from "./contact-section";
 import { KindLabelsSection } from "./kind-labels-section";
 import { MapSection } from "./map-section";
+import {
+  RewardsSection,
+  persistRewardTiers,
+  toRewardTierRow,
+  type RewardTierRow,
+} from "./rewards-section";
 import { StorageSection } from "./storage-section";
 import { BackupSection } from "./backup-section";
 import { RestoreSection } from "./restore-section";
-import { getSystem, updateSystem } from "@/lib/admin-api";
+import { getSystem, listRewardTiers, updateSystem } from "@/lib/admin-api";
 import { CATALOG_KINDS } from "@/lib/kind-labels";
 import type { SocialLink } from "@/lib/contact";
 import { useSession } from "@repo/auth/session-provider";
-import { Box } from "@repo/ui/core-elements/box";
-import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 
 /**
@@ -52,10 +56,21 @@ export default function AdminSystemPage() {
     map_tile_url: "",
     map_attribution: "",
     map_attribution_url: "",
+    // The global rewards switch. Off is every tenant's starting state, and off
+    // is what every row written before the program existed reads as.
+    rewards_enabled: false,
     // What this tenant calls each kind it sells; blank means "use the site's own
     // translation", which is every tenant's starting state.
     ...kindLabelValues(),
   });
+
+  // The rewards ladder. It lives here rather than inside `RewardsSection`
+  // because the page's own Save is what writes it - the same arrangement the
+  // menu-item form has with its sizes and ingredients. `originalTierIds` is what
+  // a save diffs against to know which rows the operator deleted.
+  const [tiers, setTiers] = useState<RewardTierRow[]>([]);
+  const [originalTierIds, setOriginalTierIds] = useState<number[]>([]);
+  const [tiersLoading, setTiersLoading] = useState(true);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -85,11 +100,30 @@ export default function AdminSystemPage() {
           map_tile_url: data.map_tile_url ?? "",
           map_attribution: data.map_attribution ?? "",
           map_attribution_url: data.map_attribution_url ?? "",
+          rewards_enabled: data.rewards_enabled ?? false,
           ...kindLabelValues(data),
         });
       })
       .catch(() => setError(t("errorLoad")))
       .finally(() => setLoading(false));
+  }, [systemId, t]);
+
+  // A request of its own rather than a key on the System payload: tiers are rows
+  // on a table of their own, and the page renders (and saves) fine without them.
+  useEffect(() => {
+    if (!systemId) return;
+    listRewardTiers()
+      .then((rows) => {
+        const mapped = rows.map((row) => toRewardTierRow(row));
+        setTiers(mapped);
+        setOriginalTierIds(
+          mapped
+            .map((r) => r.id)
+            .filter((n): n is number => typeof n === "number"),
+        );
+      })
+      .catch(() => setError(t("errorLoad")))
+      .finally(() => setTiersLoading(false));
   }, [systemId, t]);
 
   const handleSubmit = async () => {
@@ -107,6 +141,19 @@ export default function AdminSystemPage() {
         );
       }
       await updateSystem(systemId, payload);
+
+      // The rewards tiers are rows, so they are written after the System fields
+      // rather than inside that payload. A refused tier is reported on its own -
+      // the System fields above it did save, and saying "couldn't save" of the
+      // whole page would be untrue.
+      const persisted = await persistRewardTiers(tiers, originalTierIds);
+      setTiers(persisted.rows);
+      setOriginalTierIds(persisted.ids);
+      if (persisted.failed) {
+        setError(t("rewardsTierSaveFailed"));
+        return;
+      }
+
       setSuccess(t("saved"));
     } catch {
       setError(t("errorSave"));
@@ -147,13 +194,6 @@ export default function AdminSystemPage() {
     // action, done from the backend admin - not something the CMS can do.
   ];
 
-  if (loading)
-    return (
-      <Box padding="24px">
-        <Typography variant="body">{t("loading")}</Typography>
-      </Box>
-    );
-
   return (
     <>
       <Breadcrumbs
@@ -170,6 +210,7 @@ export default function AdminSystemPage() {
         values={values}
         onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
         onSubmit={handleSubmit}
+        loading={loading}
         saving={saving}
         error={error}
         success={success}
@@ -205,6 +246,18 @@ export default function AdminSystemPage() {
         <MapSection
           values={values}
           onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
+        />
+
+        {/* Inside the form, and saved by it end to end: `rewards_enabled` is an
+            ordinary System key in `values`, and the tier rows are written by
+            `persistRewardTiers` in `handleSubmit` above - the arrangement the
+            menu-item form has with its sizes and ingredients. */}
+        <RewardsSection
+          values={values}
+          onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
+          tiers={tiers}
+          onTiersChange={setTiers}
+          loading={tiersLoading}
         />
       </AdminForm>
 

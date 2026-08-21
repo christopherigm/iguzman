@@ -17,8 +17,6 @@ import {
 import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import { buildSlug } from "@/lib/slug-utils";
 import { useSession } from "@repo/auth/session-provider";
-import { Box } from "@repo/ui/core-elements/box";
-import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 
 type Props = { params: Promise<{ locale: string; id: string }> };
@@ -197,13 +195,6 @@ export default function AdminHighlightFormPage({ params }: Props) {
     { key: "enabled", label: t("enabled"), type: "boolean" },
   ];
 
-  if (loading)
-    return (
-      <Box padding="24px">
-        <Typography variant="body">{t("loading")}</Typography>
-      </Box>
-    );
-
   return (
     <>
       <Breadcrumbs
@@ -225,14 +216,17 @@ export default function AdminHighlightFormPage({ params }: Props) {
         values={values}
         onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
         onSubmit={handleSubmit}
+        loading={loading}
         saving={saving}
         error={error}
         success={success}
         siblings={siblings}
         productionHref={
-          !isNew && values.slug
-            ? `/highlights/${String(values.slug)}`
-            : undefined
+          isNew
+            ? undefined
+            : values.slug
+              ? `/highlights/${String(values.slug)}`
+              : null
         }
         imagesSlot={
           <AdminImageField

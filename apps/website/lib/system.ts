@@ -173,6 +173,13 @@ export interface System extends KindLabelOverrides {
    *  cart offers a "pay in store" / "pay on delivery" option on each flag. */
   pay_in_store_enabled: boolean;
   pay_on_delivery_enabled: boolean;
+  /**
+   * The global rewards switch. Every surface that shows a points price, a
+   * balance or an earn figure gates on this one flag - never on "does this item
+   * have points set", which is what lets a tenant switch the program off for a
+   * season without losing the numbers they entered.
+   */
+  rewards_enabled: boolean;
   /** Spotlight section - a promo panel + up to three hand-picked catalog items.
    *  Copy is bilingual; the button link is a single path/URL. All optional. */
   spotlight_enabled: boolean;

@@ -5,6 +5,30 @@
   gap: 24px;
 }
 
+/* The wrapper that a still-loading form disables in one go - the fields and
+   whatever editors the page passes as `children`. It has no look of its own
+   (it inherits .af__form's column rhythm, since it replaced two of its flex
+   children with one) beyond dimming while it is off. */
+.af__fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  /* A fieldset's default min-width is min-content, which would let a wide field
+     push the grid past its column. */
+  min-width: 0;
+}
+
+.af__fieldset:disabled {
+  opacity: 0.6;
+  /* The `disabled` attribute already makes every native control inert; this is
+     for the ones it cannot reach - drag handles, image pickers, and anything a
+     page hands in as `children`. */
+  pointer-events: none;
+}
+
 /* Two-column responsive field grid. Kept in CSS because the column count
    collapses to one at the xs breakpoint via @media, and grid-template-columns /
    grid-column placement have no component-prop equivalent. */

@@ -36,6 +36,15 @@ export interface BuyableCardViewProps {
    *  story, and saying nothing would quote a family of four one quarter of what
    *  they will actually pay. */
   perPersonLabel?: string;
+  /**
+   * Whether this tenant runs a rewards program, so the card may print an item's
+   * points price beside its money one.
+   *
+   * ⚠ Resolved by the **server** half and passed down, never read from a client
+   * hook: it comes off the System payload, and a card that fetched it would do
+   * so once per card in a grid of twenty.
+   */
+  rewardsEnabled?: boolean;
   /** Absolute origin, for the share link. Only the server knows the request
    *  host, so it is always passed in. */
   origin: string;
@@ -65,6 +74,7 @@ export function BuyableCardView({
   fromLabel,
   compact = false,
   perPersonLabel,
+  rewardsEnabled = false,
   origin,
   isAdmin,
   editLabel,
@@ -74,6 +84,7 @@ export function BuyableCardView({
 }: BuyableCardViewProps) {
   const { kind, data } = item;
   const tMenu = useTranslations("Menu");
+  const tCart = useTranslations("Cart");
 
   // A food card advertises its dietary flags, since "which of these can I eat"
   // is the only question a diner scanning a grid is asking. Vegan is the
@@ -378,6 +389,23 @@ export function BuyableCardView({
                   {perPersonLabel}
                 </Typography>
               )}
+            {/* The points price, beside the money one - "MX$120 / 1200 points".
+                It is the item's own `points_price`, not a conversion of the
+                price to its left: points are priced per item, so there is no
+                rate to convert at, and the two numbers are two independent ways
+                to buy the same thing. Absent whenever the item cannot be
+                redeemed, which is every item on a tenant not running the
+                program - so nothing on the card moved for them. */}
+            {rewardsEnabled && data.points_price ? (
+              <Typography
+                as="span"
+                variant="body"
+                fontWeight={600}
+                color="var(--accent)"
+              >
+                {tCart("pointsPrice", { points: data.points_price })}
+              </Typography>
+            ) : null}
             {effectiveCompare &&
               parseFloat(effectiveCompare) > parseFloat(displayPrice) && (
                 <Typography

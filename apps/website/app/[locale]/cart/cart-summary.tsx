@@ -1,4 +1,4 @@
-import type { CartTotal } from "@/lib/cart";
+import type { CartRewards, CartTotal } from "@/lib/cart";
 import { getSystem } from "@/lib/system";
 import { CartSummaryCard } from "./cart-summary-card";
 
@@ -6,6 +6,8 @@ interface CartSummaryProps {
   totals: CartTotal[];
   /** Total quantity, matching the navbar's count - not the number of lines. */
   count: number;
+  /** The basket's points position, resolved by the API over every line at once. */
+  rewards: CartRewards;
 }
 
 /**
@@ -18,7 +20,11 @@ interface CartSummaryProps {
  * options flickering after hydration. Django re-checks every one - this only
  * drives what the customer sees.
  */
-export async function CartSummary({ totals, count }: CartSummaryProps) {
+export async function CartSummary({
+  totals,
+  count,
+  rewards,
+}: CartSummaryProps) {
   const system = await getSystem();
 
   return (
@@ -31,6 +37,7 @@ export async function CartSummary({ totals, count }: CartSummaryProps) {
         onDelivery: system?.pay_on_delivery_enabled ?? false,
       }}
       mixedCurrency={totals.length > 1}
+      rewards={rewards}
       isGuest={false}
     />
   );

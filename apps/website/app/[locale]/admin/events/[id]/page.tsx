@@ -187,7 +187,10 @@ export default function AdminEventFormPage({ params }: Props) {
             (data.starts_at as string) ?? null,
             timezone,
           ),
-          ends_at: instantToWallClock((data.ends_at as string) ?? null, timezone),
+          ends_at: instantToWallClock(
+            (data.ends_at as string) ?? null,
+            timezone,
+          ),
           is_all_day: data.is_all_day ?? false,
           timezone,
           branch: data.branch ?? "",
@@ -240,7 +243,10 @@ export default function AdminEventFormPage({ params }: Props) {
     setSuccess(null);
     try {
       const timezone = String(values.timezone || DEFAULT_TIMEZONE);
-      const startsAt = wallClockToInstant(String(values.starts_at ?? ""), timezone);
+      const startsAt = wallClockToInstant(
+        String(values.starts_at ?? ""),
+        timezone,
+      );
       if (!startsAt) {
         setError(tEvents("errorNoDate"));
         return;
@@ -387,13 +393,6 @@ export default function AdminEventFormPage({ params }: Props) {
   const imageQuery =
     String(values.name ?? "").trim() || String(values.en_name ?? "").trim();
 
-  if (loading)
-    return (
-      <Box padding="24px">
-        <Typography variant="body">{t("loading")}</Typography>
-      </Box>
-    );
-
   return (
     <>
       <Breadcrumbs
@@ -415,12 +414,17 @@ export default function AdminEventFormPage({ params }: Props) {
         values={values}
         onChange={handleChange}
         onSubmit={handleSubmit}
+        loading={loading}
         saving={saving}
         error={error}
         success={success}
         siblings={siblings}
         productionHref={
-          !isNew && values.slug ? `/events/${String(values.slug)}` : undefined
+          isNew
+            ? undefined
+            : values.slug
+              ? `/events/${String(values.slug)}`
+              : null
         }
         slots={[
           {

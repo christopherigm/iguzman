@@ -10,12 +10,19 @@ Estado / Status: {{ status_label_es }} / {{ status_label_en }}
 
 ------------------------------------------------------------
 {% for item in items %}
-{{ item.quantity }} x {{ item.name }} - {{ item.line_total }}{% for a in item.addons %}
+{{ item.quantity }} x {{ item.name }} - {% if item.paid_with_points %}{{ item.points_price }} pts ({{ item.line_total }}){% else %}{{ item.line_total }}{% endif %}{% for a in item.addons %}
    {% if a.removed %}Sin / No {{ a.name }}{% else %}+ {{ a.name }}{% if a.quantity > 1 %} x{{ a.quantity }}{% endif %}{% endif %}{% endfor %}
 {% endfor %}
 ------------------------------------------------------------
-Subtotal ({{ item_count }}): {{ subtotal_display }}
+Subtotal ({{ item_count }}): {{ subtotal_display }}{% if points_spent %}
+Pagado con puntos / Paid with points: -{{ points_spent }} pts{% endif %}
 Total: {{ total_display }}
+
+{% if points_earned %}+{{ points_earned }} puntos ganados / points earned
+{% if points_claimable %}Crea una cuenta con este correo para reclamarlos.
+Create an account with this email to claim them.{% else %}Ya están en tu cuenta. / They are already in your account.{% endif %}
+{{ points_url }}
+{% endif %}
 
 {% if location %}
 Dónde / Where: {{ location.name }}{% if location.address %}

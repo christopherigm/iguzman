@@ -31,7 +31,6 @@ import { RecommendationsEditor } from "@/components/admin/recommendations-editor
 import { useRecommendationsEditor } from "@/hooks/use-recommendations-editor";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
-import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 
 type Props = { params: Promise<{ locale: string; id: string }> };
@@ -49,6 +48,10 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
     description: "",
     en_description: "",
     parent: "",
+    // What every item filed here earns unless it states its own award. Blank
+    // means "nothing by default" - it is not a rate to be defaulted, and an
+    // item's own blank is what defers to this one.
+    points_award: "",
     enabled: true,
   });
   // The uploader and the stock-image picker, which are one field with two doors.
@@ -154,6 +157,7 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
             description: data.description ?? "",
             en_description: data.en_description ?? "",
             parent: data.parent ?? "",
+            points_award: data.points_award ?? "",
             enabled: data.enabled ?? true,
           });
           loadImage(data.image, Number(id));
@@ -185,6 +189,10 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
       // has to be in the same write as the file it describes.
       Object.assign(payload, image.payload());
       if (payload.parent === "") payload.parent = null;
+      // Blank reaches the API as null, never as 0: "no award set here" and
+      // "items here earn nothing" are different claims, and only the second one
+      // overrides what an item would otherwise inherit.
+      if (payload.points_award === "") payload.points_award = null;
       // Always sent: an empty list clears the category's rows, so it cannot be
       // omitted when the operator has just unticked the last one.
       payload.recommendations = recommendations.value;
@@ -230,15 +238,14 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
       type: "textarea",
     },
     { key: "en_description", label: "Description (EN)", type: "textarea" },
+    {
+      key: "points_award",
+      label: t("pointsAward"),
+      type: "number",
+      helperText: t("pointsAwardCategoryHint"),
+    },
     { key: "enabled", label: t("enabled"), type: "boolean" },
   ];
-
-  if (loading)
-    return (
-      <Box padding="24px">
-        <Typography variant="body">{t("loading")}</Typography>
-      </Box>
-    );
 
   return (
     <>
@@ -261,14 +268,17 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
         values={values}
         onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
         onSubmit={handleSubmit}
+        loading={loading}
         saving={saving}
         error={error}
         success={success}
         siblings={siblings}
         productionHref={
-          !isNew && values.slug
-            ? menuCategoryHref(String(values.slug))
-            : undefined
+          isNew
+            ? undefined
+            : values.slug
+              ? menuCategoryHref(String(values.slug))
+              : null
         }
         imagesSlot={
           <AdminImageField

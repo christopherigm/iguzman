@@ -16,8 +16,6 @@ import {
 import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import { buildSlug } from "@/lib/slug-utils";
 import { useSession } from "@repo/auth/session-provider";
-import { Box } from "@repo/ui/core-elements/box";
-import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import { NutritionWebSearch } from "./nutrition-web-search";
 import { PriceWebSearch } from "./price-web-search";
@@ -307,13 +305,6 @@ export default function AdminIngredientFormPage({ params }: Props) {
     .filter((f) => (NUTRIENT_KEYS as readonly string[]).includes(f.key))
     .map((f) => ({ key: f.key, label: f.label }));
 
-  if (loading)
-    return (
-      <Box padding="24px">
-        <Typography variant="body">{t("loading")}</Typography>
-      </Box>
-    );
-
   return (
     <>
       <Breadcrumbs
@@ -335,6 +326,7 @@ export default function AdminIngredientFormPage({ params }: Props) {
         values={values}
         onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
         onSubmit={handleSubmit}
+        loading={loading}
         saving={saving}
         error={error}
         success={success}

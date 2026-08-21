@@ -121,6 +121,15 @@ class ProductCategory(RegularPicture):
     # until someone re-arranges the list.
     sort_order = models.PositiveIntegerField(default=0)
 
+    # What buying anything filed here earns, when the item does not state its
+    # own. See `Buyable.points_award`: an item's null means "inherit this", and
+    # this column's null means "nothing in this category earns by default".
+    points_award = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Points earned per unit for items in this category. Blank means none.",
+    )
+
     class Meta:
         verbose_name = 'Product Category'
         verbose_name_plural = 'Product Categories'
@@ -234,6 +243,15 @@ class ServiceCategory(RegularPicture):
     slug = models.SlugField(max_length=255, unique=True)
 
     sort_order = models.PositiveIntegerField(default=0)
+
+    # What buying anything filed here earns, when the item does not state its
+    # own. See `Buyable.points_award`: an item's null means "inherit this", and
+    # this column's null means "nothing in this category earns by default".
+    points_award = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Points earned per unit for items in this category. Blank means none.",
+    )
 
     class Meta:
         verbose_name = 'Service Category'
@@ -561,6 +579,15 @@ class MenuCategory(RegularPicture):
     slug = models.SlugField(max_length=255, unique=True)
 
     sort_order = models.PositiveIntegerField(default=0)
+
+    # What buying anything filed here earns, when the item does not state its
+    # own. See `Buyable.points_award`: an item's null means "inherit this", and
+    # this column's null means "nothing in this category earns by default".
+    points_award = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Points earned per unit for items in this category. Blank means none.",
+    )
 
     class Meta:
         verbose_name = 'Menu Category'

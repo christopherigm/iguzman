@@ -56,40 +56,47 @@ export interface FieldDef {
   key: string;
   label: string;
   type?:
-  | "text"
-  | "textarea"
-  | "boolean"
-  | "number"
-  | "url"
-  | "select"
-  | "color"
-  | "slug"
-  /**
-   * A native `<input type="datetime-local">`, whose value is **local wall clock
-   * with no zone** (`YYYY-MM-DDTHH:mm`).
-   *
-   * ⚠ That is the whole point and the whole trap. The author types "7pm", which
-   * means 7pm *where the thing happens* - not 7pm where the author is sitting,
-   * and not 7pm UTC. So a form using this owns the conversion to an instant
-   * against whatever zone the record carries; feeding the raw value to
-   * `new Date()` resolves it in the **browser's** zone, which is wrong for every
-   * author who is not in the same country as the record.
-   * `lib/event-shared.ts`'s `wallClockToInstant` / `instantToWallClock` are that
-   * conversion for events.
-   */
-  | "datetime"
-  /**
-   * A write-only secret (an API key). Masked as you type, and - because the
-   * API never sends one back - always loads blank: an empty value means
-   * "leave unchanged", so the form must omit it from the payload rather than
-   * submit "" and wipe the stored secret.
-   */
-  | "password";
+    | "text"
+    | "textarea"
+    | "boolean"
+    | "number"
+    | "url"
+    | "select"
+    | "color"
+    | "slug"
+    /**
+     * A native `<input type="datetime-local">`, whose value is **local wall clock
+     * with no zone** (`YYYY-MM-DDTHH:mm`).
+     *
+     * ⚠ That is the whole point and the whole trap. The author types "7pm", which
+     * means 7pm *where the thing happens* - not 7pm where the author is sitting,
+     * and not 7pm UTC. So a form using this owns the conversion to an instant
+     * against whatever zone the record carries; feeding the raw value to
+     * `new Date()` resolves it in the **browser's** zone, which is wrong for every
+     * author who is not in the same country as the record.
+     * `lib/event-shared.ts`'s `wallClockToInstant` / `instantToWallClock` are that
+     * conversion for events.
+     */
+    | "datetime"
+    /**
+     * A write-only secret (an API key). Masked as you type, and - because the
+     * API never sends one back - always loads blank: an empty value means
+     * "leave unchanged", so the form must omit it from the payload rather than
+     * submit "" and wipe the stored secret.
+     */
+    | "password";
   options?: { value: string | number; label: string }[];
   required?: boolean;
   placeholder?: string;
   disabled?: boolean;
   fieldError?: string | null;
+  /**
+   * A line of guidance under the input, for a field whose *blank* state means
+   * something non-obvious - a points award that inherits its category, say. It
+   * is passed straight to `TextInput`'s own `helperText`, which `fieldError`
+   * replaces when there is an error to show instead.
+   */
+  helperText?: string;
   onBlur?: () => void;
   /** Optional override for the pair-group section header label. */
   groupLabel?: string;
@@ -134,15 +141,34 @@ interface AdminFormProps {
    */
   onClone?: (names: { name: string; en_name: string }) => Promise<void> | void;
   saving?: boolean;
+  /**
+   * True while the record's own data is still being fetched.
+   *
+   * The form renders anyway: every button in the header and in the fixed action
+   * bar is on screen from the first paint, disabled, rather than appearing
+   * under the operator's cursor once the fetch lands. The fields are disabled
+   * with them, so nothing typed into a default value is silently overwritten
+   * when the record arrives.
+   */
+  loading?: boolean;
   error?: string | null;
   success?: string | null;
   /**
    * Public production URL for the record being edited, locale-agnostic and
    * root-relative (e.g. `/products/some-slug`). When set, the fixed action bar
-   * shows a "view in production" button that opens it in a new tab. Leave
-   * undefined for new records and for forms without a public page.
+   * shows a "view in production" button that opens it.
+   *
+   * Three states, because the button must not come and go while a record
+   * loads:
+   *
+   * - `undefined` - this record has no public page (a new record, or a form
+   *   that edits something the storefront never shows). No button at all.
+   * - `null` - it has one, but its address isn't known yet (the slug arrives
+   *   with the fetch). The button renders **disabled**, so the bar keeps its
+   *   shape from the first paint.
+   * - a string - the live address.
    */
-  productionHref?: string;
+  productionHref?: string | null;
   /**
    * The records either side of this one in the CMS list, from
    * `useAdminSiblings`. When set, the fixed action bar flanks Save with a prev
@@ -188,6 +214,7 @@ export function AdminForm({
   isEditing,
   onClone,
   saving,
+  loading,
   error,
   success,
   productionHref,
@@ -507,6 +534,7 @@ export function AdminForm({
                   text={t("clone")}
                   icon="/icons/copy.svg"
                   onClick={openClone}
+                  disabled={loading}
                   size="md"
                   kind="warning"
                 />
@@ -514,7 +542,7 @@ export function AdminForm({
               <Button
                 text={saving ? t("saving") : t("save")}
                 onClick={onSubmit}
-                disabled={saving}
+                disabled={saving || loading}
                 kind="primary"
                 size="md"
               />
@@ -522,99 +550,49 @@ export function AdminForm({
           </Box>
         )}
 
-        {/* Save progress, directly under the header action row. */}
-        {saving && <ProgressBar />}
+        {/* Save progress - and, on the way in, the record's own load. Both are
+            the same thing to the operator: the form is busy and its buttons
+            are inert. */}
+        {(saving || loading) && <ProgressBar />}
 
         {error && <Toast message={error} variant="error" />}
         {success && (
           <Toast message={success} variant="success" position="top-center" />
         )}
 
-        <form className="af__form" onSubmit={handleSubmit} noValidate>
-          <Box className="af__grid">
-            {/* ── Status toggles, above every field ── */}
-            {topToggles.length > 0 && (
-              <Box
-                className="af__field--full"
-                display="flex"
-                alignItems="center"
-                flexWrap="wrap"
-                gap={24}
-                paddingBottom={16}
-                styles={{
-                  borderBottom:
-                    "1px solid color-mix(in srgb, var(--foreground) 20%, transparent)",
-                }}
-              >
-                {topToggles.map((field) => (
-                  <Box
-                    key={field.key}
-                    display="flex"
-                    alignItems="center"
-                    gap={10}
-                  >
-                    <Switch
-                      checked={Boolean(values[field.key])}
-                      onChange={(v) => onChange(field.key, v)}
-                    />
-                    <Typography
-                      as="span"
-                      variant="body"
-                      fontWeight={500}
-                      color="var(--foreground)"
-                    >
-                      {field.label}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-            )}
-
-            {bodyFields.map((field, index) => (
-              <Fragment key={field.key}>
-                {/* ── Slot block, above this field's row ── */}
-                {slotMap.has(field.key) && (
-                  <Box className="af__field--full" flexDirection="column">
-                    {slotMap.get(field.key)}
-                  </Box>
-                )}
-
-                {/* ── Pair group header (shown before the ES field of each pair) ── */}
-                {needsGroupHeader(field) && (
-                  <Box
-                    className="af__field--full"
-                    paddingTop={32}
-                    paddingBottom={2}
-                    styles={{
-                      borderBottom:
-                        "1px solid color-mix(in srgb, var(--foreground) 20%, transparent)",
-                    }}
-                  >
-                    <Typography
-                      variant="label"
-                      fontWeight={800}
-                      color="var(--foreground)"
-                      styles={{
-                        letterSpacing: "0.06em",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {field.groupLabel ?? deriveGroupLabel(field.label)}
-                    </Typography>
-                  </Box>
-                )}
-
+        <form
+          className="af__form"
+          onSubmit={handleSubmit}
+          noValidate
+          aria-busy={loading || undefined}
+        >
+          {/* ⚠ One `disabled` fieldset, rather than a `disabled` prop threaded
+              through every field type and every editor passed as `children`:
+              it is the one thing in HTML that disables a whole subtree of
+              controls, sub-editors included. The action bar below is
+              deliberately outside it - its buttons decide for themselves. */}
+          <fieldset className="af__fieldset" disabled={loading}>
+            <Box className="af__grid">
+              {/* ── Status toggles, above every field ── */}
+              {topToggles.length > 0 && (
                 <Box
-                  flexDirection="column"
-                  className={fieldSpanClass(field)}
-                  gap={field.fieldError ? 4 : undefined}
+                  className="af__field--full"
+                  display="flex"
+                  alignItems="center"
+                  flexWrap="wrap"
+                  gap={24}
+                  paddingBottom={16}
+                  styles={{
+                    borderBottom:
+                      "1px solid color-mix(in srgb, var(--foreground) 20%, transparent)",
+                  }}
                 >
-                  {field.type === "boolean" ? (
+                  {topToggles.map((field) => (
                     <Box
+                      key={field.key}
                       display="flex"
                       alignItems="center"
                       gap={10}
-                      padding="10px 0"
                     >
                       <Switch
                         checked={Boolean(values[field.key])}
@@ -629,96 +607,161 @@ export function AdminForm({
                         {field.label}
                       </Typography>
                     </Box>
-                  ) : field.type === "select" ? (
-                    <Select
-                      label={field.label}
-                      value={String(values[field.key] ?? "")}
-                      onChange={(v) => onChange(field.key, v)}
-                      required={field.required}
-                      options={[
-                        { value: "", label: field.placeholder ?? "-" },
-                        ...(field.options?.map((opt) => ({
-                          value: String(opt.value),
-                          label: opt.label,
-                        })) ?? []),
-                      ]}
-                    />
-                  ) : field.type === "datetime" ? (
-                    <Box flexDirection="column" gap={6}>
-                      <label
-                        className="af__label"
-                        htmlFor={`field-${field.key}`}
-                      >
-                        {field.label}
-                      </label>
-                      <input
-                        id={`field-${field.key}`}
-                        type="datetime-local"
-                        className="af__datetime-input"
-                        required={field.required}
-                        disabled={field.disabled}
-                        value={String(values[field.key] ?? "")}
-                        onChange={(e) => onChange(field.key, e.target.value)}
-                      />
+                  ))}
+                </Box>
+              )}
+
+              {bodyFields.map((field, index) => (
+                <Fragment key={field.key}>
+                  {/* ── Slot block, above this field's row ── */}
+                  {slotMap.has(field.key) && (
+                    <Box className="af__field--full" flexDirection="column">
+                      {slotMap.get(field.key)}
                     </Box>
-                  ) : field.type === "color" ? (
-                    <Box flexDirection="column" gap={6}>
-                      <label
-                        className="af__label"
-                        htmlFor={`field-${field.key}`}
+                  )}
+
+                  {/* ── Pair group header (shown before the ES field of each pair) ── */}
+                  {needsGroupHeader(field) && (
+                    <Box
+                      className="af__field--full"
+                      paddingTop={32}
+                      paddingBottom={2}
+                      styles={{
+                        borderBottom:
+                          "1px solid color-mix(in srgb, var(--foreground) 20%, transparent)",
+                      }}
+                    >
+                      <Typography
+                        variant="label"
+                        fontWeight={800}
+                        color="var(--foreground)"
+                        styles={{
+                          letterSpacing: "0.06em",
+                          textTransform: "uppercase",
+                        }}
                       >
-                        {field.label}
-                      </label>
-                      <Box display="flex" alignItems="center" gap={8}>
-                        <input
-                          id={`field-${field.key}`}
-                          type="color"
-                          className="af__color-input"
-                          value={String(values[field.key] ?? "#000000")}
-                          onChange={(e) => onChange(field.key, e.target.value)}
-                        />
-                        <TextInput
-                          value={String(values[field.key] ?? "")}
-                          onChange={(v) => onChange(field.key, v)}
-                          placeholder="#000000"
-                          flex={1}
-                        />
-                      </Box>
+                        {field.groupLabel ?? deriveGroupLabel(field.label)}
+                      </Typography>
                     </Box>
-                  ) : (
-                    <Box flexDirection="column" gap={6}>
-                      {/* ── Label row ── */}
+                  )}
+
+                  <Box
+                    flexDirection="column"
+                    className={fieldSpanClass(field)}
+                    gap={field.fieldError ? 4 : undefined}
+                  >
+                    {field.type === "boolean" ? (
                       <Box
                         display="flex"
                         alignItems="center"
-                        justifyContent={
-                          field.type === "textarea" || isTranslatable(field)
-                            ? "space-between"
-                            : undefined
-                        }
-                        minHeight={24}
-                        marginBottom={4}
+                        gap={10}
+                        padding="10px 0"
                       >
+                        <Switch
+                          checked={Boolean(values[field.key])}
+                          onChange={(v) => onChange(field.key, v)}
+                        />
+                        <Typography
+                          as="span"
+                          variant="body"
+                          fontWeight={500}
+                          color="var(--foreground)"
+                        >
+                          {field.label}
+                        </Typography>
+                      </Box>
+                    ) : field.type === "select" ? (
+                      <Select
+                        label={field.label}
+                        value={String(values[field.key] ?? "")}
+                        onChange={(v) => onChange(field.key, v)}
+                        required={field.required}
+                        options={[
+                          { value: "", label: field.placeholder ?? "-" },
+                          ...(field.options?.map((opt) => ({
+                            value: String(opt.value),
+                            label: opt.label,
+                          })) ?? []),
+                        ]}
+                      />
+                    ) : field.type === "datetime" ? (
+                      <Box flexDirection="column" gap={6}>
                         <label
                           className="af__label"
                           htmlFor={`field-${field.key}`}
                         >
-                          {fieldLabelText(field)}
-                          {field.required && (
-                            <Typography
-                              as="span"
-                              variant="none"
-                              color="#e53935"
-                              marginLeft={2}
-                            >
-                              *
-                            </Typography>
-                          )}
+                          {field.label}
                         </label>
+                        <input
+                          id={`field-${field.key}`}
+                          type="datetime-local"
+                          className="af__datetime-input"
+                          required={field.required}
+                          disabled={field.disabled}
+                          value={String(values[field.key] ?? "")}
+                          onChange={(e) => onChange(field.key, e.target.value)}
+                        />
+                      </Box>
+                    ) : field.type === "color" ? (
+                      <Box flexDirection="column" gap={6}>
+                        <label
+                          className="af__label"
+                          htmlFor={`field-${field.key}`}
+                        >
+                          {field.label}
+                        </label>
+                        <Box display="flex" alignItems="center" gap={8}>
+                          <input
+                            id={`field-${field.key}`}
+                            type="color"
+                            className="af__color-input"
+                            value={String(values[field.key] ?? "#000000")}
+                            onChange={(e) =>
+                              onChange(field.key, e.target.value)
+                            }
+                          />
+                          <TextInput
+                            value={String(values[field.key] ?? "")}
+                            onChange={(v) => onChange(field.key, v)}
+                            placeholder="#000000"
+                            flex={1}
+                          />
+                        </Box>
+                      </Box>
+                    ) : (
+                      <Box flexDirection="column" gap={6}>
+                        {/* ── Label row ── */}
+                        <Box
+                          display="flex"
+                          alignItems="center"
+                          justifyContent={
+                            field.type === "textarea" || isTranslatable(field)
+                              ? "space-between"
+                              : undefined
+                          }
+                          minHeight={24}
+                          marginBottom={4}
+                        >
+                          <label
+                            className="af__label"
+                            htmlFor={`field-${field.key}`}
+                          >
+                            {fieldLabelText(field)}
+                            {field.required && (
+                              <Typography
+                                as="span"
+                                variant="none"
+                                color="#e53935"
+                                marginLeft={2}
+                              >
+                                *
+                              </Typography>
+                            )}
+                          </label>
 
-                        {/* ── Action buttons (enhance, translate) ── */}
-                        {(field.type === "textarea" ||
-                          isTranslatable(field)) && (
+                          {/* ── Action buttons (enhance, translate) ── */}
+                          {(field.type === "textarea" ||
+                            isTranslatable(field)) && (
                             <Box display="flex" alignItems="center" gap={12}>
                               {field.type === "textarea" && (
                                 <Button
@@ -740,7 +783,7 @@ export function AdminForm({
                                   className={[
                                     "af__enhance-btn",
                                     llmBusy ||
-                                      !String(values[field.key] ?? "").trim()
+                                    !String(values[field.key] ?? "").trim()
                                       ? "af__enhance-btn--busy"
                                       : "",
                                     activeEnhanceField === field.key
@@ -771,7 +814,7 @@ export function AdminForm({
                                   className={[
                                     "af__enhance-btn",
                                     llmBusy ||
-                                      !String(values[field.key] ?? "").trim()
+                                    !String(values[field.key] ?? "").trim()
                                       ? "af__enhance-btn--busy"
                                       : "",
                                     activeTranslateField === field.key
@@ -784,140 +827,142 @@ export function AdminForm({
                               )}
                             </Box>
                           )}
-                      </Box>
+                        </Box>
 
-                      <TextInput
-                        id={`field-${field.key}`}
-                        value={String(values[field.key] ?? "")}
-                        onChange={(v) => onChange(field.key, v)}
-                        type={
-                          field.type === "number"
-                            ? "number"
-                            : field.type === "url"
-                              ? "url"
-                              : field.type === "password"
-                                ? "password"
-                                : "text"
-                        }
-                        multirow={field.type === "textarea"}
-                        rows={field.type === "textarea" ? 7 : undefined}
-                        placeholder={field.placeholder}
-                        disabled={field.disabled ?? field.type === "slug"}
-                        onBlur={field.onBlur}
-                        error={field.fieldError ?? undefined}
-                      />
+                        <TextInput
+                          id={`field-${field.key}`}
+                          value={String(values[field.key] ?? "")}
+                          onChange={(v) => onChange(field.key, v)}
+                          type={
+                            field.type === "number"
+                              ? "number"
+                              : field.type === "url"
+                                ? "url"
+                                : field.type === "password"
+                                  ? "password"
+                                  : "text"
+                          }
+                          multirow={field.type === "textarea"}
+                          rows={field.type === "textarea" ? 7 : undefined}
+                          placeholder={field.placeholder}
+                          helperText={field.helperText}
+                          disabled={field.disabled ?? field.type === "slug"}
+                          onBlur={field.onBlur}
+                          error={field.fieldError ?? undefined}
+                        />
 
-                      {/* ── Enhance preview panel ── */}
-                      {field.type === "textarea" &&
-                        activeEnhanceField === field.key && (
-                          <Box
-                            flexDirection="column"
-                            gap={10}
-                            padding="12px 14px"
-                            borderRadius={8}
-                            border="1px solid color-mix(in srgb, var(--accent, #06b6d4) 30%, transparent)"
-                            backgroundColor="color-mix(in srgb, var(--accent, #06b6d4) 5%, transparent)"
-                          >
-                            <Typography variant="body">
-                              {enhancePreview || "…"}
-                            </Typography>
+                        {/* ── Enhance preview panel ── */}
+                        {field.type === "textarea" &&
+                          activeEnhanceField === field.key && (
                             <Box
-                              display="flex"
-                              gap={8}
-                              alignItems="center"
-                              marginTop={12}
+                              flexDirection="column"
+                              gap={10}
+                              padding="12px 14px"
+                              borderRadius={8}
+                              border="1px solid color-mix(in srgb, var(--accent, #06b6d4) 30%, transparent)"
+                              backgroundColor="color-mix(in srgb, var(--accent, #06b6d4) 5%, transparent)"
                             >
-                              {isGenerating ? (
-                                <Button
-                                  text={t("enhanceStop")}
-                                  onClick={handleDiscardEnhance}
-                                  size="md"
-                                  kind="error"
-                                />
-                              ) : (
-                                <>
+                              <Typography variant="body">
+                                {enhancePreview || "…"}
+                              </Typography>
+                              <Box
+                                display="flex"
+                                gap={8}
+                                alignItems="center"
+                                marginTop={12}
+                              >
+                                {isGenerating ? (
                                   <Button
-                                    text={t("enhanceDiscard")}
+                                    text={t("enhanceStop")}
                                     onClick={handleDiscardEnhance}
                                     size="md"
+                                    kind="error"
                                   />
-                                  <Button
-                                    text={t("enhanceAccept")}
-                                    onClick={handleAcceptEnhance}
-                                    size="md"
-                                    kind="primary"
-                                  />
-                                </>
-                              )}
+                                ) : (
+                                  <>
+                                    <Button
+                                      text={t("enhanceDiscard")}
+                                      onClick={handleDiscardEnhance}
+                                      size="md"
+                                    />
+                                    <Button
+                                      text={t("enhanceAccept")}
+                                      onClick={handleAcceptEnhance}
+                                      size="md"
+                                      kind="primary"
+                                    />
+                                  </>
+                                )}
+                              </Box>
                             </Box>
-                          </Box>
-                        )}
+                          )}
 
-                      {/* ── Translate preview panel ── */}
-                      {isTranslatable(field) &&
-                        activeTranslateField === field.key && (
-                          <Box
-                            flexDirection="column"
-                            gap={10}
-                            padding="12px 14px"
-                            borderRadius={8}
-                            border="1px solid color-mix(in srgb, var(--foreground) 15%, transparent)"
-                            backgroundColor="color-mix(in srgb, var(--foreground) 3%, transparent)"
-                          >
-                            <Typography variant="body">
-                              {translatePreview || "…"}
-                            </Typography>
+                        {/* ── Translate preview panel ── */}
+                        {isTranslatable(field) &&
+                          activeTranslateField === field.key && (
                             <Box
-                              display="flex"
-                              gap={8}
-                              alignItems="center"
-                              marginTop={12}
+                              flexDirection="column"
+                              gap={10}
+                              padding="12px 14px"
+                              borderRadius={8}
+                              border="1px solid color-mix(in srgb, var(--foreground) 15%, transparent)"
+                              backgroundColor="color-mix(in srgb, var(--foreground) 3%, transparent)"
                             >
-                              {isGenerating ? (
-                                <Button
-                                  text={t("enhanceStop")}
-                                  onClick={handleDiscardTranslate}
-                                  size="md"
-                                />
-                              ) : (
-                                <>
+                              <Typography variant="body">
+                                {translatePreview || "…"}
+                              </Typography>
+                              <Box
+                                display="flex"
+                                gap={8}
+                                alignItems="center"
+                                marginTop={12}
+                              >
+                                {isGenerating ? (
                                   <Button
-                                    text={t("enhanceDiscard")}
+                                    text={t("enhanceStop")}
                                     onClick={handleDiscardTranslate}
                                     size="md"
                                   />
-                                  <Button
-                                    text={t("enhanceAccept")}
-                                    onClick={handleAcceptTranslate}
-                                    size="md"
-                                    kind="primary"
-                                  />
-                                </>
-                              )}
+                                ) : (
+                                  <>
+                                    <Button
+                                      text={t("enhanceDiscard")}
+                                      onClick={handleDiscardTranslate}
+                                      size="md"
+                                    />
+                                    <Button
+                                      text={t("enhanceAccept")}
+                                      onClick={handleAcceptTranslate}
+                                      size="md"
+                                      kind="primary"
+                                    />
+                                  </>
+                                )}
+                              </Box>
                             </Box>
-                          </Box>
-                        )}
+                          )}
+                      </Box>
+                    )}
+                  </Box>
+
+                  {/* ── Image uploaders, right below the name field(s) ── */}
+                  {index === imagesSlotIndex && imagesSlot && (
+                    <Box
+                      className="af__field--full"
+                      flexDirection="column"
+                      gap={16}
+                      paddingTop={8}
+                    >
+                      {imagesSlot}
                     </Box>
                   )}
-                </Box>
+                </Fragment>
+              ))}
+            </Box>
 
-                {/* ── Image uploaders, right below the name field(s) ── */}
-                {index === imagesSlotIndex && imagesSlot && (
-                  <Box
-                    className="af__field--full"
-                    flexDirection="column"
-                    gap={16}
-                    paddingTop={8}
-                  >
-                    {imagesSlot}
-                  </Box>
-                )}
-              </Fragment>
-            ))}
-          </Box>
-
-          {/* Extra content (image uploaders, gradient builders, etc.) */}
-          {children}
+            {/* Extra content (image uploaders, gradient builders, etc.) */}
+            {children}
+          </fieldset>
 
           {/* Fixed action bar, centered at the bottom of the viewport: the
               production-view shortcut (when the record has a public page) sits
@@ -942,15 +987,28 @@ export function AdminForm({
                 zIndex: 100,
               }}
             >
-              {productionHref && (
+              {productionHref !== undefined && (
                 // Same-tab navigation on purpose: Button's link mode wraps a
                 // type-less <button> (which would submit this form), but for a
                 // same-tab link next/Link calls preventDefault and suppresses
                 // that submit. A `target="_blank"` here would skip the
                 // preventDefault and save the record on every click.
+                //
+                // ⚠ No `href` at all until there is a real one to give: a
+                // disabled Link-mode button is still an anchor, reachable by
+                // keyboard and live to Enter, and its inner <button> is the
+                // type-less one above - so a half-built address would both
+                // navigate and submit. With none it is a plain disabled
+                // <button type="button">, which is what keeps the bar the same
+                // width from the first paint.
                 <Button
                   text={t("viewInProduction")}
-                  href={productionHref}
+                  href={
+                    loading || productionHref === null
+                      ? undefined
+                      : productionHref
+                  }
+                  disabled={loading || productionHref === null}
                   icon="/icons/fullscreen.svg"
                   size="lg"
                 />
@@ -959,7 +1017,7 @@ export function AdminForm({
               <Button
                 type="submit"
                 text={saving ? t("saving") : t("save")}
-                disabled={saving}
+                disabled={saving || loading}
                 kind="primary"
                 size="lg"
               />
