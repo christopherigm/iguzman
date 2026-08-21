@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
+import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Card } from "@repo/ui/core-elements/card";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Select } from "@repo/ui/core-elements/select";
+import { PointsCalculatorModal } from "./points-calculator-modal";
 import { StripeNetEstimate } from "./stripe-net-estimate";
 import { computeIngredientsCost } from "@/lib/ingredient-cost";
 import type {
@@ -70,6 +72,7 @@ export function PricingSection({
 }: Props) {
   const t = useTranslations("Admin");
   const locale = useLocale();
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
 
   const currency = String(values.currency ?? "USD") || "USD";
 
@@ -242,89 +245,153 @@ export function PricingSection({
         </Card>
       )}
 
-      {/* Money fields, in cost-to-price reading order. */}
-      <Box
-        display="grid"
-        gap="16px"
-        alignItems="start"
-        styles={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}
-      >
-        <Select
-          label={t("currency")}
-          value={currency}
-          onChange={(v) => onChange("currency", v)}
-          options={CURRENCY_OPTIONS}
-        />
-        {showIngredientsCost && (
-          <TextInput
-            label={t("ingredientsCost")}
-            value={fmt(cost.total)}
-            disabled
+      {/* The money fields and the two points fields, in one card - the same
+          bordered surface the ingredient-cost breakdown above and the Stripe
+          payout estimate below sit on, so the whole section reads as a stack of
+          panels rather than a card, a bare grid and another card.
+
+          They are one card and not two because they are one decision: what this
+          item costs to make, what it sells for, and what that price is worth in
+          points are read down the card in that order. The hairline is the only
+          thing between them. */}
+      <Card gap="16px">
+        {/* Money, in cost-to-price reading order. */}
+        <Box
+          display="grid"
+          gap="16px"
+          alignItems="start"
+          styles={{
+            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+          }}
+        >
+          <Select
+            label={t("currency")}
+            value={currency}
+            onChange={(v) => onChange("currency", v)}
+            options={CURRENCY_OPTIONS}
           />
-        )}
-        <TextInput
-          label={t("costPrice")}
-          format="number"
-          value={String(values.cost_price ?? "")}
-          onChange={(v) => onChange("cost_price", v)}
-        />
-        <TextInput
-          label={t("competitorsPrice")}
-          format="number"
-          value={String(values.compare_price ?? "")}
-          onChange={(v) => onChange("compare_price", v)}
-        />
-        <TextInput
-          label={t("sellingPrice")}
-          format="number"
-          value={String(values.price ?? "")}
-          onChange={(v) => onChange("price", v)}
-        />
-      </Box>
+          {showIngredientsCost && (
+            <TextInput
+              label={t("ingredientsCost")}
+              value={fmt(cost.total)}
+              disabled
+            />
+          )}
+          <TextInput
+            label={t("costPrice")}
+            format="number"
+            value={String(values.cost_price ?? "")}
+            onChange={(v) => onChange("cost_price", v)}
+          />
+          <TextInput
+            label={t("competitorsPrice")}
+            format="number"
+            value={String(values.compare_price ?? "")}
+            onChange={(v) => onChange("compare_price", v)}
+          />
+          <TextInput
+            label={t("sellingPrice")}
+            format="number"
+            value={String(values.price ?? "")}
+            onChange={(v) => onChange("price", v)}
+          />
+        </Box>
 
-      {/* Rewards, under the money fields it sits beside on the storefront card
-          ("MX$120 / 1200 points").
+        {/* Rewards, under the money fields it sits beside on the storefront card
+            ("MX$120 / 1200 points").
 
-          ⚠ **Both are blank-means-something, and the two meanings differ.** A
-          blank *award* inherits the item's category, so clearing it is how a
-          dish is handed back to the family rate - which is why the hint says so
-          rather than the field defaulting to 0. A blank *points price* means the
-          item cannot be bought with points at all, which is every item's
-          starting state; there is deliberately no category-level points price to
-          inherit, because that number has to be weighed against this one item's
-          own money price.
+            ⚠ **Both are blank-means-something, and the two meanings differ.** A
+            blank *award* inherits the item's category, so clearing it is how a
+            dish is handed back to the family rate - which is why the hint says
+            so rather than the field defaulting to 0. A blank *points price*
+            means the item cannot be bought with points at all, which is every
+            item's starting state; there is deliberately no category-level points
+            price to inherit, because that number has to be weighed against this
+            one item's own money price.
 
-          ⚠ **Zero is not blank on the award.** An item set to 0 earns nothing
-          however generous its category is - that is how a loss-leader is taken
-          out of a family that earns - so the form must send `null` for an empty
-          box and never coerce it. Each item form's `handleSubmit` lists both keys
-          in its blank-to-null sweep for exactly this reason.
+            ⚠ **Zero is not blank on the award.** An item set to 0 earns nothing
+            however generous its category is - that is how a loss-leader is taken
+            out of a family that earns - so the form must send `null` for an
+            empty box and never coerce it. Each item form's `handleSubmit` lists
+            both keys in its blank-to-null sweep for exactly this reason.
 
-          Rendered whatever the tenant's global switch says: these are catalog
-          numbers, and a tenant setting the program up will fill them in before
-          going live. The switch on /admin/system is the only thing that decides
-          whether any of it is read. */}
-      <Box
-        display="grid"
-        gap="16px"
-        alignItems="start"
-        styles={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}
-      >
-        <TextInput
-          label={t("pointsAward")}
-          format="number"
-          value={String(values.points_award ?? "")}
-          onChange={(v) => onChange("points_award", v)}
-          helperText={t("pointsAwardHint")}
+            Rendered whatever the tenant's global switch says: these are catalog
+            numbers, and a tenant setting the program up will fill them in before
+            going live. The switch on /admin/system is the only thing that
+            decides whether any of it is read. */}
+        <Box
+          flexDirection="column"
+          gap="12px"
+          paddingTop={14}
+          styles={{ borderTop: `1px solid ${HAIRLINE}` }}
+        >
+          {/* The calculator's button sits above the pair it fills in, not below
+              it: an operator who does not know what to type has to meet the
+              offer of help before the two empty boxes, not after them. It is
+              `type="button"` because this section renders inside each item
+              form's `<form>`, and the default would submit the page. */}
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            flexWrap="wrap"
+            gap="12px"
+          >
+            <Typography as="span" variant="body" fontWeight={700}>
+              {t("rewardsTitle")}
+            </Typography>
+            <Button
+              text={t("pointsCalcOpen")}
+              kind="primary"
+              size="sm"
+              type="button"
+              onClick={() => setCalculatorOpen(true)}
+            />
+          </Box>
+
+          <Box
+            display="grid"
+            gap="16px"
+            alignItems="start"
+            styles={{
+              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+            }}
+          >
+            <TextInput
+              label={t("pointsAward")}
+              format="number"
+              value={String(values.points_award ?? "")}
+              onChange={(v) => onChange("points_award", v)}
+              helperText={t("pointsAwardHint")}
+            />
+            <TextInput
+              label={t("pointsPrice")}
+              format="number"
+              value={String(values.points_price ?? "")}
+              onChange={(v) => onChange("points_price", v)}
+              helperText={t("pointsPriceHint")}
+            />
+          </Box>
+        </Box>
+      </Card>
+
+      {/* The calculator. It writes the selling price too, since that is the
+          number it works everything else out from and an operator may well have
+          typed it here rather than above. */}
+      {calculatorOpen && (
+        <PointsCalculatorModal
+          price={values.price}
+          costPrice={values.cost_price}
+          currency={currency}
+          onCancel={() => setCalculatorOpen(false)}
+          onApply={({ price, pointsAward, pointsPrice }) => {
+            onChange("price", price);
+            onChange("points_award", String(pointsAward));
+            onChange("points_price", String(pointsPrice));
+            setCalculatorOpen(false);
+          }}
         />
-        <TextInput
-          label={t("pointsPrice")}
-          format="number"
-          value={String(values.points_price ?? "")}
-          onChange={(v) => onChange("points_price", v)}
-          helperText={t("pointsPriceHint")}
-        />
-      </Box>
+      )}
 
       {/* Stripe payout estimate, rendered as a card to match the cost card. */}
       <Card>

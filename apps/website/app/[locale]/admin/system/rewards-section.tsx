@@ -248,6 +248,40 @@ export function RewardsSection({
         />
       </Box>
 
+      {/* The catalog-wide earn rate, above the ladder because it is the number
+          every item's points are worked out from - the tiers only multiply what
+          those items already award.
+
+          ⚠ **Nothing at checkout reads it.** A purchase earns whatever the
+          item's own `points_award` says; this is what the calculator on each
+          product, service and menu-item form derives that number *from*, so one
+          tenant's whole catalog is priced off one rate and points earned on a
+          taco are worth what points earned on a pizza are. Changing it here does
+          not re-price a single existing item - those numbers are printed on
+          cards customers have already seen - it changes what the calculator
+          proposes for the next one. The hint says so, because an operator who
+          expects a re-price and does not get one will type the rate in again. */}
+      {/* One column of the form's own two-column field grid - the width Site
+          Name and every other `FieldDef` gets - rather than a narrower fixed
+          box: this reads as one more field on the page, and the hint beneath it
+          is a sentence, which at 280px wrapped over four lines. `spacing={2}`
+          is 16px, the same gutter `.af__grid` uses, so the half-column works out
+          to the same `calc(50% - 8px)`; `xs: 12` collapses it at the same
+          breakpoint the form's grid collapses at. */}
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextInput
+            label={t("rewardsPointsPerCurrency")}
+            type="number"
+            min={0.01}
+            step={0.01}
+            value={String(values.points_per_currency ?? "")}
+            onChange={(v) => onChange("points_per_currency", v)}
+            helperText={t("rewardsPointsPerCurrencyHint")}
+          />
+        </Grid>
+      </Grid>
+
       {/* The ladder is rendered whatever the switch says. Turning the program
           off is a pause, not a teardown - hiding the tiers would suggest they
           had been lost, and an operator setting one up will want to build the

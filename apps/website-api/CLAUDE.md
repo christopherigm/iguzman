@@ -713,6 +713,7 @@ confirmation email did not pay out.
 | What an item is worth     | `core.Buyable.points_award` / `points_price`             |
 | What a family is worth    | `catalog.*Category.points_award`                         |
 | The customer's choice     | `users.CartItem.pay_with_points`                         |
+| The catalog-wide earn rate | `core.System.points_per_currency`                        |
 | The frozen record         | `orders.OrderLine.paid_with_points` / `points_price`     |
 | Endpoints                 | `/api/rewards/`, `/api/rewards/tiers/admin/`             |
 
@@ -761,6 +762,16 @@ confirmation email did not pay out.
   branch does them, and the absent `stripe_session_id` is what says no money
   moved. It is handled before both the offline and the Stripe branches because it
   is true of either.
+- ⚠ **`System.points_per_currency` is read by nobody at runtime, and that is the
+  point.** A purchase earns whatever the item's own `points_award` says; this is
+  the rate the **CMS calculator** works that number out *from* (points earned =
+  price × rate, points price = N × points earned for a "buy N, get one free"
+  ladder), so one tenant's whole catalog is priced off one rate and points
+  earned on a taco are worth what points earned on a pizza are. Left to drift
+  per item, a customer farms whichever family pays best and redeems whichever
+  costs least. Never wire it into `award_points` or `spend_points`: the stored
+  per-item numbers are the contract a card has already printed, and deriving
+  them live would re-price every card the moment an operator nudged the rate.
 - **`points_award` is inherited; `points_price` is not.** An item's blank award
   defers to its category's - the same inherit/override rule
   `MenuItem.effective_sizes` and `CatalogRecommendation` follow, because a tenant

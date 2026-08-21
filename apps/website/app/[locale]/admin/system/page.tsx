@@ -59,6 +59,11 @@ export default function AdminSystemPage() {
     // The global rewards switch. Off is every tenant's starting state, and off
     // is what every row written before the program existed reads as.
     rewards_enabled: false,
+    // The catalog-wide earn rate the CMS's points calculator derives an item's
+    // points from. Seeded with the model's own default so the field renders
+    // sensibly for the moment before the API answers, rather than snapping from
+    // blank to a number.
+    points_per_currency: "1.00",
     // What this tenant calls each kind it sells; blank means "use the site's own
     // translation", which is every tenant's starting state.
     ...kindLabelValues(),
@@ -101,6 +106,7 @@ export default function AdminSystemPage() {
           map_attribution: data.map_attribution ?? "",
           map_attribution_url: data.map_attribution_url ?? "",
           rewards_enabled: data.rewards_enabled ?? false,
+          points_per_currency: data.points_per_currency ?? "1.00",
           ...kindLabelValues(data),
         });
       })

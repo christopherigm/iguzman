@@ -1,4 +1,5 @@
 import base64
+from decimal import Decimal
 from io import BytesIO
 
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -1103,6 +1104,11 @@ class SystemSerializer(serializers.ModelSerializer):
             # price gates on it, and it says nothing a customer cannot see by
             # looking at a product card.
             "rewards_enabled",
+            # The earn rate the CMS calculator derives an item's points from.
+            # Public alongside the switch, and for the same reason: a customer
+            # can already read it off any card that prints a money price beside
+            # a points one, so there is nothing here to keep back.
+            "points_per_currency",
             "spotlight_enabled",
             "spotlight_label", "en_spotlight_label",
             "spotlight_title", "en_spotlight_title",
@@ -1236,6 +1242,7 @@ _TEXT_FIELDS = [
     "storage_enabled", "storage_account_id", "storage_access_key_id",
     "storage_bucket_name", "storage_public_domain",
     "pay_in_store_enabled", "pay_on_delivery_enabled", "rewards_enabled",
+    "points_per_currency",
     "spotlight_enabled",
     "spotlight_label", "en_spotlight_label",
     "spotlight_title", "en_spotlight_title",
@@ -1413,6 +1420,13 @@ class SystemWriteSerializer(serializers.Serializer):
     pay_in_store_enabled    = serializers.BooleanField(required=False)
     pay_on_delivery_enabled = serializers.BooleanField(required=False)
     rewards_enabled         = serializers.BooleanField(required=False)
+    # Bounded below at a hundredth of a point rather than at zero: a rate of 0
+    # makes the calculator answer "this earns nothing" for every item on the
+    # site, which is a program switched off by arithmetic instead of by the
+    # switch above it.
+    points_per_currency     = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=Decimal("0.01"), required=False,
+    )
 
     # Storage - this tenant's own Cloudflare R2 bucket. The secret follows the
     # same rule as the Stripe pair: write_only, no read path, "" clears it, and

@@ -1229,6 +1229,26 @@ class System(Common):
         help_text="Turn the rewards program on. Off, nothing earns or spends points.",
     )
 
+    # How many points one unit of currency spent is worth, and the one number
+    # that keeps the program coherent across a catalog. Nothing at runtime reads
+    # it - a purchase earns whatever the item's own `points_award` says, not a
+    # figure derived here - it is the rate the CMS's points calculator works an
+    # item's two numbers *out* from, so that points earned on a taco are worth
+    # the same as points earned on a pizza. Left to drift per item, a customer
+    # simply farms whichever family pays best and redeems whichever costs least.
+    #
+    # Decimal rather than an integer because the useful rate depends entirely on
+    # the currency: 10 points per US$1 reads well, 10 points per CLP$1 does not.
+    points_per_currency = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("1.00"),
+        help_text=(
+            "Points a customer earns per 1 unit of currency spent. Used by the "
+            "CMS calculator to work out an item's points, not at checkout."
+        ),
+    )
+
     # ── Storage (Cloudflare R2) ───────────────────────────────────────────────
     # Optional, and only worth filling in for a tenant on its own domain: with
     # these set, this site's uploads go to *its* R2 bucket and serve from *its*

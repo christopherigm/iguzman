@@ -180,6 +180,16 @@ export interface System extends KindLabelOverrides {
    * season without losing the numbers they entered.
    */
   rewards_enabled: boolean;
+  /**
+   * Points earned per 1 unit of currency spent - the rate the CMS's points
+   * calculator works an item's `points_award` / `points_price` out from, so one
+   * tenant's whole catalog is priced off one number.
+   *
+   * ⚠ **Nothing on the storefront reads it**, and nothing should: what a
+   * purchase earns is the item's own `points_award`, which is what the card has
+   * already printed. A DRF `DecimalField`, so it arrives as a string.
+   */
+  points_per_currency: string;
   /** Spotlight section - a promo panel + up to three hand-picked catalog items.
    *  Copy is bilingual; the button link is a single path/URL. All optional. */
   spotlight_enabled: boolean;
