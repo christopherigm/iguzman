@@ -212,6 +212,12 @@ export default function AdminHighlightsPage() {
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
         onReorder={handleReorder}
+        bulkActions={{
+          translate: ["category", "name", "short_description", "description"],
+          image: true,
+          update: updateHighlight,
+          reload: load,
+        }}
         loading={loading}
         error={error}
       >

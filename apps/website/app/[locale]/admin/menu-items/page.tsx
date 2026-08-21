@@ -123,6 +123,13 @@ export default function AdminMenuItemsPage() {
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
         onReorder={handleReorder}
+        bulkActions={{
+          translate: ["name", "short_description", "description"],
+          image: true,
+          rewards: true,
+          update: updateMenuItem,
+          reload: load,
+        }}
         loading={loading}
         error={error}
       />

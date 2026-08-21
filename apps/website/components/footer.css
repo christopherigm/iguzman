@@ -6,7 +6,8 @@
 }
 
 /* The tenant's brandmark cradled on the top edge (`BrandmarkCradle`). The
-   cradle's own flanks *are* the rule, so the border comes off; the absolutely
+   cradle's own flanks *are* the rule - drawn at the same 1px, and joined by an
+   arch at that same weight - so the border comes off; the absolutely
    positioned disc needs a positioned footer; and the top margin reserves the
    space the disc and its shoulders occupy above the edge, so the page's last
    block never sits behind them. `--footer-cradle-badge` is the disc's diameter,

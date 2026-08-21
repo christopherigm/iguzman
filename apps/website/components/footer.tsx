@@ -108,6 +108,12 @@ export async function Footer({ logo, system }: Props) {
           // for the footer's own rule, so it wears that border's colour and the
           // disc is a page-background plate that follows the theme.
           color="color-mix(in srgb, var(--foreground) 10%, transparent)"
+          // ...and that border's weight. The flanks *are* `.footer`'s
+          // `border-top`, and the arch between them is the same rule carrying
+          // on, so both are drawn at the 1px this footer's hairlines (the top
+          // edge it replaces, the bottom bar's) are drawn at. Anything else
+          // reads as a rule that changes thickness at the brandmark.
+          strokeWidth={1}
           circleBackground="var(--page-background, var(--background))"
           // The area between the shoulders takes the footer's own background,
           // so the footer reads as swelling up to meet the mark instead of the

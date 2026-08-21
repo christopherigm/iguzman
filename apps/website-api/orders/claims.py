@@ -6,6 +6,8 @@ layer to run a query would drag the whole checkout/Stripe import graph along
 with it.
 """
 
+from django.contrib.auth.models import User
+
 from .cache import invalidate_orders
 from .models import Order
 from .services.rewards import claim_points_for_email
@@ -51,3 +53,65 @@ def claim_guest_orders(user, system):
         invalidate_orders(user.id, system.id if system else 0)
 
     return claimed
+
+
+def account_for_email(system, email):
+    """This tenant's account holding `email`, or None.
+
+    `is_active` is this codebase's "the address was verified" flag - a signup
+    creates an inactive user and `VerifyEmailView` is what flips it - so an
+    unverified account is deliberately not matched. Someone who typed a stranger's
+    address at signup has proved nothing about it, and linking a real purchase to
+    that account would hand them the buyer's name, phone and delivery address.
+
+    Registration derives the username from the tenant and the address
+    (`build_username`) and refuses a duplicate, so at most one account per System
+    can hold one address and there is nothing here to disambiguate. `iexact`
+    because mail addresses are not case-sensitive in practice and neither Stripe
+    nor a checkout form normalises what was typed.
+    """
+    cleaned = (email or "").strip()
+    if not cleaned or system is None:
+        return None
+    return User.objects.filter(
+        profile__system=system, email__iexact=cleaned, is_active=True,
+    ).order_by("id").first()
+
+
+def link_order_to_account(order) -> bool:
+    """Give a guest order to the account that already holds its email address.
+
+    The immediate half of `claim_guest_orders`. That one runs when someone proves
+    they hold an address (verification, login) and sweeps up whatever was bought
+    as a guest beforehand; this runs at the moment of purchase, for the customer
+    who *already* has an account here and simply did not sign in before checking
+    out. The rule matching them is the same in both directions - the address -
+    which is what keeps the two from ever disagreeing about whose order it is.
+
+    Returns whether anything was linked.
+
+    ⚠ **Call it before `award_points`, never after.** `award_points` writes the
+    ledger row with `order.user`, so the order of these two calls is the whole
+    difference between points landing in the customer's balance and points sitting
+    unclaimed against their address until they next sign in.
+
+    ⚠ **It links the order; it does not sign anyone in, and callers must not
+    treat it as if it did.** A guest still cannot *spend* points at that checkout:
+    every path that decides a redemption reads the authenticated user, which stays
+    None. Nor may a caller clear the linked account's server-side cart - the
+    customer checked out of their browser's own guest cart, and the account's cart
+    is a separate basket nobody touched.
+    """
+    if order.user_id is not None:
+        return False
+    user = account_for_email(order.system, order.email)
+    if user is None:
+        return False
+
+    order.user = user
+    order.linked_by_email = True
+    order.save(update_fields=["user", "linked_by_email", "updated_at"])
+    # The customer's history list is cached per user+system, and it was cached
+    # before this order belonged to anyone - exactly as in `claim_guest_orders`.
+    invalidate_orders(user.id, order.system_id or 0)
+    return True

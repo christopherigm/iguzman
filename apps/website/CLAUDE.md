@@ -65,6 +65,19 @@ nothing here may touch a Stripe credential.
 customization?, quantity}`) - Django re-prices every one of them
   from the catalog before creating a session. Either way: a client that could
   name a price could name its own.
+- **A signed-out visitor whose order turns out to be owned is sent to `/auth`,
+  not to a 404.** A guest order is readable by whoever holds its link, so the
+  only way an anonymous request gets nothing back is that the order *has* an
+  owner - which is now the ordinary outcome of checking out as a guest on an
+  address this site already has an account for (website-api's CLAUDE.md →
+  "Payments"). A receipt leading to "this order does not exist" is the one thing
+  it is not. The redirect carries `?next=/orders/<id>`, which
+  `(auth)/auth/auth-form-with-next.tsx` validates as a same-site path (a leading
+  `/` that is not `//`) before handing it to `AuthForm`'s `resolveRedirect` -
+  unvalidated, the sign-in form would be an open redirect on the tenant's own
+  domain. ⚠ A **signed-in** reader keeps the 404: "not yours" and "not there"
+  are the same answer by then, and offering them a login form they are past
+  would be a loop.
 - **`/orders/[id]` is the confirmation page and the permanent record.** The
   `session_id` Stripe appends is not proof of payment - only the signed webhook
   marks an order paid. `order-status-banner.tsx` refreshes for a few seconds when
@@ -664,6 +677,63 @@ actually fills in the hundreds.
   storefront's flat listings, in the arrangement the CMS shows.
 - **Sections start expanded and the collapsed ones are the state that is kept**,
   so a category added while the page is open is open too.
+
+## Bulk actions - finishing a catalog without opening two hundred forms
+
+Every content CMS list carries a **bulk-action bar** between its header row
+(title / sort / + New) and its table: three passes that fill in what a tenant
+left blank across the **whole list at once**. A catalog arrives written in one
+language, with no photographs and no points, and the alternative to these is
+opening every record in turn.
+
+| Piece                    | Where                                                                |
+| ------------------------ | -------------------------------------------------------------------- |
+| The bar, and the run     | `components/admin/bulk-actions.tsx` (`BulkActionsBar`)               |
+| Turning it on for a list | `AdminEntityList`'s `bulkActions` prop                               |
+| The give-back pair       | `components/admin/points-give-back.tsx` (shared with the calculator) |
+
+| Action                       | What it writes                                                                                                                                                                                  |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Translate missing fields** | The missing half of each `x` / `en_x` pair, from the half that is there, through the same `/api/ai` proxy and the same `buildTranslateMessages` prompts a single field's Translate button uses. |
+| **Main image**               | The first photo a free stock bank returns for the record's own name, with the credit that bank is owed.                                                                                         |
+| **Rewards**                  | `points_award` + `points_price`, from each item's own price and one give-back the operator states once.                                                                                         |
+
+- ⚠ **The fields are configured per list, never inferred from the rows.** A read
+  serializer carries pairs no write serializer accepts - an event's
+  `en_venue_name` is _derived_ from its branch, and the writable field is
+  `own_en_venue_name` - so a pass that paired keys by their `en_` prefix would
+  write into a field that does not exist and lose the operator the row. Each
+  page names its own `translate: [...]` keys, and only keys its write serializer
+  takes.
+- **`replace` is a switch in the confirmation, and it is off.** Off, a run only
+  fills blanks and is safe to repeat; on, it overwrites what an operator typed by
+  hand and the dialog says so in `--error`. ⚠ With it **on**, the _Spanish_ half
+  is the translation source - a filled pair cannot be asked which half is the
+  original. The ordinary run has no such problem: it reads whichever half is
+  actually there, so a catalog authored in English translates the other way.
+- ⚠ **A run is resumable, not transactional.** Each row is written with the
+  list's ordinary `PATCH` as it is worked out, so a stop, a failure or a closed
+  tab leaves the finished rows saved and the rest untouched - and running it
+  again picks up where it stopped, because every action skips what is already
+  filled in. There is no undo, which is what the confirmation is for.
+- **The rows are walked one at a time, deliberately.** A translate pass is one
+  LLM call per field and a photo pass one bank search per row; firing two hundred
+  of either at once is how a tenant's key gets rate-limited half way through a
+  catalog. It is also what makes the count honest - `2/32` is two rows
+  **written**, not two requests in flight - and what lets Stop actually stop.
+- **The bar is hidden in sort mode.** The rows are being dragged, and a pass that
+  re-read the list underneath a drag would throw the arrangement away before it
+  was saved.
+- **Brands are the one content list with no bar**: a brand has no `en_name` to
+  fill and its picture is a `logo`, not a photograph a stock bank could stand in
+  for. Branches get **Translate only**, for the same reason - their image field
+  is a `map_image`.
+- ⚠ **The photo and its credit go in one write** (`stockImageFields`), the same
+  rule the CMS picker follows - see "Finding an image in the CMS" below.
+- **Rewards is offered only where there is a price to work from.** The three
+  buyable lists carry it; the categories do not, even though they have their own
+  `points_award`, because a category has no price and the award would have to be
+  invented rather than derived.
 
 ## A detail form's buttons are there before its record is
 
@@ -1431,6 +1501,20 @@ rule; read website-api's CLAUDE.md → "Rewards" first.
 | The CMS switch + the ladder | `app/[locale]/admin/system/rewards-section.tsx`                        |
 | The catalog numbers         | `components/admin/pricing-section.tsx` (+ the three category forms)    |
 | Types                       | `lib/cart.ts` (`CartRewards`), `lib/rewards.ts`                        |
+
+- **The points calculator asks one question, both ways round.**
+  `components/admin/points-calculator-modal.tsx` ("Help me to calculate", on the
+  three item forms) takes **purchases before one is free** _or_ **the percentage
+  you give back** - the linked pair in `points-give-back.tsx`, which the Rewards
+  bulk action renders too, so the two surfaces cannot come to mean different
+  things. ⚠ **The count is the stored truth and a typed percentage is rounded to
+  one**: `points_price` is `visits × award` _exactly_, so the promise ("buy it
+  ten times and the eleventh is free") only holds while those two divide, and
+  6.67 purchases divides nothing. The readout quotes the _effective_ percentage
+  back for that reason. ⚠ **It reads the selling price and no longer asks for
+  it** - that box was a second place to type a number the form already carries,
+  and applying it let a dialog about points rewrite the price; with no price on
+  the form it says so and refuses.
 
 - ⚠ **Nothing in the browser ever computes a balance, an award or an
   affordability.** `cart.rewards` is resolved server-side over the **whole**

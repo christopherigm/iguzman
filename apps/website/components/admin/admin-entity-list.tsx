@@ -16,6 +16,7 @@ import { Icon } from "@repo/ui/core-elements/icon";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { BulkActionsBar, type BulkActionsConfig } from "./bulk-actions";
 import {
   buildSections,
   groupKeyOf,
@@ -28,6 +29,7 @@ import {
 // component they configure; the ordering itself lives in `entity-order.ts`,
 // which the detail pages' prev/next arrows read too.
 export type { EntityGroup, EntityGrouping };
+export type { BulkActionsConfig };
 
 export interface Column {
   key: string;
@@ -76,6 +78,12 @@ interface AdminEntityListProps {
    */
   hideCreate?: boolean;
   /**
+   * Turns on the bulk-action bar between the header row and the table: fill
+   * every row's missing translations, main image or points in one pass. See
+   * `bulk-actions.tsx` - the config names the fields, the bar owns the run.
+   */
+  bulkActions?: BulkActionsConfig;
+  /**
    * Extra controls for the header row, rendered immediately before "+ New".
    * For a page whose list is only part of what it edits: /admin/highlights puts
    * the Save button for the section's settings here, so every action on the page
@@ -104,6 +112,7 @@ export function AdminEntityList({
   loading,
   error,
   hideCreate,
+  bulkActions,
   headerActions,
   children,
 }: AdminEntityListProps) {
@@ -353,6 +362,14 @@ export function AdminEntityList({
 
       {/* Reorder persistence progress, directly under the header row. */}
       {saving && <ProgressBar />}
+
+      {/* The bulk actions, above the table and below the header row's own
+          controls. Hidden in sort mode: the rows are being dragged, and a pass
+          that re-reads the list underneath a drag would throw the arrangement
+          away before it was saved. */}
+      {bulkActions && !sortMode && !loading && !error && items.length > 0 && (
+        <BulkActionsBar config={bulkActions} items={items} disabled={saving} />
+      )}
 
       {sortMode && (
         <Typography variant="caption" color="var(--muted, #6b7280)">

@@ -532,6 +532,32 @@ if you find yourself reaching for one, the design has been misread.
   `orders/claims.py` runs at email verification and at login. `Order.email` is
   blank until the webhook copies what the customer typed on Stripe's page, so an
   abandoned guest order has no address for someone to register and sweep up.
+- **A guest checkout on an address that already has an account here goes into
+  it immediately** - `link_order_to_account`, the same module's other half. That
+  one is the *retroactive* claim (someone registers after buying); this is the
+  common case it never covered: a customer who has an account and simply did not
+  sign in. Same handle either way (the address), so the two cannot disagree about
+  whose order it is. Five call sites - `_checkout`, `_finalize_settled`, the
+  webhook's `_handle_completed`, booking checkout, and the POS - because that is
+  every path where an order first learns an email.
+  - ⚠ **It must run before `award_points`.** That is what decides whether the
+    points land in the customer's balance or sit unspendable against their
+    address; `Order.linked_by_email` then flips the confirmation email from
+    "create an account to claim these" to "they are already in your account".
+  - ⚠ **In the webhook it runs *after* the transaction, not inside it.** The
+    cart clear in there filters on `order.user`, so linking first would empty the
+    basket that account built while signed in - a cart the customer never
+    checked out.
+  - ⚠ **Linking is not authenticating.** `user` stays None for the whole
+    request, which is what still refuses a guest the right to *spend* the linked
+    account's points and keeps every offline branch from touching its cart.
+  - **Only a verified account matches** (`is_active`, which is what
+    `VerifyEmailView` flips). An unverified signup has proved nothing about the
+    address, and matching it would hand a stranger the buyer's name, phone and
+    delivery address. Scoped to the System, like every other order query.
+  - The order becomes owned, so the customer must sign in to read it -
+    `_may_read` is unchanged and still 404s an anonymous caller. The storefront
+    turns that into a redirect to `/auth`; see `apps/website/CLAUDE.md`.
 - **`OrderLine` snapshots; `CartItem` deliberately does not.** A cart reflects
   today's catalog; an order must reflect what was charged, forever. Never
   "simplify" an order line to read its price back through the FK - those FKs are

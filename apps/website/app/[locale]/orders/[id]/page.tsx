@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { redirect } from "@repo/i18n/navigation";
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
@@ -75,6 +76,26 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
 
   // Django scopes the lookup to the caller, so another user's order id is a 404
   // here rather than a 403 - it does not exist as far as this request is concerned.
+  //
+  // ⚠ **For a signed-out visitor that 404 is usually wrong, and this is the one
+  // place it can be told.** A guest order is readable by whoever holds its link,
+  // so the only way an anonymous request gets nothing back is that the order has
+  // an *owner* - which is exactly what happens when someone checks out as a guest
+  // on an address this site already has an account for (`link_order_to_account`
+  // in website-api). Their receipt then leads to a page saying their order does
+  // not exist, which is the one thing it is not. Send them to sign in instead,
+  // carrying the order they were trying to reach so they land on it rather than
+  // on the home page.
+  //
+  // A signed-in reader keeps the 404: at that point "not yours" and "not there"
+  // are genuinely the same answer, and offering them a login form they are
+  // already past would be a loop.
+  if (!order && session === null) {
+    redirect({
+      href: { pathname: "/auth", query: { next: `/orders/${id}` } },
+      locale,
+    });
+  }
   if (!order) notFound();
 
   // A guest reached this page by its link and has no order history to go back

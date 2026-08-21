@@ -106,6 +106,11 @@ export default function AdminBranchesPage() {
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
         onReorder={handleReorder}
+        bulkActions={{
+          translate: ["name", "location_details"],
+          update: updateBranch,
+          reload: load,
+        }}
         loading={loading}
         error={error}
       />

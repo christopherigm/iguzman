@@ -442,6 +442,19 @@ class Order(models.Model):
         on_delete=models.PROTECT,
         related_name="orders",
     )
+    # True when `user` above was **inferred from the email address** rather than
+    # authenticated: the customer checked out as a guest, and this tenant already
+    # had an account on the address they gave (`orders.claims.link_order_to_account`).
+    #
+    # Recorded rather than derived because nothing else on the row can say it
+    # afterwards. It explains why an order nobody signed in for is sitting in
+    # someone's history, and it is what the confirmation email tests to tell the
+    # customer their purchase - and the points it earned - went to the account
+    # they already have, instead of inviting them to create one they do not need.
+    #
+    # False on an order placed while signed in, and false on one `claim_guest_orders`
+    # swept up later: by then the customer had proved they hold the address.
+    linked_by_email = models.BooleanField(default=False)
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_PENDING)
     payment_method = models.CharField(
         max_length=16, choices=PAYMENT_METHOD_CHOICES, default=PAYMENT_ONLINE,

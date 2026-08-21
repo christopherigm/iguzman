@@ -92,6 +92,12 @@ export default function AdminEventsPage() {
         basePath="/admin/events"
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
+        bulkActions={{
+          translate: ["name", "short_description", "description"],
+          image: true,
+          update: updateEvent,
+          reload: load,
+        }}
         loading={loading}
         error={error}
       />

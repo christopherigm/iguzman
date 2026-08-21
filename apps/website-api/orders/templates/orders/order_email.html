@@ -24,13 +24,41 @@ the full receipt (items, add-ons, summary, link) is written once. Bilingual
   {% comment %}--- Order meta (shared, language-neutral) ---{% endcomment %}
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px 0; background-color:#f7f9fc; border-radius:10px;">
     <tr>
-      <td style="padding:16px 20px; font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#52606d; line-height:1.7;">
+      <td class="email-panel" style="padding:14px 16px; font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#52606d; line-height:1.7;">
         <strong style="color:#1f2933;">Pedido / Order:</strong> #{{ order_ref }}<br>
         <strong style="color:#1f2933;">Fecha / Date:</strong> {{ created_at|date:"d M Y, H:i" }}<br>
         <strong style="color:#1f2933;">Estado / Status:</strong> {{ status_label_es }} / {{ status_label_en }}
       </td>
     </tr>
   </table>
+
+  {% comment %}
+  --- Linked to an existing account (shared, language-neutral) ---
+  The customer checked out **as a guest**, and this tenant already had an account
+  on the address they gave, so the order was put in it - see
+  `orders.claims.link_order_to_account`. Said out loud because from the customer's
+  side nothing announced it: they never signed in, and an order appearing in a
+  history they did not know they were building reads as a mistake unless the
+  receipt explains it.
+
+  ⚠ Rendered for the linked case only. A signed-in customer needs no explanation
+  (they watched it happen), and a plain guest has no account for it to be true of -
+  their invitation to create one is the points block further down, which is
+  mutually exclusive with this by construction (`points_claimable` tests the same
+  ownership this does, from the other side).
+  {% endcomment %}
+  {% if account_linked %}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px 0; background-color:#eff6ff; border:1px solid #bfdbfe; border-radius:10px;">
+    <tr>
+      <td class="email-panel-tight" style="padding:12px 16px; font-family:Arial,Helvetica,sans-serif; font-size:13px; color:#1e40af; line-height:1.6;">
+        <strong>Agregamos este pedido a tu cuenta</strong>, porque ya tienes una con
+        este correo. Inicia sesión para verlo en tu historial.<br>
+        <span style="color:#3b82f6;"><strong>We added this order to your account</strong>,
+        since you already have one with this email. Sign in to see it in your history.</span>
+      </td>
+    </tr>
+  </table>
+  {% endif %}
 
   {% comment %}--- Items (shared) ---{% endcomment %}
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px 0;">
@@ -104,7 +132,7 @@ the full receipt (items, add-ons, summary, link) is written once. Bilingual
   {% if location %}
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 4px 0; background-color:#f7f9fc; border-radius:10px;">
     <tr>
-      <td style="padding:16px 20px 4px 20px; font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#52606d; line-height:1.7;">
+      <td class="email-panel" style="padding:14px 16px 4px 16px; font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#52606d; line-height:1.7;">
         <strong style="color:#1f2933;">Dónde / Where:</strong>
         {% if location.name %}<br>{{ location.name }}{% endif %}
         {% if location.address %}<br><span style="color:#8a94a6;"><strong style="color:#52606d;">Dirección / Address:</strong> {{ location.address|linebreaksbr }}</span>{% endif %}
@@ -119,7 +147,7 @@ the full receipt (items, add-ons, summary, link) is written once. Bilingual
     </tr>
     {% if location.map_image %}
     <tr>
-      <td style="padding:12px 20px 0 20px;">
+      <td style="padding:12px 16px 0 16px;">
         {% comment %}
         A block-level image with `width:100%` and `height:auto` - the fixed
         `width` attribute is what Outlook reads, the style is what everything
@@ -133,7 +161,7 @@ the full receipt (items, add-ons, summary, link) is written once. Bilingual
     </tr>
     {% endif %}
     <tr>
-      <td align="center" style="padding:4px 20px 8px 20px;">
+      <td align="center" style="padding:4px 16px 8px 16px;">
         {% include "users/_email_button.html" with url=location.directions_url label="Cómo llegar / Directions" primary_color=primary_color %}
       </td>
     </tr>
@@ -152,8 +180,17 @@ the full receipt (items, add-ons, summary, link) is written once. Bilingual
   {% if qr_cid %}
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 4px 0;">
     <tr>
-      <td align="center" style="padding:20px; background-color:#ffffff; border:1px solid #edf0f5; border-radius:10px;">
-        <img src="cid:{{ qr_cid }}" alt="Pedido / Order #{{ order_ref }}" width="160" height="160" style="width:160px; height:160px; display:block; border:0;">
+      {% comment %}
+      208px, up from 160 - the code is meant to be scanned off a phone screen at a
+      counter, and the extra third is the difference between a reader that catches
+      it at arm's length and one the customer has to hold still. It is `width`
+      attribute *and* inline style, as every image in this message is: Outlook
+      reads the attribute, everything else the style. Deliberately not `width:100%`
+      - a QR stretched to a wide viewport gains nothing and loses its quiet zone
+      against the padding.
+      {% endcomment %}
+      <td align="center" class="email-panel" style="padding:16px 12px; background-color:#ffffff; border:1px solid #edf0f5; border-radius:10px;">
+        <img src="cid:{{ qr_cid }}" alt="Pedido / Order #{{ order_ref }}" width="208" height="208" style="width:208px; height:208px; max-width:100%; display:block; border:0;">
         <div style="margin-top:12px; font-family:Arial,Helvetica,sans-serif; font-size:12px; color:#8a94a6; line-height:1.6;">
           Escanea este código para ver tu pedido o mostrarlo en tienda.<br>
           Scan this code to open your order or show it in store.
@@ -179,7 +216,7 @@ the full receipt (items, add-ons, summary, link) is written once. Bilingual
   {% if points_earned %}
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 4px 0; background-color:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px;">
     <tr>
-      <td style="padding:20px; font-family:Arial,Helvetica,sans-serif; text-align:center;">
+      <td class="email-panel" style="padding:16px 14px; font-family:Arial,Helvetica,sans-serif; text-align:center;">
         <div style="font-size:28px; font-weight:700; color:#16a34a; line-height:1.2;">+{{ points_earned }}</div>
         <div style="margin-top:4px; font-size:13px; color:#15803d; letter-spacing:0.06em; text-transform:uppercase;">
           Puntos ganados / Points earned
@@ -199,7 +236,7 @@ the full receipt (items, add-ons, summary, link) is written once. Bilingual
       </td>
     </tr>
     <tr>
-      <td align="center" style="padding:0 20px 16px 20px;">
+      <td align="center" style="padding:0 14px 16px 14px;">
         {% if points_claimable %}
           {% include "users/_email_button.html" with url=points_url label="Crear cuenta y reclamar / Create account" primary_color=primary_color %}
         {% else %}

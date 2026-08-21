@@ -67,19 +67,28 @@ _STATUS_LABELS = {
     "refunded": ("Reembolsado", "Refunded"),
 }
 
-# Symbol per currency in `CURRENCY_CHOICES`. The code is always appended too, so
-# the amount is unambiguous even where several currencies share the `$` glyph.
+# Symbol per currency in `CURRENCY_CHOICES`. A currency with no symbol here reads
+# as `120.00 MXN` and always carries its code; see `_money` for when the code is
+# appended to a symbol and when it is left off.
 _CURRENCY_SYMBOLS = {
     "USD": "$", "EUR": "€", "MXN": "$", "GBP": "£", "CAD": "$",
     "ARS": "$", "COP": "$", "CLP": "$", "BRL": "R$",
 }
 
 
-def _money(amount, currency):
+def _money(amount, currency, *, with_code=True):
+    """`$120.00 MXN`, or `$120.00` when the code would only be noise.
+
+    The code is on by default because several currencies share the `$` glyph and
+    a total has to be unambiguous. It is dropped inside the **item list**, where
+    it is repeated on every line for no gain: the summary directly beneath prints
+    the same currency on the subtotal and the total, so the basket names it twice
+    for a reader instead of once per row.
+    """
     symbol = _CURRENCY_SYMBOLS.get(currency)
-    if symbol:
-        return f"{symbol}{amount:,.2f} {currency}"
-    return f"{amount:,.2f} {currency}"
+    if not symbol:
+        return f"{amount:,.2f} {currency}"
+    return f"{symbol}{amount:,.2f} {currency}" if with_code else f"{symbol}{amount:,.2f}"
 
 
 def _line_image(line):
@@ -181,8 +190,10 @@ def _order_items(order):
             "size": line.size_name,
             "quantity": line.quantity,
             "image": _line_image(line),
-            "unit_price": _money(line.unit_price, line.currency),
-            "line_total": _money(line.line_total, line.currency),
+            # Symbol only - see `_money`. The summary under this list is what
+            # names the currency.
+            "unit_price": _money(line.unit_price, line.currency, with_code=False),
+            "line_total": _money(line.line_total, line.currency, with_code=False),
             "addons": addons,
         })
     return items
@@ -248,6 +259,14 @@ def send_order_email(order, *, kind):
             # go and spend a balance they cannot reach. Judged on the order's
             # owner, which is the same thing the ledger row was written with.
             "points_claimable": order.points_earned > 0 and order.user_id is None,
+            # ⚠ **"You did not sign in, but we found you anyway."** True only for
+            # a guest checkout whose email already had an account on this tenant
+            # (`orders.claims.link_order_to_account`) - never for an order placed
+            # while signed in, which needs no explanation, and never for a plain
+            # guest order, which has no account to have gone anywhere. It is the
+            # counterpart of `points_claimable` above: that block invites a guest
+            # to create an account, and this one says why no invitation is coming.
+            "account_linked": order.linked_by_email,
             # Where that invitation leads: the sign-in/sign-up form for a guest,
             # the account page for a customer who already has one.
             #

@@ -5,6 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>{{ site_name }}</title>
+  {% comment %}
+  The one place this stack uses a media query in an email. Every padding below is
+  inline (the only thing every client honours), so the small-screen override has
+  to out-specify an inline style, which is what the `!important`s are for - this
+  is the standard email idiom, not a shortcut.
+
+  Clients that ignore `<style>` entirely (Gmail's web client strips it, older
+  Outlook drops it) simply keep the inline values, which are already the reduced
+  desktop ones - so the query only ever takes a phone from "comfortable" to
+  "tight", never from broken to working. The header keeps its own padding: the
+  logo sits in a fixed 96px disc that has nothing to gain from a narrower frame.
+  {% endcomment %}
+  <style type="text/css">
+    @media only screen and (max-width: 480px) {
+      .email-shell { padding: 16px 4px !important; }
+      .email-body { padding: 20px 14px 8px 14px !important; }
+      .email-footer { padding: 18px 14px 22px 14px !important; }
+      .email-panel { padding: 12px 14px !important; }
+      .email-panel-tight { padding: 10px 14px !important; }
+    }
+  </style>
 </head>
 <body style="margin:0; padding:0; width:100%; background-color:#f4f5f7; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
   {% if preheader %}
@@ -12,7 +33,7 @@
   {% endif %}
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f7;">
     <tr>
-      <td align="center" style="padding:32px 12px;">
+      <td align="center" class="email-shell" style="padding:24px 8px;">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px; max-width:600px; background-color:#ffffff; border-radius:14px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.08);">
           <!-- Header -->
           <tr>
@@ -46,13 +67,13 @@
           <tr><td style="height:4px; line-height:4px; font-size:0; background-color:{{ secondary_color|default:'#e040fb' }};">&nbsp;</td></tr>
           <!-- Body -->
           <tr>
-            <td style="padding:36px 36px 8px 36px; font-family:Arial,Helvetica,sans-serif; color:#1f2933; font-size:16px; line-height:1.6;">
+            <td class="email-body" style="padding:28px 24px 8px 24px; font-family:Arial,Helvetica,sans-serif; color:#1f2933; font-size:16px; line-height:1.6;">
               {% block body %}{% endblock %}
             </td>
           </tr>
           <!-- Footer -->
           <tr>
-            <td style="padding:24px 36px 32px 36px; font-family:Arial,Helvetica,sans-serif; color:#8a94a6; font-size:12px; line-height:1.5; text-align:center; border-top:1px solid #edf0f5;">
+            <td class="email-footer" style="padding:22px 24px 26px 24px; font-family:Arial,Helvetica,sans-serif; color:#8a94a6; font-size:12px; line-height:1.5; text-align:center; border-top:1px solid #edf0f5;">
               <strong style="color:#52606d;">{{ site_name }}</strong>{% if slogan %} &nbsp;·&nbsp; {{ slogan }}{% endif %}
               <br>
               <a href="{{ base_url }}" target="_blank" style="color:{{ primary_color|default:'#2196f3' }}; text-decoration:none;">{{ base_url }}</a>

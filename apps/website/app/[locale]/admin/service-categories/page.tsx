@@ -78,6 +78,12 @@ export default function AdminServiceCategoriesPage() {
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
         onReorder={handleReorder}
+        bulkActions={{
+          translate: ["name", "description"],
+          image: true,
+          update: updateServiceCategory,
+          reload: load,
+        }}
         loading={loading}
         error={error}
       />

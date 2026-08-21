@@ -7,7 +7,10 @@ Hola / Hi {{ customer_name }},
 Pedido / Order: #{{ order_ref }}
 Fecha / Date: {{ created_at|date:"d M Y, H:i" }}
 Estado / Status: {{ status_label_es }} / {{ status_label_en }}
-
+{% if account_linked %}
+Agregamos este pedido a tu cuenta, porque ya tienes una con este correo.
+We added this order to your account, since you already have one with this email.
+{% endif %}
 ------------------------------------------------------------
 {% for item in items %}
 {{ item.quantity }} x {{ item.name }} - {% if item.paid_with_points %}{{ item.points_price }} pts ({{ item.line_total }}){% else %}{{ item.line_total }}{% endif %}{% for a in item.addons %}

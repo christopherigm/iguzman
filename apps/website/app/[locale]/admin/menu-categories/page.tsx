@@ -79,6 +79,12 @@ export default function AdminMenuCategoriesPage() {
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
         onReorder={handleReorder}
+        bulkActions={{
+          translate: ["name", "description"],
+          image: true,
+          update: updateMenuCategory,
+          reload: load,
+        }}
         loading={loading}
         error={error}
       />

@@ -79,6 +79,12 @@ export default function AdminProductCategoriesPage() {
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
         onReorder={handleReorder}
+        bulkActions={{
+          translate: ["name", "description"],
+          image: true,
+          update: updateProductCategory,
+          reload: load,
+        }}
         loading={loading}
         error={error}
       />

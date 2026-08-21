@@ -117,6 +117,12 @@ export default function AdminIngredientsPage() {
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
         onReorder={handleReorder}
+        bulkActions={{
+          translate: ["name", "description"],
+          image: true,
+          update: updateIngredient,
+          reload: load,
+        }}
         loading={loading}
         error={error}
       />

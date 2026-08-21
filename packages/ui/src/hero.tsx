@@ -256,21 +256,28 @@ export const HERO_FRAME_BADGE_SIZE = "clamp(36px, 4.55vw, 50px)";
 const HERO_FRAME_BORDER = "rgba(255,255,255,0.9)";
 
 /**
- * Weight of the cradle's two shoulder arcs. They are drawn with
- * `vector-effect: non-scaling-stroke`, so the stroke stays a fixed number of
- * *screen* pixels while the cradle itself shrinks with the badge's own
- * `clamp()` - which is why one flat value cannot serve both ends: 5px reads
- * right against a 50px badge on a desktop and comes out heavy and blunt against
- * a 36px one on a phone. So the weight travels the same way the badge's
- * diameter does, as a viewport clamp: 2px up to the `sm` breakpoint, growing to
- * the historical 5px by `lg` (`0.5vw - 1px` passes through exactly 2px at 600px
- * and 5px at 1200px).
+ * Weight of every line a framed heading is drawn with - the outline's three
+ * sides, the cradle's two straight flanks, and the two shoulder arcs that
+ * bridge them. **One number, because they are one frame**: the flanks are
+ * literally the top border the arch interrupts, so an arch drawn at a different
+ * weight reads as a rule that changes thickness half way along itself.
  *
- * ⚠ It has to be applied as the CSS `stroke-width` **property**, not the SVG
- * attribute of the same name - the attribute takes a plain length and would
- * drop a `clamp()` on the floor.
+ * It used to be a viewport clamp (`clamp(2px, calc(0.5vw - 1px), 5px)`) while
+ * the border it meets stayed a flat 2px, which is exactly how the two came
+ * apart: on a desktop the shoulders reached 5px against a 2px rule, and on any
+ * browser not honouring `non-scaling-stroke` (see below) the same declaration
+ * came out *thinner* than the rule instead. Don't reintroduce a weight here
+ * that the border does not also take.
+ *
+ * ⚠ It has to be applied as the CSS `stroke-width` **property** rather than the
+ * SVG attribute of the same name, together with
+ * `vector-effect: non-scaling-stroke` - the arch is drawn in a viewBox scaled
+ * by the badge's own `clamp()`, so without the vector effect the browser scales
+ * the stroke down with it and the arch lands at a fraction of the flanks'
+ * weight.
  */
-export const HERO_CRADLE_STROKE = "clamp(2px, calc(0.5vw - 1px), 5px)";
+const HERO_FRAME_LINE_PX = 2;
+export const HERO_CRADLE_STROKE = `${HERO_FRAME_LINE_PX}px`;
 
 /**
  * Frosted-glass backdrop behind a framed heading, so the outline reads as a
@@ -411,7 +418,8 @@ const CRADLE_DEFAULT = cradleGeometry(CRADLE_WIDTH, CRADLE_HEIGHT);
  * below.
  */
 const CRADLE_FILL_MASK = `url("data:image/svg+xml,${encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CRADLE_DEFAULT.width} ${CRADLE_DEFAULT.height + CRADLE_OVERSHOOT
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CRADLE_DEFAULT.width} ${
+    CRADLE_DEFAULT.height + CRADLE_OVERSHOOT
   }" preserveAspectRatio="none"><path d="${CRADLE_DEFAULT.fill}" fill="#fff"/></svg>`,
 )}")`;
 
@@ -456,9 +464,11 @@ export function BrandmarkCradle({
   /** Colour of the flanks and the two shoulders. @default the hero's white */
   color?: string;
   /**
-   * Weight of the two shoulder arcs, as a CSS length. The stroke does not scale
-   * with the badge (`non-scaling-stroke`), so the default is a viewport clamp
-   * rather than a number - see {@link HERO_CRADLE_STROKE}.
+   * Weight of the whole cradle - the two shoulder arcs **and** the two straight
+   * flanks either side of them, which are one continuous rule and must be drawn
+   * at one thickness. Pass whatever the parent's own border is, as a CSS length
+   * (a number is read as px): the flanks *are* that border, so a value that
+   * disagrees with it shows up as a rule that changes weight at the arch.
    * @default HERO_CRADLE_STROKE
    */
   strokeWidth?: string | number;
@@ -527,8 +537,15 @@ export function BrandmarkCradle({
   const cradleW = cradleWidth(size, width);
   const cradleH = cradleHeight(size, height);
   const geometry = cradleGeometry(width, height, enclose);
-  // Each flank runs from the outer corner to the edge of the centred gap.
+  // Each flank runs from the outer corner to the edge of the centred gap, and
+  // is drawn at the shoulders' own weight - the two are one rule, broken by the
+  // arch, so they cannot be given two thicknesses. A number is read as px, the
+  // way every other CSS length here is.
   const flankW = `calc(50% - (${cradleW}) / 2 + ${overhang}px)`;
+  const line =
+    typeof strokeWidth === "number" ? `${strokeWidth}px` : strokeWidth;
+  // Centred on the parent's edge, as a border would be.
+  const flankTop = `calc((${line}) * -0.5)`;
 
   return (
     <>
@@ -539,20 +556,20 @@ export function BrandmarkCradle({
           <div
             style={{
               position: "absolute",
-              top: -1,
+              top: flankTop,
               left: -overhang,
               width: flankW,
-              height: 2,
+              height: line,
               background: color,
             }}
           />
           <div
             style={{
               position: "absolute",
-              top: -1,
+              top: flankTop,
               right: -overhang,
               width: flankW,
-              height: 2,
+              height: line,
               background: color,
             }}
           />
@@ -598,7 +615,7 @@ export function BrandmarkCradle({
             stroke={color}
             strokeLinecap="round"
             vectorEffect="non-scaling-stroke"
-            style={{ strokeWidth }}
+            style={{ strokeWidth: line }}
           />
         ))}
       </svg>
@@ -671,7 +688,7 @@ export function HeroTextFrame({
       <div style={{ position: "relative", display: "inline-block" }}>
         <div
           style={{
-            border: `2px solid ${border}`,
+            border: `${HERO_FRAME_LINE_PX}px solid ${border}`,
             padding: sized("0.8em 1.7em"),
             backdropFilter: HERO_FRAME_BLUR,
             WebkitBackdropFilter: HERO_FRAME_BLUR,
@@ -755,25 +772,27 @@ export function HeroTextFrame({
       <div
         style={{
           position: "relative",
-          borderLeft: `2px solid ${border}`,
-          borderRight: `2px solid ${border}`,
-          borderBottom: `2px solid ${border}`,
+          borderLeft: `${HERO_FRAME_LINE_PX}px solid ${border}`,
+          borderRight: `${HERO_FRAME_LINE_PX}px solid ${border}`,
+          borderBottom: `${HERO_FRAME_LINE_PX}px solid ${border}`,
           borderTop: "none",
           padding: sized("0.8em 1.7em"),
         }}
       >
-        {/* The flanks run 2px outside the padding box so they close the top
-            corners over the side borders. */}
+        {/* The flanks run the border's own width outside the padding box, so
+            they close the top corners over the side borders. */}
         <BrandmarkCradle
           image={image}
           imageAlt={imageAlt}
           size={badge}
           color={border}
-          // The arcs' weight is screen-fixed, so a shrunk preview has to thin it
-          // by hand the way `sized` thins the badge and the padding - otherwise
-          // a half-size preview draws full-weight shoulders on a half-size cradle.
-          strokeWidth={sized(HERO_CRADLE_STROKE)}
-          overhang={2}
+          // ⚠ Deliberately *not* run through `sized`, unlike the badge and the
+          // padding. The frame's three sides are a flat border that a preview
+          // does not thin either, and this is the same rule continuing round
+          // the top - so scaling it here is what would make the shoulders
+          // disagree with the outline they meet.
+          strokeWidth={HERO_CRADLE_STROKE}
+          overhang={HERO_FRAME_LINE_PX}
         />
         {children}
       </div>
@@ -1221,30 +1240,30 @@ export function Hero({
           style={
             isProfile
               ? {
-                display: "block",
-                width: `calc(${profileLogoSize} * ${HERO_REVEAL_LOGO_GROW})`,
-                height: `calc(${profileLogoSize} * ${HERO_REVEAL_LOGO_GROW})`,
-                objectFit: "contain",
-                filter: HERO_BADGE_SHADOW,
-              }
+                  display: "block",
+                  width: `calc(${profileLogoSize} * ${HERO_REVEAL_LOGO_GROW})`,
+                  height: `calc(${profileLogoSize} * ${HERO_REVEAL_LOGO_GROW})`,
+                  objectFit: "contain",
+                  filter: HERO_BADGE_SHADOW,
+                }
               : {
-                display: "block",
-                // The centred logo's own max box, restated in lengths rather
-                // than the percentages the hero uses. They are the same box -
-                // 50% of the hero's width, 45% of the stack's height, which is
-                // the hero less the navbar inset - but a percentage resolves
-                // against the containing block, and here that is a
-                // shrink-wrapped span with no definite size, where both would
-                // silently resolve to `none` and draw the logo at its full
-                // intrinsic size.
-                maxWidth: scaled(
-                  `calc(min(320px, 50vw) * ${HERO_REVEAL_LOGO_GROW})`,
-                ),
-                maxHeight: scaled(
-                  `calc((${heroHeight} - var(--ui-navbar-height, 57px)) * 0.45 * ${HERO_REVEAL_LOGO_GROW})`,
-                ),
-                objectFit: "contain",
-              }
+                  display: "block",
+                  // The centred logo's own max box, restated in lengths rather
+                  // than the percentages the hero uses. They are the same box -
+                  // 50% of the hero's width, 45% of the stack's height, which is
+                  // the hero less the navbar inset - but a percentage resolves
+                  // against the containing block, and here that is a
+                  // shrink-wrapped span with no definite size, where both would
+                  // silently resolve to `none` and draw the logo at its full
+                  // intrinsic size.
+                  maxWidth: scaled(
+                    `calc(min(320px, 50vw) * ${HERO_REVEAL_LOGO_GROW})`,
+                  ),
+                  maxHeight: scaled(
+                    `calc((${heroHeight} - var(--ui-navbar-height, 57px)) * 0.45 * ${HERO_REVEAL_LOGO_GROW})`,
+                  ),
+                  objectFit: "contain",
+                }
           }
         />
         {/* The sweep's two tones, one copy of the mark each - a bright core
@@ -1334,9 +1353,9 @@ export function Hero({
   // Only a `bottom` divider matters here - a `top` notch is nowhere near the disc.
   const profileDividerLift =
     isProfile &&
-      bottomDivider &&
-      bottomDivider !== "none" &&
-      bottomDividerEdge === "bottom"
+    bottomDivider &&
+    bottomDivider !== "none" &&
+    bottomDividerEdge === "bottom"
       ? shapeDividerEdgeInset(bottomDivider, bottomDividerHeight)
       : null;
   // The disc's own overhang below the hero, and the offsets built on it: its
@@ -1353,10 +1372,10 @@ export function Hero({
   const dividerMask: CSSProperties =
     bottomDivider && bottomDivider !== "none"
       ? shapeDividerMaskStyle(
-        bottomDivider,
-        bottomDividerEdge,
-        bottomDividerHeight,
-      )
+          bottomDivider,
+          bottomDividerEdge,
+          bottomDividerHeight,
+        )
       : {};
 
   const hero = (
@@ -1436,7 +1455,7 @@ export function Hero({
             right: 0,
             bottom: isProfile
               ? // Follows the disc: a lifted disc lifts its 24px clearance too.
-              profileDividerLift
+                profileDividerLift
                 ? `calc(${profileLogoSize} / 2 + 24px + ${profileDividerLift})`
                 : `calc(${profileLogoSize} / 2 + 24px)`
               : 0,

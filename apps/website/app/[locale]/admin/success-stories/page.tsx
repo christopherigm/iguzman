@@ -77,6 +77,12 @@ export default function AdminSuccessStoriesPage() {
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
         onReorder={handleReorder}
+        bulkActions={{
+          translate: ["name", "short_description", "description"],
+          image: true,
+          update: updateSuccessStory,
+          reload: load,
+        }}
         loading={loading}
         error={error}
       />

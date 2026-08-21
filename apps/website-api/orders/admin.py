@@ -46,10 +46,13 @@ class OrderLineInline(admin.TabularInline):
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = (
-        "id", "user", "system", "status", "payment_method", "fulfilled",
-        "total", "currency", "created_at", "paid_at",
+        "id", "user", "linked_by_email", "system", "status", "payment_method",
+        "fulfilled", "total", "currency", "created_at", "paid_at",
     )
-    list_filter = ("status", "payment_method", "fulfilled", "system", "currency")
+    list_filter = (
+        "status", "payment_method", "fulfilled", "linked_by_email", "system",
+        "currency",
+    )
     search_fields = ("id", "public_id", "user__email", "user__username", "email", "phone", "stripe_session_id", "stripe_payment_intent_id")
     raw_id_fields = ("user",)
     date_hierarchy = "created_at"
@@ -62,7 +65,8 @@ class OrderAdmin(admin.ModelAdmin):
     # handed over).
     readonly_fields = (
         "public_id", "qr_code",
-        "system", "user", "payment_method", "currency", "subtotal", "total",
+        "system", "user", "linked_by_email", "payment_method", "currency",
+        "subtotal", "total",
         "stripe_session_id", "stripe_payment_intent_id",
         "email", "phone", "shipping_name", "shipping_line1", "shipping_line2",
         "shipping_city", "shipping_state", "shipping_postal_code", "shipping_country",
@@ -72,7 +76,8 @@ class OrderAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Order", {
             "fields": (
-                "public_id", "qr_code", "system", "user", "status", "payment_method",
+                "public_id", "qr_code", "system", "user", "linked_by_email",
+                "status", "payment_method",
                 "fulfilled", "fulfilled_at", "created_at", "updated_at", "paid_at",
             ),
         }),

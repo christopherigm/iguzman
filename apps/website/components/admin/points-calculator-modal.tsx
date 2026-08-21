@@ -6,21 +6,19 @@ import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { Spinner } from "@repo/ui/core-elements/spinner";
-import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { getSystem } from "@/lib/admin-api";
+import {
+  awardFor,
+  GiveBackFields,
+  percentFromVisits,
+  useGiveBack,
+} from "./points-give-back";
 
 const MUTED = "color-mix(in srgb, var(--foreground) 65%, transparent)";
 const HAIRLINE = "color-mix(in srgb, var(--foreground) 12%, transparent)";
 
-/** How many paid purchases earn a free one, before the operator says otherwise.
- *  Ten is the punch card everyone has been handed at a counter, and it puts the
- *  giveaway at a round 10% of what the customer spends. */
-const DEFAULT_VISITS = 10;
-
 export interface PointsCalculatorResult {
-  /** The selling price, which the operator may have typed in the dialog. */
-  price: string;
   /** What one purchase earns. */
   pointsAward: number;
   /** What one costs in points. */
@@ -70,12 +68,20 @@ function ResultRow({
  * the product, service and menu-item forms.
  *
  * It answers the two questions an operator actually has - "how many points
- * should this earn?" and "what should it cost in points?" - from two they can
- * answer without arithmetic: what the item sells for, and how many times someone
- * should have to buy it before the next one is free.
+ * should this earn?" and "what should it cost in points?" - from one they can
+ * answer without arithmetic: how many times someone should have to buy this
+ * before the next one is free, or (the same answer the other way round) what
+ * share of their spend comes back to them.
  *
  *     award       = round(price × rate)
  *     pointsPrice = visits × award
+ *
+ * ⚠ **The selling price is read, never asked for.** It is a field on the form
+ * this dialog was opened from, so a box here would be a second place to type a
+ * number the record already carries - and the dialog used to *apply* what was
+ * typed in it, which let a dialog about points rewrite the price. With no price
+ * on the form there is nothing to work from, and it says so rather than
+ * offering to invent one.
  *
  * ⚠ **`rate` is `System.points_per_currency` and is deliberately read-only
  * here.** It is one number for the whole catalog - that is the entire reason it
@@ -107,10 +113,13 @@ export function PointsCalculatorModal({
   const locale = useLocale();
   const systemId = useSession()?.systemId ?? 0;
 
-  const [priceInput, setPriceInput] = useState(() =>
-    String(price ?? "").trim(),
-  );
-  const [visitsInput, setVisitsInput] = useState(String(DEFAULT_VISITS));
+  // The two boxes the operator fills in: how many purchases buy the next one,
+  // or - the same answer stated the other way round - what share of the spend
+  // they hand back. The **selling price is not one of them**: it is a field on
+  // the form this dialog was opened from, so asking for it again would be a
+  // second place to type a number the record already carries, and applying it
+  // would let a dialog about points quietly rewrite the price.
+  const giveBack = useGiveBack();
 
   // The catalog-wide earn rate. Fetched here rather than by the three item forms
   // that render this dialog's button: the modal only mounts when it is opened,
@@ -168,24 +177,21 @@ export function PointsCalculatorModal({
     };
   }, [locale]);
 
-  const priceValue = Number(priceInput);
-  const visits = Math.floor(Number(visitsInput));
+  const priceValue = Number(String(price ?? "").trim());
+  const { visits, ready: hasVisits } = giveBack;
   const costValue = Number(String(costPrice ?? "").trim());
 
   const hasPrice = Number.isFinite(priceValue) && priceValue > 0;
-  const hasVisits = Number.isFinite(visits) && visits >= 1;
   const ready = hasPrice && hasVisits && rate !== null;
 
-  // Points are whole numbers on the API (a PositiveIntegerField), and an item
-  // that earns nothing at all is not what anyone reaching for a calculator
-  // means - so the award floors at one point rather than rounding to zero on a
-  // cheap item under a small rate.
-  const award = ready ? Math.max(1, Math.round(priceValue * rate)) : 0;
+  const award = ready ? awardFor(priceValue, rate) : 0;
   const pointsPrice = ready ? award * visits : 0;
 
   /** What the tenant hands back, as a share of what the customer spends. It is
-   *  `1 / visits` and nothing else - see the note on the rate above. */
-  const rewardPct = hasVisits ? 100 / visits : 0;
+   *  `1 / visits` and nothing else - see the note on the rate above. Quoted from
+   *  the **count**, not from the box: a typed percentage is rounded to a whole
+   *  number of purchases, so this is what that rounding actually comes to. */
+  const rewardPct = hasVisits ? percentFromVisits(visits) : 0;
   const marginPct =
     hasPrice && Number.isFinite(costValue) && costValue > 0
       ? ((priceValue - costValue) / priceValue) * 100
@@ -202,40 +208,24 @@ export function PointsCalculatorModal({
       okLabel={t("pointsCalcApply")}
       cancelLabel={t("cancel")}
       okDisabled={!ready}
-      okCallback={() =>
-        onApply({ price: priceInput, pointsAward: award, pointsPrice })
-      }
+      okCallback={() => onApply({ pointsAward: award, pointsPrice })}
       cancelCallback={onCancel}
     >
       <Box flexDirection="column" gap="16px">
-        {/* The two questions. Selling price first, because it is what everything
-            below is worked out from - and it is editable here so an operator who
-            opened the dialog on a blank form is not sent back up the page for
-            it; the answer travels back with the points on OK. */}
-        <Box
-          display="grid"
-          gap="12px"
-          alignItems="start"
-          styles={{
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          }}
-        >
-          <TextInput
-            label={t("sellingPrice")}
-            format="number"
-            value={priceInput}
-            onChange={setPriceInput}
-            error={!hasPrice ? t("pointsCalcNoPrice") : undefined}
-          />
-          <TextInput
-            label={t("pointsCalcVisits")}
-            type="number"
-            min={1}
-            value={visitsInput}
-            onChange={setVisitsInput}
-            helperText={t("pointsCalcVisitsHint")}
-          />
-        </Box>
+        {/* The one question, asked both ways round. */}
+        <GiveBackFields giveBack={giveBack} />
+
+        {/* The selling price, read from the form rather than asked for - and
+            said out loud, because everything below is worked out from it. A form
+            with no price yet is told to go and fill it in; there is nothing to
+            calculate from, and a box here would be a second place to type it. */}
+        {hasPrice ? (
+          <ResultRow label={t("sellingPrice")} value={money(priceValue)} />
+        ) : (
+          <Typography variant="body" color="var(--error, #dc2626)">
+            {t("pointsCalcNoPrice")}
+          </Typography>
+        )}
 
         {/* The rate, stated rather than asked for: it belongs to the catalog,
             not to this item. */}

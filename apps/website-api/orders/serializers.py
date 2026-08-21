@@ -298,6 +298,10 @@ class OrderSerializer(serializers.ModelSerializer):
             # unless the page can say which of them were paid in points, and what
             # the purchase earned back.
             "points_spent", "points_earned",
+            # Why an order nobody signed in for has a customer attached: the
+            # address it was placed with already had an account on this site.
+            # Read-only, like everything else here - it is decided at checkout.
+            "linked_by_email",
             "email", "phone", "shipping_name", "shipping_line1", "shipping_line2",
             "shipping_city", "shipping_state", "shipping_postal_code", "shipping_country",
             "created_at", "paid_at", "item_count", "lines", "booking", "qr_code",

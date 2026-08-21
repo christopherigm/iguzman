@@ -375,17 +375,16 @@ export function PricingSection({
         </Box>
       </Card>
 
-      {/* The calculator. It writes the selling price too, since that is the
-          number it works everything else out from and an operator may well have
-          typed it here rather than above. */}
+      {/* The calculator. It writes the two points fields and nothing else - the
+          selling price it works them out from is the field above, which it
+          reads and quotes back rather than asking for a second time. */}
       {calculatorOpen && (
         <PointsCalculatorModal
           price={values.price}
           costPrice={values.cost_price}
           currency={currency}
           onCancel={() => setCalculatorOpen(false)}
-          onApply={({ price, pointsAward, pointsPrice }) => {
-            onChange("price", price);
+          onApply={({ pointsAward, pointsPrice }) => {
             onChange("points_award", String(pointsAward));
             onChange("points_price", String(pointsPrice));
             setCalculatorOpen(false);

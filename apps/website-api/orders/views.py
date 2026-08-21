@@ -24,6 +24,7 @@ from users.cache import invalidate_cart
 from users.guest import resolve_guest_cart
 from users.models import CartItem
 
+from .claims import link_order_to_account
 from .cache import (
     AVAILABILITY_CACHE_TTL,
     ORDERS_CACHE_TTL,
@@ -321,6 +322,19 @@ class CheckoutView(APIView):
         if error is not None:
             return error
 
+        # A guest who already has an account here gets this order put in it, on
+        # the strength of the address they just typed - see
+        # `claims.link_order_to_account`. Before `_spend_order_points` and before
+        # the coupon, so `award_points` further down pays into the account rather
+        # than against the address; and deliberately **not** by reassigning `user`,
+        # which stays None for the whole of this request. That local is what says
+        # "this caller is authenticated", and it decides both whether points may be
+        # spent and whether a server-side cart is cleared - neither of which an
+        # inferred owner has agreed to. Online orders are not linked here: they
+        # carry no address until Stripe collects one, which is the webhook's job.
+        if user is None:
+            link_order_to_account(order)
+
         # Before the coupon, because a coupon is priced off the **money**
         # subtotal and which lines are money was already settled by
         # `_open_order`. Taken optimistically here - exactly like a coupon
@@ -454,6 +468,14 @@ class CheckoutView(APIView):
             _decrement_order_stock(order)
             if user is not None:
                 CartItem.objects.filter(user=user, system=system).delete()
+
+        # A second attempt at the link `_checkout` already made: this branch is
+        # reachable for an *online* guest order (every line redeemed, or a coupon
+        # covering the remainder), which had no address to match on back then and
+        # took one off the contact form a few lines above. A no-op when the order
+        # already has an owner.
+        if user is None:
+            link_order_to_account(order)
 
         # After the order is real, never before: an award is payment for a
         # purchase that happened.
@@ -1633,6 +1655,13 @@ class PosCheckoutView(APIView):
         if refusal is not None:
             return refusal
 
+        # A counter sale is a guest order too, and the address an associate takes
+        # for the receipt identifies its customer exactly as a checkout form's
+        # does. It only brings forward what `claim_guest_orders` would do at that
+        # customer's next sign-in anyway - the till's own permissions are
+        # untouched, and nothing here is attributed to the associate.
+        link_order_to_account(order)
+
         order.phone = (contact.get("phone") or "").strip()
         order.shipping_name = (contact.get("name") or "").strip()
 
@@ -2064,6 +2093,17 @@ class StripeWebhookView(APIView):
             # The cart did its job the moment the order was written; leaving it
             # full would invite the customer to pay for the same thing twice.
             CartItem.objects.filter(user=order.user, system=order.system).delete()
+
+        # An online guest order has no address until the block above copies the one
+        # Stripe collected, so this is the first moment it can be matched to an
+        # account - and it has to happen **before** `award_points`, which writes the
+        # ledger row with `order.user`.
+        #
+        # ⚠ Deliberately after the transaction, not inside it: the cart clear above
+        # filters on `order.user`, and running this first would point it at the
+        # linked account and empty a basket that customer built while signed in and
+        # never checked out. They bought this from their browser's guest cart.
+        link_order_to_account(order)
 
         # Outside the transaction above and after the money is recorded: this is
         # the first moment the order is real. `award_points` is idempotent on
@@ -2544,6 +2584,13 @@ class BookingCheckoutView(APIView):
         # storage under a row lock would queue every other checkout at this branch
         # behind the network.
         attach_order_qr(order)
+
+        # Deferred out of the critical section for the same reason the QR is: it
+        # is a query and a write that the branch's row lock has no reason to hold.
+        # A booking made by a guest whose address already has an account here goes
+        # into it, exactly as a cart checkout's does.
+        if user is None:
+            link_order_to_account(order)
 
         order.phone = (contact.get("phone") or "").strip()
         order.shipping_name = (contact.get("name") or "").strip()

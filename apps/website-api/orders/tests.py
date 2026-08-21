@@ -949,6 +949,104 @@ class OfflineCheckoutTests(TestCase):
         self.assertEqual(order.status, Order.STATUS_PLACED)
 
 
+class GuestOrderAccountLinkTests(TestCase):
+    """A guest checkout whose email already has an account on this tenant.
+
+    One test, walking the whole rule, because every branch of it is the same
+    question asked of a different address: *does this order belong to somebody?*
+    Getting it wrong in either direction costs something real - a customer's
+    points stranded against an address, or one person's purchase history handed
+    to another - so the misses are asserted beside the hit rather than trusted.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(
+            site_name="Acme", host="acme.test",
+            pay_in_store_enabled=True, rewards_enabled=True,
+        )
+        self.other_system = System.objects.create(site_name="Beta", host="beta.test")
+        self.product = Product.objects.create(
+            system=self.system, name="Bag", slug="bag",
+            price=Decimal("10.00"), currency="USD", stock_count=50,
+            points_award=40,
+        )
+        self.customer = make_user("ada@acme.test", self.system)
+
+    def _guest_checkout(self, email):
+        return self.client.post(
+            "/api/orders/checkout/",
+            {
+                "locale": "en", "payment_method": "in_store",
+                "contact": {"name": "Ada", "email": email, "phone": "555"},
+                "cart": [{"kind": "product", "id": self.product.id, "quantity": 2}],
+            },
+            content_type="application/json", HTTP_X_WEBSITE_HOST="acme.test",
+        )
+
+    def test_guest_checkout_finds_the_account_behind_the_email(self):
+        # ── The hit: the address has a verified account here ──────────────────
+        mail.outbox = []
+        response = self._guest_checkout("ADA@acme.test")  # case must not matter
+        self.assertEqual(response.status_code, 201)
+
+        order = Order.objects.get(public_id=response.json()["order_id"])
+        self.assertEqual(order.user_id, self.customer.id)
+        self.assertTrue(order.linked_by_email)
+
+        # The whole point of linking *before* `award_points`: the ledger row is
+        # written against the account, so the balance is spendable now rather
+        # than waiting on the customer's next sign-in.
+        self.assertEqual(order.points_earned, 80)
+        self.assertEqual(balance_for(self.customer, self.system), 80)
+        self.assertFalse(
+            PointsTransaction.objects.filter(user__isnull=True).exists(),
+            "the award must not have been left unclaimed against the address",
+        )
+
+        # And the receipt says so, instead of inviting them to create the account
+        # they already have.
+        body = mail.outbox[-1].body
+        self.assertIn("We added this order to your account", body)
+        self.assertNotIn("Create an account with this email", body)
+        # The line items drop the currency code; the summary still carries it.
+        self.assertIn("$20.00 USD", body)
+
+        # ⚠ The order is linked, not authenticated: the guest checked out of
+        # their browser's own cart, and the account's saved basket is untouched.
+        CartItem.objects.create(
+            user=self.customer, system=self.system, product=self.product, quantity=1,
+        )
+        self._guest_checkout("ada@acme.test")
+        self.assertEqual(CartItem.objects.filter(user=self.customer).count(), 1)
+
+        # ── The misses ────────────────────────────────────────────────────────
+        Order.objects.all().delete()
+        PointsTransaction.objects.all().delete()
+
+        # An unverified account has not proved it holds the address, so an order
+        # placed on it stays a guest order (and its points stay claimable).
+        unverified = make_user("bea@acme.test", self.system)
+        unverified.is_active = False
+        unverified.save(update_fields=["is_active"])
+        self._guest_checkout("bea@acme.test")
+        guest_order = Order.objects.get()
+        self.assertIsNone(guest_order.user_id)
+        self.assertFalse(guest_order.linked_by_email)
+        self.assertEqual(balance_for(unverified, self.system), 0)
+
+        # The same address on another tenant is another customer entirely.
+        Order.objects.all().delete()
+        make_user("cleo@acme.test", self.other_system)
+        self._guest_checkout("cleo@acme.test")
+        self.assertIsNone(Order.objects.get().user_id)
+
+        # And an unknown address is nobody.
+        Order.objects.all().delete()
+        self._guest_checkout("nobody@acme.test")
+        self.assertIsNone(Order.objects.get().user_id)
+
+
 # --------------------------------------------------------------------------- #
 # The CMS: order management and the till
 # --------------------------------------------------------------------------- #
