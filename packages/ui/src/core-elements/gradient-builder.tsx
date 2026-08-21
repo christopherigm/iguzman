@@ -136,9 +136,31 @@ function withAlpha(color: string, alpha: number): string {
   return color;
 }
 
-/** The value to feed the native swatch, which only accepts 6-digit hex. */
+/**
+ * The value to feed the native swatch, which only accepts 6-digit hex.
+ *
+ * `rgb()` is converted rather than given up on: `withAlpha` keeps a stop in the
+ * notation it arrived in, so every stop the opacity slider has touched in that
+ * notation is an `rgba()` - and answering `#000000` for all of them opened the
+ * picker on black on exactly the stops most likely to be edited again.
+ */
 function swatchValue(color: string): string {
-  return expandHex(color)?.hex6 ?? "#000000";
+  const hex = expandHex(color);
+  if (hex) return hex.hex6;
+  const parts = rgbParts(color);
+  if (parts) {
+    const channels = parts.slice(0, 3).map((part) => {
+      const n = parseFloat(part);
+      if (Number.isNaN(n)) return null;
+      // Either syntax: `rgb(255 0 0)` and `rgb(100% 0% 0%)` are both legal.
+      const v = part.trim().endsWith("%") ? (n / 100) * 255 : n;
+      return Math.min(255, Math.max(0, Math.round(v)))
+        .toString(16)
+        .padStart(2, "0");
+    });
+    if (channels.every((c) => c !== null)) return `#${channels.join("")}`;
+  }
+  return "#000000";
 }
 
 function autoPosition(stops: ColorStop[]): ColorStop[] {
@@ -460,18 +482,23 @@ export function GradientBuilder({
             {stops.map((stop, i) => (
               <Box key={i} flexDirection="column" gap="6px">
                 <Box display="flex" alignItems="center" gap="8px">
-                  <input
-                    type="color"
-                    value={swatchValue(stop.color)}
-                    onChange={(e) => handleSwatch(i, e.target.value)}
-                    className="gb__swatch"
-                    title={l.pickColor}
-                  />
+                  {/* One control, not a native swatch beside a text field. The
+                      two do still mean different things here - a picked colour
+                      keeps the stop's alpha, typed text is the whole notation -
+                      which is what `onSwatchChange` is for. `swatchFallback` is
+                      what opens the dialog when the notation is one the picker
+                      cannot read (an `rgba()`); the tile itself is painted with
+                      the raw value, so a half-transparent stop reads as one. */}
                   <TextInput
                     value={stop.color}
                     onChange={(v) => handleStopColor(i, v)}
-                    placeholder="#000000"
-                    className="gb__stop-text"
+                    swatch
+                    swatchFallback={swatchValue(stop.color)}
+                    swatchLabel={l.pickColor}
+                    onSwatchChange={(hex) => handleSwatch(i, hex)}
+                    aria-label={type === "solid" ? l.color : `${l.stops} ${i + 1}`}
+                    flex={1}
+                    minWidth={0}
                   />
                   {type !== "solid" && (
                     <>

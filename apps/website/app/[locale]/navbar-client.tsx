@@ -145,9 +145,9 @@ export function NavbarClient({
         ariaLabel: t("myAccount"),
         children: [
           { label: t("myAccount"), href: "/account" },
-          // Order history lives here rather than in the top-level bar: it is a
-          // thing you go looking for, not one you navigate by.
-          { label: t("orders"), href: "/orders" },
+          // No Orders entry here: order history is a top-level bar item of its
+          // own (below), and a second door to it in the account menu is one
+          // more place the same link can be looked for.
           { label: t("signOut"), onClick: handleSignOut },
         ],
       }

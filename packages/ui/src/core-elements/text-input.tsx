@@ -89,6 +89,32 @@ const toDisplayValue = (raw: string, format: TextInputFormat): string => {
   }
 };
 
+/** What the picker opens on when neither the value nor the fallback is a hex. */
+const DEFAULT_SWATCH_FALLBACK = "#000000";
+
+/**
+ * The colour a native `<input type="color">` can actually open on. It accepts
+ * `#rrggbb` and nothing else, and answers anything else by showing black -
+ * which reads as "the colour was lost". So widen a `#rgb`, drop a `#rrggbbaa`'s
+ * alpha, and hand every other notation (`gold`, `rgb(...)`, `var(--accent)`) to
+ * the fallback.
+ *
+ * Nothing is lost by that: the tile *behind* the picker is painted with the raw
+ * value, so the swatch still tells the truth about a colour this cannot parse -
+ * only the dialog's starting point falls back.
+ */
+const toPickerHex = (value: string, fallback: string): string => {
+  const v = value.trim();
+  if (/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(v)) return v.slice(0, 7);
+  if (/^#[0-9a-f]{3}$/i.test(v)) {
+    const [r, g, b] = [v[1], v[2], v[3]];
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+  return /^#[0-9a-f]{6}$/i.test(fallback.trim())
+    ? fallback.trim()
+    : DEFAULT_SWATCH_FALLBACK;
+};
+
 /**
  * One choice in an autocomplete field.
  *
@@ -190,6 +216,52 @@ export interface TextInputProps extends UIComponentProps, NativeInputProps {
    * package is i18n-agnostic, so a localised app passes its own.
    */
   noOptionsLabel?: string;
+  /**
+   * Turns the field into a **colour field**: an ordinary editable text input
+   * holding the raw value, with a round swatch at its end that opens the
+   * browser's own colour picker.
+   *
+   * Deliberately not `type="color"`, which replaces the whole field with the
+   * browser's swatch - a small target that can only ever hold `#rrggbb`. Here
+   * the *value* stays free text, so `gold`, `rgb(0 0 0 / 50%)` and a blank all
+   * survive a round trip, and **emptying the field is how a colour is cleared**
+   * (a native picker has no empty state - it shows black and means it).
+   *
+   * The tile is painted with the raw value, whatever notation it is in, and
+   * shows a struck-through "no colour" state when the field is empty.
+   *
+   * Ignored on a `multirow` field and on a combobox (`options`), whose own
+   * dropdown owns that corner of the field.
+   */
+  swatch?: boolean;
+  /**
+   * The `#rrggbb` the picker opens on when the value is not a hex it can show
+   * (blank, `gold`, a `var()`). Defaults to `#000000`. It is only the dialog's
+   * starting point - it is never emitted, and never painted on the tile.
+   */
+  swatchFallback?: string;
+  /**
+   * Accessible name for the swatch, which is a second control beside the text
+   * field and needs a name of its own. **Defaults to English**, like
+   * `noOptionsLabel` - a localised app passes its own.
+   */
+  swatchLabel?: string;
+  /**
+   * Where the *picker's* `#rrggbb` goes, when that is not simply the field's new
+   * value. Given, it replaces `onChange` for the swatch alone - the text box
+   * still emits through `onChange` as usual.
+   *
+   * It exists because the two controls stop meaning the same thing the moment
+   * the value carries something a picker cannot express. A gradient stop is the
+   * case: its notation holds an alpha the swatch knows nothing about, so a
+   * colour picked on a half-transparent stop has to be folded back into the
+   * value rather than replace it - while text the operator typed is the whole
+   * notation and replaces it outright.
+   *
+   * Only useful on a controlled field: nothing is written to an uncontrolled
+   * field's own state, since the caller is deciding what the value becomes.
+   */
+  onSwatchChange?: (hex: string) => void;
   /** React 19 ref - no forwardRef needed. */
   ref?: React.Ref<HTMLInputElement | HTMLTextAreaElement>;
 }
@@ -222,6 +294,12 @@ export interface TextInputProps extends UIComponentProps, NativeInputProps {
  * <TextInput label="Password" type="password" error="This password is too common." />
  * ```
  *
+ * @example Colour - an editable value with a picker beside it. Emptying it clears the colour.
+ * ```tsx
+ * // color === "" | "#c0a062" | "gold"
+ * <TextInput label="Colour" swatch value={color} onChange={setColor} />
+ * ```
+ *
  * @example Autocomplete - a `Select` you can type into. `value`/`onChange` are option values.
  * ```tsx
  * // place === "42", displayed as "Lake Estes (Lake) - Larimer"
@@ -241,6 +319,10 @@ export const TextInput = ({
   helperText,
   options,
   noOptionsLabel = "No matches",
+  swatch = false,
+  swatchFallback = DEFAULT_SWATCH_FALLBACK,
+  swatchLabel = "Pick a colour",
+  onSwatchChange,
   className,
   id,
   ref,
@@ -296,7 +378,14 @@ export const TextInput = ({
   // A mask always renders as a plain text field so we control the formatting;
   // the displayed value is masked, while the stored/emitted value stays raw.
   const isMasked = format !== "text" && !isCombobox;
-  const effectiveType = isMasked || isCombobox ? "text" : type;
+
+  // A colour field is a *text* field with a picker beside it - the value is free
+  // text (`gold`, a `var()`, a blank) and only the tile is a colour. So the
+  // control is `type="text"` even when the caller also asked for `type="color"`,
+  // which would otherwise hand the whole field to the browser's own swatch.
+  const hasSwatch = swatch && !multirow && !isCombobox;
+  const effectiveType =
+    isMasked || isCombobox ? "text" : hasSwatch ? "text" : type;
   const displayValue = isCombobox
     ? (query ?? selectedLabel)
     : isMasked
@@ -491,6 +580,7 @@ export const TextInput = ({
     "ui-text-input-wrapper",
     isActive ? "ui-text-input-wrapper--active" : "",
     !label ? "ui-text-input-wrapper--no-label" : "",
+    hasSwatch ? "ui-text-input-wrapper--swatch" : "",
     hasError ? "ui-text-input-wrapper--error" : "",
     className,
   ]
@@ -515,6 +605,40 @@ export const TextInput = ({
             className="ui-text-input"
             type={effectiveType}
           />
+        )}
+
+        {/* The tile carries the colour and the picker is invisible on top of
+            it, rather than the other way round: a native `<input type="color">`
+            can only *show* `#rrggbb`, so painting it with the raw value is what
+            lets `gold` and `rgb(...)` read correctly - and lets a blank read as
+            blank instead of as black, which is the one thing the native control
+            cannot say. It sits before the bar so `~ .ui-text-input-bar` still
+            reaches it from the input. */}
+        {hasSwatch && (
+          <span
+            className={[
+              "ui-text-input-swatch",
+              (currentValue ?? "").trim() === ""
+                ? "ui-text-input-swatch--empty"
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            style={{ background: (currentValue ?? "").trim() || undefined }}
+          >
+            <input
+              type="color"
+              className="ui-text-input-swatch__input"
+              value={toPickerHex(currentValue ?? "", swatchFallback)}
+              onChange={(e) =>
+                onSwatchChange
+                  ? onSwatchChange(e.target.value)
+                  : emit(e.target.value)
+              }
+              disabled={disabled}
+              aria-label={swatchLabel}
+            />
+          </span>
         )}
 
         {label && (

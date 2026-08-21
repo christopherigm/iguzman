@@ -125,10 +125,20 @@ export function contrastRatio(a: string, b: string): number | null {
  * 4.5:1) against all of them. A colour that already clears it comes back
  * unchanged, so the common case costs nothing.
  *
- * ⚠ Only ever apply the result to **text and icons**. A fill - a primary button,
- * a filled badge, a border, a slider track - keeps the raw accent: there the
- * brand hex is the *surface*, and its own foreground answers for the contrast.
- * Adjusting those repaints the customer's brand rather than making it readable.
+ * ⚠ Only ever apply the result to **ink** - anything drawn *on* a surface rather
+ * than being one. Text, a masked glyph, a 2px underline, and a low-opacity tint
+ * or outline washed over the page are all ink: nothing sits inside them to
+ * answer for their contrast, so a brand navy makes them vanish on a dark page.
+ * A **filled surface** - a primary button, a `filled` badge, a solid icon
+ * button, a slider track, a map pin - keeps the raw accent: there the brand hex
+ * *is* the surface and its own foreground answers for the contrast, so adjusting
+ * it repaints the customer's brand rather than making it readable.
+ *
+ * ⚠ "A border" is on neither list by itself, and the test is which of the two it
+ * is doing. A rim around a filled surface is part of that fill and keeps
+ * `--accent` (`IconButton`'s `KIND_SOLID_BORDERS`); a hairline outline drawn on
+ * the page to give a ghost control a shape is ink and follows this
+ * (`KIND_BORDERS`).
  *
  * Pass same-theme backgrounds only: a list holding both a white and a near-black
  * has no answer, and the walk would run to an extreme.

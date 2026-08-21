@@ -703,31 +703,24 @@ export function AdminForm({
                         />
                       </Box>
                     ) : field.type === "color" ? (
-                      <Box flexDirection="column" gap={6}>
-                        <label
-                          className="af__label"
-                          htmlFor={`field-${field.key}`}
-                        >
-                          {field.label}
-                        </label>
-                        <Box display="flex" alignItems="center" gap={8}>
-                          <input
-                            id={`field-${field.key}`}
-                            type="color"
-                            className="af__color-input"
-                            value={String(values[field.key] ?? "#000000")}
-                            onChange={(e) =>
-                              onChange(field.key, e.target.value)
-                            }
-                          />
-                          <TextInput
-                            value={String(values[field.key] ?? "")}
-                            onChange={(v) => onChange(field.key, v)}
-                            placeholder="#000000"
-                            flex={1}
-                          />
-                        </Box>
-                      </Box>
+                      /* One control, not the swatch-beside-a-field pair this
+                         used to be: two inputs for one value meant the swatch
+                         read `#000000` for a blank (and for a `var()`, and for
+                         a named colour), so the tile beside the box regularly
+                         said something the box did not. `TextInput`'s own
+                         swatch paints the raw value and leaves a blank blank. */
+                      <TextInput
+                        id={`field-${field.key}`}
+                        label={field.label}
+                        swatch
+                        swatchLabel={t("colorPick")}
+                        required={field.required}
+                        disabled={field.disabled}
+                        value={String(values[field.key] ?? "")}
+                        onChange={(v) => onChange(field.key, v)}
+                        error={field.fieldError ?? undefined}
+                        helperText={field.helperText}
+                      />
                     ) : (
                       <Box flexDirection="column" gap={6}>
                         {/* ── Label row ── */}

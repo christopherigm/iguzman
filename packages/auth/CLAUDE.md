@@ -47,7 +47,7 @@ perfectly good refresh token. The proxy is also the only place during a page ren
 that may _write_ cookies, which is why the refresh has to happen there and not in
 `getSession()`.
 
-**`isAdmin` and `isStaff` are different things.** `is_admin` is the *customer's*
+**`isAdmin` and `isStaff` are different things.** `is_admin` is the _customer's_
 CMS administrator (a flag on `UserProfile`); `is_staff` is Django staff - us, the
 platform operators - and gates operator-only controls such as the media migration
 on website's `/admin/system`. Both are optional claims: an API that does not mint
@@ -115,6 +115,25 @@ That is what lets edge-folio send a user with no `job_title` to `/onboarding` wh
 still reading the profile exactly once. It defaults to `/`, so cinelog and website
 render `<AuthForm />` bare from a server component. An app that needs the prop needs
 a thin `"use client"` wrapper - a function cannot cross the server/client boundary.
+
+**`AccountForm` takes an `aside`, which is the only way an app adds its own cards
+to the account page.** Pass a node - website passes its rewards card - and the page
+lays out two columns from `sm` up: the app's cards on the left, profile/password/
+passkeys on the right, stacking in that order on `xs`. Pass nothing (cinelog,
+edge-folio, animals, tanda) and it is the single 520px column it has always been.
+
+- **The app's cards go beside the shared sections, never inside them.** This file's
+  sections are the three every frontend has; anything else is per app, and threading
+  a per-app card through `AccountForm`'s internals is how the four copies drifted in
+  the first place.
+- ⚠ **Decide whether there is a card before passing one.** An element that renders
+  `null` is still an element, so `aside={<MyCard />}` splits the page in two and
+  leaves the left half empty whenever `MyCard` bails out. website reads
+  `getRewards()` in `page.tsx` and passes `undefined` for a tenant with no program.
+- ⚠ **An app-specific card cannot be rendered _before_ `AccountForm`.** The form
+  owns the page's only `Container`, and that container is what carries the
+  `padding-top: var(--ui-navbar-height)` clearing the fixed navbar - a sibling above
+  it paints underneath the bar. That was the bug this prop fixed.
 
 The forms render `/icons/fingerprint.svg` and (on the account page's passkey list)
 `/icons/delete-trash-icon.svg`, so an app adopting them needs both files in its

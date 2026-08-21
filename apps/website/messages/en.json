@@ -728,6 +728,7 @@
     "slogan": "Slogan",
     "videoLink": "Hero Video Link",
     "primaryColor": "Primary Color",
+    "colorPick": "Pick a colour",
     "secondaryColor": "Secondary Color",
     "highlightsBg": "Highlights Section Background (CSS)",
     "highlightsTitle": "Highlights Title (ES)",

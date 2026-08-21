@@ -72,24 +72,6 @@
   border-color: var(--accent);
 }
 
-/* Color swatch */
-.gb__swatch {
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
-  border-radius: 8px;
-  padding: 2px;
-  cursor: pointer;
-  background: none;
-}
-
-/* Stop color text input */
-.gb__stop-text {
-  flex: 1;
-  min-width: 0;
-}
-
 /* Position number input */
 .gb__pos-num {
   width: 52px;

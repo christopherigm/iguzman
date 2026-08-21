@@ -728,6 +728,7 @@
     "slogan": "Slogan",
     "videoLink": "Lien vidéo héro",
     "primaryColor": "Couleur primaire",
+    "colorPick": "Choisir une couleur",
     "secondaryColor": "Couleur secondaire",
     "highlightsBg": "Fond section points forts (CSS)",
     "highlightsTitle": "Titre points forts (ES)",

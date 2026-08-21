@@ -728,6 +728,7 @@
     "slogan": "Slogan",
     "videoLink": "Link de vídeo hero",
     "primaryColor": "Cor primária",
+    "colorPick": "Escolher cor",
     "secondaryColor": "Cor secundária",
     "highlightsBg": "Fundo da seção destaques (CSS)",
     "highlightsTitle": "Título destaques (ES)",

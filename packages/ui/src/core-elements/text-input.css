@@ -207,3 +207,79 @@
 .ui-text-input-wrapper--error .ui-text-input-message {
   color: var(--error, #ef4444);
 }
+
+/* ── Colour swatch (the `swatch` prop) ────────────────────────── */
+
+/* Room for the tile, so a long value never runs under it. After the
+   `--no-label` rule above, whose `padding` shorthand would otherwise reset
+   this one at equal specificity. */
+.ui-text-input-wrapper--swatch .ui-text-input,
+.ui-text-input-wrapper--swatch.ui-text-input-wrapper--no-label
+  .ui-text-input {
+  padding-right: 44px;
+}
+
+/* The tile is this span, painted with the field's own raw value via an inline
+   `background` - which is what lets `gold`, `rgb(...)` and a `var()` show the
+   colour they name, none of which a native `<input type="color">` can render.
+   The control itself is invisible on top of it (below), so the whole circle is
+   the hit target and the browser's inset frame never shows. */
+.ui-text-input-swatch {
+  position: absolute;
+  right: 8px;
+  bottom: 7px;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border, #b0b0b0);
+  border-radius: 50%;
+  background: var(--surface-2, #f3f4f6);
+  overflow: hidden;
+  transition:
+    border-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* No colour set - struck through rather than left blank, since an empty tile
+   over a surface-coloured circle reads as a colour that happens to be grey.
+   Muted, not `--error`: a blank is a legitimate value here (it is how a
+   consumer says "fall back to the accent"), not a mistake. */
+.ui-text-input-swatch--empty {
+  background-image: linear-gradient(
+    to top right,
+    transparent calc(50% - 1px),
+    var(--muted, #757575) calc(50% - 1px),
+    var(--muted, #757575) calc(50% + 1px),
+    transparent calc(50% + 1px)
+  );
+}
+
+.ui-text-input-swatch:hover {
+  border-color: var(--accent, #06b6d4);
+}
+
+/* The control inside is transparent, so its own focus ring would be invisible -
+   the tile wears it instead. */
+.ui-text-input-swatch:has(:focus-visible) {
+  border-color: var(--accent, #06b6d4);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #06b6d4) 35%, transparent);
+}
+
+.ui-text-input-swatch__input {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  opacity: 0;
+  cursor: pointer;
+  color-scheme: light dark;
+}
+
+.ui-text-input-swatch__input:disabled {
+  cursor: not-allowed;
+}
+
+.ui-text-input-wrapper--swatch:has(:disabled) .ui-text-input-swatch {
+  opacity: 0.6;
+}

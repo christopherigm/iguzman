@@ -3,7 +3,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { getRewards, tierName } from "@/lib/rewards";
+import { tierName, type RewardsSummary } from "@/lib/rewards";
 
 /**
  * The customer's points, on their account page.
@@ -20,12 +20,21 @@ import { getRewards, tierName } from "@/lib/rewards";
  * exactly as it did before the feature existed. `getRewards` returns the same
  * "off" shape for a signed-out reader and for an unreachable API, so there is
  * one path to nothing rather than three.
+ *
+ * ⚠ **The summary is a prop, not a read of its own**, because the page has to
+ * know whether there is a card *before* it renders one: an element that renders
+ * null is still an element, and handing one to `AccountForm`'s `aside` would
+ * split the page into two columns and leave the left one empty on every tenant
+ * with no program. The page reads `getRewards()` once and decides.
  */
-export async function RewardsCard({ locale }: { locale: string }) {
-  const [rewards, t] = await Promise.all([
-    getRewards(),
-    getTranslations("Cart"),
-  ]);
+export async function RewardsCard({
+  rewards,
+  locale,
+}: {
+  rewards: RewardsSummary;
+  locale: string;
+}) {
+  const t = await getTranslations("Cart");
 
   if (!rewards.enabled) return null;
 
@@ -39,7 +48,6 @@ export async function RewardsCard({ locale }: { locale: string }) {
   return (
     <Card
       gap={12}
-      marginBottom={24}
       backgroundColor="var(--surface-1)"
       elevation={3}
       border="none"

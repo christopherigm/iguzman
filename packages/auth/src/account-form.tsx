@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@repo/i18n/navigation";
 import { Container } from "@repo/ui/core-elements/container";
 import { Box } from "@repo/ui/core-elements/box";
+import { Grid } from "@repo/ui/core-elements/grid";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Button } from "@repo/ui/core-elements/button";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
@@ -40,7 +41,11 @@ import "./account-form.css";
  * `images.remotePatterns` for the avatar to render.
  */
 
-/** The card every section is wrapped in. */
+/**
+ * The card every section is wrapped in. It fills the column it is given - the
+ * width is decided once by the layout below (a 520px column on its own, or a
+ * grid cell when the app passes an `aside`), never per card.
+ */
 function Section({
   title,
   children,
@@ -51,7 +56,6 @@ function Section({
   return (
     <Box
       width="100%"
-      maxWidth={520}
       padding={10}
       borderRadius={8}
       flexDirection="column"
@@ -472,7 +476,14 @@ function PasskeySection() {
   );
 }
 
-export function AccountForm() {
+/**
+ * @param aside App-specific cards to show beside the account sections - website's
+ *   rewards card today, an addresses card tomorrow. Passing anything switches the
+ *   page to two columns (`sm` and up): the app's own cards on the left, profile /
+ *   password / passkeys on the right. With nothing passed the page is the single
+ *   520px column it has always been, so the other four apps are unchanged.
+ */
+export function AccountForm({ aside }: { aside?: React.ReactNode }) {
   const t = useTranslations("AccountPage");
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -515,7 +526,12 @@ export function AccountForm() {
       }}
       paddingX={10}
     >
-      <Box width="100%" maxWidth={520} marginBottom={20} marginTop={20}>
+      <Box
+        width="100%"
+        maxWidth={aside ? undefined : 520}
+        marginBottom={20}
+        marginTop={20}
+      >
         <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
           {t("title")}
         </Typography>
@@ -523,18 +539,46 @@ export function AccountForm() {
           {t("subtitle")}
         </Typography>
       </Box>
-      <Box
-        display="flex"
-        flexDirection="column"
-        gap={24}
-        width="100%"
-        maxWidth={520}
-        marginBottom={40}
-      >
-        <ProfileSection profile={profile} />
-        <ChangePasswordSection profile={profile} />
-        <PasskeySection />
-      </Box>
+      {aside ? (
+        // Two columns from `sm` up, per the repo's "split at sm, not md" rule:
+        // the app's own cards lead, the account sections follow. On `xs` they
+        // stack in that same order - a customer who followed a link here to see
+        // what the app put in that column should not have to scroll past three
+        // forms to reach it.
+        <Grid container spacing={3} width="100%" marginBottom={40}>
+          <Grid
+            size={{ xs: 12, sm: 6 }}
+            display="flex"
+            flexDirection="column"
+            gap={24}
+          >
+            {aside}
+          </Grid>
+          <Grid
+            size={{ xs: 12, sm: 6 }}
+            display="flex"
+            flexDirection="column"
+            gap={24}
+          >
+            <ProfileSection profile={profile} />
+            <ChangePasswordSection profile={profile} />
+            <PasskeySection />
+          </Grid>
+        </Grid>
+      ) : (
+        <Box
+          display="flex"
+          flexDirection="column"
+          gap={24}
+          width="100%"
+          maxWidth={520}
+          marginBottom={40}
+        >
+          <ProfileSection profile={profile} />
+          <ChangePasswordSection profile={profile} />
+          <PasskeySection />
+        </Box>
+      )}
     </Container>
   );
 }

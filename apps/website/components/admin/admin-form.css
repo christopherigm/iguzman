@@ -101,18 +101,6 @@
   color: var(--foreground);
 }
 
-/* Native <input type="color"> - not a @repo/ui component. */
-.af__color-input {
-  width: 40px;
-  height: 38px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
-  border-radius: 8px;
-  padding: 2px;
-  cursor: pointer;
-  background: none;
-  flex-shrink: 0;
-}
-
 /* Native <input type="datetime-local"> - not a @repo/ui component.
    `background` + `color` + `color-scheme` travel together (see
    apps/CLAUDE.md → "Styling - Native Form Elements"): the last is what makes

@@ -80,9 +80,13 @@ function PaletteProvider({
     // every core element that paints the accent as *ink* reads it (with
     // `var(--accent)` as the fallback, so nothing changes where it is unset).
     //
-    // ⚠ Fills keep `--accent` untouched: a primary button, a filled badge, a
-    // slider track and a border are the brand colour itself, and their own
-    // foreground answers for the contrast there.
+    // ⚠ Filled **surfaces** keep `--accent` untouched: a primary button, a
+    // filled badge, a solid icon button, a slider track and the rim around any
+    // of them are the brand colour itself, and their own foreground answers for
+    // the contrast there. Ink is everything drawn *on* a surface instead - text,
+    // a masked glyph, an active-page underline, and the low-opacity tint and
+    // outline of a ghost control, which are a wash of the ink rather than a fill
+    // and have nothing inside them to answer for the contrast.
     //
     // Both variants are published beside the resolved one so an app whose CSS
     // resolves `--accent-text` per `[data-theme]` (for the server-rendered first

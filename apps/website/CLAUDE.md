@@ -1437,7 +1437,14 @@ rule; read website-api's CLAUDE.md → "Rewards" first.
   there - without it that button is a dead end. It renders **nothing** when the
   tenant runs no program, so every other site's account page is unchanged.
   `AccountForm` is shared with cinelog and edge-folio through `@repo/auth`, which
-  is why the card sits beside it rather than inside it.
+  is why the card sits beside it rather than inside it - in that component's
+  **`aside`** column (see `packages/auth/CLAUDE.md`), which is where the next
+  site-specific card, addresses say, goes too. ⚠ It is **not** a sibling rendered
+  above the form: the form owns the page's only container, so a card placed before
+  it painted underneath the fixed navbar. ⚠ And `page.tsx`, not the card, is what
+  reads `getRewards()` - a card that renders null is still an element, and passing
+  one unconditionally would give every tenant with no program a two-column account
+  page with an empty half.
 - ⚠ **`lib/rewards.ts` is not `cache()`d**, matching the API: a balance moves on
   every checkout and is what a customer is about to decide on. Same exception
   `getOrder` carries while `getOrders` is cached.
@@ -2165,12 +2172,30 @@ passes the same two page backgrounds to `PaletteProvider` as
 `inkSurfaceLight` / `inkSurfaceDark`, so the server-rendered value and the one
 the provider rewrites on a theme toggle cannot disagree.
 
-- ⚠ **`--accent-text` is for ink only.** A primary button, a `filled` Badge, a
-  border, the menu rail and the map pin stay on `var(--accent)`: there the brand
-  hex is the _surface_, and its own foreground answers for the contrast.
-  Adjusting those would repaint the tenant's brand rather than make it readable.
-  A `subtle` or `outlined` Badge **is** ink - `badge.css` paints its `color`
-  prop as the text - so those take `--accent-text`.
+- ⚠ **`--accent-text` is for ink only** - anything drawn _on_ a surface rather
+  than being one. A primary Button, a `filled` Badge, a `solid` IconButton, the
+  menu rail and the map pin stay on `var(--accent)`: there the brand hex is the
+  _surface_, and its own foreground answers for the contrast. Adjusting those
+  would repaint the tenant's brand rather than make it readable. A `subtle` or
+  `outlined` Badge **is** ink - `badge.css` paints its `color` prop as the text -
+  so those take `--accent-text`.
+- ⚠ **A thin mark on the page is ink too, even when it is not text**, and this is
+  the half that was missed when `--accent-text` first landed. Rosalinda's
+  `#1B2A6B` sits at **1.05:1** on `--surface-1` in dark mode, so everything the
+  brand hex was painting that was not a filled surface simply stopped being
+  visible: the cart line's edit `IconButton`, the navbar's Favorites and Account
+  glyphs, its dropdown chevron, and the underline marking the current page. All
+  of them now follow `--accent-text` (`#96a5e5` here, 5.3-8.3:1), which is the
+  same blue rather than a white that throws the brand away. The fixes are in
+  `@repo/ui`, not here - `Icon`'s default colour, `IconButton`'s `KIND_ICON_COLORS`
+  / `KIND_BACKGROUNDS` / `KIND_BORDERS` plus the `--icon-button-fill` hover wash,
+  and `.ui-navbar-item--active::after`.
+- ⚠ **A border belongs to whichever of the two it is doing.** The rim around a
+  filled surface is part of that fill and keeps `--accent`; a hairline outline
+  drawn on the page to give a **ghost** control its shape is ink, and so is the
+  low-opacity tint inside it - a 16% wash of a brand navy over a dark page is
+  indistinguishable from the page, which is what left that edit button with no
+  discoverable shape at all.
 - **It is resolved per theme in CSS, never inline.** Both values are published
   as variables on `<body>` and `globals.css` picks one per `[data-theme]`,
   exactly as `--page-background-light` / `-dark` do - an inline resolved colour

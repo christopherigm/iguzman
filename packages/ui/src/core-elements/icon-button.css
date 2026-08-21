@@ -19,10 +19,13 @@
     transparent
   );
 }
+/* `--accent-text`, not `--accent`, for the reason `KIND_BACKGROUNDS` gives in
+   icon-button.tsx: a 24% wash over the page is ink, not a filled surface, and a
+   dark brand hue washed onto a dark page reads as no hover at all. */
 .ui-icon-button--primary {
   --icon-button-fill: color-mix(
     in srgb,
-    var(--accent, #06b6d4) 24%,
+    var(--accent-text, var(--accent, #06b6d4)) 24%,
     transparent
   );
 }

@@ -43,7 +43,7 @@ const SPINNER_SIZES: Record<IconButtonSize, number> = {
 /** Icon color per semantic kind. Drives the masked icon fill. */
 const KIND_ICON_COLORS: Record<IconButtonKind, string> = {
   default: "var(--muted-foreground, #6b7280)",
-  primary: "var(--accent, #06b6d4)",
+  primary: "var(--accent-text, var(--accent, #06b6d4))",
   error: "var(--error, #ef4444)",
   success: "var(--success, #16a34a)",
   warning: "var(--warning, #d97706)",
@@ -53,10 +53,19 @@ const KIND_ICON_COLORS: Record<IconButtonKind, string> = {
  * Subtle tinted background per semantic kind. Always present so the button
  * shape is discoverable even at rest. Mixed at a low percentage with
  * transparent so it reads as a faint tint over any surface.
+ *
+ * ⚠ `primary` is mixed from `--accent-text`, not `--accent`, which looks like a
+ * violation of "fills keep the raw accent" and is not one: at 16% over the page
+ * this is a *wash of the ink*, not a filled surface, so nothing inside it
+ * answers for its contrast the way a solid button's own foreground does. A
+ * brand navy washed onto a dark page is indistinguishable from the page - which
+ * is how the cart line's edit button came to have no visible shape at all. The
+ * genuine fill is `KIND_SOLID_BACKGROUNDS` below, which does keep `--accent`.
  */
 const KIND_BACKGROUNDS: Record<IconButtonKind, string> = {
   default: "color-mix(in srgb, var(--foreground, #111) 7%, transparent)",
-  primary: "color-mix(in srgb, var(--accent, #06b6d4) 16%, transparent)",
+  primary:
+    "color-mix(in srgb, var(--accent-text, var(--accent, #06b6d4)) 16%, transparent)",
   error: "color-mix(in srgb, var(--error, #ef4444) 12%, transparent)",
   success: "color-mix(in srgb, var(--success, #16a34a) 12%, transparent)",
   warning: "color-mix(in srgb, var(--warning, #d97706) 12%, transparent)",
@@ -81,7 +90,10 @@ const KIND_SOLID_BACKGROUNDS: Record<IconButtonKind, string> = {
  */
 const KIND_BORDERS: Record<IconButtonKind, string> = {
   default: "color-mix(in srgb, var(--foreground, #111) 14%, transparent)",
-  primary: "color-mix(in srgb, var(--accent, #06b6d4) 32%, transparent)",
+  // From `--accent-text` for the reason the tint above is - this outline is
+  // drawn on the page, not on the brand.
+  primary:
+    "color-mix(in srgb, var(--accent-text, var(--accent, #06b6d4)) 32%, transparent)",
   error: "color-mix(in srgb, var(--error, #ef4444) 28%, transparent)",
   success: "color-mix(in srgb, var(--success, #16a34a) 28%, transparent)",
   warning: "color-mix(in srgb, var(--warning, #d97706) 28%, transparent)",

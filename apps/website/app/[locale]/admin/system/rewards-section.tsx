@@ -370,10 +370,18 @@ export function RewardsSection({
                     onChange={(v) => edit(row.key, { earn_multiplier: v })}
                     minWidth={0}
                   />
+                  {/* `swatch`, not `type="color"`: blank is a real value here
+                      - it is how a tier says "wear the tenant's accent" - and a
+                      native colour input has no empty state, it shows black and
+                      means it. The value stays free text, so clearing the box
+                      is still how the accent is restored. */}
                   <TextInput
                     label={t("rewardsTierColor")}
+                    swatch
+                    swatchLabel={t("colorPick")}
                     value={row.color}
                     onChange={(v) => edit(row.key, { color: v })}
+                    maxLength={32}
                     minWidth={0}
                   />
                 </Box>

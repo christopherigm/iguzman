@@ -26,7 +26,13 @@ export interface IconProps extends UIComponentProps {
 
 export const Icon = ({
   icon,
-  color = "var(--accent, #06b6d4)",
+  // A masked glyph is *ink*, never a fill - so the accent it defaults to is the
+  // readable variant. On a site that publishes one brand hex for both themes
+  // (`PaletteProvider`'s `accent`) the raw `--accent` is legible in only one of
+  // them, which is what made a dark-navy chevron and a dark-navy heart vanish
+  // into the dark theme. `var(--accent)` stays the fallback, so a host that
+  // publishes no ink variant is unchanged. See `core-elements/contrast`.
+  color = "var(--accent-text, var(--accent, #06b6d4))",
   size = "24px",
   padding = 0,
   backgroundColor = "",
