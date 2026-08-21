@@ -6,6 +6,7 @@ from rest_framework import serializers
 from users.serializers import CartItemWriteSerializer
 
 from .models import Booking, Coupon, Order, OrderLine, PointsTransaction, RewardTier
+from .services.reorder import reorder_ref
 
 
 def resolve_line_image(obj, request=None):
@@ -70,6 +71,7 @@ class OrderLineSerializer(serializers.ModelSerializer):
     item_slug = serializers.SerializerMethodField()
     item_menu_category_slug = serializers.SerializerMethodField()
     item_booking_enabled = serializers.SerializerMethodField()
+    item_reorderable = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderLine
@@ -84,7 +86,7 @@ class OrderLineSerializer(serializers.ModelSerializer):
             # has to skip the redeemed ones, exactly as `Order.subtotal` does.
             "paid_with_points", "points_price",
             "image", "item_id", "item_slug", "item_menu_category_slug",
-            "item_booking_enabled",
+            "item_booking_enabled", "item_reorderable",
         ]
 
     @property
@@ -126,6 +128,21 @@ class OrderLineSerializer(serializers.ModelSerializer):
         one boolean to branch on instead of a tri-state.
         """
         return bool(obj.service and obj.service.booking_enabled)
+
+    def get_item_reorderable(self, obj):
+        """Whether this line can be put back in a cart today.
+
+        Read live through the FK, like `item_booking_enabled` and for the same
+        reason: it decides what the order page offers, and an action must address
+        the site as it is now. False for a deleted or disabled item, an
+        out-of-stock product, an unavailable dish and a bookable service.
+
+        ⚠ **The same predicate the reorder endpoint runs**
+        (`services.reorder.reorder_ref`), not a second reading of it - the page
+        gates its "Order again" button on this, and a button that offered what
+        the endpoint then refused would be a promise the site cannot keep.
+        """
+        return reorder_ref(obj) is not None
 
 
 class BookingSerializer(serializers.ModelSerializer):

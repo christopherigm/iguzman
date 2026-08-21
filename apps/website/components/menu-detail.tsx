@@ -14,6 +14,7 @@ import { nutritionRows } from "@/lib/nutrition";
 import { enabledIngredients } from "@/lib/menu-selection";
 import { menuEtaLabel } from "@/lib/menu-eta";
 import { menuItemHref } from "@/lib/menu-paths";
+import { getSystem } from "@/lib/system";
 import { MenuItemCustomizer } from "./menu-item-customizer";
 import { FavoriteButton } from "./favorite-button";
 import { NutritionLabel } from "./nutrition-label";
@@ -212,9 +213,12 @@ export async function MenuDetailVariantsMobile({
  * live price + add-to-cart) plus the food-details spec table stacked beneath it.
  */
 export async function MenuDetailPanel({ item, locale }: MenuDetailProps) {
-  const [tMenu, session] = await Promise.all([
+  const [tMenu, session, system] = await Promise.all([
     getTranslations("Menu"),
     getSession(),
+    // The global rewards switch. `getSystem` is `cache()`d per request and the
+    // layout has already asked for it on every page.
+    getSystem(),
   ]);
 
   const name =
@@ -258,6 +262,13 @@ export async function MenuDetailPanel({ item, locale }: MenuDetailProps) {
             isAvailable={item.is_available}
             isLoggedIn={session !== null}
             locale={locale}
+            // The dish's own points price, or null when the tenant runs no
+            // program - the customiser prints it beside the total. ⚠ It is the
+            // **base** points price, unmoved by the size and the add-ons the
+            // total above it follows: there is no per-size points column to
+            // derive a delta from, and inventing one would quote a number no
+            // operator ever typed. Same figure the card and the cart print.
+            pointsPrice={system?.rewards_enabled ? item.points_price : null}
           />
         </Card>
 

@@ -11,8 +11,8 @@ import { findCartLineId } from "@/lib/cart";
 import { isFavorite } from "@/lib/favorites";
 import { toShareDescription } from "@/lib/metadata";
 import { formatPrice, discountPercent } from "@/lib/price";
-import { AddToCartButton } from "./add-to-cart-button";
-import { BuyNowButton } from "./buy-now-button";
+import { getSystem } from "@/lib/system";
+import { ItemBuyActions } from "./item-buy-actions";
 import { FavoriteButton } from "./favorite-button";
 import { AdminEditButton } from "./admin-edit-button";
 import { VariantThumbs } from "./variant-thumbs";
@@ -166,10 +166,17 @@ export async function ProductDetailPanel({
   product,
   locale,
 }: ProductDetailProps) {
-  const [t, session, cartLineId] = await Promise.all([
+  const [t, tCart, session, cartLineId, system] = await Promise.all([
     getTranslations("ItemDetail"),
+    // Only for the points price beside the money one - the same phrasing the
+    // catalog card prints, from the same namespace, so an item reads the same
+    // on the grid it was clicked from and on the page it opens.
+    getTranslations("Cart"),
     getSession(),
     findCartLineId("product", product.id),
+    // The global rewards switch. `getSystem` is `cache()`d per request and the
+    // layout has already asked for it on every page.
+    getSystem(),
   ]);
 
   const discount = product.compare_price
@@ -214,6 +221,24 @@ export async function ProductDetailPanel({
                 -{discount}%
               </Badge>
             )}
+            {/* The points price, beside the money one - "MX$120 or 1200
+              points". It is the item's own `points_price`, not a conversion of
+              the figure to its left: points are priced per item, so there is no
+              rate to convert at, and the two numbers are two independent ways
+              to buy the same thing. Absent whenever the item cannot be
+              redeemed, which is every item on a tenant not running the program
+              - so nothing on the page moved for them. It trails the compare
+              price and its discount chip, which belong to the money price
+              between them. */}
+            {system?.rewards_enabled && product.points_price ? (
+              <Typography
+                as="span"
+                variant="none"
+                className="item-points-price"
+              >
+                {tCart("orPointsPrice", { points: product.points_price })}
+              </Typography>
+            ) : null}
           </Box>
 
           {/* Stock status */}
@@ -239,32 +264,16 @@ export async function ProductDetailPanel({
             </Typography>
           )}
 
-          {/* Actions: secondary + primary CTAs share the width, wrapping on very
-            narrow widths so the buttons never get crushed. */}
-          <Box alignItems="center" gap={10} width="100%" flexWrap="wrap">
-            <AddToCartButton
-              kind="product"
-              id={product.id}
-              cartLineId={cartLineId}
-              isLoggedIn={session !== null}
-              disabled={!inStock}
-              display="button"
-              buttonKind="warning"
-              size="lg"
-              flex="1"
-              minWidth={140}
-            />
-            <BuyNowButton
-              kind="product"
-              id={product.id}
-              isLoggedIn={session !== null}
-              disabled={!inStock}
-              text={t("buyNow")}
-              size="lg"
-              flex="1"
-              minWidth={140}
-            />
-          </Box>
+          {/* Actions: how many and "add to cart" on one row, "buy now" beneath
+            them. See `ItemBuyActions`. */}
+          <ItemBuyActions
+            kind="product"
+            id={product.id}
+            cartLineId={cartLineId}
+            isLoggedIn={session !== null}
+            inStock={inStock}
+            buyNowText={t("buyNow")}
+          />
         </Card>
 
         {/* Specifications spec table */}

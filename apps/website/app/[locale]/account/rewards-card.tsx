@@ -122,7 +122,9 @@ export async function RewardsCard({
                   fontWeight={700}
                   // Signed, and coloured by the sign rather than by the kind -
                   // there are five kinds and only two directions.
-                  color={row.points > 0 ? "var(--accent)" : "var(--foreground)"}
+                  color={
+                    row.points > 0 ? "var(--accent-text)" : "var(--foreground)"
+                  }
                 >
                   {row.points > 0 ? `+${row.points}` : row.points}
                 </Typography>

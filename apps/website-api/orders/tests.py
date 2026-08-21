@@ -34,8 +34,10 @@ from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
 from catalog.models import (
+    Ingredient,
     MenuCategory,
     MenuItem,
+    MenuItemIngredient,
     MenuSize,
     Product,
     ProductCategory,
@@ -3267,6 +3269,173 @@ class OrderLineSizeSnapshotTests(TestCase):
         self.assertEqual(plain.size_name, "")
         self.assertEqual(plain.size_price_delta, Decimal("0.00"))
         self.assertEqual(plain.unit_price, Decimal("200.00"))
+
+
+class OrderReorderTests(TestCase):
+    """`POST /api/orders/<public_id>/reorder/` - a past order back in the cart.
+
+    One test, because the feature has one job with three refusals in it. What it
+    has to get right: the ingredient edits and the size come back (which is the
+    whole reason the ids are snapshotted at all), a line that can no longer be
+    bought is left out rather than added blind, and an order that belongs to
+    somebody else is a 404.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(
+            site_name="Piccolo", host="piccolo.test", pay_in_store_enabled=True,
+        )
+        self.category = MenuCategory.objects.create(
+            system=self.system, name="Pizzas", slug="reorder-pizzas",
+        )
+        self.item = MenuItem.objects.create(
+            system=self.system, category=self.category, name="Margarita",
+            slug="reorder-margarita", price=Decimal("200.00"), currency="MXN",
+        )
+        MenuSize.objects.create(
+            category=self.category, name="Mediana", price_delta=Decimal("0.00"),
+            is_default=True, sort_order=0,
+        )
+        self.large = MenuSize.objects.create(
+            category=self.category, name="Grande", price_delta=Decimal("40.00"),
+            sort_order=1,
+        )
+        self.cheese = MenuItemIngredient.objects.create(
+            menu_item=self.item,
+            ingredient=Ingredient.objects.create(
+                system=self.system, name="Queso", slug="reorder-queso", unit="g",
+            ),
+            price=Decimal("15.00"), is_removable=True, max_quantity=2,
+        )
+        self.soda = Product.objects.create(
+            system=self.system, name="Soda", slug="reorder-soda",
+            price=Decimal("30.00"), currency="MXN", stock_count=5,
+        )
+        self.user = make_user("a@piccolo.test", self.system)
+        self.client.force_login(self.user)
+
+    def _place(self):
+        response = self.client.post(
+            "/api/orders/checkout/",
+            {
+                "locale": "en", "payment_method": "in_store",
+                "contact": {"name": "Jo", "phone": "555-1234"},
+            },
+            content_type="application/json", HTTP_X_WEBSITE_HOST="piccolo.test",
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        return Order.objects.get(public_id=response.json()["order_id"])
+
+    def _reorder(self, order, **extra):
+        return self.client.post(
+            f"/api/orders/{order.public_id}/reorder/",
+            {}, content_type="application/json", **extra,
+        )
+
+    def test_a_past_order_goes_back_in_the_cart_with_its_edits(self):
+        CartItem.objects.create(
+            user=self.user, system=self.system, menu_item=self.item,
+            menu_size=self.large, quantity=1,
+            customization=[{"ingredient": self.cheese.id, "quantity": 2}],
+        )
+        CartItem.objects.create(
+            user=self.user, system=self.system, product=self.soda, quantity=3,
+        )
+        order = self._place()
+        self.assertEqual(CartItem.objects.filter(user=self.user).count(), 0)
+
+        # The snapshot keeps the names *and* the ids the selection came from.
+        pizza_line = order.lines.get(kind="menu_item")
+        self.assertEqual(pizza_line.menu_size, self.large)
+        self.assertEqual(
+            [(r["name"], r["ingredient"]) for r in pizza_line.customization],
+            [("Queso", self.cheese.id)],
+        )
+
+        response = self._reorder(order)
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["skipped"], 0)
+
+        pizza = CartItem.objects.get(user=self.user, menu_item=self.item)
+        self.assertEqual(pizza.menu_size, self.large)
+        self.assertEqual(
+            pizza.customization, [{"ingredient": self.cheese.id, "quantity": 2}],
+        )
+        self.assertEqual(pizza.quantity, 1)
+
+        # It adds, it never replaces: a second press sums onto what is there,
+        # exactly as a repeated add does.
+        self._reorder(order)
+        pizza.refresh_from_db()
+        self.assertEqual(pizza.quantity, 2)
+        self.assertEqual(
+            CartItem.objects.get(user=self.user, product=self.soda).quantity, 6,
+        )
+
+        # A line that can no longer be bought is left out rather than added
+        # blind - unlike `pay/`, which is deliberately forgiving so an order the
+        # customer already agreed to can still be settled.
+        CartItem.objects.filter(user=self.user).delete()
+        self.soda.in_stock = False
+        self.soda.save()
+        skipping = self._reorder(order)
+        self.assertEqual(skipping.json()["skipped"], 1)
+        self.assertEqual([r["kind"] for r in skipping.json()["lines"]], ["menu_item"])
+        self.assertFalse(CartItem.objects.filter(user=self.user, product=self.soda).exists())
+        # ...and the order page is told the same thing, off the same predicate.
+        listed = self.client.get(f"/api/orders/{order.public_id}/").json()["lines"]
+        self.assertEqual(
+            {l["kind"]: l["item_reorderable"] for l in listed},
+            {"menu_item": True, "product": False},
+        )
+
+        # `menu_size` is SET_NULL provenance, so a size the tenant has since
+        # retired carries no id - and an absent one has to fall back to the
+        # dish's default rather than trip the write path. The *snapshot* is
+        # untouched: the receipt still says what was sold.
+        self.large.delete()
+        CartItem.objects.filter(user=self.user).delete()
+        retired = self._reorder(order)
+        self.assertEqual(retired.status_code, 200, retired.content)
+        self.assertNotIn("size", retired.json()["lines"][0])
+        self.assertEqual(
+            CartItem.objects.get(user=self.user, menu_item=self.item).menu_size.name,
+            "Mediana",
+        )
+        self.assertEqual(order.lines.get(kind="menu_item").size_name, "Grande")
+
+        # Nothing left to re-order is a refusal, not an empty success.
+        self.item.is_available = False
+        self.item.save()
+        self.assertEqual(self._reorder(order).status_code, 409)
+
+        # Another customer's order does not exist as far as they are concerned.
+        self.client.force_login(make_user("b@piccolo.test", self.system))
+        self.assertEqual(self._reorder(order).status_code, 404)
+
+    def test_a_guest_is_handed_the_references_and_writes_them_itself(self):
+        """A guest order has no account to hold a cart, so the endpoint answers
+        with the resolved refs for the browser's localStorage to keep - decided
+        here so the two carts cannot disagree about what is still buyable."""
+        self.client.logout()
+        guest = Order.objects.create(
+            system=self.system, user=None, currency="MXN",
+            subtotal=Decimal("30.00"), total=Decimal("30.00"),
+        )
+        OrderLine.objects.create(
+            order=guest, kind="product", product=self.soda, name="Soda",
+            unit_price=Decimal("30.00"), quantity=2, line_total=Decimal("60.00"),
+            currency="MXN",
+        )
+
+        response = self._reorder(guest, HTTP_X_WEBSITE_HOST="piccolo.test")
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(
+            response.json()["lines"],
+            [{"kind": "product", "id": self.soda.id, "quantity": 2}],
+        )
+        self.assertEqual(CartItem.objects.count(), 0)
 
 
 class RewardsTests(TestCase):

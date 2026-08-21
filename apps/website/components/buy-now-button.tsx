@@ -19,6 +19,13 @@ interface BuyNowButtonProps {
   size?: ButtonSize;
   flex?: string;
   minWidth?: number;
+  /**
+   * How many to put in the cart before heading to checkout, from a stepper the
+   * caller owns - the detail page's buy box, today. One write rather than N:
+   * the cart merges an add into the line it already has, so posting three times
+   * would be three round-trips for the same row. @default 1
+   */
+  quantity?: number;
 }
 
 /**
@@ -45,6 +52,7 @@ export function BuyNowButton({
   size = "lg",
   flex,
   minWidth,
+  quantity = 1,
 }: BuyNowButtonProps) {
   const t = useTranslations("ItemDetail");
   const router = useRouter();
@@ -57,7 +65,7 @@ export function BuyNowButton({
     if (!isLoggedIn) {
       // A guest buys the same way, straight into localStorage - the write is
       // synchronous, so there is nothing to await before navigating.
-      addGuestCartLine({ kind, id, quantity: 1 });
+      addGuestCartLine({ kind, id, quantity });
       router.push("/cart");
       return;
     }
@@ -67,7 +75,7 @@ export function BuyNowButton({
         const res = await fetch("/api/auth/cart", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ kind, id }),
+          body: JSON.stringify({ kind, id, quantity }),
         });
 
         if (!res.ok) {
@@ -86,7 +94,6 @@ export function BuyNowButton({
     <>
       <Button
         text={text}
-        icon="/icons/happy-heart-eyes.svg"
         kind="success"
         size={size}
         flex={flex}

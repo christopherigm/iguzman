@@ -86,11 +86,12 @@
 
 .ui-gallery__overlay {
   /* The height the `SliderControls` row beneath the slide is owed - the arrows
-     (36px) plus the column gap. The slide is capped to `90vh` minus this, so
-     the row can never be pushed off a short/landscape viewport. Read from the
-     slide's own inline width too, which is why it is a variable and not a
-     literal in two places. */
-  --ui-gallery-fs-controls: 64px;
+     (36px) plus the `Card` they now ride in (8px of padding and a 1px border
+     either side) plus the column gap. The slide is capped to `90vh` minus
+     this, so the row can never be pushed off a short/landscape viewport. Read
+     from the slide's own inline width too, which is why it is a variable and
+     not a literal in two places. */
+  --ui-gallery-fs-controls: 72px;
   animation: ui-gallery-fade-in 0.25s ease forwards;
 }
 

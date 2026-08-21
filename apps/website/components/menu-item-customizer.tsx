@@ -16,8 +16,9 @@ import {
   hasSizeChoice,
   menuItemTotal,
 } from "@/lib/menu-selection";
-import { addGuestCartLine } from "@/lib/guest-cart";
+import { addGuestCartLine, MAX_GUEST_QUANTITY } from "@/lib/guest-cart";
 import { MENU_CUSTOMIZER_GAP } from "./menu-customizer-spacing";
+import { QuantityStepper } from "./quantity-stepper";
 import { MenuIngredientPicker } from "./menu-ingredient-picker";
 import { MenuSizePicker } from "./menu-size-picker";
 import { useMenuCustomization } from "./menu-customization-context";
@@ -36,6 +37,17 @@ interface Props {
   isAvailable: boolean;
   isLoggedIn: boolean;
   locale: string;
+  /**
+   * What this dish costs in points, or null when it cannot be redeemed - which
+   * is every dish on a tenant not running the program. Printed beside the total.
+   *
+   * ⚠ It is the dish's **base** points price and does not move with the size or
+   * the add-ons the total beside it follows: there is no per-size points column
+   * to derive a delta from, and inventing one would quote a number no operator
+   * ever typed. The resolved figure arrives from the server half, which is
+   * where the tenant's rewards switch is read.
+   */
+  pointsPrice?: number | null;
 }
 
 type ToastKind = "added" | "failed";
@@ -74,13 +86,22 @@ export function MenuItemCustomizer({
   isAvailable,
   isLoggedIn,
   locale,
+  pointsPrice = null,
 }: Props) {
   const t = useTranslations("Menu");
+  // Only for the stepper's labels and the points phrasing - the same namespace
+  // the catalog card reads them from, so the two surfaces cannot drift.
+  const tCart = useTranslations("Cart");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ kind: ToastKind; id: number } | null>(
     null,
   );
+  // How many of the dish, as configured below, the next add puts in the cart.
+  // It counts the *next* add and nothing else - so it returns to one once the
+  // line is written, and the cart page's own stepper is what changes a line
+  // that already exists.
+  const [orderQuantity, setOrderQuantity] = useState(1);
 
   // Size and quantity-per-ingredient live in the shared customisation context so
   // the nutrition label (rendered in a separate page row) mirrors every change.
@@ -113,7 +134,7 @@ export function MenuItemCustomizer({
         id: menuItemId,
         size: sizeId,
         customization: buildCustomization(ingredients, quantities, options),
-        quantity: 1,
+        quantity: orderQuantity,
       }),
     });
 
@@ -125,13 +146,14 @@ export function MenuItemCustomizer({
       id: menuItemId,
       size: sizeId,
       customization: buildCustomization(ingredients, quantities, options),
-      quantity: 1,
+      quantity: orderQuantity,
     });
 
   const handleAdd = () => {
     if (!isLoggedIn) {
       addToGuestCart();
       showToast("added");
+      setOrderQuantity(1);
       return;
     }
     startTransition(async () => {
@@ -142,6 +164,7 @@ export function MenuItemCustomizer({
           return;
         }
         showToast("added");
+        setOrderQuantity(1);
         router.refresh();
       } catch {
         showToast("failed");
@@ -239,12 +262,45 @@ export function MenuItemCustomizer({
                 -{discount}%
               </Badge>
             )}
+            {/* The points price, beside the money one - "MX$120 or 1200
+              points". Not a conversion of the total to its left: points are
+              priced per item, so there is no rate to convert at, and the two
+              are independent ways to buy the same dish. It is the dish's base
+              figure and so does not follow the size and add-on arithmetic the
+              total does - the same number the card printed and the same one the
+              cart's points button will offer. */}
+            {pointsPrice ? (
+              <Typography
+                as="span"
+                variant="none"
+                className="item-points-price"
+              >
+                {tCart("orPointsPrice", { points: pointsPrice })}
+              </Typography>
+            ) : null}
           </Box>
         </Box>
 
-        {/* Add to cart + Buy now share the width, wrapping on very narrow
-            widths so the buttons never get crushed. */}
+        {/* How many, then the decision it applies to; the express path goes on
+            its own line beneath the pair. The dish's quantity belongs beside
+            the button that puts it in the cart - it is the last thing decided
+            about a dish that has just been configured above - and three
+            controls on one line is what pushed "Buy now" down. Nothing here is
+            measured the way the catalog card's row is: this box is one grid
+            cell at 100% width in every breakpoint and every locale. */}
         <Box alignItems="center" gap={10} width="100%" flexWrap="wrap">
+          {/* No stepper on a dish that cannot be added at all - a number
+              counting nothing. */}
+          {isAvailable && (
+            <QuantityStepper
+              value={orderQuantity}
+              onChange={setOrderQuantity}
+              max={MAX_GUEST_QUANTITY}
+              decreaseLabel={tCart("decrease")}
+              increaseLabel={tCart("increase")}
+              ariaLabel={tCart("quantity")}
+            />
+          )}
           <Button
             text={t("addToCart")}
             icon="/icons/add-to-cart.svg"
@@ -255,17 +311,18 @@ export function MenuItemCustomizer({
             disabled={!isAvailable || isPending}
             onClick={handleAdd}
           />
-          <Button
-            text={t("buyNow")}
-            icon="/icons/happy-heart-eyes.svg"
-            kind="success"
-            size="lg"
-            flex="1"
-            minWidth={140}
-            disabled={!isAvailable || isPending}
-            onClick={handleBuyNow}
-          />
         </Box>
+
+        {/* Buy now takes the same count with it, so a customer who asked for
+            three and pressed it arrives at checkout with three. */}
+        <Button
+          text={t("buyNow")}
+          kind="success"
+          size="lg"
+          flex="1"
+          disabled={!isAvailable || isPending}
+          onClick={handleBuyNow}
+        />
       </Box>
 
       {!isAvailable && (

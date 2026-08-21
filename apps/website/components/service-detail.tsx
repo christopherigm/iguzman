@@ -13,8 +13,7 @@ import { findCartLineId } from "@/lib/cart";
 import { isFavorite } from "@/lib/favorites";
 import { toShareDescription } from "@/lib/metadata";
 import { formatPrice, discountPercent } from "@/lib/price";
-import { AddToCartButton } from "./add-to-cart-button";
-import { BuyNowButton } from "./buy-now-button";
+import { ItemBuyActions } from "./item-buy-actions";
 import { FavoriteButton } from "./favorite-button";
 import { AdminEditButton } from "./admin-edit-button";
 import { ServiceBookingCta } from "./service-booking-cta";
@@ -201,21 +200,24 @@ export async function ServiceDetailPanel({
   service,
   locale,
 }: ServiceDetailProps) {
-  const [t, tBooking, session, cartLineId, branches, system] =
+  const [t, tBooking, tCart, session, cartLineId, branches, system] =
     await Promise.all([
       getTranslations("ItemDetail"),
       // Only for the "per person" qualifier beside the price - the same word the
       // catalog card prints, from the same namespace, so a bookable service reads
       // the same on the grid it was clicked from and on the page it opens.
       getTranslations("Booking"),
+      // Only for the points price beside the money one - the same phrasing the
+      // catalog card prints, from the same namespace.
+      getTranslations("Cart"),
       getSession(),
       findCartLineId("service", service.id),
       // Names the locations in the booking picker, and pins the one it selects.
       // Fetched unconditionally because it is `cache()`d per request and the
       // contact footer usually asks for it anyway.
       getBranches(),
-      // Only for the map pin's brandmark. Request-cached, and the layout has
-      // already asked for it on every page.
+      // The map pin's brandmark, and the global rewards switch. Request-cached,
+      // and the layout has already asked for it on every page.
       getSystem(),
     ]);
 
@@ -305,6 +307,21 @@ export async function ServiceDetailPanel({
                 -{discount}%
               </Badge>
             )}
+            {/* The points price, beside the money one - "MX$120 or 1200
+              points". The item's own `points_price`, not a conversion of the
+              figure to its left: points are priced per item, so there is no
+              rate to convert at, and the two are independent ways to buy the
+              same thing. Absent whenever the service cannot be redeemed, which
+              is every item on a tenant not running the program. */}
+            {system?.rewards_enabled && service.points_price ? (
+              <Typography
+                as="span"
+                variant="none"
+                className="item-points-price"
+              >
+                {tCart("orPointsPrice", { points: service.points_price })}
+              </Typography>
+            ) : null}
           </Box>
 
           {/* SKU */}
@@ -336,30 +353,15 @@ export async function ServiceDetailPanel({
               pinIcon={system?.img_brandmark ?? null}
             />
           ) : (
-            /* Secondary + primary CTAs share the width, wrapping on very narrow
-              widths so the buttons never get crushed. */
-            <Box alignItems="center" gap={10} width="100%" flexWrap="wrap">
-              <AddToCartButton
-                kind="service"
-                id={service.id}
-                cartLineId={cartLineId}
-                isLoggedIn={session !== null}
-                display="button"
-                buttonKind="warning"
-                size="lg"
-                flex="1"
-                minWidth={140}
-              />
-              <BuyNowButton
-                kind="service"
-                id={service.id}
-                isLoggedIn={session !== null}
-                text={t("buyNow")}
-                size="lg"
-                flex="1"
-                minWidth={140}
-              />
-            </Box>
+            /* How many and "add to cart" on one row, "buy now" beneath them.
+              See `ItemBuyActions`. */
+            <ItemBuyActions
+              kind="service"
+              id={service.id}
+              cartLineId={cartLineId}
+              isLoggedIn={session !== null}
+              buyNowText={t("buyNow")}
+            />
           )}
         </Card>
 

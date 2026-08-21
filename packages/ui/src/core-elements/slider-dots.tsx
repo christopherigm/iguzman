@@ -49,7 +49,7 @@ export interface SliderControlsProps extends SliderDotsProps {
   previousIcon?: string;
   /** Overrides the forward glyph. Defaults to `/icons/next.svg`. */
   nextIcon?: string;
-  /** Semantic colour of the two arrows. Defaults to `'success'`. */
+  /** Semantic colour of the two arrows. Defaults to `'primary'`. */
   arrowKind?: IconButtonKind;
   /** Arrow box size. Defaults to `'md'`. */
   arrowSize?: IconButtonSize;
@@ -67,7 +67,9 @@ export interface SliderControlsProps extends SliderDotsProps {
  *
  * The current slide reads as a **pill** rather than a bigger dot, so the row
  * keeps its height and nothing below it shifts on a slide change. Both states
- * are painted from `--accent` (the site's primary colour): the inactive dots
+ * are painted from `--accent-text` (the site's primary colour, walked until it
+ * is legible on this theme's surfaces - a dot is ink drawn on the page, so a
+ * single dark brand hex would otherwise vanish in dark mode): the inactive dots
  * are the same hue mixed down to a tint, so the row is one colour at two
  * strengths rather than an accent dot among grey ones.
  *
@@ -135,6 +137,8 @@ export const SliderDots: React.FC<SliderDotsProps> = (props) => {
  * The row sits **below** the slide rather than floating over it, so a button is
  * never parked on top of the content it is paging through - and the dots stay
  * between the arrows, where the count is read in the same sweep as the step.
+ * The arrows default to `kind="primary"`, so the whole row - dots and steps -
+ * is the site's own accent rather than an unrelated green.
  *
  * Renders nothing for a single slide: one dot between two dead arrows says
  * only that there is nothing to page.
@@ -164,7 +168,7 @@ export const SliderControls: React.FC<SliderControlsProps> = (props) => {
     nextLabel,
     previousIcon = SLIDER_PREV_ICON,
     nextIcon = SLIDER_NEXT_ICON,
-    arrowKind = "success",
+    arrowKind = "primary",
     arrowSize = "md",
     translucentArrows = true,
     className,

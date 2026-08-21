@@ -34,7 +34,10 @@ import "./image-gallery.css";
  * card and no background of its own: the photograph alone over the scrim, with
  * `SliderControls` (the monorepo's one pagination row) beneath it. That row is
  * what the slide has to make space for, hence `--ui-gallery-fs-controls` in the
- * stylesheet.
+ * stylesheet. **The row itself does get a `Card`** - the photo is bare, its
+ * controls are not: over a pale photograph, dots and a magnifier drawn straight
+ * onto the scrim have nothing to read against, worst of all in light mode where
+ * the accent painting them is darkest.
  *
  * **Fullscreen also zooms**, through Swiper's own `Zoom` module: a pinch or a
  * double-tap on a touchscreen, and the magnifier in the control row for a mouse
@@ -451,12 +454,25 @@ export function ImageGallery({
               ))}
             </Swiper>
 
-            {/* The row is inside the overlay, whose click closes it - so a
+            {/* The row rides in a `Card` rather than sitting bare on the
+                scrim: over a pale photograph the dots and the magnifier had
+                nothing behind them to read against, and in light mode - where
+                the accent they are painted in is at its darkest - they were
+                the hardest to find. The card gives them a surface of their
+                own, so the row is legible whatever the photo under it is
+                doing. Its height is what `--ui-gallery-fs-controls` budgets
+                for.
+
+                The row is inside the overlay, whose click closes it - so a
                 press on an arrow, a dot or the magnifier must not reach that
                 handler. */}
-            <Box
+            <Card
+              flexDirection="row"
               alignItems="center"
               gap={8}
+              padding={8}
+              // borderRadius={999}
+              width="auto"
               onClick={(e: React.MouseEvent) => e.stopPropagation()}
             >
               <SliderControls
@@ -472,6 +488,8 @@ export function ImageGallery({
                 // The row defaults to `width: 100%`, which would push the
                 // magnifier off the end of this line.
                 width="auto"
+                // Nothing worth blurring behind an opaque card.
+                translucentArrows={false}
               />
               <IconButton
                 icon={isZoomed ? "/icons/zoom-out.svg" : "/icons/zoom-in.svg"}
@@ -479,9 +497,8 @@ export function ImageGallery({
                 aria-pressed={isZoomed}
                 onClick={toggleZoom}
                 kind="success"
-                translucent
               />
-            </Box>
+            </Card>
           </Box>
 
           <IconButton

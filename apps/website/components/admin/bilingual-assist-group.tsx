@@ -187,15 +187,6 @@ export function BilingualAssistGroup({ pairs, values, onChange }: Props) {
     enhanceParagraphLength
   ] ?? { min: 80, max: 120 };
 
-  const assistBtnClass = (fieldKey: string, active: boolean) =>
-    [
-      "af__enhance-btn",
-      llmBusy || !hasValue(fieldKey) ? "af__enhance-btn--busy" : "",
-      active ? "af__enhance-btn--active" : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
-
   const renderField = (
     pair: BilingualPair,
     fieldKey: string,
@@ -218,41 +209,33 @@ export function BilingualAssistGroup({ pairs, values, onChange }: Props) {
           <Box display="flex" alignItems="center" gap={12}>
             {isTextarea && (
               <Button
-                unstyled
                 icon="/icons/enhance.svg"
                 iconSize="16px"
                 iconColor={
                   activeEnhanceField === fieldKey
-                    ? "var(--accent, #06b6d4)"
+                    ? "var(--accent-text, #06b6d4)"
                     : "var(--foreground, #171717)"
                 }
                 disabled={llmBusy || !hasValue(fieldKey)}
                 onClick={() => triggerEnhance(fieldKey)}
                 aria-label={t("enhanceLabel")}
                 title={t("enhanceLabel")}
-                className={assistBtnClass(
-                  fieldKey,
-                  activeEnhanceField === fieldKey,
-                )}
+                type="button"
               />
             )}
             <Button
-              unstyled
               icon="/icons/translate.svg"
               iconSize="16px"
               iconColor={
                 activeTranslateField === fieldKey
-                  ? "var(--accent, #06b6d4)"
+                  ? "var(--accent-text, #06b6d4)"
                   : "var(--foreground, #171717)"
               }
               disabled={llmBusy || !hasValue(fieldKey)}
               onClick={() => triggerTranslate(fieldKey)}
               aria-label={t("translateLabel")}
               title={t("translateLabel")}
-              className={assistBtnClass(
-                fieldKey,
-                activeTranslateField === fieldKey,
-              )}
+              type="button"
             />
           </Box>
         </Box>

@@ -2,9 +2,17 @@
 
    The dots are plain `<button>`s, not `@repo/ui` components, so the
    props-first rule does not reach them and their whole look (including the
-   active pill) belongs here. Both states are painted from `--accent`, the
-   site's primary colour: the resting dots are the same hue mixed down to a
-   tint, so the row reads as one colour at two strengths. */
+   active pill) belongs here. Both states are painted from `--accent-text`, the
+   site's primary colour walked until it is legible on this theme's surfaces:
+   the resting dots are the same hue mixed down to a tint, so the row reads as
+   one colour at two strengths.
+
+   `--accent-text`, not `--accent`, for the reason `core-elements/contrast`
+   gives: a dot is a mark drawn *on* the page with nothing inside it to answer
+   for its contrast - ink, like an active-page underline - so a tenant
+   publishing one dark brand hex for both themes lost the whole row in dark
+   mode. A host that publishes no `--accent-text` falls back to `--accent`
+   and is unchanged. */
 
 .ui-slider-dots {
   display: flex;
@@ -19,18 +27,26 @@
   border: 0;
   border-radius: 999px;
   cursor: pointer;
-  background: color-mix(in srgb, var(--accent, #06b6d4) 28%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--accent-text, var(--accent, #06b6d4)) 28%,
+    transparent
+  );
   transition:
     width 0.24s ease,
     background-color 0.24s ease;
 }
 
 .ui-slider-dots__dot:hover {
-  background: color-mix(in srgb, var(--accent, #06b6d4) 55%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--accent-text, var(--accent, #06b6d4)) 55%,
+    transparent
+  );
 }
 
 .ui-slider-dots__dot:focus-visible {
-  outline: 2px solid var(--accent, #06b6d4);
+  outline: 2px solid var(--accent-text, var(--accent, #06b6d4));
   outline-offset: 3px;
 }
 
@@ -39,5 +55,5 @@
 .ui-slider-dots__dot--active,
 .ui-slider-dots__dot--active:hover {
   width: 26px;
-  background: var(--accent, #06b6d4);
+  background: var(--accent-text, var(--accent, #06b6d4));
 }

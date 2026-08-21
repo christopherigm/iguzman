@@ -17,6 +17,7 @@ from .views import (
     OrderDetailView,
     OrderListView,
     OrderPayView,
+    OrderReorderView,
     PosCheckoutView,
     RewardsSummaryView,
     StripeWebhookView,
@@ -67,6 +68,10 @@ urlpatterns = [
     # a second `orders/checkout/` verb: it acts on *this* order and charges its
     # frozen lines, where checkout builds a new one out of a cart.
     path("orders/<uuid:public_id>/pay/", OrderPayView.as_view(), name="order-pay"),
+    # Turning a past order back into cart lines. Under the order's own id for the
+    # reason `pay/` is: it acts on *this* order's frozen lines, where the cart's
+    # own POST adds one item the browser named.
+    path("orders/<uuid:public_id>/reorder/", OrderReorderView.as_view(), name="order-reorder"),
     # Keyed per tenant because each tenant's Stripe account signs with its own
     # secret - each pastes this URL, with their own token, into their own
     # dashboard. The token rather than the pk so that handing a tenant its own

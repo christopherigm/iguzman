@@ -308,8 +308,8 @@ and go live rather than being a placeholder the customer must replace.
 Tests: `StockImageTests` in `core/tests.py` (one test each for the count, the
 publish-image transport, and the fetch -> seed -> upload chain),
 `StockImagePickerApiTests` beside it for the two picker endpoints, and
-`StockImageCreditTests` in `catalog/tests.py` — one test over the three *write
-shapes* a CMS image field has (a category's `ModelSerializer`, a buyable's plain
+`StockImageCreditTests` in `catalog/tests.py` — one test over the three _write
+shapes_ a CMS image field has (a category's `ModelSerializer`, a buyable's plain
 `Serializer`, a gallery row created from its parent) rather than one per model.
 
 Driven by `pnpm publish-site <host>` (`cli/website/website.sh publish`). `seed_site`
@@ -547,6 +547,55 @@ signature rejection, and the snapshot surviving a price change. Run them with
 `REDIS_URL='' python manage.py test orders` (the local `.env` points Redis at the
 cluster).
 
+## Re-ordering a past order (`POST /api/orders/<public_id>/reorder/`)
+
+The order page's "Order everything again" button: a past order's frozen lines
+turned back into cart lines, with the size and the ingredient edits the customer
+originally chose. Under the order's own id rather than a second cart verb,
+exactly as `pay/` is - it acts on _this_ order's lines, where the cart's own POST
+adds one item the browser named.
+
+- ⚠ **`OrderLine.customization` rows carry `ingredient` (and `option`) ids
+  beside their display copy, and `OrderLine.menu_size` is a SET_NULL provenance
+  FK.** Without them the snapshot is names only, and a name cannot be turned
+  back into the row it was copied from. **Rows written before they existed have
+  neither**, so such a line re-orders as the dish is _listed_ - guessing from a
+  string the tenant may since have reused would put a different dish in the
+  basket than the one on the receipt. Every reader must treat both as optional.
+  The names stay authoritative for _reading the order back_; the ids only ever
+  rebuild a selection, and `normalize_selection` / `resolve_size` re-check both
+  against what the dish still offers.
+- **`services/reorder.py::reorder_ref` is the one predicate**, shared by the
+  endpoint and by `OrderLineSerializer.item_reorderable` (which the frontend
+  gates the button on). Derived separately they would drift, and the symptom is
+  a button offering what the endpoint then refuses.
+- ⚠ **It is the mirror image of `_line_still_sellable`, and deliberately the
+  strict one where that is forgiving.** Settling an order the customer already
+  agreed to must survive the tenant tidying the catalog; _starting a new one_
+  cannot put an item in a cart that no longer exists. A deleted or disabled
+  item, an out-of-stock product and an unavailable dish are all left out - as is
+  a **bookable service**, for the reason the order page swaps that line for
+  "Book again": an appointment needs an hour and a place a cart line cannot hold.
+- **It adds; it never replaces.** Every line goes through the same
+  `_add_cart_line` / `_add_menu_line` the add endpoint and the sign-in merge use,
+  so a re-ordered line is indistinguishable from a clicked one and quantities sum
+  on an identical line, capped at 99.
+- **Two callers, one availability rule.** A guest order has no account to hold a
+  cart, so an anonymous caller is handed the resolved **references** back and
+  writes them into its own localStorage (which `/api/guest/resolve/` re-prices).
+  The refs are byte-for-byte the body `CartItemWriteSerializer` takes, `size`
+  omitted rather than null. Deciding here rather than in the browser is what
+  stops the two carts disagreeing about what a past order still contains.
+- ⚠ **`_may_reorder` is `_may_pay`'s rule, not `_may_read`'s.** An admin who
+  scanned a receipt at the counter may _read_ the order to validate it; filling
+  their own cart from it is not the access that feature needed.
+- **Nothing carries a price, and `paid_with_points` is not re-applied.** A
+  redemption was a decision made against a balance that has since moved, so a
+  re-ordered line goes back in as money and the cart offers the points button
+  again if it is still affordable.
+
+Tests: `OrderReorderTests` in `orders/tests.py`.
+
 ## Coupons - a discount code, redeemable a limited number of times
 
 `orders.Coupon` is a campaign a tenant runs: **one coupon is one code**
@@ -594,7 +643,7 @@ accepted being refused at the moment of payment.
   rather than falling back to an order-wide discount; and nothing in the
   database stops one tenant naming another's id, so
   `CouponSerializer._validate_scope` checks ownership. Without that check a
-  cross-tenant id would discount whichever of *this* tenant's items shared the
+  cross-tenant id would discount whichever of _this_ tenant's items shared the
   number - never relax it to a bare existence check. The Django admin has no
   such guard, which is why its `readonly_fields` comment says to set a target
   from the CMS.
@@ -706,22 +755,22 @@ reason: two copies of "how many points is this worth?" would eventually
 disagree, and the first symptom would be a cart promising an award the
 confirmation email did not pay out.
 
-| Piece                     | Where                                                    |
-| ------------------------- | -------------------------------------------------------- |
-| The engine                | `orders/services/rewards.py`                             |
-| The ledger + the ladder   | `orders/models.py` (`PointsTransaction`, `RewardTier`)   |
-| What an item is worth     | `core.Buyable.points_award` / `points_price`             |
-| What a family is worth    | `catalog.*Category.points_award`                         |
-| The customer's choice     | `users.CartItem.pay_with_points`                         |
-| The catalog-wide earn rate | `core.System.points_per_currency`                        |
-| The frozen record         | `orders.OrderLine.paid_with_points` / `points_price`     |
-| Endpoints                 | `/api/rewards/`, `/api/rewards/tiers/admin/`             |
+| Piece                      | Where                                                  |
+| -------------------------- | ------------------------------------------------------ |
+| The engine                 | `orders/services/rewards.py`                           |
+| The ledger + the ladder    | `orders/models.py` (`PointsTransaction`, `RewardTier`) |
+| What an item is worth      | `core.Buyable.points_award` / `points_price`           |
+| What a family is worth     | `catalog.*Category.points_award`                       |
+| The customer's choice      | `users.CartItem.pay_with_points`                       |
+| The catalog-wide earn rate | `core.System.points_per_currency`                      |
+| The frozen record          | `orders.OrderLine.paid_with_points` / `points_price`   |
+| Endpoints                  | `/api/rewards/`, `/api/rewards/tiers/admin/`           |
 
 - ⚠ **The ledger is the balance.** `PointsTransaction` rows are append-only and
   **signed** - an earn is positive, a spend negative - so a balance is one `SUM`
   with no `CASE` in it, and the `kind` exists to explain a row to a human, never
   to decide its direction. Two things force this shape over a counter: a tier is
-  defined as points *earned inside a trailing window*, which only timestamped
+  defined as points _earned inside a trailing window_, which only timestamped
   rows can answer, and a redemption has to be reversible exactly once, which a
   counter can only manage by trusting its caller. A correction is a **new** row
   (`kind="adjust"`), which is why `PointsTransactionAdmin` is read-only in every
@@ -744,7 +793,7 @@ confirmation email did not pay out.
   is the one row per account that always exists, so two checkouts by one customer
   serialise while two different customers never wait on each other.
 - ⚠ **`OrderLine.line_total` still carries the money price of a redeemed line.**
-  That is what the line was *worth*, what the receipt reads back, and what a
+  That is what the line was _worth_, what the receipt reads back, and what a
   tenant reconciles a redemption against - so `Order.subtotal` is summed over the
   **money** lines only, and every other reader that turns lines into money owes
   the same filter. The one that matters most is `coupons.eligible_subtotal`,
@@ -752,8 +801,8 @@ confirmation email did not pay out.
   half off a pizza nobody is paying for and hands the discount to the rest of the
   basket. `_basket_totals` stamps the resolved flag onto each `CartItem` under
   the **same attribute name** so that one function reads one attribute on both
-  types - a `CartItem` carries the customer's *request* (`pay_with_points`) while
-  an `OrderLine` carries the *decision*, and only the second has been checked
+  types - a `CartItem` carries the customer's _request_ (`pay_with_points`) while
+  an `OrderLine` carries the _decision_, and only the second has been checked
   against the program being on and the item having a points price.
 - ⚠ **A fully redeemed basket has nothing to charge, and Stripe refuses a
   zero-amount session.** `_finalize_settled` is that path: the order is recorded
@@ -764,7 +813,7 @@ confirmation email did not pay out.
   is true of either.
 - ⚠ **`System.points_per_currency` is read by nobody at runtime, and that is the
   point.** A purchase earns whatever the item's own `points_award` says; this is
-  the rate the **CMS calculator** works that number out *from* (points earned =
+  the rate the **CMS calculator** works that number out _from_ (points earned =
   price × rate, points price = N × points earned for a "buy N, get one free"
   ladder), so one tenant's whole catalog is priced off one rate and points
   earned on a taco are worth what points earned on a pizza are. Left to drift
@@ -778,7 +827,7 @@ confirmation email did not pay out.
   states "every pizza earns 120" once. ⚠ **Zero is not blank**: an item set to 0
   earns nothing however generous its category is, which is how a loss-leader is
   excluded, so every CMS form must send `null` for an empty box and never coerce
-  it. A points *price* is deliberately per-item only: it has to be weighed
+  it. A points _price_ is deliberately per-item only: it has to be weighed
   against that one item's own money price, and a blank means "not redeemable",
   which is what every row written before this landed is.
 - ⚠ **A points-paid line earns nothing.** Earning on a line bought with points is
@@ -796,10 +845,10 @@ confirmation email did not pay out.
   still has to find its way home. ⚠ Scoped to `system` as well as the address:
   the same address on two tenants' sites is two customers, and sweeping both
   would move one tenant's liability onto the other's books.
-- ⚠ **Tiers are judged on points *earned*, never on the balance.** Spending must
+- ⚠ **Tiers are judged on points _earned_, never on the balance.** Spending must
   not demote anyone - a program that took a customer's status away for using the
   reward it gave them is one they stop using. `RewardTier.threshold` is both the
-  reach *and* the maintain figure, so there is no second number that could
+  reach _and_ the maintain figure, so there is no second number that could
   disagree with the first, and a customer who stops buying slides back down as
   their old earnings age out of `period_months`. The window is counted in 30-day
   blocks, deliberately approximate: a qualifying window is a marketing promise,
@@ -807,7 +856,7 @@ confirmation email did not pay out.
 - **What a tier does is `earn_multiplier`, and only that.** It deliberately does
   not move `points_price`: that number is printed on every catalog card, and a
   per-tier discount would make the card wrong for everyone but one rung. The
-  write serializer bounds it to 100-500 - below 100 a tier would *penalise* the
+  write serializer bounds it to 100-500 - below 100 a tier would _penalise_ the
   customers who reached it, and an open ceiling turns a slipped keypress into a
   tenant minting ten times what it meant to.
 - **POS and bookings are out of scope for now, and nothing breaks for them.**
@@ -1126,7 +1175,7 @@ from the CMS at `/admin/homepage-flyers`.
 
 - **It is a model rather than more `System.spotlight_*` columns because of the
   band.** `background` / `top_divider` / `bottom_divider` are columns on the
-  *row*, so every slide is its own `SectionBand` - a set of flyers sharing one
+  _row_, so every slide is its own `SectionBand` - a set of flyers sharing one
   band would read as one panel whose contents change, which is what `Spotlight`
   already is.
 - **`items` is the `{kind, id}` JSON list** every other hand-picked relation here
@@ -1639,7 +1688,7 @@ on purpose.
 The probes used to point at **`/admin/`** with no `timeoutSeconds`, i.e. the
 Kubernetes default of **1 second**. `/admin/` is a real Django view: it redirects
 to `/admin/login/`, reads the session store (Redis, via `SESSION_ENGINE`) and hits
-the database. So a slow *dependency* - or any burst that pushed one request past
+the database. So a slow _dependency_ - or any burst that pushed one request past
 a second three times running - made the kubelet SIGTERM a healthy pod. The
 signature is the confusing part and worth recognising again: **the container exits
 0 with `Reason: Completed`, no traceback and no OOMKill**, because gunicorn shuts
@@ -1649,14 +1698,14 @@ crashed.
 - **`/healthz/` (liveness) touches nothing** - no database, no cache, no tenant
   lookup. Django's session and auth middleware are lazy, so a view that never
   reads `request.session` or `request.user` opens no connection. **Never add a
-  dependency check here.** Failing liveness *restarts the process*, and
+  dependency check here.** Failing liveness _restarts the process_, and
   restarting Django has never fixed Redis; at one replica it was a full outage.
 - **`/readyz/` (readiness) is where dependencies belong.** It checks Postgres and
   Redis and answers 503 when either is unreachable, which only removes the pod
   from the Service and heals by itself.
 - ⚠ **`/readyz/` compares the value it round-trips through the cache**, rather
   than just calling `cache.get`. The cache runs with `IGNORE_EXCEPTIONS: True`
-  (see below), so a dead Redis returns `None` *quietly* instead of raising - a
+  (see below), so a dead Redis returns `None` _quietly_ instead of raising - a
   bare get would report a broken cache as healthy.
 - **Every probe states its own `timeoutSeconds`** in `helm/values.yaml`. Omitting
   it is exactly how the 1-second default got in unnoticed.
@@ -1666,11 +1715,11 @@ crashed.
 Three clients defaulted to "block forever", and any one of them hanging produces
 that same exit-0-no-traceback restart:
 
-| Client | Setting                                                  | Default if unset      |
-| ------ | -------------------------------------------------------- | --------------------- |
-| Redis  | `SOCKET_TIMEOUT` / `SOCKET_CONNECT_TIMEOUT`              | `None` - no deadline  |
-| SMTP   | `EMAIL_TIMEOUT`                                          | `None` - no deadline  |
-| Postgres | `OPTIONS.connect_timeout`                              | none - no deadline    |
+| Client   | Setting                                     | Default if unset     |
+| -------- | ------------------------------------------- | -------------------- |
+| Redis    | `SOCKET_TIMEOUT` / `SOCKET_CONNECT_TIMEOUT` | `None` - no deadline |
+| SMTP     | `EMAIL_TIMEOUT`                             | `None` - no deadline |
+| Postgres | `OPTIONS.connect_timeout`                   | none - no deadline   |
 
 All three are now set in `settings.py`, each overridable by env var. The SMTP one
 matters more than it looks: registration sends its verification mail

@@ -63,37 +63,6 @@
   }
 }
 
-/* ── Enhance / translate icon button ─────────────────────────────────────────
-   `Button unstyled` icon toggle; the hover tint, active tint and busy opacity
-   are state-driven and must be reachable by CSS selectors. */
-.af__enhance-btn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  transition:
-    background 150ms ease,
-    opacity 150ms ease;
-}
-
-.af__enhance-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--foreground, #171717) 8%, transparent);
-}
-
-.af__enhance-btn--active {
-  background: color-mix(in srgb, var(--accent, #06b6d4) 12%, transparent);
-}
-
-.af__enhance-btn--busy {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
 /* Native <label> - not a @repo/ui component. */
 .af__label {
   font-size: 0.875rem; /* h6 / 14px */

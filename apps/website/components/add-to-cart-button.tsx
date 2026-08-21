@@ -278,17 +278,17 @@ export function AddToCartButton({
         const res = inCart
           ? await fetch(`/api/auth/cart/${cartLineId}`, { method: "DELETE" })
           : await fetch("/api/auth/cart", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              // Food posts the base line: kind `menu_item` with no ingredient
-              // changes and no size named, which the server prices at the dish's
-              // default size. Only reached when there was nothing to ask about.
-              body: JSON.stringify(
-                kind === "food"
-                  ? { kind: "menu_item", id, customization: [], quantity }
-                  : { kind, id, quantity },
-              ),
-            });
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            // Food posts the base line: kind `menu_item` with no ingredient
+            // changes and no size named, which the server prices at the dish's
+            // default size. Only reached when there was nothing to ask about.
+            body: JSON.stringify(
+              kind === "food"
+                ? { kind: "menu_item", id, customization: [], quantity }
+                : { kind, id, quantity },
+            ),
+          });
 
         if (!res.ok) {
           showToast(inCart ? "removeFailed" : "addFailed");

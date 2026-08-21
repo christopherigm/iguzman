@@ -32,7 +32,10 @@ class OrderLineInline(admin.TabularInline):
     # A line is a snapshot of a completed sale, so nothing here is editable:
     # changing a price or quantity after the fact would put the order out of step
     # with what Stripe actually charged, with no trace that it ever happened.
-    fields = ("kind", "name", "sku", "unit_price", "quantity", "line_total", "currency")
+    fields = (
+        "kind", "name", "sku", "size_name", "menu_size",
+        "unit_price", "quantity", "line_total", "currency",
+    )
     readonly_fields = fields
     can_delete = False
 

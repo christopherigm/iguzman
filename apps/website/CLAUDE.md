@@ -105,6 +105,38 @@ customization?, quantity}`) - Django re-prices every one of them
   "Order QR codes"; ⚠ `order.qr_code` is **null on any order placed before the
   field existed**, so the block is conditional and must stay that way.
 
+### Re-ordering a whole past order
+
+`/orders/[id]` carries an **Order everything again** button in its summary card
+(`reorder-button.tsx`), above "Back to orders": the whole receipt back into the
+basket and on to `/cart`. The per-line "Buy again" / "Book again" badges stay -
+this is the whole-order shortcut beside them, not a replacement. The API owns
+every rule; read website-api's CLAUDE.md → "Re-ordering a past order" first.
+
+- ⚠ **Nothing here decides what goes in.** The button sends only the order's id;
+  `POST /api/orders/<id>/reorder/` walks the order's own frozen lines, drops what
+  can no longer be bought and rebuilds the rest - the chosen size and the
+  ingredient edits included, from ids the line snapshotted. It is the same rule
+  the cart follows for a coupon and for a price: a client that could name a line
+  could name one the customer never bought.
+- **It is gated on `line.item_reorderable`**, which is the API's own answer to
+  the question the endpoint asks - deliberately _not_ re-derived here from
+  `item_id` + `item_booking_enabled`, which is a near-miss (it misses stock and
+  availability) and the miss is a button offering what the endpoint then refuses.
+  A booking's single service line is false, so an appointment carries no button.
+- ⚠ **An order placed before the ids existed re-orders as the dish is listed**,
+  with no warning - a name cannot be turned back into an ingredient row, and
+  guessing from a string the tenant may since have reused would put a different
+  dish in the basket than the one on the receipt above it.
+- **It adds to the cart, never replaces it**, and a guest gets it too: the API
+  hands back the references and `addGuestCartLine` writes them, exactly as it
+  writes every other line a logged-out visitor adds. That branch is the only
+  thing `isLoggedIn` decides - a signed-in cart was already written server-side
+  by the time the response arrived.
+- **A refusal calls `router.refresh()` as well as printing a message**, the same
+  rule `complete-payment-button.tsx` follows: every reason it can be refused is a
+  real change on the catalog's side, so the lines' own badges are stale too.
+
 ## Contact by WhatsApp - deep links, not the Cloud API
 
 A customer leaves an **email or a WhatsApp number** (or both) on the contact
@@ -875,6 +907,45 @@ the map an operator pins on and the map a customer reads are one design.
   no CSS. Keep the two in step, and remember the pin's **tip**, not its centre,
   is the coordinate.
 
+## A detail page's buy box - how many, then the two CTAs
+
+The three catalog detail pages price the item, say how many of it to buy, and
+offer the two ways to buy it - in that order, and in the same shape on all
+three: **the quantity stepper sits on the "add to cart" row and "buy now" goes
+underneath it.**
+
+| Piece               | Where                                                |
+| ------------------- | ---------------------------------------------------- |
+| Product / service   | `components/item-buy-actions.tsx` (`ItemBuyActions`) |
+| Menu item           | `components/menu-item-customizer.tsx`                |
+| The `− n +` control | `components/quantity-stepper.tsx`                    |
+
+- **The quantity belongs beside the button that acts on it.** A detail page used
+  to have no way to say "three of these" at all - the count was chosen a screen
+  later, on the cart page. Three controls do not read on one line, so the
+  express path is what moved: "buy now" is one decision about a number already
+  decided above it.
+- ⚠ **Nothing here is measured, unlike the catalog card's row.**
+  `buyable-card-actions.tsx` walks its controls down to a bare glyph because a
+  card is as wide as whatever grid it landed in; a buy box is one grid cell at
+  100% width in every breakpoint and every locale, so a labelled button and a
+  stepper always fit. Don't port the density walk over here.
+- **The stepper counts the _next_ add and nothing else.** It is not a live
+  handle on a line that already exists, so it goes with the add state - once the
+  item is in the cart the button flips to "remove" and the cart page's own
+  stepper is the only thing that can change that line's quantity - and it
+  returns to one after a successful add. Same rule, and the same shared
+  `useInCart`, as the card.
+- **"Buy now" carries the same count**, so a customer who asked for three and
+  took the express path arrives at checkout with three. That is what
+  `BuyNowButton`'s `quantity` is for; it defaults to 1, which is what the order
+  page's "Buy again" badges still pass.
+- **A food item's buy box is the customiser's**, not `ItemBuyActions` - its add
+  carries a size and a selection, and `MenuItemCustomizer` already owns both.
+  ⚠ Its stepper state is `orderQuantity`, deliberately not `quantity`: the
+  customisation context it consumes exports a `setQuantity` of its own, for how
+  much of an **ingredient** goes on the dish.
+
 ## Anonymous cart, favorites and guest checkout
 
 **A visitor needs no account to save items, fill a cart, or pay.** The cart and
@@ -1350,15 +1421,16 @@ beside its money one ("MX$120 / 1200 points"), a cart row offers the two as a
 pair of buttons, and the summary says what the points covered. The API owns every
 rule; read website-api's CLAUDE.md → "Rewards" first.
 
-| Piece                       | Where                                                               |
-| --------------------------- | ------------------------------------------------------------------- |
-| The points price on a card  | `components/buyable-card-view.tsx`                                  |
-| The money/points buttons    | `app/[locale]/cart/cart-line.tsx`                                   |
-| The summary's points rows   | `app/[locale]/cart/cart-summary-card.tsx`                           |
-| Balance, tier, statement    | `lib/rewards.ts`, `app/[locale]/account/rewards-card.tsx`           |
-| The CMS switch + the ladder | `app/[locale]/admin/system/rewards-section.tsx`                     |
-| The catalog numbers         | `components/admin/pricing-section.tsx` (+ the three category forms) |
-| Types                       | `lib/cart.ts` (`CartRewards`), `lib/rewards.ts`                     |
+| Piece                       | Where                                                                  |
+| --------------------------- | ---------------------------------------------------------------------- |
+| The points price on a card  | `components/buyable-card-view.tsx`                                     |
+| The same, on a detail page  | `product-detail.tsx`, `service-detail.tsx`, `menu-item-customizer.tsx` |
+| The money/points buttons    | `app/[locale]/cart/cart-line.tsx`                                      |
+| The summary's points rows   | `app/[locale]/cart/cart-summary-card.tsx`                              |
+| Balance, tier, statement    | `lib/rewards.ts`, `app/[locale]/account/rewards-card.tsx`              |
+| The CMS switch + the ladder | `app/[locale]/admin/system/rewards-section.tsx`                        |
+| The catalog numbers         | `components/admin/pricing-section.tsx` (+ the three category forms)    |
+| Types                       | `lib/cart.ts` (`CartRewards`), `lib/rewards.ts`                        |
 
 - ⚠ **Nothing in the browser ever computes a balance, an award or an
   affordability.** `cart.rewards` is resolved server-side over the **whole**
@@ -1406,6 +1478,15 @@ rule; read website-api's CLAUDE.md → "Rewards" first.
   cart painting its buttons and checkout re-checking it under a lock, and a
   refusal only the cart could explain would surface at checkout as an
   unexplained failure.
+- **A detail page prints the same points price beside its own money one**, in
+  `.item-points-price` - the price's weight at a smaller size, in
+  `--accent-text` (ink, not a fill). It trails the compare price and its
+  discount chip, which belong to the money price between them. ⚠ On a **dish**
+  it sits beside the customiser's live total, and it does **not** follow it:
+  `points_price` is the item's base figure, unmoved by the size and the add-ons
+  the total above is recomputing, because there is no per-size points column to
+  derive a delta from. It is the same number the card printed and the same one
+  the cart's points button will offer.
 - ⚠ **`rewardsEnabled` reaches the card from its _server_ half.** `BuyableCard`
   resolves `getSystem()` (request-`cache()`d, so a grid of twenty costs one
   fetch) and passes it down; a client card that fetched it would do so once per
@@ -2246,6 +2327,7 @@ Two things to keep if you touch it:
 | `.elevation-<1-24>`     | Box shadow matching `Box elevation={n}` - use on any element (Link, div, etc.) to apply the same shadow scale |
 | `.item-price`           | Large, bold price display for product/service detail pages                                                    |
 | `.item-compare-price`   | Muted, line-through compare price for detail pages                                                            |
+| `.item-points-price`    | The points price beside a detail page's money price - the price's weight, in `--accent-text`                  |
 | `.item-stock-in`        | Green "In Stock" indicator text                                                                               |
 | `.item-stock-out`       | Red "Out of Stock" indicator text                                                                             |
 | `.item-specs-table`     | Full-width spec/detail table with alternating borders and label column                                        |

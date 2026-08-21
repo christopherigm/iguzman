@@ -290,6 +290,18 @@ a {
   text-decoration: line-through;
 }
 
+/* The item's points price, printed beside the money one - "MX$120 or 1200
+   points". A peer offer rather than a footnote, so it keeps the price's weight
+   and sits between it and the compare price in size. It is *ink*, not a filled
+   surface, so it takes --accent-text: the tenant's raw brand hex is legible in
+   one theme only. */
+.item-points-price {
+  font-size: clamp(16px, 2.2vw, 22px);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--accent-text, var(--accent, #06b6d4));
+}
+
 .item-stock-in {
   font-size: 13px;
   font-weight: 600;

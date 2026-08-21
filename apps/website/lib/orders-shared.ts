@@ -113,6 +113,21 @@ export interface OrderLine {
    * service whose tenant has since turned booking off.
    */
   item_booking_enabled: boolean;
+  /**
+   * Whether this line can be put back in a cart **today** - what the "Order all
+   * again" button is gated on.
+   *
+   * Read live through the FK like `item_slug`, and deliberately stricter than
+   * the rule that decides whether an unpaid order may still be settled: false
+   * for a deleted or disabled item, an out-of-stock product, an unavailable
+   * dish, and a service sold as an appointment (which needs an hour and a place
+   * a cart line cannot hold - that line offers "Book again" instead).
+   *
+   * ⚠ It is the API's own answer, not a hint to re-derive from. The reorder
+   * endpoint runs the same predicate over the same rows, so a button gated on
+   * anything else would offer what the endpoint then refuses.
+   */
+  item_reorderable: boolean;
 }
 
 export interface Order {

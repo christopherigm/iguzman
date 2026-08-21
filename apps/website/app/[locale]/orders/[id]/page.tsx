@@ -19,6 +19,7 @@ import { OrderStatusBanner } from "./order-status-banner";
 import { BookingDetails } from "./booking-details";
 import { BookingLocation } from "./booking-location";
 import { OrderLineRow } from "./order-line-row";
+import { ReorderButton } from "./reorder-button";
 
 type Props = {
   params: Promise<{ locale: string; id: string }>;
@@ -96,6 +97,15 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
     order.status === "pending" &&
     order.payment_method === "online" &&
     !query.session_id;
+
+  // Whether anything in this order can go back in a cart. `item_reorderable` is
+  // the API's own answer, run over the same rows and by the same predicate the
+  // reorder endpoint uses - deriving it here from `item_id` and
+  // `item_booking_enabled` would be a near-miss, and the miss is a button that
+  // offers what the endpoint then refuses. A booking's single service line is
+  // false for exactly that reason, so an appointment carries no button and its
+  // line keeps its own "Book again".
+  const canReorder = order.lines.some((line) => line.item_reorderable);
 
   return (
     <Container
@@ -340,14 +350,14 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
                   <Box
                     flex="0 0 auto"
                     backgroundColor="#ffffff"
-                    padding={8}
+                    padding={2}
                     borderRadius={8}
                   >
                     <Image
                       src={order.qr_code}
                       alt={t("qrAlt", { id: orderRef(order.public_id) })}
-                      width={160}
-                      height={160}
+                      width={190}
+                      height={190}
                       style={{ display: "block" }}
                     />
                   </Box>
@@ -371,6 +381,21 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
                 the button back. */}
             {canPay && <CompletePaymentButton publicId={order.public_id} />}
 
+            {/* Everything on this receipt, straight back into the basket and on
+                to checkout - the whole-order counterpart of each line's own
+                "Buy again". Above the two navigation buttons because it is the
+                one thing here that *does* something; a customer who opened a
+                past order to repeat it should not have to read past "Back to
+                orders" to find it. A guest gets it too: the API hands back the
+                references and the browser keeps them, exactly as it keeps every
+                other line a logged-out visitor adds. */}
+            {canReorder && (
+              <ReorderButton
+                publicId={order.public_id}
+                isLoggedIn={session !== null}
+              />
+            )}
+
             {/* A guest has no order history to go back to - send them on to
                 the catalog instead of to a page that would bounce them. */}
             <Button
@@ -380,6 +405,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
               href={session !== null ? "/orders" : "/"}
               kind="primary"
               width="100%"
+              size="md"
             />
 
             {/* The other half of scanning an order's QR: an admin lands on this
@@ -396,6 +422,7 @@ export default async function OrderDetailPage({ params, searchParams }: Props) {
                 text={t("seeInAdmin")}
                 href={`/admin/orders/${order.public_id}`}
                 width="100%"
+                size="md"
               />
             ) : null}
           </Card>

@@ -592,10 +592,28 @@ class OrderLine(models.Model):
     size_price_delta = models.DecimalField(
         max_digits=12, decimal_places=2, default=Decimal("0.00"),
     )
+    # The size row itself, kept as provenance beside the snapshot above - the
+    # same role `product`/`service`/`menu_item` play, SET_NULL for the same
+    # reason. The snapshot is what the receipt reads back; this is what lets the
+    # line be *re-ordered* into a cart at the size it was bought in, which
+    # `size_name` cannot do - a name is not a handle on the row it was copied
+    # from. Null for a product, a service, a dish sold in one size, and a size
+    # the tenant has since retired.
+    menu_size = models.ForeignKey(
+        "catalog.MenuSize", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="order_lines",
+    )
     # A menu line's chosen customisation, snapshotted as a human-readable list of
     # {"name", "quantity", "unit_price", "line_upcharge", "removed"} at checkout,
     # so the order still reads back in full after the ingredient rows are gone.
     # Empty for products, services, and uncustomised menu items.
+    #
+    # Each row also carries `ingredient` (and `option`, when the customer swapped
+    # in an alternative) as provenance - the ids the selection was normalised
+    # from - so the line can be put back in a cart exactly as it was bought. They
+    # are ids, not display copy: the names above stay authoritative for reading
+    # the order back. ⚠ **Absent on every row written before they existed**, so a
+    # reader must treat them as optional and fall back to the dish as listed.
     customization = models.JSONField(default=list, blank=True)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
     quantity = models.PositiveIntegerField(default=1)

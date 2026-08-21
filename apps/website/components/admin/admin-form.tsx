@@ -758,7 +758,6 @@ export function AdminForm({
                             <Box display="flex" alignItems="center" gap={12}>
                               {field.type === "textarea" && (
                                 <Button
-                                  unstyled
                                   icon="/icons/enhance.svg"
                                   iconSize="16px"
                                   iconColor={
@@ -773,23 +772,11 @@ export function AdminForm({
                                   onClick={() => triggerEnhance(field.key)}
                                   aria-label={t("enhanceLabel")}
                                   title={t("enhanceLabel")}
-                                  className={[
-                                    "af__enhance-btn",
-                                    llmBusy ||
-                                    !String(values[field.key] ?? "").trim()
-                                      ? "af__enhance-btn--busy"
-                                      : "",
-                                    activeEnhanceField === field.key
-                                      ? "af__enhance-btn--active"
-                                      : "",
-                                  ]
-                                    .filter(Boolean)
-                                    .join(" ")}
+                                  type="button"
                                 />
                               )}
                               {isTranslatable(field) && (
                                 <Button
-                                  unstyled
                                   icon="/icons/translate.svg"
                                   iconSize="16px"
                                   iconColor={
@@ -804,18 +791,7 @@ export function AdminForm({
                                   onClick={() => triggerTranslate(field.key)}
                                   aria-label={t("translateLabel")}
                                   title={t("translateLabel")}
-                                  className={[
-                                    "af__enhance-btn",
-                                    llmBusy ||
-                                    !String(values[field.key] ?? "").trim()
-                                      ? "af__enhance-btn--busy"
-                                      : "",
-                                    activeTranslateField === field.key
-                                      ? "af__enhance-btn--active"
-                                      : "",
-                                  ]
-                                    .filter(Boolean)
-                                    .join(" ")}
+                                  type="button"
                                 />
                               )}
                             </Box>

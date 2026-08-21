@@ -65,6 +65,7 @@ from .services.order_emails import (
     STATUS,
     send_order_email,
 )
+from .services.reorder import reorder_ref
 from .services.coupons import (
     CouponError,
     apply_coupon_to_order,
@@ -158,6 +159,14 @@ def _customization_snapshot(item):
             'unit_price': str(option_price),
             'line_upcharge': str(ingredient.upcharge_for_quantity(qty, option_price)),
             'removed': ingredient.included_units > 0 and qty == 0,
+            # Provenance beside the display copy, exactly as the line's catalog
+            # FKs are: `name` is what the receipt reads back, and a name cannot
+            # be turned back into the row it was copied from - which is what
+            # re-ordering this line into a cart needs. `option` rides along only
+            # when the customer swapped in an alternative, matching what
+            # `normalize_selection` stores.
+            'ingredient': ingredient.id,
+            **({'option': row['option']} if row.get('option') else {}),
         })
     return snapshot
 
@@ -616,6 +625,9 @@ def _open_order(system, user, items, *, order_status, payment_method, email, def
                 size_price_delta=(
                     item.menu_size.price_delta if item.menu_size_id else Decimal("0.00")
                 ),
+                # Provenance, like the catalog FKs above and unlike the three
+                # snapshotted fields it sits under - see `OrderLine.menu_size`.
+                menu_size=item.menu_size if item.menu_size_id else None,
                 customization=_customization_snapshot(item),
                 unit_price=item.unit_price,
                 quantity=item.quantity,
@@ -963,10 +975,14 @@ class OrderDetailView(APIView):
             .filter(public_id=public_id, system=request_system(request))
             .select_related("booking", "booking__branch", "booking__service")
             .prefetch_related(
-                "lines", "lines__product", "lines__service",
+                "lines", "lines__product", "lines__service", "lines__menu_item",
+                # `item_menu_category_slug` walks the dish's category, and
+                # `item_reorderable` its availability - both per line.
+                "lines__menu_item__category",
                 # The serializer falls back to the item's gallery when it has no
                 # own `image`; prefetch it so that fallback is not an N+1.
                 "lines__product__images", "lines__service__images",
+                "lines__menu_item__images",
             )
             .first()
         )
@@ -1250,6 +1266,119 @@ class OrderPayView(APIView):
             return ""
         name = booking.service.name if booking.service else "Service"
         return f"{name} - {booking.deposit_percent}% deposit"
+
+
+def _may_reorder(request, order) -> bool:
+    """Whether this caller may turn this order back into cart lines.
+
+    `_may_pay`'s rules, not `_may_read`'s, and for the same reason: this is a
+    write on behalf of a customer. An admin who scanned a receipt at the counter
+    may *read* the order to validate it, but filling their own cart from it is
+    not the access that feature needed - and the line they added would be
+    indistinguishable from one they picked themselves.
+    """
+    if order.user_id is None:
+        return True
+    return request.user.is_authenticated and order.user_id == request.user.id
+
+
+class OrderReorderView(APIView):
+    """POST /api/orders/<public_id>/reorder/ - put a past order back in the cart.
+
+    Under the order's own id rather than a second cart verb, exactly as
+    `OrderPayView` is: it acts on *this* order's frozen lines, where the cart's
+    own POST adds one item the browser named.
+
+    **It adds; it never replaces.** Every line goes through the same
+    `_add_cart_line` / `_add_menu_line` the add endpoint and the sign-in merge
+    use, so a re-ordered line is indistinguishable from a clicked one and lands
+    on top of whatever the customer was already building - quantities summed on
+    an identical line, capped at 99, as a repeated add is.
+
+    **Two callers, one availability rule.** A guest order has no account to hold
+    a cart, so an anonymous caller is handed the resolved references back and
+    writes them into its own localStorage cart (which `/api/guest/resolve/`
+    re-prices, exactly as it does for every other guest line). Deciding here
+    rather than in the browser is what stops the two carts disagreeing about
+    which of a past order's lines can still be bought.
+
+    Nothing here charges anything, and nothing carries a price: `points_price`
+    and `paid_with_points` are deliberately **not** re-applied. A redemption was
+    a decision made against a balance that has since moved, so a re-ordered line
+    goes back in as money and the cart offers the points button again if it is
+    still affordable.
+    """
+
+    # AllowAny for the reason `OrderDetailView` is: a guest order has no owner to
+    # authenticate as, and its unguessable `public_id` is the only handle its
+    # customer will ever have. `_may_reorder` still refuses any order that *does*
+    # have an owner unless the caller is them.
+    permission_classes = (AllowAny,)
+
+    def post(self, request, public_id):
+        order = (
+            Order.objects
+            .filter(public_id=public_id, system=request_system(request))
+            .prefetch_related(
+                "lines", "lines__product", "lines__service", "lines__menu_item",
+                # `_add_menu_line` normalises the selection against the dish's
+                # ingredients and `resolve_size` against its sizes; without these
+                # a ten-line order is a query per line.
+                # `resolve_size` reads `effective_sizes`, which is the dish's own
+                # rows *or* its category's - both, or the walk is a query a line.
+                # (`_menu_selection` re-queries the ingredients itself, so there
+                # is nothing to prefetch for the selection half.)
+                "lines__menu_item__own_sizes", "lines__menu_item__category__sizes",
+            )
+            .first()
+        )
+        # 404 rather than 403, so this cannot be used to probe which order ids
+        # exist - the same rule the detail view follows.
+        if order is None or not _may_reorder(request, order):
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        lines = list(order.lines.all())
+        # Kept paired with the line each came from: the write below needs the
+        # catalog row, which only the line still holds.
+        pairs = [(line, reorder_ref(line)) for line in lines]
+        pairs = [(line, ref) for line, ref in pairs if ref is not None]
+        refs = [ref for _, ref in pairs]
+        if not refs:
+            return Response(
+                {
+                    "detail": "Nothing in this order can be ordered again.",
+                    "code": "NOTHING_REORDERABLE",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        skipped = len(lines) - len(refs)
+        if not request.user.is_authenticated:
+            return Response({"lines": refs, "skipped": skipped})
+
+        # Imported here rather than at module scope: `users.views` reaches back
+        # into `orders` (`claim_guest_orders`), and a top-level import would make
+        # the pair a cycle at app-load. The same call the catalog serializers are
+        # imported by there, for the same reason.
+        from users.views import _add_cart_line, _add_menu_line, _menu_selection, _menu_size
+
+        system = user_system(request)
+        for line, ref in pairs:
+            target = line.product or line.service or line.menu_item
+            if ref["kind"] == "menu_item":
+                _add_menu_line(
+                    request.user, system, target,
+                    _menu_selection(target, ref["customization"]),
+                    ref["quantity"],
+                    # Absent for a dish sold in one size - `resolve_size`
+                    # reads None as the default, which is that one size.
+                    _menu_size(target, ref.get("size")),
+                )
+            else:
+                _add_cart_line(request.user, system, ref["kind"], target, ref["quantity"])
+
+        invalidate_cart(request.user.id, system.id if system else 0)
+        return Response({"lines": refs, "skipped": skipped})
 
 
 class AdminOrderListView(APIView):
