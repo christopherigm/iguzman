@@ -1764,22 +1764,118 @@ const MEDIA_EXTENSIONS = new Set([
 ]);
 
 /**
+ * Length of the soundtrack segment kept for an Instagram image post.
+ *
+ * Instagram tells us where the highlighted part of the track starts
+ * (`highlight_start_times_in_ms`) but never where it ends, and
+ * `progressive_download_url` serves the *whole* song. Without a bound a
+ * three-minute licensed track would produce a three-minute still-image
+ * video, so the segment is capped here.
+ */
+const IG_AUDIO_SEGMENT_SECONDS = 30;
+
+/** The soundtrack gallery-dl downloaded for an Instagram post. */
+interface GalleryDlAudio {
+  /** Absolute path to the downloaded audio file. */
+  path: string;
+  /** Offset of the highlighted segment within the track, in seconds. */
+  startSeconds: number;
+}
+
+/** The subset of a gallery-dl `--write-metadata` sidecar we care about. */
+interface GalleryDlSidecar {
+  audio_url?: unknown;
+  audio_timestamps?: unknown;
+  audio_duration?: unknown;
+}
+
+/**
+ * Reads a gallery-dl `--write-metadata` sidecar, returning `null` when it
+ * is missing or unparseable. Sidecars are best-effort metadata: a bad one
+ * must never fail the download.
+ */
+const readGalleryDlSidecar = (path: string): GalleryDlSidecar | null => {
+  try {
+    if (!existsSync(path)) return null;
+    return JSON.parse(readFileSync(path, "utf8")) as GalleryDlSidecar;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Resolves the offset of the highlighted segment from a sidecar.
+ *
+ * `audio_timestamps` mirrors Instagram's `highlight_start_times_in_ms` (or
+ * the per-part `parent_start_time_in_ms` for multi-part audio) - a list of
+ * millisecond offsets. The first entry is the one the post plays. Returns
+ * `0` when the field is absent, malformed, or points past the track.
+ */
+const audioHighlightStart = (meta: GalleryDlSidecar): number => {
+  const stamps = meta.audio_timestamps;
+  const first = Array.isArray(stamps) ? stamps[0] : stamps;
+  if (typeof first !== "number" || !Number.isFinite(first) || first <= 0) {
+    return 0;
+  }
+  const start = first / 1000;
+  const duration = meta.audio_duration;
+  if (typeof duration === "number" && duration > 0 && start >= duration) {
+    return 0;
+  }
+  return start;
+};
+
+/**
  * Downloads media from an Instagram URL using gallery-dl.
  *
  * gallery-dl saves files into a directory structure; this helper
- * scans the output folder recursively for image and media files.
+ * scans the output folder recursively for image, audio and media files.
  *
- * @returns An object with arrays of downloaded image and media paths.
+ * Two flags matter here:
+ *
+ * - `-o extractor.instagram.audio=true` enables gallery-dl's Instagram
+ *   `audio` option (added in gallery-dl 1.32.0, 2026-04-24). Without it
+ *   the option defaults to `false` and the soundtrack of an image post is
+ *   never downloaded. This is the only reliable source for that audio:
+ *   yt-dlp's Instagram extractor builds formats exclusively from
+ *   `video_versions` / `video_dash_manifest`, so a photo post yields no
+ *   formats at all and every yt-dlp strategy comes up empty. gallery-dl
+ *   instead reads `music_metadata.music_info.music_asset_info` (and
+ *   `clips_metadata`) off the same `/api/v1/media/<pk>/info/` response it
+ *   already fetches for the image, and downloads `progressive_download_url`.
+ * - `--write-metadata` writes a `<filename>.<ext>.json` sidecar next to
+ *   every file. The sidecar is how the soundtrack is identified: only the
+ *   audio file's kwdict carries `audio_url`. Extension sniffing cannot do
+ *   this job - Instagram's music URLs frequently carry no extension, and
+ *   gallery-dl then falls back to the `Content-Type`, which for these is
+ *   commonly `audio/mp4` (absent from its MIME map) or
+ *   `application/octet-stream` (mapped to `.bin`).
+ *
+ * @returns The downloaded image paths, any other media paths, and the
+ *          soundtrack (with its highlight offset) when the post has one.
  */
 const galleryDlDownload = async (
   url: string,
   outputFolder: string,
   cookies: string,
-): Promise<{ images: string[]; media: string[] }> => {
+): Promise<{
+  images: string[];
+  media: string[];
+  audio: GalleryDlAudio | null;
+  sidecars: string[];
+}> => {
   const tmpFolder = `${outputFolder}/_gallery_dl_${randomUUID()}`;
   ensureFolder(tmpFolder);
 
-  const args: string[] = [url, "-d", tmpFolder, "--no-mtime"];
+  const args: string[] = [
+    url,
+    "-d",
+    tmpFolder,
+    "--no-mtime",
+    "-o",
+    "extractor.instagram.audio=true",
+    "--write-metadata",
+  ];
 
   if (cookies && existsSync(cookies)) {
     args.push("--cookies", cookies);
@@ -1806,17 +1902,34 @@ const galleryDlDownload = async (
 
   const images: string[] = [];
   const media: string[] = [];
+  const sidecars: string[] = [];
+  let audio: GalleryDlAudio | null = null;
 
   for (const file of allFiles) {
     const ext = file.split(".").pop()?.toLowerCase() ?? "";
+
+    if (ext === "json") {
+      sidecars.push(file);
+      continue;
+    }
+
     if (IMAGE_EXTENSIONS.has(ext)) {
       images.push(file);
-    } else if (MEDIA_EXTENSIONS.has(ext)) {
-      media.push(file);
+      continue;
     }
+
+    // Anything that is not an image is a candidate soundtrack. Its sidecar
+    // decides: only the audio file's metadata carries `audio_url`.
+    const meta = readGalleryDlSidecar(`${file}.json`);
+    if (meta?.audio_url && !audio) {
+      audio = { path: file, startSeconds: audioHighlightStart(meta) };
+      continue;
+    }
+
+    if (MEDIA_EXTENSIONS.has(ext)) media.push(file);
   }
 
-  return { images, media };
+  return { images, media, audio, sidecars };
 };
 
 /**
@@ -1825,6 +1938,12 @@ const galleryDlDownload = async (
  *
  * When audio is provided the video duration matches the audio length.
  * When no audio is available a short silent video (5 s) is produced.
+ *
+ * `audioSegment` narrows the track to the part Instagram actually plays:
+ * `progressive_download_url` serves the whole song, so a post whose
+ * highlight starts 45 s in would otherwise open on 45 s of the wrong
+ * music. Seeking happens before `-i` so ffmpeg skips straight to the
+ * offset instead of decoding and discarding everything before it.
  *
  * The image is scaled to fit 1080 px width (preserving aspect ratio,
  * height divisible by 2) and encoded as H.264 baseline with AAC audio.
@@ -1836,18 +1955,23 @@ const createVideoFromImage = async (
   audioPath: string | null,
   outputPath: string,
   ffmpegBinary: string,
+  audioSegment?: { startSeconds: number; durationSeconds: number },
 ): Promise<void> => {
   const args: string[] = [...THREAD_FLAGS, "-y"];
 
   if (audioPath) {
     // Loop image for the duration of the audio
+    args.push("-loop", "1", "-i", imagePath);
+
+    if (audioSegment && audioSegment.startSeconds > 0) {
+      args.push("-ss", audioSegment.startSeconds.toFixed(3));
+    }
+    args.push("-i", audioPath);
+    if (audioSegment) {
+      args.push("-t", audioSegment.durationSeconds.toFixed(3));
+    }
+
     args.push(
-      "-loop",
-      "1",
-      "-i",
-      imagePath,
-      "-i",
-      audioPath,
       "-c:v",
       "libx264",
       "-tune",
@@ -2196,7 +2320,7 @@ const instagramImageFallback = async (
     };
   }
 
-  let galleryResult: { images: string[]; media: string[] };
+  let galleryResult: Awaited<ReturnType<typeof galleryDlDownload>>;
   let tmpCleanup: string[] = [];
 
   try {
@@ -2207,7 +2331,11 @@ const instagramImageFallback = async (
 
   if (galleryResult.images.length === 0) {
     // No images found - clean up and signal failure
-    for (const f of [...galleryResult.media]) {
+    for (const f of [
+      ...galleryResult.media,
+      ...galleryResult.sidecars,
+      ...(galleryResult.audio ? [galleryResult.audio.path] : []),
+    ]) {
       try {
         rmSync(f, { force: true });
       } catch {
@@ -2218,7 +2346,11 @@ const instagramImageFallback = async (
   }
 
   const imagePath = galleryResult.images[0]!;
-  tmpCleanup = [...galleryResult.images, ...galleryResult.media];
+  tmpCleanup = [
+    ...galleryResult.images,
+    ...galleryResult.media,
+    ...galleryResult.sidecars,
+  ];
 
   /* ---- Save the image as the thumbnail ---- */
   let thumbnail: string | undefined;
@@ -2237,11 +2369,36 @@ const instagramImageFallback = async (
     // If rename fails, use the original path (already set above)
   }
 
-  /* ---- Try to get audio ---- */
-  // First check if gallery-dl downloaded any media (audio/video)
-  let audioPath: string | null = galleryResult.media[0] ?? null;
+  /* ---- Try to get audio ----
+   * Preferred source is gallery-dl's `audio` option, which is the only one
+   * that reaches the soundtrack of a photo post: yt-dlp's Instagram
+   * extractor derives formats solely from `video_versions` /
+   * `video_dash_manifest`, neither of which a photo post has, so every
+   * strategy in extractInstagramAudio comes back empty for them. It stays
+   * as the fallback for the posts gallery-dl reports no music for (e.g.
+   * a video post that reached this fallback by another route). */
+  const soundtrack = galleryResult.audio;
+  let audioPath: string | null = soundtrack?.path ?? null;
+  let audioSegment:
+    { startSeconds: number; durationSeconds: number } | undefined;
 
-  // If no media from gallery-dl, try yt-dlp audio extraction
+  if (soundtrack) {
+    tmpCleanup.push(soundtrack.path);
+    // Only trim when Instagram told us where the highlight starts. With no
+    // offset there is nothing to seek to, so the whole track is kept rather
+    // than an arbitrary first N seconds of it.
+    if (soundtrack.startSeconds > 0) {
+      audioSegment = {
+        startSeconds: soundtrack.startSeconds,
+        durationSeconds: IG_AUDIO_SEGMENT_SECONDS,
+      };
+    }
+  } else {
+    // gallery-dl found no soundtrack - fall back to any other media it
+    // downloaded, then to yt-dlp audio extraction.
+    audioPath = galleryResult.media[0] ?? null;
+  }
+
   if (!audioPath) {
     audioPath = await extractInstagramAudio(
       url,
@@ -2263,6 +2420,7 @@ const instagramImageFallback = async (
       audioPath,
       outputPath,
       ffmpegBinary,
+      audioSegment,
     );
   } catch {
     // Clean up on failure

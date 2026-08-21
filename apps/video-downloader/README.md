@@ -5,6 +5,7 @@
 ## Features
 
 - **Multi-platform downloads** via yt-dlp and gallery-dl: YouTube, TikTok, Instagram, Pinterest, Facebook, X, Rednote, Tidal
+- **Instagram image posts**: photo posts are turned into a video via gallery-dl + ffmpeg, with the post's soundtrack attached (trimmed to the highlighted segment when Instagram supplies its offset)
 - **Offline-first storage**: save videos, thumbnails, captions, and comments to OPFS for on-device playback without a connection
 - **Client-side FFmpeg processing** (FFmpeg WASM in a Web Worker): black bar removal, FPS interpolation (60/90/120), H.264 / H.265 conversion, scale-down, subtitle burn-in
 - **Server-side FFmpeg processing**: the same operations can run on the app backend (`/api/server-processing`) for devices that can't handle WASM, metered against the credits system
@@ -65,7 +66,7 @@ Build the image from the repo root (uses `scripts/docker-build.mjs`):
 pnpm docker video-downloader
 ```
 
-The Dockerfile uses a multi-stage Turborepo prune build. The final image is based on `node:22-alpine` with `ffmpeg`, `yt-dlp`, and `gallery-dl` installed. The `yt-dlp`/`gallery-dl` layer is keyed on the latest yt-dlp release so it rebuilds whenever a new version ships.
+The Dockerfile uses a multi-stage Turborepo prune build. The final image is based on `node:22-alpine` with `ffmpeg`, `yt-dlp`, and `gallery-dl` installed. The `yt-dlp`/`gallery-dl` layer is keyed on the latest yt-dlp release so it rebuilds whenever a new version ships. gallery-dl is floored at `>=1.32.0`, the release that added the Instagram `audio` extractor option the image-post soundtrack depends on - on an older version that flag is silently ignored and the post downloads without audio.
 
 ---
 

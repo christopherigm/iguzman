@@ -95,10 +95,19 @@ ARG CACHEBUST=1
 # resolves to chrome-131:macos-14.
 # Re-check on yt-dlp upgrades: once chrome142 lands in _DEPRIORITIZED_TARGETS in
 # yt_dlp/networking/_curlcffi.py, this pin can be dropped.
+# gallery-dl is floored at 1.32.0: that release (2026-04-24) added the
+# Instagram `audio` extractor option, which is what
+# packages/helpers/src/download-video.ts passes as
+# `-o extractor.instagram.audio=true` to pull the soundtrack of a photo post.
+# On an older gallery-dl the flag is simply an unknown config key - it is
+# accepted silently and the image comes down with no audio. The ADD above
+# only cache-busts on new *yt-dlp* releases, so without this floor a layer
+# cached from before that date would keep shipping a gallery-dl that no-ops
+# the flag.
 RUN pip install --break-system-packages --no-cache-dir --upgrade \
     "yt-dlp[default,curl-cffi]" \
     "curl_cffi<0.14" \
-    gallery-dl
+    "gallery-dl>=1.32.0"
 
 # Copy only what the standalone server needs
 COPY --from=builder /app/apps/video-downloader/public ./apps/video-downloader/public
