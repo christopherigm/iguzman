@@ -9,6 +9,7 @@ import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { SectionHero } from "@/components/section-hero";
 import { getProductCategories, getAllProducts } from "@/lib/catalog";
 import { CategoryCard } from "@/components/catalog-categories";
+import { LandingSection } from "@/components/landing-section";
 import { BuyableCard } from "@/components/buyable-card";
 import type { BuyableItem } from "@/components/buyable-card";
 import { kindLabel } from "@/lib/kind-labels";
@@ -91,7 +92,7 @@ export default async function ProductsPage({ params }: Props) {
           </Typography>
         )}
         {categories.length > 0 && (
-          <section className="catalog-section catalog-section--flush-top">
+          <LandingSection bare flushTop>
             <Box
               marginBottom={32}
               display="flex"
@@ -123,14 +124,10 @@ export default async function ProductsPage({ params }: Props) {
                 );
               })}
             </Grid>
-          </section>
+          </LandingSection>
         )}
         {products.length > 0 && (
-          <section
-            className={`catalog-section${
-              categories.length === 0 ? " catalog-section--flush-top" : ""
-            }`}
-          >
+          <LandingSection bare flushTop={categories.length === 0}>
             <Box
               marginBottom={32}
               display="flex"
@@ -145,16 +142,13 @@ export default async function ProductsPage({ params }: Props) {
               {products.map((product) => {
                 const item: BuyableItem = { kind: "product", data: product };
                 return (
-                  <Grid key={product.id} size={{ xs: 6, sm: 3}}>
-                    <BuyableCard
-                      item={item}
-                      locale={locale}
-                    />
+                  <Grid key={product.id} size={{ xs: 6, sm: 3 }}>
+                    <BuyableCard item={item} locale={locale} />
                   </Grid>
                 );
               })}
             </Grid>
-          </section>
+          </LandingSection>
         )}
       </Container>
     </>

@@ -3,10 +3,11 @@ import { getSession } from "@repo/auth/session";
 import { getSuccessStories } from "@/lib/success-stories";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { StoriesSliderClient } from "./stories-slider-client";
+import { LandingSection, type LandingBlockProps } from "./landing-section";
 import "./success-stories.css";
 import Box from "@repo/ui/core-elements/box";
 
-export async function SuccessStories() {
+export async function SuccessStories(section: LandingBlockProps = {}) {
   const [stories, t, adminT, locale, session] = await Promise.all([
     getSuccessStories(),
     getTranslations("SuccessStories"),
@@ -18,7 +19,7 @@ export async function SuccessStories() {
   if (stories.length === 0) return null;
 
   return (
-    <section className="stories-section">
+    <LandingSection {...section}>
       <Box className="highlights-header">
         <Typography as="h2" variant="h2" className="section-title">
           {t("heading")}
@@ -31,6 +32,6 @@ export async function SuccessStories() {
         isAdmin={session?.isAdmin ?? false}
         editLabel={adminT("edit")}
       />
-    </section>
+    </LandingSection>
   );
 }

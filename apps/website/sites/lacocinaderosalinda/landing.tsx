@@ -1,10 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import { Button } from "@repo/ui/core-elements/button";
-import { Container } from "@repo/ui/core-elements/container";
 import { getSystem } from "@/lib/system";
 import { MENU_ALL_PATH, MENU_ICON } from "@/lib/catalog-paths";
 import { fitSectionBackground } from "@/lib/section-background";
-import { SectionBand } from "@/components/section-band";
 import { Hero } from "@/components/hero";
 import { SuccessStories } from "@/components/success-stories";
 import { CompanyHighlights } from "@/components/company-highlights";
@@ -51,7 +49,7 @@ import { Firma } from "./sections/firma";
  *
  * Adjacent sections never repeat a shape: banded card grid -> split -> ruled
  * list -> tile grid -> bordered panel -> slider -> banded grid -> slider ->
- * location cards. Both `SectionBand`s carry the tenant's own band colours and
+ * location cards. Both banded blocks carry the tenant's own band colours and
  * edge notches, so the seams are a CMS setting rather than site code, and
  * `Firma` deliberately sits on the bare page so the logo watermark shows
  * through between the two banded sections.
@@ -105,15 +103,11 @@ export async function Landing() {
       />
 
       {/* Breakfast is bought with the eyes: the plates lead, before any prose. */}
-      <SectionBand
+      <CatalogItems
         background={itemsBg}
         topDivider={system?.catalog_top_divider}
         bottomDivider={system?.catalog_bottom_divider}
-      >
-        <Container paddingX={10}>
-          <CatalogItems />
-        </Container>
-      </SectionBand>
+      />
 
       <Intro />
 
@@ -122,9 +116,7 @@ export async function Landing() {
           make one, and reads as a plain section until they make a second. */}
       <HomepageFlyers />
 
-      <Container paddingX={10}>
-        <CatalogCategories />
-      </Container>
+      <CatalogCategories />
 
       {/* The dishes that carry the cook's name, gathered from across the menu.
           Renders nothing until the catalog has one - see the file's docstring
@@ -137,23 +129,15 @@ export async function Landing() {
           the three items are set in the CMS. */}
       <Spotlight />
 
-      <Container paddingX={10}>
-        <Events />
-      </Container>
+      <Events />
 
-      <SectionBand
+      <CompanyHighlights
         background={highlightsBg}
         topDivider={system?.highlights_top_divider}
         bottomDivider={system?.highlights_bottom_divider}
-      >
-        <Container paddingX={10}>
-          <CompanyHighlights />
-        </Container>
-      </SectionBand>
+      />
 
-      <Container paddingX={10}>
-        <SuccessStories />
-      </Container>
+      <SuccessStories />
 
       {/* The dining room on its map, and the way through to /contact - the
           shared block, so these cards are the ones the contact page draws.

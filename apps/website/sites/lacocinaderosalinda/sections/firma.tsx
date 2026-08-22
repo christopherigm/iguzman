@@ -1,12 +1,12 @@
 import Image from "next/image";
 import { getTranslations, getLocale } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
-import { Container } from "@repo/ui/core-elements/container";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { getAllMenuItems, type MenuItemDetail } from "@/lib/catalog";
 import { menuItemHref } from "@/lib/catalog-paths";
 import { formatPrice } from "@/lib/price";
+import { LandingSection } from "@/components/landing-section";
 
 /**
  * "La firma de la casa" - the dishes that carry Rosalinda's own name.
@@ -179,50 +179,48 @@ export async function Firma() {
   if (signature.length === 0) return null;
 
   return (
-    <Container paddingX={10}>
-      <Box paddingY={64}>
-        <Box className="highlights-header" marginBottom={24}>
-          <Typography
-            as="span"
-            variant="label"
-            color="var(--accent-text)"
-            fontWeight={700}
-            styles={{ letterSpacing: "0.14em", textTransform: "uppercase" }}
-          >
-            {t("firma.eyebrow")}
-          </Typography>
+    <LandingSection>
+      <Box className="highlights-header" marginBottom={24}>
+        <Typography
+          as="span"
+          variant="label"
+          color="var(--accent-text)"
+          fontWeight={700}
+          styles={{ letterSpacing: "0.14em", textTransform: "uppercase" }}
+        >
+          {t("firma.eyebrow")}
+        </Typography>
 
-          <Typography
-            as="h2"
-            variant="h2"
-            fontWeight={800}
-            className="section-title"
-          >
-            {t("firma.title")}
-          </Typography>
+        <Typography
+          as="h2"
+          variant="h2"
+          fontWeight={800}
+          className="section-title"
+        >
+          {t("firma.title")}
+        </Typography>
 
-          <Typography
-            as="p"
-            variant="none"
-            className="section-subtitle"
-            styles={{ maxWidth: "56ch" }}
-          >
-            {t("firma.subtitle")}
-          </Typography>
-        </Box>
+        <Typography
+          as="p"
+          variant="none"
+          className="section-subtitle"
+          styles={{ maxWidth: "56ch" }}
+        >
+          {t("firma.subtitle")}
+        </Typography>
+      </Box>
 
-        {/* Two columns from `sm` up, per the app's two-column rule - a ruled
+      {/* Two columns from `sm` up, per the app's two-column rule - a ruled
             list is exactly the shape that wastes the tablet band when stacked.
             `spacingY={0}` keeps the rows tight so their hairlines read as one
             continuous rule; `spacingX` is the gutter between the columns. */}
-        <Grid container spacingX={4} spacingY={0}>
-          {signature.map((item) => (
-            <Grid key={item.id} size={{ xs: 12, sm: 6 }}>
-              <SignatureRow item={item} locale={locale} />
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
-    </Container>
+      <Grid container spacingX={4} spacingY={0}>
+        {signature.map((item) => (
+          <Grid key={item.id} size={{ xs: 12, sm: 6 }}>
+            <SignatureRow item={item} locale={locale} />
+          </Grid>
+        ))}
+      </Grid>
+    </LandingSection>
   );
 }

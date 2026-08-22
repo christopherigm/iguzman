@@ -1,9 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Button } from "@repo/ui/core-elements/button";
-import { Container } from "@repo/ui/core-elements/container";
 import { getSystem } from "@/lib/system";
 import { fitSectionBackground } from "@/lib/section-background";
-import { SectionBand } from "@/components/section-band";
 import { Hero } from "@/components/hero";
 import { SuccessStories } from "@/components/success-stories";
 import { CompanyHighlights } from "@/components/company-highlights";
@@ -81,33 +79,21 @@ export async function Landing() {
 
       <Origin />
 
-      <SectionBand
+      <CatalogItems
         background={itemsBg}
         topDivider={system?.catalog_top_divider}
         bottomDivider={system?.catalog_bottom_divider}
-      >
-        <Container paddingX={10}>
-          <CatalogItems />
-        </Container>
-      </SectionBand>
+      />
 
-      <Container paddingX={10}>
-        <Events />
-      </Container>
+      <Events />
 
-      <Container paddingX={10}>
-        <CatalogCategories />
-      </Container>
+      <CatalogCategories />
 
-      <SectionBand
+      <CompanyHighlights
         background={highlightsBg}
         topDivider={system?.highlights_top_divider}
         bottomDivider={system?.highlights_bottom_divider}
-      >
-        <Container paddingX={10}>
-          <CompanyHighlights />
-        </Container>
-      </SectionBand>
+      />
 
       {/* The wholesale (mayoreo) invitation - now the shared, DB-driven Spotlight
           block: label → title → text → CTA on the left, the family's three
@@ -120,9 +106,7 @@ export async function Landing() {
           make one, and reads as a plain section until they make a second. */}
       <HomepageFlyers />
 
-      <Container paddingX={10}>
-        <SuccessStories />
-      </Container>
+      <SuccessStories />
 
       {/* The farm itself, on a map, and the way through to /contact - the shared
           block, so these cards are the ones the contact page draws. Invisible

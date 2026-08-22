@@ -38,9 +38,10 @@ the bilingual `en_*` seed fields are decided separately in `/seed-site`.
 - **`apps/website/sites/_default/`** — the reference implementation (a valid
   `site.config.ts` + `landing.tsx` + `index.ts`); mirror its structure. For a
   **built** site to copy the shape of, read `sites/supertortaselchino/` (food) or
-  `sites/bdrone/` (services) — both are current: `SectionBand` with the tenant's
-  dividers, `Hero` with `splitSlogan`/`align`/`actions`, `Spotlight`, and an
-  `AboutIntro`-based `sections/intro.tsx`.
+  `sites/bdrone/` (services) — both are current: a flat list of blocks with the
+  band colour and the tenant's dividers passed as props, `Hero` with
+  `splitSlogan`/`align`/`actions`, `Spotlight`, and an `AboutIntro`-based
+  `sections/intro.tsx`.
 - Root **`CLAUDE.md`** styling rule (props-first, CSS-last) and
   `apps/website/CLAUDE.md` shared utility classes.
 - **`/site-design`** skill — the design playbook (visual quality bar, the
@@ -138,22 +139,27 @@ caterer is a **menu** business — its catalog is `MenuItem`s (base price + pric
 
    **Four things the current block library gives you — use them:**
 
-   - **`SectionBand`, never a bare `<Box styles={{ width: "100%", background }}>`.**
-     It carries the tenant's band colour _and_ the shape-divider notch cut into
-     the band's top and bottom edges, so the page and its watermark show through
-     instead of a hard line. Pass the fields straight through:
+   - **A landing is a flat list of blocks — no `<Container>`, no `<SectionBand>`,
+     and never a `paddingY` of your own.** Each block renders its own
+     `LandingSection`, which carries the page gutter, the symmetric
+     `--section-space` rhythm and the optional band — so a section spaces itself
+     identically wherever it lands and **re-ordering is moving one line**. A
+     banded section is a **prop**: pass the band colour and the tenant's two
+     divider fields to the block, and it forwards them to `SectionBand`, which
+     cuts the notch into the band's top and bottom edges so the page and its
+     watermark show through instead of a hard line.
 
      ```tsx
-     <SectionBand
+     <CatalogItems
        background={fitSectionBackground(system?.catalog_items_bg || band)}
        topDivider={system?.catalog_top_divider}
        bottomDivider={system?.catalog_bottom_divider}
-     >
-       <Container paddingX={10}>
-         <CatalogItems />
-       </Container>
-     </SectionBand>
+     />
      ```
+
+     A **site-local** section in `sections/` renders `LandingSection` itself (see
+     `lacocinaderosalinda/sections/firma.tsx`), **after** its own "nothing to
+     show" guard — a block that returns `null` must contribute no empty section.
 
    - **`<Spotlight />`** — a bordered promo panel (label → title → text → CTA)
      beside a hand-picked trio of catalog cards. It is the block that stops a

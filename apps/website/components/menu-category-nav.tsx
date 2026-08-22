@@ -17,9 +17,9 @@ interface MenuCategoryNavProps {
   title: string;
   items: MenuCategoryNavItem[];
   /**
-   * Whether the first item section beside the rail is `catalog-section--flush-top`
-   * - i.e. it is the page's first block and has dropped its own top padding.
-   * The lead spacer drops the same padding, so the two columns stay level.
+   * Whether the first item section beside the rail is `--flush-top` - i.e. it
+   * is the page's first block and has dropped its own top space. The lead
+   * spacer drops the same, so the two columns stay level.
    */
   flushTop?: boolean;
   /**
@@ -30,28 +30,6 @@ interface MenuCategoryNavProps {
   brandmark?: string | null;
   brandmarkAlt?: string;
 }
-
-/**
- * `.catalog-section`'s own top padding (`components/catalog-categories.css`),
- * which the sections column contributes above its first heading and the rail's
- * column does not. Repeated here rather than read from the class because the
- * rail is not a catalog section - it only has to start level with one. ⚠ Keep
- * the two in step.
- */
-const CATALOG_SECTION_PADDING_TOP = 48;
-
-/**
- * `.catalog-section`'s own **bottom** padding, the other half of that pair.
- *
- * The rail's grid cell is as tall as the whole sections column, which ends 56px
- * below the last item card - so a sticky rail that travelled its cell to the
- * end came to rest with its bottom edge that far past the grid it addresses.
- * Given back as the rail's own bottom margin (a sticky box is constrained to
- * its containing block *minus its margins*), the last resting position lines
- * the rail's bottom edge up with the last card instead. ⚠ Keep in step with
- * `catalog-categories.css`.
- */
-const CATALOG_SECTION_PADDING_BOTTOM = 56;
 
 /**
  * The cradle's arch, as multiples of the badge - `BrandmarkCradle`'s `height`
@@ -178,16 +156,27 @@ export function MenuCategoryNav({
 
   return (
     <>
-      {/* `.catalog-section`'s top padding, which the sections column contributes
-       *  above its first heading and this column does not. It is deliberately
-       *  *outside* the sticky box: a click on the rail parks the target heading
-       *  at the navbar and leaves that padding above the viewport, so a pinned
-       *  rail must not carry it. */}
-      {!flushTop && <Box aria-hidden height={CATALOG_SECTION_PADDING_TOP} />}
+      {/* The landing rhythm's top half, which the sections column contributes
+       *  above its first heading (`.landing-section`) and this column does not.
+       *  It is deliberately *outside* the sticky box: a click on the rail parks
+       *  the target heading at the navbar and leaves that space above the
+       *  viewport, so a pinned rail must not carry it.
+       *
+       *  Both this and the nav's bottom margin below read `--section-space`
+       *  rather than restating a number - the rhythm is fluid, so a fixed px
+       *  value here would only line the two columns up at one viewport width. */}
+      {!flushTop && <Box aria-hidden height="var(--section-space)" />}
+      {/* The rail's grid cell is as tall as the whole sections column, which
+       *  ends one `--section-space` below the last item card - so a sticky rail
+       *  that travelled its cell to the end came to rest with its bottom edge
+       *  that far past the grid it addresses. Given back as the rail's own
+       *  bottom margin (a sticky box is constrained to its containing block
+       *  *minus its margins*), the last resting position lines the rail's bottom
+       *  edge up with the last card instead. */}
       <nav
         aria-label={title}
         className="menu-category-nav"
-        style={{ marginBottom: CATALOG_SECTION_PADDING_BOTTOM }}
+        style={{ marginBottom: "var(--section-space)" }}
       >
         {/* ⚠ **This spacer is what keeps the two columns level, in both of the
          *  rail's states, and it is inside the sticky box for the pinned one.**

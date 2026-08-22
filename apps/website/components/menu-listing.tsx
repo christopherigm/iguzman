@@ -7,6 +7,7 @@ import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { SectionHero } from "@/components/section-hero";
 import { CategoryCard } from "@/components/catalog-categories";
+import { LandingSection } from "@/components/landing-section";
 import { BuyableCard } from "@/components/buyable-card";
 import { MenuCategoryNav, MenuNavCradle } from "@/components/menu-category-nav";
 import { MenuCategoryNavMobile } from "@/components/menu-category-nav-mobile";
@@ -112,12 +113,10 @@ export async function MenuListing({ locale }: MenuListingProps) {
   const heroImage = images.length > 0 ? images[randomIndex] : null;
 
   // The first rendered block sits directly under the breadcrumbs, whose 8px
-  // margin is the only gap that group wants - `catalog-section`'s 48px top
-  // padding is for *stacked* sections. The categories grid leads when there is
-  // one, so only then do the item sections all keep their padding.
+  // margin is the only gap that group wants - the section rhythm
+  // (`--section-space`) is for *stacked* sections. The categories grid leads
+  // when there is one, so only then do the item sections all keep their space.
   const hasCategories = categories.length > 0;
-  const sectionClassName = (isFirst: boolean) =>
-    `catalog-section${isFirst ? " catalog-section--flush-top" : ""}`;
 
   return (
     <>
@@ -146,7 +145,7 @@ export async function MenuListing({ locale }: MenuListingProps) {
           </Typography>
         )}
         {hasCategories && (
-          <section className={sectionClassName(true)}>
+          <LandingSection bare flushTop>
             <Box
               marginBottom={32}
               display="flex"
@@ -189,7 +188,7 @@ export async function MenuListing({ locale }: MenuListingProps) {
                 );
               })}
             </Grid>
-          </section>
+          </LandingSection>
         )}
         {/* The item grids and the category rail beside them. The rail is a grid
          *  cell of its own so it is `hidden` below `md` with no media query, and
@@ -209,9 +208,10 @@ export async function MenuListing({ locale }: MenuListingProps) {
           </Grid>
           <Grid size={{ xs: 12, md: 9 }}>
             {sections.map((section, index) => (
-              <section
+              <LandingSection
                 key={section.key}
-                className={sectionClassName(!hasCategories && index === 0)}
+                bare
+                flushTop={!hasCategories && index === 0}
               >
                 <Box
                   marginBottom={32}
@@ -248,7 +248,7 @@ export async function MenuListing({ locale }: MenuListingProps) {
                     </Grid>
                   ))}
                 </Grid>
-              </section>
+              </LandingSection>
             ))}
           </Grid>
         </Grid>

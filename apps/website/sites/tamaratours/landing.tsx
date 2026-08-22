@@ -1,9 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Button } from "@repo/ui/core-elements/button";
-import { Container } from "@repo/ui/core-elements/container";
 import { getSystem } from "@/lib/system";
 import { fitSectionBackground } from "@/lib/section-background";
-import { SectionBand } from "@/components/section-band";
 import { Hero } from "@/components/hero";
 import { SuccessStories } from "@/components/success-stories";
 import { CompanyHighlights } from "@/components/company-highlights";
@@ -87,35 +85,23 @@ export async function Landing() {
 
       <Intro />
 
-      <SectionBand
+      <CatalogItems
         background={itemsBg}
         topDivider={system?.catalog_top_divider}
         bottomDivider={system?.catalog_bottom_divider}
-      >
-        <Container paddingX={10}>
-          <CatalogItems />
-        </Container>
-      </SectionBand>
+      />
 
-      <Container paddingX={10}>
-        <CatalogCategories />
-      </Container>
+      <CatalogCategories />
 
       {/* Whale season, full-moon sailings, a holiday departure - renders nothing
           until the owner adds one in /admin/events. */}
-      <Container paddingX={10}>
-        <Events />
-      </Container>
+      <Events />
 
-      <SectionBand
+      <CompanyHighlights
         background={highlightsBg}
         topDivider={system?.highlights_top_divider}
         bottomDivider={system?.highlights_bottom_divider}
-      >
-        <Container paddingX={10}>
-          <CompanyHighlights />
-        </Container>
-      </SectionBand>
+      />
 
       {/* The private-charter invitation, as the shared DB-driven Spotlight: a
           bordered panel beside three hand-picked tours, so the page does not
@@ -128,9 +114,7 @@ export async function Landing() {
           make one, and reads as a plain section until they make a second. */}
       <HomepageFlyers />
 
-      <Container paddingX={10}>
-        <SuccessStories />
-      </Container>
+      <SuccessStories />
 
       <Departure />
     </>

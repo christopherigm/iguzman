@@ -1,10 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import { Button } from "@repo/ui/core-elements/button";
-import { Container } from "@repo/ui/core-elements/container";
 import { getSystem } from "@/lib/system";
 import { MENU_ALL_PATH, MENU_ICON } from "@/lib/catalog-paths";
 import { fitSectionBackground } from "@/lib/section-background";
-import { SectionBand } from "@/components/section-band";
 import { Hero } from "@/components/hero";
 import { SuccessStories } from "@/components/success-stories";
 import { CompanyHighlights } from "@/components/company-highlights";
@@ -96,27 +94,19 @@ export async function Landing() {
 
       <Intro />
 
-      <SectionBand
+      <CatalogItems
         background={itemsBg}
         topDivider={system?.catalog_top_divider}
         bottomDivider={system?.catalog_bottom_divider}
-      >
-        <Container paddingX={10}>
-          <CatalogItems />
-        </Container>
-      </SectionBand>
+      />
 
       {/* What is on the walls this month, and anything else the café is
           putting on. After the catalog and before the highlights band, the slot
           every site here uses: a visitor meets what the shop sells before what
           it is hosting. Renders nothing until there is an event in the CMS. */}
-      <Container paddingX={10}>
-        <Events />
-      </Container>
+      <Events />
 
-      <Container paddingX={10}>
-        <CatalogCategories />
-      </Container>
+      <CatalogCategories />
 
       {/* The one non-grid beat between the two catalog blocks and the
           highlights: a bordered panel beside three hand-picked items - the
@@ -130,19 +120,13 @@ export async function Landing() {
           make one, and reads as a plain section until they make a second. */}
       <HomepageFlyers />
 
-      <SectionBand
+      <CompanyHighlights
         background={highlightsBg}
         topDivider={system?.highlights_top_divider}
         bottomDivider={system?.highlights_bottom_divider}
-      >
-        <Container paddingX={10}>
-          <CompanyHighlights />
-        </Container>
-      </SectionBand>
+      />
 
-      <Container paddingX={10}>
-        <SuccessStories />
-      </Container>
+      <SuccessStories />
 
       {/* Which end of Main Street the café is on, with its map, and the way
           through to /contact - the shared block, so these cards are the ones the

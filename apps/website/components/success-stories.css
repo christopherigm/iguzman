@@ -1,9 +1,3 @@
-.stories-section {
-  width: 100%;
-  padding: 48px 0 56px;
-  box-sizing: border-box;
-}
-
 /* Swiper container. No bottom padding: the controls are `@repo/ui`'s
    `SliderControls` row in normal flow beneath the slider, not Swiper's own
    absolutely-positioned bullets, so nothing needs a gutter held open for it. */

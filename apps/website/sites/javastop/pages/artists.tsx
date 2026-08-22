@@ -116,8 +116,10 @@ export async function Artists() {
         </Box>
 
         {/* Who is showing, and what else the café is putting on. Renders nothing
-            between hangings, so this page never claims a show it does not have. */}
-        <Events />
+            between hangings, so this page never claims a show it does not have.
+            `bare`: the block brings the landing rhythm but not a second page
+            `Container` - it is already inside this page's own. */}
+        <Events bare />
 
         <Typography
           as="h2"

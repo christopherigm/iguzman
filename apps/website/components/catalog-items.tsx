@@ -12,7 +12,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { CATALOG_ROOT, MENU_ALL_PATH, MENU_ICON } from "@/lib/catalog-paths";
 import { BuyableCard, type BuyableItem } from "./buyable-card";
-import "./catalog-items.css";
+import { LandingSection, type LandingBlockProps } from "./landing-section";
 
 /**
  * A stable pseudo-random ordering key for one item on a given day. An FNV-1a
@@ -30,7 +30,7 @@ function shuffleKey(item: BuyableItem, daySeed: number): number {
   return h >>> 0;
 }
 
-export async function CatalogItems() {
+export async function CatalogItems(section: LandingBlockProps = {}) {
   const [products, services, menuItems, locale, t, tMenu] = await Promise.all([
     getFeaturedProducts(),
     getFeaturedServices(),
@@ -80,7 +80,7 @@ export async function CatalogItems() {
   ];
 
   return (
-    <section className="catalog-items-section">
+    <LandingSection {...section}>
       <Box className="highlights-header">
         <Typography as="h2" variant="h2" className="section-title">
           {t("heading")}
@@ -115,6 +115,6 @@ export async function CatalogItems() {
           />
         ))}
       </Box>
-    </section>
+    </LandingSection>
   );
 }

@@ -202,15 +202,53 @@ Build a site by composing the shared, already-tenant-aware components in
 | `buyable-card`, `product-detail`, `service-detail`, `menu-detail`, `category-detail` | Item/detail rendering                                                | catalog helpers                                                              |
 | `menu-item-customizer`, `nutrition-label`                                            | Priced-ingredient picker + FDA panel                                 | `getMenuItem()` (its `ingredients`, `portions`)                              |
 | `section-band` (`SectionBand`)                                                       | Full-width band behind a section                                     | `System.*_bg` + `System.*_top_divider` / `*_bottom_divider`                  |
+| `landing-section` (`LandingSection`)                                                 | The section wrapper every block above renders itself in              | — (the rhythm, the gutter and the band, from props)                          |
 | `find-us` (`FindUs`)                                                                 | "Where to find us": the branch cards + their maps + a `/contact` CTA | `getBranches()` (+ `System.img_brandmark` for the pin)                       |
 | `empty-catalog-state` (`EmptyCatalogState`)                                          | "Nothing here" + browse CTAs + categories                            | `System.*_count`                                                             |
 
-**Wrap a banded section in `SectionBand`, never a bare `<Box styles={{ width:
-"100%", background }}>`.** It carries the tenant's band background _and_ the
-shape-divider notch they picked for the band's top and bottom edges (so the page
-and its watermark show through instead of a hard line). Pass the site's own
-fallback band colour as `background` exactly as before — see any
-`sites/*/landing.tsx` and `apps/website/CLAUDE.md` → "Section background bands".
+**A landing is a flat list of blocks — no `<Container>`, no `<SectionBand>`.**
+Every block above renders its own `LandingSection`, which owns the page gutter,
+the symmetric `--section-space` rhythm, and the optional colour band. So
+composing is one `<Block />` per line and **re-ordering is moving one line**:
+
+```tsx
+<Hero system={system} splitSlogan align="start" />
+<Intro />
+<CatalogItems
+  background={itemsBg}
+  topDivider={system?.catalog_top_divider}
+  bottomDivider={system?.catalog_bottom_divider}
+/>
+<Events />
+<CatalogCategories />
+<Spotlight />
+<HomepageFlyers />
+<CompanyHighlights background={highlightsBg} />
+<SuccessStories />
+<FindUs />
+```
+
+**A banded section is a prop, not a wrapper.** Pass the site's own fallback band
+colour as `background` (through `fitSectionBackground`) plus the tenant's two
+divider fields; the block forwards all three to `SectionBand`, which carries the
+band background _and_ the shape-divider notch for its top and bottom edges (so
+the page and its watermark show through instead of a hard line). Never hand-roll
+a band as `<Box styles={{ width: "100%", background }}>`. See
+`apps/website/CLAUDE.md` → "The landing rhythm" and "Section background bands".
+
+⚠ **Never give a section its own `paddingY` or wrap it in a `Container`.** That
+is what the rhythm replaced — five blocks carrying `48px 0 56px` and four
+carrying `paddingY={64}` meant the gap between two sections depended on which two
+they were, so re-ordering a landing changed its spacing. A **site-local** section
+in `sections/` therefore renders `LandingSection` too (see
+`lacocinaderosalinda/sections/firma.tsx`, `santofishrestaurant/sections/bar.tsx`);
+a thin wrapper around a shared block (every `intro.tsx`) needs nothing, since the
+block it wraps already carries the section.
+
+⚠ **A block renders its `LandingSection` _after_ its own "nothing to show"
+guard.** That is why the wrapper is inside each block rather than in the landing:
+`<Spotlight />`, `<Events />`, `<HomepageFlyers />` and `<FindUs />` are composed
+blind, and a block that returns `null` must contribute no padded, empty section.
 
 **`Spotlight` is the block that breaks a landing's card-grid monotony.** It is a
 single bordered panel — label → title → text → CTA on one side, three
@@ -224,7 +262,7 @@ into any landing before the content exists — it simply stays invisible.
 showcase; one component, two completely different sections.
 
 **`HomepageFlyers` is the same idea, several times over — and one band each.**
-Where `Spotlight` is one panel on the `System` row, a flyer is a *record*: a
+Where `Spotlight` is one panel on the `System` row, a flyer is a _record_: a
 tenant authors as many as they like in `/admin/homepage-flyers`, and each carries
 its own photograph, its own copy, its own **background and edge shapes**, and up
 to **two** catalog items. That is the whole reason it is a model — a set of
@@ -613,9 +651,10 @@ even if it compiles and lints clean. Check every landing against this rubric
    `--muted-foreground`). Accent is for emphasis (primary CTA, active state, one
    highlight) — not for filling large areas. **No purple defaults, no gradient
    soup.**
-4. **Spacing rhythm.** One reused vertical section-padding value; related items
-   grouped tight, sections separated generously; alternate plain / `--surface-2`
-   bands so the eye has rhythm.
+4. **Spacing rhythm.** The vertical rhythm is not yours to set — it is
+   `--section-space`, applied symmetrically by every block's own
+   `LandingSection`. Related items grouped tight, and alternate plain /
+   `--surface-2` bands so the eye has rhythm.
 5. **Deliberate structure & variety.** Section order tells the customer's story
    (pick the archetype for their business type — services, restaurant, product,
    portfolio, local); adjacent sections differ in shape and background — not five
@@ -651,8 +690,9 @@ Build & verify locally, then publish to prod:
    set in `site.config.ts` (`systemHost` = the customer's primary domain).
 2. `registry.ts` entry present (CLI-inserted), `_default` still last.
 3. `landing.tsx` composed from the block library + any `sections/`, props-first —
-   including `SectionBand` for banded sections (with the tenant's divider fields
-   passed through), `<Spotlight />` where the landing needs a non-grid beat, and
+   a **flat list of blocks** with no `Container`/`SectionBand` wrappers, band
+   colours and the tenant's divider fields passed as props to the blocks that are
+   banded, `<Spotlight />` where the landing needs a non-grid beat, and
    `<FindUs />` closing the page.
 4. Extra `pages/` wired into the `SiteModule.pages` map if the customer needs
    them — and **not** named after a reserved platform route (no site `/contact`;

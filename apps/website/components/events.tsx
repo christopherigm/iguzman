@@ -6,6 +6,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { getPastEvents, getUpcomingEvents } from "@/lib/events";
 import { orderForSlider } from "@/lib/event-shared";
 import { EventsSliderClient } from "./events-slider-client";
+import { LandingSection, type LandingBlockProps } from "./landing-section";
 import "./events.css";
 
 /**
@@ -36,7 +37,7 @@ const PAST_IN_SLIDER = 3;
 /** Enough upcoming events to fill the slider several times over, and no more. */
 const UPCOMING_IN_SLIDER = 12;
 
-export async function Events() {
+export async function Events(section: LandingBlockProps = {}) {
   const [upcoming, past, t, adminT, locale, session] = await Promise.all([
     getUpcomingEvents(UPCOMING_IN_SLIDER),
     getPastEvents(PAST_IN_SLIDER),
@@ -53,7 +54,7 @@ export async function Events() {
   const hasMore = upcoming.length >= UPCOMING_IN_SLIDER || past.length > 0;
 
   return (
-    <section className="events-section">
+    <LandingSection {...section}>
       {/* The heading group and the "see all" button sit on one line and wrap
           together on a phone. `.highlights-header` is the shared title/subtitle
           stack (it forces `flex-direction: column`, which is why it is the inner
@@ -89,6 +90,6 @@ export async function Events() {
         isAdmin={session?.isAdmin ?? false}
         editLabel={adminT("edit")}
       />
-    </section>
+    </LandingSection>
   );
 }

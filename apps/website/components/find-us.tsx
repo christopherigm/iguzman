@@ -1,12 +1,12 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
-import { Container } from "@repo/ui/core-elements/container";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { getSystem } from "@/lib/system";
 import { getBranches } from "@/lib/branches";
 import { branchHasCoordinates } from "@/lib/contact";
 import { ContactLocations } from "@/components/contact/contact-locations";
+import { LandingSection, type LandingBlockProps } from "./landing-section";
 
 /**
  * Shared "where to find us" landing block: the tenant's physical locations, each
@@ -39,7 +39,7 @@ import { ContactLocations } from "@/components/contact/contact-locations";
  * paint over the tenant's logo watermark and page background. Renders nothing
  * until the tenant has a usable location, exactly like the other shared blocks.
  */
-export interface FindUsProps {
+export interface FindUsProps extends LandingBlockProps {
   /** Small uppercase kicker above the heading. */
   eyebrow?: string;
   /** Section heading. */
@@ -55,6 +55,7 @@ export async function FindUs({
   heading,
   subtitle,
   ctaText,
+  ...section
 }: FindUsProps = {}) {
   const [branches, system, locale, t] = await Promise.all([
     getBranches(),
@@ -72,8 +73,8 @@ export async function FindUs({
   if (locations.length === 0) return null;
 
   return (
-    <Container paddingX={10}>
-      <Box paddingY={64} display="flex" flexDirection="column" gap="24px">
+    <LandingSection {...section}>
+      <Box display="flex" flexDirection="column" gap="24px">
         <Box display="flex" flexDirection="column" gap="10px">
           <Typography
             as="span"
@@ -118,7 +119,7 @@ export async function FindUs({
           />
         </Box>
       </Box>
-    </Container>
+    </LandingSection>
   );
 }
 

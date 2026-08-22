@@ -1,0 +1,30 @@
+/**
+ * The landing rhythm, as one class.
+ *
+ * Every composable landing block wraps its content in `LandingSection`, which
+ * renders this on a plain `<section>`. The single symmetric `padding-block` is
+ * what makes the blocks in every `sites/<slug>` landing re-orderable: a section
+ * contributes exactly the same space above and below itself wherever it lands,
+ * so moving one line in a landing never changes the page's rhythm.
+ *
+ * The measure itself is `--section-space` in `app/globals.css` - fluid, so this
+ * needs no media queries. ⚠ Never re-state the number here or anywhere else.
+ */
+.landing-section {
+  width: 100%;
+  padding-block: var(--section-space);
+}
+
+/*
+ * Drop one edge's space. For a section that opens a page under a breadcrumb
+ * group or a section hero (the catalog and menu listings), whose own margin is
+ * the gap that group wants - the landing rhythm is for *stacked* sections, not
+ * above the first one.
+ */
+.landing-section--flush-top {
+  padding-top: 0;
+}
+
+.landing-section--flush-bottom {
+  padding-bottom: 0;
+}

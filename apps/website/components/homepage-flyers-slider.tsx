@@ -7,6 +7,7 @@ import type { Swiper as SwiperType } from "swiper";
 import { Box } from "@repo/ui/core-elements/box";
 import { Container } from "@repo/ui/core-elements/container";
 import { SliderControls } from "@repo/ui/core-elements/slider-dots";
+import { LandingSection } from "./landing-section";
 import "swiper/css";
 import "./homepage-flyers.css";
 
@@ -49,56 +50,62 @@ export function HomepageFlyersSlider({
 
   if (slides.length === 0) return null;
 
-  return (
-    // `paddingBottom` is the section's own rhythm, and it is the one piece of it
-    // this block does not get for free: every other landing block carries its
-    // 48/56 padding *inside* itself (`.catalog-items-section`, `.highlights-
-    // section`, `Spotlight`/`FindUs`'s `paddingY`), so a band composed around
-    // one is held off its neighbours by that block's padding. Here the padding
-    // lives inside the flyer's own band, and what ends the section is the
-    // control row *outside* it - which left the dots sitting flush against
-    // whatever came next. With another band next (every landing that puts the
-    // flyers above the highlights), that is two colour fields meeting with only
-    // the dots between them, and with a single flyer - where `SliderControls`
-    // draws nothing at all - the two bands touch outright.
-    <Box width="100%" flexDirection="column" gap={20} paddingBottom={56}>
-      <Swiper
-        className="homepage-flyers__swiper"
-        modules={[Keyboard]}
-        onSwiper={setSwiper}
-        onSlideChange={(s) => setActiveIndex(s.realIndex)}
-        loop={slides.length > 1}
-        slidesPerView={1}
-        // No gap between slides: each one is a full-bleed colour band, and a gap
-        // would show a stripe of the page between two bands mid-swipe.
-        spaceBetween={0}
-        autoHeight
-        keyboard={{ enabled: true }}
-      >
-        {slides.map((slide) => (
-          <SwiperSlide key={slide.id}>{slide.content}</SwiperSlide>
-        ))}
-      </Swiper>
+  // With one flyer this block is exactly a banded section: the slide's own
+  // `LandingSection` carries the rhythm, `SliderControls` draws nothing, and the
+  // band meets its neighbours the way every other band does.
+  //
+  // With two or more, the control row is the one thing on a landing that sits
+  // *outside* the section it belongs to - the padding is inside each flyer's
+  // band and what ends the section is the dots below it, which left them flush
+  // against whatever came next (two colour fields meeting with only the dots
+  // between them, on every landing that puts the flyers above the highlights).
+  // So the pair is wrapped in a section of its own that is flush at the top -
+  // the band already spaced that edge - and pays the rhythm's bottom half after
+  // the dots. `bare`, because the swiper is full-bleed and the control row
+  // brings its own `Container`.
+  const hasControls = slides.length > 1;
 
-      {/* Inside the page container, unlike the bands above it: the arrows and
+  return (
+    <LandingSection bare flushTop flushBottom={!hasControls}>
+      <Box width="100%" flexDirection="column" gap={20}>
+        <Swiper
+          className="homepage-flyers__swiper"
+          modules={[Keyboard]}
+          onSwiper={setSwiper}
+          onSlideChange={(s) => setActiveIndex(s.realIndex)}
+          loop={slides.length > 1}
+          slidesPerView={1}
+          // No gap between slides: each one is a full-bleed colour band, and a gap
+          // would show a stripe of the page between two bands mid-swipe.
+          spaceBetween={0}
+          autoHeight
+          keyboard={{ enabled: true }}
+        >
+          {slides.map((slide) => (
+            <SwiperSlide key={slide.id}>{slide.content}</SwiperSlide>
+          ))}
+        </Swiper>
+
+        {/* Inside the page container, unlike the bands above it: the arrows and
           dots belong to the page's rhythm, not to the full-width band. */}
-      <Container paddingX={10}>
-        <SliderControls
-          count={slides.length}
-          active={activeIndex}
-          // `slideToLoop` indexes the real slides; it falls through to `slideTo`
-          // when the slider is not looping.
-          onSelect={(i) => swiper?.slideToLoop(i)}
-          onPrev={() => swiper?.slidePrev()}
-          onNext={() => swiper?.slideNext()}
-          label={labels.pagination}
-          // Each flyer's own title is a better destination than "slide 3", and
-          // it is already resolved for the locale.
-          dotLabel={(i) => slides[i]!.title}
-          previousLabel={labels.previous}
-          nextLabel={labels.next}
-        />
-      </Container>
-    </Box>
+        <Container paddingX={10}>
+          <SliderControls
+            count={slides.length}
+            active={activeIndex}
+            // `slideToLoop` indexes the real slides; it falls through to `slideTo`
+            // when the slider is not looping.
+            onSelect={(i) => swiper?.slideToLoop(i)}
+            onPrev={() => swiper?.slidePrev()}
+            onNext={() => swiper?.slideNext()}
+            label={labels.pagination}
+            // Each flyer's own title is a better destination than "slide 3", and
+            // it is already resolved for the locale.
+            dotLabel={(i) => slides[i]!.title}
+            previousLabel={labels.previous}
+            nextLabel={labels.next}
+          />
+        </Container>
+      </Box>
+    </LandingSection>
   );
 }

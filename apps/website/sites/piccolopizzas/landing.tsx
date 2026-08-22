@@ -1,10 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import { Button } from "@repo/ui/core-elements/button";
-import { Container } from "@repo/ui/core-elements/container";
 import { getSystem } from "@/lib/system";
 import { MENU_ALL_PATH, MENU_ICON } from "@/lib/catalog-paths";
 import { fitSectionBackground } from "@/lib/section-background";
-import { SectionBand } from "@/components/section-band";
 import { Hero } from "@/components/hero";
 import { SuccessStories } from "@/components/success-stories";
 import { CompanyHighlights } from "@/components/company-highlights";
@@ -42,7 +40,7 @@ import { Intro } from "./sections/intro";
  *
  * Adjacent sections never repeat a shape: banded card grid -> split -> tile grid
  * -> bordered panel -> slider -> banded grid -> slider -> location cards. Both
- * `SectionBand`s carry the tenant's own band colours and edge notches, so the
+ * banded blocks carry the tenant's own band colours and edge notches, so the
  * seams are a CMS setting rather than site code.
  *
  * `FindUs` earns its place at the close more here than on a single-location
@@ -99,21 +97,15 @@ export async function Landing() {
 
       {/* The pizzas themselves, before any prose - the whole reason this site
           exists is that the old one never showed them. */}
-      <SectionBand
+      <CatalogItems
         background={itemsBg}
         topDivider={system?.catalog_top_divider}
         bottomDivider={system?.catalog_bottom_divider}
-      >
-        <Container paddingX={10}>
-          <CatalogItems />
-        </Container>
-      </SectionBand>
+      />
 
       <Intro />
 
-      <Container paddingX={10}>
-        <CatalogCategories />
-      </Container>
+      <CatalogCategories />
 
       {/* Shared, DB-driven Spotlight: the pizzeria can use it for whatever it
           wants to push - the family-size pies, the mar-y-tierra spaghetti - as a
@@ -126,23 +118,15 @@ export async function Landing() {
           make one, and reads as a plain section until they make a second. */}
       <HomepageFlyers />
 
-      <Container paddingX={10}>
-        <Events />
-      </Container>
+      <Events />
 
-      <SectionBand
+      <CompanyHighlights
         background={highlightsBg}
         topDivider={system?.highlights_top_divider}
         bottomDivider={system?.highlights_bottom_divider}
-      >
-        <Container paddingX={10}>
-          <CompanyHighlights />
-        </Container>
-      </SectionBand>
+      />
 
-      <Container paddingX={10}>
-        <SuccessStories />
-      </Container>
+      <SuccessStories />
 
       {/* Both branches on their maps, and the way through to /contact - the
           shared block, so these cards are the ones the contact page draws.

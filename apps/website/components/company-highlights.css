@@ -1,9 +1,3 @@
-.highlights-section {
-  width: 100%;
-  padding: 48px 0 56px;
-  box-sizing: border-box;
-}
-
 /* Surface styling (radius, overflow, background, flex) lives on the Card props
    in company-highlights.tsx. Only the size-driven, responsive min-heights stay
    here - they cannot be expressed as component props because the @media

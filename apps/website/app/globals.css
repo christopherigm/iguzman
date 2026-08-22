@@ -90,6 +90,31 @@ body {
   margin: 0;
 }
 
+/* ── The landing rhythm ──────────────────────────────────────────────────────
+   `--section-space` is the ONE vertical measure every landing section is built
+   from: the space between a section's own edge and its content, applied
+   symmetrically (`padding-block`) by `.landing-section`
+   (`components/landing-section.css`).
+
+   Symmetric is the whole point. The blocks this replaced each carried their own
+   figure - 48px above and 56px below in five CSS files, 64px both ways in four
+   components - so the gap between any two sections depended on *which* two, and
+   reordering a landing changed its rhythm. With one symmetric value, a section
+   contributes the same space wherever it lands, which is what makes the blocks
+   in every `sites/<slug>` landing freely re-orderable.
+
+   Fluid rather than stepped: no breakpoint jumps and no media queries to keep in
+   step. 48px on a phone, opening to 88px on a wide desktop and capped there
+   (past ~1600px more air just pushes the page apart).
+
+   ⚠ Read it, never re-state it. Anything that has to line up with the rhythm -
+   the sticky menu rail's lead spacer in `components/menu-category-nav.css`, for
+   one - takes `var(--section-space)` rather than repeating a number.
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+  --section-space: clamp(48px, 5.5vw, 88px);
+}
+
 a {
   color: inherit;
   text-decoration: none;

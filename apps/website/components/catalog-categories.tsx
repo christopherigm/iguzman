@@ -16,7 +16,7 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { getSession } from "@repo/auth/session";
 import { AdminEditButton } from "./admin-edit-button";
-import "./catalog-categories.css";
+import { LandingSection, type LandingBlockProps } from "./landing-section";
 
 type CategoryType = "product" | "service" | "food";
 
@@ -170,7 +170,7 @@ export async function CategoryCard({
   );
 }
 
-export async function CatalogCategories() {
+export async function CatalogCategories(section: LandingBlockProps = {}) {
   const [productCategories, serviceCategories, menuCategories, locale, t] =
     await Promise.all([
       getProductCategories(),
@@ -188,7 +188,7 @@ export async function CatalogCategories() {
     return null;
 
   return (
-    <section className="catalog-section">
+    <LandingSection {...section}>
       <Box className="highlights-header">
         <Typography as="h2" variant="h2" className="section-title">
           {t("heading")}
@@ -253,6 +253,6 @@ export async function CatalogCategories() {
           );
         })}
       </Grid>
-    </section>
+    </LandingSection>
   );
 }

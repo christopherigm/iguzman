@@ -14,6 +14,7 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import type { GridSize } from "@repo/ui/core-elements/grid";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { AdminEditButton } from "./admin-edit-button";
+import { LandingSection, type LandingBlockProps } from "./landing-section";
 import "./company-highlights.css";
 
 export const HIGHLIGHT_GRID_SIZE: Record<string, GridSize> = {
@@ -285,7 +286,7 @@ export async function HighlightCard({
   );
 }
 
-export async function CompanyHighlights() {
+export async function CompanyHighlights(section: LandingBlockProps = {}) {
   const [highlights, system, locale] = await Promise.all([
     getHighlights(),
     getSystem(),
@@ -311,7 +312,7 @@ export async function CompanyHighlights() {
     null;
 
   return (
-    <section className="highlights-section">
+    <LandingSection {...section}>
       {(title || subtitle) && (
         <Box className="highlights-header">
           {title && (
@@ -336,6 +337,6 @@ export async function CompanyHighlights() {
           </Grid>
         ))}
       </Grid>
-    </section>
+    </LandingSection>
   );
 }

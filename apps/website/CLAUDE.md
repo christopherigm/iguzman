@@ -66,7 +66,7 @@ customization?, quantity}`) - Django re-prices every one of them
   name a price could name its own.
 - **A signed-out visitor whose order turns out to be owned is sent to `/auth`,
   not to a 404.** A guest order is readable by whoever holds its link, so the
-  only way an anonymous request gets nothing back is that the order *has* an
+  only way an anonymous request gets nothing back is that the order _has_ an
   owner - which is now the ordinary outcome of checking out as a guest on an
   address this site already has an account for (website-api's CLAUDE.md →
   "Payments"). A receipt leading to "this order does not exist" is the one thing
@@ -403,11 +403,11 @@ the app is built from `lib/catalog-paths.ts`:
 where `<family>` is `products`, `services` or `menu`. So `/menu/espresso/latte`
 and `/products/tools/hammer` are the same address read twice.
 
-| Helper                              | Gives                            |
-| ----------------------------------- | -------------------------------- |
-| `CATALOG_ROOT[family]`              | `/products`, `/services`, `/menu` |
-| `categoryHref(family, cat)`         | `/<family>/<cat>`                |
-| `itemHref(family, cat, slug)`       | `/<family>/<cat>/<slug>`         |
+| Helper                        | Gives                             |
+| ----------------------------- | --------------------------------- |
+| `CATALOG_ROOT[family]`        | `/products`, `/services`, `/menu` |
+| `categoryHref(family, cat)`   | `/<family>/<cat>`                 |
+| `itemHref(family, cat, slug)` | `/<family>/<cat>/<slug>`          |
 
 `family` is `"product" | "service" | "food"` - the same spelling `BuyableItem.kind`
 and `CategoryDetail`'s `kind` prop use, not a fourth one. `MENU_ALL_PATH`,
@@ -423,7 +423,7 @@ has by far the most call sites.
   the CMS forms mark the field `required`. That is not a taxonomy preference:
   the category slug is the first segment of the item's URL, so an item without
   one has no address.
-- ⚠ **The one-segment route is the category page *and* the item permalink.**
+- ⚠ **The one-segment route is the category page _and_ the item permalink.**
   `/<family>/<slug>` resolves the slug against that family's categories first;
   on a miss it looks the slug up as an item and 301s to its canonical
   three-segment URL (`lib/catalog-permalink.ts`). This is what keeps every flat
@@ -432,7 +432,7 @@ has by far the most call sites.
   address that survives being re-filed. The cost: a category slug wins over an
   item sharing it.
 - ⚠ **An item's canonical URL moves when an operator re-files it**, and the
-  detail route serves an item *only* under its own category - anything else is a
+  detail route serves an item _only_ under its own category - anything else is a
   404, so one item has exactly one URL. Use the one-segment permalink when an
   address has to outlive an edit.
 - The `/categories/*` tree this replaced (`/categories/products` beside
@@ -446,16 +446,16 @@ Every slug the CMS writes is `{site_prefix}-{name}`, from `System.site_prefix`.
 The API owns the whole story; read website-api's CLAUDE.md ->
 "`System.site_prefix`" first.
 
-| Piece                       | Where                                            |
-| --------------------------- | ------------------------------------------------ |
-| The builder                 | `lib/slug-utils.ts` (`buildSlug`)                |
-| The prefix, CMS-wide        | `app/[locale]/admin/site-prefix-provider.tsx`    |
+| Piece                         | Where                                               |
+| ----------------------------- | --------------------------------------------------- |
+| The builder                   | `lib/slug-utils.ts` (`buildSlug`)                   |
+| The prefix, CMS-wide          | `app/[locale]/admin/site-prefix-provider.tsx`       |
 | The field + whole-site button | `app/[locale]/admin/system/site-prefix-section.tsx` |
-| The button itself           | `components/admin/recreate-ids-button.tsx`       |
-| The call                    | `lib/admin-api.ts` (`recreateSlugs`)             |
+| The button itself             | `components/admin/recreate-ids-button.tsx`          |
+| The call                      | `lib/admin-api.ts` (`recreateSlugs`)                |
 
 - ⚠ **`buildSlug` takes the prefix, not the session's `systemId`.** It used to
-  take the id, which produced unreadable `1-latte` URLs *and* a different shape
+  take the id, which produced unreadable `1-latte` URLs _and_ a different shape
   from what `seed_site` wrote for the same tenant. Its transliteration is
   mirrored character for character by `slug_base` in website-api's
   `core/services/reslug.py` - change one and you must change the other, or a
@@ -484,7 +484,7 @@ The API owns the whole story; read website-api's CLAUDE.md ->
   belongs with the other every-row passes, because that is what it is.
 - ⚠ **It is one request, not a walk over the rows** - the odd one out in the bar
   it now sits in. The rebuild runs in a single transaction on the
-  API side, where it can dodge the slugs *other tenants* hold, which a browser
+  API side, where it can dodge the slugs _other tenants_ hold, which a browser
   cannot see; so there is no per-row progress to report and no half-finished
   state to resume. Never reimplement it as a `PATCH` per row, and don't fold it
   into `BulkActionsBar`'s run loop - it keeps its own confirmation, its own
@@ -501,13 +501,13 @@ The API owns the whole story; read website-api's CLAUDE.md ->
 A menu is sectioned by the tenant's own `MenuCategory` rows and by nothing else,
 and `MenuItem.category` is **required**. Everything follows from that:
 
-| Surface                    | Path                      | File                                     |
-| -------------------------- | ------------------------- | ---------------------------------------- |
-| The whole menu             | `/menu`                   | `components/menu-listing.tsx`            |
-| One category               | `/menu/<category>`        | `app/[locale]/menu/[category]/page.tsx`  |
-| One item                   | `/menu/<category>/<slug>` | `components/menu-item-detail-page.tsx`   |
-| One item, stable permalink | `/menu/<slug>`            | `app/[locale]/menu/[category]/page.tsx`  |
-| Paths                      | —                         | `lib/catalog-paths.ts`                   |
+| Surface                    | Path                      | File                                    |
+| -------------------------- | ------------------------- | --------------------------------------- |
+| The whole menu             | `/menu`                   | `components/menu-listing.tsx`           |
+| One category               | `/menu/<category>`        | `app/[locale]/menu/[category]/page.tsx` |
+| One item                   | `/menu/<category>/<slug>` | `components/menu-item-detail-page.tsx`  |
+| One item, stable permalink | `/menu/<slug>`            | `app/[locale]/menu/[category]/page.tsx` |
+| Paths                      | —                         | `lib/catalog-paths.ts`                  |
 
 ⚠ **The category page and the permalink are the same route.** `/menu/<slug>`
 resolves the slug against the menu's categories first and renders the category
@@ -592,24 +592,27 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   from `md`, which is why the item cards go three-across there (`md: 4`).
   ⚠ **It starts level with the first item _card_, and the way it does that is a
   spacer that _is_ the section heading** - the same `Box` + `Typography` markup
-  carrying one non-breaking space, below `.catalog-section`'s own 48px top
-  padding. A hard-coded offset would be wrong the moment the heading's type or
-  rhythm changed; this moves both columns together. ⚠ **That spacer lives
-  _inside_ the sticky `nav`, and the 48px padding lives outside it** - which is
-  what keeps the two columns level in the _pinned_ state too, not just the
-  in-flow one. The sticky `top` is `navbar + 16px`, i.e. exactly the
-  `scroll-margin-top` the section headings carry, so the box comes to rest with
-  its first child - the heading replica - sitting where the jumped-to section's
-  own heading is, and the card's top edge therefore lands on that section's first
-  item card. (The 48px stays outside because a jump parks the heading at the
-  navbar and leaves the section's top padding above the viewport; carried inside,
-  the pinned rail would sit 48px low.) It **ends** level with the last item card
-  for the mirror-image reason: the rail's cell is as tall as the sections column,
-  which runs 56px past that card, so the rail carries a 56px bottom margin - a
-  sticky box is constrained to its containing block _minus its margins_, and
+  carrying one non-breaking space, below the landing rhythm's own top half
+  (`--section-space`, see "The landing rhythm"). A hard-coded offset would be
+  wrong the moment the heading's type or rhythm changed; this moves both columns
+  together. ⚠ **That spacer lives _inside_ the sticky `nav`, and the section's
+  top space lives outside it** - which is what keeps the two columns level in the
+  _pinned_ state too, not just the in-flow one. The sticky `top` is
+  `navbar + 16px`, i.e. exactly the `scroll-margin-top` the section headings
+  carry, so the box comes to rest with its first child - the heading replica -
+  sitting where the jumped-to section's own heading is, and the card's top edge
+  therefore lands on that section's first item card. (The space stays outside
+  because a jump parks the heading at the navbar and leaves the section's top
+  padding above the viewport; carried inside, the pinned rail would sit that far
+  low.) It **ends** level with the last item card for the mirror-image reason:
+  the rail's cell is as tall as the sections column, which runs one
+  `--section-space` past that card, so the rail carries that much bottom margin -
+  a sticky box is constrained to its containing block _minus its margins_, and
   without it the rail's last resting position sat that far below the grid it
-  addresses. Those two numbers (48 / 56) are the only ones copied from
-  `catalog-categories.css` - keep them in step.
+  addresses. ⚠ **Both are `var(--section-space)`, never a px literal**: the
+  rhythm is fluid, so a number copied here would line the two columns up at
+  exactly one viewport width. (They used to be a hard-coded 48 / 56 pair with a
+  "keep them in step" warning - that is what the variable replaced.)
 - **Below `md` the index is a floating button, not a shrunken rail**
   (`components/menu-category-nav-mobile.tsx`): a pill floating just above the
   bottom edge - the site-wide menu glyph and "See Menu" (`FoodPage.navButton`,
@@ -821,7 +824,7 @@ opening every record in turn.
 | The bar, and the run     | `components/admin/bulk-actions.tsx` (`BulkActionsBar`)               |
 | Turning it on for a list | `AdminEntityList`'s `bulkActions` prop                               |
 | The give-back pair       | `components/admin/points-give-back.tsx` (shared with the calculator) |
-| The fourth button        | `components/admin/recreate-ids-button.tsx` (see "Slugs" above)        |
+| The fourth button        | `components/admin/recreate-ids-button.tsx` (see "Slugs" above)       |
 
 | Action                       | What it writes                                                                                                                                                                                  |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -2255,7 +2258,7 @@ disc in - so the two brand moments cannot drift apart.
   place that decides how big a cradled brandmark is - don't re-type the `clamp()`
   into `footer.css`.
 - **The rule is the footer's; the disc is not.** The flanks and the arch wear
-  the border's own `color-mix(… --foreground 10% …)`, since they *are* that
+  the border's own `color-mix(… --foreground 10% …)`, since they _are_ that
   border - but the circle is `HERO_BADGE_PLATE`, the same flat white every other
   brand plate takes, rather than the theme's page background it used to follow.
   See the hero's bullet above for why.
@@ -2326,15 +2329,15 @@ Three things came with the move:
 **Every record with an image can state the shape its pictures are drawn in**,
 from one select under the image controls on its CMS form. The column is
 `aspect_ratio` on the API's `BasePicture` (read website-api's CLAUDE.md ->
-"`BasePicture.aspect_ratio`" first); blank is the default and means *auto*,
+"`BasePicture.aspect_ratio`" first); blank is the default and means _auto_,
 which is the behaviour every one of these surfaces had before the column
 existed.
 
-| Piece                    | Where                                            |
-| ------------------------ | ------------------------------------------------ |
-| The ratios + the parser  | `lib/aspect-ratio.ts`                            |
-| The CMS control          | `components/admin/admin-aspect-ratio-field.tsx`  |
-| The gallery's own prop   | `@repo/ui`'s `ImageGallery` (`aspectRatio`)      |
+| Piece                   | Where                                           |
+| ----------------------- | ----------------------------------------------- |
+| The ratios + the parser | `lib/aspect-ratio.ts`                           |
+| The CMS control         | `components/admin/admin-aspect-ratio-field.tsx` |
+| The gallery's own prop  | `@repo/ui`'s `ImageGallery` (`aspectRatio`)     |
 
 Where a stated frame applies:
 
@@ -2347,7 +2350,7 @@ So **seven forms** carry the select: the three buyables, the three editorial
 records (story, highlight, event) and the flyer.
 
 - ⚠ **Never parse the string inline.** `aspectRatioValue` returns `null` for
-  auto *and* for anything unrecognised, so a row written before a ratio was
+  auto _and_ for anything unrecognised, so a row written before a ratio was
   retired renders in the default frame instead of taking the page down with it.
 - ⚠ **The ratio list here and `ASPECT_RATIO_CHOICES` in website-api's
   `core/models.py` are one list written twice** - the write serializers refuse a
@@ -2363,7 +2366,7 @@ records (story, highlight, event) and the flyer.
     three category forms carry no Image frame select, and why no category
     serializer exposes the column (website-api's CLAUDE.md ->
     "`BasePicture.aspect_ratio`").
-  - **The landing hero** (`components/hero.tsx`) is the *tenant's* band rather
+  - **The landing hero** (`components/hero.tsx`) is the _tenant's_ band rather
     than a record's: it draws `System.img_hero`, `System` has no
     `aspect_ratio` column at all, and its height is the hero's own business
     (`hero_video_layout` plus the overlay fields).
@@ -2372,7 +2375,8 @@ records (story, highlight, event) and the flyer.
     longer line up, and the same item appears in grids this record knows
     nothing about - so the box is a hard-coded 4:5, 1:1 in `compact`.
 
-  The override is for the surfaces where one record *is* the block.
+  The override is for the surfaces where one record _is_ the block.
+
 - **Fullscreen is untouched too** - there the reader wants the whole
   photograph, and a frame is the one thing in the way.
 - **It is the record's setting, not each photo's.** A gallery is one box holding
@@ -2436,16 +2440,18 @@ shapes**.
   for a single slide, so a lone flyer carries no dots and no arrows - which is
   what stops it looking like a broken carousel. The band renders nothing at all
   with no flyers, the contract every landing block here follows.
-- ⚠ **The section's own bottom rhythm is a `paddingBottom` on the slider root**,
-  and it is the one piece of the page rhythm this block does not get for free.
-  Every other landing block carries its 48/56 (or `paddingY={64}`) *inside*
-  itself, so a `SectionBand` composed around one is held off its neighbours by
-  that block's padding. Here the padding lives inside each flyer's own band and
-  what *ends* the section is the control row **outside** it - so with nothing
-  below the dots they sat flush against whatever came next. On every landing
-  that puts the flyers above the highlights that is two colour fields meeting
-  with only the dots between them, and with a single flyer (no controls at all)
-  the two bands touch outright.
+- ⚠ **The control row is the one thing on a landing that sits _outside_ the
+  section it belongs to**, and it is the one place this block's rhythm is not
+  simply its `LandingSection`'s. Each slide is its own `LandingSection` (band,
+  gutter and the symmetric `--section-space` inset), but what _ends_ the section
+  is the dots **outside** that band - so with nothing below them they sat flush
+  against whatever came next. On every landing that puts the flyers above the
+  highlights that is two colour fields meeting with only the dots between them.
+  So the swiper and its controls are wrapped in a `LandingSection bare flushTop`
+  that pays the rhythm's bottom half after the dots. ⚠ It is `flushBottom` too
+  when there is only **one** flyer: `SliderControls` draws nothing there, so the
+  block is exactly a banded section and an extra gap below it would make a lone
+  flyer sit differently from every other band.
 - ⚠ **The slide's layout is grid areas in CSS, and must stay there.** The DOM
   order is header → media → body; below `sm` that reads straight down, from `sm`
   up the photograph moves beside the writing and spans both text rows, on the
@@ -2500,6 +2506,86 @@ shapes**.
   Constants" below): the per-tenant catalog fetch, the `${kind}:${id}` encoding
   and the compaction of an emptied middle slot live there, and each consumer
   passes only how many slots it has.
+
+## The landing rhythm (`LandingSection`)
+
+**Every composable landing block renders itself in `components/landing-section.tsx`,
+and a `sites/<slug>/landing.tsx` is therefore a flat, re-orderable list of
+`<Block />` lines.** Moving a section is moving one line: no `<Container>` and no
+`<SectionBand>` travel with it.
+
+| Piece                | Where                                                 |
+| -------------------- | ----------------------------------------------------- |
+| The wrapper          | `components/landing-section.tsx` (`LandingSection`)   |
+| Its one class        | `components/landing-section.css` (`.landing-section`) |
+| The measure          | `--section-space` in `app/globals.css`                |
+| The band it wraps in | `components/section-band.tsx` (`SectionBand`)         |
+
+`LandingSection` owns the three things that used to be spread across the blocks
+and the landings composing them:
+
+1. **The vertical rhythm** - one symmetric `padding-block: var(--section-space)`.
+2. **The page gutter** - the `Container paddingX={10}` each landing used to wrap
+   half its blocks in by hand while the other half wrapped themselves.
+3. **The optional band** - `background` / `topDivider` / `bottomDivider` go
+   straight to `SectionBand`, so a banded section is a **prop on the block**
+   rather than a wrapper around it.
+
+```tsx
+// A landing is now just this. Reorder by moving a line.
+<Hero system={system} splitSlogan align="start" />
+<Intro />
+<CatalogItems
+  background={itemsBg}
+  topDivider={system?.catalog_top_divider}
+  bottomDivider={system?.catalog_bottom_divider}
+/>
+<Events />
+<CatalogCategories />
+<Spotlight />
+<HomepageFlyers />
+<CompanyHighlights background={highlightsBg} />
+<SuccessStories />
+<FindUs />
+```
+
+- ⚠ **`--section-space` is symmetric, and that is the entire point.** The blocks
+  this replaced each carried their own figure - `padding: 48px 0 56px` in five
+  CSS files, `paddingY={64}` inline in four components - so the gap between two
+  sections depended on _which_ two they were, and reordering a landing silently
+  changed its spacing. One symmetric value means a section contributes the same
+  space wherever it lands.
+- **It is fluid** (`clamp(48px, 5.5vw, 88px)`), so there are no breakpoint jumps
+  and no media queries to keep in step. ⚠ **Read it, never restate it.** Anything
+  that has to line up with the rhythm - the sticky menu rail's lead spacer and
+  bottom margin - takes `var(--section-space)`; a px literal copied out of it
+  only lines up at one viewport width, which is exactly the trap the old 48 / 56
+  constants in `menu-category-nav.tsx` were.
+- ⚠ **A block renders it _after_ its own "nothing to show" guard**, never the
+  other way round. A landing composes `<Spotlight />`, `<Events />`,
+  `<HomepageFlyers />` and `<FindUs />` blind, so a block that returns `null`
+  must contribute no padded, empty section - which is exactly what a landing
+  wrapping them from the outside could not promise. That contract is why the
+  wrapper lives inside each block rather than in the landing.
+- **Bands sit flush in the rhythm**: a band's inset _is_ its section's space, so
+  two adjacent bands meet - which is what the tenant's shape dividers are cut
+  for. There is deliberately no page-background margin around a band.
+- **`bare` drops the `Container`** for a section already inside one (the catalog
+  and menu listing pages, `javastop`'s `/artists`) or whose content is
+  edge-to-edge and brings its own (the flyers' swiper). **`flushTop` /
+  `flushBottom`** drop one edge's space - for the section that opens a page under
+  a breadcrumb group, whose own margin is the gap that group wants.
+- **`LandingBlockProps` is the type every block takes and spreads**
+  (`Omit<LandingSectionProps, "children">`), so which sections are banded and
+  which open a page are decisions made at the call site while the block stays
+  layout-agnostic. Blocks with props of their own (`FindUs`, `AboutIntro`) extend
+  it and spread the rest.
+- ⚠ **A site-local section in `sites/<slug>/sections/` uses it too**
+  (`lacocinaderosalinda`'s `Firma`, `santofishrestaurant`'s `Bar`) - a bespoke
+  section that kept its own `paddingY` would be the one block on the page that
+  stopped matching when it moved. A wrapper around a shared block (every
+  `intro.tsx`, `origin.tsx`, `departure.tsx`) needs nothing: the block it wraps
+  already carries the section.
 
 ## Section background bands (`SectionBand`)
 
@@ -2635,21 +2721,22 @@ Two things to keep if you touch it:
 
 ## Shared utility classes in `app/globals.css`
 
-| Class                   | Use for                                                                                                       |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `.section-title`        | `<h2>` (or any heading) that titles a page section                                                            |
-| `.section-subtitle`     | Supporting paragraph beneath a section title                                                                  |
-| `.highlights-header`    | Wrapper for a section-title (+ optional subtitle); flex-column + gap, resets the children's bottom margins    |
-| `.zoom-on-hover`        | Card container with `overflow: hidden` - scales inner `<img>` to 1.1× on hover                                |
-| `.card-content`         | Inner content wrapper of any card - standard padding (`16px` vertical, `10px` horizontal)                     |
-| `.elevation-<1-24>`     | Box shadow matching `Box elevation={n}` - use on any element (Link, div, etc.) to apply the same shadow scale |
-| `.item-price`           | Large, bold price display for product/service detail pages                                                    |
-| `.item-compare-price`   | Muted, line-through compare price for detail pages                                                            |
-| `.item-points-price`    | The points price beside a detail page's money price - the price's weight, in `--accent-text`                  |
-| `.item-stock-in`        | Green "In Stock" indicator text                                                                               |
-| `.item-stock-out`       | Red "Out of Stock" indicator text                                                                             |
-| `.item-specs-table`     | Full-width spec/detail table with alternating borders and label column                                        |
-| `.item-section-heading` | `<h2>` section heading inside a detail page (description, specs, etc.)                                        |
+| Class                   | Use for                                                                                                                |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `.landing-section`      | The one landing-section wrapper - symmetric `--section-space` rhythm. Rendered by `LandingSection`; never hand-written |
+| `.section-title`        | `<h2>` (or any heading) that titles a page section                                                                     |
+| `.section-subtitle`     | Supporting paragraph beneath a section title                                                                           |
+| `.highlights-header`    | Wrapper for a section-title (+ optional subtitle); flex-column + gap, resets the children's bottom margins             |
+| `.zoom-on-hover`        | Card container with `overflow: hidden` - scales inner `<img>` to 1.1× on hover                                         |
+| `.card-content`         | Inner content wrapper of any card - standard padding (`16px` vertical, `10px` horizontal)                              |
+| `.elevation-<1-24>`     | Box shadow matching `Box elevation={n}` - use on any element (Link, div, etc.) to apply the same shadow scale          |
+| `.item-price`           | Large, bold price display for product/service detail pages                                                             |
+| `.item-compare-price`   | Muted, line-through compare price for detail pages                                                                     |
+| `.item-points-price`    | The points price beside a detail page's money price - the price's weight, in `--accent-text`                           |
+| `.item-stock-in`        | Green "In Stock" indicator text                                                                                        |
+| `.item-stock-out`       | Red "Out of Stock" indicator text                                                                                      |
+| `.item-specs-table`     | Full-width spec/detail table with alternating borders and label column                                                 |
+| `.item-section-heading` | `<h2>` section heading inside a detail page (description, specs, etc.)                                                 |
 
 ```tsx
 <Typography as="h2" variant="h2" className="section-title">{title}</Typography>
@@ -2699,12 +2786,14 @@ Rules:
   independent - keep whatever the page needs (commonly `32`, or `8` on detail pages).
 - **When the first block after breadcrumbs is a _section wrapper_ (not an `<h1>`),
   cancel that wrapper's top padding so it doesn't reintroduce a large gap.** The
-  breadcrumbs' 8px margin-bottom is still the only group gap. Concretely: the catalog
-  listing pages (`categories/{products,services}`) add `catalog-section--flush-top`
-  to the **first** rendered `.catalog-section` (its `padding: 48px 0 56px` rhythm is
-  meant for _stacked_ sections, not the one directly under the breadcrumbs), and
-  `components/category-detail.tsx` renders its root `<Box>` with no `paddingTop` for
-  the same reason. Don't restore those top paddings.
+  breadcrumbs' 8px margin-bottom is still the only group gap. Concretely: the
+  catalog and menu listing pages pass `flushTop` to the **first** `LandingSection`
+  they render (the landing rhythm is meant for _stacked_ sections, not the one
+  directly under the breadcrumbs), and `components/category-detail.tsx` renders
+  its root `<Box>` with no `paddingTop` for the same reason. Don't restore those
+  top paddings. ⚠ Those pages also pass **`bare`**, since they are already inside
+  their own page `Container` and `LandingSection` would otherwise add a second
+  gutter inside the first.
 
 ## Two-column media/text layouts - split at `sm`, not `md`
 
@@ -2789,8 +2878,9 @@ Before defining a constant, type, or pure utility function in a component file, 
 | `apps/website/components/admin/catalog-option-label.ts`    | `CATALOG_KIND_ICON`, `catalogRowCategory`, `catalogOptionLabel` - how a catalog record reads in a CMS `<select>`: family glyph, then the **category** it is filed under (the family label only standing in when it has none), then its name. Used by `coupon-scope-picker.tsx`, `catalog-ref-picker.tsx` and `admin/social-posts/[id]/page.tsx`                           |
 | `apps/website/components/admin/bilingual-name-fields.tsx`  | `BilingualNameFields` - one short ES/EN name pair with a per-field AI translate button (its own `useLlmProxy`, the shared `buildTranslateMessages` prompts). Used by a reward tier's name and a menu ingredient's choice-group label; extracted from `menu-ingredients-editor.tsx`, which carried its own copy of the prompts because `group_en_name` has no `en_` prefix |
 | `apps/website/components/menu-customizer-spacing.ts`       | `MENU_CUSTOMIZER_GAP` - the space between the size choice and the add-ons, on all three surfaces that customise a dish (detail page, card/cart modal, POS till)                                                                                                                                                                                                           |
+| `apps/website/components/landing-section.tsx`              | `LandingSection`, `LandingSectionProps`, `LandingBlockProps` - the one landing-section wrapper (rhythm + gutter + optional band) that every composable landing block renders itself in, and the prop bag each of them spreads                                                                                                                                             |
 | `apps/website/lib/maps.ts`                                 | `directionsHref` - the Google Maps hand-off, built from **coordinates, never an address**. Used by the contact page's locations, an event's venue and an order's location; website-api builds the same URL for the order email                                                                                                                                            |
-| `apps/website/lib/aspect-ratio.ts`                          | `ASPECT_RATIOS`, `ASPECT_RATIO_LABEL_KEY`, `aspectRatioValue` - the frame a record's images are drawn in, shared by the CMS select that writes it and every public surface that draws it. Its twin is `ASPECT_RATIO_CHOICES` in website-api's `core/models.py`                                                                                            |
+| `apps/website/lib/aspect-ratio.ts`                         | `ASPECT_RATIOS`, `ASPECT_RATIO_LABEL_KEY`, `aspectRatioValue` - the frame a record's images are drawn in, shared by the CMS select that writes it and every public surface that draws it. Its twin is `ASPECT_RATIO_CHOICES` in website-api's `core/models.py`                                                                                                            |
 | `apps/website/lib/same-origin-image.ts`                    | `toSameOriginDataUrl` - routes a remote image through `/api/media` (this app's own passthrough proxy) so a canvas that draws it is not tainted. Used by both flyer exports and by `lib/map-capture.ts`                                                                                                                                                                    |
 | `apps/website/lib/contact.ts`                              | `whatsappHref` - the wa.me click-to-chat URL, with the number stripped to digits (wa.me rejects the spaces and dashes people type) and an optional prefilled message. Used both directions: a **branch's** number on the contact page, a **customer's** in the admin inbox                                                                                                |
 

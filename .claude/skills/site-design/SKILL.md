@@ -135,7 +135,7 @@ That gives you two design levers, and you must not confuse them:
 | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
 | Section **order** and which blocks appear                                                                    | Band **colours** (`catalog_items_bg`, `highlights_bg`)                                                                     |
 | Hero **hierarchy**: `splitSlogan` (headline + quieter subline), `align="start"`, and which CTA sits under it | Hero **darkening** (`hero_overlay_style`/`_opacity`/`_extent`) and the **logo badge** (`hero_video_layout`, `hero_logo_*`) |
-| Whether a section sits in a `SectionBand` at all                                                             | Which **notch shape** each band edge and the hero's bottom edge gets                                                       |
+| Whether a section is **banded** at all (a `background` prop on the block)                                    | Which **notch shape** each band edge and the hero's bottom edge gets                                                       |
 | Type **hierarchy** (`Typography` `variant`)                                                                  | The **typefaces** (`google_font_url`, `font_display`, `font_body`)                                                         |
 
 **Two hard don'ts follow, and they're the same mistake:**
@@ -146,8 +146,9 @@ That gives you two design levers, and you must not confuse them:
   and reads as "the overlay setting is ignored." Three sites carried one; it was
   removed. Raise `hero_overlay_opacity` or pick a stronger style instead.
 - **Never hand-write a `mask-image`** or wrap a section in your own
-  `ShapeDivider` to add a wave. Pass the tenant's `*_divider` fields through
-  `SectionBand` and let an unset field mean a straight edge.
+  `ShapeDivider` to add a wave. Pass the tenant's `*_divider` fields to the block
+  as `topDivider` / `bottomDivider` — it forwards them to `SectionBand` — and let
+  an unset field mean a straight edge.
 
 So when a landing looks flat — hard seams between sections, default Roboto, an
 unreadable slogan over a busy photo — **the fix is usually a seed/CMS field, not
@@ -178,14 +179,19 @@ Score a landing against these. A site should clear all six.
    neutral tokens (`--foreground`, `--background`, `--surface-2`, `--border`,
    `--muted-foreground`). That's the palette. Accent is for _emphasis_ (primary
    CTA, active state, a single highlight), not for filling large areas.
-4. **Spacing rhythm.** Pick one vertical section-padding value and reuse it
-   (e.g. `paddingY={64}` on section wrappers, `{48}` on mobile via responsive
-   props). Inconsistent gaps read as sloppy. Group related items tight, separate
-   sections generously.
+4. **Spacing rhythm.** ⚠ **The vertical rhythm is not a choice you make.** It is
+   `--section-space` (fluid, `clamp(48px, 5.5vw, 88px)`), applied symmetrically
+   by the `LandingSection` every block renders itself in — which is what lets an
+   operator re-order a landing without any section coming out wrong for its new
+   place. Never give a section its own `paddingY` or wrap it in a `Container`;
+   a site-local section in `sections/` renders `LandingSection` too. Inconsistent
+   gaps read as sloppy, and this is how they stop happening. What is still yours:
+   grouping related items tight _inside_ a section.
 5. **Deliberate section order & variety.** The order should tell the customer's
    story (see archetypes), and adjacent sections should differ in shape and
-   background so the eye has rhythm. Alternate plain / `--surface-2` bands (via
-   `SectionBand`, which also carries the tenant's edge notches). **Two blocks
+   background so the eye has rhythm. Alternate plain / `--surface-2` bands (a
+   `background` prop on the block, which also carries the tenant's edge notches).
+   **Two blocks
    exist specifically to break a run of card grids — use them rather than
    stacking a fifth grid:** `<Spotlight />` (a bordered promo panel beside a
    hand-picked trio; DB-driven, invisible until configured, so it costs nothing
@@ -263,8 +269,9 @@ The reference exemplars in-repo:
   `--surface-2` bands for rhythm, no purple, no `translateY`. Mirror its restraint.
 - **`sites/supertortaselchino/`** and **`sites/panorganico/`** (food) — the
   current shape of a landing: `Hero` with `splitSlogan`/`align="start"` and a
-  count-gated CTA, `SectionBand` fed the tenant's divider fields, `<Spotlight />`
-  breaking the grid run, and an `AboutIntro`-based `sections/intro.tsx`. Their
+  count-gated CTA, a flat list of blocks with the band colour and the tenant's
+  divider fields passed as props, `<Spotlight />` breaking the grid run, and an
+  `AboutIntro`-based `sections/intro.tsx`. Their
   band is `color-mix(in srgb, var(--accent) 6%, var(--surface-2))` — a neutral
   carrying a few percent of the brand, which resolves per theme and reads warm
   without becoming a coloured area. Copy that trick, not a gradient.

@@ -2,13 +2,12 @@ import Image from "next/image";
 import { aspectRatioValue } from "@/lib/aspect-ratio";
 import { getTranslations, getLocale } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
-import { Container } from "@repo/ui/core-elements/container";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { getHomepageFlyers, type HomepageFlyer } from "@/lib/homepage-flyers";
 import { getAllProducts, getAllServices, getAllMenuItems } from "@/lib/catalog";
 import { fitSectionBackground } from "@/lib/section-background";
-import { SectionBand } from "./section-band";
+import { LandingSection } from "./landing-section";
 import { BuyableCard, type BuyableItem } from "./buyable-card";
 import {
   HomepageFlyersSlider,
@@ -116,38 +115,42 @@ export async function HomepageFlyers() {
       id: flyer.id,
       title,
       content: (
-        <SectionBand
+        <LandingSection
           background={fitSectionBackground(flyer.background || "transparent")}
           topDivider={flyer.top_divider}
           bottomDivider={flyer.bottom_divider}
         >
-          <Container paddingX={10}>
-            {/* The three grid areas are assigned here; the templates that place
-                them - and the gap, since from `sm` up the title and the copy
-                below it close into one block - live in `homepage-flyers.css`,
-                because they are the one thing that differs between a phone and
-                everything above it, and an inline style would beat every media
-                query in there. */}
-            <Box className={classes.join(" ")} display="grid" paddingY={64}>
-              {title && (
-                <Typography
-                  as="h2"
-                  variant="h2"
-                  fontWeight={800}
-                  margin={0}
-                  styles={{ gridArea: "header" }}
-                >
-                  {title}
-                </Typography>
-              )}
+          {/* The three grid areas are assigned here; the templates that place
+              them - and the gap, since from `sm` up the title and the copy
+              below it close into one block - live in `homepage-flyers.css`,
+              because they are the one thing that differs between a phone and
+              everything above it, and an inline style would beat every media
+              query in there.
 
-              {flyer.image && (
-                <Box
-                  width="100%"
-                  alignSelf="flex-start"
-                  styles={{ gridArea: "media" }}
-                >
-                  {/* `width`/`height` are the placeholder ratio that reserves the
+              No `paddingY` of its own: the vertical rhythm is the
+              `LandingSection`'s, exactly as it is for every other landing
+              block, so a flyer band's inset matches the section above and
+              below it whatever order the site puts them in. */}
+          <Box className={classes.join(" ")} display="grid">
+            {title && (
+              <Typography
+                as="h2"
+                variant="h2"
+                fontWeight={800}
+                margin={0}
+                styles={{ gridArea: "header" }}
+              >
+                {title}
+              </Typography>
+            )}
+
+            {flyer.image && (
+              <Box
+                width="100%"
+                alignSelf="flex-start"
+                styles={{ gridArea: "media" }}
+              >
+                {/* `width`/`height` are the placeholder ratio that reserves the
                       box while the file loads; `height: auto` hands the frame
                       back to the photograph's own aspect ratio once it has, which
                       is what keeps a flyer's artwork uncropped.
@@ -155,82 +158,77 @@ export async function HomepageFlyers() {
                       No `priority` on any of them, the first slide included: the
                       band sits below the hero, so eager-loading it would only
                       compete with the picture that actually is the LCP. */}
-                  <Image
-                    src={flyer.image}
-                    alt={title || ""}
-                    width={1200}
-                    height={900}
-                    sizes="(min-width: 600px) 50vw, 100vw"
-                    style={{
-                      width: "100%",
-                      // A stated frame crops the photograph to it; with none
-                      // (the default) `auto` hands the box back to the file, as
-                      // the comment above says.
-                      height: "auto",
-                      aspectRatio: frame != null ? String(frame) : undefined,
-                      objectFit: flyer.fit === "contain" ? "contain" : "cover",
-                      borderRadius: 12,
-                    }}
-                  />
-                </Box>
+                <Image
+                  src={flyer.image}
+                  alt={title || ""}
+                  width={1200}
+                  height={900}
+                  sizes="(min-width: 600px) 50vw, 100vw"
+                  style={{
+                    width: "100%",
+                    // A stated frame crops the photograph to it; with none
+                    // (the default) `auto` hands the box back to the file, as
+                    // the comment above says.
+                    height: "auto",
+                    aspectRatio: frame != null ? String(frame) : undefined,
+                    objectFit: flyer.fit === "contain" ? "contain" : "cover",
+                    borderRadius: 12,
+                  }}
+                />
+              </Box>
+            )}
+
+            <Box flexDirection="column" gap={16} styles={{ gridArea: "body" }}>
+              {description && (
+                <Typography
+                  as="p"
+                  variant="body"
+                  margin={0}
+                  styles={{ lineHeight: 1.7 }}
+                >
+                  {description}
+                </Typography>
               )}
 
-              <Box
-                flexDirection="column"
-                gap={16}
-                styles={{ gridArea: "body" }}
-              >
-                {description && (
-                  <Typography
-                    as="p"
-                    variant="body"
-                    margin={0}
-                    styles={{ lineHeight: 1.7 }}
-                  >
-                    {description}
-                  </Typography>
-                )}
-
-                {items.length > 0 && (
-                  <Grid container spacing={2}>
-                    {items.map((item, index) => (
-                      <Grid
-                        key={`${item.kind}-${item.data.id}`}
-                        // One card size for every flyer, whatever it carries:
-                        // two-up while the copy column is narrow, three-across
-                        // from `md`, where it is wide enough for a trio. It is
-                        // deliberately not derived from `items.length` - a
-                        // slider whose cards changed size from slide to slide
-                        // read as three different components rather than one
-                        // row of the same thing.
-                        size={{ xs: 6, md: 4 }}
-                        // ...which leaves the third card with nowhere to go
-                        // below `md`: it would wrap to a row of its own, under
-                        // a half-empty one. Two is the whole row there, so the
-                        // third is dropped for the `xs` and `sm` bands and
-                        // comes back with the column that can hold it.
-                        hidden={index > 1 ? { xs: true, sm: true } : undefined}
-                      >
-                        <BuyableCard
-                          item={item}
-                          locale={locale}
-                          fromLabel={tMenu("from")}
-                          // The card rides in the copy column beside a
-                          // photograph, at a third of its width: its blurb and
-                          // its share/heart pair have no room to read there,
-                          // and the flyer's own copy is already saying what
-                          // this is. What is left is the picture, the price and
-                          // the one button worth pressing.
-                          compact
-                        />
-                      </Grid>
-                    ))}
-                  </Grid>
-                )}
-              </Box>
+              {items.length > 0 && (
+                <Grid container spacing={2}>
+                  {items.map((item, index) => (
+                    <Grid
+                      key={`${item.kind}-${item.data.id}`}
+                      // One card size for every flyer, whatever it carries:
+                      // two-up while the copy column is narrow, three-across
+                      // from `md`, where it is wide enough for a trio. It is
+                      // deliberately not derived from `items.length` - a
+                      // slider whose cards changed size from slide to slide
+                      // read as three different components rather than one
+                      // row of the same thing.
+                      size={{ xs: 6, md: 4 }}
+                      // ...which leaves the third card with nowhere to go
+                      // below `md`: it would wrap to a row of its own, under
+                      // a half-empty one. Two is the whole row there, so the
+                      // third is dropped for the `xs` and `sm` bands and
+                      // comes back with the column that can hold it.
+                      hidden={index > 1 ? { xs: true, sm: true } : undefined}
+                    >
+                      <BuyableCard
+                        item={item}
+                        locale={locale}
+                        fromLabel={tMenu("from")}
+                        // The card rides in the copy column beside a
+                        // photograph, at a third of its width: its blurb and
+                        // its share/heart pair have no room to read there,
+                        // and the flyer's own copy is already saying what
+                        // this is. What is left is the picture, the price and
+                        // the one button worth pressing.
+                        compact
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
             </Box>
-          </Container>
-        </SectionBand>
+          </Box>
+        </LandingSection>
       ),
     });
   });

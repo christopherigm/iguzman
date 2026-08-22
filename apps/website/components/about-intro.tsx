@@ -1,9 +1,9 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { Box } from "@repo/ui/core-elements/box";
-import { Container } from "@repo/ui/core-elements/container";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
+import { LandingSection, type LandingBlockProps } from "./landing-section";
 import "./about-intro.css";
 
 /**
@@ -21,7 +21,7 @@ import "./about-intro.css";
  * families exist). The brand color flows in automatically via `--accent`, so
  * the eyebrow and the accent rule never take a color prop.
  */
-export interface AboutIntroProps {
+export interface AboutIntroProps extends LandingBlockProps {
   /** Small uppercase kicker above the title. */
   eyebrow: string;
   /** Section heading (usually the site name). */
@@ -55,79 +55,78 @@ export function AboutIntro({
   imageSrc,
   imageAlt,
   children,
+  ...section
 }: AboutIntroProps) {
   return (
-    <Container paddingX={10}>
-      <Box paddingY={64}>
-        <Grid container spacing={3} alignItems="center">
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Box display="flex" flexDirection="column" gap="20px">
+    <LandingSection {...section}>
+      <Grid container spacing={3} alignItems="center">
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <Box display="flex" flexDirection="column" gap="20px">
+            <Typography
+              as="span"
+              variant="label"
+              color="var(--accent-text)"
+              fontWeight={700}
+              styles={{ letterSpacing: "0.14em", textTransform: "uppercase" }}
+            >
+              {eyebrow}
+            </Typography>
+
+            <Typography as="h2" variant="h2" fontWeight={800}>
+              {title}
+            </Typography>
+
+            <Box
+              paddingLeft={20}
+              styles={{ borderLeft: "3px solid var(--accent)" }}
+            >
               <Typography
-                as="span"
-                variant="label"
-                color="var(--accent-text)"
-                fontWeight={700}
-                styles={{ letterSpacing: "0.14em", textTransform: "uppercase" }}
+                as="p"
+                variant="body"
+                styles={{
+                  whiteSpace: "pre-line",
+                  lineHeight: 1.75,
+                  // Cap the measure: on a wide screen the half-width column
+                  // still runs past 75 characters a line, which is where
+                  // continuous prose gets tiring to track back from.
+                  maxWidth: "64ch",
+                }}
               >
-                {eyebrow}
+                {trimAbout(body)}
               </Typography>
-
-              <Typography as="h2" variant="h2" fontWeight={800}>
-                {title}
-              </Typography>
-
-              <Box
-                paddingLeft={20}
-                styles={{ borderLeft: "3px solid var(--accent)" }}
-              >
-                <Typography
-                  as="p"
-                  variant="body"
-                  styles={{
-                    whiteSpace: "pre-line",
-                    lineHeight: 1.75,
-                    // Cap the measure: on a wide screen the half-width column
-                    // still runs past 75 characters a line, which is where
-                    // continuous prose gets tiring to track back from.
-                    maxWidth: "64ch",
-                  }}
-                >
-                  {trimAbout(body)}
-                </Typography>
-              </Box>
-
-              {children && (
-                <Box
-                  display="flex"
-                  gap="16px"
-                  flexWrap="wrap"
-                  alignItems="center"
-                  marginTop="8px"
-                >
-                  {children}
-                </Box>
-              )}
             </Box>
-          </Grid>
 
-          <Grid size={{ xs: 12, sm: 6 }}>
-            {/* Plain div (not a @repo/ui Box) so the responsive height/aspect
+            {children && (
+              <Box
+                display="flex"
+                gap="16px"
+                flexWrap="wrap"
+                alignItems="center"
+                marginTop="8px"
+              >
+                {children}
+              </Box>
+            )}
+          </Box>
+        </Grid>
+
+        <Grid size={{ xs: 12, sm: 6 }}>
+          {/* Plain div (not a @repo/ui Box) so the responsive height/aspect
                 ratio can live entirely in CSS - an inline `styles` value would
                 out-specificity the md media-query override. */}
-            <div className="about-intro__media elevation-6">
-              {imageSrc && (
-                <Image
-                  fill
-                  src={imageSrc}
-                  alt={imageAlt ?? ""}
-                  sizes="(max-width: 900px) 100vw, 50vw"
-                  style={{ objectFit: "cover" }}
-                />
-              )}
-            </div>
-          </Grid>
+          <div className="about-intro__media elevation-6">
+            {imageSrc && (
+              <Image
+                fill
+                src={imageSrc}
+                alt={imageAlt ?? ""}
+                sizes="(max-width: 900px) 100vw, 50vw"
+                style={{ objectFit: "cover" }}
+              />
+            )}
+          </div>
         </Grid>
-      </Box>
-    </Container>
+      </Grid>
+    </LandingSection>
   );
 }

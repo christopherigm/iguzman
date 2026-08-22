@@ -1,10 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import { Button } from "@repo/ui/core-elements/button";
-import { Container } from "@repo/ui/core-elements/container";
 import { getSystem } from "@/lib/system";
 import { MENU_ALL_PATH, MENU_ICON } from "@/lib/catalog-paths";
 import { fitSectionBackground } from "@/lib/section-background";
-import { SectionBand } from "@/components/section-band";
 import { Hero } from "@/components/hero";
 import { SuccessStories } from "@/components/success-stories";
 import { CompanyHighlights } from "@/components/company-highlights";
@@ -42,7 +40,7 @@ import { Bar } from "./sections/bar";
  *   Success stories - the guests' own words
  *
  * Adjacent sections never repeat a shape: split -> card grid -> dark list panel
- * -> tile grid -> bordered panel -> card grid -> stories. The two `SectionBand`s
+ * -> tile grid -> bordered panel -> card grid -> stories. The two banded blocks
  * carry the tenant's own band colours and edge notches, so the seams are a CMS
  * setting rather than site code.
  *
@@ -91,28 +89,20 @@ export async function Landing() {
 
       <Intro />
 
-      <Container paddingX={10}>
-        <Events />
-      </Container>
+      <Events />
 
-      <SectionBand
+      <CatalogItems
         background={itemsBg}
         topDivider={system?.catalog_top_divider}
         bottomDivider={system?.catalog_bottom_divider}
-      >
-        <Container paddingX={10}>
-          <CatalogItems />
-        </Container>
-      </SectionBand>
+      />
 
       {/* The "and bar" half of the grill and bar - a dark photographic price
           list, the one section on this page shaped like a printed menu. Renders
           nothing until the tenant has a bar/drinks menu category with items. */}
       <Bar />
 
-      <Container paddingX={10}>
-        <CatalogCategories />
-      </Container>
+      <CatalogCategories />
 
       {/* Shared, DB-driven Spotlight: Santo Fish uses it for the ceviche and
           aguachile line - a bordered panel beside a hand-picked trio. Renders
@@ -124,19 +114,13 @@ export async function Landing() {
           make one, and reads as a plain section until they make a second. */}
       <HomepageFlyers />
 
-      <SectionBand
+      <CompanyHighlights
         background={highlightsBg}
         topDivider={system?.highlights_top_divider}
         bottomDivider={system?.highlights_bottom_divider}
-      >
-        <Container paddingX={10}>
-          <CompanyHighlights />
-        </Container>
-      </SectionBand>
+      />
 
-      <Container paddingX={10}>
-        <SuccessStories />
-      </Container>
+      <SuccessStories />
 
       {/* The Pico Rivera dining room on a map, and the way through to /contact -
           the shared block, so these cards are the ones the contact page draws.

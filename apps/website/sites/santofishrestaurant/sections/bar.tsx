@@ -2,7 +2,6 @@ import Image from "next/image";
 import { getTranslations, getLocale } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
-import { Container } from "@repo/ui/core-elements/container";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
 import {
@@ -12,6 +11,7 @@ import {
 } from "@/lib/catalog";
 import { menuCategoryHref } from "@/lib/catalog-paths";
 import { formatPrice } from "@/lib/price";
+import { LandingSection } from "@/components/landing-section";
 
 /**
  * "La Barra" - the bar half of a Mexican seafood *grill and bar*.
@@ -131,103 +131,101 @@ export async function Bar() {
   const textColor = onImage ? "#fff" : "var(--foreground)";
 
   return (
-    <Container paddingX={10}>
-      <Box paddingY={64}>
-        <Box
-          width="100%"
-          borderRadius={16}
-          elevation={8}
-          backgroundColor="var(--surface-2)"
-          styles={{ position: "relative", overflow: "hidden" }}
-        >
-          {category.image && (
-            <>
-              <Image
-                fill
-                src={category.image}
-                alt={name}
-                sizes="(max-width: 900px) 100vw, 1100px"
-                style={{ objectFit: "cover" }}
-              />
-              {/* Flat tint, not a gradient: the copy sits on the left on wide
+    <LandingSection>
+      <Box
+        width="100%"
+        borderRadius={16}
+        elevation={8}
+        backgroundColor="var(--surface-2)"
+        styles={{ position: "relative", overflow: "hidden" }}
+      >
+        {category.image && (
+          <>
+            <Image
+              fill
+              src={category.image}
+              alt={name}
+              sizes="(max-width: 900px) 100vw, 1100px"
+              style={{ objectFit: "cover" }}
+            />
+            {/* Flat tint, not a gradient: the copy sits on the left on wide
                   screens and stacks over the whole panel on mobile, so an even
                   darkening is the only one legible at every width. */}
-              <Box
-                styles={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "rgba(0,0,0,0.68)",
-                }}
-              />
-            </>
-          )}
+            <Box
+              styles={{
+                position: "absolute",
+                inset: 0,
+                background: "rgba(0,0,0,0.68)",
+              }}
+            />
+          </>
+        )}
 
-          <Box padding={32} styles={{ position: "relative", zIndex: 1 }}>
-            <Grid container spacing={4}>
-              <Grid size={{ xs: 12, sm: 5 }}>
-                <Box display="flex" flexDirection="column" gap="16px">
-                  <Typography
-                    as="span"
-                    variant="label"
-                    color={onImage ? "#fff" : "var(--accent-text)"}
-                    fontWeight={700}
-                    styles={{
-                      letterSpacing: "0.14em",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {t("bar.eyebrow")}
-                  </Typography>
+        <Box padding={32} styles={{ position: "relative", zIndex: 1 }}>
+          <Grid container spacing={4}>
+            <Grid size={{ xs: 12, sm: 5 }}>
+              <Box display="flex" flexDirection="column" gap="16px">
+                <Typography
+                  as="span"
+                  variant="label"
+                  color={onImage ? "#fff" : "var(--accent-text)"}
+                  fontWeight={700}
+                  styles={{
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {t("bar.eyebrow")}
+                </Typography>
 
+                <Typography
+                  as="h2"
+                  variant="h2"
+                  fontWeight={800}
+                  color={textColor}
+                  margin={0}
+                >
+                  {name}
+                </Typography>
+
+                {description && (
                   <Typography
-                    as="h2"
-                    variant="h2"
-                    fontWeight={800}
+                    as="p"
+                    variant="body"
                     color={textColor}
                     margin={0}
+                    styles={{ lineHeight: 1.7, maxWidth: "48ch" }}
                   >
-                    {name}
+                    {description}
                   </Typography>
+                )}
 
-                  {description && (
-                    <Typography
-                      as="p"
-                      variant="body"
-                      color={textColor}
-                      margin={0}
-                      styles={{ lineHeight: 1.7, maxWidth: "48ch" }}
-                    >
-                      {description}
-                    </Typography>
-                  )}
-
-                  <Box marginTop={8}>
-                    <Button
-                      text={t("bar.cta")}
-                      href={menuCategoryHref(category.slug)}
-                      kind="primary"
-                      size="lg"
-                    />
-                  </Box>
+                <Box marginTop={8}>
+                  <Button
+                    text={t("bar.cta")}
+                    href={menuCategoryHref(category.slug)}
+                    kind="primary"
+                    size="lg"
+                  />
                 </Box>
-              </Grid>
-
-              <Grid size={{ xs: 12, sm: 7 }}>
-                <Box display="flex" flexDirection="column" gap="14px">
-                  {items.map((item) => (
-                    <BarLine
-                      key={item.id}
-                      item={item}
-                      locale={locale}
-                      onImage={onImage}
-                    />
-                  ))}
-                </Box>
-              </Grid>
+              </Box>
             </Grid>
-          </Box>
+
+            <Grid size={{ xs: 12, sm: 7 }}>
+              <Box display="flex" flexDirection="column" gap="14px">
+                {items.map((item) => (
+                  <BarLine
+                    key={item.id}
+                    item={item}
+                    locale={locale}
+                    onImage={onImage}
+                  />
+                ))}
+              </Box>
+            </Grid>
+          </Grid>
         </Box>
       </Box>
-    </Container>
+    </LandingSection>
   );
 }
