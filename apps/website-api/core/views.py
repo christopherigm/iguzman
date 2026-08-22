@@ -65,6 +65,7 @@ from .serializers import (
 )
 from core.services.contact import send_contact_message_notification, send_contact_message_reply
 from core.services.llm import stream_chat
+from core.services.reslug import SLUG_MODELS, rebuild_slugs
 from core.site_payload import ImageArchive, apply_payload
 
 logger = logging.getLogger(__name__)
@@ -1873,6 +1874,67 @@ class SlugCheckView(APIView):
                 pass
 
         return Response({"available": not qs.exists()})
+
+
+class SystemRecreateSlugsView(APIView):
+    """
+    POST /api/system/<pk>/recreate-slugs/ - rebuild this site's slugs from its
+    `site_prefix`.
+
+    Body (both optional)::
+
+        {"models": ["product", "menu-item"]}   # default: all eleven
+
+    Returns ``{"changed": n, "total": n, "models": {<key>: {...}}}``.
+
+    **Destructive, and the CMS says so before calling it.** Every record whose
+    name no longer matches its slug gets a new URL, and the old one stops
+    resolving - there is no redirect table (see `core.services.reslug`). It is
+    a separate endpoint from the System PATCH beside it for exactly that reason:
+    editing the prefix is a field, re-slugging a live catalog is an act.
+
+    Scoped to the **caller's own** System, taken from their profile like
+    `SystemStorageView`, so a tenant admin cannot re-slug another customer's
+    catalog by changing the pk in the URL.
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    def post(self, request, pk):
+        system = user_system(request)
+        if system is None or system.pk != int(pk):
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        keys = (request.data or {}).get("models")
+        if keys is not None:
+            if not isinstance(keys, list) or not all(isinstance(k, str) for k in keys):
+                return Response(
+                    {"detail": "`models` must be a list of model keys."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            unknown = [k for k in keys if k not in SLUG_MODELS]
+            if unknown:
+                # Refused rather than skipped: a caller asking for a key this
+                # build does not have is asking for rows that will not be
+                # rebuilt, and reporting "0 changed" for them would read as
+                # "already correct".
+                return Response(
+                    {"detail": f"Unknown model(s): {', '.join(sorted(unknown))}."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        try:
+            report = rebuild_slugs(system, keys)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "changed": sum(r["changed"] for r in report.values()),
+                "total": sum(r["total"] for r in report.values()),
+                "models": report,
+            }
+        )
 
 
 class AiChatView(APIView):

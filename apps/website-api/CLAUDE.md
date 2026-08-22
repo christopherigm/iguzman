@@ -1219,6 +1219,88 @@ from the CMS at `/admin/homepage-flyers`.
   `System.stock_image_count` - `attributed_specs()` derives that list rather than
   repeating it.
 
+## `System.site_prefix` - the namespace every slug is built under
+
+Eleven models carry a `slug` that is **`unique=True` across the whole table**,
+not per tenant: `Product`, `Service`, `MenuItem`, `Ingredient`, their three
+categories, and `core`'s `Brand`, `SuccessStory`, `CompanyHighlight` and `Event`.
+This is one database serving many customers, so without a namespace the first
+tenant to sell a "Latte" takes that slug away from everyone else on the box.
+
+`System.site_prefix` is that namespace, and every slug is `{site_prefix}-{name}`.
+
+| Piece                    | Where                                            |
+| ------------------------ | ------------------------------------------------ |
+| The column + its default | `core/models.py` (`System.site_prefix`, `save()`) |
+| Default from the host    | `core/site_prefix.py`                            |
+| The rebuild              | `core/services/reslug.py` (`SLUG_MODELS`)        |
+| The endpoint             | `core/views.py` (`SystemRecreateSlugsView`)      |
+| The CMS                  | `apps/website` -> `/admin/system`, and each list |
+
+- **It replaced three conventions that disagreed.** The CMS built
+  `{system_id}-{name}` (`lib/slug-utils.ts`), `catalog.services.clone` mirrored
+  that, and `seed_site` built `{slugify(host)}-{name}` - so one tenant's dish
+  came out with a different slug depending on which door it arrived through. All
+  three read this column now, and `reslug.slug_base` is the one transliteration,
+  mirrored character for character by the frontend's `buildSlug`. **Change one
+  and you must change the other**, or a record typed into the form and the same
+  record rebuilt by "Recreate IDs" land on different URLs.
+- ⚠ **Derived in `System.save()` when blank, never `default=`d.** A literal
+  default on a `unique=True` column is one string every row would share, so the
+  *second* `System.objects.create(host=...)` on a database fails the insert -
+  which is exactly how the test suite broke when this first landed. Filling it
+  from the row's own host makes every door correct at once: a serializer, a
+  fixture, the Django admin, a shell one-liner. It only ever **fills** - a
+  prefix an operator typed is never rewritten, because the catalog's slugs are
+  built from it.
+- ⚠ **Editing the column re-slugs nothing.** A slug is derived once, at create,
+  which is what stops a URL moving every time somebody fixes a typo in a name.
+  Rebuilding is the separate, explicit `POST /api/system/<pk>/recreate-slugs/`,
+  because it changes every public URL on the site at once. **There is no
+  redirect table and deliberately so** - that would be a new model plus a lookup
+  on every 404 - so the CMS confirmation says outright that existing links,
+  bookmarks, search results and printed QR codes stop working.
+- ⚠ **Users and coupons are excluded, and that is not an oversight.**
+  `users.build_username` composes a login from `(system_id, email)`: a login is
+  matched exactly, never typed off a poster, and re-deriving it would sign every
+  existing customer out. `Coupon.code` is **already unique per system** (the
+  `coupon_code_unique_per_system` constraint) and `find_coupon` filters by
+  system, so two tenants can both run "SUMMER20" with no collision - prefixing
+  it would only lengthen what a customer types off a printed flyer and invalidate
+  every QR already printed.
+- ⚠ **`_park_conflicts` is what stops a rebuild dying half way through.** The
+  unique index is not deferrable, so the constraint is checked on every
+  statement, not at commit - and renaming "Latte" to "Espresso" while "Mocha"
+  becomes "Latte" fails whenever the second write lands first, which is just pk
+  order. Rows whose current slug a sibling is about to claim are moved to a
+  throwaway `__reslug-<system>-<pk>` first, with `queryset.update()` so the
+  transient value fires no cache-invalidating signal.
+- **Rows are saved one at a time through `save()`, never `bulk_update`.** All
+  eleven models have `post_save` receivers clearing the right Redis namespace, so
+  a bulk write would leave the storefront serving the old slugs for up to an
+  hour. A record whose slug is already correct is not written at all, so a second
+  press is nearly free and does not bump `modified` across the whole catalog.
+- **The rebuild dodges other tenants' slugs**, read once per model rather than
+  queried per row, and suffixes `-2` for two of this tenant's own records that
+  share a name. Ordered by pk, so two runs resolve such a pair the same way
+  round.
+- **It travels with `publish-site`** (`SYSTEM_TEXT_FIELDS`), because the
+  payload's child records are keyed **by slug** and every slug starts with it - a
+  target still on its old prefix would upsert none of them and silently create a
+  second copy of the whole catalog. Both `_apply` and `seed_site._upsert_system`
+  settle it through `unique_prefix()` **after** the field loop, so a payload
+  naming a prefix another tenant on the target already holds suffixes rather
+  than aborting the publish with an IntegrityError.
+- ⚠ **`SlugCheckView._MODEL_MAP` in `core/views.py` looks like `SLUG_MODELS` and
+  is not it** - it still carries a `variant-option` entry for a model deleted in
+  `catalog/0032`, which would raise `LookupError` if anything ever asked for it.
+  Don't merge the two lists without dropping that dead row first.
+
+Tests: `SitePrefixTests` in `core/tests.py` - one test covering the self-filling
+default, the serializer's uniqueness refusal, the rebuild's three collision
+cases (a sibling sharing a name, a slug another tenant holds, a slug a sibling
+is handing over), the no-op second press, and the tenant boundary.
+
 ## Catalog kind labels - four columns on `System`
 
 `kind_label_<kind>` / `en_kind_label_<kind>` hold what a tenant calls the two

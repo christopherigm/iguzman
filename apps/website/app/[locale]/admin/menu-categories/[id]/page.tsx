@@ -27,6 +27,7 @@ import {
 } from "@/components/admin/menu-sizes-editor";
 import { menuCategoryHref } from "@/lib/catalog-paths";
 import { buildSlug } from "@/lib/slug-utils";
+import { useSitePrefix } from "../../site-prefix-provider";
 import { RecommendationsEditor } from "@/components/admin/recommendations-editor";
 import { useRecommendationsEditor } from "@/hooks/use-recommendations-editor";
 import { useSession } from "@repo/auth/session-provider";
@@ -92,8 +93,12 @@ export default function AdminMenuCategoryFormPage({ params }: Props) {
     sourceId: isNew ? null : Number(id),
   });
 
-  if (isNew) {
-    const derivedSlug = buildSlug(String(values.name ?? ""), systemId);
+  // The tenant's slug namespace, from the CMS-wide provider. Null while the
+  // System loads, which is what the guard below is for: `buildSlug(name, "")`
+  // would give this record a leading hyphen and no namespace at all.
+  const sitePrefix = useSitePrefix();
+  if (isNew && sitePrefix) {
+    const derivedSlug = buildSlug(String(values.name ?? ""), sitePrefix);
     if (values.slug !== derivedSlug) {
       setValues((prev) => ({ ...prev, slug: derivedSlug }));
     }

@@ -18,8 +18,6 @@ Two rules the whole module turns on:
 """
 
 import os
-import re
-import unicodedata
 
 from django.core.files.storage import default_storage
 from django.db import transaction
@@ -31,30 +29,32 @@ from core.models import picture
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _slugify(name: str, system_id) -> str:
-    """Mirror of the CMS's `buildSlug` (apps/website/lib/slug-utils.ts).
-
-    Kept identical so a cloned record's slug is indistinguishable from one the
-    form would have produced for a new record with the same name.
-    """
-    base = unicodedata.normalize('NFD', name or '')
-    base = ''.join(ch for ch in base if unicodedata.category(ch) != 'Mn')
-    base = base.lower()
-    base = re.sub(r'[^a-z0-9\s-]', '', base)
-    base = re.sub(r'\s+', '-', base.strip())
-    base = re.sub(r'-+', '-', base)
-    return f"{system_id}-{base}" if base else f"{system_id}-item"
-
-
 def unique_slug(model, name: str, system_id) -> str:
-    """A slug for `name` that no row of `model` holds yet.
+    """A slug for `name`, namespaced to the system, that no row of `model` holds.
+
+    The shape (``{site_prefix}-{name}``) and the transliteration both come from
+    `core.services.reslug`, which is the single definition shared with the CMS's
+    `buildSlug` and with "Recreate IDs". This module used to carry its own copy
+    building ``{system_id}-{name}``, so a cloned dish and the same dish typed
+    into the form came out with different slugs.
 
     Cloning is the one flow that reliably collides: "Pizza (copy)" cloned twice
     yields the same base slug, and `slug` is `unique=True`. Collisions get a
     numeric suffix rather than an error, because the operator asked for a copy,
     not for a lecture about slugs.
     """
-    base = _slugify(name, system_id)
+    from core.models import System
+    from core.services.reslug import build_slug
+
+    prefix = (
+        System.objects.filter(pk=system_id)
+        .values_list("site_prefix", flat=True)
+        .first()
+    )
+    # A system that has somehow lost its prefix falls back to its id, which is
+    # what this module used to build every slug from - unique, if unlovely.
+    # Refusing the clone over it would be a worse answer than an ugly URL.
+    base = build_slug(name, prefix or str(system_id))
     candidate = base
     suffix = 2
     while model.objects.filter(slug=candidate).exists():

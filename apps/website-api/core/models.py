@@ -744,6 +744,31 @@ class System(Common):
     en_site_description = models.TextField(null=True, blank=True)
     host = models.CharField(max_length=64, null=False, blank=False, default="127.0.0.1", unique=True)
 
+    # The namespace every globally-unique slug on this site carries, and the one
+    # thing standing between two tenants who both sell a "Latte" - see
+    # `core.site_prefix` for the whole story, and for why users and coupons are
+    # deliberately left out of it.
+    #
+    # ⚠ **Derived in `save()` when blank, not defaulted here** - the same shape
+    # `MenuSize.system` uses, and for a harder reason. A `default=` on a
+    # `unique=True` column is a literal every row would share, so the *second*
+    # `System.objects.create(host=...)` on a database fails the insert outright.
+    # Filling it from the row's own host (`javastop.com.mx` -> `javastop`)
+    # instead makes every door correct at once: the CMS, `seed_site`,
+    # `publish-site`, the Django admin, a fixture and a shell one-liner.
+    #
+    # Blank is allowed at the form layer only so that door exists; a saved row
+    # never carries one, because a slug built from a blank prefix has a leading
+    # hyphen and no namespace at all - the exact collision this column prevents.
+    #
+    # ⚠ Editing it does **not** re-slug anything. The catalog keeps the slugs it
+    # was created with until an operator presses "Recreate IDs"
+    # (`SystemRecreateSlugsView`), which is a deliberate second step: re-slugging
+    # changes every public URL on the site at once.
+    site_prefix = models.SlugField(
+        max_length=32, null=False, blank=True, default="", unique=True,
+    )
+
     img_logo = models.ImageField(null=True, blank=True, upload_to=picture)
     img_logo_hero = models.ImageField(null=True, blank=True, upload_to=picture)
     img_favicon = models.ImageField(null=True, blank=True, upload_to=picture)
@@ -1349,6 +1374,30 @@ class System(Common):
 
     def __str__(self):
         return f"{self.site_name} ({self.host})"
+
+    def save(self, *args, **kwargs):
+        """Fill `site_prefix` from the host before the row can be written blank.
+
+        This is what lets every other door stay simple: a `System` created in a
+        test, a fixture, the Django admin or a shell has a working slug
+        namespace without anyone remembering to pass one, and a second site on
+        the same database does not collide with the first over a shared default.
+
+        ⚠ It only ever *fills* - a prefix an operator typed is never rewritten,
+        because the catalog's slugs are built from it and quietly changing it
+        would orphan every URL on the site. `update_fields` is widened when it
+        fills, or the write it was about to make would silently drop the value.
+        """
+        if not self.site_prefix:
+            from core.site_prefix import default_prefix_for_host, unique_prefix
+
+            self.site_prefix = unique_prefix(
+                default_prefix_for_host(self.host), exclude_pk=self.pk,
+            )
+            update_fields = kwargs.get("update_fields")
+            if update_fields is not None:
+                kwargs["update_fields"] = {*update_fields, "site_prefix"}
+        super().save(*args, **kwargs)
 
     def set_stripe_secret_key(self, raw_secret: str) -> None:
         """Encrypt and store the plaintext Stripe secret key ('' clears it)."""

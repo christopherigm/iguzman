@@ -69,6 +69,16 @@ export default function AdminBrandsPage() {
         onDelete={handleDelete}
         onToggleEnabled={handleToggleEnabled}
         onReorder={handleReorder}
+        bulkActions={{
+          // The one list whose bar carries nothing else: a brand has no
+          // `en_name` to translate and its picture is a logo, not a photograph
+          // a stock bank could stand in for. Scoped to this list - rebuilds
+          // only these records' slugs from the tenant's site prefix, where
+          // /admin/system carries the same button with no `models`.
+          recreate: ["brand"],
+          update: updateBrand,
+          reload: load,
+        }}
         loading={loading}
         error={error}
       />

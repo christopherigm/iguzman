@@ -61,6 +61,52 @@ export async function updateSystem(pk: number, data: Record<string, unknown>) {
   return parseResponse<Record<string, unknown>>(res);
 }
 
+/**
+ * Which record families "Recreate IDs" can rebuild the slugs of. The keys are
+ * the API's own (`SLUG_MODELS` in website-api's `core/services/reslug.py`), and
+ * an unknown one is a 400 rather than a silent skip.
+ */
+export type SlugModelKey =
+  | "product"
+  | "product-category"
+  | "service"
+  | "service-category"
+  | "menu-item"
+  | "menu-category"
+  | "ingredient"
+  | "brand"
+  | "success-story"
+  | "highlight"
+  | "event";
+
+export interface RecreateSlugsResult {
+  changed: number;
+  total: number;
+  models: Record<string, { changed: number; unchanged: number; total: number }>;
+}
+
+/**
+ * Rebuild this tenant's slugs from its `site_prefix`.
+ *
+ * `models` scopes the pass to one CMS list; omitting it rebuilds all eleven,
+ * which is what /admin/system's own button asks for.
+ *
+ * ⚠ **Destructive, and there is no undo.** Every record whose name no longer
+ * matches its slug gets a new public URL and the old one stops resolving - no
+ * redirect is left behind. Never call it without the confirmation dialog.
+ *
+ * One request, not a PATCH per row: the whole rebuild runs in a single
+ * transaction on the API side, where it can also dodge the slugs other tenants
+ * hold - which a browser cannot see.
+ */
+export async function recreateSlugs(pk: number, models?: SlugModelKey[]) {
+  const res = await adminFetch(`/api/system/${pk}/recreate-slugs/`, {
+    method: "POST",
+    body: JSON.stringify(models ? { models } : {}),
+  });
+  return parseResponse<RecreateSlugsResult>(res);
+}
+
 // ---- Products ----
 export async function listProducts(systemId: number) {
   const res = await adminFetch(

@@ -37,6 +37,8 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils.text import slugify
 
+from core.site_prefix import default_prefix_for_host, unique_prefix
+
 from catalog.models import (
     Ingredient,
     MenuCategory,
@@ -137,13 +139,15 @@ class Command(BaseCommand):
 
         self._credits = self._load_credits(host)
 
-        # A short token derived from the host, used to namespace globally-unique
-        # slugs so two seeded sites never collide (product/service/category/story
-        # slugs are unique across the whole DB).
-        self._token = slugify(host.split(":")[0].replace(".", "-")) or "site"
-
         with transaction.atomic():
             system = self._upsert_system(host, sys_brief)
+            # The namespace every globally-unique slug this command writes goes
+            # under. Read off the System rather than re-derived from the host:
+            # this used to build its own `slugify(host)` token, so a site seeded
+            # here and the same site edited in the CMS produced two different
+            # slug shapes for one tenant. `_upsert_system` guarantees the column
+            # is set, including for a System created just above.
+            self._token = system.site_prefix
             if opts["reset"]:
                 self._reset(system)
             self._seed_success_stories(system, brief.get("success_stories") or [])
@@ -269,7 +273,7 @@ class Command(BaseCommand):
         return None
 
     def _uslug(self, raw: str, fallback: str) -> str:
-        """A globally-unique, host-namespaced slug."""
+        """A globally-unique slug, namespaced by the System's `site_prefix`."""
         base = slugify(raw) or slugify(fallback) or "item"
         return f"{self._token}-{base}"
 
@@ -287,11 +291,28 @@ class Command(BaseCommand):
     def _upsert_system(self, host: str, sys_brief: dict) -> System:
         system, created = System.objects.get_or_create(
             host=host,
-            defaults={"site_name": sys_brief.get("site_name") or host, "enabled": True},
+            defaults={
+                "site_name": sys_brief.get("site_name") or host,
+                "enabled": True,
+                # Unique across systems, and the model default is one literal
+                # shared by all of them - so without this the second site ever
+                # seeded on a database fails the insert.
+                "site_prefix": unique_prefix(default_prefix_for_host(host)),
+            },
         )
         for field in SYSTEM_TEXT_FIELDS:
             if sys_brief.get(field) is not None:
                 setattr(system, field, sys_brief[field])
+        # ⚠ After the loop, because `site_prefix` is one of those fields and a
+        # brief may name one another tenant on this database already holds -
+        # which is an IntegrityError on save rather than a validation message.
+        # It also fills the column for a System seeded before it existed: every
+        # slug in this run is built from it by `_uslug`, and a blank would
+        # namespace the whole catalog under nothing.
+        system.site_prefix = unique_prefix(
+            system.site_prefix or default_prefix_for_host(host),
+            exclude_pk=system.pk,
+        )
         system.enabled = True
 
         assets = sys_brief.get("assets") or {}

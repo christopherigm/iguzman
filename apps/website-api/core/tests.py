@@ -789,6 +789,106 @@ class HomepageFlyerTests(TestCase):
 # System settings & branch writes
 # --------------------------------------------------------------------------- #
 
+class SitePrefixTests(TestCase):
+    """The slug namespace, and the button that rebuilds a catalog against it.
+
+    One test, because the pieces only mean anything together: a prefix that
+    fills itself, an endpoint that refuses another tenant, and a rebuild whose
+    whole job is to not collide - with the other tenant's rows, with a sibling
+    that shares a name, or with the slug a sibling is about to hand over.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Piccolo", host="piccolo.com.mx")
+        self.other = System.objects.create(site_name="Java", host="javastop.com.mx")
+
+    def _dish(self, system, name, slug):
+        category, _ = MenuCategory.objects.get_or_create(
+            system=system, slug=f"{system.site_prefix}-cat", defaults={"name": "Cat"},
+        )
+        return MenuItem.objects.create(
+            system=system, category=category, name=name, slug=slug, price=Decimal("10.00"),
+        )
+
+    def test_the_prefix_fills_itself_and_rebuilds_a_catalog_without_colliding(self):
+        # Derived from the host's first label, with no TLD in it, and never
+        # the same literal twice - a shared default on a unique column would
+        # fail the second System's insert outright.
+        self.assertEqual(self.system.site_prefix, "piccolo")
+        self.assertEqual(self.other.site_prefix, "javastop")
+
+        # A prefix an operator typed is kept; only a blank one is filled.
+        self.system.site_prefix = "pizzeria"
+        self.system.save()
+        self.system.refresh_from_db()
+        self.assertEqual(self.system.site_prefix, "pizzeria")
+
+        # The write serializer refuses a prefix another tenant holds, rather
+        # than letting the save raise an IntegrityError the CMS cannot explain.
+        serializer = SystemWriteSerializer(instance=self.system, data={"site_prefix": "javastop"})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("site_prefix", serializer.errors)
+
+        # Three dishes on our tenant, plus one on the neighbour whose slug is
+        # exactly what one of ours is about to want.
+        margherita = self._dish(self.system, "Margherita", "old-margherita")
+        # Two of ours share a name, and must not both claim one slug.
+        twin = self._dish(self.system, "Margherita", "old-twin")
+        # This one currently sits on the slug `margherita` would take if it were
+        # written first - the cycle that makes a naive rebuild die half way.
+        cycle = self._dish(self.system, "Napoli", "pizzeria-margherita")
+        theirs = self._dish(self.other, "Pizzeria Special", "pizzeria-napoli")
+
+        self.client.force_login(make_admin("boss", self.system))
+        res = self.client.post(
+            f"/api/system/{self.system.pk}/recreate-slugs/",
+            data=json.dumps({"models": ["menu-item"]}),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 200, res.content)
+        self.assertEqual(res.json()["models"]["menu-item"]["changed"], 3)
+
+        for row in (margherita, twin, cycle, theirs):
+            row.refresh_from_db()
+        self.assertEqual(margherita.slug, "pizzeria-margherita")
+        # Same name, so the older row keeps the bare slug and this one suffixes.
+        self.assertEqual(twin.slug, "pizzeria-margherita-2")
+        # Dodges the neighbour's row, which this rebuild may not touch.
+        self.assertEqual(cycle.slug, "pizzeria-napoli-2")
+        self.assertEqual(theirs.slug, "pizzeria-napoli")
+
+        # A second press is a no-op - nothing is rewritten, so it is safe to
+        # repeat and does not bump `modified` across the whole catalog.
+        res = self.client.post(
+            f"/api/system/{self.system.pk}/recreate-slugs/",
+            data=json.dumps({"models": ["menu-item"]}),
+            content_type="application/json",
+        )
+        self.assertEqual(res.json()["models"]["menu-item"]["changed"], 0)
+
+        # An unknown model key is refused rather than skipped: reporting "0
+        # changed" for rows that were never going to be rebuilt reads as
+        # "already correct".
+        res = self.client.post(
+            f"/api/system/{self.system.pk}/recreate-slugs/",
+            data=json.dumps({"models": ["coupon"]}),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 400)
+
+        # The tenant boundary: our admin cannot re-slug the neighbour's catalog
+        # by changing the pk in the URL.
+        res = self.client.post(
+            f"/api/system/{self.other.pk}/recreate-slugs/",
+            data=json.dumps({}),
+            content_type="application/json",
+        )
+        self.assertEqual(res.status_code, 404)
+        theirs.refresh_from_db()
+        self.assertEqual(theirs.slug, "pizzeria-napoli")
+
+
 class SystemSettingsTests(TestCase):
     """The basemap a tenant picks, and what it calls the families it sells.
 

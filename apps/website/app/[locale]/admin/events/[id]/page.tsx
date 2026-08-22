@@ -31,6 +31,7 @@ import {
 import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import { instantToWallClock, wallClockToInstant } from "@/lib/event-shared";
 import { buildSlug } from "@/lib/slug-utils";
+import { useSitePrefix } from "../../site-prefix-provider";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -129,11 +130,15 @@ export default function AdminEventFormPage({ params }: Props) {
     list: listEvents,
   });
 
+  // The tenant's slug namespace, from the CMS-wide provider. Null while the
+  // System loads, which is what the guard below is for: `buildSlug(name, "")`
+  // would give this record a leading hyphen and no namespace at all.
+  const sitePrefix = useSitePrefix();
   // Auto-populate the slug from the name for new records (the field is
   // read-only). Derived during render rather than in an effect; the guard stops
   // it looping once the slug already matches the name.
-  if (isNew) {
-    const derivedSlug = buildSlug(String(values.name ?? ""), systemId);
+  if (isNew && sitePrefix) {
+    const derivedSlug = buildSlug(String(values.name ?? ""), sitePrefix);
     if (values.slug !== derivedSlug) {
       setValues((prev) => ({ ...prev, slug: derivedSlug }));
     }

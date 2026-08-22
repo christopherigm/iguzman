@@ -406,9 +406,9 @@ class SocialPostAdmin(admin.ModelAdmin):
 
 @admin.register(System)
 class SystemAdmin(admin.ModelAdmin):
-    list_display = ("site_name", "host", "primary_color", "secondary_color", "enabled", "stripe_configured", "modified")
+    list_display = ("site_name", "host", "site_prefix", "primary_color", "secondary_color", "enabled", "stripe_configured", "modified")
     list_filter = ("enabled", "stripe_enabled")
-    search_fields = ("site_name", "host")
+    search_fields = ("site_name", "host", "site_prefix")
     readonly_fields = ("created", "modified", "version", "stripe_configured", "storage_configured")
     # Encrypted secrets are never editable or viewable here - the ciphertext
     # columns are excluded outright, and the plaintext only ever enters through
@@ -422,7 +422,16 @@ class SystemAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ("Identity", {
-            "fields": ("site_name", "host", "enabled", "version", "created", "modified"),
+            "fields": ("site_name", "host", "site_prefix", "enabled", "version", "created", "modified"),
+            "description": (
+                "'Site prefix' namespaces every slug this site's catalog uses "
+                "(<code>{prefix}-{name}</code>), which is what keeps two tenants "
+                "selling the same dish from colliding on one globally-unique "
+                "slug. Editing it here changes nothing that already exists - "
+                "rebuilding the catalog's slugs from it is the CMS's "
+                "\u201cRecreate IDs\u201d button, because it changes every "
+                "public URL on the site at once."
+            ),
         }),
         ("Site Description", {
             "fields": ("site_description", "en_site_description"),

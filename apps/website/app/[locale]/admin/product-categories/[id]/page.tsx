@@ -16,6 +16,7 @@ import {
 } from "@/lib/admin-api";
 import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import { buildSlug } from "@/lib/slug-utils";
+import { useSitePrefix } from "../../site-prefix-provider";
 import { RecommendationsEditor } from "@/components/admin/recommendations-editor";
 import { useRecommendationsEditor } from "@/hooks/use-recommendations-editor";
 import { useSession } from "@repo/auth/session-provider";
@@ -76,11 +77,15 @@ export default function AdminProductCategoryFormPage({ params }: Props) {
     sourceId: isNew ? null : Number(id),
   });
 
+  // The tenant's slug namespace, from the CMS-wide provider. Null while the
+  // System loads, which is what the guard below is for: `buildSlug(name, "")`
+  // would give this record a leading hyphen and no namespace at all.
+  const sitePrefix = useSitePrefix();
   // Auto-populate slug from name for new records (the slug field is read-only).
   // Derived during render rather than in an effect; the guard stops it looping
   // once the slug already matches the name.
-  if (isNew) {
-    const derivedSlug = buildSlug(String(values.name ?? ""), systemId);
+  if (isNew && sitePrefix) {
+    const derivedSlug = buildSlug(String(values.name ?? ""), sitePrefix);
     if (values.slug !== derivedSlug) {
       setValues((prev) => ({ ...prev, slug: derivedSlug }));
     }

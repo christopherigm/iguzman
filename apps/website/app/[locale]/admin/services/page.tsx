@@ -123,6 +123,10 @@ export default function AdminServicesPage() {
           translate: ["name", "short_description", "description"],
           image: true,
           rewards: true,
+          // Scoped to this list: rebuilds only these records' slugs from
+          // the tenant's site prefix. /admin/system carries the same
+          // component with no `models`, for the whole site at once.
+          recreate: ["service"],
           update: updateService,
           reload: load,
         }}

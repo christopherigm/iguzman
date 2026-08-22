@@ -700,7 +700,10 @@ class CloneTests(TestCase):
         self.assertEqual(clone.price, Decimal("12.00"))
         # `sku` is unique=True - a copied one would collide.
         self.assertIsNone(clone.sku)
-        self.assertEqual(clone.slug, f"{self.system.id}-copy")
+        # Namespaced by the System's `site_prefix`, not by its id - the same
+        # shape the CMS form and "Recreate IDs" build, so a cloned record and a
+        # typed one are indistinguishable.
+        self.assertEqual(clone.slug, f"{self.system.site_prefix}-copy")
 
         # Its own files, really written: deleting one must not blank the other.
         self.assertNotEqual(clone.image.name, product.image.name)

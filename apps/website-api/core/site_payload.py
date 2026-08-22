@@ -53,6 +53,8 @@ from django.utils import timezone as django_timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.text import slugify
 
+from core.site_prefix import default_prefix_for_host, unique_prefix
+
 from catalog.models import (
     Ingredient,
     MenuCategory,
@@ -78,6 +80,11 @@ from core.models import (
 # `seed_site` so both paths agree on which System fields are copyable content.
 SYSTEM_TEXT_FIELDS = (
     "site_name",
+    # The slug namespace (`core.site_prefix`). It travels because the payload's
+    # child records are keyed **by slug** and every one of those slugs starts
+    # with it - a target still on its old prefix would upsert none of them and
+    # silently create a second copy of the whole catalog instead.
+    "site_prefix",
     "site_description",
     "en_site_description",
     "slogan",
@@ -1019,11 +1026,28 @@ def _apply(payload: dict, sys_data: dict, host: str, *, reset: bool) -> dict:
     with transaction.atomic():
         system, created = System.objects.get_or_create(
             host=host,
-            defaults={"site_name": sys_data.get("site_name") or host, "enabled": True},
+            defaults={
+                "site_name": sys_data.get("site_name") or host,
+                "enabled": True,
+                # `site_prefix` is unique, and the model default is the same
+                # literal for everyone - so without this the *second* site ever
+                # created here fails the insert.
+                "site_prefix": unique_prefix(default_prefix_for_host(host)),
+            },
         )
         for f in SYSTEM_TEXT_FIELDS:
             if sys_data.get(f) is not None:
                 setattr(system, f, sys_data[f])
+        # ⚠ Settled after the loop above, never inside it. The prefix is unique
+        # across systems, so a payload naming one that another tenant on this
+        # target already holds would raise an IntegrityError and abort the whole
+        # publish. Suffixing keeps the publish alive; the cost is that this
+        # site's incoming slugs no longer match its prefix, which `_apply_*`
+        # handles the way it handles any unknown slug - by creating the rows.
+        system.site_prefix = unique_prefix(
+            system.site_prefix or default_prefix_for_host(host),
+            exclude_pk=system.pk,
+        )
         system.enabled = True
         system.save()
         # The hero and about photographs, under their own per-field refs. Same

@@ -1067,6 +1067,11 @@ class SystemSerializer(serializers.ModelSerializer):
         fields = [
             "id", "enabled", "created", "modified", "version",
             "site_name", "site_description", "en_site_description", "host",
+            # Public, like `host` and unlike the credentials further down: it is
+            # the first thing in every slug on the site, so it is already on
+            # display in every URL a visitor sees. The CMS reads it from here to
+            # build a new record's slug in the browser.
+            "site_prefix",
             "img_logo", "img_logo_hero", "img_favicon",
             "img_manifest_1080", "img_manifest_512", "img_manifest_256", "img_manifest_192", "img_manifest_128",
             "img_brandmark",
@@ -1215,7 +1220,7 @@ class SystemSerializer(serializers.ModelSerializer):
 
 
 _TEXT_FIELDS = [
-    "site_name", "site_description", "en_site_description", "host", "video_link", "slogan", "primary_color", "secondary_color",
+    "site_name", "site_description", "en_site_description", "host", "site_prefix", "video_link", "slogan", "primary_color", "secondary_color",
     "navbar_translucent",
     "contact_email", "social_links",
     "highlights_bg",
@@ -1274,6 +1279,11 @@ class SystemWriteSerializer(serializers.Serializer):
     site_description    = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     en_site_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     host                = serializers.CharField(max_length=64, required=False)
+    # `SlugField` rather than `CharField`: this string is concatenated into every
+    # slug on the site, and a space or a slash in it would produce URLs that do
+    # not resolve. `allow_blank` is deliberately absent - the column is not
+    # nullable and a blank prefix is no namespace at all (`core.site_prefix`).
+    site_prefix         = serializers.SlugField(max_length=32, required=False)
     video_link      = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
     slogan          = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     primary_color   = serializers.CharField(max_length=16, required=False)
@@ -1458,6 +1468,27 @@ class SystemWriteSerializer(serializers.Serializer):
         value = value.split("://", 1)[-1].strip("/")
         # Whatever follows the host is a path, and a custom domain has none.
         return value.split("/", 1)[0]
+
+    def validate_site_prefix(self, value):
+        """Reject a prefix another tenant already owns.
+
+        The column is `unique=True`, so without this the save raises an
+        IntegrityError and the CMS shows "couldn't save" for what is really a
+        name clash the operator can fix in one keystroke. Scoped past the
+        instance being edited, or re-saving a site with its own prefix unchanged
+        would refuse itself.
+        """
+        from core.models import System
+
+        value = (value or "").strip()
+        taken = System.objects.filter(site_prefix=value)
+        if self.instance is not None:
+            taken = taken.exclude(pk=self.instance.pk)
+        if taken.exists():
+            raise serializers.ValidationError(
+                "Another site is already using this prefix.",
+            )
+        return value
 
     # Spotlight section - a promo panel + up to three hand-picked catalog items.
     spotlight_enabled          = serializers.BooleanField(required=False)

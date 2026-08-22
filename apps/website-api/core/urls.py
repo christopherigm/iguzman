@@ -38,6 +38,7 @@ from .views import (
     SuccessStoryImagesView,
     SuccessStoryListView,
     SystemListView,
+    SystemRecreateSlugsView,
     SystemStorageView,
     SystemView,
 )
@@ -51,6 +52,14 @@ urlpatterns = [
     # above like every other CMS field. Separate from the System payload because
     # that one is AllowAny and this is not.
     path("system/<int:pk>/storage/", SystemStorageView.as_view(), name="system-storage"),
+    # Its own endpoint rather than a flag on the System PATCH above: editing
+    # `site_prefix` is a field, rebuilding every slug on the site from it is an
+    # act, and the CMS confirms the second one separately.
+    path(
+        "system/<int:pk>/recreate-slugs/",
+        SystemRecreateSlugsView.as_view(),
+        name="system-recreate-slugs",
+    ),
 
     path("success-stories/", SuccessStoryListView.as_view(), name="success-story-list"),
     path("success-stories/slug/<slug:slug>/", SuccessStoryBySlugView.as_view(), name="success-story-by-slug"),

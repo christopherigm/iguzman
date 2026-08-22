@@ -16,8 +16,10 @@ import {
   getSystem,
   searchStockImages,
   stockImageFields,
+  type SlugModelKey,
 } from "@/lib/admin-api";
 import { buildTranslateMessages } from "./field-assist";
+import { RecreateIdsButton } from "./recreate-ids-button";
 import { awardFor, GiveBackFields, useGiveBack } from "./points-give-back";
 
 const MUTED = "color-mix(in srgb, var(--foreground) 65%, transparent)";
@@ -46,6 +48,14 @@ export interface BulkActionsConfig {
   image?: boolean;
   /** The record has `points_award` + `points_price`, and a `price` to work them out from. */
   rewards?: boolean;
+  /**
+   * Rebuild these families' slugs from the tenant's site prefix - the list's
+   * own key, e.g. `["product"]`. Unlike the three passes above this is a single
+   * transactional request rather than a walk over the rows; it rides in the bar
+   * because it is still one press that rewrites every record. See
+   * `recreate-ids-button.tsx`.
+   */
+  recreate?: SlugModelKey[];
   /** Persists one row. The list's own `updateX` from `lib/admin-api`. */
   update: (id: number, data: Record<string, unknown>) => Promise<unknown>;
   /** Re-reads the list once a run ends - the page's own `load`. */
@@ -77,6 +87,10 @@ const text = (value: unknown) => String(value ?? "").trim();
  * done saved and the rest untouched - and running the pass again picks up
  * exactly where it left off, since every action skips what is already filled in.
  * There is no undo; the confirmation says so.
+ *
+ * The one action that is not a walk is `recreate` - "Recreate IDs" rides at the
+ * end of the bar but is a single transactional request, and owns its own
+ * confirmation and progress (see `recreate-ids-button.tsx`).
  */
 export function BulkActionsBar({
   config,
@@ -325,6 +339,14 @@ export function BulkActionsBar({
             type="button"
             disabled={blocked}
             onClick={() => openDialog("rewards")}
+          />
+        )}
+        {config.recreate && (
+          <RecreateIdsButton
+            models={config.recreate}
+            reload={config.reload}
+            disabled={blocked}
+            size="sm"
           />
         )}
         {busy && (

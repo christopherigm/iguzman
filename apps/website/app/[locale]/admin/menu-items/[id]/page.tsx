@@ -68,6 +68,7 @@ import {
 } from "@/lib/admin-api";
 import { useAdminSiblings } from "@/hooks/use-admin-siblings";
 import { buildSlug } from "@/lib/slug-utils";
+import { useSitePrefix } from "../../site-prefix-provider";
 import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -226,8 +227,12 @@ export default function AdminMenuItemFormPage({ params }: Props) {
     categoryId: values.category ? Number(values.category) : null,
   });
 
-  if (isNew) {
-    const derivedSlug = buildSlug(String(values.name ?? ""), systemId);
+  // The tenant's slug namespace, from the CMS-wide provider. Null while the
+  // System loads, which is what the guard below is for: `buildSlug(name, "")`
+  // would give this record a leading hyphen and no namespace at all.
+  const sitePrefix = useSitePrefix();
+  if (isNew && sitePrefix) {
+    const derivedSlug = buildSlug(String(values.name ?? ""), sitePrefix);
     if (values.slug !== derivedSlug) {
       setValues((prev) => ({ ...prev, slug: derivedSlug }));
     }

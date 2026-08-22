@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import { ContactSection } from "./contact-section";
 import { KindLabelsSection } from "./kind-labels-section";
+import { SitePrefixSection } from "./site-prefix-section";
 import { MapSection } from "./map-section";
 import {
   RewardsSection,
@@ -19,6 +20,7 @@ import { getSystem, listRewardTiers, updateSystem } from "@/lib/admin-api";
 import { CATALOG_KINDS } from "@/lib/kind-labels";
 import type { SocialLink } from "@/lib/contact";
 import { useSession } from "@repo/auth/session-provider";
+import { useSetSitePrefix } from "../site-prefix-provider";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 
 /**
@@ -45,6 +47,10 @@ export default function AdminSystemPage() {
     site_description: "",
     en_site_description: "",
     host: "",
+    // The slug namespace every record on this site is created under. Never
+    // blank on a saved System (the API fills it from the host), so the empty
+    // string here is only the moment before the payload arrives.
+    site_prefix: "",
     contact_email: "",
     social_links: [],
     enabled: true,
@@ -84,6 +90,10 @@ export default function AdminSystemPage() {
 
   const session = useSession();
   const systemId = session?.systemId ?? 0;
+  // Publishes a saved prefix back to the CMS-wide provider, so a record created
+  // on another page later in the same session is slugged under the new one
+  // rather than the copy that was fetched when the CMS first loaded.
+  const setSitePrefix = useSetSitePrefix();
   // Django staff - us, not the customer's own CMS administrator. It gates the
   // Storage section below and nothing else on this page. Presentation only: the
   // API re-derives it from the token on every call.
@@ -98,6 +108,7 @@ export default function AdminSystemPage() {
           site_description: data.site_description ?? "",
           en_site_description: data.en_site_description ?? "",
           host: data.host ?? "",
+          site_prefix: data.site_prefix ?? "",
           contact_email: data.contact_email ?? "",
           social_links: data.social_links ?? [],
           enabled: data.enabled ?? true,
@@ -160,6 +171,7 @@ export default function AdminSystemPage() {
         return;
       }
 
+      setSitePrefix(String(values.site_prefix ?? ""));
       setSuccess(t("saved"));
     } catch {
       setError(t("errorSave"));
@@ -181,7 +193,9 @@ export default function AdminSystemPage() {
       type: "textarea",
     },
     // `host` is intentionally not editable here (kept in `values` so it still
-    // round-trips unchanged). The hero's own fields - `video_link`, `slogan`
+    // round-trips unchanged). `site_prefix`, which is seeded *from* the host, is
+    // editable - but in its own section below rather than as a `FieldDef`,
+    // because the button that applies a change to it belongs beside it. The hero's own fields - `video_link`, `slogan`
     // and every `hero_*` - live on /admin/logos-and-styles, inside
     // HeroVideoSection beside the live hero preview.
     //
@@ -232,6 +246,17 @@ export default function AdminSystemPage() {
             composition and watermark live on /admin/logos-and-styles; the promo
             panel on /admin/featured-spotlight; Stripe and the offline payment
             methods on /admin/payments.) */}
+        {/* First of the sections, because it governs the others: this is the
+            namespace every slug on the site is built from, and the button
+            beneath it rebuilds the whole catalog against that namespace. An
+            operator who has just changed the prefix should not have to scroll
+            past the contact details to find the thing that applies it. */}
+        <SitePrefixSection
+          values={values}
+          onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
+          loading={loading}
+        />
+
         <ContactSection
           values={values}
           onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}

@@ -430,6 +430,62 @@ has by far the most call sites.
   per-kind menu paths. Only listings need rules there; bare slugs are handled by
   the one-segment route, which a static rule could not do.
 
+## Slugs are namespaced by the tenant's site prefix
+
+Every slug the CMS writes is `{site_prefix}-{name}`, from `System.site_prefix`.
+The API owns the whole story; read website-api's CLAUDE.md ->
+"`System.site_prefix`" first.
+
+| Piece                       | Where                                            |
+| --------------------------- | ------------------------------------------------ |
+| The builder                 | `lib/slug-utils.ts` (`buildSlug`)                |
+| The prefix, CMS-wide        | `app/[locale]/admin/site-prefix-provider.tsx`    |
+| The field + whole-site button | `app/[locale]/admin/system/site-prefix-section.tsx` |
+| The button itself           | `components/admin/recreate-ids-button.tsx`       |
+| The call                    | `lib/admin-api.ts` (`recreateSlugs`)             |
+
+- ⚠ **`buildSlug` takes the prefix, not the session's `systemId`.** It used to
+  take the id, which produced unreadable `1-latte` URLs *and* a different shape
+  from what `seed_site` wrote for the same tenant. Its transliteration is
+  mirrored character for character by `slug_base` in website-api's
+  `core/services/reslug.py` - change one and you must change the other, or a
+  record typed into the form and the same record rebuilt by "Recreate IDs" land
+  on different URLs.
+- **One fetch for eleven forms.** `SitePrefixProvider` sits in
+  `admin/layout.tsx` and resolves `getSystem(session.systemId)` once; the eleven
+  detail forms read `useSitePrefix()`. ⚠ It is the **admin** `getSystem(pk)`,
+  not `lib/system.ts`'s host-resolved one: the CMS always edits the tenant you
+  signed in as, while the host in development follows the dev site switcher, and
+  resolving by host here would paint one customer's prefix onto slugs saved to
+  another's catalog - the exact mismatch `DevTenantGuard` exists to catch.
+- ⚠ **A form must not build a slug from a null prefix.** `useSitePrefix()` is
+  `null` while the System loads, and `buildSlug(name, "")` yields `-latte` - a
+  leading hyphen and no namespace at all. Every one of the eleven guards with
+  `if (isNew && sitePrefix)`.
+- **`/admin/system` publishes a saved prefix back to the provider**
+  (`useSetSitePrefix`), so a record created on another page later in the same
+  session is slugged under the new prefix rather than the copy fetched when the
+  CMS first loaded.
+- **"Recreate IDs" is one component in two placements**: on `/admin/system` with
+  no `models` (the whole site, beside the field that drives it - which is where
+  an operator lands after changing it), and in each CMS list's **bulk-action
+  bar**, scoped to that list - `recreate: ["product"]` on `AdminEntityList`'s
+  `bulkActions`, and so on. It used to sit in the header row beside "+ New"; it
+  belongs with the other every-row passes, because that is what it is.
+- ⚠ **It is one request, not a walk over the rows** - the odd one out in the bar
+  it now sits in. The rebuild runs in a single transaction on the
+  API side, where it can dodge the slugs *other tenants* hold, which a browser
+  cannot see; so there is no per-row progress to report and no half-finished
+  state to resume. Never reimplement it as a `PATCH` per row, and don't fold it
+  into `BulkActionsBar`'s run loop - it keeps its own confirmation, its own
+  progress and its own result line, and only its **button** rides in that row.
+- ⚠ **There is no undo, and the dialog is the only thing that says so.** Every
+  rebuilt record gets a new public URL and the old one 404s - no redirect is
+  kept. `recreateIdsWarning` names bookmarks, search results and printed QR
+  codes in `--error`; never render the button without its `ConfirmationModal`.
+- **Coupon codes are deliberately untouched** by all of this - see the API's
+  CLAUDE.md for why. So is a user's login.
+
 ## The menu - one sectioning, one listing, one detail route
 
 A menu is sectioned by the tenant's own `MenuCategory` rows and by nothing else,
@@ -755,12 +811,14 @@ opening every record in turn.
 | The bar, and the run     | `components/admin/bulk-actions.tsx` (`BulkActionsBar`)               |
 | Turning it on for a list | `AdminEntityList`'s `bulkActions` prop                               |
 | The give-back pair       | `components/admin/points-give-back.tsx` (shared with the calculator) |
+| The fourth button        | `components/admin/recreate-ids-button.tsx` (see "Slugs" above)        |
 
 | Action                       | What it writes                                                                                                                                                                                  |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Translate missing fields** | The missing half of each `x` / `en_x` pair, from the half that is there, through the same `/api/ai` proxy and the same `buildTranslateMessages` prompts a single field's Translate button uses. |
 | **Main image**               | The first photo a free stock bank returns for the record's own name, with the credit that bank is owed.                                                                                         |
 | **Rewards**                  | `points_award` + `points_price`, from each item's own price and one give-back the operator states once.                                                                                         |
+| **Recreate IDs**             | Every record's slug, rebuilt from the tenant's site prefix. Not one of the passes - one transactional request with its own confirmation and its own progress; see "Slugs" above.                |
 
 - ⚠ **The fields are configured per list, never inferred from the rows.** A read
   serializer carries pairs no write serializer accepts - an event's
@@ -787,11 +845,15 @@ opening every record in turn.
   **written**, not two requests in flight - and what lets Stop actually stop.
 - **The bar is hidden in sort mode.** The rows are being dragged, and a pass that
   re-read the list underneath a drag would throw the arrangement away before it
-  was saved.
-- **Brands are the one content list with no bar**: a brand has no `en_name` to
-  fill and its picture is a `logo`, not a photograph a stock bank could stand in
-  for. Branches get **Translate only**, for the same reason - their image field
-  is a `map_image`.
+  was saved. ⚠ It is hidden on an **empty** list too, which is what now takes
+  Recreate IDs off a list with nothing to rebuild - as a header-row button it
+  was on screen whatever the table held.
+- **Brands' bar carries Recreate IDs and nothing else**: a brand has no
+  `en_name` to fill and its picture is a `logo`, not a photograph a stock bank
+  could stand in for - but its slugs are namespaced like every other family's,
+  so it has a bar now where it used to have none. Branches get **Translate
+  only**, for the reason the brands list has no translate pass - their image
+  field is a `map_image`.
 - ⚠ **The photo and its credit go in one write** (`stockImageFields`), the same
   rule the CMS picker follows - see "Finding an image in the CMS" below.
 - **Rewards is offered only where there is a price to work from.** The three

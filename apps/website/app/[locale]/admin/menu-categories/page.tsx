@@ -82,6 +82,10 @@ export default function AdminMenuCategoriesPage() {
         bulkActions={{
           translate: ["name", "description"],
           image: true,
+          // Scoped to this list: rebuilds only these records' slugs from
+          // the tenant's site prefix. /admin/system carries the same
+          // component with no `models`, for the whole site at once.
+          recreate: ["menu-category"],
           update: updateMenuCategory,
           reload: load,
         }}

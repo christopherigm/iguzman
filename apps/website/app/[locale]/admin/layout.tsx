@@ -3,6 +3,7 @@ import { setRequestLocale } from "next-intl/server";
 import { getSession } from "@repo/auth/session";
 import { AdminSidebar } from "./admin-sidebar";
 import { DevTenantGuard } from "./dev-tenant-guard";
+import { SitePrefixProvider } from "./site-prefix-provider";
 import { DevSiteSwitcher } from "../dev-site-switcher";
 import { DEV_SITE_COOKIE, SITE_CONFIGS } from "@/sites/registry";
 import { getSystem } from "@/lib/system";
@@ -58,7 +59,10 @@ export default async function AdminLayout({ children, params }: Props) {
           marginTop={16}
           paddingBottom={40}
         >
-          {children}
+          {/* The tenant's slug namespace, fetched once for the whole CMS: the
+              eleven detail forms that derive a new record's slug in the browser
+              all read it from here rather than each asking for the System. */}
+          <SitePrefixProvider>{children}</SitePrefixProvider>
         </Container>
       </Box>
       {isDev && (
