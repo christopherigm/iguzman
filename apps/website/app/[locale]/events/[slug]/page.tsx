@@ -13,6 +13,7 @@ import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { RichText } from "@repo/ui/core-elements/rich-text";
 import { SectionHero } from "@/components/section-hero";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
+import { aspectRatioValue } from "@/lib/aspect-ratio";
 import type { GalleryImage } from "@/components/item-gallery-client";
 import { PlaceMap } from "@/components/place-map";
 import { AdminEditButton } from "@/components/admin-edit-button";
@@ -199,6 +200,7 @@ export default async function EventDetailPage({ params }: Props) {
               <ItemGalleryClient
                 images={galleryImages}
                 placeholderColor={event.background_color ?? undefined}
+                aspectRatio={aspectRatioValue(event.aspect_ratio)}
               />
             </Grid>
           )}

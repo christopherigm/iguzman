@@ -369,6 +369,16 @@ Six things that will bite:
   reads `own_*` - loading the resolved ones into the form would show the branch's
   address in the address box, an author would "correct" it, and the event would
   silently detach from the location carrying its coordinates.
+- **The form stops asking for a location the branch already gives.** Pick a
+  branch that has both a name and an address and the Venue / Venue (EN) /
+  Address fields and the map picker are replaced by one line naming the branch
+  they now come from - those four are `own_*` overrides, and on such a branch
+  every one of them resolves to the branch's own value anyway. Two things keep
+  them on screen: **"Another place"** (with no branch there is nothing to fall
+  back to, so they are the only place the location can come from - never hide
+  them there), and an event that has **already** overridden one, since hiding a
+  filled field turns it into a value the operator can neither see nor clear
+  while every public page goes on rendering it.
 - **`Event` has no `sort_order`, deliberately** - unlike every sibling content
   model. It is ordered by when it happens, and a hand-dragged order beside a date
   is a second source of truth that can only disagree with the first. That is why
@@ -2284,8 +2294,8 @@ the brief.
 
 ## Detail-page galleries
 
-All five detail routes - product, service, menu item, blog post, highlight -
-render `components/item-gallery-client.tsx`, which is now a **thin wrapper over
+All six detail routes - product, service, menu item, blog post, highlight,
+event - render `components/item-gallery-client.tsx`, which is now a **thin wrapper over
 `@repo/ui`'s `ImageGallery`**, shared with `apps/animals`' three catalog detail
 pages. The wrapper owns nothing but this app's `Gallery` message namespace (the
 package is i18n-agnostic and takes every string as a prop); the slideshow, the
@@ -2306,6 +2316,86 @@ Three things came with the move:
 - ⚠ **`public/icons/` must carry all six glyphs the gallery reads** -
   `fullscreen`, `prev`, `next`, `close`, and now `zoom-in`/`zoom-out`, which
   were copied in from `apps/animals` with this change.
+- **The derived frame is now overridable per record** - the gallery takes an
+  `aspectRatio`, which every one of these routes passes from its record's own
+  `aspect_ratio` column. Null (the default) leaves the derivation exactly as
+  above. See "The image frame" below.
+
+## The image frame (`aspect_ratio`)
+
+**Every record with an image can state the shape its pictures are drawn in**,
+from one select under the image controls on its CMS form. The column is
+`aspect_ratio` on the API's `BasePicture` (read website-api's CLAUDE.md ->
+"`BasePicture.aspect_ratio`" first); blank is the default and means *auto*,
+which is the behaviour every one of these surfaces had before the column
+existed.
+
+| Piece                    | Where                                            |
+| ------------------------ | ------------------------------------------------ |
+| The ratios + the parser  | `lib/aspect-ratio.ts`                            |
+| The CMS control          | `components/admin/admin-aspect-ratio-field.tsx`  |
+| The gallery's own prop   | `@repo/ui`'s `ImageGallery` (`aspectRatio`)      |
+
+Where a stated frame applies:
+
+| Surface                       | Auto is                                   |
+| ----------------------------- | ----------------------------------------- |
+| The six detail-page galleries | The 4:5 / 5:4 box derived from the photos |
+| A homepage flyer's photograph | The picture's own proportions             |
+
+So **seven forms** carry the select: the three buyables, the three editorial
+records (story, highlight, event) and the flyer.
+
+- ⚠ **Never parse the string inline.** `aspectRatioValue` returns `null` for
+  auto *and* for anything unrecognised, so a row written before a ratio was
+  retired renders in the default frame instead of taking the page down with it.
+- ⚠ **The ratio list here and `ASPECT_RATIO_CHOICES` in website-api's
+  `core/models.py` are one list written twice** - the write serializers refuse a
+  value that is not a choice, so a ratio added on one side only is a select
+  whose save fails.
+- ⚠ **Every hero is untouched, and so are the catalog cards. None of the three
+  may import `lib/aspect-ratio.ts`.**
+  - **A category page's `SectionHero`** (`products|services|menu/[category]/page.tsx`)
+    keeps its fixed `clamp(220px, 30vw, 400px)` band. The height of a
+    full-bleed strip under the navbar belongs to the **page**, not to the
+    picture in it - a category that stated 9:16 turned its own landing into a
+    wall the reader had to scroll past to reach the items. That is why the
+    three category forms carry no Image frame select, and why no category
+    serializer exposes the column (website-api's CLAUDE.md ->
+    "`BasePicture.aspect_ratio`").
+  - **The landing hero** (`components/hero.tsx`) is the *tenant's* band rather
+    than a record's: it draws `System.img_hero`, `System` has no
+    `aspect_ratio` column at all, and its height is the hero's own business
+    (`hero_video_layout` plus the overlay fields).
+  - **The catalog cards** (`components/buyable-card.tsx` and its view): a
+    grid's frame belongs to the grid - cards of several ratios in one row no
+    longer line up, and the same item appears in grids this record knows
+    nothing about - so the box is a hard-coded 4:5, 1:1 in `compact`.
+
+  The override is for the surfaces where one record *is* the block.
+- **Fullscreen is untouched too** - there the reader wants the whole
+  photograph, and a frame is the one thing in the way.
+- **It is the record's setting, not each photo's.** A gallery is one box holding
+  pictures of several shapes; the gallery-row models carry the column (they
+  inherit `BasePicture`) and nothing reads it there.
+- **The select sits in `imagesSlot`, not among the record's fields** - it is a
+  fact about the pictures rather than about the thing they are pictures of, and
+  an operator who has just decided the photo is too tall is already looking at
+  that corner of the form. Within the slot it goes **directly under the field's
+  label and above the drop zone** - on a single-image field through
+  `AdminImageField`'s `afterLabel`, on a gallery by sitting first inside the
+  form's own gallery `Box`. It states something about the whole field, which
+  below a ten-slot uploader and its stock picker read as a footnote to the last
+  thumbnail.
+- ⚠ **Its width is capped in `admin-aspect-ratio-field.css`, not by a prop.**
+  The images slot is `af__field--full`, so an uncapped select is drawn twice as
+  wide as the Category select above it; the cap is one `.af__grid` column
+  (`calc(50% - 8px)`, half the 16px gap) and it is CSS because below `sm` that
+  grid is a single column and the select is full width like everything else.
+- **A gallery field's label is `imagesGallery` ("Images for gallery"), not
+  `images`** - the plain key is still what the events list titles its image
+  column, and on a form carrying a Main Image field as well, "Images" did not
+  say which of the two an operator was looking at.
 
 ## Homepage flyers - promo slides with a band each
 
@@ -2371,7 +2461,8 @@ shapes**.
   photograph sits between them.
 - **The photograph keeps its own aspect ratio** - `width`/`height` are the
   placeholder ratio that reserves the box, and `height: auto` hands the frame
-  back to the file once it loads. No `priority` on any slide, the first included:
+  back to the file once it loads - unless the flyer states an `aspect_ratio`,
+  which crops it to that box instead (see "The image frame"). No `priority` on any slide, the first included:
   the band is below the hero, so eager-loading it only competes with the real LCP.
 - **`items` are `{kind, id}` refs, resolved on the frontend** against the cached
   catalog, exactly like `spotlight_items` - so a picked item that is later
@@ -2699,6 +2790,7 @@ Before defining a constant, type, or pure utility function in a component file, 
 | `apps/website/components/admin/bilingual-name-fields.tsx`  | `BilingualNameFields` - one short ES/EN name pair with a per-field AI translate button (its own `useLlmProxy`, the shared `buildTranslateMessages` prompts). Used by a reward tier's name and a menu ingredient's choice-group label; extracted from `menu-ingredients-editor.tsx`, which carried its own copy of the prompts because `group_en_name` has no `en_` prefix |
 | `apps/website/components/menu-customizer-spacing.ts`       | `MENU_CUSTOMIZER_GAP` - the space between the size choice and the add-ons, on all three surfaces that customise a dish (detail page, card/cart modal, POS till)                                                                                                                                                                                                           |
 | `apps/website/lib/maps.ts`                                 | `directionsHref` - the Google Maps hand-off, built from **coordinates, never an address**. Used by the contact page's locations, an event's venue and an order's location; website-api builds the same URL for the order email                                                                                                                                            |
+| `apps/website/lib/aspect-ratio.ts`                          | `ASPECT_RATIOS`, `ASPECT_RATIO_LABEL_KEY`, `aspectRatioValue` - the frame a record's images are drawn in, shared by the CMS select that writes it and every public surface that draws it. Its twin is `ASPECT_RATIO_CHOICES` in website-api's `core/models.py`                                                                                            |
 | `apps/website/lib/same-origin-image.ts`                    | `toSameOriginDataUrl` - routes a remote image through `/api/media` (this app's own passthrough proxy) so a canvas that draws it is not tainted. Used by both flyer exports and by `lib/map-capture.ts`                                                                                                                                                                    |
 | `apps/website/lib/contact.ts`                              | `whatsappHref` - the wa.me click-to-chat URL, with the number stripped to digits (wa.me rejects the spaces and dashes people type) and an optional prefilled message. Used both directions: a **branch's** number on the contact page, a **customer's** in the admin inbox                                                                                                |
 

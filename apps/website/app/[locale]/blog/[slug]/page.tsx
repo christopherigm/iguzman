@@ -11,6 +11,7 @@ import { SectionHero } from "@/components/section-hero";
 import { RichText } from "@repo/ui/core-elements/rich-text";
 import { getSuccessStory } from "@/lib/success-stories";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
+import { aspectRatioValue } from "@/lib/aspect-ratio";
 import type { GalleryImage } from "@/components/item-gallery-client";
 import "@/components/item-detail.css";
 
@@ -156,6 +157,7 @@ export default async function SuccessStoryDetailPage({ params }: Props) {
               <ItemGalleryClient
                 images={galleryImages}
                 placeholderColor={story.background_color ?? undefined}
+                aspectRatio={aspectRatioValue(story.aspect_ratio)}
               />
             </Grid>
           )}

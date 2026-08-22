@@ -273,6 +273,12 @@ export interface ProductDetail {
   image: string | null;
   video_link: string | null;
   background_color: string | null;
+  /**
+   * The frame this record's photographs are drawn in ("" = auto, which is what
+   * every record carries until an operator says otherwise). Resolve it with
+   * `aspectRatioValue` from `lib/aspect-ratio.ts`; never parse it inline.
+   */
+  aspect_ratio: string;
   price: string;
   compare_price: string | null;
   currency: string;
@@ -334,6 +340,12 @@ export interface ServiceDetail {
   image: string | null;
   video_link: string | null;
   background_color: string | null;
+  /**
+   * The frame this record's photographs are drawn in ("" = auto, which is what
+   * every record carries until an operator says otherwise). Resolve it with
+   * `aspectRatioValue` from `lib/aspect-ratio.ts`; never parse it inline.
+   */
+  aspect_ratio: string;
   price: string;
   compare_price: string | null;
   currency: string;
@@ -688,6 +700,12 @@ export interface MenuItemDetail {
   image: string | null;
   video_link: string | null;
   background_color: string | null;
+  /**
+   * The frame this record's photographs are drawn in ("" = auto, which is what
+   * every record carries until an operator says otherwise). Resolve it with
+   * `aspectRatioValue` from `lib/aspect-ratio.ts`; never parse it inline.
+   */
+  aspect_ratio: string;
   price: string;
   compare_price: string | null;
   currency: string;

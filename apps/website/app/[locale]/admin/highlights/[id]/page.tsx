@@ -6,6 +6,7 @@ import { use } from "react";
 import { useRouter } from "@repo/i18n/navigation";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import { AdminImageField } from "@/components/admin/admin-image-field";
+import { AdminAspectRatioField } from "@/components/admin/admin-aspect-ratio-field";
 import { useAdminImageField } from "@/hooks/use-admin-image-field";
 import {
   getHighlight,
@@ -36,6 +37,7 @@ export default function AdminHighlightFormPage({ params }: Props) {
   const router = useRouter();
 
   const [values, setValues] = useState<Record<string, unknown>>({
+    aspect_ratio: "",
     name: "",
     en_name: "",
     category: "",
@@ -106,6 +108,7 @@ export default function AdminHighlightFormPage({ params }: Props) {
       getHighlight(Number(id))
         .then((data) => {
           setValues({
+            aspect_ratio: data.aspect_ratio ?? "",
             name: data.name ?? "",
             en_name: data.en_name ?? "",
             category: data.category ?? "",
@@ -240,6 +243,14 @@ export default function AdminHighlightFormPage({ params }: Props) {
             query={
               String(values.name ?? "").trim() ||
               String(values.en_name ?? "").trim()
+            }
+            afterLabel={
+              <AdminAspectRatioField
+                value={values.aspect_ratio}
+                onChange={(v) =>
+                  setValues((prev) => ({ ...prev, aspect_ratio: v }))
+                }
+              />
             }
           />
         }

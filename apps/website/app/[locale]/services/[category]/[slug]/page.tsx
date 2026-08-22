@@ -15,6 +15,7 @@ import {
 import type { ServiceDetail } from "@/lib/catalog";
 import type { GalleryImage } from "@/components/item-gallery-client";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
+import { aspectRatioValue } from "@/lib/aspect-ratio";
 import { ItemHeroVideo } from "@/components/item-hero-video";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
@@ -212,6 +213,7 @@ export default async function ServicePage({ params }: Props) {
             <ItemGalleryClient
               images={galleryImages}
               placeholderColor={service.background_color ?? undefined}
+              aspectRatio={aspectRatioValue(service.aspect_ratio)}
             />
           </Grid>
           <ServiceDetailPanel service={service} locale={locale} />

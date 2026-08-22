@@ -52,7 +52,8 @@ import "./image-gallery.css";
  * Instagram-style 4:5 or 5:4 box chosen from the *most portrait* photo in the
  * set, so a column of pictures of wildly different shapes still occupies one
  * stable rectangle beside the text instead of resizing the whole row on every
- * slide change.
+ * slide change. A consumer whose record states its own frame passes
+ * `aspectRatio` and that decision is taken instead - see the prop.
  *
  * Each photo may carry its own `fit` and `backgroundColor`: a plate authored as
  * `contain` (an illustration, a range map) must not be cropped to fill the
@@ -97,6 +98,20 @@ export interface ImageGalleryProps {
   images: GalleryImage[];
   /** Painted behind an empty gallery and behind a `contain` photo. */
   placeholderColor?: string | null;
+  /**
+   * The frame every slide is drawn in, as width/height (0.8 for a 4:5 box).
+   * Omitted or null, the gallery derives one from the most-portrait photo in
+   * the set, which is what it has always done - this is the consuming app's
+   * door onto that decision, for a record whose owner would rather state the
+   * shape than let the photographs pick it.
+   *
+   * ⚠ **It is the frame, not the picture.** A photo still fills it as its own
+   * `fit` says, so an override crops a `cover` photo that does not share the
+   * chosen shape - which is the point - and letterboxes a `contain` one.
+   * Fullscreen is deliberately untouched: there the reader wants the whole
+   * photograph, and a frame is the one thing standing in the way.
+   */
+  aspectRatio?: number | null;
   labels?: ImageGalleryLabels;
   className?: string;
 }
@@ -121,6 +136,7 @@ const MAX_ZOOM = 3;
 export function ImageGallery({
   images,
   placeholderColor,
+  aspectRatio,
   labels,
   className,
 }: ImageGalleryProps) {
@@ -213,7 +229,9 @@ export function ImageGallery({
         width="100%"
         borderRadius={8}
         styles={{
-          aspectRatio: "1 / 1",
+          // The record's stated frame, so an empty gallery reserves the box its
+          // photographs will land in rather than a square they never fill.
+          aspectRatio: aspectRatio != null ? String(aspectRatio) : "1 / 1",
           backgroundColor: placeholderColor ?? "var(--surface-1, #e0e0e0)",
         }}
       />
@@ -257,10 +275,15 @@ export function ImageGallery({
                   // `cover` photo scales up to fill it (cropping its edges); a
                   // `contain` one is letterboxed over its own background, which
                   // is the whole point of the author having chosen `contain`.
+                  // The record's own frame wins over the derived one: an
+                  // operator who has stated the shape is answering the very
+                  // question `slideAspectRatio` guesses at.
                   aspectRatio:
-                    slideAspectRatio !== null
-                      ? String(slideAspectRatio)
-                      : "1 / 1",
+                    aspectRatio != null
+                      ? String(aspectRatio)
+                      : slideAspectRatio !== null
+                        ? String(slideAspectRatio)
+                        : "1 / 1",
                 }}
               >
                 <Image

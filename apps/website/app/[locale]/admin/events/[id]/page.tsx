@@ -9,11 +9,13 @@ import {
   type NewImage,
 } from "@/components/admin-image-uploader/admin-image-uploader";
 import { AdminImageField } from "@/components/admin/admin-image-field";
+import { AdminAspectRatioField } from "@/components/admin/admin-aspect-ratio-field";
 import { ImageWebSearch } from "@/components/admin/image-web-search";
 import {
   remainingGallerySlots,
   useAdminImageField,
 } from "@/hooks/use-admin-image-field";
+import { MapPicker } from "@/components/admin/map-picker";
 import { timezoneOptions } from "@/components/admin/timezone-options";
 import {
   getEvent,
@@ -74,6 +76,7 @@ export default function AdminEventFormPage({ params }: Props) {
   const router = useRouter();
 
   const [values, setValues] = useState<Record<string, unknown>>({
+    aspect_ratio: "",
     name: "",
     en_name: "",
     slug: "",
@@ -96,7 +99,7 @@ export default function AdminEventFormPage({ params }: Props) {
     enabled: true,
   });
   const [branches, setBranches] = useState<
-    { id: number; name: string; timezone: string }[]
+    { id: number; name: string; address: string; timezone: string }[]
   >([]);
   // The cover image's uploader and stock picker: one field with two doors.
   const image = useAdminImageField();
@@ -168,6 +171,7 @@ export default function AdminEventFormPage({ params }: Props) {
           rows.map((row) => ({
             id: row.id as number,
             name: String(row.name ?? `#${row.id}`),
+            address: String(row.address ?? ""),
             timezone: String(row.timezone ?? DEFAULT_TIMEZONE),
           })),
         );
@@ -184,6 +188,7 @@ export default function AdminEventFormPage({ params }: Props) {
       .then((data) => {
         const timezone = String(data.timezone ?? DEFAULT_TIMEZONE);
         setValues({
+          aspect_ratio: data.aspect_ratio ?? "",
           name: data.name ?? "",
           en_name: data.en_name ?? "",
           slug: data.slug ?? "",
@@ -272,6 +277,8 @@ export default function AdminEventFormPage({ params }: Props) {
         en_description: values.en_description,
         is_featured: values.is_featured,
         enabled: values.enabled,
+        // The frame the event's photographs are drawn in; "" is auto.
+        aspect_ratio: values.aspect_ratio,
         is_all_day: values.is_all_day,
         timezone,
         starts_at: startsAt,
@@ -336,6 +343,30 @@ export default function AdminEventFormPage({ params }: Props) {
     }
   };
 
+  // The location this event is filed under, when it is filed under one.
+  const selectedBranch = branches.find(
+    (b) => String(b.id) === String(values.branch),
+  );
+  // ⚠ These are the row's *own* values, not the resolved ones (see the file
+  // header) - so this asks "has this event overridden its branch", not "does
+  // this event have a location".
+  const hasOwnLocation = Boolean(
+    values.venue_name ||
+    values.en_venue_name ||
+    values.address ||
+    values.latitude ||
+    values.longitude,
+  );
+  // A branch that names and addresses itself already answers all four location
+  // fields through `Event.effective_*`, so the form stops asking for them and
+  // says where they come from instead. An event that has already overridden one
+  // keeps them: hiding a *filled* field turns it into a value the operator can
+  // neither see nor clear, while every public page goes on rendering it. And
+  // "Another place" always keeps them - with no branch there is nothing to fall
+  // back to, so those fields are the only place the location can come from.
+  const inheritsLocation =
+    Boolean(selectedBranch?.name && selectedBranch?.address) && !hasOwnLocation;
+
   const fields: FieldDef[] = [
     { key: "name", label: t("name"), required: true, onBlur: handleNameBlur },
     { key: "en_name", label: "Name (EN)" },
@@ -367,11 +398,20 @@ export default function AdminEventFormPage({ params }: Props) {
       placeholder: tEvents("branchNone"),
       options: branches.map((b) => ({ value: b.id, label: b.name })),
     },
-    { key: "venue_name", label: tEvents("venueLabel") },
-    { key: "en_venue_name", label: `${tEvents("venueLabel")} (EN)` },
-    { key: "address", label: tEvents("addressLabel"), type: "textarea" },
-    { key: "latitude", label: tEvents("latitudeLabel"), type: "number" },
-    { key: "longitude", label: tEvents("longitudeLabel"), type: "number" },
+    ...(inheritsLocation
+      ? []
+      : ([
+          { key: "venue_name", label: tEvents("venueLabel") },
+          { key: "en_venue_name", label: `${tEvents("venueLabel")} (EN)` },
+          { key: "address", label: tEvents("addressLabel"), type: "textarea" },
+        ] as FieldDef[])),
+    // ⚠ No Latitude / Longitude inputs, exactly as on the branch form. The
+    // coordinates are the map picker's output (mounted in the slot below, under
+    // the address) and are shown there as a readout - two decimal boxes beside a
+    // map are a second way to set the same value, and the one that can disagree
+    // with the pin. They are still ordinary fields in `values`, so nothing about
+    // the payload changed - including that a blank pair still means "use the
+    // branch's own".
     { key: "href", label: t("link") ?? "Link", type: "url" },
     {
       key: "short_description",
@@ -445,6 +485,52 @@ export default function AdminEventFormPage({ params }: Props) {
               </Typography>
             ),
           },
+          // Under the address it pins, and above the link - the pin is part
+          // of *where this event happens*, not of how it is advertised. With
+          // the location inherited there is nothing here to pin, so the map
+          // gives way to the one line saying which branch answers for it.
+          inheritsLocation
+            ? {
+                beforeKey: "href",
+                node: (
+                  <Typography
+                    variant="caption"
+                    color="var(--muted-foreground, #6b7280)"
+                  >
+                    {tEvents("locationFromBranch", {
+                      branch: selectedBranch?.name ?? "",
+                    })}
+                  </Typography>
+                ),
+              }
+            : {
+                // ⚠ No screenshot is taken here, unlike the branch form's picker:
+                // `map_image` is a column on `Branch` alone (it exists for the
+                // booking confirmation email), so there is no `capture()` call and
+                // no brandmark to draw into one.
+                beforeKey: "href",
+                node: (
+                  <Box flexDirection="column" gap={8}>
+                    <MapPicker
+                      latitude={String(values.latitude ?? "")}
+                      longitude={String(values.longitude ?? "")}
+                      onChange={(latitude, longitude) =>
+                        setValues((prev) => ({ ...prev, latitude, longitude }))
+                      }
+                    />
+                    {/* The coordinates as a readout, not as inputs - see the note
+                    where the two number fields used to be. */}
+                    <Typography variant="caption" color="var(--foreground)">
+                      {values.latitude && values.longitude
+                        ? tEvents("coordinatesValue", {
+                            latitude: String(values.latitude),
+                            longitude: String(values.longitude),
+                          })
+                        : tEvents("coordinatesEmpty")}
+                    </Typography>
+                  </Box>
+                ),
+              },
         ]}
         imagesSlot={
           <>
@@ -455,8 +541,14 @@ export default function AdminEventFormPage({ params }: Props) {
             />
             <Box display="flex" flexDirection="column" gap="8px">
               <Typography variant="label">
-                {t("images") ?? "Gallery Images"}
+                {t("imagesGallery") ?? "Images for gallery"}
               </Typography>
+              <AdminAspectRatioField
+                value={values.aspect_ratio}
+                onChange={(v) =>
+                  setValues((prev) => ({ ...prev, aspect_ratio: v }))
+                }
+              />
               <AdminImageUploader
                 existingImages={existingGallery}
                 onChange={(n, d, o) => {

@@ -30,11 +30,18 @@ export interface GalleryImage {
 interface ItemGalleryClientProps {
   images: GalleryImage[];
   placeholderColor?: string;
+  /**
+   * The record's own frame, from its `aspect_ratio` column through
+   * `aspectRatioValue` - null (the default) leaves the gallery deriving one
+   * from the photographs, as it always has. See `lib/aspect-ratio.ts`.
+   */
+  aspectRatio?: number | null;
 }
 
 export function ItemGalleryClient({
   images,
   placeholderColor,
+  aspectRatio,
 }: ItemGalleryClientProps) {
   const t = useTranslations("Gallery");
 
@@ -42,6 +49,7 @@ export function ItemGalleryClient({
     <ImageGallery
       images={images}
       placeholderColor={placeholderColor}
+      aspectRatio={aspectRatio}
       labels={{
         expand: t("expand"),
         previous: t("previous"),

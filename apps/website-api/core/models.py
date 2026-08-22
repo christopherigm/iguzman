@@ -70,6 +70,30 @@ FIT_CHOICES = [
 ]
 
 
+# The frame a record's own photographs are drawn in, when the tenant would
+# rather state it than let the pictures decide. Blank is the default and means
+# "auto": the detail gallery derives its frame from the most-portrait photo in
+# the set, and every other surface keeps whatever box it always had - so an
+# untouched site renders exactly as it did before this column existed.
+#
+# The value is a plain `w:h` string rather than a float because it is CSS on the
+# other end (`aspect-ratio: 4 / 5`), and because a number would lose the name
+# the operator picked: 0.8 read back out of the database says nothing, "4:5"
+# says portrait. Adding a ratio here is a migration-free change to
+# `apps/website/lib/aspect-ratio.ts`'s twin list plus one row in this tuple -
+# keep the two in step, or the CMS offers a value the API refuses.
+ASPECT_RATIO_AUTO = ""
+ASPECT_RATIO_CHOICES = [
+    (ASPECT_RATIO_AUTO, "Auto - from the images"),
+    ("4:5", "Portrait (4:5)"),
+    ("5:4", "Landscape (5:4)"),
+    ("1:1", "Square (1:1)"),
+    ("16:9", "Wide (16:9)"),
+    ("3:2", "Photo (3:2)"),
+    ("9:16", "Tall (9:16)"),
+]
+
+
 CURRENCY_CHOICES = [
     ("USD", "US Dollar"),
     ("EUR", "Euro"),
@@ -191,6 +215,18 @@ class BasePicture(Common):
         blank=True,
     )
     background_color = ColorField(null=True, blank=True, default="#fff")
+    # The frame this record's own images are drawn in - see ASPECT_RATIO_CHOICES.
+    # It is the *record's* setting, not each picture's: a gallery is one frame
+    # holding photographs of several shapes, and a row's own answer could only
+    # disagree with its neighbours'. So the gallery-row models (ProductImage,
+    # EventImage, ...) carry this column too and nothing reads it there; the one
+    # that is read is the owner's.
+    aspect_ratio = models.CharField(
+        max_length=16,
+        choices=ASPECT_RATIO_CHOICES,
+        blank=True,
+        default=ASPECT_RATIO_AUTO,
+    )
 
     class Meta:
         abstract = True

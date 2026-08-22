@@ -9,6 +9,7 @@ import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { SectionHero } from "@/components/section-hero";
 import { getHighlight } from "@/lib/highlights";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
+import { aspectRatioValue } from "@/lib/aspect-ratio";
 import type { GalleryImage } from "@/components/item-gallery-client";
 import "@/components/item-detail.css";
 
@@ -124,6 +125,7 @@ export default async function HighlightDetailPage({ params }: Props) {
               <ItemGalleryClient
                 images={galleryImages}
                 placeholderColor={highlight.background_color ?? undefined}
+                aspectRatio={aspectRatioValue(highlight.aspect_ratio)}
               />
             </Grid>
           )}

@@ -13,6 +13,7 @@ import {
   type NewImage,
 } from "@/components/admin-image-uploader/admin-image-uploader";
 import { AdminImageField } from "@/components/admin/admin-image-field";
+import { AdminAspectRatioField } from "@/components/admin/admin-aspect-ratio-field";
 import { ImageWebSearch } from "@/components/admin/image-web-search";
 import {
   remainingGallerySlots,
@@ -110,6 +111,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
   const router = useRouter();
 
   const [values, setValues] = useState<Record<string, unknown>>({
+    aspect_ratio: "",
     name: "",
     en_name: "",
     slug: "",
@@ -347,6 +349,7 @@ export default function AdminMenuItemFormPage({ params }: Props) {
       ])
         .then(([item, images, ings, rec]) => {
           setValues({
+            aspect_ratio: item.aspect_ratio ?? "",
             name: item.name ?? "",
             en_name: item.en_name ?? "",
             slug: item.slug ?? "",
@@ -792,7 +795,15 @@ export default function AdminMenuItemFormPage({ params }: Props) {
               query={imageQuery}
             />
             <Box display="flex" flexDirection="column" gap="8px">
-              <Typography variant="label">{t("images") ?? "Images"}</Typography>
+              <Typography variant="label">
+                {t("imagesGallery") ?? "Images for gallery"}
+              </Typography>
+              <AdminAspectRatioField
+                value={values.aspect_ratio}
+                onChange={(v) =>
+                  setValues((prev) => ({ ...prev, aspect_ratio: v }))
+                }
+              />
               <AdminImageUploader
                 existingImages={existingImages}
                 onChange={(n, d, o) => {

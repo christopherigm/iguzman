@@ -15,6 +15,7 @@ import {
 import { getRequestOrigin, toShareDescription } from "@/lib/metadata";
 import type { GalleryImage } from "@/components/item-gallery-client";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
+import { aspectRatioValue } from "@/lib/aspect-ratio";
 import { ItemHeroVideo } from "@/components/item-hero-video";
 import { getSystem } from "@/lib/system";
 import {
@@ -197,6 +198,7 @@ export async function MenuItemDetailPage({
               <ItemGalleryClient
                 images={galleryImages}
                 placeholderColor={item.background_color ?? undefined}
+                aspectRatio={aspectRatioValue(item.aspect_ratio)}
               />
             </Grid>
             <MenuDetailPanel item={item} locale={locale} />

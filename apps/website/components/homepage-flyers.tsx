@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { aspectRatioValue } from "@/lib/aspect-ratio";
 import { getTranslations, getLocale } from "next-intl/server";
 import { Box } from "@repo/ui/core-elements/box";
 import { Container } from "@repo/ui/core-elements/container";
@@ -95,6 +96,9 @@ export async function HomepageFlyers() {
   flyers.forEach((flyer) => {
     const title = pick(locale, flyer.name, flyer.en_name);
     const description = pick(locale, flyer.description, flyer.en_description);
+    // The frame this flyer's photograph is drawn in; null (the default) leaves
+    // the picture its own proportions.
+    const frame = aspectRatioValue(flyer.aspect_ratio);
     // A row with neither a title nor a photograph has nothing to show and would
     // render as an empty band the visitor can still swipe to.
     if (!title && !flyer.image) return;
@@ -159,9 +163,13 @@ export async function HomepageFlyers() {
                     sizes="(min-width: 600px) 50vw, 100vw"
                     style={{
                       width: "100%",
+                      // A stated frame crops the photograph to it; with none
+                      // (the default) `auto` hands the box back to the file, as
+                      // the comment above says.
                       height: "auto",
-                      borderRadius: 12,
+                      aspectRatio: frame != null ? String(frame) : undefined,
                       objectFit: flyer.fit === "contain" ? "contain" : "cover",
+                      borderRadius: 12,
                     }}
                   />
                 </Box>

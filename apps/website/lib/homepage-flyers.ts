@@ -32,6 +32,12 @@ export interface HomepageFlyer {
   image: string | null;
   fit: string | null;
   background_color: string | null;
+  /**
+   * The frame the flyer's photograph is drawn in ("" = auto, which keeps the
+   * picture's own proportions). Resolve it with `aspectRatioValue` from
+   * `lib/aspect-ratio.ts`; never parse it inline.
+   */
+  aspect_ratio: string;
   href: string | null;
   items: SpotlightRef[];
   /** Which side the photograph sits on from `sm` up. */

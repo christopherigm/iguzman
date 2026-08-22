@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@repo/i18n/navigation";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import { AdminImageField } from "@/components/admin/admin-image-field";
+import { AdminAspectRatioField } from "@/components/admin/admin-aspect-ratio-field";
 import {
   CatalogRefPicker,
   useCatalogRefOptions,
@@ -64,6 +65,7 @@ export default function AdminHomepageFlyerFormPage({ params }: Props) {
   const router = useRouter();
 
   const [values, setValues] = useState<Record<string, unknown>>({
+    aspect_ratio: "",
     name: "",
     en_name: "",
     description: "",
@@ -101,6 +103,7 @@ export default function AdminHomepageFlyerFormPage({ params }: Props) {
       .then((data) => {
         setValues((prev) => ({
           ...prev,
+          aspect_ratio: data.aspect_ratio ?? "",
           name: data.name ?? "",
           en_name: data.en_name ?? "",
           description: data.description ?? "",
@@ -225,6 +228,15 @@ export default function AdminHomepageFlyerFormPage({ params }: Props) {
             query={
               String(values.name ?? "").trim() ||
               String(values.en_name ?? "").trim()
+            }
+            afterLabel={
+              <AdminAspectRatioField
+                value={values.aspect_ratio}
+                onChange={(v) =>
+                  setValues((prev) => ({ ...prev, aspect_ratio: v }))
+                }
+                scope="image"
+              />
             }
           />
         }

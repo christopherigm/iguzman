@@ -3,7 +3,9 @@ from decimal import Decimal
 from django.db import transaction
 from rest_framework import serializers
 
-from core.models import Branch, Brand, ResourcePool, System, CURRENCY_CHOICES
+from core.models import (
+    ASPECT_RATIO_CHOICES, Branch, Brand, ResourcePool, System, CURRENCY_CHOICES,
+)
 from core.image_sizes import REGULAR, SMALL, STANDARD, image_cfg
 from core.serializers import ImageProcessingSerializer, StockCreditWriteMixin
 from .models import (
@@ -373,7 +375,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'short_description', 'en_short_description',
             'slug', 'sku', 'barcode',
             'image', 'images', 'variants',
-            'href', 'video_link', 'fit', 'background_color',
+            'href', 'video_link', 'fit', 'background_color', 'aspect_ratio',
             'price', 'compare_price', 'cost_price', 'currency',
             # Rewards. Both are the item's **own** values, unresolved: a null
             # `points_award` means "inherit my category's" and only
@@ -411,6 +413,13 @@ class ProductWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
         required=False, allow_null=True,
     )
     background_color = serializers.CharField(max_length=25, required=False, allow_null=True, allow_blank=True)
+    # The frame this record's images are drawn in ("" = auto); see
+    # `ASPECT_RATIO_CHOICES`. Blank is a real value here, not a missing
+    # one - it is how an operator hands the frame back to the pictures.
+    aspect_ratio = serializers.ChoiceField(
+        choices=[c[0] for c in ASPECT_RATIO_CHOICES],
+        required=False, allow_blank=True,
+    )
     # Manual display order, written by the admin list's drag-to-reorder mode.
     sort_order = serializers.IntegerField(required=False, min_value=0)
 
@@ -792,7 +801,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             'short_description', 'en_short_description',
             'slug', 'sku',
             'image', 'images', 'variants',
-            'href', 'video_link', 'fit', 'background_color',
+            'href', 'video_link', 'fit', 'background_color', 'aspect_ratio',
             'price', 'compare_price', 'cost_price', 'currency',
             # Rewards. Both are the item's **own** values, unresolved: a null
             # `points_award` means "inherit my category's" and only
@@ -874,6 +883,13 @@ class ServiceWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
         required=False, allow_null=True,
     )
     background_color = serializers.CharField(max_length=25, required=False, allow_null=True, allow_blank=True)
+    # The frame this record's images are drawn in ("" = auto); see
+    # `ASPECT_RATIO_CHOICES`. Blank is a real value here, not a missing
+    # one - it is how an operator hands the frame back to the pictures.
+    aspect_ratio = serializers.ChoiceField(
+        choices=[c[0] for c in ASPECT_RATIO_CHOICES],
+        required=False, allow_blank=True,
+    )
     # Manual display order, written by the admin list's drag-to-reorder mode.
     sort_order = serializers.IntegerField(required=False, min_value=0)
 
@@ -1887,7 +1903,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
             'slug', 'sku',
             'image', 'images', 'ingredients', 'variants',
             'sizes', 'sizes_enabled',
-            'href', 'video_link', 'fit', 'background_color',
+            'href', 'video_link', 'fit', 'background_color', 'aspect_ratio',
             'price', 'compare_price', 'cost_price', 'currency',
             # Rewards. Both are the item's **own** values, unresolved: a null
             # `points_award` means "inherit my category's" and only
@@ -1929,6 +1945,13 @@ class MenuItemWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
         required=False, allow_null=True,
     )
     background_color = serializers.CharField(max_length=25, required=False, allow_null=True, allow_blank=True)
+    # The frame this record's images are drawn in ("" = auto); see
+    # `ASPECT_RATIO_CHOICES`. Blank is a real value here, not a missing
+    # one - it is how an operator hands the frame back to the pictures.
+    aspect_ratio = serializers.ChoiceField(
+        choices=[c[0] for c in ASPECT_RATIO_CHOICES],
+        required=False, allow_blank=True,
+    )
     # Manual display order, written by the admin list's drag-to-reorder mode.
     sort_order = serializers.IntegerField(required=False, min_value=0)
 

@@ -251,6 +251,41 @@ Two more things `image_cfg` encodes:
 Re-encoding is destructive and the original is never kept: fixing a size only
 affects **future** uploads, and existing rows have to be re-uploaded in the CMS.
 
+## `BasePicture.aspect_ratio` - the frame a record's images are drawn in
+
+Every picture-bearing model carries an **`aspect_ratio`** (it is on the abstract
+`BasePicture`, so it landed on all eighteen concrete tables in one migration).
+It is a `w:h` string from `ASPECT_RATIO_CHOICES` in `core/models.py`, and
+**blank - the default - means "auto"**: the frontend keeps whatever frame it
+always used, so nothing rendered differently the day this shipped.
+
+- ⚠ **The list in `core/models.py` and the one in `apps/website/lib/aspect-ratio.ts`
+  are one list written twice.** The write serializers refuse a value that is not
+  a choice, so a ratio added on one side only is a CMS select whose save fails.
+- **It is a string, not a float**, because it is CSS on the other end
+  (`aspect-ratio: 4 / 5`) and because `0.8` read back out of the database says
+  nothing while `"4:5"` says portrait.
+- ⚠ **It is the *owner's* setting, and the gallery-row models' copies are dead
+  columns.** `ProductImage`, `EventImage`, `SuccessStoryImage` and the rest
+  inherit it and nothing reads it there: a gallery is one frame holding
+  photographs of several shapes, so a per-row answer could only disagree with
+  its neighbours' - which is the thing the column exists to stop. It is exposed
+  in the CMS on the seven forms that own a gallery or a block image, and on no
+  other.
+- ⚠ **The three category tables' copies are dead columns too**, for a different
+  reason: a category's only image surface is the full-bleed `SectionHero` at
+  the top of its page, whose height belongs to the page rather than to the
+  picture in it (a portrait photo would make a wall the reader scrolls past to
+  reach the items). So `ProductCategory`, `ServiceCategory` and `MenuCategory`
+  keep the inherited column but **no serializer exposes it**, and their CMS
+  forms carry no Image frame select. Don't add one back without a surface that
+  actually reads it.
+- **Seven serializer pairs carry it**: the three buyables (`catalog`), plus
+  `SuccessStory`, `CompanyHighlight`, `HomepageFlyer` and `Event` (`core`). The
+  write serializers declare it `allow_blank=True` - blank is a **real value**
+  here ("hand the frame back to the pictures"), never a missing one, so it must
+  not be swept into `None` by a blank-to-null rule.
+
 ## Publishing a site's content (dev → prod)
 
 `core/site_payload.py` is the portable serialize/apply layer for a `System`'s

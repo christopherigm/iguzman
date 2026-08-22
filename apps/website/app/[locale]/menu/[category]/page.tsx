@@ -107,6 +107,12 @@ export default async function MenuCategoryPage({ params }: Props) {
           <SectionHero
             backgroundImage={category.image}
             slogan={name}
+            // A fixed band, deliberately *not* the record's own
+            // `aspect_ratio`: the height of a full-bleed strip under the navbar
+            // belongs to the page rather than to the picture in it - a portrait
+            // photo would turn it into a wall the reader has to scroll past to
+            // reach the items. The three category forms carry no Image frame
+            // select for the same reason; see `lib/aspect-ratio.ts`.
             style={{ height: "clamp(220px, 30vw, 400px)" }}
           />
           {/* Admin-only edit shortcut, anchored to the bottom of the hero -

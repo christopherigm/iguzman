@@ -36,6 +36,12 @@ export interface CompanyHighlight {
   image: string | null;
   fit: string | null;
   background_color: string | null;
+  /**
+   * The frame this record's photographs are drawn in ("" = auto, which is what
+   * every record carries until an operator says otherwise). Resolve it with
+   * `aspectRatioValue` from `lib/aspect-ratio.ts`; never parse it inline.
+   */
+  aspect_ratio: string;
   href: string | null;
   icon: string | null;
   size: "sm" | "md" | "lg" | "xl";

@@ -11,6 +11,7 @@ from rest_framework import serializers
 from . import image_sizes
 from .image_sizes import REGULAR, SMALL, MEDIUM, STANDARD, image_cfg
 from .models import (
+    ASPECT_RATIO_CHOICES,
     DIVIDER_CHOICES,
     KIND_LABEL_FIELDS,
     BookingResource,
@@ -317,7 +318,7 @@ class SuccessStorySerializer(serializers.ModelSerializer):
             "name", "en_name",
             "short_description", "en_short_description",
             "description", "en_description",
-            "image", "fit", "background_color", "href",
+            "image", "fit", "background_color", "aspect_ratio", "href",
             "slug", "sort_order",
             "images",
         ]
@@ -351,6 +352,13 @@ class SuccessStoryWriteSerializer(StockCreditWriteMixin, serializers.Serializer)
     href        = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
     fit         = serializers.CharField(max_length=16, required=False, allow_null=True, allow_blank=True)
     background_color = serializers.CharField(max_length=32, required=False, allow_null=True, allow_blank=True)
+    # The frame this record's images are drawn in ("" = auto); see
+    # `ASPECT_RATIO_CHOICES`. Blank is a real value here, not a missing
+    # one - it is how an operator hands the frame back to the pictures.
+    aspect_ratio = serializers.ChoiceField(
+        choices=[c[0] for c in ASPECT_RATIO_CHOICES],
+        required=False, allow_blank=True,
+    )
     slug        = serializers.SlugField(max_length=255, required=False, allow_null=True, allow_blank=True)
     enabled     = serializers.BooleanField(required=False)
     # Manual display order, written by the admin list's drag-to-reorder mode.
@@ -369,7 +377,7 @@ class SuccessStoryWriteSerializer(StockCreditWriteMixin, serializers.Serializer)
             "system", "name", "en_name",
             "short_description", "en_short_description",
             "description", "en_description",
-            "href", "fit", "background_color", "slug", "enabled", "sort_order",
+            "href", "fit", "background_color", "aspect_ratio", "slug", "enabled", "sort_order",
         ]
         update_fields = []
         for field_name in scalar_fields:
@@ -470,7 +478,7 @@ class CompanyHighlightSerializer(serializers.ModelSerializer):
             "name", "en_name",
             "short_description", "en_short_description",
             "description", "en_description",
-            "image", "fit", "background_color", "href",
+            "image", "fit", "background_color", "aspect_ratio", "href",
             "icon", "size", "slug", "sort_order",
             "items",
         ]
@@ -499,6 +507,13 @@ class CompanyHighlightWriteSerializer(StockCreditWriteMixin, serializers.Seriali
     href         = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
     fit          = serializers.CharField(max_length=16, required=False, allow_null=True, allow_blank=True)
     background_color = serializers.CharField(max_length=32, required=False, allow_null=True, allow_blank=True)
+    # The frame this record's images are drawn in ("" = auto); see
+    # `ASPECT_RATIO_CHOICES`. Blank is a real value here, not a missing
+    # one - it is how an operator hands the frame back to the pictures.
+    aspect_ratio = serializers.ChoiceField(
+        choices=[c[0] for c in ASPECT_RATIO_CHOICES],
+        required=False, allow_blank=True,
+    )
     icon         = serializers.CharField(max_length=512, required=False, allow_null=True, allow_blank=True)
     size         = serializers.ChoiceField(choices=["sm", "md", "lg", "xl"], required=False)
     slug         = serializers.SlugField(max_length=255, required=False, allow_null=True, allow_blank=True)
@@ -519,7 +534,7 @@ class CompanyHighlightWriteSerializer(StockCreditWriteMixin, serializers.Seriali
             "name", "en_name",
             "short_description", "en_short_description",
             "description", "en_description",
-            "href", "fit", "background_color", "icon", "size", "slug", "sort_order", "enabled",
+            "href", "fit", "background_color", "aspect_ratio", "icon", "size", "slug", "sort_order", "enabled",
         ]
         update_fields = []
         for field_name in scalar_fields:
@@ -660,7 +675,7 @@ class HomepageFlyerSerializer(serializers.ModelSerializer):
             "name", "en_name",
             "short_description", "en_short_description",
             "description", "en_description",
-            "image", "fit", "background_color", "href",
+            "image", "fit", "background_color", "aspect_ratio", "href",
             "items", "image_side",
             "background", "top_divider", "bottom_divider",
             "sort_order",
@@ -688,6 +703,13 @@ class HomepageFlyerWriteSerializer(StockCreditWriteMixin, serializers.Serializer
     href         = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
     fit          = serializers.CharField(max_length=16, required=False, allow_null=True, allow_blank=True)
     background_color = serializers.CharField(max_length=32, required=False, allow_null=True, allow_blank=True)
+    # The frame this record's images are drawn in ("" = auto); see
+    # `ASPECT_RATIO_CHOICES`. Blank is a real value here, not a missing
+    # one - it is how an operator hands the frame back to the pictures.
+    aspect_ratio = serializers.ChoiceField(
+        choices=[c[0] for c in ASPECT_RATIO_CHOICES],
+        required=False, allow_blank=True,
+    )
     items        = serializers.JSONField(required=False)
     image_side   = serializers.ChoiceField(
         choices=[HomepageFlyer.SIDE_LEFT, HomepageFlyer.SIDE_RIGHT], required=False
@@ -717,7 +739,7 @@ class HomepageFlyerWriteSerializer(StockCreditWriteMixin, serializers.Serializer
             "name", "en_name",
             "short_description", "en_short_description",
             "description", "en_description",
-            "href", "fit", "background_color",
+            "href", "fit", "background_color", "aspect_ratio",
             "items", "image_side",
             "background", "top_divider", "bottom_divider",
             "sort_order", "enabled",
@@ -834,7 +856,7 @@ class EventSerializer(serializers.ModelSerializer):
             "name", "en_name",
             "short_description", "en_short_description",
             "description", "en_description",
-            "image", "fit", "background_color", "href",
+            "image", "fit", "background_color", "aspect_ratio", "href",
             "slug",
             "branch", "branch_name", "branch_en_name",
             "venue_name", "en_venue_name", "address", "latitude", "longitude",
@@ -876,6 +898,13 @@ class EventWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
     href        = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
     fit         = serializers.CharField(max_length=16, required=False, allow_null=True, allow_blank=True)
     background_color = serializers.CharField(max_length=32, required=False, allow_null=True, allow_blank=True)
+    # The frame this record's images are drawn in ("" = auto); see
+    # `ASPECT_RATIO_CHOICES`. Blank is a real value here, not a missing
+    # one - it is how an operator hands the frame back to the pictures.
+    aspect_ratio = serializers.ChoiceField(
+        choices=[c[0] for c in ASPECT_RATIO_CHOICES],
+        required=False, allow_blank=True,
+    )
     slug        = serializers.SlugField(max_length=255, required=False, allow_null=True, allow_blank=True)
     enabled     = serializers.BooleanField(required=False)
     is_featured = serializers.BooleanField(required=False)
@@ -929,7 +958,7 @@ class EventWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
             "system", "branch", "name", "en_name",
             "short_description", "en_short_description",
             "description", "en_description",
-            "href", "fit", "background_color", "slug", "enabled", "is_featured",
+            "href", "fit", "background_color", "aspect_ratio", "slug", "enabled", "is_featured",
             "venue_name", "en_venue_name", "address", "latitude", "longitude",
             "starts_at", "ends_at", "is_all_day", "timezone",
         ]

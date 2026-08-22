@@ -1,0 +1,11 @@
+/* The frame select is a select like any other on the form and should read as
+   one. It lives in the images slot, which spans both grid columns, so left to
+   itself it stretches to twice the width of every other select on the form.
+   Kept in CSS because it is a breakpoint override: below sm the field grid is
+   a single column and this select is full width like everything else. The
+   subtrahend is half of `.af__grid`'s 16px gap. */
+@media (--sm) {
+  .admin-aspect-ratio-field {
+    max-width: calc(50% - 8px);
+  }
+}

@@ -16,6 +16,12 @@ type Props = {
    * it until the operator types their own search.
    */
   query: string;
+  /**
+   * Rendered between the label and the drop zone - today the Image frame
+   * select, which states a fact about the whole field and so belongs at its
+   * head rather than under the picker at its foot.
+   */
+  afterLabel?: React.ReactNode;
 };
 
 /**
@@ -28,10 +34,11 @@ type Props = {
  * this; the gallery fields (products, menu items, the two editorial galleries)
  * keep their own uploader and pass the picker a slot count instead.
  */
-export function AdminImageField({ label, field, query }: Props) {
+export function AdminImageField({ label, field, query, afterLabel }: Props) {
   return (
     <Box display="flex" flexDirection="column" gap="8px">
       <Typography variant="label">{label}</Typography>
+      {afterLabel}
       <AdminImageUploader
         key={field.uploaderKey}
         existingImages={field.existing}
