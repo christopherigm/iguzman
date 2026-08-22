@@ -1155,12 +1155,20 @@ export function Hero({
   // mark it centres in that space is sized off it. A caller's `style` wins here
   // as it does on the box itself - the CMS preview sizes its hero by hand - so
   // both the reservation and the mark follow whatever is actually drawn.
+  //
+  // The two fallbacks are the landing hero's only, since every section hero
+  // passes its own `style.height`. An image hero is the taller of the pair - a
+  // still has no motion to hold a reader with - but not by as much as it once
+  // was: at `clamp(500px, 65vw, 800px)` it filled nearly the whole viewport on
+  // a desktop, so the landing opened on a photograph with no hint that anything
+  // followed it. `.hero--image` in `hero.css` restates the image value and must
+  // be kept in step (this inline height is what actually paints).
   const styleHeight = style?.height;
   const heroHeight =
     typeof styleHeight === "number"
       ? `${styleHeight}px`
       : (styleHeight ??
-        (hasVideo ? "clamp(350px, 45vw, 600px)" : "clamp(500px, 65vw, 800px)"));
+        (hasVideo ? "clamp(350px, 45vw, 600px)" : "clamp(400px, 55vw, 660px)"));
 
   // Fraction of the badge the logo is drawn at. Scaling the `cover` image down
   // about its centre keeps the exact 100% look and reveals a ring of the badge's

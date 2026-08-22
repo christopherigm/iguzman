@@ -155,6 +155,57 @@ Each module's docstring restates this. Run the whole suite with
 `REDIS_URL='' python manage.py test` (the local `.env` points Redis at the
 cluster); it should stay under about half a minute.
 
+## Migrations - SQLite passes, PostgreSQL is the one that runs
+
+Local development and the test suite are on **SQLite**; production is
+**PostgreSQL**. A migration can therefore be green on your laptop, green in CI,
+and still crash-loop the pod - and it will, because `entrypoint.sh` runs
+`migrate` before gunicorn, so a migration that cannot apply is an API that
+cannot start.
+
+**The trap that has already bitten once (`0072_system_site_prefix`):**
+
+> Never `AddField` an indexed column and then `AlterField` it to `unique=True`
+> **in the same migration**.
+
+PostgreSQL's schema editor answers every indexed `varchar` with a *second*,
+`varchar_pattern_ops` index named `<table>_<column>_<hash>_like`. `AddField`
+**defers** its index to the end of the migration, while the `AlterField` that
+adds `unique=True` creates its own `_like` index *immediately* - and the name is
+hashed from the column, so both statements carry the same name. The deferred one
+then flushes on top of the one already there:
+
+```
+django.db.utils.ProgrammingError:
+relation "core_system_site_prefix_16ee111c_like" already exists
+```
+
+SQLite has neither index, so nothing collides and the migration looks fine.
+
+Two ways out, both fine - pass `db_index=False` on the intermediate `AddField`
+(what `0072` does; the `AlterField` still lands the real unique index, so the end
+state is unchanged), or split the two operations into separate migrations, since
+each migration gets its own schema editor and flushes its own deferred SQL.
+
+**Before shipping any migration that adds a constraint or an index, run it
+against a real PostgreSQL** - a throwaway container is enough, and takes a
+minute:
+
+```bash
+docker run -d --name wa-migtest -e POSTGRES_USER=website \
+  -e POSTGRES_PASSWORD=website -e POSTGRES_DB=website -p 55432:5432 postgres:16
+
+DB_HOST=127.0.0.1 DB_PORT=55432 DB_NAME=website \
+DB_USER=website DB_PASSWORD=website python manage.py migrate
+```
+
+Setting `DB_HOST` is the whole switch (`settings.py` falls back to SQLite
+without it), so the same env prefix runs the **test suite** on PostgreSQL too -
+worth doing for anything schema-shaped. A migration with a data back-fill wants
+one more step: migrate to the revision *before* it, insert rows that look like
+production's, and only then migrate to head - an empty table exercises none of
+the back-fill's collision handling.
+
 ## Image sizes - the serializer decides, not the model
 
 **`core/image_sizes.py` is the single source of truth for stored dimensions.**
@@ -1276,10 +1327,25 @@ tenant to sell a "Latte" takes that slug away from everyone else on the box.
   throwaway `__reslug-<system>-<pk>` first, with `queryset.update()` so the
   transient value fires no cache-invalidating signal.
 - **Rows are saved one at a time through `save()`, never `bulk_update`.** All
-  eleven models have `post_save` receivers clearing the right Redis namespace, so
-  a bulk write would leave the storefront serving the old slugs for up to an
-  hour. A record whose slug is already correct is not written at all, so a second
-  press is nearly free and does not bump `modified` across the whole catalog.
+  eleven models have `post_save` receivers, and a bulk write fires none of them,
+  so a dish would go on serving its category's old slug out of cache. A record
+  whose slug is already correct is not written at all, so a second press is
+  nearly free and does not bump `modified` across the whole catalog.
+- ⚠ **Those receivers are cross-model, so the rebuild clears its own namespaces
+  itself** - `SLUG_CACHE_PATTERNS` in `core/services/reslug.py`, swept
+  `on_commit` for the models a pass actually moved. Saving a `MenuCategory`
+  clears the **menu item** caches (their payloads embed `category_slug`), and
+  saving a `MenuItem` clears the **category** ones (`item_count`); a model's own
+  list and detail caches are cleared by the **viewset** that wrote the row - and
+  a rebuild goes through no viewset. Without the sweep the CMS list and every
+  public page built from it went on serving the old slugs for the full 5-minute
+  TTL while the new ones were already live, so a category card led to a 404 on a
+  page that exists. `on_commit` rather than inline: a read landing mid-transaction
+  would re-prime the very namespaces just cleared, for another whole TTL. The
+  three **user-scoped** payloads carrying a link to a buyable go with the catalog
+  keys - a cart line and a favorite embed the item's whole payload, an order line
+  its `item_slug` - because a rebuild moves every one of those URLs at once,
+  where an ordinary item write only ever needed the carts.
 - **The rebuild dodges other tenants' slugs**, read once per model rather than
   queried per row, and suffixes `-2` for two of this tenant's own records that
   share a name. Ordered by pk, so two runs resolve such a pair the same way

@@ -50,7 +50,18 @@ export function HomepageFlyersSlider({
   if (slides.length === 0) return null;
 
   return (
-    <Box width="100%" flexDirection="column" gap={20}>
+    // `paddingBottom` is the section's own rhythm, and it is the one piece of it
+    // this block does not get for free: every other landing block carries its
+    // 48/56 padding *inside* itself (`.catalog-items-section`, `.highlights-
+    // section`, `Spotlight`/`FindUs`'s `paddingY`), so a band composed around
+    // one is held off its neighbours by that block's padding. Here the padding
+    // lives inside the flyer's own band, and what ends the section is the
+    // control row *outside* it - which left the dots sitting flush against
+    // whatever came next. With another band next (every landing that puts the
+    // flyers above the highlights), that is two colour fields meeting with only
+    // the dots between them, and with a single flyer - where `SliderControls`
+    // draws nothing at all - the two bands touch outright.
+    <Box width="100%" flexDirection="column" gap={20} paddingBottom={56}>
       <Swiper
         className="homepage-flyers__swiper"
         modules={[Keyboard]}

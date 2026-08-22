@@ -888,6 +888,51 @@ class SitePrefixTests(TestCase):
         theirs.refresh_from_db()
         self.assertEqual(theirs.slug, "pizzeria-napoli")
 
+    def test_a_rebuild_drops_the_caches_that_still_hold_the_old_slugs(self):
+        """The rebuilt rows' own namespaces, which no receiver clears.
+
+        `catalog.signals` is cross-model - saving a MenuCategory clears the
+        *menu item* caches - and a category's own list is normally cleared by
+        the viewset that wrote it, which a rebuild goes through none of. So
+        the CMS list, and every public page built from it, went on serving the
+        old slugs for the full five-minute TTL while the new ones were already
+        live: a customer following a cached link got a 404 on a page that
+        exists. This is that bug.
+        """
+        category = MenuCategory.objects.create(
+            system=self.system, name="Pizzas", slug="old-pizzas",
+        )
+
+        # Prime the public list cache with the pre-rebuild slug, exactly as a
+        # visitor loading the menu would.
+        url = f"/api/catalog/menu-categories/?system={self.system.pk}"
+        self.assertEqual(self.client.get(url).json()[0]["slug"], "old-pizzas")
+
+        self.client.force_login(make_admin("boss", self.system))
+        # `captureOnCommitCallbacks` because the sweep is deferred to
+        # `on_commit`; TestCase never commits, so without this it never runs.
+        with self.captureOnCommitCallbacks(execute=True):
+            res = self.client.post(
+                f"/api/system/{self.system.pk}/recreate-slugs/",
+                data=json.dumps({"models": ["menu-category"]}),
+                content_type="application/json",
+            )
+        self.assertEqual(res.status_code, 200, res.content)
+
+        category.refresh_from_db()
+        self.assertEqual(category.slug, "piccolo-pizzas")
+        self.assertEqual(self.client.get(url).json()[0]["slug"], "piccolo-pizzas")
+
+        # A pass that moved nothing sweeps nothing: the second press must not
+        # cost the whole catalog its cache.
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            self.client.post(
+                f"/api/system/{self.system.pk}/recreate-slugs/",
+                data=json.dumps({"models": ["menu-category"]}),
+                content_type="application/json",
+            )
+        self.assertEqual(callbacks, [])
+
 
 class SystemSettingsTests(TestCase):
     """The basemap a tenant picks, and what it calls the families it sells.

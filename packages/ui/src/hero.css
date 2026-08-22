@@ -1,9 +1,17 @@
+/*
+ * Mirrors the image-hero fallback in `hero.tsx` (`heroHeight`), which is what
+ * actually paints - the height is written inline, so an inline style wins over
+ * this rule. Keep the two in step. It is deliberately shorter than the frame a
+ * still used to fill: at the old `clamp(500px, 65vw, 800px)` a landing opened
+ * on a photograph occupying nearly the whole viewport, so the first band below
+ * it was never even hinted at. Still taller than the video hero
+ * (`clamp(350px, 45vw, 600px)`), which has motion to hold a reader with.
+ */
 .hero--image {
-  height: clamp(500px, 65vw, 800px);
+  height: clamp(400px, 55vw, 660px);
 }
 
-@media (max-width: 899px) {
-  /* md */
+@media (--below-md) {
   .hero--image {
     min-height: 350px;
   }

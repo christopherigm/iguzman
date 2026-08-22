@@ -61,7 +61,24 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="system",
             name="site_prefix",
-            field=models.SlugField(blank=True, default="", max_length=32),
+            # ⚠ `db_index=False` is load-bearing, and only on PostgreSQL.
+            #
+            # A SlugField is indexed by default, and PostgreSQL's schema editor
+            # answers a `varchar` index with a *second*, `varchar_pattern_ops`
+            # one named `..._site_prefix_<hash>_like`. `AddField` defers both to
+            # the end of the migration, while the `AlterField` below adds
+            # `unique=True` - whose own `_like` index is created immediately and
+            # carries the very same name, because the name is hashed from the
+            # column. The deferred statement then flushes on top of it:
+            #
+            #     ProgrammingError: relation
+            #     "core_system_site_prefix_16ee111c_like" already exists
+            #
+            # SQLite has no such index, so this only ever surfaced against the
+            # production database. Leaving the intermediate column unindexed
+            # means nothing is queued to collide; the `AlterField` still lands
+            # the real (unique) index, so the end state is unchanged.
+            field=models.SlugField(blank=True, db_index=False, default="", max_length=32),
         ),
         migrations.RunPython(backfill_site_prefix, noop),
         migrations.AlterField(

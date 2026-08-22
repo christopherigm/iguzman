@@ -2346,6 +2346,16 @@ shapes**.
   for a single slide, so a lone flyer carries no dots and no arrows - which is
   what stops it looking like a broken carousel. The band renders nothing at all
   with no flyers, the contract every landing block here follows.
+- ⚠ **The section's own bottom rhythm is a `paddingBottom` on the slider root**,
+  and it is the one piece of the page rhythm this block does not get for free.
+  Every other landing block carries its 48/56 (or `paddingY={64}`) *inside*
+  itself, so a `SectionBand` composed around one is held off its neighbours by
+  that block's padding. Here the padding lives inside each flyer's own band and
+  what *ends* the section is the control row **outside** it - so with nothing
+  below the dots they sat flush against whatever came next. On every landing
+  that puts the flyers above the highlights that is two colour fields meeting
+  with only the dots between them, and with a single flyer (no controls at all)
+  the two bands touch outright.
 - ⚠ **The slide's layout is grid areas in CSS, and must stay there.** The DOM
   order is header → media → body; below `sm` that reads straight down, from `sm`
   up the photograph moves beside the writing and spans both text rows, on the

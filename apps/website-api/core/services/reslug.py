@@ -28,6 +28,8 @@ import unicodedata
 from django.apps import apps as django_apps
 from django.db import transaction
 
+from core.cache import invalidate_pattern
+
 
 def slug_base(name: str) -> str:
     """The name half of a slug: ASCII, lowercase, hyphen-separated.
@@ -79,6 +81,60 @@ SLUG_MODELS = {
     "event": ("core", "Event"),
 }
 
+#: The user-scoped payloads that carry a **link** to a buyable, and so a slug.
+#:
+#: A cart line and a favorite each embed the item's whole catalog payload
+#: (`CartItemSerializer.get_item`), and an order line carries `item_slug` +
+#: `item_category_slug` read live through the FK - so after a rebuild all three
+#: address the item at a URL that has just stopped resolving. `catalog.signals`
+#: sweeps the carts on an ordinary item write and neither of the other two; a
+#: rebuild moves every URL at once, so it clears all three.
+#:
+#: Every user's, not the ones holding a rebuilt item: which those are is exactly
+#: what cannot be asked cheaply - the same trade `_invalidate_carts` makes, and
+#: affordable here because this runs once, on an operator's deliberate act.
+_LINKED_PATTERNS = ("users:cart*", "users:favorites*", "orders:list:*")
+
+#: Every cache namespace a re-slugged row can make wrong, per `SLUG_MODELS` key.
+#:
+#: ⚠ **This exists because the `post_save` receivers do not cover it.**
+#: `catalog.signals` and `core.signals` are deliberately *cross-model*: saving a
+#: MenuCategory clears the **menu item** caches (their payloads embed
+#: `category_slug`), saving a Product clears the **category** caches (their
+#: payloads embed `item_count`). A model's own list and detail namespaces are
+#: cleared by its own viewset, on the `PATCH` that wrote it - and a rebuild does
+#: not go through any viewset. Without this map the CMS list, and every public
+#: page built from it, went on serving the **old** slugs for the whole 5-minute
+#: TTL while the new ones were already live - so a customer following a cached
+#: link got a 404 on a page that exists.
+#:
+#: Patterns, not `cache.delete()` of a single key: the by-pk detail keys are
+#: swept by their glob (`catalog:menu_category:*`), and the by-slug ones
+#: (`core:event:slug:<host>:<slug>`) are namespaced by the *old* slug, so
+#: nothing but a sweep could ever reach them again.
+SLUG_CACHE_PATTERNS = {
+    "product": ("catalog:product:*", "catalog:products:*") + _LINKED_PATTERNS,
+    "product-category": (
+        "catalog:product_category:*", "catalog:product_categories:*",
+    ) + _LINKED_PATTERNS,
+    "service": ("catalog:service:*", "catalog:services:*") + _LINKED_PATTERNS,
+    "service-category": (
+        "catalog:service_category:*", "catalog:service_categories:*",
+    ) + _LINKED_PATTERNS,
+    "menu-item": ("catalog:menu_item:*", "catalog:menu_items:*") + _LINKED_PATTERNS,
+    "menu-category": (
+        "catalog:menu_category:*", "catalog:menu_categories:*",
+    ) + _LINKED_PATTERNS,
+    # A dish embeds its ingredients, so the menu namespaces go too - the same
+    # sweep `IngredientDetailView.patch` makes, and `catalog:menu_item*`
+    # (no colon) is what also catches `catalog:menu_item_ingredients:*`.
+    "ingredient": ("catalog:ingredient:*", "catalog:ingredients:*", "catalog:menu_item*"),
+    "brand": ("core:brand:*", "core:brands:*"),
+    "success-story": ("core:success_story:*", "core:success_stories:*"),
+    "highlight": ("core:highlight:*", "core:highlights:*"),
+    "event": ("core:event:*", "core:events:*"),
+}
+
 
 def _reserved_slugs(Model, system_id):
     """Every slug of `Model` held by a row belonging to some *other* tenant.
@@ -104,16 +160,22 @@ def rebuild_slugs(system, keys=None):
 
     Returns ``{key: {"changed": n, "unchanged": n, "total": n}}``.
 
-    Three things worth knowing about how it writes:
+    Four things worth knowing about how it writes:
 
     * **Rows are saved one at a time, through `save()`** - not `bulk_update`.
-      Every one of these models has `post_save` receivers that clear the right
-      Redis namespace (`catalog.signals`, `core.signals`), and a bulk write
-      fires none of them, so the storefront would go on serving the old slugs
-      out of cache until the hour was up.
+      These models' `post_save` receivers clear the namespaces of the *other*
+      models that embed them (`catalog.signals`, `core.signals`), and a bulk
+      write fires none of them, so a dish would go on serving its category's
+      old slug out of cache until the TTL lapsed.
+    * **Their own namespaces are cleared here, from `SLUG_CACHE_PATTERNS`** -
+      no receiver does it, because ordinarily a model's own caches are cleared
+      by the viewset that wrote the row, and this pass goes through none. The
+      sweep runs `on_commit`, so a read racing the transaction cannot re-prime
+      a namespace with the pre-rebuild slugs, and only models that actually
+      changed are swept.
     * **A record whose slug is already correct is not written at all**, so a
-      second press is nearly free and does not bump `modified` across the whole
-      catalog.
+      second press is nearly free (it clears no cache either) and does not bump
+      `modified` across the whole catalog.
     * **Rows whose current slug another row is about to claim are parked first.**
       See `_park_conflicts`.
     """
@@ -133,7 +195,29 @@ def rebuild_slugs(system, keys=None):
         Model = django_apps.get_model(app_label, model_name)
         report[key] = _rebuild_one(Model, system, prefix)
 
+    _schedule_invalidation(key for key, r in report.items() if r["changed"])
+
     return report
+
+
+def _schedule_invalidation(keys):
+    """Sweep the cache namespaces of every model this pass actually moved.
+
+    Deferred to `on_commit` rather than run inline: everything above happens in
+    one transaction, and a public read landing between the sweep and the commit
+    would re-prime the very namespaces just cleared - with the old slugs, for
+    another full TTL. On a failed transaction it never runs at all, which is
+    right: nothing moved.
+    """
+    patterns = sorted({p for key in keys for p in SLUG_CACHE_PATTERNS.get(key, ())})
+    if not patterns:
+        return
+
+    def _sweep():
+        for pattern in patterns:
+            invalidate_pattern(pattern)
+
+    transaction.on_commit(_sweep)
 
 
 def _rebuild_one(Model, system, prefix):
