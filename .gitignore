@@ -63,3 +63,6 @@ apps/*/public/sw.js
 apps/*/public/workbox-*.js
 
 lint_results.json
+
+diplomado
+diplomado/*

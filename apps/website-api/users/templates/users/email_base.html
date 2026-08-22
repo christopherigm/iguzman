@@ -6,6 +6,15 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>{{ site_name }}</title>
   {% comment %}
+  `color-scheme: light` is the standards-track way to tell a client this email
+  is already designed and not to re-colour it. Apple Mail honours it; Gmail's
+  apps and Outlook's dark themes do not, which is why the branding is a
+  pre-composited PNG rather than a white cell they could flip to black - see
+  `core/services/email_badges.py`.
+  {% endcomment %}
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  {% comment %}
   The one place this stack uses a media query in an email. Every padding below is
   inline (the only thing every client honours), so the small-screen override has
   to out-specify an inline style, which is what the `!important`s are for - this
@@ -18,6 +27,7 @@
   logo sits in a fixed 96px disc that has nothing to gain from a narrower frame.
   {% endcomment %}
   <style type="text/css">
+    :root { color-scheme: light; supported-color-schemes: light; }
     @media only screen and (max-width: 480px) {
       .email-shell { padding: 16px 4px !important; }
       .email-body { padding: 20px 14px 8px 14px !important; }
@@ -38,18 +48,26 @@
           <!-- Header -->
           <tr>
             <td align="center" style="background-color:{{ primary_color|default:'#2196f3' }}; padding:32px;">
-              {% if logo_url %}
+              {% if logo_cid %}
                 {% comment %}
-                Logo sits in a white circle - like the "profile" hero layout's
-                page-background disc. Both caps are 90% of the disc's diameter
-                (86 of 96px) so the logo fills the circle rather than floating
-                in it, whatever its aspect ratio: a wide wordmark is bounded by
-                the width, a tall mark by the height, and only ~5px of white is
-                left on the bounding axis.
-
-                Both must be the *same* number. Capping width and height apart
-                (it was 72 x 56) shrinks a square logo to the smaller of the
-                two, which is why every square brandmark rendered a size down.
+                The white disc is baked into the PNG, corners and all, instead
+                of being a `border-radius:50%` cell behind the logo. A client in
+                forced dark mode re-colours a white *background* to near-black -
+                which is what used to swallow every transparent PNG logo - but
+                never re-colours the pixels of an image, and an `<img>` carrying
+                explicit width/height attributes cannot be stretched into an
+                oval by Outlook ignoring `max-width`. So: always white, always a
+                circle. Built by `core.services.email_badges`, attached inline
+                by each sender, and rendered at 2x for phone screens.
+                {% endcomment %}
+                <img src="cid:{{ logo_cid }}" alt="{{ site_name }}" width="96" height="96" style="display:block; margin:0 auto; width:96px; height:96px; border:0; outline:none; text-decoration:none;">
+              {% elif logo_url %}
+                {% comment %}
+                Fallback for the tenants whose logo could not be composited (an
+                unreadable upload, a format Pillow will not open): the original
+                HTML disc, which is right everywhere except a client forcing
+                dark mode. Both caps are the same number - capping width and
+                height apart shrinks a square logo to the smaller of the two.
                 {% endcomment %}
                 <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
                   <tr>
@@ -71,6 +89,19 @@
               {% block body %}{% endblock %}
             </td>
           </tr>
+          {% comment %}
+          Sign-off brandmark, on the same baked-in white disc as the header logo
+          and for the same reason. Only tenants that actually have a brandmark
+          get it: repeating the header logo at the foot of a short transactional
+          email is noise, not branding.
+          {% endcomment %}
+          {% if brandmark_cid %}
+          <tr>
+            <td align="center" style="padding:8px 24px 24px 24px;">
+              <img src="cid:{{ brandmark_cid }}" alt="{{ site_name }}" width="64" height="64" style="display:block; margin:0 auto; width:64px; height:64px; border:0; outline:none; text-decoration:none;">
+            </td>
+          </tr>
+          {% endif %}
           <!-- Footer -->
           <tr>
             <td class="email-footer" style="padding:22px 24px 26px 24px; font-family:Arial,Helvetica,sans-serif; color:#8a94a6; font-size:12px; line-height:1.5; text-align:center; border-top:1px solid #edf0f5;">

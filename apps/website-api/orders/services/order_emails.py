@@ -31,6 +31,7 @@ from django.template.loader import render_to_string
 
 from core.media import absolute_media_url
 from core.services.contact import _admin_emails, _tenant_brand
+from core.services.email_badges import attach_badges
 
 from ..models import Booking
 from ..serializers import resolve_line_image
@@ -324,6 +325,7 @@ def send_order_email(order, *, kind):
             reply_to=_admin_emails(system) or [brand["from_email"]],
         )
         message.attach_alternative(html_body, "text/html")
+        attach_badges(message, system)
 
         if qr_png:
             image = MIMEImage(qr_png, "png")

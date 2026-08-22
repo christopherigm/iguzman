@@ -15,6 +15,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 
 from core.media import absolute_media_url
+from core.services.email_badges import attach_badges, badge_context
 
 
 # The customer-facing label for each related-item kind, so the email reads
@@ -42,6 +43,9 @@ def _tenant_brand(system):
         "base_url": base_url.rstrip("/"),
         "site_name": site_name,
         "logo_url": logo_url,
+        # `cid:` refs for the circular logo/brandmark badges the template
+        # prefers over `logo_url`; the sender attaches the bytes.
+        **badge_context(system),
         "primary_color": (system.primary_color if system else None) or "#2196f3",
         "secondary_color": (system.secondary_color if system else None) or "#e040fb",
         "slogan": (system.slogan if system else None) or "",
@@ -126,6 +130,7 @@ def send_contact_message_notification(message):
         reply_to=[message.email or brand["from_email"]],
     )
     email.attach_alternative(html_body, "text/html")
+    attach_badges(email, system)
     email.send(fail_silently=False)
     return len(recipients)
 
@@ -173,4 +178,5 @@ def send_contact_message_reply(message, body, subject=None):
         reply_to=admin_recipients or [brand["from_email"]],
     )
     email.attach_alternative(html_body, "text/html")
+    attach_badges(email, system)
     email.send(fail_silently=False)

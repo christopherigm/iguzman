@@ -9,6 +9,7 @@ that decides which bucket a real file is written to. See `CLAUDE.md` ->
 
 import base64
 import json
+import math
 import os
 import pathlib
 import shutil
@@ -56,6 +57,13 @@ from core.models import (
     System,
     backup_upload_path,
     picture,
+)
+from core.services.contact import send_contact_message_reply
+from core.services.email_badges import (
+    BRANDMARK_CID,
+    LOGO_CID,
+    badge_context,
+    brand_badges,
 )
 from core.tenant_paths import system_id_for, system_id_from_name
 from core.serializers import BranchWriteSerializer, SystemWriteSerializer
@@ -988,6 +996,100 @@ class ContactChannelTests(TestCase):
         )
         self.assertEqual(res.status_code, 400)
 
+
+class EmailBadgeTests(IsolatedMediaTestCase):
+    """The tenant's mark, composited onto a white disc for the branded emails.
+
+    One test, because the whole feature is one guarantee with a silent failure
+    mode: whatever a tenant uploaded, the recipient sees it on white, inside a
+    circle, in a mail client that may be forcing dark mode. If any half of that
+    breaks - the disc, the fit, or the `cid` wiring - the symptom is an ugly or
+    blank header in every transactional email and nothing in the logs.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.system = System.objects.create(site_name="Acme", host="acme.test")
+
+    @staticmethod
+    def _upload(width, height):
+        """An opaque rectangle - the worst case for fitting a mark in a circle."""
+        buffer = BytesIO()
+        Image.new("RGBA", (width, height), (10, 10, 10, 255)).save(buffer, "PNG")
+        return ContentFile(buffer.getvalue())
+
+    def test_the_mark_is_always_white_backed_round_and_inside_the_circle(self):
+        self.system.img_logo.save("logo.png", self._upload(400, 120), save=True)
+        self.system.img_brandmark.save("mark.png", self._upload(256, 256), save=True)
+
+        badges = brand_badges(self.system)
+        self.assertEqual(set(badges), {LOGO_CID, BRANDMARK_CID})
+        self.assertEqual(
+            badge_context(self.system),
+            {"logo_cid": LOGO_CID, "brandmark_cid": BRANDMARK_CID},
+        )
+
+        for cid, png in badges.items():
+            image = Image.open(BytesIO(png))
+            size = image.width
+            # Square by construction: this is what a client cannot stretch into
+            # an oval, however it decides to size the `<img>`.
+            self.assertEqual(image.size, (size, size), cid)
+            # Clear at the corners, so the same badge sits on the coloured
+            # header and on the white body alike.
+            self.assertEqual(image.getpixel((0, 0))[3], 0, cid)
+
+            centre, radius = (size - 1) / 2, size / 2
+            pixels = image.load()
+            see_through, outside, white = [], [], 0
+            for y in range(size):
+                for x in range(size):
+                    alpha = pixels[x, y][3]
+                    distance = math.hypot(x - centre, y - centre)
+                    # Nothing drawn escapes the disc. A wide wordmark and a
+                    # square emblem fail this in opposite directions, which is
+                    # why the two uploads above are the shapes they are.
+                    if alpha > 8 and distance > radius + 1:
+                        outside.append((x, y))
+                    # And nothing inside it is see-through: a transparent hole
+                    # is where the recipient's dark background would show.
+                    # (Kept clear of the rim itself, which is antialiased.)
+                    elif distance < radius - 4 and alpha < 250:
+                        see_through.append((x, y))
+                    elif pixels[x, y] == (255, 255, 255, 255):
+                        white += 1
+            self.assertEqual(outside, [], cid)
+            self.assertEqual(see_through, [], cid)
+            self.assertGreater(white, 0, cid)
+
+        # And they reach the recipient: inline parts under `multipart/related`,
+        # which is what lets a client resolve the `cid:` the template renders.
+        message = ContactMessage.objects.create(
+            system=self.system, name="Ana", email="ana@example.com", message="Hola",
+        )
+        send_contact_message_reply(message, "Claro que si")
+        parts = {
+            part.get("Content-ID"): part
+            for part in mail.outbox[0].message().walk()
+            if part.get("Content-ID")
+        }
+        self.assertEqual(set(parts), {f"<{LOGO_CID}>", f"<{BRANDMARK_CID}>"})
+        for part in parts.values():
+            self.assertEqual(part.get_content_type(), "image/png")
+            self.assertIn("inline", part.get("Content-Disposition"))
+        html = [
+            p.get_payload(decode=True).decode()
+            for p in mail.outbox[0].message().walk()
+            if p.get_content_type() == "text/html"
+        ][0]
+        self.assertIn(f"cid:{LOGO_CID}", html)
+        self.assertIn(f"cid:{BRANDMARK_CID}", html)
+
+        # A tenant with no brandmark drops the sign-off block rather than
+        # repeating the header logo at the foot of the email.
+        self.system.img_brandmark.delete(save=True)
+        cache.clear()
+        self.assertIsNone(badge_context(self.system)["brandmark_cid"])
 
 # --------------------------------------------------------------------------- #
 # Stock photography and the credit it owes

@@ -36,6 +36,7 @@ from catalog.recommendations import cart_recommendations
 from core.media import absolute_media_url
 from core.models import System
 from core.permissions import IsSystemAdmin
+from core.services.email_badges import attach_badges, badge_context
 from core.tenancy import host_system, profile_system, user_system
 from orders.claims import claim_guest_orders
 from .guest import (
@@ -114,6 +115,9 @@ def _email_brand(user):
         'base_url': base_url.rstrip('/'),
         'site_name': site_name,
         'logo_url': logo_url,
+        # `cid:` refs for the circular logo/brandmark badges the template
+        # prefers over `logo_url`; the sender attaches the bytes.
+        **badge_context(system),
         'primary_color': (system.primary_color if system else None) or '#2196f3',
         'secondary_color': (system.secondary_color if system else None) or '#e040fb',
         'slogan': (system.slogan if system else None) or '',
@@ -138,6 +142,7 @@ def _send_branded_email(user, subject, template, path, expiry_hours):
     html_body = render_to_string(f'users/{template}.html', ctx)
     message = EmailMultiAlternatives(subject, text_body, brand['from_email'], [user.email])
     message.attach_alternative(html_body, 'text/html')
+    attach_badges(message, profile_system(user))
     message.send(fail_silently=False)
 
 
