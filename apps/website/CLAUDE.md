@@ -1982,10 +1982,16 @@ landing, which is exactly what the preview shows.
   shows is what ships. Don't reintroduce a per-site scrim to "help legibility" -
   it darkens the live hero invisibly to the preview; raise `hero_overlay_opacity`
   or pick a stronger style instead.
-- **The circle paints `var(--page-background, …)`**, which `globals.css`
-  resolves per theme from `--page-background-light` / `--page-background-dark`.
-  Keep that variable: it is what makes the disc read as a hole through the video
-  onto the page, in either theme, without a reload.
+- ⚠ **The circle paints a flat white in both themes** - `HERO_BADGE_PLATE` in
+  `@repo/ui/hero`, which every plate a brand mark is drawn on now takes: this
+  disc, the item hero's (`item-hero-video.tsx`), and the cradled brandmarks in
+  the footer and on the menu index. It used to paint
+  `var(--page-background, …)`, so the badge read as a hole punched through the
+  video onto the page - a lovely idea, and the wrong one for a mark. A tenant's
+  logo is drawn for one ground (nearly always a white one), so on a dark page
+  background the plate turned dark under a mark with dark ink in it and took the
+  mark with it. Don't reintroduce a theme variable here; the whole point is that
+  it does **not** follow the theme.
 
 ## The footer's stock-photo credit
 
@@ -2111,16 +2117,17 @@ disc in - so the two brand moments cannot drift apart.
   set on the element from `HERO_FRAME_BADGE_SIZE`, so `@repo/ui` stays the one
   place that decides how big a cradled brandmark is - don't re-type the `clamp()`
   into `footer.css`.
-- **The colours are the footer's, not the hero's.** The hero draws its cradle in
-  white because it sits over a video; here it wears the border's own
-  `color-mix(… --foreground 10% …)` and a `var(--page-background, …)` disc, so
-  it follows the theme rather than staying white in dark mode.
+- **The rule is the footer's; the disc is not.** The flanks and the arch wear
+  the border's own `color-mix(… --foreground 10% …)`, since they *are* that
+  border - but the circle is `HERO_BADGE_PLATE`, the same flat white every other
+  brand plate takes, rather than the theme's page background it used to follow.
+  See the hero's bullet above for why.
 - **The area between the shoulders is filled with the footer's `--background`**
   (the cradle's `fill`), so the footer swells up to meet the mark instead of the
   page showing through a notch in its edge. That is also what makes the disc
-  legible: a `--page-background` circle against a `--background` bump reads as a
-  container, where against the bare page it was only a shadow. The hero passes
-  no `fill` - its frame floats over a video and has no surface to continue.
+  legible: a white circle against a `--background` bump reads as a container,
+  where against the bare page it was only a shadow. The hero passes no `fill` -
+  its frame floats over a video and has no surface to continue.
 
 ## Typography (per-tenant fonts)
 

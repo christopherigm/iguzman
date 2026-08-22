@@ -1071,6 +1071,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "img_manifest_1080", "img_manifest_512", "img_manifest_256", "img_manifest_192", "img_manifest_128",
             "img_brandmark",
             "img_hero", "video_link", "slogan", "primary_color", "secondary_color",
+            "navbar_translucent",
             "contact_email", "social_links",
             "highlights_bg",
             "highlights_title", "en_highlights_title",
@@ -1215,6 +1216,7 @@ class SystemSerializer(serializers.ModelSerializer):
 
 _TEXT_FIELDS = [
     "site_name", "site_description", "en_site_description", "host", "video_link", "slogan", "primary_color", "secondary_color",
+    "navbar_translucent",
     "contact_email", "social_links",
     "highlights_bg",
     "highlights_title", "en_highlights_title",
@@ -1346,6 +1348,7 @@ class SystemWriteSerializer(serializers.Serializer):
         required=False, min_value=0, max_value=24
     )
     hero_text_frame = serializers.BooleanField(required=False)
+    navbar_translucent = serializers.BooleanField(required=False)
     enabled         = serializers.BooleanField(required=False)
 
     # Watermark & page background. The bounds are the same ones the CMS sliders

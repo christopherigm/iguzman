@@ -156,6 +156,37 @@
       "subtitle": "Repartidos por toda la carta, de los chilaquiles al botanero: los que Rosalinda firma con su propio nombre."
     }
   },
+  "JavaStopSite": {
+    "hero": {
+      "viewMenu": "Ver el menú"
+    },
+    "intro": {
+      "eyebrow": "En Main Street desde 1992",
+      "story": "Nuestra historia",
+      "visit": "Cómo llegar",
+      "artists": "El muro de arte"
+    },
+    "about": {
+      "home": "Inicio",
+      "eyebrow": "Nuestra historia",
+      "title": "Sobre nosotros",
+      "titleNamed": "Sobre {name}",
+      "placeholder": "Estamos preparando nuestra historia. Vuelve pronto para leer cómo una cafetería familiar ha conservado la misma esquina de Main Street desde 1992.",
+      "missionHeading": "Nuestra misión",
+      "visionHeading": "Nuestra visión",
+      "artistsCta": "El muro de arte"
+    },
+    "artistsPage": {
+      "eyebrow": "Artistas locales",
+      "breadcrumb": "El muro de arte",
+      "title": "El muro de arte",
+      "subtitle": "Las paredes de la cafetería son de un artista local a la vez.",
+      "intro": "En una cafetería la gente se queda un rato, y eso la vuelve un buen sitio para mirar algo. Por eso las paredes se prestan a artistas que trabajan cerca: la obra se cuelga, se queda un tiempo y después cambia. Lo que está colgado ahora aparece abajo: ven a verlo con una taza.",
+      "submitHeading": "¿Quieres exponer tu obra?",
+      "submitText": "Si haces obra en Longmont o cerca y te gustaría verla en estas paredes, escríbenos y cuéntanos un poco sobre ella.",
+      "contactCta": "Escríbenos"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""
@@ -734,6 +765,7 @@
     "primaryColor": "Color primario",
     "colorPick": "Elegir color",
     "secondaryColor": "Color secundario",
+    "navbarTranslucent": "Barra de navegación transparente",
     "highlightsBg": "Fondo de sección destacados (CSS)",
     "highlightsTitle": "Título de destacados (ES)",
     "highlightsSubtitle": "Subtítulo de destacados (ES)",

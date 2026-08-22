@@ -71,9 +71,32 @@
   min-height: 56px;
 }
 
+/* The logo is the one thing here that gives. A tall wordmark can be twice as
+   wide as a compact mark, and with `flex-shrink: 0` that extra width pushed the
+   trailing controls - the hamburger first - straight off the right edge on a
+   phone. It shrinks in proportion instead, so the actions cluster is always
+   reachable. */
 .ui-navbar-logo {
   display: flex;
   align-items: center;
+  min-width: 0;
+}
+
+.ui-navbar-logo img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ── Trailing controls (one cluster, one gap) ─────── */
+.ui-navbar-actions {
+  display: flex;
+  align-items: center;
+  /* Deliberately tighter than `.ui-navbar-inner`'s 16px: these are icon
+     buttons with padding of their own, they read as one group, and on a phone
+     the width they save is what keeps the hamburger on screen. It is the same
+     4px `.ui-navbar-fixed` uses inside itself, so every space in the cluster
+     is the same width. */
+  gap: 4px;
   flex-shrink: 0;
 }
 

@@ -57,6 +57,13 @@ interface NavbarClientProps {
    * cart is in their browser, so it is counted here rather than on the server.
    */
   cartCount: number;
+  /**
+   * Paint the bar semi-transparent with a backdrop blur (`System.navbar_translucent`).
+   * Defaults to true, which is what this component hard-coded before the tenant
+   * could choose - a site whose hero is busy behind the bar turns it off for a
+   * solid, always-legible header.
+   */
+  translucent?: boolean;
 }
 
 export function NavbarClient({
@@ -69,6 +76,7 @@ export function NavbarClient({
   showContact,
   eventCount,
   cartCount,
+  translucent = true,
 }: NavbarClientProps) {
   const t = useTranslations("Navbar");
   const locale = useLocale();
@@ -245,7 +253,7 @@ export function NavbarClient({
       // both from the menu they already opened.
       locales={routing.locales}
       currentLocale={locale}
-      translucent
+      translucent={translucent}
     />
   );
 }

@@ -156,6 +156,37 @@
       "subtitle": "Scattered right across the menu, from the chilaquiles to the botanero: the ones Rosalinda signs with her own name."
     }
   },
+  "JavaStopSite": {
+    "hero": {
+      "viewMenu": "See the menu"
+    },
+    "intro": {
+      "eyebrow": "On Main Street since 1992",
+      "story": "Our story",
+      "visit": "Find us",
+      "artists": "The art wall"
+    },
+    "about": {
+      "home": "Home",
+      "eyebrow": "Our story",
+      "title": "About us",
+      "titleNamed": "About {name}",
+      "placeholder": "We're getting our story ready. Come back soon to read how a family coffee shop has kept the same corner of Main Street since 1992.",
+      "missionHeading": "Our mission",
+      "visionHeading": "Our vision",
+      "artistsCta": "The art wall"
+    },
+    "artistsPage": {
+      "eyebrow": "Local artists",
+      "breadcrumb": "The art wall",
+      "title": "The art wall",
+      "subtitle": "The walls of the café belong to a local artist at a time.",
+      "intro": "A coffee shop is somewhere people sit for a while, which makes it a good place to look at something. So the walls are given over to artists working nearby: the work goes up, it stays up, and then it changes. Whatever is hanging now is below — come and see it over a cup.",
+      "submitHeading": "Would you like to show your work?",
+      "submitText": "If you make work in or around Longmont and would like to see it on these walls, get in touch and tell us a little about it.",
+      "contactCta": "Get in touch"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""
@@ -734,6 +765,7 @@
     "primaryColor": "Primary Color",
     "colorPick": "Pick a colour",
     "secondaryColor": "Secondary Color",
+    "navbarTranslucent": "Transparent navbar",
     "highlightsBg": "Highlights Section Background (CSS)",
     "highlightsTitle": "Highlights Title (ES)",
     "highlightsSubtitle": "Highlights Subtitle (ES)",

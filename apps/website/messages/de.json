@@ -156,6 +156,37 @@
       "subtitle": "Über die ganze Karte verteilt, von den Chilaquiles bis zum Botanero: die Gerichte, die Rosalinda mit ihrem eigenen Namen zeichnet."
     }
   },
+  "JavaStopSite": {
+    "hero": {
+      "viewMenu": "Zur Karte"
+    },
+    "intro": {
+      "eyebrow": "In der Main Street seit 1992",
+      "story": "Unsere Geschichte",
+      "visit": "So finden Sie uns",
+      "artists": "Die Kunstwand"
+    },
+    "about": {
+      "home": "Startseite",
+      "eyebrow": "Unsere Geschichte",
+      "title": "Über uns",
+      "titleNamed": "Über {name}",
+      "placeholder": "Wir bereiten unsere Geschichte gerade vor. Schauen Sie bald wieder vorbei und lesen Sie, wie ein Familiencafé seit 1992 dieselbe Ecke der Main Street hält.",
+      "missionHeading": "Unsere Mission",
+      "visionHeading": "Unsere Vision",
+      "artistsCta": "Die Kunstwand"
+    },
+    "artistsPage": {
+      "eyebrow": "Lokale Künstler",
+      "breadcrumb": "Die Kunstwand",
+      "title": "Die Kunstwand",
+      "subtitle": "Die Wände des Cafés gehören jeweils einer Künstlerin oder einem Künstler aus der Nachbarschaft.",
+      "intro": "In einem Café bleibt man eine Weile sitzen – und das macht es zu einem guten Ort, um etwas anzusehen. Deshalb überlassen wir die Wände Menschen, die hier in der Nähe arbeiten: Die Werke werden gehängt, bleiben eine Weile und wechseln dann. Was gerade hängt, steht unten – kommen Sie vorbei und sehen Sie es sich bei einer Tasse an.",
+      "submitHeading": "Möchten Sie Ihre Arbeiten zeigen?",
+      "submitText": "Wenn Sie in oder um Longmont arbeiten und Ihre Werke an diesen Wänden sehen möchten, schreiben Sie uns und erzählen Sie uns ein wenig davon.",
+      "contactCta": "Schreiben Sie uns"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""
@@ -734,6 +765,7 @@
     "primaryColor": "Primärfarbe",
     "colorPick": "Farbe wählen",
     "secondaryColor": "Sekundärfarbe",
+    "navbarTranslucent": "Transparente Navigationsleiste",
     "highlightsBg": "Highlights-Hintergrund (CSS)",
     "highlightsTitle": "Highlights-Titel (ES)",
     "highlightsSubtitle": "Highlights-Untertitel (ES)",

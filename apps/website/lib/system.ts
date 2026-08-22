@@ -50,6 +50,13 @@ export interface System extends KindLabelOverrides {
   slogan: string | null;
   primary_color: string;
   secondary_color: string;
+  /**
+   * Whether the fixed navbar is semi-transparent with a backdrop blur, or a
+   * solid bar. True on a tenant that has never touched the setting - the
+   * website hard-coded `translucent` before it existed - so an un-configured
+   * site is unchanged.
+   */
+  navbar_translucent: boolean;
   /** Site-wide contact email shown on the contact page (business info, not PII). */
   contact_email: string | null;
   /** Ordered social links; the frontend maps each platform to its icon. */

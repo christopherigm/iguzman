@@ -156,6 +156,37 @@
       "subtitle": "Espalhados por todo o cardápio, dos chilaquiles ao botanero: os que Rosalinda assina com o próprio nome."
     }
   },
+  "JavaStopSite": {
+    "hero": {
+      "viewMenu": "Ver o cardápio"
+    },
+    "intro": {
+      "eyebrow": "Na Main Street desde 1992",
+      "story": "Nossa história",
+      "visit": "Como chegar",
+      "artists": "A parede dos artistas"
+    },
+    "about": {
+      "home": "Início",
+      "eyebrow": "Nossa história",
+      "title": "Sobre nós",
+      "titleNamed": "Sobre {name}",
+      "placeholder": "Estamos preparando nossa história. Volte em breve para ler como uma cafeteria de família mantém a mesma esquina da Main Street desde 1992.",
+      "missionHeading": "Nossa missão",
+      "visionHeading": "Nossa visão",
+      "artistsCta": "A parede dos artistas"
+    },
+    "artistsPage": {
+      "eyebrow": "Artistas locais",
+      "breadcrumb": "A parede dos artistas",
+      "title": "A parede dos artistas",
+      "subtitle": "As paredes da cafeteria são de um artista local por vez.",
+      "intro": "Numa cafeteria as pessoas ficam um tempo, e isso faz dela um bom lugar para olhar alguma coisa. Por isso as paredes são emprestadas a quem trabalha por perto: a obra é pendurada, fica um tempo e depois muda. O que está pendurado agora aparece abaixo — venha ver com uma xícara.",
+      "submitHeading": "Quer expor seu trabalho?",
+      "submitText": "Se você cria em Longmont ou por perto e gostaria de ver seu trabalho nessas paredes, escreva para nós e conte um pouco sobre ele.",
+      "contactCta": "Fale conosco"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""
@@ -734,6 +765,7 @@
     "primaryColor": "Cor primária",
     "colorPick": "Escolher cor",
     "secondaryColor": "Cor secundária",
+    "navbarTranslucent": "Barra de navegação transparente",
     "highlightsBg": "Fundo da seção destaques (CSS)",
     "highlightsTitle": "Título destaques (ES)",
     "highlightsSubtitle": "Subtítulo destaques (ES)",

@@ -1,7 +1,7 @@
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { BrandmarkCradle } from "@repo/ui/hero";
+import { BrandmarkCradle, HERO_BADGE_PLATE } from "@repo/ui/hero";
 import { MenuCategoryNavItems } from "./menu-category-nav-items";
 import type { MenuCategoryNavItem } from "./menu-category-nav-items";
 import {
@@ -116,14 +116,15 @@ export function MenuNavCradle({
     <BrandmarkCradle
       image={brandmark}
       imageAlt={brandmarkAlt}
-      // The hero draws its cradle in white over a video. Here the arches
-      // rise out of the card itself, so both they and the area they
-      // enclose take the card's own background and the swell reads as one
-      // shape; the disc is a page-background plate, as in the footer, so
-      // it follows the theme.
+      // The arches rise out of the card itself, so both they and the area
+      // they enclose take the card's own background and the swell reads as
+      // one shape. The disc does **not** follow the theme with them: like
+      // every other plate a brand mark is drawn on it is a flat white
+      // (`HERO_BADGE_PLATE`), since the mark inside it was drawn for one
+      // ground and a dark plate takes its dark ink with it.
       color={MENU_NAV_BACKGROUND}
       fill={MENU_NAV_BACKGROUND}
-      circleBackground="var(--page-background, var(--background))"
+      circleBackground={HERO_BADGE_PLATE}
       // ⚠ No straight flanks. They are the parent's top border, and this
       // parent is a `Card` with rounded top corners: a square rule drawn
       // on the corner's chord leaves a stub of accent hanging past each
@@ -133,8 +134,8 @@ export function MenuNavCradle({
       height={CRADLE_ARCH_HEIGHT}
       width={CRADLE_ARCH_WIDTH}
       // The arch closes over the mark rather than cradling it - see the
-      // constant. The disc is a page-background plate either way, so on
-      // this one the ring of accent around it is what reads as the niche.
+      // constant. The disc is a white plate either way, so on this one the
+      // ring of accent around it is what reads as the niche.
       enclose={CRADLE_ENCLOSE}
     />
   );

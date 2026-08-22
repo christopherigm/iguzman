@@ -350,6 +350,9 @@ export default async function LocaleLayout({ children, params }: Props) {
                         }
                         eventCount={system?.event_count ?? 0}
                         cartCount={cartCount}
+                        // The tenant's own choice (/admin/logos-and-styles):
+                        // a blurred bar over the hero, or a solid one.
+                        translucent={system?.navbar_translucent ?? true}
                       />
                     </HideOnFullScreenTool>
                     {/* Renders nothing; folds a guest's localStorage cart and

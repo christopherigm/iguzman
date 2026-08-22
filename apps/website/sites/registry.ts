@@ -21,6 +21,7 @@ import santofishrestaurantConfig from "./santofishrestaurant/site.config";
 import tamaratoursConfig from "./tamaratours/site.config";
 import piccolopizzasConfig from "./piccolopizzas/site.config";
 import lacocinaderosalindaConfig from "./lacocinaderosalinda/site.config";
+import javastopConfig from "./javastop/site.config";
 // <new-site:import> - the CLI inserts new `import <slug>Config from ...` lines above this marker.
 
 /**
@@ -45,6 +46,7 @@ const SITES: SiteEntry[] = [
   { config: tamaratoursConfig, load: () => import("./tamaratours") },
   { config: piccolopizzasConfig, load: () => import("./piccolopizzas") },
   { config: lacocinaderosalindaConfig, load: () => import("./lacocinaderosalinda") },
+  { config: javastopConfig, load: () => import("./javastop") },
   // <new-site:entry> - the CLI inserts new `{ config, load }` entries above this marker.
   { config: defaultConfig, load: () => import("./_default") },
 ];

@@ -7,7 +7,11 @@ import { Grid } from "@repo/ui/core-elements/grid";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { ThemeSwitch } from "@repo/ui/theme-switch";
-import { BrandmarkCradle, HERO_FRAME_BADGE_SIZE } from "@repo/ui/hero";
+import {
+  BrandmarkCradle,
+  HERO_BADGE_PLATE,
+  HERO_FRAME_BADGE_SIZE,
+} from "@repo/ui/hero";
 import { LocaleSwitcher } from "@repo/ui/core-elements/locale-switcher";
 import { routing } from "@repo/i18n/routing";
 import { type System } from "@/lib/system";
@@ -104,9 +108,11 @@ export async function Footer({ logo, system }: Props) {
         <BrandmarkCradle
           image={brandmark}
           imageAlt={system?.site_name ?? ""}
-          // The hero draws its cradle in white over a video; here it stands in
-          // for the footer's own rule, so it wears that border's colour and the
-          // disc is a page-background plate that follows the theme.
+          // The cradle stands in for the footer's own rule, so it wears that
+          // border's colour - but the disc does not follow the theme with it:
+          // like every other plate a brand mark is drawn on, it is a flat white
+          // (`HERO_BADGE_PLATE`), because the mark inside it was drawn for one
+          // ground and a dark plate takes its dark ink with it.
           color="color-mix(in srgb, var(--foreground) 10%, transparent)"
           // ...and that border's weight. The flanks *are* `.footer`'s
           // `border-top`, and the arch between them is the same rule carrying
@@ -114,7 +120,7 @@ export async function Footer({ logo, system }: Props) {
           // edge it replaces, the bottom bar's) are drawn at. Anything else
           // reads as a rule that changes thickness at the brandmark.
           strokeWidth={1}
-          circleBackground="var(--page-background, var(--background))"
+          circleBackground={HERO_BADGE_PLATE}
           // The area between the shoulders takes the footer's own background,
           // so the footer reads as swelling up to meet the mark instead of the
           // page showing through a notch in its edge.
@@ -157,8 +163,9 @@ export async function Footer({ logo, system }: Props) {
               <Box
                 display="flex"
                 alignItems="center"
-                justifyContent="space-evenly"
+                justifyContent="start"
                 flexWrap="wrap"
+                gap={12}
               >
                 <ThemeSwitch />
                 <LocaleSwitcher

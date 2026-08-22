@@ -773,6 +773,15 @@ class System(Common):
     slogan = models.CharField(max_length=255, null=True, blank=True, default="Company slogan")
     primary_color = models.CharField(max_length=16, null=False, blank=False, default="#2196f3")
     secondary_color = models.CharField(max_length=16, null=False, blank=False, default="#e040fb")
+    # Whether the fixed navbar is semi-transparent with a backdrop blur (the
+    # frontend's `Navbar translucent` prop) or a solid bar. Default True because
+    # the website hard-coded `translucent` before this field existed, so every
+    # existing tenant is unchanged; a site whose hero is busy behind the bar
+    # turns it off for a solid, always-legible header.
+    navbar_translucent = models.BooleanField(
+        default=True,
+        help_text="Make the navbar semi-transparent with a backdrop blur (off = a solid bar).",
+    )
 
     # ── Contact ───────────────────────────────────────────────────────────────
     # Site-wide contact details, rendered on the public contact page (and reused

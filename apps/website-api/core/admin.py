@@ -438,7 +438,7 @@ class SystemAdmin(admin.ModelAdmin):
         }),
         ("Branding", {
             "fields": (
-                "primary_color", "secondary_color",
+                "primary_color", "secondary_color", "navbar_translucent",
                 "img_logo", "img_logo_hero", "img_favicon", "img_brandmark",
                 "img_manifest_1080", "img_manifest_512", "img_manifest_256", "img_manifest_192", "img_manifest_128",
             ),

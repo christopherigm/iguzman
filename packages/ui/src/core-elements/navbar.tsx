@@ -581,67 +581,73 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
         })}
       </div>
 
-      {/* Action slot (caller-supplied, leads the fixed items) */}
-      {actionSlot}
+      {/* Every trailing control - the caller's action, the fixed items, the
+          search box, the right slot and the hamburger - lives in one cluster
+          with one small gap, so they read as a single group and stay together
+          when the logo is wide. It never shrinks; the logo does. */}
+      <div className="ui-navbar-actions">
+        {/* Action slot (caller-supplied, leads the fixed items) */}
+        {actionSlot}
 
-      {/* Fixed menu items (always visible) */}
-      {fixedItems.length > 0 && (
-        <div className="ui-navbar-fixed">
-          {fixedItems.map((item, index) => {
-            const hasChildren = item.children && item.children.length > 0;
-            const key = menuItemKey(item, index);
-            const isOpen = activeDropdown === key;
-            return (
-              <div
-                key={key}
-                className="ui-navbar-menu-item-wrapper"
-                ref={isOpen ? activeDropdownWrapperRef : undefined}
-              >
-                <NavbarItem
-                  item={item}
-                  onToggleDropdown={
-                    hasChildren
-                      ? () => setActiveDropdown(isOpen ? null : key)
-                      : undefined
-                  }
-                  isDropdownOpen={isOpen}
-                  isActive={isItemActive(item)}
-                  chevronIcon={chevronIcon}
-                />
-                {hasChildren && isOpen && (
-                  <DropdownPanel
-                    items={item.children!}
-                    onClose={() => setActiveDropdown(null)}
+        {/* Fixed menu items (always visible) */}
+        {fixedItems.length > 0 && (
+          <div className="ui-navbar-fixed">
+            {fixedItems.map((item, index) => {
+              const hasChildren = item.children && item.children.length > 0;
+              const key = menuItemKey(item, index);
+              const isOpen = activeDropdown === key;
+              return (
+                <div
+                  key={key}
+                  className="ui-navbar-menu-item-wrapper"
+                  ref={isOpen ? activeDropdownWrapperRef : undefined}
+                >
+                  <NavbarItem
+                    item={item}
+                    onToggleDropdown={
+                      hasChildren
+                        ? () => setActiveDropdown(isOpen ? null : key)
+                        : undefined
+                    }
+                    isDropdownOpen={isOpen}
+                    isActive={isItemActive(item)}
+                    chevronIcon={chevronIcon}
                   />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  {hasChildren && isOpen && (
+                    <DropdownPanel
+                      items={item.children!}
+                      onClose={() => setActiveDropdown(null)}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
-      {/* Search */}
-      {searchBox && (
-        <SearchBox
-          onSearch={onSearch}
-          onSearchChange={onSearchChange}
-          searchIcon={searchIcon}
-          closeIcon={closeIcon}
-          externalValue={searchValue}
-        />
-      )}
+        {/* Search */}
+        {searchBox && (
+          <SearchBox
+            onSearch={onSearch}
+            onSearchChange={onSearchChange}
+            searchIcon={searchIcon}
+            closeIcon={closeIcon}
+            externalValue={searchValue}
+          />
+        )}
 
-      {/* Right slot (caller-supplied action) */}
-      {rightSlot}
+        {/* Right slot (caller-supplied action) */}
+        {rightSlot}
 
-      {/* Hamburger (visible xs/sm) */}
-      <button
-        className="ui-navbar-hamburger"
-        onClick={() => setDrawerOpen(true)}
-        aria-label="Open menu"
-      >
-        <Icon icon={hamburgerIcon || "/icons/hamburger.svg"} size="24px" />
-      </button>
+        {/* Hamburger (visible xs/sm) */}
+        <button
+          className="ui-navbar-hamburger"
+          onClick={() => setDrawerOpen(true)}
+          aria-label="Open menu"
+        >
+          <Icon icon={hamburgerIcon || "/icons/hamburger.svg"} size="24px" />
+        </button>
+      </div>
     </div>
   );
 

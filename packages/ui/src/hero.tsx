@@ -191,6 +191,25 @@ export const HERO_BADGE_SHADOW =
   "drop-shadow(0 3px 5px rgba(0,0,0,0.21)) drop-shadow(0 4px 11px rgba(0,0,0,0.105))";
 
 /**
+ * What every plate a brand mark is drawn on is painted with: a flat white, in
+ * both themes.
+ *
+ * It used to be `var(--page-background, var(--background))`, so the badge read
+ * as a hole punched through the video onto the page - which is a lovely idea and
+ * the wrong one for a mark. A tenant's logo is drawn for one ground (nearly
+ * always a white one): on a dark page background the plate turned dark under a
+ * mark with dark ink in it, and the mark went with it. White is also what
+ * `BrandmarkCradle` has always defaulted its disc to (the hero's framed heading,
+ * the item hero), so pinning it here is what makes the *whole* set of brand
+ * moments - the hero badge, the footer's cradled mark, the menu index's - one
+ * object rather than two that disagree the moment the reader flips the theme.
+ *
+ * ⚠ It is deliberately not a token. The point is that it does *not* follow the
+ * theme; a variable here is an invitation to make it follow one again.
+ */
+export const HERO_BADGE_PLATE = "#fff";
+
+/**
  * Same-origin URL for a (possibly cross-origin) logo, safe to use as a CSS
  * `mask-image`. A cross-origin mask image that is not served CORS-clean resolves
  * to an *empty* mask in Chromium/WebKit - the masked element is then clipped away
@@ -475,7 +494,7 @@ export function BrandmarkCradle({
   imageAlt = "",
   size = HERO_FRAME_BADGE_PX,
   color = HERO_FRAME_BORDER,
-  circleBackground = "#fff",
+  circleBackground = HERO_BADGE_PLATE,
   fill = null,
   overhang = 0,
   flanks = true,
@@ -506,7 +525,10 @@ export function BrandmarkCradle({
    * @default HERO_CRADLE_STROKE
    */
   strokeWidth?: string | number;
-  /** What the circle is painted with, behind the brandmark. @default "#fff" */
+  /**
+   * What the circle is painted with, behind the brandmark.
+   * @default HERO_BADGE_PLATE (white, in both themes - see that constant)
+   */
   circleBackground?: string;
   /**
    * Paints the area the two shoulders enclose - between them, above the line
@@ -976,7 +998,7 @@ export type HeroProps = {
    * The drawn size of the logo inside the badge, as a
    * fraction of the disc. `1` is the current edge-to-edge `cover` fill; a smaller
    * value (e.g. `0.5`) shrinks the logo about the disc's centre, leaving a ring of
-   * the disc's page-background colour around it. Clamped to `[0.1, 1]`. @default 1
+   * the disc's own white around it. Clamped to `[0.1, 1]`. @default 1
    */
   profileLogoScale?: number;
   /**
@@ -1146,9 +1168,10 @@ export function Hero({
   const logoScale = Math.min(Math.max(profileLogoScale, 0.1), 1);
 
   // The logo-background badge: a square box clipped to the chosen shape, filled
-  // with the page's own background so it reads as a hole punched through the
-  // video onto the page. Positioned by its caller (centred in the content stack
-  // for `default`, straddling the bottom edge for `profile`).
+  // with the flat white every brand plate takes (`HERO_BADGE_PLATE`) so the mark
+  // reads on the ground it was drawn for, in either theme. Positioned by its
+  // caller (centred in the content stack for `default`, straddling the bottom
+  // edge for `profile`).
   const isLogoShape = logoBackground === "logo";
   // Built rather than declared, because the loading placeholder draws the very
   // same badge with a light sweep inside it - and a sweep has to be *inside* to
@@ -1159,11 +1182,9 @@ export function Hero({
         className={HERO_REVEAL_LOGO_CLASS}
         width={size}
         height={size}
-        // Geometric shapes are opaque page-background plates; the `logo` shape
-        // draws its plate through a mask (below) instead, so the box stays clear.
-        backgroundColor={
-          isLogoShape ? undefined : "var(--page-background, var(--background))"
-        }
+        // Geometric shapes are opaque white plates; the `logo` shape draws its
+        // plate through a mask (below) instead, so the box stays clear.
+        backgroundColor={isLogoShape ? undefined : HERO_BADGE_PLATE}
         alignItems="center"
         justifyContent="center"
         styles={{
@@ -1176,15 +1197,15 @@ export function Hero({
         }}
       >
         {isLogoShape && logoImage && (
-          // The page-background plate, clipped to the logo's own silhouette so the
-          // badge reads as a logo-shaped hole through the video onto the page.
+          // The white plate, clipped to the logo's own silhouette so the badge
+          // reads as the mark itself lifted off the video rather than a box on it.
           <span
             aria-hidden
             style={{
               position: "absolute",
               inset: 0,
               zIndex: 0,
-              background: "var(--page-background, var(--background))",
+              background: HERO_BADGE_PLATE,
               ...heroLogoMaskStyle(logoImage),
             }}
           />

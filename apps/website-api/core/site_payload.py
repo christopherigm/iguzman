@@ -83,6 +83,7 @@ SYSTEM_TEXT_FIELDS = (
     "slogan",
     "primary_color",
     "secondary_color",
+    "navbar_translucent",
     "about",
     "en_about",
     "mission",

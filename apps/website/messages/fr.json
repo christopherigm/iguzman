@@ -156,6 +156,37 @@
       "subtitle": "Disséminés dans toute la carte, des chilaquiles au botanero : ceux que Rosalinda signe de son propre nom."
     }
   },
+  "JavaStopSite": {
+    "hero": {
+      "viewMenu": "Voir la carte"
+    },
+    "intro": {
+      "eyebrow": "Sur Main Street depuis 1992",
+      "story": "Notre histoire",
+      "visit": "Nous trouver",
+      "artists": "Le mur des artistes"
+    },
+    "about": {
+      "home": "Accueil",
+      "eyebrow": "Notre histoire",
+      "title": "À propos",
+      "titleNamed": "À propos de {name}",
+      "placeholder": "Nous préparons notre histoire. Revenez bientôt pour découvrir comment un café de famille occupe le même coin de Main Street depuis 1992.",
+      "missionHeading": "Notre mission",
+      "visionHeading": "Notre vision",
+      "artistsCta": "Le mur des artistes"
+    },
+    "artistsPage": {
+      "eyebrow": "Artistes locaux",
+      "breadcrumb": "Le mur des artistes",
+      "title": "Le mur des artistes",
+      "subtitle": "Les murs du café appartiennent à un artiste du quartier à la fois.",
+      "intro": "Dans un café, on reste un moment : c'est donc un bon endroit pour regarder quelque chose. Les murs sont confiés à des artistes qui travaillent tout près : l'œuvre est accrochée, elle reste un temps, puis elle change. Ce qui est accroché en ce moment se trouve ci-dessous — venez le voir autour d'une tasse.",
+      "submitHeading": "Vous aimeriez exposer ?",
+      "submitText": "Si vous créez à Longmont ou dans les environs et que vous aimeriez voir votre travail sur ces murs, écrivez-nous et parlez-nous-en.",
+      "contactCta": "Nous écrire"
+    }
+  },
   "Metadata": {
     "title": "Website",
     "description": ""
@@ -734,6 +765,7 @@
     "primaryColor": "Couleur primaire",
     "colorPick": "Choisir une couleur",
     "secondaryColor": "Couleur secondaire",
+    "navbarTranslucent": "Barre de navigation transparente",
     "highlightsBg": "Fond section points forts (CSS)",
     "highlightsTitle": "Titre points forts (ES)",
     "highlightsSubtitle": "Sous-titre points forts (ES)",

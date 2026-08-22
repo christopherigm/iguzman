@@ -29,6 +29,7 @@ import logoToAssets from "@repo/helpers/logo-to-assets";
 const OWNED_FIELDS = [
   "primary_color",
   "secondary_color",
+  "navbar_translucent",
   // The hero composition. `video_link` and `slogan` are edited inside
   // HeroVideoSection rather than in the field list, beside the live preview.
   "video_link",
@@ -72,6 +73,9 @@ export default function AdminLogosAndStylesPage() {
   const [values, setValues] = useState<Record<string, unknown>>({
     primary_color: "#2196f3",
     secondary_color: "#e040fb",
+    // True is what the navbar hard-coded before it was a setting, so a tenant
+    // who has never opened this page keeps the bar they already had.
+    navbar_translucent: true,
     video_link: "",
     slogan: "",
     hero_video_layout: "default",
@@ -142,6 +146,7 @@ export default function AdminLogosAndStylesPage() {
         setValues({
           primary_color: data.primary_color ?? "#2196f3",
           secondary_color: data.secondary_color ?? "#e040fb",
+          navbar_translucent: data.navbar_translucent ?? true,
           video_link: data.video_link ?? "",
           slogan: data.slogan ?? "",
           hero_video_layout: data.hero_video_layout ?? "default",
@@ -287,6 +292,14 @@ export default function AdminLogosAndStylesPage() {
       key: "secondary_color",
       label: t("secondaryColor") ?? "Secondary Color",
       type: "color",
+    },
+    // Renders in place (it is not one of AdminForm's TOP_TOGGLE_KEYS), so the
+    // switch sits directly under the two colour pickers - the navbar is the
+    // first thing painted in them.
+    {
+      key: "navbar_translucent",
+      label: t("navbarTranslucent"),
+      type: "boolean",
     },
   ];
 

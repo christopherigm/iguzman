@@ -15,6 +15,7 @@ import {
   heroLogoMaskStyle,
   heroOverlayBackground,
   HeroTextFrame,
+  HERO_BADGE_PLATE,
   HERO_BADGE_SHADOW,
 } from "@repo/ui/hero";
 import type {
@@ -300,14 +301,13 @@ export function ItemHeroVideo({
           <Box
             width={profileSize}
             height={profileSize}
-            // Geometric shapes are opaque page-background plates (resolved per
-            // theme in globals.css); the `logo` shape draws its plate through a
-            // mask instead, and with no shape at all there is no plate - the
-            // logo hangs over the edge on its own - so the box stays clear.
+            // Geometric shapes are opaque white plates (`HERO_BADGE_PLATE`, the
+            // same flat white the landing hero's badge and every cradled
+            // brandmark take); the `logo` shape draws its plate through a mask
+            // instead, and with no shape at all there is no plate - the logo
+            // hangs over the edge on its own - so the box stays clear.
             backgroundColor={
-              isLogoShape || !hasBadge
-                ? undefined
-                : "var(--page-background, var(--background))"
+              isLogoShape || !hasBadge ? undefined : HERO_BADGE_PLATE
             }
             alignItems="center"
             justifyContent="center"
@@ -327,14 +327,14 @@ export function ItemHeroVideo({
             }}
           >
             {isLogoShape && logo && (
-              // Page-background plate clipped to the logo's own silhouette.
+              // White plate clipped to the logo's own silhouette.
               <span
                 aria-hidden
                 style={{
                   position: "absolute",
                   inset: 0,
                   zIndex: 0,
-                  background: "var(--page-background, var(--background))",
+                  background: HERO_BADGE_PLATE,
                   ...heroLogoMaskStyle(logo),
                 }}
               />
