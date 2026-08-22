@@ -13,6 +13,7 @@ import { BuyableCard } from "@/components/buyable-card";
 import type { BuyableItem } from "@/components/buyable-card";
 import { kindLabel } from "@/lib/kind-labels";
 import { getKindLabels } from "@/lib/system";
+import { categoryHref } from "@/lib/catalog-paths";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -116,7 +117,7 @@ export default async function ServicesPage({ params }: Props) {
                       image={cat.image}
                       itemCount={cat.item_count}
                       type="service"
-                      href={`/categories/services/${cat.slug}/`}
+                      href={categoryHref("service", cat.slug)}
                     />
                   </Grid>
                 );

@@ -3,58 +3,82 @@ import { notFound } from "next/navigation";
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { Container } from "@repo/ui/core-elements/container";
 import { Grid } from "@repo/ui/core-elements/grid";
-import { getProduct } from "@/lib/catalog";
+import { getService } from "@/lib/catalog";
 import { getSystem } from "@/lib/system";
 import { kindLabel, kindLabels } from "@/lib/kind-labels";
 import { getRequestOrigin, toShareDescription } from "@/lib/metadata";
-import type { ProductDetail } from "@/lib/catalog";
+import {
+  CATALOG_ROOT,
+  categoryHref,
+  itemHref,
+} from "@/lib/catalog-paths";
+import type { ServiceDetail } from "@/lib/catalog";
 import type { GalleryImage } from "@/components/item-gallery-client";
 import { ItemGalleryClient } from "@/components/item-gallery-client";
 import { ItemHeroVideo } from "@/components/item-hero-video";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import {
-  ProductDetailHeader,
-  ProductDetailVariantsMobile,
-  ProductDetailPanel,
-  ProductDetailSections,
-} from "@/components/product-detail";
+  ServiceDetailHeader,
+  ServiceDetailVariantsMobile,
+  ServiceDetailPanel,
+  ServiceDetailSections,
+} from "@/components/service-detail";
 import { ItemQuestionCard } from "@/components/contact/item-question-card";
 
+/**
+ * One service, at `/services/<category>/<slug>`.
+ *
+ * **The route serves the item only under its own category; anything else is a
+ * 404.** A slug is unique across the family, so the lookup does not need the
+ * category - which means `category` is a genuine check rather than part of the
+ * query. One item therefore has exactly one URL.
+ *
+ * Every link in the app is built from the item's own category (`itemHref`), so
+ * nothing here should ever produce a mismatch. ⚠ A 404 is also how an item
+ * *re-filed* in the CMS surfaces on its old URL - the category segment makes
+ * the address mutable, which is the cost of having it there. The one-segment
+ * permalink beside this route (`/services/<slug>`) is the stable address that
+ * survives a re-filing.
+ */
+
 type Props = {
-  params: Promise<{ locale: string; slug: string }>;
+  params: Promise<{ locale: string; category: string; slug: string }>;
 };
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ locale: string; slug: string }>;
+  params: Promise<{ locale: string; category: string; slug: string }>;
 }): Promise<Metadata> {
-  const { locale, slug } = await params;
-  const [product, system, origin] = await Promise.all([
-    getProduct(slug),
+  const { locale, category, slug } = await params;
+  const [service, system, origin] = await Promise.all([
+    getService(slug),
     getSystem(),
     getRequestOrigin(),
   ]);
-  if (!product) return {};
+  // Not this item's URL - the page 404s, so it advertises no metadata.
+  if (!service || service.category_slug !== category) return {};
 
   const name =
-    (locale === "en" ? product.en_name : product.name) ??
-    product.name ??
-    product.en_name ??
+    (locale === "en" ? service.en_name : service.name) ??
+    service.name ??
+    service.en_name ??
     slug;
 
   // Share cards get the trimmed blurb; the <meta name="description"> keeps the
   // full body for search engines.
   const description =
-    (locale === "en" ? product.en_description : product.description) ??
-    product.description ??
-    product.en_description ??
+    (locale === "en" ? service.en_description : service.description) ??
+    service.description ??
+    service.en_description ??
     undefined;
   const shareDescription = toShareDescription(description);
 
-  const url = `${origin}/${locale}/products/${slug}`;
-  const image = product.image ?? product.images.find((img) => img.image)?.image;
+  // Built from the item's own category rather than the route, which is the
+  // same thing by the time we get here - the mismatch returned above.
+  const url = `${origin}/${locale}${itemHref("service", service.category_slug, slug)}`;
+  const image = service.image ?? service.images.find((img) => img.image)?.image;
 
   return {
     metadataBase: new URL(origin),
@@ -78,9 +102,9 @@ export async function generateMetadata({
   };
 }
 
-function buildGalleryImages(product: ProductDetail): GalleryImage[] {
+function buildGalleryImages(service: ServiceDetail): GalleryImage[] {
   const images: GalleryImage[] = [];
-  const name = product.en_name ?? product.name ?? product.slug;
+  const name = service.en_name ?? service.name ?? service.slug;
   const seen = new Set<string>();
   const push = (url: string | null, alt: string) => {
     if (url && !seen.has(url)) {
@@ -89,55 +113,55 @@ function buildGalleryImages(product: ProductDetail): GalleryImage[] {
     }
   };
 
-  // Prefer the product's gallery images.
-  for (const img of product.images) {
+  // Prefer the service's gallery images.
+  for (const img of service.images) {
     push(img.image, img.name ?? name);
   }
   // Only fall back to the main image when the gallery has none of its own -
   // otherwise the main image (usually also the first gallery image) shows twice.
   if (images.length === 0) {
-    push(product.image, name);
+    push(service.image, name);
   }
 
   return images;
 }
 
-export default async function ProductPage({ params }: Props) {
-  const { locale, slug } = await params;
+export default async function ServicePage({ params }: Props) {
+  const { locale, category, slug } = await params;
   setRequestLocale(locale);
 
-  const [product, system, t, tNav] = await Promise.all([
-    getProduct(slug),
+  const [service, system, t, tNav] = await Promise.all([
+    getService(slug),
     getSystem(),
     getTranslations("ItemDetail"),
     getTranslations("CategoryDetail"),
   ]);
 
-  if (!product) notFound();
+  // An item filed under another category lives at another URL; this is not
+  // its page.
+  if (!service || service.category_slug !== category) notFound();
 
-  const galleryImages = buildGalleryImages(product);
+  const galleryImages = buildGalleryImages(service);
 
   const displayName =
-    (locale === "en" ? product.en_name : product.name) ??
-    product.name ??
-    product.en_name ??
+    (locale === "en" ? service.en_name : service.name) ??
+    service.name ??
+    service.en_name ??
     slug;
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },
     // The tenant's own name for the family; the href never moves.
     {
-      label: kindLabel(kindLabels(system, locale), "product", tNav("products")),
-      href: "/categories/products",
+      label: kindLabel(kindLabels(system, locale), "service", tNav("services")),
+      href: CATALOG_ROOT.service,
     },
-    ...(product.category_name && product.category_slug
-      ? [
-          {
-            label: product.category_name,
-            href: `/categories/products/${product.category_slug}`,
-          },
-        ]
-      : []),
+    // Always present: the category is required on every buyable now, and it
+    // is the segment the visitor arrived through.
+    {
+      label: service.category_name,
+      href: categoryHref("service", service.category_slug),
+    },
     { label: displayName },
   ];
 
@@ -148,9 +172,9 @@ export default async function ProductPage({ params }: Props) {
   // the landing page's Hero - so the spacing is dropped.
   return (
     <>
-      {product.video_link && (
+      {service.video_link && (
         <ItemHeroVideo
-          url={product.video_link}
+          url={service.video_link}
           title={displayName}
           parallax={false}
           layout={system?.hero_video_layout ?? "default"}
@@ -171,30 +195,30 @@ export default async function ProductPage({ params }: Props) {
         paddingX={10}
         marginTop={16}
         paddingTop={
-          product.video_link ? undefined : "var(--ui-navbar-height, 57px)"
+          service.video_link ? undefined : "var(--ui-navbar-height, 57px)"
         }
         paddingBottom="var(--ui-page-bottom-spacing, 64px)"
       >
         <Breadcrumbs items={breadcrumbs} />
-        <ProductDetailHeader product={product} locale={locale} />
+        <ServiceDetailHeader service={service} locale={locale} />
         {/* One grid holds every detail card so they flow together - no
             per-section margin tricks. Each sub-component returns its own grid
             cell (or null), so absent cards leave no gap. */}
         <Grid container spacing={2}>
           {/* xs: variants above the gallery. sm+: variants move into the buy-box
               column, so this cell hides and the gallery leads. */}
-          <ProductDetailVariantsMobile product={product} locale={locale} />
+          <ServiceDetailVariantsMobile service={service} locale={locale} />
           <Grid size={{ xs: 12, sm: 6 }}>
             <ItemGalleryClient
               images={galleryImages}
-              placeholderColor={product.background_color ?? undefined}
+              placeholderColor={service.background_color ?? undefined}
             />
           </Grid>
-          <ProductDetailPanel product={product} locale={locale} />
-          <ProductDetailSections product={product} locale={locale} />
+          <ServiceDetailPanel service={service} locale={locale} />
+          <ServiceDetailSections service={service} locale={locale} />
           <ItemQuestionCard
-            kind="product"
-            id={product.id}
+            kind="service"
+            id={service.id}
             name={displayName}
           />
         </Grid>

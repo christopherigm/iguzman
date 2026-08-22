@@ -13,7 +13,7 @@ import { discountPercent } from "@/lib/price";
 import { nutritionRows } from "@/lib/nutrition";
 import { enabledIngredients } from "@/lib/menu-selection";
 import { menuEtaLabel } from "@/lib/menu-eta";
-import { menuItemHref } from "@/lib/menu-paths";
+import { menuItemHref } from "@/lib/catalog-paths";
 import { getSystem } from "@/lib/system";
 import { MenuItemCustomizer } from "./menu-item-customizer";
 import { FavoriteButton } from "./favorite-button";

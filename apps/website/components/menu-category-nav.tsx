@@ -145,7 +145,7 @@ export function MenuNavCradle({
  * The menu's category rail - the list of category names beside the item grids,
  * which sticks below the fixed navbar once the page has scrolled past it.
  *
- * It exists because a tenant with a few hundred dishes turns `/categories/menu`
+ * It exists because a tenant with a few hundred dishes turns `/menu`
  * into a page you can only navigate by scrolling: the category *cards* at the
  * top are a fine index while they are on screen, and useless the moment they
  * are not. The rail is that index, kept in view.

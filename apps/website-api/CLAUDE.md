@@ -1251,9 +1251,18 @@ four cannot list different sets. The frontend resolution rules are in
 ## Menu sectioning - the category, and nothing else
 
 A `MenuItem` belongs to exactly one `MenuCategory`, and **`category` is
-required**. That one relation is the whole sectioning story: it groups
-`/categories/menu`, fills the navbar's Menu dropdown, and is the first segment of
-every item's public URL (`/menu/<category>/<slug>`).
+required**. That one relation is the whole sectioning story: it groups `/menu`,
+fills the navbar's Menu dropdown, and is the first segment of every item's
+public URL (`/menu/<category>/<slug>`).
+
+⚠ **The same is now true of `Product` and `Service`.** Both FKs were nullable
+until `catalog.0042`, which backfilled every orphan into a per-System "Otros"
+category and made the columns non-null - because all three families moved to one
+URL shape, `/<family>/<category>/<item>`, so an item with no category has no
+address. The write serializers require the field, and so do the CMS forms. When
+a test or a fixture needs a buyable but not a taxonomy, use
+`catalog/test_helpers.py`'s `a_product_category()` / `a_service_category()`
+rather than hand-rolling one.
 
 It used to be sectioned twice. `MenuItem.kind` was a five-value enum
 (food/drink/dessert/side/appetizer) that sat beside the optional category and

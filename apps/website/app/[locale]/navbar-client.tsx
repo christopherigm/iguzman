@@ -9,7 +9,11 @@ import { useSession } from "@repo/auth/session-provider";
 import { useAuthActions } from "@repo/auth/use-auth-actions";
 import { useGuestState } from "@/hooks/use-guest-cart";
 import { guestCartCount } from "@/lib/guest-cart";
-import { MENU_ALL_PATH, menuCategoryHref } from "@/lib/menu-paths";
+import {
+  CATALOG_ROOT,
+  MENU_ALL_PATH,
+  menuCategoryHref,
+} from "@/lib/catalog-paths";
 import { kindLabel, type KindLabels } from "@/lib/kind-labels";
 import "./navbar-client.css";
 
@@ -208,7 +212,7 @@ export function NavbarClient({
       ? [
           {
             label: kindLabel(kindLabels, "product", t("products")),
-            href: "/categories/products",
+            href: CATALOG_ROOT.product,
           },
         ]
       : []),
@@ -216,7 +220,7 @@ export function NavbarClient({
       ? [
           {
             label: kindLabel(kindLabels, "service", t("services")),
-            href: "/categories/services",
+            href: CATALOG_ROOT.service,
           },
         ]
       : []),

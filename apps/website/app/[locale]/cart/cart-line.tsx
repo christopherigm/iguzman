@@ -14,7 +14,7 @@ import { Toast } from "@repo/ui/core-elements/toast";
 import type { CartItem, CartRewards } from "@/lib/cart";
 import { formatPrice } from "@/lib/price";
 import { menuEtaLabel } from "@/lib/menu-eta";
-import { menuItemHref } from "@/lib/menu-paths";
+import { itemHref } from "@/lib/catalog-paths";
 import {
   customizableIngredients,
   enabledIngredients,
@@ -106,12 +106,13 @@ export function CartLine({
     item.en_name ??
     "";
 
-  const href =
-    line.kind === "product"
-      ? `/products/${line.item.slug}`
-      : line.kind === "service"
-        ? `/services/${line.item.slug}`
-        : menuItemHref(line.item.category_slug, line.item.slug);
+  // One shape for all three families, `/<family>/<category>/<slug>`; the cart's
+  // own `kind` is already that first segment's family.
+  const href = itemHref(
+    line.kind === "menu_item" ? "food" : line.kind,
+    line.item.category_slug,
+    line.item.slug,
+  );
 
   // A dish says how long it will take instead of naming its family: the customer
   // already knows what they put in their basket, and "ready in 20 min" is the

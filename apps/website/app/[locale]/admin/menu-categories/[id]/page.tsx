@@ -25,7 +25,7 @@ import {
   toMenuSizeRow,
   type MenuSizeRow,
 } from "@/components/admin/menu-sizes-editor";
-import { menuCategoryHref } from "@/lib/menu-paths";
+import { menuCategoryHref } from "@/lib/catalog-paths";
 import { buildSlug } from "@/lib/slug-utils";
 import { RecommendationsEditor } from "@/components/admin/recommendations-editor";
 import { useRecommendationsEditor } from "@/hooks/use-recommendations-editor";

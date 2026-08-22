@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { Button } from "@repo/ui/core-elements/button";
 import { Container } from "@repo/ui/core-elements/container";
 import { getSystem } from "@/lib/system";
-import { MENU_ALL_PATH, MENU_ICON } from "@/lib/menu-paths";
+import { MENU_ALL_PATH, MENU_ICON } from "@/lib/catalog-paths";
 import { fitSectionBackground } from "@/lib/section-background";
 import { SectionBand } from "@/components/section-band";
 import { Hero } from "@/components/hero";
@@ -37,7 +37,7 @@ import { Intro } from "./sections/intro";
  * The drinks and the kitchen are MenuItems (the "food" Buyable family), not
  * products - a latte is a base price plus priced choices (size, syrup, oat
  * milk, bacon on the breakfast sandwich), which is exactly what a `Product`
- * cannot express. So the CTAs point at `/categories/menu` through
+ * cannot express. So the CTAs point at `/menu` through
  * `MENU_ALL_PATH`, never a path literal, and are gated on `menu_item_count` so
  * they never land on an empty listing before the catalog is seeded.
  *

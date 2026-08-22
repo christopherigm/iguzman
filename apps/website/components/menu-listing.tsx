@@ -17,7 +17,7 @@ import {
   type MenuItemDetail,
 } from "@/lib/catalog";
 import { getSystem } from "@/lib/system";
-import { menuCategoryHref } from "@/lib/menu-paths";
+import { menuCategoryHref } from "@/lib/catalog-paths";
 
 /**
  * The whole menu: the tenant's `MenuCategory` cards, then one section of items

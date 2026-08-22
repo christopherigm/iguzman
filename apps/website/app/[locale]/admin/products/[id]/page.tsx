@@ -44,6 +44,7 @@ import { useSession } from "@repo/auth/session-provider";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+import { itemHref } from "@/lib/catalog-paths";
 
 /** How many photos one product's gallery holds, uploads and picks together. */
 const GALLERY_MAX = 10;
@@ -134,6 +135,9 @@ export default function AdminProductFormPage({ params }: Props) {
   const [categoryOptions, setCategoryOptions] = useState<
     { value: string | number; label: string }[]
   >([]);
+  const [categorySlugs, setCategorySlugs] = useState<Record<number, string>>(
+    {},
+  );
   const [brandOptions, setBrandOptions] = useState<
     { value: string | number; label: string }[]
   >([]);
@@ -211,6 +215,13 @@ export default function AdminProductFormPage({ params }: Props) {
           value: c.id as number,
           label: String(c.name ?? c.id),
         })),
+      );
+      // The category's *slug* is the first segment of the item's public URL, so
+      // "view live" needs it alongside the id the select stores.
+      setCategorySlugs(
+        Object.fromEntries(
+          cats.map((c) => [c.id as number, String(c.slug ?? "")]),
+        ),
       );
       setBrandOptions(
         brands.map((b) => ({
@@ -320,13 +331,16 @@ export default function AdminProductFormPage({ params }: Props) {
         "barcode",
         "href",
         "video_link",
-        "category",
         "brand",
         "dimension_unit",
         "weight_unit",
       ].forEach((k) => {
         if (payload[k] === "") payload[k] = null;
       });
+      // `category` is deliberately NOT in that list: it is required (it is a
+      // segment of the item's URL), so a blank must reach the API as a blank and
+      // be refused, not be quietly nulled into a row the storefront then cannot
+      // address.
       // Symmetrical sibling variants, sent as a list of Product ids. The write
       // serializer strips any self-reference; an empty list clears them all.
       payload.variants = variantIds;
@@ -408,12 +422,17 @@ export default function AdminProductFormPage({ params }: Props) {
     },
     { key: "sku", label: "SKU" },
     { key: "barcode", label: t("barcode") ?? "Barcode" },
+    // Required, exactly as on the menu-item form: the category slug is the
+    // first segment of the product's public URL
+    // (`/products/<category>/<slug>`), so a product filed under nothing has no
+    // page to be reached at. No "- None -" option, for the same reason.
     {
       key: "category",
       label: t("category") ?? "Category",
       type: "select",
+      required: true,
       options: categoryOptions,
-      placeholder: "- None -",
+      placeholder: t("selectCategory"),
     },
     {
       key: "brand",
@@ -508,9 +527,21 @@ export default function AdminProductFormPage({ params }: Props) {
         productionHref={
           isNew
             ? undefined
-            : values.slug
-              ? `/products/${String(values.slug)}`
-              : null
+            : values.slug && categorySlugs[Number(values.category)]
+              ? itemHref(
+                  "product",
+                  // The category currently selected in the form, so "view live"
+                  // follows the dropdown. It only reaches a real page once
+                  // saved - the route serves an item only under its own
+                  // category - which is the same caveat the slug field already
+                  // has.
+                  categorySlugs[Number(values.category)] as string,
+                  String(values.slug),
+                )
+              : // A saved record always has both, so this is the gap before the
+                // fetch (and `loadMeta`, which is a separate call) lands: the
+                // button is there, disabled, rather than appearing later.
+                null
         }
         imagesSlot={
           <>

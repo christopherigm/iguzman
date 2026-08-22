@@ -6,7 +6,7 @@ const site: SiteModule = {
   config,
   Landing,
   // No extra pages: the story lives in the landing's Intro, and everything else
-  // this kitchen needs is already a platform route - "/categories/menu" for the
+  // this kitchen needs is already a platform route - "/menu" for the
   // whole carta, "/menu/<category>/<dish>" for a dish, and "/contact" for the
   // branches, their maps, the hours and the form. A site "/contact" in
   // particular would be dead code; the platform route always wins.

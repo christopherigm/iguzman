@@ -14,8 +14,8 @@ interface ScrollToSectionLinkProps {
 /**
  * Turns a link whose destination is already **on this page** into a scroll.
  *
- * The menu's category cards point at `/categories/menu/<slug>`, which is the
- * right address everywhere else on the site - but on `/categories/menu` that
+ * The menu's category cards point at `/menu/<category>`, which is the
+ * right address everywhere else on the site - but on `/menu` that
  * category's dishes are a few hundred pixels further down the same page, so
  * navigating away to see them is a page load that undoes itself. This catches
  * the click on its way up from the anchor and scrolls to the section heading

@@ -1,52 +1,172 @@
-import { notFound } from "next/navigation";
-import { setRequestLocale } from "next-intl/server";
-import { permanentRedirect } from "next/navigation";
-import { getMenuItem } from "@/lib/catalog";
-import { menuItemHref } from "@/lib/menu-paths";
-import { getPathname } from "@repo/i18n/navigation";
+import type { Metadata } from "next";
+import { setRequestLocale, getTranslations } from "next-intl/server";
+import { Container } from "@repo/ui/core-elements/container";
+import { Box } from "@repo/ui/core-elements/box";
+import { Button } from "@repo/ui/core-elements/button";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
+import { SectionHero } from "@/components/section-hero";
+import { getSession } from "@repo/auth/session";
+import { getMenuCategory, getMenuItemsByCategory } from "@/lib/catalog";
+import { redirectToItemOrNotFound } from "@/lib/catalog-permalink";
+import { MENU_ALL_PATH, MENU_ICON } from "@/lib/catalog-paths";
+import { CategoryDetail } from "@/components/category-detail";
+import { AdminEditButton } from "@/components/admin-edit-button";
 
 /**
- * The category-independent permalink for a menu item: `/menu/<slug>` resolves
- * the item and permanently redirects to `/menu/<category>/<slug>`.
+ * One menu category, at `/menu/<category>` - the section a customer clicks into
+ * from the menu page or the navbar's Menu dropdown.
  *
- * It exists because the real URL carries the category, and an operator re-filing
- * a dish in the CMS therefore *moves* it - which would break a link already
- * shared or printed on a flyer. A slug is globally unique, so this one is
- * stable forever and is what should be handed out when the address has to
- * outlive an edit.
- *
- * It is also the landing point for the five pre-category paths (`/food/<slug>`,
- * `/drink/<slug>`, …), which `next.config.js` redirects here - a static rule
- * cannot know an item's category, and this does.
- *
- * ⚠ **One segment only**, so it never shadows `/menu/<category>/<slug>` beside
- * it: that route is two segments and Next matches on segment count.
- *
- * ⚠ **The folder is `[category]`, not `[slug]`, and must stay that way** even
- * though what lands in it here is an item slug. Next refuses to build when two
- * routes give the *same* dynamic level different slug names, so this segment and
- * the one in `[category]/[slug]` have to share a name - and `category` is the one
- * that reads correctly on the canonical two-segment URL.
+ * ⚠ It is also the menu's **item permalink**: a slug that is not a category is
+ * looked up as a dish and permanently redirected to `/menu/<category>/<slug>`.
+ * See `lib/catalog-permalink.ts` for why that fallback lives here and what it
+ * costs (a category slug wins over a dish sharing it).
  */
 
 type Props = {
   params: Promise<{ locale: string; category: string }>;
 };
 
-export default async function MenuItemPermalinkPage({ params }: Props) {
-  // `category` is this route's item slug - see the note above on the folder name.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; category: string }>;
+}): Promise<Metadata> {
+  const { locale, category: slug } = await params;
+  const category = await getMenuCategory(slug);
+  // Not a category: the page redirects to an item, which carries its own.
+  if (!category) return {};
+
+  const name =
+    (locale === "en" ? category.en_name : category.name) ??
+    category.name ??
+    category.en_name ??
+    slug;
+
+  const description =
+    (locale === "en" ? category.en_description : category.description) ??
+    category.description ??
+    category.en_description ??
+    undefined;
+
+  return {
+    title: name,
+    description: description ?? undefined,
+    openGraph: {
+      title: name,
+      description: description ?? undefined,
+      images: category.image ? [{ url: category.image }] : undefined,
+    },
+  };
+}
+
+export default async function MenuCategoryPage({ params }: Props) {
   const { locale, category: slug } = await params;
   setRequestLocale(locale);
 
-  const item = await getMenuItem(slug);
-  if (!item) notFound();
+  const [category, t, tCatalog, tAdmin, session] = await Promise.all([
+    getMenuCategory(slug),
+    getTranslations("CategoryDetail"),
+    getTranslations("CatalogItems"),
+    getTranslations("Admin"),
+    getSession(),
+  ]);
 
-  // `permanentRedirect` takes a real path, not a locale-less href, so the
-  // prefix is applied here rather than by the navigation helpers.
-  permanentRedirect(
-    getPathname({
-      href: menuItemHref(item.category_slug, item.slug),
-      locale,
-    }),
+  // Not a category, so try the slug as a dish and send the visitor to its
+  // canonical URL; 404 only when it is neither.
+  if (!category)
+    return redirectToItemOrNotFound({ family: "food", slug, locale });
+
+  const items = await getMenuItemsByCategory(category.id);
+
+  const name =
+    (locale === "en" ? category.en_name : category.name) ??
+    category.name ??
+    category.en_name ??
+    slug;
+
+  const description =
+    (locale === "en" ? category.en_description : category.description) ??
+    category.description ??
+    category.en_description ??
+    "";
+
+  const breadcrumbs: BreadcrumbItem[] = [
+    { label: t("home"), href: "/" },
+    { label: t("food"), href: MENU_ALL_PATH },
+    { label: name },
+  ];
+
+  const hasImage = Boolean(category.image);
+
+  return (
+    <>
+      {hasImage && (
+        <Box styles={{ position: "relative" }}>
+          <SectionHero
+            backgroundImage={category.image}
+            slogan={name}
+            style={{ height: "clamp(220px, 30vw, 400px)" }}
+          />
+          {/* Admin-only edit shortcut, anchored to the bottom of the hero -
+              same slot the item hero uses for its fullscreen control. */}
+          {session?.isAdmin && (
+            <Container
+              size="lg"
+              paddingX={10}
+              paddingBottom={8}
+              styles={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 10,
+              }}
+            >
+              <Box justifyContent="flex-end">
+                <AdminEditButton
+                  href={`/admin/menu-categories/${category.id}`}
+                  label={tAdmin("edit")}
+                  solid
+                />
+              </Box>
+            </Container>
+          )}
+        </Box>
+      )}
+      <Container
+        paddingX={10}
+        marginTop={16}
+        paddingTop={!hasImage ? "var(--ui-navbar-height, 57px)" : undefined}
+        paddingBottom="var(--ui-page-bottom-spacing, 64px)"
+      >
+        <Breadcrumbs items={breadcrumbs} />
+        {description && (
+          <Typography variant="none" className="section-subtitle">
+            {description}
+          </Typography>
+        )}
+        <CategoryDetail
+          category={category}
+          kind="food"
+          items={items}
+          locale={locale}
+          showTitle={!hasImage}
+        />
+        {/* Same CTA the landing's featured grid ends with - a reader who has
+            reached the bottom of one category is looking for the rest of the
+            menu, and it is also the way out of an empty category. */}
+        <Box justifyContent="center">
+          <Button
+            text={tCatalog("seeMoreMenuItems")}
+            href={MENU_ALL_PATH}
+            icon={MENU_ICON}
+            kind="primary"
+            size="lg"
+          />
+        </Box>
+      </Container>
+    </>
   );
 }

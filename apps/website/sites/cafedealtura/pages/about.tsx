@@ -163,7 +163,7 @@ export async function About() {
         {hasProducts && (
           <Button
             text={t("about.productsCta")}
-            href="/categories/products"
+            href="/products"
             kind="primary"
             size="lg"
           />

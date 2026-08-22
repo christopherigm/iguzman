@@ -13,11 +13,11 @@
  * ten `System` columns are gone.
  *
  * ⚠ **These rename a label and nothing else.** Every URL
- * (`/categories/products`, `/products/<slug>`) is structural: renaming
+ * (`/products`, `/products/<slug>`) is structural: renaming
  * "Products" must not move a page a customer has bookmarked. Never build a path
  * from a label.
  *
- * Plain data with no server import, for the same reason `menu-paths.ts` is: the
+ * Plain data with no server import, for the same reason `catalog-paths.ts` is: the
  * navbar is a **client** component and needs this, while `lib/system.ts` reaches
  * `next/headers` through `resolve-site.ts` to resolve the tenant. That is why
  * `KindLabelOverrides` is declared here structurally rather than imported from

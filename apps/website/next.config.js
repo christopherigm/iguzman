@@ -32,34 +32,60 @@ const nextConfig = {
     };
     return config;
   },
-  // The menu used to be sectioned by a `MenuItem.kind` enum, which gave it five
-  // listing pages and five detail routes. Both sets are gone - a menu is
-  // sectioned by the tenant's own categories now - but the URLs are on printed
-  // menus, flyers and QR codes, so they are redirected rather than 404'd.
+  // Two rounds of catalog URL history, both still in the wild on printed menus,
+  // flyers, QR codes and search indexes - so they are redirected, not 404'd.
+  //
+  //  1. The menu used to be sectioned by a `MenuItem.kind` enum, which gave it
+  //     five listing pages (`/categories/food`, …) and five detail routes
+  //     (`/food/<slug>`, …). Both sets went when the tenant's own categories
+  //     became the only sectioning a menu has.
+  //  2. Category listings lived in a `/categories/*` tree parallel to the items
+  //     themselves (`/categories/products` beside `/products/<slug>`). All three
+  //     families share one shape now - `/<family>/<category>/<item>` - so that
+  //     prefix is gone and its pages moved one level up.
+  //
+  // ⚠ Only *listings* and the dead per-kind paths need rules here. A bare
+  // `/<family>/<slug>` - an old flat product URL, an old menu-category URL, or
+  // an item permalink - is handled by the one-segment route itself, which
+  // resolves the slug against that family's categories and then its items (see
+  // `lib/catalog-permalink.ts`). A static rule cannot know which of the two a
+  // slug is; that route can.
   //
   // Written twice per path because a request may or may not carry a locale
   // prefix by the time it reaches here; the locale is pinned to the real list so
   // `/:locale/...` cannot swallow an unrelated two-segment path.
   async redirects() {
     const LOCALE = ':locale(de|en|es|fr|pt)';
-    // Listing pages -> the one menu listing.
+    // The five dead per-kind menu listings -> the one menu listing.
     const listings = ['food', 'drinks', 'desserts', 'sides', 'appetizers'];
-    // Detail routes -> the slug-only permalink, which looks the item up and
-    // redirects on to `/menu/<category>/<slug>`. A static rule cannot know an
-    // item's category; `app/[locale]/menu/[category]/page.tsx` does.
+    // The five dead per-kind detail routes -> the one-segment permalink, which
+    // looks the dish up and redirects on to `/menu/<category>/<slug>`.
     const details = ['food', 'drink', 'dessert', 'side', 'appetizer'];
+    // The `/categories/*` tree -> the same page one level up.
+    const families = ['products', 'services', 'menu'];
+
+    // Both spellings of one rule: bare, and locale-prefixed.
+    const pair = (source, destination) => [
+      { source, destination, permanent: true },
+      {
+        source: `/${LOCALE}${source}`,
+        destination: `/:locale${destination}`,
+        permanent: true,
+      },
+    ];
 
     return [
-      ...listings.flatMap((kind) => [
-        { source: `/categories/${kind}`, destination: '/categories/menu', permanent: true },
-        { source: `/${LOCALE}/categories/${kind}`, destination: '/:locale/categories/menu', permanent: true },
-      ]),
-      // Menu categories moved under the listing they belong to.
-      { source: '/categories/food/:slug', destination: '/categories/menu/:slug', permanent: true },
-      { source: `/${LOCALE}/categories/food/:slug`, destination: '/:locale/categories/menu/:slug', permanent: true },
-      ...details.flatMap((kind) => [
-        { source: `/${kind}/:slug`, destination: '/menu/:slug', permanent: true },
-        { source: `/${LOCALE}/${kind}/:slug`, destination: '/:locale/menu/:slug', permanent: true },
+      ...listings.flatMap((kind) => pair(`/categories/${kind}`, '/menu')),
+      // Menu categories were briefly at `/categories/food/<slug>`, between the
+      // `kind` enum going and the `/categories` prefix going.
+      ...pair('/categories/food/:slug', '/menu/:slug'),
+      ...details.flatMap((kind) => pair(`/${kind}/:slug`, `/menu/:slug`)),
+      // Each family needs both rules: `/categories/products` and
+      // `/categories/products/:slug` are different segment counts, and Next
+      // matches on those.
+      ...families.flatMap((family) => [
+        ...pair(`/categories/${family}`, `/${family}`),
+        ...pair(`/categories/${family}/:slug`, `/${family}/:slug`),
       ]),
     ];
   },

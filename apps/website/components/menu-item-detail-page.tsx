@@ -11,7 +11,7 @@ import {
   MENU_ALL_PATH,
   menuCategoryHref,
   menuItemHref,
-} from "@/lib/menu-paths";
+} from "@/lib/catalog-paths";
 import { getRequestOrigin, toShareDescription } from "@/lib/metadata";
 import type { GalleryImage } from "@/components/item-gallery-client";
 import { ItemGalleryClient } from "@/components/item-gallery-client";

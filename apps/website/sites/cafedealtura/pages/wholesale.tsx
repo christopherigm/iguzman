@@ -85,7 +85,7 @@ export async function WholesalePage() {
               {hasProducts && (
                 <Button
                   text={t("wholesalePage.productsCta")}
-                  href="/categories/products"
+                  href="/products"
                   kind="primary"
                   size="lg"
                 />

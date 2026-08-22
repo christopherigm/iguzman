@@ -69,7 +69,7 @@ class OrderLineSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
     item_id = serializers.SerializerMethodField()
     item_slug = serializers.SerializerMethodField()
-    item_menu_category_slug = serializers.SerializerMethodField()
+    item_category_slug = serializers.SerializerMethodField()
     item_booking_enabled = serializers.SerializerMethodField()
     item_reorderable = serializers.SerializerMethodField()
 
@@ -85,7 +85,7 @@ class OrderLineSerializer(serializers.ModelSerializer):
             # `OrderLine.paid_with_points`. Anything rendering a total from these
             # has to skip the redeemed ones, exactly as `Order.subtotal` does.
             "paid_with_points", "points_price",
-            "image", "item_id", "item_slug", "item_menu_category_slug",
+            "image", "item_id", "item_slug", "item_category_slug",
             "item_booking_enabled", "item_reorderable",
         ]
 
@@ -105,14 +105,27 @@ class OrderLineSerializer(serializers.ModelSerializer):
         target = obj.product or obj.service or obj.menu_item
         return getattr(target, "slug", None) if target else None
 
-    def get_item_menu_category_slug(self, obj):
-        """A menu item's category slug - the first segment of its detail route
-        (``/menu/<category>/<slug>``). Null for a product or a service, and null
-        once the item is deleted - like `image` and `item_slug`, this is read
-        live through the FK rather than snapshotted, because it only exists to
-        address a page that still exists, and an item re-filed under another
-        category has moved."""
-        return obj.menu_item.category.slug if obj.menu_item else None
+    def get_item_category_slug(self, obj):
+        """The line item's category slug - the first segment of its detail route
+        (``/<family>/<category>/<slug>``), whichever of the three families it
+        belongs to.
+
+        Null once the item is deleted - like `image` and `item_slug`, this is
+        read live through the FK rather than snapshotted, because it only exists
+        to address a page that still exists, and an item re-filed under another
+        category has moved.
+
+        ⚠ This used to be `item_menu_category_slug` and answer for menu items
+        alone, because a product's and a service's detail routes were then a
+        single `/<family>/<slug>` segment. All three families share the
+        category-first URL shape now, so all three need their category here."""
+        target = obj.product or obj.service or obj.menu_item
+        if target is None:
+            return None
+        # `category` is non-null on all three models, but a line read mid-deploy
+        # (or against a fixture predating the backfill) can still find nothing.
+        category = getattr(target, "category", None)
+        return category.slug if category else None
 
     def get_item_booking_enabled(self, obj):
         """Whether this line's service is *still* sold as an appointment.

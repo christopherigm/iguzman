@@ -8,7 +8,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { ShareButton } from "@repo/ui/core-elements/share-button";
 import { toShareDescription } from "@/lib/share";
-import { menuItemHref } from "@/lib/menu-paths";
+import { itemHref } from "@/lib/catalog-paths";
 import { formatPrice, discountPercent } from "@/lib/price";
 import { enabledIngredients, lowestPrice } from "@/lib/menu-selection";
 import { BuyableCardActions } from "./buyable-card-actions";
@@ -157,14 +157,10 @@ export function BuyableCardView({
         data.en_description ??
         "");
 
-  // `kind` here is the buyable *family*; a menu item's own kind (drink, dessert,
-  // ...) picks which detail route it links to.
-  const href =
-    item.kind === "product"
-      ? `/products/${item.data.slug}`
-      : item.kind === "service"
-        ? `/services/${item.data.slug}`
-        : menuItemHref(item.data.category_slug, item.data.slug);
+  // `item.kind` is the buyable *family*, which is also the first segment of
+  // the URL - the three share one shape, `/<family>/<category>/<slug>`, so one
+  // call covers all of them.
+  const href = itemHref(item.kind, item.data.category_slug, item.data.slug);
 
   // A sibling variant is its own catalog item with its own card, so a card only
   // ever prices and pictures the item it is for.

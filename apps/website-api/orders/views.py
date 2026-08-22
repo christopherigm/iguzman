@@ -998,8 +998,11 @@ class OrderDetailView(APIView):
             .select_related("booking", "booking__branch", "booking__service")
             .prefetch_related(
                 "lines", "lines__product", "lines__service", "lines__menu_item",
-                # `item_menu_category_slug` walks the dish's category, and
-                # `item_reorderable` its availability - both per line.
+                # `item_category_slug` walks the item's category, and
+                # `item_reorderable` its availability - both per line. All three
+                # families carry a category now, so all three are prefetched.
+                "lines__product__category",
+                "lines__service__category",
                 "lines__menu_item__category",
                 # The serializer falls back to the item's gallery when it has no
                 # own `image`; prefetch it so that fallback is not an N+1.

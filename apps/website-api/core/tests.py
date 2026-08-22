@@ -68,6 +68,7 @@ from core.services.email_badges import (
 from core.tenant_paths import system_id_for, system_id_from_name
 from core.serializers import BranchWriteSerializer, SystemWriteSerializer
 from core.site_payload import serialize_system, apply_payload
+from catalog.test_helpers import a_product_category, a_service_category
 from orders.models import Booking, Order
 
 
@@ -365,6 +366,7 @@ class SiteBackupTests(IsolatedMediaTestCase):
         Product.objects.filter(system=source).delete()
         squatter = self._system(host="squatter.test", name="Squatter")
         theirs = Product.objects.create(
+            category=a_product_category(squatter),
             system=squatter, name="Their hammer", slug="hammer", price=Decimal("1.00"),
         )
         restore_archive(source, path, ["products"], mode="merge")
@@ -479,7 +481,10 @@ class TenantStorageTests(IsolatedMediaTestCase):
         self.addCleanup(storage_module.forget_system)
 
     def test_every_upload_path_names_its_tenant_and_parses_back(self):
-        product = Product.objects.create(name="Loaf", slug="loaf", system=self.system)
+        product = Product.objects.create(
+            category=a_product_category(self.system),
+            name="Loaf", slug="loaf", system=self.system,
+        )
         name = picture(product, "photo.png")
         self.assertTrue(name.startswith(f"t/{self.system.pk}/pictures/product/"))
         self.assertEqual(system_id_from_name(name), self.system.pk)

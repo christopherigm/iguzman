@@ -61,7 +61,7 @@ export async function Landing() {
           hasServices && (
             <Button
               text={t("intro.exploreServices")}
-              href="/categories/services"
+              href="/services"
               kind="primary"
               size="lg"
             />

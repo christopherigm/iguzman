@@ -339,10 +339,11 @@ exactly this reason.
 `menu_item_count` decide whether a CTA has anywhere to go — an ungated CTA lands
 on an empty listing before the catalog is seeded.
 
-**A food CTA points at `MENU_ALL_PATH` (`/categories/menu`), never a path
-literal.** The menu is one listing — `/categories/menu`, the whole thing — plus
-a page per category at `menuCategoryHref(slug)`. Both live in
-`lib/menu-paths.ts`; never build one by concatenation. There used to be five
+**A food CTA points at `MENU_ALL_PATH` (`/menu`), never a path literal.** The
+menu is one listing — `/menu`, the whole thing — plus a page per category at
+`menuCategoryHref(slug)`. Both live in `lib/catalog-paths.ts`; never build one
+by concatenation. A products or services CTA is the same story one family over:
+`CATALOG_ROOT.product` / `CATALOG_ROOT.service`, never `"/products"` typed out. There used to be five
 per-kind listings beside it (`/categories/{food,drinks,desserts,sides,appetizers}`)
 backed by a `MenuItem.kind` enum; the enum is gone and a menu is sectioned by the
 tenant's own categories now, so **to feature one section — a drinks band on a

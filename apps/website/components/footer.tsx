@@ -15,7 +15,7 @@ import {
 import { LocaleSwitcher } from "@repo/ui/core-elements/locale-switcher";
 import { routing } from "@repo/i18n/routing";
 import { type System } from "@/lib/system";
-import { MENU_ALL_PATH } from "@/lib/menu-paths";
+import { CATALOG_ROOT, MENU_ALL_PATH } from "@/lib/catalog-paths";
 import { kindLabel, kindLabels } from "@/lib/kind-labels";
 import { getSite } from "@/lib/resolve-site";
 import "./footer.css";
@@ -34,8 +34,8 @@ export async function Footer({ logo, system }: Props) {
 
   // Same rule as the navbar: a catalog family only gets a link when the tenant
   // actually has records of that kind, so a services-only business never shows
-  // an empty Products page. The listing routes live under /categories/* - the
-  // bare /products and /services paths are detail-only ([slug]) and 404.
+  // an empty Products page. `CATALOG_ROOT` is each family's listing route, which
+  // is also the first segment of every URL beneath it.
   // Each family wears whatever the tenant calls it, as in the navbar. The menu
   // link keeps our own word: it leads to the *whole* menu, which is every kind
   // at once and so is nobody's single label.
@@ -46,7 +46,7 @@ export async function Footer({ logo, system }: Props) {
       ? [
           {
             label: kindLabel(labels, "product", t("products")),
-            href: "/categories/products",
+            href: CATALOG_ROOT.product,
           },
         ]
       : []),
@@ -54,7 +54,7 @@ export async function Footer({ logo, system }: Props) {
       ? [
           {
             label: kindLabel(labels, "service", t("services")),
-            href: "/categories/services",
+            href: CATALOG_ROOT.service,
           },
         ]
       : []),

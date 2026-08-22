@@ -8,7 +8,7 @@ import {
   type ServiceCategory,
   type MenuCategory,
 } from "@/lib/catalog";
-import { menuCategoryHref } from "@/lib/menu-paths";
+import { categoryHref, menuCategoryHref } from "@/lib/catalog-paths";
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -209,7 +209,7 @@ export async function CatalogCategories() {
                 image={cat.image}
                 itemCount={cat.item_count}
                 type="product"
-                href={`/categories/products/${cat.slug}/`}
+                href={categoryHref("product", cat.slug)}
               />
             </Grid>
           );
@@ -228,7 +228,7 @@ export async function CatalogCategories() {
                 image={cat.image}
                 itemCount={cat.item_count}
                 type="service"
-                href={`/categories/services/${cat.slug}/`}
+                href={categoryHref("service", cat.slug)}
               />
             </Grid>
           );

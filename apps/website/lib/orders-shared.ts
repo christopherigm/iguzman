@@ -101,7 +101,10 @@ export interface OrderLine {
    *  was bought, so it is read live and follows an item re-filed in the CMS.
    *  Both are needed to build the link, so a null here means the row renders
    *  without one. */
-  item_menu_category_slug: string | null;
+  /** The line item’s category slug - the first segment of its detail route
+   *  (`/<family>/<category>/<slug>`), whichever family it belongs to. Null once
+   *  the item is deleted, like `item_slug`. */
+  item_category_slug: string | null;
   /**
    * Whether this line's service is **still** sold as an appointment, which
    * decides what re-ordering it means: "Book again" through `/booking/<slug>`,

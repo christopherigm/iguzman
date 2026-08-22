@@ -5,7 +5,7 @@ import { Container } from "@repo/ui/core-elements/container";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { getAllMenuItems, type MenuItemDetail } from "@/lib/catalog";
-import { menuItemHref } from "@/lib/menu-paths";
+import { menuItemHref } from "@/lib/catalog-paths";
 import { formatPrice } from "@/lib/price";
 
 /**
@@ -57,7 +57,7 @@ const SIGNATURE_MATCH = "rosalinda";
 
 /** How many signature dishes the section shows. Two columns of three: enough to
  *  read as a line rather than a coincidence, short enough not to become the
- *  menu itself (that is `/categories/menu`, two sections further down). */
+ *  menu itself (that is `/menu`, two sections further down). */
 const MAX_DISHES = 6;
 
 function pick(

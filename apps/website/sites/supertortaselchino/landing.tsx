@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { Button } from "@repo/ui/core-elements/button";
 import { Container } from "@repo/ui/core-elements/container";
 import { getSystem } from "@/lib/system";
-import { MENU_ALL_PATH, MENU_ICON } from "@/lib/menu-paths";
+import { MENU_ALL_PATH, MENU_ICON } from "@/lib/catalog-paths";
 import { fitSectionBackground } from "@/lib/section-background";
 import { SectionBand } from "@/components/section-band";
 import { Hero } from "@/components/hero";
@@ -33,7 +33,7 @@ import { Intro } from "./sections/intro";
  * self-edits all of it in the CMS.
  *
  * The tortas are MenuItems (the "food" Buyable family), not products - the CTAs
- * point at `/categories/menu` (the whole menu), and we gate them on `menu_item_count` so they
+ * point at `/menu` (the whole menu), and we gate them on `menu_item_count` so they
  * never land on an empty listing before the catalog is seeded.
  *
  * The hero is not the centred, equal-weight composition the shared block

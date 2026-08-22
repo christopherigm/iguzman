@@ -43,6 +43,7 @@ from catalog.models import (
     ProductCategory,
     Service,
 )
+from catalog.test_helpers import a_product_category, a_service_category
 from core.crypto import decrypt, encrypt
 from core.models import BookingResource, Branch, BranchHours, ResourcePool, System
 from users.models import CartItem
@@ -158,6 +159,7 @@ class _BookingFixture(TestCase):
                 opens_at=time(9, 0), closes_at=time(17, 0),
             )
         self.service = Service.objects.create(
+            category=a_service_category(self.system),
             system=self.system, name="Haircut", slug="haircut",
             price=Decimal("100.00"), currency="USD", duration=60,
             booking_enabled=True, booking_in_branch=True,
@@ -265,6 +267,7 @@ class CheckoutTests(TestCase):
         cache.clear()
         self.system = stripe_system()
         self.product = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Bag", slug="bag",
             price=Decimal("10.00"), currency="USD",
         )
@@ -321,6 +324,7 @@ class CheckoutTests(TestCase):
 
         Order.objects.all().delete()
         service = Service.objects.create(
+            category=a_service_category(self.system),
             system=self.system, name="Setup", slug="setup",
             price=Decimal("50.00"), currency="USD",
         )
@@ -358,6 +362,7 @@ class CheckoutTests(TestCase):
         # A mixed-currency cart is refused, not converted: a Checkout Session is
         # single-currency and `Buyable.currency` is per item.
         euro = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Hat", slug="hat",
             price=Decimal("20.00"), currency="EUR",
         )
@@ -411,6 +416,7 @@ class WebhookTests(TestCase):
         cache.clear()
         self.system = stripe_system()
         self.product = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Bag", slug="bag",
             price=Decimal("10.00"), currency="USD", stock_count=5,
         )
@@ -623,6 +629,7 @@ class OrderReadTests(TestCase):
             name="Michelada", slug="o-michelada", price=Decimal("6.00"),
         )
         product = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Mug", slug="mug", price=Decimal("10.00"),
         )
         menu_line = OrderLine.objects.create(
@@ -640,12 +647,14 @@ class OrderReadTests(TestCase):
             r["name"]: r
             for r in self.client.get(f"/api/orders/{self.order.public_id}/").json()["lines"]
         }
-        # `item_menu_category_slug` is the first segment of the item's URL, read
-        # live through the FK so it follows a dish re-filed in the CMS.
-        self.assertEqual(rows["Michelada"]["item_menu_category_slug"], "o-bebidas")
-        # A product line carries no menu category, so the frontend cannot
-        # mistake one for a menu item.
-        self.assertIsNone(rows["Mug"]["item_menu_category_slug"])
+        # `item_category_slug` is the first segment of the item's URL, read live
+        # through the FK so it follows an item re-filed in the CMS.
+        self.assertEqual(rows["Michelada"]["item_category_slug"], "o-bebidas")
+        # Every family carries one now, not just the menu: a product line has to
+        # answer here too, or its link loses its first segment.
+        self.assertEqual(
+            rows["Mug"]["item_category_slug"], product.category.slug,
+        )
 
         item.delete()
         product.delete()
@@ -661,7 +670,7 @@ class OrderReadTests(TestCase):
         }
         self.assertEqual(rows[menu_line.pk]["name"], "Michelada")
         self.assertIsNone(rows[menu_line.pk]["item_slug"])
-        self.assertIsNone(rows[menu_line.pk]["item_menu_category_slug"])
+        self.assertIsNone(rows[menu_line.pk]["item_category_slug"])
 
 
 class OrderDeleteTests(TestCase):
@@ -731,6 +740,7 @@ class GuestCheckoutTests(TestCase):
         cache.clear()
         self.system = stripe_system()
         self.product = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Bag", slug="bag",
             price=Decimal("10.00"), currency="USD",
         )
@@ -762,6 +772,7 @@ class GuestCheckoutTests(TestCase):
     def test_another_tenants_item_cannot_be_bought_through_this_host(self, mock_create):
         other = System.objects.create(site_name="Other", host="other.test")
         theirs = Product.objects.create(
+            category=a_product_category(other),
             system=other, name="Theirs", slug="theirs",
             price=Decimal("99.00"), currency="USD",
         )
@@ -852,6 +863,7 @@ class OfflineCheckoutTests(TestCase):
             pay_in_store_enabled=True, pay_on_delivery_enabled=True,
         )
         self.product = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Bag", slug="bag",
             price=Decimal("10.00"), currency="USD", stock_count=5,
         )
@@ -967,6 +979,7 @@ class GuestOrderAccountLinkTests(TestCase):
         )
         self.other_system = System.objects.create(site_name="Beta", host="beta.test")
         self.product = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Bag", slug="bag",
             price=Decimal("10.00"), currency="USD", stock_count=50,
             points_award=40,
@@ -1128,6 +1141,7 @@ class PosCheckoutTests(TestCase):
         self.system = System.objects.create(site_name="Acme", host="acme.test")
         self.other_system = System.objects.create(site_name="Beta", host="beta.test")
         self.product = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Loaf", slug="loaf",
             price=Decimal("10.00"), currency="USD", stock_count=5,
         )
@@ -1183,6 +1197,7 @@ class PosCheckoutTests(TestCase):
 
     def test_the_till_refuses_what_it_may_not_sell(self):
         theirs = Product.objects.create(
+            category=a_product_category(self.other_system),
             system=self.other_system, name="Theirs", slug="theirs",
             price=Decimal("99.00"), currency="USD",
         )
@@ -1253,6 +1268,7 @@ class OrderEmailTests(TestCase):
         cache.clear()
         self.system = stripe_system(pay_in_store_enabled=True)
         self.product = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Bag", slug="bag",
             price=Decimal("10.00"), currency="USD", stock_count=5,
         )
@@ -1394,6 +1410,7 @@ class OrderQrTests(TestCase):
             site_name="Acme", host="acme.test", pay_in_store_enabled=True,
         )
         self.product = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Bag", slug="bag",
             price=Decimal("10.00"), currency="USD", stock_count=5,
         )
@@ -1516,6 +1533,7 @@ class BookingAvailabilityTests(TestCase):
                 break_start=time(13, 0), break_end=time(14, 0),
             )
         self.service = Service.objects.create(
+            category=a_service_category(self.system),
             system=self.system, name="Haircut", slug="haircut",
             price=Decimal("100.00"), currency="USD", duration=60,
             booking_enabled=True,
@@ -1565,6 +1583,7 @@ class BookingAvailabilityTests(TestCase):
         # Two services at one branch keep their own grids: four hours fits the
         # 09:00-13:00 window exactly and nowhere else.
         tour = Service.objects.create(
+            category=a_service_category(self.system),
             system=self.system, name="City tour", slug="city-tour",
             price=Decimal("300.00"), currency="USD", duration=240,
             booking_enabled=True,
@@ -1629,6 +1648,7 @@ class BookingAvailabilityTests(TestCase):
         # The home business: no Branch rows at all, so the defaults apply.
         solo_system = System.objects.create(site_name="Solo", host="solo.test")
         solo = Service.objects.create(
+            category=a_service_category(solo_system),
             system=solo_system, name="Consult", slug="consult",
             price=Decimal("50.00"), currency="USD", duration=60, booking_enabled=True,
         )
@@ -1677,6 +1697,7 @@ class BookingCheckoutTests(_BookingFixture):
         # A service that is not bookable, and another tenant's, are both 404s.
         other = System.objects.create(site_name="Beta", host="beta.test")
         theirs = Service.objects.create(
+            category=a_service_category(other),
             system=other, name="Theirs", slug="theirs",
             price=Decimal("10.00"), currency="USD", booking_enabled=True,
         )
@@ -1846,6 +1867,7 @@ class BookingLocationTests(TestCase):
             latitude=Decimal("22.88000000"), longitude=Decimal("-109.90000000"),
         )
         self.service = Service.objects.create(
+            category=a_service_category(self.system),
             system=self.system, name="Tour", slug="tour",
             price=Decimal("100.00"), currency="USD", booking_enabled=True,
         )
@@ -2006,6 +2028,7 @@ class OrderPayTests(TestCase):
         cache.clear()
         self.system = stripe_system()
         self.product = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Bag", slug="bag",
             price=Decimal("10.00"), currency="USD", stock_count=5,
         )
@@ -2747,6 +2770,7 @@ class BookingCheckoutAtomicityTests(TransactionTestCase):
                 opens_at=time(9, 0), closes_at=time(17, 0),
             )
         self.service = Service.objects.create(
+            category=a_service_category(self.system),
             system=self.system, name="Whale tour", slug="whale-tour",
             price=Decimal("500.00"), currency="MXN", duration=240,
             booking_enabled=True, booking_pay_in_person=True,
@@ -2819,6 +2843,7 @@ class CouponTests(TestCase):
         self.system = System.objects.create(site_name="Acme", host="acme.test")
         self.other_system = System.objects.create(site_name="Beta", host="beta.test")
         self.product = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Loaf", slug="loaf",
             price=Decimal("100.00"), currency="USD", stock_count=50,
         )
@@ -2999,6 +3024,7 @@ class CouponTests(TestCase):
         Product.objects.filter(pk=self.product.pk).update(category=bakery)
         self.product.refresh_from_db()
         jacket = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Jacket", slug="jacket",
             price=Decimal("300.00"), currency="USD", stock_count=5,
         )
@@ -3076,23 +3102,17 @@ class CouponTests(TestCase):
         from has to carry the category as well as the name - a dish name on its
         own says nothing about where on the menu the offer sits.
 
-        A category target is filed under nothing (its `parent` is a different
-        question) and an uncategorized product has no answer to give, so both
-        report None rather than a prefix the flyer would draw as a dangling
-        separator."""
+        A *category* target is filed under nothing (its `parent` is a different
+        question), so it reports None rather than a prefix the flyer would draw
+        as a dangling separator. An item target always has one to give: every
+        buyable is required to carry a category, since its slug is the first
+        segment of the item's URL."""
         bakery = ProductCategory.objects.create(
             system=self.system, name="Bakery", slug="bakery",
         )
         Product.objects.filter(pk=self.product.pk).update(category=bakery)
-        loose = Product.objects.create(
-            system=self.system, name="Jacket", slug="jacket",
-            price=Decimal("300.00"), currency="USD",
-        )
         on_item = self._coupon(
             code="LOAF10", scope_kind=Coupon.SCOPE_PRODUCT, scope_id=self.product.pk,
-        )
-        on_loose = self._coupon(
-            code="COAT10", scope_kind=Coupon.SCOPE_PRODUCT, scope_id=loose.pk,
         )
         on_category = self._coupon(
             code="BAKERY10",
@@ -3107,7 +3127,6 @@ class CouponTests(TestCase):
             return response.json()["scope"]
 
         self.assertEqual(scope(on_item)["category_name"], "Bakery")
-        self.assertIsNone(scope(on_loose)["category_name"])
         self.assertIsNone(scope(on_category)["category_name"])
 
     def test_a_coupon_cannot_be_scoped_to_another_tenants_item(self):
@@ -3116,6 +3135,7 @@ class CouponTests(TestCase):
         carrying a rival's product id would discount whichever of this tenant's
         items happened to share the number."""
         theirs = Product.objects.create(
+            category=a_product_category(self.other_system),
             system=self.other_system, name="Theirs", slug="theirs",
             price=Decimal("10.00"), currency="USD",
         )
@@ -3407,6 +3427,7 @@ class OrderReorderTests(TestCase):
             price=Decimal("15.00"), is_removable=True, max_quantity=2,
         )
         self.soda = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Soda", slug="reorder-soda",
             price=Decimal("30.00"), currency="MXN", stock_count=5,
         )

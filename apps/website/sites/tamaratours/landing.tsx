@@ -34,7 +34,7 @@ import { Departure } from "./sections/departure";
  *
  * Tours are the **service** family, not products: each trip is booked, has a
  * duration and a modality, and its variants are session lengths / private vs.
- * shared. So every catalog CTA points at `/categories/services` and is gated on
+ * shared. So every catalog CTA points at `/services` and is gated on
  * `system.service_count`, so it never lands on an empty listing before the
  * catalog is seeded.
  *
@@ -77,7 +77,7 @@ export async function Landing() {
           hasTours && (
             <Button
               text={t("hero.viewTours")}
-              href="/categories/services"
+              href="/services"
               kind="primary"
               size="lg"
             />

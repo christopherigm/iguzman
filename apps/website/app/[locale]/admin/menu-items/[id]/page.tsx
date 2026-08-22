@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import { use } from "react";
 import { useRouter } from "@repo/i18n/navigation";
 import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
-// `lib/menu-paths.ts` is server-free, so a client form may read it.
-import { menuItemHref } from "@/lib/menu-paths";
+// `lib/catalog-paths.ts` is server-free, so a client form may read it.
+import { menuItemHref } from "@/lib/catalog-paths";
 import { PricingSection } from "@/components/admin/pricing-section";
 import {
   AdminImageUploader,

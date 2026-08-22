@@ -3,10 +3,14 @@ import { setRequestLocale, getTranslations } from "next-intl/server";
 import { MenuListing } from "@/components/menu-listing";
 
 /**
- * The whole menu: the tenant's category cards plus every item, grouped into a
- * section per category. The only menu listing there is - the five per-kind
- * pages that used to sit beside it (`/categories/food`, `/categories/drinks`, …)
- * went with `MenuItem.kind`. One category on its own is `./menu/<slug>`.
+ * The whole menu at `/menu`: the tenant's category cards plus every item,
+ * grouped into a section per category. The only menu listing there is - the
+ * five per-kind pages that used to sit beside it went with `MenuItem.kind`, and
+ * this page itself moved up out of `/categories/menu` when the three catalog
+ * families were unified on `/<family>/<category>/<item>`.
+ *
+ * One category on its own is `/menu/<category>`; one dish is
+ * `/menu/<category>/<slug>`.
  */
 
 type Props = {

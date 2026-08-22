@@ -10,7 +10,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Grid } from "@repo/ui/core-elements/grid";
-import { MENU_ALL_PATH, MENU_ICON } from "@/lib/menu-paths";
+import { CATALOG_ROOT, MENU_ALL_PATH, MENU_ICON } from "@/lib/catalog-paths";
 import { BuyableCard, type BuyableItem } from "./buyable-card";
 import "./catalog-items.css";
 
@@ -69,10 +69,10 @@ export async function CatalogItems() {
   // any mix of the five kinds.
   const seeMore: { label: string; href: string; icon?: string }[] = [
     ...(services.length > 0
-      ? [{ label: t("seeMoreServices"), href: "/categories/services" }]
+      ? [{ label: t("seeMoreServices"), href: CATALOG_ROOT.service }]
       : []),
     ...(products.length > 0
-      ? [{ label: t("seeMoreProducts"), href: "/categories/products" }]
+      ? [{ label: t("seeMoreProducts"), href: CATALOG_ROOT.product }]
       : []),
     ...(menuItems.length > 0
       ? [{ label: t("seeMoreMenuItems"), href: MENU_ALL_PATH, icon: MENU_ICON }]

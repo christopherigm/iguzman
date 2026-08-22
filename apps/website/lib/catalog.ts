@@ -109,6 +109,11 @@ export interface ProductVariant {
   slug: string;
   name: string | null;
   en_name: string | null;
+  /** The sibling's own category slug, which is the first segment of its detail
+   *  route - a variant is normally filed beside the item it hangs off, but the
+   *  CMS does not enforce that, so the link is built from this rather than from
+   *  the page it is rendered on. */
+  category_slug: string;
   image: string | null;
   price: string;
   currency: string;
@@ -122,6 +127,11 @@ export interface ServiceVariant {
   slug: string;
   name: string | null;
   en_name: string | null;
+  /** The sibling's own category slug, which is the first segment of its detail
+   *  route - a variant is normally filed beside the item it hangs off, but the
+   *  CMS does not enforce that, so the link is built from this rather than from
+   *  the page it is rendered on. */
+  category_slug: string;
   image: string | null;
   price: string;
   currency: string;
@@ -164,11 +174,16 @@ export interface FeaturedProduct {
   /**
    * The category this item is filed under, as the API's list payload already
    * carries it (both list endpoints use the full serializer). The landing's
-   * catalog grid prints it on the card, since that grid interleaves the three
-   * buyable families and the card would otherwise not say what it is. Null for
-   * an uncategorized record - unlike a menu item, whose category is required.
+   * catalog grid prints the name on the card, since that grid interleaves the
+   * three buyable families and the card would otherwise not say what it is.
+   *
+   * ⚠ `category_slug` has to be on **this** (list) type, not only on the detail
+   * one: a card links to `/<family>/<category>/<slug>`, and it renders from the
+   * list payload - without the slug here every card in the grid would be a link
+   * with a missing segment. Both are required, like a menu item's.
    */
-  category_name: string | null;
+  category_name: string;
+  category_slug: string;
   variants: ProductVariant[];
 }
 
@@ -224,11 +239,16 @@ export interface FeaturedService {
   /**
    * The category this item is filed under, as the API's list payload already
    * carries it (both list endpoints use the full serializer). The landing's
-   * catalog grid prints it on the card, since that grid interleaves the three
-   * buyable families and the card would otherwise not say what it is. Null for
-   * an uncategorized record - unlike a menu item, whose category is required.
+   * catalog grid prints the name on the card, since that grid interleaves the
+   * three buyable families and the card would otherwise not say what it is.
+   *
+   * ⚠ `category_slug` has to be on **this** (list) type, not only on the detail
+   * one: a card links to `/<family>/<category>/<slug>`, and it renders from the
+   * list payload - without the slug here every card in the grid would be a link
+   * with a missing segment. Both are required, like a menu item's.
    */
-  category_name: string | null;
+  category_name: string;
+  category_slug: string;
   variants: ServiceVariant[];
 }
 
@@ -281,9 +301,12 @@ export interface ProductDetail {
   barcode: string | null;
   brand: number | null;
   brand_name: string | null;
-  category: number | null;
-  category_name: string | null;
-  category_slug: string | null;
+  /** Required, like a menu item's: the category slug is the first segment of
+   *  the item's URL (`/products/<category>/<slug>`), so an item without one
+   *  would have no page to be reached at. */
+  category: number;
+  category_name: string;
+  category_slug: string;
   length: string | null;
   width: string | null;
   height: string | null;
@@ -336,9 +359,12 @@ export interface ServiceDetail {
   sku: string | null;
   brand: number | null;
   brand_name: string | null;
-  category: number | null;
-  category_name: string | null;
-  category_slug: string | null;
+  /** Required, like a menu item's: the category slug is the first segment of
+   *  the item's URL (`/services/<category>/<slug>`), so an item without one
+   *  would have no page to be reached at. */
+  category: number;
+  category_name: string;
+  category_slug: string;
   duration: number | null;
   modality: string | null;
   images: ServiceImage[];

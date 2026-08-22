@@ -71,7 +71,7 @@ export async function Landing() {
           hasProducts && (
             <Button
               text={t("origin.viewCoffees")}
-              href="/categories/products"
+              href="/products"
               kind="primary"
               size="lg"
             />

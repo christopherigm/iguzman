@@ -10,7 +10,7 @@ import {
   getAllMenuItems,
   type MenuItemDetail,
 } from "@/lib/catalog";
-import { menuCategoryHref } from "@/lib/menu-paths";
+import { menuCategoryHref } from "@/lib/catalog-paths";
 import { formatPrice } from "@/lib/price";
 
 /**

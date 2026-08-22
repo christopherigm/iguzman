@@ -150,10 +150,13 @@ class Product(RecommendationSource, Buyable):
       - Buyable: system (FK), brand (FK), price, compare_price, cost_price, currency
     """
 
+    # Required, and CASCADE: deleting a category deletes the products filed
+    # under it. There is no "no category" state for a product to fall back to -
+    # the category slug is the first segment of every product URL
+    # (`/products/<category>/<slug>`), so an uncategorized product would have no
+    # page to be reached at.
     category = models.ForeignKey(
         ProductCategory,
-        null=True,
-        blank=True,
         on_delete=models.CASCADE,
         related_name='products',
     )
@@ -273,10 +276,11 @@ class Service(RecommendationSource, Buyable):
       - Buyable: system (FK), brand (FK), price, compare_price, cost_price, currency
     """
 
+    # Required, and CASCADE, for the same reason as `Product.category`: the
+    # category slug is the first segment of every service URL
+    # (`/services/<category>/<slug>`).
     category = models.ForeignKey(
         ServiceCategory,
-        null=True,
-        blank=True,
         on_delete=models.CASCADE,
         related_name='services',
     )

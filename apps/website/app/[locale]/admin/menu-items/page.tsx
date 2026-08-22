@@ -34,7 +34,7 @@ export default function AdminMenuItemsPage() {
     try {
       // The categories are fetched for their **order** as much as their names:
       // the sections read in the arrangement the CMS gives the categories
-      // themselves - the same order the storefront's `/categories/menu` sections
+      // themselves - the same order the storefront's `/menu` sections
       // follow - which is the order the API already returns them in
       // (`sort_order`, then name).
       const [data, cats] = await Promise.all([

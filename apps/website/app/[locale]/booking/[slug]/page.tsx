@@ -13,6 +13,7 @@ import { getSystem } from "@/lib/system";
 import { ItemHeroVideo } from "@/components/item-hero-video";
 import { SectionHero } from "@/components/section-hero";
 import { BookingForm } from "./booking-form";
+import { CATALOG_ROOT, itemHref } from "@/lib/catalog-paths";
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
@@ -112,8 +113,10 @@ export default async function BookingPage({ params }: Props) {
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t("home"), href: "/" },
-    { label: t("services"), href: "/categories/services" },
-    { label: name, href: `/services/${slug}` },
+    { label: t("services"), href: CATALOG_ROOT.service },
+    // The service's own three-segment URL, not the one-segment permalink beside
+    // it - a breadcrumb should land on the page, not on a 301 to it.
+    { label: name, href: itemHref("service", service.category_slug, slug) },
     { label: t("heading") },
   ];
 

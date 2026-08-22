@@ -18,6 +18,7 @@ from decimal import Decimal
 
 from core.models import Branch, Brand, System
 
+from .test_helpers import a_product_category, a_service_category
 from .models import (
     CatalogRecommendation, Product, ProductCategory, ProductImage, MenuCategory,
     MenuItem, MenuItemIngredient, MenuItemIngredientOption, MenuSize, Ingredient,
@@ -51,9 +52,11 @@ class CatalogListTests(TestCase):
         cache.clear()
         self.system = System.objects.create(site_name="Acme", host="acme.test")
         Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Live", slug="live", enabled=True,
         )
         Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Draft", slug="draft", enabled=False,
         )
         self.url = f"/api/catalog/products/?system={self.system.id}"
@@ -211,12 +214,14 @@ class MenuItemCategoryTests(TestCase):
         # and `branch_count` decides whether Contact renders at all.
         self.assertEqual(payload()["product_count"], 0)
         Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Mug", slug="inv-mug", price=Decimal("9.00"),
         )
         self.assertEqual(payload()["product_count"], 1)
 
         self.assertEqual(payload()["service_count"], 0)
         Service.objects.create(
+            category=a_service_category(self.system),
             system=self.system, name="Catering", slug="inv-catering",
             price=Decimal("99.00"),
         )
@@ -673,11 +678,12 @@ class CloneTests(TestCase):
 
     def test_a_product_clone_is_a_deep_copy_with_its_own_files(self):
         product = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Mug", slug="mug", sku="MUG-1",
             price=Decimal("12.00"), image=self._image(),
         )
         gallery = ProductImage.objects.create(product=product, image=self._image("g.png"))
-        sibling = Product.objects.create(system=self.system, name="Mug XL", slug="mug-xl")
+        sibling = Product.objects.create(category=a_product_category(self.system), system=self.system, name="Mug XL", slug="mug-xl")
         product.variants.add(sibling)
         url = f"/api/catalog/products/{product.id}/clone/"
 
@@ -779,6 +785,7 @@ class ServiceSlugReadTests(TestCase):
         self.system = System.objects.create(site_name="Tours", host="tours.test")
         Branch.objects.create(system=self.system, name="Marina", booking_capacity=4)
         Service.objects.create(
+            category=a_service_category(self.system),
             system=self.system, name="Boat tour", slug="boat-tour",
             price=Decimal("500.00"), duration=120,
             booking_enabled=True, booking_party_enabled=True,
@@ -1107,6 +1114,7 @@ class CatalogRecommendationTests(TestCase):
         # Cross-family: a dish may recommend a Product, and a product category is
         # just as valid a source.
         product = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Mug", slug="rec-mug", price=Decimal("120.00"),
         )
         CatalogRecommendation.objects.create(
@@ -1159,6 +1167,7 @@ class CatalogRecommendationTests(TestCase):
         CatalogRecommendation.objects.create(
             menu_category=self.pizzas,
             recommended_product=Product.objects.create(
+                category=a_product_category(self.system),
                 system=self.system, name="Taza", slug="rec-taza",
                 price=Decimal("120.00"), in_stock=False,
             ),
@@ -1336,6 +1345,10 @@ class StockImageCreditTests(TestCase):
         self.system = System.objects.create(site_name="Acme", host="acme.test")
         self.host = {"HTTP_X_WEBSITE_HOST": "acme.test"}
         self.client = admin_client(self, self.system)
+        # A product cannot be posted without one - its slug is the first segment
+        # of the product's URL. Nothing here is about sectioning, so one
+        # throwaway category serves every write below.
+        self.category = a_product_category(self.system)
 
     def _post(self, url, **data):
         response = self.client.post(
@@ -1363,7 +1376,8 @@ class StockImageCreditTests(TestCase):
         # straight into the model - so the credit has to be popped out of it.
         self._post(
             "/api/catalog/products/",
-            system=self.system.id, name="Hammer", slug="hammer", price="10.00",
+            system=self.system.id, category=self.category.id,
+            name="Hammer", slug="hammer", price="10.00",
             image=self.PNG, **self.CREDIT,
         )
         hammer = Product.objects.get(slug="hammer")
@@ -1384,7 +1398,8 @@ class StockImageCreditTests(TestCase):
         is still owed."""
         self._post(
             "/api/catalog/products/",
-            system=self.system.id, name="Hammer", slug="hammer", price="10.00",
+            system=self.system.id, category=self.category.id,
+            name="Hammer", slug="hammer", price="10.00",
             image=self.PNG, **self.CREDIT,
         )
         hammer = Product.objects.get(slug="hammer")

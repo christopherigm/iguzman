@@ -5,7 +5,7 @@ import { Button } from "@repo/ui/core-elements/button";
 import { Card } from "@repo/ui/core-elements/card";
 import { Icon } from "@repo/ui/core-elements/icon";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { MENU_ICON } from "@/lib/menu-paths";
+import { MENU_ICON } from "@/lib/catalog-paths";
 import { MenuCategoryNavItems } from "./menu-category-nav-items";
 import type { MenuCategoryNavItem } from "./menu-category-nav-items";
 import {

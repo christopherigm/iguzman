@@ -14,7 +14,7 @@ import {
   hasMinOrder,
 } from "@/lib/coupon-shared";
 import { formatPrice } from "@/lib/price";
-import { MENU_ALL_PATH, MENU_ICON } from "@/lib/menu-paths";
+import { CATALOG_ROOT, MENU_ALL_PATH, MENU_ICON } from "@/lib/catalog-paths";
 import { CouponClaim, type CouponDestination } from "./coupon-claim";
 
 type Props = { params: Promise<{ locale: string; code: string }> };
@@ -80,7 +80,7 @@ export default async function CouponPage({ params }: Props) {
       ? [
           {
             label: catalogT("browseProducts"),
-            href: "/categories/products",
+            href: CATALOG_ROOT.product,
           },
         ]
       : []),
@@ -88,7 +88,7 @@ export default async function CouponPage({ params }: Props) {
       ? [
           {
             label: catalogT("browseServices"),
-            href: "/categories/services",
+            href: CATALOG_ROOT.service,
           },
         ]
       : []),

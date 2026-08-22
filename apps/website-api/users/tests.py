@@ -27,6 +27,7 @@ from catalog.models import (
     Product,
     Service,
 )
+from catalog.test_helpers import a_product_category, a_service_category
 from core.models import System
 
 from .models import CartItem, EmailVerificationToken, Favorite, UserProfile
@@ -49,11 +50,13 @@ class CartTests(TestCase):
         self.other_system = System.objects.create(site_name="Other", host="other.test")
 
         self.product = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Bag", slug="bag",
             price=Decimal("10.00"), currency="USD",
         )
         # A sibling variant of `product` - its own standalone, orderable Product.
         self.variant = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Bag Small", slug="bag-small",
             price=Decimal("8.00"), currency="USD",
         )
@@ -90,7 +93,7 @@ class CartTests(TestCase):
         self.assertEqual(line.unit_price, Decimal("10.00"))
         self.assertEqual(line.line_total, Decimal("30.00"))
 
-        service = Service.objects.create(system=self.system, name="Fix", slug="fix")
+        service = Service.objects.create(category=a_service_category(self.system), system=self.system, name="Fix", slug="fix")
         for kwargs in (
             {"product": self.product},                              # a duplicate
             {},                                                     # no target
@@ -126,6 +129,7 @@ class CartTests(TestCase):
         self.assertEqual(variant_line.json()["unit_price"], "8.00")
 
         mxn = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Peso", slug="peso",
             price=Decimal("50.00"), currency="MXN",
         )
@@ -165,6 +169,7 @@ class CartTests(TestCase):
 
         # Another tenant's product cannot be added, and a disabled one is gone.
         foreign = Product.objects.create(
+            category=a_product_category(self.other_system),
             system=self.other_system, name="Foreign", slug="foreign",
             price=Decimal("1.00"),
         )
@@ -242,10 +247,12 @@ class GuestCartTests(TestCase):
         cache.clear()
         self.system = System.objects.create(site_name="Acme", host="acme.test")
         self.product = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Bag", slug="bag",
             price=Decimal("10.00"), currency="USD",
         )
         self.variant = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Bag Small", slug="bag-small",
             price=Decimal("8.00"), currency="USD",
         )
@@ -260,13 +267,16 @@ class GuestCartTests(TestCase):
     def test_a_guest_cart_is_priced_and_deduped_from_the_catalog(self):
         other = System.objects.create(site_name="Other", host="other.test")
         theirs = Product.objects.create(
+            category=a_product_category(other),
             system=other, name="Theirs", slug="theirs", price=Decimal("99.00"),
         )
         hidden = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Draft", slug="draft",
             price=Decimal("5.00"), enabled=False,
         )
         hat = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Hat", slug="hat",
             price=Decimal("5.00"), currency="USD",
         )
@@ -325,6 +335,7 @@ class GuestCartTests(TestCase):
         # ⚠ Tenancy comes from the profile, never from a header a client can set.
         other = System.objects.create(site_name="Other", host="other.test")
         theirs = Product.objects.create(
+            category=a_product_category(other),
             system=other, name="Theirs", slug="theirs", price=Decimal("99.00"),
         )
         self.client.post(
@@ -766,6 +777,7 @@ class CartRecommendationTests(TestCase):
         to be a full item payload - not a cut-down reference."""
         CatalogRecommendation.objects.all().delete()
         product = Product.objects.create(
+            category=a_product_category(self.system),
             system=self.system, name="Taza", slug="cartrec-taza",
             price=Decimal("120.00"), currency="MXN",
         )

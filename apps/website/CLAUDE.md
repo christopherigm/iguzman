@@ -379,18 +379,81 @@ Six things that will bite:
   count on `SystemSerializer` it needs a signal clearing the System payload on
   write - `core/signals.py` has one; the payload is cached for an hour.
 
+## Catalog URLs - one shape for all three families
+
+Products, services and the menu share one URL shape, and every catalog link in
+the app is built from `lib/catalog-paths.ts`:
+
+```
+/<family>                       the listing: category cards + every item
+/<family>/<category>            one category
+/<family>/<category>/<item>     one item
+```
+
+where `<family>` is `products`, `services` or `menu`. So `/menu/espresso/latte`
+and `/products/tools/hammer` are the same address read twice.
+
+| Helper                              | Gives                            |
+| ----------------------------------- | -------------------------------- |
+| `CATALOG_ROOT[family]`              | `/products`, `/services`, `/menu` |
+| `categoryHref(family, cat)`         | `/<family>/<cat>`                |
+| `itemHref(family, cat, slug)`       | `/<family>/<cat>/<slug>`         |
+
+`family` is `"product" | "service" | "food"` - the same spelling `BuyableItem.kind`
+and `CategoryDetail`'s `kind` prop use, not a fourth one. `MENU_ALL_PATH`,
+`menuCategoryHref` and `menuItemHref` are aliases over these for the menu, which
+has by far the most call sites.
+
+- ⚠ **Never build a catalog path by concatenation**, and never default the
+  category segment. A caller that has not got the category slug to hand would
+  build a link straight to a 404; one that genuinely cannot know it (an order
+  line whose item was deleted) has no page to link to and must render no link.
+- ⚠ **Every buyable is required to carry a category** - `Product.category`,
+  `Service.category` and `MenuItem.category` are all non-null in the API, and
+  the CMS forms mark the field `required`. That is not a taxonomy preference:
+  the category slug is the first segment of the item's URL, so an item without
+  one has no address.
+- ⚠ **The one-segment route is the category page *and* the item permalink.**
+  `/<family>/<slug>` resolves the slug against that family's categories first;
+  on a miss it looks the slug up as an item and 301s to its canonical
+  three-segment URL (`lib/catalog-permalink.ts`). This is what keeps every flat
+  `/products/<slug>` and `/services/<slug>` link from before the categories
+  existed working, with no per-slug redirect rule - and what gives an item an
+  address that survives being re-filed. The cost: a category slug wins over an
+  item sharing it.
+- ⚠ **An item's canonical URL moves when an operator re-files it**, and the
+  detail route serves an item *only* under its own category - anything else is a
+  404, so one item has exactly one URL. Use the one-segment permalink when an
+  address has to outlive an edit.
+- The `/categories/*` tree this replaced (`/categories/products` beside
+  `/products/<slug>`) is redirected in `next.config.js`, along with the older
+  per-kind menu paths. Only listings need rules there; bare slugs are handled by
+  the one-segment route, which a static rule could not do.
+
 ## The menu - one sectioning, one listing, one detail route
 
 A menu is sectioned by the tenant's own `MenuCategory` rows and by nothing else,
 and `MenuItem.category` is **required**. Everything follows from that:
 
-| Surface                    | Path                      | File                                           |
-| -------------------------- | ------------------------- | ---------------------------------------------- |
-| The whole menu             | `/categories/menu`        | `components/menu-listing.tsx`                  |
-| One category               | `/categories/menu/<slug>` | `app/[locale]/categories/menu/[slug]/page.tsx` |
-| One item                   | `/menu/<category>/<slug>` | `components/menu-item-detail-page.tsx`         |
-| One item, stable permalink | `/menu/<slug>`            | `app/[locale]/menu/[category]/page.tsx`        |
-| Paths                      | —                         | `lib/menu-paths.ts`                            |
+| Surface                    | Path                      | File                                     |
+| -------------------------- | ------------------------- | ---------------------------------------- |
+| The whole menu             | `/menu`                   | `components/menu-listing.tsx`            |
+| One category               | `/menu/<category>`        | `app/[locale]/menu/[category]/page.tsx`  |
+| One item                   | `/menu/<category>/<slug>` | `components/menu-item-detail-page.tsx`   |
+| One item, stable permalink | `/menu/<slug>`            | `app/[locale]/menu/[category]/page.tsx`  |
+| Paths                      | —                         | `lib/catalog-paths.ts`                   |
+
+⚠ **The category page and the permalink are the same route.** `/menu/<slug>`
+resolves the slug against the menu's categories first and renders the category
+page; on a miss it looks the slug up as a dish and 301s to
+`/menu/<category>/<slug>` (`lib/catalog-permalink.ts`). A category slug
+therefore wins over a dish sharing it - slugs are unique per table, not across
+the two, so that is a content mistake to catch in the CMS.
+
+**This shape is not the menu's alone.** Products and services have exactly the
+same three levels - `/products`, `/products/<category>`,
+`/products/<category>/<slug>` - and the same permalink fallback. See "Catalog
+URLs" below.
 
 This replaced a `MenuItem.kind` enum (food/drink/dessert/side/appetizer) that sat
 beside the category and drove five listing pages
@@ -400,7 +463,9 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
 
 - ⚠ **Never build a menu path by concatenation.** `MENU_ALL_PATH`,
   `menuCategoryHref(slug)` and `menuItemHref(categorySlug, slug)` in
-  `lib/menu-paths.ts` are the only three. That module is deliberately plain data
+  `lib/catalog-paths.ts` are the only three (they are thin aliases over the
+  family-generic `CATALOG_ROOT` / `categoryHref` / `itemHref` in the same
+  module). That module is deliberately plain data
   with no server import: the navbar is a **client** component and needs it, while
   `lib/catalog.ts` reaches `next/headers` through `resolve-site.ts`. It also
   carries **`MENU_ICON`** - the one glyph every "go to the menu" button wears
@@ -430,7 +495,7 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   link. It costs one `getMenuCategories()` read, which is `cache()`d per request
   and cached in Django - it is **content**, so it is not on the System payload
   beside the flat `menu_item_count`.
-- **`/categories/menu` groups items by category in the categories' own CMS
+- **`/menu` groups items by category in the categories' own CMS
   order** (`sort_order`), driven by the `categories` list rather than by grouping
   the items - so the operator's arrangement is what the page reads as. A category
   with no items gets its card but no section: an empty grid under a heading reads
@@ -629,8 +694,8 @@ The API side is in website-api's CLAUDE.md → "Menu sectioning".
   package is not marked side-effect-free, so importing `BrandmarkCradle` from a
   client module drags `react-player` into this page's browser bundle for one
   `<svg>`. Don't merge them back.
-- **A category _card_ on `/categories/menu` scrolls to its section** rather than
-  leading to `/categories/menu/<slug>`, since the dishes are further down the
+- **A category _card_ on `/menu` scrolls to its section** rather than
+  leading to `/menu/<category>`, since the dishes are further down the
   same page - `components/scroll-to-section-link.tsx`, wrapping the card the
   page already renders. ⚠ It listens on the **capture** phase: the card is a
   `Link`, which `preventDefault`s and pushes the route in its own `onClick`, so
@@ -829,8 +894,8 @@ Buyable families, authored in the CMS at `/admin/system` → Catalog names
   categories - see above. This used to cover seven kinds; the five menu ones went
   with `MenuItem.kind`, and `kindLabelWithOverride` (the CMS's "Food (Pizzas)"
   dropdown annotation) went with them.
-- ⚠ **A label is a label. Nothing routes off one.** `/categories/products` and
-  `/products/<slug>` are structural and must not move when a tenant renames a
+- ⚠ **A label is a label. Nothing routes off one.** `/products` and
+  `/products/<category>/<slug>` are structural and must not move when a tenant renames a
   family - a customer's bookmark and a search result have to keep working. Never
   build a path from a label.
 - **Blank means "use our translation".** `kindLabels()` drops empty overrides, so
@@ -851,7 +916,7 @@ Buyable families, authored in the CMS at `/admin/system` → Catalog names
 - **The navbar takes them as a prop.** It is a client component, so
   `[locale]/layout.tsx` resolves `kindLabels(system, locale)` from the System it
   already holds. `lib/kind-labels.ts` is plain data with no server import for the
-  same reason `lib/menu-paths.ts` is - and that is why `KindLabelOverrides` is
+  same reason `lib/catalog-paths.ts` is - and that is why `KindLabelOverrides` is
   declared there and `System` extends it, rather than the reverse.
 
 ## Maps - one component, one basemap, one credit

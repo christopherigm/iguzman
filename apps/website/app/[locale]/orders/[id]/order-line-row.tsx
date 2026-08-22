@@ -7,7 +7,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import type { OrderLine } from "@/lib/orders";
 import { formatPrice } from "@/lib/price";
-import { menuItemHref } from "@/lib/menu-paths";
+import { itemHref } from "@/lib/catalog-paths";
 import { BuyNowButton } from "@/components/buy-now-button";
 
 interface OrderLineRowProps {
@@ -46,19 +46,18 @@ export async function OrderLineRow({ line }: OrderLineRowProps) {
         ? "rgba(99,102,241,0.8)"
         : "rgba(234,88,12,0.85)";
 
-  // A menu line needs its category slug as well as its own to address a page,
-  // and both go null together when the item is deleted - so no category means
-  // no link, the same as no slug.
+  // Every line needs its category slug as well as its own to address a page -
+  // all three families sit at `/<family>/<category>/<slug>` - and both go null
+  // together when the item is deleted, so no category means no link, the same
+  // as no slug.
   const href =
-    line.item_slug === null
+    line.item_slug === null || line.item_category_slug === null
       ? null
-      : line.kind === "product"
-        ? `/products/${line.item_slug}`
-        : line.kind === "service"
-          ? `/services/${line.item_slug}`
-          : line.item_menu_category_slug
-            ? menuItemHref(line.item_menu_category_slug, line.item_slug)
-            : null;
+      : itemHref(
+          line.kind === "menu_item" ? "food" : line.kind,
+          line.item_category_slug,
+          line.item_slug,
+        );
 
   const image = line.image ? (
     <Box

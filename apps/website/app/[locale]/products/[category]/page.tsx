@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { Container } from "@repo/ui/core-elements/container";
 import { Box } from "@repo/ui/core-elements/box";
@@ -9,22 +8,36 @@ import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { SectionHero } from "@/components/section-hero";
 import { getSession } from "@repo/auth/session";
 import { getProductCategory, getProductsByCategory } from "@/lib/catalog";
+import { redirectToItemOrNotFound } from "@/lib/catalog-permalink";
 import { CategoryDetail } from "@/components/category-detail";
 import { kindLabel } from "@/lib/kind-labels";
 import { getKindLabels } from "@/lib/system";
 import { AdminEditButton } from "@/components/admin-edit-button";
+import { CATALOG_ROOT } from "@/lib/catalog-paths";
+
+/**
+ * One product category, at `/products/<category>` - the section a customer clicks
+ * into from the products listing page.
+ *
+ * ⚠ It is also this family's **item permalink**: a slug that is not a category
+ * is looked up as a product and permanently redirected to
+ * `/products/<category>/<slug>`. That is what keeps every `/products/<slug>` link
+ * from before the categories existed working. See `lib/catalog-permalink.ts`
+ * for what the fallback costs (a category slug wins over a product sharing it).
+ */
 
 type Props = {
-  params: Promise<{ locale: string; slug: string }>;
+  params: Promise<{ locale: string; category: string }>;
 };
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ locale: string; slug: string }>;
+  params: Promise<{ locale: string; category: string }>;
 }): Promise<Metadata> {
-  const { locale, slug } = await params;
+  const { locale, category: slug } = await params;
   const category = await getProductCategory(slug);
+  // Not a category: the page redirects to an item, which carries its own.
   if (!category) return {};
 
   const name =
@@ -51,7 +64,7 @@ export async function generateMetadata({
 }
 
 export default async function ProductCategoryPage({ params }: Props) {
-  const { locale, slug } = await params;
+  const { locale, category: slug } = await params;
   setRequestLocale(locale);
 
   const [category, t, tAdmin, session, labels] = await Promise.all([
@@ -62,7 +75,10 @@ export default async function ProductCategoryPage({ params }: Props) {
     getKindLabels(locale),
   ]);
 
-  if (!category) notFound();
+  // Not a category, so try the slug as a product and send the visitor to its
+  // canonical URL; 404 only when it is neither.
+  if (!category)
+    return redirectToItemOrNotFound({ family: "product", slug, locale });
 
   const items = await getProductsByCategory(category.id);
 
@@ -82,7 +98,7 @@ export default async function ProductCategoryPage({ params }: Props) {
     { label: t("home"), href: "/" },
     {
       label: kindLabel(labels, "product", t("products")),
-      href: "/categories/products",
+      href: CATALOG_ROOT.product,
     },
     { label: name },
   ];

@@ -7,6 +7,7 @@ import { Badge } from "@repo/ui/core-elements/badge";
 import { ShareButton } from "@repo/ui/core-elements/share-button";
 import { getSession } from "@repo/auth/session";
 import type { ServiceDetail } from "@/lib/catalog";
+import { itemHref } from "@/lib/catalog-paths";
 import { getBranches } from "@/lib/branches";
 import { getSystem } from "@/lib/system";
 import { findCartLineId } from "@/lib/cart";
@@ -163,12 +164,12 @@ async function ServiceVariantsCard({ service, locale }: ServiceDetailProps) {
         {t("variants")}
       </Typography>
       <VariantThumbs
-        hrefFor={(v) => `/services/${v.slug}`}
+        hrefFor={(v) => itemHref("service", v.category_slug, v.slug)}
         current={{
           slug: service.slug,
           name: displayName,
           image: service.image,
-          href: `/services/${service.slug}`,
+          href: itemHref("service", service.category_slug, service.slug),
         }}
         variants={service.variants}
         locale={locale}

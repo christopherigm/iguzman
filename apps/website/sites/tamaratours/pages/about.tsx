@@ -174,7 +174,7 @@ export async function About() {
           {hasTours && (
             <Button
               text={t("hero.viewTours")}
-              href="/categories/services"
+              href="/services"
               kind="primary"
               size="lg"
             />

@@ -30,7 +30,7 @@ export type CouponDestination = {
  * scanned a poster has an empty cart, and a cart page telling them so is a dead
  * end at the exact moment they were most willing to buy something.
  *
- * ⚠ **Which catalog is not a constant.** It used to be `/categories/products`
+ * ⚠ **Which catalog is not a constant.** It used to be `/products`
  * for everyone, which sent the customer of a services-only or food-only tenant
  * to an empty page. The page hands down whichever of the three families this
  * tenant sells - the same three counts `EmptyCatalogState` and the navbar key

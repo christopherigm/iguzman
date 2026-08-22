@@ -7,6 +7,7 @@ import { Badge } from "@repo/ui/core-elements/badge";
 import { ShareButton } from "@repo/ui/core-elements/share-button";
 import { getSession } from "@repo/auth/session";
 import type { ProductDetail } from "@/lib/catalog";
+import { itemHref } from "@/lib/catalog-paths";
 import { findCartLineId } from "@/lib/cart";
 import { isFavorite } from "@/lib/favorites";
 import { toShareDescription } from "@/lib/metadata";
@@ -129,12 +130,12 @@ async function ProductVariantsCard({ product, locale }: ProductDetailProps) {
         {t("variants")}
       </Typography>
       <VariantThumbs
-        hrefFor={(v) => `/products/${v.slug}`}
+        hrefFor={(v) => itemHref("product", v.category_slug, v.slug)}
         current={{
           slug: product.slug,
           name: displayName,
           image: product.image,
-          href: `/products/${product.slug}`,
+          href: itemHref("product", product.category_slug, product.slug),
         }}
         variants={product.variants}
         locale={locale}

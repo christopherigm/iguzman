@@ -9,7 +9,7 @@ import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
 import { SectionHero } from "@/components/section-hero";
 import { getSystem } from "@/lib/system";
-import { MENU_ALL_PATH, MENU_ICON } from "@/lib/menu-paths";
+import { MENU_ALL_PATH, MENU_ICON } from "@/lib/catalog-paths";
 import { localized } from "../localized";
 
 /**

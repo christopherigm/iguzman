@@ -334,13 +334,22 @@ class ProductVariantSerializer(serializers.ModelSerializer):
     """A sibling variant reference on a Product - only enough to render a
     linkable thumbnail on the detail page. Deliberately shallow: it does NOT
     nest ``variants``, so the public payload can never recurse through the
-    symmetrical relation."""
+    symmetrical relation.
+
+    ``category_slug`` is here for the link, not for display: a product's detail
+    route is ``/products/<category>/<slug>``, and nothing stops the CMS from
+    linking a variant filed under a different category, so a thumbnail cannot
+    assume its sibling shares the current page's category segment."""
 
     image = serializers.SerializerMethodField()
+    category_slug = serializers.SlugRelatedField(source='category', slug_field='slug', read_only=True)
 
     class Meta:
         model = Product
-        fields = ['id', 'slug', 'name', 'en_name', 'image', 'price', 'currency', 'in_stock']
+        fields = [
+            'id', 'slug', 'name', 'en_name', 'category_slug', 'image',
+            'price', 'currency', 'in_stock',
+        ]
 
     def get_image(self, obj):
         return _buyable_image_url(obj, self.context.get('request'))
@@ -351,7 +360,7 @@ class ProductSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, read_only=True)
     variants = ProductVariantSerializer(many=True, read_only=True)
     brand_name = serializers.CharField(source='brand.name', read_only=True, default=None)
-    category_name = serializers.CharField(source='category.name', read_only=True, default=None)
+    category_name = serializers.CharField(source='category.name', read_only=True)
     category_slug = serializers.SlugRelatedField(source='category', slug_field='slug', read_only=True)
 
     class Meta:
@@ -412,8 +421,12 @@ class ProductWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
     brand = serializers.PrimaryKeyRelatedField(
         queryset=Brand.objects.all(), required=False, allow_null=True,
     )
+    # Required, like its MenuItem counterpart: the category is the first segment
+    # of the item's URL (`/products/<category>/<slug>`), so an item without one
+    # has no page to be reached at. `required=False` on a PATCH is handled by
+    # the partial-update path, which only writes the keys it was sent.
     category = serializers.PrimaryKeyRelatedField(
-        queryset=ProductCategory.objects.all(), required=False, allow_null=True,
+        queryset=ProductCategory.objects.all(),
     )
     # Sibling variants (symmetrical M2M). Written as a list of Product ids; the
     # relation is set after the product is saved (see create/update).
@@ -727,13 +740,22 @@ class ServiceVariantSerializer(serializers.ModelSerializer):
     """A sibling variant reference on a Service - only enough to render a
     linkable thumbnail on the detail page. Deliberately shallow: it does NOT
     nest ``variants``, so the public payload can never recurse through the
-    symmetrical relation."""
+    symmetrical relation.
+
+    ``category_slug`` is here for the link, not for display: a service's detail
+    route is ``/services/<category>/<slug>``, and nothing stops the CMS from
+    linking a variant filed under a different category, so a thumbnail cannot
+    assume its sibling shares the current page's category segment."""
 
     image = serializers.SerializerMethodField()
+    category_slug = serializers.SlugRelatedField(source='category', slug_field='slug', read_only=True)
 
     class Meta:
         model = Service
-        fields = ['id', 'slug', 'name', 'en_name', 'image', 'price', 'currency', 'duration', 'modality']
+        fields = [
+            'id', 'slug', 'name', 'en_name', 'category_slug', 'image',
+            'price', 'currency', 'duration', 'modality',
+        ]
 
     def get_image(self, obj):
         return _buyable_image_url(obj, self.context.get('request'))
@@ -744,7 +766,7 @@ class ServiceSerializer(serializers.ModelSerializer):
     images = ServiceImageSerializer(many=True, read_only=True)
     variants = ServiceVariantSerializer(many=True, read_only=True)
     brand_name = serializers.CharField(source='brand.name', read_only=True, default=None)
-    category_name = serializers.CharField(source='category.name', read_only=True, default=None)
+    category_name = serializers.CharField(source='category.name', read_only=True)
     category_slug = serializers.SlugRelatedField(source='category', slug_field='slug', read_only=True)
     # The *resolved* options rather than the raw switches, so the storefront and
     # the checkout cannot disagree about what "no option enabled" means - the
@@ -862,8 +884,12 @@ class ServiceWriteSerializer(StockCreditWriteMixin, serializers.Serializer):
     brand = serializers.PrimaryKeyRelatedField(
         queryset=Brand.objects.all(), required=False, allow_null=True,
     )
+    # Required, like its MenuItem counterpart: the category is the first segment
+    # of the item's URL (`/services/<category>/<slug>`), so an item without one
+    # has no page to be reached at. `required=False` on a PATCH is handled by
+    # the partial-update path, which only writes the keys it was sent.
     category = serializers.PrimaryKeyRelatedField(
-        queryset=ServiceCategory.objects.all(), required=False, allow_null=True,
+        queryset=ServiceCategory.objects.all(),
     )
     # Sibling variants (symmetrical M2M). Written as a list of Service ids; the
     # relation is set after the service is saved (see create/update).
@@ -1847,7 +1873,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
     # a dish comes to show one list on its detail page and another at the counter.
     sizes = serializers.SerializerMethodField()
     brand_name = serializers.CharField(source='brand.name', read_only=True, default=None)
-    category_name = serializers.CharField(source='category.name', read_only=True, default=None)
+    category_name = serializers.CharField(source='category.name', read_only=True)
     category_slug = serializers.SlugRelatedField(source='category', slug_field='slug', read_only=True)
 
     class Meta:

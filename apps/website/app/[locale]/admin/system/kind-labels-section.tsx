@@ -19,7 +19,7 @@ import { CATALOG_KINDS, type CatalogKind } from "@/lib/kind-labels";
  * Drinks, Desserts, Sides, Appetizers) for the `MenuItem.kind` enum that has
  * since been removed.
  *
- * ⚠ **A rename changes a label and nothing else.** `/categories/products` and
+ * ⚠ **A rename changes a label and nothing else.** `/products` and
  * `/products/<slug>` are structural and stay exactly as they are, so a
  * customer's bookmark and a search result keep working.
  *
